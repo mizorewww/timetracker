@@ -12,12 +12,20 @@ import SwiftData
 struct timetrackerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            TaskNode.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            DailySummary.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [modelConfiguration]
+            )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

@@ -17,6 +17,14 @@ struct StopSegmentUseCase {
     }
 }
 
+struct StopSessionUseCase {
+    let repository: TimeTrackingRepository
+
+    func execute(sessionID: UUID) throws {
+        try repository.stopSession(sessionID: sessionID)
+    }
+}
+
 struct PauseSessionUseCase {
     let repository: TimeTrackingRepository
 
@@ -40,6 +48,50 @@ struct AddManualTimeUseCase {
     @discardableResult
     func execute(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
         try repository.addManualSegment(taskID: taskID, startedAt: startedAt, endedAt: endedAt, note: note)
+    }
+}
+
+struct UpdateTaskUseCase {
+    let repository: TaskRepository
+
+    func execute(
+        taskID: UUID,
+        title: String,
+        kind: TaskNodeKind,
+        parentID: UUID?,
+        colorHex: String?,
+        iconName: String?,
+        notes: String?,
+        estimatedSeconds: Int?,
+        dueAt: Date?
+    ) throws {
+        try repository.updateTask(
+            taskID: taskID,
+            title: title,
+            kind: kind,
+            parentID: parentID,
+            colorHex: colorHex,
+            iconName: iconName,
+            notes: notes,
+            estimatedSeconds: estimatedSeconds,
+            dueAt: dueAt
+        )
+    }
+}
+
+struct ArchiveTaskUseCase {
+    let repository: TaskRepository
+
+    func execute(taskID: UUID) throws {
+        try repository.archiveTask(taskID: taskID)
+    }
+}
+
+struct SoftDeleteTaskUseCase {
+    let repository: TaskRepository
+
+    func execute(taskID: UUID) throws {
+        try repository.softDeleteTask(taskID: taskID)
     }
 }
 

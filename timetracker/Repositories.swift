@@ -7,6 +7,7 @@ protocol TaskRepository {
     func children(of parentID: UUID?) throws -> [TaskNode]
     func task(id: UUID) throws -> TaskNode?
     @discardableResult func createTask(title: String, kind: TaskNodeKind, parentID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
+    func updateTask(taskID: UUID, title: String, kind: TaskNodeKind, parentID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
     func archiveTask(taskID: UUID) throws
     func softDeleteTask(taskID: UUID) throws
@@ -18,6 +19,7 @@ protocol TimeTrackingRepository {
     func segments(from: Date, to: Date) throws -> [TimeSegment]
     @discardableResult func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment
     func stopSegment(segmentID: UUID) throws
+    func stopSession(sessionID: UUID) throws
     func pauseSession(sessionID: UUID) throws
     @discardableResult func resumeSession(sessionID: UUID) throws -> TimeSegment?
     @discardableResult func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment
@@ -85,6 +87,36 @@ final class SwiftDataTaskRepository: TaskRepository {
         context.insert(node)
         try context.save()
         return node
+    }
+
+    func updateTask(
+        taskID: UUID,
+        title: String,
+        kind: TaskNodeKind,
+        parentID: UUID?,
+        colorHex: String?,
+        iconName: String?,
+        notes: String?,
+        estimatedSeconds: Int?,
+        dueAt: Date?
+    ) throws {
+        let nodes = try allNodes()
+        guard let node = nodes.first(where: { $0.id == taskID }) else { return }
+        guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else { return }
+
+        node.title = title
+        node.kind = kind
+        node.parentID = parentID
+        node.colorHex = colorHex
+        node.iconName = iconName
+        node.notes = notes
+        node.estimatedSeconds = estimatedSeconds
+        node.dueAt = dueAt
+        node.updatedAt = Date()
+        node.clientMutationID = UUID()
+        try applyHierarchy(to: node, parentID: parentID)
+        try updateDescendantHierarchy(of: node)
+        try context.save()
     }
 
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {
@@ -204,6 +236,18 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
             session.updatedAt = now
         }
 
+        try context.save()
+    }
+
+    func stopSession(sessionID: UUID) throws {
+        guard let session = try session(id: sessionID), session.deletedAt == nil else { return }
+        let now = Date()
+        for segment in try activeSegments().filter({ $0.sessionID == sessionID }) {
+            segment.endedAt = now
+            segment.updatedAt = now
+        }
+        session.endedAt = now
+        session.updatedAt = now
         try context.save()
     }
 

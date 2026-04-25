@@ -1,41 +1,56 @@
-//
-//  timetrackerUITests.swift
-//  timetrackerUITests
-//
-//  Created by gaozexuan on 2026/4/25.
-//
-
 import XCTest
 
 final class timetrackerUITests: XCTestCase {
-
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
-        app.launch()
+    func testPrimaryNavigationAndSettingsLoad() throws {
+        let app = launchApp()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(app.buttons["home.startTimer"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Active Timers"].exists)
+
+        app.buttons["sidebar.Analytics"].click()
+        XCTAssertTrue(app.staticTexts["分析"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Wall Time"].exists)
+
+        app.buttons["sidebar.Settings"].click()
+        XCTAssertTrue(app.otherElements["settings.view"].waitForExistence(timeout: 3) || app.staticTexts["同步"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["iCloud 容器"].exists)
+    }
+
+    @MainActor
+    func testTaskEditorAndPomodoroFlowOpen() throws {
+        let app = launchApp()
+
+        app.buttons["home.newTask"].click()
+        XCTAssertTrue(app.staticTexts["新建任务"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["保存"].exists)
+        app.buttons["取消"].click()
+
+        app.buttons["sidebar.Pomodoro"].click()
+        XCTAssertTrue(app.staticTexts["pomodoro.title"].waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            app.buttons["pomodoro.startFocus"].exists ||
+            app.staticTexts["可以完成本轮"].exists ||
+            app.staticTexts["剩余时间"].exists
+        )
     }
 
     @MainActor
     func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+            _ = launchApp()
         }
+    }
+
+    @MainActor
+    private func launchApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        return app
     }
 }

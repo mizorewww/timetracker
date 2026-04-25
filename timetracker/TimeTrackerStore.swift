@@ -7,12 +7,17 @@ final class TimeTrackerStore: ObservableObject {
     @Published private(set) var tasks: [TaskNode] = []
     @Published private(set) var activeSegments: [TimeSegment] = []
     @Published private(set) var todaySegments: [TimeSegment] = []
+    @Published private(set) var allSegments: [TimeSegment] = []
     @Published private(set) var sessions: [TimeSession] = []
+    @Published private(set) var pomodoroRuns: [PomodoroRun] = []
     @Published var selectedTaskID: UUID?
     @Published var selectedRange: RangePreset = .today
     @Published var errorMessage: String?
     @Published var taskEditorDraft: TaskEditorDraft?
     @Published var manualTimeDraft: ManualTimeDraft?
+    @Published var segmentEditorDraft: SegmentEditorDraft?
+    @Published var desktopDestination: DesktopDestination = .today
+    @Published private var cloudAccountStatus: String = AppCloudSync.accountStatus
 
     enum RangePreset: String, CaseIterable, Identifiable {
         case today = "Today"
@@ -22,6 +27,37 @@ final class TimeTrackerStore: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum DesktopDestination: String, CaseIterable, Identifiable {
+        case today = "Today"
+        case tasks = "Tasks"
+        case pomodoro = "Pomodoro"
+        case analytics = "Analytics"
+        case settings = "Settings"
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .today: return "今日"
+            case .tasks: return "任务"
+            case .pomodoro: return "番茄钟"
+            case .analytics: return "分析"
+            case .settings: return "设置"
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .today: return "sun.max"
+            case .tasks: return "checklist"
+            case .pomodoro: return "timer"
+            case .analytics: return "chart.bar"
+            case .settings: return "gearshape"
+            }
+        }
+    }
+
+    private var modelContext: ModelContext?
     private var taskRepository: TaskRepository?
     private var timeRepository: TimeTrackingRepository?
     private var pomodoroRepository: PomodoroRepository?
@@ -29,6 +65,7 @@ final class TimeTrackerStore: ObservableObject {
 
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
+        self.modelContext = context
         let taskRepository = SwiftDataTaskRepository(context: context)
         let timeRepository = SwiftDataTimeTrackingRepository(context: context)
         self.taskRepository = taskRepository
@@ -38,16 +75,26 @@ final class TimeTrackerStore: ObservableObject {
         do {
             try SeedData.ensureSeeded(context: context)
             try refresh()
+            Task {
+                await refreshCloudAccountStatus()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func refreshCloudAccountStatus() async {
+        await AppCloudSync.refreshAccountStatus()
+        cloudAccountStatus = AppCloudSync.accountStatus
     }
 
     func refresh() throws {
         guard let taskRepository, let timeRepository else { return }
         tasks = try taskRepository.allNodes()
         activeSegments = try timeRepository.activeSegments()
+        allSegments = try timeRepository.allSegments()
         sessions = try timeRepository.sessions()
+        pomodoroRuns = try pomodoroRepository?.runs() ?? []
 
         let range = Calendar.current.dateInterval(of: .day, for: Date()) ?? DateInterval(start: Date(), duration: 24 * 60 * 60)
         todaySegments = try timeRepository.segments(from: range.start, to: range.end)
@@ -197,10 +244,75 @@ final class TimeTrackerStore: ObservableObject {
         manualTimeDraft = nil
     }
 
-    func startPomodoroForSelectedTask() {
-        guard let selectedTaskID else { return }
+    func presentEditSegment(_ segment: TimeSegment) {
+        segmentEditorDraft = SegmentEditorDraft(segment: segment, note: note(for: segment))
+    }
+
+    func saveSegmentDraft(_ draft: SegmentEditorDraft) {
+        guard let taskID = draft.taskID else {
+            errorMessage = "请选择任务。"
+            return
+        }
+
+        let endedAt = draft.isActive ? nil : draft.endedAt
+        if let endedAt, endedAt <= draft.startedAt {
+            errorMessage = "结束时间必须晚于开始时间。"
+            return
+        }
+
         perform {
-            _ = try StartPomodoroUseCase(repository: requiredPomodoroRepository()).execute(taskID: selectedTaskID)
+            try UpdateSegmentUseCase(repository: requiredTimeRepository()).execute(
+                segmentID: draft.segmentID,
+                taskID: taskID,
+                startedAt: draft.startedAt,
+                endedAt: endedAt,
+                note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            )
+            selectedTaskID = taskID
+        }
+        segmentEditorDraft = nil
+    }
+
+    func deleteSegment(_ segmentID: UUID) {
+        perform {
+            try SoftDeleteSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segmentID)
+        }
+        segmentEditorDraft = nil
+    }
+
+    func replaceWithDemoData() {
+        perform {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try SeedData.replaceWithDemoData(context: modelContext)
+        }
+    }
+
+    func startPomodoroForSelectedTask(focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) {
+        guard let selectedTaskID else {
+            errorMessage = "请选择一个任务再开始番茄钟。"
+            return
+        }
+        perform {
+            _ = try StartPomodoroUseCase(repository: requiredPomodoroRepository()).execute(
+                taskID: selectedTaskID,
+                focusSeconds: focusSeconds,
+                breakSeconds: breakSeconds,
+                targetRounds: targetRounds
+            )
+        }
+    }
+
+    func completeActivePomodoro() {
+        guard let run = activePomodoroRun else { return }
+        perform {
+            try CompletePomodoroFocusUseCase(repository: requiredPomodoroRepository()).execute(runID: run.id)
+        }
+    }
+
+    func cancelActivePomodoro() {
+        guard let run = activePomodoroRun else { return }
+        perform {
+            try CancelPomodoroUseCase(repository: requiredPomodoroRepository()).execute(runID: run.id)
         }
     }
 
@@ -209,8 +321,30 @@ final class TimeTrackerStore: ObservableObject {
         return task(for: selectedTaskID)
     }
 
+    var activePomodoroRun: PomodoroRun? {
+        pomodoroRuns.first { run in
+            run.deletedAt == nil &&
+            run.endedAt == nil &&
+            [.planned, .focusing, .shortBreak, .longBreak, .interrupted].contains(run.state)
+        }
+    }
+
     var recentTasks: [TaskNode] {
         tasks.filter { $0.status == .active }.prefix(4).map { $0 }
+    }
+
+    var archivedTasks: [TaskNode] {
+        tasks.filter { $0.status == .archived }
+    }
+
+    var syncStatus: SyncStatus {
+        SyncStatus(
+            mode: AppCloudSync.persistenceMode,
+            containerIdentifier: AppCloudSync.containerIdentifier,
+            deviceID: DeviceIdentity.current,
+            lastError: AppCloudSync.lastError,
+            accountStatus: cloudAccountStatus
+        )
     }
 
     var pausedSessions: [TimeSession] {
@@ -251,7 +385,12 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     var completedPomodoroCount: Int {
-        todaySegments.filter { $0.source == .pomodoro && $0.endedAt != nil }.count
+        let today = Calendar.current.dateInterval(of: .day, for: Date())
+        return pomodoroRuns.filter { run in
+            run.state == .completed &&
+            run.deletedAt == nil &&
+            today?.contains(run.endedAt ?? run.updatedAt) == true
+        }.count
     }
 
     var averageFocusSeconds: Int {
@@ -262,6 +401,42 @@ final class TimeTrackerStore: ObservableObject {
 
     func task(for id: UUID) -> TaskNode? {
         tasks.first { $0.id == id }
+    }
+
+    func taskTitle(for run: PomodoroRun) -> String {
+        task(for: run.taskID)?.title ?? "Deleted Task"
+    }
+
+    func pomodoroRemainingSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
+        guard run.state == .focusing, let startedAt = run.startedAt else {
+            return run.focusSecondsPlanned
+        }
+        return max(0, run.focusSecondsPlanned - Int(now.timeIntervalSince(startedAt)))
+    }
+
+    func pomodoroProgress(for run: PomodoroRun, now: Date = Date()) -> Double {
+        guard run.focusSecondsPlanned > 0 else { return 0 }
+        let remaining = pomodoroRemainingSeconds(for: run, now: now)
+        return min(1, max(0, 1 - Double(remaining) / Double(run.focusSecondsPlanned)))
+    }
+
+    func pomodoroStateLabel(for run: PomodoroRun) -> String {
+        switch run.state {
+        case .planned:
+            return "Ready"
+        case .focusing:
+            return "Focus"
+        case .shortBreak:
+            return "Short Break"
+        case .longBreak:
+            return "Long Break"
+        case .completed:
+            return "Completed"
+        case .cancelled:
+            return "Cancelled"
+        case .interrupted:
+            return "Interrupted"
+        }
     }
 
     func path(for task: TaskNode) -> String {
@@ -289,8 +464,120 @@ final class TimeTrackerStore: ObservableObject {
         return parents.joined(separator: " / ")
     }
 
+    func note(for segment: TimeSegment) -> String {
+        sessions.first { $0.id == segment.sessionID }?.note ?? ""
+    }
+
     func secondsForTaskToday(_ task: TaskNode, mode: AggregationMode = .gross) -> Int {
         aggregationService.totalSeconds(segments: todaySegments.filter { $0.taskID == task.id }, mode: mode)
+    }
+
+    func secondsForTaskThisWeek(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
+        guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
+        let segments = allSegments.filter { $0.taskID == task.id && overlaps($0, interval: interval, now: now) }
+        return aggregationService.totalSeconds(segments: segments, mode: mode, now: now)
+    }
+
+    func recentSegments(for task: TaskNode, limit: Int = 6) -> [TimeSegment] {
+        allSegments
+            .filter { $0.taskID == task.id && $0.deletedAt == nil }
+            .sorted { $0.startedAt > $1.startedAt }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    func analyticsOverview(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsOverview {
+        let segments = segmentsForAnalytics(range: range, now: now)
+        let gross = aggregationService.totalSeconds(segments: segments, mode: .gross, now: now)
+        let wall = aggregationService.totalSeconds(segments: segments, mode: .wallClock, now: now)
+        let pomodoros = segments.filter { $0.source == .pomodoro && $0.endedAt != nil }.count
+        let focusSegments = segments.filter { $0.source == .pomodoro }
+        let averageFocus = focusSegments.isEmpty ? 0 : aggregationService.grossSeconds(focusSegments, now: now) / focusSegments.count
+        return AnalyticsOverview(
+            grossSeconds: gross,
+            wallSeconds: wall,
+            overlapSeconds: max(0, gross - wall),
+            pomodoroCount: pomodoros,
+            averageFocusSeconds: averageFocus
+        )
+    }
+
+    func dailyBreakdown(range: AnalyticsRange, now: Date = Date()) -> [DailyAnalyticsPoint] {
+        let calendar = Calendar.current
+        return dayIntervals(for: range, now: now).map { interval in
+            let segments = allSegments.filter { overlaps($0, interval: interval, now: now) }
+            return DailyAnalyticsPoint(
+                date: interval.start,
+                grossSeconds: aggregationService.totalSeconds(segments: segments, mode: .gross, now: now),
+                wallSeconds: aggregationService.totalSeconds(segments: segments, mode: .wallClock, now: now),
+                label: calendar.shortWeekdaySymbols[calendar.component(.weekday, from: interval.start) - 1]
+            )
+        }
+    }
+
+    func hourlyBreakdown(for date: Date = Date(), now: Date = Date()) -> [HourlyAnalyticsPoint] {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        return (0..<24).map { hour in
+            let start = calendar.date(byAdding: .hour, value: hour, to: startOfDay) ?? startOfDay
+            let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3_600)
+            let interval = DateInterval(start: start, end: end)
+            let segments = allSegments.filter { overlaps($0, interval: interval, now: now) }
+            let gross = secondsOverlapping(segments: segments, interval: interval, now: now)
+            let wallIntervals = segments.compactMap { clippedInterval(for: $0, in: interval, now: now) }
+            let wall = aggregationService.mergeOverlappingIntervals(wallIntervals).reduce(0) {
+                $0 + Int($1.end.timeIntervalSince($1.start))
+            }
+            return HourlyAnalyticsPoint(hour: hour, grossSeconds: gross, wallSeconds: wall)
+        }
+    }
+
+    func taskBreakdown(range: AnalyticsRange, now: Date = Date()) -> [TaskAnalyticsPoint] {
+        let segments = segmentsForAnalytics(range: range, now: now)
+        let grouped = Dictionary(grouping: segments, by: \.taskID)
+        return grouped.compactMap { taskID, taskSegments -> TaskAnalyticsPoint? in
+            guard let task = task(for: taskID) else { return nil }
+            let gross = aggregationService.totalSeconds(segments: taskSegments, mode: .gross, now: now)
+            guard gross > 0 else { return nil }
+            return TaskAnalyticsPoint(
+                taskID: taskID,
+                title: task.title,
+                path: path(for: task),
+                colorHex: task.colorHex,
+                grossSeconds: gross,
+                wallSeconds: aggregationService.totalSeconds(segments: taskSegments, mode: .wallClock, now: now)
+            )
+        }
+        .sorted { $0.grossSeconds > $1.grossSeconds }
+    }
+
+    func overlapSegments(range: AnalyticsRange, now: Date = Date()) -> [OverlapAnalyticsPoint] {
+        let segments = segmentsForAnalytics(range: range, now: now)
+            .filter { $0.endedAt != nil || $0.startedAt <= now }
+            .sorted { $0.startedAt < $1.startedAt }
+
+        var overlaps: [OverlapAnalyticsPoint] = []
+        for index in segments.indices {
+            for otherIndex in segments.index(after: index)..<segments.endIndex {
+                let first = segments[index]
+                let second = segments[otherIndex]
+                let firstEnd = first.endedAt ?? now
+                let secondEnd = second.endedAt ?? now
+                let start = max(first.startedAt, second.startedAt)
+                let end = min(firstEnd, secondEnd)
+                if end > start {
+                    overlaps.append(
+                        OverlapAnalyticsPoint(
+                            start: start,
+                            end: end,
+                            firstTitle: displayTitle(for: first),
+                            secondTitle: displayTitle(for: second)
+                        )
+                    )
+                }
+            }
+        }
+        return overlaps.sorted { $0.durationSeconds > $1.durationSeconds }
     }
 
     func rootTasks() -> [TaskNode] {
@@ -299,6 +586,57 @@ final class TimeTrackerStore: ObservableObject {
 
     func children(of task: TaskNode) -> [TaskNode] {
         tasks.filter { $0.parentID == task.id }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private func segmentsForAnalytics(range: AnalyticsRange, now: Date) -> [TimeSegment] {
+        guard let interval = analyticsInterval(for: range, now: now) else { return allSegments }
+        return allSegments.filter { overlaps($0, interval: interval, now: now) }
+    }
+
+    private func analyticsInterval(for range: AnalyticsRange, now: Date) -> DateInterval? {
+        let calendar = Calendar.current
+        switch range {
+        case .today:
+            return calendar.dateInterval(of: .day, for: now)
+        case .week:
+            return calendar.dateInterval(of: .weekOfYear, for: now)
+        case .month:
+            return calendar.dateInterval(of: .month, for: now)
+        }
+    }
+
+    private func dayIntervals(for range: AnalyticsRange, now: Date) -> [DateInterval] {
+        let calendar = Calendar.current
+        guard let interval = analyticsInterval(for: range, now: now) else { return [] }
+        var result: [DateInterval] = []
+        var cursor = interval.start
+        while cursor < interval.end {
+            let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? interval.end
+            result.append(DateInterval(start: cursor, end: min(next, interval.end)))
+            cursor = next
+        }
+        return result
+    }
+
+    private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
+        let end = segment.endedAt ?? now
+        return segment.startedAt < interval.end && end > interval.start
+    }
+
+    private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {
+        guard segment.deletedAt == nil else { return nil }
+        let end = segment.endedAt ?? now
+        let start = max(segment.startedAt, interval.start)
+        let clippedEnd = min(end, interval.end)
+        guard clippedEnd > start else { return nil }
+        return DateInterval(start: start, end: clippedEnd)
+    }
+
+    private func secondsOverlapping(segments: [TimeSegment], interval: DateInterval, now: Date) -> Int {
+        segments.reduce(0) { result, segment in
+            guard let clipped = clippedInterval(for: segment, in: interval, now: now) else { return result }
+            return result + Int(clipped.end.timeIntervalSince(clipped.start))
+        }
     }
 
     private func perform(_ action: () throws -> Void) {
@@ -387,6 +725,101 @@ struct ManualTimeDraft: Identifiable {
         self.startedAt = end.addingTimeInterval(-30 * 60)
         self.endedAt = end
         self.note = ""
+    }
+}
+
+struct SegmentEditorDraft: Identifiable {
+    let id = UUID()
+    let segmentID: UUID
+    var taskID: UUID?
+    var startedAt: Date
+    var endedAt: Date
+    var isActive: Bool
+    var note: String
+    var source: TimeSessionSource
+
+    init(segment: TimeSegment, note: String) {
+        self.segmentID = segment.id
+        self.taskID = segment.taskID
+        self.startedAt = segment.startedAt
+        self.endedAt = segment.endedAt ?? Date()
+        self.isActive = segment.endedAt == nil
+        self.note = note
+        self.source = segment.source
+    }
+}
+
+struct SyncStatus {
+    let mode: String
+    let containerIdentifier: String
+    let deviceID: String
+    let lastError: String?
+    let accountStatus: String
+
+    var isCloudBacked: Bool {
+        mode == "iCloud"
+    }
+
+    var storageStatusText: String {
+        isCloudBacked ? "SwiftData + iCloud" : mode
+    }
+}
+
+enum AnalyticsRange: String, CaseIterable, Identifiable {
+    case today = "Today"
+    case week = "Week"
+    case month = "Month"
+
+    var id: String { rawValue }
+}
+
+struct AnalyticsOverview {
+    let grossSeconds: Int
+    let wallSeconds: Int
+    let overlapSeconds: Int
+    let pomodoroCount: Int
+    let averageFocusSeconds: Int
+}
+
+struct DailyAnalyticsPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let grossSeconds: Int
+    let wallSeconds: Int
+    let label: String
+}
+
+struct HourlyAnalyticsPoint: Identifiable {
+    let hour: Int
+    let grossSeconds: Int
+    let wallSeconds: Int
+
+    var id: Int { hour }
+    var label: String {
+        hour == 0 ? "00" : "\(hour)"
+    }
+}
+
+struct TaskAnalyticsPoint: Identifiable {
+    let taskID: UUID
+    let title: String
+    let path: String
+    let colorHex: String?
+    let grossSeconds: Int
+    let wallSeconds: Int
+
+    var id: UUID { taskID }
+}
+
+struct OverlapAnalyticsPoint: Identifiable {
+    let id = UUID()
+    let start: Date
+    let end: Date
+    let firstTitle: String
+    let secondTitle: String
+
+    var durationSeconds: Int {
+        max(0, Int(end.timeIntervalSince(start)))
     }
 }
 

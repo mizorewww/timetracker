@@ -18,16 +18,57 @@ struct timetrackerApp: App {
             PomodoroRun.self,
             DailySummary.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        if CommandLine.arguments.contains("--uitesting") {
+            let configuration = ModelConfiguration(
+                "TimeTrackerUITests",
+                schema: schema,
+                isStoredInMemoryOnly: true,
+                cloudKitDatabase: .none
+            )
+            do {
+                AppCloudSync.recordUITesting()
+                return try ModelContainer(
+                    for: schema,
+                    migrationPlan: TimeTrackerMigrationPlan.self,
+                    configurations: [configuration]
+                )
+            } catch {
+                fatalError("Could not create UI test ModelContainer: \(error)")
+            }
+        }
+
+        let cloudConfiguration = ModelConfiguration(
+            "TimeTracker",
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .private(AppCloudSync.containerIdentifier)
+        )
+        let localConfiguration = ModelConfiguration(
+            "TimeTracker",
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        )
 
         do {
-            return try ModelContainer(
+            let container = try ModelContainer(
                 for: schema,
                 migrationPlan: TimeTrackerMigrationPlan.self,
-                configurations: [modelConfiguration]
+                configurations: [cloudConfiguration]
             )
+            AppCloudSync.recordCloudKitEnabled()
+            return container
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            AppCloudSync.recordLocalFallback(error: error)
+            do {
+                return try ModelContainer(
+                    for: schema,
+                    migrationPlan: TimeTrackerMigrationPlan.self,
+                    configurations: [localConfiguration]
+                )
+            } catch {
+                fatalError("Could not create local ModelContainer: \(error)")
+            }
         }
     }()
 

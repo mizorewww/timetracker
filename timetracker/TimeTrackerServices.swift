@@ -1,5 +1,66 @@
 import Foundation
+import CloudKit
 import SwiftData
+
+enum AppCloudSync {
+    static let containerIdentifier = "iCloud.me.mezorewww.timetracker"
+    static let modeKey = "TimeTrackerPersistenceMode"
+    static let errorKey = "TimeTrackerPersistenceError"
+    static let accountStatusKey = "TimeTrackerCloudAccountStatus"
+
+    static var persistenceMode: String {
+        UserDefaults.standard.string(forKey: modeKey) ?? "Local"
+    }
+
+    static var lastError: String? {
+        UserDefaults.standard.string(forKey: errorKey)
+    }
+
+    static var accountStatus: String {
+        UserDefaults.standard.string(forKey: accountStatusKey) ?? "未检查"
+    }
+
+    static func recordCloudKitEnabled() {
+        UserDefaults.standard.set("iCloud", forKey: modeKey)
+        UserDefaults.standard.removeObject(forKey: errorKey)
+    }
+
+    static func recordLocalFallback(error: Error) {
+        UserDefaults.standard.set("Local fallback", forKey: modeKey)
+        UserDefaults.standard.set(error.localizedDescription, forKey: errorKey)
+    }
+
+    static func recordUITesting() {
+        UserDefaults.standard.set("UI Test", forKey: modeKey)
+        UserDefaults.standard.removeObject(forKey: errorKey)
+        UserDefaults.standard.set("UI 测试内存存储", forKey: accountStatusKey)
+    }
+
+    static func refreshAccountStatus() async {
+        let container = CKContainer(identifier: containerIdentifier)
+        let statusText: String
+        do {
+            let status = try await container.accountStatus()
+            switch status {
+            case .available:
+                statusText = "Apple ID 可用"
+            case .noAccount:
+                statusText = "未登录 iCloud"
+            case .restricted:
+                statusText = "iCloud 受限制"
+            case .couldNotDetermine:
+                statusText = "无法确定"
+            case .temporarilyUnavailable:
+                statusText = "暂时不可用"
+            @unknown default:
+                statusText = "未知状态"
+            }
+        } catch {
+            statusText = error.localizedDescription
+        }
+        UserDefaults.standard.set(statusText, forKey: accountStatusKey)
+    }
+}
 
 struct TimerCommand: Codable, Hashable, Identifiable {
     enum CommandType: String, Codable {

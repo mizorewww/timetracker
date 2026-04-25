@@ -46,25 +46,25 @@ enum AggregationMode: String, CaseIterable, Identifiable {
 
 @Model
 final class TaskNode {
-    var id: UUID
-    var title: String
-    var kindRaw: String
+    var id: UUID = UUID()
+    var title: String = ""
+    var kindRaw: String = TaskNodeKind.task.rawValue
     var parentID: UUID?
-    var sortOrder: Double
-    var path: String
-    var depth: Int
-    var statusRaw: String
+    var sortOrder: Double = 0
+    var path: String = ""
+    var depth: Int = 0
+    var statusRaw: String = TaskStatus.active.rawValue
     var colorHex: String?
     var iconName: String?
     var estimatedSeconds: Int?
     var dueAt: Date?
     var notes: String?
-    var createdAt: Date
-    var updatedAt: Date
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
     var archivedAt: Date?
     var deletedAt: Date?
-    var deviceID: String
-    var clientMutationID: UUID
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
 
     init(
         title: String,
@@ -94,17 +94,17 @@ final class TaskNode {
 
 @Model
 final class TimeSession {
-    var id: UUID
-    var taskID: UUID
+    var id: UUID = UUID()
+    var taskID: UUID = UUID()
     var titleSnapshot: String?
-    var sourceRaw: String
-    var startedAt: Date
+    var sourceRaw: String = TimeSessionSource.timer.rawValue
+    var startedAt: Date = Date()
     var endedAt: Date?
     var note: String?
-    var deviceID: String
-    var clientMutationID: UUID
-    var createdAt: Date
-    var updatedAt: Date
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
     var deletedAt: Date?
 
     init(
@@ -128,15 +128,15 @@ final class TimeSession {
 
 @Model
 final class TimeSegment {
-    var id: UUID
-    var sessionID: UUID
-    var taskID: UUID
-    var startedAt: Date
+    var id: UUID = UUID()
+    var sessionID: UUID = UUID()
+    var taskID: UUID = UUID()
+    var startedAt: Date = Date()
     var endedAt: Date?
-    var sourceRaw: String
-    var deviceID: String
-    var createdAt: Date
-    var updatedAt: Date
+    var sourceRaw: String = TimeSessionSource.timer.rawValue
+    var deviceID: String = ""
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
     var deletedAt: Date?
 
     init(
@@ -161,22 +161,22 @@ final class TimeSegment {
 
 @Model
 final class PomodoroRun {
-    var id: UUID
-    var taskID: UUID
+    var id: UUID = UUID()
+    var taskID: UUID = UUID()
     var sessionID: UUID?
-    var focusSecondsPlanned: Int
-    var breakSecondsPlanned: Int
+    var focusSecondsPlanned: Int = 25 * 60
+    var breakSecondsPlanned: Int = 5 * 60
     var longBreakSecondsPlanned: Int?
-    var stateRaw: String
+    var stateRaw: String = PomodoroState.planned.rawValue
     var startedAt: Date?
     var endedAt: Date?
-    var completedFocusRounds: Int
-    var targetRounds: Int
-    var createdAt: Date
-    var updatedAt: Date
+    var completedFocusRounds: Int = 0
+    var targetRounds: Int = 1
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
     var deletedAt: Date?
-    var deviceID: String
-    var clientMutationID: UUID
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
 
     init(
         taskID: UUID,
@@ -201,15 +201,15 @@ final class PomodoroRun {
 
 @Model
 final class DailySummary {
-    var id: UUID
-    var date: Date
+    var id: UUID = UUID()
+    var date: Date = Date()
     var taskID: UUID?
-    var grossSeconds: Int
-    var wallClockSeconds: Int
-    var pomodoroCount: Int
-    var interruptionCount: Int
-    var generatedAt: Date
-    var version: Int
+    var grossSeconds: Int = 0
+    var wallClockSeconds: Int = 0
+    var pomodoroCount: Int = 0
+    var interruptionCount: Int = 0
+    var generatedAt: Date = Date()
+    var version: Int = 1
 
     init(date: Date, taskID: UUID?, grossSeconds: Int, wallClockSeconds: Int, pomodoroCount: Int, interruptionCount: Int, version: Int = 1) {
         self.id = UUID()

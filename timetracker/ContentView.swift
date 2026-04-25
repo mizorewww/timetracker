@@ -66,7 +66,7 @@ struct ContentView: View {
             #if os(macOS)
             ZStack {
                 DesktopRootView(store: store)
-                    .disabled(store.taskEditorDraft != nil || store.manualTimeDraft != nil)
+                    .disabled(store.taskEditorDraft != nil || store.manualTimeDraft != nil || store.segmentEditorDraft != nil)
 
                 DesktopModalLayer(store: store)
             }
@@ -90,6 +90,9 @@ struct ContentView: View {
         }
         .sheet(item: $store.manualTimeDraft) { draft in
             ManualTimeSheet(store: store, initialDraft: draft)
+        }
+        .sheet(item: $store.segmentEditorDraft) { draft in
+            SegmentEditorSheet(store: store, initialDraft: draft)
         }
         #endif
         #if os(macOS)
@@ -172,7 +175,7 @@ struct DesktopRootView: View {
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
                 #endif
         } content: {
-            DesktopMainView(store: store)
+            DesktopContentView(store: store)
                 #if os(macOS)
                 .navigationSplitViewColumnWidth(min: 620, ideal: 720)
                 #endif
@@ -181,6 +184,25 @@ struct DesktopRootView: View {
                 #if os(macOS)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 280)
                 #endif
+        }
+    }
+}
+
+struct DesktopContentView: View {
+    @ObservedObject var store: TimeTrackerStore
+
+    var body: some View {
+        switch store.desktopDestination {
+        case .today:
+            DesktopMainView(store: store)
+        case .tasks:
+            TasksView(store: store)
+        case .pomodoro:
+            PomodoroView(store: store)
+        case .analytics:
+            AnalyticsView(store: store)
+        case .settings:
+            SettingsView(store: store)
         }
     }
 }
@@ -361,9 +383,9 @@ struct MetricsPanel: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(AppColors.border)
         )
     }
@@ -432,6 +454,7 @@ struct ActionStack: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            .accessibilityIdentifier("home.startTimer")
 
             Button {
                 store.presentNewTask()
@@ -441,6 +464,7 @@ struct ActionStack: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
+            .accessibilityIdentifier("home.newTask")
         }
     }
 }
@@ -464,9 +488,9 @@ struct ActiveTimersSection: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(AppColors.border)
             )
         }
@@ -489,9 +513,9 @@ struct PausedSessionsSection: View {
                         }
                     }
                 }
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .stroke(AppColors.border)
                 )
             }
@@ -615,9 +639,9 @@ struct TimelineSection: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(AppColors.border)
             )
         }
@@ -667,6 +691,31 @@ struct TimelineRow: View {
                 Text(DurationFormatter.compact(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt))))
                     .foregroundStyle(.secondary)
                     .font(.subheadline.monospacedDigit())
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            store.selectedTaskID = segment.taskID
+        }
+        .contextMenu {
+            Button {
+                store.presentEditSegment(segment)
+            } label: {
+                Label("编辑时间片段", systemImage: "pencil")
+            }
+
+            Button {
+                store.presentManualTime(taskID: segment.taskID)
+            } label: {
+                Label("补录同类任务", systemImage: "calendar.badge.plus")
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                store.deleteSegment(segment.id)
+            } label: {
+                Label("软删除时间片段", systemImage: "trash")
             }
         }
         .padding(.horizontal, 14)
@@ -728,11 +777,18 @@ struct SidebarView: View {
     @ObservedObject var store: TimeTrackerStore
 
     var body: some View {
-        List(selection: $store.selectedTaskID) {
+        List {
             Section {
-                SidebarStaticRow(title: "Today", systemImage: "sun.max", count: store.activeSegments.count, color: .blue)
-                SidebarStaticRow(title: "收件箱", systemImage: "tray", count: 3, color: .primary)
-                SidebarStaticRow(title: "收藏", systemImage: "star", count: 2, color: .primary)
+                ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
+                    SidebarDestinationRow(
+                        destination: destination,
+                        count: count(for: destination),
+                        isSelected: store.desktopDestination == destination
+                    ) {
+                        store.desktopDestination = destination
+                    }
+                    .accessibilityIdentifier("sidebar.\(destination.rawValue)")
+                }
             }
 
             Section("任务") {
@@ -741,29 +797,22 @@ struct SidebarView: View {
                         .tag(task.id)
                 }
             }
-
-            Section("Areas") {
-                SidebarStaticRow(title: "工作", systemImage: "target", count: 7, color: .blue)
-                SidebarStaticRow(title: "学习", systemImage: "target", count: 5, color: .blue)
-                SidebarStaticRow(title: "生活", systemImage: "target", count: 2, color: .blue)
-            }
-
-            Section("Tags") {
-                SidebarStaticRow(title: "深度工作", systemImage: "tag", count: 4, color: .red)
-                SidebarStaticRow(title: "会议", systemImage: "tag", count: 3, color: .red)
-                SidebarStaticRow(title: "阅读", systemImage: "tag", count: 3, color: .red)
-            }
         }
         .navigationTitle("Time Tracker")
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Image(systemName: "gearshape")
-                Text("设置")
-                Spacer()
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .padding()
+    }
+
+    private func count(for destination: TimeTrackerStore.DesktopDestination) -> Int? {
+        switch destination {
+        case .today:
+            return store.activeSegments.count
+        case .tasks:
+            return store.tasks.count
+        case .pomodoro:
+            return store.pomodoroRuns.filter { $0.state == .completed }.count
+        case .analytics:
+            return nil
+        case .settings:
+            return nil
         }
     }
 }
@@ -879,6 +928,33 @@ struct SidebarStaticRow: View {
     }
 }
 
+struct SidebarDestinationRow: View {
+    let destination: TimeTrackerStore.DesktopDestination
+    let count: Int?
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Label(destination.title, systemImage: destination.symbolName)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+                Spacer()
+                if let count {
+                    Text("\(count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .background(.thinMaterial, in: Capsule())
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+    }
+}
+
 struct InspectorView: View {
     @ObservedObject var store: TimeTrackerStore
 
@@ -948,11 +1024,11 @@ struct InspectorInfoGrid: View {
                 InfoRow(title: "路径", value: store.path(for: task))
                 InfoRow(title: "状态", value: activeStatusText, badge: activeStatusText == "Running")
                 InfoRow(title: "今日", value: DurationFormatter.compact(store.secondsForTaskToday(task)))
-                InfoRow(title: "本周", value: DurationFormatter.compact(store.secondsForTaskToday(task) + 2 * 3600 + 16 * 60))
+                InfoRow(title: "本周", value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
 
@@ -992,11 +1068,12 @@ struct NotesPanel: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Notes")
                 .font(.headline)
-            Text(task.notes ?? "完善三栏布局，强调时间线与 Inspector 的配合。")
+            Text(task.notes ?? "没有备注")
+                .foregroundStyle(task.notes == nil ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
 }
@@ -1013,11 +1090,12 @@ struct StatsPanel: View {
             HStack {
                 SmallStat(title: "今日番茄", value: "\(store.completedPomodoroCount)")
                 Divider()
-                SmallStat(title: "平均专注", value: DurationFormatter.compact(max(27 * 60, store.averageFocusSeconds)))
+                SmallStat(title: "平均专注", value: DurationFormatter.compact(store.averageFocusSeconds))
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .accessibilityIdentifier("pomodoro.active")
         }
     }
 }
@@ -1055,8 +1133,8 @@ struct PomodoroSettingsPanel: View {
                     .font(.subheadline)
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
 }
@@ -1071,7 +1149,12 @@ struct RecentSessionsPanel: View {
                 .font(.headline)
 
             VStack(spacing: 8) {
-                ForEach(store.timelineSegments.filter { $0.taskID == task.id }.prefix(2), id: \.id) { segment in
+                let recent = store.recentSegments(for: task, limit: 4)
+                if recent.isEmpty {
+                    EmptyStateRow(title: "还没有记录", icon: "clock")
+                }
+
+                ForEach(recent, id: \.id) { segment in
                     HStack {
                         Text(shortRange(segment))
                         Spacer()
@@ -1081,18 +1164,15 @@ struct RecentSessionsPanel: View {
                     .font(.subheadline.monospacedDigit())
                 }
 
-                HStack {
-                    Text("查看全部 (6)")
-                        .foregroundStyle(.blue)
-                    Spacer()
-                    Image(systemName: "chevron.right")
+                if store.recentSegments(for: task, limit: 100).count > recent.count {
+                    Text("还有更多记录")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                .font(.subheadline)
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
 
@@ -1185,60 +1265,67 @@ struct InspectorSummaryCard: View {
                 HStack {
                     SmallStat(title: "今日", value: DurationFormatter.compact(store.secondsForTaskToday(task)))
                     Divider()
-                    SmallStat(title: "本周", value: DurationFormatter.compact(store.secondsForTaskToday(task) + 2 * 3600 + 16 * 60))
+                    SmallStat(title: "本周", value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
                 }
 
-                Text(task.notes ?? "完善三栏布局，强调时间线与 Inspector 的配合。")
+                Text(task.notes ?? "没有备注")
                     .font(.subheadline)
+                    .foregroundStyle(task.notes == nil ? .secondary : .primary)
                     .foregroundStyle(.secondary)
             }
             .padding(18)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
 }
 
 struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var searchText = ""
+
+    private var searchResults: [TaskNode] {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        return store.tasks.filter { task in
+            task.title.localizedCaseInsensitiveContains(trimmed) ||
+            store.path(for: task).localizedCaseInsensitiveContains(trimmed) ||
+            (task.notes?.localizedCaseInsensitiveContains(trimmed) ?? false)
+        }
+    }
 
     var body: some View {
         List {
-            ForEach(store.rootTasks(), id: \.id) { task in
-                Section(task.title) {
-                    ForEach(store.children(of: task), id: \.id) { child in
-                        Button {
-                            store.selectedTaskID = child.id
-                        } label: {
-                            HStack {
-                                TaskIcon(task: child, size: 28)
-                                Text(child.title)
-                                Spacer()
-                                Text(DurationFormatter.compact(store.secondsForTaskToday(child)))
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                            }
-                        }
-                        .swipeActions {
-                            Button {
-                                store.startTask(child)
-                            } label: {
-                                Label("开始", systemImage: "play.fill")
-                            }
-                            .tint(.blue)
-
-                            Button {
-                                store.presentEditTask(child)
-                            } label: {
-                                Label("编辑", systemImage: "pencil")
-                            }
-                            .tint(.gray)
-                        }
+            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Section {
+                    ForEach(store.rootTasks(), id: \.id) { task in
+                        TaskManagementTreeRow(store: store, task: task, depth: 0)
                     }
+                } header: {
+                    Text("任务树")
+                } footer: {
+                    Text("所有任务都可以计时，也都可以包含子任务。")
+                }
+            } else if searchResults.isEmpty {
+                EmptyStateRow(title: "没有匹配的任务", icon: "magnifyingglass")
+            } else {
+                Section("搜索结果") {
+                    ForEach(searchResults, id: \.id) { task in
+                        TaskManagementFlatRow(store: store, task: task)
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    store.presentNewTask()
+                } label: {
+                    Label("新建根任务", systemImage: "plus")
                 }
             }
         }
         .navigationTitle("任务")
+        .searchable(text: $searchText, prompt: "搜索任务、路径或备注")
         .toolbar {
             Button {
                 store.presentNewTask()
@@ -1249,80 +1336,519 @@ struct TasksView: View {
     }
 }
 
-struct PomodoroView: View {
+struct TaskManagementTreeRow: View {
     @ObservedObject var store: TimeTrackerStore
+    let task: TaskNode
+    let depth: Int
 
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            Text(store.selectedTask?.title ?? "选择任务")
-                .font(.title2.weight(.semibold))
-
-            ZStack {
-                Circle()
-                    .stroke(Color.secondary.opacity(0.25), lineWidth: 8)
-                Circle()
-                    .trim(from: 0, to: 0.67)
-                    .stroke(.blue, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Text("25:00")
-                    .font(.system(size: 52, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
+        let children = store.children(of: task)
+        Group {
+            if children.isEmpty {
+                TaskManagementFlatRow(store: store, task: task, depth: depth)
+            } else {
+                DisclosureGroup {
+                    ForEach(children, id: \.id) { child in
+                        TaskManagementTreeRow(store: store, task: child, depth: depth + 1)
+                    }
+                } label: {
+                    TaskManagementFlatRow(store: store, task: task, depth: depth)
+                }
             }
-            .frame(width: 230, height: 230)
+        }
+    }
+}
+
+struct TaskManagementFlatRow: View {
+    @ObservedObject var store: TimeTrackerStore
+    let task: TaskNode
+    var depth: Int = 0
+
+    private var isRunning: Bool {
+        store.activeSegments.contains { $0.taskID == task.id }
+    }
+
+    var body: some View {
+        Button {
+            store.selectedTaskID = task.id
+        } label: {
+            HStack(spacing: 12) {
+                TaskIcon(task: task, size: 30)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(task.title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+
+                        if isRunning {
+                            Text("Running")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        }
+                    }
+
+                    Text(store.path(for: task))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(DurationFormatter.compact(store.secondsForTaskToday(task)))
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+
+                    let childCount = store.children(of: task).count
+                    if childCount > 0 {
+                        Text("\(childCount) 子任务")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.leading, CGFloat(depth) * 10)
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            TaskContextMenu(store: store, task: task)
+        }
+        .swipeActions(edge: .leading) {
+            Button {
+                store.startTask(task)
+            } label: {
+                Label("开始", systemImage: "play.fill")
+            }
+            .tint(.blue)
 
             Button {
-                store.startPomodoroForSelectedTask()
+                store.presentNewTask(parentID: task.id)
+            } label: {
+                Label("子任务", systemImage: "plus")
+            }
+            .tint(.green)
+        }
+        .swipeActions(edge: .trailing) {
+            Button {
+                store.presentEditTask(task)
+            } label: {
+                Label("编辑", systemImage: "pencil")
+            }
+            .tint(.gray)
+
+            Button(role: .destructive) {
+                store.deleteSelectedTask(taskID: task.id)
+            } label: {
+                Label("删除", systemImage: "trash")
+            }
+        }
+    }
+}
+
+struct PomodoroView: View {
+    @ObservedObject var store: TimeTrackerStore
+    @State private var preset: PomodoroPreset = .classic
+    @State private var targetRounds = 1
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                header
+
+                if let run = store.activePomodoroRun {
+                    ActivePomodoroCard(store: store, run: run)
+                } else {
+                    PomodoroSetupCard(store: store, preset: $preset, targetRounds: $targetRounds)
+                }
+
+                PomodoroLedgerCard(store: store)
+            }
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+            .padding()
+        }
+        .navigationTitle("番茄钟")
+        .background(AppColors.background)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("番茄钟")
+                .font(.largeTitle.bold())
+                .accessibilityIdentifier("pomodoro.title")
+            Text("专注时间会写入同一套 TimeSession / TimeSegment 账本。")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private enum PomodoroPreset: String, CaseIterable, Identifiable {
+    case classic = "25 / 5"
+    case deep = "50 / 10"
+    case quick = "15 / 3"
+
+    var id: String { rawValue }
+
+    var focusSeconds: Int {
+        switch self {
+        case .classic: return 25 * 60
+        case .deep: return 50 * 60
+        case .quick: return 15 * 60
+        }
+    }
+
+    var breakSeconds: Int {
+        switch self {
+        case .classic: return 5 * 60
+        case .deep: return 10 * 60
+        case .quick: return 3 * 60
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .classic: return "经典专注"
+        case .deep: return "深度工作"
+        case .quick: return "快速进入"
+        }
+    }
+}
+
+private struct PomodoroSetupCard: View {
+    @ObservedObject var store: TimeTrackerStore
+    @Binding var preset: PomodoroPreset
+    @Binding var targetRounds: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("开始前")
+                    .font(.headline)
+                Text("请选择任务。番茄钟不是孤立倒计时，完成后会生成真实时间记录。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Picker("任务", selection: Binding<UUID?>(
+                get: { store.selectedTaskID },
+                set: { store.selectedTaskID = $0 }
+            )) {
+                Text("选择任务").tag(UUID?.none)
+                ForEach(store.tasks) { task in
+                    Text(store.path(for: task)).tag(Optional(task.id))
+                }
+            }
+
+            Picker("模式", selection: $preset) {
+                ForEach(PomodoroPreset.allCases) { preset in
+                    Text(preset.rawValue).tag(preset)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Stepper(value: $targetRounds, in: 1...8) {
+                LabeledContent("目标轮次", value: "\(targetRounds)")
+            }
+
+            HStack {
+                PomodoroPlanMetric(title: "专注", value: DurationFormatter.compact(preset.focusSeconds))
+                PomodoroPlanMetric(title: "休息", value: DurationFormatter.compact(preset.breakSeconds))
+                PomodoroPlanMetric(title: "模式", value: preset.title)
+            }
+
+            Button {
+                store.startPomodoroForSelectedTask(
+                    focusSeconds: preset.focusSeconds,
+                    breakSeconds: preset.breakSeconds,
+                    targetRounds: targetRounds
+                )
             } label: {
                 Label("开始专注", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .padding(.horizontal, 36)
-
-            Spacer()
+            .disabled(store.selectedTaskID == nil)
+            .accessibilityIdentifier("pomodoro.startFocus")
         }
-        .navigationTitle("番茄钟")
-        .background(AppColors.background)
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+    }
+}
+
+private struct ActivePomodoroCard: View {
+    @ObservedObject var store: TimeTrackerStore
+    let run: PomodoroRun
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = store.pomodoroRemainingSeconds(for: run, now: context.date)
+            let progress = store.pomodoroProgress(for: run, now: context.date)
+            VStack(spacing: 20) {
+                VStack(spacing: 6) {
+                    Label(store.pomodoroStateLabel(for: run), systemImage: run.state == .focusing ? "flame.fill" : "pause.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(run.state == .focusing ? .blue : .orange)
+                    Text(store.taskTitle(for: run))
+                        .font(.title2.weight(.semibold))
+                    Text("\(run.completedFocusRounds) / \(run.targetRounds) 轮")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                ZStack {
+                    Circle()
+                        .stroke(Color.secondary.opacity(0.18), lineWidth: 10)
+                    Circle()
+                        .trim(from: 0, to: progress)
+                        .stroke(.blue, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    VStack(spacing: 6) {
+                        Text(DurationFormatter.clock(remaining))
+                            .font(.system(size: 52, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                        Text(remaining == 0 ? "可以完成本轮" : "剩余时间")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 240, height: 240)
+
+                HStack(spacing: 12) {
+                    Button {
+                        store.completeActivePomodoro()
+                    } label: {
+                        Label(remaining == 0 ? "完成本轮" : "提前完成", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button(role: .destructive) {
+                        store.cancelActivePomodoro()
+                    } label: {
+                        Label("取消", systemImage: "xmark.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .controlSize(.large)
+            }
+            .padding(22)
+            .frame(maxWidth: .infinity)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .accessibilityIdentifier("pomodoro.active")
+        }
+    }
+}
+
+private struct PomodoroPlanMetric: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+private struct PomodoroLedgerCard: View {
+    @ObservedObject var store: TimeTrackerStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("最近番茄")
+                .font(.headline)
+
+            if store.pomodoroRuns.isEmpty {
+                EmptyStateRow(title: "还没有番茄钟记录", icon: "timer")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(store.pomodoroRuns.prefix(5)) { run in
+                        HStack(spacing: 12) {
+                            Image(systemName: iconName(for: run.state))
+                                .foregroundStyle(color(for: run.state))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(store.taskTitle(for: run))
+                                    .font(.subheadline.weight(.medium))
+                                Text("\(store.pomodoroStateLabel(for: run)) · \(run.completedFocusRounds)/\(run.targetRounds) 轮")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(DurationFormatter.compact(run.focusSecondsPlanned))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 10)
+
+                        if run.id != store.pomodoroRuns.prefix(5).last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+    }
+
+    private func iconName(for state: PomodoroState) -> String {
+        switch state {
+        case .completed: return "checkmark.circle.fill"
+        case .cancelled: return "xmark.circle.fill"
+        case .focusing: return "flame.fill"
+        case .shortBreak, .longBreak: return "cup.and.saucer.fill"
+        case .planned: return "timer"
+        case .interrupted: return "pause.circle.fill"
+        }
+    }
+
+    private func color(for state: PomodoroState) -> Color {
+        switch state {
+        case .completed: return .green
+        case .cancelled: return .red
+        case .focusing: return .blue
+        case .shortBreak, .longBreak: return .orange
+        case .planned, .interrupted: return .secondary
+        }
     }
 }
 
 struct AnalyticsView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var range: AnalyticsRange = .today
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("概览")
-                    .font(.largeTitle.bold())
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let overview = store.analyticsOverview(for: range, now: context.date)
+            let daily = store.dailyBreakdown(range: range, now: context.date)
+            let hourly = store.hourlyBreakdown(for: context.date, now: context.date)
+            let tasks = store.taskBreakdown(range: range, now: context.date)
+            let overlaps = store.overlapSegments(range: range, now: context.date)
 
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                        AnalyticsMetric(title: "Wall Time", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), delta: "+12%")
-                        AnalyticsMetric(title: "Gross Time", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), delta: "+18%")
-                        AnalyticsMetric(title: "Overlap", value: DurationFormatter.compact(store.overlapSeconds(now: context.date)), delta: "透明")
-                        AnalyticsMetric(title: "番茄", value: "\(store.completedPomodoroCount)", delta: "+2")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("分析")
+                                .font(.largeTitle.bold())
+                            Text(range == .today ? "今天的时间如何流动，以及它被哪些任务占用。" : "按天复盘时间趋势、任务分布和重叠计时。")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Picker("Range", selection: $range) {
+                            ForEach(AnalyticsRange.allCases) { range in
+                                Text(range.rawValue).tag(range)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 280)
+                    }
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
+                        AnalyticsMetric(title: "Wall Time", value: DurationFormatter.compact(overview.wallSeconds), footnote: "去重后的真实时间")
+                        AnalyticsMetric(title: "Gross Time", value: DurationFormatter.compact(overview.grossSeconds), footnote: "任务时间相加")
+                        AnalyticsMetric(title: "Overlap", value: DurationFormatter.compact(overview.overlapSeconds), footnote: "并行计时差值")
+                        AnalyticsMetric(title: "Pomodoros", value: "\(overview.pomodoroCount)", footnote: "已完成专注片段")
+                    }
+
+                    if range == .today {
+                        TodayActivityCard(hourly: hourly)
+                        ScreenTimeBreakdownCard(tasks: tasks, totalSeconds: max(overview.grossSeconds, 1))
+                    } else {
+                        AnalyticsChartCard(title: "每日趋势", subtitle: "Week / Month 使用每日聚合；Today 会改用小时分布。") {
+                            Chart(daily) { point in
+                                BarMark(
+                                    x: .value("Day", point.label),
+                                    y: .value("Wall Minutes", point.wallSeconds / 60)
+                                )
+                                .foregroundStyle(.blue)
+
+                                LineMark(
+                                    x: .value("Day", point.label),
+                                    y: .value("Gross Minutes", point.grossSeconds / 60)
+                                )
+                                .foregroundStyle(.green)
+                                .symbol(.circle)
+                            }
+                            .chartYAxisLabel("分钟")
+                            .frame(height: 240)
+                        }
+                    }
+
+                    AnalyticsChartCard(title: "任务排行", subtitle: "按 Gross Time 排序，方便看清并行计时归属。") {
+                        if tasks.isEmpty {
+                            EmptyStateRow(title: "这个范围内还没有任务时间", icon: "chart.bar")
+                        } else {
+                            Chart(tasks.prefix(8).map { $0 }) { task in
+                                BarMark(
+                                    x: .value("Minutes", task.grossSeconds / 60),
+                                    y: .value("Task", task.title)
+                                )
+                                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+                            }
+                            .chartXAxisLabel("Gross 分钟")
+                            .frame(height: max(220, CGFloat(min(tasks.count, 8)) * 34))
+                        }
+                    }
+
+                    AnalyticsChartCard(title: "Top Tasks", subtitle: "任务路径保留，避免改名或移动后失去上下文。") {
+                        VStack(spacing: 0) {
+                            if tasks.isEmpty {
+                                EmptyStateRow(title: "暂无任务排行", icon: "list.number")
+                            } else {
+                                ForEach(tasks.prefix(6)) { task in
+                                    AnalyticsTaskRow(task: task, totalSeconds: max(overview.grossSeconds, 1))
+                                    if task.id != tasks.prefix(6).last?.id {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    AnalyticsChartCard(title: "Overlapping Sessions", subtitle: "这里解释 Gross Time 比 Wall Time 多出来的部分。") {
+                        VStack(spacing: 0) {
+                            if overlaps.isEmpty {
+                                EmptyStateRow(title: "没有发现并行计时", icon: "rectangle.2.swap")
+                            } else {
+                                ForEach(overlaps.prefix(6)) { overlap in
+                                    OverlapRow(overlap: overlap)
+                                    if overlap.id != overlaps.prefix(6).last?.id {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-
-                VStack(alignment: .leading) {
-                    Text("任务分布")
-                        .font(.headline)
-                    Chart(store.tasks.filter { store.secondsForTaskToday($0) > 0 }, id: \.id) { task in
-                        BarMark(
-                            x: .value("Time", store.secondsForTaskToday(task) / 60),
-                            y: .value("Task", task.title)
-                        )
-                        .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-                    }
-                    .frame(height: 260)
-                }
-                .padding(16)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("分析")
         .background(AppColors.background)
@@ -1332,7 +1858,7 @@ struct AnalyticsView: View {
 struct AnalyticsMetric: View {
     let title: String
     let value: String
-    let delta: String
+    let footnote: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1342,35 +1868,504 @@ struct AnalyticsMetric: View {
             Text(value)
                 .font(.title2.weight(.semibold))
                 .monospacedDigit()
-            Text(delta)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.green)
+            Text(footnote)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+    }
+}
+
+struct AnalyticsChartCard<Content: View>: View {
+    let title: String
+    var subtitle: String?
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.headline)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            content
+        }
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+    }
+}
+
+struct TodayActivityCard: View {
+    let hourly: [HourlyAnalyticsPoint]
+
+    var body: some View {
+        AnalyticsChartCard(title: "今天时间分布", subtitle: "每根柱代表一个小时；蓝色是 Wall Time，浅色背景提示并行计时产生的 Gross Time。") {
+            Chart(hourly) { point in
+                BarMark(
+                    x: .value("Hour", point.hour),
+                    y: .value("Gross Minutes", point.grossSeconds / 60),
+                    width: .fixed(8)
+                )
+                .foregroundStyle(Color.blue.opacity(0.16))
+
+                BarMark(
+                    x: .value("Hour", point.hour),
+                    y: .value("Wall Minutes", point.wallSeconds / 60),
+                    width: .fixed(8)
+                )
+                .foregroundStyle(.blue)
+            }
+            .chartXAxis {
+                AxisMarks(values: [0, 6, 12, 18, 23]) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let hour = value.as(Int.self) {
+                            Text(hour == 23 ? "24" : "\(hour)")
+                        }
+                    }
+                }
+            }
+            .chartYAxisLabel("分钟")
+            .frame(height: 220)
+        }
+    }
+}
+
+struct ScreenTimeBreakdownCard: View {
+    let tasks: [TaskAnalyticsPoint]
+    let totalSeconds: Int
+
+    private var visibleTasks: [TaskAnalyticsPoint] {
+        Array(tasks.prefix(6))
+    }
+
+    var body: some View {
+        AnalyticsChartCard(title: "任务使用时间", subtitle: "类似屏幕使用时间：先看总量，再看颜色分段和任务列表。") {
+            VStack(alignment: .leading, spacing: 14) {
+                if tasks.isEmpty {
+                    EmptyStateRow(title: "今天还没有任务时间", icon: "hourglass")
+                } else {
+                    screenTimeBar
+
+                    VStack(spacing: 0) {
+                        ForEach(visibleTasks) { task in
+                            ScreenTimeTaskRow(task: task, totalSeconds: totalSeconds)
+                            if task.id != visibleTasks.last?.id {
+                                Divider()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var screenTimeBar: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 3) {
+                ForEach(visibleTasks) { task in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Color(hex: task.colorHex) ?? .blue)
+                        .frame(width: segmentWidth(for: task, totalWidth: proxy.size.width))
+                }
+                if tasks.count > visibleTasks.count {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Color.secondary.opacity(0.25))
+                        .frame(width: 20)
+                }
+            }
+        }
+        .frame(height: 16)
+        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+    }
+
+    private func segmentWidth(for task: TaskAnalyticsPoint, totalWidth: CGFloat) -> CGFloat {
+        let ratio = CGFloat(task.grossSeconds) / CGFloat(max(totalSeconds, 1))
+        return max(10, totalWidth * ratio)
+    }
+}
+
+struct ScreenTimeTaskRow: View {
+    let task: TaskAnalyticsPoint
+    let totalSeconds: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(Color(hex: task.colorHex) ?? .blue)
+                .frame(width: 12, height: 12)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.title)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Text(task.path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(DurationFormatter.compact(task.grossSeconds))
+                    .font(.subheadline.monospacedDigit())
+                Text("\(Int((Double(task.grossSeconds) / Double(max(totalSeconds, 1))) * 100))%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+}
+
+struct AnalyticsTaskRow: View {
+    let task: TaskAnalyticsPoint
+    let totalSeconds: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hex: task.colorHex) ?? .blue)
+                .frame(width: 10, height: 10)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(task.title)
+                    .font(.subheadline.weight(.medium))
+                Text(task.path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(DurationFormatter.compact(task.grossSeconds))
+                    .font(.subheadline.monospacedDigit())
+                Text("\(Int(Double(task.grossSeconds) / Double(totalSeconds) * 100))%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+}
+
+struct OverlapRow: View {
+    let overlap: OverlapAnalyticsPoint
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "rectangle.2.swap")
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(overlap.firstTitle) + \(overlap.secondTitle)")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Text(timeRangeText)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text(DurationFormatter.compact(overlap.durationSeconds))
+                .font(.subheadline.monospacedDigit())
+        }
+        .padding(.vertical, 10)
+    }
+
+    private var timeRangeText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd HH:mm"
+        let endFormatter = DateFormatter()
+        endFormatter.dateFormat = "HH:mm"
+        return "\(formatter.string(from: overlap.start)) - \(endFormatter.string(from: overlap.end))"
     }
 }
 
 struct SettingsView: View {
     @ObservedObject var store: TimeTrackerStore
+    @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
+    @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
+    @AppStorage("AllowParallelTimers") private var allowParallelTimers = true
+    @AppStorage("ShowGrossAndWallTogether") private var showGrossAndWallTogether = true
+    @State private var isResetConfirmationPresented = false
 
     var body: some View {
-        Form {
-            Section("数据") {
-                LabeledContent("本地优先", value: "SwiftData")
-                LabeledContent("事实来源", value: "TimeSegment")
-                LabeledContent("同步字段", value: "deviceID / clientMutationID")
-            }
+        let sync = store.syncStatus
 
-            Section("操作") {
-                Button("手动补录 30 分钟") {
-                    store.presentManualTime()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("设置")
+                        .font(.largeTitle.bold())
+                        .accessibilityIdentifier("settings.title")
+                    Text("本地优先、可同步、可验证。设置项按系统偏好设置的方式排列，避免信息挤在一起。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                SettingsSectionCard(
+                    title: "同步",
+                    subtitle: sync.isCloudBacked ? "SwiftData 容器已以 CloudKit private database 打开。" : "当前使用本地存储；CloudKit 不可用时会自动回退。",
+                    symbol: "icloud.fill",
+                    tint: .blue
+                ) {
+                    SettingsValueRow(title: "存储", value: "SwiftData")
+                    SettingsValueRow(title: "事实来源", value: "TimeSegment")
+                    SettingsStatusRow(title: "当前模式", status: sync.storageStatusText, tint: sync.isCloudBacked ? .green : .orange)
+                    SettingsStatusRow(title: "CloudKit 账号", status: sync.accountStatus, tint: sync.accountStatus == "Apple ID 可用" ? .green : .orange)
+                    SettingsValueRow(title: "iCloud 容器", value: sync.containerIdentifier, monospaced: true)
+                    SettingsValueRow(title: "设备 ID", value: sync.deviceID, monospaced: true)
+                    if let error = sync.lastError {
+                        SettingsValueRow(title: "同步回退原因", value: error, monospaced: false, isWarning: true)
+                    }
+                    HStack {
+                        Spacer()
+                        Button {
+                            Task {
+                                await store.refreshCloudAccountStatus()
+                            }
+                        } label: {
+                            Label("重新检查 iCloud", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                SettingsSectionCard(
+                    title: "默认行为",
+                    subtitle: "这些偏好只影响新开始的流程，不会重写已有账本。",
+                    symbol: "slider.horizontal.3",
+                    tint: .indigo
+                ) {
+                    SettingsControlRow(title: "默认专注时长") {
+                        Stepper("\(defaultFocusMinutes) 分钟", value: $defaultFocusMinutes, in: 5...90, step: 5)
+                            .labelsHidden()
+                    }
+                    SettingsControlRow(title: "默认休息时长") {
+                        Stepper("\(defaultBreakMinutes) 分钟", value: $defaultBreakMinutes, in: 1...30, step: 1)
+                            .labelsHidden()
+                    }
+                    SettingsControlRow(title: "允许多个任务同时计时") {
+                        Toggle("", isOn: $allowParallelTimers)
+                            .labelsHidden()
+                    }
+                    SettingsControlRow(title: "同时显示 Wall / Gross Time") {
+                        Toggle("", isOn: $showGrossAndWallTogether)
+                            .labelsHidden()
+                    }
+                }
+
+                SettingsSectionCard(
+                    title: "账本概览",
+                    subtitle: "这些数字直接来自 SwiftData 原始记录，不是缓存摘要。",
+                    symbol: "list.bullet.rectangle.portrait.fill",
+                    tint: .teal
+                ) {
+                    SettingsValueRow(title: "任务数量", value: "\(store.tasks.count)")
+                    SettingsValueRow(title: "时间片段", value: "\(store.allSegments.count)")
+                    SettingsValueRow(title: "番茄钟记录", value: "\(store.pomodoroRuns.count)")
+                    SettingsValueRow(title: "已归档任务", value: "\(store.archivedTasks.count)")
+                }
+
+                SettingsSectionCard(
+                    title: "调试与演示",
+                    subtitle: "演示数据用于验证首页、时间线、重叠统计和分析图表。",
+                    symbol: "wrench.and.screwdriver.fill",
+                    tint: .gray
+                ) {
+                    SettingsActionRow(
+                        title: "手动补录时间",
+                        detail: "创建 source = manual 的 TimeSession 和 TimeSegment。",
+                        symbol: "calendar.badge.plus"
+                    ) {
+                        store.presentManualTime()
+                    }
+
+                    SettingsActionRow(
+                        title: "重建演示数据",
+                        detail: "覆盖当前本地数据并生成多日任务、番茄钟和重叠计时。",
+                        symbol: "sparkles"
+                    ) {
+                        isResetConfirmationPresented = true
+                    }
                 }
             }
+            .frame(maxWidth: 860, alignment: .leading)
+            .padding(24)
         }
+        .background(AppColors.background)
         .navigationTitle("设置")
+        .confirmationDialog("重建演示数据？", isPresented: $isResetConfirmationPresented, titleVisibility: .visible) {
+            Button("清空并生成演示数据", role: .destructive) {
+                store.replaceWithDemoData()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("这会删除当前本机 SwiftData 存储中的任务和时间片段，然后写入一组多日演示数据。")
+        }
+        .accessibilityIdentifier("settings.view")
+    }
+}
+
+struct SettingsSectionCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    let tint: Color
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(tint.gradient)
+                Image(systemName: symbol)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 38, height: 38)
+
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.headline)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                VStack(spacing: 0) {
+                    content
+                }
+                .background(.background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            }
+        }
+    }
+}
+
+struct SettingsValueRow: View {
+    let title: String
+    let value: String
+    var monospaced = false
+    var isWarning = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 18) {
+            Text(title)
+                .foregroundStyle(.primary)
+                .frame(width: 150, alignment: .leading)
+            Text(value)
+                .font(monospaced ? .caption.monospaced() : .body)
+                .foregroundStyle(isWarning ? .orange : .secondary)
+                .textSelection(.enabled)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, 164)
+        }
+    }
+}
+
+struct SettingsStatusRow: View {
+    let title: String
+    let status: String
+    let tint: Color
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 18) {
+            Text(title)
+                .frame(width: 150, alignment: .leading)
+            Text(status)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(tint)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(tint.opacity(0.12), in: Capsule())
+            Spacer()
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, 164)
+        }
+    }
+}
+
+struct SettingsControlRow<Control: View>: View {
+    let title: String
+    @ViewBuilder var control: Control
+
+    var body: some View {
+        HStack(spacing: 18) {
+            Text(title)
+                .font(.subheadline)
+                .frame(width: 220, alignment: .leading)
+            Spacer()
+            control
+                .frame(minWidth: 120, alignment: .trailing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, 234)
+        }
+    }
+}
+
+struct SettingsActionRow: View {
+    let title: String
+    let detail: String
+    let symbol: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.blue)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, 50)
+        }
     }
 }
 
@@ -1399,10 +2394,22 @@ struct DesktopModalLayer: View {
                 )
                 .frame(width: 620, height: 520)
                 .transition(.scale(scale: 0.98).combined(with: .opacity))
+            } else if let draft = store.segmentEditorDraft {
+                modalBackdrop
+                SegmentEditorPanel(
+                    store: store,
+                    initialDraft: draft,
+                    onCancel: { store.segmentEditorDraft = nil },
+                    onSave: { store.saveSegmentDraft($0) },
+                    onDelete: { store.deleteSegment($0) }
+                )
+                .frame(width: 620, height: 560)
+                .transition(.scale(scale: 0.98).combined(with: .opacity))
             }
         }
         .animation(.easeOut(duration: 0.16), value: store.taskEditorDraft?.id)
         .animation(.easeOut(duration: 0.16), value: store.manualTimeDraft?.id)
+        .animation(.easeOut(duration: 0.16), value: store.segmentEditorDraft?.id)
     }
 
     private var modalBackdrop: some View {
@@ -1411,6 +2418,7 @@ struct DesktopModalLayer: View {
             .onTapGesture {
                 store.taskEditorDraft = nil
                 store.manualTimeDraft = nil
+                store.segmentEditorDraft = nil
             }
     }
 }
@@ -1531,8 +2539,8 @@ struct TaskEditorPanel: View {
 
             modalFooter(canSave: !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
     }
 
@@ -1603,6 +2611,145 @@ struct ManualTimeSheet: View {
             }
         )
         .presentationDetents([.medium, .large])
+    }
+}
+
+struct SegmentEditorSheet: View {
+    @ObservedObject var store: TimeTrackerStore
+    @Environment(\.dismiss) private var dismiss
+    let initialDraft: SegmentEditorDraft
+
+    var body: some View {
+        SegmentEditorPanel(
+            store: store,
+            initialDraft: initialDraft,
+            onCancel: {
+                store.segmentEditorDraft = nil
+                dismiss()
+            },
+            onSave: { draft in
+                store.saveSegmentDraft(draft)
+                dismiss()
+            },
+            onDelete: { segmentID in
+                store.deleteSegment(segmentID)
+                dismiss()
+            }
+        )
+        .presentationDetents([.medium, .large])
+    }
+}
+
+struct SegmentEditorPanel: View {
+    @ObservedObject var store: TimeTrackerStore
+    @State private var draft: SegmentEditorDraft
+    let onCancel: () -> Void
+    let onSave: (SegmentEditorDraft) -> Void
+    let onDelete: (UUID) -> Void
+
+    init(
+        store: TimeTrackerStore,
+        initialDraft: SegmentEditorDraft,
+        onCancel: @escaping () -> Void,
+        onSave: @escaping (SegmentEditorDraft) -> Void,
+        onDelete: @escaping (UUID) -> Void
+    ) {
+        self.store = store
+        self.onCancel = onCancel
+        self.onSave = onSave
+        self.onDelete = onDelete
+        _draft = State(initialValue: initialDraft)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("编辑时间片段")
+                        .font(.title2.bold())
+                    Text("这会直接修正原始时间账本。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    onCancel()
+                } label: {
+                    Image(systemName: "xmark")
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding(18)
+
+            Form {
+                Section("归属") {
+                    Picker("任务", selection: taskBinding) {
+                        Text("请选择").tag(Optional<UUID>.none)
+                        ForEach(store.tasks, id: \.id) { task in
+                            Text(store.path(for: task)).tag(Optional(task.id))
+                        }
+                    }
+
+                    LabeledContent("来源", value: draft.source.rawValue)
+                }
+
+                Section("时间") {
+                    DatePicker("开始", selection: $draft.startedAt, displayedComponents: [.date, .hourAndMinute])
+                    Toggle("正在进行", isOn: $draft.isActive)
+                    if !draft.isActive {
+                        DatePicker("结束", selection: $draft.endedAt, displayedComponents: [.date, .hourAndMinute])
+                        LabeledContent("时长") {
+                            Text(DurationFormatter.compact(Int(draft.endedAt.timeIntervalSince(draft.startedAt))))
+                                .font(.headline.monospacedDigit())
+                                .foregroundStyle(draft.endedAt > draft.startedAt ? Color.primary : Color.red)
+                        }
+                    }
+                }
+
+                Section("备注") {
+                    TextField("这段时间的说明", text: $draft.note)
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        onDelete(draft.segmentID)
+                    } label: {
+                        Label("软删除时间片段", systemImage: "trash")
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Button("取消") {
+                    onCancel()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button("保存") {
+                    onSave(draft)
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(draft.taskID == nil || (!draft.isActive && draft.endedAt <= draft.startedAt))
+            }
+            .padding(18)
+            .background(.thinMaterial)
+        }
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
+    }
+
+    private var taskBinding: Binding<UUID?> {
+        Binding {
+            draft.taskID
+        } set: { value in
+            draft.taskID = value
+        }
     }
 }
 
@@ -1818,8 +2965,8 @@ struct ManualTimePanel: View {
             .padding(18)
             .background(.thinMaterial)
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
     }
 
@@ -1845,8 +2992,8 @@ struct FormSectionBox<Content: View>: View {
             content
         }
         .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppColors.border))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 }
 

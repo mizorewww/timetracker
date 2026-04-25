@@ -17,8 +17,11 @@ protocol TimeTrackingRepository {
     func activeSegments() throws -> [TimeSegment]
     func sessions() throws -> [TimeSession]
     func segments(from: Date, to: Date) throws -> [TimeSegment]
+    func allSegments() throws -> [TimeSegment]
     @discardableResult func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment
     func stopSegment(segmentID: UUID) throws
+    func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws
+    func softDeleteSegment(segmentID: UUID) throws
     func stopSession(sessionID: UUID) throws
     func pauseSession(sessionID: UUID) throws
     @discardableResult func resumeSession(sessionID: UUID) throws -> TimeSegment?
@@ -26,8 +29,11 @@ protocol TimeTrackingRepository {
 }
 
 protocol PomodoroRepository {
+    func runs() throws -> [PomodoroRun]
+    func activeRuns() throws -> [PomodoroRun]
     @discardableResult func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, targetRounds: Int) throws -> PomodoroRun
     func completeFocus(runID: UUID) throws
+    func cancel(runID: UUID) throws
 }
 
 @MainActor
@@ -214,6 +220,11 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
         }
     }
 
+    func allSegments() throws -> [TimeSegment] {
+        let descriptor = FetchDescriptor<TimeSegment>(sortBy: [SortDescriptor(\.startedAt)])
+        return try context.fetch(descriptor).filter { $0.deletedAt == nil }
+    }
+
     @discardableResult
     func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
         let session = TimeSession(taskID: taskID, source: source, deviceID: deviceID)
@@ -234,6 +245,45 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
            try activeSegments().contains(where: { $0.sessionID == session.id }) == false {
             session.endedAt = now
             session.updatedAt = now
+        }
+
+        try context.save()
+    }
+
+    func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws {
+        guard let segment = try segment(id: segmentID) else { return }
+        let now = Date()
+        segment.taskID = taskID
+        segment.startedAt = startedAt
+        segment.endedAt = endedAt
+        segment.updatedAt = now
+
+        if let session = try session(id: segment.sessionID) {
+            session.taskID = taskID
+            session.startedAt = try earliestStartedAt(for: session.id) ?? startedAt
+            session.endedAt = endedAt == nil ? nil : try latestEndedAt(for: session.id)
+            session.note = note
+            session.updatedAt = now
+        }
+
+        try context.save()
+    }
+
+    func softDeleteSegment(segmentID: UUID) throws {
+        guard let segment = try segment(id: segmentID) else { return }
+        let now = Date()
+        segment.deletedAt = now
+        segment.updatedAt = now
+
+        if let session = try session(id: segment.sessionID) {
+            let remaining = try segments(in: session.id).filter { $0.id != segment.id && $0.deletedAt == nil }
+            if remaining.isEmpty {
+                session.deletedAt = now
+                session.updatedAt = now
+            } else {
+                session.endedAt = remaining.contains { $0.endedAt == nil } ? nil : remaining.compactMap(\.endedAt).max()
+                session.updatedAt = now
+            }
         }
 
         try context.save()
@@ -288,6 +338,26 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
         return try context.fetch(descriptor).first { $0.id == id && $0.deletedAt == nil }
     }
 
+    private func segments(in sessionID: UUID) throws -> [TimeSegment] {
+        let descriptor = FetchDescriptor<TimeSegment>()
+        return try context.fetch(descriptor).filter { $0.sessionID == sessionID }
+    }
+
+    private func latestEndedAt(for sessionID: UUID) throws -> Date? {
+        let sessionSegments = try segments(in: sessionID).filter { $0.deletedAt == nil }
+        if sessionSegments.contains(where: { $0.endedAt == nil }) {
+            return nil
+        }
+        return sessionSegments.compactMap(\.endedAt).max()
+    }
+
+    private func earliestStartedAt(for sessionID: UUID) throws -> Date? {
+        try segments(in: sessionID)
+            .filter { $0.deletedAt == nil }
+            .map(\.startedAt)
+            .min()
+    }
+
     private func session(id: UUID) throws -> TimeSession? {
         let descriptor = FetchDescriptor<TimeSession>()
         return try context.fetch(descriptor).first { $0.id == id && $0.deletedAt == nil }
@@ -306,8 +376,34 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         self.deviceID = deviceID ?? DeviceIdentity.current
     }
 
+    func runs() throws -> [PomodoroRun] {
+        let descriptor = FetchDescriptor<PomodoroRun>(
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        return try context.fetch(descriptor).filter { $0.deletedAt == nil }
+    }
+
+    func activeRuns() throws -> [PomodoroRun] {
+        try runs().filter { run in
+            switch run.state {
+            case .planned, .focusing, .shortBreak, .longBreak, .interrupted:
+                return run.endedAt == nil
+            case .completed, .cancelled:
+                return false
+            }
+        }
+    }
+
     @discardableResult
     func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, targetRounds: Int) throws -> PomodoroRun {
+        for existingRun in try activeRuns().filter({ $0.state == .focusing }) {
+            if let sessionID = existingRun.sessionID {
+                try timeRepository.pauseSession(sessionID: sessionID)
+            }
+            existingRun.state = .interrupted
+            existingRun.updatedAt = Date()
+        }
+
         let run = PomodoroRun(taskID: taskID, focus: focusSeconds, breakSeconds: breakSeconds, targetRounds: targetRounds, deviceID: deviceID)
         let segment = try timeRepository.startTask(taskID: taskID, source: .pomodoro)
         run.sessionID = segment.sessionID
@@ -322,6 +418,7 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
     func completeFocus(runID: UUID) throws {
         let descriptor = FetchDescriptor<PomodoroRun>()
         guard let run = try context.fetch(descriptor).first(where: { $0.id == runID && $0.deletedAt == nil }) else { return }
+        guard run.state == .focusing || run.state == .interrupted else { return }
         if let sessionID = run.sessionID {
             try timeRepository.pauseSession(sessionID: sessionID)
         }
@@ -329,6 +426,19 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         run.state = run.completedFocusRounds >= run.targetRounds ? .completed : .shortBreak
         run.endedAt = run.state == .completed ? Date() : nil
         run.updatedAt = Date()
+        try context.save()
+    }
+
+    func cancel(runID: UUID) throws {
+        let descriptor = FetchDescriptor<PomodoroRun>()
+        guard let run = try context.fetch(descriptor).first(where: { $0.id == runID && $0.deletedAt == nil }) else { return }
+        if let sessionID = run.sessionID {
+            try timeRepository.stopSession(sessionID: sessionID)
+        }
+        run.state = .cancelled
+        run.endedAt = Date()
+        run.updatedAt = Date()
+        run.clientMutationID = UUID()
         try context.save()
     }
 }

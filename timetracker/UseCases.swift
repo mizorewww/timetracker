@@ -17,6 +17,28 @@ struct StopSegmentUseCase {
     }
 }
 
+struct UpdateSegmentUseCase {
+    let repository: TimeTrackingRepository
+
+    func execute(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws {
+        try repository.updateSegment(
+            segmentID: segmentID,
+            taskID: taskID,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            note: note
+        )
+    }
+}
+
+struct SoftDeleteSegmentUseCase {
+    let repository: TimeTrackingRepository
+
+    func execute(segmentID: UUID) throws {
+        try repository.softDeleteSegment(segmentID: segmentID)
+    }
+}
+
 struct StopSessionUseCase {
     let repository: TimeTrackingRepository
 
@@ -118,5 +140,21 @@ struct StartPomodoroUseCase {
     @discardableResult
     func execute(taskID: UUID, focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) throws -> PomodoroRun {
         try repository.startPomodoro(taskID: taskID, focusSeconds: focusSeconds, breakSeconds: breakSeconds, targetRounds: targetRounds)
+    }
+}
+
+struct CompletePomodoroFocusUseCase {
+    let repository: PomodoroRepository
+
+    func execute(runID: UUID) throws {
+        try repository.completeFocus(runID: runID)
+    }
+}
+
+struct CancelPomodoroUseCase {
+    let repository: PomodoroRepository
+
+    func execute(runID: UUID) throws {
+        try repository.cancel(runID: runID)
     }
 }

@@ -77,7 +77,10 @@ final class TimeTrackerStore: ObservableObject {
     private var syncObservers: [NSObjectProtocol] = []
     private var taskByID: [UUID: TaskNode] = [:]
     private var childrenByParentID: [UUID?: [TaskNode]] = [:]
+    private var taskPathByID: [UUID: String] = [:]
+    private var taskParentPathByID: [UUID: String] = [:]
     private var sortedTodaySegments: [TimeSegment] = []
+    private var scheduledSyncRefreshTask: Task<Void, Never>?
 
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
@@ -642,13 +645,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func path(for task: TaskNode) -> String {
-        var names = [task.title]
-        var cursor = task.parentID
-        while let parentID = cursor, let parent = self.task(for: parentID) {
-            names.insert(parent.title, at: 0)
-            cursor = parent.parentID
-        }
-        return names.joined(separator: " / ")
+        taskPathByID[task.id] ?? task.title
     }
 
     func displayTitle(for segment: TimeSegment) -> String {
@@ -656,14 +653,8 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func displayPath(for segment: TimeSegment) -> String {
-        guard let task = task(for: segment.taskID) else { return "Ledger" }
-        var parents: [String] = []
-        var cursor = task.parentID
-        while let parentID = cursor, let parent = self.task(for: parentID) {
-            parents.insert(parent.title, at: 0)
-            cursor = parent.parentID
-        }
-        return parents.joined(separator: " / ")
+        guard taskByID[segment.taskID] != nil else { return "Ledger" }
+        return taskParentPathByID[segment.taskID] ?? ""
     }
 
     func note(for segment: TimeSegment) -> String {
@@ -807,6 +798,34 @@ final class TimeTrackerStore: ObservableObject {
                 return first.sortOrder < second.sortOrder
             }
         }
+
+        var pathCache: [UUID: String] = [:]
+        var parentPathCache: [UUID: String] = [:]
+        var componentCache: [UUID: [String]] = [:]
+
+        func pathComponents(for task: TaskNode, visited: Set<UUID> = []) -> [String] {
+            if let cached = componentCache[task.id] {
+                return cached
+            }
+            guard !visited.contains(task.id) else { return [task.title] }
+            let components: [String]
+            if let parentID = task.parentID, let parent = taskByID[parentID] {
+                components = pathComponents(for: parent, visited: visited.union([task.id])) + [task.title]
+            } else {
+                components = [task.title]
+            }
+            componentCache[task.id] = components
+            return components
+        }
+
+        for task in tasks {
+            let components = pathComponents(for: task)
+            pathCache[task.id] = components.joined(separator: " / ")
+            parentPathCache[task.id] = components.dropLast().joined(separator: " / ")
+        }
+
+        taskPathByID = pathCache
+        taskParentPathByID = parentPathCache
     }
 
     private func segmentsForAnalytics(range: AnalyticsRange, now: Date) -> [TimeSegment] {
@@ -880,9 +899,18 @@ final class TimeTrackerStore: ObservableObject {
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 guard let store = self else { return }
                 Task { @MainActor in
-                    store.refreshQuietly()
+                    store.scheduleQuietRefresh()
                 }
             }
+        }
+    }
+
+    private func scheduleQuietRefresh() {
+        scheduledSyncRefreshTask?.cancel()
+        scheduledSyncRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            self?.refreshQuietly()
         }
     }
 
@@ -1116,11 +1144,12 @@ struct AnalyticsOverview {
 }
 
 struct DailyAnalyticsPoint: Identifiable {
-    let id = UUID()
     let date: Date
     let grossSeconds: Int
     let wallSeconds: Int
     let label: String
+
+    var id: Date { date }
 }
 
 struct HourlyAnalyticsPoint: Identifiable {
@@ -1146,11 +1175,14 @@ struct TaskAnalyticsPoint: Identifiable {
 }
 
 struct OverlapAnalyticsPoint: Identifiable {
-    let id = UUID()
     let start: Date
     let end: Date
     let firstTitle: String
     let secondTitle: String
+
+    var id: String {
+        "\(Int(start.timeIntervalSince1970))-\(Int(end.timeIntervalSince1970))-\(firstTitle)-\(secondTitle)"
+    }
 
     var durationSeconds: Int {
         max(0, Int(end.timeIntervalSince(start)))

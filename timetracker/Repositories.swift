@@ -227,7 +227,7 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
 
     @discardableResult
     func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
-        let session = TimeSession(taskID: taskID, source: source, deviceID: deviceID)
+        let session = TimeSession(taskID: taskID, source: source, deviceID: deviceID, titleSnapshot: try titleSnapshot(for: taskID))
         let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: source, deviceID: deviceID)
         context.insert(session)
         context.insert(segment)
@@ -323,7 +323,7 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
 
     @discardableResult
     func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
-        let session = TimeSession(taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt)
+        let session = TimeSession(taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt, titleSnapshot: try titleSnapshot(for: taskID))
         session.endedAt = endedAt
         session.note = note
         let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt, endedAt: endedAt)
@@ -361,6 +361,11 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
     private func session(id: UUID) throws -> TimeSession? {
         let descriptor = FetchDescriptor<TimeSession>()
         return try context.fetch(descriptor).first { $0.id == id && $0.deletedAt == nil }
+    }
+
+    private func titleSnapshot(for taskID: UUID) throws -> String? {
+        let descriptor = FetchDescriptor<TaskNode>()
+        return try context.fetch(descriptor).first { $0.id == taskID }?.title
     }
 }
 

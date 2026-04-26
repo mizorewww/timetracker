@@ -536,14 +536,15 @@ final class TimeTrackerStore: ObservableObject {
         let segments = segmentsForAnalytics(range: range, now: now)
         let grouped = Dictionary(grouping: segments, by: \.taskID)
         return grouped.compactMap { taskID, taskSegments -> TaskAnalyticsPoint? in
-            guard let task = task(for: taskID) else { return nil }
             let gross = aggregationService.totalSeconds(segments: taskSegments, mode: .gross, now: now)
             guard gross > 0 else { return nil }
+            let task = task(for: taskID)
+            let fallbackTitle = sessions.first { $0.taskID == taskID }?.titleSnapshot ?? "已删除任务"
             return TaskAnalyticsPoint(
                 taskID: taskID,
-                title: task.title,
-                path: path(for: task),
-                colorHex: task.colorHex,
+                title: task?.title ?? fallbackTitle,
+                path: task.map { path(for: $0) } ?? "历史账本 / 已删除任务",
+                colorHex: task?.colorHex,
                 grossSeconds: gross,
                 wallSeconds: aggregationService.totalSeconds(segments: taskSegments, mode: .wallClock, now: now)
             )

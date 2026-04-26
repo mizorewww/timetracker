@@ -7,31 +7,48 @@
 
 import SwiftUI
 import SwiftData
+#if os(macOS)
+import AppKit
+#endif
 
 @main
 struct timetrackerApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
+    #if os(macOS)
+    @NSApplicationDelegateAdaptor(TimeTrackerAppDelegate.self) private var appDelegate
+    #endif
+
+    var sharedModelContainer: ModelContainer = timetrackerApp.makeModelContainer()
+
+    static func makeUITestModelContainer() throws -> ModelContainer {
+        let configuration = ModelConfiguration(
+            "TimeTrackerUITests",
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            cloudKitDatabase: .none
+        )
+        AppCloudSync.recordUITesting()
+        return try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
+    }
+
+    private static var schema: Schema {
+        Schema([
             TaskNode.self,
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
             DailySummary.self
         ])
+    }
+
+    private static func makeModelContainer() -> ModelContainer {
+        let schema = Self.schema
         if CommandLine.arguments.contains("--uitesting") {
-            let configuration = ModelConfiguration(
-                "TimeTrackerUITests",
-                schema: schema,
-                isStoredInMemoryOnly: true,
-                cloudKitDatabase: .none
-            )
             do {
-                AppCloudSync.recordUITesting()
-                return try ModelContainer(
-                    for: schema,
-                    migrationPlan: TimeTrackerMigrationPlan.self,
-                    configurations: [configuration]
-                )
+                return try makeUITestModelContainer()
             } catch {
                 fatalError("Could not create UI test ModelContainer: \(error)")
             }
@@ -70,7 +87,7 @@ struct timetrackerApp: App {
                 fatalError("Could not create local ModelContainer: \(error)")
             }
         }
-    }()
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -91,6 +108,63 @@ struct timetrackerApp: App {
 }
 
 #if os(macOS)
+final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
+    private var uiTestWindow: NSWindow?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard CommandLine.arguments.contains("--uitesting") else { return }
+
+        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
+        NSApp.setActivationPolicy(.regular)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            NSApp.activate(ignoringOtherApps: true)
+            let hasVisibleContentWindow = NSApp.windows.contains { window in
+                window.isVisible && window.canBecomeMain && !window.title.isEmpty
+            }
+
+            if !hasVisibleContentWindow {
+                NSApp.sendAction(Selector(("newWindow:")), to: nil, from: nil)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                self.openUITestWindowIfNeeded()
+            }
+        }
+    }
+
+    private func openUITestWindowIfNeeded() {
+        guard CommandLine.arguments.contains("--uitesting") else { return }
+
+        let hasVisibleContentWindow = NSApp.windows.contains { window in
+            window.isVisible && window.canBecomeMain && !window.title.isEmpty
+        }
+        guard !hasVisibleContentWindow else { return }
+
+        do {
+            let container = try timetrackerApp.makeUITestModelContainer()
+            let rootView = ContentView()
+                .frame(minWidth: 1120, minHeight: 700)
+                .modelContainer(container)
+            let hostingController = NSHostingController(rootView: rootView)
+            let window = NSWindow(
+                contentRect: NSRect(x: 220, y: 160, width: 1240, height: 760),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Time Tracker"
+            window.contentViewController = hostingController
+            window.setFrameAutosaveName("TimeTrackerUITestWindow")
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            uiTestWindow = window
+        } catch {
+            assertionFailure("Could not create UI test fallback window: \(error)")
+        }
+    }
+}
+
 struct TimeTrackerCommands: Commands {
     @FocusedValue(\.newTaskAction) private var newTask
     @FocusedValue(\.manualTimeAction) private var manualTime

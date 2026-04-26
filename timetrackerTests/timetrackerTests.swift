@@ -186,6 +186,96 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func todayHourlyBreakdownSeparatesGrossAndWallForOverlap() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstTask = try taskRepository.createTask(title: "Coding", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Meeting", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfDay = calendar.startOfDay(for: now)
+
+        _ = try timeRepository.addManualSegment(
+            taskID: firstTask.id,
+            startedAt: startOfDay.addingTimeInterval(9 * 3_600),
+            endedAt: startOfDay.addingTimeInterval(10 * 3_600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: secondTask.id,
+            startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 30 * 60),
+            endedAt: startOfDay.addingTimeInterval(10 * 3_600),
+            note: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        let nine = store.hourlyBreakdown(for: now, now: now)[9]
+
+        #expect(nine.grossSeconds == 90 * 60)
+        #expect(nine.wallSeconds == 60 * 60)
+    }
+
+    @Test @MainActor
+    func taskBreakdownKeepsLedgerVisibleAfterTaskSoftDelete() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Client Research", kind: .task, parentID: nil, colorHex: "1677FF", iconName: nil)
+        let now = Date()
+
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: now.addingTimeInterval(-3_600),
+            endedAt: now.addingTimeInterval(-1_800),
+            note: "Billable"
+        )
+        try taskRepository.softDeleteTask(taskID: task.id)
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        let breakdown = store.taskBreakdown(range: .today, now: now)
+
+        #expect(breakdown.count == 1)
+        #expect(breakdown.first?.title == "Client Research")
+        #expect(breakdown.first?.path == "历史账本 / 已删除任务")
+        #expect(breakdown.first?.grossSeconds == 1_800)
+    }
+
+    @Test @MainActor
+    func manualSegmentStoresAndUpdatesSessionNote() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Writing", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let start = Date(timeIntervalSince1970: 10_000)
+        let segment = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(1_200),
+            note: "Initial note"
+        )
+
+        var session = try #require(try timeRepository.sessions().first { $0.id == segment.sessionID })
+        #expect(session.note == "Initial note")
+        #expect(session.titleSnapshot == "Writing")
+
+        try timeRepository.updateSegment(
+            segmentID: segment.id,
+            taskID: task.id,
+            startedAt: start.addingTimeInterval(60),
+            endedAt: start.addingTimeInterval(1_500),
+            note: "Corrected note"
+        )
+
+        session = try #require(try timeRepository.sessions().first { $0.id == segment.sessionID })
+        #expect(session.note == "Corrected note")
+        #expect(session.startedAt == start.addingTimeInterval(60))
+        #expect(session.endedAt == start.addingTimeInterval(1_500))
+    }
+
+    @Test @MainActor
     func pomodoroCreatesLedgerSegmentAndCompletesFocus() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -246,6 +336,49 @@ struct TimeTrackerTests {
         let overview = store.analyticsOverview(for: .week)
         #expect(overview.grossSeconds > overview.wallSeconds)
         #expect(store.taskBreakdown(range: .week).isEmpty == false)
+    }
+
+    @Test @MainActor
+    func replacingDemoDataClearsExistingLedgerBeforeSeeding() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let oldTask = try taskRepository.createTask(title: "Temporary Task", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        _ = try timeRepository.addManualSegment(
+            taskID: oldTask.id,
+            startedAt: Date().addingTimeInterval(-600),
+            endedAt: Date(),
+            note: nil
+        )
+
+        try SeedData.replaceWithDemoData(context: context)
+
+        #expect(try taskRepository.allNodes().contains { $0.title == "Temporary Task" } == false)
+        #expect(try timeRepository.allSegments().contains { $0.taskID == oldTask.id } == false)
+        #expect(try timeRepository.activeSegments().count == 2)
+    }
+
+    @Test @MainActor
+    func modelDefaultsSupportCloudKitCompatibleConstruction() throws {
+        let context = try makeContext()
+        let task = TaskNode(title: "Defaults", kind: .task, parentID: nil, deviceID: "test")
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test")
+        let segment = TimeSegment(sessionID: session.id, taskID: task.id, source: .timer, deviceID: "test")
+        let run = PomodoroRun(taskID: task.id, deviceID: "test")
+        let summary = DailySummary(date: Date(), taskID: task.id, grossSeconds: 0, wallClockSeconds: 0, pomodoroCount: 0, interruptionCount: 0)
+
+        context.insert(task)
+        context.insert(session)
+        context.insert(segment)
+        context.insert(run)
+        context.insert(summary)
+        try context.save()
+
+        #expect(task.id.uuidString.isEmpty == false)
+        #expect(task.status == .active)
+        #expect(segment.source == .timer)
+        #expect(run.state == .planned)
+        #expect(summary.version == 1)
     }
 
     @MainActor

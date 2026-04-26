@@ -10,6 +10,8 @@ The app should feel like a focused Apple productivity tool: clear hierarchy, nat
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
 - iPad and macOS may use a detail inspector, but the inspector should stay narrow and collapse when it is not useful.
 - The analytics timeline should separate graphic bars from task text. Bars show time, color, and icon; rows below carry labels.
+- When a section shows every item, do not show inert "All" links. A disclosure or navigation affordance should only appear when it performs an action.
+- Horizontal iPad/macOS Today action buttons should align to the metric panel height. If a metric card and action stack sit in the same row, their top and bottom edges should match.
 
 ## Terminology
 
@@ -30,3 +32,17 @@ Before merging UI work, verify:
 - iPad landscape Today with sidebar and optional inspector.
 - macOS narrow minimum window and full-screen window.
 - Long task names, localized strings, and dynamic timer text do not overlap.
+
+## Timeline Rules
+
+The Today analytics timeline uses a full-day display interval. It clips cross-day segments to today's bounds, then displays from today's 00:00 to today's 23:59:59. This avoids jumpy chart scale changes and makes time labels predictable across iPhone, iPad, and macOS.
+
+Bars should show only time position, duration, color, and the task symbol. Task title, parent path, and exact time range belong in rows below the chart. On iPhone, the timeline is vertical; on iPad and macOS, it is horizontal.
+
+Adjacent tasks with no visible gap should use different lanes so their bars remain distinguishable. The layout should still minimize lane count: if task A overlaps B and B overlaps C, but A does not overlap C, A and C can reuse the same lane.
+
+## Task Lists
+
+The task management screen must render each visible task as its own `List` row. Do not place an entire subtree inside one row, because iPhone context menus and swipe actions would attach to the parent subtree instead of the child task the user touched.
+
+Children are shown by flattening the expanded task tree into visible rows with indentation. This preserves infinite nesting while keeping native row behavior: tap to edit on iPhone, swipe to start/edit/delete, and context menu on each individual task.

@@ -70,25 +70,25 @@ enum SeedData {
 
         let app = try taskRepository.createTask(title: "Time Tracker App", kind: .project, parentID: nil, colorHex: "1677FF", iconName: "clock.badge.checkmark")
         let design = try taskRepository.createTask(title: "Design System", kind: .project, parentID: app.id, colorHex: "1677FF", iconName: "paintpalette")
-        let macDesign = try taskRepository.createTask(title: "设计 macOS UI", kind: .task, parentID: design.id, colorHex: "1677FF", iconName: "macwindow")
-        let iosDesign = try taskRepository.createTask(title: "设计 iOS UI", kind: .task, parentID: design.id, colorHex: "0EA5E9", iconName: "iphone")
+        let macDesign = try taskRepository.createTask(title: "Design macOS UI", kind: .task, parentID: design.id, colorHex: "1677FF", iconName: "macwindow")
+        let iosDesign = try taskRepository.createTask(title: "Design iOS UI", kind: .task, parentID: design.id, colorHex: "0EA5E9", iconName: "iphone")
         let implementation = try taskRepository.createTask(title: "Implementation", kind: .project, parentID: app.id, colorHex: "16A34A", iconName: "hammer")
-        let ledger = try taskRepository.createTask(title: "SwiftData 时间账本", kind: .task, parentID: implementation.id, colorHex: "16A34A", iconName: "externaldrive.badge.checkmark")
+        let ledger = try taskRepository.createTask(title: "SwiftData Ledger", kind: .task, parentID: implementation.id, colorHex: "16A34A", iconName: "externaldrive.badge.checkmark")
         let analytics = try taskRepository.createTask(title: "Analytics Charts", kind: .task, parentID: implementation.id, colorHex: "7C3AED", iconName: "chart.xyaxis.line")
         let sync = try taskRepository.createTask(title: "iCloud Sync", kind: .task, parentID: implementation.id, colorHex: "64748B", iconName: "icloud")
 
         let client = try taskRepository.createTask(title: "Client Work", kind: .project, parentID: nil, colorHex: "F97316", iconName: "briefcase")
-        let meeting = try taskRepository.createTask(title: "团队会议", kind: .task, parentID: client.id, colorHex: "F97316", iconName: "person.2")
-        let review = try taskRepository.createTask(title: "需求评审", kind: .task, parentID: client.id, colorHex: "EF4444", iconName: "doc.text.magnifyingglass")
+        let meeting = try taskRepository.createTask(title: "Team Meeting", kind: .task, parentID: client.id, colorHex: "F97316", iconName: "person.2")
+        let review = try taskRepository.createTask(title: "Requirements Review", kind: .task, parentID: client.id, colorHex: "EF4444", iconName: "doc.text.magnifyingglass")
 
         let study = try taskRepository.createTask(title: "Study", kind: .project, parentID: nil, colorHex: "16A34A", iconName: "book")
-        let hig = try taskRepository.createTask(title: "阅读 Apple HIG", kind: .task, parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
-        let swift = try taskRepository.createTask(title: "SwiftData 文档", kind: .task, parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
+        let hig = try taskRepository.createTask(title: "Read Apple HIG", kind: .task, parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
+        let swift = try taskRepository.createTask(title: "SwiftData Docs", kind: .task, parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
 
-        macDesign.notes = "收敛三栏布局，优先保证时间线、任务树和 Inspector 的信息密度。"
-        iosDesign.notes = "移动端优先快速开始、当前状态和可修正的今天时间线。"
-        analytics.notes = "所有统计从 TimeSegment 聚合，不把缓存当成事实。"
-        sync.notes = "SwiftData CloudKit private database，保留 deviceID 和 clientMutationID。"
+        macDesign.notes = "Refine the three-column layout and prioritize the timeline, task tree, and inspector density."
+        iosDesign.notes = "On mobile, prioritize quick start, current state, and an editable Today timeline."
+        analytics.notes = "All analytics aggregate from TimeSegment records; cached summaries are never the source of truth."
+        sync.notes = "SwiftData CloudKit private database with deviceID and clientMutationID kept for conflict handling."
 
         let focusTasks = [macDesign, iosDesign, ledger, analytics, sync, meeting, review, hig, swift]
         for dayOffset in stride(from: -13, through: 0, by: 1) {
@@ -114,7 +114,7 @@ enum SeedData {
                 source: .timer,
                 start: day.addingTimeInterval(TimeInterval((baseHour + 2) * 3600)),
                 duration: TimeInterval((30 + (dayIndex % 3) * 15) * 60),
-                note: "同步会议"
+                note: "Sync meeting"
             )
 
             try addSegment(
@@ -133,7 +133,7 @@ enum SeedData {
                     source: .timer,
                     start: day.addingTimeInterval(TimeInterval((baseHour + 3) * 3600 + 45 * 60)),
                     duration: TimeInterval(45 * 60),
-                    note: "重叠阅读，用于测试 Gross / Wall 差异"
+                    note: "Overlapping reading to test Gross and Wall differences"
                 )
             }
 
@@ -152,14 +152,14 @@ enum SeedData {
             taskID: macDesign.id,
             source: .pomodoro,
             start: now.addingTimeInterval(-84 * 60),
-            note: "当前专注"
+            note: "Current focus"
         )
         try addActiveSegment(
             context: context,
             taskID: hig.id,
             source: .timer,
             start: now.addingTimeInterval(-32 * 60),
-            note: "并行阅读"
+            note: "Parallel reading"
         )
 
         try context.save()

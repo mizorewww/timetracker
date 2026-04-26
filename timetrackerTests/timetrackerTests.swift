@@ -258,7 +258,7 @@ struct TimeTrackerTests {
 
         #expect(breakdown.count == 1)
         #expect(breakdown.first?.title == "Client Research")
-        #expect(breakdown.first?.path == "历史账本 / 已删除任务")
+        #expect(breakdown.first?.path == AppStrings.localized("task.deleted.path"))
         #expect(breakdown.first?.grossSeconds == 1_800)
     }
 
@@ -512,7 +512,7 @@ struct TimeTrackerTests {
 
         try repository.setTaskStatus(taskID: task.id, status: .completed)
         #expect(try repository.task(id: task.id)?.status == .completed)
-        #expect(TaskStatus.completed.displayName == "已完成")
+        #expect(TaskStatus.completed.displayName == AppStrings.localized("status.completed"))
     }
 
     @Test @MainActor
@@ -567,7 +567,7 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func timelineLayoutClipsCrossDaySegmentsAndPadsVisibleRange() {
+    func timelineLayoutClipsCrossDaySegmentsAndUsesWholeDayRange() {
         let day = Date(timeIntervalSince1970: 24 * 60 * 60)
         let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
         let crossDay = TimelineLayoutItem(
@@ -585,7 +585,7 @@ struct TimeTrackerTests {
 
         #expect(result.entries.first?.item.startedAt == day)
         #expect(result.displayInterval.start == day)
-        #expect(result.displayInterval.end == evening.endedAt)
+        #expect(result.displayInterval.end == dayInterval.end)
     }
 
     @Test
@@ -601,6 +601,23 @@ struct TimeTrackerTests {
         let reference = try #require(keySets.first)
         for keys in keySets.dropFirst() {
             #expect(keys == reference)
+        }
+    }
+
+    @Test
+    func swiftSourcesDoNotContainHardCodedChineseText() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceRoot = projectRoot.appending(path: "timetracker")
+        let enumerator = try #require(FileManager.default.enumerator(at: sourceRoot, includingPropertiesForKeys: nil))
+        let swiftFiles = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        let chinesePattern = try NSRegularExpression(pattern: "\\p{Han}")
+
+        for file in swiftFiles {
+            let source = try String(contentsOf: file, encoding: .utf8)
+            let range = NSRange(source.startIndex..<source.endIndex, in: source)
+            #expect(chinesePattern.firstMatch(in: source, range: range) == nil, "Move user-facing Chinese text into Localizable.strings: \(file.lastPathComponent)")
         }
     }
 

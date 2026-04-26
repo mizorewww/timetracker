@@ -10,11 +10,14 @@ User-facing copy should be added to the `Localizable.strings` files under each `
 
 ## Rules
 
-- Do not hard-code new user-facing strings in views unless they are temporary during active development.
+- Do not hard-code user-facing Chinese text in Swift source. The unit test `swiftSourcesDoNotContainHardCodedChineseText` enforces this.
+- Do not add a new localized key to only one language. The unit test `localizationFilesExposeTheSameKeys` requires all locale files to expose the same keys.
 - Prefer concise labels that fit on iPhone.
 - Avoid implementation terms in everyday UI. Use ledger terminology only when the user is editing historical records or reading data-management settings.
 - When adding a key, add it to all three languages in the same change.
 
 ## Current Migration State
 
-The first refactor pass localizes the main navigation, Today surface, primary actions, key menus, and app display name. Older strings in deep forms still need to be migrated gradually.
+The refactor branch localizes navigation, Today, Tasks, Pomodoro, Analytics, Settings, task editing, segment editing, manual time entry, Live Activity fallbacks, sync status, and core validation errors.
+
+Demo data is seeded with ASCII titles and notes so it does not bypass localization tests. Future demo content that must be localized should be produced through localized string keys at seed time.

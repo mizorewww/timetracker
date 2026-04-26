@@ -38,7 +38,7 @@ final class LiveActivityCoordinator {
         let task = tasks.first { $0.id == primary.taskID }
         let state = TimeTrackingActivityAttributes.ContentState(
             taskTitle: task?.title ?? primary.titleSnapshotFallback,
-            taskPath: task.map { displayPath(for: $0, tasks: tasks) } ?? "时间记录",
+            taskPath: task.map { displayPath(for: $0, tasks: tasks) } ?? AppStrings.localized("live.timer.defaultPath"),
             iconName: task?.iconName ?? "timer",
             colorHex: task?.colorHex ?? "0A84FF",
             startedAt: primary.startedAt,
@@ -80,7 +80,7 @@ final class LiveActivityCoordinator {
     private func endAllActivities() async {
         let content = ActivityContent(
             state: TimeTrackingActivityAttributes.ContentState(
-                taskTitle: "计时已结束",
+                taskTitle: AppStrings.localized("live.timer.endedTitle"),
                 taskPath: "",
                 iconName: "checkmark",
                 colorHex: "34C759",
@@ -101,13 +101,13 @@ final class LiveActivityCoordinator {
             parentNames.insert(parent.title, at: 0)
             cursor = parent.parentID
         }
-        return parentNames.isEmpty ? "根任务" : parentNames.joined(separator: " / ")
+        return parentNames.isEmpty ? AppStrings.rootTask : parentNames.joined(separator: " / ")
     }
 }
 
 private extension TimeSegment {
     var titleSnapshotFallback: String {
-        "正在计时"
+        AppStrings.activeTimers
     }
 }
 

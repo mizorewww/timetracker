@@ -49,3 +49,15 @@ timetracker/Shared
 ```
 
 Pure layout and formatting logic belongs in `timetracker/Shared` with unit tests.
+
+## Shared UI Logic
+
+`TimelineLayoutEngine` owns Today timeline clipping, display interval, and lane allocation. Keep this logic out of SwiftUI view bodies so chart behavior can be tested without launching the app.
+
+Task tree display should be treated as derived UI state. The durable model remains `TaskNode.parentID/path/depth/sortOrder`; the Tasks screen derives a flat list of currently visible rows from that tree so native list interactions remain reliable on iPhone.
+
+## Feature Status
+
+The first app version includes local SwiftData persistence, task creation/editing/status, soft delete/archive, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, analytics overview, CSV export, demo data management, database optimization, iCloud configuration, and Live Activity display for running timers.
+
+Future work should preserve the ledger contract: every timer, pomodoro, manual entry, widget action, Live Activity action, or Watch command must ultimately create or update `TimeSession` and `TimeSegment` records through shared use cases.

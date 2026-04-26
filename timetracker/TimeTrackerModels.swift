@@ -311,11 +311,11 @@ extension TaskNode {
 extension TaskStatus {
     var displayName: String {
         switch self {
-        case .planned: return "计划"
-        case .active: return "未完成"
-        case .paused: return "暂停"
-        case .completed: return "已完成"
-        case .archived: return "已归档"
+        case .planned: return AppStrings.localized("status.planned")
+        case .active: return AppStrings.localized("status.active")
+        case .paused: return AppStrings.paused
+        case .completed: return AppStrings.localized("status.completed")
+        case .archived: return AppStrings.localized("status.archived")
         }
     }
 

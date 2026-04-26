@@ -27,9 +27,6 @@ struct TimelineLayoutResult: Equatable {
 }
 
 enum TimelineLayoutEngine {
-    static let minimumDisplayDuration: TimeInterval = 2 * 60 * 60
-    static let leadingPadding: TimeInterval = 30 * 60
-
     static func layout(
         items: [TimelineLayoutItem],
         dayInterval: DateInterval,
@@ -71,24 +68,7 @@ enum TimelineLayoutEngine {
         for items: [TimelineLayoutItem],
         dayInterval: DateInterval
     ) -> DateInterval {
-        guard !items.isEmpty else {
-            return dayInterval
-        }
-
-        let earliest = items.map(\.startedAt).min() ?? dayInterval.start
-        let latest = items.map(\.endedAt).max() ?? dayInterval.end
-        let start = max(dayInterval.start, earliest.addingTimeInterval(-leadingPadding))
-        var end = min(dayInterval.end, latest)
-
-        if end.timeIntervalSince(start) < minimumDisplayDuration {
-            end = min(dayInterval.end, start.addingTimeInterval(minimumDisplayDuration))
-        }
-
-        if end <= start {
-            end = min(dayInterval.end, start.addingTimeInterval(60 * 60))
-        }
-
-        return DateInterval(start: start, end: end)
+        dayInterval
     }
 
     private static func firstAvailableLane(

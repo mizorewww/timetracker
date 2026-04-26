@@ -258,7 +258,7 @@ struct TimeTrackerTests {
 
         #expect(breakdown.count == 1)
         #expect(breakdown.first?.title == "Client Research")
-        #expect(breakdown.first?.path == "历史账本 / 已删除任务")
+        #expect(breakdown.first?.path == AppStrings.localized("task.deleted.path"))
         #expect(breakdown.first?.grossSeconds == 1_800)
     }
 
@@ -512,7 +512,7 @@ struct TimeTrackerTests {
 
         try repository.setTaskStatus(taskID: task.id, status: .completed)
         #expect(try repository.task(id: task.id)?.status == .completed)
-        #expect(TaskStatus.completed.displayName == "已完成")
+        #expect(TaskStatus.completed.displayName == AppStrings.localized("status.completed"))
     }
 
     @Test @MainActor
@@ -537,6 +537,109 @@ struct TimeTrackerTests {
         #expect(csv.contains("CSV Task"))
         #expect(csv.contains("900"))
         #expect(csv.contains("Export note"))
+    }
+
+    @Test
+    func timelineLayoutUsesMinimumNumberOfLanes() {
+        let day = Date(timeIntervalSince1970: 0)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let first = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(12 * 60), endedAt: day.addingTimeInterval(34 * 60))
+        let second = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(20 * 60), endedAt: day.addingTimeInterval(50 * 60))
+        let third = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(40 * 60), endedAt: day.addingTimeInterval(55 * 60))
+
+        let result = TimelineLayoutEngine.layout(items: [first, second, third], dayInterval: dayInterval)
+
+        #expect(result.laneCount == 2)
+        #expect(result.entries.map(\.lane) == [0, 1, 0])
+    }
+
+    @Test
+    func timelineLayoutKeepsBackToBackSegmentsVisuallySeparated() {
+        let day = Date(timeIntervalSince1970: 0)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let first = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(9 * 3600), endedAt: day.addingTimeInterval(10 * 3600))
+        let second = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(10 * 3600), endedAt: day.addingTimeInterval(11 * 3600))
+
+        let result = TimelineLayoutEngine.layout(items: [first, second], dayInterval: dayInterval)
+
+        #expect(result.laneCount == 2)
+        #expect(result.entries.map(\.lane) == [0, 1])
+    }
+
+    @Test
+    func timelineLayoutClipsCrossDaySegmentsAndUsesVisibleRange() {
+        let day = Date(timeIntervalSince1970: 24 * 60 * 60)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let crossDay = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(-45 * 60),
+            endedAt: day.addingTimeInterval(20 * 60)
+        )
+        let evening = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(20 * 3600),
+            endedAt: day.addingTimeInterval(21 * 3600)
+        )
+
+        let result = TimelineLayoutEngine.layout(items: [crossDay, evening], dayInterval: dayInterval)
+
+        #expect(result.entries.first?.item.startedAt == day)
+        #expect(result.displayInterval.start == day)
+        #expect(result.displayInterval.end == evening.endedAt)
+    }
+
+    @Test
+    func timelineLayoutUsesFirstAndLastVisibleSegmentBounds() {
+        let day = Date(timeIntervalSince1970: 48 * 60 * 60)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let morning = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(9 * 3600),
+            endedAt: day.addingTimeInterval(10 * 3600)
+        )
+        let afternoon = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(14 * 3600),
+            endedAt: day.addingTimeInterval(16 * 3600)
+        )
+
+        let result = TimelineLayoutEngine.layout(items: [afternoon, morning], dayInterval: dayInterval)
+
+        #expect(result.displayInterval.start == morning.startedAt)
+        #expect(result.displayInterval.end == afternoon.endedAt)
+    }
+
+    @Test
+    func localizationFilesExposeTheSameKeys() throws {
+        let locales = ["en", "zh-Hans", "zh-Hant"]
+        let keySets = try locales.map { locale -> Set<String> in
+            let path = try #require(Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "\(locale).lproj"))
+            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
+            #expect(dictionary.isEmpty == false)
+            return Set(dictionary.keys)
+        }
+
+        let reference = try #require(keySets.first)
+        for keys in keySets.dropFirst() {
+            #expect(keys == reference)
+        }
+    }
+
+    @Test
+    func swiftSourcesDoNotContainHardCodedChineseText() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceRoot = projectRoot.appending(path: "timetracker")
+        let enumerator = try #require(FileManager.default.enumerator(at: sourceRoot, includingPropertiesForKeys: nil))
+        let swiftFiles = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        let chinesePattern = try NSRegularExpression(pattern: "\\p{Han}")
+
+        for file in swiftFiles {
+            let source = try String(contentsOf: file, encoding: .utf8)
+            let range = NSRange(source.startIndex..<source.endIndex, in: source)
+            #expect(chinesePattern.firstMatch(in: source, range: range) == nil, "Move user-facing Chinese text into Localizable.strings: \(file.lastPathComponent)")
+        }
     }
 
     @MainActor

@@ -25,7 +25,7 @@ enum AppCloudSync {
     }
 
     static var accountStatus: String {
-        UserDefaults.standard.string(forKey: accountStatusKey) ?? "未检查"
+        UserDefaults.standard.string(forKey: accountStatusKey) ?? AppStrings.localized("sync.unchecked")
     }
 
     static func recordCloudKitEnabled() {
@@ -35,7 +35,7 @@ enum AppCloudSync {
 
     static func recordCloudKitDisabledByUser() {
         UserDefaults.standard.set("Local", forKey: modeKey)
-        UserDefaults.standard.set("用户已关闭 iCloud 同步，下次启动继续使用本地存储。", forKey: accountStatusKey)
+        UserDefaults.standard.set(AppStrings.localized("sync.disabledMessage"), forKey: accountStatusKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
     }
 
@@ -47,16 +47,16 @@ enum AppCloudSync {
     static func recordEmergencyInMemoryFallback(error: Error) {
         UserDefaults.standard.set("In-memory fallback", forKey: modeKey)
         UserDefaults.standard.set(
-            "持久化存储启动失败，已临时使用内存存储：\(error.localizedDescription)",
+            String(format: AppStrings.localized("sync.temporaryStoreError"), error.localizedDescription),
             forKey: errorKey
         )
-        UserDefaults.standard.set("本次启动使用临时存储", forKey: accountStatusKey)
+        UserDefaults.standard.set(AppStrings.localized("sync.temporaryStore"), forKey: accountStatusKey)
     }
 
     static func recordUITesting() {
         UserDefaults.standard.set("UI Test", forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
-        UserDefaults.standard.set("UI 测试内存存储", forKey: accountStatusKey)
+        UserDefaults.standard.set(AppStrings.localized("sync.uiTestStore"), forKey: accountStatusKey)
     }
 
     static func refreshAccountStatus() async {
@@ -66,17 +66,17 @@ enum AppCloudSync {
             let status = try await container.accountStatus()
             switch status {
             case .available:
-                statusText = "Apple ID 可用"
+                statusText = AppStrings.localized("sync.account.available")
             case .noAccount:
-                statusText = "未登录 iCloud"
+                statusText = AppStrings.localized("sync.account.noAccount")
             case .restricted:
-                statusText = "iCloud 受限制"
+                statusText = AppStrings.localized("sync.account.restricted")
             case .couldNotDetermine:
-                statusText = "无法确定"
+                statusText = AppStrings.localized("sync.account.couldNotDetermine")
             case .temporarilyUnavailable:
-                statusText = "暂时不可用"
+                statusText = AppStrings.localized("sync.account.temporarilyUnavailable")
             @unknown default:
-                statusText = "未知状态"
+                statusText = AppStrings.localized("sync.account.unknown")
             }
         } catch {
             statusText = error.localizedDescription

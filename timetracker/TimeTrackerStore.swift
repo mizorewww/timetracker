@@ -42,11 +42,11 @@ final class TimeTrackerStore: ObservableObject {
 
         var title: String {
             switch self {
-            case .today: return "今日"
-            case .tasks: return "任务"
-            case .pomodoro: return "番茄钟"
-            case .analytics: return "分析"
-            case .settings: return "设置"
+            case .today: return AppStrings.today
+            case .tasks: return AppStrings.tasks
+            case .pomodoro: return AppStrings.pomodoro
+            case .analytics: return AppStrings.analytics
+            case .settings: return AppStrings.settings
             }
         }
 
@@ -106,8 +106,8 @@ final class TimeTrackerStore: ObservableObject {
     func forceCloudSyncRefresh() async -> String {
         await refreshCloudAccountStatus()
         refreshQuietly()
-        let storage = syncStatus.isCloudBacked ? "iCloud 存储" : "本地存储"
-        return "\(storage)：\(syncStatus.accountStatus)。已刷新本机视图；若另一台设备刚写入，系统完成导入后这里会自动更新。"
+        let storage = syncStatus.isCloudBacked ? AppStrings.localized("sync.storage.iCloud") : AppStrings.localized("sync.storage.local")
+        return String(format: AppStrings.localized("sync.refreshSummary"), storage, syncStatus.accountStatus)
     }
 
     func refreshCloudAccountStatus() async {
@@ -119,7 +119,7 @@ final class TimeTrackerStore: ObservableObject {
         perform {
             guard let modelContext else { throw StoreError.notConfigured }
             let event = CountdownEvent(
-                title: "新事件",
+                title: AppStrings.localized("task.newEvent"),
                 date: Date().addingTimeInterval(30 * 24 * 60 * 60),
                 deviceID: DeviceIdentity.current
             )
@@ -241,7 +241,7 @@ final class TimeTrackerStore: ObservableObject {
     func saveTaskDraft(_ draft: TaskEditorDraft) {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
-            errorMessage = "任务名称不能为空。"
+            errorMessage = AppStrings.localized("task.nameRequired")
             return
         }
 
@@ -323,11 +323,11 @@ final class TimeTrackerStore: ObservableObject {
 
     func saveManualTimeDraft(_ draft: ManualTimeDraft) {
         guard let taskID = draft.taskID else {
-            errorMessage = "请选择任务。"
+            errorMessage = AppStrings.localized("task.selectRequired")
             return
         }
         guard draft.endedAt > draft.startedAt else {
-            errorMessage = "结束时间必须晚于开始时间。"
+            errorMessage = AppStrings.localized("time.endAfterStart")
             return
         }
 
@@ -348,13 +348,13 @@ final class TimeTrackerStore: ObservableObject {
 
     func saveSegmentDraft(_ draft: SegmentEditorDraft) {
         guard let taskID = draft.taskID else {
-            errorMessage = "请选择任务。"
+            errorMessage = AppStrings.localized("task.selectRequired")
             return
         }
 
         let endedAt = draft.isActive ? nil : draft.endedAt
         if let endedAt, endedAt <= draft.startedAt {
-            errorMessage = "结束时间必须晚于开始时间。"
+            errorMessage = AppStrings.localized("time.endAfterStart")
             return
         }
 
@@ -463,7 +463,7 @@ final class TimeTrackerStore: ObservableObject {
 
     func startPomodoroForSelectedTask(focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) {
         guard let selectedTaskID else {
-            errorMessage = "请选择一个任务再开始番茄钟。"
+            errorMessage = AppStrings.localized("task.selectBeforePomodoro")
             return
         }
         perform {
@@ -730,11 +730,11 @@ final class TimeTrackerStore: ObservableObject {
             let gross = aggregationService.totalSeconds(segments: taskSegments, mode: .gross, now: now)
             guard gross > 0 else { return nil }
             let task = task(for: taskID)
-            let fallbackTitle = sessions.first { $0.taskID == taskID }?.titleSnapshot ?? "已删除任务"
+            let fallbackTitle = sessions.first { $0.taskID == taskID }?.titleSnapshot ?? AppStrings.localized("task.deleted")
             return TaskAnalyticsPoint(
                 taskID: taskID,
                 title: task?.title ?? fallbackTitle,
-                path: task.map { path(for: $0) } ?? "历史账本 / 已删除任务",
+                path: task.map { path(for: $0) } ?? AppStrings.localized("task.deleted.path"),
                 colorHex: task?.colorHex,
                 grossSeconds: gross,
                 wallSeconds: aggregationService.totalSeconds(segments: taskSegments, mode: .wallClock, now: now)

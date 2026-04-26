@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -182,28 +182,6 @@
 			productReference = D41D8E8E2F9CC4B50024913B /* timetracker.app */;
 			productType = "com.apple.product-type.application";
 		};
-		E20000000000000000000007 /* timetrackerLiveActivityExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E2000000000000000000000B /* Build configuration list for PBXNativeTarget "timetrackerLiveActivityExtension" */;
-			buildPhases = (
-				E20000000000000000000008 /* Sources */,
-				E20000000000000000000009 /* Frameworks */,
-				E2000000000000000000000A /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				E20000000000000000000006 /* timetrackerLiveActivityExtension */,
-			);
-			name = timetrackerLiveActivityExtension;
-			packageProductDependencies = (
-			);
-			productName = timetrackerLiveActivityExtension;
-			productReference = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		D41D8E9E2F9CC4B60024913B /* timetrackerTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D41D8EB72F9CC4B60024913B /* Build configuration list for PBXNativeTarget "timetrackerTests" */;
@@ -250,6 +228,28 @@
 			productReference = D41D8EA92F9CC4B60024913B /* timetrackerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		E20000000000000000000007 /* timetrackerLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E2000000000000000000000B /* Build configuration list for PBXNativeTarget "timetrackerLiveActivityExtension" */;
+			buildPhases = (
+				E20000000000000000000008 /* Sources */,
+				E20000000000000000000009 /* Frameworks */,
+				E2000000000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E20000000000000000000006 /* timetrackerLiveActivityExtension */,
+			);
+			name = timetrackerLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = timetrackerLiveActivityExtension;
+			productReference = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -263,9 +263,6 @@
 					D41D8E8D2F9CC4B50024913B = {
 						CreatedOnToolsVersion = 26.3;
 					};
-					E20000000000000000000007 = {
-						CreatedOnToolsVersion = 26.3;
-					};
 					D41D8E9E2F9CC4B60024913B = {
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = D41D8E8D2F9CC4B50024913B;
@@ -273,6 +270,9 @@
 					D41D8EA82F9CC4B60024913B = {
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = D41D8E8D2F9CC4B50024913B;
+					};
+					E20000000000000000000007 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -282,6 +282,8 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hant",
+				"zh-Hans",
 			);
 			mainGroup = D41D8E852F9CC4B50024913B;
 			minimizedProjectReferenceProxies = 1;
@@ -470,68 +472,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Release;
-		};
-		E2000000000000000000000C /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = LT98S43NKA;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		E2000000000000000000000D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = LT98S43NKA;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -753,6 +693,68 @@
 			};
 			name = Release;
 		};
+		E2000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LT98S43NKA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E2000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LT98S43NKA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -774,15 +776,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E2000000000000000000000B /* Build configuration list for PBXNativeTarget "timetrackerLiveActivityExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E2000000000000000000000C /* Debug */,
-				E2000000000000000000000D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		D41D8EB72F9CC4B60024913B /* Build configuration list for PBXNativeTarget "timetrackerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -797,6 +790,15 @@
 			buildConfigurations = (
 				D41D8EBB2F9CC4B60024913B /* Debug */,
 				D41D8EBC2F9CC4B60024913B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E2000000000000000000000B /* Build configuration list for PBXNativeTarget "timetrackerLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2000000000000000000000C /* Debug */,
+				E2000000000000000000000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -21,13 +21,16 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
-        XCTAssertTrue(app.staticTexts["Active Timers"].exists)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.activeTimers"].waitForExistence(timeout: 2) ||
+            anyStaticText(["正在计时", "正在計時", "Active Timers"], in: app)
+        )
 
         openSection("分析", sidebarIdentifier: "sidebar.Analytics", in: app)
-        XCTAssertTrue(app.staticTexts["分析"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["分析"].waitForExistence(timeout: 3) || app.staticTexts["Analytics"].waitForExistence(timeout: 3))
 
         openSection("设置", sidebarIdentifier: "settings.open", in: app)
-        XCTAssertTrue(app.otherElements["settings.view"].waitForExistence(timeout: 3) || app.staticTexts["设置"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.otherElements["settings.view"].waitForExistence(timeout: 3) || app.staticTexts["设置"].waitForExistence(timeout: 3) || app.staticTexts["Settings"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -36,13 +39,15 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(homeIsReady(in: app))
         app.buttons["home.newTask"].tap()
-        XCTAssertTrue(app.buttons["保存"].waitForExistence(timeout: 3) || app.textFields["任务名称"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["保存"].waitForExistence(timeout: 3) || app.buttons["Save"].waitForExistence(timeout: 3) || app.textFields["任务名称"].waitForExistence(timeout: 3))
         if app.buttons["取消"].exists {
-            app.buttons["取消"].tap()
+            app.buttons["取消"].firstMatch.tap()
+        } else if app.buttons["Cancel"].exists {
+            app.buttons["Cancel"].firstMatch.tap()
         }
 
         openSection("番茄钟", sidebarIdentifier: "sidebar.Pomodoro", in: app)
-        XCTAssertTrue(app.staticTexts["pomodoro.title"].waitForExistence(timeout: 3) || app.staticTexts["番茄钟"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["pomodoro.title"].waitForExistence(timeout: 3) || app.staticTexts["番茄钟"].waitForExistence(timeout: 3) || app.staticTexts["Pomodoro"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -62,8 +67,9 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func openSection(_ tabTitle: String, sidebarIdentifier: String, in app: XCUIApplication) {
-        if app.buttons[sidebarIdentifier].exists {
-            app.buttons[sidebarIdentifier].tap()
+        let identifiedElement = app.descendants(matching: .any)[sidebarIdentifier]
+        if identifiedElement.waitForExistence(timeout: 1) {
+            identifiedElement.firstMatch.tap()
             return
         }
 
@@ -72,6 +78,21 @@ final class timetrackerUITests: XCTestCase {
             return
         }
 
-        app.buttons[tabTitle].tap()
+        if app.buttons[tabTitle].waitForExistence(timeout: 1) {
+            app.buttons[tabTitle].firstMatch.tap()
+            return
+        }
+
+        if app.staticTexts[tabTitle].waitForExistence(timeout: 1) {
+            app.staticTexts[tabTitle].firstMatch.tap()
+            return
+        }
+
+        XCTFail("Could not open section \(tabTitle)")
+    }
+
+    @MainActor
+    private func anyStaticText(_ labels: [String], in app: XCUIApplication) -> Bool {
+        labels.contains { app.staticTexts[$0].waitForExistence(timeout: 1) }
     }
 }

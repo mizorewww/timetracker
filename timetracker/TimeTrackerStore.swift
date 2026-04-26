@@ -5,9 +5,17 @@ import SwiftData
 
 @MainActor
 final class TimeTrackerStore: ObservableObject {
-    @Published private(set) var tasks: [TaskNode] = []
+    @Published private(set) var tasks: [TaskNode] = [] {
+        didSet {
+            rebuildTaskIndexes()
+        }
+    }
     @Published private(set) var activeSegments: [TimeSegment] = []
-    @Published private(set) var todaySegments: [TimeSegment] = []
+    @Published private(set) var todaySegments: [TimeSegment] = [] {
+        didSet {
+            sortedTodaySegments = todaySegments.sorted { $0.startedAt > $1.startedAt }
+        }
+    }
     @Published private(set) var allSegments: [TimeSegment] = []
     @Published private(set) var sessions: [TimeSession] = []
     @Published private(set) var pomodoroRuns: [PomodoroRun] = []
@@ -67,6 +75,9 @@ final class TimeTrackerStore: ObservableObject {
     private var pomodoroRepository: PomodoroRepository?
     private let aggregationService = TimeAggregationService()
     private var syncObservers: [NSObjectProtocol] = []
+    private var taskByID: [UUID: TaskNode] = [:]
+    private var childrenByParentID: [UUID?: [TaskNode]] = [:]
+    private var sortedTodaySegments: [TimeSegment] = []
 
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
@@ -531,7 +542,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     var timelineSegments: [TimeSegment] {
-        todaySegments.sorted { $0.startedAt > $1.startedAt }
+        sortedTodaySegments
     }
 
     var todayGrossSeconds: Int {
@@ -574,7 +585,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func task(for id: UUID) -> TaskNode? {
-        tasks.first { $0.id == id }
+        taskByID[id]
     }
 
     func activeSegment(for taskID: UUID) -> TimeSegment? {
@@ -773,11 +784,29 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func rootTasks() -> [TaskNode] {
-        tasks.filter { $0.parentID == nil }.sorted { $0.sortOrder < $1.sortOrder }
+        childrenByParentID[nil] ?? []
     }
 
     func children(of task: TaskNode) -> [TaskNode] {
-        tasks.filter { $0.parentID == task.id }.sorted { $0.sortOrder < $1.sortOrder }
+        childrenByParentID[task.id] ?? []
+    }
+
+    private func rebuildTaskIndexes() {
+        taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+
+        var grouped: [UUID?: [TaskNode]] = [:]
+        for task in tasks {
+            grouped[task.parentID, default: []].append(task)
+        }
+
+        childrenByParentID = grouped.mapValues { children in
+            children.sorted { first, second in
+                if first.sortOrder == second.sortOrder {
+                    return first.title.localizedStandardCompare(second.title) == .orderedAscending
+                }
+                return first.sortOrder < second.sortOrder
+            }
+        }
     }
 
     private func segmentsForAnalytics(range: AnalyticsRange, now: Date) -> [TimeSegment] {

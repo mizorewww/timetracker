@@ -468,7 +468,7 @@ struct TimeProgressTile: View {
                 .tint(item.tint)
         }
         .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 }
@@ -549,7 +549,7 @@ struct MetricsPanel: View {
         }
         .padding(isCompactPhone ? 14 : 18)
         .frame(maxWidth: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(AppColors.border)
@@ -761,7 +761,7 @@ struct ActiveTimersSection: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(AppColors.border)
@@ -788,7 +788,7 @@ struct PausedSessionsSection: View {
                             }
                         }
                     }
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .stroke(AppColors.border)
@@ -975,7 +975,7 @@ struct TimelineSection: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(AppColors.border)
@@ -1609,7 +1609,7 @@ struct InspectorInfoGrid: View {
                 InfoRow(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
@@ -1654,7 +1654,7 @@ struct NotesPanel: View {
                 .foregroundStyle(task.notes == nil ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
@@ -1675,7 +1675,7 @@ struct StatsPanel: View {
                 SmallStat(title: AppStrings.localized("task.stats.averageFocus"), value: DurationFormatter.compact(store.averageFocusSeconds))
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
             .accessibilityIdentifier("pomodoro.active")
         }
@@ -1721,7 +1721,7 @@ struct PomodoroSettingsPanel: View {
                     .font(.subheadline)
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
@@ -1759,7 +1759,7 @@ struct RecentSessionsPanel: View {
                 }
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
@@ -1943,7 +1943,7 @@ struct InspectorSummaryCard: View {
                     .foregroundStyle(.secondary)
             }
             .padding(18)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         }
     }
@@ -2398,7 +2398,7 @@ private struct PomodoroSetupCard: View {
             .accessibilityIdentifier("pomodoro.startFocus")
         }
         .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 }
@@ -2474,7 +2474,7 @@ private struct ActivePomodoroCard: View {
             }
             .padding(22)
             .frame(maxWidth: .infinity)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
             .accessibilityIdentifier("pomodoro.active")
         }
@@ -2539,7 +2539,7 @@ private struct PomodoroLedgerCard: View {
             }
         }
         .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 
@@ -2721,7 +2721,7 @@ struct AnalyticsMetric: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 }
@@ -2745,7 +2745,7 @@ struct AnalyticsChartCard<Content: View>: View {
             content
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 }
@@ -4196,7 +4196,7 @@ struct SegmentEditorPanel: View {
             .padding(18)
             .background(.thinMaterial)
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
     }
@@ -4431,7 +4431,7 @@ struct ManualTimePanel: View {
             .padding(18)
             .background(.thinMaterial)
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
         .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
     }
@@ -4525,6 +4525,11 @@ struct EmptyStateRow: View {
 
 enum AppColors {
     static let background = Color(platformColor: .systemGroupedBackground)
+    #if os(macOS)
+    static let cardBackground = Color(nsColor: .controlBackgroundColor)
+    #else
+    static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    #endif
     static let border = Color.primary.opacity(0.08)
     static let panelHeader = LinearGradient(
         colors: [Color.blue.opacity(0.10), Color.green.opacity(0.06)],

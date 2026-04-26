@@ -42,6 +42,25 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func countdownEventsAreSwiftDataBackedAndAllowEmptyList() throws {
+        let context = try makeContext()
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        #expect(store.countdownEvents.isEmpty)
+
+        store.addCountdownEvent()
+        #expect(store.countdownEvents.count == 1)
+
+        let event = try #require(store.countdownEvents.first)
+        store.updateCountdownEvent(event, title: "Launch", date: Date(timeIntervalSince1970: 200))
+        #expect(store.countdownEvents.first?.title == "Launch")
+
+        store.deleteCountdownEvent(event)
+        #expect(store.countdownEvents.isEmpty)
+    }
+
+    @Test @MainActor
     func taskMovePreventsCyclesAndUpdatesHierarchy() throws {
         let context = try makeContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -301,6 +320,56 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func startingPomodoroPausesExistingTimerForSameTask() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Shared Task", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+
+        let regularSegment = try timeRepository.startTask(taskID: task.id, source: .timer)
+        let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
+
+        let active = try timeRepository.activeSegments()
+        #expect(active.count == 1)
+        #expect(active.first?.source == .pomodoro)
+        #expect(active.first?.sessionID == run.sessionID)
+
+        let pausedRegular = try #require(try timeRepository.allSegments().first { $0.id == regularSegment.id })
+        #expect(pausedRegular.endedAt != nil)
+    }
+
+    @Test @MainActor
+    func storeTimerActionsKeepPomodoroRunInSync() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Synced Focus", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.selectedTaskID = task.id
+
+        store.startPomodoroForSelectedTask(focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
+        let activeSegment = try #require(store.activeSegment(for: task.id))
+        #expect(activeSegment.source == .pomodoro)
+        #expect(store.activePomodoroRun(for: task.id)?.state == .focusing)
+
+        store.pause(segment: activeSegment)
+        #expect(store.activeSegment(for: task.id) == nil)
+        #expect(store.pausedSession(for: task.id) != nil)
+        #expect(store.activePomodoroRun(for: task.id)?.state == .interrupted)
+
+        let pausedSession = try #require(store.pausedSession(for: task.id))
+        store.resume(session: pausedSession)
+        #expect(store.activeSegment(for: task.id)?.source == .pomodoro)
+        #expect(store.activePomodoroRun(for: task.id)?.state == .focusing)
+
+        let resumedSegment = try #require(store.activeSegment(for: task.id))
+        store.stop(segment: resumedSegment)
+        #expect(store.activeSegment(for: task.id) == nil)
+        #expect(store.activePomodoroRun(for: task.id) == nil)
+    }
+
+    @Test @MainActor
     func cancellingPomodoroStopsLedgerSession() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -359,6 +428,28 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func clearingDemoDataKeepsUserCreatedRecords() throws {
+        let context = try makeContext()
+        try SeedData.replaceWithDemoData(context: context)
+
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let userTask = try taskRepository.createTask(title: "Real Work", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        _ = try timeRepository.addManualSegment(
+            taskID: userTask.id,
+            startedAt: Date().addingTimeInterval(-900),
+            endedAt: Date(),
+            note: nil
+        )
+
+        try SeedData.clearDemoData(context: context)
+
+        #expect(try taskRepository.allNodes().map(\.title) == ["Real Work"])
+        #expect(try timeRepository.allSegments().count == 1)
+        #expect(try timeRepository.activeSegments().isEmpty)
+    }
+
+    @Test @MainActor
     func modelDefaultsSupportCloudKitCompatibleConstruction() throws {
         let context = try makeContext()
         let task = TaskNode(title: "Defaults", kind: .task, parentID: nil, deviceID: "test")
@@ -366,12 +457,14 @@ struct TimeTrackerTests {
         let segment = TimeSegment(sessionID: session.id, taskID: task.id, source: .timer, deviceID: "test")
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
         let summary = DailySummary(date: Date(), taskID: task.id, grossSeconds: 0, wallClockSeconds: 0, pomodoroCount: 0, interruptionCount: 0)
+        let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
 
         context.insert(task)
         context.insert(session)
         context.insert(segment)
         context.insert(run)
         context.insert(summary)
+        context.insert(countdown)
         try context.save()
 
         #expect(task.id.uuidString.isEmpty == false)
@@ -379,6 +472,45 @@ struct TimeTrackerTests {
         #expect(segment.source == .timer)
         #expect(run.state == .planned)
         #expect(summary.version == 1)
+        #expect(countdown.deletedAt == nil)
+    }
+
+    @Test @MainActor
+    func taskStatusCanBePlannedAndCompleted() throws {
+        let context = try makeContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(title: "Plan draft", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+
+        try repository.setTaskStatus(taskID: task.id, status: .planned)
+        #expect(try repository.task(id: task.id)?.status == .planned)
+
+        try repository.setTaskStatus(taskID: task.id, status: .completed)
+        #expect(try repository.task(id: task.id)?.status == .completed)
+        #expect(TaskStatus.completed.displayName == "已完成")
+    }
+
+    @Test @MainActor
+    func csvExportIncludesLedgerRows() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "CSV Task", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let start = Date(timeIntervalSince1970: 2_000)
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(900),
+            note: "Export note"
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        let csv = store.csvExport()
+
+        #expect(csv.contains("Task,Path,Start,End,Duration Seconds,Source,Note"))
+        #expect(csv.contains("CSV Task"))
+        #expect(csv.contains("900"))
+        #expect(csv.contains("Export note"))
     }
 
     @MainActor
@@ -388,7 +520,8 @@ struct TimeTrackerTests {
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
-            DailySummary.self
+            DailySummary.self,
+            CountdownEvent.self
         ])
         let configuration = ModelConfiguration(
             "TimeTrackerTests",

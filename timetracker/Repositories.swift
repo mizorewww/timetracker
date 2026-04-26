@@ -7,8 +7,9 @@ protocol TaskRepository {
     func children(of parentID: UUID?) throws -> [TaskNode]
     func task(id: UUID) throws -> TaskNode?
     @discardableResult func createTask(title: String, kind: TaskNodeKind, parentID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
-    func updateTask(taskID: UUID, title: String, kind: TaskNodeKind, parentID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
+    func updateTask(taskID: UUID, title: String, kind: TaskNodeKind, status: TaskStatus, parentID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
+    func setTaskStatus(taskID: UUID, status: TaskStatus) throws
     func archiveTask(taskID: UUID) throws
     func softDeleteTask(taskID: UUID) throws
 }
@@ -99,6 +100,7 @@ final class SwiftDataTaskRepository: TaskRepository {
         taskID: UUID,
         title: String,
         kind: TaskNodeKind,
+        status: TaskStatus,
         parentID: UUID?,
         colorHex: String?,
         iconName: String?,
@@ -112,6 +114,7 @@ final class SwiftDataTaskRepository: TaskRepository {
 
         node.title = title
         node.kind = kind
+        node.status = status
         node.parentID = parentID
         node.colorHex = colorHex
         node.iconName = iconName
@@ -136,6 +139,15 @@ final class SwiftDataTaskRepository: TaskRepository {
         node.clientMutationID = UUID()
         try applyHierarchy(to: node, parentID: newParentID)
         try updateDescendantHierarchy(of: node)
+        try context.save()
+    }
+
+    func setTaskStatus(taskID: UUID, status: TaskStatus) throws {
+        guard let node = try task(id: taskID) else { return }
+        node.status = status
+        node.archivedAt = status == .archived ? Date() : nil
+        node.updatedAt = Date()
+        node.clientMutationID = UUID()
         try context.save()
     }
 
@@ -407,6 +419,9 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             }
             existingRun.state = .interrupted
             existingRun.updatedAt = Date()
+        }
+        for segment in try timeRepository.activeSegments().filter({ $0.taskID == taskID }) {
+            try timeRepository.pauseSession(sessionID: segment.sessionID)
         }
 
         let run = PomodoroRun(taskID: taskID, focus: focusSeconds, breakSeconds: breakSeconds, targetRounds: targetRounds, deviceID: deviceID)

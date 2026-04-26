@@ -80,6 +80,7 @@ struct UpdateTaskUseCase {
         taskID: UUID,
         title: String,
         kind: TaskNodeKind,
+        status: TaskStatus,
         parentID: UUID?,
         colorHex: String?,
         iconName: String?,
@@ -91,6 +92,7 @@ struct UpdateTaskUseCase {
             taskID: taskID,
             title: title,
             kind: kind,
+            status: status,
             parentID: parentID,
             colorHex: colorHex,
             iconName: iconName,
@@ -106,6 +108,14 @@ struct ArchiveTaskUseCase {
 
     func execute(taskID: UUID) throws {
         try repository.archiveTask(taskID: taskID)
+    }
+}
+
+struct SetTaskStatusUseCase {
+    let repository: TaskRepository
+
+    func execute(taskID: UUID, status: TaskStatus) throws {
+        try repository.setTaskStatus(taskID: taskID, status: status)
     }
 }
 

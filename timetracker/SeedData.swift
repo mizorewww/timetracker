@@ -14,8 +14,11 @@ enum SeedData {
         try buildDemoData(context: context)
     }
 
-    private static func clearAll(context: ModelContext) throws {
+    static func clearAll(context: ModelContext) throws {
         for model in try context.fetch(FetchDescriptor<DailySummary>()) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<CountdownEvent>()) {
             context.delete(model)
         }
         for model in try context.fetch(FetchDescriptor<PomodoroRun>()) {
@@ -28,6 +31,32 @@ enum SeedData {
             context.delete(model)
         }
         for model in try context.fetch(FetchDescriptor<TaskNode>()) {
+            context.delete(model)
+        }
+        try context.save()
+    }
+
+    static func clearDemoData(context: ModelContext) throws {
+        let demoTasks = try context.fetch(FetchDescriptor<TaskNode>()).filter { $0.deviceID == "demo" }
+        let demoTaskIDs = Set(demoTasks.map(\.id))
+        let demoSessions = try context.fetch(FetchDescriptor<TimeSession>()).filter {
+            $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+        }
+        let demoSessionIDs = Set(demoSessions.map(\.id))
+
+        for model in try context.fetch(FetchDescriptor<DailySummary>()) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<PomodoroRun>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) }) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<TimeSegment>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) || demoSessionIDs.contains($0.sessionID) }) {
+            context.delete(model)
+        }
+        for model in demoSessions {
+            context.delete(model)
+        }
+        for model in demoTasks {
             context.delete(model)
         }
         try context.save()

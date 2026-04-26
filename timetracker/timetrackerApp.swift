@@ -40,7 +40,8 @@ struct timetrackerApp: App {
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
-            DailySummary.self
+            DailySummary.self,
+            CountdownEvent.self
         ])
     }
 
@@ -66,6 +67,29 @@ struct timetrackerApp: App {
             isStoredInMemoryOnly: false,
             cloudKitDatabase: .none
         )
+        let emergencyConfiguration = ModelConfiguration(
+            "TimeTrackerEmergency",
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            cloudKitDatabase: .none
+        )
+
+        guard AppCloudSync.isEnabled else {
+            AppCloudSync.recordCloudKitDisabledByUser()
+            do {
+                return try ModelContainer(
+                    for: schema,
+                    migrationPlan: TimeTrackerMigrationPlan.self,
+                    configurations: [localConfiguration]
+                )
+            } catch {
+                return makeEmergencyModelContainer(
+                    schema: schema,
+                    configuration: emergencyConfiguration,
+                    error: error
+                )
+            }
+        }
 
         do {
             let container = try ModelContainer(
@@ -84,30 +108,72 @@ struct timetrackerApp: App {
                     configurations: [localConfiguration]
                 )
             } catch {
-                fatalError("Could not create local ModelContainer: \(error)")
+                return makeEmergencyModelContainer(
+                    schema: schema,
+                    configuration: emergencyConfiguration,
+                    error: error
+                )
             }
         }
     }
 
+    private static func makeEmergencyModelContainer(
+        schema: Schema,
+        configuration: ModelConfiguration,
+        error: Error
+    ) -> ModelContainer {
+        AppCloudSync.recordEmergencyInMemoryFallback(error: error)
+        do {
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [configuration]
+            )
+        } catch {
+            preconditionFailure("Could not create emergency in-memory ModelContainer: \(error)")
+        }
+    }
+
     var body: some Scene {
+        #if os(macOS)
         WindowGroup {
             ContentView()
-                #if os(macOS)
-                .frame(minWidth: 1120, minHeight: 700)
-                #endif
+                .frame(minWidth: 960, minHeight: 680)
         }
         .modelContainer(sharedModelContainer)
-        #if os(macOS)
-        .defaultSize(width: 1240, height: 760)
+        .defaultSize(width: 1180, height: 760)
         .windowResizability(.contentMinSize)
         .commands {
             TimeTrackerCommands()
         }
+
+        Settings {
+            SettingsSceneView()
+                .modelContainer(sharedModelContainer)
+                .frame(width: 640, height: 620)
+        }
+        #else
+        WindowGroup {
+            ContentView()
+        }
+        .modelContainer(sharedModelContainer)
         #endif
     }
 }
 
 #if os(macOS)
+struct SettingsSceneView: View {
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var store = TimeTrackerStore()
+
+    var body: some View {
+        SettingsView(store: store)
+            .task {
+                store.configureIfNeeded(context: modelContext)
+            }
+    }
+}
+
 final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
     private var uiTestWindow: NSWindow?
 
@@ -144,11 +210,11 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         do {
             let container = try timetrackerApp.makeUITestModelContainer()
             let rootView = ContentView()
-                .frame(minWidth: 1120, minHeight: 700)
+                .frame(minWidth: 960, minHeight: 680)
                 .modelContainer(container)
             let hostingController = NSHostingController(rootView: rootView)
             let window = NSWindow(
-                contentRect: NSRect(x: 220, y: 160, width: 1240, height: 760),
+                contentRect: NSRect(x: 220, y: 160, width: 1180, height: 760),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,
                 defer: false
@@ -174,27 +240,27 @@ struct TimeTrackerCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("New Task") {
+            Button("新建任务") {
                 newTask?()
             }
             .keyboardShortcut("n", modifiers: [.command])
             .disabled(newTask == nil)
 
-            Button("Add Manual Time") {
+            Button("补录时间") {
                 manualTime?()
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
             .disabled(manualTime == nil)
         }
 
-        CommandMenu("Time Tracker") {
-            Button("New Task") {
+        CommandMenu("时间追踪") {
+            Button("新建任务") {
                 newTask?()
             }
             .keyboardShortcut("n", modifiers: [.command])
             .disabled(newTask == nil)
 
-            Button("Add Manual Time") {
+            Button("补录时间") {
                 manualTime?()
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
@@ -202,13 +268,13 @@ struct TimeTrackerCommands: Commands {
 
             Divider()
 
-            Button("Start Selected Timer") {
+            Button("开始所选任务计时") {
                 startTimer?()
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
             .disabled(startTimer == nil)
 
-            Button("Start Pomodoro") {
+            Button("开始番茄钟") {
                 startPomodoro?()
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
@@ -216,7 +282,7 @@ struct TimeTrackerCommands: Commands {
 
             Divider()
 
-            Button("Refresh Ledger") {
+            Button("刷新数据") {
                 refresh?()
             }
             .keyboardShortcut("r", modifiers: [.command])

@@ -10,6 +10,7 @@ final class TimeTrackerStore: ObservableObject {
     @Published private(set) var allSegments: [TimeSegment] = []
     @Published private(set) var sessions: [TimeSession] = []
     @Published private(set) var pomodoroRuns: [PomodoroRun] = []
+    @Published private(set) var countdownEvents: [CountdownEvent] = []
     @Published var selectedTaskID: UUID?
     @Published var selectedRange: RangePreset = .today
     @Published var errorMessage: String?
@@ -73,6 +74,7 @@ final class TimeTrackerStore: ObservableObject {
         self.pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
 
         do {
+            try migrateLegacyCountdownEventsIfNeeded(context: context)
             try SeedData.ensureSeeded(context: context)
             try refresh()
             Task {
@@ -88,6 +90,42 @@ final class TimeTrackerStore: ObservableObject {
         cloudAccountStatus = AppCloudSync.accountStatus
     }
 
+    func addCountdownEvent() {
+        perform {
+            guard let modelContext else { throw StoreError.notConfigured }
+            let event = CountdownEvent(
+                title: "新事件",
+                date: Date().addingTimeInterval(30 * 24 * 60 * 60),
+                deviceID: DeviceIdentity.current
+            )
+            modelContext.insert(event)
+            try modelContext.save()
+        }
+    }
+
+    func updateCountdownEvent(_ event: CountdownEvent, title: String? = nil, date: Date? = nil) {
+        perform {
+            if let title {
+                event.title = title
+            }
+            if let date {
+                event.date = date
+            }
+            event.updatedAt = Date()
+            event.clientMutationID = UUID()
+            try modelContext?.save()
+        }
+    }
+
+    func deleteCountdownEvent(_ event: CountdownEvent) {
+        perform {
+            event.deletedAt = Date()
+            event.updatedAt = Date()
+            event.clientMutationID = UUID()
+            try modelContext?.save()
+        }
+    }
+
     func refresh() throws {
         guard let taskRepository, let timeRepository else { return }
         tasks = try taskRepository.allNodes()
@@ -95,6 +133,7 @@ final class TimeTrackerStore: ObservableObject {
         allSegments = try timeRepository.allSegments()
         sessions = try timeRepository.sessions()
         pomodoroRuns = try pomodoroRepository?.runs() ?? []
+        countdownEvents = try fetchCountdownEvents()
 
         let range = Calendar.current.dateInterval(of: .day, for: Date()) ?? DateInterval(start: Date(), duration: 24 * 60 * 60)
         todaySegments = try timeRepository.segments(from: range.start, to: range.end)
@@ -106,39 +145,53 @@ final class TimeTrackerStore: ObservableObject {
 
     func startSelectedTask() {
         guard let selectedTaskID else { return }
-        perform {
-            _ = try StartTaskUseCase(repository: requiredTimeRepository()).execute(taskID: selectedTaskID, source: .timer)
-        }
+        startTask(taskID: selectedTaskID)
     }
 
     func startTask(_ task: TaskNode) {
         selectedTaskID = task.id
+        startTask(taskID: task.id)
+    }
+
+    private func startTask(taskID: UUID) {
         perform {
-            _ = try StartTaskUseCase(repository: requiredTimeRepository()).execute(taskID: task.id, source: .timer)
+            if activeSegment(for: taskID) != nil {
+                return
+            }
+            if let pausedSession = pausedSession(for: taskID) {
+                _ = try ResumeSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: pausedSession.id)
+                try resumePomodoroIfNeeded(sessionID: pausedSession.id)
+                return
+            }
+            _ = try StartTaskUseCase(repository: requiredTimeRepository()).execute(taskID: taskID, source: .timer)
         }
     }
 
     func stop(segment: TimeSegment) {
         perform {
             try StopSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segment.id)
+            try cancelPomodoroIfNeeded(sessionID: segment.sessionID)
         }
     }
 
     func pause(segment: TimeSegment) {
         perform {
             try PauseSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: segment.sessionID)
+            try interruptPomodoroIfNeeded(sessionID: segment.sessionID)
         }
     }
 
     func resume(session: TimeSession) {
         perform {
             _ = try ResumeSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: session.id)
+            try resumePomodoroIfNeeded(sessionID: session.id)
         }
     }
 
     func stop(session: TimeSession) {
         perform {
             try StopSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: session.id)
+            try cancelPomodoroIfNeeded(sessionID: session.id)
         }
     }
 
@@ -163,6 +216,7 @@ final class TimeTrackerStore: ObservableObject {
                     taskID: taskID,
                     title: sanitizedTitle,
                     kind: draft.kind,
+                    status: draft.status,
                     parentID: draft.parentID,
                     colorHex: draft.colorHex,
                     iconName: draft.iconName,
@@ -183,6 +237,7 @@ final class TimeTrackerStore: ObservableObject {
                     taskID: task.id,
                     title: sanitizedTitle,
                     kind: draft.kind,
+                    status: draft.status,
                     parentID: draft.parentID,
                     colorHex: draft.colorHex,
                     iconName: draft.iconName,
@@ -204,6 +259,14 @@ final class TimeTrackerStore: ObservableObject {
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
             }
+        }
+    }
+
+    func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) {
+        let targetID = taskID ?? selectedTaskID
+        guard let targetID else { return }
+        perform {
+            try SetTaskStatusUseCase(repository: requiredTaskRepository()).execute(taskID: targetID, status: status)
         }
     }
 
@@ -285,6 +348,46 @@ final class TimeTrackerStore: ObservableObject {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.replaceWithDemoData(context: modelContext)
         }
+    }
+
+    func clearAllData() {
+        perform {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try SeedData.clearAll(context: modelContext)
+            selectedTaskID = nil
+        }
+    }
+
+    func clearDemoData() {
+        perform {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try SeedData.clearDemoData(context: modelContext)
+            if let selectedTaskID, tasks.contains(where: { $0.id == selectedTaskID && $0.deviceID == "demo" }) {
+                self.selectedTaskID = nil
+            }
+        }
+    }
+
+    func csvExport() -> String {
+        let formatter = ISO8601DateFormatter()
+        let header = ["Task", "Path", "Start", "End", "Duration Seconds", "Source", "Note"]
+        let rows = allSegments
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.startedAt < $1.startedAt }
+            .map { segment in
+                [
+                    displayTitle(for: segment),
+                    displayPath(for: segment),
+                    formatter.string(from: segment.startedAt),
+                    segment.endedAt.map { formatter.string(from: $0) } ?? "",
+                    "\(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt)))",
+                    segment.source.rawValue,
+                    note(for: segment)
+                ]
+            }
+        return ([header] + rows)
+            .map { $0.map(Self.csvEscaped).joined(separator: ",") }
+            .joined(separator: "\n")
     }
 
     func startPomodoroForSelectedTask(focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) {
@@ -401,6 +504,23 @@ final class TimeTrackerStore: ObservableObject {
 
     func task(for id: UUID) -> TaskNode? {
         tasks.first { $0.id == id }
+    }
+
+    func activeSegment(for taskID: UUID) -> TimeSegment? {
+        activeSegments.first { $0.taskID == taskID }
+    }
+
+    func pausedSession(for taskID: UUID) -> TimeSession? {
+        pausedSessions.first { $0.taskID == taskID }
+    }
+
+    func activePomodoroRun(for taskID: UUID) -> PomodoroRun? {
+        pomodoroRuns.first { run in
+            run.taskID == taskID &&
+            run.deletedAt == nil &&
+            run.endedAt == nil &&
+            [.planned, .focusing, .shortBreak, .longBreak, .interrupted].contains(run.state)
+        }
     }
 
     func taskTitle(for run: PomodoroRun) -> String {
@@ -649,6 +769,76 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
 
+    private func interruptPomodoroIfNeeded(sessionID: UUID) throws {
+        guard let run = pomodoroRuns.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }),
+              run.state == .focusing else {
+            return
+        }
+        run.state = .interrupted
+        run.updatedAt = Date()
+        run.clientMutationID = UUID()
+        try modelContext?.save()
+    }
+
+    private func resumePomodoroIfNeeded(sessionID: UUID) throws {
+        guard let run = pomodoroRuns.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }),
+              run.state == .interrupted else {
+            return
+        }
+        run.state = .focusing
+        run.startedAt = Date()
+        run.updatedAt = Date()
+        run.clientMutationID = UUID()
+        try modelContext?.save()
+    }
+
+    private func cancelPomodoroIfNeeded(sessionID: UUID) throws {
+        guard let run = pomodoroRuns.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }) else {
+            return
+        }
+        run.state = .cancelled
+        run.endedAt = Date()
+        run.updatedAt = Date()
+        run.clientMutationID = UUID()
+        try modelContext?.save()
+    }
+
+    private func fetchCountdownEvents() throws -> [CountdownEvent] {
+        guard let modelContext else { return [] }
+        let descriptor = FetchDescriptor<CountdownEvent>(
+            sortBy: [
+                SortDescriptor(\.date),
+                SortDescriptor(\.createdAt)
+            ]
+        )
+        return try modelContext.fetch(descriptor).filter { $0.deletedAt == nil }
+    }
+
+    private func migrateLegacyCountdownEventsIfNeeded(context: ModelContext) throws {
+        guard !UserDefaults.standard.bool(forKey: "CountdownEventsMigratedToSwiftData"),
+              let json = UserDefaults.standard.string(forKey: "CountdownEventsJSON") else {
+            return
+        }
+
+        let existing = try context.fetch(FetchDescriptor<CountdownEvent>())
+        guard existing.isEmpty else {
+            UserDefaults.standard.set(true, forKey: "CountdownEventsMigratedToSwiftData")
+            return
+        }
+
+        for legacy in LegacyCountdownEvent.decode(json) {
+            context.insert(
+                CountdownEvent(
+                    title: legacy.title,
+                    date: legacy.date,
+                    deviceID: DeviceIdentity.current
+                )
+            )
+        }
+        try context.save()
+        UserDefaults.standard.set(true, forKey: "CountdownEventsMigratedToSwiftData")
+    }
+
     private func requiredTaskRepository() throws -> TaskRepository {
         guard let taskRepository else { throw StoreError.notConfigured }
         return taskRepository
@@ -671,6 +861,29 @@ final class TimeTrackerStore: ObservableObject {
             "TimeTrackerStore has not been configured with a ModelContext."
         }
     }
+
+    private static func csvEscaped(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+        if escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"") {
+            return "\"\(escaped)\""
+        }
+        return escaped
+    }
+}
+
+private struct LegacyCountdownEvent: Codable {
+    var title: String
+    var date: Date
+
+    static func decode(_ json: String) -> [LegacyCountdownEvent] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let data = json.data(using: .utf8),
+              let events = try? decoder.decode([LegacyCountdownEvent].self, from: data) else {
+            return []
+        }
+        return events.sorted { $0.date < $1.date }
+    }
 }
 
 struct TaskEditorDraft: Identifiable {
@@ -678,6 +891,7 @@ struct TaskEditorDraft: Identifiable {
     var taskID: UUID?
     var title: String
     var kind: TaskNodeKind
+    var status: TaskStatus
     var parentID: UUID?
     var colorHex: String
     var iconName: String
@@ -690,6 +904,7 @@ struct TaskEditorDraft: Identifiable {
         self.taskID = nil
         self.title = ""
         self.kind = .task
+        self.status = .active
         self.parentID = parentID
         self.colorHex = "1677FF"
         self.iconName = "checkmark.circle"
@@ -703,6 +918,7 @@ struct TaskEditorDraft: Identifiable {
         self.taskID = task.id
         self.title = task.title
         self.kind = task.kind
+        self.status = task.status
         self.parentID = task.parentID
         self.colorHex = task.colorHex ?? "1677FF"
         self.iconName = task.iconName ?? "checkmark.circle"

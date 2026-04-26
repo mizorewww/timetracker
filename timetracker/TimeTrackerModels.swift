@@ -10,6 +10,7 @@ enum TaskNodeKind: String, Codable, CaseIterable, Identifiable {
 }
 
 enum TaskStatus: String, Codable, CaseIterable {
+    case planned
     case active
     case paused
     case completed
@@ -224,6 +225,32 @@ final class DailySummary {
     }
 }
 
+@Model
+final class CountdownEvent {
+    var id: UUID = UUID()
+    var title: String = ""
+    var date: Date = Date()
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var deletedAt: Date?
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
+
+    init(
+        title: String,
+        date: Date,
+        deviceID: String
+    ) {
+        self.id = UUID()
+        self.title = title
+        self.date = date
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.deviceID = deviceID
+        self.clientMutationID = UUID()
+    }
+}
+
 enum TimeTrackerSchemaV1: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 0, 0)
 
@@ -238,13 +265,30 @@ enum TimeTrackerSchemaV1: VersionedSchema {
     }
 }
 
+enum TimeTrackerSchemaV2: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 1, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            DailySummary.self,
+            CountdownEvent.self
+        ]
+    }
+}
+
 enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [TimeTrackerSchemaV1.self]
+        [TimeTrackerSchemaV1.self, TimeTrackerSchemaV2.self]
     }
 
     static var stages: [MigrationStage] {
-        []
+        [
+            .lightweight(fromVersion: TimeTrackerSchemaV1.self, toVersion: TimeTrackerSchemaV2.self)
+        ]
     }
 }
 
@@ -261,6 +305,38 @@ extension TaskNode {
 
     var isRunning: Bool {
         status == .paused ? false : false
+    }
+}
+
+extension TaskStatus {
+    var displayName: String {
+        switch self {
+        case .planned: return "计划"
+        case .active: return "未完成"
+        case .paused: return "暂停"
+        case .completed: return "已完成"
+        case .archived: return "已归档"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .planned: return "calendar"
+        case .active: return "circle"
+        case .paused: return "pause.circle"
+        case .completed: return "checkmark.circle.fill"
+        case .archived: return "archivebox"
+        }
+    }
+
+    var colorHex: String {
+        switch self {
+        case .planned: return "0EA5E9"
+        case .active: return "64748B"
+        case .paused: return "F97316"
+        case .completed: return "16A34A"
+        case .archived: return "64748B"
+        }
     }
 }
 

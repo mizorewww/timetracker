@@ -2,6 +2,7 @@ import Charts
 import Foundation
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #else
@@ -59,6 +60,7 @@ extension FocusedValues {
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("PreferredColorScheme") private var preferredColorScheme = "system"
     @StateObject private var store = TimeTrackerStore()
 
     var body: some View {
@@ -77,6 +79,7 @@ struct ContentView: View {
         .task {
             store.configureIfNeeded(context: modelContext)
         }
+        .preferredColorScheme(appColorScheme)
         .alert("Error", isPresented: errorBinding) {
             Button("OK") {
                 store.errorMessage = nil
@@ -121,6 +124,14 @@ struct ContentView: View {
             if !newValue {
                 store.errorMessage = nil
             }
+        }
+    }
+
+    private var appColorScheme: ColorScheme? {
+        switch preferredColorScheme {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
         }
     }
 }
@@ -177,12 +188,12 @@ struct DesktopRootView: View {
         } content: {
             DesktopContentView(store: store)
                 #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 620, ideal: 720)
+                .navigationSplitViewColumnWidth(min: 480, ideal: 720)
                 #endif
         } detail: {
             InspectorView(store: store)
                 #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 280)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
                 #endif
         }
     }
@@ -217,6 +228,7 @@ struct DesktopMainView: View {
                 VStack(alignment: .leading, spacing: compact ? 16 : 22) {
                     HeaderBar(store: store, compact: compact)
                     MetricsAndActions(store: store, horizontal: !compact)
+                    TimeProgressSection(store: store)
                     ActiveTimersSection(store: store)
                     PausedSessionsSection(store: store)
                     TimelineSection(store: store)
@@ -261,6 +273,7 @@ struct PhoneHomeView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HeaderBar(store: store, compact: true)
                 MetricsAndActions(store: store, horizontal: false)
+                TimeProgressSection(store: store)
                 ActiveTimersSection(store: store)
                 PausedSessionsSection(store: store)
                 TimelineSection(store: store)
@@ -272,7 +285,6 @@ struct PhoneHomeView: View {
             .padding(.bottom, 24)
         }
         .background(AppColors.background)
-        .navigationTitle("Today")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
@@ -298,31 +310,81 @@ struct HeaderBar: View {
     let compact: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if !compact {
-                HStack(spacing: 16) {
-                    Text("Today")
-                        .font(.largeTitle.bold())
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Today")
+                .font(compact ? .largeTitle.bold() : .largeTitle.bold())
+            Text("先确认现在发生什么，再快速继续下一件事。完整 Today / Week / Month 复盘在分析页。")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
 
-                    Spacer()
+struct TimeProgressSection: View {
+    @ObservedObject var store: TimeTrackerStore
 
-                    Picker("Range", selection: $store.selectedRange) {
-                        ForEach(TimeTrackerStore.RangePreset.allCases) { range in
-                            Text(range.rawValue).tag(range)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 360)
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let items = progressItems(now: context.date)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                ForEach(items) { item in
+                    TimeProgressTile(item: item)
                 }
-            } else {
-                Picker("Range", selection: $store.selectedRange) {
-                    ForEach(TimeTrackerStore.RangePreset.allCases) { range in
-                        Text(range.rawValue).tag(range)
-                    }
-                }
-                .pickerStyle(.segmented)
             }
         }
+    }
+
+    private func progressItems(now: Date) -> [TimeProgressItem] {
+        let calendar = Calendar.current
+        let countdownItems = store.countdownEvents.map { event in
+            let days = max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: event.date)).day ?? 0)
+            return TimeProgressItem(title: event.title, value: "\(days) 天", fraction: days == 0 ? 1 : 0, tint: .purple)
+        }
+
+        return [
+            item("今天", interval: calendar.dateInterval(of: .day, for: now), now: now),
+            item("本周", interval: calendar.dateInterval(of: .weekOfYear, for: now), now: now),
+            item("本月", interval: calendar.dateInterval(of: .month, for: now), now: now),
+            item("今年", interval: calendar.dateInterval(of: .year, for: now), now: now)
+        ] + countdownItems
+    }
+
+    private func item(_ title: String, interval: DateInterval?, now: Date) -> TimeProgressItem {
+        guard let interval else {
+            return TimeProgressItem(title: title, value: "--", fraction: 0, tint: .secondary)
+        }
+        let fraction = min(1, max(0, now.timeIntervalSince(interval.start) / interval.duration))
+        return TimeProgressItem(title: title, value: "\(Int(fraction * 100))%", fraction: fraction, tint: .blue)
+    }
+}
+
+struct TimeProgressItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let value: String
+    let fraction: Double
+    let tint: Color
+}
+
+struct TimeProgressTile: View {
+    let item: TimeProgressItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(item.title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(item.value)
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+            }
+            ProgressView(value: item.fraction)
+                .tint(item.tint)
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
     }
 }
 
@@ -338,6 +400,7 @@ struct MetricsAndActions: View {
                     ActionStack(store: store)
                         .frame(width: 220)
                 }
+                .frame(minHeight: 142)
             } else {
                 VStack(spacing: 16) {
                     MetricsPanel(store: store)
@@ -363,11 +426,11 @@ struct MetricsPanel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 0) {
-                    MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [3, 4, 8, 5, 11, 6, 4, 7, 5, 9, 10], showsBars: true)
+                    MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
                     Divider()
-                    MetricCell(title: "Wall Time", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [1, 3, 6, 2, 7, 4, 3, 5, 8, 4, 6], showsBars: true)
+                    MetricCell(title: "Wall Time", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
                     Divider()
-                    MetricCell(title: "Gross Time", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [2, 5, 7, 4, 9, 8, 3, 5, 8, 11, 6], showsBars: true)
+                    MetricCell(title: "Gross Time", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
                 }
 
                 VStack(spacing: 12) {
@@ -400,27 +463,31 @@ struct MetricCell: View {
     var showsBars: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: showsBars ? .leading : .center, spacing: 8) {
             HStack {
-                Circle()
-                    .fill(isMuted ? Color.clear : tint)
-                    .frame(width: 8, height: 8)
+                if !isMuted {
+                    Circle()
+                        .fill(tint)
+                        .frame(width: 8, height: 8)
+                }
                 Text(title)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(isMuted ? .primary : tint)
             }
+            .frame(maxWidth: .infinity, alignment: showsBars ? .leading : .center)
 
             Text(value)
                 .font(.system(size: 30, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, alignment: showsBars ? .leading : .center)
 
             if showsBars {
                 MiniBars(values: values, tint: isMuted ? .gray.opacity(0.38) : tint)
                     .frame(height: 30)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: showsBars ? .leading : .center)
         .padding(.horizontal, 10)
     }
 }
@@ -451,6 +518,7 @@ struct ActionStack: View {
             } label: {
                 Label("开始计时", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
+                    .frame(maxHeight: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -461,11 +529,13 @@ struct ActionStack: View {
             } label: {
                 Label("新建任务", systemImage: "plus")
                     .frame(maxWidth: .infinity)
+                    .frame(maxHeight: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
             .accessibilityIdentifier("home.newTask")
         }
+        .frame(maxHeight: .infinity)
     }
 }
 
@@ -548,9 +618,11 @@ struct PausedSessionRow: View {
             Button {
                 store.resume(session: session)
             } label: {
-                Label("恢复", systemImage: "play.fill")
+                Image(systemName: "play.fill")
+                    .frame(width: 32, height: 32)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .tint(.blue)
 
             Button(role: .destructive) {
                 store.stop(session: session)
@@ -571,9 +643,18 @@ struct PausedSessionRow: View {
 struct ActiveTimerRow: View {
     @ObservedObject var store: TimeTrackerStore
     let segment: TimeSegment
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: isCompactPhone ? 8 : 12) {
             Circle()
                 .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
                 .frame(width: 10, height: 10)
@@ -592,23 +673,25 @@ struct ActiveTimerRow: View {
             Spacer(minLength: 10)
 
             DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .font(.system(size: isCompactPhone ? 20 : 30, weight: .medium, design: .rounded))
                 .monospacedDigit()
-                .minimumScaleFactor(0.65)
+                .minimumScaleFactor(0.75)
+                .frame(minWidth: isCompactPhone ? 54 : 86, alignment: .trailing)
 
             Button {
                 store.pause(segment: segment)
             } label: {
                 Image(systemName: "pause.fill")
-                    .frame(width: 32, height: 32)
+                    .frame(width: isCompactPhone ? 24 : 32, height: isCompactPhone ? 24 : 32)
             }
             .buttonStyle(.bordered)
+            .tint(.blue)
 
             Button(role: .destructive) {
                 store.stop(segment: segment)
             } label: {
                 Image(systemName: "stop.fill")
-                    .frame(width: 32, height: 32)
+                    .frame(width: isCompactPhone ? 24 : 32, height: isCompactPhone ? 24 : 32)
             }
             .buttonStyle(.bordered)
         }
@@ -616,7 +699,7 @@ struct ActiveTimerRow: View {
         .onTapGesture {
             store.selectedTaskID = segment.taskID
         }
-        .padding(14)
+        .padding(isCompactPhone ? 10 : 14)
     }
 }
 
@@ -651,6 +734,15 @@ struct TimelineSection: View {
 struct TimelineRow: View {
     @ObservedObject var store: TimeTrackerStore
     let segment: TimeSegment
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
 
     private var tag: String {
         switch segment.source {
@@ -669,12 +761,11 @@ struct TimelineRow: View {
             Text(timeRangeText)
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: isCompactPhone ? 82 : 120, alignment: .leading)
 
             Text(store.displayTitle(for: segment))
                 .lineLimit(1)
-
-            Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(tag)
                 .font(.caption.weight(.medium))
@@ -682,15 +773,18 @@ struct TimelineRow: View {
                 .padding(.vertical, 4)
                 .foregroundStyle(tagColor)
                 .background(tagColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .frame(width: isCompactPhone ? 74 : 96, alignment: .center)
 
             if segment.endedAt == nil {
                 Text("now")
                     .foregroundStyle(.blue)
                     .font(.subheadline.monospacedDigit())
+                    .frame(width: isCompactPhone ? 38 : 56, alignment: .trailing)
             } else {
                 Text(DurationFormatter.compact(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt))))
                     .foregroundStyle(.secondary)
                     .font(.subheadline.monospacedDigit())
+                    .frame(width: isCompactPhone ? 38 : 56, alignment: .trailing)
             }
         }
         .contentShape(Rectangle())
@@ -742,22 +836,58 @@ struct TimelineRow: View {
 
 struct QuickStartSection: View {
     @ObservedObject var store: TimeTrackerStore
+    @AppStorage("QuickStartTaskIDs") private var quickStartTaskIDs = ""
+    @State private var isEditorPresented = false
+
+    private var selectedIDs: [UUID] {
+        quickStartTaskIDs
+            .split(separator: ",")
+            .compactMap { UUID(uuidString: String($0)) }
+    }
+
+    private var quickStartTasks: [TaskNode] {
+        let ids = selectedIDs
+        guard !ids.isEmpty else { return store.recentTasks }
+        return ids.compactMap { store.task(for: $0) }.filter { $0.deletedAt == nil && $0.status != .archived }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(title: "Quick Start")
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Quick Start")
+                        .font(.headline)
+                    Text(selectedIDs.isEmpty ? "默认显示最近可继续的未完成任务。" : "显示你固定的快捷任务。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    isEditorPresented = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .buttonStyle(.bordered)
+                .help("编辑 Quick Start")
+            }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
-                ForEach(store.recentTasks, id: \.id) { task in
+                ForEach(quickStartTasks, id: \.id) { task in
                     Button {
                         store.startTask(task)
                     } label: {
-                        Label(task.title, systemImage: task.iconName ?? "play")
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 8) {
+                            Image(systemName: task.iconName ?? "play")
+                                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+                            Text(task.title)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+                    .tint(Color(hex: task.colorHex) ?? .blue)
                 }
 
                 Button {
@@ -770,16 +900,104 @@ struct QuickStartSection: View {
                 .controlSize(.large)
             }
         }
+        .sheet(isPresented: $isEditorPresented) {
+            QuickStartEditorSheet(
+                store: store,
+                selectedIDs: selectedIDs,
+                onSave: { ids in
+                    quickStartTaskIDs = ids.map(\.uuidString).joined(separator: ",")
+                }
+            )
+        }
+    }
+}
+
+struct QuickStartEditorSheet: View {
+    @ObservedObject var store: TimeTrackerStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedIDs: Set<UUID>
+    let onSave: ([UUID]) -> Void
+
+    init(store: TimeTrackerStore, selectedIDs: [UUID], onSave: @escaping ([UUID]) -> Void) {
+        self.store = store
+        self.onSave = onSave
+        _selectedIDs = State(initialValue: Set(selectedIDs))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        selectedIDs.removeAll()
+                    } label: {
+                        Label("使用最近任务自动生成", systemImage: "clock.arrow.circlepath")
+                    }
+                } footer: {
+                    Text("为空时，Quick Start 会自动显示最近可继续的未完成任务。")
+                }
+
+                Section("固定任务") {
+                    ForEach(store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }, id: \.id) { task in
+                        Button {
+                            if selectedIDs.contains(task.id) {
+                                selectedIDs.remove(task.id)
+                            } else {
+                                selectedIDs.insert(task.id)
+                            }
+                        } label: {
+                            HStack {
+                                TaskIcon(task: task, size: 24)
+                                VStack(alignment: .leading) {
+                                    Text(task.title)
+                                    Text(store.path(for: task))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if selectedIDs.contains(task.id) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("编辑 Quick Start")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        let ordered = store.tasks.map(\.id).filter { selectedIDs.contains($0) }
+                        onSave(ordered)
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 420, minHeight: 520)
     }
 }
 
 struct SidebarView: View {
     @ObservedObject var store: TimeTrackerStore
 
+    private var destinations: [TimeTrackerStore.DesktopDestination] {
+        #if os(macOS)
+        return TimeTrackerStore.DesktopDestination.allCases.filter { $0 != .settings }
+        #else
+        return TimeTrackerStore.DesktopDestination.allCases
+        #endif
+    }
+
     var body: some View {
         List {
             Section {
-                ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
+                ForEach(destinations) { destination in
                     SidebarDestinationRow(
                         destination: destination,
                         count: count(for: destination),
@@ -799,6 +1017,17 @@ struct SidebarView: View {
             }
         }
         .navigationTitle("Time Tracker")
+        #if os(macOS)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                SettingsLink {
+                    Image(systemName: "gearshape")
+                }
+                .accessibilityIdentifier("settings.open")
+                .help("设置")
+            }
+        }
+        #endif
     }
 
     private func count(for destination: TimeTrackerStore.DesktopDestination) -> Int? {
@@ -845,7 +1074,15 @@ struct TaskTreeRow: View {
             Image(systemName: task.iconName ?? "checkmark.circle")
                 .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
             Text(task.title)
+                .strikethrough(task.status == .completed)
+                .foregroundStyle(task.status == .completed ? .secondary : .primary)
             Spacer()
+            if task.status != .active {
+                Image(systemName: task.status.symbolName)
+                    .font(.caption)
+                    .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
+                    .help(task.status.displayName)
+            }
             let childCount = store.children(of: task).count
             if childCount > 0 {
                 Text("\(childCount)")
@@ -860,6 +1097,19 @@ struct TaskTreeRow: View {
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
+    }
+}
+
+struct TaskStatusBadge: View {
+    let status: TaskStatus
+
+    var body: some View {
+        Label(status.displayName, systemImage: status.symbolName)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(Color(hex: status.colorHex) ?? .secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background((Color(hex: status.colorHex) ?? .secondary).opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 
@@ -884,6 +1134,12 @@ struct TaskContextMenu: View {
             store.presentManualTime(taskID: task.id)
         } label: {
             Label("手动补录", systemImage: "calendar.badge.plus")
+        }
+
+        Menu("状态") {
+            Button("计划") { store.setTaskStatus(.planned, taskID: task.id) }
+            Button("未完成") { store.setTaskStatus(.active, taskID: task.id) }
+            Button("完成") { store.setTaskStatus(.completed, taskID: task.id) }
         }
 
         Divider()
@@ -948,10 +1204,18 @@ struct SidebarDestinationRow: View {
                         .background(.thinMaterial, in: Capsule())
                 }
             }
-            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
-        .listRowBackground(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
+        .listRowBackground(Color.clear)
     }
 }
 
@@ -1033,7 +1297,7 @@ struct InspectorInfoGrid: View {
     }
 
     private var activeStatusText: String {
-        store.activeSegments.contains { $0.taskID == task.id } ? "Running" : task.status.rawValue.capitalized
+        store.activeSegments.contains { $0.taskID == task.id } ? "Running" : task.status.displayName
     }
 }
 
@@ -1119,6 +1383,10 @@ struct SmallStat: View {
 
 struct PomodoroSettingsPanel: View {
     @ObservedObject var store: TimeTrackerStore
+    @AppStorage("PomodoroDefaultMode") private var defaultMode = PomodoroPreset.classic.rawValue
+    @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
+    @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
+    @AppStorage("DefaultPomodoroRounds") private var defaultPomodoroRounds = 1
     @State private var autoBreak = false
 
     var body: some View {
@@ -1127,8 +1395,10 @@ struct PomodoroSettingsPanel: View {
                 .font(.headline)
 
             VStack(spacing: 12) {
-                InfoRow(title: "专注时长", value: "25 分钟")
-                InfoRow(title: "休息时长", value: "5 分钟")
+                InfoRow(title: "默认模式", value: PomodoroPreset(rawValue: defaultMode)?.title ?? "自定义")
+                InfoRow(title: "专注时长", value: "\(defaultFocusMinutes) 分钟")
+                InfoRow(title: "休息时长", value: "\(defaultBreakMinutes) 分钟")
+                InfoRow(title: "默认轮次", value: "\(defaultPomodoroRounds)")
                 Toggle("专注结束后自动开始休息", isOn: $autoBreak)
                     .font(.subheadline)
             }
@@ -1187,53 +1457,134 @@ struct InspectorActionButtons: View {
     @ObservedObject var store: TimeTrackerStore
 
     var body: some View {
-        VStack(spacing: 10) {
+        if let task = store.selectedTask {
+            VStack(spacing: 10) {
+                timerControls(for: task)
+                pomodoroControls(for: task)
+
+                HStack(spacing: 10) {
+                    Button {
+                        store.presentEditTask(task)
+                    } label: {
+                        Label("编辑", systemImage: "pencil")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        store.archiveSelectedTask()
+                    } label: {
+                        Label("归档", systemImage: "archivebox")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Button(role: .destructive) {
+                    store.deleteSelectedTask()
+                } label: {
+                    Label("软删除任务", systemImage: "trash")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func timerControls(for task: TaskNode) -> some View {
+        if let segment = store.activeSegment(for: task.id) {
+            HStack(spacing: 10) {
+                Button {
+                    store.pause(segment: segment)
+                } label: {
+                    Label("暂停计时", systemImage: "pause.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button(role: .destructive) {
+                    store.stop(segment: segment)
+                } label: {
+                    Label("停止", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .controlSize(.large)
+        } else if let session = store.pausedSession(for: task.id) {
+            HStack(spacing: 10) {
+                Button {
+                    store.resume(session: session)
+                } label: {
+                    Label("继续计时", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button(role: .destructive) {
+                    store.stop(session: session)
+                } label: {
+                    Label("结束", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .controlSize(.large)
+        } else {
             Button {
-                store.startPomodoroForSelectedTask()
+                store.startTask(task)
             } label: {
-                Text("开始番茄钟")
+                Label("开始计时", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+        }
+    }
 
-            Button(role: .destructive) {
-                if let segment = store.activeSegments.first(where: { $0.taskID == store.selectedTaskID }) {
-                    store.stop(segment: segment)
-                }
-            } label: {
-                Label("停止计时", systemImage: "stop.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-
+    @ViewBuilder
+    private func pomodoroControls(for task: TaskNode) -> some View {
+        if let run = store.activePomodoroRun(for: task.id) {
             HStack(spacing: 10) {
-                Button {
-                    if let task = store.selectedTask {
-                        store.presentEditTask(task)
+                if run.state == .interrupted,
+                   let sessionID = run.sessionID,
+                   let session = store.sessions.first(where: { $0.id == sessionID }) {
+                    Button {
+                        store.resume(session: session)
+                    } label: {
+                        Label("继续番茄钟", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
                     }
-                } label: {
-                    Label("编辑", systemImage: "pencil")
-                        .frame(maxWidth: .infinity)
+                    .buttonStyle(.borderedProminent)
+                } else {
+                    Button {
+                        store.completeActivePomodoro()
+                    } label: {
+                        Label("完成本轮", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.bordered)
 
-                Button {
-                    store.archiveSelectedTask()
+                Button(role: .destructive) {
+                    store.cancelActivePomodoro()
                 } label: {
-                    Label("归档", systemImage: "archivebox")
+                    Label("取消", systemImage: "xmark.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
             }
-
-            Button(role: .destructive) {
-                store.deleteSelectedTask()
+            .controlSize(.large)
+        } else {
+            Button {
+                store.startPomodoroForSelectedTask()
             } label: {
-                Label("软删除任务", systemImage: "trash")
+                Label("开始番茄钟", systemImage: "timer")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
+            .controlSize(.large)
         }
     }
 }
@@ -1248,7 +1599,7 @@ struct InspectorSummaryCard: View {
                     Label("任务快照", systemImage: "smallcircle.filled.circle")
                         .foregroundStyle(.blue)
                     Spacer()
-                    Text(store.activeSegments.contains { $0.taskID == task.id } ? "Running" : task.status.rawValue.capitalized)
+                    Text(store.activeSegments.contains { $0.taskID == task.id } ? "Running" : task.status.displayName)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.green)
                         .padding(.horizontal, 10)
@@ -1340,19 +1691,36 @@ struct TaskManagementTreeRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
     let depth: Int
+    @State private var isExpanded = true
 
     var body: some View {
         let children = store.children(of: task)
-        Group {
-            if children.isEmpty {
-                TaskManagementFlatRow(store: store, task: task, depth: depth)
-            } else {
-                DisclosureGroup {
-                    ForEach(children, id: \.id) { child in
-                        TaskManagementTreeRow(store: store, task: child, depth: depth + 1)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 4) {
+                if children.isEmpty {
+                    Color.clear
+                        .frame(width: 18, height: 44)
+                } else {
+                    Button {
+                        withAnimation(.snappy(duration: 0.16)) {
+                            isExpanded.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 18, height: 44)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     }
-                } label: {
-                    TaskManagementFlatRow(store: store, task: task, depth: depth)
+                    .buttonStyle(.plain)
+                }
+                TaskManagementFlatRow(store: store, task: task, depth: 0)
+            }
+            .padding(.leading, CGFloat(depth) * 18)
+
+            if isExpanded {
+                ForEach(children, id: \.id) { child in
+                    TaskManagementTreeRow(store: store, task: child, depth: depth + 1)
                 }
             }
         }
@@ -1363,6 +1731,9 @@ struct TaskManagementFlatRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
     var depth: Int = 0
+#if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+#endif
 
     private var isRunning: Bool {
         store.activeSegments.contains { $0.taskID == task.id }
@@ -1370,7 +1741,7 @@ struct TaskManagementFlatRow: View {
 
     var body: some View {
         Button {
-            store.selectedTaskID = task.id
+            openTask()
         } label: {
             HStack(spacing: 12) {
                 TaskIcon(task: task, size: 30)
@@ -1379,7 +1750,8 @@ struct TaskManagementFlatRow: View {
                     HStack(spacing: 8) {
                         Text(task.title)
                             .font(.headline)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                            .strikethrough(task.status == .completed)
                             .lineLimit(1)
 
                         if isRunning {
@@ -1389,6 +1761,8 @@ struct TaskManagementFlatRow: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
                                 .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        } else if task.status != .active {
+                            TaskStatusBadge(status: task.status)
                         }
                     }
 
@@ -1412,6 +1786,14 @@ struct TaskManagementFlatRow: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+#if os(iOS)
+                if horizontalSizeClass == .compact {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+#endif
             }
             .padding(.leading, CGFloat(depth) * 10)
             .padding(.vertical, 4)
@@ -1450,22 +1832,46 @@ struct TaskManagementFlatRow: View {
             }
         }
     }
+
+    private func openTask() {
+#if os(iOS)
+        if horizontalSizeClass == .compact {
+            store.selectedTaskID = task.id
+            store.presentEditTask(task)
+            return
+        }
+#endif
+        store.selectedTaskID = task.id
+    }
 }
 
 struct PomodoroView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var preset: PomodoroPreset = .classic
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @AppStorage("PomodoroDefaultMode") private var defaultMode = PomodoroPreset.classic.rawValue
+    @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
+    @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
+    @AppStorage("DefaultPomodoroRounds") private var defaultPomodoroRounds = 1
+    @State private var focusMinutes = 25
+    @State private var breakMinutes = 5
     @State private var targetRounds = 1
 
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                header
+                if horizontalSizeClass != .compact {
+                    header
+                }
 
                 if let run = store.activePomodoroRun {
                     ActivePomodoroCard(store: store, run: run)
                 } else {
-                    PomodoroSetupCard(store: store, preset: $preset, targetRounds: $targetRounds)
+                    PomodoroSetupCard(
+                        store: store,
+                        focusMinutes: $focusMinutes,
+                        breakMinutes: $breakMinutes,
+                        targetRounds: $targetRounds
+                    )
                 }
 
                 PomodoroLedgerCard(store: store)
@@ -1476,6 +1882,15 @@ struct PomodoroView: View {
         }
         .navigationTitle("番茄钟")
         .background(AppColors.background)
+        .onAppear {
+            focusMinutes = defaultFocusMinutes
+            breakMinutes = defaultBreakMinutes
+            targetRounds = max(1, defaultPomodoroRounds)
+            if let preset = PomodoroPreset(rawValue: defaultMode), preset != .custom {
+                focusMinutes = preset.focusMinutes
+                breakMinutes = preset.breakMinutes
+            }
+        }
     }
 
     private var header: some View {
@@ -1495,22 +1910,33 @@ private enum PomodoroPreset: String, CaseIterable, Identifiable {
     case classic = "25 / 5"
     case deep = "50 / 10"
     case quick = "15 / 3"
+    case custom = "自定义"
 
     var id: String { rawValue }
 
     var focusSeconds: Int {
-        switch self {
-        case .classic: return 25 * 60
-        case .deep: return 50 * 60
-        case .quick: return 15 * 60
-        }
+        focusMinutes * 60
     }
 
     var breakSeconds: Int {
+        breakMinutes * 60
+    }
+
+    var focusMinutes: Int {
         switch self {
-        case .classic: return 5 * 60
-        case .deep: return 10 * 60
-        case .quick: return 3 * 60
+        case .classic: return 25
+        case .deep: return 50
+        case .quick: return 15
+        case .custom: return 25
+        }
+    }
+
+    var breakMinutes: Int {
+        switch self {
+        case .classic: return 5
+        case .deep: return 10
+        case .quick: return 3
+        case .custom: return 5
         }
     }
 
@@ -1519,14 +1945,24 @@ private enum PomodoroPreset: String, CaseIterable, Identifiable {
         case .classic: return "经典专注"
         case .deep: return "深度工作"
         case .quick: return "快速进入"
+        case .custom: return "自定义"
         }
     }
 }
 
 private struct PomodoroSetupCard: View {
     @ObservedObject var store: TimeTrackerStore
-    @Binding var preset: PomodoroPreset
+    @Binding var focusMinutes: Int
+    @Binding var breakMinutes: Int
     @Binding var targetRounds: Int
+
+    private var numberFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.minimum = 1
+        formatter.maximum = 480
+        return formatter
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -1548,28 +1984,53 @@ private struct PomodoroSetupCard: View {
                 }
             }
 
-            Picker("模式", selection: $preset) {
-                ForEach(PomodoroPreset.allCases) { preset in
-                    Text(preset.rawValue).tag(preset)
+            Menu("套用模式") {
+                ForEach(PomodoroPreset.allCases.filter { $0 != .custom }) { preset in
+                    Button(preset.title) {
+                        focusMinutes = preset.focusMinutes
+                        breakMinutes = preset.breakMinutes
+                    }
                 }
             }
-            .pickerStyle(.segmented)
 
-            Stepper(value: $targetRounds, in: 1...8) {
-                LabeledContent("目标轮次", value: "\(targetRounds)")
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
+                GridRow {
+                    Text("专注")
+                        .foregroundStyle(.secondary)
+                    TextField("分钟", value: $focusMinutes, formatter: numberFormatter)
+                        .textFieldStyle(.roundedBorder)
+                    Text("分钟")
+                        .foregroundStyle(.secondary)
+                }
+                GridRow {
+                    Text("休息")
+                        .foregroundStyle(.secondary)
+                    TextField("分钟", value: $breakMinutes, formatter: numberFormatter)
+                        .textFieldStyle(.roundedBorder)
+                    Text("分钟")
+                        .foregroundStyle(.secondary)
+                }
+                GridRow {
+                    Text("轮次")
+                        .foregroundStyle(.secondary)
+                    TextField("次数", value: $targetRounds, formatter: numberFormatter)
+                        .textFieldStyle(.roundedBorder)
+                    Text("轮")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             HStack {
-                PomodoroPlanMetric(title: "专注", value: DurationFormatter.compact(preset.focusSeconds))
-                PomodoroPlanMetric(title: "休息", value: DurationFormatter.compact(preset.breakSeconds))
-                PomodoroPlanMetric(title: "模式", value: preset.title)
+                PomodoroPlanMetric(title: "专注", value: "\(focusMinutes) 分钟")
+                PomodoroPlanMetric(title: "休息", value: "\(breakMinutes) 分钟")
+                PomodoroPlanMetric(title: "轮次", value: "\(targetRounds)")
             }
 
             Button {
                 store.startPomodoroForSelectedTask(
-                    focusSeconds: preset.focusSeconds,
-                    breakSeconds: preset.breakSeconds,
-                    targetRounds: targetRounds
+                    focusSeconds: max(1, focusMinutes) * 60,
+                    breakSeconds: max(1, breakMinutes) * 60,
+                    targetRounds: max(1, targetRounds)
                 )
             } label: {
                 Label("开始专注", systemImage: "play.fill")
@@ -1625,13 +2086,25 @@ private struct ActivePomodoroCard: View {
                 .frame(width: 240, height: 240)
 
                 HStack(spacing: 12) {
-                    Button {
-                        store.completeActivePomodoro()
-                    } label: {
-                        Label(remaining == 0 ? "完成本轮" : "提前完成", systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity)
+                    if run.state == .interrupted,
+                       let sessionID = run.sessionID,
+                       let session = store.sessions.first(where: { $0.id == sessionID }) {
+                        Button {
+                            store.resume(session: session)
+                        } label: {
+                            Label("继续专注", systemImage: "play.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    } else {
+                        Button {
+                            store.completeActivePomodoro()
+                        } label: {
+                            Label(remaining == 0 ? "完成本轮" : "提前完成", systemImage: "checkmark.circle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
 
                     Button(role: .destructive) {
                         store.cancelActivePomodoro()
@@ -1738,48 +2211,46 @@ private struct PomodoroLedgerCard: View {
 
 struct AnalyticsView: View {
     @ObservedObject var store: TimeTrackerStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var range: AnalyticsRange = .today
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let overview = store.analyticsOverview(for: range, now: context.date)
             let daily = store.dailyBreakdown(range: range, now: context.date)
-            let hourly = store.hourlyBreakdown(for: context.date, now: context.date)
             let tasks = store.taskBreakdown(range: range, now: context.date)
             let overlaps = store.overlapSegments(range: range, now: context.date)
+            let todaySegments = store.todaySegments
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("分析")
-                                .font(.largeTitle.bold())
-                            Text(range == .today ? "今天的时间如何流动，以及它被哪些任务占用。" : "按天复盘时间趋势、任务分布和重叠计时。")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Picker("Range", selection: $range) {
-                            ForEach(AnalyticsRange.allCases) { range in
-                                Text(range.rawValue).tag(range)
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            if horizontalSizeClass != .compact {
+                                analyticsTitle(range)
                             }
+                            Spacer()
+                            analyticsRangePicker
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 280)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            if horizontalSizeClass != .compact {
+                                analyticsTitle(range)
+                            }
+                            analyticsRangePicker
+                        }
                     }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
-                        AnalyticsMetric(title: "Wall Time", value: DurationFormatter.compact(overview.wallSeconds), footnote: "去重后的真实时间")
+                        AnalyticsMetric(title: "Wall Time", value: DurationFormatter.compact(overview.wallSeconds), footnote: "真实经过的时间")
                         AnalyticsMetric(title: "Gross Time", value: DurationFormatter.compact(overview.grossSeconds), footnote: "任务时间相加")
-                        AnalyticsMetric(title: "Overlap", value: DurationFormatter.compact(overview.overlapSeconds), footnote: "并行计时差值")
-                        AnalyticsMetric(title: "Pomodoros", value: "\(overview.pomodoroCount)", footnote: "已完成专注片段")
+                        AnalyticsMetric(title: "Overlap", value: DurationFormatter.compact(overview.overlapSeconds), footnote: "同时计时产生")
+                        AnalyticsMetric(title: "Pomodoros", value: "\(overview.pomodoroCount)", footnote: "完成的专注片段")
                     }
 
                     if range == .today {
-                        TodayActivityCard(hourly: hourly)
-                        ScreenTimeBreakdownCard(tasks: tasks, totalSeconds: max(overview.grossSeconds, 1))
+                        OverlappingTimelineCard(store: store, segments: todaySegments, now: context.date)
+                        TaskDonutCard(tasks: tasks, totalSeconds: max(overview.grossSeconds, 1))
                     } else {
                         AnalyticsChartCard(title: "每日趋势", subtitle: "Week / Month 使用每日聚合；Today 会改用小时分布。") {
                             Chart(daily) { point in
@@ -1853,6 +2324,26 @@ struct AnalyticsView: View {
         .navigationTitle("分析")
         .background(AppColors.background)
     }
+
+    private func analyticsTitle(_ range: AnalyticsRange) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+                            Text("分析")
+                                .font(.largeTitle.bold())
+                            Text(range == .today ? "今天的时间如何流动，以及它被哪些任务占用。" : "按天复盘时间趋势、任务分布和重叠计时。")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+    }
+
+    private var analyticsRangePicker: some View {
+        Picker("Range", selection: $range) {
+            ForEach(AnalyticsRange.allCases) { range in
+                Text(range.rawValue).tag(range)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 280)
+    }
 }
 
 struct AnalyticsMetric: View {
@@ -1900,6 +2391,216 @@ struct AnalyticsChartCard<Content: View>: View {
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+    }
+}
+
+struct OverlappingTimelineCard: View {
+    @ObservedObject var store: TimeTrackerStore
+    let segments: [TimeSegment]
+    let now: Date
+
+    private var dayInterval: DateInterval {
+        Calendar.current.dateInterval(of: .day, for: now) ?? DateInterval(start: Calendar.current.startOfDay(for: now), duration: 86_400)
+    }
+
+    private var visibleSegments: [TimeSegment] {
+        segments
+            .filter { $0.deletedAt == nil && ($0.endedAt ?? now) > dayInterval.start && $0.startedAt < dayInterval.end }
+            .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private var laneEntries: [TimelineLaneEntry] {
+        var laneEnds: [Date] = []
+        return visibleSegments.enumerated().map { index, segment in
+            let interval = clippedInterval(segment)
+            let lane = laneEnds.firstIndex { interval.start >= $0 } ?? laneEnds.count
+            if lane == laneEnds.count {
+                laneEnds.append(interval.end)
+            } else {
+                laneEnds[lane] = interval.end
+            }
+            return TimelineLaneEntry(segment: segment, lane: lane, labelIndex: index)
+        }
+    }
+
+    var body: some View {
+        AnalyticsChartCard(title: "今天时间轴", subtitle: "同一水平线表示没有重叠；只有同时计时才会开新轨道。") {
+            if visibleSegments.isEmpty {
+                EmptyStateRow(title: "今天还没有时间记录", icon: "timeline.selection")
+            } else {
+                GeometryReader { proxy in
+                    ZStack(alignment: .topLeading) {
+                        hourGrid(width: proxy.size.width, height: timelineHeight)
+
+                        ForEach(laneEntries) { entry in
+                            timelineBar(entry: entry, width: proxy.size.width)
+                        }
+                    }
+                }
+                .frame(height: timelineHeight)
+            }
+        }
+    }
+
+    private var timelineHeight: CGFloat {
+        let laneCount = (laneEntries.map(\.lane).max() ?? 0) + 1
+        let outsideLabelCount = laneEntries.filter { entry in
+            let interval = clippedInterval(entry.segment)
+            return interval.duration / dayInterval.duration < 128 / 700
+        }.count
+        return max(190, CGFloat(laneCount) * 56 + CGFloat(outsideLabelCount) * 18 + 54)
+    }
+
+    private func hourGrid(width: CGFloat, height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
+                let x = width * CGFloat(hour) / 24
+                VStack(alignment: .leading, spacing: 4) {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.16))
+                        .frame(width: 1, height: height - 22)
+                    Text(hour == 24 ? "24" : "\(hour)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .offset(x: x)
+            }
+        }
+    }
+
+    private func timelineBar(entry: TimelineLaneEntry, width: CGFloat) -> some View {
+        let segment = entry.segment
+        let interval = clippedInterval(segment)
+        let startRatio = interval.start.timeIntervalSince(dayInterval.start) / dayInterval.duration
+        let durationRatio = interval.duration / dayInterval.duration
+        let task = store.task(for: segment.taskID)
+        let barWidth = max(18, width * CGFloat(durationRatio))
+        let x = width * CGFloat(startRatio)
+        let title = store.displayTitle(for: segment)
+        let needsOutsideLabel = barWidth < 128
+        let laneCount = (laneEntries.map(\.lane).max() ?? 0) + 1
+        let outsideLabelY = CGFloat(laneCount) * 56 + 6 + CGFloat(entry.labelIndex) * 18
+        let availableLabelWidth = min(180, max(80, width - x - 4))
+
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(Color(hex: task?.colorHex) ?? .blue)
+                .frame(width: barWidth, height: 24)
+                .overlay {
+                    if needsOutsideLabel {
+                        Image(systemName: task?.iconName ?? "checkmark.circle")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                    } else {
+                        HStack(spacing: 6) {
+                            Image(systemName: task?.iconName ?? "checkmark.circle")
+                                .font(.caption)
+                            Text(title)
+                                .font(.caption.weight(.medium))
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                    }
+                }
+
+            if needsOutsideLabel {
+                Label(title, systemImage: task?.iconName ?? "checkmark.circle")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .frame(width: availableLabelWidth, alignment: .leading)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .offset(y: outsideLabelY)
+            }
+        }
+        .offset(x: x, y: CGFloat(entry.lane) * 56 + 22)
+        .help("\(store.displayTitle(for: segment)) \(shortRange(segment))")
+    }
+
+    private func clippedInterval(_ segment: TimeSegment) -> DateInterval {
+        let start = max(segment.startedAt, dayInterval.start)
+        let end = min(segment.endedAt ?? now, dayInterval.end)
+        return DateInterval(start: start, end: max(start.addingTimeInterval(60), end))
+    }
+
+    private func shortRange(_ segment: TimeSegment) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return "\(formatter.string(from: segment.startedAt))-\(segment.endedAt.map { formatter.string(from: $0) } ?? "Now")"
+    }
+}
+
+private struct TimelineLaneEntry: Identifiable {
+    let segment: TimeSegment
+    let lane: Int
+    let labelIndex: Int
+
+    var id: UUID { segment.id }
+}
+
+struct TaskDonutCard: View {
+    let tasks: [TaskAnalyticsPoint]
+    let totalSeconds: Int
+
+    private var visibleTasks: [TaskAnalyticsPoint] {
+        Array(tasks.prefix(8))
+    }
+
+    var body: some View {
+        AnalyticsChartCard(title: "任务使用时间", subtitle: "环状图显示任务占比，列表显示具体时长。") {
+            if tasks.isEmpty {
+                EmptyStateRow(title: "这个范围内还没有任务时间", icon: "chart.pie")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: 22) {
+                        donut
+                        taskList
+                    }
+                    VStack(alignment: .leading, spacing: 16) {
+                        donut
+                        taskList
+                    }
+                }
+            }
+        }
+    }
+
+    private var donut: some View {
+        Chart(visibleTasks) { task in
+            SectorMark(
+                angle: .value("Seconds", task.grossSeconds),
+                innerRadius: .ratio(0.62),
+                angularInset: 1.5
+            )
+            .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+        }
+        .chartLegend(.hidden)
+        .frame(width: 210, height: 210)
+        .overlay {
+            VStack(spacing: 2) {
+                Text(DurationFormatter.compact(totalSeconds))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                Text("总计")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var taskList: some View {
+        VStack(spacing: 0) {
+            ForEach(visibleTasks) { task in
+                ScreenTimeTaskRow(task: task, totalSeconds: totalSeconds)
+                if task.id != visibleTasks.last?.id {
+                    Divider()
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -2094,120 +2795,200 @@ struct OverlapRow: View {
     }
 }
 
+struct CSVExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+
+    var text: String
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        if let data = configuration.file.regularFileContents,
+           let text = String(data: data, encoding: .utf8) {
+            self.text = text
+        } else {
+            self.text = ""
+        }
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var store: TimeTrackerStore
+    @AppStorage("PreferredColorScheme") private var preferredColorScheme = "system"
+    @AppStorage("PomodoroDefaultMode") private var pomodoroDefaultMode = PomodoroPreset.classic.rawValue
     @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
     @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
+    @AppStorage("DefaultPomodoroRounds") private var defaultPomodoroRounds = 1
     @AppStorage("AllowParallelTimers") private var allowParallelTimers = true
     @AppStorage("ShowGrossAndWallTogether") private var showGrossAndWallTogether = true
+    @AppStorage("TimeTrackerCloudSyncEnabled") private var cloudSyncEnabled = true
     @State private var isResetConfirmationPresented = false
+    @State private var isClearConfirmationPresented = false
+    @State private var isExportPresented = false
+    @State private var isCheckingSync = false
+    @State private var syncCheckMessage: String?
+
+    private var minuteFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.minimum = 1
+        formatter.maximum = 480
+        return formatter
+    }
 
     var body: some View {
-        let sync = store.syncStatus
+        Form {
+            Section {
+                Picker("外观", selection: $preferredColorScheme) {
+                    Text("跟随系统").tag("system")
+                    Text("浅色").tag("light")
+                    Text("深色").tag("dark")
+                }
+                .pickerStyle(.segmented)
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("设置")
-                        .font(.largeTitle.bold())
-                        .accessibilityIdentifier("settings.title")
-                    Text("本地优先、可同步、可验证。设置项按系统偏好设置的方式排列，避免信息挤在一起。")
-                        .font(.subheadline)
+                Toggle("允许多个任务同时计时", isOn: $allowParallelTimers)
+                Toggle("同时显示 Wall / Gross Time", isOn: $showGrossAndWallTogether)
+            } header: {
+                SettingsHeader(symbol: "paintbrush.pointed.fill", title: "显示与计时")
+            } footer: {
+                Text("多个任务同时运行时，Gross 会把任务时间相加，Wall 只计算真实经过的时间。")
+            }
+
+            Section {
+                Picker("默认模式", selection: $pomodoroDefaultMode) {
+                    ForEach(PomodoroPreset.allCases) { preset in
+                        Text(preset.title).tag(preset.rawValue)
+                    }
+                }
+                .onChange(of: pomodoroDefaultMode) { _, newValue in
+                    guard let preset = PomodoroPreset(rawValue: newValue), preset != .custom else { return }
+                    defaultFocusMinutes = preset.focusMinutes
+                    defaultBreakMinutes = preset.breakMinutes
+                }
+
+                TextField("专注分钟", value: $defaultFocusMinutes, formatter: minuteFormatter)
+                TextField("休息分钟", value: $defaultBreakMinutes, formatter: minuteFormatter)
+                TextField("默认轮次", value: $defaultPomodoroRounds, formatter: minuteFormatter)
+            } header: {
+                SettingsHeader(symbol: "timer", title: "番茄钟")
+            } footer: {
+                Text("开始番茄钟时会默认填入这里的数值，也可以在开始前临时修改。")
+            }
+
+            Section {
+                if store.countdownEvents.isEmpty {
+                    Text("没有倒计时事件。首页只显示今天、本周、本月和今年进度。")
                         .foregroundStyle(.secondary)
                 }
 
-                SettingsSectionCard(
-                    title: "同步",
-                    subtitle: sync.isCloudBacked ? "SwiftData 容器已以 CloudKit private database 打开。" : "当前使用本地存储；CloudKit 不可用时会自动回退。",
-                    symbol: "icloud.fill",
-                    tint: .blue
-                ) {
-                    SettingsValueRow(title: "存储", value: "SwiftData")
-                    SettingsValueRow(title: "事实来源", value: "TimeSegment")
-                    SettingsStatusRow(title: "当前模式", status: sync.storageStatusText, tint: sync.isCloudBacked ? .green : .orange)
-                    SettingsStatusRow(title: "CloudKit 账号", status: sync.accountStatus, tint: sync.accountStatus == "Apple ID 可用" ? .green : .orange)
-                    SettingsValueRow(title: "iCloud 容器", value: sync.containerIdentifier, monospaced: true)
-                    SettingsValueRow(title: "设备 ID", value: sync.deviceID, monospaced: true)
-                    if let error = sync.lastError {
-                        SettingsValueRow(title: "同步回退原因", value: error, monospaced: false, isWarning: true)
-                    }
-                    HStack {
-                        Spacer()
-                        Button {
-                            Task {
-                                await store.refreshCloudAccountStatus()
-                            }
-                        } label: {
-                            Label("重新检查 iCloud", systemImage: "arrow.clockwise")
+                ForEach(store.countdownEvents) { event in
+                    CountdownEventSettingsRow(
+                        event: event,
+                        onChangeTitle: { title in
+                            store.updateCountdownEvent(event, title: title)
+                        },
+                        onChangeDate: { date in
+                            store.updateCountdownEvent(event, date: date)
+                        },
+                        onDelete: {
+                            store.deleteCountdownEvent(event)
                         }
-                        .buttonStyle(.bordered)
-                    }
+                    )
                 }
 
-                SettingsSectionCard(
-                    title: "默认行为",
-                    subtitle: "这些偏好只影响新开始的流程，不会重写已有账本。",
-                    symbol: "slider.horizontal.3",
-                    tint: .indigo
-                ) {
-                    SettingsControlRow(title: "默认专注时长") {
-                        Stepper("\(defaultFocusMinutes) 分钟", value: $defaultFocusMinutes, in: 5...90, step: 5)
-                            .labelsHidden()
-                    }
-                    SettingsControlRow(title: "默认休息时长") {
-                        Stepper("\(defaultBreakMinutes) 分钟", value: $defaultBreakMinutes, in: 1...30, step: 1)
-                            .labelsHidden()
-                    }
-                    SettingsControlRow(title: "允许多个任务同时计时") {
-                        Toggle("", isOn: $allowParallelTimers)
-                            .labelsHidden()
-                    }
-                    SettingsControlRow(title: "同时显示 Wall / Gross Time") {
-                        Toggle("", isOn: $showGrossAndWallTogether)
-                            .labelsHidden()
-                    }
+                Button {
+                    store.addCountdownEvent()
+                } label: {
+                    Label("添加事件", systemImage: "plus")
                 }
-
-                SettingsSectionCard(
-                    title: "账本概览",
-                    subtitle: "这些数字直接来自 SwiftData 原始记录，不是缓存摘要。",
-                    symbol: "list.bullet.rectangle.portrait.fill",
-                    tint: .teal
-                ) {
-                    SettingsValueRow(title: "任务数量", value: "\(store.tasks.count)")
-                    SettingsValueRow(title: "时间片段", value: "\(store.allSegments.count)")
-                    SettingsValueRow(title: "番茄钟记录", value: "\(store.pomodoroRuns.count)")
-                    SettingsValueRow(title: "已归档任务", value: "\(store.archivedTasks.count)")
-                }
-
-                SettingsSectionCard(
-                    title: "调试与演示",
-                    subtitle: "演示数据用于验证首页、时间线、重叠统计和分析图表。",
-                    symbol: "wrench.and.screwdriver.fill",
-                    tint: .gray
-                ) {
-                    SettingsActionRow(
-                        title: "手动补录时间",
-                        detail: "创建 source = manual 的 TimeSession 和 TimeSegment。",
-                        symbol: "calendar.badge.plus"
-                    ) {
-                        store.presentManualTime()
-                    }
-
-                    SettingsActionRow(
-                        title: "重建演示数据",
-                        detail: "覆盖当前本地数据并生成多日任务、番茄钟和重叠计时。",
-                        symbol: "sparkles"
-                    ) {
-                        isResetConfirmationPresented = true
-                    }
-                }
+            } header: {
+                SettingsHeader(symbol: "calendar.badge.clock", title: "倒计时事件")
+            } footer: {
+                Text("可以为空，也可以添加任意多个。首页会按日期显示距离每个事件还有多少天。")
             }
-            .frame(maxWidth: 860, alignment: .leading)
-            .padding(24)
+
+            Section {
+                Button {
+                    isExportPresented = true
+                } label: {
+                    Label("导出 CSV", systemImage: "square.and.arrow.down")
+                }
+
+                Button {
+                    store.presentManualTime()
+                } label: {
+                    Label("补录时间", systemImage: "calendar.badge.plus")
+                }
+            } header: {
+                SettingsHeader(symbol: "doc.text.fill", title: "数据")
+            } footer: {
+                Text("CSV 会导出任务、路径、开始时间、结束时间、时长、来源和备注，适合账单、归档或二次分析。")
+            }
+
+            Section {
+                Toggle(isOn: $cloudSyncEnabled) {
+                    Label("iCloud 同步", systemImage: "icloud")
+                }
+                .onChange(of: cloudSyncEnabled) { _, enabled in
+                    if !enabled {
+                        AppCloudSync.recordCloudKitDisabledByUser()
+                    }
+                }
+
+                LabeledContent("当前存储", value: cloudSyncEnabled ? (store.syncStatus.isCloudBacked ? "iCloud" : "本地，重启后尝试 iCloud") : "本地")
+
+                Button {
+                    isCheckingSync = true
+                    Task {
+                        await store.refreshCloudAccountStatus()
+                        syncCheckMessage = store.syncStatus.accountStatus
+                        isCheckingSync = false
+                    }
+                } label: {
+                    Label(isCheckingSync ? "正在检查..." : "检查同步状态", systemImage: "arrow.clockwise")
+                }
+                .disabled(isCheckingSync)
+            } header: {
+                SettingsHeader(symbol: "icloud.fill", title: "同步")
+            } footer: {
+                Text("开关会在下次启动时生效。关闭后新启动会使用本地存储，不再尝试连接 CloudKit。")
+            }
+
+            Section {
+                LabeledContent("任务", value: "\(store.tasks.count)")
+                LabeledContent("时间片段", value: "\(store.allSegments.count)")
+                LabeledContent("番茄钟", value: "\(store.pomodoroRuns.count)")
+                LabeledContent("CloudKit 账号", value: store.syncStatus.accountStatus)
+                LabeledContent("iCloud 容器", value: store.syncStatus.containerIdentifier)
+                Button("重建演示数据", role: .destructive) {
+                    isResetConfirmationPresented = true
+                }
+                Button("清除演示数据", role: .destructive) {
+                    isClearConfirmationPresented = true
+                }
+            } header: {
+                SettingsHeader(symbol: "ladybug.fill", title: "调试与演示")
+            }
         }
-        .background(AppColors.background)
+        .formStyle(.grouped)
         .navigationTitle("设置")
+        .accessibilityIdentifier("settings.view")
+        .fileExporter(
+            isPresented: $isExportPresented,
+            document: CSVExportDocument(text: store.csvExport()),
+            contentType: .commaSeparatedText,
+            defaultFilename: "time-tracker-export.csv"
+        ) { result in
+            if case let .failure(error) = result {
+                store.errorMessage = error.localizedDescription
+            }
+        }
         .confirmationDialog("重建演示数据？", isPresented: $isResetConfirmationPresented, titleVisibility: .visible) {
             Button("清空并生成演示数据", role: .destructive) {
                 store.replaceWithDemoData()
@@ -2216,7 +2997,78 @@ struct SettingsView: View {
         } message: {
             Text("这会删除当前本机 SwiftData 存储中的任务和时间片段，然后写入一组多日演示数据。")
         }
-        .accessibilityIdentifier("settings.view")
+        .confirmationDialog("清除演示数据？", isPresented: $isClearConfirmationPresented, titleVisibility: .visible) {
+            Button("清除演示任务和记录", role: .destructive) {
+                store.clearDemoData()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("这会删除由演示数据生成的任务、时间片段和番茄钟记录，不会主动删除你手动创建的记录。")
+        }
+        .alert("iCloud 同步状态", isPresented: syncCheckPresented) {
+            Button("好") {
+                syncCheckMessage = nil
+            }
+        } message: {
+            Text(syncCheckMessage ?? "")
+        }
+    }
+
+    private var syncCheckPresented: Binding<Bool> {
+        Binding {
+            syncCheckMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                syncCheckMessage = nil
+            }
+        }
+    }
+}
+
+struct SettingsHeader: View {
+    let symbol: String
+    let title: String
+
+    var body: some View {
+        Label(title, systemImage: symbol)
+    }
+}
+
+struct CountdownEventSettingsRow: View {
+    let event: CountdownEvent
+    let onChangeTitle: (String) -> Void
+    let onChangeDate: (Date) -> Void
+    let onDelete: () -> Void
+
+    private var titleBinding: Binding<String> {
+        Binding {
+            event.title
+        } set: { value in
+            onChangeTitle(value)
+        }
+    }
+
+    private var dateBinding: Binding<Date> {
+        Binding {
+            event.date
+        } set: { value in
+            onChangeDate(value)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("事件名称", text: titleBinding)
+            HStack {
+                DatePicker("日期", selection: dateBinding, displayedComponents: .date)
+                Spacer()
+                Button(role: .destructive, action: onDelete) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -2462,35 +3314,34 @@ struct TaskEditorPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(draft.taskID == nil ? "新建任务" : "编辑任务")
-                        .font(.title2.bold())
-                    Text("任务可以计时，也可以继续包含子任务。")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    onCancel()
-                } label: {
-                    Image(systemName: "xmark")
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.borderless)
-            }
-            .padding(18)
-
+        NavigationStack {
             Form {
                 Section("基本信息") {
                     TextField("任务名称", text: $draft.title)
+
+                    Picker("状态", selection: $draft.status) {
+                        ForEach(TaskStatus.allCases, id: \.self) { status in
+                            Text(status.displayName).tag(status)
+                        }
+                    }
+                    .pickerStyle(.segmented)
 
                     Picker("父任务", selection: parentBinding) {
                         Text("根级").tag(Optional<UUID>.none)
                         ForEach(store.tasks.filter { $0.id != draft.taskID }, id: \.id) { task in
                             Text(indentedTitle(task)).tag(Optional(task.id))
                         }
+                    }
+
+                    DisclosureGroup("高级分类") {
+                        Picker("显示方式", selection: $draft.kind) {
+                            Text("任务").tag(TaskNodeKind.task)
+                            Text("项目").tag(TaskNodeKind.project)
+                            Text("文件夹").tag(TaskNodeKind.folder)
+                        }
+                        Text("每一项都可以继续添加子任务。分类只影响图标和整理方式，不限制计时。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
 
                     HStack {
@@ -2505,6 +3356,7 @@ struct TaskEditorPanel: View {
                                 Text("选择")
                             }
                         }
+                        #if os(macOS)
                         .popover(isPresented: $isSymbolPickerPresented) {
                             SymbolAndColorPicker(
                                 symbols: SymbolCatalog.symbolNames,
@@ -2514,8 +3366,8 @@ struct TaskEditorPanel: View {
                                 colorHex: $draft.colorHex
                             )
                             .frame(width: 460, height: 520)
-                            .padding()
                         }
+                        #endif
                     }
                 }
 
@@ -2536,12 +3388,54 @@ struct TaskEditorPanel: View {
                 }
             }
             .formStyle(.grouped)
+            .navigationTitle(draft.taskID == nil ? "新建任务" : "编辑任务")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        onCancel()
+                    }
+                    .keyboardShortcut(.cancelAction)
+                }
 
-            modalFooter(canSave: !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        onSave(draft)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSave)
+                }
+            }
+            #if os(iOS)
+            .sheet(isPresented: $isSymbolPickerPresented) {
+                NavigationStack {
+                    SymbolAndColorPicker(
+                        symbols: SymbolCatalog.symbolNames,
+                        searchKeywords: SymbolCatalog.searchKeywords,
+                        colors: colors,
+                        symbolName: $draft.iconName,
+                        colorHex: $draft.colorHex
+                    )
+                    .navigationTitle("符号与颜色")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("完成") {
+                                isSymbolPickerPresented = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.large])
+            }
+            #endif
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
-        .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
+    }
+
+    private var canSave: Bool {
+        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var parentTitle: String {
@@ -2571,25 +3465,6 @@ struct TaskEditorPanel: View {
         String(repeating: "  ", count: task.depth) + task.title
     }
 
-    private func modalFooter(canSave: Bool) -> some View {
-        HStack {
-            Button("取消") {
-                onCancel()
-            }
-            .keyboardShortcut(.cancelAction)
-
-            Spacer()
-
-            Button("保存") {
-                onSave(draft)
-            }
-            .keyboardShortcut(.defaultAction)
-            .buttonStyle(.borderedProminent)
-            .disabled(!canSave)
-        }
-        .padding(18)
-        .background(.thinMaterial)
-    }
 }
 
 struct ManualTimeSheet: View {
@@ -2799,15 +3674,15 @@ struct SymbolAndColorPicker: View {
                         .help(symbol)
                     }
                 }
+                .padding(.vertical, 2)
             }
-            .frame(maxHeight: 330)
 
             Divider()
 
             Text("颜色")
                 .font(.headline)
 
-            HStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 10)], alignment: .leading, spacing: 10) {
                 ForEach(colors, id: \.self) { hex in
                     Button {
                         colorHex = hex
@@ -2827,6 +3702,8 @@ struct SymbolAndColorPicker: View {
                 }
             }
         }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -2865,7 +3742,12 @@ enum SymbolCatalog {
     }
 
     private static func resourceURLs(fileName: String, extension ext: String) -> [URL] {
-        [
+        let bundled: [URL] = [
+            fileName == "symbol_order" ? Bundle.main.url(forResource: "SFSymbolOrder", withExtension: ext) : nil,
+            fileName == "symbol_search" ? Bundle.main.url(forResource: "SFSymbolSearch", withExtension: ext) : nil
+        ].compactMap(\.self)
+
+        let system = [
             "/System/Library/CoreServices/CoreGlyphs.bundle/Contents/Resources",
             "/System/Library/CoreServices/CoreGlyphs.bundle/Resources",
             "/System/Library/PrivateFrameworks/SFSymbols.framework/Versions/A/Resources/CoreGlyphs.bundle/Contents/Resources",
@@ -2873,6 +3755,8 @@ enum SymbolCatalog {
         ].map {
             URL(fileURLWithPath: $0).appendingPathComponent(fileName).appendingPathExtension(ext)
         }
+
+        return bundled + system
     }
 
     private static let fallbackSymbols = [

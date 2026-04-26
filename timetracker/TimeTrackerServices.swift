@@ -4,9 +4,17 @@ import SwiftData
 
 enum AppCloudSync {
     static let containerIdentifier = "iCloud.me.mezorewww.timetracker"
+    static let enabledKey = "TimeTrackerCloudSyncEnabled"
     static let modeKey = "TimeTrackerPersistenceMode"
     static let errorKey = "TimeTrackerPersistenceError"
     static let accountStatusKey = "TimeTrackerCloudAccountStatus"
+
+    static var isEnabled: Bool {
+        if UserDefaults.standard.object(forKey: enabledKey) == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: enabledKey)
+    }
 
     static var persistenceMode: String {
         UserDefaults.standard.string(forKey: modeKey) ?? "Local"
@@ -25,9 +33,24 @@ enum AppCloudSync {
         UserDefaults.standard.removeObject(forKey: errorKey)
     }
 
+    static func recordCloudKitDisabledByUser() {
+        UserDefaults.standard.set("Local", forKey: modeKey)
+        UserDefaults.standard.set("用户已关闭 iCloud 同步，下次启动继续使用本地存储。", forKey: accountStatusKey)
+        UserDefaults.standard.removeObject(forKey: errorKey)
+    }
+
     static func recordLocalFallback(error: Error) {
         UserDefaults.standard.set("Local fallback", forKey: modeKey)
         UserDefaults.standard.set(error.localizedDescription, forKey: errorKey)
+    }
+
+    static func recordEmergencyInMemoryFallback(error: Error) {
+        UserDefaults.standard.set("In-memory fallback", forKey: modeKey)
+        UserDefaults.standard.set(
+            "持久化存储启动失败，已临时使用内存存储：\(error.localizedDescription)",
+            forKey: errorKey
+        )
+        UserDefaults.standard.set("本次启动使用临时存储", forKey: accountStatusKey)
     }
 
     static func recordUITesting() {

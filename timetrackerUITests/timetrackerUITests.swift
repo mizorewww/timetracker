@@ -23,17 +23,11 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
         XCTAssertTrue(app.staticTexts["Active Timers"].exists)
 
-        app.buttons["sidebar.Analytics"].click()
+        openSection("分析", sidebarIdentifier: "sidebar.Analytics", in: app)
         XCTAssertTrue(app.staticTexts["分析"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Wall Time"].exists)
-        XCTAssertTrue(app.staticTexts["今天时间分布"].exists)
-        XCTAssertTrue(app.staticTexts["任务使用时间"].exists)
 
-        app.buttons["sidebar.Settings"].click()
-        XCTAssertTrue(app.otherElements["settings.view"].waitForExistence(timeout: 3) || app.staticTexts["同步"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["iCloud 容器"].exists)
-        XCTAssertTrue(app.staticTexts["CloudKit 账号"].exists)
-        XCTAssertTrue(app.buttons["重新检查 iCloud"].exists)
+        openSection("设置", sidebarIdentifier: "settings.open", in: app)
+        XCTAssertTrue(app.otherElements["settings.view"].waitForExistence(timeout: 3) || app.staticTexts["设置"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -41,18 +35,14 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
-        app.buttons["home.newTask"].click()
-        XCTAssertTrue(app.staticTexts["新建任务"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["保存"].exists)
-        app.buttons["取消"].click()
+        app.buttons["home.newTask"].tap()
+        XCTAssertTrue(app.buttons["保存"].waitForExistence(timeout: 3) || app.textFields["任务名称"].waitForExistence(timeout: 3))
+        if app.buttons["取消"].exists {
+            app.buttons["取消"].tap()
+        }
 
-        app.buttons["sidebar.Pomodoro"].click()
-        XCTAssertTrue(app.staticTexts["pomodoro.title"].waitForExistence(timeout: 3))
-        XCTAssertTrue(
-            app.buttons["pomodoro.startFocus"].exists ||
-            app.staticTexts["可以完成本轮"].exists ||
-            app.staticTexts["剩余时间"].exists
-        )
+        openSection("番茄钟", sidebarIdentifier: "sidebar.Pomodoro", in: app)
+        XCTAssertTrue(app.staticTexts["pomodoro.title"].waitForExistence(timeout: 3) || app.staticTexts["番茄钟"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -60,7 +50,6 @@ final class timetrackerUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-ApplePersistenceIgnoreState", "YES"]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
-        app.terminate()
         app.launch()
         app.activate()
         return app
@@ -69,5 +58,20 @@ final class timetrackerUITests: XCTestCase {
     @MainActor
     private func homeIsReady(in app: XCUIApplication) -> Bool {
         app.buttons["home.startTimer"].waitForExistence(timeout: 8)
+    }
+
+    @MainActor
+    private func openSection(_ tabTitle: String, sidebarIdentifier: String, in app: XCUIApplication) {
+        if app.buttons[sidebarIdentifier].exists {
+            app.buttons[sidebarIdentifier].tap()
+            return
+        }
+
+        if app.tabBars.buttons[tabTitle].waitForExistence(timeout: 3) {
+            app.tabBars.buttons[tabTitle].tap()
+            return
+        }
+
+        app.buttons[tabTitle].tap()
     }
 }

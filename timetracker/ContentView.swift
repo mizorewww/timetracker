@@ -60,6 +60,7 @@ extension FocusedValues {
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("PreferredColorScheme") private var preferredColorScheme = "system"
     @StateObject private var store = TimeTrackerStore()
 
@@ -78,6 +79,20 @@ struct ContentView: View {
         }
         .task {
             store.configureIfNeeded(context: modelContext)
+            store.refreshQuietly()
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await store.refreshForForeground()
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard scenePhase == .active, AppCloudSync.isEnabled else { continue }
+                await MainActor.run {
+                    store.refreshQuietly()
+                }
+            }
         }
         .preferredColorScheme(appColorScheme)
         .alert("Error", isPresented: errorBinding) {
@@ -178,6 +193,7 @@ struct iOSRootView: View {
 
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var isInspectorPresented = false
 
     var body: some View {
         NavigationSplitView {
@@ -185,16 +201,55 @@ struct DesktopRootView: View {
                 #if os(macOS)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
                 #endif
-        } content: {
+        } detail: {
             DesktopContentView(store: store)
                 #if os(macOS)
                 .navigationSplitViewColumnWidth(min: 480, ideal: 720)
                 #endif
-        } detail: {
-            InspectorView(store: store)
-                #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
-                #endif
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            isInspectorPresented.toggle()
+                        } label: {
+                            Image(systemName: "sidebar.right")
+                        }
+                        .help(isInspectorPresented ? "隐藏详情" : "显示详情")
+                        .disabled(!inspectorIsRelevant)
+                    }
+                }
+                .inspector(isPresented: inspectorBinding) {
+                    InspectorView(store: store)
+                        .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+                }
+        }
+        .onAppear {
+            isInspectorPresented = inspectorIsRelevant
+        }
+        .onChange(of: store.desktopDestination) { _, _ in
+            updateInspectorVisibility()
+        }
+        .onChange(of: store.selectedTaskID) { _, _ in
+            updateInspectorVisibility()
+        }
+    }
+
+    private var inspectorIsRelevant: Bool {
+        store.desktopDestination == .today && store.selectedTask != nil
+    }
+
+    private var inspectorBinding: Binding<Bool> {
+        Binding {
+            isInspectorPresented && inspectorIsRelevant
+        } set: { newValue in
+            isInspectorPresented = newValue
+        }
+    }
+
+    private func updateInspectorVisibility() {
+        if inspectorIsRelevant {
+            isInspectorPresented = true
+        } else {
+            isInspectorPresented = false
         }
     }
 }
@@ -510,11 +565,23 @@ struct MiniBars: View {
 
 struct ActionStack: View {
     @ObservedObject var store: TimeTrackerStore
+#if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var isTaskPickerPresented = false
+#endif
 
     var body: some View {
         VStack(spacing: 12) {
             Button {
+#if os(iOS)
+                if horizontalSizeClass == .compact {
+                    isTaskPickerPresented = true
+                } else {
+                    store.startSelectedTask()
+                }
+#else
                 store.startSelectedTask()
+#endif
             } label: {
                 Label("开始计时", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
@@ -536,8 +603,67 @@ struct ActionStack: View {
             .accessibilityIdentifier("home.newTask")
         }
         .frame(maxHeight: .infinity)
+#if os(iOS)
+        .sheet(isPresented: $isTaskPickerPresented) {
+            NavigationStack {
+                TaskStartPicker(store: store) {
+                    isTaskPickerPresented = false
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+#endif
     }
 }
+
+#if os(iOS)
+struct TaskStartPicker: View {
+    @ObservedObject var store: TimeTrackerStore
+    let onDone: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }, id: \.id) { task in
+                    Button {
+                        store.startTask(task)
+                        onDone()
+                    } label: {
+                        HStack(spacing: 12) {
+                            TaskIcon(task: task, size: 28)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(task.title)
+                                    .foregroundStyle(.primary)
+                                Text(store.path(for: task))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            if store.activeSegment(for: task.id) != nil {
+                                Text("运行中")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("选择要开始计时的任务")
+            } footer: {
+                Text("iPhone 没有常驻任务详情面板，所以开始前先确认计时归属。")
+            }
+        }
+        .navigationTitle("开始计时")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消", action: onDone)
+            }
+        }
+    }
+}
+#endif
 
 struct ActiveTimersSection: View {
     @ObservedObject var store: TimeTrackerStore
@@ -983,8 +1109,14 @@ struct QuickStartEditorSheet: View {
     }
 }
 
+enum SidebarSelection: Hashable {
+    case destination(TimeTrackerStore.DesktopDestination)
+    case task(UUID)
+}
+
 struct SidebarView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var selection: SidebarSelection?
 
     private var destinations: [TimeTrackerStore.DesktopDestination] {
         #if os(macOS)
@@ -995,28 +1127,37 @@ struct SidebarView: View {
     }
 
     var body: some View {
-        List {
+        List(selection: $selection) {
             Section {
                 ForEach(destinations) { destination in
-                    SidebarDestinationRow(
-                        destination: destination,
-                        count: count(for: destination),
-                        isSelected: store.desktopDestination == destination
-                    ) {
-                        store.desktopDestination = destination
-                    }
-                    .accessibilityIdentifier("sidebar.\(destination.rawValue)")
+                    SidebarDestinationLabel(destination: destination, count: count(for: destination))
+                        .tag(SidebarSelection.destination(destination))
+                        .accessibilityIdentifier("sidebar.\(destination.rawValue)")
                 }
             }
 
             Section("任务") {
                 ForEach(store.rootTasks(), id: \.id) { task in
-                    TaskTreeRow(store: store, task: task)
-                        .tag(task.id)
+                    TaskTreeRow(store: store, task: task, selection: $selection)
                 }
             }
         }
         .navigationTitle("Time Tracker")
+        .onAppear {
+            syncSelectionFromStore()
+        }
+        .onChange(of: selection) { _, newValue in
+            guard let newValue else { return }
+            switch newValue {
+            case let .destination(destination):
+                store.desktopDestination = destination
+            case let .task(taskID):
+                store.selectedTaskID = taskID
+            }
+        }
+        .onChange(of: store.selectedTaskID) { _, _ in
+            syncSelectionFromStore()
+        }
         #if os(macOS)
         .toolbar {
             ToolbarItem(placement: .automatic) {
@@ -1028,6 +1169,14 @@ struct SidebarView: View {
             }
         }
         #endif
+    }
+
+    private func syncSelectionFromStore() {
+        if let selectedTaskID = store.selectedTaskID {
+            selection = .task(selectedTaskID)
+        } else {
+            selection = .destination(store.desktopDestination)
+        }
     }
 
     private func count(for destination: TimeTrackerStore.DesktopDestination) -> Int? {
@@ -1049,21 +1198,22 @@ struct SidebarView: View {
 struct TaskTreeRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
+    @Binding var selection: SidebarSelection?
 
     var body: some View {
         let children = store.children(of: task)
         Group {
             if children.isEmpty {
                 taskLabel
-                    .tag(task.id)
+                    .tag(SidebarSelection.task(task.id))
             } else {
                 DisclosureGroup {
                     ForEach(children, id: \.id) { child in
-                        TaskTreeRow(store: store, task: child)
-                            .tag(child.id)
+                        TaskTreeRow(store: store, task: child, selection: $selection)
                     }
                 } label: {
                     taskLabel
+                        .tag(SidebarSelection.task(task.id))
                 }
             }
         }
@@ -1091,9 +1241,6 @@ struct TaskTreeRow: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectedTaskID = task.id
-        }
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
@@ -1184,38 +1331,22 @@ struct SidebarStaticRow: View {
     }
 }
 
-struct SidebarDestinationRow: View {
+struct SidebarDestinationLabel: View {
     let destination: TimeTrackerStore.DesktopDestination
     let count: Int?
-    let isSelected: Bool
-    let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack {
-                Label(destination.title, systemImage: destination.symbolName)
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-                Spacer()
-                if let count {
-                    Text("\(count)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .background(.thinMaterial, in: Capsule())
-                }
+        HStack {
+            Label(destination.title, systemImage: destination.symbolName)
+            Spacer()
+            if let count {
+                Text("\(count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .background(.thinMaterial, in: Capsule())
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
-        .listRowBackground(Color.clear)
     }
 }
 
@@ -2403,6 +2534,23 @@ struct OverlappingTimelineCard: View {
         Calendar.current.dateInterval(of: .day, for: now) ?? DateInterval(start: Calendar.current.startOfDay(for: now), duration: 86_400)
     }
 
+    private var displayInterval: DateInterval {
+        guard !visibleSegments.isEmpty else { return dayInterval }
+        let clipped = visibleSegments.map(clippedToDay)
+        let earliest = clipped.map(\.start).min() ?? dayInterval.start
+        let latest = clipped.map(\.end).max() ?? dayInterval.end
+        let paddedStart = earliest.addingTimeInterval(-30 * 60)
+        let start = max(dayInterval.start, paddedStart)
+        var end = min(dayInterval.end, latest)
+        if end.timeIntervalSince(start) < 2 * 60 * 60 {
+            end = min(dayInterval.end, start.addingTimeInterval(2 * 60 * 60))
+        }
+        if end <= start {
+            end = min(dayInterval.end, start.addingTimeInterval(60 * 60))
+        }
+        return DateInterval(start: start, end: end)
+    }
+
     private var visibleSegments: [TimeSegment] {
         segments
             .filter { $0.deletedAt == nil && ($0.endedAt ?? now) > dayInterval.start && $0.startedAt < dayInterval.end }
@@ -2413,7 +2561,7 @@ struct OverlappingTimelineCard: View {
         var laneEnds: [Date] = []
         return visibleSegments.enumerated().map { index, segment in
             let interval = clippedInterval(segment)
-            let lane = laneEnds.firstIndex { interval.start >= $0 } ?? laneEnds.count
+            let lane = laneEnds.firstIndex { interval.start.timeIntervalSince($0) > minimumLaneGap } ?? laneEnds.count
             if lane == laneEnds.count {
                 laneEnds.append(interval.end)
             } else {
@@ -2424,113 +2572,249 @@ struct OverlappingTimelineCard: View {
     }
 
     var body: some View {
-        AnalyticsChartCard(title: "今天时间轴", subtitle: "同一水平线表示没有重叠；只有同时计时才会开新轨道。") {
+        AnalyticsChartCard(title: "今天时间轴", subtitle: "条形只表达时间位置和长度；任务文字在下方列表中逐行查看。") {
             if visibleSegments.isEmpty {
                 EmptyStateRow(title: "今天还没有时间记录", icon: "timeline.selection")
             } else {
-                GeometryReader { proxy in
-                    ZStack(alignment: .topLeading) {
-                        hourGrid(width: proxy.size.width, height: timelineHeight)
+                VStack(alignment: .leading, spacing: 14) {
+                    if isCompact {
+                        verticalTimeline
+                            .frame(height: 520)
+                    } else {
+                        horizontalTimeline
+                            .frame(height: horizontalTimelineHeight)
+                    }
 
-                        ForEach(laneEntries) { entry in
-                            timelineBar(entry: entry, width: proxy.size.width)
+                    Divider()
+
+                    VStack(spacing: 0) {
+                        ForEach(visibleSegments) { segment in
+                            timelineLegendRow(segment)
+                            if segment.id != visibleSegments.last?.id {
+                                Divider()
+                            }
                         }
                     }
                 }
-                .frame(height: timelineHeight)
             }
         }
     }
 
-    private var timelineHeight: CGFloat {
-        let laneCount = (laneEntries.map(\.lane).max() ?? 0) + 1
-        let outsideLabelCount = laneEntries.filter { entry in
-            let interval = clippedInterval(entry.segment)
-            return interval.duration / dayInterval.duration < 128 / 700
-        }.count
-        return max(190, CGFloat(laneCount) * 56 + CGFloat(outsideLabelCount) * 18 + 54)
+    private var isCompact: Bool {
+        #if os(iOS)
+        UIDevice.current.userInterfaceIdiom == .phone
+        #else
+        false
+        #endif
     }
 
-    private func hourGrid(width: CGFloat, height: CGFloat) -> some View {
+    private var laneCount: Int {
+        (laneEntries.map(\.lane).max() ?? 0) + 1
+    }
+
+    private var minimumLaneGap: TimeInterval {
+        60
+    }
+
+    private var horizontalTimelineHeight: CGFloat {
+        max(120, CGFloat(laneCount) * 34 + 34)
+    }
+
+    private var horizontalTimeline: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                horizontalHourGrid(width: proxy.size.width, height: proxy.size.height)
+                ForEach(laneEntries) { entry in
+                    horizontalBar(entry: entry, width: proxy.size.width)
+                }
+            }
+        }
+    }
+
+    private var verticalTimeline: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                verticalHourGrid(width: proxy.size.width, height: proxy.size.height)
+                ForEach(laneEntries) { entry in
+                    verticalBar(entry: entry, width: proxy.size.width, height: proxy.size.height)
+                }
+            }
+        }
+    }
+
+    private func horizontalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
-                let x = width * CGFloat(hour) / 24
+            ForEach(hourTicks(), id: \.self) { tick in
+                let ratio = tick.timeIntervalSince(displayInterval.start) / displayInterval.duration
+                let x = width * CGFloat(ratio)
                 VStack(alignment: .leading, spacing: 4) {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.16))
-                        .frame(width: 1, height: height - 22)
-                    Text(hour == 24 ? "24" : "\(hour)")
+                        .frame(width: 1, height: height - 18)
+                    Text(hourLabel(tick))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
-                .offset(x: x)
+                .offset(x: min(max(0, x), width - 12))
             }
         }
     }
 
-    private func timelineBar(entry: TimelineLaneEntry, width: CGFloat) -> some View {
+    private func verticalHourGrid(width: CGFloat, height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(hourTicks(), id: \.self) { tick in
+                let ratio = tick.timeIntervalSince(displayInterval.start) / displayInterval.duration
+                let y = height * CGFloat(ratio)
+                HStack(spacing: 8) {
+                    Text(hourLabel(tick))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, alignment: .trailing)
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.16))
+                        .frame(height: 1)
+                }
+                .offset(y: min(max(0, y - 6), height - 12))
+            }
+        }
+    }
+
+    private func horizontalBar(entry: TimelineLaneEntry, width: CGFloat) -> some View {
         let segment = entry.segment
         let interval = clippedInterval(segment)
-        let startRatio = interval.start.timeIntervalSince(dayInterval.start) / dayInterval.duration
-        let durationRatio = interval.duration / dayInterval.duration
+        let startRatio = interval.start.timeIntervalSince(displayInterval.start) / displayInterval.duration
+        let durationRatio = interval.duration / displayInterval.duration
         let task = store.task(for: segment.taskID)
         let barWidth = max(18, width * CGFloat(durationRatio))
         let x = width * CGFloat(startRatio)
-        let title = store.displayTitle(for: segment)
-        let needsOutsideLabel = barWidth < 128
-        let laneCount = (laneEntries.map(\.lane).max() ?? 0) + 1
-        let outsideLabelY = CGFloat(laneCount) * 56 + 6 + CGFloat(entry.labelIndex) * 18
-        let availableLabelWidth = min(180, max(80, width - x - 4))
 
-        return ZStack(alignment: .topLeading) {
+        return RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .fill(Color(hex: task?.colorHex) ?? .blue)
+            .frame(width: barWidth, height: 24)
+            .overlay {
+                Image(systemName: task?.iconName ?? "checkmark.circle")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            .offset(x: x, y: CGFloat(entry.lane) * 34 + 16)
+            .help("\(store.displayTitle(for: segment)) \(shortRange(segment))")
+    }
+
+    private func verticalBar(entry: TimelineLaneEntry, width: CGFloat, height: CGFloat) -> some View {
+        let segment = entry.segment
+        let interval = clippedInterval(segment)
+        let startRatio = interval.start.timeIntervalSince(displayInterval.start) / displayInterval.duration
+        let durationRatio = interval.duration / displayInterval.duration
+        let task = store.task(for: segment.taskID)
+        let leftAxis: CGFloat = 42
+        let laneWidth = max(22, min(38, (width - leftAxis - 12) / CGFloat(max(laneCount, 1)) - 8))
+        let barHeight = max(20, height * CGFloat(durationRatio))
+        let x = leftAxis + CGFloat(entry.lane) * (laneWidth + 8)
+        let y = height * CGFloat(startRatio)
+
+        return RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(Color(hex: task?.colorHex) ?? .blue)
+            .frame(width: laneWidth, height: barHeight)
+            .overlay(alignment: .top) {
+                Image(systemName: task?.iconName ?? "checkmark.circle")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.top, 4)
+            }
+            .offset(x: x, y: min(y, height - barHeight))
+            .help("\(store.displayTitle(for: segment)) \(shortRange(segment))")
+    }
+
+    private func timelineLegendRow(_ segment: TimeSegment) -> some View {
+        let task = store.task(for: segment.taskID)
+        return HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .fill(Color(hex: task?.colorHex) ?? .blue)
-                .frame(width: barWidth, height: 24)
+                .frame(width: 28, height: 28)
                 .overlay {
-                    if needsOutsideLabel {
-                        Image(systemName: task?.iconName ?? "checkmark.circle")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white)
-                    } else {
-                        HStack(spacing: 6) {
-                            Image(systemName: task?.iconName ?? "checkmark.circle")
-                                .font(.caption)
-                            Text(title)
-                                .font(.caption.weight(.medium))
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
+                    Image(systemName: task?.iconName ?? "checkmark.circle")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                    }
                 }
 
-            if needsOutsideLabel {
-                Label(title, systemImage: task?.iconName ?? "checkmark.circle")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.primary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(store.displayTitle(for: segment))
+                    .font(.subheadline.weight(.medium))
                     .lineLimit(1)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .frame(width: availableLabelWidth, alignment: .leading)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    .offset(y: outsideLabelY)
+                Text(displayPathText(for: segment))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(shortRange(segment))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Text(DurationFormatter.compact(Int((segment.endedAt ?? now).timeIntervalSince(segment.startedAt))))
+                    .font(.subheadline.monospacedDigit())
             }
         }
-        .offset(x: x, y: CGFloat(entry.lane) * 56 + 22)
-        .help("\(store.displayTitle(for: segment)) \(shortRange(segment))")
+        .padding(.vertical, 9)
     }
 
     private func clippedInterval(_ segment: TimeSegment) -> DateInterval {
+        let clipped = clippedToDay(segment)
+        let start = max(clipped.start, displayInterval.start)
+        let end = min(clipped.end, displayInterval.end)
+        return DateInterval(start: start, end: max(start.addingTimeInterval(60), end))
+    }
+
+    private func clippedToDay(_ segment: TimeSegment) -> DateInterval {
         let start = max(segment.startedAt, dayInterval.start)
         let end = min(segment.endedAt ?? now, dayInterval.end)
         return DateInterval(start: start, end: max(start.addingTimeInterval(60), end))
+    }
+
+    private func hourTicks() -> [Date] {
+        let calendar = Calendar.current
+        let totalHours = max(1, displayInterval.duration / 3600)
+        let step: Int
+        if totalHours <= 4 {
+            step = 1
+        } else if totalHours <= 10 {
+            step = 2
+        } else {
+            step = 4
+        }
+        let firstHour = calendar.dateInterval(of: .hour, for: displayInterval.start)?.start ?? displayInterval.start
+        var tick = firstHour
+        var result: [Date] = []
+        while tick <= displayInterval.end {
+            if tick >= displayInterval.start {
+                result.append(tick)
+            }
+            guard let next = calendar.date(byAdding: .hour, value: step, to: tick) else { break }
+            tick = next
+        }
+        if result.isEmpty || result.last! < displayInterval.end {
+            result.append(displayInterval.end)
+        }
+        return result
+    }
+
+    private func hourLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 
     private func shortRange(_ segment: TimeSegment) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return "\(formatter.string(from: segment.startedAt))-\(segment.endedAt.map { formatter.string(from: $0) } ?? "Now")"
+    }
+
+    private func displayPathText(for segment: TimeSegment) -> String {
+        let path = store.displayPath(for: segment).trimmingCharacters(in: .whitespacesAndNewlines)
+        return path.isEmpty ? "根任务" : path
     }
 }
 
@@ -2954,10 +3238,21 @@ struct SettingsView: View {
                     Label(isCheckingSync ? "正在检查..." : "检查同步状态", systemImage: "arrow.clockwise")
                 }
                 .disabled(isCheckingSync)
+
+                Button {
+                    isCheckingSync = true
+                    Task {
+                        syncCheckMessage = await store.forceCloudSyncRefresh()
+                        isCheckingSync = false
+                    }
+                } label: {
+                    Label("立即刷新同步", systemImage: "arrow.clockwise.icloud")
+                }
+                .disabled(isCheckingSync)
             } header: {
                 SettingsHeader(symbol: "icloud.fill", title: "同步")
             } footer: {
-                Text("开关会在下次启动时生效。关闭后新启动会使用本地存储，不再尝试连接 CloudKit。")
+                Text("打开 App 时会自动刷新；前台运行时也会监听 iCloud 导入并定时刷新。本开关会在下次启动时生效。")
             }
 
             Section {
@@ -3979,16 +4274,6 @@ extension PlatformColor {
 #else
 typealias PlatformColor = UIColor
 #endif
-
-private extension TimeTrackerStore {
-    func refreshQuietly() {
-        do {
-            try refresh()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
 
 #Preview {
     ContentView()

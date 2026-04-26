@@ -1,4 +1,5 @@
 import Combine
+import CoreData
 import Foundation
 import SwiftData
 
@@ -63,6 +64,7 @@ final class TimeTrackerStore: ObservableObject {
     private var timeRepository: TimeTrackingRepository?
     private var pomodoroRepository: PomodoroRepository?
     private let aggregationService = TimeAggregationService()
+    private var syncObservers: [NSObjectProtocol] = []
 
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
@@ -72,6 +74,7 @@ final class TimeTrackerStore: ObservableObject {
         self.taskRepository = taskRepository
         self.timeRepository = timeRepository
         self.pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
+        installSyncObservers()
 
         do {
             try migrateLegacyCountdownEventsIfNeeded(context: context)
@@ -83,6 +86,26 @@ final class TimeTrackerStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func refreshQuietly() {
+        do {
+            try refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func refreshForForeground() async {
+        refreshQuietly()
+        await refreshCloudAccountStatus()
+    }
+
+    func forceCloudSyncRefresh() async -> String {
+        await refreshCloudAccountStatus()
+        refreshQuietly()
+        let storage = syncStatus.isCloudBacked ? "iCloud 存储" : "本地存储"
+        return "\(storage)：\(syncStatus.accountStatus)。已刷新本机视图；若另一台设备刚写入，系统完成导入后这里会自动更新。"
     }
 
     func refreshCloudAccountStatus() async {
@@ -141,6 +164,7 @@ final class TimeTrackerStore: ObservableObject {
         if selectedTaskID == nil {
             selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
         }
+        syncLiveActivitiesIfAvailable()
     }
 
     func startSelectedTask() {
@@ -766,6 +790,23 @@ final class TimeTrackerStore: ObservableObject {
             try refresh()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func installSyncObservers() {
+        guard syncObservers.isEmpty else { return }
+        let center = NotificationCenter.default
+        let names: [Notification.Name] = [
+            .NSPersistentStoreRemoteChange,
+            NSPersistentCloudKitContainer.eventChangedNotification
+        ]
+        syncObservers = names.map { name in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                guard let store = self else { return }
+                Task { @MainActor in
+                    store.refreshQuietly()
+                }
+            }
         }
     }
 

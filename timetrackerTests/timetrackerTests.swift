@@ -567,7 +567,7 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func timelineLayoutClipsCrossDaySegmentsAndUsesWholeDayRange() {
+    func timelineLayoutClipsCrossDaySegmentsAndUsesVisibleRange() {
         let day = Date(timeIntervalSince1970: 24 * 60 * 60)
         let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
         let crossDay = TimelineLayoutItem(
@@ -585,7 +585,28 @@ struct TimeTrackerTests {
 
         #expect(result.entries.first?.item.startedAt == day)
         #expect(result.displayInterval.start == day)
-        #expect(result.displayInterval.end == dayInterval.end)
+        #expect(result.displayInterval.end == evening.endedAt)
+    }
+
+    @Test
+    func timelineLayoutUsesFirstAndLastVisibleSegmentBounds() {
+        let day = Date(timeIntervalSince1970: 48 * 60 * 60)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let morning = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(9 * 3600),
+            endedAt: day.addingTimeInterval(10 * 3600)
+        )
+        let afternoon = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(14 * 3600),
+            endedAt: day.addingTimeInterval(16 * 3600)
+        )
+
+        let result = TimelineLayoutEngine.layout(items: [afternoon, morning], dayInterval: dayInterval)
+
+        #expect(result.displayInterval.start == morning.startedAt)
+        #expect(result.displayInterval.end == afternoon.endedAt)
     }
 
     @Test

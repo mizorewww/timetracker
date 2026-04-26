@@ -68,7 +68,19 @@ enum TimelineLayoutEngine {
         for items: [TimelineLayoutItem],
         dayInterval: DateInterval
     ) -> DateInterval {
-        dayInterval
+        guard let earliestStart = items.map(\.startedAt).min(),
+              let latestEnd = items.map(\.endedAt).max() else {
+            return dayInterval
+        }
+
+        let start = max(earliestStart, dayInterval.start)
+        let end = min(latestEnd, dayInterval.end)
+
+        guard end > start else {
+            return dayInterval
+        }
+
+        return DateInterval(start: start, end: end)
     }
 
     private static func firstAvailableLane(

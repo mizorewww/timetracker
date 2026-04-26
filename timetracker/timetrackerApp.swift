@@ -240,27 +240,27 @@ struct TimeTrackerCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("新建任务") {
+            Button(AppStrings.newTask) {
                 newTask?()
             }
             .keyboardShortcut("n", modifiers: [.command])
             .disabled(newTask == nil)
 
-            Button("补录时间") {
+            Button(AppStrings.addTime) {
                 manualTime?()
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
             .disabled(manualTime == nil)
         }
 
-        CommandMenu("时间追踪") {
-            Button("新建任务") {
+        CommandMenu(AppStrings.appName) {
+            Button(AppStrings.newTask) {
                 newTask?()
             }
             .keyboardShortcut("n", modifiers: [.command])
             .disabled(newTask == nil)
 
-            Button("补录时间") {
+            Button(AppStrings.addTime) {
                 manualTime?()
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
@@ -268,13 +268,13 @@ struct TimeTrackerCommands: Commands {
 
             Divider()
 
-            Button("开始所选任务计时") {
+            Button(AppStrings.localized("menu.startSelectedTask")) {
                 startTimer?()
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
             .disabled(startTimer == nil)
 
-            Button("开始番茄钟") {
+            Button(AppStrings.localized("menu.startPomodoro")) {
                 startPomodoro?()
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
@@ -282,7 +282,7 @@ struct TimeTrackerCommands: Commands {
 
             Divider()
 
-            Button("刷新数据") {
+            Button(AppStrings.localized("menu.refreshData")) {
                 refresh?()
             }
             .keyboardShortcut("r", modifiers: [.command])

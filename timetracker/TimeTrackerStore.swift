@@ -42,11 +42,11 @@ final class TimeTrackerStore: ObservableObject {
 
         var title: String {
             switch self {
-            case .today: return "今日"
-            case .tasks: return "任务"
-            case .pomodoro: return "番茄钟"
-            case .analytics: return "分析"
-            case .settings: return "设置"
+            case .today: return AppStrings.today
+            case .tasks: return AppStrings.tasks
+            case .pomodoro: return AppStrings.pomodoro
+            case .analytics: return AppStrings.analytics
+            case .settings: return AppStrings.settings
             }
         }
 

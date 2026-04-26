@@ -539,6 +539,71 @@ struct TimeTrackerTests {
         #expect(csv.contains("Export note"))
     }
 
+    @Test
+    func timelineLayoutUsesMinimumNumberOfLanes() {
+        let day = Date(timeIntervalSince1970: 0)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let first = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(12 * 60), endedAt: day.addingTimeInterval(34 * 60))
+        let second = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(20 * 60), endedAt: day.addingTimeInterval(50 * 60))
+        let third = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(40 * 60), endedAt: day.addingTimeInterval(55 * 60))
+
+        let result = TimelineLayoutEngine.layout(items: [first, second, third], dayInterval: dayInterval)
+
+        #expect(result.laneCount == 2)
+        #expect(result.entries.map(\.lane) == [0, 1, 0])
+    }
+
+    @Test
+    func timelineLayoutKeepsBackToBackSegmentsVisuallySeparated() {
+        let day = Date(timeIntervalSince1970: 0)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let first = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(9 * 3600), endedAt: day.addingTimeInterval(10 * 3600))
+        let second = TimelineLayoutItem(id: UUID(), startedAt: day.addingTimeInterval(10 * 3600), endedAt: day.addingTimeInterval(11 * 3600))
+
+        let result = TimelineLayoutEngine.layout(items: [first, second], dayInterval: dayInterval)
+
+        #expect(result.laneCount == 2)
+        #expect(result.entries.map(\.lane) == [0, 1])
+    }
+
+    @Test
+    func timelineLayoutClipsCrossDaySegmentsAndPadsVisibleRange() {
+        let day = Date(timeIntervalSince1970: 24 * 60 * 60)
+        let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
+        let crossDay = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(-45 * 60),
+            endedAt: day.addingTimeInterval(20 * 60)
+        )
+        let evening = TimelineLayoutItem(
+            id: UUID(),
+            startedAt: day.addingTimeInterval(20 * 3600),
+            endedAt: day.addingTimeInterval(21 * 3600)
+        )
+
+        let result = TimelineLayoutEngine.layout(items: [crossDay, evening], dayInterval: dayInterval)
+
+        #expect(result.entries.first?.item.startedAt == day)
+        #expect(result.displayInterval.start == day)
+        #expect(result.displayInterval.end == evening.endedAt)
+    }
+
+    @Test
+    func localizationFilesExposeTheSameKeys() throws {
+        let locales = ["en", "zh-Hans", "zh-Hant"]
+        let keySets = try locales.map { locale -> Set<String> in
+            let path = try #require(Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "\(locale).lproj"))
+            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
+            #expect(dictionary.isEmpty == false)
+            return Set(dictionary.keys)
+        }
+
+        let reference = try #require(keySets.first)
+        for keys in keySets.dropFirst() {
+            #expect(keys == reference)
+        }
+    }
+
     @MainActor
     private func makeContext() throws -> ModelContext {
         let schema = Schema([

@@ -19,6 +19,8 @@ final class TimeTrackerStore: ObservableObject {
     @Published var manualTimeDraft: ManualTimeDraft?
     @Published var segmentEditorDraft: SegmentEditorDraft?
     @Published var desktopDestination: DesktopDestination = .today
+    @Published private(set) var selectedTaskPulseID: UUID?
+    @Published private(set) var selectedTaskPulseToken = UUID()
     @Published private var cloudAccountStatus: String = AppCloudSync.accountStatus
 
     enum RangePreset: String, CaseIterable, Identifiable {
@@ -172,8 +174,17 @@ final class TimeTrackerStore: ObservableObject {
         startTask(taskID: selectedTaskID)
     }
 
+    func selectTask(_ taskID: UUID, revealInToday: Bool = true) {
+        selectedTaskID = taskID
+        if revealInToday {
+            desktopDestination = .today
+        }
+        selectedTaskPulseID = taskID
+        selectedTaskPulseToken = UUID()
+    }
+
     func startTask(_ task: TaskNode) {
-        selectedTaskID = task.id
+        selectTask(task.id, revealInToday: false)
         startTask(taskID: task.id)
     }
 
@@ -390,6 +401,42 @@ final class TimeTrackerStore: ObservableObject {
                 self.selectedTaskID = nil
             }
         }
+    }
+
+    @discardableResult
+    func optimizeDatabase() -> Int {
+        var removedCount = 0
+        perform {
+            guard let modelContext else { throw StoreError.notConfigured }
+            let allTasks = try modelContext.fetch(FetchDescriptor<TaskNode>())
+            let validTaskIDs = Set(allTasks.filter { $0.deletedAt == nil }.map(\.id))
+            let allSegments = try modelContext.fetch(FetchDescriptor<TimeSegment>())
+            let allSessions = try modelContext.fetch(FetchDescriptor<TimeSession>())
+            let allRuns = try modelContext.fetch(FetchDescriptor<PomodoroRun>())
+
+            let orphanSegments = allSegments.filter { !validTaskIDs.contains($0.taskID) }
+            let orphanSessions = allSessions.filter { !validTaskIDs.contains($0.taskID) }
+            let orphanRuns = allRuns.filter { !validTaskIDs.contains($0.taskID) }
+            let orphanSegmentIDs = Set(orphanSegments.map(\.id))
+            let sessionIDsWithSegments = Set(allSegments.filter { !orphanSegmentIDs.contains($0.id) }.map(\.sessionID))
+            let emptySessions = allSessions.filter { !sessionIDsWithSegments.contains($0.id) }
+            var removedSessionIDs = Set<UUID>()
+            let removableSessions = (orphanSessions + emptySessions).filter { removedSessionIDs.insert($0.id).inserted }
+
+            for segment in orphanSegments {
+                modelContext.delete(segment)
+            }
+            for session in removableSessions {
+                modelContext.delete(session)
+            }
+            for run in orphanRuns {
+                modelContext.delete(run)
+            }
+
+            removedCount = orphanSegments.count + removableSessions.count + orphanRuns.count
+            try modelContext.save()
+        }
+        return removedCount
     }
 
     func csvExport() -> String {

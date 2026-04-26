@@ -263,6 +263,32 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func optimizeDatabaseDeletesLedgerRowsForSoftDeletedTasks() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Temporary Client", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let start = Date().addingTimeInterval(-1_800)
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(900),
+            note: nil
+        )
+        try taskRepository.softDeleteTask(taskID: task.id)
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.allSegments.count == 1)
+
+        let removedCount = store.optimizeDatabase()
+
+        #expect(removedCount == 2)
+        #expect(try timeRepository.allSegments().isEmpty)
+        #expect(try timeRepository.sessions().isEmpty)
+    }
+
+    @Test @MainActor
     func manualSegmentStoresAndUpdatesSessionNote() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

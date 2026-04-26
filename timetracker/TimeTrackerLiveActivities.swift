@@ -38,7 +38,7 @@ final class LiveActivityCoordinator {
         let task = tasks.first { $0.id == primary.taskID }
         let state = TimeTrackingActivityAttributes.ContentState(
             taskTitle: task?.title ?? primary.titleSnapshotFallback,
-            taskPath: task?.path.replacingOccurrences(of: "/", with: " / ") ?? "时间记录",
+            taskPath: task.map { displayPath(for: $0, tasks: tasks) } ?? "时间记录",
             iconName: task?.iconName ?? "timer",
             colorHex: task?.colorHex ?? "0A84FF",
             startedAt: primary.startedAt,
@@ -92,6 +92,16 @@ final class LiveActivityCoordinator {
         for activity in Activity<TimeTrackingActivityAttributes>.activities {
             await activity.end(content, dismissalPolicy: .immediate)
         }
+    }
+
+    private func displayPath(for task: TaskNode, tasks: [TaskNode]) -> String {
+        var parentNames: [String] = []
+        var cursor = task.parentID
+        while let parentID = cursor, let parent = tasks.first(where: { $0.id == parentID }) {
+            parentNames.insert(parent.title, at: 0)
+            cursor = parent.parentID
+        }
+        return parentNames.isEmpty ? "根任务" : parentNames.joined(separator: " / ")
     }
 }
 

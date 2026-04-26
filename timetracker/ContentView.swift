@@ -295,6 +295,9 @@ struct DesktopMainView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(AppColors.background)
+            #if os(iOS)
+            .scrollBounceBehavior(.basedOnSize)
+            #endif
         }
         .toolbar {
             ToolbarItemGroup {
@@ -340,6 +343,9 @@ struct PhoneHomeView: View {
             .padding(.bottom, 24)
         }
         .background(AppColors.background)
+        #if os(iOS)
+        .scrollBounceBehavior(.basedOnSize)
+        #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
@@ -454,6 +460,7 @@ struct MetricsAndActions: View {
                     MetricsPanel(store: store)
                     ActionStack(store: store)
                         .frame(width: 220)
+                        .frame(height: 142)
                 }
                 .frame(minHeight: 142)
             } else {
@@ -476,36 +483,75 @@ private var phoneToolbarPlacement: ToolbarItemPlacement {
 
 struct MetricsPanel: View {
     @ObservedObject var store: TimeTrackerStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 0) {
-                    MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
-                    Divider()
-                    MetricCell(title: "Wall Time", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
-                    Divider()
-                    MetricCell(title: "Gross Time", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            if isCompactPhone {
+                HStack(alignment: .top, spacing: 0) {
+                    MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false, alignment: .leading, compact: true)
+                    MetricCell(title: "Wall", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false, alignment: .center, compact: true)
+                    MetricCell(title: "Gross", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false, alignment: .trailing, compact: true)
                 }
-
-                VStack(spacing: 12) {
-                    MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
-                    Divider()
+            } else {
+                ViewThatFits(in: .horizontal) {
                     HStack(spacing: 0) {
+                        MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
+                        Divider()
                         MetricCell(title: "Wall Time", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
                         Divider()
                         MetricCell(title: "Gross Time", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
                     }
+
+                    VStack(spacing: 12) {
+                        MetricCell(title: "今日追踪", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
+                        Divider()
+                        HStack(spacing: 0) {
+                            MetricCell(title: "Wall Time", value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
+                            Divider()
+                            MetricCell(title: "Gross Time", value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
+                        }
+                    }
                 }
             }
         }
-        .padding(18)
+        .padding(isCompactPhone ? 14 : 18)
         .frame(maxWidth: .infinity)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(AppColors.border)
         )
+    }
+}
+
+enum MetricTextAlignment {
+    case leading
+    case center
+    case trailing
+
+    var frameAlignment: Alignment {
+        switch self {
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
+        }
+    }
+
+    var horizontalAlignment: HorizontalAlignment {
+        switch self {
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
+        }
     }
 }
 
@@ -516,9 +562,11 @@ struct MetricCell: View {
     let isMuted: Bool
     let values: [Int]
     var showsBars: Bool = true
+    var alignment: MetricTextAlignment = .center
+    var compact: Bool = false
 
     var body: some View {
-        VStack(alignment: showsBars ? .leading : .center, spacing: 8) {
+        VStack(alignment: showsBars ? .leading : alignment.horizontalAlignment, spacing: compact ? 6 : 8) {
             HStack {
                 if !isMuted {
                     Circle()
@@ -526,24 +574,27 @@ struct MetricCell: View {
                         .frame(width: 8, height: 8)
                 }
                 Text(title)
-                    .font(.subheadline.weight(.medium))
+                    .font((compact ? Font.caption : Font.subheadline).weight(.medium))
                     .foregroundStyle(isMuted ? .primary : tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
-            .frame(maxWidth: .infinity, alignment: showsBars ? .leading : .center)
+            .frame(maxWidth: .infinity, alignment: showsBars ? .leading : alignment.frameAlignment)
 
             Text(value)
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
+                .font(.system(size: compact ? 24 : 30, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity, alignment: showsBars ? .leading : .center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(maxWidth: .infinity, alignment: showsBars ? .leading : alignment.frameAlignment)
 
             if showsBars {
                 MiniBars(values: values, tint: isMuted ? .gray.opacity(0.38) : tint)
                     .frame(height: 30)
             }
         }
-        .frame(maxWidth: .infinity, alignment: showsBars ? .leading : .center)
-        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, alignment: showsBars ? .leading : alignment.frameAlignment)
+        .padding(.horizontal, compact ? 4 : 10)
     }
 }
 
@@ -585,7 +636,7 @@ struct ActionStack: View {
             } label: {
                 Label("开始计时", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
-                    .frame(maxHeight: .infinity)
+                    .frame(minHeight: 52)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -596,13 +647,12 @@ struct ActionStack: View {
             } label: {
                 Label("新建任务", systemImage: "plus")
                     .frame(maxWidth: .infinity)
-                    .frame(maxHeight: .infinity)
+                    .frame(minHeight: 52)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
             .accessibilityIdentifier("home.newTask")
         }
-        .frame(maxHeight: .infinity)
 #if os(iOS)
         .sheet(isPresented: $isTaskPickerPresented) {
             NavigationStack {
@@ -760,7 +810,7 @@ struct PausedSessionRow: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            store.selectedTaskID = session.taskID
+            store.selectTask(session.taskID, revealInToday: false)
         }
         .padding(14)
     }
@@ -780,52 +830,98 @@ struct ActiveTimerRow: View {
     }
 
     var body: some View {
-        HStack(spacing: isCompactPhone ? 8 : 12) {
-            Circle()
-                .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
-                .frame(width: 10, height: 10)
+        Group {
+            if isCompactPhone {
+                VStack(spacing: 12) {
+                    HStack(alignment: .center, spacing: 12) {
+                        TaskIcon(task: store.task(for: segment.taskID), size: 34)
+                        Spacer(minLength: 12)
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text(store.displayTitle(for: segment))
+                                .font(.headline)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
+                            Text(displayPathText)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
+                        }
+                    }
 
-            TaskIcon(task: store.task(for: segment.taskID))
+                    HStack(spacing: 10) {
+                        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+                            .font(.system(size: 27, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(store.displayTitle(for: segment))
-                    .font(.headline)
-                Text(store.displayPath(for: segment))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                        pauseButton(size: 30)
+                        stopButton(size: 30)
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
+                        .frame(width: 10, height: 10)
+
+                    TaskIcon(task: store.task(for: segment.taskID))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(store.displayTitle(for: segment))
+                            .font(.headline)
+                        Text(displayPathText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 10)
+
+                    DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+                        .font(.system(size: 30, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.75)
+                        .frame(minWidth: 86, alignment: .trailing)
+
+                    pauseButton(size: 32)
+                    stopButton(size: 32)
+                }
             }
-
-            Spacer(minLength: 10)
-
-            DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                .font(.system(size: isCompactPhone ? 20 : 30, weight: .medium, design: .rounded))
-                .monospacedDigit()
-                .minimumScaleFactor(0.75)
-                .frame(minWidth: isCompactPhone ? 54 : 86, alignment: .trailing)
-
-            Button {
-                store.pause(segment: segment)
-            } label: {
-                Image(systemName: "pause.fill")
-                    .frame(width: isCompactPhone ? 24 : 32, height: isCompactPhone ? 24 : 32)
-            }
-            .buttonStyle(.bordered)
-            .tint(.blue)
-
-            Button(role: .destructive) {
-                store.stop(segment: segment)
-            } label: {
-                Image(systemName: "stop.fill")
-                    .frame(width: isCompactPhone ? 24 : 32, height: isCompactPhone ? 24 : 32)
-            }
-            .buttonStyle(.bordered)
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            store.selectedTaskID = segment.taskID
+            store.selectTask(segment.taskID, revealInToday: false)
         }
         .padding(isCompactPhone ? 10 : 14)
+    }
+
+    private var displayPathText: String {
+        let path = store.displayPath(for: segment)
+        return path.isEmpty ? "根任务" : path
+    }
+
+    private func pauseButton(size: CGFloat) -> some View {
+        Button {
+            store.pause(segment: segment)
+        } label: {
+            Image(systemName: "pause.fill")
+                .frame(width: size, height: size)
+        }
+        .buttonStyle(.bordered)
+        .tint(.blue)
+    }
+
+    private func stopButton(size: CGFloat) -> some View {
+        Button(role: .destructive) {
+            store.stop(segment: segment)
+        } label: {
+            Image(systemName: "stop.fill")
+                .frame(width: size, height: size)
+        }
+        .buttonStyle(.bordered)
     }
 }
 
@@ -915,7 +1011,7 @@ struct TimelineRow: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            store.selectedTaskID = segment.taskID
+            store.selectTask(segment.taskID, revealInToday: false)
         }
         .contextMenu {
             Button {
@@ -1152,7 +1248,7 @@ struct SidebarView: View {
             case let .destination(destination):
                 store.desktopDestination = destination
             case let .task(taskID):
-                store.selectedTaskID = taskID
+                store.selectTask(taskID)
             }
         }
         .onChange(of: store.selectedTaskID) { _, _ in
@@ -1199,6 +1295,7 @@ struct TaskTreeRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
     @Binding var selection: SidebarSelection?
+    @State private var isPulsing = false
 
     var body: some View {
         let children = store.children(of: task)
@@ -1241,6 +1338,15 @@ struct TaskTreeRow: View {
             }
         }
         .contentShape(Rectangle())
+        .scaleEffect(isPulsing ? 1.045 : 1)
+        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isPulsing)
+        .onChange(of: store.selectedTaskPulseToken) { _, _ in
+            guard store.selectedTaskPulseID == task.id else { return }
+            isPulsing = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                isPulsing = false
+            }
+        }
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
@@ -1356,13 +1462,8 @@ struct InspectorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Text("Selected Task")
-                        .font(.headline)
-                    Spacer()
-                    Image(systemName: "pin")
-                        .foregroundStyle(.secondary)
-                }
+                Text("Selected Task")
+                    .font(.headline)
 
                 if let task = store.selectedTask {
                     SelectedTaskHeader(store: store, task: task)
@@ -1385,6 +1486,7 @@ struct InspectorView: View {
 struct SelectedTaskHeader: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
+    @State private var isPulsing = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -1402,6 +1504,15 @@ struct SelectedTaskHeader: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+        }
+        .scaleEffect(isPulsing ? 1.045 : 1)
+        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isPulsing)
+        .onChange(of: store.selectedTaskPulseToken) { _, _ in
+            guard store.selectedTaskPulseID == task.id else { return }
+            isPulsing = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                isPulsing = false
+            }
         }
     }
 }
@@ -1967,12 +2078,12 @@ struct TaskManagementFlatRow: View {
     private func openTask() {
 #if os(iOS)
         if horizontalSizeClass == .compact {
-            store.selectedTaskID = task.id
+            store.selectTask(task.id, revealInToday: false)
             store.presentEditTask(task)
             return
         }
 #endif
-        store.selectedTaskID = task.id
+        store.selectTask(task.id)
     }
 }
 
@@ -2650,12 +2761,15 @@ struct OverlappingTimelineCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.16))
-                        .frame(width: 1, height: height - 18)
+                        .frame(width: 1, height: height - 24)
                     Text(hourLabel(tick))
-                        .font(.caption2.monospacedDigit())
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                        .frame(width: 44, alignment: .leading)
                 }
-                .offset(x: min(max(0, x), width - 12))
+                .offset(x: min(max(0, x), width - 44))
             }
         }
     }
@@ -2667,9 +2781,11 @@ struct OverlappingTimelineCard: View {
                 let y = height * CGFloat(ratio)
                 HStack(spacing: 8) {
                     Text(hourLabel(tick))
-                        .font(.caption2.monospacedDigit())
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
-                        .frame(width: 30, alignment: .trailing)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.88)
+                        .frame(width: 46, alignment: .trailing)
                     Rectangle()
                         .fill(Color.secondary.opacity(0.16))
                         .frame(height: 1)
@@ -2706,7 +2822,7 @@ struct OverlappingTimelineCard: View {
         let startRatio = interval.start.timeIntervalSince(displayInterval.start) / displayInterval.duration
         let durationRatio = interval.duration / displayInterval.duration
         let task = store.task(for: segment.taskID)
-        let leftAxis: CGFloat = 42
+        let leftAxis: CGFloat = 58
         let laneWidth = max(22, min(38, (width - leftAxis - 12) / CGFloat(max(laneCount, 1)) - 8))
         let barHeight = max(20, height * CGFloat(durationRatio))
         let x = leftAxis + CGFloat(entry.lane) * (laneWidth + 8)
@@ -2751,10 +2867,13 @@ struct OverlappingTimelineCard: View {
 
             VStack(alignment: .trailing, spacing: 2) {
                 Text(shortRange(segment))
-                    .font(.caption.monospacedDigit())
+                    .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
                 Text(DurationFormatter.compact(Int((segment.endedAt ?? now).timeIntervalSince(segment.startedAt))))
                     .font(.subheadline.monospacedDigit())
+                    .lineLimit(1)
             }
         }
         .padding(.vertical, 9)
@@ -3114,9 +3233,11 @@ struct SettingsView: View {
     @AppStorage("TimeTrackerCloudSyncEnabled") private var cloudSyncEnabled = true
     @State private var isResetConfirmationPresented = false
     @State private var isClearConfirmationPresented = false
+    @State private var isOptimizeConfirmationPresented = false
     @State private var isExportPresented = false
     @State private var isCheckingSync = false
     @State private var syncCheckMessage: String?
+    @State private var databaseOptimizationMessage: String?
 
     private var minuteFormatter: NumberFormatter {
         let formatter = NumberFormatter()
@@ -3209,10 +3330,16 @@ struct SettingsView: View {
                 } label: {
                     Label("补录时间", systemImage: "calendar.badge.plus")
                 }
+
+                Button(role: .destructive) {
+                    isOptimizeConfirmationPresented = true
+                } label: {
+                    Label("优化数据库", systemImage: "externaldrive.badge.checkmark")
+                }
             } header: {
                 SettingsHeader(symbol: "doc.text.fill", title: "数据")
             } footer: {
-                Text("CSV 会导出任务、路径、开始时间、结束时间、时长、来源和备注，适合账单、归档或二次分析。")
+                Text("CSV 会导出任务、路径、开始时间、结束时间、时长、来源和备注。优化数据库会清理已删除任务留下的孤立时间记录。")
             }
 
             Section {
@@ -3300,12 +3427,28 @@ struct SettingsView: View {
         } message: {
             Text("这会删除由演示数据生成的任务、时间片段和番茄钟记录，不会主动删除你手动创建的记录。")
         }
+        .confirmationDialog("优化数据库？", isPresented: $isOptimizeConfirmationPresented, titleVisibility: .visible) {
+            Button("删除孤立记录", role: .destructive) {
+                let removedCount = store.optimizeDatabase()
+                databaseOptimizationMessage = removedCount == 0 ? "没有发现需要清理的孤立记录。" : "已清理 \(removedCount) 条孤立记录。"
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("任务软删除后，历史时间记录会保留。这个操作会永久删除已经没有可见任务归属的时间片段、会话和番茄钟记录。")
+        }
         .alert("iCloud 同步状态", isPresented: syncCheckPresented) {
             Button("好") {
                 syncCheckMessage = nil
             }
         } message: {
             Text(syncCheckMessage ?? "")
+        }
+        .alert("数据库优化", isPresented: optimizationMessagePresented) {
+            Button("好") {
+                databaseOptimizationMessage = nil
+            }
+        } message: {
+            Text(databaseOptimizationMessage ?? "")
         }
     }
 
@@ -3315,6 +3458,16 @@ struct SettingsView: View {
         } set: { isPresented in
             if !isPresented {
                 syncCheckMessage = nil
+            }
+        }
+    }
+
+    private var optimizationMessagePresented: Binding<Bool> {
+        Binding {
+            databaseOptimizationMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                databaseOptimizationMessage = nil
             }
         }
     }

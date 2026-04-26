@@ -193,10 +193,11 @@ struct iOSRootView: View {
 
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(store: store)
                 #if os(macOS)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
@@ -207,6 +208,17 @@ struct DesktopRootView: View {
                 .navigationSplitViewColumnWidth(min: 480, ideal: 720)
                 #endif
                 .toolbar {
+                    #if os(iOS)
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            togglePrimarySidebar()
+                        } label: {
+                            Image(systemName: "sidebar.left")
+                        }
+                        .accessibilityLabel(sidebarToggleTitle)
+                    }
+                    #endif
+
                     ToolbarItem(placement: .automatic) {
                         Button {
                             isInspectorPresented.toggle()
@@ -230,6 +242,18 @@ struct DesktopRootView: View {
         }
         .onChange(of: store.selectedTaskID) { _, _ in
             updateInspectorVisibility()
+        }
+    }
+
+    private var sidebarToggleTitle: String {
+        columnVisibility == .detailOnly
+            ? AppStrings.localized("sidebar.show")
+            : AppStrings.localized("sidebar.hide")
+    }
+
+    private func togglePrimarySidebar() {
+        withAnimation(.snappy) {
+            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
         }
     }
 

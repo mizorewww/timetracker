@@ -123,6 +123,8 @@
 "sync.account.temporarilyUnavailable" = "暂时不可用";
 "sync.account.unknown" = "未知状态";
 "tab.home" = "首页";
+"sidebar.show" = "显示侧边栏";
+"sidebar.hide" = "隐藏侧边栏";
 "inspector.show" = "显示详情";
 "inspector.hide" = "隐藏详情";
 "progress.today" = "今天";

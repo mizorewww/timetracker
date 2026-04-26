@@ -123,6 +123,8 @@
 "sync.account.temporarilyUnavailable" = "Temporarily unavailable";
 "sync.account.unknown" = "Unknown status";
 "tab.home" = "Home";
+"sidebar.show" = "Show Sidebar";
+"sidebar.hide" = "Hide Sidebar";
 "inspector.show" = "Show Details";
 "inspector.hide" = "Hide Details";
 "progress.today" = "Today";

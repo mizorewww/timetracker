@@ -149,46 +149,123 @@ struct iOSRootView: View {
 
     var body: some View {
         if horizontalSizeClass == .regular {
-            DesktopRootView(store: store)
+            iPadRootView(store: store)
         } else {
-            TabView {
-                NavigationStack {
-                    PhoneHomeView(store: store)
-                }
-                .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
-
-                NavigationStack {
-                    TasksView(store: store)
-                }
-                .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
-
-                NavigationStack {
-                    PomodoroView(store: store)
-                }
-                .tabItem { Label(AppStrings.pomodoro, systemImage: "timer") }
-
-                NavigationStack {
-                    AnalyticsView(store: store)
-                }
-                .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
-
-                NavigationStack {
-                    SettingsView(store: store)
-                }
-                .tabItem { Label(AppStrings.settings, systemImage: "gearshape") }
-            }
+            PhoneRootView(store: store)
         }
+    }
+}
+
+struct PhoneRootView: View {
+    @ObservedObject var store: TimeTrackerStore
+
+    var body: some View {
+        TabView {
+            NavigationStack {
+                PhoneHomeView(store: store)
+            }
+            .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
+
+            NavigationStack {
+                TasksView(store: store)
+            }
+            .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
+
+            NavigationStack {
+                PomodoroView(store: store)
+            }
+            .tabItem { Label(AppStrings.pomodoro, systemImage: "timer") }
+
+            NavigationStack {
+                AnalyticsView(store: store)
+            }
+            .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
+
+            NavigationStack {
+                SettingsView(store: store)
+            }
+            .tabItem { Label(AppStrings.settings, systemImage: "gearshape") }
+        }
+    }
+}
+
+struct iPadRootView: View {
+    @ObservedObject var store: TimeTrackerStore
+    @State private var isInspectorPresented = false
+
+    var body: some View {
+        TabView(selection: $store.desktopDestination) {
+            NavigationStack {
+                DesktopMainView(store: store)
+            }
+            .tabItem { Label(AppStrings.today, systemImage: TimeTrackerStore.DesktopDestination.today.symbolName) }
+            .tag(TimeTrackerStore.DesktopDestination.today)
+
+            NavigationStack {
+                TasksView(store: store)
+            }
+            .tabItem { Label(AppStrings.tasks, systemImage: TimeTrackerStore.DesktopDestination.tasks.symbolName) }
+            .tag(TimeTrackerStore.DesktopDestination.tasks)
+
+            NavigationStack {
+                PomodoroView(store: store)
+            }
+            .tabItem { Label(AppStrings.pomodoro, systemImage: TimeTrackerStore.DesktopDestination.pomodoro.symbolName) }
+            .tag(TimeTrackerStore.DesktopDestination.pomodoro)
+
+            NavigationStack {
+                AnalyticsView(store: store)
+            }
+            .tabItem { Label(AppStrings.analytics, systemImage: TimeTrackerStore.DesktopDestination.analytics.symbolName) }
+            .tag(TimeTrackerStore.DesktopDestination.analytics)
+
+            NavigationStack {
+                SettingsView(store: store)
+            }
+            .tabItem { Label(AppStrings.settings, systemImage: TimeTrackerStore.DesktopDestination.settings.symbolName) }
+            .tag(TimeTrackerStore.DesktopDestination.settings)
+        }
+        .tabViewStyle(.sidebarAdaptable)
+        .accessibilityIdentifier("ipad.adaptableTabs")
+        .inspector(isPresented: inspectorBinding) {
+            InspectorView(store: store)
+                .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+        }
+        .onAppear {
+            isInspectorPresented = inspectorIsRelevant
+        }
+        .onChange(of: store.desktopDestination) { _, _ in
+            updateInspectorVisibility()
+        }
+        .onChange(of: store.selectedTaskID) { _, _ in
+            updateInspectorVisibility()
+        }
+    }
+
+    private var inspectorIsRelevant: Bool {
+        store.desktopDestination == .today && store.selectedTask != nil
+    }
+
+    private var inspectorBinding: Binding<Bool> {
+        Binding {
+            isInspectorPresented && inspectorIsRelevant
+        } set: { newValue in
+            isInspectorPresented = newValue
+        }
+    }
+
+    private func updateInspectorVisibility() {
+        isInspectorPresented = inspectorIsRelevant
     }
 }
 #endif
 
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        NavigationSplitView {
             sidebarColumn
         } detail: {
             detailColumn
@@ -218,34 +295,6 @@ struct DesktopRootView: View {
             .navigationSplitViewColumnWidth(min: 520, ideal: 760)
             #endif
             .toolbar {
-                #if os(iOS)
-                ToolbarItem(placement: .topBarLeading) {
-                    if columnVisibility != .all {
-                        Button {
-                            columnVisibility = .all
-                        } label: {
-                            Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
-                                .labelStyle(.iconOnly)
-                        }
-                        .accessibilityLabel(AppStrings.localized("sidebar.show"))
-                    }
-                }
-
-                ToolbarItem(placement: .principal) {
-                    if columnVisibility != .all {
-                        Picker(AppStrings.localized("app.name"), selection: $store.desktopDestination) {
-                            ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
-                                Label(destination.title, systemImage: destination.symbolName)
-                                    .tag(destination)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 520)
-                        .accessibilityIdentifier("ipad.topNavigation")
-                    }
-                }
-                #endif
-
                 ToolbarItem(placement: .automatic) {
                     Button {
                         isInspectorPresented.toggle()

@@ -643,18 +643,21 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func regularWidthSidebarProvidesTopBarRecoveryControls() throws {
+    func regularWidthIOSUsesSystemSidebarAdaptableTabs() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let source = try String(contentsOf: projectRoot.appending(path: "timetracker/ContentView.swift"), encoding: .utf8)
 
-        #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
+        #expect(source.contains("iPadRootView(store: store)"))
+        #expect(source.contains("struct iPadRootView"))
+        #expect(source.contains(".tabViewStyle(.sidebarAdaptable)"))
+        #expect(source.contains("ipad.adaptableTabs"))
+        #expect(source.contains("NavigationSplitView {"))
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
-        #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
-        #expect(source.contains("if columnVisibility != .all"))
-        #expect(source.contains("\"sidebar.left\""))
-        #expect(source.contains("ipad.topNavigation"))
+        #expect(source.contains("NavigationSplitView(columnVisibility:") == false)
+        #expect(source.contains("NavigationSplitViewVisibility") == false)
+        #expect(source.contains("ipad.topNavigation") == false)
         #expect(source.contains(".overlay(alignment: .topLeading)") == false)
     }
 

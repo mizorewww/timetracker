@@ -27,8 +27,8 @@
 "common.all" = "全部";
 "error.title" = "錯誤";
 "home.subtitle" = "先確認正在發生的事，再回看今天，並快速繼續下一項任務。";
-"timer.chooseTaskHeader" = "選擇任務";
-"timer.chooseTaskFooter" = "iPhone 沒有常駐任務詳情面板，開始前先確認計時歸屬。";
+"timer.chooseTaskHeader" = "開始計時";
+"timer.chooseTaskFooter" = "選擇一個任務後會立即開始計時。之後可以在今日時間線裡修改。";
 "timeline.editSegment" = "編輯時間片段";
 "timeline.addSimilarTime" = "補錄同類任務";
 "timeline.deleteSegment" = "刪除時間片段";

@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct DesktopMainView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -179,18 +182,19 @@ struct MetricsAndActions: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 18) {
                         MetricsPanelContent(store: store)
-                            .padding(18)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 14)
                             .frame(maxWidth: .infinity)
 
                         Divider()
-                            .padding(.vertical, 16)
+                            .padding(.vertical, 12)
 
-                        ActionStack(store: store, buttonHeight: 58)
+                        ActionStack(store: store, buttonHeight: 42, spacing: 8)
                             .frame(minWidth: 180, idealWidth: 210, maxWidth: 240)
-                            .padding(.vertical, 18)
-                            .padding(.trailing, 18)
+                            .padding(.vertical, 12)
+                            .padding(.trailing, 14)
                     }
-                    .frame(minHeight: 146)
+                    .frame(minHeight: 108)
                     .appCard(padding: 0)
 
                     VStack(spacing: 16) {
@@ -365,13 +369,14 @@ struct MiniBars: View {
 struct ActionStack: View {
     @ObservedObject var store: TimeTrackerStore
     var buttonHeight: CGFloat?
+    var spacing: CGFloat = 12
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isTaskPickerPresented = false
 #endif
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: spacing) {
             Button {
 #if os(iOS)
                 if horizontalSizeClass == .compact {
@@ -412,6 +417,7 @@ struct ActionStack: View {
                 }
             }
             .presentationDetents([.medium, .large])
+            .presentationBackground(Color(uiColor: .systemGroupedBackground))
         }
 #endif
     }
@@ -455,6 +461,9 @@ struct TaskStartPicker: View {
                 Text(.app("timer.chooseTaskFooter"))
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle(AppStrings.startTimer)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

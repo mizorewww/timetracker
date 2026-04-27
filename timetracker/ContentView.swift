@@ -184,10 +184,11 @@ struct iOSRootView: View {
 
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebarColumn
         } detail: {
             detailColumn
@@ -217,6 +218,34 @@ struct DesktopRootView: View {
             .navigationSplitViewColumnWidth(min: 520, ideal: 760)
             #endif
             .toolbar {
+                #if os(iOS)
+                ToolbarItem(placement: .topBarLeading) {
+                    if columnVisibility != .all {
+                        Button {
+                            columnVisibility = .all
+                        } label: {
+                            Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
+                                .labelStyle(.iconOnly)
+                        }
+                        .accessibilityLabel(AppStrings.localized("sidebar.show"))
+                    }
+                }
+
+                ToolbarItem(placement: .principal) {
+                    if columnVisibility != .all {
+                        Picker(AppStrings.localized("app.name"), selection: $store.desktopDestination) {
+                            ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
+                                Label(destination.title, systemImage: destination.symbolName)
+                                    .tag(destination)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 520)
+                        .accessibilityIdentifier("ipad.topNavigation")
+                    }
+                }
+                #endif
+
                 ToolbarItem(placement: .automatic) {
                     Button {
                         isInspectorPresented.toggle()

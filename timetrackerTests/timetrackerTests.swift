@@ -643,15 +643,29 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func collapsedRegularWidthSidebarHasRestoreControl() throws {
+    func regularWidthSidebarReliesOnNativeSplitViewControls() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let source = try String(contentsOf: projectRoot.appending(path: "timetracker/ContentView.swift"), encoding: .utf8)
 
-        #expect(source.contains("columnVisibility == .detailOnly"))
-        #expect(source.contains("\"sidebar.left\""))
-        #expect(source.contains("sidebar.show"))
+        #expect(source.contains("NavigationSplitView {"))
+        #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
+        #expect(source.contains("\"sidebar.left\"") == false)
+        #expect(source.contains("NavigationSplitViewVisibility") == false)
+    }
+
+    @Test
+    func taskTreeUsesNativeDisclosureRowsInsteadOfCustomChevronLayout() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+
+        #expect(source.contains("DisclosureGroup(isExpanded:"))
+        #expect(source.contains("TaskManagementVisibleRow") == false)
+        #expect(source.contains("TaskTreeDisplayRow") == false)
+        #expect(source.contains("rotationEffect") == false)
     }
 
     @MainActor

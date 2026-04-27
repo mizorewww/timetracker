@@ -184,54 +184,15 @@ struct iOSRootView: View {
 
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(store: store)
-                #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
-                #endif
+        NavigationSplitView {
+            sidebarColumn
         } detail: {
-            DesktopContentView(store: store)
-                #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 480, ideal: 720)
-                #endif
-                .toolbar {
-                    ToolbarItem(placement: .automatic) {
-                        Button {
-                            isInspectorPresented.toggle()
-                        } label: {
-                            Image(systemName: "sidebar.right")
-                        }
-                        .help(isInspectorPresented ? AppStrings.localized("inspector.hide") : AppStrings.localized("inspector.show"))
-                        .disabled(!inspectorIsRelevant)
-                    }
-                }
-                .inspector(isPresented: inspectorBinding) {
-                    InspectorView(store: store)
-                        .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
-                }
+            detailColumn
         }
-        #if os(iOS)
-        .overlay(alignment: .topLeading) {
-            if columnVisibility == .detailOnly {
-                Button {
-                    columnVisibility = .all
-                } label: {
-                    Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.circle)
-                .controlSize(.regular)
-                .padding(.top, 12)
-                .padding(.leading, 12)
-                .accessibilityLabel(AppStrings.localized("sidebar.show"))
-            }
-        }
-        #endif
+        .navigationSplitViewStyle(.balanced)
         .onAppear {
             isInspectorPresented = inspectorIsRelevant
         }
@@ -241,6 +202,35 @@ struct DesktopRootView: View {
         .onChange(of: store.selectedTaskID) { _, _ in
             updateInspectorVisibility()
         }
+    }
+
+    private var sidebarColumn: some View {
+        SidebarView(store: store)
+            #if os(macOS)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
+            #endif
+    }
+
+    private var detailColumn: some View {
+        DesktopContentView(store: store)
+            #if os(macOS)
+            .navigationSplitViewColumnWidth(min: 520, ideal: 760)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        isInspectorPresented.toggle()
+                    } label: {
+                        Image(systemName: "sidebar.right")
+                    }
+                    .help(isInspectorPresented ? AppStrings.localized("inspector.hide") : AppStrings.localized("inspector.show"))
+                    .disabled(!inspectorIsRelevant)
+                }
+            }
+            .inspector(isPresented: inspectorBinding) {
+                InspectorView(store: store)
+                    .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+            }
     }
 
     private var inspectorIsRelevant: Bool {

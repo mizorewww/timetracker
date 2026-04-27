@@ -73,6 +73,12 @@ struct TasksView: View {
         }
         .navigationTitle(AppStrings.tasks)
         .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
+        #if os(iOS)
+        .listStyle(.insetGrouped)
+        .scrollBounceBehavior(.basedOnSize)
+        #else
+        .listStyle(.inset)
+        #endif
         .toolbar {
             Button {
                 store.presentNewTask()
@@ -112,9 +118,7 @@ struct TaskManagementVisibleRow: View {
         HStack(alignment: .center, spacing: 6) {
             if row.hasChildren {
                 Button {
-                    withAnimation(.snappy(duration: 0.16)) {
-                        onToggleExpanded()
-                    }
+                    onToggleExpanded()
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
@@ -159,10 +163,10 @@ struct TaskManagementFlatRow: View {
                             .font(.headline)
                             .foregroundStyle(task.status == .completed ? .secondary : .primary)
                             .strikethrough(task.status == .completed)
-                            .lineLimit(1)
+                            .lineLimit(2)
 
                         if isRunning {
-                        Text(AppStrings.running)
+                            Text(AppStrings.running)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.green)
                                 .padding(.horizontal, 6)

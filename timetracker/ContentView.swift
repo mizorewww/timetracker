@@ -214,6 +214,24 @@ struct DesktopRootView: View {
                         .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
                 }
         }
+        #if os(iOS)
+        .overlay(alignment: .topLeading) {
+            if columnVisibility == .detailOnly {
+                Button {
+                    columnVisibility = .all
+                } label: {
+                    Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
+                .controlSize(.regular)
+                .padding(.top, 12)
+                .padding(.leading, 12)
+                .accessibilityLabel(AppStrings.localized("sidebar.show"))
+            }
+        }
+        #endif
         .onAppear {
             isInspectorPresented = inspectorIsRelevant
         }

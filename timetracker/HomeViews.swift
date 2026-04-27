@@ -177,13 +177,21 @@ struct MetricsAndActions: View {
         Group {
             if horizontal {
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 16) {
-                        MetricsPanel(store: store)
-                        ActionStack(store: store, buttonHeight: 65)
+                    HStack(alignment: .top, spacing: 18) {
+                        MetricsPanelContent(store: store)
+                            .padding(18)
+                            .frame(maxWidth: .infinity)
+
+                        Divider()
+                            .padding(.vertical, 16)
+
+                        ActionStack(store: store, buttonHeight: 58)
                             .frame(minWidth: 180, idealWidth: 210, maxWidth: 240)
-                            .frame(height: 142)
+                            .padding(.vertical, 18)
+                            .padding(.trailing, 18)
                     }
-                    .frame(minHeight: 142)
+                    .frame(minHeight: 146)
+                    .appCard(padding: 0)
 
                     VStack(spacing: 16) {
                         MetricsPanel(store: store)
@@ -209,6 +217,26 @@ private var phoneToolbarPlacement: ToolbarItemPlacement {
 }
 
 struct MetricsPanel: View {
+    @ObservedObject var store: TimeTrackerStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    var body: some View {
+        MetricsPanelContent(store: store)
+            .padding(isCompactPhone ? 14 : 18)
+            .frame(maxWidth: .infinity)
+            .appCard(padding: 0)
+    }
+}
+
+private struct MetricsPanelContent: View {
     @ObservedObject var store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -250,9 +278,6 @@ struct MetricsPanel: View {
                 }
             }
         }
-        .padding(isCompactPhone ? 14 : 18)
-        .frame(maxWidth: .infinity)
-        .appCard(padding: 0)
     }
 }
 

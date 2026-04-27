@@ -643,13 +643,15 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func regularWidthSidebarUsesSystemToggleOnly() throws {
+    func collapsedRegularWidthSidebarHasRestoreControl() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let source = try String(contentsOf: projectRoot.appending(path: "timetracker/ContentView.swift"), encoding: .utf8)
 
-        #expect(source.contains("\"sidebar.left\"") == false)
+        #expect(source.contains("columnVisibility == .detailOnly"))
+        #expect(source.contains("\"sidebar.left\""))
+        #expect(source.contains("sidebar.show"))
     }
 
     @MainActor

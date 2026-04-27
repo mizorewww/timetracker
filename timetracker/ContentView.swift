@@ -194,43 +194,29 @@ struct iPadRootView: View {
     @State private var isInspectorPresented = false
 
     var body: some View {
-        TabView(selection: $store.desktopDestination) {
-            NavigationStack {
-                DesktopMainView(store: store)
-            }
-            .tabItem { Label(AppStrings.today, systemImage: TimeTrackerStore.DesktopDestination.today.symbolName) }
-            .tag(TimeTrackerStore.DesktopDestination.today)
-
-            NavigationStack {
-                TasksView(store: store)
-            }
-            .tabItem { Label(AppStrings.tasks, systemImage: TimeTrackerStore.DesktopDestination.tasks.symbolName) }
-            .tag(TimeTrackerStore.DesktopDestination.tasks)
-
-            NavigationStack {
-                PomodoroView(store: store)
-            }
-            .tabItem { Label(AppStrings.pomodoro, systemImage: TimeTrackerStore.DesktopDestination.pomodoro.symbolName) }
-            .tag(TimeTrackerStore.DesktopDestination.pomodoro)
-
-            NavigationStack {
-                AnalyticsView(store: store)
-            }
-            .tabItem { Label(AppStrings.analytics, systemImage: TimeTrackerStore.DesktopDestination.analytics.symbolName) }
-            .tag(TimeTrackerStore.DesktopDestination.analytics)
-
-            NavigationStack {
-                SettingsView(store: store)
-            }
-            .tabItem { Label(AppStrings.settings, systemImage: TimeTrackerStore.DesktopDestination.settings.symbolName) }
-            .tag(TimeTrackerStore.DesktopDestination.settings)
+        NavigationSplitView {
+            SidebarView(store: store)
+                .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
+        } detail: {
+            DesktopContentView(store: store)
+                .navigationSplitViewColumnWidth(min: 560, ideal: 780)
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            isInspectorPresented.toggle()
+                        } label: {
+                            Image(systemName: "sidebar.right")
+                        }
+                        .disabled(!inspectorIsRelevant)
+                    }
+                }
+                .inspector(isPresented: inspectorBinding) {
+                    InspectorView(store: store)
+                        .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+                }
         }
-        .tabViewStyle(.sidebarAdaptable)
-        .accessibilityIdentifier("ipad.adaptableTabs")
-        .inspector(isPresented: inspectorBinding) {
-            InspectorView(store: store)
-                .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
-        }
+        .navigationSplitViewStyle(.balanced)
+        .accessibilityIdentifier("ipad.splitNavigation")
         .onAppear {
             isInspectorPresented = inspectorIsRelevant
         }

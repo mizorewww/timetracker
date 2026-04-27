@@ -643,7 +643,7 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func regularWidthIOSUsesSystemSidebarAdaptableTabs() throws {
+    func regularWidthIOSUsesVisibleSystemSplitView() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -651,10 +651,11 @@ struct TimeTrackerTests {
 
         #expect(source.contains("iPadRootView(store: store)"))
         #expect(source.contains("struct iPadRootView"))
-        #expect(source.contains(".tabViewStyle(.sidebarAdaptable)"))
-        #expect(source.contains("ipad.adaptableTabs"))
+        #expect(source.contains("ipad.splitNavigation"))
+        #expect(source.contains(".navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)"))
         #expect(source.contains("NavigationSplitView {"))
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
+        #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
         #expect(source.contains("NavigationSplitView(columnVisibility:") == false)
         #expect(source.contains("NavigationSplitViewVisibility") == false)
         #expect(source.contains("ipad.topNavigation") == false)

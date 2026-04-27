@@ -1,61 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
-
-struct DesktopModalLayer: View {
-    @ObservedObject var store: TimeTrackerStore
-
-    var body: some View {
-        ZStack {
-            if let draft = store.taskEditorDraft {
-                modalBackdrop
-                TaskEditorPanel(
-                    store: store,
-                    initialDraft: draft,
-                    onCancel: { store.taskEditorDraft = nil },
-                    onSave: { store.saveTaskDraft($0) }
-                )
-                .frame(width: 500, height: 560)
-                .transition(.scale(scale: 0.98).combined(with: .opacity))
-            } else if let draft = store.manualTimeDraft {
-                modalBackdrop
-                ManualTimePanel(
-                    store: store,
-                    initialDraft: draft,
-                    onCancel: { store.manualTimeDraft = nil },
-                    onSave: { store.saveManualTimeDraft($0) }
-                )
-                .frame(width: 620, height: 520)
-                .transition(.scale(scale: 0.98).combined(with: .opacity))
-            } else if let draft = store.segmentEditorDraft {
-                modalBackdrop
-                SegmentEditorPanel(
-                    store: store,
-                    initialDraft: draft,
-                    onCancel: { store.segmentEditorDraft = nil },
-                    onSave: { store.saveSegmentDraft($0) },
-                    onDelete: { store.deleteSegment($0) }
-                )
-                .frame(width: 620, height: 560)
-                .transition(.scale(scale: 0.98).combined(with: .opacity))
-            }
-        }
-        .animation(.easeOut(duration: 0.16), value: store.taskEditorDraft?.id)
-        .animation(.easeOut(duration: 0.16), value: store.manualTimeDraft?.id)
-        .animation(.easeOut(duration: 0.16), value: store.segmentEditorDraft?.id)
-    }
-
-    private var modalBackdrop: some View {
-        Color.black.opacity(0.18)
-            .ignoresSafeArea()
-            .onTapGesture {
-                store.taskEditorDraft = nil
-                store.manualTimeDraft = nil
-                store.segmentEditorDraft = nil
-            }
-    }
-}
 
 struct TaskEditorSheet: View {
     @ObservedObject var store: TimeTrackerStore
@@ -75,6 +18,7 @@ struct TaskEditorSheet: View {
                 dismiss()
             }
         )
+        .editorSheetFrame(width: 520, height: 620)
         .presentationDetents([.large])
     }
 }
@@ -171,34 +115,12 @@ struct TaskEditorPanel: View {
                     }
                 }
                 .formStyle(.grouped)
-
-                #if os(macOS)
-                Divider()
-                HStack {
-                    Button(AppStrings.cancel) {
-                        onCancel()
-                    }
-                    .keyboardShortcut(.cancelAction)
-
-                    Spacer()
-
-                    Button(AppStrings.localized("common.save")) {
-                        onSave(draft)
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canSave)
-                }
-                .padding(16)
-                .background(.thinMaterial)
-                #endif
             }
             .navigationTitle(draft.taskID == nil ? AppStrings.localized("editor.task.newTitle") : AppStrings.localized("editor.task.editTitle"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                #if os(iOS)
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {
                         onCancel()
@@ -213,7 +135,6 @@ struct TaskEditorPanel: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
                 }
-                #endif
             }
             #if os(iOS)
             .sheet(isPresented: $isSymbolPickerPresented) {
@@ -292,6 +213,7 @@ struct ManualTimeSheet: View {
                 dismiss()
             }
         )
+        .editorSheetFrame(width: 620, height: 560)
         .presentationDetents([.medium, .large])
     }
 }
@@ -318,6 +240,7 @@ struct SegmentEditorSheet: View {
                 dismiss()
             }
         )
+        .editorSheetFrame(width: 620, height: 620)
         .presentationDetents([.medium, .large])
     }
 }
@@ -344,26 +267,7 @@ struct SegmentEditorPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(.app("segment.edit.title"))
-                        .font(.title2.bold())
-                    Text(.app("segment.edit.subtitle"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    onCancel()
-                } label: {
-                    Image(systemName: "xmark")
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.borderless)
-            }
-            .padding(18)
-
+        NavigationStack {
             Form {
                 Section(AppStrings.localized("segment.assignment")) {
                     Picker(AppStrings.localized("segment.task"), selection: taskBinding) {
@@ -402,26 +306,27 @@ struct SegmentEditorPanel: View {
                 }
             }
             .formStyle(.grouped)
-
-            HStack {
-                Button(AppStrings.cancel) {
-                    onCancel()
+            .navigationTitle(AppStrings.localized("segment.edit.title"))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        onCancel()
+                    }
+                    .keyboardShortcut(.cancelAction)
                 }
-                .keyboardShortcut(.cancelAction)
 
-                Spacer()
-
-                Button(AppStrings.localized("common.save")) {
-                    onSave(draft)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.localized("common.save")) {
+                        onSave(draft)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(draft.taskID == nil || (!draft.isActive && draft.endedAt <= draft.startedAt))
                 }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(draft.taskID == nil || (!draft.isActive && draft.endedAt <= draft.startedAt))
             }
-            .padding(18)
-            .background(.thinMaterial)
         }
-        .background(AppColors.background)
     }
 
     private var taskBinding: Binding<UUID?> {
@@ -590,26 +495,7 @@ struct ManualTimePanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(.app("manual.title"))
-                        .font(.title2.bold())
-                    Text(.app("manual.subtitle"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    onCancel()
-                } label: {
-                    Image(systemName: "xmark")
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.borderless)
-            }
-            .padding(18)
-
+        NavigationStack {
             Form {
                 Section(AppStrings.localized("segment.assignment")) {
                     Picker(AppStrings.localized("segment.task"), selection: taskBinding) {
@@ -635,26 +521,27 @@ struct ManualTimePanel: View {
                 }
             }
             .formStyle(.grouped)
-
-            HStack {
-                Button(AppStrings.cancel) {
-                    onCancel()
+            .navigationTitle(AppStrings.localized("manual.title"))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        onCancel()
+                    }
+                    .keyboardShortcut(.cancelAction)
                 }
-                .keyboardShortcut(.cancelAction)
 
-                Spacer()
-
-                Button(AppStrings.localized("common.save")) {
-                    onSave(draft)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.localized("common.save")) {
+                        onSave(draft)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(draft.taskID == nil || draft.endedAt <= draft.startedAt)
                 }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(draft.taskID == nil || draft.endedAt <= draft.startedAt)
             }
-            .padding(18)
-            .background(.thinMaterial)
         }
-        .background(AppColors.background)
     }
 
     private var taskBinding: Binding<UUID?> {
@@ -666,18 +553,13 @@ struct ManualTimePanel: View {
     }
 }
 
-struct FormSectionBox<Content: View>: View {
-    let title: String
-    let systemImage: String
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label(title, systemImage: systemImage)
-                .font(.headline)
-                .foregroundStyle(.primary)
-            content
-        }
-        .appCard(padding: 14)
+private extension View {
+    @ViewBuilder
+    func editorSheetFrame(width: CGFloat, height: CGFloat) -> some View {
+        #if os(macOS)
+        frame(minWidth: width, idealWidth: width, minHeight: height, idealHeight: height)
+        #else
+        self
+        #endif
     }
 }

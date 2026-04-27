@@ -1,7 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore

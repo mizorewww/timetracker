@@ -32,7 +32,7 @@
 "timeline.editSegment" = "编辑时间片段";
 "timeline.addSimilarTime" = "补录同类任务";
 "timeline.deleteSegment" = "删除时间片段";
-"quickStart.defaultHint" = "默认显示最近可继续的未完成任务。";
+"quickStart.defaultHint" = "优先显示固定任务，再按使用频率补充最近任务。";
 "quickStart.pinnedHint" = "显示你固定的快捷任务。";
 "quickStart.edit" = "编辑快速开始";
 "menu.startSelectedTask" = "开始所选任务计时";
@@ -138,8 +138,11 @@
 "progress.month" = "本月";
 "progress.year" = "今年";
 "quickStart.auto" = "使用最近任务自动生成";
-"quickStart.auto.footer" = "为空时，Quick Start 会自动显示最近可继续的未完成任务。";
+"quickStart.auto.footer" = "为空时，Quick Start 会按使用频率显示最近任务。";
 "quickStart.pinnedTasks" = "固定任务";
+"quickStart.recentTasks" = "最近使用";
+"quickStart.empty.title" = "没有快捷任务";
+"quickStart.empty.description" = "可以先固定任务，或开始计时后自动生成最近任务。";
 "task.action.startTimer" = "开始计时";
 "task.action.newSubtask" = "新建子任务";
 "task.action.addManualTime" = "手动补录";

@@ -178,6 +178,49 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func quickStartRecentTasksRankByFrequencyAndSkipPinnedTasks() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pinnedTask = try taskRepository.createTask(title: "Pinned", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let frequentTask = try taskRepository.createTask(title: "Frequent", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let occasionalTask = try taskRepository.createTask(title: "Occasional", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let start = Date(timeIntervalSince1970: 10_000)
+
+        _ = try timeRepository.addManualSegment(
+            taskID: occasionalTask.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: frequentTask.id,
+            startedAt: start.addingTimeInterval(1_000),
+            endedAt: start.addingTimeInterval(1_600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: frequentTask.id,
+            startedAt: start.addingTimeInterval(2_000),
+            endedAt: start.addingTimeInterval(2_600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: pinnedTask.id,
+            startedAt: start.addingTimeInterval(3_000),
+            endedAt: start.addingTimeInterval(3_600),
+            note: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        let quickStartTasks = store.frequentRecentTasks(excluding: [pinnedTask.id], limit: 2)
+
+        #expect(quickStartTasks.map(\.id) == [frequentTask.id, occasionalTask.id])
+    }
+
+    @Test @MainActor
     func todayHourlyBreakdownClipsSegmentsIntoHourBuckets() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -655,6 +698,7 @@ struct TimeTrackerTests {
         #expect(source.contains(".navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)"))
         #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
         #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
+        #expect(source.contains("if columnVisibility != .all"))
         #expect(source.contains("\"sidebar.left\""))
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
         #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
@@ -680,7 +724,23 @@ struct TimeTrackerTests {
 
         #expect(phoneHome.contains(".navigationTitle(AppStrings.today)"))
         #expect(phoneHome.contains(".navigationBarTitleDisplayMode(.large)"))
+        #expect(phoneHome.contains(".padding(.top, 10)") == false)
         #expect(phoneHome.contains("HeaderBar(store: store") == false)
+    }
+
+    @Test
+    func quickStartComposesPinnedAndFrequentRecentTasks() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let homeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore.swift"), encoding: .utf8)
+
+        #expect(homeSource.contains("private var pinnedTasks"))
+        #expect(homeSource.contains("private var recentFillTasks"))
+        #expect(homeSource.contains("limit: max(0, 3 - pinnedTasks.count)"))
+        #expect(homeSource.contains("QuickStartTaskButton"))
+        #expect(storeSource.contains("func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3)"))
     }
 
     @Test

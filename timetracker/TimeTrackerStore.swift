@@ -521,6 +521,40 @@ final class TimeTrackerStore: ObservableObject {
         tasks.filter { $0.status == .active }.prefix(4).map { $0 }
     }
 
+    func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3) -> [TaskNode] {
+        guard limit > 0 else { return [] }
+
+        let availableTasks = tasks.filter {
+            $0.deletedAt == nil &&
+            $0.status != .archived &&
+            !excludedIDs.contains($0.id)
+        }
+        let availableIDs = Set(availableTasks.map(\.id))
+        let segmentsByTaskID = Dictionary(grouping: allSegments.filter {
+            $0.deletedAt == nil && availableIDs.contains($0.taskID)
+        }, by: \.taskID)
+
+        let rankedTasks = availableTasks.compactMap { task -> (task: TaskNode, count: Int, lastStartedAt: Date)? in
+            guard let segments = segmentsByTaskID[task.id], !segments.isEmpty else { return nil }
+            let lastStartedAt = segments.map(\.startedAt).max() ?? task.updatedAt
+            return (task, segments.count, lastStartedAt)
+        }
+        .sorted { lhs, rhs in
+            if lhs.count != rhs.count {
+                return lhs.count > rhs.count
+            }
+            return lhs.lastStartedAt > rhs.lastStartedAt
+        }
+        .map(\.task)
+
+        let rankedIDs = Set(rankedTasks.map(\.id))
+        let fallbackTasks = recentTasks.filter {
+            !excludedIDs.contains($0.id) && !rankedIDs.contains($0.id)
+        }
+
+        return Array((rankedTasks + fallbackTasks).prefix(limit))
+    }
+
     var archivedTasks: [TaskNode] {
         tasks.filter { $0.status == .archived }
     }

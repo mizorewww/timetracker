@@ -32,7 +32,7 @@
 "timeline.editSegment" = "Edit Time Segment";
 "timeline.addSimilarTime" = "Add Similar Time";
 "timeline.deleteSegment" = "Delete Time Segment";
-"quickStart.defaultHint" = "Shows recent unfinished tasks by default.";
+"quickStart.defaultHint" = "Pinned tasks first, then frequently used recent tasks.";
 "quickStart.pinnedHint" = "Shows your pinned quick-start tasks.";
 "quickStart.edit" = "Edit Quick Start";
 "menu.startSelectedTask" = "Start Selected Task";
@@ -138,8 +138,11 @@
 "progress.month" = "This Month";
 "progress.year" = "This Year";
 "quickStart.auto" = "Use Recent Tasks Automatically";
-"quickStart.auto.footer" = "When empty, Quick Start shows recent unfinished tasks.";
+"quickStart.auto.footer" = "When empty, Quick Start shows frequently used recent tasks.";
 "quickStart.pinnedTasks" = "Pinned Tasks";
+"quickStart.recentTasks" = "Recent";
+"quickStart.empty.title" = "No Quick Start Tasks";
+"quickStart.empty.description" = "Pin tasks here or start tracking to build a recent list.";
 "task.action.startTimer" = "Start Timer";
 "task.action.newSubtask" = "New Subtask";
 "task.action.addManualTime" = "Add Time Manually";

@@ -203,13 +203,15 @@ struct iPadRootView: View {
                 .navigationSplitViewColumnWidth(min: 560, ideal: 780)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            columnVisibility = .all
-                        } label: {
-                            Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
-                                .labelStyle(.iconOnly)
+                        if columnVisibility != .all {
+                            Button {
+                                columnVisibility = .all
+                            } label: {
+                                Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .accessibilityLabel(AppStrings.localized("sidebar.show"))
                         }
-                        .accessibilityLabel(AppStrings.localized("sidebar.show"))
                     }
 
                     ToolbarItem(placement: .automatic) {

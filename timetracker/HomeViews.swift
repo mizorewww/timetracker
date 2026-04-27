@@ -68,7 +68,7 @@ struct PhoneHomeView: View {
                 InspectorSummaryCard(store: store)
             }
             .padding(.horizontal, 18)
-            .padding(.top, 10)
+            .padding(.top, 0)
             .padding(.bottom, 24)
         }
         .background(AppColors.background)
@@ -879,10 +879,17 @@ struct QuickStartSection: View {
             .compactMap { UUID(uuidString: String($0)) }
     }
 
-    private var quickStartTasks: [TaskNode] {
-        let ids = selectedIDs
-        guard !ids.isEmpty else { return store.recentTasks }
-        return ids.compactMap { store.task(for: $0) }.filter { $0.deletedAt == nil && $0.status != .archived }
+    private var pinnedTasks: [TaskNode] {
+        Array(selectedIDs.compactMap { store.task(for: $0) }
+            .filter { $0.deletedAt == nil && $0.status != .archived }
+            .prefix(3))
+    }
+
+    private var recentFillTasks: [TaskNode] {
+        store.frequentRecentTasks(
+            excluding: Set(pinnedTasks.map(\.id)),
+            limit: max(0, 3 - pinnedTasks.count)
+        )
     }
 
     var body: some View {
@@ -891,7 +898,7 @@ struct QuickStartSection: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(AppStrings.quickStart)
                         .font(.headline)
-                    Text(selectedIDs.isEmpty ? AppStrings.localized("quickStart.defaultHint") : AppStrings.localized("quickStart.pinnedHint"))
+                    Text(AppStrings.localized("quickStart.defaultHint"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -905,33 +912,29 @@ struct QuickStartSection: View {
                 .help(AppStrings.localized("quickStart.edit"))
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
-                ForEach(quickStartTasks, id: \.id) { task in
-                    Button {
-                        store.startTask(task)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: task.iconName ?? "play")
-                                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-                            Text(task.title)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .tint(Color(hex: task.colorHex) ?? .blue)
+            if pinnedTasks.isEmpty && recentFillTasks.isEmpty {
+                ContentUnavailableView(
+                    AppStrings.localized("quickStart.empty.title"),
+                    systemImage: "clock.arrow.circlepath",
+                    description: Text(.app("quickStart.empty.description"))
+                )
+                .frame(maxWidth: .infinity, minHeight: 104)
+            } else {
+                if !pinnedTasks.isEmpty {
+                    QuickStartTaskGroup(
+                        title: AppStrings.localized("quickStart.pinnedTasks"),
+                        tasks: pinnedTasks,
+                        store: store
+                    )
                 }
 
-                Button {
-                    store.presentNewTask()
-                } label: {
-                    Label(AppStrings.newTask, systemImage: "plus")
-                        .frame(maxWidth: .infinity)
+                if !recentFillTasks.isEmpty {
+                    QuickStartTaskGroup(
+                        title: AppStrings.localized("quickStart.recentTasks"),
+                        tasks: recentFillTasks,
+                        store: store
+                    )
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
             }
         }
         .sheet(isPresented: $isEditorPresented) {
@@ -943,6 +946,51 @@ struct QuickStartSection: View {
                 }
             )
         }
+    }
+}
+
+private struct QuickStartTaskGroup: View {
+    let title: String
+    let tasks: [TaskNode]
+    @ObservedObject var store: TimeTrackerStore
+
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(tasks, id: \.id) { task in
+                    QuickStartTaskButton(task: task) {
+                        store.startTask(task)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct QuickStartTaskButton: View {
+    let task: TaskNode
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: task.iconName ?? "play")
+                    .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+                    .frame(width: 18)
+                Text(task.title)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .tint(Color(hex: task.colorHex) ?? .blue)
     }
 }
 

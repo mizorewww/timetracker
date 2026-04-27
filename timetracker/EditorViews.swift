@@ -421,9 +421,7 @@ struct SegmentEditorPanel: View {
             .padding(18)
             .background(.thinMaterial)
         }
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
-        .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
+        .background(AppColors.background)
     }
 
     private var taskBinding: Binding<UUID?> {
@@ -454,7 +452,7 @@ struct SymbolAndColorPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("SF Symbols")
+                Text(.app("editor.symbol.sfSymbols"))
                     .font(.headline)
                 Spacer()
                 Text("\(filteredSymbols.count) / \(symbols.count)")
@@ -656,9 +654,7 @@ struct ManualTimePanel: View {
             .padding(18)
             .background(.thinMaterial)
         }
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
-        .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
+        .background(AppColors.background)
     }
 
     private var taskBinding: Binding<UUID?> {
@@ -682,8 +678,6 @@ struct FormSectionBox<Content: View>: View {
                 .foregroundStyle(.primary)
             content
         }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard(padding: 14)
     }
 }

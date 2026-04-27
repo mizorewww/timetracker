@@ -97,6 +97,8 @@
 "common.days" = "%d days";
 "common.now" = "Now";
 "common.custom" = "Custom";
+"source.manual" = "Manual";
+"source.timer" = "Timer";
 "status.planned" = "Planned";
 "status.active" = "Not Done";
 "status.completed" = "Completed";
@@ -127,6 +129,10 @@
 "sidebar.hide" = "Hide Sidebar";
 "inspector.show" = "Show Details";
 "inspector.hide" = "Hide Details";
+"inspector.selectedTask" = "Selected Task";
+"inspector.stats" = "Stats";
+"inspector.pomodoroSettings" = "Pomodoro Settings";
+"inspector.recentSessions" = "Recent Sessions";
 "progress.today" = "Today";
 "progress.week" = "This Week";
 "progress.month" = "This Month";
@@ -203,6 +209,9 @@
 "analytics.gross.footnote" = "Sum of task time";
 "analytics.overlap.footnote" = "Created by parallel timers";
 "analytics.pomodoros.footnote" = "Completed focus segments";
+"analytics.metric.overlap" = "Overlap";
+"analytics.metric.pomodoros" = "Pomodoros";
+"analytics.range" = "Range";
 "analytics.dailyTrend.title" = "Daily Trend";
 "analytics.dailyTrend.subtitle" = "Week and Month use daily totals. Today uses an hourly distribution.";
 "analytics.taskRank.title" = "Task Ranking";
@@ -251,6 +260,7 @@
 "editor.task.editTitle" = "Edit Task";
 "editor.task.rootTitle" = "Root Task";
 "editor.symbol.title" = "Symbol and Color";
+"editor.symbol.sfSymbols" = "SF Symbols";
 "editor.symbol.search" = "Search symbol names";
 "editor.symbol.color" = "Color";
 "segment.edit.title" = "Edit Time Segment";

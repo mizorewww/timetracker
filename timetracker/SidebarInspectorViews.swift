@@ -260,7 +260,7 @@ struct InspectorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Selected Task")
+                Text(.app("inspector.selectedTask"))
                     .font(.headline)
 
                 if let task = store.selectedTask {
@@ -330,9 +330,7 @@ struct InspectorInfoGrid: View {
                 InfoRow(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskToday(task)))
                 InfoRow(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
         }
     }
 
@@ -370,14 +368,12 @@ struct NotesPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Notes")
+            Text(.app("editor.task.notes"))
                 .font(.headline)
             Text(task.notes ?? AppStrings.localized("task.notes.empty"))
                 .foregroundStyle(task.notes == nil ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+                .appCard(padding: 12)
         }
     }
 }
@@ -388,7 +384,7 @@ struct StatsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Stats")
+            Text(.app("inspector.stats"))
                 .font(.headline)
 
             HStack {
@@ -396,9 +392,7 @@ struct StatsPanel: View {
                 Divider()
                 SmallStat(title: AppStrings.localized("task.stats.averageFocus"), value: DurationFormatter.compact(store.averageFocusSeconds))
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
             .accessibilityIdentifier("pomodoro.active")
         }
     }
@@ -431,7 +425,7 @@ struct PomodoroSettingsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Pomodoro Settings")
+            Text(.app("inspector.pomodoroSettings"))
                 .font(.headline)
 
             VStack(spacing: 12) {
@@ -442,9 +436,7 @@ struct PomodoroSettingsPanel: View {
                 Toggle(AppStrings.localized("task.autoStartBreak"), isOn: $autoBreak)
                     .font(.subheadline)
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
         }
     }
 }
@@ -455,7 +447,7 @@ struct RecentSessionsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Recent Sessions")
+            Text(.app("inspector.recentSessions"))
                 .font(.headline)
 
             VStack(spacing: 8) {
@@ -480,9 +472,7 @@ struct RecentSessionsPanel: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
         }
     }
 
@@ -664,9 +654,7 @@ struct InspectorSummaryCard: View {
                     .foregroundStyle(task.notes == nil ? .secondary : .primary)
                     .foregroundStyle(.secondary)
             }
-            .padding(18)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 18)
         }
     }
 }

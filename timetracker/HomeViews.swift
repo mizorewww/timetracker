@@ -173,9 +173,7 @@ struct TimeProgressTile: View {
             ProgressView(value: item.fraction)
                 .tint(item.tint)
         }
-        .padding(12)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard(padding: 12)
     }
 }
 
@@ -255,11 +253,7 @@ struct MetricsPanel: View {
         }
         .padding(isCompactPhone ? 14 : 18)
         .frame(maxWidth: .infinity)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(AppColors.border)
-        )
+        .appCard(padding: 0)
     }
 }
 
@@ -467,11 +461,7 @@ struct ActiveTimersSection: View {
                     }
                 }
             }
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppColors.border)
-            )
+            .appCard(padding: 0)
         }
         .accessibilityIdentifier("home.activeTimers")
     }
@@ -494,11 +484,7 @@ struct PausedSessionsSection: View {
                             }
                         }
                     }
-                    .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(AppColors.border)
-                    )
+                    .appCard(padding: 0)
                 }
             }
         }
@@ -519,7 +505,7 @@ struct PausedSessionRow: View {
             TaskIcon(task: store.task(for: session.taskID))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(store.task(for: session.taskID)?.title ?? "Deleted Task")
+                Text(store.task(for: session.taskID)?.title ?? AppStrings.localized("task.deleted"))
                     .font(.headline)
                 Text(AppStrings.paused)
                     .font(.subheadline)
@@ -681,11 +667,7 @@ struct TimelineSection: View {
                     }
                 }
             }
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppColors.border)
-            )
+            .appCard(padding: 0)
         }
         .accessibilityIdentifier("home.timeline")
     }
@@ -706,9 +688,9 @@ struct TimelineRow: View {
 
     private var tag: String {
         switch segment.source {
-        case .pomodoro: return "Pomodoro"
-        case .manual: return "Manual"
-        default: return "Timer"
+        case .pomodoro: return AppStrings.pomodoro
+        case .manual: return AppStrings.localized("source.manual")
+        default: return AppStrings.localized("source.timer")
         }
     }
 
@@ -809,7 +791,7 @@ struct TimelineRow: View {
     private var durationText: some View {
         Group {
             if segment.endedAt == nil {
-                Text("now")
+                Text(.app("common.now"))
                     .foregroundStyle(.blue)
             } else {
                 Text(DurationFormatter.compact(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt))))
@@ -822,9 +804,9 @@ struct TimelineRow: View {
     }
 
     private var tagColor: Color {
-        switch tag {
-        case "Pomodoro": return .blue
-        case "Manual": return .orange
+        switch segment.source {
+        case .pomodoro: return .blue
+        case .manual: return .orange
         default: return .secondary
         }
     }
@@ -833,7 +815,7 @@ struct TimelineRow: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         let start = formatter.string(from: segment.startedAt)
-        let end = segment.endedAt.map { formatter.string(from: $0) } ?? "Now"
+        let end = segment.endedAt.map { formatter.string(from: $0) } ?? AppStrings.localized("common.now")
         return "\(start) - \(end)"
     }
 }

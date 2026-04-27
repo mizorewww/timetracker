@@ -67,12 +67,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             #if os(macOS)
-            ZStack {
-                DesktopRootView(store: store)
-                    .disabled(store.taskEditorDraft != nil || store.manualTimeDraft != nil || store.segmentEditorDraft != nil)
-
-                DesktopModalLayer(store: store)
-            }
+            DesktopRootView(store: store)
             #else
             iOSRootView(store: store)
             #endif
@@ -96,13 +91,12 @@ struct ContentView: View {
         }
         .preferredColorScheme(appColorScheme)
         .alert(Text(.app("error.title")), isPresented: errorBinding) {
-            Button("OK") {
+            Button(AppStrings.localized("common.ok")) {
                 store.errorMessage = nil
             }
         } message: {
             Text(store.errorMessage ?? "")
         }
-        #if os(iOS)
         .sheet(item: $store.taskEditorDraft) { draft in
             TaskEditorSheet(store: store, initialDraft: draft)
         }
@@ -112,7 +106,6 @@ struct ContentView: View {
         .sheet(item: $store.segmentEditorDraft) { draft in
             SegmentEditorSheet(store: store, initialDraft: draft)
         }
-        #endif
         #if os(macOS)
         .focusedSceneValue(\.newTaskAction) {
             store.presentNewTask()

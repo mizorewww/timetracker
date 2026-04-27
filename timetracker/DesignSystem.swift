@@ -2,11 +2,13 @@ import SwiftUI
 
 enum AppLayout {
     static let cardRadius: CGFloat = 8
+    static let iconRadius: CGFloat = 7
     static let pageSpacing: CGFloat = 20
     static let sectionSpacing: CGFloat = 12
     static let cardPadding: CGFloat = 16
     static let compactPagePadding: CGFloat = 18
     static let regularPagePadding: CGFloat = 28
+    static let desktopReadableWidth: CGFloat = 980
 }
 
 struct AppCardBackground: ViewModifier {
@@ -32,6 +34,15 @@ struct AppCardBackground: ViewModifier {
 extension View {
     func appCard(padding: CGFloat = AppLayout.cardPadding, stroke: Bool = true) -> some View {
         modifier(AppCardBackground(padding: padding, stroke: stroke))
+    }
+
+    @ViewBuilder
+    func platformSheetFrame(width: CGFloat, height: CGFloat) -> some View {
+        #if os(macOS)
+        frame(minWidth: width, idealWidth: width, minHeight: height, idealHeight: height)
+        #else
+        self
+        #endif
     }
 }
 
@@ -72,6 +83,6 @@ struct AppRowIcon: View {
             .font(.body.weight(.semibold))
             .foregroundStyle(tint)
             .frame(width: 30, height: 30)
-            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
     }
 }

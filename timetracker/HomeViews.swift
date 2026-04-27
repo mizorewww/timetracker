@@ -1,7 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct DesktopMainView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -80,12 +77,7 @@ struct PhoneHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         #endif
         .toolbar {
-            ToolbarItemGroup(placement: phoneToolbarPlacement) {
-                Button {
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                }
-
+            ToolbarItem(placement: phoneToolbarPlacement) {
                 Button {
                     store.presentNewTask()
                 } label: {
@@ -117,7 +109,7 @@ struct TimeProgressSection: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let items = progressItems(now: context.date)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 12)], spacing: 12) {
                 ForEach(items) { item in
                     TimeProgressTile(item: item)
                 }
@@ -184,13 +176,20 @@ struct MetricsAndActions: View {
     var body: some View {
         Group {
             if horizontal {
-                HStack(alignment: .top, spacing: 18) {
-                    MetricsPanel(store: store)
-                    ActionStack(store: store, buttonHeight: 65)
-                        .frame(width: 220)
-                        .frame(height: 142)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) {
+                        MetricsPanel(store: store)
+                        ActionStack(store: store, buttonHeight: 65)
+                            .frame(minWidth: 180, idealWidth: 210, maxWidth: 240)
+                            .frame(height: 142)
+                    }
+                    .frame(minHeight: 142)
+
+                    VStack(spacing: 16) {
+                        MetricsPanel(store: store)
+                        ActionStack(store: store)
+                    }
                 }
-                .frame(minHeight: 142)
             } else {
                 VStack(spacing: 16) {
                     MetricsPanel(store: store)
@@ -555,62 +554,11 @@ struct ActiveTimerRow: View {
     var body: some View {
         Group {
             if isCompactPhone {
-                VStack(spacing: 12) {
-                    HStack(alignment: .center, spacing: 12) {
-                        TaskIcon(task: store.task(for: segment.taskID), size: 34)
-                        Spacer(minLength: 12)
-                        VStack(alignment: .trailing, spacing: 3) {
-                            Text(store.displayTitle(for: segment))
-                                .font(.headline)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.78)
-                            Text(displayPathText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.78)
-                        }
-                    }
-
-                    HStack(spacing: 10) {
-                        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                            .font(.system(size: 24, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        pauseButton(size: 30)
-                        stopButton(size: 30)
-                    }
-                }
+                compactContent
             } else {
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
-                        .frame(width: 10, height: 10)
-
-                    TaskIcon(task: store.task(for: segment.taskID))
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(store.displayTitle(for: segment))
-                            .font(.headline)
-                        Text(displayPathText)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: 10)
-
-                    DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                        .font(.system(size: 30, weight: .medium, design: .rounded))
-                        .monospacedDigit()
-                        .minimumScaleFactor(0.75)
-                        .frame(minWidth: 86, alignment: .trailing)
-
-                    pauseButton(size: 32)
-                    stopButton(size: 32)
+                ViewThatFits(in: .horizontal) {
+                    regularContent
+                    compactContent
                 }
             }
         }
@@ -619,6 +567,69 @@ struct ActiveTimerRow: View {
             store.selectTask(segment.taskID, revealInToday: false)
         }
         .padding(isCompactPhone ? 10 : 14)
+    }
+
+    private var regularContent: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
+                .frame(width: 10, height: 10)
+
+            TaskIcon(task: store.task(for: segment.taskID))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(store.displayTitle(for: segment))
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(displayPathText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 10)
+
+            DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .minimumScaleFactor(0.75)
+                .frame(minWidth: 86, alignment: .trailing)
+
+            pauseButton(size: 32)
+            stopButton(size: 32)
+        }
+    }
+
+    private var compactContent: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                TaskIcon(task: store.task(for: segment.taskID), size: 34)
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(store.displayTitle(for: segment))
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    Text(displayPathText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+            }
+
+            HStack(spacing: 10) {
+                DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                pauseButton(size: 30)
+                stopButton(size: 30)
+            }
+        }
     }
 
     private var displayPathText: String {
@@ -699,7 +710,10 @@ struct TimelineRow: View {
             if isCompactPhone {
                 compactContent
             } else {
-                regularContent
+                ViewThatFits(in: .horizontal) {
+                    regularContent
+                    compactContent
+                }
             }
         }
         .contentShape(Rectangle())
@@ -965,6 +979,6 @@ struct QuickStartEditorSheet: View {
                 }
             }
         }
-        .frame(minWidth: 420, minHeight: 520)
+        .platformSheetFrame(width: 420, height: 520)
     }
 }

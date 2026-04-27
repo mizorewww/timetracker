@@ -1,8 +1,6 @@
-import Charts
 import Foundation
 import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #else
@@ -201,17 +199,6 @@ struct DesktopRootView: View {
                 .navigationSplitViewColumnWidth(min: 480, ideal: 720)
                 #endif
                 .toolbar {
-                    #if os(iOS)
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            togglePrimarySidebar()
-                        } label: {
-                            Image(systemName: "sidebar.left")
-                        }
-                        .accessibilityLabel(sidebarToggleTitle)
-                    }
-                    #endif
-
                     ToolbarItem(placement: .automatic) {
                         Button {
                             isInspectorPresented.toggle()
@@ -235,18 +222,6 @@ struct DesktopRootView: View {
         }
         .onChange(of: store.selectedTaskID) { _, _ in
             updateInspectorVisibility()
-        }
-    }
-
-    private var sidebarToggleTitle: String {
-        columnVisibility == .detailOnly
-            ? AppStrings.localized("sidebar.show")
-            : AppStrings.localized("sidebar.hide")
-    }
-
-    private func togglePrimarySidebar() {
-        withAnimation(.snappy) {
-            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
         }
     }
 

@@ -1,7 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct PomodoroView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -200,8 +197,7 @@ private struct PomodoroSetupCard: View {
             .accessibilityIdentifier("pomodoro.startFocus")
         }
         .padding(18)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard(padding: 0)
     }
 }
 
@@ -276,8 +272,7 @@ private struct ActivePomodoroCard: View {
             }
             .padding(22)
             .frame(maxWidth: .infinity)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 0)
             .accessibilityIdentifier("pomodoro.active")
         }
     }
@@ -341,8 +336,7 @@ private struct PomodoroLedgerCard: View {
             }
         }
         .padding(18)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard(padding: 0)
     }
 
     private func iconName(for state: PomodoroState) -> String {

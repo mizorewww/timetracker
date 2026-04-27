@@ -1,7 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 enum SidebarSelection: Hashable {
     case destination(TimeTrackerStore.DesktopDestination)
@@ -36,7 +33,7 @@ struct SidebarView: View {
                 }
             }
         }
-        .navigationTitle("Time Tracker")
+        .navigationTitle(AppStrings.localized("app.name"))
         .onAppear {
             syncSelectionFromStore()
         }
@@ -108,8 +105,8 @@ struct TaskTreeRow: View {
                     }
                 } label: {
                     taskLabel
-                        .tag(SidebarSelection.task(task.id))
                 }
+                .tag(SidebarSelection.task(task.id))
             }
         }
     }
@@ -211,26 +208,6 @@ struct TaskContextMenu: View {
             store.deleteSelectedTask(taskID: task.id)
         } label: {
             Label(AppStrings.localized("task.action.softDelete"), systemImage: "trash")
-        }
-    }
-}
-
-struct SidebarStaticRow: View {
-    let title: String
-    let systemImage: String
-    let count: Int
-    let color: Color
-
-    var body: some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-                .foregroundStyle(color)
-            Spacer()
-            Text("\(count)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .background(.thinMaterial, in: Capsule())
         }
     }
 }

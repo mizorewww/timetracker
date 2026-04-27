@@ -1,7 +1,5 @@
 import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct AnalyticsView: View {
     @ObservedObject var store: TimeTrackerStore

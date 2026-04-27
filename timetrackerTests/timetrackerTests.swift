@@ -642,6 +642,16 @@ struct TimeTrackerTests {
         }
     }
 
+    @Test
+    func regularWidthSidebarUsesSystemToggleOnly() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/ContentView.swift"), encoding: .utf8)
+
+        #expect(source.contains("\"sidebar.left\"") == false)
+    }
+
     @MainActor
     private func makeContext() throws -> ModelContext {
         let schema = Schema([

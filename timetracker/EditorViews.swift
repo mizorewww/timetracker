@@ -18,7 +18,7 @@ struct TaskEditorSheet: View {
                 dismiss()
             }
         )
-        .editorSheetFrame(width: 520, height: 620)
+        .platformSheetFrame(width: 520, height: 620)
         .presentationDetents([.large])
     }
 }
@@ -213,7 +213,7 @@ struct ManualTimeSheet: View {
                 dismiss()
             }
         )
-        .editorSheetFrame(width: 620, height: 560)
+        .platformSheetFrame(width: 620, height: 560)
         .presentationDetents([.medium, .large])
     }
 }
@@ -240,7 +240,7 @@ struct SegmentEditorSheet: View {
                 dismiss()
             }
         )
-        .editorSheetFrame(width: 620, height: 620)
+        .platformSheetFrame(width: 620, height: 620)
         .presentationDetents([.medium, .large])
     }
 }
@@ -550,16 +550,5 @@ struct ManualTimePanel: View {
         } set: { value in
             draft.taskID = value
         }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func editorSheetFrame(width: CGFloat, height: CGFloat) -> some View {
-        #if os(macOS)
-        frame(minWidth: width, idealWidth: width, minHeight: height, idealHeight: height)
-        #else
-        self
-        #endif
     }
 }

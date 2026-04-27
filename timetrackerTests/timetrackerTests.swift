@@ -740,6 +740,10 @@ struct TimeTrackerTests {
         #expect(homeSource.contains("private var recentFillTasks"))
         #expect(homeSource.contains("limit: max(0, 3 - pinnedTasks.count)"))
         #expect(homeSource.contains("QuickStartTaskButton"))
+        #expect(homeSource.contains("private let maxPinnedTasks = 3"))
+        #expect(homeSource.contains("QuickStartSelectableTaskRow"))
+        #expect(homeSource.contains("selectedIDs.append(task.id)"))
+        #expect(homeSource.contains("selectedIDs.remove(atOffsets: offsets)"))
         #expect(storeSource.contains("func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3)"))
     }
 

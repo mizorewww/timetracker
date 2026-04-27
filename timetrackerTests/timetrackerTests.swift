@@ -738,13 +738,40 @@ struct TimeTrackerTests {
 
         #expect(homeSource.contains("private var pinnedTasks"))
         #expect(homeSource.contains("private var recentFillTasks"))
-        #expect(homeSource.contains("limit: max(0, 3 - pinnedTasks.count)"))
+        #expect(homeSource.contains("limit: 3"))
         #expect(homeSource.contains("QuickStartTaskButton"))
-        #expect(homeSource.contains("private let maxPinnedTasks = 3"))
+        #expect(homeSource.contains("private let maxPinnedTasks = 3") == false)
         #expect(homeSource.contains("QuickStartSelectableTaskRow"))
         #expect(homeSource.contains("selectedIDs.append(task.id)"))
         #expect(homeSource.contains("selectedIDs.remove(atOffsets: offsets)"))
         #expect(storeSource.contains("func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3)"))
+    }
+
+    @Test
+    func homePlacesQuickStartBeforeTimeline() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+
+        guard
+            let desktopStart = source.range(of: "struct DesktopMainView"),
+            let phoneStart = source.range(of: "struct PhoneHomeView"),
+            let headerStart = source.range(of: "struct HeaderBar")
+        else {
+            Issue.record("Could not locate home view sections")
+            return
+        }
+
+        let desktopMain = String(source[desktopStart.lowerBound..<phoneStart.lowerBound])
+        let phoneHome = String(source[phoneStart.lowerBound..<headerStart.lowerBound])
+        let desktopQuickStart = try #require(desktopMain.range(of: "QuickStartSection(store: store)")?.lowerBound)
+        let desktopTimeline = try #require(desktopMain.range(of: "TimelineSection(store: store)")?.lowerBound)
+        let phoneQuickStart = try #require(phoneHome.range(of: "QuickStartSection(store: store)")?.lowerBound)
+        let phoneTimeline = try #require(phoneHome.range(of: "TimelineSection(store: store)")?.lowerBound)
+
+        #expect(desktopQuickStart < desktopTimeline)
+        #expect(phoneQuickStart < phoneTimeline)
     }
 
     @Test

@@ -16,10 +16,10 @@ struct DesktopMainView: View {
                     TimeProgressSection(store: store)
                     ActiveTimersSection(store: store)
                     PausedSessionsSection(store: store)
-                    TimelineSection(store: store)
                     if !compact {
                         QuickStartSection(store: store)
                     }
+                    TimelineSection(store: store)
                 }
                 .padding(compact ? 18 : 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,8 +63,8 @@ struct PhoneHomeView: View {
                 TimeProgressSection(store: store)
                 ActiveTimersSection(store: store)
                 PausedSessionsSection(store: store)
-                TimelineSection(store: store)
                 QuickStartSection(store: store)
+                TimelineSection(store: store)
                 InspectorSummaryCard(store: store)
             }
             .padding(.horizontal, 18)
@@ -880,15 +880,14 @@ struct QuickStartSection: View {
     }
 
     private var pinnedTasks: [TaskNode] {
-        Array(selectedIDs.compactMap { store.task(for: $0) }
+        selectedIDs.compactMap { store.task(for: $0) }
             .filter { $0.deletedAt == nil && $0.status != .archived }
-            .prefix(3))
     }
 
     private var recentFillTasks: [TaskNode] {
         store.frequentRecentTasks(
             excluding: Set(pinnedTasks.map(\.id)),
-            limit: max(0, 3 - pinnedTasks.count)
+            limit: 3
         )
     }
 
@@ -999,12 +998,11 @@ struct QuickStartEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedIDs: [UUID]
     let onSave: ([UUID]) -> Void
-    private let maxPinnedTasks = 3
 
     init(store: TimeTrackerStore, selectedIDs: [UUID], onSave: @escaping ([UUID]) -> Void) {
         self.store = store
         self.onSave = onSave
-        _selectedIDs = State(initialValue: Array(selectedIDs.prefix(3)))
+        _selectedIDs = State(initialValue: selectedIDs)
     }
 
     private var availableTasks: [TaskNode] {
@@ -1023,16 +1021,16 @@ struct QuickStartEditorSheet: View {
     private func togglePinned(_ task: TaskNode) {
         if let index = selectedIDs.firstIndex(of: task.id) {
             selectedIDs.remove(at: index)
-        } else if selectedIDs.count < maxPinnedTasks {
+        } else {
             selectedIDs.append(task.id)
         }
     }
 
     private func cleanedPinnedIDs() -> [UUID] {
-        Array(selectedIDs.filter { id in
+        selectedIDs.filter { id in
             guard let task = store.task(for: id) else { return false }
             return task.deletedAt == nil && task.status != .archived
-        }.prefix(maxPinnedTasks))
+        }
     }
 
     var body: some View {
@@ -1053,13 +1051,13 @@ struct QuickStartEditorSheet: View {
 
                     if !selectedIDs.isEmpty {
                         Button(role: .destructive) {
-                        selectedIDs.removeAll()
-                    } label: {
+                            selectedIDs.removeAll()
+                        } label: {
                             Label(AppStrings.localized("quickStart.clearPinned"), systemImage: "xmark.circle")
                         }
                     }
                 } header: {
-                    Text(String(format: AppStrings.localized("quickStart.pinnedHeader"), pinnedTasks.count, maxPinnedTasks))
+                    Text(String(format: AppStrings.localized("quickStart.pinnedHeader"), pinnedTasks.count))
                 } footer: {
                     Text(.app("quickStart.pinnedFooter"))
                 }
@@ -1075,11 +1073,10 @@ struct QuickStartEditorSheet: View {
                                 path: store.path(for: task),
                                 isPinned: pinned,
                                 order: selectedIDs.firstIndex(of: task.id).map { $0 + 1 },
-                                isDisabled: !pinned && selectedIDs.count >= maxPinnedTasks
+                                isDisabled: false
                             )
                         }
                         .buttonStyle(.plain)
-                        .disabled(!pinned && selectedIDs.count >= maxPinnedTasks)
                     }
                 }
             }

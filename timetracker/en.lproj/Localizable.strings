@@ -143,8 +143,8 @@
 "quickStart.recentTasks" = "Recent";
 "quickStart.empty.title" = "No Quick Start Tasks";
 "quickStart.empty.description" = "Pin tasks here or start tracking to build a recent list.";
-"quickStart.pinnedHeader" = "Pinned Tasks %d/%d";
-"quickStart.pinnedFooter" = "Pinned tasks stay at the top of Quick Start. Delete all pinned tasks to use the automatic recent list only.";
+"quickStart.pinnedHeader" = "Pinned Tasks %d";
+"quickStart.pinnedFooter" = "Pinned tasks stay at the top of Quick Start. Keep this list short if you want a faster start; recent suggestions below are limited to three tasks.";
 "quickStart.clearPinned" = "Clear Pinned Tasks";
 "quickStart.allTasks" = "All Tasks";
 "task.action.startTimer" = "Start Timer";

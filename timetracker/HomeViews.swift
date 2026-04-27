@@ -59,7 +59,6 @@ struct PhoneHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HeaderBar(store: store, compact: true)
                 MetricsAndActions(store: store, horizontal: false)
                 TimeProgressSection(store: store)
                 ActiveTimersSection(store: store)
@@ -73,6 +72,7 @@ struct PhoneHomeView: View {
             .padding(.bottom, 24)
         }
         .background(AppColors.background)
+        .navigationTitle(AppStrings.today)
         #if os(iOS)
         .scrollBounceBehavior(.basedOnSize)
         #endif

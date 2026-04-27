@@ -653,13 +653,34 @@ struct TimeTrackerTests {
         #expect(source.contains("struct iPadRootView"))
         #expect(source.contains("ipad.splitNavigation"))
         #expect(source.contains(".navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)"))
-        #expect(source.contains("NavigationSplitView {"))
+        #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
+        #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
+        #expect(source.contains("\"sidebar.left\""))
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
         #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
-        #expect(source.contains("NavigationSplitView(columnVisibility:") == false)
-        #expect(source.contains("NavigationSplitViewVisibility") == false)
         #expect(source.contains("ipad.topNavigation") == false)
         #expect(source.contains(".overlay(alignment: .topLeading)") == false)
+    }
+
+    @Test
+    func phoneHomeUsesSystemLargeTitle() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+
+        guard
+            let start = source.range(of: "struct PhoneHomeView"),
+            let end = source.range(of: "struct HeaderBar")
+        else {
+            Issue.record("Could not locate PhoneHomeView")
+            return
+        }
+        let phoneHome = String(source[start.lowerBound..<end.lowerBound])
+
+        #expect(phoneHome.contains(".navigationTitle(AppStrings.today)"))
+        #expect(phoneHome.contains(".navigationBarTitleDisplayMode(.large)"))
+        #expect(phoneHome.contains("HeaderBar(store: store") == false)
     }
 
     @Test

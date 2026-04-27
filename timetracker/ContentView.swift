@@ -191,16 +191,27 @@ struct PhoneRootView: View {
 
 struct iPadRootView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(store: store)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
         } detail: {
             DesktopContentView(store: store)
                 .navigationSplitViewColumnWidth(min: 560, ideal: 780)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            columnVisibility = .all
+                        } label: {
+                            Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
+                                .labelStyle(.iconOnly)
+                        }
+                        .accessibilityLabel(AppStrings.localized("sidebar.show"))
+                    }
+
                     ToolbarItem(placement: .automatic) {
                         Button {
                             isInspectorPresented.toggle()

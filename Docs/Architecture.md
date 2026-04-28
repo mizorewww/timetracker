@@ -61,3 +61,9 @@ Task tree display should be treated as derived UI state. The durable model remai
 The first app version includes local SwiftData persistence, task creation/editing/status, soft delete/archive, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, analytics overview, CSV export, demo data management, database optimization, iCloud configuration, and Live Activity display for running timers.
 
 Future work should preserve the ledger contract: every timer, pomodoro, manual entry, widget action, Live Activity action, or Watch command must ultimately create or update `TimeSession` and `TimeSegment` records through shared use cases.
+
+## Version and Build Info
+
+Settings includes an About section with the app icon, `MARKETING_VERSION`, build number, Git branch, short commit hash, and build date. The app target writes `AppBuildInfo.plist` during the build using `scripts/write_build_info_plist.sh`; do not hard-code Git metadata in Swift source.
+
+Version bumping is automated through `.githooks/pre-commit`. See `Docs/Versioning.md` before changing release or commit automation.

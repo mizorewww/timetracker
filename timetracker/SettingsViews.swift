@@ -203,6 +203,18 @@ struct SettingsView: View {
             } header: {
                 SettingsHeader(symbol: "wrench.and.screwdriver.fill", title: AppStrings.localized("settings.maintenance"))
             }
+
+            Section {
+                AboutAppSummary()
+                LabeledContent(AppStrings.localized("settings.about.version"), value: AppBuildInfo.versionSummary)
+                LabeledContent(AppStrings.localized("settings.about.branch"), value: AppBuildInfo.gitBranch)
+                LabeledContent(AppStrings.localized("settings.about.commit"), value: AppBuildInfo.gitCommit + (AppBuildInfo.isDirtyBuild ? " *" : ""))
+                LabeledContent(AppStrings.localized("settings.about.built"), value: AppBuildInfo.buildDate)
+            } header: {
+                SettingsHeader(symbol: "info.circle.fill", title: AppStrings.localized("settings.about"))
+            } footer: {
+                Text(.app("settings.about.footer"))
+            }
         }
         .formStyle(.grouped)
         .navigationTitle(AppStrings.settings)
@@ -276,6 +288,30 @@ struct SettingsView: View {
                 databaseOptimizationMessage = nil
             }
         }
+    }
+}
+
+struct AboutAppSummary: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            AppIconImage()
+                .frame(width: 58, height: 58)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(AppBuildInfo.displayName)
+                    .font(.headline)
+                Text(String(format: AppStrings.localized("settings.about.versionFormat"), AppBuildInfo.versionSummary))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(AppBuildInfo.gitBranch)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 6)
+        .textSelection(.enabled)
+        .accessibilityElement(children: .combine)
     }
 }
 

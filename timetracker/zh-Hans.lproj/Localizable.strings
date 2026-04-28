@@ -74,6 +74,13 @@
 "settings.rebuildDemoData" = "重建演示数据";
 "settings.clearDemoData" = "清除演示数据";
 "settings.maintenance" = "维护";
+"settings.about" = "关于";
+"settings.about.version" = "版本";
+"settings.about.branch" = "分支";
+"settings.about.commit" = "提交";
+"settings.about.built" = "构建时间";
+"settings.about.versionFormat" = "版本 %@";
+"settings.about.footer" = "分支和提交信息会在构建时写入。提交后面的星号表示这个构建包含未提交的本地修改。";
 "settings.countdown.eventName" = "事件名称";
 "settings.countdown.date" = "日期";
 "common.ok" = "好";

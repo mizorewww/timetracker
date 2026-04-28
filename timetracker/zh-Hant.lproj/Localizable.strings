@@ -74,6 +74,13 @@
 "settings.rebuildDemoData" = "重建示範資料";
 "settings.clearDemoData" = "清除示範資料";
 "settings.maintenance" = "維護";
+"settings.about" = "關於";
+"settings.about.version" = "版本";
+"settings.about.branch" = "分支";
+"settings.about.commit" = "提交";
+"settings.about.built" = "建置時間";
+"settings.about.versionFormat" = "版本 %@";
+"settings.about.footer" = "分支和提交資訊會在建置時寫入。提交後面的星號表示這個建置包含未提交的本機修改。";
 "settings.countdown.eventName" = "事件名稱";
 "settings.countdown.date" = "日期";
 "common.ok" = "好";

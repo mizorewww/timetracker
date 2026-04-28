@@ -74,6 +74,13 @@
 "settings.rebuildDemoData" = "Rebuild Demo Data";
 "settings.clearDemoData" = "Clear Demo Data";
 "settings.maintenance" = "Maintenance";
+"settings.about" = "About";
+"settings.about.version" = "Version";
+"settings.about.branch" = "Branch";
+"settings.about.commit" = "Commit";
+"settings.about.built" = "Built";
+"settings.about.versionFormat" = "Version %@";
+"settings.about.footer" = "The branch and commit are written at build time. An asterisk after the commit means the build included uncommitted local changes.";
 "settings.countdown.eventName" = "Event Name";
 "settings.countdown.date" = "Date";
 "common.ok" = "OK";

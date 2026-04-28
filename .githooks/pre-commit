@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SKIP_VERSION_BUMP:-0}" == "1" ]]; then
+  echo "Skipping automatic version bump because SKIP_VERSION_BUMP=1."
+  exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+"$REPO_ROOT/scripts/bump_marketing_version.sh"
+git add "$REPO_ROOT/timetracker.xcodeproj/project.pbxproj"

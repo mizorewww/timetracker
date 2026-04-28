@@ -145,6 +145,7 @@ struct TimeTrackerTests {
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let firstTask = try taskRepository.createTask(title: "Coding", parentID: nil, colorHex: "1677FF", iconName: nil)
         let secondTask = try taskRepository.createTask(title: "Meeting", parentID: nil, colorHex: "EF4444", iconName: nil)
+        secondTask.status = .planned
         let calendar = Calendar.current
         let now = Date()
         let startOfDay = calendar.startOfDay(for: now)
@@ -173,6 +174,7 @@ struct TimeTrackerTests {
         let tasks = store.taskBreakdown(range: .week, now: now)
         #expect(tasks.count == 2)
         #expect(tasks.first?.grossSeconds == 3_600)
+        #expect(tasks.first { $0.taskID == secondTask.id }?.status == .planned)
 
         let overlaps = store.overlapSegments(range: .week, now: now)
         #expect(overlaps.first?.durationSeconds == 1_800)
@@ -1025,6 +1027,35 @@ struct TimeTrackerTests {
         #expect(rollups[planned.id]?.checklistProgress.totalCount == 0)
         #expect(rollups[planned.id]?.estimatedTotalSeconds == 900)
         #expect(rollups[completed.id]?.remainingSeconds == 0)
+    }
+
+    @Test @MainActor
+    func lowConfidenceHistoryOnlyForecastsAreHiddenFromPrimaryUI() throws {
+        let historyOnly = TaskNode(title: "History Only", parentID: nil, deviceID: "test")
+        let manual = TaskNode(title: "Manual", parentID: nil, deviceID: "test")
+        manual.estimatedSeconds = 1_800
+        let checklistTask = TaskNode(title: "Checklist", parentID: nil, deviceID: "test")
+        let start = Date(timeIntervalSince1970: 10_000)
+        let segments = [
+            TimeSegment(sessionID: UUID(), taskID: historyOnly.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(600)),
+            TimeSegment(sessionID: UUID(), taskID: checklistTask.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(900))
+        ]
+        let checklist = [
+            ChecklistItem(taskID: checklistTask.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: checklistTask.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+        ]
+
+        let rollups = TaskRollupService().rollups(
+            tasks: [historyOnly, manual, checklistTask],
+            segments: segments,
+            checklistItems: checklist,
+            now: start.addingTimeInterval(2_000)
+        )
+
+        #expect(rollups[historyOnly.id]?.confidence == .low)
+        #expect(rollups[historyOnly.id]?.isDisplayableForecast == false)
+        #expect(rollups[manual.id]?.isDisplayableForecast == true)
+        #expect(rollups[checklistTask.id]?.isDisplayableForecast == true)
     }
 
     @Test

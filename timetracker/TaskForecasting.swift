@@ -49,6 +49,10 @@ struct TaskRollup: Identifiable, Equatable {
         }
         return min(1, max(0, Double(workedSeconds) / Double(estimatedTotalSeconds)))
     }
+
+    var isDisplayableForecast: Bool {
+        estimatedTotalSeconds != nil && confidence != .none && confidence != .low
+    }
 }
 
 struct ForecastingService {

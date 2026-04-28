@@ -809,6 +809,7 @@ final class TimeTrackerStore: ObservableObject {
                 title: task?.title ?? fallbackTitle,
                 path: task.map { path(for: $0) } ?? AppStrings.localized("task.deleted.path"),
                 colorHex: task?.colorHex,
+                status: task?.status,
                 grossSeconds: gross,
                 wallSeconds: aggregationService.totalSeconds(segments: taskSegments, mode: .wallClock, now: now)
             )
@@ -1352,6 +1353,7 @@ struct TaskAnalyticsPoint: Identifiable {
     let title: String
     let path: String
     let colorHex: String?
+    let status: TaskStatus?
     let grossSeconds: Int
     let wallSeconds: Int
 

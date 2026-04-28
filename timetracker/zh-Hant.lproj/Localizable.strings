@@ -241,8 +241,8 @@
 "analytics.timeline.subtitle" = "條形只表達時間位置和長度；長時間空白會被折疊，避免記錄被擠得看不清。";
 "analytics.timeline.empty" = "今天還沒有時間記錄";
 "analytics.timeline.gap.omitted" = "省略 %@";
-"analytics.taskUsage.title" = "任務使用時間";
-"analytics.taskUsage.subtitle" = "環狀圖顯示任務占比，列表顯示具體時長。";
+"analytics.taskUsage.title" = "任務狀態分布";
+"analytics.taskUsage.subtitle" = "按任務狀態彙總用時，並使用任務列表裡同一套狀態顏色。";
 "analytics.total" = "總計";
 "analytics.hourDistribution.title" = "今天時間分布";
 "analytics.hourDistribution.subtitle" = "類似螢幕使用時間的日內視圖；藍色是實際時間，淺色背景提示並行計時產生的累計時間。";
@@ -255,7 +255,7 @@
 "analytics.forecasts.empty" = "新增清單項或預估時長後會顯示預測";
 "forecast.today.title" = "預估進度";
 "forecast.explainer.title" = "這個預測怎麼算";
-"forecast.explainer.body" = "App 會優先使用已完成的清單項，其次參考這個任務的歷史記錄和相似任務，全部在本機完成。新增清單項或手動預估時長會讓結果更可靠。";
+"forecast.explainer.body" = "只有任務有已完成清單項、手動預估時長，或子任務已有估算時，才會顯示預測。App 會用已記錄時間計算剩餘，並隱藏可信度太低的硬猜。";
 "forecast.panel.title" = "預估進度";
 "forecast.worked" = "已用";
 "forecast.estimatedTotal" = "預估";
@@ -265,6 +265,7 @@
 "forecast.daysFormat" = "%d 天";
 "forecast.confidence" = "可信度";
 "forecast.noEstimate" = "暫無足夠資料";
+"forecast.unavailable.guidance" = "新增清單項並完成其中一部分，或填寫手動預估時長後，這裡才會顯示剩餘時間預測。";
 "forecast.confidence.high" = "高";
 "forecast.confidence.medium" = "中";
 "forecast.confidence.low" = "低";

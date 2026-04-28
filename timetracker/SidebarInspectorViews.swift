@@ -113,11 +113,6 @@ struct TaskTreeRow: View {
 
     private var taskLabel: some View {
         HStack {
-            Image(systemName: task.status.symbolName)
-                .font(.caption)
-                .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
-                .frame(width: 14)
-                .help(task.status.displayName)
             Image(systemName: task.iconName ?? "checkmark.circle")
                 .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
             Text(task.title)
@@ -136,6 +131,11 @@ struct TaskTreeRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Image(systemName: task.status.symbolName)
+                .font(.caption)
+                .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
+                .frame(width: 14)
+                .help(task.status.displayName)
         }
         .contentShape(Rectangle())
         .scaleEffect(isPulsing ? 1.045 : 1)
@@ -414,14 +414,21 @@ struct TaskForecastPanel: View {
                 VStack(spacing: 10) {
                     ForecastExplanationCallout()
                     InfoRow(title: AppStrings.localized("forecast.worked"), value: DurationFormatter.compact(rollup.workedSeconds))
-                    InfoRow(title: AppStrings.localized("forecast.estimatedTotal"), value: estimateText(for: rollup))
-                    InfoRow(title: AppStrings.localized("forecast.remaining"), value: remainingText(for: rollup))
-                    InfoRow(title: AppStrings.localized("forecast.projectedDays"), value: daysText(for: rollup))
-                    InfoRow(title: AppStrings.localized("forecast.confidence"), value: rollup.confidence.displayName)
-                    Text(rollup.reason)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if rollup.isDisplayableForecast {
+                        InfoRow(title: AppStrings.localized("forecast.estimatedTotal"), value: estimateText(for: rollup))
+                        InfoRow(title: AppStrings.localized("forecast.remaining"), value: remainingText(for: rollup))
+                        InfoRow(title: AppStrings.localized("forecast.projectedDays"), value: daysText(for: rollup))
+                        InfoRow(title: AppStrings.localized("forecast.confidence"), value: rollup.confidence.displayName)
+                        Text(rollup.reason)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(AppStrings.localized("forecast.unavailable.guidance"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 .appCard(padding: 14)
             }
@@ -726,7 +733,7 @@ struct InspectorSummaryCard: View {
                     SmallStat(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
                 }
 
-                if let rollup = store.rollup(for: task.id) {
+                if let rollup = store.rollup(for: task.id), rollup.isDisplayableForecast {
                     Divider()
                     HStack {
                         SmallStat(title: AppStrings.localized("forecast.remaining"), value: rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate"))

@@ -183,7 +183,7 @@ struct TaskForecastSummarySection: View {
                   task.status != .archived,
                   task.status != .completed,
                   let rollup = store.rollup(for: task.id),
-                  rollup.estimatedTotalSeconds != nil else {
+                  rollup.isDisplayableForecast else {
                 return nil
             }
             return TaskForecastItem(task: task, rollup: rollup)
@@ -194,7 +194,7 @@ struct TaskForecastSummarySection: View {
 
         guard let selectedTask = store.selectedTask,
               let selectedRollup = store.rollup(for: selectedTask.id),
-              selectedRollup.estimatedTotalSeconds != nil,
+              selectedRollup.isDisplayableForecast,
               selectedTask.status != .archived,
               selectedTask.status != .completed else {
             return Array(candidates.prefix(3))

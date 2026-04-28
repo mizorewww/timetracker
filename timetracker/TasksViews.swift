@@ -203,7 +203,6 @@ private struct TaskManagementRowContent: View {
         let progress = store.checklistProgress(for: task.id)
         let rollup = store.rollup(for: task.id)
         HStack(spacing: 12) {
-            TaskStatusBadge(status: task.status)
             TaskIcon(task: task, size: 30)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -231,7 +230,7 @@ private struct TaskManagementRowContent: View {
                         .lineLimit(1)
                 }
 
-                if progress.totalCount > 0 || rollup?.remainingSeconds != nil {
+                if progress.totalCount > 0 || rollup?.isDisplayableForecast == true {
                     TaskProgressLine(progress: progress, rollup: rollup)
                 }
             }
@@ -250,6 +249,8 @@ private struct TaskManagementRowContent: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            TaskStatusBadge(status: task.status)
 
             if showsNavigationChevron {
                 Image(systemName: "chevron.right")
@@ -298,7 +299,7 @@ private struct TaskProgressLine: View {
     }
 
     private var remainingText: String? {
-        guard let remaining = rollup?.remainingSeconds else { return nil }
+        guard rollup?.isDisplayableForecast == true, let remaining = rollup?.remainingSeconds else { return nil }
         return String(format: AppStrings.localized("forecast.remainingFormat"), DurationFormatter.compact(remaining))
     }
 }

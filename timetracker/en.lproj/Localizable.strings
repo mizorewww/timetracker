@@ -241,8 +241,8 @@
 "analytics.timeline.subtitle" = "Bars show position and duration. Long idle gaps are folded so recorded time stays readable.";
 "analytics.timeline.empty" = "No time records today";
 "analytics.timeline.gap.omitted" = "%@ skipped";
-"analytics.taskUsage.title" = "Task Usage";
-"analytics.taskUsage.subtitle" = "The donut shows share by task; the list shows exact durations.";
+"analytics.taskUsage.title" = "Task Status Distribution";
+"analytics.taskUsage.subtitle" = "Time is grouped by task status, using the same status colors shown in the task list.";
 "analytics.total" = "Total";
 "analytics.hourDistribution.title" = "Today Distribution";
 "analytics.hourDistribution.subtitle" = "A Screen Time-style view of the day. Blue is Wall Time; pale bars show extra Gross Time from overlap.";
@@ -255,7 +255,7 @@
 "analytics.forecasts.empty" = "Add checklist items or estimates to see forecasts";
 "forecast.today.title" = "Forecast";
 "forecast.explainer.title" = "How this forecast works";
-"forecast.explainer.body" = "The app estimates locally from completed checklist items first, then your task history and similar tasks. Add checklist items or a manual estimate to make it more reliable.";
+"forecast.explainer.body" = "Forecasts appear only when a task has completed checklist items, a manual estimate, or child tasks with estimates. The app uses recorded time to calculate what remains and hides low-confidence guesses.";
 "forecast.panel.title" = "Forecast";
 "forecast.worked" = "Used";
 "forecast.estimatedTotal" = "Estimate";
@@ -265,6 +265,7 @@
 "forecast.daysFormat" = "%d days";
 "forecast.confidence" = "Confidence";
 "forecast.noEstimate" = "Not enough data";
+"forecast.unavailable.guidance" = "Add checklist items and mark some done, or enter a manual estimate, to show a remaining-time forecast here.";
 "forecast.confidence.high" = "High";
 "forecast.confidence.medium" = "Medium";
 "forecast.confidence.low" = "Low";

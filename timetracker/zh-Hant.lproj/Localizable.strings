@@ -169,6 +169,7 @@
 "task.section.info" = "基本資訊";
 "task.field.path" = "路徑";
 "task.field.status" = "狀態";
+"task.field.total" = "累計";
 "task.field.today" = "今日";
 "task.field.week" = "本週";
 "task.notes.empty" = "沒有備註";
@@ -262,7 +263,7 @@
 "forecast.explainer.title" = "這個預測怎麼算";
 "forecast.explainer.body" = "只有任務有已完成清單項、手動預估時長，或子任務已有估算時，才會顯示預測。App 會用已記錄時間計算剩餘，並隱藏可信度太低的硬猜。";
 "forecast.panel.title" = "預估進度";
-"forecast.worked" = "已用";
+"forecast.worked" = "累計已用";
 "forecast.estimatedTotal" = "預估";
 "forecast.remaining" = "剩餘";
 "forecast.remainingFormat" = "剩餘 %@";

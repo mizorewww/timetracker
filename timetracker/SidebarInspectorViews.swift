@@ -317,6 +317,10 @@ struct InspectorInfoGrid: View {
             VStack(spacing: 10) {
                 InfoRow(title: AppStrings.localized("task.field.path"), value: store.path(for: task))
                 InfoRow(title: AppStrings.localized("task.field.status"), value: activeStatusText, badge: activeStatusText == AppStrings.running)
+                InfoRow(
+                    title: AppStrings.localized("task.field.total"),
+                    value: DurationFormatter.compact(store.rollup(for: task.id)?.workedSeconds ?? store.secondsForTaskTotalRollup(task))
+                )
                 InfoRow(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
                 InfoRow(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeekRollup(task)))
             }
@@ -752,9 +756,12 @@ struct InspectorSummaryCard: View {
                     .foregroundStyle(.secondary)
 
                 HStack {
-                    SmallStat(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
+                    SmallStat(
+                        title: AppStrings.localized("task.field.total"),
+                        value: DurationFormatter.compact(store.rollup(for: task.id)?.workedSeconds ?? store.secondsForTaskTotalRollup(task))
+                    )
                     Divider()
-                    SmallStat(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeekRollup(task)))
+                    SmallStat(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
                 }
 
                 if !store.children(of: task).isEmpty,

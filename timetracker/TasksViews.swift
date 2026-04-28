@@ -247,7 +247,7 @@ private struct TaskManagementRowContent: View {
             Spacer(minLength: 10)
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
+                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
 
@@ -312,7 +312,7 @@ private struct TaskManagementRowContent: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
+                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
 

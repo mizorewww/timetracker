@@ -907,6 +907,20 @@ struct TimeTrackerTests {
     }
 
     @Test
+    func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let tasksSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SidebarInspectorViews.swift"), encoding: .utf8)
+
+        #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
+        #expect(tasksSource.contains("secondsForTaskTodayRollup(task)") == false)
+        #expect(inspectorSource.contains("task.field.total"))
+        #expect(inspectorSource.contains("forecast.worked"))
+    }
+
+    @Test
     func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -1166,7 +1180,7 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
-    func taskListRollupDurationsIncludeDescendantTaskTime() throws {
+    func taskListRollupDurationsIncludeHistoricalDescendantTaskTime() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -1195,6 +1209,13 @@ struct TimeTrackerTests {
             endedAt: startOfDay.addingTimeInterval(11 * 3_600 + 300),
             note: nil
         )
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: startOfDay) ?? startOfDay.addingTimeInterval(-86_400)
+        _ = try timeRepository.addManualSegment(
+            taskID: child.id,
+            startedAt: yesterday.addingTimeInterval(14 * 3_600),
+            endedAt: yesterday.addingTimeInterval(14 * 3_600 + 2_400),
+            note: nil
+        )
 
         let store = TimeTrackerStore()
         store.configureIfNeeded(context: context)
@@ -1202,6 +1223,10 @@ struct TimeTrackerTests {
         #expect(store.secondsForTaskToday(parent) == 600)
         #expect(store.secondsForTaskTodayRollup(parent, now: now) == 1_800)
         #expect(store.secondsForTaskTodayRollup(child, now: now) == 1_200)
+        #expect(store.secondsForTaskTotal(parent) == 600)
+        #expect(store.secondsForTaskTotalRollup(parent, now: now) == 4_200)
+        #expect(store.secondsForTaskTotalRollup(child, now: now) == 3_600)
+        #expect(store.rollup(for: parent.id)?.workedSeconds == 4_200)
     }
 
     @Test @MainActor

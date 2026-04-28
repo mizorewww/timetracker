@@ -772,6 +772,17 @@ final class TimeTrackerStore: ObservableObject {
         sessions.first { $0.id == segment.sessionID }?.note ?? ""
     }
 
+    func secondsForTaskTotal(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
+        let segments = allSegments.filter { $0.taskID == task.id && $0.deletedAt == nil }
+        return aggregationService.totalSeconds(segments: segments, mode: mode, now: now)
+    }
+
+    func secondsForTaskTotalRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
+        let ids = taskAndDescendantIDs(for: task.id)
+        let segments = allSegments.filter { ids.contains($0.taskID) && $0.deletedAt == nil }
+        return aggregationService.totalSeconds(segments: segments, mode: mode, now: now)
+    }
+
     func secondsForTaskToday(_ task: TaskNode, mode: AggregationMode = .gross) -> Int {
         let now = Date()
         guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }

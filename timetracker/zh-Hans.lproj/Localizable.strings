@@ -169,6 +169,7 @@
 "task.section.info" = "基本信息";
 "task.field.path" = "路径";
 "task.field.status" = "状态";
+"task.field.total" = "累计";
 "task.field.today" = "今日";
 "task.field.week" = "本周";
 "task.notes.empty" = "没有备注";
@@ -262,7 +263,7 @@
 "forecast.explainer.title" = "这个预测怎么算";
 "forecast.explainer.body" = "只有任务有已完成清单项、手动预计时长，或子任务已有估算时，才会显示预测。应用会用已记录时间计算剩余，并隐藏可信度太低的硬猜。";
 "forecast.panel.title" = "预计进度";
-"forecast.worked" = "已用";
+"forecast.worked" = "累计已用";
 "forecast.estimatedTotal" = "预计";
 "forecast.remaining" = "剩余";
 "forecast.remainingFormat" = "剩余 %@";

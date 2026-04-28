@@ -169,6 +169,7 @@
 "task.section.info" = "Info";
 "task.field.path" = "Path";
 "task.field.status" = "Status";
+"task.field.total" = "Total";
 "task.field.today" = "Today";
 "task.field.week" = "This Week";
 "task.notes.empty" = "No notes";
@@ -262,7 +263,7 @@
 "forecast.explainer.title" = "How this forecast works";
 "forecast.explainer.body" = "Forecasts appear only when a task has completed checklist items, a manual estimate, or child tasks with estimates. The app uses recorded time to calculate what remains and hides low-confidence guesses.";
 "forecast.panel.title" = "Forecast";
-"forecast.worked" = "Used";
+"forecast.worked" = "Worked Total";
 "forecast.estimatedTotal" = "Estimate";
 "forecast.remaining" = "Left";
 "forecast.remainingFormat" = "Left %@";

@@ -181,11 +181,15 @@ struct TaskForecastsCard: View {
             if forecastItems.isEmpty {
                 EmptyStateRow(title: AppStrings.localized("analytics.forecasts.empty"), icon: "checklist")
             } else {
-                VStack(spacing: 0) {
-                    ForEach(forecastItems) { item in
-                        ForecastAnalyticsRow(store: store, item: item)
-                        if item.id != forecastItems.last?.id {
-                            Divider()
+                VStack(spacing: 12) {
+                    ForecastExplanationCallout()
+
+                    VStack(spacing: 0) {
+                        ForEach(forecastItems) { item in
+                            ForecastAnalyticsRow(store: store, item: item)
+                            if item.id != forecastItems.last?.id {
+                                Divider()
+                            }
                         }
                     }
                 }
@@ -296,6 +300,13 @@ struct OverlappingTimelineCard: View {
         )
     }
 
+    private var axisCompression: TimelineAxisCompression {
+        TimelineAxisCompression(
+            displayInterval: displayInterval,
+            busyIntervals: layoutResult.entries.map(\.item.interval)
+        )
+    }
+
     var body: some View {
         AnalyticsChartCard(title: AppStrings.localized("analytics.timeline.title"), subtitle: AppStrings.localized("analytics.timeline.subtitle")) {
             if visibleSegments.isEmpty {
@@ -349,6 +360,9 @@ struct OverlappingTimelineCard: View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
                 horizontalHourGrid(width: proxy.size.width, height: proxy.size.height)
+                ForEach(axisCompression.omittedGaps) { gap in
+                    horizontalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
+                }
                 ForEach(laneEntries) { entry in
                     horizontalBar(entry: entry, width: proxy.size.width)
                 }
@@ -360,6 +374,9 @@ struct OverlappingTimelineCard: View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
                 verticalHourGrid(width: proxy.size.width, height: proxy.size.height)
+                ForEach(axisCompression.omittedGaps) { gap in
+                    verticalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
+                }
                 ForEach(laneEntries) { entry in
                     verticalBar(entry: entry, width: proxy.size.width, height: proxy.size.height)
                 }
@@ -369,8 +386,8 @@ struct OverlappingTimelineCard: View {
 
     private func horizontalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach(hourTicks(), id: \.self) { tick in
-                let ratio = tick.timeIntervalSince(displayInterval.start) / displayInterval.duration
+            ForEach(hourTicks().filter { !axisCompression.isInsideOmittedGap($0) }, id: \.self) { tick in
+                let ratio = axisCompression.ratio(for: tick)
                 let x = width * CGFloat(ratio)
                 VStack(alignment: .leading, spacing: 4) {
                     Rectangle()
@@ -390,8 +407,8 @@ struct OverlappingTimelineCard: View {
 
     private func verticalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach(hourTicks(), id: \.self) { tick in
-                let ratio = tick.timeIntervalSince(displayInterval.start) / displayInterval.duration
+            ForEach(hourTicks().filter { !axisCompression.isInsideOmittedGap($0) }, id: \.self) { tick in
+                let ratio = axisCompression.ratio(for: tick)
                 let y = height * CGFloat(ratio)
                 HStack(spacing: 8) {
                     Text(hourLabel(tick))
@@ -412,8 +429,9 @@ struct OverlappingTimelineCard: View {
     private func horizontalBar(entry: TimelineLaneEntry, width: CGFloat) -> some View {
         let segment = entry.segment
         let interval = entry.interval
-        let startRatio = interval.start.timeIntervalSince(displayInterval.start) / displayInterval.duration
-        let durationRatio = interval.duration / displayInterval.duration
+        let startRatio = axisCompression.ratio(for: interval.start)
+        let endRatio = axisCompression.ratio(for: interval.end)
+        let durationRatio = max(0, endRatio - startRatio)
         let task = store.task(for: segment.taskID)
         let barWidth = max(18, width * CGFloat(durationRatio))
         let x = width * CGFloat(startRatio)
@@ -433,8 +451,9 @@ struct OverlappingTimelineCard: View {
     private func verticalBar(entry: TimelineLaneEntry, width: CGFloat, height: CGFloat) -> some View {
         let segment = entry.segment
         let interval = entry.interval
-        let startRatio = interval.start.timeIntervalSince(displayInterval.start) / displayInterval.duration
-        let durationRatio = interval.duration / displayInterval.duration
+        let startRatio = axisCompression.ratio(for: interval.start)
+        let endRatio = axisCompression.ratio(for: interval.end)
+        let durationRatio = max(0, endRatio - startRatio)
         let task = store.task(for: segment.taskID)
         let leftAxis: CGFloat = 68
         let laneWidth = max(22, min(38, (width - leftAxis - 12) / CGFloat(max(laneCount, 1)) - 8))
@@ -453,6 +472,42 @@ struct OverlappingTimelineCard: View {
             }
             .offset(x: x, y: min(y, height - barHeight))
             .help("\(store.displayTitle(for: segment)) \(shortRange(segment))")
+    }
+
+    private func horizontalGapMarker(_ gap: TimelineOmittedGap, width: CGFloat, height: CGFloat) -> some View {
+        let x = width * CGFloat(axisCompression.ratio(forCompressedOffset: gap.compressedMidpointOffset))
+        return DashedTimelineLine(isVertical: true)
+            .stroke(Color.secondary.opacity(0.42), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            .frame(width: 1, height: max(28, height - 28))
+            .overlay(alignment: .center) {
+                Text(omittedGapText(gap))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.regularMaterial, in: Capsule())
+                    .fixedSize()
+            }
+            .offset(x: min(max(0, x), width - 1), y: 4)
+    }
+
+    private func verticalGapMarker(_ gap: TimelineOmittedGap, width: CGFloat, height: CGFloat) -> some View {
+        let y = height * CGFloat(axisCompression.ratio(forCompressedOffset: gap.compressedMidpointOffset))
+        return DashedTimelineLine(isVertical: false)
+            .stroke(Color.secondary.opacity(0.42), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            .frame(width: max(40, width - 68), height: 1)
+            .overlay(alignment: .center) {
+                Text(omittedGapText(gap))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.regularMaterial, in: Capsule())
+                    .fixedSize()
+            }
+            .offset(x: 68, y: min(max(0, y), height - 1))
     }
 
     private func timelineLegendRow(_ segment: TimeSegment) -> some View {
@@ -536,6 +591,26 @@ struct OverlappingTimelineCard: View {
         let path = store.displayPath(for: segment).trimmingCharacters(in: .whitespacesAndNewlines)
         return path.isEmpty ? AppStrings.rootTask : path
     }
+
+    private func omittedGapText(_ gap: TimelineOmittedGap) -> String {
+        String(format: AppStrings.localized("analytics.timeline.gap.omitted"), DurationFormatter.compact(Int(gap.duration)))
+    }
+}
+
+private struct DashedTimelineLine: Shape {
+    let isVertical: Bool
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        if isVertical {
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        } else {
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        }
+        return path
+    }
 }
 
 private struct TimelineLaneEntry: Identifiable {
@@ -612,35 +687,137 @@ struct TaskDonutCard: View {
 struct TodayActivityCard: View {
     let hourly: [HourlyAnalyticsPoint]
 
+    private var totalWallSeconds: Int {
+        hourly.reduce(0) { $0 + $1.wallSeconds }
+    }
+
+    private var totalGrossSeconds: Int {
+        hourly.reduce(0) { $0 + $1.grossSeconds }
+    }
+
+    private var maxHourSeconds: Int {
+        max(1, hourly.map { max($0.grossSeconds, $0.wallSeconds) }.max() ?? 1)
+    }
+
+    private var hasActivity: Bool {
+        hourly.contains { $0.wallSeconds > 0 || $0.grossSeconds > 0 }
+    }
+
     var body: some View {
         AnalyticsChartCard(title: AppStrings.localized("analytics.hourDistribution.title"), subtitle: AppStrings.localized("analytics.hourDistribution.subtitle")) {
-            Chart(hourly) { point in
-                BarMark(
-                    x: .value("Hour", point.hour),
-                    y: .value("Gross Minutes", point.grossSeconds / 60),
-                    width: .fixed(8)
-                )
-                .foregroundStyle(Color.blue.opacity(0.16))
-
-                BarMark(
-                    x: .value("Hour", point.hour),
-                    y: .value("Wall Minutes", point.wallSeconds / 60),
-                    width: .fixed(8)
-                )
-                .foregroundStyle(.blue)
-            }
-            .chartXAxis {
-                AxisMarks(values: [0, 6, 12, 18, 23]) { value in
-                    AxisGridLine()
-                    AxisValueLabel {
-                        if let hour = value.as(Int.self) {
-                            Text(hour == 23 ? "24" : "\(hour)")
+            if !hasActivity {
+                EmptyStateRow(title: AppStrings.localized("analytics.empty.todayTaskTime"), icon: "chart.bar")
+            } else {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(DurationFormatter.compact(totalWallSeconds))
+                                .font(.title3.weight(.semibold).monospacedDigit())
+                            Text(.app("metric.wallTime"))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(DurationFormatter.compact(totalGrossSeconds))
+                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                            Text(.app("metric.grossTime"))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    hourlyBars
+
+                    HStack {
+                        ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
+                            Text(String(format: "%02d", hour))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            if hour != 24 {
+                                Spacer()
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 14) {
+                        AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)
+                        AnalyticsLegendSwatch(color: .blue.opacity(0.18), title: AppStrings.grossTime)
                     }
                 }
             }
-            .chartYAxisLabel(AppStrings.localized("analytics.minutes"))
-            .frame(height: 220)
+        }
+    }
+
+    private var hourlyBars: some View {
+        GeometryReader { proxy in
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(hourly) { point in
+                    HourActivityBar(
+                        point: point,
+                        maxSeconds: maxHourSeconds,
+                        availableHeight: proxy.size.height
+                    )
+                }
+            }
+        }
+        .frame(height: 150)
+        .padding(.horizontal, 2)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct HourActivityBar: View {
+    let point: HourlyAnalyticsPoint
+    let maxSeconds: Int
+    let availableHeight: CGFloat
+
+    private var grossHeight: CGFloat {
+        max(4, availableHeight * CGFloat(point.grossSeconds) / CGFloat(max(maxSeconds, 1)))
+    }
+
+    private var wallHeight: CGFloat {
+        max(point.wallSeconds > 0 ? 4 : 0, availableHeight * CGFloat(point.wallSeconds) / CGFloat(max(maxSeconds, 1)))
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.10))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if point.grossSeconds > 0 {
+                Capsule()
+                    .fill(Color.blue.opacity(0.18))
+                    .frame(height: grossHeight)
+            }
+
+            if point.wallSeconds > 0 {
+                Capsule()
+                    .fill(Color.blue)
+                    .frame(height: min(wallHeight, grossHeight))
+            }
+        }
+        .help("\(String(format: "%02d:00", point.hour)) \(DurationFormatter.compact(point.wallSeconds))")
+    }
+}
+
+private struct AnalyticsLegendSwatch: View {
+    let color: Color
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(color)
+                .frame(width: 12, height: 12)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

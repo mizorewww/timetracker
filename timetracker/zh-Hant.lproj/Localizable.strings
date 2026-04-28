@@ -238,13 +238,14 @@
 "analytics.header.today" = "今天的時間如何流動，以及它被哪些任務占用。";
 "analytics.header.other" = "按天回顧時間趨勢、任務分布和重疊計時。";
 "analytics.timeline.title" = "今天時間軸";
-"analytics.timeline.subtitle" = "條形只表達時間位置和長度；任務文字在下方列表中逐行查看。";
+"analytics.timeline.subtitle" = "條形只表達時間位置和長度；長時間空白會被折疊，避免記錄被擠得看不清。";
 "analytics.timeline.empty" = "今天還沒有時間記錄";
+"analytics.timeline.gap.omitted" = "省略 %@";
 "analytics.taskUsage.title" = "任務使用時間";
 "analytics.taskUsage.subtitle" = "環狀圖顯示任務占比，列表顯示具體時長。";
 "analytics.total" = "總計";
 "analytics.hourDistribution.title" = "今天時間分布";
-"analytics.hourDistribution.subtitle" = "每根柱代表一個小時；藍色是實際時間，淺色背景提示並行計時產生的累計時間。";
+"analytics.hourDistribution.subtitle" = "類似螢幕使用時間的日內視圖；藍色是實際時間，淺色背景提示並行計時產生的累計時間。";
 "analytics.minutes" = "分鐘";
 "analytics.screenTime.title" = "任務使用時間";
 "analytics.screenTime.subtitle" = "類似螢幕使用時間：先看總量，再看顏色分段和任務列表。";
@@ -253,6 +254,8 @@
 "analytics.forecasts.subtitle" = "基於清單進度和本地時間記錄生成可解釋估算。";
 "analytics.forecasts.empty" = "新增清單項或預估時長後會顯示預測";
 "forecast.today.title" = "預估進度";
+"forecast.explainer.title" = "這個預測怎麼算";
+"forecast.explainer.body" = "App 會優先使用已完成的清單項，其次參考這個任務的歷史記錄和相似任務，全部在本機完成。新增清單項或手動預估時長會讓結果更可靠。";
 "forecast.panel.title" = "預估進度";
 "forecast.worked" = "已用";
 "forecast.estimatedTotal" = "預估";

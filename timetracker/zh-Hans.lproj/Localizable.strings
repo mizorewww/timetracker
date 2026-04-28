@@ -238,13 +238,14 @@
 "analytics.header.today" = "今天的时间如何流动，以及它被哪些任务占用。";
 "analytics.header.other" = "按天复盘时间趋势、任务分布和重叠计时。";
 "analytics.timeline.title" = "今天时间轴";
-"analytics.timeline.subtitle" = "条形只表达时间位置和长度；任务文字在下方列表中逐行查看。";
+"analytics.timeline.subtitle" = "条形只表达时间位置和长度；长时间空白会被折叠，避免记录被挤得看不清。";
 "analytics.timeline.empty" = "今天还没有时间记录";
+"analytics.timeline.gap.omitted" = "省略 %@";
 "analytics.taskUsage.title" = "任务使用时间";
 "analytics.taskUsage.subtitle" = "环状图显示任务占比，列表显示具体时长。";
 "analytics.total" = "总计";
 "analytics.hourDistribution.title" = "今天时间分布";
-"analytics.hourDistribution.subtitle" = "每根柱代表一个小时；蓝色是实际时间，浅色背景提示并行计时产生的累计时间。";
+"analytics.hourDistribution.subtitle" = "类似屏幕使用时间的日内视图；蓝色是实际时间，浅色背景提示并行计时产生的累计时间。";
 "analytics.minutes" = "分钟";
 "analytics.screenTime.title" = "任务使用时间";
 "analytics.screenTime.subtitle" = "类似屏幕使用时间：先看总量，再看颜色分段和任务列表。";
@@ -253,6 +254,8 @@
 "analytics.forecasts.subtitle" = "基于清单进度和本地时间记录生成可解释估算。";
 "analytics.forecasts.empty" = "添加清单项或预计时长后会显示预测";
 "forecast.today.title" = "预计进度";
+"forecast.explainer.title" = "这个预测怎么算";
+"forecast.explainer.body" = "应用会优先使用已完成的清单项，其次参考这个任务的历史记录和相似任务，全部在本机完成。添加清单项或手动预计时长会让结果更可靠。";
 "forecast.panel.title" = "预计进度";
 "forecast.worked" = "已用";
 "forecast.estimatedTotal" = "预计";

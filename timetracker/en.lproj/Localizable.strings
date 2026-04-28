@@ -238,13 +238,14 @@
 "analytics.header.today" = "How time moved today and which tasks used it.";
 "analytics.header.other" = "Review daily trends, task distribution, and overlapping timers.";
 "analytics.timeline.title" = "Today Timeline";
-"analytics.timeline.subtitle" = "Bars show position and duration. Read task names in the list below.";
+"analytics.timeline.subtitle" = "Bars show position and duration. Long idle gaps are folded so recorded time stays readable.";
 "analytics.timeline.empty" = "No time records today";
+"analytics.timeline.gap.omitted" = "%@ skipped";
 "analytics.taskUsage.title" = "Task Usage";
 "analytics.taskUsage.subtitle" = "The donut shows share by task; the list shows exact durations.";
 "analytics.total" = "Total";
 "analytics.hourDistribution.title" = "Today Distribution";
-"analytics.hourDistribution.subtitle" = "Each bar is one hour. Blue is Wall Time; pale bars show extra Gross Time from overlap.";
+"analytics.hourDistribution.subtitle" = "A Screen Time-style view of the day. Blue is Wall Time; pale bars show extra Gross Time from overlap.";
 "analytics.minutes" = "Minutes";
 "analytics.screenTime.title" = "Task Usage";
 "analytics.screenTime.subtitle" = "Similar to Screen Time: total first, then color segments and task rows.";
@@ -253,6 +254,8 @@
 "analytics.forecasts.subtitle" = "Explainable estimates based on checklist progress and local time history.";
 "analytics.forecasts.empty" = "Add checklist items or estimates to see forecasts";
 "forecast.today.title" = "Forecast";
+"forecast.explainer.title" = "How this forecast works";
+"forecast.explainer.body" = "The app estimates locally from completed checklist items first, then your task history and similar tasks. Add checklist items or a manual estimate to make it more reliable.";
 "forecast.panel.title" = "Forecast";
 "forecast.worked" = "Used";
 "forecast.estimatedTotal" = "Estimate";

@@ -208,6 +208,7 @@ struct TaskForecastSummarySection: View {
         if !forecasts.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 SectionTitle(title: AppStrings.localized("forecast.today.title"))
+                ForecastExplanationCallout()
 
                 VStack(spacing: 0) {
                     ForEach(forecasts) { item in

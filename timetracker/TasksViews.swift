@@ -203,6 +203,7 @@ private struct TaskManagementRowContent: View {
         let progress = store.checklistProgress(for: task.id)
         let rollup = store.rollup(for: task.id)
         HStack(spacing: 12) {
+            TaskStatusBadge(status: task.status)
             TaskIcon(task: task, size: 30)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -224,8 +225,6 @@ private struct TaskManagementRowContent: View {
                 }
 
                 HStack(spacing: 6) {
-                    TaskStatusBadge(status: task.status)
-
                     Text(store.path(for: task))
                         .font(.caption)
                         .foregroundStyle(.secondary)

@@ -113,18 +113,17 @@ struct TaskTreeRow: View {
 
     private var taskLabel: some View {
         HStack {
+            Image(systemName: task.status.symbolName)
+                .font(.caption)
+                .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
+                .frame(width: 14)
+                .help(task.status.displayName)
             Image(systemName: task.iconName ?? "checkmark.circle")
                 .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
             Text(task.title)
                 .strikethrough(task.status == .completed)
                 .foregroundStyle(task.status == .completed ? .secondary : .primary)
             Spacer()
-            if task.status != .active {
-                Image(systemName: task.status.symbolName)
-                    .font(.caption)
-                    .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
-                    .help(task.status.displayName)
-            }
             let progress = store.checklistProgress(for: task.id)
             if progress.totalCount > 0 {
                 Text(progress.label)
@@ -413,6 +412,7 @@ struct TaskForecastPanel: View {
                     .font(.headline)
 
                 VStack(spacing: 10) {
+                    ForecastExplanationCallout()
                     InfoRow(title: AppStrings.localized("forecast.worked"), value: DurationFormatter.compact(rollup.workedSeconds))
                     InfoRow(title: AppStrings.localized("forecast.estimatedTotal"), value: estimateText(for: rollup))
                     InfoRow(title: AppStrings.localized("forecast.remaining"), value: remainingText(for: rollup))

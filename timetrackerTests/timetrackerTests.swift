@@ -654,6 +654,34 @@ struct TimeTrackerTests {
     }
 
     @Test
+    func timelineAxisCompressionFoldsLongIdleGaps() {
+        let day = Date(timeIntervalSince1970: 72 * 60 * 60)
+        let display = DateInterval(start: day.addingTimeInterval(9 * 3600), end: day.addingTimeInterval(16 * 3600))
+        let morning = DateInterval(start: day.addingTimeInterval(9 * 3600), end: day.addingTimeInterval(10 * 3600))
+        let afternoon = DateInterval(start: day.addingTimeInterval(14 * 3600), end: day.addingTimeInterval(16 * 3600))
+
+        let compression = TimelineAxisCompression(displayInterval: display, busyIntervals: [morning, afternoon])
+
+        #expect(compression.omittedGaps.count == 1)
+        #expect(abs((compression.omittedGaps.first?.duration ?? 0) - 14_400) < 0.001)
+        #expect(compression.compressedDuration < display.duration)
+        #expect(compression.ratio(for: afternoon.start) < afternoon.start.timeIntervalSince(display.start) / display.duration)
+    }
+
+    @Test
+    func timelineAxisCompressionKeepsShortGapsLinear() {
+        let day = Date(timeIntervalSince1970: 96 * 60 * 60)
+        let display = DateInterval(start: day.addingTimeInterval(9 * 3600), end: day.addingTimeInterval(11 * 3600))
+        let first = DateInterval(start: day.addingTimeInterval(9 * 3600), end: day.addingTimeInterval(10 * 3600))
+        let second = DateInterval(start: day.addingTimeInterval(10 * 3600 + 20 * 60), end: day.addingTimeInterval(11 * 3600))
+
+        let compression = TimelineAxisCompression(displayInterval: display, busyIntervals: [first, second])
+
+        #expect(compression.omittedGaps.isEmpty)
+        #expect(compression.compressedDuration == display.duration)
+    }
+
+    @Test
     func localizationFilesExposeTheSameKeys() throws {
         let locales = ["en", "zh-Hans", "zh-Hant"]
         let keySets = try locales.map { locale -> Set<String> in

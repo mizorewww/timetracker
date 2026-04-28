@@ -61,6 +61,34 @@ struct EmptyStateRow: View {
     }
 }
 
+struct ForecastExplanationCallout: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.blue)
+                .frame(width: 22, height: 22)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(.app("forecast.explainer.title"))
+                    .font(.caption.weight(.semibold))
+                Text(.app("forecast.explainer.body"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.blue.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
 enum AppColors {
     static let background = Color(platformColor: .systemGroupedBackground)
     #if os(macOS)

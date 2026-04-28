@@ -826,7 +826,25 @@ struct TimeTrackerTests {
         #expect(source.contains("DisclosureGroup(isExpanded:"))
         #expect(source.contains("TaskManagementVisibleRow") == false)
         #expect(source.contains("TaskTreeDisplayRow") == false)
+        #expect(source.contains("toggleExpanded") == false)
+        #expect(source.contains("depth: depth + 1") == false)
         #expect(source.contains("rotationEffect") == false)
+    }
+
+    @Test
+    func todayMetricsUseSemanticTrendColorsAndEqualCompactActions() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+
+        #expect(source.contains("trendColor: grossTrend.color"))
+        #expect(source.contains(".foregroundStyle(metric.trendColor)"))
+        #expect(source.contains(".green"))
+        #expect(source.contains(".red"))
+        #expect(source.contains("startButton\n                    .frame(maxWidth: .infinity)"))
+        #expect(source.contains("newTaskButton\n                    .frame(maxWidth: .infinity)"))
+        #expect(source.contains(".layoutPriority(1.1)") == false)
     }
 
     @Test

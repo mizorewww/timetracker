@@ -309,26 +309,23 @@ struct MetricsAndActions: View {
         Group {
             if horizontal {
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 18) {
+                    HStack(alignment: .center, spacing: 14) {
                         MetricsPanelContent(store: store)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 14)
                             .frame(maxWidth: .infinity)
 
                         Divider()
-                            .padding(.vertical, 12)
+                            .frame(height: 64)
 
-                        ActionStack(store: store, buttonHeight: 38, spacing: 8)
-                            .frame(minWidth: 180, idealWidth: 210, maxWidth: 240)
-                            .padding(.vertical, 10)
-                            .padding(.trailing, 14)
+                        ActionStack(store: store, buttonHeight: 36, spacing: 8)
+                            .frame(width: 190)
                     }
-                    .frame(minHeight: 88)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 14)
                     .appCard(padding: 0)
 
                     VStack(spacing: 16) {
                         MetricsPanel(store: store)
-                        ActionStack(store: store)
+                        ActionStack(store: store, buttonHeight: 40)
                     }
                 }
             } else {
@@ -421,6 +418,8 @@ private struct MetricsPanelContent: View {
         let todayWall = store.todayWallSeconds(now: now)
         let yesterdayGross = store.daySeconds(for: yesterday, mode: .gross, now: now)
         let yesterdayWall = store.daySeconds(for: yesterday, mode: .wallClock, now: now)
+        let grossTrend = trend(current: todayGross, previous: yesterdayGross)
+        let wallTrend = trend(current: todayWall, previous: yesterdayWall)
 
         return [
             MetricSummaryItem(
@@ -429,7 +428,8 @@ private struct MetricsPanelContent: View {
                 value: DurationFormatter.compact(todayGross),
                 iconName: "clock.badge.checkmark",
                 tint: .blue,
-                trendText: trendText(current: todayGross, previous: yesterdayGross),
+                trendText: grossTrend.text,
+                trendColor: grossTrend.color,
                 alignment: .leading
             ),
             MetricSummaryItem(
@@ -438,7 +438,8 @@ private struct MetricsPanelContent: View {
                 value: DurationFormatter.compact(todayWall),
                 iconName: "timeline.selection",
                 tint: .green,
-                trendText: trendText(current: todayWall, previous: yesterdayWall),
+                trendText: wallTrend.text,
+                trendColor: wallTrend.color,
                 alignment: .center
             ),
             MetricSummaryItem(
@@ -447,24 +448,25 @@ private struct MetricsPanelContent: View {
                 value: DurationFormatter.compact(todayGross),
                 iconName: "square.stack.3d.up",
                 tint: .orange,
-                trendText: trendText(current: todayGross, previous: yesterdayGross),
+                trendText: grossTrend.text,
+                trendColor: grossTrend.color,
                 alignment: .trailing
             )
         ]
     }
 
-    private func trendText(current: Int, previous: Int) -> String {
+    private func trend(current: Int, previous: Int) -> (text: String, color: Color) {
         guard previous > 0 else {
-            return AppStrings.localized("home.metric.noComparison")
+            return (AppStrings.localized("home.metric.noComparison"), .secondary)
         }
         let percent = Int(round((Double(current - previous) / Double(previous)) * 100))
         if percent > 0 {
-            return String(format: AppStrings.localized("home.metric.upFromYesterday"), percent)
+            return (String(format: AppStrings.localized("home.metric.upFromYesterday"), percent), .green)
         }
         if percent < 0 {
-            return String(format: AppStrings.localized("home.metric.downFromYesterday"), abs(percent))
+            return (String(format: AppStrings.localized("home.metric.downFromYesterday"), abs(percent)), .red)
         }
-        return AppStrings.localized("home.metric.sameAsYesterday")
+        return (AppStrings.localized("home.metric.sameAsYesterday"), .secondary)
     }
 }
 
@@ -475,6 +477,7 @@ struct MetricSummaryItem: Identifiable {
     let iconName: String
     let tint: Color
     let trendText: String
+    let trendColor: Color
     let alignment: MetricTextAlignment
 }
 
@@ -527,7 +530,7 @@ struct MetricCell: View {
 
             Text(metric.trendText)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(metric.trendColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
@@ -587,8 +590,9 @@ struct ActionStack: View {
         if isCompactPhone {
             HStack(spacing: spacing) {
                 startButton
-                    .layoutPriority(1.1)
+                    .frame(maxWidth: .infinity)
                 newTaskButton
+                    .frame(maxWidth: .infinity)
             }
         } else {
             VStack(spacing: spacing) {
@@ -616,10 +620,7 @@ struct ActionStack: View {
             store.startSelectedTask()
 #endif
         } label: {
-            Label(AppStrings.startTimer, systemImage: "play.fill")
-                .frame(maxWidth: .infinity)
-                .frame(height: buttonHeight)
-                .frame(minHeight: buttonHeight == nil ? 44 : 0)
+            actionLabel(title: AppStrings.startTimer, systemImage: "play.fill")
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.regular)
@@ -630,14 +631,25 @@ struct ActionStack: View {
         Button {
             store.presentNewTask()
         } label: {
-            Label(AppStrings.newTask, systemImage: "plus")
-                .frame(maxWidth: .infinity)
-                .frame(height: buttonHeight)
-                .frame(minHeight: buttonHeight == nil ? 44 : 0)
+            actionLabel(title: AppStrings.newTask, systemImage: "plus")
         }
         .buttonStyle(.bordered)
         .controlSize(.regular)
         .accessibilityIdentifier("home.newTask")
+    }
+
+    private func actionLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+            Text(title)
+                .font(.body.weight(.medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: buttonHeight)
+        .frame(minHeight: buttonHeight == nil ? 44 : 0)
     }
 }
 

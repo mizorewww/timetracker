@@ -24,10 +24,10 @@
 "metric.wallTime" = "实际时间";
 "metric.grossTime" = "累计时间";
 "metric.todayTracked" = "今日记录";
-"home.metric.noComparison" = "昨日暂无数据";
-"home.metric.upFromYesterday" = "比昨天高 %d%%";
-"home.metric.downFromYesterday" = "比昨天低 %d%%";
-"home.metric.sameAsYesterday" = "与昨天持平";
+"home.metric.noComparison" = "昨日无数据";
+"home.metric.upFromYesterday" = "较昨日 ↑%d%%";
+"home.metric.downFromYesterday" = "较昨日 ↓%d%%";
+"home.metric.sameAsYesterday" = "较昨日持平";
 "common.all" = "全部";
 "error.title" = "错误";
 "home.subtitle" = "先确认正在发生的事，再回看今天，并快速继续下一项任务。";

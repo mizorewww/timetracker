@@ -25,8 +25,8 @@
 "metric.grossTime" = "Gross Time";
 "metric.todayTracked" = "Tracked Today";
 "home.metric.noComparison" = "No data yesterday";
-"home.metric.upFromYesterday" = "Up %d%% vs yesterday";
-"home.metric.downFromYesterday" = "Down %d%% vs yesterday";
+"home.metric.upFromYesterday" = "↑ %d%% vs yesterday";
+"home.metric.downFromYesterday" = "↓ %d%% vs yesterday";
 "home.metric.sameAsYesterday" = "Same as yesterday";
 "common.all" = "All";
 "error.title" = "Error";

@@ -268,7 +268,7 @@
 "forecast.remaining" = "Left";
 "forecast.remainingFormat" = "Left %@";
 "forecast.projectedDays" = "Days";
-"forecast.daysFormat" = "%d days";
+"forecast.daysFormat" = "%.1f days";
 "forecast.confidence" = "Confidence";
 "forecast.noEstimate" = "Not enough data";
 "forecast.unavailable.guidance" = "Add checklist items and mark some done, or enter a manual estimate, to show a remaining-time forecast here.";

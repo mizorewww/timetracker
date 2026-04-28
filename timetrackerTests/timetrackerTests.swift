@@ -1180,6 +1180,48 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func checklistChangesImmediatelyRecalculateForecastEstimates() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Forecast Task", parentID: nil, colorHex: nil, iconName: nil)
+        let end = Date().addingTimeInterval(-60)
+
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: end.addingTimeInterval(-3_600),
+            endedAt: end,
+            note: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        var firstDraft = TaskEditorDraft(task: task, checklistItems: [])
+        firstDraft.checklistItems = [
+            ChecklistEditorDraft(title: "Done", isCompleted: true),
+            ChecklistEditorDraft(title: "Todo", isCompleted: false)
+        ]
+        store.saveTaskDraft(firstDraft)
+
+        let firstRollup = try #require(store.rollup(for: task.id))
+        #expect(firstRollup.checklistProgress.label == "1/2")
+        #expect(firstRollup.estimatedTotalSeconds == 7_200)
+        #expect(firstRollup.remainingSeconds == 3_600)
+        #expect(abs((firstRollup.projectedDays ?? 0) - 1.0) < 0.05)
+
+        var secondDraft = TaskEditorDraft(task: task, checklistItems: store.checklistItems(for: task.id))
+        secondDraft.checklistItems.append(ChecklistEditorDraft(title: "Also done", isCompleted: true))
+        store.saveTaskDraft(secondDraft)
+
+        let secondRollup = try #require(store.rollup(for: task.id))
+        #expect(secondRollup.checklistProgress.label == "2/3")
+        #expect(secondRollup.estimatedTotalSeconds == 5_400)
+        #expect(secondRollup.remainingSeconds == 1_800)
+        #expect(abs((secondRollup.projectedDays ?? 0) - 0.5) < 0.05)
+    }
+
+    @Test @MainActor
     func taskListRollupDurationsIncludeHistoricalDescendantTaskTime() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

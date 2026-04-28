@@ -268,7 +268,7 @@
 "forecast.remaining" = "剩餘";
 "forecast.remainingFormat" = "剩餘 %@";
 "forecast.projectedDays" = "天數";
-"forecast.daysFormat" = "%d 天";
+"forecast.daysFormat" = "%.1f 天";
 "forecast.confidence" = "可信度";
 "forecast.noEstimate" = "暫無足夠資料";
 "forecast.unavailable.guidance" = "新增清單項並完成其中一部分，或填寫手動預估時長後，這裡才會顯示剩餘時間預測。";

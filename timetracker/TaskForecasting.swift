@@ -36,7 +36,7 @@ struct TaskRollup: Identifiable, Equatable {
     let workedSeconds: Int
     let estimatedTotalSeconds: Int?
     let remainingSeconds: Int?
-    let projectedDays: Int?
+    let projectedDays: Double?
     let checklistProgress: ChecklistProgress
     let confidence: ForecastConfidence
     let reason: String
@@ -260,11 +260,11 @@ struct TaskRollupService {
         }
     }
 
-    private func projectedDays(for remainingSeconds: Int?, segments: [TimeSegment], now: Date) -> Int? {
+    private func projectedDays(for remainingSeconds: Int?, segments: [TimeSegment], now: Date) -> Double? {
         guard let remainingSeconds, remainingSeconds > 0 else { return 0 }
         let daily = forecastingService.recentDailyAvailableSeconds(segments: segments, now: now)
         guard daily > 0 else { return nil }
-        return max(1, Int(ceil(Double(remainingSeconds) / Double(daily))))
+        return max(0.1, Double(remainingSeconds) / Double(daily))
     }
 
     private func confidence(ownEstimate: ForecastConfidence?, childRollups: [TaskRollup], estimate: Int?) -> ForecastConfidence {

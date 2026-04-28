@@ -798,6 +798,34 @@ struct TimeTrackerTests {
         #expect(source.contains("rotationEffect") == false)
     }
 
+    @Test
+    func taskEditorUsesInlineKindPickerAndRemovesAdvancedClassification() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
+        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+
+        #expect(editorSource.contains("TaskKindPicker(selection: $draft.kind)"))
+        #expect(editorSource.contains(".pickerStyle(.inline)"))
+        #expect(editorSource.contains("TaskKindPickerOption(kind: kind)"))
+        #expect(editorSource.contains("editor.task.advanced") == false)
+        #expect(englishStrings.contains("editor.task.advanced") == false)
+    }
+
+    @Test
+    func taskListShowsTaskKindBadges() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let tasksSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+        let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
+
+        #expect(tasksSource.contains("TaskKindBadge(kind: task.kind)"))
+        #expect(sharedSource.contains("struct TaskKindBadge"))
+        #expect(sharedSource.contains("Image(systemName: kind.defaultIconName)"))
+    }
+
     @MainActor
     private func makeContext() throws -> ModelContext {
         let schema = Schema([

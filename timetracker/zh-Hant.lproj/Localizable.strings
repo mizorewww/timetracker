@@ -257,12 +257,13 @@
 "editor.task.status" = "狀態";
 "editor.task.parent" = "父任務";
 "editor.task.rootLevel" = "根級";
-"editor.task.advanced" = "進階分類";
-"editor.task.kind" = "顯示方式";
+"editor.task.kind" = "任務類型";
 "editor.task.kind.task" = "任務";
 "editor.task.kind.project" = "專案";
 "editor.task.kind.folder" = "資料夾";
-"editor.task.kind.footer" = "每一項都可以繼續新增子任務。分類只影響圖示和整理方式，不限制計時。";
+"editor.task.kind.task.example" = "具體行動，可以直接開始並完成。";
+"editor.task.kind.project.example" = "較大的成果，可以包含多個相關任務。";
+"editor.task.kind.folder.example" = "用於整理巢狀任務的安靜分組。";
 "editor.task.symbolColor" = "符號與顏色";
 "editor.task.plan" = "計劃";
 "editor.task.estimate" = "預估時長";

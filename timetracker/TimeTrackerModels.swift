@@ -7,6 +7,30 @@ enum TaskNodeKind: String, Codable, CaseIterable, Identifiable {
     case task
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .folder: return AppStrings.localized("editor.task.kind.folder")
+        case .project: return AppStrings.localized("editor.task.kind.project")
+        case .task: return AppStrings.localized("editor.task.kind.task")
+        }
+    }
+
+    var exampleText: String {
+        switch self {
+        case .folder: return AppStrings.localized("editor.task.kind.folder.example")
+        case .project: return AppStrings.localized("editor.task.kind.project.example")
+        case .task: return AppStrings.localized("editor.task.kind.task.example")
+        }
+    }
+
+    var defaultIconName: String {
+        switch self {
+        case .folder: return "folder"
+        case .project: return "briefcase"
+        case .task: return "checkmark.circle"
+        }
+    }
 }
 
 enum TaskStatus: String, Codable, CaseIterable {

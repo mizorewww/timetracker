@@ -223,10 +223,14 @@ private struct TaskManagementRowContent: View {
                     }
                 }
 
-                Text(store.path(for: task))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    TaskKindBadge(kind: task.kind)
+
+                    Text(store.path(for: task))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 10)

@@ -60,16 +60,10 @@ struct TaskEditorPanel: View {
                             }
                         }
 
-                        DisclosureGroup(AppStrings.localized("editor.task.advanced")) {
-                            Picker(AppStrings.localized("editor.task.kind"), selection: $draft.kind) {
-                                Text(.app("editor.task.kind.task")).tag(TaskNodeKind.task)
-                                Text(.app("editor.task.kind.project")).tag(TaskNodeKind.project)
-                                Text(.app("editor.task.kind.folder")).tag(TaskNodeKind.folder)
+                        TaskKindPicker(selection: $draft.kind)
+                            .onChange(of: draft.kind) { oldValue, newValue in
+                                updateDefaultIcon(from: oldValue, to: newValue)
                             }
-                            Text(.app("editor.task.kind.footer"))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
 
                         HStack {
                             Text(.app("editor.task.symbolColor"))
@@ -193,6 +187,44 @@ struct TaskEditorPanel: View {
         String(repeating: "  ", count: task.depth) + task.title
     }
 
+    private func updateDefaultIcon(from oldValue: TaskNodeKind, to newValue: TaskNodeKind) {
+        let defaultIcons = Set(TaskNodeKind.allCases.map(\.defaultIconName))
+        if draft.iconName == oldValue.defaultIconName || defaultIcons.contains(draft.iconName) {
+            draft.iconName = newValue.defaultIconName
+        }
+    }
+
+}
+
+private struct TaskKindPicker: View {
+    @Binding var selection: TaskNodeKind
+
+    var body: some View {
+        Picker(AppStrings.localized("editor.task.kind"), selection: $selection) {
+            ForEach(TaskNodeKind.allCases) { kind in
+                TaskKindPickerOption(kind: kind)
+                    .tag(kind)
+            }
+        }
+        .pickerStyle(.inline)
+    }
+}
+
+private struct TaskKindPickerOption: View {
+    let kind: TaskNodeKind
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(kind.displayName)
+                Text(kind.exampleText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: kind.defaultIconName)
+        }
+    }
 }
 
 struct ManualTimeSheet: View {

@@ -257,12 +257,13 @@
 "editor.task.status" = "状态";
 "editor.task.parent" = "父任务";
 "editor.task.rootLevel" = "根级";
-"editor.task.advanced" = "高级分类";
-"editor.task.kind" = "显示方式";
+"editor.task.kind" = "任务类型";
 "editor.task.kind.task" = "任务";
 "editor.task.kind.project" = "项目";
 "editor.task.kind.folder" = "文件夹";
-"editor.task.kind.footer" = "每一项都可以继续添加子任务。分类只影响图标和整理方式，不限制计时。";
+"editor.task.kind.task.example" = "具体行动，可以直接开始并完成。";
+"editor.task.kind.project.example" = "较大的成果，可以包含多个相关任务。";
+"editor.task.kind.folder.example" = "用于整理嵌套任务的安静分组。";
 "editor.task.symbolColor" = "符号与颜色";
 "editor.task.plan" = "计划";
 "editor.task.estimate" = "预计时长";

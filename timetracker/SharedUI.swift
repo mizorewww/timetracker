@@ -25,11 +25,45 @@ struct TaskIcon: View {
 
     var body: some View {
         let tint = Color(hex: task?.colorHex) ?? .blue
-        Image(systemName: task?.iconName ?? "checkmark.circle")
+        Image(systemName: task?.iconName ?? task?.kind.defaultIconName ?? TaskNodeKind.task.defaultIconName)
             .font(.system(size: size * 0.45, weight: .semibold))
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
+    }
+}
+
+struct TaskKindBadge: View {
+    let kind: TaskNodeKind
+
+    var body: some View {
+        Label {
+            Text(kind.displayName)
+        } icon: {
+            Image(systemName: kind.defaultIconName)
+        }
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(foreground)
+        .labelStyle(.titleAndIcon)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(background, in: Capsule())
+    }
+
+    private var foreground: Color {
+        switch kind {
+        case .folder: return .secondary
+        case .project: return .blue
+        case .task: return .green
+        }
+    }
+
+    private var background: Color {
+        switch kind {
+        case .folder: return Color.secondary.opacity(0.12)
+        case .project: return Color.blue.opacity(0.12)
+        case .task: return Color.green.opacity(0.12)
+        }
     }
 }
 

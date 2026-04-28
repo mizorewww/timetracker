@@ -257,12 +257,13 @@
 "editor.task.status" = "Status";
 "editor.task.parent" = "Parent Task";
 "editor.task.rootLevel" = "Root";
-"editor.task.advanced" = "Advanced Classification";
-"editor.task.kind" = "Display As";
+"editor.task.kind" = "Task Type";
 "editor.task.kind.task" = "Task";
 "editor.task.kind.project" = "Project";
 "editor.task.kind.folder" = "Folder";
-"editor.task.kind.footer" = "Every item can contain subtasks. Classification affects organization and icon defaults, not timing.";
+"editor.task.kind.task.example" = "A concrete action you can start and finish.";
+"editor.task.kind.project.example" = "A larger outcome that can contain related tasks.";
+"editor.task.kind.folder.example" = "A quiet group for organizing nested work.";
 "editor.task.symbolColor" = "Symbol and Color";
 "editor.task.plan" = "Plan";
 "editor.task.estimate" = "Estimate";

@@ -1,38 +1,6 @@
 import Foundation
 import SwiftData
 
-enum TaskNodeKind: String, Codable, CaseIterable, Identifiable {
-    case folder
-    case project
-    case task
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .folder: return AppStrings.localized("editor.task.kind.folder")
-        case .project: return AppStrings.localized("editor.task.kind.project")
-        case .task: return AppStrings.localized("editor.task.kind.task")
-        }
-    }
-
-    var exampleText: String {
-        switch self {
-        case .folder: return AppStrings.localized("editor.task.kind.folder.example")
-        case .project: return AppStrings.localized("editor.task.kind.project.example")
-        case .task: return AppStrings.localized("editor.task.kind.task.example")
-        }
-    }
-
-    var defaultIconName: String {
-        switch self {
-        case .folder: return "folder"
-        case .project: return "briefcase"
-        case .task: return "checkmark.circle"
-        }
-    }
-}
-
 enum TaskStatus: String, Codable, CaseIterable {
     case planned
     case active
@@ -73,7 +41,7 @@ enum AggregationMode: String, CaseIterable, Identifiable {
 final class TaskNode {
     var id: UUID = UUID()
     var title: String = ""
-    var kindRaw: String = TaskNodeKind.task.rawValue
+    var kindRaw: String = "task"
     var parentID: UUID?
     var sortOrder: Double = 0
     var path: String = ""
@@ -93,7 +61,6 @@ final class TaskNode {
 
     init(
         title: String,
-        kind: TaskNodeKind,
         parentID: UUID?,
         deviceID: String,
         colorHex: String? = nil,
@@ -102,7 +69,6 @@ final class TaskNode {
     ) {
         self.id = UUID()
         self.title = title
-        self.kindRaw = kind.rawValue
         self.parentID = parentID
         self.sortOrder = sortOrder
         self.path = ""
@@ -317,11 +283,6 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
 }
 
 extension TaskNode {
-    var kind: TaskNodeKind {
-        get { TaskNodeKind(rawValue: kindRaw) ?? .task }
-        set { kindRaw = newValue.rawValue }
-    }
-
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
@@ -333,12 +294,26 @@ extension TaskNode {
 }
 
 extension TaskStatus {
+    static var editableCases: [TaskStatus] {
+        [.planned, .active, .completed]
+    }
+
     var displayName: String {
         switch self {
         case .planned: return AppStrings.localized("status.planned")
         case .active: return AppStrings.localized("status.active")
         case .paused: return AppStrings.paused
         case .completed: return AppStrings.localized("status.completed")
+        case .archived: return AppStrings.localized("status.archived")
+        }
+    }
+
+    var exampleText: String {
+        switch self {
+        case .planned: return AppStrings.localized("editor.task.status.planned.example")
+        case .active: return AppStrings.localized("editor.task.status.active.example")
+        case .paused: return AppStrings.paused
+        case .completed: return AppStrings.localized("editor.task.status.completed.example")
         case .archived: return AppStrings.localized("status.archived")
         }
     }

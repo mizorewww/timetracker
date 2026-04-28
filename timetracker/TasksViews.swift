@@ -218,13 +218,11 @@ private struct TaskManagementRowContent: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    } else if task.status != .active {
-                        TaskStatusBadge(status: task.status)
                     }
                 }
 
                 HStack(spacing: 6) {
-                    TaskKindBadge(kind: task.kind)
+                    TaskStatusBadge(status: task.status)
 
                     Text(store.path(for: task))
                         .font(.caption)

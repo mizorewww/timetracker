@@ -68,22 +68,22 @@ enum SeedData {
         let now = Date()
         let startOfToday = calendar.startOfDay(for: now)
 
-        let app = try taskRepository.createTask(title: "Time Tracker App", kind: .project, parentID: nil, colorHex: "1677FF", iconName: "clock.badge.checkmark")
-        let design = try taskRepository.createTask(title: "Design System", kind: .project, parentID: app.id, colorHex: "1677FF", iconName: "paintpalette")
-        let macDesign = try taskRepository.createTask(title: "Design macOS UI", kind: .task, parentID: design.id, colorHex: "1677FF", iconName: "macwindow")
-        let iosDesign = try taskRepository.createTask(title: "Design iOS UI", kind: .task, parentID: design.id, colorHex: "0EA5E9", iconName: "iphone")
-        let implementation = try taskRepository.createTask(title: "Implementation", kind: .project, parentID: app.id, colorHex: "16A34A", iconName: "hammer")
-        let ledger = try taskRepository.createTask(title: "SwiftData Ledger", kind: .task, parentID: implementation.id, colorHex: "16A34A", iconName: "externaldrive.badge.checkmark")
-        let analytics = try taskRepository.createTask(title: "Analytics Charts", kind: .task, parentID: implementation.id, colorHex: "7C3AED", iconName: "chart.xyaxis.line")
-        let sync = try taskRepository.createTask(title: "iCloud Sync", kind: .task, parentID: implementation.id, colorHex: "64748B", iconName: "icloud")
+        let app = try taskRepository.createTask(title: "Time Tracker App", parentID: nil, colorHex: "1677FF", iconName: "clock.badge.checkmark")
+        let design = try taskRepository.createTask(title: "Design System", parentID: app.id, colorHex: "1677FF", iconName: "paintpalette")
+        let macDesign = try taskRepository.createTask(title: "Design macOS UI", parentID: design.id, colorHex: "1677FF", iconName: "macwindow")
+        let iosDesign = try taskRepository.createTask(title: "Design iOS UI", parentID: design.id, colorHex: "0EA5E9", iconName: "iphone")
+        let implementation = try taskRepository.createTask(title: "Implementation", parentID: app.id, colorHex: "16A34A", iconName: "hammer")
+        let ledger = try taskRepository.createTask(title: "SwiftData Ledger", parentID: implementation.id, colorHex: "16A34A", iconName: "externaldrive.badge.checkmark")
+        let analytics = try taskRepository.createTask(title: "Analytics Charts", parentID: implementation.id, colorHex: "7C3AED", iconName: "chart.xyaxis.line")
+        let sync = try taskRepository.createTask(title: "iCloud Sync", parentID: implementation.id, colorHex: "64748B", iconName: "icloud")
 
-        let client = try taskRepository.createTask(title: "Client Work", kind: .project, parentID: nil, colorHex: "F97316", iconName: "briefcase")
-        let meeting = try taskRepository.createTask(title: "Team Meeting", kind: .task, parentID: client.id, colorHex: "F97316", iconName: "person.2")
-        let review = try taskRepository.createTask(title: "Requirements Review", kind: .task, parentID: client.id, colorHex: "EF4444", iconName: "doc.text.magnifyingglass")
+        let client = try taskRepository.createTask(title: "Client Work", parentID: nil, colorHex: "F97316", iconName: "briefcase")
+        let meeting = try taskRepository.createTask(title: "Team Meeting", parentID: client.id, colorHex: "F97316", iconName: "person.2")
+        let review = try taskRepository.createTask(title: "Requirements Review", parentID: client.id, colorHex: "EF4444", iconName: "doc.text.magnifyingglass")
 
-        let study = try taskRepository.createTask(title: "Study", kind: .project, parentID: nil, colorHex: "16A34A", iconName: "book")
-        let hig = try taskRepository.createTask(title: "Read Apple HIG", kind: .task, parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
-        let swift = try taskRepository.createTask(title: "SwiftData Docs", kind: .task, parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
+        let study = try taskRepository.createTask(title: "Study", parentID: nil, colorHex: "16A34A", iconName: "book")
+        let hig = try taskRepository.createTask(title: "Read Apple HIG", parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
+        let swift = try taskRepository.createTask(title: "SwiftData Docs", parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
 
         macDesign.notes = "Refine the three-column layout and prioritize the timeline, task tree, and inspector density."
         iosDesign.notes = "On mobile, prioritize quick start, current state, and an editable Today timeline."

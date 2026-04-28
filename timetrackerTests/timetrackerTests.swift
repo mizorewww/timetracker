@@ -65,8 +65,8 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
 
-        let root = try repository.createTask(title: "Root", kind: .project, parentID: nil, colorHex: nil, iconName: nil)
-        let child = try repository.createTask(title: "Child", kind: .task, parentID: root.id, colorHex: nil, iconName: nil)
+        let root = try repository.createTask(title: "Root", parentID: nil, colorHex: nil, iconName: nil)
+        let child = try repository.createTask(title: "Child", parentID: root.id, colorHex: nil, iconName: nil)
 
         try repository.moveTask(taskID: root.id, newParentID: child.id, sortOrder: 10)
         #expect((try repository.task(id: root.id))?.parentID == nil)
@@ -83,7 +83,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Design", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: nil, iconName: nil)
 
         let first = try timeRepository.startTask(taskID: task.id, source: .timer)
         #expect(try timeRepository.activeSegments().count == 1)
@@ -108,8 +108,8 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let firstTask = try taskRepository.createTask(title: "Design", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
-        let secondTask = try taskRepository.createTask(title: "Writing", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let firstTask = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Writing", parentID: nil, colorHex: nil, iconName: nil)
 
         let start = Date(timeIntervalSince1970: 2_000)
         let segment = try timeRepository.addManualSegment(
@@ -142,8 +142,8 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let firstTask = try taskRepository.createTask(title: "Coding", kind: .task, parentID: nil, colorHex: "1677FF", iconName: nil)
-        let secondTask = try taskRepository.createTask(title: "Meeting", kind: .task, parentID: nil, colorHex: "EF4444", iconName: nil)
+        let firstTask = try taskRepository.createTask(title: "Coding", parentID: nil, colorHex: "1677FF", iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Meeting", parentID: nil, colorHex: "EF4444", iconName: nil)
         let calendar = Calendar.current
         let now = Date()
         let startOfDay = calendar.startOfDay(for: now)
@@ -182,9 +182,9 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let pinnedTask = try taskRepository.createTask(title: "Pinned", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
-        let frequentTask = try taskRepository.createTask(title: "Frequent", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
-        let occasionalTask = try taskRepository.createTask(title: "Occasional", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let pinnedTask = try taskRepository.createTask(title: "Pinned", parentID: nil, colorHex: nil, iconName: nil)
+        let frequentTask = try taskRepository.createTask(title: "Frequent", parentID: nil, colorHex: nil, iconName: nil)
+        let occasionalTask = try taskRepository.createTask(title: "Occasional", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date(timeIntervalSince1970: 10_000)
 
         _ = try timeRepository.addManualSegment(
@@ -225,7 +225,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Design", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: nil, iconName: nil)
         let calendar = Calendar.current
         let now = Date()
         let startOfDay = calendar.startOfDay(for: now)
@@ -252,8 +252,8 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let firstTask = try taskRepository.createTask(title: "Coding", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
-        let secondTask = try taskRepository.createTask(title: "Meeting", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let firstTask = try taskRepository.createTask(title: "Coding", parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Meeting", parentID: nil, colorHex: nil, iconName: nil)
         let calendar = Calendar.current
         let now = Date()
         let startOfDay = calendar.startOfDay(for: now)
@@ -284,7 +284,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Client Research", kind: .task, parentID: nil, colorHex: "1677FF", iconName: nil)
+        let task = try taskRepository.createTask(title: "Client Research", parentID: nil, colorHex: "1677FF", iconName: nil)
         let now = Date()
 
         _ = try timeRepository.addManualSegment(
@@ -310,7 +310,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Temporary Client", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Temporary Client", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date().addingTimeInterval(-1_800)
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -336,7 +336,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Writing", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Writing", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date(timeIntervalSince1970: 10_000)
         let segment = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -369,7 +369,7 @@ struct TimeTrackerTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Focus", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Focus", parentID: nil, colorHex: nil, iconName: nil)
 
         let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
 
@@ -394,7 +394,7 @@ struct TimeTrackerTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Shared Task", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Shared Task", parentID: nil, colorHex: nil, iconName: nil)
 
         let regularSegment = try timeRepository.startTask(taskID: task.id, source: .timer)
         let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
@@ -412,7 +412,7 @@ struct TimeTrackerTests {
     func storeTimerActionsKeepPomodoroRunInSync() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Synced Focus", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Synced Focus", parentID: nil, colorHex: nil, iconName: nil)
         let store = TimeTrackerStore()
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
@@ -444,7 +444,7 @@ struct TimeTrackerTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Focus", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "Focus", parentID: nil, colorHex: nil, iconName: nil)
 
         let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 2)
         try pomodoroRepository.cancel(runID: run.id)
@@ -481,7 +481,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let oldTask = try taskRepository.createTask(title: "Temporary Task", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let oldTask = try taskRepository.createTask(title: "Temporary Task", parentID: nil, colorHex: nil, iconName: nil)
         _ = try timeRepository.addManualSegment(
             taskID: oldTask.id,
             startedAt: Date().addingTimeInterval(-600),
@@ -503,7 +503,7 @@ struct TimeTrackerTests {
 
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let userTask = try taskRepository.createTask(title: "Real Work", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let userTask = try taskRepository.createTask(title: "Real Work", parentID: nil, colorHex: nil, iconName: nil)
         _ = try timeRepository.addManualSegment(
             taskID: userTask.id,
             startedAt: Date().addingTimeInterval(-900),
@@ -521,7 +521,7 @@ struct TimeTrackerTests {
     @Test @MainActor
     func modelDefaultsSupportCloudKitCompatibleConstruction() throws {
         let context = try makeContext()
-        let task = TaskNode(title: "Defaults", kind: .task, parentID: nil, deviceID: "test")
+        let task = TaskNode(title: "Defaults", parentID: nil, deviceID: "test")
         let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test")
         let segment = TimeSegment(sessionID: session.id, taskID: task.id, source: .timer, deviceID: "test")
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
@@ -548,7 +548,7 @@ struct TimeTrackerTests {
     func taskStatusCanBePlannedAndCompleted() throws {
         let context = try makeContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let task = try repository.createTask(title: "Plan draft", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try repository.createTask(title: "Plan draft", parentID: nil, colorHex: nil, iconName: nil)
 
         try repository.setTaskStatus(taskID: task.id, status: .planned)
         #expect(try repository.task(id: task.id)?.status == .planned)
@@ -563,7 +563,7 @@ struct TimeTrackerTests {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "CSV Task", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "CSV Task", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date(timeIntervalSince1970: 2_000)
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -799,31 +799,33 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func taskEditorUsesInlineKindPickerAndRemovesAdvancedClassification() throws {
+    func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
+        let modelsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerModels.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 
-        #expect(editorSource.contains("TaskKindPicker(selection: $draft.kind)"))
+        #expect(editorSource.contains("TaskStatusPicker(selection: $draft.status)"))
         #expect(editorSource.contains(".pickerStyle(.inline)"))
-        #expect(editorSource.contains("TaskKindPickerOption(kind: kind)"))
-        #expect(editorSource.contains("editor.task.advanced") == false)
-        #expect(englishStrings.contains("editor.task.advanced") == false)
+        #expect(editorSource.contains("TaskStatusPickerOption(status: status)"))
+        #expect(editorSource.contains("TaskKindPicker") == false)
+        #expect(modelsSource.contains("enum TaskNodeKind") == false)
+        #expect(englishStrings.contains("editor.task.kind") == false)
     }
 
     @Test
-    func taskListShowsTaskKindBadges() throws {
+    func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let tasksSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
         let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
 
-        #expect(tasksSource.contains("TaskKindBadge(kind: task.kind)"))
-        #expect(sharedSource.contains("struct TaskKindBadge"))
-        #expect(sharedSource.contains("Image(systemName: kind.defaultIconName)"))
+        #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
+        #expect(tasksSource.contains("TaskKindBadge") == false)
+        #expect(sharedSource.contains("struct TaskKindBadge") == false)
     }
 
     @MainActor

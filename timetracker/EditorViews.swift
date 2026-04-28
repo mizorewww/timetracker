@@ -46,12 +46,7 @@ struct TaskEditorPanel: View {
                     Section(AppStrings.localized("editor.task.info")) {
                         TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
 
-                        Picker(AppStrings.localized("editor.task.status"), selection: $draft.status) {
-                            ForEach(TaskStatus.allCases, id: \.self) { status in
-                                Text(status.displayName).tag(status)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        TaskStatusPicker(selection: $draft.status)
 
                         Picker(AppStrings.localized("editor.task.parent"), selection: parentBinding) {
                             Text(.app("editor.task.rootLevel")).tag(Optional<UUID>.none)
@@ -59,11 +54,6 @@ struct TaskEditorPanel: View {
                                 Text(indentedTitle(task)).tag(Optional(task.id))
                             }
                         }
-
-                        TaskKindPicker(selection: $draft.kind)
-                            .onChange(of: draft.kind) { oldValue, newValue in
-                                updateDefaultIcon(from: oldValue, to: newValue)
-                            }
 
                         HStack {
                             Text(.app("editor.task.symbolColor"))
@@ -187,42 +177,36 @@ struct TaskEditorPanel: View {
         String(repeating: "  ", count: task.depth) + task.title
     }
 
-    private func updateDefaultIcon(from oldValue: TaskNodeKind, to newValue: TaskNodeKind) {
-        let defaultIcons = Set(TaskNodeKind.allCases.map(\.defaultIconName))
-        if draft.iconName == oldValue.defaultIconName || defaultIcons.contains(draft.iconName) {
-            draft.iconName = newValue.defaultIconName
-        }
-    }
-
 }
 
-private struct TaskKindPicker: View {
-    @Binding var selection: TaskNodeKind
+private struct TaskStatusPicker: View {
+    @Binding var selection: TaskStatus
 
     var body: some View {
-        Picker(AppStrings.localized("editor.task.kind"), selection: $selection) {
-            ForEach(TaskNodeKind.allCases) { kind in
-                TaskKindPickerOption(kind: kind)
-                    .tag(kind)
+        Picker(AppStrings.localized("editor.task.status"), selection: $selection) {
+            ForEach(TaskStatus.editableCases, id: \.self) { status in
+                TaskStatusPickerOption(status: status)
+                    .tag(status)
             }
         }
         .pickerStyle(.inline)
     }
 }
 
-private struct TaskKindPickerOption: View {
-    let kind: TaskNodeKind
+private struct TaskStatusPickerOption: View {
+    let status: TaskStatus
 
     var body: some View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
-                Text(kind.displayName)
-                Text(kind.exampleText)
+                Text(status.displayName)
+                Text(status.exampleText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         } icon: {
-            Image(systemName: kind.defaultIconName)
+            Image(systemName: status.symbolName)
+                .foregroundStyle(Color(hex: status.colorHex) ?? .secondary)
         }
     }
 }

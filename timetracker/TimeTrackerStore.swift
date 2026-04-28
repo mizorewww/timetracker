@@ -264,7 +264,6 @@ final class TimeTrackerStore: ObservableObject {
                 try UpdateTaskUseCase(repository: requiredTaskRepository()).execute(
                     taskID: taskID,
                     title: sanitizedTitle,
-                    kind: draft.kind,
                     status: draft.status,
                     parentID: draft.parentID,
                     colorHex: draft.colorHex,
@@ -277,7 +276,6 @@ final class TimeTrackerStore: ObservableObject {
             } else {
                 let task = try CreateTaskUseCase(repository: requiredTaskRepository()).execute(
                     title: sanitizedTitle,
-                    kind: draft.kind,
                     parentID: draft.parentID,
                     colorHex: draft.colorHex,
                     iconName: draft.iconName
@@ -285,7 +283,6 @@ final class TimeTrackerStore: ObservableObject {
                 try UpdateTaskUseCase(repository: requiredTaskRepository()).execute(
                     taskID: task.id,
                     title: sanitizedTitle,
-                    kind: draft.kind,
                     status: draft.status,
                     parentID: draft.parentID,
                     colorHex: draft.colorHex,
@@ -1069,7 +1066,6 @@ struct TaskEditorDraft: Identifiable {
     let id = UUID()
     var taskID: UUID?
     var title: String
-    var kind: TaskNodeKind
     var status: TaskStatus
     var parentID: UUID?
     var colorHex: String
@@ -1082,7 +1078,6 @@ struct TaskEditorDraft: Identifiable {
     init(parentID: UUID?) {
         self.taskID = nil
         self.title = ""
-        self.kind = .task
         self.status = .active
         self.parentID = parentID
         self.colorHex = "1677FF"
@@ -1096,7 +1091,6 @@ struct TaskEditorDraft: Identifiable {
     init(task: TaskNode) {
         self.taskID = task.id
         self.title = task.title
-        self.kind = task.kind
         self.status = task.status
         self.parentID = task.parentID
         self.colorHex = task.colorHex ?? "1677FF"

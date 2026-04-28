@@ -185,9 +185,13 @@ struct TaskContextMenu: View {
         }
 
         Menu(AppStrings.localized("task.status.menu")) {
-            Button(AppStrings.localized("task.status.planned")) { store.setTaskStatus(.planned, taskID: task.id) }
-            Button(AppStrings.localized("task.status.notDone")) { store.setTaskStatus(.active, taskID: task.id) }
-            Button(AppStrings.localized("task.status.done")) { store.setTaskStatus(.completed, taskID: task.id) }
+            ForEach(TaskStatus.editableCases, id: \.self) { status in
+                Button {
+                    store.setTaskStatus(status, taskID: task.id)
+                } label: {
+                    Label(status.displayName, systemImage: status.symbolName)
+                }
+            }
         }
 
         Divider()

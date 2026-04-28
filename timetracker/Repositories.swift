@@ -6,8 +6,8 @@ protocol TaskRepository {
     func rootNodes() throws -> [TaskNode]
     func children(of parentID: UUID?) throws -> [TaskNode]
     func task(id: UUID) throws -> TaskNode?
-    @discardableResult func createTask(title: String, kind: TaskNodeKind, parentID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
-    func updateTask(taskID: UUID, title: String, kind: TaskNodeKind, status: TaskStatus, parentID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
+    @discardableResult func createTask(title: String, parentID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
+    func updateTask(taskID: UUID, title: String, status: TaskStatus, parentID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
     func setTaskStatus(taskID: UUID, status: TaskStatus) throws
     func archiveTask(taskID: UUID) throws
@@ -78,11 +78,10 @@ final class SwiftDataTaskRepository: TaskRepository {
     }
 
     @discardableResult
-    func createTask(title: String, kind: TaskNodeKind, parentID: UUID?, colorHex: String? = nil, iconName: String? = nil) throws -> TaskNode {
+    func createTask(title: String, parentID: UUID?, colorHex: String? = nil, iconName: String? = nil) throws -> TaskNode {
         let siblings = try children(of: parentID)
         let node = TaskNode(
             title: title,
-            kind: kind,
             parentID: parentID,
             deviceID: deviceID,
             colorHex: colorHex,
@@ -99,7 +98,6 @@ final class SwiftDataTaskRepository: TaskRepository {
     func updateTask(
         taskID: UUID,
         title: String,
-        kind: TaskNodeKind,
         status: TaskStatus,
         parentID: UUID?,
         colorHex: String?,
@@ -113,7 +111,6 @@ final class SwiftDataTaskRepository: TaskRepository {
         guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else { return }
 
         node.title = title
-        node.kind = kind
         node.status = status
         node.parentID = parentID
         node.colorHex = colorHex

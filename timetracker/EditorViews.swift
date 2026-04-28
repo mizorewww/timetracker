@@ -99,13 +99,13 @@ struct TaskEditorPanel: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        ForEach(Array(draft.checklistItems.indices), id: \.self) { index in
+                        ForEach(Array(orderedChecklistIndices.enumerated()), id: \.element) { visualIndex, index in
                             ChecklistEditorRow(
                                 item: $draft.checklistItems[index],
-                                canMoveUp: index > 0,
-                                canMoveDown: index < draft.checklistItems.count - 1,
-                                moveUp: { moveChecklistItem(from: index, to: index - 1) },
-                                moveDown: { moveChecklistItem(from: index, to: index + 1) },
+                                canMoveUp: visualIndex > 0,
+                                canMoveDown: visualIndex < orderedChecklistIndices.count - 1,
+                                moveUp: { moveChecklistItem(atVisualIndex: visualIndex, direction: -1) },
+                                moveDown: { moveChecklistItem(atVisualIndex: visualIndex, direction: 1) },
                                 delete: { draft.checklistItems.remove(at: index) }
                             )
                         }
@@ -178,6 +178,17 @@ struct TaskEditorPanel: View {
         !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var orderedChecklistIndices: [Int] {
+        draft.checklistItems.indices.sorted { lhs, rhs in
+            let left = draft.checklistItems[lhs]
+            let right = draft.checklistItems[rhs]
+            if left.isCompleted != right.isCompleted {
+                return !left.isCompleted
+            }
+            return lhs < rhs
+        }
+    }
+
     private var parentTitle: String {
         guard let parentID = draft.parentID, let task = store.task(for: parentID) else {
             return AppStrings.localized("editor.task.rootTitle")
@@ -211,6 +222,16 @@ struct TaskEditorPanel: View {
             return
         }
         draft.checklistItems.swapAt(source, destination)
+    }
+
+    private func moveChecklistItem(atVisualIndex visualIndex: Int, direction: Int) {
+        let ordered = orderedChecklistIndices
+        let targetVisualIndex = visualIndex + direction
+        guard ordered.indices.contains(visualIndex),
+              ordered.indices.contains(targetVisualIndex) else {
+            return
+        }
+        moveChecklistItem(from: ordered[visualIndex], to: ordered[targetVisualIndex])
     }
 
 }
@@ -257,11 +278,20 @@ private struct ChecklistEditorRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Toggle(AppStrings.localized("editor.checklist.completed"), isOn: $item.isCompleted)
-                .labelsHidden()
+            Button {
+                item.isCompleted.toggle()
+            } label: {
+                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppStrings.localized("editor.checklist.completed"))
 
             TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title)
                 .textFieldStyle(.plain)
+                .strikethrough(item.isCompleted)
+                .foregroundStyle(item.isCompleted ? .secondary : .primary)
 
             Menu {
                 Button {

@@ -874,6 +874,37 @@ struct TimeTrackerTests {
         #expect(englishStrings.contains("\"analytics.taskUsage.title\" = \"Task Distribution\";"))
     }
 
+    @Test
+    func todayActivityDistributionUsesTaskColorBuckets() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
+        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+
+        #expect(analyticsSource.contains("TodayActivityCard(store: store, segments: todaySegments, now: context.date)"))
+        #expect(analyticsSource.contains("struct HourTaskSlice"))
+        #expect(analyticsSource.contains("Color(hex: colorHex)"))
+        #expect(analyticsSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)
+        #expect(englishStrings.contains("\"analytics.hourDistribution.taskColorHint\""))
+    }
+
+    @Test
+    func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
+        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SidebarInspectorViews.swift"), encoding: .utf8)
+        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+
+        #expect(editorSource.contains("\"checkmark.circle.fill\""))
+        #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
+        #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
+        #expect(inspectorSource.contains("visibleItems.prefix(5)"))
+        #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
+    }
+
     @Test @MainActor
     func syncedPreferenceMigrationImportsLegacyUserDefaults() throws {
         let defaults = UserDefaults.standard
@@ -993,6 +1024,50 @@ struct TimeTrackerTests {
         #expect(activeItems.first?.isCompleted == true)
         #expect(activeItems.first?.completedAt != nil)
         #expect(allItems.filter { $0.deletedAt != nil }.count == 1)
+
+        let keptItem = try #require(activeItems.first)
+        store.toggleChecklistItem(keptItem)
+        #expect(store.checklistItems(for: task.id).first?.isCompleted == false)
+        #expect(store.checklistItems(for: task.id).first?.completedAt == nil)
+    }
+
+    @Test @MainActor
+    func taskListRollupDurationsIncludeDescendantTaskTime() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let parent = try taskRepository.createTask(title: "Parent", parentID: nil, colorHex: nil, iconName: nil)
+        let child = try taskRepository.createTask(title: "Child", parentID: parent.id, colorHex: nil, iconName: nil)
+        let grandchild = try taskRepository.createTask(title: "Grandchild", parentID: child.id, colorHex: nil, iconName: nil)
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfDay = calendar.startOfDay(for: now)
+
+        _ = try timeRepository.addManualSegment(
+            taskID: parent.id,
+            startedAt: startOfDay.addingTimeInterval(9 * 3_600),
+            endedAt: startOfDay.addingTimeInterval(9 * 3_600 + 600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: child.id,
+            startedAt: startOfDay.addingTimeInterval(10 * 3_600),
+            endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 900),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: grandchild.id,
+            startedAt: startOfDay.addingTimeInterval(11 * 3_600),
+            endedAt: startOfDay.addingTimeInterval(11 * 3_600 + 300),
+            note: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        #expect(store.secondsForTaskToday(parent) == 600)
+        #expect(store.secondsForTaskTodayRollup(parent, now: now) == 1_800)
+        #expect(store.secondsForTaskTodayRollup(child, now: now) == 1_200)
     }
 
     @Test @MainActor

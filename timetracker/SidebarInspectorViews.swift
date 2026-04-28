@@ -253,7 +253,9 @@ struct InspectorView: View {
                     SelectedTaskHeader(store: store, task: task)
                     InspectorInfoGrid(store: store, task: task)
                     TaskChecklistPanel(store: store, task: task)
-                    TaskForecastPanel(store: store, task: task)
+                    if !store.children(of: task).isEmpty {
+                        TaskForecastPanel(store: store, task: task)
+                    }
                     NotesPanel(task: task)
                     StatsPanel(store: store, task: task)
                     PomodoroSettingsPanel(store: store)
@@ -315,8 +317,8 @@ struct InspectorInfoGrid: View {
             VStack(spacing: 10) {
                 InfoRow(title: AppStrings.localized("task.field.path"), value: store.path(for: task))
                 InfoRow(title: AppStrings.localized("task.field.status"), value: activeStatusText, badge: activeStatusText == AppStrings.running)
-                InfoRow(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskToday(task)))
-                InfoRow(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
+                InfoRow(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
+                InfoRow(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeekRollup(task)))
             }
             .appCard(padding: 14)
         }
@@ -359,6 +361,18 @@ struct TaskChecklistPanel: View {
         store.checklistItems(for: task.id)
     }
 
+    private var visibleItems: [ChecklistItem] {
+        items.sorted { lhs, rhs in
+            if lhs.isCompleted != rhs.isCompleted {
+                return !lhs.isCompleted
+            }
+            if lhs.sortOrder == rhs.sortOrder {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.sortOrder < rhs.sortOrder
+        }
+    }
+
     private var progress: ChecklistProgress {
         store.checklistProgress(for: task.id)
     }
@@ -377,10 +391,17 @@ struct TaskChecklistPanel: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     ProgressView(value: progress.fraction)
-                    ForEach(items.prefix(5), id: \.id) { item in
+                    ForEach(visibleItems.prefix(5), id: \.id) { item in
                         HStack(spacing: 8) {
-                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(item.isCompleted ? .green : .secondary)
+                            Button {
+                                store.toggleChecklistItem(item)
+                            } label: {
+                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+                            }
+                            .buttonStyle(.plain)
+
                             Text(item.title)
                                 .lineLimit(1)
                                 .strikethrough(item.isCompleted)
@@ -394,6 +415,9 @@ struct TaskChecklistPanel: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    Text(.app("checklist.keepCompletedHint"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 .appCard(padding: 14)
             }
@@ -728,12 +752,14 @@ struct InspectorSummaryCard: View {
                     .foregroundStyle(.secondary)
 
                 HStack {
-                    SmallStat(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskToday(task)))
+                    SmallStat(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
                     Divider()
-                    SmallStat(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
+                    SmallStat(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeekRollup(task)))
                 }
 
-                if let rollup = store.rollup(for: task.id), rollup.isDisplayableForecast {
+                if !store.children(of: task).isEmpty,
+                   let rollup = store.rollup(for: task.id),
+                   rollup.isDisplayableForecast {
                     Divider()
                     HStack {
                         SmallStat(title: AppStrings.localized("forecast.remaining"), value: rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate"))

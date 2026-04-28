@@ -24,6 +24,10 @@
 "metric.wallTime" = "實際時間";
 "metric.grossTime" = "累計時間";
 "metric.todayTracked" = "今日記錄";
+"home.metric.noComparison" = "昨日暫無資料";
+"home.metric.upFromYesterday" = "比昨天高 %d%%";
+"home.metric.downFromYesterday" = "比昨天低 %d%%";
+"home.metric.sameAsYesterday" = "與昨天持平";
 "common.all" = "全部";
 "error.title" = "錯誤";
 "home.subtitle" = "先確認正在發生的事，再回看今天，並快速繼續下一項任務。";
@@ -245,7 +249,8 @@
 "analytics.taskUsage.subtitle" = "按任務彙總用時，並使用 App 裡同一套任務顏色。";
 "analytics.total" = "總計";
 "analytics.hourDistribution.title" = "今天時間分布";
-"analytics.hourDistribution.subtitle" = "類似螢幕使用時間的日內視圖；藍色是實際時間，淺色背景提示並行計時產生的累計時間。";
+"analytics.hourDistribution.subtitle" = "類似螢幕使用時間的日內視圖；每根柱子使用對應任務的顏色。";
+"analytics.hourDistribution.taskColorHint" = "按任務顏色";
 "analytics.minutes" = "分鐘";
 "analytics.screenTime.title" = "任務使用時間";
 "analytics.screenTime.subtitle" = "類似螢幕使用時間：先看總量，再看顏色分段和任務列表。";
@@ -280,6 +285,7 @@
 "checklist.progressFormat" = "已完成 %d/%d";
 "checklist.noItems" = "無清單";
 "checklist.moreFormat" = "還有 %d 項";
+"checklist.keepCompletedHint" = "盡量保留已完成項；刪除它們會移除用於估算的進度歷史。";
 "editor.task.info" = "基本資訊";
 "editor.task.name" = "任務名稱";
 "editor.task.status" = "狀態";
@@ -296,7 +302,7 @@
 "editor.task.due" = "截止日";
 "editor.checklist.title" = "清單";
 "editor.checklist.empty" = "把任務拆成清單項後，App 可以追蹤進度並估算剩餘時間。";
-"editor.checklist.footer" = "清單項不是任務，不能單獨計時；時間仍然記錄在目前任務上。";
+"editor.checklist.footer" = "清單項不是任務，不能單獨計時；盡量保留已完成項，它們會幫助估算剩餘時間。";
 "editor.checklist.add" = "新增清單項";
 "editor.checklist.newItem" = "新清單項";
 "editor.checklist.itemPlaceholder" = "清單項";

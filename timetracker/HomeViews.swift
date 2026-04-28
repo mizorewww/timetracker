@@ -311,19 +311,19 @@ struct MetricsAndActions: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 18) {
                         MetricsPanelContent(store: store)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 10)
                             .padding(.horizontal, 14)
                             .frame(maxWidth: .infinity)
 
                         Divider()
                             .padding(.vertical, 12)
 
-                        ActionStack(store: store, buttonHeight: 42, spacing: 8)
+                        ActionStack(store: store, buttonHeight: 38, spacing: 8)
                             .frame(minWidth: 180, idealWidth: 210, maxWidth: 240)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 10)
                             .padding(.trailing, 14)
                     }
-                    .frame(minHeight: 108)
+                    .frame(minHeight: 88)
                     .appCard(padding: 0)
 
                     VStack(spacing: 16) {
@@ -332,9 +332,9 @@ struct MetricsAndActions: View {
                     }
                 }
             } else {
-                VStack(spacing: 16) {
+                VStack(spacing: 10) {
                     MetricsPanel(store: store)
-                    ActionStack(store: store)
+                    ActionStack(store: store, buttonHeight: 44, spacing: 10)
                 }
             }
         }
@@ -363,7 +363,7 @@ struct MetricsPanel: View {
 
     var body: some View {
         MetricsPanelContent(store: store)
-            .padding(isCompactPhone ? 14 : 18)
+            .padding(isCompactPhone ? 12 : 14)
             .frame(maxWidth: .infinity)
             .appCard(padding: 0)
     }
@@ -383,35 +383,99 @@ private struct MetricsPanelContent: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
+            let metrics = metricItems(now: context.date)
             if isCompactPhone {
                 HStack(alignment: .top, spacing: 0) {
-                    MetricCell(title: AppStrings.todayTracked, value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false, alignment: .leading, compact: true)
-                    MetricCell(title: AppStrings.wallTime, value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false, alignment: .center, compact: true)
-                    MetricCell(title: AppStrings.grossTime, value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false, alignment: .trailing, compact: true)
+                    ForEach(metrics) { metric in
+                        MetricCell(metric: metric, compact: true)
+                    }
                 }
             } else {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 0) {
-                        MetricCell(title: AppStrings.todayTracked, value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
-                        Divider()
-                        MetricCell(title: AppStrings.wallTime, value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
-                        Divider()
-                        MetricCell(title: AppStrings.grossTime, value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
+                        ForEach(metrics) { metric in
+                            MetricCell(metric: metric, compact: false)
+                            if metric.id != metrics.last?.id {
+                                Divider()
+                            }
+                        }
                     }
 
                     VStack(spacing: 12) {
-                        MetricCell(title: AppStrings.todayTracked, value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .blue, isMuted: false, values: [], showsBars: false)
-                        Divider()
-                        HStack(spacing: 0) {
-                            MetricCell(title: AppStrings.wallTime, value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
-                            Divider()
-                            MetricCell(title: AppStrings.grossTime, value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)), tint: .gray, isMuted: true, values: [], showsBars: false)
+                        ForEach(metrics) { metric in
+                            MetricCell(metric: metric, compact: false)
+                            if metric.id != metrics.last?.id {
+                                Divider()
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    private func metricItems(now: Date) -> [MetricSummaryItem] {
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        let todayGross = store.todayGrossSeconds(now: now)
+        let todayWall = store.todayWallSeconds(now: now)
+        let yesterdayGross = store.daySeconds(for: yesterday, mode: .gross, now: now)
+        let yesterdayWall = store.daySeconds(for: yesterday, mode: .wallClock, now: now)
+
+        return [
+            MetricSummaryItem(
+                id: "tracked",
+                title: AppStrings.todayTracked,
+                value: DurationFormatter.compact(todayGross),
+                iconName: "clock.badge.checkmark",
+                tint: .blue,
+                trendText: trendText(current: todayGross, previous: yesterdayGross),
+                alignment: .leading
+            ),
+            MetricSummaryItem(
+                id: "wall",
+                title: AppStrings.wallTime,
+                value: DurationFormatter.compact(todayWall),
+                iconName: "timeline.selection",
+                tint: .green,
+                trendText: trendText(current: todayWall, previous: yesterdayWall),
+                alignment: .center
+            ),
+            MetricSummaryItem(
+                id: "gross",
+                title: AppStrings.grossTime,
+                value: DurationFormatter.compact(todayGross),
+                iconName: "square.stack.3d.up",
+                tint: .orange,
+                trendText: trendText(current: todayGross, previous: yesterdayGross),
+                alignment: .trailing
+            )
+        ]
+    }
+
+    private func trendText(current: Int, previous: Int) -> String {
+        guard previous > 0 else {
+            return AppStrings.localized("home.metric.noComparison")
+        }
+        let percent = Int(round((Double(current - previous) / Double(previous)) * 100))
+        if percent > 0 {
+            return String(format: AppStrings.localized("home.metric.upFromYesterday"), percent)
+        }
+        if percent < 0 {
+            return String(format: AppStrings.localized("home.metric.downFromYesterday"), abs(percent))
+        }
+        return AppStrings.localized("home.metric.sameAsYesterday")
+    }
+}
+
+struct MetricSummaryItem: Identifiable {
+    let id: String
+    let title: String
+    let value: String
+    let iconName: String
+    let tint: Color
+    let trendText: String
+    let alignment: MetricTextAlignment
 }
 
 enum MetricTextAlignment {
@@ -437,44 +501,38 @@ enum MetricTextAlignment {
 }
 
 struct MetricCell: View {
-    let title: String
-    let value: String
-    let tint: Color
-    let isMuted: Bool
-    let values: [Int]
-    var showsBars: Bool = true
-    var alignment: MetricTextAlignment = .center
+    let metric: MetricSummaryItem
     var compact: Bool = false
 
     var body: some View {
-        VStack(alignment: showsBars ? .leading : alignment.horizontalAlignment, spacing: compact ? 6 : 8) {
-            HStack {
-                if !isMuted {
-                    Circle()
-                        .fill(tint)
-                        .frame(width: 8, height: 8)
-                }
-                Text(title)
-                    .font((compact ? Font.caption : Font.subheadline).weight(.medium))
-                    .foregroundStyle(isMuted ? .primary : tint)
+        VStack(alignment: metric.alignment.horizontalAlignment, spacing: compact ? 4 : 6) {
+            HStack(spacing: 5) {
+                Image(systemName: metric.iconName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(metric.tint)
+                Text(metric.title)
+                    .font((compact ? Font.caption2 : Font.caption).weight(.medium))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
             }
-            .frame(maxWidth: .infinity, alignment: showsBars ? .leading : alignment.frameAlignment)
+            .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
 
-            Text(value)
-                .font(.system(size: compact ? 24 : 30, weight: .semibold, design: .rounded))
+            Text(metric.value)
+                .font(.system(size: compact ? 20 : 24, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
-                .frame(maxWidth: .infinity, alignment: showsBars ? .leading : alignment.frameAlignment)
+                .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
 
-            if showsBars {
-                MiniBars(values: values, tint: isMuted ? .gray.opacity(0.38) : tint)
-                    .frame(height: 30)
-            }
+            Text(metric.trendText)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
         }
-        .frame(maxWidth: .infinity, alignment: showsBars ? .leading : alignment.frameAlignment)
+        .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
         .padding(.horizontal, compact ? 4 : 10)
     }
 }
@@ -502,42 +560,14 @@ struct ActionStack: View {
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isTaskPickerPresented = false
+
+    private var isCompactPhone: Bool {
+        horizontalSizeClass == .compact
+    }
 #endif
 
     var body: some View {
-        VStack(spacing: spacing) {
-            Button {
-#if os(iOS)
-                if horizontalSizeClass == .compact {
-                    isTaskPickerPresented = true
-                } else {
-                    store.startSelectedTask()
-                }
-#else
-                store.startSelectedTask()
-#endif
-            } label: {
-                Label(AppStrings.startTimer, systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: buttonHeight)
-                    .frame(minHeight: buttonHeight == nil ? 52 : 0)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityIdentifier("home.startTimer")
-
-            Button {
-                store.presentNewTask()
-            } label: {
-                Label(AppStrings.newTask, systemImage: "plus")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: buttonHeight)
-                    .frame(minHeight: buttonHeight == nil ? 52 : 0)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .accessibilityIdentifier("home.newTask")
-        }
+        actionLayout
 #if os(iOS)
         .sheet(isPresented: $isTaskPickerPresented) {
             NavigationStack {
@@ -549,6 +579,65 @@ struct ActionStack: View {
             .presentationBackground(Color(uiColor: .systemGroupedBackground))
         }
 #endif
+    }
+
+    @ViewBuilder
+    private var actionLayout: some View {
+#if os(iOS)
+        if isCompactPhone {
+            HStack(spacing: spacing) {
+                startButton
+                    .layoutPriority(1.1)
+                newTaskButton
+            }
+        } else {
+            VStack(spacing: spacing) {
+                startButton
+                newTaskButton
+            }
+        }
+#else
+        VStack(spacing: spacing) {
+            startButton
+            newTaskButton
+        }
+#endif
+    }
+
+    private var startButton: some View {
+        Button {
+#if os(iOS)
+            if horizontalSizeClass == .compact {
+                isTaskPickerPresented = true
+            } else {
+                store.startSelectedTask()
+            }
+#else
+            store.startSelectedTask()
+#endif
+        } label: {
+            Label(AppStrings.startTimer, systemImage: "play.fill")
+                .frame(maxWidth: .infinity)
+                .frame(height: buttonHeight)
+                .frame(minHeight: buttonHeight == nil ? 44 : 0)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.regular)
+        .accessibilityIdentifier("home.startTimer")
+    }
+
+    private var newTaskButton: some View {
+        Button {
+            store.presentNewTask()
+        } label: {
+            Label(AppStrings.newTask, systemImage: "plus")
+                .frame(maxWidth: .infinity)
+                .frame(height: buttonHeight)
+                .frame(minHeight: buttonHeight == nil ? 44 : 0)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .accessibilityIdentifier("home.newTask")
     }
 }
 

@@ -669,6 +669,12 @@ final class TimeTrackerStore: ObservableObject {
         aggregationService.totalSeconds(segments: todaySegments, mode: .wallClock, now: now)
     }
 
+    func daySeconds(for date: Date, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
+        guard let interval = Calendar.current.dateInterval(of: .day, for: date) else { return 0 }
+        let segments = allSegments.filter { overlaps($0, interval: interval, now: now) }
+        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+    }
+
     func overlapSeconds(now: Date) -> Int {
         max(0, todayGrossSeconds(now: now) - todayWallSeconds(now: now))
     }
@@ -767,13 +773,40 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func secondsForTaskToday(_ task: TaskNode, mode: AggregationMode = .gross) -> Int {
-        aggregationService.totalSeconds(segments: todaySegments.filter { $0.taskID == task.id }, mode: mode)
+        let now = Date()
+        guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
+        let segments = allSegments.filter { $0.taskID == task.id && overlaps($0, interval: interval, now: now) }
+        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+    }
+
+    func secondsForTaskTodayRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
+        guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
+        let ids = taskAndDescendantIDs(for: task.id)
+        let segments = allSegments.filter { ids.contains($0.taskID) && overlaps($0, interval: interval, now: now) }
+        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskThisWeek(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
         let segments = allSegments.filter { $0.taskID == task.id && overlaps($0, interval: interval, now: now) }
-        return aggregationService.totalSeconds(segments: segments, mode: mode, now: now)
+        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+    }
+
+    func secondsForTaskThisWeekRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
+        guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
+        let ids = taskAndDescendantIDs(for: task.id)
+        let segments = allSegments.filter { ids.contains($0.taskID) && overlaps($0, interval: interval, now: now) }
+        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+    }
+
+    func toggleChecklistItem(_ item: ChecklistItem) {
+        perform {
+            item.isCompleted.toggle()
+            item.completedAt = item.isCompleted ? Date() : nil
+            item.updatedAt = Date()
+            item.clientMutationID = UUID()
+            try modelContext?.save()
+        }
     }
 
     func recentSegments(for task: TaskNode, limit: Int = 6) -> [TimeSegment] {
@@ -945,6 +978,34 @@ final class TimeTrackerStore: ObservableObject {
     private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
         let end = segment.endedAt ?? now
         return segment.startedAt < interval.end && end > interval.start
+    }
+
+    private func clippedSeconds(segments: [TimeSegment], interval: DateInterval, mode: AggregationMode, now: Date) -> Int {
+        let intervals = segments.compactMap { clippedInterval(for: $0, in: interval, now: now) }
+        switch mode {
+        case .gross:
+            return intervals.reduce(0) { $0 + Int($1.end.timeIntervalSince($1.start)) }
+        case .wallClock:
+            return aggregationService.mergeOverlappingIntervals(intervals).reduce(0) { $0 + Int($1.end.timeIntervalSince($1.start)) }
+        }
+    }
+
+    private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {
+        guard segment.deletedAt == nil else { return nil }
+        let end = segment.endedAt ?? now
+        let start = max(segment.startedAt, interval.start)
+        let clippedEnd = min(end, interval.end)
+        guard clippedEnd > start else { return nil }
+        return DateInterval(start: start, end: clippedEnd)
+    }
+
+    private func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
+        guard !visited.contains(taskID) else { return [] }
+        let nextVisited = visited.union([taskID])
+        let childIDs = (childrenByParentID[taskID] ?? []).reduce(into: Set<UUID>()) { result, child in
+            result.formUnion(taskAndDescendantIDs(for: child.id, visited: nextVisited))
+        }
+        return childIDs.union([taskID])
     }
 
     private func perform(_ action: () throws -> Void) {

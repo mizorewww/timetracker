@@ -1,7 +1,7 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#endif
 
 struct DesktopMainView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -16,10 +16,10 @@ struct DesktopMainView: View {
                     TimeProgressSection(store: store)
                     ActiveTimersSection(store: store)
                     PausedSessionsSection(store: store)
-                    TimelineSection(store: store)
                     if !compact {
                         QuickStartSection(store: store)
                     }
+                    TimelineSection(store: store)
                 }
                 .padding(compact ? 18 : 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -59,20 +59,20 @@ struct PhoneHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HeaderBar(store: store, compact: true)
                 MetricsAndActions(store: store, horizontal: false)
                 TimeProgressSection(store: store)
                 ActiveTimersSection(store: store)
                 PausedSessionsSection(store: store)
-                TimelineSection(store: store)
                 QuickStartSection(store: store)
+                TimelineSection(store: store)
                 InspectorSummaryCard(store: store)
             }
             .padding(.horizontal, 18)
-            .padding(.top, 10)
+            .padding(.top, 0)
             .padding(.bottom, 24)
         }
         .background(AppColors.background)
+        .navigationTitle(AppStrings.today)
         #if os(iOS)
         .scrollBounceBehavior(.basedOnSize)
         #endif
@@ -80,12 +80,7 @@ struct PhoneHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         #endif
         .toolbar {
-            ToolbarItemGroup(placement: phoneToolbarPlacement) {
-                Button {
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                }
-
+            ToolbarItem(placement: phoneToolbarPlacement) {
                 Button {
                     store.presentNewTask()
                 } label: {
@@ -117,7 +112,7 @@ struct TimeProgressSection: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let items = progressItems(now: context.date)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 12)], spacing: 12) {
                 ForEach(items) { item in
                     TimeProgressTile(item: item)
                 }
@@ -173,9 +168,7 @@ struct TimeProgressTile: View {
             ProgressView(value: item.fraction)
                 .tint(item.tint)
         }
-        .padding(12)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard(padding: 12)
     }
 }
 
@@ -186,13 +179,29 @@ struct MetricsAndActions: View {
     var body: some View {
         Group {
             if horizontal {
-                HStack(alignment: .top, spacing: 18) {
-                    MetricsPanel(store: store)
-                    ActionStack(store: store, buttonHeight: 65)
-                        .frame(width: 220)
-                        .frame(height: 142)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 18) {
+                        MetricsPanelContent(store: store)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 14)
+                            .frame(maxWidth: .infinity)
+
+                        Divider()
+                            .padding(.vertical, 12)
+
+                        ActionStack(store: store, buttonHeight: 42, spacing: 8)
+                            .frame(minWidth: 180, idealWidth: 210, maxWidth: 240)
+                            .padding(.vertical, 12)
+                            .padding(.trailing, 14)
+                    }
+                    .frame(minHeight: 108)
+                    .appCard(padding: 0)
+
+                    VStack(spacing: 16) {
+                        MetricsPanel(store: store)
+                        ActionStack(store: store)
+                    }
                 }
-                .frame(minHeight: 142)
             } else {
                 VStack(spacing: 16) {
                     MetricsPanel(store: store)
@@ -212,6 +221,26 @@ private var phoneToolbarPlacement: ToolbarItemPlacement {
 }
 
 struct MetricsPanel: View {
+    @ObservedObject var store: TimeTrackerStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    var body: some View {
+        MetricsPanelContent(store: store)
+            .padding(isCompactPhone ? 14 : 18)
+            .frame(maxWidth: .infinity)
+            .appCard(padding: 0)
+    }
+}
+
+private struct MetricsPanelContent: View {
     @ObservedObject var store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -253,13 +282,6 @@ struct MetricsPanel: View {
                 }
             }
         }
-        .padding(isCompactPhone ? 14 : 18)
-        .frame(maxWidth: .infinity)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(AppColors.border)
-        )
     }
 }
 
@@ -347,13 +369,14 @@ struct MiniBars: View {
 struct ActionStack: View {
     @ObservedObject var store: TimeTrackerStore
     var buttonHeight: CGFloat?
+    var spacing: CGFloat = 12
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isTaskPickerPresented = false
 #endif
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: spacing) {
             Button {
 #if os(iOS)
                 if horizontalSizeClass == .compact {
@@ -394,6 +417,7 @@ struct ActionStack: View {
                 }
             }
             .presentationDetents([.medium, .large])
+            .presentationBackground(Color(uiColor: .systemGroupedBackground))
         }
 #endif
     }
@@ -437,6 +461,9 @@ struct TaskStartPicker: View {
                 Text(.app("timer.chooseTaskFooter"))
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle(AppStrings.startTimer)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -467,11 +494,7 @@ struct ActiveTimersSection: View {
                     }
                 }
             }
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppColors.border)
-            )
+            .appCard(padding: 0)
         }
         .accessibilityIdentifier("home.activeTimers")
     }
@@ -494,11 +517,7 @@ struct PausedSessionsSection: View {
                             }
                         }
                     }
-                    .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(AppColors.border)
-                    )
+                    .appCard(padding: 0)
                 }
             }
         }
@@ -519,7 +538,7 @@ struct PausedSessionRow: View {
             TaskIcon(task: store.task(for: session.taskID))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(store.task(for: session.taskID)?.title ?? "Deleted Task")
+                Text(store.task(for: session.taskID)?.title ?? AppStrings.localized("task.deleted"))
                     .font(.headline)
                 Text(AppStrings.paused)
                     .font(.subheadline)
@@ -569,62 +588,11 @@ struct ActiveTimerRow: View {
     var body: some View {
         Group {
             if isCompactPhone {
-                VStack(spacing: 12) {
-                    HStack(alignment: .center, spacing: 12) {
-                        TaskIcon(task: store.task(for: segment.taskID), size: 34)
-                        Spacer(minLength: 12)
-                        VStack(alignment: .trailing, spacing: 3) {
-                            Text(store.displayTitle(for: segment))
-                                .font(.headline)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.78)
-                            Text(displayPathText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.78)
-                        }
-                    }
-
-                    HStack(spacing: 10) {
-                        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                            .font(.system(size: 24, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        pauseButton(size: 30)
-                        stopButton(size: 30)
-                    }
-                }
+                compactContent
             } else {
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
-                        .frame(width: 10, height: 10)
-
-                    TaskIcon(task: store.task(for: segment.taskID))
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(store.displayTitle(for: segment))
-                            .font(.headline)
-                        Text(displayPathText)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: 10)
-
-                    DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                        .font(.system(size: 30, weight: .medium, design: .rounded))
-                        .monospacedDigit()
-                        .minimumScaleFactor(0.75)
-                        .frame(minWidth: 86, alignment: .trailing)
-
-                    pauseButton(size: 32)
-                    stopButton(size: 32)
+                ViewThatFits(in: .horizontal) {
+                    regularContent
+                    compactContent
                 }
             }
         }
@@ -633,6 +601,69 @@ struct ActiveTimerRow: View {
             store.selectTask(segment.taskID, revealInToday: false)
         }
         .padding(isCompactPhone ? 10 : 14)
+    }
+
+    private var regularContent: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
+                .frame(width: 10, height: 10)
+
+            TaskIcon(task: store.task(for: segment.taskID))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(store.displayTitle(for: segment))
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(displayPathText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 10)
+
+            DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .minimumScaleFactor(0.75)
+                .frame(minWidth: 86, alignment: .trailing)
+
+            pauseButton(size: 32)
+            stopButton(size: 32)
+        }
+    }
+
+    private var compactContent: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                TaskIcon(task: store.task(for: segment.taskID), size: 34)
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(store.displayTitle(for: segment))
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    Text(displayPathText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+            }
+
+            HStack(spacing: 10) {
+                DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                pauseButton(size: 30)
+                stopButton(size: 30)
+            }
+        }
     }
 
     private var displayPathText: String {
@@ -681,11 +712,7 @@ struct TimelineSection: View {
                     }
                 }
             }
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(AppColors.border)
-            )
+            .appCard(padding: 0)
         }
         .accessibilityIdentifier("home.timeline")
     }
@@ -706,9 +733,9 @@ struct TimelineRow: View {
 
     private var tag: String {
         switch segment.source {
-        case .pomodoro: return "Pomodoro"
-        case .manual: return "Manual"
-        default: return "Timer"
+        case .pomodoro: return AppStrings.pomodoro
+        case .manual: return AppStrings.localized("source.manual")
+        default: return AppStrings.localized("source.timer")
         }
     }
 
@@ -717,7 +744,10 @@ struct TimelineRow: View {
             if isCompactPhone {
                 compactContent
             } else {
-                regularContent
+                ViewThatFits(in: .horizontal) {
+                    regularContent
+                    compactContent
+                }
             }
         }
         .contentShape(Rectangle())
@@ -809,7 +839,7 @@ struct TimelineRow: View {
     private var durationText: some View {
         Group {
             if segment.endedAt == nil {
-                Text("now")
+                Text(.app("common.now"))
                     .foregroundStyle(.blue)
             } else {
                 Text(DurationFormatter.compact(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt))))
@@ -822,9 +852,9 @@ struct TimelineRow: View {
     }
 
     private var tagColor: Color {
-        switch tag {
-        case "Pomodoro": return .blue
-        case "Manual": return .orange
+        switch segment.source {
+        case .pomodoro: return .blue
+        case .manual: return .orange
         default: return .secondary
         }
     }
@@ -833,7 +863,7 @@ struct TimelineRow: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         let start = formatter.string(from: segment.startedAt)
-        let end = segment.endedAt.map { formatter.string(from: $0) } ?? "Now"
+        let end = segment.endedAt.map { formatter.string(from: $0) } ?? AppStrings.localized("common.now")
         return "\(start) - \(end)"
     }
 }
@@ -849,10 +879,16 @@ struct QuickStartSection: View {
             .compactMap { UUID(uuidString: String($0)) }
     }
 
-    private var quickStartTasks: [TaskNode] {
-        let ids = selectedIDs
-        guard !ids.isEmpty else { return store.recentTasks }
-        return ids.compactMap { store.task(for: $0) }.filter { $0.deletedAt == nil && $0.status != .archived }
+    private var pinnedTasks: [TaskNode] {
+        selectedIDs.compactMap { store.task(for: $0) }
+            .filter { $0.deletedAt == nil && $0.status != .archived }
+    }
+
+    private var recentFillTasks: [TaskNode] {
+        store.frequentRecentTasks(
+            excluding: Set(pinnedTasks.map(\.id)),
+            limit: 3
+        )
     }
 
     var body: some View {
@@ -861,7 +897,7 @@ struct QuickStartSection: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(AppStrings.quickStart)
                         .font(.headline)
-                    Text(selectedIDs.isEmpty ? AppStrings.localized("quickStart.defaultHint") : AppStrings.localized("quickStart.pinnedHint"))
+                    Text(AppStrings.localized("quickStart.defaultHint"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -875,33 +911,29 @@ struct QuickStartSection: View {
                 .help(AppStrings.localized("quickStart.edit"))
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
-                ForEach(quickStartTasks, id: \.id) { task in
-                    Button {
-                        store.startTask(task)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: task.iconName ?? "play")
-                                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-                            Text(task.title)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .tint(Color(hex: task.colorHex) ?? .blue)
+            if pinnedTasks.isEmpty && recentFillTasks.isEmpty {
+                ContentUnavailableView(
+                    AppStrings.localized("quickStart.empty.title"),
+                    systemImage: "clock.arrow.circlepath",
+                    description: Text(.app("quickStart.empty.description"))
+                )
+                .frame(maxWidth: .infinity, minHeight: 104)
+            } else {
+                if !pinnedTasks.isEmpty {
+                    QuickStartTaskGroup(
+                        title: AppStrings.localized("quickStart.pinnedTasks"),
+                        tasks: pinnedTasks,
+                        store: store
+                    )
                 }
 
-                Button {
-                    store.presentNewTask()
-                } label: {
-                    Label(AppStrings.newTask, systemImage: "plus")
-                        .frame(maxWidth: .infinity)
+                if !recentFillTasks.isEmpty {
+                    QuickStartTaskGroup(
+                        title: AppStrings.localized("quickStart.recentTasks"),
+                        tasks: recentFillTasks,
+                        store: store
+                    )
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
             }
         }
         .sheet(isPresented: $isEditorPresented) {
@@ -916,59 +948,141 @@ struct QuickStartSection: View {
     }
 }
 
+private struct QuickStartTaskGroup: View {
+    let title: String
+    let tasks: [TaskNode]
+    @ObservedObject var store: TimeTrackerStore
+
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(tasks, id: \.id) { task in
+                    QuickStartTaskButton(task: task) {
+                        store.startTask(task)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct QuickStartTaskButton: View {
+    let task: TaskNode
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: task.iconName ?? "play")
+                    .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+                    .frame(width: 18)
+                Text(task.title)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .tint(Color(hex: task.colorHex) ?? .blue)
+    }
+}
+
 struct QuickStartEditorSheet: View {
     @ObservedObject var store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedIDs: Set<UUID>
+    @State private var selectedIDs: [UUID]
     let onSave: ([UUID]) -> Void
 
     init(store: TimeTrackerStore, selectedIDs: [UUID], onSave: @escaping ([UUID]) -> Void) {
         self.store = store
         self.onSave = onSave
-        _selectedIDs = State(initialValue: Set(selectedIDs))
+        _selectedIDs = State(initialValue: selectedIDs)
+    }
+
+    private var availableTasks: [TaskNode] {
+        store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }
+    }
+
+    private var pinnedTasks: [TaskNode] {
+        selectedIDs.compactMap { store.task(for: $0) }
+            .filter { $0.deletedAt == nil && $0.status != .archived }
+    }
+
+    private func isPinned(_ task: TaskNode) -> Bool {
+        selectedIDs.contains(task.id)
+    }
+
+    private func togglePinned(_ task: TaskNode) {
+        if let index = selectedIDs.firstIndex(of: task.id) {
+            selectedIDs.remove(at: index)
+        } else {
+            selectedIDs.append(task.id)
+        }
+    }
+
+    private func cleanedPinnedIDs() -> [UUID] {
+        selectedIDs.filter { id in
+            guard let task = store.task(for: id) else { return false }
+            return task.deletedAt == nil && task.status != .archived
+        }
     }
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Button {
-                        selectedIDs.removeAll()
-                    } label: {
+                    if pinnedTasks.isEmpty {
                         Label(AppStrings.localized("quickStart.auto"), systemImage: "clock.arrow.circlepath")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(Array(pinnedTasks.enumerated()), id: \.element.id) { index, task in
+                            QuickStartPinnedTaskRow(task: task, path: store.path(for: task), order: index + 1)
+                        }
+                        .onDelete { offsets in
+                            selectedIDs.remove(atOffsets: offsets)
+                        }
                     }
+
+                    if !selectedIDs.isEmpty {
+                        Button(role: .destructive) {
+                            selectedIDs.removeAll()
+                        } label: {
+                            Label(AppStrings.localized("quickStart.clearPinned"), systemImage: "xmark.circle")
+                        }
+                    }
+                } header: {
+                    Text(String(format: AppStrings.localized("quickStart.pinnedHeader"), pinnedTasks.count))
                 } footer: {
-                    Text(.app("quickStart.auto.footer"))
+                    Text(.app("quickStart.pinnedFooter"))
                 }
 
-                Section(AppStrings.localized("quickStart.pinnedTasks")) {
-                    ForEach(store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }, id: \.id) { task in
+                Section(AppStrings.localized("quickStart.allTasks")) {
+                    ForEach(availableTasks, id: \.id) { task in
+                        let pinned = isPinned(task)
                         Button {
-                            if selectedIDs.contains(task.id) {
-                                selectedIDs.remove(task.id)
-                            } else {
-                                selectedIDs.insert(task.id)
-                            }
+                            togglePinned(task)
                         } label: {
-                            HStack {
-                                TaskIcon(task: task, size: 24)
-                                VStack(alignment: .leading) {
-                                    Text(task.title)
-                                    Text(store.path(for: task))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if selectedIDs.contains(task.id) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
-                                }
-                            }
+                            QuickStartSelectableTaskRow(
+                                task: task,
+                                path: store.path(for: task),
+                                isPinned: pinned,
+                                order: selectedIDs.firstIndex(of: task.id).map { $0 + 1 },
+                                isDisabled: false
+                            )
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
+            #if os(iOS)
+            .listStyle(.insetGrouped)
+            #endif
             .navigationTitle(AppStrings.localized("quickStart.edit"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -976,13 +1090,72 @@ struct QuickStartEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.localized("common.save")) {
-                        let ordered = store.tasks.map(\.id).filter { selectedIDs.contains($0) }
-                        onSave(ordered)
+                        onSave(cleanedPinnedIDs())
                         dismiss()
                     }
                 }
             }
         }
-        .frame(minWidth: 420, minHeight: 520)
+        .platformSheetFrame(width: 420, height: 520)
+    }
+}
+
+private struct QuickStartPinnedTaskRow: View {
+    let task: TaskNode
+    let path: String
+    let order: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TaskIcon(task: task, size: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.title)
+                    .foregroundStyle(.primary)
+                Text(path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("#\(order)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct QuickStartSelectableTaskRow: View {
+    let task: TaskNode
+    let path: String
+    let isPinned: Bool
+    let order: Int?
+    let isDisabled: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TaskIcon(task: task, size: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.title)
+                    .foregroundStyle(isDisabled ? .secondary : .primary)
+                Text(path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if let order {
+                Text("#\(order)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            Image(systemName: isPinned ? "checkmark.circle.fill" : "plus.circle")
+                .foregroundStyle(isPinned ? .blue : .secondary)
+        }
+        .contentShape(Rectangle())
+        .opacity(isDisabled ? 0.55 : 1)
+        .accessibilityElement(children: .combine)
     }
 }

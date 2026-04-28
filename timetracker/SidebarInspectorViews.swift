@@ -1,7 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 enum SidebarSelection: Hashable {
     case destination(TimeTrackerStore.DesktopDestination)
@@ -36,7 +33,7 @@ struct SidebarView: View {
                 }
             }
         }
-        .navigationTitle("Time Tracker")
+        .navigationTitle(AppStrings.localized("app.name"))
         .onAppear {
             syncSelectionFromStore()
         }
@@ -108,8 +105,8 @@ struct TaskTreeRow: View {
                     }
                 } label: {
                     taskLabel
-                        .tag(SidebarSelection.task(task.id))
                 }
+                .tag(SidebarSelection.task(task.id))
             }
         }
     }
@@ -215,26 +212,6 @@ struct TaskContextMenu: View {
     }
 }
 
-struct SidebarStaticRow: View {
-    let title: String
-    let systemImage: String
-    let count: Int
-    let color: Color
-
-    var body: some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-                .foregroundStyle(color)
-            Spacer()
-            Text("\(count)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .background(.thinMaterial, in: Capsule())
-        }
-    }
-}
-
 struct SidebarDestinationLabel: View {
     let destination: TimeTrackerStore.DesktopDestination
     let count: Int?
@@ -260,7 +237,7 @@ struct InspectorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Selected Task")
+                Text(.app("inspector.selectedTask"))
                     .font(.headline)
 
                 if let task = store.selectedTask {
@@ -330,9 +307,7 @@ struct InspectorInfoGrid: View {
                 InfoRow(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskToday(task)))
                 InfoRow(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
         }
     }
 
@@ -370,14 +345,12 @@ struct NotesPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Notes")
+            Text(.app("editor.task.notes"))
                 .font(.headline)
             Text(task.notes ?? AppStrings.localized("task.notes.empty"))
                 .foregroundStyle(task.notes == nil ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+                .appCard(padding: 12)
         }
     }
 }
@@ -388,7 +361,7 @@ struct StatsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Stats")
+            Text(.app("inspector.stats"))
                 .font(.headline)
 
             HStack {
@@ -396,9 +369,7 @@ struct StatsPanel: View {
                 Divider()
                 SmallStat(title: AppStrings.localized("task.stats.averageFocus"), value: DurationFormatter.compact(store.averageFocusSeconds))
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
             .accessibilityIdentifier("pomodoro.active")
         }
     }
@@ -431,7 +402,7 @@ struct PomodoroSettingsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Pomodoro Settings")
+            Text(.app("inspector.pomodoroSettings"))
                 .font(.headline)
 
             VStack(spacing: 12) {
@@ -442,9 +413,7 @@ struct PomodoroSettingsPanel: View {
                 Toggle(AppStrings.localized("task.autoStartBreak"), isOn: $autoBreak)
                     .font(.subheadline)
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
         }
     }
 }
@@ -455,7 +424,7 @@ struct RecentSessionsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Recent Sessions")
+            Text(.app("inspector.recentSessions"))
                 .font(.headline)
 
             VStack(spacing: 8) {
@@ -480,9 +449,7 @@ struct RecentSessionsPanel: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(14)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 14)
         }
     }
 
@@ -664,9 +631,7 @@ struct InspectorSummaryCard: View {
                     .foregroundStyle(task.notes == nil ? .secondary : .primary)
                     .foregroundStyle(.secondary)
             }
-            .padding(18)
-            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .appCard(padding: 18)
         }
     }
 }

@@ -5,10 +5,13 @@ The app should feel like a focused Apple productivity tool: clear hierarchy, nat
 ## Principles
 
 - Prefer native `NavigationSplitView`, `List`, `Form`, sheets, popovers, menus, and toolbar items before custom controls.
+- Do not add a custom primary-sidebar toggle to the iPad/macOS split view. Let `NavigationSplitView` provide the system sidebar affordance; custom `sidebar.left` buttons can duplicate the system control and disappear after collapsing.
 - Cards are for repeated content or framed data, not for every section.
 - Today should answer three questions quickly: what is running, what happened today, and what can continue next.
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
 - iPad and macOS may use a detail inspector, but the inspector should stay narrow and collapse when it is not useful.
+- Sheets should use system `NavigationStack` + `Form` + toolbar cancel/save actions. Avoid custom modal title bars unless the content is not an editor.
+- Fixed sheet sizes are macOS-only. iPhone and iPad sheets must follow the platform presentation width so they do not overflow compact devices.
 - The analytics timeline should separate graphic bars from task text. Bars show time, color, and icon; rows below carry labels.
 - When a section shows every item, do not show inert "All" links. A disclosure or navigation affordance should only appear when it performs an action.
 - Horizontal iPad/macOS Today action buttons should align to the metric panel height. If a metric card and action stack sit in the same row, their top and bottom edges should match.

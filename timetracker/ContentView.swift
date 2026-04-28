@@ -1,8 +1,6 @@
-import Charts
 import Foundation
 import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #else
@@ -67,12 +65,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             #if os(macOS)
-            ZStack {
-                DesktopRootView(store: store)
-                    .disabled(store.taskEditorDraft != nil || store.manualTimeDraft != nil || store.segmentEditorDraft != nil)
-
-                DesktopModalLayer(store: store)
-            }
+            DesktopRootView(store: store)
             #else
             iOSRootView(store: store)
             #endif
@@ -96,13 +89,12 @@ struct ContentView: View {
         }
         .preferredColorScheme(appColorScheme)
         .alert(Text(.app("error.title")), isPresented: errorBinding) {
-            Button("OK") {
+            Button(AppStrings.localized("common.ok")) {
                 store.errorMessage = nil
             }
         } message: {
             Text(store.errorMessage ?? "")
         }
-        #if os(iOS)
         .sheet(item: $store.taskEditorDraft) { draft in
             TaskEditorSheet(store: store, initialDraft: draft)
         }
@@ -112,7 +104,6 @@ struct ContentView: View {
         .sheet(item: $store.segmentEditorDraft) { draft in
             SegmentEditorSheet(store: store, initialDraft: draft)
         }
-        #endif
         #if os(macOS)
         .focusedSceneValue(\.newTaskAction) {
             store.presentNewTask()
@@ -158,40 +149,47 @@ struct iOSRootView: View {
 
     var body: some View {
         if horizontalSizeClass == .regular {
-            DesktopRootView(store: store)
+            iPadRootView(store: store)
         } else {
-            TabView {
-                NavigationStack {
-                    PhoneHomeView(store: store)
-                }
-                .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
-
-                NavigationStack {
-                    TasksView(store: store)
-                }
-                .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
-
-                NavigationStack {
-                    PomodoroView(store: store)
-                }
-                .tabItem { Label(AppStrings.pomodoro, systemImage: "timer") }
-
-                NavigationStack {
-                    AnalyticsView(store: store)
-                }
-                .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
-
-                NavigationStack {
-                    SettingsView(store: store)
-                }
-                .tabItem { Label(AppStrings.settings, systemImage: "gearshape") }
-            }
+            PhoneRootView(store: store)
         }
     }
 }
-#endif
 
-struct DesktopRootView: View {
+struct PhoneRootView: View {
+    @ObservedObject var store: TimeTrackerStore
+
+    var body: some View {
+        TabView {
+            NavigationStack {
+                PhoneHomeView(store: store)
+            }
+            .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
+
+            NavigationStack {
+                TasksView(store: store)
+            }
+            .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
+
+            NavigationStack {
+                PomodoroView(store: store)
+            }
+            .tabItem { Label(AppStrings.pomodoro, systemImage: "timer") }
+
+            NavigationStack {
+                AnalyticsView(store: store)
+            }
+            .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
+
+            NavigationStack {
+                SettingsView(store: store)
+            }
+            .tabItem { Label(AppStrings.settings, systemImage: "gearshape") }
+        }
+    }
+}
+
+struct iPadRootView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
@@ -199,25 +197,22 @@ struct DesktopRootView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(store: store)
-                #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
-                #endif
+                .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
         } detail: {
             DesktopContentView(store: store)
-                #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 480, ideal: 720)
-                #endif
+                .navigationSplitViewColumnWidth(min: 560, ideal: 780)
                 .toolbar {
-                    #if os(iOS)
                     ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            togglePrimarySidebar()
-                        } label: {
-                            Image(systemName: "sidebar.left")
+                        if columnVisibility != .all {
+                            Button {
+                                columnVisibility = .all
+                            } label: {
+                                Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .accessibilityLabel(AppStrings.localized("sidebar.show"))
                         }
-                        .accessibilityLabel(sidebarToggleTitle)
                     }
-                    #endif
 
                     ToolbarItem(placement: .automatic) {
                         Button {
@@ -225,7 +220,6 @@ struct DesktopRootView: View {
                         } label: {
                             Image(systemName: "sidebar.right")
                         }
-                        .help(isInspectorPresented ? AppStrings.localized("inspector.hide") : AppStrings.localized("inspector.show"))
                         .disabled(!inspectorIsRelevant)
                     }
                 }
@@ -234,6 +228,8 @@ struct DesktopRootView: View {
                         .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
                 }
         }
+        .navigationSplitViewStyle(.balanced)
+        .accessibilityIdentifier("ipad.splitNavigation")
         .onAppear {
             isInspectorPresented = inspectorIsRelevant
         }
@@ -245,16 +241,73 @@ struct DesktopRootView: View {
         }
     }
 
-    private var sidebarToggleTitle: String {
-        columnVisibility == .detailOnly
-            ? AppStrings.localized("sidebar.show")
-            : AppStrings.localized("sidebar.hide")
+    private var inspectorIsRelevant: Bool {
+        store.desktopDestination == .today && store.selectedTask != nil
     }
 
-    private func togglePrimarySidebar() {
-        withAnimation(.snappy) {
-            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+    private var inspectorBinding: Binding<Bool> {
+        Binding {
+            isInspectorPresented && inspectorIsRelevant
+        } set: { newValue in
+            isInspectorPresented = newValue
         }
+    }
+
+    private func updateInspectorVisibility() {
+        isInspectorPresented = inspectorIsRelevant
+    }
+}
+#endif
+
+struct DesktopRootView: View {
+    @ObservedObject var store: TimeTrackerStore
+    @State private var isInspectorPresented = false
+
+    var body: some View {
+        NavigationSplitView {
+            sidebarColumn
+        } detail: {
+            detailColumn
+        }
+        .navigationSplitViewStyle(.balanced)
+        .onAppear {
+            isInspectorPresented = inspectorIsRelevant
+        }
+        .onChange(of: store.desktopDestination) { _, _ in
+            updateInspectorVisibility()
+        }
+        .onChange(of: store.selectedTaskID) { _, _ in
+            updateInspectorVisibility()
+        }
+    }
+
+    private var sidebarColumn: some View {
+        SidebarView(store: store)
+            #if os(macOS)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
+            #endif
+    }
+
+    private var detailColumn: some View {
+        DesktopContentView(store: store)
+            #if os(macOS)
+            .navigationSplitViewColumnWidth(min: 520, ideal: 760)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        isInspectorPresented.toggle()
+                    } label: {
+                        Image(systemName: "sidebar.right")
+                    }
+                    .help(isInspectorPresented ? AppStrings.localized("inspector.hide") : AppStrings.localized("inspector.show"))
+                    .disabled(!inspectorIsRelevant)
+                }
+            }
+            .inspector(isPresented: inspectorBinding) {
+                InspectorView(store: store)
+                    .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+            }
     }
 
     private var inspectorIsRelevant: Bool {

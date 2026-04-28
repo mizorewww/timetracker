@@ -1,7 +1,4 @@
-import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -18,37 +15,15 @@ struct TasksView: View {
         }
     }
 
-    private var visibleRows: [TaskTreeDisplayRow] {
-        var rows: [TaskTreeDisplayRow] = []
-
-        func append(task: TaskNode, depth: Int) {
-            let children = store.children(of: task)
-            rows.append(TaskTreeDisplayRow(task: task, depth: depth, hasChildren: !children.isEmpty))
-            guard expandedTaskIDs.contains(task.id) else { return }
-            for child in children {
-                append(task: child, depth: depth + 1)
-            }
-        }
-
-        for root in store.rootTasks() {
-            append(task: root, depth: 0)
-        }
-
-        return rows
-    }
-
     var body: some View {
         List {
             if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Section {
-                    ForEach(visibleRows) { row in
-                        TaskManagementVisibleRow(
+                    ForEach(store.rootTasks(), id: \.id) { task in
+                        TaskManagementTreeRow(
                             store: store,
-                            row: row,
-                            isExpanded: expandedTaskIDs.contains(row.task.id),
-                            onToggleExpanded: {
-                                toggleExpanded(row.task.id)
-                            }
+                            task: task,
+                            expandedTaskIDs: $expandedTaskIDs
                         )
                     }
                 } header: {
@@ -76,6 +51,12 @@ struct TasksView: View {
         }
         .navigationTitle(AppStrings.tasks)
         .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
+        #if os(iOS)
+        .listStyle(.insetGrouped)
+        .scrollBounceBehavior(.basedOnSize)
+        #else
+        .listStyle(.inset)
+        #endif
         .toolbar {
             Button {
                 store.presentNewTask()
@@ -97,50 +78,48 @@ struct TasksView: View {
     }
 }
 
-struct TaskTreeDisplayRow: Identifiable {
-    let task: TaskNode
-    let depth: Int
-    let hasChildren: Bool
-
-    var id: UUID { task.id }
-}
-
-struct TaskManagementVisibleRow: View {
+struct TaskManagementTreeRow: View {
     @ObservedObject var store: TimeTrackerStore
-    let row: TaskTreeDisplayRow
-    let isExpanded: Bool
-    let onToggleExpanded: () -> Void
+    let task: TaskNode
+    @Binding var expandedTaskIDs: Set<UUID>
 
     var body: some View {
-        HStack(alignment: .center, spacing: 6) {
-            if row.hasChildren {
-                Button {
-                    withAnimation(.snappy(duration: 0.16)) {
-                        onToggleExpanded()
+        let children = store.children(of: task)
+        Group {
+            if children.isEmpty {
+                TaskManagementFlatRow(store: store, task: task)
+            } else {
+                DisclosureGroup(isExpanded: expandedBinding) {
+                    ForEach(children, id: \.id) { child in
+                        TaskManagementTreeRow(
+                            store: store,
+                            task: child,
+                            expandedTaskIDs: $expandedTaskIDs
+                        )
                     }
                 } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 40, alignment: .center)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    TaskManagementFlatRow(store: store, task: task)
                 }
-                .buttonStyle(.plain)
-            } else {
-                Color.clear
-                    .frame(width: 22, height: 40)
             }
-
-            TaskManagementFlatRow(store: store, task: row.task, depth: 0)
         }
-        .padding(.leading, CGFloat(row.depth) * 22)
+    }
+
+    private var expandedBinding: Binding<Bool> {
+        Binding {
+            expandedTaskIDs.contains(task.id)
+        } set: { isExpanded in
+            if isExpanded {
+                expandedTaskIDs.insert(task.id)
+            } else {
+                expandedTaskIDs.remove(task.id)
+            }
+        }
     }
 }
 
 struct TaskManagementFlatRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
-    var depth: Int = 0
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #endif
@@ -150,65 +129,16 @@ struct TaskManagementFlatRow: View {
     }
 
     var body: some View {
-        Button {
+        TaskManagementRowContent(
+            store: store,
+            task: task,
+            isRunning: isRunning,
+            showsNavigationChevron: showsNavigationChevron
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
             openTask()
-        } label: {
-            HStack(spacing: 12) {
-                TaskIcon(task: task, size: 30)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(task.title)
-                            .font(.headline)
-                            .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                            .strikethrough(task.status == .completed)
-                            .lineLimit(1)
-
-                        if isRunning {
-                        Text(AppStrings.running)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.green)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                        } else if task.status != .active {
-                            TaskStatusBadge(status: task.status)
-                        }
-                    }
-
-                    Text(store.path(for: task))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(DurationFormatter.compact(store.secondsForTaskToday(task)))
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-
-                    let childCount = store.children(of: task).count
-                    if childCount > 0 {
-                        Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-#if os(iOS)
-                if horizontalSizeClass == .compact {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-#endif
-            }
-            .padding(.leading, CGFloat(depth) * 10)
-            .padding(.vertical, 4)
         }
-        .buttonStyle(.plain)
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
@@ -243,6 +173,14 @@ struct TaskManagementFlatRow: View {
         }
     }
 
+    private var showsNavigationChevron: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact && store.children(of: task).isEmpty
+        #else
+        false
+        #endif
+    }
+
     private func openTask() {
 #if os(iOS)
         if horizontalSizeClass == .compact {
@@ -252,5 +190,66 @@ struct TaskManagementFlatRow: View {
         }
 #endif
         store.selectTask(task.id)
+    }
+}
+
+private struct TaskManagementRowContent: View {
+    @ObservedObject var store: TimeTrackerStore
+    let task: TaskNode
+    let isRunning: Bool
+    let showsNavigationChevron: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TaskIcon(task: task, size: 30)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(task.title)
+                        .font(.headline)
+                        .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                        .strikethrough(task.status == .completed)
+                        .lineLimit(2)
+
+                    if isRunning {
+                        Text(AppStrings.running)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    } else if task.status != .active {
+                        TaskStatusBadge(status: task.status)
+                    }
+                }
+
+                Text(store.path(for: task))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 10)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(DurationFormatter.compact(store.secondsForTaskToday(task)))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+
+                let childCount = store.children(of: task).count
+                if childCount > 0 {
+                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if showsNavigationChevron {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

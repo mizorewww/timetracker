@@ -1,7 +1,5 @@
 import Charts
-import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct AnalyticsView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -36,10 +34,10 @@ struct AnalyticsView: View {
                     }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
-                        AnalyticsMetric(title: "Wall Time", value: DurationFormatter.compact(overview.wallSeconds), footnote: AppStrings.localized("analytics.wall.footnote"))
-                        AnalyticsMetric(title: "Gross Time", value: DurationFormatter.compact(overview.grossSeconds), footnote: AppStrings.localized("analytics.gross.footnote"))
-                        AnalyticsMetric(title: "Overlap", value: DurationFormatter.compact(overview.overlapSeconds), footnote: AppStrings.localized("analytics.overlap.footnote"))
-                        AnalyticsMetric(title: "Pomodoros", value: "\(overview.pomodoroCount)", footnote: AppStrings.localized("analytics.pomodoros.footnote"))
+                        AnalyticsMetric(title: AppStrings.wallTime, value: DurationFormatter.compact(overview.wallSeconds), footnote: AppStrings.localized("analytics.wall.footnote"))
+                        AnalyticsMetric(title: AppStrings.grossTime, value: DurationFormatter.compact(overview.grossSeconds), footnote: AppStrings.localized("analytics.gross.footnote"))
+                        AnalyticsMetric(title: AppStrings.localized("analytics.metric.overlap"), value: DurationFormatter.compact(overview.overlapSeconds), footnote: AppStrings.localized("analytics.overlap.footnote"))
+                        AnalyticsMetric(title: AppStrings.localized("analytics.metric.pomodoros"), value: "\(overview.pomodoroCount)", footnote: AppStrings.localized("analytics.pomodoros.footnote"))
                     }
 
                     if range == .today {
@@ -130,7 +128,7 @@ struct AnalyticsView: View {
     }
 
     private var analyticsRangePicker: some View {
-        Picker("Range", selection: $range) {
+        Picker(AppStrings.localized("analytics.range"), selection: $range) {
             ForEach(AnalyticsRange.allCases) { range in
                 Text(range.rawValue).tag(range)
             }
@@ -158,9 +156,7 @@ struct AnalyticsMetric: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard()
     }
 }
 
@@ -182,9 +178,7 @@ struct AnalyticsChartCard<Content: View>: View {
             }
             content
         }
-        .padding(16)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+        .appCard()
     }
 }
 

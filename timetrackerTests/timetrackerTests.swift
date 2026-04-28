@@ -178,6 +178,49 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func quickStartRecentTasksRankByFrequencyAndSkipPinnedTasks() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pinnedTask = try taskRepository.createTask(title: "Pinned", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let frequentTask = try taskRepository.createTask(title: "Frequent", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let occasionalTask = try taskRepository.createTask(title: "Occasional", kind: .task, parentID: nil, colorHex: nil, iconName: nil)
+        let start = Date(timeIntervalSince1970: 10_000)
+
+        _ = try timeRepository.addManualSegment(
+            taskID: occasionalTask.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: frequentTask.id,
+            startedAt: start.addingTimeInterval(1_000),
+            endedAt: start.addingTimeInterval(1_600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: frequentTask.id,
+            startedAt: start.addingTimeInterval(2_000),
+            endedAt: start.addingTimeInterval(2_600),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: pinnedTask.id,
+            startedAt: start.addingTimeInterval(3_000),
+            endedAt: start.addingTimeInterval(3_600),
+            note: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        let quickStartTasks = store.frequentRecentTasks(excluding: [pinnedTask.id], limit: 2)
+
+        #expect(quickStartTasks.map(\.id) == [frequentTask.id, occasionalTask.id])
+    }
+
+    @Test @MainActor
     func todayHourlyBreakdownClipsSegmentsIntoHourBuckets() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -640,6 +683,119 @@ struct TimeTrackerTests {
             let range = NSRange(source.startIndex..<source.endIndex, in: source)
             #expect(chinesePattern.firstMatch(in: source, range: range) == nil, "Move user-facing Chinese text into Localizable.strings: \(file.lastPathComponent)")
         }
+    }
+
+    @Test
+    func regularWidthIOSUsesVisibleSystemSplitView() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/ContentView.swift"), encoding: .utf8)
+
+        #expect(source.contains("iPadRootView(store: store)"))
+        #expect(source.contains("struct iPadRootView"))
+        #expect(source.contains("ipad.splitNavigation"))
+        #expect(source.contains(".navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)"))
+        #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
+        #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
+        #expect(source.contains("if columnVisibility != .all"))
+        #expect(source.contains("\"sidebar.left\""))
+        #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
+        #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
+        #expect(source.contains("ipad.topNavigation") == false)
+        #expect(source.contains(".overlay(alignment: .topLeading)") == false)
+    }
+
+    @Test
+    func phoneHomeUsesSystemLargeTitle() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+
+        guard
+            let start = source.range(of: "struct PhoneHomeView"),
+            let end = source.range(of: "struct HeaderBar")
+        else {
+            Issue.record("Could not locate PhoneHomeView")
+            return
+        }
+        let phoneHome = String(source[start.lowerBound..<end.lowerBound])
+
+        #expect(phoneHome.contains(".navigationTitle(AppStrings.today)"))
+        #expect(phoneHome.contains(".navigationBarTitleDisplayMode(.large)"))
+        #expect(phoneHome.contains(".padding(.top, 10)") == false)
+        #expect(phoneHome.contains("HeaderBar(store: store") == false)
+    }
+
+    @Test
+    func quickStartComposesPinnedAndFrequentRecentTasks() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let homeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore.swift"), encoding: .utf8)
+
+        #expect(homeSource.contains("private var pinnedTasks"))
+        #expect(homeSource.contains("private var recentFillTasks"))
+        #expect(homeSource.contains("limit: 3"))
+        #expect(homeSource.contains("QuickStartTaskButton"))
+        #expect(homeSource.contains("private let maxPinnedTasks = 3") == false)
+        #expect(homeSource.contains("QuickStartSelectableTaskRow"))
+        #expect(homeSource.contains("selectedIDs.append(task.id)"))
+        #expect(homeSource.contains("selectedIDs.remove(atOffsets: offsets)"))
+        #expect(storeSource.contains("func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3)"))
+    }
+
+    @Test
+    func homePlacesQuickStartBeforeTimeline() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+
+        guard
+            let desktopStart = source.range(of: "struct DesktopMainView"),
+            let phoneStart = source.range(of: "struct PhoneHomeView"),
+            let headerStart = source.range(of: "struct HeaderBar")
+        else {
+            Issue.record("Could not locate home view sections")
+            return
+        }
+
+        let desktopMain = String(source[desktopStart.lowerBound..<phoneStart.lowerBound])
+        let phoneHome = String(source[phoneStart.lowerBound..<headerStart.lowerBound])
+        let desktopQuickStart = try #require(desktopMain.range(of: "QuickStartSection(store: store)")?.lowerBound)
+        let desktopTimeline = try #require(desktopMain.range(of: "TimelineSection(store: store)")?.lowerBound)
+        let phoneQuickStart = try #require(phoneHome.range(of: "QuickStartSection(store: store)")?.lowerBound)
+        let phoneTimeline = try #require(phoneHome.range(of: "TimelineSection(store: store)")?.lowerBound)
+
+        #expect(desktopQuickStart < desktopTimeline)
+        #expect(phoneQuickStart < phoneTimeline)
+    }
+
+    @Test
+    func compactTaskPickerUsesOpaqueSystemSheet() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+
+        #expect(source.contains(".presentationBackground(Color(uiColor: .systemGroupedBackground))"))
+        #expect(source.contains(".scrollContentBackground(.hidden)"))
+    }
+
+    @Test
+    func taskTreeUsesNativeDisclosureRowsInsteadOfCustomChevronLayout() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+
+        #expect(source.contains("DisclosureGroup(isExpanded:"))
+        #expect(source.contains("TaskManagementVisibleRow") == false)
+        #expect(source.contains("TaskTreeDisplayRow") == false)
+        #expect(source.contains("rotationEffect") == false)
     }
 
     @MainActor

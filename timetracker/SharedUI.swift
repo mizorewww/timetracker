@@ -1,16 +1,14 @@
-import Charts
 import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct SectionTitle: View {
     let title: String
     var trailing: String?
 
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.title3.bold())
+                .font(.headline)
             Spacer()
             if let trailing {
                 Text(trailing)
@@ -26,12 +24,12 @@ struct TaskIcon: View {
     var size: CGFloat = 38
 
     var body: some View {
+        let tint = Color(hex: task?.colorHex) ?? .blue
         Image(systemName: task?.iconName ?? "checkmark.circle")
             .font(.system(size: size * 0.45, weight: .semibold))
-            .foregroundStyle(Color(hex: task?.colorHex) ?? .blue)
+            .foregroundStyle(tint)
             .frame(width: size, height: size)
-            .background((Color(hex: task?.colorHex) ?? .blue).opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(AppColors.border))
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
     }
 }
 

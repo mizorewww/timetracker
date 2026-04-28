@@ -213,6 +213,12 @@ private struct ForecastAnalyticsRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                if let paceText = item.rollup.historicalPaceDisplayText {
+                    Text(paceText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 ProgressView(value: item.rollup.completionFraction)
                     .tint(Color(hex: item.task.colorHex) ?? .blue)
             }
@@ -220,7 +226,7 @@ private struct ForecastAnalyticsRow: View {
             Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(item.rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate"))
+                Text(item.rollup.remainingDisplayText)
                     .font(.subheadline.weight(.semibold).monospacedDigit())
                 Text(daysText)
                     .font(.caption)
@@ -235,10 +241,7 @@ private struct ForecastAnalyticsRow: View {
     }
 
     private var daysText: String {
-        guard let days = item.rollup.projectedDays else {
-            return item.rollup.confidence.displayName
-        }
-        return String(format: AppStrings.localized("forecast.daysFormat"), days)
+        item.rollup.projectedDays == nil ? item.rollup.confidence.displayName : item.rollup.projectedDaysDisplayText
     }
 }
 

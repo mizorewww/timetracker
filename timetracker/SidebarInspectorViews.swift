@@ -446,6 +446,9 @@ struct TaskForecastPanel: View {
                         InfoRow(title: AppStrings.localized("forecast.estimatedTotal"), value: estimateText(for: rollup))
                         InfoRow(title: AppStrings.localized("forecast.remaining"), value: remainingText(for: rollup))
                         InfoRow(title: AppStrings.localized("forecast.projectedDays"), value: daysText(for: rollup))
+                        if let paceText = rollup.historicalPaceDisplayText {
+                            InfoRow(title: AppStrings.localized("forecast.historyPace"), value: paceText)
+                        }
                         InfoRow(title: AppStrings.localized("forecast.confidence"), value: rollup.confidence.displayName)
                         Text(rollup.reason)
                             .font(.caption)
@@ -468,14 +471,11 @@ struct TaskForecastPanel: View {
     }
 
     private func remainingText(for rollup: TaskRollup) -> String {
-        rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate")
+        rollup.remainingDisplayText
     }
 
     private func daysText(for rollup: TaskRollup) -> String {
-        guard let days = rollup.projectedDays else {
-            return AppStrings.localized("forecast.noEstimate")
-        }
-        return String(format: AppStrings.localized("forecast.daysFormat"), days)
+        rollup.projectedDaysDisplayText
     }
 }
 
@@ -771,7 +771,7 @@ struct InspectorSummaryCard: View {
                     HStack {
                         SmallStat(title: AppStrings.localized("forecast.remaining"), value: rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate"))
                         Divider()
-                        SmallStat(title: AppStrings.localized("forecast.projectedDays"), value: rollup.projectedDays.map { String(format: AppStrings.localized("forecast.daysFormat"), $0) } ?? AppStrings.localized("forecast.noEstimate"))
+                        SmallStat(title: AppStrings.localized("forecast.projectedDays"), value: rollup.projectedDaysDisplayText)
                     }
                 }
 

@@ -37,6 +37,8 @@ struct TaskRollup: Identifiable, Equatable {
     let estimatedTotalSeconds: Int?
     let remainingSeconds: Int?
     let projectedDays: Double?
+    let historicalDailyAverageSeconds: Int?
+    let historicalActiveDayCount: Int
     let checklistProgress: ChecklistProgress
     let confidence: ForecastConfidence
     let reason: String
@@ -52,6 +54,31 @@ struct TaskRollup: Identifiable, Equatable {
 
     var isDisplayableForecast: Bool {
         estimatedTotalSeconds != nil && confidence != .none && confidence != .low
+    }
+
+    var remainingDisplayText: String {
+        guard let remainingSeconds else {
+            return AppStrings.localized("forecast.noEstimate")
+        }
+        return String(format: AppStrings.localized("forecast.remainingFormat"), DurationFormatter.compact(remainingSeconds))
+    }
+
+    var projectedDaysDisplayText: String {
+        guard let projectedDays else {
+            return AppStrings.localized("forecast.noEstimate")
+        }
+        return String(format: AppStrings.localized("forecast.daysFormat"), projectedDays)
+    }
+
+    var historicalPaceDisplayText: String? {
+        guard let historicalDailyAverageSeconds, historicalDailyAverageSeconds > 0, historicalActiveDayCount > 0 else {
+            return nil
+        }
+        return String(
+            format: AppStrings.localized("forecast.historyPaceFormat"),
+            DurationFormatter.compact(historicalDailyAverageSeconds),
+            historicalActiveDayCount
+        )
     }
 }
 
@@ -169,6 +196,24 @@ struct TaskRollupService {
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         let childrenByParent = Dictionary(grouping: tasks, by: \.parentID)
         var cache: [UUID: TaskRollup] = [:]
+        var subtreeCache: [UUID: Set<UUID>] = [:]
+
+        func subtreeIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
+            if let cached = subtreeCache[taskID] {
+                return cached
+            }
+            guard !visited.contains(taskID) else {
+                return []
+            }
+
+            var ids: Set<UUID> = [taskID]
+            let nextVisited = visited.union([taskID])
+            for child in childrenByParent[taskID] ?? [] {
+                ids.formUnion(subtreeIDs(for: child.id, visited: nextVisited))
+            }
+            subtreeCache[taskID] = ids
+            return ids
+        }
 
         func build(taskID: UUID, visited: Set<UUID>) -> TaskRollup? {
             if let cached = cache[taskID] {
@@ -198,7 +243,8 @@ struct TaskRollupService {
             let rawEstimate = combineEstimate(ownEstimate?.seconds, childEstimate: childEstimate, hasChildren: !childRollups.isEmpty)
             let estimate = task.status == .completed ? max(rawEstimate ?? worked, worked) : rawEstimate
             let remaining: Int? = task.status == .completed ? 0 : estimate.map { max(0, $0 - worked) }
-            let projectedDays = projectedDays(for: remaining, segments: segments, now: now)
+            let pace = historicalDailyPace(for: subtreeIDs(for: taskID), segments: segments, now: now)
+            let projectedDays = projectedDays(for: remaining, dailyAverageSeconds: pace?.averageSeconds)
             let confidence = confidence(ownEstimate: ownEstimate?.confidence, childRollups: childRollups, estimate: estimate)
             let reason = ownEstimate?.reason ?? childRollups.first(where: { $0.confidence != .none })?.reason ?? AppStrings.localized("forecast.reason.insufficient")
 
@@ -208,6 +254,8 @@ struct TaskRollupService {
                 estimatedTotalSeconds: estimate,
                 remainingSeconds: remaining,
                 projectedDays: projectedDays,
+                historicalDailyAverageSeconds: pace?.averageSeconds,
+                historicalActiveDayCount: pace?.activeDayCount ?? 0,
                 checklistProgress: progress,
                 confidence: estimate == nil ? .none : confidence,
                 reason: estimate == nil ? AppStrings.localized("forecast.reason.insufficient") : reason
@@ -260,11 +308,40 @@ struct TaskRollupService {
         }
     }
 
-    private func projectedDays(for remainingSeconds: Int?, segments: [TimeSegment], now: Date) -> Double? {
+    private func projectedDays(for remainingSeconds: Int?, dailyAverageSeconds: Int?) -> Double? {
         guard let remainingSeconds, remainingSeconds > 0 else { return 0 }
-        let daily = forecastingService.recentDailyAvailableSeconds(segments: segments, now: now)
-        guard daily > 0 else { return nil }
+        guard let daily = dailyAverageSeconds, daily > 0 else { return nil }
         return max(0.1, Double(remainingSeconds) / Double(daily))
+    }
+
+    private func historicalDailyPace(
+        for taskIDs: Set<UUID>,
+        segments: [TimeSegment],
+        now: Date,
+        calendar: Calendar = .current
+    ) -> (averageSeconds: Int, activeDayCount: Int)? {
+        guard !taskIDs.isEmpty else { return nil }
+
+        var dayTotals: [Date: Int] = [:]
+        for segment in segments where taskIDs.contains(segment.taskID) && segment.deletedAt == nil {
+            let end = segment.endedAt ?? now
+            guard end > segment.startedAt else { continue }
+
+            var cursor = calendar.startOfDay(for: segment.startedAt)
+            while cursor < end {
+                guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+                let sliceStart = max(segment.startedAt, cursor)
+                let sliceEnd = min(end, nextDay)
+                if sliceEnd > sliceStart {
+                    dayTotals[cursor, default: 0] += Int(sliceEnd.timeIntervalSince(sliceStart))
+                }
+                cursor = nextDay
+            }
+        }
+
+        let activeTotals = dayTotals.values.filter { $0 > 0 }
+        guard !activeTotals.isEmpty else { return nil }
+        return (activeTotals.reduce(0, +) / activeTotals.count, activeTotals.count)
     }
 
     private func confidence(ownEstimate: ForecastConfidence?, childRollups: [TaskRollup], estimate: Int?) -> ForecastConfidence {

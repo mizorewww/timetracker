@@ -367,6 +367,9 @@ private struct TaskProgressLine: View {
                 if let remainingText {
                     Text(remainingText)
                 }
+                if let daysText {
+                    Text(daysText)
+                }
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -375,6 +378,9 @@ private struct TaskProgressLine: View {
                 }
                 if let remainingText {
                     Text(remainingText)
+                }
+                if let daysText {
+                    Text(daysText)
                 }
             }
         }
@@ -397,5 +403,10 @@ private struct TaskProgressLine: View {
     private var remainingText: String? {
         guard rollup?.isDisplayableForecast == true, let remaining = rollup?.remainingSeconds else { return nil }
         return String(format: AppStrings.localized("forecast.remainingFormat"), DurationFormatter.compact(remaining))
+    }
+
+    private var daysText: String? {
+        guard rollup?.isDisplayableForecast == true, let rollup else { return nil }
+        return rollup.projectedDaysDisplayText
     }
 }

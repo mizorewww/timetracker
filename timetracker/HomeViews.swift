@@ -265,6 +265,12 @@ private struct ForecastSummaryRow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                if let paceText = rollup.historicalPaceDisplayText {
+                    Text(paceText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 10)
@@ -287,17 +293,11 @@ private struct ForecastSummaryRow: View {
     }
 
     private var remainingText: String {
-        guard let remaining = rollup.remainingSeconds else {
-            return AppStrings.localized("forecast.noEstimate")
-        }
-        return DurationFormatter.compact(remaining)
+        rollup.remainingDisplayText
     }
 
     private var daysText: String {
-        guard let days = rollup.projectedDays else {
-            return rollup.confidence.displayName
-        }
-        return String(format: AppStrings.localized("forecast.daysFormat"), days)
+        rollup.projectedDays == nil ? rollup.confidence.displayName : rollup.projectedDaysDisplayText
     }
 }
 

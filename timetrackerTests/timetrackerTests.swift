@@ -1208,6 +1208,8 @@ struct TimeTrackerTests {
         #expect(firstRollup.checklistProgress.label == "1/2")
         #expect(firstRollup.estimatedTotalSeconds == 7_200)
         #expect(firstRollup.remainingSeconds == 3_600)
+        #expect(firstRollup.historicalDailyAverageSeconds == 3_600)
+        #expect(firstRollup.historicalActiveDayCount == 1)
         #expect(abs((firstRollup.projectedDays ?? 0) - 1.0) < 0.05)
 
         var secondDraft = TaskEditorDraft(task: task, checklistItems: store.checklistItems(for: task.id))
@@ -1218,7 +1220,45 @@ struct TimeTrackerTests {
         #expect(secondRollup.checklistProgress.label == "2/3")
         #expect(secondRollup.estimatedTotalSeconds == 5_400)
         #expect(secondRollup.remainingSeconds == 1_800)
+        #expect(secondRollup.historicalDailyAverageSeconds == 3_600)
+        #expect(secondRollup.historicalActiveDayCount == 1)
         #expect(abs((secondRollup.projectedDays ?? 0) - 0.5) < 0.05)
+    }
+
+    @Test @MainActor
+    func forecastDaysUseOnlyThisTasksHistoricalTrackedDays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayOne = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 20, hour: 9)))
+        let dayTwo = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 22, hour: 9)))
+        let task = TaskNode(title: "Forecast Task", parentID: nil, deviceID: "test")
+        let unrelated = TaskNode(title: "Unrelated", parentID: nil, deviceID: "test")
+        let segments = [
+            TimeSegment(sessionID: UUID(), taskID: task.id, source: .timer, deviceID: "test", startedAt: dayOne, endedAt: dayOne.addingTimeInterval(3_600)),
+            TimeSegment(sessionID: UUID(), taskID: task.id, source: .timer, deviceID: "test", startedAt: dayTwo, endedAt: dayTwo.addingTimeInterval(7_200)),
+            TimeSegment(sessionID: UUID(), taskID: unrelated.id, source: .timer, deviceID: "test", startedAt: dayOne, endedAt: dayOne.addingTimeInterval(36_000))
+        ]
+        let checklist = [
+            ChecklistItem(taskID: task.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: task.id, title: "Todo 1", isCompleted: false, sortOrder: 20, deviceID: "test"),
+            ChecklistItem(taskID: task.id, title: "Todo 2", isCompleted: false, sortOrder: 30, deviceID: "test"),
+            ChecklistItem(taskID: task.id, title: "Todo 3", isCompleted: false, sortOrder: 40, deviceID: "test")
+        ]
+
+        let rollups = TaskRollupService().rollups(
+            tasks: [task, unrelated],
+            segments: segments,
+            checklistItems: checklist,
+            now: dayTwo.addingTimeInterval(10_000)
+        )
+        let rollup = try #require(rollups[task.id])
+
+        #expect(rollup.workedSeconds == 10_800)
+        #expect(rollup.estimatedTotalSeconds == 43_200)
+        #expect(rollup.remainingSeconds == 32_400)
+        #expect(rollup.historicalDailyAverageSeconds == 5_400)
+        #expect(rollup.historicalActiveDayCount == 2)
+        #expect(abs((rollup.projectedDays ?? 0) - 6.0) < 0.05)
     }
 
     @Test @MainActor
@@ -1296,6 +1336,9 @@ struct TimeTrackerTests {
         #expect(parentRollup.workedSeconds == 1_900)
         #expect(parentRollup.estimatedTotalSeconds == 3_800)
         #expect(parentRollup.remainingSeconds == 1_900)
+        #expect(parentRollup.historicalDailyAverageSeconds == 1_900)
+        #expect(parentRollup.historicalActiveDayCount == 1)
+        #expect(abs((parentRollup.projectedDays ?? 0) - 1.0) < 0.05)
         #expect(parentRollup.checklistProgress.label == "1/2")
         #expect(parentRollup.confidence == .medium)
     }

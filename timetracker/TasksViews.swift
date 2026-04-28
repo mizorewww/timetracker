@@ -296,6 +296,13 @@ private struct TaskManagementRowContent: View {
                     }
                 }
 
+                if progress.totalCount > 0 {
+                    CompactChecklistProgressLine(
+                        progress: progress,
+                        tint: Color(hex: task.colorHex) ?? .blue
+                    )
+                }
+
                 if rollup?.isDisplayableForecast == true {
                     TaskProgressLine(progress: progress, rollup: rollup, showsChecklist: false)
                         .lineLimit(1)
@@ -305,12 +312,6 @@ private struct TaskManagementRowContent: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 3) {
-                if progress.totalCount > 0 {
-                    Text(progress.label)
-                        .font(.caption.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-
                 Text(DurationFormatter.compact(store.secondsForTaskTodayRollup(task)))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
@@ -330,6 +331,25 @@ private struct TaskManagementRowContent: View {
             }
         }
         .padding(.vertical, 6)
+    }
+}
+
+private struct CompactChecklistProgressLine: View {
+    let progress: ChecklistProgress
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 7) {
+            ProgressView(value: progress.fraction)
+                .tint(tint)
+                .frame(maxWidth: 76)
+
+            Text(String(format: AppStrings.localized("checklist.progressFormat"), progress.completedCount, progress.totalCount))
+                .font(.caption2.weight(.medium).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
     }
 }
 

@@ -894,6 +894,19 @@ struct TimeTrackerTests {
     }
 
     @Test
+    func compactTaskRowsShowChecklistProgressBar() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+
+        #expect(source.contains("CompactChecklistProgressLine("))
+        #expect(source.contains("ProgressView(value: progress.fraction)"))
+        #expect(source.contains("checklist.progressFormat"))
+        #expect(source.contains("if progress.totalCount > 0 {\n                    CompactChecklistProgressLine"))
+    }
+
+    @Test
     func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

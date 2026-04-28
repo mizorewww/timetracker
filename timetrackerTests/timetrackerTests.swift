@@ -530,6 +530,8 @@ struct TimeTrackerTests {
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
         let summary = DailySummary(date: Date(), taskID: task.id, grossSeconds: 0, wallClockSeconds: 0, pomodoroCount: 0, interruptionCount: 0)
         let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
+        let preference = SyncedPreference(key: AppPreferenceKey.defaultFocusMinutes.rawValue, valueJSON: "25", deviceID: "test")
+        let checklistItem = ChecklistItem(taskID: task.id, title: "Checklist", deviceID: "test")
 
         context.insert(task)
         context.insert(session)
@@ -537,6 +539,8 @@ struct TimeTrackerTests {
         context.insert(run)
         context.insert(summary)
         context.insert(countdown)
+        context.insert(preference)
+        context.insert(checklistItem)
         try context.save()
 
         #expect(task.id.uuidString.isEmpty == false)
@@ -545,6 +549,48 @@ struct TimeTrackerTests {
         #expect(run.state == .planned)
         #expect(summary.version == 1)
         #expect(countdown.deletedAt == nil)
+        #expect(preference.deletedAt == nil)
+        #expect(checklistItem.deletedAt == nil)
+    }
+
+    @Test @MainActor
+    func cloudSyncedSchemaIncludesChecklistAndAllUserDataModels() throws {
+        let requiredModelNames: Set<String> = [
+            "TaskNode",
+            "TimeSession",
+            "TimeSegment",
+            "PomodoroRun",
+            "CountdownEvent",
+            "SyncedPreference",
+            "ChecklistItem"
+        ]
+
+        #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
+
+        let schema = TimeTrackerModelRegistry.currentSchema
+        let configuration = ModelConfiguration(
+            "TimeTrackerCloudSyncContract",
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            cloudKitDatabase: .none
+        )
+        let container = try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
+        let context = ModelContext(container)
+        let task = TaskNode(title: "Cloud task", parentID: nil, deviceID: "test")
+        let checklist = ChecklistItem(taskID: task.id, title: "Cloud checklist", deviceID: "test")
+        let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
+
+        context.insert(task)
+        context.insert(checklist)
+        context.insert(preference)
+        try context.save()
+
+        #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).map(\.title) == ["Cloud checklist"])
+        #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).map(\.key) == [AppPreferenceKey.showGrossAndWallTogether.rawValue])
     }
 
     @Test @MainActor
@@ -1181,23 +1227,18 @@ struct TimeTrackerTests {
 
     @MainActor
     private func makeContext() throws -> ModelContext {
-        let schema = Schema([
-            TaskNode.self,
-            TimeSession.self,
-            TimeSegment.self,
-            PomodoroRun.self,
-            DailySummary.self,
-            CountdownEvent.self,
-            SyncedPreference.self,
-            ChecklistItem.self
-        ])
+        let schema = TimeTrackerModelRegistry.currentSchema
         let configuration = ModelConfiguration(
             "TimeTrackerTests",
             schema: schema,
             isStoredInMemoryOnly: true,
             cloudKitDatabase: .none
         )
-        let container = try ModelContainer(for: schema, configurations: [configuration])
+        let container = try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
         return ModelContext(container)
     }
 }

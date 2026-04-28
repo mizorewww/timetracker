@@ -35,16 +35,7 @@ struct timetrackerApp: App {
     }
 
     private static var schema: Schema {
-        Schema([
-            TaskNode.self,
-            TimeSession.self,
-            TimeSegment.self,
-            PomodoroRun.self,
-            DailySummary.self,
-            CountdownEvent.self,
-            SyncedPreference.self,
-            ChecklistItem.self
-        ])
+        TimeTrackerModelRegistry.currentSchema
     }
 
     private static func makeModelContainer() -> ModelContainer {

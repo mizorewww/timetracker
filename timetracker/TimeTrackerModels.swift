@@ -360,6 +360,20 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
     }
 }
 
+enum TimeTrackerModelRegistry {
+    static var currentSchema: Schema {
+        Schema(versionedSchema: TimeTrackerSchemaV3.self)
+    }
+
+    static var currentModels: [any PersistentModel.Type] {
+        TimeTrackerSchemaV3.models
+    }
+
+    static var cloudSyncedUserModelNames: Set<String> {
+        Set(currentModels.map { String(describing: $0) })
+    }
+}
+
 extension TaskNode {
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .active }

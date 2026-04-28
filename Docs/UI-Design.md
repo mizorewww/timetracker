@@ -8,6 +8,8 @@ The app should feel like a focused Apple productivity tool: clear hierarchy, nat
 - Do not add a custom primary-sidebar toggle to the iPad/macOS split view. Let `NavigationSplitView` provide the system sidebar affordance; custom `sidebar.left` buttons can duplicate the system control and disappear after collapsing.
 - Cards are for repeated content or framed data, not for every section.
 - Today should answer three questions quickly: what is running, what happened today, and what can continue next.
+- Forecast UI should explain where numbers come from. Prefer short reasons such as checklist progress, manual estimate, or local history over abstract confidence language by itself.
+- Checklist UI belongs inside task editing and task detail surfaces. Do not present checklist items as timed subtasks; they are progress markers under a timed task.
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
 - iPad and macOS may use a detail inspector, but the inspector should stay narrow and collapse when it is not useful.
 - Sheets should use system `NavigationStack` + `Form` + toolbar cancel/save actions. Avoid custom modal title bars unless the content is not an editor.
@@ -38,7 +40,7 @@ Before merging UI work, verify:
 
 ## Timeline Rules
 
-The Today analytics timeline uses a full-day display interval. It clips cross-day segments to today's bounds, then displays from today's 00:00 to today's 23:59:59. This avoids jumpy chart scale changes and makes time labels predictable across iPhone, iPad, and macOS.
+The Today analytics timeline clips cross-day segments to today's bounds, then displays the visible range from the first visible segment start to the last visible segment end. Empty days fall back to the full day. This keeps dense work periods readable while still respecting midnight boundaries.
 
 Bars should show only time position, duration, color, and the task symbol. Task title, parent path, and exact time range belong in rows below the chart. On iPhone, the timeline is vertical; on iPad and macOS, it is horizontal.
 

@@ -125,6 +125,12 @@ struct TaskTreeRow: View {
                     .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
                     .help(task.status.displayName)
             }
+            let progress = store.checklistProgress(for: task.id)
+            if progress.totalCount > 0 {
+                Text(progress.label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
             let childCount = store.children(of: task).count
             if childCount > 0 {
                 Text("\(childCount)")
@@ -247,6 +253,8 @@ struct InspectorView: View {
                 if let task = store.selectedTask {
                     SelectedTaskHeader(store: store, task: task)
                     InspectorInfoGrid(store: store, task: task)
+                    TaskChecklistPanel(store: store, task: task)
+                    TaskForecastPanel(store: store, task: task)
                     NotesPanel(task: task)
                     StatsPanel(store: store, task: task)
                     PomodoroSettingsPanel(store: store)
@@ -329,7 +337,7 @@ struct InfoRow: View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
                 .foregroundStyle(.secondary)
-                .frame(width: 54, alignment: .leading)
+                .frame(minWidth: 54, maxWidth: 86, alignment: .leading)
             Spacer()
             Text(value)
                 .lineLimit(2)
@@ -341,6 +349,98 @@ struct InfoRow: View {
                 .background(badge ? Color.green.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .font(.subheadline)
+    }
+}
+
+struct TaskChecklistPanel: View {
+    @ObservedObject var store: TimeTrackerStore
+    let task: TaskNode
+
+    private var items: [ChecklistItem] {
+        store.checklistItems(for: task.id)
+    }
+
+    private var progress: ChecklistProgress {
+        store.checklistProgress(for: task.id)
+    }
+
+    var body: some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(.app("checklist.title"))
+                        .font(.headline)
+                    Spacer()
+                    Text(progress.label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    ProgressView(value: progress.fraction)
+                    ForEach(items.prefix(5), id: \.id) { item in
+                        HStack(spacing: 8) {
+                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(item.isCompleted ? .green : .secondary)
+                            Text(item.title)
+                                .lineLimit(1)
+                                .strikethrough(item.isCompleted)
+                                .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                            Spacer()
+                        }
+                        .font(.subheadline)
+                    }
+                    if items.count > 5 {
+                        Text(String(format: AppStrings.localized("checklist.moreFormat"), items.count - 5))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .appCard(padding: 14)
+            }
+        }
+    }
+}
+
+struct TaskForecastPanel: View {
+    @ObservedObject var store: TimeTrackerStore
+    let task: TaskNode
+
+    var body: some View {
+        if let rollup = store.rollup(for: task.id) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(.app("forecast.panel.title"))
+                    .font(.headline)
+
+                VStack(spacing: 10) {
+                    InfoRow(title: AppStrings.localized("forecast.worked"), value: DurationFormatter.compact(rollup.workedSeconds))
+                    InfoRow(title: AppStrings.localized("forecast.estimatedTotal"), value: estimateText(for: rollup))
+                    InfoRow(title: AppStrings.localized("forecast.remaining"), value: remainingText(for: rollup))
+                    InfoRow(title: AppStrings.localized("forecast.projectedDays"), value: daysText(for: rollup))
+                    InfoRow(title: AppStrings.localized("forecast.confidence"), value: rollup.confidence.displayName)
+                    Text(rollup.reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .appCard(padding: 14)
+            }
+        }
+    }
+
+    private func estimateText(for rollup: TaskRollup) -> String {
+        rollup.estimatedTotalSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate")
+    }
+
+    private func remainingText(for rollup: TaskRollup) -> String {
+        rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate")
+    }
+
+    private func daysText(for rollup: TaskRollup) -> String {
+        guard let days = rollup.projectedDays else {
+            return AppStrings.localized("forecast.noEstimate")
+        }
+        return String(format: AppStrings.localized("forecast.daysFormat"), days)
     }
 }
 
@@ -398,10 +498,6 @@ struct SmallStat: View {
 
 struct PomodoroSettingsPanel: View {
     @ObservedObject var store: TimeTrackerStore
-    @AppStorage("PomodoroDefaultMode") private var defaultMode = PomodoroPreset.classic.rawValue
-    @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
-    @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
-    @AppStorage("DefaultPomodoroRounds") private var defaultPomodoroRounds = 1
     @State private var autoBreak = false
 
     var body: some View {
@@ -410,10 +506,10 @@ struct PomodoroSettingsPanel: View {
                 .font(.headline)
 
             VStack(spacing: 12) {
-                InfoRow(title: AppStrings.localized("task.field.defaultMode"), value: PomodoroPreset(rawValue: defaultMode)?.title ?? AppStrings.localized("common.custom"))
-                InfoRow(title: AppStrings.localized("task.field.focusDuration"), value: String(format: AppStrings.localized("common.minutes"), defaultFocusMinutes))
-                InfoRow(title: AppStrings.localized("task.field.breakDuration"), value: String(format: AppStrings.localized("common.minutes"), defaultBreakMinutes))
-                InfoRow(title: AppStrings.localized("task.field.defaultRounds"), value: "\(defaultPomodoroRounds)")
+                InfoRow(title: AppStrings.localized("task.field.defaultMode"), value: PomodoroPreset(rawValue: store.preferences.pomodoroDefaultMode)?.title ?? AppStrings.localized("common.custom"))
+                InfoRow(title: AppStrings.localized("task.field.focusDuration"), value: String(format: AppStrings.localized("common.minutes"), store.preferences.defaultFocusMinutes))
+                InfoRow(title: AppStrings.localized("task.field.breakDuration"), value: String(format: AppStrings.localized("common.minutes"), store.preferences.defaultBreakMinutes))
+                InfoRow(title: AppStrings.localized("task.field.defaultRounds"), value: "\(store.preferences.defaultPomodoroRounds)")
                 Toggle(AppStrings.localized("task.autoStartBreak"), isOn: $autoBreak)
                     .font(.subheadline)
             }
@@ -628,6 +724,15 @@ struct InspectorSummaryCard: View {
                     SmallStat(title: AppStrings.localized("task.field.today"), value: DurationFormatter.compact(store.secondsForTaskToday(task)))
                     Divider()
                     SmallStat(title: AppStrings.localized("task.field.week"), value: DurationFormatter.compact(store.secondsForTaskThisWeek(task)))
+                }
+
+                if let rollup = store.rollup(for: task.id) {
+                    Divider()
+                    HStack {
+                        SmallStat(title: AppStrings.localized("forecast.remaining"), value: rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate"))
+                        Divider()
+                        SmallStat(title: AppStrings.localized("forecast.projectedDays"), value: rollup.projectedDays.map { String(format: AppStrings.localized("forecast.daysFormat"), $0) } ?? AppStrings.localized("forecast.noEstimate"))
+                    }
                 }
 
                 Text(task.notes ?? AppStrings.localized("task.notes.empty"))

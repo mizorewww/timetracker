@@ -241,6 +241,66 @@ final class CountdownEvent {
     }
 }
 
+@Model
+final class SyncedPreference {
+    var id: UUID = UUID()
+    var key: String = ""
+    var valueJSON: String = ""
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var deletedAt: Date?
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
+
+    init(
+        key: String,
+        valueJSON: String,
+        deviceID: String
+    ) {
+        self.id = UUID()
+        self.key = key
+        self.valueJSON = valueJSON
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.deviceID = deviceID
+        self.clientMutationID = UUID()
+    }
+}
+
+@Model
+final class ChecklistItem {
+    var id: UUID = UUID()
+    var taskID: UUID = UUID()
+    var title: String = ""
+    var isCompleted: Bool = false
+    var sortOrder: Double = 0
+    var completedAt: Date?
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var deletedAt: Date?
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
+
+    init(
+        taskID: UUID,
+        title: String,
+        isCompleted: Bool = false,
+        sortOrder: Double = 0,
+        deviceID: String
+    ) {
+        self.id = UUID()
+        self.taskID = taskID
+        self.title = title
+        self.isCompleted = isCompleted
+        self.sortOrder = sortOrder
+        self.completedAt = isCompleted ? Date() : nil
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.deviceID = deviceID
+        self.clientMutationID = UUID()
+    }
+}
+
 enum TimeTrackerSchemaV1: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 0, 0)
 
@@ -270,14 +330,32 @@ enum TimeTrackerSchemaV2: VersionedSchema {
     }
 }
 
+enum TimeTrackerSchemaV3: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 2, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            DailySummary.self,
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self
+        ]
+    }
+}
+
 enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [TimeTrackerSchemaV1.self, TimeTrackerSchemaV2.self]
+        [TimeTrackerSchemaV1.self, TimeTrackerSchemaV2.self, TimeTrackerSchemaV3.self]
     }
 
     static var stages: [MigrationStage] {
         [
-            .lightweight(fromVersion: TimeTrackerSchemaV1.self, toVersion: TimeTrackerSchemaV2.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV1.self, toVersion: TimeTrackerSchemaV2.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV2.self, toVersion: TimeTrackerSchemaV3.self)
         ]
     }
 }

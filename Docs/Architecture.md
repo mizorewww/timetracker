@@ -27,13 +27,32 @@ Views may format and present state, but durable business actions should go throu
 
 `CountdownEvent` stores optional user-defined date milestones shown on Today.
 
+`SyncedPreference` stores user-facing settings as JSON values in SwiftData so preferences travel through the same iCloud-backed store as tasks and timers. The only preference mirrored into `UserDefaults` is the iCloud enablement flag, because the model container must know whether to start in CloudKit mode before SwiftData can fetch cloud values.
+
+`ChecklistItem` belongs to a `TaskNode`, but it is not a task. Checklist items are for progress and estimation only; timers, manual entries, pomodoros, widgets, and Live Activities still attach time to the task itself.
+
+## Forecasting and Analytics
+
+Forecasting is local and explainable. `TaskRollupService` recursively combines direct task time, checklist progress, and direct child-task rollups. `ForecastingService` provides fallback estimates from the task's own history, completed sibling tasks, completed tasks globally, and recent daily available time. `AnalyticsEngine` owns pure date/range aggregation for overview metrics, hourly activity, and daily/monthly chart points.
+
+Checklist estimates are equal-weight in V3:
+
+```text
+ownEstimatedTotal = ownWorkedSeconds / completedChecklistCount * totalChecklistCount
+rollupWorked = direct task time + direct child rollupWorked
+rollupEstimatedTotal = own estimate + direct child rollupEstimatedTotal
+remaining = max(0, rollupEstimatedTotal - rollupWorked)
+```
+
+If a task is completed, remaining time is always zero. If there is not enough checklist, manual estimate, or history data, the forecast reports "not enough data" instead of inventing a number.
+
 ## Deletion Rules
 
 Tasks are soft-deleted by default. Historical ledger rows stay visible because time already happened. The settings action "Optimize Database" permanently removes orphaned ledger rows whose task has been deleted and is no longer visible.
 
 ## Sync Assumptions
 
-iCloud sync is controlled by `AppCloudSync` and the SwiftData model container configuration. The app refreshes on launch, foreground, remote import notifications, and periodic foreground polling. Start/stop actions remain idempotent at the repository/use-case level where possible.
+iCloud sync is controlled by `AppCloudSync` and the SwiftData model container configuration. User preferences sync through `SyncedPreference`; technical state such as device identity, migration flags, build info, and CloudKit error text stays local. The app refreshes on launch, foreground, remote import notifications, and periodic foreground polling. Start/stop actions remain idempotent at the repository/use-case level where possible.
 
 ## UI Structure
 
@@ -58,7 +77,7 @@ Task tree display should be treated as derived UI state. The durable model remai
 
 ## Feature Status
 
-The first app version includes local SwiftData persistence, task creation/editing/status, soft delete/archive, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, analytics overview, CSV export, demo data management, database optimization, iCloud configuration, and Live Activity display for running timers.
+The first app version includes local SwiftData persistence, iCloud-backed user preferences, task creation/editing/status, task checklists, soft delete/archive, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, local task forecasting, analytics overview, CSV export, demo data management, database optimization, iCloud configuration, and Live Activity display for running timers.
 
 Future work should preserve the ledger contract: every timer, pomodoro, manual entry, widget action, Live Activity action, or Watch command must ultimately create or update `TimeSession` and `TimeSegment` records through shared use cases.
 

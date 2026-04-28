@@ -26,14 +26,6 @@ struct CSVExportDocument: FileDocument {
 
 struct SettingsView: View {
     @ObservedObject var store: TimeTrackerStore
-    @AppStorage("PreferredColorScheme") private var preferredColorScheme = "system"
-    @AppStorage("PomodoroDefaultMode") private var pomodoroDefaultMode = PomodoroPreset.classic.rawValue
-    @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
-    @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
-    @AppStorage("DefaultPomodoroRounds") private var defaultPomodoroRounds = 1
-    @AppStorage("AllowParallelTimers") private var allowParallelTimers = true
-    @AppStorage("ShowGrossAndWallTogether") private var showGrossAndWallTogether = true
-    @AppStorage("TimeTrackerCloudSyncEnabled") private var cloudSyncEnabled = true
     @State private var isResetConfirmationPresented = false
     @State private var isClearConfirmationPresented = false
     @State private var isOptimizeConfirmationPresented = false
@@ -53,15 +45,15 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(AppStrings.localized("settings.appearance"), selection: $preferredColorScheme) {
+                Picker(AppStrings.localized("settings.appearance"), selection: preferredColorSchemeBinding) {
                     Text(.app("settings.appearance.system")).tag("system")
                     Text(.app("settings.appearance.light")).tag("light")
                     Text(.app("settings.appearance.dark")).tag("dark")
                 }
                 .pickerStyle(.segmented)
 
-                Toggle(AppStrings.localized("settings.allowParallelTimers"), isOn: $allowParallelTimers)
-                Toggle(AppStrings.localized("settings.showWallGross"), isOn: $showGrossAndWallTogether)
+                Toggle(AppStrings.localized("settings.allowParallelTimers"), isOn: allowParallelTimersBinding)
+                Toggle(AppStrings.localized("settings.showWallGross"), isOn: showGrossAndWallTogetherBinding)
             } header: {
                 SettingsHeader(symbol: "paintbrush.pointed.fill", title: AppStrings.localized("settings.displayTiming"))
             } footer: {
@@ -69,20 +61,20 @@ struct SettingsView: View {
             }
 
             Section {
-                Picker(AppStrings.localized("settings.defaultMode"), selection: $pomodoroDefaultMode) {
+                Picker(AppStrings.localized("settings.defaultMode"), selection: pomodoroDefaultModeBinding) {
                     ForEach(PomodoroPreset.allCases) { preset in
                         Text(preset.title).tag(preset.rawValue)
                     }
                 }
-                .onChange(of: pomodoroDefaultMode) { _, newValue in
+                .onChange(of: store.preferences.pomodoroDefaultMode) { _, newValue in
                     guard let preset = PomodoroPreset(rawValue: newValue), preset != .custom else { return }
-                    defaultFocusMinutes = preset.focusMinutes
-                    defaultBreakMinutes = preset.breakMinutes
+                    store.setDefaultFocusMinutes(preset.focusMinutes)
+                    store.setDefaultBreakMinutes(preset.breakMinutes)
                 }
 
-                TextField(AppStrings.localized("settings.focusMinutes"), value: $defaultFocusMinutes, formatter: minuteFormatter)
-                TextField(AppStrings.localized("settings.breakMinutes"), value: $defaultBreakMinutes, formatter: minuteFormatter)
-                TextField(AppStrings.localized("settings.defaultRounds"), value: $defaultPomodoroRounds, formatter: minuteFormatter)
+                TextField(AppStrings.localized("settings.focusMinutes"), value: defaultFocusMinutesBinding, formatter: minuteFormatter)
+                TextField(AppStrings.localized("settings.breakMinutes"), value: defaultBreakMinutesBinding, formatter: minuteFormatter)
+                TextField(AppStrings.localized("settings.defaultRounds"), value: defaultPomodoroRoundsBinding, formatter: minuteFormatter)
             } header: {
                 SettingsHeader(symbol: "timer", title: AppStrings.pomodoro)
             } footer: {
@@ -146,18 +138,13 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle(isOn: $cloudSyncEnabled) {
+                Toggle(isOn: cloudSyncEnabledBinding) {
                     Label(AppStrings.localized("settings.icloud"), systemImage: "icloud")
-                }
-                .onChange(of: cloudSyncEnabled) { _, enabled in
-                    if !enabled {
-                        AppCloudSync.recordCloudKitDisabledByUser()
-                    }
                 }
 
                 LabeledContent(
                     AppStrings.localized("settings.currentStorage"),
-                    value: cloudSyncEnabled ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud")) : AppStrings.localized("settings.local")
+                    value: store.preferences.cloudSyncEnabled ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud")) : AppStrings.localized("settings.local")
                 )
 
                 Button {
@@ -288,6 +275,62 @@ struct SettingsView: View {
                 databaseOptimizationMessage = nil
             }
         }
+    }
+
+    private var preferredColorSchemeBinding: Binding<String> {
+        Binding(
+            get: { store.preferences.preferredColorScheme },
+            set: { store.setPreferredColorScheme($0) }
+        )
+    }
+
+    private var pomodoroDefaultModeBinding: Binding<String> {
+        Binding(
+            get: { store.preferences.pomodoroDefaultMode },
+            set: { store.setPomodoroDefaultMode($0) }
+        )
+    }
+
+    private var defaultFocusMinutesBinding: Binding<Int> {
+        Binding(
+            get: { store.preferences.defaultFocusMinutes },
+            set: { store.setDefaultFocusMinutes($0) }
+        )
+    }
+
+    private var defaultBreakMinutesBinding: Binding<Int> {
+        Binding(
+            get: { store.preferences.defaultBreakMinutes },
+            set: { store.setDefaultBreakMinutes($0) }
+        )
+    }
+
+    private var defaultPomodoroRoundsBinding: Binding<Int> {
+        Binding(
+            get: { store.preferences.defaultPomodoroRounds },
+            set: { store.setDefaultPomodoroRounds($0) }
+        )
+    }
+
+    private var allowParallelTimersBinding: Binding<Bool> {
+        Binding(
+            get: { store.preferences.allowParallelTimers },
+            set: { store.setAllowParallelTimers($0) }
+        )
+    }
+
+    private var showGrossAndWallTogetherBinding: Binding<Bool> {
+        Binding(
+            get: { store.preferences.showGrossAndWallTogether },
+            set: { store.setShowGrossAndWallTogether($0) }
+        )
+    }
+
+    private var cloudSyncEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { store.preferences.cloudSyncEnabled },
+            set: { store.setCloudSyncEnabled($0) }
+        )
     }
 }
 

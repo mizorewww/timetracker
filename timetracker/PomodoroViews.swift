@@ -3,10 +3,6 @@ import SwiftUI
 struct PomodoroView: View {
     @ObservedObject var store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @AppStorage("PomodoroDefaultMode") private var defaultMode = PomodoroPreset.classic.rawValue
-    @AppStorage("DefaultFocusMinutes") private var defaultFocusMinutes = 25
-    @AppStorage("DefaultBreakMinutes") private var defaultBreakMinutes = 5
-    @AppStorage("DefaultPomodoroRounds") private var defaultPomodoroRounds = 1
     @State private var focusMinutes = 25
     @State private var breakMinutes = 5
     @State private var targetRounds = 1
@@ -38,13 +34,20 @@ struct PomodoroView: View {
         .navigationTitle(AppStrings.pomodoro)
         .background(AppColors.background)
         .onAppear {
-            focusMinutes = defaultFocusMinutes
-            breakMinutes = defaultBreakMinutes
-            targetRounds = max(1, defaultPomodoroRounds)
-            if let preset = PomodoroPreset(rawValue: defaultMode), preset != .custom {
-                focusMinutes = preset.focusMinutes
-                breakMinutes = preset.breakMinutes
-            }
+            applyDefaultPreferences()
+        }
+        .onChange(of: store.preferences) { _, _ in
+            applyDefaultPreferences()
+        }
+    }
+
+    private func applyDefaultPreferences() {
+        focusMinutes = store.preferences.defaultFocusMinutes
+        breakMinutes = store.preferences.defaultBreakMinutes
+        targetRounds = max(1, store.preferences.defaultPomodoroRounds)
+        if let preset = PomodoroPreset(rawValue: store.preferences.pomodoroDefaultMode), preset != .custom {
+            focusMinutes = preset.focusMinutes
+            breakMinutes = preset.breakMinutes
         }
     }
 

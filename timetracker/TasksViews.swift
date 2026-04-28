@@ -200,6 +200,8 @@ private struct TaskManagementRowContent: View {
     let showsNavigationChevron: Bool
 
     var body: some View {
+        let progress = store.checklistProgress(for: task.id)
+        let rollup = store.rollup(for: task.id)
         HStack(spacing: 12) {
             TaskIcon(task: task, size: 30)
 
@@ -229,6 +231,10 @@ private struct TaskManagementRowContent: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+
+                if progress.totalCount > 0 || rollup?.remainingSeconds != nil {
+                    TaskProgressLine(progress: progress, rollup: rollup)
+                }
             }
 
             Spacer(minLength: 10)
@@ -253,5 +259,47 @@ private struct TaskManagementRowContent: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+private struct TaskProgressLine: View {
+    let progress: ChecklistProgress
+    let rollup: TaskRollup?
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                checklistLabel
+                if let remainingText {
+                    Text(remainingText)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                checklistLabel
+                if let remainingText {
+                    Text(remainingText)
+                }
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+    }
+
+    private var checklistLabel: some View {
+        HStack(spacing: 5) {
+            if progress.totalCount > 0 {
+                ProgressView(value: progress.fraction)
+                    .frame(width: 48)
+                Text(String(format: AppStrings.localized("checklist.progressFormat"), progress.completedCount, progress.totalCount))
+            } else {
+                Text(AppStrings.localized("checklist.noItems"))
+            }
+        }
+    }
+
+    private var remainingText: String? {
+        guard let remaining = rollup?.remainingSeconds else { return nil }
+        return String(format: AppStrings.localized("forecast.remainingFormat"), DurationFormatter.compact(remaining))
     }
 }

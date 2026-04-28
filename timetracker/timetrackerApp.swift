@@ -41,7 +41,9 @@ struct timetrackerApp: App {
             TimeSegment.self,
             PomodoroRun.self,
             DailySummary.self,
-            CountdownEvent.self
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self
         ])
     }
 

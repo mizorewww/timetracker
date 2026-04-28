@@ -29,6 +29,9 @@ Signed export:
 - Manual time edit/delete behavior.
 - Demo data and database optimization safety.
 - Timeline lane layout for overlaps, adjacent tasks, and cross-day segments.
+- Synced user preferences, including legacy UserDefaults import and the local iCloud startup mirror.
+- Checklist add/update/delete/sort behavior and recursive rollup forecasting.
+- Month analytics labels using real day numbers rather than repeated weekday names.
 - Localization key parity across English, Simplified Chinese, and Traditional Chinese.
 - No hard-coded Chinese text in Swift source files.
 

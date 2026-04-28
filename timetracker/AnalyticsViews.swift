@@ -10,6 +10,7 @@ struct AnalyticsView: View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let overview = store.analyticsOverview(for: range, now: context.date)
             let daily = store.dailyBreakdown(range: range, now: context.date)
+            let hourly = store.hourlyBreakdown(now: context.date)
             let tasks = store.taskBreakdown(range: range, now: context.date)
             let overlaps = store.overlapSegments(range: range, now: context.date)
             let todaySegments = store.todaySegments
@@ -40,7 +41,10 @@ struct AnalyticsView: View {
                         AnalyticsMetric(title: AppStrings.localized("analytics.metric.pomodoros"), value: "\(overview.pomodoroCount)", footnote: AppStrings.localized("analytics.pomodoros.footnote"))
                     }
 
+                    TaskForecastsCard(store: store)
+
                     if range == .today {
+                        TodayActivityCard(hourly: hourly)
                         OverlappingTimelineCard(store: store, segments: todaySegments, now: context.date)
                         TaskDonutCard(tasks: tasks, totalSeconds: max(overview.grossSeconds, 1))
                     } else {
@@ -61,37 +65,6 @@ struct AnalyticsView: View {
                             }
                             .chartYAxisLabel(AppStrings.localized("analytics.minutes"))
                             .frame(height: 240)
-                        }
-                    }
-
-                    AnalyticsChartCard(title: AppStrings.localized("analytics.taskRank.title"), subtitle: AppStrings.localized("analytics.taskRank.subtitle")) {
-                        if tasks.isEmpty {
-                            EmptyStateRow(title: AppStrings.localized("analytics.empty.rangeTaskTime"), icon: "chart.bar")
-                        } else {
-                            Chart(tasks.prefix(8).map { $0 }) { task in
-                                BarMark(
-                                    x: .value("Minutes", task.grossSeconds / 60),
-                                    y: .value("Task", task.title)
-                                )
-                                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-                            }
-                            .chartXAxisLabel(AppStrings.localized("analytics.grossMinutes"))
-                            .frame(height: max(220, CGFloat(min(tasks.count, 8)) * 34))
-                        }
-                    }
-
-                    AnalyticsChartCard(title: AppStrings.localized("analytics.topTasks.title"), subtitle: AppStrings.localized("analytics.topTasks.subtitle")) {
-                        VStack(spacing: 0) {
-                            if tasks.isEmpty {
-                                EmptyStateRow(title: AppStrings.localized("analytics.empty.topTasks"), icon: "list.number")
-                            } else {
-                                ForEach(tasks.prefix(6)) { task in
-                                    AnalyticsTaskRow(task: task, totalSeconds: max(overview.grossSeconds, 1))
-                                    if task.id != tasks.prefix(6).last?.id {
-                                        Divider()
-                                    }
-                                }
-                            }
                         }
                     }
 
@@ -180,6 +153,97 @@ struct AnalyticsChartCard<Content: View>: View {
         }
         .appCard()
     }
+}
+
+struct TaskForecastsCard: View {
+    @ObservedObject var store: TimeTrackerStore
+
+    private var forecastItems: [AnalyticsForecastItem] {
+        store.tasks.compactMap { task -> AnalyticsForecastItem? in
+            guard task.deletedAt == nil,
+                  task.status != .archived,
+                  task.status != .completed,
+                  let rollup = store.rollup(for: task.id),
+                  rollup.estimatedTotalSeconds != nil else {
+                return nil
+            }
+            return AnalyticsForecastItem(task: task, rollup: rollup)
+        }
+        .sorted {
+            ($0.rollup.remainingSeconds ?? 0) > ($1.rollup.remainingSeconds ?? 0)
+        }
+        .prefix(6)
+        .map { $0 }
+    }
+
+    var body: some View {
+        AnalyticsChartCard(title: AppStrings.localized("analytics.forecasts.title"), subtitle: AppStrings.localized("analytics.forecasts.subtitle")) {
+            if forecastItems.isEmpty {
+                EmptyStateRow(title: AppStrings.localized("analytics.forecasts.empty"), icon: "checklist")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(forecastItems) { item in
+                        ForecastAnalyticsRow(store: store, item: item)
+                        if item.id != forecastItems.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct ForecastAnalyticsRow: View {
+    @ObservedObject var store: TimeTrackerStore
+    let item: AnalyticsForecastItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TaskIcon(task: item.task, size: 32)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.task.title)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Text(item.rollup.reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                ProgressView(value: item.rollup.completionFraction)
+                    .tint(Color(hex: item.task.colorHex) ?? .blue)
+            }
+
+            Spacer(minLength: 12)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(item.rollup.remainingSeconds.map(DurationFormatter.compact) ?? AppStrings.localized("forecast.noEstimate"))
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                Text(daysText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            store.selectTask(item.task.id)
+        }
+        .padding(.vertical, 10)
+    }
+
+    private var daysText: String {
+        guard let days = item.rollup.projectedDays else {
+            return item.rollup.confidence.displayName
+        }
+        return String(format: AppStrings.localized("forecast.daysFormat"), days)
+    }
+}
+
+private struct AnalyticsForecastItem: Identifiable {
+    let task: TaskNode
+    let rollup: TaskRollup
+
+    var id: UUID { task.id }
 }
 
 struct OverlappingTimelineCard: View {

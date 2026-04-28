@@ -30,6 +30,9 @@ enum SeedData {
         for model in try context.fetch(FetchDescriptor<TimeSession>()) {
             context.delete(model)
         }
+        for model in try context.fetch(FetchDescriptor<ChecklistItem>()) {
+            context.delete(model)
+        }
         for model in try context.fetch(FetchDescriptor<TaskNode>()) {
             context.delete(model)
         }
@@ -54,6 +57,9 @@ enum SeedData {
             context.delete(model)
         }
         for model in demoSessions {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<ChecklistItem>()).filter({ demoTaskIDs.contains($0.taskID) }) {
             context.delete(model)
         }
         for model in demoTasks {
@@ -89,6 +95,12 @@ enum SeedData {
         iosDesign.notes = "On mobile, prioritize quick start, current state, and an editable Today timeline."
         analytics.notes = "All analytics aggregate from TimeSegment records; cached summaries are never the source of truth."
         sync.notes = "SwiftData CloudKit private database with deviceID and clientMutationID kept for conflict handling."
+
+        addChecklist(context: context, taskID: macDesign.id, titles: ["Align inspector", "Tighten sidebar", "Polish timeline"], completed: 2)
+        addChecklist(context: context, taskID: iosDesign.id, titles: ["Compact active timer rows", "Fix task editor sheet", "Review phone analytics"], completed: 1)
+        addChecklist(context: context, taskID: ledger.id, titles: ["Schema migration", "Preference import", "Checklist persistence", "CloudKit smoke test"], completed: 3)
+        addChecklist(context: context, taskID: analytics.id, titles: ["Month axis", "Forecast card", "Donut cleanup", "Overlap lanes"], completed: 2)
+        addChecklist(context: context, taskID: sync.id, titles: ["Sync settings", "Restart notice", "Manual sync button"], completed: 1)
 
         let focusTasks = [macDesign, iosDesign, ledger, analytics, sync, meeting, review, hig, swift]
         for dayOffset in stride(from: -13, through: 0, by: 1) {
@@ -212,6 +224,19 @@ enum SeedData {
             run.startedAt = start
             run.state = .focusing
             context.insert(run)
+        }
+    }
+
+    private static func addChecklist(context: ModelContext, taskID: UUID, titles: [String], completed: Int) {
+        for (index, title) in titles.enumerated() {
+            let item = ChecklistItem(
+                taskID: taskID,
+                title: title,
+                isCompleted: index < completed,
+                sortOrder: Double(index + 1) * 10,
+                deviceID: "demo"
+            )
+            context.insert(item)
         }
     }
 }

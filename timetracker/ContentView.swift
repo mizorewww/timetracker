@@ -59,7 +59,6 @@ extension FocusedValues {
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("PreferredColorScheme") private var preferredColorScheme = "system"
     @StateObject private var store = TimeTrackerStore()
 
     var body: some View {
@@ -134,7 +133,7 @@ struct ContentView: View {
     }
 
     private var appColorScheme: ColorScheme? {
-        switch preferredColorScheme {
+        switch store.preferences.preferredColorScheme {
         case "light": return .light
         case "dark": return .dark
         default: return nil

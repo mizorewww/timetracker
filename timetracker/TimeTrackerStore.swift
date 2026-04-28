@@ -20,6 +20,14 @@ final class TimeTrackerStore: ObservableObject {
     @Published private(set) var sessions: [TimeSession] = []
     @Published private(set) var pomodoroRuns: [PomodoroRun] = []
     @Published private(set) var countdownEvents: [CountdownEvent] = []
+    @Published private(set) var syncedPreferences: [SyncedPreference] = []
+    @Published private(set) var checklistItems: [ChecklistItem] = [] {
+        didSet {
+            rebuildChecklistIndexes()
+        }
+    }
+    @Published private(set) var preferences = AppPreferences.defaults
+    @Published private(set) var taskRollups: [UUID: TaskRollup] = [:]
     @Published var selectedTaskID: UUID?
     @Published var selectedRange: RangePreset = .today
     @Published var errorMessage: String?
@@ -74,13 +82,16 @@ final class TimeTrackerStore: ObservableObject {
     private var timeRepository: TimeTrackingRepository?
     private var pomodoroRepository: PomodoroRepository?
     private let aggregationService = TimeAggregationService()
+    private let analyticsEngine = AnalyticsEngine()
     private var syncObservers: [NSObjectProtocol] = []
     private var taskByID: [UUID: TaskNode] = [:]
     private var childrenByParentID: [UUID?: [TaskNode]] = [:]
+    private var checklistByTaskID: [UUID: [ChecklistItem]] = [:]
     private var taskPathByID: [UUID: String] = [:]
     private var taskParentPathByID: [UUID: String] = [:]
     private var sortedTodaySegments: [TimeSegment] = []
     private var scheduledSyncRefreshTask: Task<Void, Never>?
+    private let rollupService = TaskRollupService()
 
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
@@ -93,6 +104,7 @@ final class TimeTrackerStore: ObservableObject {
         installSyncObservers()
 
         do {
+            try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context)
             try migrateLegacyCountdownEventsIfNeeded(context: context)
             try SeedData.ensureSeeded(context: context)
             try refresh()
@@ -172,7 +184,17 @@ final class TimeTrackerStore: ObservableObject {
         allSegments = try timeRepository.allSegments()
         sessions = try timeRepository.sessions()
         pomodoroRuns = try pomodoroRepository?.runs() ?? []
+        syncedPreferences = try fetchSyncedPreferences()
+        preferences = AppPreferences(syncedPreferences: syncedPreferences)
+        SyncedPreferenceService.syncLocalMirrors(preferences)
         countdownEvents = try fetchCountdownEvents()
+        checklistItems = try fetchChecklistItems()
+        taskRollups = rollupService.rollups(
+            tasks: tasks,
+            segments: allSegments,
+            checklistItems: checklistItems,
+            now: Date()
+        )
 
         let range = Calendar.current.dateInterval(of: .day, for: Date()) ?? DateInterval(start: Date(), duration: 24 * 60 * 60)
         todaySegments = try timeRepository.segments(from: range.start, to: range.end)
@@ -207,12 +229,22 @@ final class TimeTrackerStore: ObservableObject {
             if activeSegment(for: taskID) != nil {
                 return
             }
+            if !preferences.allowParallelTimers {
+                try pauseOtherActiveSegments(excluding: taskID)
+            }
             if let pausedSession = pausedSession(for: taskID) {
                 _ = try ResumeSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: pausedSession.id)
                 try resumePomodoroIfNeeded(sessionID: pausedSession.id)
                 return
             }
             _ = try StartTaskUseCase(repository: requiredTimeRepository()).execute(taskID: taskID, source: .timer)
+        }
+    }
+
+    private func pauseOtherActiveSegments(excluding taskID: UUID) throws {
+        for segment in activeSegments where segment.taskID != taskID {
+            try PauseSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: segment.sessionID)
+            try interruptPomodoroIfNeeded(sessionID: segment.sessionID)
         }
     }
 
@@ -249,7 +281,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func presentEditTask(_ task: TaskNode) {
-        taskEditorDraft = TaskEditorDraft(task: task)
+        taskEditorDraft = TaskEditorDraft(task: task, checklistItems: checklistItems(for: task.id))
     }
 
     func saveTaskDraft(_ draft: TaskEditorDraft) {
@@ -272,6 +304,7 @@ final class TimeTrackerStore: ObservableObject {
                     estimatedSeconds: draft.estimatedMinutes.map { $0 * 60 },
                     dueAt: draft.hasDueDate ? draft.dueAt : nil
                 )
+                try saveChecklistDrafts(draft.checklistItems, taskID: taskID)
                 selectedTaskID = taskID
             } else {
                 let task = try CreateTaskUseCase(repository: requiredTaskRepository()).execute(
@@ -291,10 +324,48 @@ final class TimeTrackerStore: ObservableObject {
                     estimatedSeconds: draft.estimatedMinutes.map { $0 * 60 },
                     dueAt: draft.hasDueDate ? draft.dueAt : nil
                 )
+                try saveChecklistDrafts(draft.checklistItems, taskID: task.id)
                 selectedTaskID = task.id
             }
         }
         taskEditorDraft = nil
+    }
+
+    func setPreferredColorScheme(_ value: String) {
+        setPreference(.preferredColorScheme, valueJSON: PreferenceJSON.encode(value))
+    }
+
+    func setPomodoroDefaultMode(_ value: String) {
+        setPreference(.pomodoroDefaultMode, valueJSON: PreferenceJSON.encode(value))
+    }
+
+    func setDefaultFocusMinutes(_ value: Int) {
+        setPreference(.defaultFocusMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...480)))
+    }
+
+    func setDefaultBreakMinutes(_ value: Int) {
+        setPreference(.defaultBreakMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...480)))
+    }
+
+    func setDefaultPomodoroRounds(_ value: Int) {
+        setPreference(.defaultPomodoroRounds, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...24)))
+    }
+
+    func setAllowParallelTimers(_ value: Bool) {
+        setPreference(.allowParallelTimers, valueJSON: PreferenceJSON.encode(value))
+    }
+
+    func setShowGrossAndWallTogether(_ value: Bool) {
+        setPreference(.showGrossAndWallTogether, valueJSON: PreferenceJSON.encode(value))
+    }
+
+    func setCloudSyncEnabled(_ value: Bool) {
+        setPreference(.cloudSyncEnabled, valueJSON: PreferenceJSON.encode(value))
+        UserDefaults.standard.set(value, forKey: AppCloudSync.enabledKey)
+    }
+
+    func setQuickStartTaskIDs(_ ids: [UUID]) {
+        setPreference(.quickStartTaskIDs, valueJSON: PreferenceJSON.encode(ids.map(\.uuidString)))
     }
 
     func archiveSelectedTask(taskID: UUID? = nil) {
@@ -478,6 +549,9 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
         perform {
+            if !preferences.allowParallelTimers {
+                try pauseOtherActiveSegments(excluding: selectedTaskID)
+            }
             _ = try StartPomodoroUseCase(repository: requiredPomodoroRepository()).execute(
                 taskID: selectedTaskID,
                 focusSeconds: focusSeconds,
@@ -711,49 +785,15 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func analyticsOverview(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsOverview {
-        let segments = segmentsForAnalytics(range: range, now: now)
-        let gross = aggregationService.totalSeconds(segments: segments, mode: .gross, now: now)
-        let wall = aggregationService.totalSeconds(segments: segments, mode: .wallClock, now: now)
-        let pomodoros = segments.filter { $0.source == .pomodoro && $0.endedAt != nil }.count
-        let focusSegments = segments.filter { $0.source == .pomodoro }
-        let averageFocus = focusSegments.isEmpty ? 0 : aggregationService.grossSeconds(focusSegments, now: now) / focusSegments.count
-        return AnalyticsOverview(
-            grossSeconds: gross,
-            wallSeconds: wall,
-            overlapSeconds: max(0, gross - wall),
-            pomodoroCount: pomodoros,
-            averageFocusSeconds: averageFocus
-        )
+        analyticsEngine.overview(segments: allSegments, range: range, now: now)
     }
 
     func dailyBreakdown(range: AnalyticsRange, now: Date = Date()) -> [DailyAnalyticsPoint] {
-        let calendar = Calendar.current
-        return dayIntervals(for: range, now: now).map { interval in
-            let segments = allSegments.filter { overlaps($0, interval: interval, now: now) }
-            return DailyAnalyticsPoint(
-                date: interval.start,
-                grossSeconds: aggregationService.totalSeconds(segments: segments, mode: .gross, now: now),
-                wallSeconds: aggregationService.totalSeconds(segments: segments, mode: .wallClock, now: now),
-                label: calendar.shortWeekdaySymbols[calendar.component(.weekday, from: interval.start) - 1]
-            )
-        }
+        analyticsEngine.dailyBreakdown(segments: allSegments, range: range, now: now)
     }
 
     func hourlyBreakdown(for date: Date = Date(), now: Date = Date()) -> [HourlyAnalyticsPoint] {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        return (0..<24).map { hour in
-            let start = calendar.date(byAdding: .hour, value: hour, to: startOfDay) ?? startOfDay
-            let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3_600)
-            let interval = DateInterval(start: start, end: end)
-            let segments = allSegments.filter { overlaps($0, interval: interval, now: now) }
-            let gross = secondsOverlapping(segments: segments, interval: interval, now: now)
-            let wallIntervals = segments.compactMap { clippedInterval(for: $0, in: interval, now: now) }
-            let wall = aggregationService.mergeOverlappingIntervals(wallIntervals).reduce(0) {
-                $0 + Int($1.end.timeIntervalSince($1.start))
-            }
-            return HourlyAnalyticsPoint(hour: hour, grossSeconds: gross, wallSeconds: wall)
-        }
+        analyticsEngine.hourlyBreakdown(segments: allSegments, date: date, now: now)
     }
 
     func taskBreakdown(range: AnalyticsRange, now: Date = Date()) -> [TaskAnalyticsPoint] {
@@ -813,6 +853,18 @@ final class TimeTrackerStore: ObservableObject {
         childrenByParentID[task.id] ?? []
     }
 
+    func checklistItems(for taskID: UUID) -> [ChecklistItem] {
+        checklistByTaskID[taskID] ?? []
+    }
+
+    func checklistProgress(for taskID: UUID) -> ChecklistProgress {
+        rollupService.checklistProgress(for: taskID, checklistItems: checklistItems)
+    }
+
+    func rollup(for taskID: UUID) -> TaskRollup? {
+        taskRollups[taskID]
+    }
+
     private func rebuildTaskIndexes() {
         taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
 
@@ -859,6 +911,18 @@ final class TimeTrackerStore: ObservableObject {
         taskParentPathByID = parentPathCache
     }
 
+    private func rebuildChecklistIndexes() {
+        checklistByTaskID = Dictionary(grouping: checklistItems.filter { $0.deletedAt == nil }, by: \.taskID)
+            .mapValues { items in
+                items.sorted { lhs, rhs in
+                    if lhs.sortOrder == rhs.sortOrder {
+                        return lhs.createdAt < rhs.createdAt
+                    }
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+            }
+    }
+
     private func segmentsForAnalytics(range: AnalyticsRange, now: Date) -> [TimeSegment] {
         guard let interval = analyticsInterval(for: range, now: now) else { return allSegments }
         return allSegments.filter { overlaps($0, interval: interval, now: now) }
@@ -876,38 +940,9 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
 
-    private func dayIntervals(for range: AnalyticsRange, now: Date) -> [DateInterval] {
-        let calendar = Calendar.current
-        guard let interval = analyticsInterval(for: range, now: now) else { return [] }
-        var result: [DateInterval] = []
-        var cursor = interval.start
-        while cursor < interval.end {
-            let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? interval.end
-            result.append(DateInterval(start: cursor, end: min(next, interval.end)))
-            cursor = next
-        }
-        return result
-    }
-
     private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
         let end = segment.endedAt ?? now
         return segment.startedAt < interval.end && end > interval.start
-    }
-
-    private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {
-        guard segment.deletedAt == nil else { return nil }
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return DateInterval(start: start, end: clippedEnd)
-    }
-
-    private func secondsOverlapping(segments: [TimeSegment], interval: DateInterval, now: Date) -> Int {
-        segments.reduce(0) { result, segment in
-            guard let clipped = clippedInterval(for: segment, in: interval, now: now) else { return result }
-            return result + Int(clipped.end.timeIntervalSince(clipped.start))
-        }
     }
 
     private func perform(_ action: () throws -> Void) {
@@ -977,6 +1012,103 @@ final class TimeTrackerStore: ObservableObject {
         run.updatedAt = Date()
         run.clientMutationID = UUID()
         try modelContext?.save()
+    }
+
+    private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
+        perform {
+            guard let modelContext else { throw StoreError.notConfigured }
+            let allPreferences = try modelContext.fetch(FetchDescriptor<SyncedPreference>())
+            let existing = allPreferences
+                .filter { $0.key == key.rawValue && $0.deletedAt == nil }
+                .sorted { $0.updatedAt > $1.updatedAt }
+            let target = existing.first ?? SyncedPreference(
+                key: key.rawValue,
+                valueJSON: valueJSON,
+                deviceID: DeviceIdentity.current
+            )
+            if existing.isEmpty {
+                modelContext.insert(target)
+            }
+            target.valueJSON = valueJSON
+            target.updatedAt = Date()
+            target.deviceID = DeviceIdentity.current
+            target.clientMutationID = UUID()
+            for duplicate in existing.dropFirst() {
+                duplicate.deletedAt = Date()
+                duplicate.updatedAt = Date()
+                duplicate.clientMutationID = UUID()
+            }
+            try modelContext.save()
+        }
+    }
+
+    private func saveChecklistDrafts(_ drafts: [ChecklistEditorDraft], taskID: UUID) throws {
+        guard let modelContext else { throw StoreError.notConfigured }
+        let existing = try modelContext.fetch(FetchDescriptor<ChecklistItem>())
+            .filter { $0.taskID == taskID }
+        let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        var keptIDs = Set<UUID>()
+
+        for (index, draft) in drafts.enumerated() {
+            let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { continue }
+            let sortOrder = Double(index + 1) * 10
+            if let existingID = draft.existingID, let item = existingByID[existingID] {
+                item.title = title
+                if item.isCompleted != draft.isCompleted {
+                    item.completedAt = draft.isCompleted ? Date() : nil
+                }
+                item.isCompleted = draft.isCompleted
+                item.sortOrder = sortOrder
+                item.deletedAt = nil
+                item.updatedAt = Date()
+                item.clientMutationID = UUID()
+                keptIDs.insert(item.id)
+            } else {
+                let item = ChecklistItem(
+                    taskID: taskID,
+                    title: title,
+                    isCompleted: draft.isCompleted,
+                    sortOrder: sortOrder,
+                    deviceID: DeviceIdentity.current
+                )
+                modelContext.insert(item)
+                keptIDs.insert(item.id)
+            }
+        }
+
+        for item in existing where item.deletedAt == nil && !keptIDs.contains(item.id) {
+            item.deletedAt = Date()
+            item.updatedAt = Date()
+            item.clientMutationID = UUID()
+        }
+        try modelContext.save()
+    }
+
+    private func fetchSyncedPreferences() throws -> [SyncedPreference] {
+        guard let modelContext else { return [] }
+        let descriptor = FetchDescriptor<SyncedPreference>(
+            sortBy: [
+                SortDescriptor(\.key),
+                SortDescriptor(\.updatedAt, order: .reverse)
+            ]
+        )
+        let all = try modelContext.fetch(descriptor)
+        return SyncedPreferenceService.latestByKey(all)
+            .values
+            .sorted { $0.key < $1.key }
+    }
+
+    private func fetchChecklistItems() throws -> [ChecklistItem] {
+        guard let modelContext else { return [] }
+        let descriptor = FetchDescriptor<ChecklistItem>(
+            sortBy: [
+                SortDescriptor(\.taskID),
+                SortDescriptor(\.sortOrder),
+                SortDescriptor(\.createdAt)
+            ]
+        )
+        return try modelContext.fetch(descriptor).filter { $0.deletedAt == nil }
     }
 
     private func fetchCountdownEvents() throws -> [CountdownEvent] {
@@ -1074,6 +1206,7 @@ struct TaskEditorDraft: Identifiable {
     var estimatedMinutes: Int?
     var hasDueDate: Bool
     var dueAt: Date
+    var checklistItems: [ChecklistEditorDraft]
 
     init(parentID: UUID?) {
         self.taskID = nil
@@ -1086,9 +1219,10 @@ struct TaskEditorDraft: Identifiable {
         self.estimatedMinutes = nil
         self.hasDueDate = false
         self.dueAt = Date()
+        self.checklistItems = []
     }
 
-    init(task: TaskNode) {
+    init(task: TaskNode, checklistItems: [ChecklistItem]) {
         self.taskID = task.id
         self.title = task.title
         self.status = task.status
@@ -1099,6 +1233,28 @@ struct TaskEditorDraft: Identifiable {
         self.estimatedMinutes = task.estimatedSeconds.map { $0 / 60 }
         self.hasDueDate = task.dueAt != nil
         self.dueAt = task.dueAt ?? Date()
+        self.checklistItems = checklistItems.map(ChecklistEditorDraft.init(item:))
+    }
+}
+
+struct ChecklistEditorDraft: Identifiable, Equatable {
+    let id: UUID
+    var existingID: UUID?
+    var title: String
+    var isCompleted: Bool
+
+    nonisolated init(title: String = "", isCompleted: Bool = false) {
+        self.id = UUID()
+        self.existingID = nil
+        self.title = title
+        self.isCompleted = isCompleted
+    }
+
+    nonisolated init(item: ChecklistItem) {
+        self.id = item.id
+        self.existingID = item.id
+        self.title = item.title
+        self.isCompleted = item.isCompleted
     }
 }
 

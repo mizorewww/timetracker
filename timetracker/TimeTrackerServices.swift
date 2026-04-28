@@ -154,7 +154,7 @@ struct TimeAggregationService {
 }
 
 enum DurationFormatter {
-    static func compact(_ seconds: Int) -> String {
+    nonisolated static func compact(_ seconds: Int) -> String {
         let safeSeconds = max(0, seconds)
         let hours = safeSeconds / 3600
         let minutes = (safeSeconds % 3600) / 60
@@ -164,7 +164,7 @@ enum DurationFormatter {
         return "\(minutes)m"
     }
 
-    static func clock(_ seconds: Int) -> String {
+    nonisolated static func clock(_ seconds: Int) -> String {
         let safeSeconds = max(0, seconds)
         let hours = safeSeconds / 3600
         let minutes = (safeSeconds % 3600) / 60
@@ -177,7 +177,7 @@ enum DurationFormatter {
 }
 
 enum DeviceIdentity {
-    static let current: String = {
+    nonisolated static let current: String = {
         let storageKey = "TimeTrackerDeviceID"
         if let existing = UserDefaults.standard.string(forKey: storageKey) {
             return existing

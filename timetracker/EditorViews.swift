@@ -93,6 +93,34 @@ struct TaskEditorPanel: View {
                         }
                     }
 
+                    Section {
+                        if draft.checklistItems.isEmpty {
+                            Text(.app("editor.checklist.empty"))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        ForEach(Array(draft.checklistItems.indices), id: \.self) { index in
+                            ChecklistEditorRow(
+                                item: $draft.checklistItems[index],
+                                canMoveUp: index > 0,
+                                canMoveDown: index < draft.checklistItems.count - 1,
+                                moveUp: { moveChecklistItem(from: index, to: index - 1) },
+                                moveDown: { moveChecklistItem(from: index, to: index + 1) },
+                                delete: { draft.checklistItems.remove(at: index) }
+                            )
+                        }
+
+                        Button {
+                            draft.checklistItems.append(ChecklistEditorDraft(title: AppStrings.localized("editor.checklist.newItem")))
+                        } label: {
+                            Label(AppStrings.localized("editor.checklist.add"), systemImage: "plus")
+                        }
+                    } header: {
+                        Text(.app("editor.checklist.title"))
+                    } footer: {
+                        Text(.app("editor.checklist.footer"))
+                    }
+
                     Section(AppStrings.localized("editor.task.notes")) {
                         TextEditor(text: $draft.notes)
                             .frame(minHeight: 88)
@@ -177,6 +205,14 @@ struct TaskEditorPanel: View {
         String(repeating: "  ", count: task.depth) + task.title
     }
 
+    private func moveChecklistItem(from source: Int, to destination: Int) {
+        guard draft.checklistItems.indices.contains(source),
+              draft.checklistItems.indices.contains(destination) else {
+            return
+        }
+        draft.checklistItems.swapAt(source, destination)
+    }
+
 }
 
 private struct TaskStatusPicker: View {
@@ -208,6 +244,54 @@ private struct TaskStatusPickerOption: View {
             Image(systemName: status.symbolName)
                 .foregroundStyle(Color(hex: status.colorHex) ?? .secondary)
         }
+    }
+}
+
+private struct ChecklistEditorRow: View {
+    @Binding var item: ChecklistEditorDraft
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let moveUp: () -> Void
+    let moveDown: () -> Void
+    let delete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Toggle(AppStrings.localized("editor.checklist.completed"), isOn: $item.isCompleted)
+                .labelsHidden()
+
+            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title)
+                .textFieldStyle(.plain)
+
+            Menu {
+                Button {
+                    moveUp()
+                } label: {
+                    Label(AppStrings.localized("common.moveUp"), systemImage: "chevron.up")
+                }
+                .disabled(!canMoveUp)
+
+                Button {
+                    moveDown()
+                } label: {
+                    Label(AppStrings.localized("common.moveDown"), systemImage: "chevron.down")
+                }
+                .disabled(!canMoveDown)
+
+                Divider()
+
+                Button(role: .destructive) {
+                    delete()
+                } label: {
+                    Label(AppStrings.delete, systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 

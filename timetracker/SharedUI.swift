@@ -107,5 +107,5 @@ typealias PlatformColor = UIColor
 
 #Preview {
     ContentView()
-        .modelContainer(for: [TaskNode.self, TimeSession.self, TimeSegment.self, PomodoroRun.self, DailySummary.self], inMemory: true)
+        .modelContainer(for: [TaskNode.self, TimeSession.self, TimeSegment.self, PomodoroRun.self, DailySummary.self, CountdownEvent.self, SyncedPreference.self, ChecklistItem.self], inMemory: true)
 }

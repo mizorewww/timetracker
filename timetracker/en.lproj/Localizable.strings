@@ -241,8 +241,8 @@
 "analytics.timeline.subtitle" = "Bars show position and duration. Long idle gaps are folded so recorded time stays readable.";
 "analytics.timeline.empty" = "No time records today";
 "analytics.timeline.gap.omitted" = "%@ skipped";
-"analytics.taskUsage.title" = "Task Status Distribution";
-"analytics.taskUsage.subtitle" = "Time is grouped by task status, using the same status colors shown in the task list.";
+"analytics.taskUsage.title" = "Task Distribution";
+"analytics.taskUsage.subtitle" = "Time is grouped by task, using the same task colors shown across the app.";
 "analytics.total" = "Total";
 "analytics.hourDistribution.title" = "Today Distribution";
 "analytics.hourDistribution.subtitle" = "A Screen Time-style view of the day. Blue is Wall Time; pale bars show extra Gross Time from overlap.";

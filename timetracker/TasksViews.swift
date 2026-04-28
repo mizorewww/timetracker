@@ -171,6 +171,9 @@ struct TaskManagementFlatRow: View {
                 Label(AppStrings.delete, systemImage: "trash")
             }
         }
+        #if os(iOS)
+        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+        #endif
     }
 
     private var showsNavigationChevron: Bool {
@@ -198,8 +201,24 @@ private struct TaskManagementRowContent: View {
     let task: TaskNode
     let isRunning: Bool
     let showsNavigationChevron: Bool
+#if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+#endif
 
     var body: some View {
+        #if os(iOS)
+        if horizontalSizeClass == .compact {
+            compactBody
+        } else {
+            regularBody
+        }
+        #else
+        regularBody
+        #endif
+    }
+
+    @ViewBuilder
+    private var regularBody: some View {
         let progress = store.checklistProgress(for: task.id)
         let rollup = store.rollup(for: task.id)
         HStack(spacing: 12) {
@@ -259,6 +278,72 @@ private struct TaskManagementRowContent: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var compactBody: some View {
+        let progress = store.checklistProgress(for: task.id)
+        let rollup = store.rollup(for: task.id)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                TaskIcon(task: task, size: 30)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(task.title)
+                            .font(.headline)
+                            .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                            .strikethrough(task.status == .completed)
+                            .lineLimit(1)
+
+                        if isRunning {
+                            Text(AppStrings.running)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        }
+                    }
+
+                    Text(store.path(for: task))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                TaskStatusBadge(status: task.status)
+            }
+
+            HStack(alignment: .center, spacing: 8) {
+                if progress.totalCount > 0 || rollup?.isDisplayableForecast == true {
+                    TaskProgressLine(progress: progress, rollup: rollup)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                Text(DurationFormatter.compact(store.secondsForTaskToday(task)))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+
+                let childCount = store.children(of: task).count
+                if childCount > 0 {
+                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                if showsNavigationChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.vertical, 6)
     }
 }
 

@@ -241,8 +241,8 @@
 "analytics.timeline.subtitle" = "條形只表達時間位置和長度；長時間空白會被折疊，避免記錄被擠得看不清。";
 "analytics.timeline.empty" = "今天還沒有時間記錄";
 "analytics.timeline.gap.omitted" = "省略 %@";
-"analytics.taskUsage.title" = "任務狀態分布";
-"analytics.taskUsage.subtitle" = "按任務狀態彙總用時，並使用任務列表裡同一套狀態顏色。";
+"analytics.taskUsage.title" = "任務分布";
+"analytics.taskUsage.subtitle" = "按任務彙總用時，並使用 App 裡同一套任務顏色。";
 "analytics.total" = "總計";
 "analytics.hourDistribution.title" = "今天時間分布";
 "analytics.hourDistribution.subtitle" = "類似螢幕使用時間的日內視圖；藍色是實際時間，淺色背景提示並行計時產生的累計時間。";

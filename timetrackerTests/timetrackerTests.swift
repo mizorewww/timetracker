@@ -859,6 +859,21 @@ struct TimeTrackerTests {
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
     }
 
+    @Test
+    func analyticsTaskDistributionUsesTaskBucketsAndTaskColors() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
+        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+
+        #expect(analyticsSource.contains("id: task.taskID.uuidString"))
+        #expect(analyticsSource.contains("colorHex: task.colorHex"))
+        #expect(analyticsSource.contains("point.status?.rawValue") == false)
+        #expect(englishStrings.contains("Task Status Distribution") == false)
+        #expect(englishStrings.contains("\"analytics.taskUsage.title\" = \"Task Distribution\";"))
+    }
+
     @Test @MainActor
     func syncedPreferenceMigrationImportsLegacyUserDefaults() throws {
         let defaults = UserDefaults.standard

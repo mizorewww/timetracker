@@ -627,23 +627,20 @@ struct TaskDonutCard: View {
     let totalSeconds: Int
 
     private var slices: [TaskDistributionSlice] {
-        let grouped = Dictionary(grouping: tasks) { point in
-            point.status?.rawValue ?? "deleted"
-        }
-        return grouped.compactMap { _, points -> TaskDistributionSlice? in
-            guard let first = points.first else { return nil }
-            let seconds = points.reduce(0) { $0 + $1.grossSeconds }
-            guard seconds > 0 else { return nil }
-            let status = first.status
+        tasks.compactMap { task -> TaskDistributionSlice? in
+            guard task.grossSeconds > 0 else { return nil }
             return TaskDistributionSlice(
-                id: status?.rawValue ?? "deleted",
-                title: status?.displayName ?? AppStrings.localized("task.deleted"),
-                symbolName: status?.symbolName ?? "trash",
-                colorHex: status?.colorHex ?? "8E8E93",
-                grossSeconds: seconds
+                id: task.taskID.uuidString,
+                title: task.title,
+                subtitle: task.path,
+                symbolName: task.iconName ?? "checkmark.circle",
+                colorHex: task.colorHex ?? "0A84FF",
+                grossSeconds: task.grossSeconds
             )
         }
         .sorted { $0.grossSeconds > $1.grossSeconds }
+        .prefix(8)
+        .map { $0 }
     }
 
     var body: some View {
@@ -672,6 +669,7 @@ struct TaskDonutCard: View {
 private struct TaskDistributionSlice: Identifiable {
     let id: String
     let title: String
+    let subtitle: String
     let symbolName: String
     let colorHex: String
     let grossSeconds: Int
@@ -718,6 +716,7 @@ private struct StableDonutChart: View {
             }
         }
         .frame(width: 190, height: 190)
+        .aspectRatio(1, contentMode: .fit)
         .accessibilityElement(children: .combine)
     }
 
@@ -770,7 +769,7 @@ private struct TaskDistributionLegendItem: View {
             Image(systemName: slice.symbolName)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(slice.color)
-                .frame(width: 18)
+                .frame(width: 18, height: 18)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(slice.title)
@@ -779,6 +778,7 @@ private struct TaskDistributionLegendItem: View {
                 Text("\(DurationFormatter.compact(slice.grossSeconds)) · \(percentage)%")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
     }

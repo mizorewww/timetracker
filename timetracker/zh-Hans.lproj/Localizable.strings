@@ -241,8 +241,8 @@
 "analytics.timeline.subtitle" = "条形只表达时间位置和长度；长时间空白会被折叠，避免记录被挤得看不清。";
 "analytics.timeline.empty" = "今天还没有时间记录";
 "analytics.timeline.gap.omitted" = "省略 %@";
-"analytics.taskUsage.title" = "任务状态分布";
-"analytics.taskUsage.subtitle" = "按任务状态汇总用时，并使用任务列表里同一套状态颜色。";
+"analytics.taskUsage.title" = "任务分布";
+"analytics.taskUsage.subtitle" = "按任务汇总用时，并使用应用里同一套任务颜色。";
 "analytics.total" = "总计";
 "analytics.hourDistribution.title" = "今天时间分布";
 "analytics.hourDistribution.subtitle" = "类似屏幕使用时间的日内视图；蓝色是实际时间，浅色背景提示并行计时产生的累计时间。";

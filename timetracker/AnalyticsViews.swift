@@ -831,10 +831,6 @@ struct TodayActivityCard: View {
         hourly.reduce(0) { $0 + $1.totalSeconds }
     }
 
-    private var maxHourSeconds: Int {
-        max(1, hourly.map(\.totalSeconds).max() ?? 1)
-    }
-
     private var legendItems: [HourTaskSlice] {
         let grouped = Dictionary(grouping: hourly.flatMap(\.slices), by: \.taskID)
         return grouped.compactMap { _, slices -> HourTaskSlice? in
@@ -904,7 +900,6 @@ struct TodayActivityCard: View {
                 ForEach(hourly) { point in
                     HourTaskActivityBar(
                         point: point,
-                        maxSeconds: maxHourSeconds,
                         availableHeight: proxy.size.height
                     )
                 }
@@ -945,41 +940,136 @@ private struct HourTaskSlice: Identifiable {
     var color: Color { Color(hex: colorHex) ?? .blue }
 }
 
+struct HourStackLayoutInput: Equatable {
+    let id: UUID
+    let seconds: Int
+}
+
+struct HourStackLayoutItem: Identifiable, Equatable {
+    let id: UUID
+    let height: Double
+}
+
+enum HourStackLayoutEngine {
+    static func maxVisibleSliceCount(availableHeight: Double, minSliceHeight: Double) -> Int {
+        guard availableHeight > 0, minSliceHeight > 0 else { return 0 }
+        return max(1, Int(floor(availableHeight / minSliceHeight)) - 1)
+    }
+
+    static func layout(
+        inputs: [HourStackLayoutInput],
+        availableHeight: Double,
+        minSliceHeight: Double,
+        maxItems: Int? = nil
+    ) -> [HourStackLayoutItem] {
+        let sorted = inputs
+            .filter { $0.seconds > 0 }
+            .sorted { lhs, rhs in
+                if lhs.seconds == rhs.seconds {
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                return lhs.seconds > rhs.seconds
+            }
+        guard availableHeight > 0, minSliceHeight > 0, !sorted.isEmpty else { return [] }
+
+        let capacity = maxItems ?? maxVisibleSliceCount(availableHeight: availableHeight, minSliceHeight: minSliceHeight)
+        let visible = Array(sorted.prefix(capacity))
+        let effectiveMinSliceHeight = min(minSliceHeight, availableHeight / Double(max(visible.count, 1)))
+        let totalSeconds = max(1, visible.reduce(0) { $0 + $1.seconds })
+        var heights = visible.map { input in
+            availableHeight * Double(input.seconds) / Double(totalSeconds)
+        }
+
+        var deficit = 0.0
+        for index in heights.indices where heights[index] < effectiveMinSliceHeight {
+            deficit += effectiveMinSliceHeight - heights[index]
+            heights[index] = effectiveMinSliceHeight
+        }
+
+        while deficit > 0.0001 {
+            guard let donorIndex = heights.indices
+                .filter({ heights[$0] > effectiveMinSliceHeight })
+                .max(by: { heights[$0] < heights[$1] })
+            else {
+                break
+            }
+            let take = min(deficit, heights[donorIndex] - effectiveMinSliceHeight)
+            heights[donorIndex] -= take
+            deficit -= take
+        }
+
+        return zip(visible, heights).map { input, height in
+            HourStackLayoutItem(id: input.id, height: height)
+        }
+    }
+}
+
 private struct HourTaskActivityBar: View {
     let point: HourTaskActivity
-    let maxSeconds: Int
     let availableHeight: CGFloat
+    private let sliceSpacing: CGFloat = 1
+    private let cornerRadius: CGFloat = 4
 
-    private var totalHeight: CGFloat {
-        guard point.totalSeconds > 0 else { return 0 }
-        return max(5, availableHeight * CGFloat(point.totalSeconds) / CGFloat(max(maxSeconds, 1)))
+    private var minSliceHeight: CGFloat {
+        max(5, min(8, availableHeight * 0.05))
+    }
+
+    private var visibleSliceCount: Int {
+        let activeSliceCount = point.slices.filter { $0.seconds > 0 }.count
+        let capacity = HourStackLayoutEngine.maxVisibleSliceCount(
+            availableHeight: Double(max(0, availableHeight)),
+            minSliceHeight: Double(minSliceHeight)
+        )
+        return min(activeSliceCount, capacity)
+    }
+
+    private var contentHeight: CGFloat {
+        let sliceCount = CGFloat(max(visibleSliceCount - 1, 0))
+        return max(0, availableHeight - sliceCount * sliceSpacing)
+    }
+
+    private var renderedSlices: [RenderedHourTaskSlice] {
+        let inputs = point.slices.map { HourStackLayoutInput(id: $0.id, seconds: $0.seconds) }
+        let layouts = HourStackLayoutEngine.layout(
+            inputs: inputs,
+            availableHeight: Double(max(0, contentHeight)),
+            minSliceHeight: Double(minSliceHeight),
+            maxItems: visibleSliceCount
+        )
+        let slicesByID = Dictionary(uniqueKeysWithValues: point.slices.map { ($0.id, $0) })
+        return layouts.compactMap { layout in
+            guard let slice = slicesByID[layout.id] else { return nil }
+            return RenderedHourTaskSlice(slice: slice, height: CGFloat(layout.height))
+        }
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Capsule()
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(Color.secondary.opacity(0.10))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if point.totalSeconds > 0 {
-                VStack(spacing: 1) {
-                    ForEach(Array(point.slices.reversed())) { slice in
+            if point.totalSeconds > 0, renderedSlices.isEmpty == false {
+                VStack(spacing: sliceSpacing) {
+                    ForEach(Array(renderedSlices.reversed())) { rendered in
                         Rectangle()
-                            .fill(slice.color)
-                            .frame(height: sliceHeight(slice))
+                            .fill(rendered.slice.color)
+                            .frame(height: rendered.height)
                     }
                 }
-                .frame(height: totalHeight)
-                .clipShape(Capsule())
+                .frame(height: availableHeight)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
         }
         .help("\(String(format: "%02d:00", point.hour)) \(DurationFormatter.compact(point.totalSeconds))")
     }
+}
 
-    private func sliceHeight(_ slice: HourTaskSlice) -> CGFloat {
-        guard point.totalSeconds > 0 else { return 0 }
-        return max(2, totalHeight * CGFloat(slice.seconds) / CGFloat(point.totalSeconds))
-    }
+private struct RenderedHourTaskSlice: Identifiable {
+    let slice: HourTaskSlice
+    let height: CGFloat
+
+    var id: UUID { slice.id }
 }
 
 private struct AnalyticsLegendSwatch: View {

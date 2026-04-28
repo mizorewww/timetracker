@@ -963,7 +963,64 @@ struct TimeTrackerTests {
         #expect(analyticsSource.contains("struct HourTaskSlice"))
         #expect(analyticsSource.contains("Color(hex: colorHex)"))
         #expect(analyticsSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)
+        #expect(analyticsSource.contains("HourStackLayoutEngine.layout"))
+        #expect(analyticsSource.contains("RoundedRectangle(cornerRadius: cornerRadius"))
+        #expect(analyticsSource.contains("availableHeight * CGFloat(point.totalSeconds)") == false)
+        #expect(analyticsSource.contains(".clipShape(Capsule())") == false)
         #expect(englishStrings.contains("\"analytics.hourDistribution.taskColorHint\""))
+    }
+
+    @Test
+    func hourStackLayoutPreservesTinyTasksByBorrowingFromLargestSlice() throws {
+        let largeID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let tinyID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let smallerID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+
+        let layout = HourStackLayoutEngine.layout(
+            inputs: [
+                HourStackLayoutInput(id: largeID, seconds: 3_500),
+                HourStackLayoutInput(id: tinyID, seconds: 10),
+                HourStackLayoutInput(id: smallerID, seconds: 10)
+            ],
+            availableHeight: 100,
+            minSliceHeight: 8
+        )
+
+        let large = try #require(layout.first { $0.id == largeID })
+        let tiny = try #require(layout.first { $0.id == tinyID })
+        let smaller = try #require(layout.first { $0.id == smallerID })
+
+        #expect(layout.count == 3)
+        #expect(tiny.height == 8)
+        #expect(smaller.height == 8)
+        #expect(large.height > 80)
+        #expect(abs(layout.reduce(0) { $0 + $1.height } - 100) < 0.001)
+    }
+
+    @Test
+    func hourStackLayoutDropsShortestTasksWhenMinimumHeightsWouldOverflow() {
+        let ids = [
+            UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+            UUID(uuidString: "00000000-0000-0000-0000-000000000012")!,
+            UUID(uuidString: "00000000-0000-0000-0000-000000000013")!,
+            UUID(uuidString: "00000000-0000-0000-0000-000000000014")!,
+            UUID(uuidString: "00000000-0000-0000-0000-000000000015")!,
+            UUID(uuidString: "00000000-0000-0000-0000-000000000016")!
+        ]
+
+        let layout = HourStackLayoutEngine.layout(
+            inputs: zip(ids, [100, 90, 80, 70, 60, 50]).map { id, seconds in
+                HourStackLayoutInput(id: id, seconds: seconds)
+            },
+            availableHeight: 50,
+            minSliceHeight: 10
+        )
+
+        #expect(layout.count == 4)
+        #expect(layout.map(\.id) == Array(ids.prefix(4)))
+        #expect(layout.contains { $0.id == ids[4] } == false)
+        #expect(layout.contains { $0.id == ids[5] } == false)
+        #expect(abs(layout.reduce(0) { $0 + $1.height } - 50) < 0.001)
     }
 
     @Test

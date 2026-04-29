@@ -46,6 +46,110 @@ struct CoreRefactorTests {
         #expect(snapshot.overlaps.first?.durationSeconds == 3_600)
     }
 
+    @Test @MainActor
+    func ledgerVisibleRefreshDoesNotFetchFullHistory() throws {
+        let repository = LedgerRefreshSpyRepository()
+        var store = LedgerStore()
+
+        try store.refreshVisible(repository: repository, now: Date(timeIntervalSince1970: 10_000))
+
+        #expect(repository.activeSegmentsCallCount == 1)
+        #expect(repository.pausedSessionsCallCount == 1)
+        #expect(repository.rangeSegmentsCallCount == 1)
+        #expect(repository.allSegmentsCallCount == 0)
+        #expect(repository.sessionsCallCount == 0)
+    }
+
+    @Test @MainActor
+    func analyticsStoreOwnsSnapshotCache() {
+        let task = TaskNode(title: "Cached Task", parentID: nil, deviceID: "test")
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 20_000), titleSnapshot: task.title)
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: session.startedAt,
+            endedAt: session.startedAt.addingTimeInterval(600)
+        )
+        var store = AnalyticsStore()
+
+        #expect(store.cachedSnapshot(for: .today) == nil)
+
+        store.refreshSnapshot(
+            range: .today,
+            tasks: [task],
+            segments: [segment],
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: session.startedAt.addingTimeInterval(900)
+        )
+
+        #expect(store.cachedSnapshot(for: .today)?.overview.grossSeconds == 600)
+        #expect(store.cachedSnapshot(for: .today)?.taskBreakdown.first?.title == "Cached Task")
+    }
+
+    @Test @MainActor
+    func rollupStoreOwnsForecastStateSeparatelyFromAnalyticsCache() {
+        let task = TaskNode(title: "Rollup Task", parentID: nil, deviceID: "test")
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 25_000), titleSnapshot: task.title)
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: session.startedAt,
+            endedAt: session.startedAt.addingTimeInterval(900)
+        )
+        let checklist = [
+            ChecklistItem(taskID: task.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
+            ChecklistItem(taskID: task.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test")
+        ]
+        var rollupStore = RollupStore()
+        let analyticsStore = AnalyticsStore()
+
+        rollupStore.refresh(tasks: [task], segments: [segment], checklistItems: checklist, now: session.startedAt.addingTimeInterval(1_000))
+
+        #expect(rollupStore.rollup(for: task.id)?.workedSeconds == 900)
+        #expect(rollupStore.checklistProgress(for: task.id, checklistItems: checklist).label == "1/2")
+        #expect(analyticsStore.cachedSnapshot(for: .today) == nil)
+    }
+
+    @Test @MainActor
+    func csvExportServiceEscapesRowsAndUsesSessionFallbackForDeletedTasks() {
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test",
+            startedAt: Date(timeIntervalSince1970: 30_000),
+            titleSnapshot: "Deleted, Task"
+        )
+        session.endedAt = session.startedAt.addingTimeInterval(120)
+        session.note = "Said \"hello\""
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test",
+            startedAt: session.startedAt,
+            endedAt: session.endedAt
+        )
+
+        let csv = CSVExportService().export(
+            segments: [segment],
+            sessions: [session],
+            taskByID: [:],
+            taskParentPathByID: [:],
+            now: session.endedAt ?? session.startedAt
+        )
+
+        #expect(csv.contains("\"Deleted, Task\""))
+        #expect(csv.contains(AppStrings.localized("task.deleted.path")))
+        #expect(csv.contains("\"Said \"\"hello\"\"\""))
+    }
+
     @Test
     func sidebarUsesSharedFlatTaskTreeContract() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
@@ -71,5 +175,64 @@ struct CoreRefactorTests {
         #expect(analyticsSource.contains("Text(range.rawValue)") == false)
         #expect(storeSource.contains("return \"Ready\"") == false)
         #expect(storeSource.contains("return \"Focus\"") == false)
+    }
+}
+
+private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
+    var activeSegmentsCallCount = 0
+    var pausedSessionsCallCount = 0
+    var rangeSegmentsCallCount = 0
+    var allSegmentsCallCount = 0
+    var sessionsCallCount = 0
+
+    func activeSegments() throws -> [TimeSegment] {
+        activeSegmentsCallCount += 1
+        return []
+    }
+
+    func pausedSessions() throws -> [TimeSession] {
+        pausedSessionsCallCount += 1
+        return []
+    }
+
+    func sessions() throws -> [TimeSession] {
+        sessionsCallCount += 1
+        return []
+    }
+
+    func segments(from: Date, to: Date) throws -> [TimeSegment] {
+        try segments(from: from, to: to, now: Date())
+    }
+
+    func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment] {
+        rangeSegmentsCallCount += 1
+        return []
+    }
+
+    func allSegments() throws -> [TimeSegment] {
+        allSegmentsCallCount += 1
+        return []
+    }
+
+    func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
+        fatalError("Unused in LedgerRefreshSpyRepository")
+    }
+
+    func stopSegment(segmentID: UUID) throws {}
+
+    func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws {}
+
+    func softDeleteSegment(segmentID: UUID) throws {}
+
+    func stopSession(sessionID: UUID) throws {}
+
+    func pauseSession(sessionID: UUID) throws {}
+
+    func resumeSession(sessionID: UUID) throws -> TimeSegment? {
+        nil
+    }
+
+    func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
+        fatalError("Unused in LedgerRefreshSpyRepository")
     }
 }

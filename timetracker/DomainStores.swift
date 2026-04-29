@@ -10,17 +10,46 @@ struct TaskStore {
 
 struct LedgerStore {
     private(set) var activeSegments: [TimeSegment] = []
+    private(set) var pausedSessions: [TimeSession] = []
     private(set) var todaySegments: [TimeSegment] = []
     private(set) var allSegments: [TimeSegment] = []
     private(set) var sessions: [TimeSession] = []
 
     mutating func refresh(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
+        try refreshVisible(repository: repository, now: now, calendar: calendar)
+        try refreshHistory(repository: repository)
+    }
+
+    mutating func refreshVisible(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
         activeSegments = try repository.activeSegments()
-        allSegments = try repository.allSegments()
-        sessions = try repository.sessions()
+        pausedSessions = try repository.pausedSessions()
 
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
-        todaySegments = try repository.segments(from: today.start, to: today.end)
+        todaySegments = try repository.segments(from: today.start, to: today.end, now: now)
+        mergeVisibleSegments(todayInterval: today, now: now)
+    }
+
+    mutating func refreshHistory(repository: TimeTrackingRepository) throws {
+        allSegments = try repository.allSegments()
+        sessions = try repository.sessions()
+    }
+
+    private mutating func mergeVisibleSegments(todayInterval: DateInterval, now: Date) {
+        guard !allSegments.isEmpty else {
+            allSegments = todaySegments
+            return
+        }
+
+        let visibleIDs = Set(todaySegments.map(\.id))
+        allSegments = allSegments
+            .filter { segment in
+                if visibleIDs.contains(segment.id) {
+                    return false
+                }
+                let end = segment.endedAt ?? now
+                return !(segment.startedAt < todayInterval.end && end > todayInterval.start)
+            } + todaySegments
+        allSegments.sort { $0.startedAt < $1.startedAt }
     }
 }
 
@@ -44,13 +73,79 @@ struct AnalyticsSnapshot {
     let rangeSegments: [TimeSegment]
 }
 
+struct RollupStore {
+    private let rollupService = TaskRollupService()
+    private(set) var taskRollups: [UUID: TaskRollup] = [:]
+
+    mutating func refresh(tasks: [TaskNode], segments: [TimeSegment], checklistItems: [ChecklistItem], now: Date = Date()) {
+        taskRollups = rollupService.rollups(tasks: tasks, segments: segments, checklistItems: checklistItems, now: now)
+    }
+
+    func rollup(for taskID: UUID) -> TaskRollup? {
+        taskRollups[taskID]
+    }
+
+    func checklistProgress(for taskID: UUID, checklistItems: [ChecklistItem]) -> ChecklistProgress {
+        rollupService.checklistProgress(for: taskID, checklistItems: checklistItems)
+    }
+}
+
 struct AnalyticsStore {
     private let engine = AnalyticsEngine()
     private let aggregationService = TimeAggregationService()
-    private let rollupService = TaskRollupService()
+    private(set) var snapshots: [AnalyticsRange: AnalyticsSnapshot] = [:]
 
-    func rollups(tasks: [TaskNode], segments: [TimeSegment], checklistItems: [ChecklistItem], now: Date = Date()) -> [UUID: TaskRollup] {
-        rollupService.rollups(tasks: tasks, segments: segments, checklistItems: checklistItems, now: now)
+    func cachedSnapshot(for range: AnalyticsRange) -> AnalyticsSnapshot? {
+        snapshots[range]
+    }
+
+    @discardableResult
+    mutating func refreshSnapshot(
+        range: AnalyticsRange,
+        tasks: [TaskNode],
+        segments: [TimeSegment],
+        sessions: [TimeSession],
+        taskPathByID: [UUID: String],
+        taskParentPathByID: [UUID: String],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> AnalyticsSnapshot {
+        let snapshot = snapshot(
+            range: range,
+            tasks: tasks,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            now: now,
+            calendar: calendar
+        )
+        snapshots[range] = snapshot
+        return snapshot
+    }
+
+    mutating func refreshCachedSnapshots(
+        tasks: [TaskNode],
+        segments: [TimeSegment],
+        sessions: [TimeSession],
+        taskPathByID: [UUID: String],
+        taskParentPathByID: [UUID: String],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) {
+        guard !snapshots.isEmpty else { return }
+        for range in Array(snapshots.keys) {
+            refreshSnapshot(
+                range: range,
+                tasks: tasks,
+                segments: segments,
+                sessions: sessions,
+                taskPathByID: taskPathByID,
+                taskParentPathByID: taskParentPathByID,
+                now: now,
+                calendar: calendar
+            )
+        }
     }
 
     func snapshot(

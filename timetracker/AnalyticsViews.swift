@@ -1,103 +1,121 @@
 import Charts
+import Combine
 import SwiftUI
 
 struct AnalyticsView: View {
     @ObservedObject var store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var range: AnalyticsRange = .today
+    @State private var now = Date()
+    private let analyticsRefreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let snapshot = store.analyticsSnapshot(for: range, now: context.date)
-            let overview = snapshot.overview
-            let daily = snapshot.daily
-            let tasks = snapshot.taskBreakdown
-            let overlaps = snapshot.overlaps
-            let todaySegments = store.todaySegments
+        Group {
+            if let snapshot = store.cachedAnalyticsSnapshot(for: range) {
+                analyticsContent(snapshot: snapshot, now: now)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationTitle(AppStrings.analytics)
+        .background(AppColors.background)
+        .task(id: range) {
+            store.refreshAnalyticsSnapshot(for: range, now: now)
+        }
+        .onReceive(analyticsRefreshTimer) { date in
+            now = date
+            store.refreshAnalyticsSnapshot(for: range, now: date)
+        }
+    }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack {
-                            if horizontalSizeClass != .compact {
-                                analyticsTitle(range)
-                            }
-                            Spacer()
-                            analyticsRangePicker
-                        }
+    private func analyticsContent(snapshot: AnalyticsSnapshot, now: Date) -> some View {
+        let overview = snapshot.overview
+        let daily = snapshot.daily
+        let tasks = snapshot.taskBreakdown
+        let overlaps = snapshot.overlaps
+        let todaySegments = store.todaySegments
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            if horizontalSizeClass != .compact {
-                                analyticsTitle(range)
-                            }
-                            analyticsRangePicker
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        if horizontalSizeClass != .compact {
+                            analyticsTitle(range)
                         }
+                        Spacer()
+                        analyticsRangePicker
                     }
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
-                        AnalyticsMetric(title: AppStrings.wallTime, value: DurationFormatter.compact(overview.wallSeconds), footnote: AppStrings.localized("analytics.wall.footnote"))
-                        AnalyticsMetric(title: AppStrings.grossTime, value: DurationFormatter.compact(overview.grossSeconds), footnote: AppStrings.localized("analytics.gross.footnote"))
-                        AnalyticsMetric(title: AppStrings.localized("analytics.metric.overlap"), value: DurationFormatter.compact(overview.overlapSeconds), footnote: AppStrings.localized("analytics.overlap.footnote"))
-                        AnalyticsMetric(title: AppStrings.localized("analytics.metric.pomodoros"), value: "\(overview.pomodoroCount)", footnote: AppStrings.localized("analytics.pomodoros.footnote"))
-                    }
-
-                    TaskForecastsCard(store: store)
-
-                    if range == .today {
-                        TodayActivityCard(store: store, segments: todaySegments, now: context.date)
-                        OverlappingTimelineCard(store: store, segments: todaySegments, now: context.date)
-                        TaskDonutCard(tasks: tasks, totalSeconds: max(overview.grossSeconds, 1))
-                    } else {
-                        AnalyticsChartCard(title: AppStrings.localized("analytics.dailyTrend.title"), subtitle: AppStrings.localized("analytics.dailyTrend.subtitle")) {
-                            Chart(daily) { point in
-                                BarMark(
-                                    x: .value("Day", point.label),
-                                    y: .value("Wall Minutes", point.wallSeconds / 60)
-                                )
-                                .foregroundStyle(.blue)
-
-                                LineMark(
-                                    x: .value("Day", point.label),
-                                    y: .value("Gross Minutes", point.grossSeconds / 60)
-                                )
-                                .foregroundStyle(.green)
-                                .symbol(.circle)
-                            }
-                            .chartYAxisLabel(AppStrings.localized("analytics.minutes"))
-                            .frame(height: 240)
+                    VStack(alignment: .leading, spacing: 12) {
+                        if horizontalSizeClass != .compact {
+                            analyticsTitle(range)
                         }
+                        analyticsRangePicker
                     }
+                }
 
-                    AnalyticsChartCard(title: AppStrings.localized("analytics.overlap.title"), subtitle: AppStrings.localized("analytics.overlap.subtitle")) {
-                        VStack(spacing: 0) {
-                            if overlaps.isEmpty {
-                                EmptyStateRow(title: AppStrings.localized("analytics.empty.overlap"), icon: "rectangle.2.swap")
-                            } else {
-                                ForEach(overlaps.prefix(6)) { overlap in
-                                    OverlapRow(overlap: overlap)
-                                    if overlap.id != overlaps.prefix(6).last?.id {
-                                        Divider()
-                                    }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
+                    AnalyticsMetric(title: AppStrings.wallTime, value: DurationFormatter.compact(overview.wallSeconds), footnote: AppStrings.localized("analytics.wall.footnote"))
+                    AnalyticsMetric(title: AppStrings.grossTime, value: DurationFormatter.compact(overview.grossSeconds), footnote: AppStrings.localized("analytics.gross.footnote"))
+                    AnalyticsMetric(title: AppStrings.localized("analytics.metric.overlap"), value: DurationFormatter.compact(overview.overlapSeconds), footnote: AppStrings.localized("analytics.overlap.footnote"))
+                    AnalyticsMetric(title: AppStrings.localized("analytics.metric.pomodoros"), value: "\(overview.pomodoroCount)", footnote: AppStrings.localized("analytics.pomodoros.footnote"))
+                }
+
+                TaskForecastsCard(store: store)
+
+                if range == .today {
+                    TodayActivityCard(store: store, segments: todaySegments, now: now)
+                    OverlappingTimelineCard(store: store, segments: todaySegments, now: now)
+                    TaskDonutCard(tasks: tasks, totalSeconds: max(overview.grossSeconds, 1))
+                } else {
+                    AnalyticsChartCard(title: AppStrings.localized("analytics.dailyTrend.title"), subtitle: AppStrings.localized("analytics.dailyTrend.subtitle")) {
+                        Chart(daily) { point in
+                            BarMark(
+                                x: .value("Day", point.label),
+                                y: .value("Wall Minutes", point.wallSeconds / 60)
+                            )
+                            .foregroundStyle(.blue)
+
+                            LineMark(
+                                x: .value("Day", point.label),
+                                y: .value("Gross Minutes", point.grossSeconds / 60)
+                            )
+                            .foregroundStyle(.green)
+                            .symbol(.circle)
+                        }
+                        .chartYAxisLabel(AppStrings.localized("analytics.minutes"))
+                        .frame(height: 240)
+                    }
+                }
+
+                AnalyticsChartCard(title: AppStrings.localized("analytics.overlap.title"), subtitle: AppStrings.localized("analytics.overlap.subtitle")) {
+                    VStack(spacing: 0) {
+                        if overlaps.isEmpty {
+                            EmptyStateRow(title: AppStrings.localized("analytics.empty.overlap"), icon: "rectangle.2.swap")
+                        } else {
+                            ForEach(overlaps.prefix(6)) { overlap in
+                                OverlapRow(overlap: overlap)
+                                if overlap.id != overlaps.prefix(6).last?.id {
+                                    Divider()
                                 }
                             }
                         }
                     }
                 }
-                .padding()
             }
+            .padding()
         }
-        .navigationTitle(AppStrings.analytics)
-        .background(AppColors.background)
     }
 
     private func analyticsTitle(_ range: AnalyticsRange) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-                            Text(AppStrings.analytics)
-                                .font(.largeTitle.bold())
-                            Text(range == .today ? AppStrings.localized("analytics.header.today") : AppStrings.localized("analytics.header.other"))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
+            Text(AppStrings.analytics)
+                .font(.largeTitle.bold())
+            Text(range == .today ? AppStrings.localized("analytics.header.today") : AppStrings.localized("analytics.header.other"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var analyticsRangePicker: some View {
@@ -153,104 +171,6 @@ struct AnalyticsChartCard<Content: View>: View {
         }
         .appCard()
     }
-}
-
-struct TaskForecastsCard: View {
-    @ObservedObject var store: TimeTrackerStore
-
-    private var forecastItems: [AnalyticsForecastItem] {
-        store.tasks.compactMap { task -> AnalyticsForecastItem? in
-            guard task.deletedAt == nil,
-                  task.status != .archived,
-                  task.status != .completed,
-                  let rollup = store.rollup(for: task.id),
-                  rollup.isDisplayableForecast else {
-                return nil
-            }
-            return AnalyticsForecastItem(task: task, rollup: rollup)
-        }
-        .sorted {
-            ($0.rollup.remainingSeconds ?? 0) > ($1.rollup.remainingSeconds ?? 0)
-        }
-        .prefix(6)
-        .map { $0 }
-    }
-
-    var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.forecasts.title"), subtitle: AppStrings.localized("analytics.forecasts.subtitle")) {
-            if forecastItems.isEmpty {
-                EmptyStateRow(title: AppStrings.localized("analytics.forecasts.empty"), icon: "checklist")
-            } else {
-                VStack(spacing: 12) {
-                    ForecastExplanationCallout()
-
-                    VStack(spacing: 0) {
-                        ForEach(forecastItems) { item in
-                            ForecastAnalyticsRow(store: store, item: item)
-                            if item.id != forecastItems.last?.id {
-                                Divider()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct ForecastAnalyticsRow: View {
-    @ObservedObject var store: TimeTrackerStore
-    let item: AnalyticsForecastItem
-
-    var body: some View {
-        HStack(spacing: 12) {
-            TaskIcon(task: item.task, size: 32)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.task.title)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                Text(item.rollup.reason)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                if let paceText = item.rollup.historicalPaceDisplayText {
-                    Text(paceText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                ProgressView(value: item.rollup.completionFraction)
-                    .tint(Color(hex: item.task.colorHex) ?? .blue)
-            }
-
-            Spacer(minLength: 12)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(item.rollup.remainingDisplayText)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                Text(daysText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectTask(item.task.id)
-        }
-        .padding(.vertical, 10)
-    }
-
-    private var daysText: String {
-        item.rollup.projectedDays == nil ? item.rollup.confidence.displayName : item.rollup.projectedDaysDisplayText
-    }
-}
-
-private struct AnalyticsForecastItem: Identifiable {
-    let task: TaskNode
-    let rollup: TaskRollup
-
-    var id: UUID { task.id }
 }
 
 struct OverlappingTimelineCard: View {

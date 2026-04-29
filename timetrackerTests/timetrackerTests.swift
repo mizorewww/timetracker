@@ -194,6 +194,34 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
+    func segmentRangeQueryUsesExplicitSnapshotDateForActiveSegments() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Active", parentID: nil, colorHex: nil, iconName: nil)
+        let start = Date(timeIntervalSince1970: 10_000)
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: start, titleSnapshot: task.title)
+        let segment = TimeSegment(sessionID: session.id, taskID: task.id, source: .timer, deviceID: "test", startedAt: start, endedAt: nil)
+        context.insert(session)
+        context.insert(segment)
+        try context.save()
+
+        let beforeRange = try timeRepository.segments(
+            from: start.addingTimeInterval(600),
+            to: start.addingTimeInterval(1_200),
+            now: start.addingTimeInterval(300)
+        )
+        let insideRange = try timeRepository.segments(
+            from: start.addingTimeInterval(600),
+            to: start.addingTimeInterval(1_200),
+            now: start.addingTimeInterval(900)
+        )
+
+        #expect(beforeRange.isEmpty)
+        #expect(insideRange.map(\.id) == [segment.id])
+    }
+
+    @Test @MainActor
     func analyticsOverviewBreakdownAndOverlapUseSegments() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -364,7 +392,7 @@ struct TimeTrackerTests {
     }
 
     @Test @MainActor
-    func optimizeDatabaseDeletesLedgerRowsForSoftDeletedTasks() throws {
+    func optimizeDatabasePreservesLedgerRowsForSoftDeletedTasks() throws {
         let context = try makeContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -384,9 +412,37 @@ struct TimeTrackerTests {
 
         let removedCount = store.optimizeDatabase()
 
+        #expect(removedCount == 0)
+        #expect(try timeRepository.allSegments().count == 1)
+        #expect(try timeRepository.sessions().count == 1)
+    }
+
+    @Test @MainActor
+    func optimizeDatabaseRemovesOnlyTrulyOrphanedLedgerRows() throws {
+        let context = try makeContext()
+        let missingTaskID = UUID()
+        let session = TimeSession(taskID: missingTaskID, source: .manual, deviceID: "test")
+        session.endedAt = Date()
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: missingTaskID,
+            source: .manual,
+            deviceID: "test",
+            startedAt: Date().addingTimeInterval(-900),
+            endedAt: Date()
+        )
+        context.insert(session)
+        context.insert(segment)
+        try context.save()
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        let removedCount = store.optimizeDatabase()
+
         #expect(removedCount == 2)
-        #expect(try timeRepository.allSegments().isEmpty)
-        #expect(try timeRepository.sessions().isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).contains { $0.id == segment.id } == false)
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).contains { $0.id == session.id } == false)
     }
 
     @Test @MainActor
@@ -444,6 +500,25 @@ struct TimeTrackerTests {
         #expect(completedRun.state == .completed)
         #expect(completedRun.completedFocusRounds == 1)
         #expect(completedRun.endedAt != nil)
+        #expect(try timeRepository.sessions().first { $0.id == run.sessionID }?.endedAt != nil)
+    }
+
+    @Test @MainActor
+    func pomodoroIntermediateRoundKeepsSessionPausedForResume() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Focus", parentID: nil, colorHex: nil, iconName: nil)
+
+        let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 2)
+        try pomodoroRepository.completeFocus(runID: run.id)
+
+        let pausedSession = try #require(try timeRepository.pausedSessions().first { $0.id == run.sessionID })
+        let updatedRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
+        #expect(pausedSession.endedAt == nil)
+        #expect(updatedRun.state == .shortBreak)
+        #expect(updatedRun.endedAt == nil)
     }
 
     @Test @MainActor
@@ -1063,7 +1138,7 @@ struct TimeTrackerTests {
         let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 
-        #expect(analyticsSource.contains("TodayActivityCard(store: store, segments: todaySegments, now: context.date)"))
+        #expect(analyticsSource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))
         #expect(analyticsSource.contains("struct HourTaskSlice"))
         #expect(analyticsSource.contains("Color(hex: colorHex)"))
         #expect(analyticsSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)
@@ -1313,6 +1388,46 @@ struct TimeTrackerTests {
         #expect(secondRollup.historicalDailyAverageSeconds == 3_600)
         #expect(secondRollup.historicalActiveDayCount == 1)
         #expect(abs((secondRollup.projectedDays ?? 0) - 0.5) < 0.05)
+    }
+
+    @Test @MainActor
+    func checklistToggleImmediatelyRecalculatesForecastEstimates() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Toggle Forecast Task", parentID: nil, colorHex: nil, iconName: nil)
+        let end = Date().addingTimeInterval(-60)
+
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: end.addingTimeInterval(-3_600),
+            endedAt: end,
+            note: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        var draft = TaskEditorDraft(task: task, checklistItems: [])
+        draft.checklistItems = [
+            ChecklistEditorDraft(title: "Already done", isCompleted: true),
+            ChecklistEditorDraft(title: "Tap me", isCompleted: false)
+        ]
+        store.saveTaskDraft(draft)
+
+        let firstRollup = try #require(store.rollup(for: task.id))
+        #expect(firstRollup.checklistProgress.label == "1/2")
+        #expect(firstRollup.estimatedTotalSeconds == 7_200)
+        #expect(firstRollup.remainingSeconds == 3_600)
+
+        let itemToToggle = try #require(store.checklistItems(for: task.id).first { $0.title == "Tap me" })
+        store.toggleChecklistItem(itemToToggle)
+
+        let secondRollup = try #require(store.rollup(for: task.id))
+        #expect(secondRollup.checklistProgress.label == "2/2")
+        #expect(secondRollup.estimatedTotalSeconds == 3_600)
+        #expect(secondRollup.remainingSeconds == 0)
+        #expect(secondRollup.projectedDays == 0)
     }
 
     @Test @MainActor

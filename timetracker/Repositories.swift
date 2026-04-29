@@ -16,8 +16,10 @@ protocol TaskRepository {
 
 protocol TimeTrackingRepository {
     func activeSegments() throws -> [TimeSegment]
+    func pausedSessions() throws -> [TimeSession]
     func sessions() throws -> [TimeSession]
     func segments(from: Date, to: Date) throws -> [TimeSegment]
+    func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment]
     func allSegments() throws -> [TimeSegment]
     @discardableResult func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment
     func stopSegment(segmentID: UUID) throws
@@ -244,6 +246,15 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
         return try context.fetch(descriptor)
     }
 
+    func pausedSessions() throws -> [TimeSession] {
+        let descriptor = FetchDescriptor<TimeSession>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.endedAt == nil },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        let activeSessionIDs = Set(try activeSegments().map(\.sessionID))
+        return try context.fetch(descriptor).filter { !activeSessionIDs.contains($0.id) }
+    }
+
     func sessions() throws -> [TimeSession] {
         let descriptor = FetchDescriptor<TimeSession>(
             predicate: #Predicate { $0.deletedAt == nil },
@@ -253,13 +264,17 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
+        try segments(from: from, to: to, now: Date())
+    }
+
+    func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment] {
         let upperBound = to
         let descriptor = FetchDescriptor<TimeSegment>(
             predicate: #Predicate { $0.deletedAt == nil && $0.startedAt < upperBound },
             sortBy: [SortDescriptor(\.startedAt)]
         )
         return try context.fetch(descriptor).filter { segment in
-            let end = segment.endedAt ?? Date()
+            let end = min(segment.endedAt ?? now, upperBound)
             return end > from
         }
     }
@@ -490,13 +505,19 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         let descriptor = FetchDescriptor<PomodoroRun>()
         guard let run = try context.fetch(descriptor).first(where: { $0.id == runID && $0.deletedAt == nil }) else { return }
         guard run.state == .focusing || run.state == .interrupted else { return }
+        let now = Date()
+        let willComplete = run.completedFocusRounds + 1 >= run.targetRounds
         if let sessionID = run.sessionID {
-            try timeRepository.pauseSession(sessionID: sessionID)
+            if willComplete {
+                try timeRepository.stopSession(sessionID: sessionID)
+            } else {
+                try timeRepository.pauseSession(sessionID: sessionID)
+            }
         }
         run.completedFocusRounds += 1
-        run.state = run.completedFocusRounds >= run.targetRounds ? .completed : .shortBreak
-        run.endedAt = run.state == .completed ? Date() : nil
-        run.updatedAt = Date()
+        run.state = willComplete ? .completed : .shortBreak
+        run.endedAt = willComplete ? now : nil
+        run.updatedAt = now
         try context.save()
     }
 

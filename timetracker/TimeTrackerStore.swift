@@ -18,6 +18,7 @@ final class TimeTrackerStore: ObservableObject {
     }
     @Published private(set) var allSegments: [TimeSegment] = []
     @Published private(set) var sessions: [TimeSession] = []
+    @Published private(set) var pausedSessions: [TimeSession] = []
     @Published private(set) var pomodoroRuns: [PomodoroRun] = []
     @Published private(set) var countdownEvents: [CountdownEvent] = []
     @Published private(set) var syncedPreferences: [SyncedPreference] = []
@@ -27,7 +28,8 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
     @Published private(set) var preferences = AppPreferences.defaults
-    @Published private(set) var taskRollups: [UUID: TaskRollup] = [:]
+    @Published private var rollupDomainStore = RollupStore()
+    @Published private var analyticsDomainStore = AnalyticsStore()
     @Published var selectedTaskID: UUID?
     @Published var selectedRange: RangePreset = .today
     @Published var errorMessage: String?
@@ -97,10 +99,11 @@ final class TimeTrackerStore: ObservableObject {
     private let taskTreeService = TaskTreeService()
     private let ledgerSummaryService = LedgerSummaryService()
     private let checklistDraftService = ChecklistDraftService()
+    private let databaseMaintenanceService = DatabaseMaintenanceService()
+    private let csvExportService = CSVExportService()
     private var taskDomainStore = TaskStore()
     private var ledgerDomainStore = LedgerStore()
     private var preferenceDomainStore = PreferenceStore()
-    private var analyticsDomainStore = AnalyticsStore()
     private var syncObservers: [NSObjectProtocol] = []
     private var taskByID: [UUID: TaskNode] = [:]
     private var childrenByParentID: [UUID?: [TaskNode]] = [:]
@@ -109,14 +112,15 @@ final class TimeTrackerStore: ObservableObject {
     private var taskParentPathByID: [UUID: String] = [:]
     private var sortedTodaySegments: [TimeSegment] = []
     private var scheduledSyncRefreshTask: Task<Void, Never>?
-    private let rollupService = TaskRollupService()
     private enum RefreshScope: Hashable {
         case tasks
         case ledger
+        case ledgerHistory
         case pomodoro
         case preferences
         case countdown
         case checklist
+        case rollups
         case analytics
         case liveActivities
     }
@@ -124,10 +128,12 @@ final class TimeTrackerStore: ObservableObject {
     private static let fullRefreshScopes: Set<RefreshScope> = [
         .tasks,
         .ledger,
+        .ledgerHistory,
         .pomodoro,
         .preferences,
         .countdown,
         .checklist,
+        .rollups,
         .analytics,
         .liveActivities
     ]
@@ -227,8 +233,8 @@ final class TimeTrackerStore: ObservableObject {
         if shouldRefreshAll || scopes.contains(.tasks) {
             try refreshTaskDomain()
         }
-        if shouldRefreshAll || scopes.contains(.ledger) {
-            try refreshLedgerDomain()
+        if shouldRefreshAll || scopes.contains(.ledger) || scopes.contains(.ledgerHistory) {
+            try refreshLedgerDomain(includeHistory: shouldRefreshAll || scopes.contains(.ledgerHistory))
         }
         if shouldRefreshAll || scopes.contains(.pomodoro) {
             try refreshPomodoroDomain()
@@ -242,7 +248,11 @@ final class TimeTrackerStore: ObservableObject {
         if shouldRefreshAll || scopes.contains(.checklist) {
             checklistItems = try fetchChecklistItems()
         }
-        if shouldRefreshAll || scopes.contains(.analytics) || scopes.contains(.tasks) || scopes.contains(.ledger) || scopes.contains(.checklist) {
+        let rollupsInvalidated = shouldRefreshAll || scopes.contains(.rollups) || scopes.contains(.tasks) || scopes.contains(.ledger) || scopes.contains(.ledgerHistory) || scopes.contains(.checklist)
+        if rollupsInvalidated {
+            refreshRollupDomain()
+        }
+        if shouldRefreshAll || scopes.contains(.analytics) || scopes.contains(.tasks) || scopes.contains(.ledger) || scopes.contains(.ledgerHistory) || scopes.contains(.checklist) {
             refreshAnalyticsDomain()
         }
 
@@ -252,7 +262,7 @@ final class TimeTrackerStore: ObservableObject {
             self.selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
         }
 
-        if shouldRefreshAll || scopes.contains(.liveActivities) || scopes.contains(.ledger) || scopes.contains(.tasks) {
+        if shouldRefreshAll || scopes.contains(.liveActivities) || scopes.contains(.ledger) || scopes.contains(.ledgerHistory) || scopes.contains(.tasks) {
             syncLiveActivitiesIfAvailable()
         }
     }
@@ -263,10 +273,15 @@ final class TimeTrackerStore: ObservableObject {
         tasks = taskDomainStore.tasks
     }
 
-    private func refreshLedgerDomain() throws {
+    private func refreshLedgerDomain(includeHistory: Bool) throws {
         guard let timeRepository else { return }
-        try ledgerDomainStore.refresh(repository: timeRepository)
+        if includeHistory {
+            try ledgerDomainStore.refresh(repository: timeRepository)
+        } else {
+            try ledgerDomainStore.refreshVisible(repository: timeRepository)
+        }
         activeSegments = ledgerDomainStore.activeSegments
+        pausedSessions = ledgerDomainStore.pausedSessions
         allSegments = ledgerDomainStore.allSegments
         sessions = ledgerDomainStore.sessions
         todaySegments = ledgerDomainStore.todaySegments
@@ -282,13 +297,19 @@ final class TimeTrackerStore: ObservableObject {
         preferences = preferenceDomainStore.preferences
     }
 
-    private func refreshAnalyticsDomain() {
-        taskRollups = analyticsDomainStore.rollups(
+    private func refreshRollupDomain() {
+        var store = rollupDomainStore
+        store.refresh(
             tasks: tasks,
             segments: allSegments,
             checklistItems: checklistItems,
             now: Date()
         )
+        rollupDomainStore = store
+    }
+
+    private func refreshAnalyticsDomain() {
+        refreshCachedAnalyticsSnapshots(now: Date())
     }
 
     func startSelectedTask() {
@@ -503,7 +524,7 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
 
-        perform(refresh: [.ledger, .analytics, .liveActivities]) {
+        perform(refresh: [.ledgerHistory, .analytics, .liveActivities]) {
             _ = try AddManualTimeUseCase(repository: requiredTimeRepository()).execute(
                 taskID: taskID,
                 startedAt: draft.startedAt,
@@ -530,7 +551,7 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
 
-        perform(refresh: [.ledger, .analytics, .liveActivities]) {
+        perform(refresh: [.ledgerHistory, .analytics, .liveActivities]) {
             try UpdateSegmentUseCase(repository: requiredTimeRepository()).execute(
                 segmentID: draft.segmentID,
                 taskID: taskID,
@@ -544,7 +565,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func deleteSegment(_ segmentID: UUID) {
-        perform(refresh: [.ledger, .analytics, .liveActivities]) {
+        perform(refresh: [.ledgerHistory, .analytics, .liveActivities]) {
             try SoftDeleteSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segmentID)
         }
         segmentEditorDraft = nil
@@ -580,57 +601,18 @@ final class TimeTrackerStore: ObservableObject {
         var removedCount = 0
         perform {
             guard let modelContext else { throw StoreError.notConfigured }
-            let allTasks = try modelContext.fetch(FetchDescriptor<TaskNode>())
-            let validTaskIDs = Set(allTasks.filter { $0.deletedAt == nil }.map(\.id))
-            let allSegments = try modelContext.fetch(FetchDescriptor<TimeSegment>())
-            let allSessions = try modelContext.fetch(FetchDescriptor<TimeSession>())
-            let allRuns = try modelContext.fetch(FetchDescriptor<PomodoroRun>())
-
-            let orphanSegments = allSegments.filter { !validTaskIDs.contains($0.taskID) }
-            let orphanSessions = allSessions.filter { !validTaskIDs.contains($0.taskID) }
-            let orphanRuns = allRuns.filter { !validTaskIDs.contains($0.taskID) }
-            let orphanSegmentIDs = Set(orphanSegments.map(\.id))
-            let sessionIDsWithSegments = Set(allSegments.filter { !orphanSegmentIDs.contains($0.id) }.map(\.sessionID))
-            let emptySessions = allSessions.filter { !sessionIDsWithSegments.contains($0.id) }
-            var removedSessionIDs = Set<UUID>()
-            let removableSessions = (orphanSessions + emptySessions).filter { removedSessionIDs.insert($0.id).inserted }
-
-            for segment in orphanSegments {
-                modelContext.delete(segment)
-            }
-            for session in removableSessions {
-                modelContext.delete(session)
-            }
-            for run in orphanRuns {
-                modelContext.delete(run)
-            }
-
-            removedCount = orphanSegments.count + removableSessions.count + orphanRuns.count
-            try modelContext.save()
+            removedCount = try databaseMaintenanceService.optimizeDatabase(context: modelContext)
         }
         return removedCount
     }
 
     func csvExport() -> String {
-        let formatter = ISO8601DateFormatter()
-        let header = ["Task", "Path", "Start", "End", "Duration Seconds", "Source", "Note"]
-        let rows = allSegments
-            .filter { $0.deletedAt == nil }
-            .sorted { $0.startedAt < $1.startedAt }
-            .map { segment in
-                [
-                    displayTitle(for: segment),
-                    displayPath(for: segment),
-                    formatter.string(from: segment.startedAt),
-                    segment.endedAt.map { formatter.string(from: $0) } ?? "",
-                    "\(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt)))",
-                    segment.source.rawValue,
-                    note(for: segment)
-                ]
-            }
-        return ([header] + rows)
-            .map { $0.map(Self.csvEscaped).joined(separator: ",") }
-            .joined(separator: "\n")
+        csvExportService.export(
+            segments: allSegments,
+            sessions: sessions,
+            taskByID: taskByID,
+            taskParentPathByID: taskParentPathByID
+        )
     }
 
     func startPomodoroForSelectedTask(focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) {
@@ -728,15 +710,6 @@ final class TimeTrackerStore: ObservableObject {
             lastError: AppCloudSync.lastError,
             accountStatus: cloudAccountStatus
         )
-    }
-
-    var pausedSessions: [TimeSession] {
-        let activeSessionIDs = Set(activeSegments.map(\.sessionID))
-        return sessions.filter { session in
-            session.endedAt == nil &&
-            session.deletedAt == nil &&
-            !activeSessionIDs.contains(session.id)
-        }
     }
 
     var timelineSegments: [TimeSegment] {
@@ -923,6 +896,41 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func analyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsSnapshot {
+        makeAnalyticsSnapshot(for: range, now: now)
+    }
+
+    func cachedAnalyticsSnapshot(for range: AnalyticsRange) -> AnalyticsSnapshot? {
+        analyticsDomainStore.cachedSnapshot(for: range)
+    }
+
+    func refreshAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) {
+        var store = analyticsDomainStore
+        store.refreshSnapshot(
+            range: range,
+            tasks: tasks,
+            segments: allSegments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            now: now
+        )
+        analyticsDomainStore = store
+    }
+
+    private func refreshCachedAnalyticsSnapshots(now: Date = Date()) {
+        var store = analyticsDomainStore
+        store.refreshCachedSnapshots(
+            tasks: tasks,
+            segments: allSegments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            now: now
+        )
+        analyticsDomainStore = store
+    }
+
+    private func makeAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsSnapshot {
         analyticsDomainStore.snapshot(
             range: range,
             tasks: tasks,
@@ -993,11 +1001,11 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func checklistProgress(for taskID: UUID) -> ChecklistProgress {
-        rollupService.checklistProgress(for: taskID, checklistItems: checklistItems)
+        rollupDomainStore.checklistProgress(for: taskID, checklistItems: checklistItems)
     }
 
     func rollup(for taskID: UUID) -> TaskRollup? {
-        taskRollups[taskID]
+        rollupDomainStore.rollup(for: taskID)
     }
 
     private func rebuildTaskIndexes() {
@@ -1259,13 +1267,6 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
 
-    private static func csvEscaped(_ value: String) -> String {
-        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
-        if escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"") {
-            return "\"\(escaped)\""
-        }
-        return escaped
-    }
 }
 
 private struct LegacyCountdownEvent: Codable {
@@ -1280,198 +1281,6 @@ private struct LegacyCountdownEvent: Codable {
             return []
         }
         return events.sorted { $0.date < $1.date }
-    }
-}
-
-struct TaskEditorDraft: Identifiable {
-    let id = UUID()
-    var taskID: UUID?
-    var title: String
-    var status: TaskStatus
-    var parentID: UUID?
-    var colorHex: String
-    var iconName: String
-    var notes: String
-    var estimatedMinutes: Int?
-    var hasDueDate: Bool
-    var dueAt: Date
-    var checklistItems: [ChecklistEditorDraft]
-
-    init(parentID: UUID?) {
-        self.taskID = nil
-        self.title = ""
-        self.status = .active
-        self.parentID = parentID
-        self.colorHex = "1677FF"
-        self.iconName = "checkmark.circle"
-        self.notes = ""
-        self.estimatedMinutes = nil
-        self.hasDueDate = false
-        self.dueAt = Date()
-        self.checklistItems = []
-    }
-
-    init(task: TaskNode, checklistItems: [ChecklistItem]) {
-        self.taskID = task.id
-        self.title = task.title
-        self.status = task.status
-        self.parentID = task.parentID
-        self.colorHex = task.colorHex ?? "1677FF"
-        self.iconName = task.iconName ?? "checkmark.circle"
-        self.notes = task.notes ?? ""
-        self.estimatedMinutes = task.estimatedSeconds.map { $0 / 60 }
-        self.hasDueDate = task.dueAt != nil
-        self.dueAt = task.dueAt ?? Date()
-        self.checklistItems = checklistItems.map(ChecklistEditorDraft.init(item:))
-    }
-}
-
-struct ChecklistEditorDraft: Identifiable, Equatable {
-    let id: UUID
-    var existingID: UUID?
-    var title: String
-    var isCompleted: Bool
-
-    nonisolated init(title: String = "", isCompleted: Bool = false) {
-        self.id = UUID()
-        self.existingID = nil
-        self.title = title
-        self.isCompleted = isCompleted
-    }
-
-    nonisolated init(item: ChecklistItem) {
-        self.id = item.id
-        self.existingID = item.id
-        self.title = item.title
-        self.isCompleted = item.isCompleted
-    }
-}
-
-struct ManualTimeDraft: Identifiable {
-    let id = UUID()
-    var taskID: UUID?
-    var startedAt: Date
-    var endedAt: Date
-    var note: String
-
-    init(taskID: UUID?, tasks: [TaskNode]) {
-        let end = Date()
-        self.taskID = taskID ?? tasks.first?.id
-        self.startedAt = end.addingTimeInterval(-30 * 60)
-        self.endedAt = end
-        self.note = ""
-    }
-}
-
-struct SegmentEditorDraft: Identifiable {
-    let id = UUID()
-    let segmentID: UUID
-    var taskID: UUID?
-    var startedAt: Date
-    var endedAt: Date
-    var isActive: Bool
-    var note: String
-    var source: TimeSessionSource
-
-    init(segment: TimeSegment, note: String) {
-        self.segmentID = segment.id
-        self.taskID = segment.taskID
-        self.startedAt = segment.startedAt
-        self.endedAt = segment.endedAt ?? Date()
-        self.isActive = segment.endedAt == nil
-        self.note = note
-        self.source = segment.source
-    }
-}
-
-struct SyncStatus {
-    let mode: String
-    let containerIdentifier: String
-    let deviceID: String
-    let lastError: String?
-    let accountStatus: String
-
-    var isCloudBacked: Bool {
-        mode == "iCloud"
-    }
-
-    var storageStatusText: String {
-        isCloudBacked ? "SwiftData + iCloud" : mode
-    }
-}
-
-enum AnalyticsRange: String, CaseIterable, Identifiable {
-    case today = "Today"
-    case week = "Week"
-    case month = "Month"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .today:
-            return AppStrings.localized("analytics.range.today")
-        case .week:
-            return AppStrings.localized("analytics.range.week")
-        case .month:
-            return AppStrings.localized("analytics.range.month")
-        }
-    }
-}
-
-struct AnalyticsOverview {
-    let grossSeconds: Int
-    let wallSeconds: Int
-    let overlapSeconds: Int
-    let pomodoroCount: Int
-    let averageFocusSeconds: Int
-}
-
-struct DailyAnalyticsPoint: Identifiable {
-    let date: Date
-    let grossSeconds: Int
-    let wallSeconds: Int
-    let label: String
-
-    var id: Date { date }
-}
-
-struct HourlyAnalyticsPoint: Identifiable {
-    let hour: Int
-    let grossSeconds: Int
-    let wallSeconds: Int
-
-    var id: Int { hour }
-    var label: String {
-        hour == 0 ? "00" : "\(hour)"
-    }
-}
-
-struct TaskAnalyticsPoint: Identifiable {
-    let taskID: UUID
-    let title: String
-    let path: String
-    let colorHex: String?
-    let iconName: String?
-    let status: TaskStatus?
-    let grossSeconds: Int
-    let wallSeconds: Int
-
-    var id: UUID { taskID }
-}
-
-struct OverlapAnalyticsPoint: Identifiable {
-    let start: Date
-    let end: Date
-    let firstTitle: String
-    let secondTitle: String
-
-    var id: String {
-        "\(Int(start.timeIntervalSince1970))-\(Int(end.timeIntervalSince1970))-\(firstTitle)-\(secondTitle)"
-    }
-
-    var durationSeconds: Int {
-        max(0, Int(end.timeIntervalSince(start)))
     }
 }
 

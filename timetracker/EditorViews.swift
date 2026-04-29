@@ -14,8 +14,9 @@ struct TaskEditorSheet: View {
                 dismiss()
             },
             onSave: { draft in
-                store.saveTaskDraft(draft)
-                dismiss()
+                if store.saveTaskDraft(draft) {
+                    dismiss()
+                }
             }
         )
         .platformSheetFrame(width: 520, height: 620)
@@ -50,7 +51,7 @@ struct TaskEditorPanel: View {
 
                         Picker(AppStrings.localized("editor.task.parent"), selection: parentBinding) {
                             Text(.app("editor.task.rootLevel")).tag(Optional<UUID>.none)
-                            ForEach(store.tasks.filter { $0.id != draft.taskID }, id: \.id) { task in
+                            ForEach(store.validParentTasks(for: draft.taskID), id: \.id) { task in
                                 Text(indentedTitle(task)).tag(Optional(task.id))
                             }
                         }
@@ -407,7 +408,7 @@ struct SegmentEditorPanel: View {
                         }
                     }
 
-                    LabeledContent(AppStrings.localized("segment.source"), value: draft.source.rawValue)
+                    LabeledContent(AppStrings.localized("segment.source"), value: draft.source.displayName)
                 }
 
                 Section(AppStrings.localized("segment.time")) {

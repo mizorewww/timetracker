@@ -3,7 +3,7 @@ import SwiftUI
 struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var searchText = ""
-    @State private var expandedTaskIDs: Set<UUID> = []
+    @State private var expansionState = TaskExpansionState()
 
     private var searchResults: [TaskNode] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -19,12 +19,19 @@ struct TasksView: View {
         List {
             if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Section {
-                    ForEach(store.rootTasks(), id: \.id) { task in
-                        TaskManagementTreeRow(
-                            store: store,
-                            task: task,
-                            expandedTaskIDs: $expandedTaskIDs
-                        )
+                    ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)) { row in
+                        if let task = store.task(for: row.taskID) {
+                            TaskManagementFlatRow(
+                                store: store,
+                                task: task,
+                                treeDepth: row.depth,
+                                hasChildren: row.hasChildren,
+                                isExpanded: row.isExpanded,
+                                toggleExpansion: {
+                                    expansionState.toggle(row.taskID)
+                                }
+                            )
+                        }
                     }
                 } header: {
                     Text(.app("tasks.tree"))
@@ -65,43 +72,8 @@ struct TasksView: View {
             }
         }
         .onAppear {
-            expandedTaskIDs.formUnion(store.tasks.map(\.id))
-        }
-    }
-}
-
-struct TaskManagementTreeRow: View {
-    @ObservedObject var store: TimeTrackerStore
-    let task: TaskNode
-    @Binding var expandedTaskIDs: Set<UUID>
-
-    var body: some View {
-        let children = store.children(of: task)
-        if children.isEmpty {
-            TaskManagementFlatRow(store: store, task: task)
-        } else {
-            DisclosureGroup(isExpanded: expandedBinding) {
-                ForEach(children, id: \.id) { child in
-                    TaskManagementTreeRow(
-                        store: store,
-                        task: child,
-                        expandedTaskIDs: $expandedTaskIDs
-                    )
-                }
-            } label: {
-                TaskManagementFlatRow(store: store, task: task)
-            }
-        }
-    }
-
-    private var expandedBinding: Binding<Bool> {
-        Binding {
-            expandedTaskIDs.contains(task.id)
-        } set: { isExpanded in
-            if isExpanded {
-                expandedTaskIDs.insert(task.id)
-            } else {
-                expandedTaskIDs.remove(task.id)
+            for task in store.tasks {
+                expansionState.expand(task.id)
             }
         }
     }
@@ -110,6 +82,10 @@ struct TaskManagementTreeRow: View {
 struct TaskManagementFlatRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
+    var treeDepth: Int = 0
+    var hasChildren = false
+    var isExpanded = false
+    var toggleExpansion: (() -> Void)?
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #endif
@@ -119,12 +95,16 @@ struct TaskManagementFlatRow: View {
     }
 
     var body: some View {
-        TaskManagementRowContent(
-            store: store,
-            task: task,
-            isRunning: isRunning,
-            showsNavigationChevron: showsNavigationChevron
-        )
+        HStack(alignment: .center, spacing: 8) {
+            disclosureButton
+            TaskManagementRowContent(
+                store: store,
+                task: task,
+                isRunning: isRunning,
+                showsNavigationChevron: showsNavigationChevron
+            )
+        }
+        .padding(.leading, CGFloat(treeDepth) * 14)
         .contentShape(Rectangle())
         .onTapGesture {
             openTask()
@@ -168,10 +148,30 @@ struct TaskManagementFlatRow: View {
 
     private var showsNavigationChevron: Bool {
         #if os(iOS)
-        horizontalSizeClass == .compact && store.children(of: task).isEmpty
+        horizontalSizeClass == .compact && !hasChildren
         #else
         false
         #endif
+    }
+
+    @ViewBuilder
+    private var disclosureButton: some View {
+        if hasChildren {
+            Button {
+                toggleExpansion?()
+            } label: {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isExpanded ? AppStrings.localized("tasks.collapse") : AppStrings.localized("tasks.expand"))
+        } else if treeDepth > 0 {
+            Color.clear
+                .frame(width: 16, height: 24)
+        }
     }
 
     private func openTask() {

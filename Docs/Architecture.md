@@ -48,7 +48,7 @@ If a task is completed, remaining time is always zero. If there is not enough ch
 
 ## Deletion Rules
 
-Tasks are soft-deleted by default. Historical ledger rows stay visible because time already happened. The settings action "Optimize Database" permanently removes orphaned ledger rows whose task has been deleted and is no longer visible.
+Tasks are soft-deleted by default. Historical ledger rows stay visible because time already happened. The settings action "Optimize Database" only removes ledger rows whose task reference is truly missing from the database; it must not purge history merely because the task itself was soft-deleted.
 
 ## Sync Assumptions
 
@@ -56,7 +56,7 @@ iCloud sync is controlled by `AppCloudSync` and the SwiftData model container co
 
 ## UI Structure
 
-The current UI still has a large `ContentView.swift` file. New refactors should prefer small feature files under folders such as:
+The current UI still has large feature files, especially Home, Analytics, Inspector, and Editor surfaces. New refactors should prefer small feature files under folders such as:
 
 ```text
 timetracker/Home
@@ -68,6 +68,8 @@ timetracker/Shared
 ```
 
 Pure layout and formatting logic belongs in `timetracker/Shared` with unit tests.
+
+For the longer-term architecture roadmap and feature ownership map, see `Docs/ArchitecturePlan.md`.
 
 ## Shared UI Logic
 

@@ -974,7 +974,7 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let homeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let homeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeQuickStartViews.swift"), encoding: .utf8)
         let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore.swift"), encoding: .utf8)
 
         #expect(homeSource.contains("private var pinnedTasks"))
@@ -1020,7 +1020,7 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeMetricsViews.swift"), encoding: .utf8)
 
         #expect(source.contains(".presentationBackground(Color(uiColor: .systemGroupedBackground))"))
         #expect(source.contains(".scrollContentBackground(.hidden)"))
@@ -1047,7 +1047,7 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeMetricsViews.swift"), encoding: .utf8)
 
         #expect(source.contains("trendColor: grossTrend.color"))
         #expect(source.contains(".foregroundStyle(metric.trendColor)"))

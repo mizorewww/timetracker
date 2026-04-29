@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -117,6 +118,59 @@ struct CoreRefactorTests {
     }
 
     @Test @MainActor
+    func refreshPlannerMapsUserMutationsToDomainSizedScopes() {
+        let planner = StoreRefreshPlanner()
+
+        #expect(planner.scopes(after: [.checklist]) == [.checklist, .rollups, .analytics])
+        #expect(planner.scopes(after: [.taskTree]) == [.tasks, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.timer]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.pomodoro]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.ledgerHistory]) == [.ledgerHistory, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.preferences]) == [.preferences])
+        #expect(planner.scopes(after: [.allData]) == StoreRefreshScope.full)
+    }
+
+    @Test @MainActor
+    func refreshPlannerCoalescesMultipleMutationsWithoutEscalatingToFullRefresh() {
+        let scopes = StoreRefreshPlanner().scopes(after: [.taskTree, .checklist, .timer])
+
+        #expect(scopes.contains(.tasks))
+        #expect(scopes.contains(.checklist))
+        #expect(scopes.contains(.ledgerVisible))
+        #expect(scopes.contains(.rollups))
+        #expect(scopes.contains(.analytics))
+        #expect(scopes.contains(.preferences) == false)
+        #expect(scopes != StoreRefreshScope.full)
+    }
+
+    @Test @MainActor
+    func checklistCommandHandlerOwnsAddAndToggleSemantics() throws {
+        let context = try makeContext()
+        let task = TaskNode(title: "Command Task", parentID: nil, deviceID: "test")
+        context.insert(task)
+        try context.save()
+
+        let handler = ChecklistCommandHandler()
+        let firstResult = try handler.add(taskID: task.id, title: " First ", existingItems: [], context: context, deviceID: "test")
+        let first = try #require(firstResult)
+        let secondResult = try handler.add(taskID: task.id, title: "Second", existingItems: [first], context: context, deviceID: "test")
+        let second = try #require(secondResult)
+        let blank = try handler.add(taskID: task.id, title: "   ", existingItems: [first, second], context: context, deviceID: "test")
+
+        #expect(blank == nil)
+        #expect(first.title == "First")
+        #expect(second.sortOrder > first.sortOrder)
+
+        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 1_000))
+        #expect(first.isCompleted)
+        #expect(first.completedAt == Date(timeIntervalSince1970: 1_000))
+
+        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 2_000))
+        #expect(first.isCompleted == false)
+        #expect(first.completedAt == nil)
+    }
+
+    @Test @MainActor
     func csvExportServiceEscapesRowsAndUsesSessionFallbackForDeletedTasks() {
         let taskID = UUID()
         let session = TimeSession(
@@ -175,6 +229,23 @@ struct CoreRefactorTests {
         #expect(analyticsSource.contains("Text(range.rawValue)") == false)
         #expect(storeSource.contains("return \"Ready\"") == false)
         #expect(storeSource.contains("return \"Focus\"") == false)
+    }
+
+    @MainActor
+    private func makeContext() throws -> ModelContext {
+        let schema = TimeTrackerModelRegistry.currentSchema
+        let configuration = ModelConfiguration(
+            "CoreRefactorTests",
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            cloudKitDatabase: .none
+        )
+        let container = try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
+        return ModelContext(container)
     }
 }
 

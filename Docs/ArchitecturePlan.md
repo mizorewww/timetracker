@@ -19,13 +19,15 @@ Current progress:
 - `PreferenceStore` owns synced user preference loading.
 - `MaintenanceServices` owns CSV export and database cleanup rules.
 - `TaskTreeService`, `TaskTreeFlattener`, and related pure services own task tree derivation.
+- `StoreRefreshPlanner` maps user mutations to domain-sized refresh scopes.
+- `ChecklistCommandHandler` and `PreferenceCommandHandler` own checklist and preference writes.
 
 Remaining risk:
 
-- `TimeTrackerStore.refresh(scopes:)` still coordinates multiple domains.
-- Timer, task, checklist, pomodoro, and preference write commands still enter through the facade.
+- `TimeTrackerStore.refresh(scopes:)` still coordinates multiple domains, but callers now describe mutations instead of hand-picking scopes.
+- Timer, task, and pomodoro write commands still need dedicated command handlers.
 - Some repository methods still need range caches or bucket indexes before very large ledgers feel cheap.
-- Home and Analytics views remain too large and still mix layout policy with presentation.
+- Analytics views remain too large and still mix layout policy with presentation. Home has been split into entry, metrics/actions, timeline/timers, quick start, and forecast files.
 
 ## Target Module Shape
 
@@ -126,7 +128,7 @@ Example: checklist toggle
 ```text
 Checklist row tap
   -> TimeTrackerStore.toggleChecklistItem(...)
-  -> ChecklistCommands.toggle(...)
+  -> ChecklistCommandHandler.toggle(...)
   -> Checklist repository updates one item
   -> TaskStore refreshes affected task checklist
   -> RollupStore recomputes affected task branch
@@ -183,7 +185,22 @@ Use this table when adding or debugging features.
 
 ## Refresh and Invalidation Plan
 
-The facade should stop deciding global refresh order. Move toward explicit invalidation events:
+The facade should stop deciding global refresh order. The current bridge is `StoreRefreshPlanner`: write methods describe a `StoreDomainMutation`, and the planner converts that mutation to refresh scopes. This keeps mutation intent testable and prevents future features from manually sprinkling refresh scopes through the facade.
+
+Current mutation mapping:
+
+| Mutation | Refresh scopes |
+| --- | --- |
+| `taskTree` | Tasks, rollups, analytics, Live Activities |
+| `timer` | Visible ledger, pomodoro, rollups, analytics, Live Activities |
+| `ledgerHistory` | Ledger history, rollups, analytics, Live Activities |
+| `pomodoro` | Visible ledger, pomodoro, rollups, analytics, Live Activities |
+| `checklist` | Checklist, rollups, analytics |
+| `preferences` | Preferences |
+| `countdown` | Countdown events |
+| `allData` | Full refresh |
+
+Next step is replacing coarse mutation scopes with explicit invalidation events:
 
 ```text
 TaskChanged(taskID, affectedAncestorIDs)
@@ -230,11 +247,11 @@ Rules:
 Recommended splits:
 
 ```text
-HomeMetricsView
-HomeTimerList
-HomePausedSessions
-HomeTimeline
-HomeQuickStart
+HomeViews
+HomeMetricsViews
+HomeTimelineViews
+HomeQuickStartViews
+HomeForecastViews
 TaskListScreen
 TaskEditorSheet
 TaskChecklistSection
@@ -302,14 +319,14 @@ Before merging a feature:
 
 P1:
 
-- Move timer, task, checklist, pomodoro, and preference writes into domain command handlers.
-- Replace `TimeTrackerStore.refresh(scopes:)` with event-based domain invalidation.
+- Move timer, task, and pomodoro writes into domain command handlers. Checklist and preferences are already command-backed.
+- Replace mutation-level refresh scopes with event-based domain invalidation.
 - Keep `TimeTrackerStore` as a facade only until views are moved to feature stores.
 
 P2:
 
 - Add ledger date buckets or summary caches for large Month/Year analytics.
-- Split Home into metrics, timers, timeline, paused sessions, and quick start files.
+- Continue keeping Home feature files narrow as new sections are added.
 - Split Analytics into overview, timeline, distribution, forecast, and overlap files.
 - Move Sidebar and Tasks to the same flattened task row policy.
 - Replace source-string tests with domain behavior tests where possible.

@@ -8,8 +8,9 @@ The app should feel like a focused Apple productivity tool: clear hierarchy, nat
 - Do not add a custom primary-sidebar toggle to the iPad/macOS split view. Let `NavigationSplitView` provide the system sidebar affordance; custom `sidebar.left` buttons can duplicate the system control and disappear after collapsing.
 - Cards are for repeated content or framed data, not for every section.
 - Today should answer three questions quickly: what is running, what happened today, and what can continue next.
-- Forecast UI should explain where numbers come from. Prefer short reasons such as checklist progress, manual estimate, or local history over abstract confidence language by itself.
+- Forecast UI should explain where numbers come from. Forecast cards need an `info.circle` entry point, a short source label, and a plain-language reason. Do not show a forecast when checklist progress or tracked time is missing.
 - Checklist UI belongs inside task editing and task detail surfaces. Do not present checklist items as timed subtasks; they are progress markers under a timed task.
+- Checklist rows should behave like native to-do rows: a large circular check button, at least 44 pt row height, unfinished items first, completed items after them with strikethrough text. Adding a checklist item should create a focused empty row immediately.
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
 - iPad and macOS may use a detail inspector, but the inspector should stay narrow and collapse when it is not useful.
 - Sheets should use system `NavigationStack` + `Form` + toolbar cancel/save actions. Avoid custom modal title bars unless the content is not an editor.

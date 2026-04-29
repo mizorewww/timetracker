@@ -3,44 +3,33 @@ import SwiftUI
 struct TaskForecastSummarySection: View {
     @ObservedObject var store: TimeTrackerStore
 
-    private var forecasts: [TaskForecastItem] {
-        let candidates = store.tasks.compactMap { task -> TaskForecastItem? in
-            guard task.deletedAt == nil,
-                  task.status != .archived,
-                  task.status != .completed,
-                  let rollup = store.rollup(for: task.id),
-                  rollup.isDisplayableForecast else {
-                return nil
-            }
-            return TaskForecastItem(task: task, rollup: rollup)
-        }
-        .sorted {
-            ($0.rollup.remainingSeconds ?? 0) > ($1.rollup.remainingSeconds ?? 0)
-        }
-
-        guard let selectedTask = store.selectedTask,
-              let selectedRollup = store.rollup(for: selectedTask.id),
-              selectedRollup.isDisplayableForecast,
-              selectedTask.status != .archived,
-              selectedTask.status != .completed else {
+    private var forecasts: [ForecastDisplayItem] {
+        let candidates = store.forecastDisplayItems()
+        guard let selectedTaskID = store.selectedTaskID,
+              let selectedItem = store.forecastDisplayItem(for: selectedTaskID) else {
             return Array(candidates.prefix(3))
         }
 
-        let withoutSelected = candidates.filter { $0.task.id != selectedTask.id }
-        return Array(([TaskForecastItem(task: selectedTask, rollup: selectedRollup)] + withoutSelected).prefix(3))
+        let withoutSelected = candidates.filter { $0.taskID != selectedItem.taskID }
+        return Array(([selectedItem] + withoutSelected).prefix(3))
     }
 
     var body: some View {
         if !forecasts.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(title: AppStrings.localized("forecast.today.title"))
+                HStack {
+                    SectionTitle(title: AppStrings.localized("forecast.today.title"))
+                    ForecastInfoButton()
+                }
                 ForecastExplanationCallout()
 
                 VStack(spacing: 0) {
                     ForEach(forecasts) { item in
-                        ForecastSummaryRow(store: store, task: item.task, rollup: item.rollup)
-                        if item.task.id != forecasts.last?.task.id {
-                            Divider().padding(.leading, 54)
+                        if let task = store.task(for: item.taskID) {
+                            ForecastSummaryRow(store: store, task: task, rollup: item.rollup)
+                            if item.taskID != forecasts.last?.taskID {
+                                Divider().padding(.leading, 54)
+                            }
                         }
                     }
                 }
@@ -49,13 +38,6 @@ struct TaskForecastSummarySection: View {
             .accessibilityIdentifier("home.forecasts")
         }
     }
-}
-
-private struct TaskForecastItem: Identifiable {
-    let task: TaskNode
-    let rollup: TaskRollup
-
-    var id: UUID { task.id }
 }
 
 private struct ForecastSummaryRow: View {
@@ -87,6 +69,12 @@ private struct ForecastSummaryRow: View {
                     .lineLimit(1)
                 ProgressView(value: rollup.completionFraction)
                     .tint(Color(hex: task.colorHex) ?? .blue)
+                if let sourceLabel = rollup.forecastSourceLabel {
+                    Text(sourceLabel)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 Text(rollup.reason)
                     .font(.caption2)
                     .foregroundStyle(.secondary)

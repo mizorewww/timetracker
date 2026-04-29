@@ -135,6 +135,19 @@ Checklist row tap
 
 This prevents a small checklist edit from refetching every timer, pomodoro, preference, and analytics snapshot.
 
+Checklist forecast invalidation is not optional. Toggling, adding, renaming, deleting, or reordering a checklist item must invalidate the affected task branch in `RollupStore` immediately, because the visible remaining time is a direct function of checklist progress.
+
+Forecast rules:
+
+```text
+Forecast eligibility = task has checklist + at least one completed item + tracked time on that task
+Completed checklist = own remaining time is zero
+Manual estimates = planning metadata only, not a forecast trigger
+Historical time = projected days only, never remaining hours by itself
+```
+
+Parent tasks follow one display rule across Home, Analytics, and Inspector: show the parent when it has its own checklist or multiple forecastable child branches; otherwise drill into the single forecastable child branch so the user sees the task that actually owns the checklist.
+
 ## Read Flow
 
 Target read flow:
@@ -159,7 +172,7 @@ Use this table when adding or debugging features.
 | Manual time | `TimeSession`, `TimeSegment` | `LedgerCommands` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Home`, `SharedUI/Forms` |
 | Task edit/move/delete | `TaskNode` | `TaskCommands` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener` | `Features/Tasks`, `Features/Sidebar` |
 | Checklist | `ChecklistItem` | `ChecklistCommands` | `TaskStore`, `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks`, `Features/Inspector` |
-| Forecast | none, derived | none | `RollupStore` | `ForecastingService`, `TaskRollupService` | `Features/Home`, `Features/Analytics`, `Features/Inspector` |
+| Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Inspector` |
 | Pomodoro | `PomodoroRun`, ledger models | `PomodoroCommands` | `LedgerStore` | `PomodoroState` helpers | `Features/Pomodoro` |
 | Analytics | none, derived | none | `AnalyticsStore` | `AnalyticsEngine`, `TimeAggregationService` | `Features/Analytics` |
 | Synced settings | `SyncedPreference` | `PreferenceCommands` | `PreferenceStore` | `AppPreferenceCodec` | `Features/Settings` |

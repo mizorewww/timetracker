@@ -1209,9 +1209,11 @@ struct TimeTrackerTests {
             .deletingLastPathComponent()
         let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
         let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SidebarInspectorViews.swift"), encoding: .utf8)
+        let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 
-        #expect(editorSource.contains("\"checkmark.circle.fill\""))
+        #expect(sharedSource.contains("\"checkmark.circle.fill\""))
+        #expect(editorSource.contains("ChecklistCompletionButton"))
         #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
         #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
         #expect(inspectorSource.contains("visibleItems.prefix(5)"))
@@ -1428,6 +1430,39 @@ struct TimeTrackerTests {
         #expect(secondRollup.estimatedTotalSeconds == 3_600)
         #expect(secondRollup.remainingSeconds == 0)
         #expect(secondRollup.projectedDays == 0)
+        #expect(secondRollup.forecastState == .completed)
+    }
+
+    @Test @MainActor
+    func checklistForecastRequiresCompletedItemAndTrackedTime() throws {
+        let taskWithNoCompletedItem = TaskNode(title: "No completed item", parentID: nil, deviceID: "test")
+        let taskWithNoTime = TaskNode(title: "No tracked time", parentID: nil, deviceID: "test")
+        let start = Date(timeIntervalSince1970: 10_000)
+        let segments = [
+            TimeSegment(sessionID: UUID(), taskID: taskWithNoCompletedItem.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_800))
+        ]
+        let checklist = [
+            ChecklistItem(taskID: taskWithNoCompletedItem.id, title: "First", isCompleted: false, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: taskWithNoCompletedItem.id, title: "Second", isCompleted: false, sortOrder: 20, deviceID: "test"),
+            ChecklistItem(taskID: taskWithNoTime.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: taskWithNoTime.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+        ]
+
+        let rollups = TaskRollupService().rollups(
+            tasks: [taskWithNoCompletedItem, taskWithNoTime],
+            segments: segments,
+            checklistItems: checklist,
+            now: start.addingTimeInterval(2_000)
+        )
+
+        #expect(rollups[taskWithNoCompletedItem.id]?.estimatedTotalSeconds == nil)
+        #expect(rollups[taskWithNoCompletedItem.id]?.remainingSeconds == nil)
+        #expect(rollups[taskWithNoCompletedItem.id]?.forecastState == .needsCompletedItem)
+        #expect(rollups[taskWithNoCompletedItem.id]?.isDisplayableForecast == false)
+        #expect(rollups[taskWithNoTime.id]?.estimatedTotalSeconds == nil)
+        #expect(rollups[taskWithNoTime.id]?.remainingSeconds == nil)
+        #expect(rollups[taskWithNoTime.id]?.forecastState == .needsTrackedTime)
+        #expect(rollups[taskWithNoTime.id]?.isDisplayableForecast == false)
     }
 
     @Test @MainActor
@@ -1539,13 +1574,14 @@ struct TimeTrackerTests {
         let parentRollup = try #require(rollups[parent.id])
 
         #expect(parentRollup.workedSeconds == 1_900)
-        #expect(parentRollup.estimatedTotalSeconds == 3_800)
-        #expect(parentRollup.remainingSeconds == 1_900)
+        #expect(parentRollup.estimatedTotalSeconds == 2_900)
+        #expect(parentRollup.remainingSeconds == 1_000)
         #expect(parentRollup.historicalDailyAverageSeconds == 1_900)
         #expect(parentRollup.historicalActiveDayCount == 1)
-        #expect(abs((parentRollup.projectedDays ?? 0) - 1.0) < 0.05)
+        #expect(abs((parentRollup.projectedDays ?? 0) - 0.53) < 0.05)
         #expect(parentRollup.checklistProgress.label == "1/2")
         #expect(parentRollup.confidence == .medium)
+        #expect(parentRollup.forecastState == .ready)
     }
 
     @Test @MainActor
@@ -1563,13 +1599,16 @@ struct TimeTrackerTests {
 
         #expect(rollups[empty.id]?.estimatedTotalSeconds == nil)
         #expect(rollups[empty.id]?.confidence == ForecastConfidence.none)
+        #expect(rollups[empty.id]?.forecastState == .needsChecklist)
         #expect(rollups[planned.id]?.checklistProgress.totalCount == 0)
-        #expect(rollups[planned.id]?.estimatedTotalSeconds == 900)
+        #expect(rollups[planned.id]?.estimatedTotalSeconds == nil)
+        #expect(rollups[planned.id]?.forecastState == .needsChecklist)
         #expect(rollups[completed.id]?.remainingSeconds == 0)
+        #expect(rollups[completed.id]?.forecastState == .completed)
     }
 
     @Test @MainActor
-    func lowConfidenceHistoryOnlyForecastsAreHiddenFromPrimaryUI() throws {
+    func onlyChecklistBackedForecastsAreDisplayable() throws {
         let historyOnly = TaskNode(title: "History Only", parentID: nil, deviceID: "test")
         let manual = TaskNode(title: "Manual", parentID: nil, deviceID: "test")
         manual.estimatedSeconds = 1_800
@@ -1591,10 +1630,84 @@ struct TimeTrackerTests {
             now: start.addingTimeInterval(2_000)
         )
 
-        #expect(rollups[historyOnly.id]?.confidence == .low)
+        #expect(rollups[historyOnly.id]?.forecastState == .needsChecklist)
         #expect(rollups[historyOnly.id]?.isDisplayableForecast == false)
-        #expect(rollups[manual.id]?.isDisplayableForecast == true)
+        #expect(rollups[manual.id]?.forecastState == .needsChecklist)
+        #expect(rollups[manual.id]?.isDisplayableForecast == false)
         #expect(rollups[checklistTask.id]?.isDisplayableForecast == true)
+    }
+
+    @Test @MainActor
+    func forecastDisplayServiceDrillsIntoSingleChildButAggregatesMultipleChildren() throws {
+        let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
+        let firstChild = TaskNode(title: "First", parentID: parent.id, deviceID: "test")
+        let secondChild = TaskNode(title: "Second", parentID: parent.id, deviceID: "test")
+        let start = Date(timeIntervalSince1970: 20_000)
+        let firstSegment = TimeSegment(sessionID: UUID(), taskID: firstChild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_200))
+        let secondSegment = TimeSegment(sessionID: UUID(), taskID: secondChild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(600))
+        let firstChecklist = [
+            ChecklistItem(taskID: firstChild.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: firstChild.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+        ]
+        let firstOnlyRollups = TaskRollupService().rollups(
+            tasks: [parent, firstChild, secondChild],
+            segments: [firstSegment],
+            checklistItems: firstChecklist,
+            now: start.addingTimeInterval(2_000)
+        )
+
+        let firstOnlyDisplay = ForecastDisplayService().displayItems(
+            tasks: [parent, firstChild, secondChild],
+            rollups: firstOnlyRollups
+        )
+        #expect(firstOnlyDisplay.map(\.taskID) == [firstChild.id])
+
+        let secondChecklist = [
+            ChecklistItem(taskID: secondChild.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: secondChild.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+        ]
+        let multiRollups = TaskRollupService().rollups(
+            tasks: [parent, firstChild, secondChild],
+            segments: [firstSegment, secondSegment],
+            checklistItems: firstChecklist + secondChecklist,
+            now: start.addingTimeInterval(2_000)
+        )
+
+        let multiDisplay = ForecastDisplayService().displayItems(
+            tasks: [parent, firstChild, secondChild],
+            rollups: multiRollups
+        )
+        #expect(multiDisplay.map(\.taskID) == [parent.id])
+        #expect(multiRollups[parent.id]?.forecastState == .aggregate)
+        #expect(multiRollups[parent.id]?.forecastSourceTaskIDs.count == 2)
+    }
+
+    @Test @MainActor
+    func parentForecastIncludesChildForecastsWhenOwnChecklistIsIncomplete() throws {
+        let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
+        let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
+        let start = Date(timeIntervalSince1970: 30_000)
+        let childSegment = TimeSegment(sessionID: UUID(), taskID: child.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_200))
+        let checklist = [
+            ChecklistItem(taskID: parent.id, title: "Parent todo", isCompleted: false, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: child.id, title: "Child done", isCompleted: true, sortOrder: 10, deviceID: "test"),
+            ChecklistItem(taskID: child.id, title: "Child todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+        ]
+        let rollups = TaskRollupService().rollups(
+            tasks: [parent, child],
+            segments: [childSegment],
+            checklistItems: checklist,
+            now: start.addingTimeInterval(2_000)
+        )
+        let parentRollup = try #require(rollups[parent.id])
+
+        #expect(parentRollup.forecastState == .aggregate)
+        #expect(parentRollup.remainingSeconds == 1_200)
+        #expect(parentRollup.estimatedTotalSeconds == 2_400)
+        #expect(parentRollup.forecastSourceTaskIDs == [child.id])
+        #expect(parentRollup.forecastSourceLabel == String(format: AppStrings.localized("forecast.source.aggregate"), 1))
+        #expect(ForecastDisplayService().displayItem(for: parent.id, tasks: [parent, child], rollups: rollups)?.taskID == parent.id)
+        #expect(ForecastDisplayService().displayItems(tasks: [parent, child], rollups: rollups).map(\.taskID) == [parent.id])
     }
 
     @Test

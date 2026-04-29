@@ -28,6 +28,7 @@ struct TaskEditorPanel: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var draft: TaskEditorDraft
     @State private var isSymbolPickerPresented = false
+    @FocusState private var focusedChecklistDraftID: UUID?
     let onCancel: () -> Void
     let onSave: (TaskEditorDraft) -> Void
 
@@ -107,12 +108,14 @@ struct TaskEditorPanel: View {
                                 canMoveDown: visualIndex < orderedChecklistIndices.count - 1,
                                 moveUp: { moveChecklistItem(atVisualIndex: visualIndex, direction: -1) },
                                 moveDown: { moveChecklistItem(atVisualIndex: visualIndex, direction: 1) },
-                                delete: { draft.checklistItems.remove(at: index) }
+                                delete: { draft.checklistItems.remove(at: index) },
+                                focus: $focusedChecklistDraftID,
+                                submit: { addChecklistItem(afterVisualIndex: visualIndex) }
                             )
                         }
 
                         Button {
-                            draft.checklistItems.append(ChecklistEditorDraft(title: AppStrings.localized("editor.checklist.newItem")))
+                            addChecklistItem()
                         } label: {
                             Label(AppStrings.localized("editor.checklist.add"), systemImage: "plus")
                         }
@@ -235,6 +238,16 @@ struct TaskEditorPanel: View {
         moveChecklistItem(from: ordered[visualIndex], to: ordered[targetVisualIndex])
     }
 
+    private func addChecklistItem(afterVisualIndex visualIndex: Int? = nil) {
+        let newItem = ChecklistEditorDraft()
+        if let visualIndex {
+            let insertionIndex = min(visualIndex + 1, draft.checklistItems.count)
+            draft.checklistItems.insert(newItem, at: insertionIndex)
+        } else {
+            draft.checklistItems.append(newItem)
+        }
+        focusedChecklistDraftID = newItem.id
+    }
 }
 
 private struct TaskStatusPicker: View {
@@ -276,23 +289,24 @@ private struct ChecklistEditorRow: View {
     let moveUp: () -> Void
     let moveDown: () -> Void
     let delete: () -> Void
+    let focus: FocusState<UUID?>.Binding
+    let submit: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            Button {
-                item.isCompleted.toggle()
-            } label: {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+            ChecklistCompletionButton(isCompleted: item.isCompleted) {
+                withAnimation(.snappy(duration: 0.22)) {
+                    item.isCompleted.toggle()
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(AppStrings.localized("editor.checklist.completed"))
 
             TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title)
                 .textFieldStyle(.plain)
                 .strikethrough(item.isCompleted)
                 .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                .focused(focus, equals: item.id)
+                .submitLabel(.next)
+                .onSubmit(submit)
 
             Menu {
                 Button {
@@ -322,6 +336,7 @@ private struct ChecklistEditorRow: View {
             }
             .buttonStyle(.plain)
         }
+        .frame(minHeight: 44)
         .accessibilityElement(children: .contain)
     }
 }

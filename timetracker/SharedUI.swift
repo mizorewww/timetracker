@@ -89,6 +89,143 @@ struct ForecastExplanationCallout: View {
     }
 }
 
+struct ForecastInfoButton: View {
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented = true
+        } label: {
+            Image(systemName: "info.circle")
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .accessibilityLabel(AppStrings.localized("forecast.info.title"))
+        .popover(isPresented: $isPresented) {
+            ForecastInfoView()
+                .frame(minWidth: 320, idealWidth: 420, maxWidth: 520, minHeight: 420)
+        }
+    }
+}
+
+struct ForecastInfoView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    InfoGuideRow(
+                        icon: "checklist",
+                        title: AppStrings.localized("forecast.info.requirements.title"),
+                        bodyText: AppStrings.localized("forecast.info.requirements.body")
+                    )
+                    InfoGuideRow(
+                        icon: "function",
+                        title: AppStrings.localized("forecast.info.formula.title"),
+                        bodyText: AppStrings.localized("forecast.info.formula.body")
+                    )
+                    InfoGuideRow(
+                        icon: "folder.badge.gearshape",
+                        title: AppStrings.localized("forecast.info.children.title"),
+                        bodyText: AppStrings.localized("forecast.info.children.body")
+                    )
+                    InfoGuideRow(
+                        icon: "archivebox",
+                        title: AppStrings.localized("forecast.info.history.title"),
+                        bodyText: AppStrings.localized("forecast.info.history.body")
+                    )
+                }
+
+                Section(AppStrings.localized("forecast.info.example.title")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(AppStrings.localized("forecast.info.example.body"))
+                            .font(.subheadline)
+                        ProgressView(value: 0.25)
+                        HStack {
+                            Label("1/4", systemImage: "checkmark.circle.fill")
+                            Spacer()
+                            Text(AppStrings.localized("forecast.info.example.remaining"))
+                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .navigationTitle(AppStrings.localized("forecast.info.title"))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.done) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct InfoGuideRow: View {
+    let icon: String
+    let title: String
+    let bodyText: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(bodyText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 3)
+    }
+}
+
+struct ChecklistCompletionButton: View {
+    let isCompleted: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ChecklistCompletionMark(isCompleted: isCompleted)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(AppStrings.localized("editor.checklist.completed"))
+    }
+}
+
+struct ChecklistCompletionMark: View {
+    let isCompleted: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(isCompleted ? Color.green : Color.secondary.opacity(0.45), lineWidth: 2)
+                .background(Circle().fill(isCompleted ? Color.green : Color.clear))
+            if isCompleted {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .frame(width: 30, height: 30)
+        .contentShape(Circle())
+        .animation(.snappy(duration: 0.18), value: isCompleted)
+    }
+}
+
 enum AppColors {
     static let background = Color(platformColor: .systemGroupedBackground)
     #if os(macOS)

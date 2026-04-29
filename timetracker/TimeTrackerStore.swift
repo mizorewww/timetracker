@@ -99,6 +99,7 @@ final class TimeTrackerStore: ObservableObject {
     private let taskTreeService = TaskTreeService()
     private let ledgerSummaryService = LedgerSummaryService()
     private let checklistDraftService = ChecklistDraftService()
+    private let forecastDisplayService = ForecastDisplayService()
     private let databaseMaintenanceService = DatabaseMaintenanceService()
     private let csvExportService = CSVExportService()
     private var taskDomainStore = TaskStore()
@@ -878,12 +879,31 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func toggleChecklistItem(_ item: ChecklistItem) {
-        perform(refresh: [.checklist, .analytics]) {
+        perform(refresh: [.checklist, .rollups, .analytics]) {
             item.isCompleted.toggle()
             item.completedAt = item.isCompleted ? Date() : nil
             item.updatedAt = Date()
             item.clientMutationID = UUID()
             try modelContext?.save()
+        }
+    }
+
+    func addChecklistItem(taskID: UUID, title: String) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        perform(refresh: [.checklist, .rollups, .analytics]) {
+            guard let modelContext else { throw StoreError.notConfigured }
+            let nextSortOrder = ((checklistItems(for: taskID).map(\.sortOrder).max() ?? 0) + 10)
+            let item = ChecklistItem(
+                taskID: taskID,
+                title: trimmedTitle,
+                isCompleted: false,
+                sortOrder: nextSortOrder,
+                deviceID: DeviceIdentity.current
+            )
+            modelContext.insert(item)
+            try modelContext.save()
         }
     }
 
@@ -1006,6 +1026,14 @@ final class TimeTrackerStore: ObservableObject {
 
     func rollup(for taskID: UUID) -> TaskRollup? {
         rollupDomainStore.rollup(for: taskID)
+    }
+
+    func forecastDisplayItems(limit: Int? = nil) -> [ForecastDisplayItem] {
+        forecastDisplayService.displayItems(tasks: tasks, rollups: rollupDomainStore.taskRollups, limit: limit)
+    }
+
+    func forecastDisplayItem(for taskID: UUID) -> ForecastDisplayItem? {
+        forecastDisplayService.displayItem(for: taskID, tasks: tasks, rollups: rollupDomainStore.taskRollups)
     }
 
     private func rebuildTaskIndexes() {

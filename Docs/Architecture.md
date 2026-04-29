@@ -33,18 +33,42 @@ Views may format and present state, but durable business actions should go throu
 
 ## Forecasting and Analytics
 
-Forecasting is local and explainable. `TaskRollupService` recursively combines direct task time, checklist progress, and direct child-task rollups. `ForecastingService` provides fallback estimates from the task's own history, completed sibling tasks, completed tasks globally, and recent daily available time. `AnalyticsEngine` owns pure date/range aggregation for overview metrics, hourly activity, and daily/monthly chart points.
+Forecasting is local and explainable. `TaskRollupService` recursively combines direct task time, checklist progress, and direct child-task rollups. It does not create forecasts from manual estimates or history alone. `ForecastDisplayService` decides whether Home, Analytics, and Inspector should show the selected task, drill into one forecastable child task, or show a parent summary. `AnalyticsEngine` owns pure date/range aggregation for overview metrics, hourly activity, and daily/monthly chart points.
 
-Checklist estimates are equal-weight in V3:
+Checklist estimates are equal-weight:
 
 ```text
-ownEstimatedTotal = ownWorkedSeconds / completedChecklistCount * totalChecklistCount
-rollupWorked = direct task time + direct child rollupWorked
-rollupEstimatedTotal = own estimate + direct child rollupEstimatedTotal
-remaining = max(0, rollupEstimatedTotal - rollupWorked)
+if checklistTotal == 0:
+  forecastState = needsChecklist
+else if completedChecklistCount == 0:
+  forecastState = needsCompletedItem
+else if ownWorkedSeconds == 0:
+  forecastState = needsTrackedTime
+else:
+  averagePerItem = ownWorkedSeconds / completedChecklistCount
+  ownRemaining = averagePerItem * unfinishedChecklistCount
+
+rollupWorked = direct task time + recursive child rollupWorked
+rollupRemaining = ownRemaining + recursive child forecast remaining
 ```
 
-If a task is completed, remaining time is always zero. If there is not enough checklist, manual estimate, or history data, the forecast reports "not enough data" instead of inventing a number.
+If a task is completed, or all of its checklist items are completed, its own remaining time is always zero. Historical time is only used to convert remaining hours into projected days for the same task branch. If there is not enough checklist progress or tracked time, the forecast reports the missing requirement instead of inventing a number.
+
+Parent display rules:
+
+```text
+Parent has its own checklist:
+  show the parent forecast and include forecastable children recursively
+
+Parent has no checklist and exactly one forecastable child branch:
+  show that child task directly
+
+Parent has no checklist and multiple forecastable child branches:
+  show a parent summary labeled as an aggregate
+
+No checklist-backed branch exists:
+  do not show a forecast card; show guidance in task detail
+```
 
 ## Deletion Rules
 

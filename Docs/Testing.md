@@ -22,6 +22,7 @@ Signed export:
 
 ## What Must Stay Covered
 
+- Every new feature should first document its expected behavior in `Docs/Architecture.md`, `Docs/ArchitecturePlan.md`, or a focused feature note, then add failing tests before implementation. If the behavior is UI-only, write the acceptance checklist before changing layout code.
 - Gross vs wall-clock aggregation.
 - Task tree moves and cycle prevention.
 - Timer pause, resume, and stop semantics.
@@ -30,7 +31,7 @@ Signed export:
 - Demo data and database optimization safety.
 - Timeline lane layout for overlaps, adjacent tasks, and cross-day segments.
 - Synced user preferences, including legacy UserDefaults import and the local iCloud startup mirror.
-- Checklist add/update/delete/sort behavior and recursive rollup forecasting.
+- Checklist add/update/delete/sort behavior and recursive rollup forecasting, including `0 completed`, `0 tracked time`, completion to `0` remaining, and parent/child forecast display rules.
 - Month analytics labels using real day numbers rather than repeated weekday names.
 - Localization key parity across English, Simplified Chinese, and Traditional Chinese.
 - No hard-coded Chinese text in Swift source files.

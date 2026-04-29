@@ -2,6 +2,7 @@ import Foundation
 
 struct AnalyticsEngine {
     private let aggregationService = TimeAggregationService()
+    private let dailySummaryService = DailySummaryService()
 
     func overview(segments: [TimeSegment], range: AnalyticsRange, now: Date = Date(), calendar: Calendar = .current) -> AnalyticsOverview {
         let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
@@ -20,13 +21,13 @@ struct AnalyticsEngine {
     }
 
     func dailyBreakdown(segments: [TimeSegment], range: AnalyticsRange, now: Date = Date(), calendar: Calendar = .current) -> [DailyAnalyticsPoint] {
-        dayIntervals(for: range, now: now, calendar: calendar).map { interval in
-            let daySegments = segments.filter { overlaps($0, interval: interval, now: now) }
+        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
+        return dailySummaryService.summaries(segments: segments, interval: interval, now: now, calendar: calendar).map { summary in
             return DailyAnalyticsPoint(
-                date: interval.start,
-                grossSeconds: aggregationService.totalSeconds(segments: daySegments, mode: .gross, now: now),
-                wallSeconds: aggregationService.totalSeconds(segments: daySegments, mode: .wallClock, now: now),
-                label: dayLabel(for: interval.start, range: range, calendar: calendar)
+                date: summary.date,
+                grossSeconds: summary.grossSeconds,
+                wallSeconds: summary.wallClockSeconds,
+                label: dayLabel(for: summary.date, range: range, calendar: calendar)
             )
         }
     }
@@ -61,18 +62,6 @@ struct AnalyticsEngine {
         case .month:
             return calendar.dateInterval(of: .month, for: now)
         }
-    }
-
-    private func dayIntervals(for range: AnalyticsRange, now: Date, calendar: Calendar) -> [DateInterval] {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
-        var result: [DateInterval] = []
-        var cursor = interval.start
-        while cursor < interval.end {
-            let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? interval.end
-            result.append(DateInterval(start: cursor, end: min(next, interval.end)))
-            cursor = next
-        }
-        return result
     }
 
     private func dayLabel(for date: Date, range: AnalyticsRange, calendar: Calendar) -> String {

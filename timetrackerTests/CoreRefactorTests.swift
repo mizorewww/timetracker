@@ -92,6 +92,29 @@ struct CoreRefactorTests {
     }
 
     @Test @MainActor
+    func dailySummaryServiceClipsCrossDaySegmentsIntoEachDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let taskID = UUID()
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 10, hour: 23, minute: 30)))
+        let end = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 11, hour: 0, minute: 30)))
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 11, hour: 12)))
+        let session = TimeSession(taskID: taskID, source: .timer, deviceID: "test", startedAt: start)
+        let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: .timer, deviceID: "test", startedAt: start, endedAt: end)
+
+        let summaries = DailySummaryService().summaries(
+            segments: [segment],
+            interval: DateInterval(start: calendar.startOfDay(for: start), end: calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: end)) ?? end),
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(summaries.map(\.grossSeconds) == [1_800, 1_800])
+        #expect(summaries.map(\.wallClockSeconds) == [1_800, 1_800])
+        #expect(summaries.first?.taskID == nil)
+    }
+
+    @Test @MainActor
     func rollupStoreOwnsForecastStateSeparatelyFromAnalyticsCache() {
         let task = TaskNode(title: "Rollup Task", parentID: nil, deviceID: "test")
         let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 25_000), titleSnapshot: task.title)
@@ -148,6 +171,37 @@ struct CoreRefactorTests {
         #expect(scopes.contains(.analytics))
         #expect(scopes.contains(.preferences) == false)
         #expect(scopes != StoreRefreshScope.full)
+    }
+
+    @Test @MainActor
+    func refreshPlanCentralizesDerivedRefreshRules() {
+        let planner = StoreRefreshPlanner()
+        let taskID = UUID()
+
+        let checklistPlan = planner.plan(after: [.checklistChanged(taskID: taskID)])
+        #expect(checklistPlan.refreshChecklist)
+        #expect(checklistPlan.refreshRollups)
+        #expect(checklistPlan.refreshAnalytics)
+        #expect(checklistPlan.refreshLedger == false)
+        #expect(checklistPlan.syncLiveActivities == false)
+
+        let timerPlan = planner.plan(after: [.timerChanged(taskID: taskID)])
+        #expect(timerPlan.refreshLedger)
+        #expect(timerPlan.includeLedgerHistory == false)
+        #expect(timerPlan.refreshPomodoro)
+        #expect(timerPlan.refreshRollups)
+        #expect(timerPlan.refreshAnalytics)
+        #expect(timerPlan.syncLiveActivities)
+
+        let historyPlan = planner.plan(after: [
+            .ledgerHistoryChanged(
+                taskID: taskID,
+                range: StoreInvalidationRange(start: Date(timeIntervalSince1970: 1), end: Date(timeIntervalSince1970: 2))
+            )
+        ])
+        #expect(historyPlan.refreshLedger)
+        #expect(historyPlan.includeLedgerHistory)
+        #expect(historyPlan.validateSelection)
     }
 
     @Test @MainActor

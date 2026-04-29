@@ -20,11 +20,13 @@ Current progress:
 - `MaintenanceServices` owns CSV export and database cleanup rules.
 - `TaskTreeService`, `TaskTreeFlattener`, and related pure services own task tree derivation.
 - `StoreRefreshPlanner` maps user invalidation events to domain-sized refresh scopes.
+- `StoreRefreshPlan` centralizes derived refresh rules for rollups, analytics, selection validation, and Live Activity sync.
 - `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `LedgerCommandHandler`, `CountdownCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
+- `DailySummaryService` clips raw `TimeSegment` rows into daily summary snapshots and feeds daily analytics without replacing the ledger fact layer.
 
 Remaining risk:
 
-- `TimeTrackerStore.refresh(scopes:)` still coordinates multiple domains, but callers now emit invalidation events instead of hand-picking scopes.
+- `TimeTrackerStore.refresh(plan:)` still invokes multiple domain refresh methods, but the refresh decision table lives in tested `StoreRefreshPlan`.
 - Command handlers still call use cases and repositories directly, but business sequences are no longer embedded in SwiftUI-facing methods.
 - Some repository methods still need range caches or bucket indexes before very large ledgers feel cheap.
 - Analytics and Home are now split by component family, but layout policy still lives close to SwiftUI views and should eventually move into small layout policy types.
@@ -230,6 +232,12 @@ Next options, in order:
 4. Keep all active-segment queries direct and fresh; active timers must never wait for a summary cache.
 
 Do not replace the ledger with summaries. Summaries are disposable derived data.
+
+Current progress:
+
+- `DailySummaryService` can generate in-memory `DailySummarySnapshot` rows from raw segments.
+- Daily analytics now uses day-clipped summaries, so cross-day segments are not double-counted.
+- Persisted `DailySummary` can be introduced later as a cache using `DailySummaryService.model(from:)`.
 
 ## UI Architecture Plan
 

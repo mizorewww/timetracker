@@ -47,7 +47,64 @@ enum StoreInvalidationEvent: Hashable {
     }
 }
 
+struct StoreRefreshPlan: Equatable {
+    let scopes: Set<StoreRefreshScope>
+    let refreshTasks: Bool
+    let refreshLedger: Bool
+    let includeLedgerHistory: Bool
+    let refreshPomodoro: Bool
+    let refreshPreferences: Bool
+    let refreshCountdown: Bool
+    let refreshChecklist: Bool
+    let refreshRollups: Bool
+    let refreshAnalytics: Bool
+    let validateSelection: Bool
+    let syncLiveActivities: Bool
+
+    init(scopes: Set<StoreRefreshScope>) {
+        self.scopes = scopes
+        let isFullRefresh = scopes == StoreRefreshScope.full
+
+        refreshTasks = isFullRefresh || scopes.contains(.tasks)
+        includeLedgerHistory = isFullRefresh || scopes.contains(.ledgerHistory)
+        refreshLedger = isFullRefresh || scopes.contains(.ledgerVisible) || scopes.contains(.ledgerHistory)
+        refreshPomodoro = isFullRefresh || scopes.contains(.pomodoro)
+        refreshPreferences = isFullRefresh || scopes.contains(.preferences)
+        refreshCountdown = isFullRefresh || scopes.contains(.countdown)
+        refreshChecklist = isFullRefresh || scopes.contains(.checklist)
+
+        refreshRollups = isFullRefresh ||
+            scopes.contains(.rollups) ||
+            scopes.contains(.tasks) ||
+            scopes.contains(.ledgerVisible) ||
+            scopes.contains(.ledgerHistory) ||
+            scopes.contains(.checklist)
+
+        refreshAnalytics = isFullRefresh ||
+            scopes.contains(.analytics) ||
+            scopes.contains(.tasks) ||
+            scopes.contains(.ledgerVisible) ||
+            scopes.contains(.ledgerHistory) ||
+            scopes.contains(.checklist)
+
+        validateSelection = refreshTasks || refreshLedger
+        syncLiveActivities = isFullRefresh ||
+            scopes.contains(.liveActivities) ||
+            scopes.contains(.ledgerVisible) ||
+            scopes.contains(.ledgerHistory) ||
+            scopes.contains(.tasks)
+    }
+}
+
 struct StoreRefreshPlanner {
+    func plan(after events: Set<StoreInvalidationEvent>) -> StoreRefreshPlan {
+        StoreRefreshPlan(scopes: scopes(after: events))
+    }
+
+    func plan(for scopes: Set<StoreRefreshScope>) -> StoreRefreshPlan {
+        StoreRefreshPlan(scopes: scopes)
+    }
+
     func scopes(after events: Set<StoreInvalidationEvent>) -> Set<StoreRefreshScope> {
         guard events.isEmpty == false else { return [] }
         if events.contains(.fullSync) {

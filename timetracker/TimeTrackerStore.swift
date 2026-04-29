@@ -192,47 +192,51 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func refresh() throws {
-        try refresh(scopes: StoreRefreshScope.full)
+        try refresh(plan: refreshPlanner.plan(for: StoreRefreshScope.full))
     }
 
-    private func refresh(scopes: Set<StoreRefreshScope>) throws {
+    private func refresh(plan: StoreRefreshPlan) throws {
         guard taskRepository != nil, timeRepository != nil else { return }
-        let shouldRefreshAll = scopes == StoreRefreshScope.full
 
-        if shouldRefreshAll || scopes.contains(.tasks) {
+        if plan.refreshTasks {
             try refreshTaskDomain()
         }
-        if shouldRefreshAll || scopes.contains(.ledgerVisible) || scopes.contains(.ledgerHistory) {
-            try refreshLedgerDomain(includeHistory: shouldRefreshAll || scopes.contains(.ledgerHistory))
+        if plan.refreshLedger {
+            try refreshLedgerDomain(includeHistory: plan.includeLedgerHistory)
         }
-        if shouldRefreshAll || scopes.contains(.pomodoro) {
+        if plan.refreshPomodoro {
             try refreshPomodoroDomain()
         }
-        if shouldRefreshAll || scopes.contains(.preferences) {
+        if plan.refreshPreferences {
             try refreshPreferenceDomain()
         }
-        if shouldRefreshAll || scopes.contains(.countdown) {
+        if plan.refreshCountdown {
             countdownEvents = try fetchCountdownEvents()
         }
-        if shouldRefreshAll || scopes.contains(.checklist) {
+        if plan.refreshChecklist {
             checklistItems = try fetchChecklistItems()
         }
-        let rollupsInvalidated = shouldRefreshAll || scopes.contains(.rollups) || scopes.contains(.tasks) || scopes.contains(.ledgerVisible) || scopes.contains(.ledgerHistory) || scopes.contains(.checklist)
-        if rollupsInvalidated {
+        if plan.refreshRollups {
             refreshRollupDomain()
         }
-        if shouldRefreshAll || scopes.contains(.analytics) || scopes.contains(.tasks) || scopes.contains(.ledgerVisible) || scopes.contains(.ledgerHistory) || scopes.contains(.checklist) {
+        if plan.refreshAnalytics {
             refreshAnalyticsDomain()
         }
 
+        if plan.validateSelection {
+            validateSelectedTask()
+        }
+
+        if plan.syncLiveActivities {
+            syncLiveActivitiesIfAvailable()
+        }
+    }
+
+    private func validateSelectedTask() {
         if selectedTaskID == nil {
             selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
         } else if let selectedTaskID, taskByID[selectedTaskID] == nil {
             self.selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
-        }
-
-        if shouldRefreshAll || scopes.contains(.liveActivities) || scopes.contains(.ledgerVisible) || scopes.contains(.ledgerHistory) || scopes.contains(.tasks) {
-            syncLiveActivitiesIfAvailable()
         }
     }
 
@@ -1017,7 +1021,7 @@ final class TimeTrackerStore: ObservableObject {
     private func perform(events: Set<StoreInvalidationEvent>, _ action: () throws -> Void) -> Bool {
         do {
             try action()
-            try refresh(scopes: refreshPlanner.scopes(after: events))
+            try refresh(plan: refreshPlanner.plan(after: events))
             return true
         } catch {
             errorMessage = error.localizedDescription

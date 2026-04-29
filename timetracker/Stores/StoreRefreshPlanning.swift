@@ -20,27 +20,31 @@ struct StoreInvalidationRange: Hashable {
     let end: Date
 }
 
-enum StoreInvalidationEvent: Hashable {
-    case taskTreeChanged(taskID: UUID?)
-    case timerChanged(taskID: UUID?)
-    case ledgerHistoryChanged(taskID: UUID?, range: StoreInvalidationRange?)
-    case pomodoroChanged(taskID: UUID?)
-    case checklistChanged(taskID: UUID?)
-    case preferencesChanged
+enum StoreDomainEvent: Hashable {
+    case taskChanged(taskID: UUID?, affectedAncestorIDs: Set<UUID>)
+    case checklistChanged(taskID: UUID?, affectedAncestorIDs: Set<UUID>)
+    case ledgerChanged(taskID: UUID?, dateInterval: StoreInvalidationRange?, isVisible: Bool)
+    case pomodoroChanged(runID: UUID?, sessionID: UUID?, taskID: UUID?)
+    case preferenceChanged(key: String?)
     case countdownChanged
+    case remoteImportCompleted
     case fullSync
 
     var affectedTaskIDs: Set<UUID> {
         switch self {
-        case .taskTreeChanged(let taskID),
-             .timerChanged(let taskID),
-             .pomodoroChanged(let taskID),
-             .checklistChanged(let taskID):
+        case .taskChanged(let taskID, let affectedAncestorIDs),
+             .checklistChanged(let taskID, let affectedAncestorIDs):
+            var ids = affectedAncestorIDs
+            if let taskID {
+                ids.insert(taskID)
+            }
+            return ids
+        case .ledgerChanged(let taskID, _, _),
+             .pomodoroChanged(_, _, let taskID):
             return taskID.map { [$0] } ?? []
-        case .ledgerHistoryChanged(let taskID, _):
-            return taskID.map { [$0] } ?? []
-        case .preferencesChanged,
+        case .preferenceChanged,
              .countdownChanged,
+             .remoteImportCompleted,
              .fullSync:
             return []
         }
@@ -48,14 +52,14 @@ enum StoreInvalidationEvent: Hashable {
 
     var affectedLedgerRanges: [StoreInvalidationRange] {
         switch self {
-        case .ledgerHistoryChanged(_, let range):
-            return range.map { [$0] } ?? []
-        case .taskTreeChanged,
-             .timerChanged,
+        case .ledgerChanged(_, let dateInterval, _):
+            return dateInterval.map { [$0] } ?? []
+        case .taskChanged,
              .pomodoroChanged,
              .checklistChanged,
-             .preferencesChanged,
+             .preferenceChanged,
              .countdownChanged,
+             .remoteImportCompleted,
              .fullSync:
             return []
         }
@@ -116,7 +120,7 @@ struct StoreRefreshPlan: Equatable {
 }
 
 struct StoreRefreshPlanner {
-    func plan(after events: Set<StoreInvalidationEvent>) -> StoreRefreshPlan {
+    func plan(after events: Set<StoreDomainEvent>) -> StoreRefreshPlan {
         StoreRefreshPlan(
             scopes: scopes(after: events),
             affectedTaskIDs: events.reduce(into: Set<UUID>()) { $0.formUnion($1.affectedTaskIDs) },
@@ -124,13 +128,9 @@ struct StoreRefreshPlanner {
         )
     }
 
-    func plan(for scopes: Set<StoreRefreshScope>) -> StoreRefreshPlan {
-        StoreRefreshPlan(scopes: scopes)
-    }
-
-    func scopes(after events: Set<StoreInvalidationEvent>) -> Set<StoreRefreshScope> {
+    func scopes(after events: Set<StoreDomainEvent>) -> Set<StoreRefreshScope> {
         guard events.isEmpty == false else { return [] }
-        if events.contains(.fullSync) {
+        if events.contains(.fullSync) || events.contains(.remoteImportCompleted) {
             return StoreRefreshScope.full
         }
 
@@ -139,25 +139,27 @@ struct StoreRefreshPlanner {
         }
     }
 
-    func scopes(after event: StoreInvalidationEvent) -> Set<StoreRefreshScope> {
+    func scopes(after event: StoreDomainEvent) -> Set<StoreRefreshScope> {
         switch event {
-        case .taskTreeChanged:
+        case .taskChanged:
             return [.tasks, .rollups, .analytics, .liveActivities]
-        case .timerChanged:
-            return [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
-        case .ledgerHistoryChanged:
+        case .ledgerChanged(_, _, let isVisible):
+            if isVisible {
+                return [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
+            }
             return [.ledgerHistory, .rollups, .analytics, .liveActivities]
         case .pomodoroChanged:
             return [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
         case .checklistChanged:
             return [.checklist, .rollups, .analytics]
-        case .preferencesChanged:
+        case .preferenceChanged:
             return [.preferences]
         case .countdownChanged:
             return [.countdown]
+        case .remoteImportCompleted:
+            return StoreRefreshScope.full
         case .fullSync:
             return StoreRefreshScope.full
         }
     }
-
 }

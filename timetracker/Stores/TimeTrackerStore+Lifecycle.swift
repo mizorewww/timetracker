@@ -53,7 +53,7 @@ extension TimeTrackerStore {
 
 
     func refresh() throws {
-        try refresh(plan: refreshPlanner.plan(for: StoreRefreshScope.full))
+        try refresh(plan: refreshPlanner.plan(after: [.fullSync]))
     }
 
     private func refresh(plan: StoreRefreshPlan) throws {
@@ -147,12 +147,12 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func perform(event: StoreInvalidationEvent = .fullSync, _ action: () throws -> Void) -> Bool {
+    func perform(event: StoreDomainEvent = .fullSync, _ action: () throws -> Void) -> Bool {
         perform(events: [event], action)
     }
 
     @discardableResult
-    func perform(events: Set<StoreInvalidationEvent>, _ action: () throws -> Void) -> Bool {
+    func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
         do {
             try action()
             try refresh(plan: refreshPlanner.plan(after: events))
@@ -185,7 +185,12 @@ extension TimeTrackerStore {
         scheduledSyncRefreshTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
-            self?.refreshQuietly()
+            guard let self else { return }
+            do {
+                try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

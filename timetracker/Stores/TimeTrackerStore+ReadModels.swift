@@ -265,6 +265,18 @@ extension TimeTrackerStore {
         return result
     }
 
+    func affectedAncestorIDs(for taskID: UUID?, parentID: UUID? = nil) -> Set<UUID> {
+        var ids: Set<UUID> = []
+        if let taskID {
+            ids.formUnion(ancestorTaskIDs(for: taskID))
+        }
+        if let parentID {
+            ids.insert(parentID)
+            ids.formUnion(ancestorTaskIDs(for: parentID))
+        }
+        return ids
+    }
+
     func validParentTasks(for taskID: UUID?) -> [TaskNode] {
         taskTreeService.validParentTasks(for: taskID, tasks: tasks)
     }

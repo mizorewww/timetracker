@@ -21,7 +21,7 @@ extension TimeTrackerStore {
     }
 
     private func startTask(taskID: UUID) {
-        perform(event: .timerChanged(taskID: taskID)) {
+        perform(event: .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true)) {
             try timerCommandHandler.startTask(
                 taskID: taskID,
                 allowParallelTimers: preferences.allowParallelTimers,
@@ -35,25 +35,25 @@ extension TimeTrackerStore {
     }
 
     func stop(segment: TimeSegment) {
-        perform(event: .timerChanged(taskID: segment.taskID)) {
+        perform(event: .ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true)) {
             try timerCommandHandler.stop(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func pause(segment: TimeSegment) {
-        perform(event: .timerChanged(taskID: segment.taskID)) {
+        perform(event: .ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true)) {
             try timerCommandHandler.pause(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func resume(session: TimeSession) {
-        perform(event: .timerChanged(taskID: session.taskID)) {
+        perform(event: .ledgerChanged(taskID: session.taskID, dateInterval: nil, isVisible: true)) {
             try timerCommandHandler.resume(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func stop(session: TimeSession) {
-        perform(event: .timerChanged(taskID: session.taskID)) {
+        perform(event: .ledgerChanged(taskID: session.taskID, dateInterval: nil, isVisible: true)) {
             try timerCommandHandler.stop(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }

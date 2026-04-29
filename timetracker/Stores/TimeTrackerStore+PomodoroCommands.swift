@@ -6,7 +6,7 @@ extension TimeTrackerStore {
             errorMessage = AppStrings.localized("task.selectBeforePomodoro")
             return
         }
-        perform(event: .pomodoroChanged(taskID: selectedTaskID)) {
+        perform(event: .pomodoroChanged(runID: nil, sessionID: nil, taskID: selectedTaskID)) {
             _ = try pomodoroCommandHandler.start(
                 taskID: selectedTaskID,
                 focusSeconds: focusSeconds,
@@ -24,14 +24,14 @@ extension TimeTrackerStore {
 
     func completeActivePomodoro() {
         guard let run = activePomodoroRun else { return }
-        perform(event: .pomodoroChanged(taskID: run.taskID)) {
+        perform(event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)) {
             try pomodoroCommandHandler.complete(run: run, repository: requiredPomodoroRepository())
         }
     }
 
     func cancelActivePomodoro() {
         guard let run = activePomodoroRun else { return }
-        perform(event: .pomodoroChanged(taskID: run.taskID)) {
+        perform(event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)) {
             try pomodoroCommandHandler.cancel(run: run, repository: requiredPomodoroRepository())
         }
     }

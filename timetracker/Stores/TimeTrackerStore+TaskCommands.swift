@@ -17,7 +17,10 @@ extension TimeTrackerStore {
             return false
         }
 
-        let didSave = perform(events: [.taskTreeChanged(taskID: draft.taskID), .checklistChanged(taskID: draft.taskID)]) {
+        let didSave = perform(events: [
+            .taskChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID)),
+            .checklistChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID))
+        ]) {
             selectedTaskID = try taskDraftCommandHandler.save(
                 draft: draft,
                 sanitizedTitle: sanitizedTitle,
@@ -34,7 +37,7 @@ extension TimeTrackerStore {
     func archiveSelectedTask(taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform(event: .taskTreeChanged(taskID: targetID)) {
+        perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
             try taskDraftCommandHandler.archive(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
@@ -45,7 +48,7 @@ extension TimeTrackerStore {
     func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform(event: .taskTreeChanged(taskID: targetID)) {
+        perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
             try taskDraftCommandHandler.setStatus(status, taskID: targetID, repository: requiredTaskRepository())
         }
     }
@@ -53,7 +56,7 @@ extension TimeTrackerStore {
     func deleteSelectedTask(taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform(event: .taskTreeChanged(taskID: targetID)) {
+        perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
             try taskDraftCommandHandler.softDelete(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id

@@ -16,7 +16,7 @@ extension TimeTrackerStore {
             return
         }
 
-        perform(event: .ledgerHistoryChanged(taskID: taskID, range: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt))) {
+        perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
             try ledgerCommandHandler.addManualTime(draft: draft, taskID: taskID, repository: requiredTimeRepository())
         }
         manualTimeDraft = nil
@@ -38,7 +38,7 @@ extension TimeTrackerStore {
             return
         }
 
-        perform(event: .ledgerHistoryChanged(taskID: taskID, range: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt))) {
+        perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
             try ledgerCommandHandler.updateSegment(draft: draft, taskID: taskID, repository: requiredTimeRepository())
             selectedTaskID = taskID
         }
@@ -46,7 +46,7 @@ extension TimeTrackerStore {
     }
 
     func deleteSegment(_ segmentID: UUID) {
-        perform(event: .ledgerHistoryChanged(taskID: segmentEditorDraft?.taskID, range: nil)) {
+        perform(event: .ledgerChanged(taskID: segmentEditorDraft?.taskID, dateInterval: nil, isVisible: false)) {
             try ledgerCommandHandler.softDeleteSegment(segmentID, repository: requiredTimeRepository())
         }
         segmentEditorDraft = nil

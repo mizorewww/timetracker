@@ -39,7 +39,7 @@ extension TimeTrackerStore {
     }
 
     private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
-        perform(event: .preferencesChanged) {
+        perform(event: .preferenceChanged(key: key.rawValue)) {
             guard let modelContext else { throw StoreError.notConfigured }
             try preferenceCommandHandler.set(key: key, valueJSON: valueJSON, context: modelContext)
         }

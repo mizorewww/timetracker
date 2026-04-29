@@ -29,6 +29,7 @@ struct TaskRollupService {
     ) -> [UUID: TaskRollup] {
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         let childrenByParent = Dictionary(grouping: tasks, by: \.parentID)
+        let segmentsByTaskID = Dictionary(grouping: segments.filter { $0.deletedAt == nil }, by: \.taskID)
         var cache: [UUID: TaskRollup] = [:]
         var subtreeCache: [UUID: Set<UUID>] = [:]
 
@@ -57,7 +58,7 @@ struct TaskRollupService {
                 return nil
             }
 
-            let ownWorked = aggregationService.grossSeconds(segments.filter { $0.taskID == taskID }, now: now)
+            let ownWorked = aggregationService.grossSeconds(segmentsByTaskID[taskID] ?? [], now: now)
             let progress = checklistProgress(for: taskID, checklistItems: checklistItems)
             let ownForecast = ownChecklistForecast(task: task, ownWorkedSeconds: ownWorked, progress: progress)
             let childRollups = (childrenByParent[taskID] ?? []).compactMap {
@@ -116,7 +117,11 @@ struct TaskRollupService {
             }
 
             let estimate = remaining.map { max(worked + $0, worked) }
-            let pace = historicalDailyPace(for: subtreeIDs(for: taskID), segments: segments, now: now)
+            let pace = historicalDailyPace(
+                for: subtreeIDs(for: taskID),
+                segmentsByTaskID: segmentsByTaskID,
+                now: now
+            )
             let projectedDays = projectedDays(for: remaining, dailyAverageSeconds: pace?.averageSeconds)
             let confidence = task.status == .completed ? .high : confidence(ownForecast: ownForecast, childRollups: childForecasts, estimate: estimate)
             let uniqueSourceIDs = orderedUnique(sourceIDs)
@@ -237,26 +242,28 @@ struct TaskRollupService {
 
     private func historicalDailyPace(
         for taskIDs: Set<UUID>,
-        segments: [TimeSegment],
+        segmentsByTaskID: [UUID: [TimeSegment]],
         now: Date,
         calendar: Calendar = .current
     ) -> (averageSeconds: Int, activeDayCount: Int)? {
         guard !taskIDs.isEmpty else { return nil }
 
         var dayTotals: [Date: Int] = [:]
-        for segment in segments where taskIDs.contains(segment.taskID) && segment.deletedAt == nil {
-            let end = segment.endedAt ?? now
-            guard end > segment.startedAt else { continue }
+        for taskID in taskIDs {
+            for segment in segmentsByTaskID[taskID] ?? [] {
+                let end = segment.endedAt ?? now
+                guard end > segment.startedAt else { continue }
 
-            var cursor = calendar.startOfDay(for: segment.startedAt)
-            while cursor < end {
-                guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-                let sliceStart = max(segment.startedAt, cursor)
-                let sliceEnd = min(end, nextDay)
-                if sliceEnd > sliceStart {
-                    dayTotals[cursor, default: 0] += Int(sliceEnd.timeIntervalSince(sliceStart))
+                var cursor = calendar.startOfDay(for: segment.startedAt)
+                while cursor < end {
+                    guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+                    let sliceStart = max(segment.startedAt, cursor)
+                    let sliceEnd = min(end, nextDay)
+                    if sliceEnd > sliceStart {
+                        dayTotals[cursor, default: 0] += Int(sliceEnd.timeIntervalSince(sliceStart))
+                    }
+                    cursor = nextDay
                 }
-                cursor = nextDay
             }
         }
 

@@ -1077,12 +1077,13 @@ struct TimeTrackerTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let tasksSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
-        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SidebarInspectorViews.swift"), encoding: .utf8)
+        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorViews.swift"), encoding: .utf8)
+        let forecastSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorForecastViews.swift"), encoding: .utf8)
 
         #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
         #expect(tasksSource.contains("secondsForTaskTodayRollup(task)") == false)
         #expect(inspectorSource.contains("task.field.total"))
-        #expect(inspectorSource.contains("forecast.worked"))
+        #expect(forecastSource.contains("forecast.worked"))
     }
 
     @Test
@@ -1209,7 +1210,7 @@ struct TimeTrackerTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
-        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SidebarInspectorViews.swift"), encoding: .utf8)
+        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorChecklistViews.swift"), encoding: .utf8)
         let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 

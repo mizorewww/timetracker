@@ -24,6 +24,7 @@ Current progress:
 - `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `LedgerCommandHandler`, `CountdownCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
 - `DailySummaryService` clips raw `TimeSegment` rows into daily summary snapshots and feeds daily analytics without replacing the ledger fact layer.
 - Repository protocols and SwiftData implementations are split by persistence owner: task tree, ledger, and pomodoro.
+- Sidebar and inspector SwiftUI are separated into navigation, reusable task row commands, inspector shell, checklist panel, and forecast panel files.
 
 Remaining risk:
 
@@ -269,6 +270,11 @@ AnalyticsTimelineSection
 AnalyticsDistributionSection
 AnalyticsActivityViews
 AnalyticsRowsViews
+SidebarInspectorViews
+TaskRowComponents
+InspectorViews
+InspectorChecklistViews
+InspectorForecastViews
 SettingsGeneralPane
 SettingsDataPane
 SettingsAboutPane
@@ -339,7 +345,6 @@ P2:
 - Add ledger date buckets or summary caches for large Month/Year analytics.
 - Continue keeping Home feature files narrow as new sections are added.
 - Continue splitting Analytics until chart-specific layout code and row components are isolated from the screen entry.
-- Move Sidebar and Tasks to the same flattened task row policy.
 - Replace source-string tests with domain behavior tests where possible.
 
 P3:

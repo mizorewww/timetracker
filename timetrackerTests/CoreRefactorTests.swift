@@ -179,6 +179,8 @@ struct CoreRefactorTests {
         let taskID = UUID()
 
         let checklistPlan = planner.plan(after: [.checklistChanged(taskID: taskID)])
+        #expect(checklistPlan.affectedTaskIDs == [taskID])
+        #expect(checklistPlan.affectedLedgerRanges.isEmpty)
         #expect(checklistPlan.refreshChecklist)
         #expect(checklistPlan.refreshRollups)
         #expect(checklistPlan.refreshAnalytics)
@@ -193,12 +195,15 @@ struct CoreRefactorTests {
         #expect(timerPlan.refreshAnalytics)
         #expect(timerPlan.syncLiveActivities)
 
+        let range = StoreInvalidationRange(start: Date(timeIntervalSince1970: 1), end: Date(timeIntervalSince1970: 2))
         let historyPlan = planner.plan(after: [
             .ledgerHistoryChanged(
                 taskID: taskID,
-                range: StoreInvalidationRange(start: Date(timeIntervalSince1970: 1), end: Date(timeIntervalSince1970: 2))
+                range: range
             )
         ])
+        #expect(historyPlan.affectedTaskIDs == [taskID])
+        #expect(historyPlan.affectedLedgerRanges == [range])
         #expect(historyPlan.refreshLedger)
         #expect(historyPlan.includeLedgerHistory)
         #expect(historyPlan.validateSelection)

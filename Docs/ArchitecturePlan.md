@@ -20,7 +20,7 @@ Current progress:
 - `MaintenanceServices` owns CSV export and database cleanup rules.
 - `TaskTreeService`, `TaskTreeFlattener`, and related pure services own task tree derivation.
 - `StoreRefreshPlanner` maps user invalidation events to domain-sized refresh scopes.
-- `StoreRefreshPlan` centralizes derived refresh rules for rollups, analytics, selection validation, and Live Activity sync.
+- `StoreRefreshPlan` centralizes derived refresh rules for rollups, analytics, selection validation, and Live Activity sync, while preserving affected task IDs and ledger ranges for future incremental refresh.
 - `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `LedgerCommandHandler`, `CountdownCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
 - `DailySummaryService` clips raw `TimeSegment` rows into daily summary snapshots and feeds daily analytics without replacing the ledger fact layer.
 

@@ -656,8 +656,13 @@ final class TimeTrackerStore: ObservableObject {
 
     func daySeconds(for date: Date, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .day, for: date) else { return 0 }
-        let segments = allSegments.filter { overlaps($0, interval: interval, now: now) }
-        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+        return ledgerSummaryService.secondsInInterval(
+            taskIDs: Set(allSegments.map(\.taskID)),
+            segments: allSegments,
+            interval: interval,
+            mode: mode,
+            now: now
+        )
     }
 
     func overlapSeconds(now: Date) -> Int {
@@ -965,47 +970,6 @@ final class TimeTrackerStore: ObservableObject {
                     return lhs.sortOrder < rhs.sortOrder
                 }
             }
-    }
-
-    private func segmentsForAnalytics(range: AnalyticsRange, now: Date) -> [TimeSegment] {
-        guard let interval = analyticsInterval(for: range, now: now) else { return allSegments }
-        return allSegments.filter { overlaps($0, interval: interval, now: now) }
-    }
-
-    private func analyticsInterval(for range: AnalyticsRange, now: Date) -> DateInterval? {
-        let calendar = Calendar.current
-        switch range {
-        case .today:
-            return calendar.dateInterval(of: .day, for: now)
-        case .week:
-            return calendar.dateInterval(of: .weekOfYear, for: now)
-        case .month:
-            return calendar.dateInterval(of: .month, for: now)
-        }
-    }
-
-    private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
-        let end = segment.endedAt ?? now
-        return segment.startedAt < interval.end && end > interval.start
-    }
-
-    private func clippedSeconds(segments: [TimeSegment], interval: DateInterval, mode: AggregationMode, now: Date) -> Int {
-        let intervals = segments.compactMap { clippedInterval(for: $0, in: interval, now: now) }
-        switch mode {
-        case .gross:
-            return intervals.reduce(0) { $0 + Int($1.end.timeIntervalSince($1.start)) }
-        case .wallClock:
-            return aggregationService.mergeOverlappingIntervals(intervals).reduce(0) { $0 + Int($1.end.timeIntervalSince($1.start)) }
-        }
-    }
-
-    private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {
-        guard segment.deletedAt == nil else { return nil }
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return DateInterval(start: start, end: clippedEnd)
     }
 
     private func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {

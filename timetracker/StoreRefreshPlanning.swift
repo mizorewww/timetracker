@@ -45,10 +45,27 @@ enum StoreInvalidationEvent: Hashable {
             return []
         }
     }
+
+    var affectedLedgerRanges: [StoreInvalidationRange] {
+        switch self {
+        case .ledgerHistoryChanged(_, let range):
+            return range.map { [$0] } ?? []
+        case .taskTreeChanged,
+             .timerChanged,
+             .pomodoroChanged,
+             .checklistChanged,
+             .preferencesChanged,
+             .countdownChanged,
+             .fullSync:
+            return []
+        }
+    }
 }
 
 struct StoreRefreshPlan: Equatable {
     let scopes: Set<StoreRefreshScope>
+    let affectedTaskIDs: Set<UUID>
+    let affectedLedgerRanges: [StoreInvalidationRange]
     let refreshTasks: Bool
     let refreshLedger: Bool
     let includeLedgerHistory: Bool
@@ -61,8 +78,10 @@ struct StoreRefreshPlan: Equatable {
     let validateSelection: Bool
     let syncLiveActivities: Bool
 
-    init(scopes: Set<StoreRefreshScope>) {
+    init(scopes: Set<StoreRefreshScope>, affectedTaskIDs: Set<UUID> = [], affectedLedgerRanges: [StoreInvalidationRange] = []) {
         self.scopes = scopes
+        self.affectedTaskIDs = affectedTaskIDs
+        self.affectedLedgerRanges = affectedLedgerRanges
         let isFullRefresh = scopes == StoreRefreshScope.full
 
         refreshTasks = isFullRefresh || scopes.contains(.tasks)
@@ -98,7 +117,11 @@ struct StoreRefreshPlan: Equatable {
 
 struct StoreRefreshPlanner {
     func plan(after events: Set<StoreInvalidationEvent>) -> StoreRefreshPlan {
-        StoreRefreshPlan(scopes: scopes(after: events))
+        StoreRefreshPlan(
+            scopes: scopes(after: events),
+            affectedTaskIDs: events.reduce(into: Set<UUID>()) { $0.formUnion($1.affectedTaskIDs) },
+            affectedLedgerRanges: events.flatMap(\.affectedLedgerRanges)
+        )
     }
 
     func plan(for scopes: Set<StoreRefreshScope>) -> StoreRefreshPlan {

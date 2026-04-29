@@ -8,10 +8,11 @@ struct AnalyticsView: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            let overview = store.analyticsOverview(for: range, now: context.date)
-            let daily = store.dailyBreakdown(range: range, now: context.date)
-            let tasks = store.taskBreakdown(range: range, now: context.date)
-            let overlaps = store.overlapSegments(range: range, now: context.date)
+            let snapshot = store.analyticsSnapshot(for: range, now: context.date)
+            let overview = snapshot.overview
+            let daily = snapshot.daily
+            let tasks = snapshot.taskBreakdown
+            let overlaps = snapshot.overlaps
             let todaySegments = store.todaySegments
 
             ScrollView {
@@ -102,7 +103,7 @@ struct AnalyticsView: View {
     private var analyticsRangePicker: some View {
         Picker(AppStrings.localized("analytics.range"), selection: $range) {
             ForEach(AnalyticsRange.allCases) { range in
-                Text(range.rawValue).tag(range)
+                Text(range.displayName).tag(range)
             }
         }
         .pickerStyle(.segmented)

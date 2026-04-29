@@ -959,7 +959,7 @@ struct TimeTrackerTests {
         let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
         let serviceSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TaskTreeServices.swift"), encoding: .utf8)
 
-        #expect(source.contains("ForEach(store.taskTreeRows(expandedTaskIDs: expandedTaskIDs))"))
+        #expect(source.contains("ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs))"))
         #expect(source.contains("TaskManagementTreeRow") == false)
         #expect(source.contains("DisclosureGroup(") == false)
         #expect(serviceSource.contains("struct TaskTreeFlattener"))

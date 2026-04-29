@@ -3,7 +3,7 @@ import SwiftUI
 struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var searchText = ""
-    @State private var expandedTaskIDs: Set<UUID> = []
+    @State private var expansionState = TaskExpansionState()
 
     private var searchResults: [TaskNode] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -19,7 +19,7 @@ struct TasksView: View {
         List {
             if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Section {
-                    ForEach(store.taskTreeRows(expandedTaskIDs: expandedTaskIDs)) { row in
+                    ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)) { row in
                         if let task = store.task(for: row.taskID) {
                             TaskManagementFlatRow(
                                 store: store,
@@ -28,7 +28,7 @@ struct TasksView: View {
                                 hasChildren: row.hasChildren,
                                 isExpanded: row.isExpanded,
                                 toggleExpansion: {
-                                    toggleExpansion(for: row.taskID)
+                                    expansionState.toggle(row.taskID)
                                 }
                             )
                         }
@@ -72,15 +72,9 @@ struct TasksView: View {
             }
         }
         .onAppear {
-            expandedTaskIDs.formUnion(store.tasks.map(\.id))
-        }
-    }
-
-    private func toggleExpansion(for taskID: UUID) {
-        if expandedTaskIDs.contains(taskID) {
-            expandedTaskIDs.remove(taskID)
-        } else {
-            expandedTaskIDs.insert(taskID)
+            for task in store.tasks {
+                expansionState.expand(task.id)
+            }
         }
     }
 }

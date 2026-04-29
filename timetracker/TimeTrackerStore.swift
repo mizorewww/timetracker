@@ -45,6 +45,17 @@ final class TimeTrackerStore: ObservableObject {
         case month = "Month"
 
         var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .today:
+                return AppStrings.localized("analytics.range.today")
+            case .week:
+                return AppStrings.localized("analytics.range.week")
+            case .month:
+                return AppStrings.localized("analytics.range.month")
+            }
+        }
     }
 
     enum DesktopDestination: String, CaseIterable, Identifiable {
@@ -86,6 +97,10 @@ final class TimeTrackerStore: ObservableObject {
     private let taskTreeService = TaskTreeService()
     private let ledgerSummaryService = LedgerSummaryService()
     private let checklistDraftService = ChecklistDraftService()
+    private var taskDomainStore = TaskStore()
+    private var ledgerDomainStore = LedgerStore()
+    private var preferenceDomainStore = PreferenceStore()
+    private var analyticsDomainStore = AnalyticsStore()
     private var syncObservers: [NSObjectProtocol] = []
     private var taskByID: [UUID: TaskNode] = [:]
     private var childrenByParentID: [UUID?: [TaskNode]] = [:]
@@ -95,6 +110,27 @@ final class TimeTrackerStore: ObservableObject {
     private var sortedTodaySegments: [TimeSegment] = []
     private var scheduledSyncRefreshTask: Task<Void, Never>?
     private let rollupService = TaskRollupService()
+    private enum RefreshScope: Hashable {
+        case tasks
+        case ledger
+        case pomodoro
+        case preferences
+        case countdown
+        case checklist
+        case analytics
+        case liveActivities
+    }
+
+    private static let fullRefreshScopes: Set<RefreshScope> = [
+        .tasks,
+        .ledger,
+        .pomodoro,
+        .preferences,
+        .countdown,
+        .checklist,
+        .analytics,
+        .liveActivities
+    ]
 
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
@@ -145,7 +181,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func addCountdownEvent() {
-        perform {
+        perform(refresh: [.countdown]) {
             guard let modelContext else { throw StoreError.notConfigured }
             let event = CountdownEvent(
                 title: AppStrings.localized("task.newEvent"),
@@ -158,7 +194,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func updateCountdownEvent(_ event: CountdownEvent, title: String? = nil, date: Date? = nil) {
-        perform {
+        perform(refresh: [.countdown]) {
             if let title {
                 event.title = title
             }
@@ -172,7 +208,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func deleteCountdownEvent(_ event: CountdownEvent) {
-        perform {
+        perform(refresh: [.countdown]) {
             event.deletedAt = Date()
             event.updatedAt = Date()
             event.clientMutationID = UUID()
@@ -181,31 +217,78 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func refresh() throws {
-        guard let taskRepository, let timeRepository else { return }
-        tasks = try taskRepository.allNodes()
-        activeSegments = try timeRepository.activeSegments()
-        allSegments = try timeRepository.allSegments()
-        sessions = try timeRepository.sessions()
+        try refresh(scopes: Self.fullRefreshScopes)
+    }
+
+    private func refresh(scopes: Set<RefreshScope>) throws {
+        guard taskRepository != nil, timeRepository != nil else { return }
+        let shouldRefreshAll = scopes == Self.fullRefreshScopes
+
+        if shouldRefreshAll || scopes.contains(.tasks) {
+            try refreshTaskDomain()
+        }
+        if shouldRefreshAll || scopes.contains(.ledger) {
+            try refreshLedgerDomain()
+        }
+        if shouldRefreshAll || scopes.contains(.pomodoro) {
+            try refreshPomodoroDomain()
+        }
+        if shouldRefreshAll || scopes.contains(.preferences) {
+            try refreshPreferenceDomain()
+        }
+        if shouldRefreshAll || scopes.contains(.countdown) {
+            countdownEvents = try fetchCountdownEvents()
+        }
+        if shouldRefreshAll || scopes.contains(.checklist) {
+            checklistItems = try fetchChecklistItems()
+        }
+        if shouldRefreshAll || scopes.contains(.analytics) || scopes.contains(.tasks) || scopes.contains(.ledger) || scopes.contains(.checklist) {
+            refreshAnalyticsDomain()
+        }
+
+        if selectedTaskID == nil {
+            selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
+        } else if let selectedTaskID, taskByID[selectedTaskID] == nil {
+            self.selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
+        }
+
+        if shouldRefreshAll || scopes.contains(.liveActivities) || scopes.contains(.ledger) || scopes.contains(.tasks) {
+            syncLiveActivitiesIfAvailable()
+        }
+    }
+
+    private func refreshTaskDomain() throws {
+        guard let taskRepository else { return }
+        try taskDomainStore.refresh(repository: taskRepository)
+        tasks = taskDomainStore.tasks
+    }
+
+    private func refreshLedgerDomain() throws {
+        guard let timeRepository else { return }
+        try ledgerDomainStore.refresh(repository: timeRepository)
+        activeSegments = ledgerDomainStore.activeSegments
+        allSegments = ledgerDomainStore.allSegments
+        sessions = ledgerDomainStore.sessions
+        todaySegments = ledgerDomainStore.todaySegments
+    }
+
+    private func refreshPomodoroDomain() throws {
         pomodoroRuns = try pomodoroRepository?.runs() ?? []
-        syncedPreferences = try fetchSyncedPreferences()
-        preferences = AppPreferences(syncedPreferences: syncedPreferences)
-        SyncedPreferenceService.syncLocalMirrors(preferences)
-        countdownEvents = try fetchCountdownEvents()
-        checklistItems = try fetchChecklistItems()
-        taskRollups = rollupService.rollups(
+    }
+
+    private func refreshPreferenceDomain() throws {
+        preferenceDomainStore.refresh(syncedPreferences: try fetchSyncedPreferences())
+        syncedPreferences = preferenceDomainStore.syncedPreferences
+        preferences = preferenceDomainStore.preferences
+    }
+
+    private func refreshAnalyticsDomain() {
+        taskRollups = analyticsDomainStore.rollups(
             tasks: tasks,
             segments: allSegments,
             checklistItems: checklistItems,
             now: Date()
         )
-
-        let range = Calendar.current.dateInterval(of: .day, for: Date()) ?? DateInterval(start: Date(), duration: 24 * 60 * 60)
-        todaySegments = try timeRepository.segments(from: range.start, to: range.end)
-
-        if selectedTaskID == nil {
-            selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
-        }
-        syncLiveActivitiesIfAvailable()
     }
 
     func startSelectedTask() {
@@ -228,7 +311,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     private func startTask(taskID: UUID) {
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             if activeSegment(for: taskID) != nil {
                 return
             }
@@ -252,28 +335,28 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func stop(segment: TimeSegment) {
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             try StopSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segment.id)
             try cancelPomodoroIfNeeded(sessionID: segment.sessionID)
         }
     }
 
     func pause(segment: TimeSegment) {
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             try PauseSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: segment.sessionID)
             try interruptPomodoroIfNeeded(sessionID: segment.sessionID)
         }
     }
 
     func resume(session: TimeSession) {
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             _ = try ResumeSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: session.id)
             try resumePomodoroIfNeeded(sessionID: session.id)
         }
     }
 
     func stop(session: TimeSession) {
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             try StopSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: session.id)
             try cancelPomodoroIfNeeded(sessionID: session.id)
         }
@@ -295,7 +378,7 @@ final class TimeTrackerStore: ObservableObject {
             return false
         }
 
-        let didSave = perform {
+        let didSave = perform(refresh: [.tasks, .checklist, .analytics, .liveActivities]) {
             if let taskID = draft.taskID {
                 try UpdateTaskUseCase(repository: requiredTaskRepository()).execute(
                     taskID: taskID,
@@ -378,7 +461,7 @@ final class TimeTrackerStore: ObservableObject {
     func archiveSelectedTask(taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform {
+        perform(refresh: [.tasks, .analytics, .liveActivities]) {
             try ArchiveTaskUseCase(repository: requiredTaskRepository()).execute(taskID: targetID)
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
@@ -389,7 +472,7 @@ final class TimeTrackerStore: ObservableObject {
     func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform {
+        perform(refresh: [.tasks, .analytics, .liveActivities]) {
             try SetTaskStatusUseCase(repository: requiredTaskRepository()).execute(taskID: targetID, status: status)
         }
     }
@@ -397,7 +480,7 @@ final class TimeTrackerStore: ObservableObject {
     func deleteSelectedTask(taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform {
+        perform(refresh: [.tasks, .analytics, .liveActivities]) {
             try SoftDeleteTaskUseCase(repository: requiredTaskRepository()).execute(taskID: targetID)
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
@@ -420,7 +503,7 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
 
-        perform {
+        perform(refresh: [.ledger, .analytics, .liveActivities]) {
             _ = try AddManualTimeUseCase(repository: requiredTimeRepository()).execute(
                 taskID: taskID,
                 startedAt: draft.startedAt,
@@ -447,7 +530,7 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
 
-        perform {
+        perform(refresh: [.ledger, .analytics, .liveActivities]) {
             try UpdateSegmentUseCase(repository: requiredTimeRepository()).execute(
                 segmentID: draft.segmentID,
                 taskID: taskID,
@@ -461,7 +544,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func deleteSegment(_ segmentID: UUID) {
-        perform {
+        perform(refresh: [.ledger, .analytics, .liveActivities]) {
             try SoftDeleteSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segmentID)
         }
         segmentEditorDraft = nil
@@ -555,7 +638,7 @@ final class TimeTrackerStore: ObservableObject {
             errorMessage = AppStrings.localized("task.selectBeforePomodoro")
             return
         }
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             if !preferences.allowParallelTimers {
                 try pauseOtherActiveSegments(excluding: selectedTaskID)
             }
@@ -570,14 +653,14 @@ final class TimeTrackerStore: ObservableObject {
 
     func completeActivePomodoro() {
         guard let run = activePomodoroRun else { return }
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             try CompletePomodoroFocusUseCase(repository: requiredPomodoroRepository()).execute(runID: run.id)
         }
     }
 
     func cancelActivePomodoro() {
         guard let run = activePomodoroRun else { return }
-        perform {
+        perform(refresh: [.ledger, .pomodoro, .analytics, .liveActivities]) {
             try CancelPomodoroUseCase(repository: requiredPomodoroRepository()).execute(runID: run.id)
         }
     }
@@ -727,7 +810,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func taskTitle(for run: PomodoroRun) -> String {
-        task(for: run.taskID)?.title ?? "Deleted Task"
+        task(for: run.taskID)?.title ?? AppStrings.localized("task.deleted")
     }
 
     func pomodoroRemainingSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
@@ -746,19 +829,19 @@ final class TimeTrackerStore: ObservableObject {
     func pomodoroStateLabel(for run: PomodoroRun) -> String {
         switch run.state {
         case .planned:
-            return "Ready"
+            return AppStrings.localized("pomodoro.state.ready")
         case .focusing:
-            return "Focus"
+            return AppStrings.localized("pomodoro.state.focus")
         case .shortBreak:
-            return "Short Break"
+            return AppStrings.localized("pomodoro.state.shortBreak")
         case .longBreak:
-            return "Long Break"
+            return AppStrings.localized("pomodoro.state.longBreak")
         case .completed:
-            return "Completed"
+            return AppStrings.localized("pomodoro.state.completed")
         case .cancelled:
-            return "Cancelled"
+            return AppStrings.localized("pomodoro.state.cancelled")
         case .interrupted:
-            return "Interrupted"
+            return AppStrings.localized("pomodoro.state.interrupted")
         }
     }
 
@@ -777,11 +860,11 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func displayTitle(for segment: TimeSegment) -> String {
-        task(for: segment.taskID)?.title ?? "Deleted Task"
+        task(for: segment.taskID)?.title ?? AppStrings.localized("task.deleted")
     }
 
     func displayPath(for segment: TimeSegment) -> String {
-        guard taskByID[segment.taskID] != nil else { return "Ledger" }
+        guard taskByID[segment.taskID] != nil else { return AppStrings.localized("task.deleted.path") }
         return taskParentPathByID[segment.taskID] ?? ""
     }
 
@@ -822,7 +905,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func toggleChecklistItem(_ item: ChecklistItem) {
-        perform {
+        perform(refresh: [.checklist, .analytics]) {
             item.isCompleted.toggle()
             item.completedAt = item.isCompleted ? Date() : nil
             item.updatedAt = Date()
@@ -839,12 +922,24 @@ final class TimeTrackerStore: ObservableObject {
             .map { $0 }
     }
 
+    func analyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsSnapshot {
+        analyticsDomainStore.snapshot(
+            range: range,
+            tasks: tasks,
+            segments: allSegments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            now: now
+        )
+    }
+
     func analyticsOverview(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsOverview {
-        analyticsEngine.overview(segments: allSegments, range: range, now: now)
+        analyticsSnapshot(for: range, now: now).overview
     }
 
     func dailyBreakdown(range: AnalyticsRange, now: Date = Date()) -> [DailyAnalyticsPoint] {
-        analyticsEngine.dailyBreakdown(segments: allSegments, range: range, now: now)
+        analyticsSnapshot(for: range, now: now).daily
     }
 
     func hourlyBreakdown(for date: Date = Date(), now: Date = Date()) -> [HourlyAnalyticsPoint] {
@@ -852,54 +947,11 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func taskBreakdown(range: AnalyticsRange, now: Date = Date()) -> [TaskAnalyticsPoint] {
-        let segments = segmentsForAnalytics(range: range, now: now)
-        let grouped = Dictionary(grouping: segments, by: \.taskID)
-        return grouped.compactMap { taskID, taskSegments -> TaskAnalyticsPoint? in
-            let gross = aggregationService.totalSeconds(segments: taskSegments, mode: .gross, now: now)
-            guard gross > 0 else { return nil }
-            let task = task(for: taskID)
-            let fallbackTitle = sessions.first { $0.taskID == taskID }?.titleSnapshot ?? AppStrings.localized("task.deleted")
-            return TaskAnalyticsPoint(
-                taskID: taskID,
-                title: task?.title ?? fallbackTitle,
-                path: task.map { path(for: $0) } ?? AppStrings.localized("task.deleted.path"),
-                colorHex: task?.colorHex,
-                iconName: task?.iconName,
-                status: task?.status,
-                grossSeconds: gross,
-                wallSeconds: aggregationService.totalSeconds(segments: taskSegments, mode: .wallClock, now: now)
-            )
-        }
-        .sorted { $0.grossSeconds > $1.grossSeconds }
+        analyticsSnapshot(for: range, now: now).taskBreakdown
     }
 
     func overlapSegments(range: AnalyticsRange, now: Date = Date()) -> [OverlapAnalyticsPoint] {
-        let segments = segmentsForAnalytics(range: range, now: now)
-            .filter { $0.endedAt != nil || $0.startedAt <= now }
-            .sorted { $0.startedAt < $1.startedAt }
-
-        var overlaps: [OverlapAnalyticsPoint] = []
-        for index in segments.indices {
-            for otherIndex in segments.index(after: index)..<segments.endIndex {
-                let first = segments[index]
-                let second = segments[otherIndex]
-                let firstEnd = first.endedAt ?? now
-                let secondEnd = second.endedAt ?? now
-                let start = max(first.startedAt, second.startedAt)
-                let end = min(firstEnd, secondEnd)
-                if end > start {
-                    overlaps.append(
-                        OverlapAnalyticsPoint(
-                            start: start,
-                            end: end,
-                            firstTitle: displayTitle(for: first),
-                            secondTitle: displayTitle(for: second)
-                        )
-                    )
-                }
-            }
-        }
-        return overlaps.sorted { $0.durationSeconds > $1.durationSeconds }
+        analyticsSnapshot(for: range, now: now).overlaps
     }
 
     func rootTasks() -> [TaskNode] {
@@ -908,6 +960,18 @@ final class TimeTrackerStore: ObservableObject {
 
     func children(of task: TaskNode) -> [TaskNode] {
         childrenByParentID[task.id] ?? []
+    }
+
+    func ancestorTaskIDs(for taskID: UUID) -> [UUID] {
+        var result: [UUID] = []
+        var cursor = taskByID[taskID]
+        var visited: Set<UUID> = []
+        while let parentID = cursor?.parentID, !visited.contains(parentID) {
+            result.append(parentID)
+            visited.insert(parentID)
+            cursor = taskByID[parentID]
+        }
+        return result
     }
 
     func validParentTasks(for taskID: UUID?) -> [TaskNode] {
@@ -1002,10 +1066,10 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     @discardableResult
-    private func perform(_ action: () throws -> Void) -> Bool {
+    private func perform(refresh scopes: Set<RefreshScope>? = nil, _ action: () throws -> Void) -> Bool {
         do {
             try action()
-            try refresh()
+            try refresh(scopes: scopes ?? Self.fullRefreshScopes)
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -1073,12 +1137,14 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
-        perform {
+        perform(refresh: [.preferences]) {
             guard let modelContext else { throw StoreError.notConfigured }
-            let allPreferences = try modelContext.fetch(FetchDescriptor<SyncedPreference>())
-            let existing = allPreferences
-                .filter { $0.key == key.rawValue && $0.deletedAt == nil }
-                .sorted { $0.updatedAt > $1.updatedAt }
+            let rawKey = key.rawValue
+            let descriptor = FetchDescriptor<SyncedPreference>(
+                predicate: #Predicate { $0.key == rawKey && $0.deletedAt == nil },
+                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            )
+            let existing = try modelContext.fetch(descriptor)
             let target = existing.first ?? SyncedPreference(
                 key: key.rawValue,
                 valueJSON: valueJSON,
@@ -1108,6 +1174,7 @@ final class TimeTrackerStore: ObservableObject {
     private func fetchSyncedPreferences() throws -> [SyncedPreference] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<SyncedPreference>(
+            predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [
                 SortDescriptor(\.key),
                 SortDescriptor(\.updatedAt, order: .reverse)
@@ -1122,24 +1189,26 @@ final class TimeTrackerStore: ObservableObject {
     private func fetchChecklistItems() throws -> [ChecklistItem] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<ChecklistItem>(
+            predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [
                 SortDescriptor(\.taskID),
                 SortDescriptor(\.sortOrder),
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try modelContext.fetch(descriptor).filter { $0.deletedAt == nil }
+        return try modelContext.fetch(descriptor)
     }
 
     private func fetchCountdownEvents() throws -> [CountdownEvent] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<CountdownEvent>(
+            predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [
                 SortDescriptor(\.date),
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try modelContext.fetch(descriptor).filter { $0.deletedAt == nil }
+        return try modelContext.fetch(descriptor)
     }
 
     private func migrateLegacyCountdownEventsIfNeeded(context: ModelContext) throws {
@@ -1337,6 +1406,17 @@ enum AnalyticsRange: String, CaseIterable, Identifiable {
     case month = "Month"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .today:
+            return AppStrings.localized("analytics.range.today")
+        case .week:
+            return AppStrings.localized("analytics.range.week")
+        case .month:
+            return AppStrings.localized("analytics.range.month")
+        }
+    }
 }
 
 struct AnalyticsOverview {

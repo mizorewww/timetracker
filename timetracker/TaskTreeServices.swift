@@ -104,6 +104,30 @@ struct TaskTreeRowModel: Identifiable, Equatable {
     var id: UUID { taskID }
 }
 
+struct TaskExpansionState: Equatable {
+    private(set) var expandedTaskIDs: Set<UUID> = []
+
+    func contains(_ taskID: UUID) -> Bool {
+        expandedTaskIDs.contains(taskID)
+    }
+
+    mutating func toggle(_ taskID: UUID) {
+        if expandedTaskIDs.contains(taskID) {
+            expandedTaskIDs.remove(taskID)
+        } else {
+            expandedTaskIDs.insert(taskID)
+        }
+    }
+
+    mutating func expand(_ taskID: UUID) {
+        expandedTaskIDs.insert(taskID)
+    }
+
+    mutating func collapse(_ taskID: UUID) {
+        expandedTaskIDs.remove(taskID)
+    }
+}
+
 struct TaskTreeFlattener {
     static func visibleRows(
         rootTasks: [TaskNode],
@@ -186,8 +210,13 @@ struct ChecklistDraftService {
         context: ModelContext,
         deviceID: String = DeviceIdentity.current
     ) throws {
-        let existing = try context.fetch(FetchDescriptor<ChecklistItem>())
-            .filter { $0.taskID == taskID }
+        let targetTaskID = taskID
+        let existing = try context.fetch(
+            FetchDescriptor<ChecklistItem>(
+                predicate: #Predicate { $0.taskID == targetTaskID },
+                sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.createdAt)]
+            )
+        )
         let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
         var keptIDs = Set<UUID>()
 

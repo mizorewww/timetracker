@@ -37,6 +37,29 @@ enum AggregationMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+extension TimeSessionSource {
+    var displayName: String {
+        switch self {
+        case .manual:
+            return AppStrings.localized("source.manual")
+        case .timer:
+            return AppStrings.localized("source.timer")
+        case .pomodoro:
+            return AppStrings.pomodoro
+        case .importCalendar:
+            return AppStrings.localized("source.calendar")
+        case .shortcut:
+            return AppStrings.localized("source.shortcut")
+        case .watch:
+            return AppStrings.localized("source.watch")
+        case .widget:
+            return AppStrings.localized("source.widget")
+        case .liveActivity:
+            return AppStrings.localized("source.liveActivity")
+        }
+    }
+}
+
 @Model
 final class TaskNode {
     var id: UUID = UUID()

@@ -408,7 +408,7 @@ struct SegmentEditorPanel: View {
                         }
                     }
 
-                    LabeledContent(AppStrings.localized("segment.source"), value: draft.source.rawValue)
+                    LabeledContent(AppStrings.localized("segment.source"), value: draft.source.displayName)
                 }
 
                 Section(AppStrings.localized("segment.time")) {

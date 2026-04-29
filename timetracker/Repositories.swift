@@ -57,13 +57,14 @@ final class SwiftDataTaskRepository: TaskRepository {
 
     func allNodes() throws -> [TaskNode] {
         let descriptor = FetchDescriptor<TaskNode>(
+            predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [
                 SortDescriptor(\.depth),
                 SortDescriptor(\.sortOrder),
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try context.fetch(descriptor).filter { $0.deletedAt == nil }
+        return try context.fetch(descriptor)
     }
 
     func rootNodes() throws -> [TaskNode] {
@@ -71,18 +72,24 @@ final class SwiftDataTaskRepository: TaskRepository {
     }
 
     func children(of parentID: UUID?) throws -> [TaskNode] {
-        try allNodes()
-            .filter { $0.parentID == parentID }
-            .sorted { lhs, rhs in
-                if lhs.sortOrder == rhs.sortOrder {
-                    return lhs.createdAt < rhs.createdAt
-                }
-                return lhs.sortOrder < rhs.sortOrder
-            }
+        let parent = parentID
+        let descriptor = FetchDescriptor<TaskNode>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.parentID == parent },
+            sortBy: [
+                SortDescriptor(\.sortOrder),
+                SortDescriptor(\.createdAt)
+            ]
+        )
+        return try context.fetch(descriptor)
     }
 
     func task(id: UUID) throws -> TaskNode? {
-        try allNodes().first { $0.id == id }
+        let taskID = id
+        var descriptor = FetchDescriptor<TaskNode>(
+            predicate: #Predicate { $0.id == taskID && $0.deletedAt == nil }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
     }
 
     @discardableResult
@@ -230,27 +237,39 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
     }
 
     func activeSegments() throws -> [TimeSegment] {
-        let descriptor = FetchDescriptor<TimeSegment>(sortBy: [SortDescriptor(\.startedAt)])
-        return try context.fetch(descriptor).filter { $0.endedAt == nil && $0.deletedAt == nil }
+        let descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.endedAt == nil },
+            sortBy: [SortDescriptor(\.startedAt)]
+        )
+        return try context.fetch(descriptor)
     }
 
     func sessions() throws -> [TimeSession] {
-        let descriptor = FetchDescriptor<TimeSession>(sortBy: [SortDescriptor(\.startedAt, order: .reverse)])
-        return try context.fetch(descriptor).filter { $0.deletedAt == nil }
+        let descriptor = FetchDescriptor<TimeSession>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        return try context.fetch(descriptor)
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
-        let descriptor = FetchDescriptor<TimeSegment>(sortBy: [SortDescriptor(\.startedAt)])
+        let upperBound = to
+        let descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.startedAt < upperBound },
+            sortBy: [SortDescriptor(\.startedAt)]
+        )
         return try context.fetch(descriptor).filter { segment in
-            guard segment.deletedAt == nil else { return false }
             let end = segment.endedAt ?? Date()
-            return segment.startedAt < to && end > from
+            return end > from
         }
     }
 
     func allSegments() throws -> [TimeSegment] {
-        let descriptor = FetchDescriptor<TimeSegment>(sortBy: [SortDescriptor(\.startedAt)])
-        return try context.fetch(descriptor).filter { $0.deletedAt == nil }
+        let descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [SortDescriptor(\.startedAt)]
+        )
+        return try context.fetch(descriptor)
     }
 
     @discardableResult
@@ -362,13 +381,21 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
     }
 
     private func segment(id: UUID) throws -> TimeSegment? {
-        let descriptor = FetchDescriptor<TimeSegment>()
-        return try context.fetch(descriptor).first { $0.id == id && $0.deletedAt == nil }
+        let segmentID = id
+        var descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.id == segmentID && $0.deletedAt == nil }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
     }
 
     private func segments(in sessionID: UUID) throws -> [TimeSegment] {
-        let descriptor = FetchDescriptor<TimeSegment>()
-        return try context.fetch(descriptor).filter { $0.sessionID == sessionID }
+        let targetSessionID = sessionID
+        let descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.sessionID == targetSessionID },
+            sortBy: [SortDescriptor(\.startedAt)]
+        )
+        return try context.fetch(descriptor)
     }
 
     private func latestEndedAt(for sessionID: UUID) throws -> Date? {
@@ -387,13 +414,21 @@ final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
     }
 
     private func session(id: UUID) throws -> TimeSession? {
-        let descriptor = FetchDescriptor<TimeSession>()
-        return try context.fetch(descriptor).first { $0.id == id && $0.deletedAt == nil }
+        let sessionID = id
+        var descriptor = FetchDescriptor<TimeSession>(
+            predicate: #Predicate { $0.id == sessionID && $0.deletedAt == nil }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
     }
 
     private func titleSnapshot(for taskID: UUID) throws -> String? {
-        let descriptor = FetchDescriptor<TaskNode>()
-        return try context.fetch(descriptor).first { $0.id == taskID }?.title
+        let id = taskID
+        var descriptor = FetchDescriptor<TaskNode>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first?.title
     }
 }
 

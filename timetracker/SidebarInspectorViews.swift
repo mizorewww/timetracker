@@ -8,6 +8,7 @@ enum SidebarSelection: Hashable {
 struct SidebarView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var selection: SidebarSelection?
+    @State private var expansionState = TaskExpansionState()
 
     private var destinations: [TimeTrackerStore.DesktopDestination] {
         #if os(macOS)
@@ -28,8 +29,11 @@ struct SidebarView: View {
             }
 
             Section(AppStrings.tasks) {
-                ForEach(store.rootTasks(), id: \.id) { task in
-                    TaskTreeRow(store: store, task: task, selection: $selection)
+                ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)) { row in
+                    if let task = store.task(for: row.taskID) {
+                        SidebarTaskTreeRow(store: store, task: task, row: row, expansionState: $expansionState)
+                            .tag(SidebarSelection.task(task.id))
+                    }
                 }
             }
         }
@@ -64,6 +68,9 @@ struct SidebarView: View {
 
     private func syncSelectionFromStore() {
         if let selectedTaskID = store.selectedTaskID {
+            for ancestorID in store.ancestorTaskIDs(for: selectedTaskID) {
+                expansionState.expand(ancestorID)
+            }
             selection = .task(selectedTaskID)
         } else {
             selection = .destination(store.desktopDestination)
@@ -86,38 +93,45 @@ struct SidebarView: View {
     }
 }
 
-struct TaskTreeRow: View {
+struct SidebarTaskTreeRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
-    @Binding var selection: SidebarSelection?
+    let row: TaskTreeRowModel
+    @Binding var expansionState: TaskExpansionState
     @State private var isPulsing = false
 
     var body: some View {
-        let children = store.children(of: task)
-        Group {
-            if children.isEmpty {
-                taskLabel
-                    .tag(SidebarSelection.task(task.id))
-            } else {
-                DisclosureGroup {
-                    ForEach(children, id: \.id) { child in
-                        TaskTreeRow(store: store, task: child, selection: $selection)
-                    }
-                } label: {
-                    taskLabel
-                }
-                .tag(SidebarSelection.task(task.id))
-            }
-        }
+        taskLabel
     }
 
     private var taskLabel: some View {
-        HStack {
+        HStack(spacing: 8) {
+            Color.clear
+                .frame(width: CGFloat(row.depth) * 14)
+
+            if row.hasChildren {
+                Button {
+                    expansionState.toggle(task.id)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(row.isExpanded ? 90 : 0))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 14, height: 18)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(row.isExpanded ? AppStrings.localized("task.tree.collapse") : AppStrings.localized("task.tree.expand"))
+            } else {
+                Color.clear
+                    .frame(width: 14, height: 18)
+            }
+
             Image(systemName: task.iconName ?? "checkmark.circle")
                 .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
             Text(task.title)
                 .strikethrough(task.status == .completed)
                 .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                .lineLimit(1)
             Spacer()
             let progress = store.checklistProgress(for: task.id)
             if progress.totalCount > 0 {
@@ -125,7 +139,7 @@ struct TaskTreeRow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            let childCount = store.children(of: task).count
+            let childCount = row.hasChildren ? store.children(of: task).count : 0
             if childCount > 0 {
                 Text("\(childCount)")
                     .font(.caption)

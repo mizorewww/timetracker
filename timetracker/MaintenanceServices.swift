@@ -79,7 +79,7 @@ struct CSVExportService {
         return taskParentPathByID[segment.taskID] ?? ""
     }
 
-    static func csvEscaped(_ value: String) -> String {
+    nonisolated static func csvEscaped(_ value: String) -> String {
         let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
         if escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"") {
             return "\"\(escaped)\""

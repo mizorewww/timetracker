@@ -103,6 +103,9 @@ final class TimeTrackerStore: ObservableObject {
     private let databaseMaintenanceService = DatabaseMaintenanceService()
     private let csvExportService = CSVExportService()
     private let refreshPlanner = StoreRefreshPlanner()
+    private let timerCommandHandler = TimerCommandHandler()
+    private let taskDraftCommandHandler = TaskDraftCommandHandler()
+    private let pomodoroCommandHandler = PomodoroCommandHandler()
     private let checklistCommandHandler = ChecklistCommandHandler()
     private let preferenceCommandHandler = PreferenceCommandHandler()
     private var taskDomainStore = TaskStore()
@@ -312,53 +315,39 @@ final class TimeTrackerStore: ObservableObject {
 
     private func startTask(taskID: UUID) {
         perform(mutation: .timer) {
-            if activeSegment(for: taskID) != nil {
-                return
-            }
-            if !preferences.allowParallelTimers {
-                try pauseOtherActiveSegments(excluding: taskID)
-            }
-            if let pausedSession = pausedSession(for: taskID) {
-                _ = try ResumeSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: pausedSession.id)
-                try resumePomodoroIfNeeded(sessionID: pausedSession.id)
-                return
-            }
-            _ = try StartTaskUseCase(repository: requiredTimeRepository()).execute(taskID: taskID, source: .timer)
-        }
-    }
-
-    private func pauseOtherActiveSegments(excluding taskID: UUID) throws {
-        for segment in activeSegments where segment.taskID != taskID {
-            try PauseSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: segment.sessionID)
-            try interruptPomodoroIfNeeded(sessionID: segment.sessionID)
+            try timerCommandHandler.startTask(
+                taskID: taskID,
+                allowParallelTimers: preferences.allowParallelTimers,
+                activeSegments: activeSegments,
+                pausedSessions: pausedSessions,
+                pomodoroRuns: pomodoroRuns,
+                timeRepository: requiredTimeRepository(),
+                context: modelContext
+            )
         }
     }
 
     func stop(segment: TimeSegment) {
         perform(mutation: .timer) {
-            try StopSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segment.id)
-            try cancelPomodoroIfNeeded(sessionID: segment.sessionID)
+            try timerCommandHandler.stop(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func pause(segment: TimeSegment) {
         perform(mutation: .timer) {
-            try PauseSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: segment.sessionID)
-            try interruptPomodoroIfNeeded(sessionID: segment.sessionID)
+            try timerCommandHandler.pause(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func resume(session: TimeSession) {
         perform(mutation: .timer) {
-            _ = try ResumeSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: session.id)
-            try resumePomodoroIfNeeded(sessionID: session.id)
+            try timerCommandHandler.resume(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func stop(session: TimeSession) {
         perform(mutation: .timer) {
-            try StopSessionUseCase(repository: requiredTimeRepository()).execute(sessionID: session.id)
-            try cancelPomodoroIfNeeded(sessionID: session.id)
+            try timerCommandHandler.stop(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
@@ -379,41 +368,12 @@ final class TimeTrackerStore: ObservableObject {
         }
 
         let didSave = perform(mutations: [.taskTree, .checklist]) {
-            if let taskID = draft.taskID {
-                try UpdateTaskUseCase(repository: requiredTaskRepository()).execute(
-                    taskID: taskID,
-                    title: sanitizedTitle,
-                    status: draft.status,
-                    parentID: draft.parentID,
-                    colorHex: draft.colorHex,
-                    iconName: draft.iconName,
-                    notes: draft.notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-                    estimatedSeconds: draft.estimatedMinutes.map { $0 * 60 },
-                    dueAt: draft.hasDueDate ? draft.dueAt : nil
-                )
-                try saveChecklistDrafts(draft.checklistItems, taskID: taskID)
-                selectedTaskID = taskID
-            } else {
-                let task = try CreateTaskUseCase(repository: requiredTaskRepository()).execute(
-                    title: sanitizedTitle,
-                    parentID: draft.parentID,
-                    colorHex: draft.colorHex,
-                    iconName: draft.iconName
-                )
-                try UpdateTaskUseCase(repository: requiredTaskRepository()).execute(
-                    taskID: task.id,
-                    title: sanitizedTitle,
-                    status: draft.status,
-                    parentID: draft.parentID,
-                    colorHex: draft.colorHex,
-                    iconName: draft.iconName,
-                    notes: draft.notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-                    estimatedSeconds: draft.estimatedMinutes.map { $0 * 60 },
-                    dueAt: draft.hasDueDate ? draft.dueAt : nil
-                )
-                try saveChecklistDrafts(draft.checklistItems, taskID: task.id)
-                selectedTaskID = task.id
-            }
+            selectedTaskID = try taskDraftCommandHandler.save(
+                draft: draft,
+                sanitizedTitle: sanitizedTitle,
+                taskRepository: requiredTaskRepository(),
+                saveChecklistDrafts: saveChecklistDrafts
+            )
         }
         if didSave {
             taskEditorDraft = nil
@@ -462,7 +422,7 @@ final class TimeTrackerStore: ObservableObject {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
         perform(mutation: .taskTree) {
-            try ArchiveTaskUseCase(repository: requiredTaskRepository()).execute(taskID: targetID)
+            try taskDraftCommandHandler.archive(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
             }
@@ -473,7 +433,7 @@ final class TimeTrackerStore: ObservableObject {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
         perform(mutation: .taskTree) {
-            try SetTaskStatusUseCase(repository: requiredTaskRepository()).execute(taskID: targetID, status: status)
+            try taskDraftCommandHandler.setStatus(status, taskID: targetID, repository: requiredTaskRepository())
         }
     }
 
@@ -481,7 +441,7 @@ final class TimeTrackerStore: ObservableObject {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
         perform(mutation: .taskTree) {
-            try SoftDeleteTaskUseCase(repository: requiredTaskRepository()).execute(taskID: targetID)
+            try taskDraftCommandHandler.softDelete(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
             }
@@ -600,14 +560,17 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
         perform(mutation: .pomodoro) {
-            if !preferences.allowParallelTimers {
-                try pauseOtherActiveSegments(excluding: selectedTaskID)
-            }
-            _ = try StartPomodoroUseCase(repository: requiredPomodoroRepository()).execute(
+            _ = try pomodoroCommandHandler.start(
                 taskID: selectedTaskID,
                 focusSeconds: focusSeconds,
                 breakSeconds: breakSeconds,
-                targetRounds: targetRounds
+                targetRounds: targetRounds,
+                allowParallelTimers: preferences.allowParallelTimers,
+                activeSegments: activeSegments,
+                pomodoroRuns: pomodoroRuns,
+                timeRepository: requiredTimeRepository(),
+                pomodoroRepository: requiredPomodoroRepository(),
+                context: modelContext
             )
         }
     }
@@ -615,14 +578,14 @@ final class TimeTrackerStore: ObservableObject {
     func completeActivePomodoro() {
         guard let run = activePomodoroRun else { return }
         perform(mutation: .pomodoro) {
-            try CompletePomodoroFocusUseCase(repository: requiredPomodoroRepository()).execute(runID: run.id)
+            try pomodoroCommandHandler.complete(run: run, repository: requiredPomodoroRepository())
         }
     }
 
     func cancelActivePomodoro() {
         guard let run = activePomodoroRun else { return }
         perform(mutation: .pomodoro) {
-            try CancelPomodoroUseCase(repository: requiredPomodoroRepository()).execute(runID: run.id)
+            try pomodoroCommandHandler.cancel(run: run, repository: requiredPomodoroRepository())
         }
     }
 
@@ -1112,39 +1075,6 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
 
-    private func interruptPomodoroIfNeeded(sessionID: UUID) throws {
-        guard let run = pomodoroRuns.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }),
-              run.state == .focusing else {
-            return
-        }
-        run.state = .interrupted
-        run.updatedAt = Date()
-        run.clientMutationID = UUID()
-        try modelContext?.save()
-    }
-
-    private func resumePomodoroIfNeeded(sessionID: UUID) throws {
-        guard let run = pomodoroRuns.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }),
-              run.state == .interrupted else {
-            return
-        }
-        run.state = .focusing
-        run.updatedAt = Date()
-        run.clientMutationID = UUID()
-        try modelContext?.save()
-    }
-
-    private func cancelPomodoroIfNeeded(sessionID: UUID) throws {
-        guard let run = pomodoroRuns.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }) else {
-            return
-        }
-        run.state = .cancelled
-        run.endedAt = Date()
-        run.updatedAt = Date()
-        run.clientMutationID = UUID()
-        try modelContext?.save()
-    }
-
     private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
         perform(mutation: .preferences) {
             guard let modelContext else { throw StoreError.notConfigured }
@@ -1262,7 +1192,7 @@ private struct LegacyCountdownEvent: Codable {
     }
 }
 
-private extension String {
+extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
     }

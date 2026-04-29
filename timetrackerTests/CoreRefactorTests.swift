@@ -171,6 +171,57 @@ struct CoreRefactorTests {
     }
 
     @Test @MainActor
+    func timerCommandHandlerCoordinatesLedgerAndParallelTimerPolicy() throws {
+        let context = try makeContext()
+        let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstTaskID = UUID()
+        let secondTaskID = UUID()
+        let firstSegment = try repository.startTask(taskID: firstTaskID, source: .timer)
+
+        try TimerCommandHandler().startTask(
+            taskID: secondTaskID,
+            allowParallelTimers: false,
+            activeSegments: [firstSegment],
+            pausedSessions: [],
+            pomodoroRuns: [],
+            timeRepository: repository,
+            context: context
+        )
+
+        let activeSegments = try repository.activeSegments()
+        #expect(firstSegment.endedAt != nil)
+        #expect(activeSegments.count == 1)
+        #expect(activeSegments.first?.taskID == secondTaskID)
+    }
+
+    @Test @MainActor
+    func pomodoroCommandHandlerOwnsTimerStateTransitions() throws {
+        let context = try makeContext()
+        let sessionID = UUID()
+        let run = PomodoroRun(taskID: UUID(), deviceID: "test")
+        run.sessionID = sessionID
+        run.state = .focusing
+        context.insert(run)
+        try context.save()
+
+        let handler = PomodoroCommandHandler()
+        let interruptedAt = Date(timeIntervalSince1970: 1_000)
+        try handler.interruptIfNeeded(sessionID: sessionID, runs: [run], context: context, now: interruptedAt)
+        #expect(run.state == .interrupted)
+        #expect(run.updatedAt == interruptedAt)
+
+        let resumedAt = Date(timeIntervalSince1970: 2_000)
+        try handler.resumeIfNeeded(sessionID: sessionID, runs: [run], context: context, now: resumedAt)
+        #expect(run.state == .focusing)
+        #expect(run.updatedAt == resumedAt)
+
+        let cancelledAt = Date(timeIntervalSince1970: 3_000)
+        try handler.cancelIfNeeded(sessionID: sessionID, runs: [run], context: context, now: cancelledAt)
+        #expect(run.state == .cancelled)
+        #expect(run.endedAt == cancelledAt)
+    }
+
+    @Test @MainActor
     func csvExportServiceEscapesRowsAndUsesSessionFallbackForDeletedTasks() {
         let taskID = UUID()
         let session = TimeSession(

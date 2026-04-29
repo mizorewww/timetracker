@@ -20,12 +20,12 @@ Current progress:
 - `MaintenanceServices` owns CSV export and database cleanup rules.
 - `TaskTreeService`, `TaskTreeFlattener`, and related pure services own task tree derivation.
 - `StoreRefreshPlanner` maps user mutations to domain-sized refresh scopes.
-- `ChecklistCommandHandler` and `PreferenceCommandHandler` own checklist and preference writes.
+- `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
 
 Remaining risk:
 
 - `TimeTrackerStore.refresh(scopes:)` still coordinates multiple domains, but callers now describe mutations instead of hand-picking scopes.
-- Timer, task, and pomodoro write commands still need dedicated command handlers.
+- Command handlers still call use cases and repositories directly, but business sequences are no longer embedded in SwiftUI-facing methods.
 - Some repository methods still need range caches or bucket indexes before very large ledgers feel cheap.
 - Analytics views remain too large and still mix layout policy with presentation. Home has been split into entry, metrics/actions, timeline/timers, quick start, and forecast files.
 
@@ -319,7 +319,7 @@ Before merging a feature:
 
 P1:
 
-- Move timer, task, and pomodoro writes into domain command handlers. Checklist and preferences are already command-backed.
+- Move command handlers behind feature stores so writes can publish domain events instead of returning through `TimeTrackerStore.perform`.
 - Replace mutation-level refresh scopes with event-based domain invalidation.
 - Keep `TimeTrackerStore` as a facade only until views are moved to feature stores.
 

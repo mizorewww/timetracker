@@ -20,7 +20,7 @@ Current progress:
 - `MaintenanceServices` owns CSV export and database cleanup rules.
 - `TaskTreeService`, `TaskTreeFlattener`, and related pure services own task tree derivation.
 - `StoreRefreshPlanner` maps user invalidation events to domain-sized refresh scopes.
-- `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
+- `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `LedgerCommandHandler`, `CountdownCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
 
 Remaining risk:
 

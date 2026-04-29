@@ -106,6 +106,8 @@ final class TimeTrackerStore: ObservableObject {
     private let timerCommandHandler = TimerCommandHandler()
     private let taskDraftCommandHandler = TaskDraftCommandHandler()
     private let pomodoroCommandHandler = PomodoroCommandHandler()
+    private let ledgerCommandHandler = LedgerCommandHandler()
+    private let countdownCommandHandler = CountdownCommandHandler()
     private let checklistCommandHandler = ChecklistCommandHandler()
     private let preferenceCommandHandler = PreferenceCommandHandler()
     private var taskDomainStore = TaskStore()
@@ -171,36 +173,21 @@ final class TimeTrackerStore: ObservableObject {
     func addCountdownEvent() {
         perform(event: .countdownChanged) {
             guard let modelContext else { throw StoreError.notConfigured }
-            let event = CountdownEvent(
-                title: AppStrings.localized("task.newEvent"),
-                date: Date().addingTimeInterval(30 * 24 * 60 * 60),
-                deviceID: DeviceIdentity.current
-            )
-            modelContext.insert(event)
-            try modelContext.save()
+            try countdownCommandHandler.add(context: modelContext)
         }
     }
 
     func updateCountdownEvent(_ event: CountdownEvent, title: String? = nil, date: Date? = nil) {
         perform(event: .countdownChanged) {
-            if let title {
-                event.title = title
-            }
-            if let date {
-                event.date = date
-            }
-            event.updatedAt = Date()
-            event.clientMutationID = UUID()
-            try modelContext?.save()
+            guard let modelContext else { throw StoreError.notConfigured }
+            try countdownCommandHandler.update(event, title: title, date: date, context: modelContext)
         }
     }
 
     func deleteCountdownEvent(_ event: CountdownEvent) {
         perform(event: .countdownChanged) {
-            event.deletedAt = Date()
-            event.updatedAt = Date()
-            event.clientMutationID = UUID()
-            try modelContext?.save()
+            guard let modelContext else { throw StoreError.notConfigured }
+            try countdownCommandHandler.softDelete(event, context: modelContext)
         }
     }
 
@@ -464,12 +451,7 @@ final class TimeTrackerStore: ObservableObject {
         }
 
         perform(event: .ledgerHistoryChanged(taskID: taskID, range: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt))) {
-            _ = try AddManualTimeUseCase(repository: requiredTimeRepository()).execute(
-                taskID: taskID,
-                startedAt: draft.startedAt,
-                endedAt: draft.endedAt,
-                note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "Manual"
-            )
+            try ledgerCommandHandler.addManualTime(draft: draft, taskID: taskID, repository: requiredTimeRepository())
         }
         manualTimeDraft = nil
     }
@@ -491,13 +473,7 @@ final class TimeTrackerStore: ObservableObject {
         }
 
         perform(event: .ledgerHistoryChanged(taskID: taskID, range: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt))) {
-            try UpdateSegmentUseCase(repository: requiredTimeRepository()).execute(
-                segmentID: draft.segmentID,
-                taskID: taskID,
-                startedAt: draft.startedAt,
-                endedAt: endedAt,
-                note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            )
+            try ledgerCommandHandler.updateSegment(draft: draft, taskID: taskID, repository: requiredTimeRepository())
             selectedTaskID = taskID
         }
         segmentEditorDraft = nil
@@ -505,7 +481,7 @@ final class TimeTrackerStore: ObservableObject {
 
     func deleteSegment(_ segmentID: UUID) {
         perform(event: .ledgerHistoryChanged(taskID: segmentEditorDraft?.taskID, range: nil)) {
-            try SoftDeleteSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segmentID)
+            try ledgerCommandHandler.softDeleteSegment(segmentID, repository: requiredTimeRepository())
         }
         segmentEditorDraft = nil
     }

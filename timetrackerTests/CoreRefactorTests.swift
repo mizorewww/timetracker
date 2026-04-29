@@ -229,6 +229,48 @@ struct CoreRefactorTests {
     }
 
     @Test @MainActor
+    func ledgerCommandHandlerOwnsManualSegmentWrites() throws {
+        let context = try makeContext()
+        let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = TaskNode(title: "Ledger Task", parentID: nil, deviceID: "test")
+        var draft = ManualTimeDraft(taskID: task.id, tasks: [task])
+        draft.startedAt = Date(timeIntervalSince1970: 10_000)
+        draft.endedAt = draft.startedAt.addingTimeInterval(1_200)
+        draft.note = "   "
+
+        let segment = try LedgerCommandHandler().addManualTime(draft: draft, taskID: task.id, repository: repository)
+        let session = try #require(try repository.sessions().first { $0.id == segment.sessionID })
+
+        #expect(segment.taskID == task.id)
+        #expect(session.note == "Manual")
+
+        var editDraft = SegmentEditorDraft(segment: segment, note: " Updated ")
+        editDraft.isActive = true
+        try LedgerCommandHandler().updateSegment(draft: editDraft, taskID: task.id, repository: repository)
+        #expect(segment.endedAt == nil)
+        #expect(session.note == "Updated")
+
+        try LedgerCommandHandler().softDeleteSegment(segment.id, repository: repository)
+        #expect(segment.deletedAt != nil)
+    }
+
+    @Test @MainActor
+    func countdownCommandHandlerOwnsCountdownWrites() throws {
+        let context = try makeContext()
+        let handler = CountdownCommandHandler()
+        let event = try handler.add(context: context, deviceID: "test")
+        let date = Date(timeIntervalSince1970: 50_000)
+
+        try handler.update(event, title: "Ship", date: date, context: context, now: Date(timeIntervalSince1970: 40_000))
+        #expect(event.title == "Ship")
+        #expect(event.date == date)
+        #expect(event.updatedAt == Date(timeIntervalSince1970: 40_000))
+
+        try handler.softDelete(event, context: context, now: Date(timeIntervalSince1970: 60_000))
+        #expect(event.deletedAt == Date(timeIntervalSince1970: 60_000))
+    }
+
+    @Test @MainActor
     func csvExportServiceEscapesRowsAndUsesSessionFallbackForDeletedTasks() {
         let taskID = UUID()
         let session = TimeSession(

@@ -19,15 +19,15 @@ Current progress:
 - `PreferenceStore` owns synced user preference loading.
 - `MaintenanceServices` owns CSV export and database cleanup rules.
 - `TaskTreeService`, `TaskTreeFlattener`, and related pure services own task tree derivation.
-- `StoreRefreshPlanner` maps user mutations to domain-sized refresh scopes.
+- `StoreRefreshPlanner` maps user invalidation events to domain-sized refresh scopes.
 - `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
 
 Remaining risk:
 
-- `TimeTrackerStore.refresh(scopes:)` still coordinates multiple domains, but callers now describe mutations instead of hand-picking scopes.
+- `TimeTrackerStore.refresh(scopes:)` still coordinates multiple domains, but callers now emit invalidation events instead of hand-picking scopes.
 - Command handlers still call use cases and repositories directly, but business sequences are no longer embedded in SwiftUI-facing methods.
 - Some repository methods still need range caches or bucket indexes before very large ledgers feel cheap.
-- Analytics views remain too large and still mix layout policy with presentation. Home has been split into entry, metrics/actions, timeline/timers, quick start, and forecast files.
+- Analytics and Home are now split by component family, but layout policy still lives close to SwiftUI views and should eventually move into small layout policy types.
 
 ## Target Module Shape
 
@@ -185,22 +185,22 @@ Use this table when adding or debugging features.
 
 ## Refresh and Invalidation Plan
 
-The facade should stop deciding global refresh order. The current bridge is `StoreRefreshPlanner`: write methods describe a `StoreDomainMutation`, and the planner converts that mutation to refresh scopes. This keeps mutation intent testable and prevents future features from manually sprinkling refresh scopes through the facade.
+The facade should stop deciding global refresh order. The current bridge is `StoreRefreshPlanner`: write methods emit `StoreInvalidationEvent` values with affected task IDs and optional time ranges, and the planner converts those events to refresh scopes. This keeps invalidation intent testable and gives later work a place to narrow refreshes to one task branch or date bucket.
 
-Current mutation mapping:
+Current invalidation mapping:
 
-| Mutation | Refresh scopes |
+| Event | Refresh scopes |
 | --- | --- |
-| `taskTree` | Tasks, rollups, analytics, Live Activities |
-| `timer` | Visible ledger, pomodoro, rollups, analytics, Live Activities |
-| `ledgerHistory` | Ledger history, rollups, analytics, Live Activities |
-| `pomodoro` | Visible ledger, pomodoro, rollups, analytics, Live Activities |
-| `checklist` | Checklist, rollups, analytics |
-| `preferences` | Preferences |
-| `countdown` | Countdown events |
-| `allData` | Full refresh |
+| `taskTreeChanged(taskID:)` | Tasks, rollups, analytics, Live Activities |
+| `timerChanged(taskID:)` | Visible ledger, pomodoro, rollups, analytics, Live Activities |
+| `ledgerHistoryChanged(taskID:range:)` | Ledger history, rollups, analytics, Live Activities |
+| `pomodoroChanged(taskID:)` | Visible ledger, pomodoro, rollups, analytics, Live Activities |
+| `checklistChanged(taskID:)` | Checklist, rollups, analytics |
+| `preferencesChanged` | Preferences |
+| `countdownChanged` | Countdown events |
+| `fullSync` | Full refresh |
 
-Next step is replacing coarse mutation scopes with explicit invalidation events:
+Next step is replacing coarse refresh scopes with explicit domain events:
 
 ```text
 TaskChanged(taskID, affectedAncestorIDs)
@@ -258,6 +258,8 @@ TaskChecklistSection
 AnalyticsOverviewSection
 AnalyticsTimelineSection
 AnalyticsDistributionSection
+AnalyticsActivityViews
+AnalyticsRowsViews
 SettingsGeneralPane
 SettingsDataPane
 SettingsAboutPane
@@ -320,14 +322,14 @@ Before merging a feature:
 P1:
 
 - Move command handlers behind feature stores so writes can publish domain events instead of returning through `TimeTrackerStore.perform`.
-- Replace mutation-level refresh scopes with event-based domain invalidation.
+- Replace scope-level refresh orchestration with event-based domain invalidation.
 - Keep `TimeTrackerStore` as a facade only until views are moved to feature stores.
 
 P2:
 
 - Add ledger date buckets or summary caches for large Month/Year analytics.
 - Continue keeping Home feature files narrow as new sections are added.
-- Split Analytics into overview, timeline, distribution, forecast, and overlap files.
+- Continue splitting Analytics until chart-specific layout code and row components are isolated from the screen entry.
 - Move Sidebar and Tasks to the same flattened task row policy.
 - Replace source-string tests with domain behavior tests where possible.
 

@@ -32,7 +32,7 @@ Signed export:
 - Timeline lane layout for overlaps, adjacent tasks, and cross-day segments.
 - Synced user preferences, including legacy UserDefaults import and the local iCloud startup mirror.
 - Checklist add/update/delete/sort behavior and recursive rollup forecasting, including `0 completed`, `0 tracked time`, completion to `0` remaining, and parent/child forecast display rules.
-- Store refresh planning: each user mutation must map to domain-sized refresh scopes, and combined mutations must not silently escalate to a full refresh.
+- Store refresh planning: each user invalidation event must map to domain-sized refresh scopes, carry affected task IDs where available, and combined invalidations must not silently escalate to a full refresh.
 - Command handlers: durable writes such as timer, task, pomodoro, checklist, and preference changes must have behavior tests at the command boundary before UI wiring changes.
 - Month analytics labels using real day numbers rather than repeated weekday names.
 - Localization key parity across English, Simplified Chinese, and Traditional Chinese.

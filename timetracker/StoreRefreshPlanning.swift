@@ -15,47 +15,69 @@ enum StoreRefreshScope: Hashable, CaseIterable {
     static let full: Set<StoreRefreshScope> = Set(allCases)
 }
 
-enum StoreDomainMutation: Hashable {
-    case taskTree
-    case timer
-    case ledgerHistory
-    case pomodoro
-    case checklist
-    case preferences
-    case countdown
-    case allData
+struct StoreInvalidationRange: Hashable {
+    let start: Date
+    let end: Date
+}
+
+enum StoreInvalidationEvent: Hashable {
+    case taskTreeChanged(taskID: UUID?)
+    case timerChanged(taskID: UUID?)
+    case ledgerHistoryChanged(taskID: UUID?, range: StoreInvalidationRange?)
+    case pomodoroChanged(taskID: UUID?)
+    case checklistChanged(taskID: UUID?)
+    case preferencesChanged
+    case countdownChanged
+    case fullSync
+
+    var affectedTaskIDs: Set<UUID> {
+        switch self {
+        case .taskTreeChanged(let taskID),
+             .timerChanged(let taskID),
+             .pomodoroChanged(let taskID),
+             .checklistChanged(let taskID):
+            return taskID.map { [$0] } ?? []
+        case .ledgerHistoryChanged(let taskID, _):
+            return taskID.map { [$0] } ?? []
+        case .preferencesChanged,
+             .countdownChanged,
+             .fullSync:
+            return []
+        }
+    }
 }
 
 struct StoreRefreshPlanner {
-    func scopes(after mutations: Set<StoreDomainMutation>) -> Set<StoreRefreshScope> {
-        guard mutations.isEmpty == false else { return [] }
-        if mutations.contains(.allData) {
+    func scopes(after events: Set<StoreInvalidationEvent>) -> Set<StoreRefreshScope> {
+        guard events.isEmpty == false else { return [] }
+        if events.contains(.fullSync) {
             return StoreRefreshScope.full
         }
 
-        return mutations.reduce(into: Set<StoreRefreshScope>()) { result, mutation in
-            result.formUnion(scopes(after: mutation))
+        return events.reduce(into: Set<StoreRefreshScope>()) { result, event in
+            result.formUnion(scopes(after: event))
         }
     }
 
-    func scopes(after mutation: StoreDomainMutation) -> Set<StoreRefreshScope> {
-        switch mutation {
-        case .taskTree:
+    func scopes(after event: StoreInvalidationEvent) -> Set<StoreRefreshScope> {
+        switch event {
+        case .taskTreeChanged:
             return [.tasks, .rollups, .analytics, .liveActivities]
-        case .timer:
+        case .timerChanged:
             return [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
-        case .ledgerHistory:
+        case .ledgerHistoryChanged:
             return [.ledgerHistory, .rollups, .analytics, .liveActivities]
-        case .pomodoro:
+        case .pomodoroChanged:
             return [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
-        case .checklist:
+        case .checklistChanged:
             return [.checklist, .rollups, .analytics]
-        case .preferences:
+        case .preferencesChanged:
             return [.preferences]
-        case .countdown:
+        case .countdownChanged:
             return [.countdown]
-        case .allData:
+        case .fullSync:
             return StoreRefreshScope.full
         }
     }
+
 }

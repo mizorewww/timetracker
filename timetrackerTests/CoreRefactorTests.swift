@@ -118,21 +118,28 @@ struct CoreRefactorTests {
     }
 
     @Test @MainActor
-    func refreshPlannerMapsUserMutationsToDomainSizedScopes() {
+    func refreshPlannerMapsInvalidationEventsToDomainSizedScopes() {
         let planner = StoreRefreshPlanner()
+        let taskID = UUID()
 
-        #expect(planner.scopes(after: [.checklist]) == [.checklist, .rollups, .analytics])
-        #expect(planner.scopes(after: [.taskTree]) == [.tasks, .rollups, .analytics, .liveActivities])
-        #expect(planner.scopes(after: [.timer]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
-        #expect(planner.scopes(after: [.pomodoro]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
-        #expect(planner.scopes(after: [.ledgerHistory]) == [.ledgerHistory, .rollups, .analytics, .liveActivities])
-        #expect(planner.scopes(after: [.preferences]) == [.preferences])
-        #expect(planner.scopes(after: [.allData]) == StoreRefreshScope.full)
+        #expect(planner.scopes(after: [.checklistChanged(taskID: taskID)]) == [.checklist, .rollups, .analytics])
+        #expect(planner.scopes(after: [.taskTreeChanged(taskID: taskID)]) == [.tasks, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.timerChanged(taskID: taskID)]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.pomodoroChanged(taskID: taskID)]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.ledgerHistoryChanged(taskID: taskID, range: nil)]) == [.ledgerHistory, .rollups, .analytics, .liveActivities])
+        #expect(planner.scopes(after: [.preferencesChanged]) == [.preferences])
+        #expect(planner.scopes(after: [.fullSync]) == StoreRefreshScope.full)
+        #expect(StoreInvalidationEvent.checklistChanged(taskID: taskID).affectedTaskIDs == [taskID])
     }
 
     @Test @MainActor
-    func refreshPlannerCoalescesMultipleMutationsWithoutEscalatingToFullRefresh() {
-        let scopes = StoreRefreshPlanner().scopes(after: [.taskTree, .checklist, .timer])
+    func refreshPlannerCoalescesMultipleInvalidationsWithoutEscalatingToFullRefresh() {
+        let taskID = UUID()
+        let scopes = StoreRefreshPlanner().scopes(after: [
+            .taskTreeChanged(taskID: taskID),
+            .checklistChanged(taskID: taskID),
+            .timerChanged(taskID: taskID)
+        ])
 
         #expect(scopes.contains(.tasks))
         #expect(scopes.contains(.checklist))

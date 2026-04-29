@@ -169,7 +169,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func addCountdownEvent() {
-        perform(mutation: .countdown) {
+        perform(event: .countdownChanged) {
             guard let modelContext else { throw StoreError.notConfigured }
             let event = CountdownEvent(
                 title: AppStrings.localized("task.newEvent"),
@@ -182,7 +182,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func updateCountdownEvent(_ event: CountdownEvent, title: String? = nil, date: Date? = nil) {
-        perform(mutation: .countdown) {
+        perform(event: .countdownChanged) {
             if let title {
                 event.title = title
             }
@@ -196,7 +196,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func deleteCountdownEvent(_ event: CountdownEvent) {
-        perform(mutation: .countdown) {
+        perform(event: .countdownChanged) {
             event.deletedAt = Date()
             event.updatedAt = Date()
             event.clientMutationID = UUID()
@@ -314,7 +314,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     private func startTask(taskID: UUID) {
-        perform(mutation: .timer) {
+        perform(event: .timerChanged(taskID: taskID)) {
             try timerCommandHandler.startTask(
                 taskID: taskID,
                 allowParallelTimers: preferences.allowParallelTimers,
@@ -328,25 +328,25 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func stop(segment: TimeSegment) {
-        perform(mutation: .timer) {
+        perform(event: .timerChanged(taskID: segment.taskID)) {
             try timerCommandHandler.stop(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func pause(segment: TimeSegment) {
-        perform(mutation: .timer) {
+        perform(event: .timerChanged(taskID: segment.taskID)) {
             try timerCommandHandler.pause(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func resume(session: TimeSession) {
-        perform(mutation: .timer) {
+        perform(event: .timerChanged(taskID: session.taskID)) {
             try timerCommandHandler.resume(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 
     func stop(session: TimeSession) {
-        perform(mutation: .timer) {
+        perform(event: .timerChanged(taskID: session.taskID)) {
             try timerCommandHandler.stop(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
@@ -367,7 +367,7 @@ final class TimeTrackerStore: ObservableObject {
             return false
         }
 
-        let didSave = perform(mutations: [.taskTree, .checklist]) {
+        let didSave = perform(events: [.taskTreeChanged(taskID: draft.taskID), .checklistChanged(taskID: draft.taskID)]) {
             selectedTaskID = try taskDraftCommandHandler.save(
                 draft: draft,
                 sanitizedTitle: sanitizedTitle,
@@ -421,7 +421,7 @@ final class TimeTrackerStore: ObservableObject {
     func archiveSelectedTask(taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform(mutation: .taskTree) {
+        perform(event: .taskTreeChanged(taskID: targetID)) {
             try taskDraftCommandHandler.archive(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
@@ -432,7 +432,7 @@ final class TimeTrackerStore: ObservableObject {
     func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform(mutation: .taskTree) {
+        perform(event: .taskTreeChanged(taskID: targetID)) {
             try taskDraftCommandHandler.setStatus(status, taskID: targetID, repository: requiredTaskRepository())
         }
     }
@@ -440,7 +440,7 @@ final class TimeTrackerStore: ObservableObject {
     func deleteSelectedTask(taskID: UUID? = nil) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        perform(mutation: .taskTree) {
+        perform(event: .taskTreeChanged(taskID: targetID)) {
             try taskDraftCommandHandler.softDelete(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
@@ -463,7 +463,7 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
 
-        perform(mutation: .ledgerHistory) {
+        perform(event: .ledgerHistoryChanged(taskID: taskID, range: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt))) {
             _ = try AddManualTimeUseCase(repository: requiredTimeRepository()).execute(
                 taskID: taskID,
                 startedAt: draft.startedAt,
@@ -490,7 +490,7 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
 
-        perform(mutation: .ledgerHistory) {
+        perform(event: .ledgerHistoryChanged(taskID: taskID, range: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt))) {
             try UpdateSegmentUseCase(repository: requiredTimeRepository()).execute(
                 segmentID: draft.segmentID,
                 taskID: taskID,
@@ -504,7 +504,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func deleteSegment(_ segmentID: UUID) {
-        perform(mutation: .ledgerHistory) {
+        perform(event: .ledgerHistoryChanged(taskID: segmentEditorDraft?.taskID, range: nil)) {
             try SoftDeleteSegmentUseCase(repository: requiredTimeRepository()).execute(segmentID: segmentID)
         }
         segmentEditorDraft = nil
@@ -559,7 +559,7 @@ final class TimeTrackerStore: ObservableObject {
             errorMessage = AppStrings.localized("task.selectBeforePomodoro")
             return
         }
-        perform(mutation: .pomodoro) {
+        perform(event: .pomodoroChanged(taskID: selectedTaskID)) {
             _ = try pomodoroCommandHandler.start(
                 taskID: selectedTaskID,
                 focusSeconds: focusSeconds,
@@ -577,14 +577,14 @@ final class TimeTrackerStore: ObservableObject {
 
     func completeActivePomodoro() {
         guard let run = activePomodoroRun else { return }
-        perform(mutation: .pomodoro) {
+        perform(event: .pomodoroChanged(taskID: run.taskID)) {
             try pomodoroCommandHandler.complete(run: run, repository: requiredPomodoroRepository())
         }
     }
 
     func cancelActivePomodoro() {
         guard let run = activePomodoroRun else { return }
-        perform(mutation: .pomodoro) {
+        perform(event: .pomodoroChanged(taskID: run.taskID)) {
             try pomodoroCommandHandler.cancel(run: run, repository: requiredPomodoroRepository())
         }
     }
@@ -820,14 +820,14 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func toggleChecklistItem(_ item: ChecklistItem) {
-        perform(mutation: .checklist) {
+        perform(event: .checklistChanged(taskID: item.taskID)) {
             guard let modelContext else { throw StoreError.notConfigured }
             try checklistCommandHandler.toggle(item, context: modelContext)
         }
     }
 
     func addChecklistItem(taskID: UUID, title: String) {
-        perform(mutation: .checklist) {
+        perform(event: .checklistChanged(taskID: taskID)) {
             guard let modelContext else { throw StoreError.notConfigured }
             try checklistCommandHandler.add(
                 taskID: taskID,
@@ -1033,15 +1033,15 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     @discardableResult
-    private func perform(mutation: StoreDomainMutation = .allData, _ action: () throws -> Void) -> Bool {
-        perform(mutations: [mutation], action)
+    private func perform(event: StoreInvalidationEvent = .fullSync, _ action: () throws -> Void) -> Bool {
+        perform(events: [event], action)
     }
 
     @discardableResult
-    private func perform(mutations: Set<StoreDomainMutation>, _ action: () throws -> Void) -> Bool {
+    private func perform(events: Set<StoreInvalidationEvent>, _ action: () throws -> Void) -> Bool {
         do {
             try action()
-            try refresh(scopes: refreshPlanner.scopes(after: mutations))
+            try refresh(scopes: refreshPlanner.scopes(after: events))
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -1076,7 +1076,7 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
-        perform(mutation: .preferences) {
+        perform(event: .preferencesChanged) {
             guard let modelContext else { throw StoreError.notConfigured }
             try preferenceCommandHandler.set(key: key, valueJSON: valueJSON, context: modelContext)
         }

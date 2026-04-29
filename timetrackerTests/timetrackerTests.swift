@@ -1120,7 +1120,7 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
+        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsDistributionViews.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 
         #expect(analyticsSource.contains("id: task.taskID.uuidString"))
@@ -1135,10 +1135,11 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
+        let entrySource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
+        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsActivityViews.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 
-        #expect(analyticsSource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))
+        #expect(entrySource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))
         #expect(analyticsSource.contains("struct HourTaskSlice"))
         #expect(analyticsSource.contains("Color(hex: colorHex)"))
         #expect(analyticsSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)

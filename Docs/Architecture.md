@@ -80,20 +80,34 @@ iCloud sync is controlled by `AppCloudSync` and the SwiftData model container co
 
 ## UI Structure
 
-The current UI still has large feature files, especially Home, Analytics, Inspector, and Editor surfaces. New refactors should prefer small feature files under folders such as:
+The app source is organized by ownership. New files should land next to the domain they affect:
 
 ```text
-timetracker/Home
-timetracker/Tasks
-timetracker/Pomodoro
-timetracker/Analytics
-timetracker/Settings
+timetracker/App
+timetracker/Models
+timetracker/Repositories
+timetracker/Commands
+timetracker/Stores
+timetracker/Services
+timetracker/Features/Home
+timetracker/Features/Tasks
+timetracker/Features/Pomodoro
+timetracker/Features/Analytics
+timetracker/Features/Settings
+timetracker/Features/Sidebar
+timetracker/Features/Inspector
+timetracker/Features/Ledger
 timetracker/Shared
+timetracker/SharedUI
 ```
 
-Pure layout and formatting logic belongs in `timetracker/Shared` with unit tests.
+Within `Features/Home`, keep the Today screen split by responsibility: `HomeViews.swift` composes the page, `HomeMetricsViews.swift` renders the compact time summary, `HomeActionsViews.swift` owns start/new-task controls and the compact task picker, `HomeProgressViews.swift` owns calendar/countdown progress tiles, and the forecast, quick start, and timeline files own their own sections. Within `Features/Settings`, keep the settings form separate from support rows and export document types.
+
+Pure layout, formatting, and derivation logic belongs in `Services`, `Shared`, or `SharedUI` with unit tests. SwiftUI feature files should render state and collect input; durable writes go through store facade methods and command handlers.
 
 For the longer-term architecture roadmap and feature ownership map, see `Docs/ArchitecturePlan.md`.
+
+Xcode shared schemes are source-controlled under `timetracker.xcodeproj/xcshareddata/xcschemes`. Do not rely on per-user scheme state for app builds; command-line builds and install scripts must be able to use `-scheme timetracker` from a clean checkout.
 
 ## Shared UI Logic
 

@@ -365,10 +365,7 @@ struct CoreRefactorTests {
 
     @Test
     func sidebarUsesSharedFlatTaskTreeContract() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let sidebarSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SidebarInspectorViews.swift"), encoding: .utf8)
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
 
         #expect(sidebarSource.contains("store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)"))
         #expect(sidebarSource.contains("DisclosureGroup(") == false)
@@ -379,11 +376,8 @@ struct CoreRefactorTests {
         #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.today"))
         #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
 
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
-        let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore.swift"), encoding: .utf8)
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/TimeTrackerStore.swift")
 
         #expect(analyticsSource.contains("Text(range.rawValue)") == false)
         #expect(storeSource.contains("return \"Ready\"") == false)

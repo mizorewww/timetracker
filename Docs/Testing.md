@@ -14,6 +14,14 @@ Build for iOS device:
 xcodebuild build -project timetracker.xcodeproj -scheme timetracker -destination 'generic/platform=iOS'
 ```
 
+Scheme visibility check:
+
+```sh
+xcodebuild -list -project timetracker.xcodeproj
+```
+
+The output must include the app scheme `timetracker`. Shared schemes live in `timetracker.xcodeproj/xcshareddata/xcschemes` and must be committed with project changes.
+
 Signed export:
 
 ```sh
@@ -34,6 +42,7 @@ Signed export:
 - Checklist add/update/delete/sort behavior and recursive rollup forecasting, including `0 completed`, `0 tracked time`, completion to `0` remaining, and parent/child forecast display rules.
 - Store refresh planning: each user invalidation event must map to domain-sized refresh scopes, carry affected task IDs where available, and combined invalidations must not silently escalate to a full refresh.
 - Command handlers: durable writes such as timer, task, pomodoro, ledger, countdown, checklist, and preference changes must have behavior tests at the command boundary before UI wiring changes.
+- Project structure: app and extension schemes must remain shared and source-controlled; filesystem moves should be followed by `xcodebuild -list` plus a generic iOS build.
 - Month analytics labels using real day numbers rather than repeated weekday names.
 - Localization key parity across English, Simplified Chinese, and Traditional Chinese.
 - No hard-coded Chinese text in Swift source files.

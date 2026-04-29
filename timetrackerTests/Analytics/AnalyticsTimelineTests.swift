@@ -235,11 +235,8 @@ struct AnalyticsTimelineTests {
 
     @Test
     func analyticsTaskDistributionUsesTaskBucketsAndTaskColors() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsDistributionViews.swift"), encoding: .utf8)
-        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsDistributionViews.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("id: task.taskID.uuidString"))
         #expect(analyticsSource.contains("colorHex: task.colorHex"))
@@ -250,12 +247,9 @@ struct AnalyticsTimelineTests {
 
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let entrySource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsViews.swift"), encoding: .utf8)
-        let analyticsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/AnalyticsActivityViews.swift"), encoding: .utf8)
-        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+        let entrySource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsActivityViews.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(entrySource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))
         #expect(analyticsSource.contains("struct HourTaskSlice"))

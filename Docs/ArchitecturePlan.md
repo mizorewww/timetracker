@@ -28,14 +28,16 @@ Current progress:
 - Editor SwiftUI is separated into task editing, task editor components, manual time entry, segment editing, and symbol/color picking.
 - Forecast code is split into rollup models, the rollup calculation service, optional pace forecasting helpers, and display selection rules.
 - Tests are split by subsystem so ledger, analytics, lifecycle, UI contract, pomodoro, preferences, checklist, and forecast coverage can evolve independently.
-- `TimeTrackerStore` is now a thin core plus lifecycle, command, read-model, and analytics extensions. It is still a facade, but future changes can land in a smaller owner file.
+- The app, tests, stores, services, repositories, and features now live in real filesystem folders matching this architecture map.
+- `TimeTrackerStore` is now a thin core plus lifecycle, read-model, analytics, and domain-specific command extensions. It is still a facade, but future changes can land in a smaller owner file.
+- Xcode shared schemes are tracked in `timetracker.xcodeproj/xcshareddata/xcschemes` so app builds do not depend on local user scheme state.
 
 Remaining risk:
 
 - `TimeTrackerStore.refresh(plan:)` still invokes multiple domain refresh methods, but the refresh decision table lives in tested `StoreRefreshPlan`.
 - Command handlers still call use cases and repositories directly, but business sequences are no longer embedded in SwiftUI-facing methods.
 - Some repository methods still need range caches or bucket indexes before very large ledgers feel cheap.
-- Analytics and Home are now split by component family, but layout policy still lives close to SwiftUI views and should eventually move into small layout policy types.
+- Analytics and Home are now split by component family. Home separates shell composition, metric summary, action/task picker, progress/countdown tiles, forecast, quick start, and timeline. Layout policy still lives close to SwiftUI views and should eventually move into small layout policy types.
 
 ## Target Module Shape
 
@@ -70,7 +72,14 @@ timetracker/
   Stores/
     TimeTrackerStore.swift
     TimeTrackerStore+Lifecycle.swift
-    TimeTrackerStore+Commands.swift
+    TimeTrackerStore+TimerCommands.swift
+    TimeTrackerStore+TaskCommands.swift
+    TimeTrackerStore+LedgerCommands.swift
+    TimeTrackerStore+PomodoroCommands.swift
+    TimeTrackerStore+ChecklistCommands.swift
+    TimeTrackerStore+PreferenceCommands.swift
+    TimeTrackerStore+MaintenanceCommands.swift
+    TimeTrackerStore+CountdownCommands.swift
     TimeTrackerStore+ReadModels.swift
     TimeTrackerStore+Analytics.swift
     TaskStore.swift
@@ -92,6 +101,13 @@ timetracker/
 
   Features/
     Home/
+      HomeViews.swift
+      HomeMetricsViews.swift
+      HomeActionsViews.swift
+      HomeProgressViews.swift
+      HomeForecastViews.swift
+      HomeQuickStartViews.swift
+      HomeTimelineViews.swift
     Tasks/
     Pomodoro/
     Analytics/

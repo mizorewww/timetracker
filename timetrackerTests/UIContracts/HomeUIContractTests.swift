@@ -67,9 +67,7 @@ struct HomeUIContractTests {
 
     @Test
     func liveActivityExtensionLocalizationFilesExposeTheSameKeys() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
+        let projectRoot = try projectRootURL()
         let locales = ["en", "zh-Hans", "zh-Hant"]
         let keySets = try locales.map { locale -> Set<String> in
             let path = projectRoot.appending(path: "timetrackerLiveActivityExtension/\(locale).lproj/Localizable.strings").path
@@ -86,9 +84,7 @@ struct HomeUIContractTests {
 
     @Test
     func swiftSourcesDoNotContainHardCodedChineseText() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
+        let projectRoot = try projectRootURL()
         let sourceRoots = [
             projectRoot.appending(path: "timetracker"),
             projectRoot.appending(path: "timetrackerLiveActivityExtension"),
@@ -109,10 +105,7 @@ struct HomeUIContractTests {
 
     @Test
     func regularWidthIOSUsesVisibleSystemSplitView() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/ContentView.swift"), encoding: .utf8)
+        let source = try sourceText("timetracker/App/ContentView.swift")
 
         #expect(source.contains("iPadRootView(store: store)"))
         #expect(source.contains("struct iPadRootView"))
@@ -130,10 +123,7 @@ struct HomeUIContractTests {
 
     @Test
     func phoneHomeUsesSystemLargeTitle() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
 
         guard
             let start = source.range(of: "struct PhoneHomeView"),
@@ -152,11 +142,8 @@ struct HomeUIContractTests {
 
     @Test
     func quickStartComposesPinnedAndFrequentRecentTasks() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let homeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeQuickStartViews.swift"), encoding: .utf8)
-        let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore+ReadModels.swift"), encoding: .utf8)
+        let homeSource = try sourceText("timetracker/Features/Home/HomeQuickStartViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/TimeTrackerStore+ReadModels.swift")
 
         #expect(homeSource.contains("private var pinnedTasks"))
         #expect(homeSource.contains("private var recentFillTasks"))
@@ -171,10 +158,7 @@ struct HomeUIContractTests {
 
     @Test
     func homePlacesQuickStartBeforeTimeline() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeViews.swift"), encoding: .utf8)
+        let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
 
         guard
             let desktopStart = source.range(of: "struct DesktopMainView"),
@@ -198,10 +182,7 @@ struct HomeUIContractTests {
 
     @Test
     func compactTaskPickerUsesOpaqueSystemSheet() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeMetricsViews.swift"), encoding: .utf8)
+        let source = try sourceText("timetracker/Features/Home/HomeActionsViews.swift")
 
         #expect(source.contains(".presentationBackground(Color(uiColor: .systemGroupedBackground))"))
         #expect(source.contains(".scrollContentBackground(.hidden)"))
@@ -209,11 +190,8 @@ struct HomeUIContractTests {
 
     @Test
     func taskTreeUsesFlatVisibleRowsSoEachTaskOwnsItsListRow() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
-        let serviceSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TaskTreeServices.swift"), encoding: .utf8)
+        let source = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
+        let serviceSource = try sourceText("timetracker/Services/TaskTreeServices.swift")
 
         #expect(source.contains("ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs))"))
         #expect(source.contains("TaskManagementTreeRow") == false)
@@ -225,10 +203,12 @@ struct HomeUIContractTests {
 
     @Test
     func todayMetricsUseSemanticTrendColorsAndEqualCompactActions() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeMetricsViews.swift"), encoding: .utf8)
+        let source = try [
+            "timetracker/Features/Home/HomeMetricsViews.swift",
+            "timetracker/Features/Home/HomeActionsViews.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
 
         #expect(source.contains("trendColor: grossTrend.color"))
         #expect(source.contains(".foregroundStyle(metric.trendColor)"))
@@ -241,10 +221,7 @@ struct HomeUIContractTests {
 
     @Test
     func compactTaskRowsShowChecklistProgressBar() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+        let source = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
 
         #expect(source.contains("CompactChecklistProgressLine("))
         #expect(source.contains("ProgressView(value: progress.fraction)"))
@@ -254,12 +231,9 @@ struct HomeUIContractTests {
 
     @Test
     func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let tasksSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
-        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorViews.swift"), encoding: .utf8)
-        let forecastSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorForecastViews.swift"), encoding: .utf8)
+        let tasksSource = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
+        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorViews.swift")
+        let forecastSource = try sourceText("timetracker/Features/Inspector/InspectorForecastViews.swift")
 
         #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
         #expect(tasksSource.contains("secondsForTaskTodayRollup(task)") == false)
@@ -269,19 +243,16 @@ struct HomeUIContractTests {
 
     @Test
     func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
         let editorSource = try [
-            "timetracker/TaskEditorViews.swift",
-            "timetracker/TaskEditorComponents.swift"
+            "timetracker/Features/Tasks/TaskEditorViews.swift",
+            "timetracker/Features/Tasks/TaskEditorComponents.swift"
         ]
         .map { path in
-            try String(contentsOf: projectRoot.appending(path: path), encoding: .utf8)
+            try sourceText(path)
         }
         .joined(separator: "\n")
-        let modelsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerModels.swift"), encoding: .utf8)
-        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+        let modelsSource = try sourceText("timetracker/Models/TimeTrackerModels.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(editorSource.contains("TaskStatusPicker(selection: $draft.status)"))
         #expect(editorSource.contains(".pickerStyle(.inline)"))
@@ -293,11 +264,8 @@ struct HomeUIContractTests {
 
     @Test
     func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let tasksSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
-        let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
+        let tasksSource = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
+        let sharedSource = try sourceText("timetracker/SharedUI/SharedUI.swift")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
@@ -306,13 +274,10 @@ struct HomeUIContractTests {
 
     @Test
     func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TaskEditorComponents.swift"), encoding: .utf8)
-        let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorChecklistViews.swift"), encoding: .utf8)
-        let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
-        let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
+        let editorSource = try sourceText("timetracker/Features/Tasks/TaskEditorComponents.swift")
+        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorChecklistViews.swift")
+        let sharedSource = try sourceText("timetracker/SharedUI/SharedUI.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(sharedSource.contains("\"checkmark.circle.fill\""))
         #expect(editorSource.contains("ChecklistCompletionButton"))

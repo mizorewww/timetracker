@@ -105,31 +105,23 @@ struct TaskStartPicker: View {
     @ObservedObject var store: TimeTrackerStore
     let onDone: () -> Void
 
+    private var availableTasks: [TaskNode] {
+        store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }
+    }
+
     var body: some View {
         List {
             Section {
-                ForEach(store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }, id: \.id) { task in
+                ForEach(availableTasks, id: \.id) { task in
                     Button {
                         store.startTask(task)
                         onDone()
                     } label: {
-                        HStack(spacing: 12) {
-                            TaskIcon(task: task, size: 28)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(task.title)
-                                    .foregroundStyle(.primary)
-                                Text(store.path(for: task))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                            Spacer()
-                            if store.activeSegment(for: task.id) != nil {
-                                Text(AppStrings.running)
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                            }
-                        }
+                        TaskStartPickerRow(
+                            task: task,
+                            path: store.path(for: task),
+                            isRunning: store.activeSegment(for: task.id) != nil
+                        )
                     }
                 }
             } header: {
@@ -147,6 +139,37 @@ struct TaskStartPicker: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppStrings.cancel, action: onDone)
             }
+        }
+    }
+}
+
+private struct TaskStartPickerRow: View {
+    let task: TaskNode
+    let path: String
+    let isRunning: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TaskIcon(task: task, size: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(task.title)
+                    .foregroundStyle(.primary)
+                Text(path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            runningBadge
+        }
+    }
+
+    @ViewBuilder
+    private var runningBadge: some View {
+        if isRunning {
+            Text(AppStrings.running)
+                .font(.caption)
+                .foregroundStyle(.green)
         }
     }
 }

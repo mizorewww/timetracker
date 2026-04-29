@@ -1091,7 +1091,14 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
+        let editorSource = try [
+            "timetracker/TaskEditorViews.swift",
+            "timetracker/TaskEditorComponents.swift"
+        ]
+        .map { path in
+            try String(contentsOf: projectRoot.appending(path: path), encoding: .utf8)
+        }
+        .joined(separator: "\n")
         let modelsSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerModels.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)
 
@@ -1209,7 +1216,7 @@ struct TimeTrackerTests {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/EditorViews.swift"), encoding: .utf8)
+        let editorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TaskEditorComponents.swift"), encoding: .utf8)
         let inspectorSource = try String(contentsOf: projectRoot.appending(path: "timetracker/InspectorChecklistViews.swift"), encoding: .utf8)
         let sharedSource = try String(contentsOf: projectRoot.appending(path: "timetracker/SharedUI.swift"), encoding: .utf8)
         let englishStrings = try String(contentsOf: projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings"), encoding: .utf8)

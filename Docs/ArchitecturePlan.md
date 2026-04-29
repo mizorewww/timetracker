@@ -25,6 +25,7 @@ Current progress:
 - `DailySummaryService` clips raw `TimeSegment` rows into daily summary snapshots and feeds daily analytics without replacing the ledger fact layer.
 - Repository protocols and SwiftData implementations are split by persistence owner: task tree, ledger, and pomodoro.
 - Sidebar and inspector SwiftUI are separated into navigation, reusable task row commands, inspector shell, checklist panel, and forecast panel files.
+- Editor SwiftUI is separated into task editing, task editor components, manual time entry, segment editing, and symbol/color picking.
 
 Remaining risk:
 
@@ -264,7 +265,11 @@ HomeQuickStartViews
 HomeForecastViews
 TaskListScreen
 TaskEditorSheet
+TaskEditorComponents
 TaskChecklistSection
+ManualTimeViews
+SegmentEditorViews
+SymbolPickerViews
 AnalyticsOverviewSection
 AnalyticsTimelineSection
 AnalyticsDistributionSection

@@ -28,6 +28,7 @@ Current progress:
 - Editor SwiftUI is separated into task editing, task editor components, manual time entry, segment editing, and symbol/color picking.
 - Forecast code is split into rollup models, the rollup calculation service, optional pace forecasting helpers, and display selection rules.
 - Tests are split by subsystem so ledger, analytics, lifecycle, UI contract, pomodoro, preferences, checklist, and forecast coverage can evolve independently.
+- `TimeTrackerStore` is now a thin core plus lifecycle, command, read-model, and analytics extensions. It is still a facade, but future changes can land in a smaller owner file.
 
 Remaining risk:
 
@@ -68,6 +69,10 @@ timetracker/
 
   Stores/
     TimeTrackerStore.swift
+    TimeTrackerStore+Lifecycle.swift
+    TimeTrackerStore+Commands.swift
+    TimeTrackerStore+ReadModels.swift
+    TimeTrackerStore+Analytics.swift
     TaskStore.swift
     LedgerStore.swift
     RollupStore.swift

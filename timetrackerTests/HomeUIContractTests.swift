@@ -156,7 +156,7 @@ struct HomeUIContractTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let homeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/HomeQuickStartViews.swift"), encoding: .utf8)
-        let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore.swift"), encoding: .utf8)
+        let storeSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TimeTrackerStore+ReadModels.swift"), encoding: .utf8)
 
         #expect(homeSource.contains("private var pinnedTasks"))
         #expect(homeSource.contains("private var recentFillTasks"))

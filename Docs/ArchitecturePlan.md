@@ -26,6 +26,7 @@ Current progress:
 - Repository protocols and SwiftData implementations are split by persistence owner: task tree, ledger, and pomodoro.
 - Sidebar and inspector SwiftUI are separated into navigation, reusable task row commands, inspector shell, checklist panel, and forecast panel files.
 - Editor SwiftUI is separated into task editing, task editor components, manual time entry, segment editing, and symbol/color picking.
+- Forecast code is split into rollup models, the rollup calculation service, optional pace forecasting helpers, and display selection rules.
 
 Remaining risk:
 
@@ -75,8 +76,10 @@ timetracker/
   Services/
     TaskTreeService.swift
     LedgerSummaryService.swift
+    TaskRollupModels.swift
     TaskRollupService.swift
     ForecastingService.swift
+    ForecastDisplayService.swift
     AnalyticsEngine.swift
     TimelineLayoutEngine.swift
     MaintenanceServices.swift

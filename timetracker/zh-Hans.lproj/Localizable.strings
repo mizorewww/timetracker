@@ -337,5 +337,8 @@
 "manual.title" = "手动补录";
 "manual.subtitle" = "修正遗忘的工作时间，仍然写入统一时间账本。";
 "manual.note.placeholder" = "例如：会议、补录、客户沟通";
+"task.error.invalidMove" = "任务不能移动到自身或自己的子任务下面。";
+"tasks.expand" = "展开";
+"tasks.collapse" = "折叠";
 "live.timer.defaultPath" = "时间记录";
 "live.timer.endedTitle" = "计时已结束";

@@ -2,19 +2,6 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-struct TimeTrackingActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        var taskTitle: String
-        var taskPath: String
-        var iconName: String
-        var colorHex: String
-        var startedAt: Date
-        var additionalTimerCount: Int
-    }
-
-    var taskID: String
-}
-
 @main
 struct TimeTrackerLiveActivityBundle: WidgetBundle {
     var body: some Widget {
@@ -51,7 +38,7 @@ struct TimeTrackerLiveActivityWidget: Widget {
                                     .background(.white.opacity(0.16), in: Capsule())
                             }
                         }
-                        Text(context.state.taskPath.isEmpty ? "正在记录时间" : context.state.taskPath)
+                        Text(context.state.taskPath.isEmpty ? String(localized: "live.timer.defaultPath") : context.state.taskPath)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -91,7 +78,7 @@ private struct LockScreenTimerView: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     if context.state.additionalTimerCount > 0 {
-                        Text("另有 \(context.state.additionalTimerCount) 个")
+                        Text(String(format: String(localized: "live.timer.additionalFormat"), context.state.additionalTimerCount))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.9))
                             .padding(.horizontal, 7)
@@ -100,7 +87,7 @@ private struct LockScreenTimerView: View {
                     }
                 }
 
-                Text(context.state.taskPath.isEmpty ? "正在记录时间" : context.state.taskPath)
+                Text(context.state.taskPath.isEmpty ? String(localized: "live.timer.defaultPath") : context.state.taskPath)
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.66))
                     .lineLimit(1)
@@ -148,7 +135,7 @@ private struct TimerText: View {
             Text(startedAt, style: .timer)
                 .font(style == .lockScreen ? .title2.monospacedDigit().weight(.semibold) : .headline.monospacedDigit().weight(.semibold))
                 .foregroundStyle(.white)
-            Text("已计时")
+            Text(String(localized: "live.timer.elapsed"))
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.58))
         }

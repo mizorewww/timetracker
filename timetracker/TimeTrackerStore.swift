@@ -83,6 +83,9 @@ final class TimeTrackerStore: ObservableObject {
     private var pomodoroRepository: PomodoroRepository?
     private let aggregationService = TimeAggregationService()
     private let analyticsEngine = AnalyticsEngine()
+    private let taskTreeService = TaskTreeService()
+    private let ledgerSummaryService = LedgerSummaryService()
+    private let checklistDraftService = ChecklistDraftService()
     private var syncObservers: [NSObjectProtocol] = []
     private var taskByID: [UUID: TaskNode] = [:]
     private var childrenByParentID: [UUID?: [TaskNode]] = [:]
@@ -284,14 +287,15 @@ final class TimeTrackerStore: ObservableObject {
         taskEditorDraft = TaskEditorDraft(task: task, checklistItems: checklistItems(for: task.id))
     }
 
-    func saveTaskDraft(_ draft: TaskEditorDraft) {
+    @discardableResult
+    func saveTaskDraft(_ draft: TaskEditorDraft) -> Bool {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
             errorMessage = AppStrings.localized("task.nameRequired")
-            return
+            return false
         }
 
-        perform {
+        let didSave = perform {
             if let taskID = draft.taskID {
                 try UpdateTaskUseCase(repository: requiredTaskRepository()).execute(
                     taskID: taskID,
@@ -328,7 +332,10 @@ final class TimeTrackerStore: ObservableObject {
                 selectedTaskID = task.id
             }
         }
-        taskEditorDraft = nil
+        if didSave {
+            taskEditorDraft = nil
+        }
+        return didSave
     }
 
     func setPreferredColorScheme(_ value: String) {
@@ -724,10 +731,10 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func pomodoroRemainingSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
-        guard run.state == .focusing, let startedAt = run.startedAt else {
+        guard [.focusing, .interrupted].contains(run.state) else {
             return run.focusSecondsPlanned
         }
-        return max(0, run.focusSecondsPlanned - Int(now.timeIntervalSince(startedAt)))
+        return max(0, run.focusSecondsPlanned - pomodoroElapsedFocusSeconds(for: run, now: now))
     }
 
     func pomodoroProgress(for run: PomodoroRun, now: Date = Date()) -> Double {
@@ -755,6 +762,16 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
 
+    func pomodoroElapsedFocusSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
+        guard let sessionID = run.sessionID else { return 0 }
+        let segments = allSegments.filter { segment in
+            segment.sessionID == sessionID &&
+            segment.source == .pomodoro &&
+            segment.deletedAt == nil
+        }
+        return aggregationService.grossSeconds(segments, now: now)
+    }
+
     func path(for task: TaskNode) -> String {
         taskPathByID[task.id] ?? task.title
     }
@@ -773,41 +790,35 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     func secondsForTaskTotal(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
-        let segments = allSegments.filter { $0.taskID == task.id && $0.deletedAt == nil }
-        return aggregationService.totalSeconds(segments: segments, mode: mode, now: now)
+        ledgerSummaryService.totalSeconds(taskIDs: [task.id], segments: allSegments, mode: mode, now: now)
     }
 
     func secondsForTaskTotalRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         let ids = taskAndDescendantIDs(for: task.id)
-        let segments = allSegments.filter { ids.contains($0.taskID) && $0.deletedAt == nil }
-        return aggregationService.totalSeconds(segments: segments, mode: mode, now: now)
+        return ledgerSummaryService.totalSeconds(taskIDs: ids, segments: allSegments, mode: mode, now: now)
     }
 
     func secondsForTaskToday(_ task: TaskNode, mode: AggregationMode = .gross) -> Int {
         let now = Date()
         guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
-        let segments = allSegments.filter { $0.taskID == task.id && overlaps($0, interval: interval, now: now) }
-        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: allSegments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskTodayRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
         let ids = taskAndDescendantIDs(for: task.id)
-        let segments = allSegments.filter { ids.contains($0.taskID) && overlaps($0, interval: interval, now: now) }
-        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: ids, segments: allSegments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskThisWeek(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
-        let segments = allSegments.filter { $0.taskID == task.id && overlaps($0, interval: interval, now: now) }
-        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: allSegments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskThisWeekRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
         let ids = taskAndDescendantIDs(for: task.id)
-        let segments = allSegments.filter { ids.contains($0.taskID) && overlaps($0, interval: interval, now: now) }
-        return clippedSeconds(segments: segments, interval: interval, mode: mode, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: ids, segments: allSegments, interval: interval, mode: mode, now: now)
     }
 
     func toggleChecklistItem(_ item: ChecklistItem) {
@@ -899,6 +910,20 @@ final class TimeTrackerStore: ObservableObject {
         childrenByParentID[task.id] ?? []
     }
 
+    func validParentTasks(for taskID: UUID?) -> [TaskNode] {
+        taskTreeService.validParentTasks(for: taskID, tasks: tasks)
+    }
+
+    func taskTreeRows(expandedTaskIDs: Set<UUID>) -> [TaskTreeRowModel] {
+        TaskTreeFlattener.visibleRows(
+            rootTasks: rootTasks(),
+            children: { [weak self] task in
+                self?.children(of: task) ?? []
+            },
+            expandedTaskIDs: expandedTaskIDs
+        )
+    }
+
     func checklistItems(for taskID: UUID) -> [ChecklistItem] {
         checklistByTaskID[taskID] ?? []
     }
@@ -912,49 +937,11 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     private func rebuildTaskIndexes() {
-        taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-
-        var grouped: [UUID?: [TaskNode]] = [:]
-        for task in tasks {
-            grouped[task.parentID, default: []].append(task)
-        }
-
-        childrenByParentID = grouped.mapValues { children in
-            children.sorted { first, second in
-                if first.sortOrder == second.sortOrder {
-                    return first.title.localizedStandardCompare(second.title) == .orderedAscending
-                }
-                return first.sortOrder < second.sortOrder
-            }
-        }
-
-        var pathCache: [UUID: String] = [:]
-        var parentPathCache: [UUID: String] = [:]
-        var componentCache: [UUID: [String]] = [:]
-
-        func pathComponents(for task: TaskNode, visited: Set<UUID> = []) -> [String] {
-            if let cached = componentCache[task.id] {
-                return cached
-            }
-            guard !visited.contains(task.id) else { return [task.title] }
-            let components: [String]
-            if let parentID = task.parentID, let parent = taskByID[parentID] {
-                components = pathComponents(for: parent, visited: visited.union([task.id])) + [task.title]
-            } else {
-                components = [task.title]
-            }
-            componentCache[task.id] = components
-            return components
-        }
-
-        for task in tasks {
-            let components = pathComponents(for: task)
-            pathCache[task.id] = components.joined(separator: " / ")
-            parentPathCache[task.id] = components.dropLast().joined(separator: " / ")
-        }
-
-        taskPathByID = pathCache
-        taskParentPathByID = parentPathCache
+        let indexes = taskTreeService.indexes(tasks: tasks)
+        taskByID = indexes.taskByID
+        childrenByParentID = indexes.childrenByParentID
+        taskPathByID = indexes.taskPathByID
+        taskParentPathByID = indexes.taskParentPathByID
     }
 
     private func rebuildChecklistIndexes() {
@@ -1011,20 +998,18 @@ final class TimeTrackerStore: ObservableObject {
     }
 
     private func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
-        guard !visited.contains(taskID) else { return [] }
-        let nextVisited = visited.union([taskID])
-        let childIDs = (childrenByParentID[taskID] ?? []).reduce(into: Set<UUID>()) { result, child in
-            result.formUnion(taskAndDescendantIDs(for: child.id, visited: nextVisited))
-        }
-        return childIDs.union([taskID])
+        taskTreeService.taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID, visited: visited)
     }
 
-    private func perform(_ action: () throws -> Void) {
+    @discardableResult
+    private func perform(_ action: () throws -> Void) -> Bool {
         do {
             try action()
             try refresh()
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -1071,7 +1056,6 @@ final class TimeTrackerStore: ObservableObject {
             return
         }
         run.state = .focusing
-        run.startedAt = Date()
         run.updatedAt = Date()
         run.clientMutationID = UUID()
         try modelContext?.save()
@@ -1118,45 +1102,7 @@ final class TimeTrackerStore: ObservableObject {
 
     private func saveChecklistDrafts(_ drafts: [ChecklistEditorDraft], taskID: UUID) throws {
         guard let modelContext else { throw StoreError.notConfigured }
-        let existing = try modelContext.fetch(FetchDescriptor<ChecklistItem>())
-            .filter { $0.taskID == taskID }
-        let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
-        var keptIDs = Set<UUID>()
-
-        for (index, draft) in drafts.enumerated() {
-            let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !title.isEmpty else { continue }
-            let sortOrder = Double(index + 1) * 10
-            if let existingID = draft.existingID, let item = existingByID[existingID] {
-                item.title = title
-                if item.isCompleted != draft.isCompleted {
-                    item.completedAt = draft.isCompleted ? Date() : nil
-                }
-                item.isCompleted = draft.isCompleted
-                item.sortOrder = sortOrder
-                item.deletedAt = nil
-                item.updatedAt = Date()
-                item.clientMutationID = UUID()
-                keptIDs.insert(item.id)
-            } else {
-                let item = ChecklistItem(
-                    taskID: taskID,
-                    title: title,
-                    isCompleted: draft.isCompleted,
-                    sortOrder: sortOrder,
-                    deviceID: DeviceIdentity.current
-                )
-                modelContext.insert(item)
-                keptIDs.insert(item.id)
-            }
-        }
-
-        for item in existing where item.deletedAt == nil && !keptIDs.contains(item.id) {
-            item.deletedAt = Date()
-            item.updatedAt = Date()
-            item.clientMutationID = UUID()
-        }
-        try modelContext.save()
+        try checklistDraftService.save(drafts: drafts, taskID: taskID, context: modelContext)
     }
 
     private func fetchSyncedPreferences() throws -> [SyncedPreference] {

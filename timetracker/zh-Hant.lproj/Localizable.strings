@@ -337,5 +337,8 @@
 "manual.title" = "手動補錄";
 "manual.subtitle" = "修正遺忘的工作時間，仍然寫入統一時間帳本。";
 "manual.note.placeholder" = "例如：會議、補錄、客戶溝通";
+"task.error.invalidMove" = "任務不能移動到自身或自己的子任務下面。";
+"tasks.expand" = "展開";
+"tasks.collapse" = "摺疊";
 "live.timer.defaultPath" = "時間記錄";
 "live.timer.endedTitle" = "計時已結束";

@@ -69,7 +69,13 @@ struct TimeTrackerTests {
         let root = try repository.createTask(title: "Root", parentID: nil, colorHex: nil, iconName: nil)
         let child = try repository.createTask(title: "Child", parentID: root.id, colorHex: nil, iconName: nil)
 
-        try repository.moveTask(taskID: root.id, newParentID: child.id, sortOrder: 10)
+        do {
+            try repository.moveTask(taskID: root.id, newParentID: child.id, sortOrder: 10)
+            Issue.record("Expected invalid move to throw")
+        } catch TaskRepositoryError.invalidMove {
+        } catch {
+            Issue.record("Unexpected move error: \(error)")
+        }
         #expect((try repository.task(id: root.id))?.parentID == nil)
 
         try repository.moveTask(taskID: child.id, newParentID: nil, sortOrder: 20)
@@ -77,6 +83,55 @@ struct TimeTrackerTests {
         let moved = try #require(movedTask)
         #expect(moved.parentID == nil)
         #expect(moved.depth == 0)
+    }
+
+    @Test @MainActor
+    func softDeletingParentRecursivelySoftDeletesDescendantsButKeepsLedger() throws {
+        let context = try makeContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+
+        let parent = try taskRepository.createTask(title: "Parent", parentID: nil, colorHex: nil, iconName: nil)
+        let child = try taskRepository.createTask(title: "Child", parentID: parent.id, colorHex: nil, iconName: nil)
+        let grandchild = try taskRepository.createTask(title: "Grandchild", parentID: child.id, colorHex: nil, iconName: nil)
+        let segment = try timeRepository.addManualSegment(
+            taskID: grandchild.id,
+            startedAt: Date().addingTimeInterval(-600),
+            endedAt: Date(),
+            note: nil
+        )
+
+        try taskRepository.softDeleteTask(taskID: parent.id)
+
+        #expect(try taskRepository.allNodes().isEmpty)
+        let rawNodes = try context.fetch(FetchDescriptor<TaskNode>())
+        #expect(rawNodes.count == 3)
+        #expect(rawNodes.allSatisfy { $0.deletedAt != nil })
+        #expect(try timeRepository.allSegments().contains { $0.id == segment.id })
+    }
+
+    @Test @MainActor
+    func taskTreeServiceFiltersInvalidParentsAndFlattensVisibleRows() throws {
+        let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
+        let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
+        let grandchild = TaskNode(title: "Grandchild", parentID: child.id, deviceID: "test")
+        let sibling = TaskNode(title: "Sibling", parentID: nil, deviceID: "test")
+        let service = TaskTreeService()
+        let indexes = service.indexes(tasks: [parent, child, grandchild, sibling])
+
+        let validParents = service.validParentTasks(for: parent.id, tasks: [parent, child, grandchild, sibling])
+        #expect(validParents.map(\.id) == [sibling.id])
+
+        let rows = TaskTreeFlattener.visibleRows(
+            rootTasks: indexes.childrenByParentID[nil] ?? [],
+            children: { indexes.childrenByParentID[$0.id] ?? [] },
+            expandedTaskIDs: [parent.id]
+        )
+
+        #expect(rows.map(\.taskID) == [parent.id, child.id, sibling.id])
+        #expect(rows.map(\.depth) == [0, 1, 0])
+        #expect(rows.first?.hasChildren == true)
+        #expect(rows.first?.isExpanded == true)
     }
 
     @Test @MainActor
@@ -423,17 +478,26 @@ struct TimeTrackerTests {
         store.startPomodoroForSelectedTask(focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
         let activeSegment = try #require(store.activeSegment(for: task.id))
         #expect(activeSegment.source == .pomodoro)
-        #expect(store.activePomodoroRun(for: task.id)?.state == .focusing)
+        let startedAt = try #require(store.activePomodoroRun(for: task.id)?.startedAt)
+        activeSegment.startedAt = Date().addingTimeInterval(-5 * 60)
+        try context.save()
+        store.refreshQuietly()
+        let focusingRun = try #require(store.activePomodoroRun(for: task.id))
+        #expect(focusingRun.state == .focusing)
+        #expect(store.pomodoroRemainingSeconds(for: focusingRun) <= 20 * 60)
 
-        store.pause(segment: activeSegment)
+        let currentSegment = try #require(store.activeSegment(for: task.id))
+        store.pause(segment: currentSegment)
         #expect(store.activeSegment(for: task.id) == nil)
         #expect(store.pausedSession(for: task.id) != nil)
         #expect(store.activePomodoroRun(for: task.id)?.state == .interrupted)
+        #expect(store.activePomodoroRun(for: task.id)?.startedAt == startedAt)
 
         let pausedSession = try #require(store.pausedSession(for: task.id))
         store.resume(session: pausedSession)
         #expect(store.activeSegment(for: task.id)?.source == .pomodoro)
         #expect(store.activePomodoroRun(for: task.id)?.state == .focusing)
+        #expect(store.activePomodoroRun(for: task.id)?.startedAt == startedAt)
 
         let resumedSegment = try #require(store.activeSegment(for: task.id))
         store.stop(segment: resumedSegment)
@@ -746,13 +810,38 @@ struct TimeTrackerTests {
     }
 
     @Test
+    func liveActivityExtensionLocalizationFilesExposeTheSameKeys() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let locales = ["en", "zh-Hans", "zh-Hant"]
+        let keySets = try locales.map { locale -> Set<String> in
+            let path = projectRoot.appending(path: "timetrackerLiveActivityExtension/\(locale).lproj/Localizable.strings").path
+            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
+            #expect(dictionary.isEmpty == false)
+            return Set(dictionary.keys)
+        }
+
+        let reference = try #require(keySets.first)
+        for keys in keySets.dropFirst() {
+            #expect(keys == reference)
+        }
+    }
+
+    @Test
     func swiftSourcesDoNotContainHardCodedChineseText() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let sourceRoot = projectRoot.appending(path: "timetracker")
-        let enumerator = try #require(FileManager.default.enumerator(at: sourceRoot, includingPropertiesForKeys: nil))
-        let swiftFiles = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        let sourceRoots = [
+            projectRoot.appending(path: "timetracker"),
+            projectRoot.appending(path: "timetrackerLiveActivityExtension"),
+            projectRoot.appending(path: "SharedLiveActivity")
+        ]
+        let swiftFiles = try sourceRoots.flatMap { sourceRoot -> [URL] in
+            let enumerator = try #require(FileManager.default.enumerator(at: sourceRoot, includingPropertiesForKeys: nil))
+            return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        }
         let chinesePattern = try NSRegularExpression(pattern: "\\p{Han}")
 
         for file in swiftFiles {
@@ -863,17 +952,18 @@ struct TimeTrackerTests {
     }
 
     @Test
-    func taskTreeUsesNativeDisclosureRowsInsteadOfCustomChevronLayout() throws {
+    func taskTreeUsesFlatVisibleRowsSoEachTaskOwnsItsListRow() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let source = try String(contentsOf: projectRoot.appending(path: "timetracker/TasksViews.swift"), encoding: .utf8)
+        let serviceSource = try String(contentsOf: projectRoot.appending(path: "timetracker/TaskTreeServices.swift"), encoding: .utf8)
 
-        #expect(source.contains("DisclosureGroup(isExpanded:"))
-        #expect(source.contains("TaskManagementVisibleRow") == false)
-        #expect(source.contains("TaskTreeDisplayRow") == false)
-        #expect(source.contains("toggleExpanded") == false)
-        #expect(source.contains("depth: depth + 1") == false)
+        #expect(source.contains("ForEach(store.taskTreeRows(expandedTaskIDs: expandedTaskIDs))"))
+        #expect(source.contains("TaskManagementTreeRow") == false)
+        #expect(source.contains("DisclosureGroup(") == false)
+        #expect(serviceSource.contains("struct TaskTreeFlattener"))
+        #expect(serviceSource.contains("TaskTreeRowModel"))
         #expect(source.contains("rotationEffect") == false)
     }
 

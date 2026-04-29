@@ -37,6 +37,14 @@ protocol PomodoroRepository {
     func cancel(runID: UUID) throws
 }
 
+enum TaskRepositoryError: LocalizedError, Equatable {
+    case invalidMove
+
+    var errorDescription: String? {
+        AppStrings.localized("task.error.invalidMove")
+    }
+}
+
 @MainActor
 final class SwiftDataTaskRepository: TaskRepository {
     private let context: ModelContext
@@ -108,7 +116,9 @@ final class SwiftDataTaskRepository: TaskRepository {
     ) throws {
         let nodes = try allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
-        guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else { return }
+        guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else {
+            throw TaskRepositoryError.invalidMove
+        }
 
         node.title = title
         node.status = status
@@ -128,7 +138,9 @@ final class SwiftDataTaskRepository: TaskRepository {
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {
         let nodes = try allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
-        guard canMove(nodeID: taskID, to: newParentID, nodes: nodes) else { return }
+        guard canMove(nodeID: taskID, to: newParentID, nodes: nodes) else {
+            throw TaskRepositoryError.invalidMove
+        }
 
         node.parentID = newParentID
         node.sortOrder = sortOrder
@@ -158,10 +170,15 @@ final class SwiftDataTaskRepository: TaskRepository {
     }
 
     func softDeleteTask(taskID: UUID) throws {
-        guard let node = try task(id: taskID) else { return }
-        node.deletedAt = Date()
-        node.updatedAt = Date()
-        node.clientMutationID = UUID()
+        let nodes = try allNodes()
+        guard nodes.contains(where: { $0.id == taskID }) else { return }
+        let now = Date()
+        let idsToDelete = descendantIDs(of: taskID, nodes: nodes).union([taskID])
+        for node in nodes where idsToDelete.contains(node.id) {
+            node.deletedAt = now
+            node.updatedAt = now
+            node.clientMutationID = UUID()
+        }
         try context.save()
     }
 
@@ -171,11 +188,13 @@ final class SwiftDataTaskRepository: TaskRepository {
         return !descendantIDs(of: nodeID, nodes: nodes).contains(newParentID)
     }
 
-    private func descendantIDs(of nodeID: UUID, nodes: [TaskNode]) -> Set<UUID> {
+    private func descendantIDs(of nodeID: UUID, nodes: [TaskNode], visited: Set<UUID> = []) -> Set<UUID> {
+        guard !visited.contains(nodeID) else { return [] }
+        let nextVisited = visited.union([nodeID])
         let directChildren = nodes.filter { $0.parentID == nodeID }
         return directChildren.reduce(into: Set<UUID>()) { result, child in
             result.insert(child.id)
-            result.formUnion(descendantIDs(of: child.id, nodes: nodes))
+            result.formUnion(descendantIDs(of: child.id, nodes: nodes, visited: nextVisited))
         }
     }
 

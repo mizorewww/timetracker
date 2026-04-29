@@ -23,6 +23,7 @@ Current progress:
 - `StoreRefreshPlan` centralizes derived refresh rules for rollups, analytics, selection validation, and Live Activity sync, while preserving affected task IDs and ledger ranges for future incremental refresh.
 - `TimerCommandHandler`, `TaskDraftCommandHandler`, `PomodoroCommandHandler`, `LedgerCommandHandler`, `CountdownCommandHandler`, `ChecklistCommandHandler`, and `PreferenceCommandHandler` own the first layer of user write commands.
 - `DailySummaryService` clips raw `TimeSegment` rows into daily summary snapshots and feeds daily analytics without replacing the ledger fact layer.
+- Repository protocols and SwiftData implementations are split by persistence owner: task tree, ledger, and pomodoro.
 
 Remaining risk:
 

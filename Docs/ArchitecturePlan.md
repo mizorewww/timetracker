@@ -27,6 +27,7 @@ Current progress:
 - Sidebar and inspector SwiftUI are separated into navigation, reusable task row commands, inspector shell, checklist panel, and forecast panel files.
 - Editor SwiftUI is separated into task editing, task editor components, manual time entry, segment editing, and symbol/color picking.
 - Forecast code is split into rollup models, the rollup calculation service, optional pace forecasting helpers, and display selection rules.
+- Tests are split by subsystem so ledger, analytics, lifecycle, UI contract, pomodoro, preferences, checklist, and forecast coverage can evolve independently.
 
 Remaining risk:
 

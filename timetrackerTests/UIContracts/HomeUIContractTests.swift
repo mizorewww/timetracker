@@ -208,15 +208,21 @@ struct HomeUIContractTests {
     func todayMetricsUseSemanticTrendColorsAndEqualCompactActions() throws {
         let source = try [
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift"
+            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/SharedUI/Components/MetricCards.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")
+        let homeMetricsSource = try sourceText("timetracker/Features/Home/Sections/HomeMetricsViews.swift")
+        let sharedMetricsSource = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
 
         #expect(source.contains("trendColor: grossTrend.color"))
         #expect(source.contains(".foregroundStyle(metric.trendColor)"))
         #expect(source.contains(".green"))
         #expect(source.contains(".red"))
+        #expect(sharedMetricsSource.contains("struct MetricCell"))
+        #expect(sharedMetricsSource.contains("struct MetricSummaryItem"))
+        #expect(homeMetricsSource.contains("struct MetricCell") == false)
         #expect(source.contains("startButton\n                    .frame(maxWidth: .infinity)"))
         #expect(source.contains("newTaskButton\n                    .frame(maxWidth: .infinity)"))
         #expect(source.contains(".layoutPriority(1.1)") == false)
@@ -333,5 +339,18 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("private func actionLabel") == false)
         #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"task.action.startTimer\")"))
         #expect(inspectorSource.contains("Label(AppStrings.localized(\"timer.action.pause\")") == false)
+    }
+
+    @Test
+    func settingsActionRowsUseSharedComponent() throws {
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
+        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsSectionsViews.swift")
+
+        #expect(sharedSource.contains("struct SettingsActionLabel"))
+        #expect(sharedSource.contains(".font(.body)"))
+        #expect(settingsSource.contains("SettingsActionLabel("))
+        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportCSV\")") == false)
+        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceSync\")") == false)
+        #expect(settingsSource.contains("Button(role: .destructive, action: onRebuildDemoData) {\n                Text(") == false)
     }
 }

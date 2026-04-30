@@ -246,11 +246,13 @@ Completed so far:
 - `SharedUI/Components` no longer has a catch-all component file; task visuals, forecast help, checklist controls, empty states, action labels, and timer labels live in dedicated files.
 - Task status and running-state badges now live in `SharedUI/Components/StatusBadges.swift`, so Home, Tasks, and Inspector do not each draw their own status treatment.
 - Task checklist and forecast progress lines now live in `SharedUI/Components/TaskProgressViews.swift`, keeping the task list row focused on row layout.
+- Metric cells now live in `SharedUI/Components/MetricCards.swift`, so Today and future dashboard sections can share one responsive metric style.
 - Section headers now live in `SharedUI/Components/SectionHeaders.swift`, and Home section titles, Settings form headers, `AppSection`, and Analytics chart cards share the same title/subtitle treatment.
 - Full-width action labels now live in `SharedUI/Components/ActionControls.swift`, so Home and Inspector buttons share icon/text sizing and compact compression behavior.
 - Running timer labels now live in `SharedUI/Components/DurationLabels.swift`, keeping TimelineView-driven clock updates out of feature row files.
 - Empty-state rows now live in `SharedUI/Components/EmptyStates.swift`, so Home, Analytics, Pomodoro, Inspector, and Tasks reuse the same quiet system-style placeholder treatment.
 - Checklist display rows and inline add rows now live in `SharedUI/Components/ChecklistControls.swift`, keeping checklist touch targets and add behavior consistent across inspector and future task-detail surfaces.
+- Settings action labels now live in `SharedUI/Components/SettingsRows.swift`, keeping settings buttons visually consistent while preserving native `Form` and `Button` behavior.
 - Checklist completion uses fixed-size SF Symbols without custom animation so row layout stays stable when items are toggled.
 - `Features/Settings/SettingsViews.swift` now composes dedicated section views from `Features/Settings/SettingsSectionsViews.swift`, keeping the settings shell smaller and making individual settings groups easier to adjust.
 

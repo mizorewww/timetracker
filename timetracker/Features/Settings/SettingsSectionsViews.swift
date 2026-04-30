@@ -92,7 +92,7 @@ struct CountdownSettingsSection: View {
             }
 
             Button(action: onAdd) {
-                Label(AppStrings.localized("settings.countdown.add"), systemImage: "plus")
+                SettingsActionLabel(title: AppStrings.localized("settings.countdown.add"), systemImage: "plus")
             }
         } header: {
             SettingsHeader(symbol: "calendar.badge.clock", title: AppStrings.localized("settings.countdown"))
@@ -110,15 +110,15 @@ struct DataSettingsSection: View {
     var body: some View {
         Section {
             Button(action: onExport) {
-                Label(AppStrings.localized("settings.exportCSV"), systemImage: "square.and.arrow.down")
+                SettingsActionLabel(title: AppStrings.localized("settings.exportCSV"), systemImage: "square.and.arrow.down")
             }
 
             Button(action: onAddTime) {
-                Label(AppStrings.addTime, systemImage: "calendar.badge.plus")
+                SettingsActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus")
             }
 
             Button(role: .destructive, action: onOptimize) {
-                Label(AppStrings.localized("settings.optimizeDatabase"), systemImage: "externaldrive.badge.checkmark")
+                SettingsActionLabel(title: AppStrings.localized("settings.optimizeDatabase"), systemImage: "externaldrive.badge.checkmark")
             }
         } header: {
             SettingsHeader(symbol: "doc.text.fill", title: AppStrings.localized("settings.data"))
@@ -147,15 +147,15 @@ struct SyncSettingsSection: View {
             )
 
             Button(action: onCheckSync) {
-                Label(
-                    isCheckingSync ? AppStrings.localized("settings.checking") : AppStrings.localized("settings.checkSync"),
+                SettingsActionLabel(
+                    title: isCheckingSync ? AppStrings.localized("settings.checking") : AppStrings.localized("settings.checkSync"),
                     systemImage: "arrow.clockwise"
                 )
             }
             .disabled(isCheckingSync)
 
             Button(action: onForceSync) {
-                Label(AppStrings.localized("settings.forceSync"), systemImage: "arrow.clockwise.icloud")
+                SettingsActionLabel(title: AppStrings.localized("settings.forceSync"), systemImage: "arrow.clockwise.icloud")
             }
             .disabled(isCheckingSync)
         } header: {
@@ -183,10 +183,10 @@ struct MaintenanceSettingsSection: View {
             LabeledContent(AppStrings.localized("settings.cloudAccount"), value: cloudAccount)
             LabeledContent(AppStrings.localized("settings.icloudContainer"), value: cloudContainer)
             Button(role: .destructive, action: onRebuildDemoData) {
-                Text(AppStrings.localized("settings.rebuildDemoData"))
+                SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise")
             }
             Button(role: .destructive, action: onClearDemoData) {
-                Text(AppStrings.localized("settings.clearDemoData"))
+                SettingsActionLabel(title: AppStrings.localized("settings.clearDemoData"), systemImage: "trash")
             }
         } header: {
             SettingsHeader(symbol: "wrench.and.screwdriver.fill", title: AppStrings.localized("settings.maintenance"))

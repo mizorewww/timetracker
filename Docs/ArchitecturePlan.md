@@ -248,7 +248,7 @@ Completed so far:
 - Task checklist and forecast progress lines now live in `SharedUI/Components/TaskProgressViews.swift`, keeping the task list row focused on row layout.
 - Section headers now live in `SharedUI/Components/SectionHeaders.swift`, and Home section titles, Settings form headers, `AppSection`, and Analytics chart cards share the same title/subtitle treatment.
 - Full-width action labels now live in `SharedUI/Components/ActionControls.swift`, so Home and Inspector buttons share icon/text sizing and compact compression behavior.
-- Checklist completion uses fixed-size SF Symbols instead of a hand-drawn circle so row layout stays stable when items are toggled.
+- Checklist completion uses fixed-size SF Symbols without custom animation so row layout stays stable when items are toggled.
 - `Features/Settings/SettingsViews.swift` now composes dedicated section views from `Features/Settings/SettingsSectionsViews.swift`, keeping the settings shell smaller and making individual settings groups easier to adjust.
 
 Exit criteria:

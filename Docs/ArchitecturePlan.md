@@ -238,6 +238,12 @@ Tests and checks:
 - Keep localization parity across English, Simplified Chinese, and Traditional Chinese.
 - Add macOS UI smoke checks for settings window, inspector visibility, task editing, and timeline navigation.
 
+Completed so far:
+
+- Source layout now has semantic folders for store facade/domain/refresh code, service algorithms, feature controls/sections/rows, and shared UI foundation/components.
+- `SharedUI/Components/SharedUI.swift` was reduced to generic shell components; task visuals, forecast help, checklist controls, and color support now live in dedicated files.
+- Checklist completion uses fixed-size SF Symbols instead of a hand-drawn circle so row layout stays stable when items are toggled.
+
 Exit criteria:
 
 - Home, Tasks, Pomodoro, Analytics, Settings, Sidebar, and Inspector use shared row/card/control styles where they present the same kind of information.

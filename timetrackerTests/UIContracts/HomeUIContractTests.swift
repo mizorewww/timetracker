@@ -268,7 +268,12 @@ struct HomeUIContractTests {
     @Test
     func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/SharedUI.swift")
+        let sharedSource = try [
+            "timetracker/SharedUI/Components/ChecklistControls.swift",
+            "timetracker/SharedUI/Components/TaskVisuals.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
@@ -279,7 +284,7 @@ struct HomeUIContractTests {
     func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
         let editorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
         let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorChecklistViews.swift")
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/SharedUI.swift")
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/ChecklistControls.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(sharedSource.contains("\"checkmark.circle.fill\""))

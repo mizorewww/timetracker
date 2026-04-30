@@ -6,7 +6,6 @@ struct TaskEditorDraft: Identifiable {
     var title: String
     var status: TaskStatus
     var parentID: UUID?
-    var categoryID: UUID?
     var colorHex: String
     var iconName: String
     var notes: String
@@ -15,12 +14,11 @@ struct TaskEditorDraft: Identifiable {
     var dueAt: Date
     var checklistItems: [ChecklistEditorDraft]
 
-    init(parentID: UUID?, categoryID: UUID? = nil) {
+    init(parentID: UUID?) {
         self.taskID = nil
         self.title = ""
         self.status = .active
         self.parentID = parentID
-        self.categoryID = parentID == nil ? categoryID : nil
         self.colorHex = "1677FF"
         self.iconName = "checkmark.circle"
         self.notes = ""
@@ -35,7 +33,6 @@ struct TaskEditorDraft: Identifiable {
         self.title = task.title
         self.status = task.status
         self.parentID = task.parentID
-        self.categoryID = task.categoryID
         self.colorHex = task.colorHex ?? "1677FF"
         self.iconName = task.iconName ?? "checkmark.circle"
         self.notes = task.notes ?? ""
@@ -43,31 +40,6 @@ struct TaskEditorDraft: Identifiable {
         self.hasDueDate = task.dueAt != nil
         self.dueAt = task.dueAt ?? Date()
         self.checklistItems = checklistItems.map(ChecklistEditorDraft.init(item:))
-    }
-}
-
-struct TaskCategoryEditorDraft: Identifiable {
-    let id = UUID()
-    var categoryID: UUID?
-    var title: String
-    var colorHex: String
-    var iconName: String
-    var includesInForecast: Bool
-
-    init() {
-        self.categoryID = nil
-        self.title = ""
-        self.colorHex = "1677FF"
-        self.iconName = "square.grid.2x2"
-        self.includesInForecast = true
-    }
-
-    init(category: TaskCategory) {
-        self.categoryID = category.id
-        self.title = category.title
-        self.colorHex = category.colorHex ?? "1677FF"
-        self.iconName = category.iconName ?? "square.grid.2x2"
-        self.includesInForecast = category.includesInForecast
     }
 }
 

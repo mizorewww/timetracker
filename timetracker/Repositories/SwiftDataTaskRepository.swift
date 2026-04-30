@@ -48,87 +48,8 @@ final class SwiftDataTaskRepository: TaskRepository {
         return try context.fetch(descriptor).first
     }
 
-    func categories() throws -> [TaskCategory] {
-        let descriptor = FetchDescriptor<TaskCategory>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try context.fetch(descriptor)
-    }
-
-    func category(id: UUID) throws -> TaskCategory? {
-        let categoryID = id
-        var descriptor = FetchDescriptor<TaskCategory>(
-            predicate: #Predicate { $0.id == categoryID && $0.deletedAt == nil }
-        )
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
-    }
-
     @discardableResult
-    func createCategory(
-        title: String,
-        colorHex: String? = nil,
-        iconName: String? = nil,
-        includesInForecast: Bool = true
-    ) throws -> TaskCategory {
-        let existing = try categories()
-        let category = TaskCategory(
-            title: title,
-            deviceID: deviceID,
-            colorHex: colorHex,
-            iconName: iconName,
-            includesInForecast: includesInForecast,
-            sortOrder: (existing.last?.sortOrder ?? 0) + 10
-        )
-        context.insert(category)
-        try context.save()
-        return category
-    }
-
-    func updateCategory(
-        categoryID: UUID,
-        title: String,
-        colorHex: String?,
-        iconName: String?,
-        includesInForecast: Bool
-    ) throws {
-        guard let category = try category(id: categoryID) else { return }
-        category.title = title
-        category.colorHex = colorHex
-        category.iconName = iconName
-        category.includesInForecast = includesInForecast
-        category.updatedAt = Date()
-        category.clientMutationID = UUID()
-        try context.save()
-    }
-
-    func softDeleteCategory(categoryID: UUID) throws {
-        guard let category = try category(id: categoryID) else { return }
-        let now = Date()
-        category.deletedAt = now
-        category.updatedAt = now
-        category.clientMutationID = UUID()
-
-        for task in try allNodes() where task.categoryID == categoryID {
-            task.categoryID = nil
-            task.updatedAt = now
-            task.clientMutationID = UUID()
-        }
-        try context.save()
-    }
-
-    @discardableResult
-    func createTask(
-        title: String,
-        parentID: UUID?,
-        categoryID: UUID? = nil,
-        colorHex: String? = nil,
-        iconName: String? = nil
-    ) throws -> TaskNode {
+    func createTask(title: String, parentID: UUID?, colorHex: String? = nil, iconName: String? = nil) throws -> TaskNode {
         let siblings = try children(of: parentID)
         let node = TaskNode(
             title: title,
@@ -136,7 +57,6 @@ final class SwiftDataTaskRepository: TaskRepository {
             deviceID: deviceID,
             colorHex: colorHex,
             iconName: iconName,
-            categoryID: parentID == nil ? categoryID : nil,
             sortOrder: (siblings.last?.sortOrder ?? 0) + 10
         )
 
@@ -151,7 +71,6 @@ final class SwiftDataTaskRepository: TaskRepository {
         title: String,
         status: TaskStatus,
         parentID: UUID?,
-        categoryID: UUID?,
         colorHex: String?,
         iconName: String?,
         notes: String?,
@@ -167,7 +86,6 @@ final class SwiftDataTaskRepository: TaskRepository {
         node.title = title
         node.status = status
         node.parentID = parentID
-        node.categoryID = parentID == nil ? categoryID : nil
         node.colorHex = colorHex
         node.iconName = iconName
         node.notes = notes
@@ -188,9 +106,6 @@ final class SwiftDataTaskRepository: TaskRepository {
         }
 
         node.parentID = newParentID
-        if newParentID != nil {
-            node.categoryID = nil
-        }
         node.sortOrder = sortOrder
         node.updatedAt = Date()
         node.clientMutationID = UUID()

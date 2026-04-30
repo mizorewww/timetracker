@@ -15,7 +15,6 @@ final class TaskNode {
     var title: String = ""
     var kindRaw: String = "task"
     var parentID: UUID?
-    var categoryID: UUID?
     var sortOrder: Double = 0
     var path: String = ""
     var depth: Int = 0
@@ -38,54 +37,17 @@ final class TaskNode {
         deviceID: String,
         colorHex: String? = nil,
         iconName: String? = nil,
-        categoryID: UUID? = nil,
         sortOrder: Double = 0
     ) {
         self.id = UUID()
         self.title = title
         self.parentID = parentID
-        self.categoryID = categoryID
         self.sortOrder = sortOrder
         self.path = ""
         self.depth = 0
         self.statusRaw = TaskStatus.active.rawValue
         self.colorHex = colorHex
         self.iconName = iconName
-        self.createdAt = Date()
-        self.updatedAt = Date()
-        self.deviceID = deviceID
-        self.clientMutationID = UUID()
-    }
-}
-
-@Model
-final class TaskCategory {
-    var id: UUID = UUID()
-    var title: String = ""
-    var colorHex: String?
-    var iconName: String?
-    var includesInForecast: Bool = true
-    var sortOrder: Double = 0
-    var createdAt: Date = Date()
-    var updatedAt: Date = Date()
-    var deletedAt: Date?
-    var deviceID: String = ""
-    var clientMutationID: UUID = UUID()
-
-    init(
-        title: String,
-        deviceID: String,
-        colorHex: String? = nil,
-        iconName: String? = nil,
-        includesInForecast: Bool = true,
-        sortOrder: Double = 0
-    ) {
-        self.id = UUID()
-        self.title = title
-        self.colorHex = colorHex
-        self.iconName = iconName
-        self.includesInForecast = includesInForecast
-        self.sortOrder = sortOrder
         self.createdAt = Date()
         self.updatedAt = Date()
         self.deviceID = deviceID

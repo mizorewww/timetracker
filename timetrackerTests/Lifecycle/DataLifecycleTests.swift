@@ -122,8 +122,7 @@ struct DataLifecycleTests {
 
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let demoCategory = try #require(try taskRepository.categories().first { $0.deviceID == "demo" })
-        let userTask = try taskRepository.createTask(title: "Real Work", parentID: nil, categoryID: demoCategory.id, colorHex: nil, iconName: nil)
+        let userTask = try taskRepository.createTask(title: "Real Work", parentID: nil, colorHex: nil, iconName: nil)
         _ = try timeRepository.addManualSegment(
             taskID: userTask.id,
             startedAt: Date().addingTimeInterval(-900),
@@ -134,7 +133,6 @@ struct DataLifecycleTests {
         try SeedData.clearDemoData(context: context)
 
         #expect(try taskRepository.allNodes().map(\.title) == ["Real Work"])
-        #expect(try taskRepository.task(id: userTask.id)?.categoryID == nil)
         #expect(try timeRepository.allSegments().count == 1)
         #expect(try timeRepository.activeSegments().isEmpty)
         #expect(SeedData.isAutomaticDemoSeedingDisabled)
@@ -204,10 +202,8 @@ struct DataLifecycleTests {
         let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.defaultFocusMinutes.rawValue, valueJSON: "25", deviceID: "test")
         let checklistItem = ChecklistItem(taskID: task.id, title: "Checklist", deviceID: "test")
-        let category = TaskCategory(title: "Work", deviceID: "test")
 
         context.insert(task)
-        context.insert(category)
         context.insert(session)
         context.insert(segment)
         context.insert(run)
@@ -225,14 +221,12 @@ struct DataLifecycleTests {
         #expect(countdown.deletedAt == nil)
         #expect(preference.deletedAt == nil)
         #expect(checklistItem.deletedAt == nil)
-        #expect(category.includesInForecast)
     }
 
     @Test @MainActor
     func cloudSyncedSchemaIncludesChecklistAndAllUserDataModels() throws {
         let requiredModelNames: Set<String> = [
             "TaskNode",
-            "TaskCategory",
             "TimeSession",
             "TimeSegment",
             "PomodoroRun",
@@ -307,6 +301,7 @@ struct DataLifecycleTests {
         #expect(csv.contains("Export note"))
     }
 
+    @MainActor
     private func prepareAutomaticDemoSeeding(
         mode: String = AppCloudSync.modeLocal,
         disabled: Bool = false,
@@ -321,6 +316,7 @@ struct DataLifecycleTests {
         }
     }
 
+    @MainActor
     private func resetDemoSeedingDefaults() {
         UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
         UserDefaults.standard.removeObject(forKey: AppCloudSync.modeKey)

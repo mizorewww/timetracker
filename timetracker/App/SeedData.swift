@@ -53,9 +53,6 @@ enum SeedData {
         for model in try context.fetch(FetchDescriptor<TaskNode>()) {
             context.delete(model)
         }
-        for model in try context.fetch(FetchDescriptor<TaskCategory>()) {
-            context.delete(model)
-        }
         try context.save()
         if disablesAutomaticDemoSeeding {
             setAutomaticDemoSeedingDisabled(true)
@@ -69,18 +66,9 @@ enum SeedData {
             $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
         }
         let demoSessionIDs = Set(demoSessions.map(\.id))
-        let demoCategories = try context.fetch(FetchDescriptor<TaskCategory>()).filter { $0.deviceID == "demo" }
-        let demoCategoryIDs = Set(demoCategories.map(\.id))
-        let now = Date()
 
         for model in try context.fetch(FetchDescriptor<DailySummary>()) {
             context.delete(model)
-        }
-        for task in try context.fetch(FetchDescriptor<TaskNode>()) where task.deviceID != "demo" {
-            guard let categoryID = task.categoryID, demoCategoryIDs.contains(categoryID) else { continue }
-            task.categoryID = nil
-            task.updatedAt = now
-            task.clientMutationID = UUID()
         }
         for model in try context.fetch(FetchDescriptor<PomodoroRun>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) }) {
             context.delete(model)
@@ -97,9 +85,6 @@ enum SeedData {
         for model in demoTasks {
             context.delete(model)
         }
-        for model in demoCategories {
-            context.delete(model)
-        }
         try context.save()
         setAutomaticDemoSeedingDisabled(true)
     }
@@ -109,20 +94,8 @@ enum SeedData {
         let calendar = Calendar.current
         let now = Date()
         let startOfToday = calendar.startOfDay(for: now)
-        let workCategory = try taskRepository.createCategory(
-            title: "Work",
-            colorHex: "1677FF",
-            iconName: "briefcase",
-            includesInForecast: true
-        )
-        let studyCategory = try taskRepository.createCategory(
-            title: "Study",
-            colorHex: "16A34A",
-            iconName: "book",
-            includesInForecast: true
-        )
 
-        let app = try taskRepository.createTask(title: "Time Tracker App", parentID: nil, categoryID: workCategory.id, colorHex: "1677FF", iconName: "clock.badge.checkmark")
+        let app = try taskRepository.createTask(title: "Time Tracker App", parentID: nil, colorHex: "1677FF", iconName: "clock.badge.checkmark")
         let design = try taskRepository.createTask(title: "Design System", parentID: app.id, colorHex: "1677FF", iconName: "paintpalette")
         let macDesign = try taskRepository.createTask(title: "Design macOS UI", parentID: design.id, colorHex: "1677FF", iconName: "macwindow")
         let iosDesign = try taskRepository.createTask(title: "Design iOS UI", parentID: design.id, colorHex: "0EA5E9", iconName: "iphone")
@@ -131,11 +104,11 @@ enum SeedData {
         let analytics = try taskRepository.createTask(title: "Analytics Charts", parentID: implementation.id, colorHex: "7C3AED", iconName: "chart.xyaxis.line")
         let sync = try taskRepository.createTask(title: "iCloud Sync", parentID: implementation.id, colorHex: "64748B", iconName: "icloud")
 
-        let client = try taskRepository.createTask(title: "Client Work", parentID: nil, categoryID: workCategory.id, colorHex: "F97316", iconName: "briefcase")
+        let client = try taskRepository.createTask(title: "Client Work", parentID: nil, colorHex: "F97316", iconName: "briefcase")
         let meeting = try taskRepository.createTask(title: "Team Meeting", parentID: client.id, colorHex: "F97316", iconName: "person.2")
         let review = try taskRepository.createTask(title: "Requirements Review", parentID: client.id, colorHex: "EF4444", iconName: "doc.text.magnifyingglass")
 
-        let study = try taskRepository.createTask(title: "Study", parentID: nil, categoryID: studyCategory.id, colorHex: "16A34A", iconName: "book")
+        let study = try taskRepository.createTask(title: "Study", parentID: nil, colorHex: "16A34A", iconName: "book")
         let hig = try taskRepository.createTask(title: "Read Apple HIG", parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
         let swift = try taskRepository.createTask(title: "SwiftData Docs", parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
 

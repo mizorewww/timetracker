@@ -46,45 +46,26 @@ enum TimeTrackerSchemaV3: VersionedSchema {
     }
 }
 
-enum TimeTrackerSchemaV4: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 3, 0)
-
-    static var models: [any PersistentModel.Type] {
-        [
-            TaskNode.self,
-            TaskCategory.self,
-            TimeSession.self,
-            TimeSegment.self,
-            PomodoroRun.self,
-            DailySummary.self,
-            CountdownEvent.self,
-            SyncedPreference.self,
-            ChecklistItem.self
-        ]
-    }
-}
-
 enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [TimeTrackerSchemaV1.self, TimeTrackerSchemaV2.self, TimeTrackerSchemaV3.self, TimeTrackerSchemaV4.self]
+        [TimeTrackerSchemaV1.self, TimeTrackerSchemaV2.self, TimeTrackerSchemaV3.self]
     }
 
     static var stages: [MigrationStage] {
         [
             .lightweight(fromVersion: TimeTrackerSchemaV1.self, toVersion: TimeTrackerSchemaV2.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV2.self, toVersion: TimeTrackerSchemaV3.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV3.self, toVersion: TimeTrackerSchemaV4.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV2.self, toVersion: TimeTrackerSchemaV3.self)
         ]
     }
 }
 
 enum TimeTrackerModelRegistry {
     static var currentSchema: Schema {
-        Schema(versionedSchema: TimeTrackerSchemaV4.self)
+        Schema(versionedSchema: TimeTrackerSchemaV3.self)
     }
 
     static var currentModels: [any PersistentModel.Type] {
-        TimeTrackerSchemaV4.models
+        TimeTrackerSchemaV3.models
     }
 
     static var cloudSyncedUserModelNames: Set<String> {

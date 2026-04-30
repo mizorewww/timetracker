@@ -25,14 +25,12 @@ struct TaskRollupService {
         tasks: [TaskNode],
         segments: [TimeSegment],
         checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>? = nil,
         now: Date = Date()
     ) -> [UUID: TaskRollup] {
         calculatedRollups(
             tasks: tasks,
             segments: segments,
             checklistItems: checklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
             now: now,
             initialCache: [:],
             buildIDs: nil
@@ -45,19 +43,12 @@ struct TaskRollupService {
         tasks: [TaskNode],
         segments: [TimeSegment],
         checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>? = nil,
         now: Date = Date()
     ) -> [UUID: TaskRollup] {
         let knownTaskIDs = Set(tasks.map(\.id))
         let affected = affectedTaskIDs.intersection(knownTaskIDs)
         guard !affected.isEmpty, !existingRollups.isEmpty else {
-            return rollups(
-                tasks: tasks,
-                segments: segments,
-                checklistItems: checklistItems,
-                forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-                now: now
-            )
+            return rollups(tasks: tasks, segments: segments, checklistItems: checklistItems, now: now)
         }
 
         let affectedWithAncestors = affected.union(ancestorIDs(of: affected, tasks: tasks))
@@ -69,7 +60,6 @@ struct TaskRollupService {
             tasks: tasks,
             segments: segments,
             checklistItems: checklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
             now: now,
             initialCache: seed,
             buildIDs: affectedWithAncestors
@@ -80,7 +70,6 @@ struct TaskRollupService {
         tasks: [TaskNode],
         segments: [TimeSegment],
         checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>?,
         now: Date,
         initialCache: [UUID: TaskRollup],
         buildIDs: Set<UUID>?
@@ -132,18 +121,12 @@ struct TaskRollupService {
             let hasChildForecast = !childForecasts.isEmpty
             let hasOwnChecklist = progress.totalCount > 0
             let ownRemaining = ownForecast.remainingSeconds
-            let isForecastEligible = forecastEligibleTaskIDs?.contains(taskID) ?? true
             let remaining: Int?
             let forecastState: ForecastState
             let sourceIDs: [UUID]
             let reason: String
 
-            if !isForecastEligible {
-                remaining = nil
-                forecastState = .disabled
-                sourceIDs = []
-                reason = AppStrings.localized("forecast.reason.categoryDisabled")
-            } else if task.status == .completed {
+            if task.status == .completed {
                 remaining = 0
                 forecastState = .completed
                 sourceIDs = (ownForecast.contributesSource ? [taskID] : []) + childSourceIDs

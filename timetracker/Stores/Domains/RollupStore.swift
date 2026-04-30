@@ -4,20 +4,8 @@ struct RollupStore {
     private let rollupService = TaskRollupService()
     private(set) var taskRollups: [UUID: TaskRollup] = [:]
 
-    mutating func refresh(
-        tasks: [TaskNode],
-        segments: [TimeSegment],
-        checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>? = nil,
-        now: Date = Date()
-    ) {
-        taskRollups = rollupService.rollups(
-            tasks: tasks,
-            segments: segments,
-            checklistItems: checklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-            now: now
-        )
+    mutating func refresh(tasks: [TaskNode], segments: [TimeSegment], checklistItems: [ChecklistItem], now: Date = Date()) {
+        taskRollups = rollupService.rollups(tasks: tasks, segments: segments, checklistItems: checklistItems, now: now)
     }
 
     mutating func refreshAffected(
@@ -25,7 +13,6 @@ struct RollupStore {
         tasks: [TaskNode],
         segments: [TimeSegment],
         checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>? = nil,
         now: Date = Date()
     ) {
         taskRollups = rollupService.rollups(
@@ -34,7 +21,6 @@ struct RollupStore {
             tasks: tasks,
             segments: segments,
             checklistItems: checklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
             now: now
         )
     }

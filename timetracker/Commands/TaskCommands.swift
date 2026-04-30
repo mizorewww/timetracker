@@ -18,7 +18,6 @@ struct TaskDraftCommandHandler {
         let task = try CreateTaskUseCase(repository: taskRepository).execute(
             title: sanitizedTitle,
             parentID: draft.parentID,
-            categoryID: draft.categoryID,
             colorHex: draft.colorHex,
             iconName: draft.iconName
         )
@@ -45,7 +44,6 @@ struct TaskDraftCommandHandler {
             title: title,
             status: draft.status,
             parentID: draft.parentID,
-            categoryID: draft.categoryID,
             colorHex: draft.colorHex,
             iconName: draft.iconName,
             notes: draft.notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,

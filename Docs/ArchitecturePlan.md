@@ -357,6 +357,7 @@ Completed so far:
 - `AnalyticsStore` now slices the requested analytics range once and reuses that range snapshot for overview, daily points, task breakdown, overlap analysis, and cached refreshes.
 - `LedgerBucketCache` now groups range segments into day buckets in one pass instead of scanning the whole range once per day. Multi-day segments are explicitly assigned to every affected bucket, so cross-day ledger rows still rebuild correctly.
 - Performance tests cover large monthly ledger bucket generation and cross-day bucket splitting, alongside the existing analytics snapshot and cache-invalidation budgets.
+- Additional performance budgets now cover dense overlapping timers, long checklist forecast rollups, and large timeline layout inputs before UI work reaches SwiftUI rendering.
 
 Exit criteria:
 
@@ -409,6 +410,10 @@ Performance budgets currently cover:
 
 - Large task-tree flattening.
 - Large analytics snapshot generation.
+- Dense overlapping analytics snapshots.
+- Large ledger bucket summaries.
+- Large timeline layout inputs.
+- Long checklist rollup calculations.
 - Affected branch rollup refresh.
 
 Before merging a feature:

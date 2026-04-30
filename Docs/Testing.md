@@ -56,6 +56,11 @@ UI tests should rely on accessibility identifiers for core controls, not transla
 
 Runtime smoothness is a product requirement. The app should not feel slower than a native Apple productivity app on macOS, iPad, or iPhone.
 
+Use two complementary checks:
+
+1. Automated performance budget tests for deterministic domain work. These belong in `CorePerformanceBudgetTests` and should cover analytics snapshots, day-bucket summaries, overlap detection, task tree flattening, checklist rollups, and timeline layout. They protect against accidental algorithmic regressions during refactors.
+2. Release profiling on macOS and real iPhone/iPad for frame pacing, scrolling, chart drawing, resize behavior, sheet presentation, and touch latency. These cannot be proven reliably by unit tests because SwiftUI rendering, device thermals, refresh rate, and OS scheduling all affect the result.
+
 Before attempting performance fixes:
 
 1. Reproduce the hitch with a seeded large-data profile.

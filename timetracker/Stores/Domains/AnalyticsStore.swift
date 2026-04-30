@@ -10,6 +10,12 @@ struct AnalyticsSnapshot {
 }
 
 struct AnalyticsStore {
+    private struct BoundedOverlapSegment {
+        let segment: TimeSegment
+        let end: Date
+        let title: String
+    }
+
     private let aggregationService = TimeAggregationService()
     private let dailySummaryService = DailySummaryService()
     private var ledgerBucketCache = LedgerBucketCache()
@@ -250,21 +256,26 @@ struct AnalyticsStore {
         struct Event {
             let date: Date
             let isStart: Bool
-            let segment: TimeSegment
+            let segmentID: UUID
         }
 
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
-        let boundedSegments = segments.compactMap { segment -> (segment: TimeSegment, end: Date)? in
+        let boundedSegments = segments.compactMap { segment -> BoundedOverlapSegment? in
             let end = segment.endedAt ?? now
             guard segment.deletedAt == nil, end > segment.startedAt else { return nil }
-            return (segment, end)
+            return BoundedOverlapSegment(
+                segment: segment,
+                end: end,
+                title: displayTitle(for: segment, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID)
+            )
         }
+        let boundedByID = Dictionary(uniqueKeysWithValues: boundedSegments.map { ($0.segment.id, $0) })
 
         var events: [Event] = []
         for item in boundedSegments {
-            events.append(Event(date: item.segment.startedAt, isStart: true, segment: item.segment))
-            events.append(Event(date: item.end, isStart: false, segment: item.segment))
+            events.append(Event(date: item.segment.startedAt, isStart: true, segmentID: item.segment.id))
+            events.append(Event(date: item.end, isStart: false, segmentID: item.segment.id))
         }
 
         events.sort { lhs, rhs in
@@ -274,7 +285,7 @@ struct AnalyticsStore {
             return lhs.date < rhs.date
         }
 
-        var active: [UUID: TimeSegment] = [:]
+        var active: [UUID: BoundedOverlapSegment] = [:]
         var overlaps: [OverlapAnalyticsPoint] = []
         var cursor = events.first?.date
         var index = events.startIndex
@@ -282,37 +293,61 @@ struct AnalyticsStore {
         while index < events.endIndex {
             let date = events[index].date
             if let start = cursor, date > start, active.count > 1 {
-                let activeSegments = active.values.sorted {
-                    if $0.startedAt == $1.startedAt {
-                        return displayTitle(for: $0, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID) <
-                            displayTitle(for: $1, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID)
-                    }
-                    return $0.startedAt < $1.startedAt
-                }
-                if let first = activeSegments.first, let second = activeSegments.dropFirst().first {
+                let pair = firstTwoActiveOverlaps(active.values)
+                if let first = pair.first, let second = pair.second {
                     overlaps.append(
                         OverlapAnalyticsPoint(
                             start: start,
                             end: date,
-                            firstTitle: displayTitle(for: first, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID),
-                            secondTitle: displayTitle(for: second, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID)
+                            firstTitle: first.title,
+                            secondTitle: second.title
                         )
                     )
                 }
             }
 
             while index < events.endIndex, events[index].date == date, events[index].isStart == false {
-                active.removeValue(forKey: events[index].segment.id)
+                active.removeValue(forKey: events[index].segmentID)
                 index = events.index(after: index)
             }
             while index < events.endIndex, events[index].date == date, events[index].isStart == true {
-                active[events[index].segment.id] = events[index].segment
+                if let bounded = boundedByID[events[index].segmentID] {
+                    active[events[index].segmentID] = bounded
+                }
                 index = events.index(after: index)
             }
             cursor = date
         }
 
         return overlaps.sorted { $0.durationSeconds > $1.durationSeconds }
+    }
+
+    private func firstTwoActiveOverlaps(
+        _ active: Dictionary<UUID, BoundedOverlapSegment>.Values
+    ) -> (first: BoundedOverlapSegment?, second: BoundedOverlapSegment?) {
+        var first: BoundedOverlapSegment?
+        var second: BoundedOverlapSegment?
+
+        for candidate in active {
+            if first.map({ overlapPrecedes(candidate, $0) }) ?? true {
+                second = first
+                first = candidate
+            } else if second.map({ overlapPrecedes(candidate, $0) }) ?? true {
+                second = candidate
+            }
+        }
+
+        return (first, second)
+    }
+
+    private func overlapPrecedes(_ lhs: BoundedOverlapSegment, _ rhs: BoundedOverlapSegment) -> Bool {
+        if lhs.segment.startedAt == rhs.segment.startedAt {
+            if lhs.title == rhs.title {
+                return lhs.segment.id.uuidString < rhs.segment.id.uuidString
+            }
+            return lhs.title < rhs.title
+        }
+        return lhs.segment.startedAt < rhs.segment.startedAt
     }
 
     private func displayTitle(

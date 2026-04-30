@@ -77,6 +77,7 @@ struct TaskRollupService {
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         let childrenByParent = Dictionary(grouping: tasks, by: \.parentID)
         let segmentsByTaskID = Dictionary(grouping: segments.filter { $0.deletedAt == nil }, by: \.taskID)
+        let checklistItemsByTaskID = Dictionary(grouping: checklistItems.filter { $0.deletedAt == nil }, by: \.taskID)
         var cache = initialCache
         var subtreeCache: [UUID: Set<UUID>] = [:]
 
@@ -106,7 +107,7 @@ struct TaskRollupService {
             }
 
             let ownWorked = aggregationService.grossSeconds(segmentsByTaskID[taskID] ?? [], now: now)
-            let progress = checklistProgress(for: taskID, checklistItems: checklistItems)
+            let progress = checklistProgress(for: taskID, checklistItemsByTaskID: checklistItemsByTaskID)
             let ownForecast = ownChecklistForecast(task: task, ownWorkedSeconds: ownWorked, progress: progress)
             let childRollups = (childrenByParent[taskID] ?? []).compactMap {
                 build(taskID: $0.id, visited: visited.union([taskID]))
@@ -198,6 +199,18 @@ struct TaskRollupService {
             _ = build(taskID: taskID, visited: [])
         }
         return cache.filter { taskByID[$0.key] != nil }
+    }
+
+    private func checklistProgress(
+        for taskID: UUID,
+        checklistItemsByTaskID: [UUID: [ChecklistItem]]
+    ) -> ChecklistProgress {
+        let items = checklistItemsByTaskID[taskID] ?? []
+        return ChecklistProgress(
+            taskID: taskID,
+            totalCount: items.count,
+            completedCount: items.filter(\.isCompleted).count
+        )
     }
 
     private func ancestorIDs(of taskIDs: Set<UUID>, tasks: [TaskNode]) -> Set<UUID> {

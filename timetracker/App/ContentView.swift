@@ -48,6 +48,9 @@ struct ContentView: View {
         .sheet(item: $store.taskEditorDraft) { draft in
             TaskEditorSheet(store: store, initialDraft: draft)
         }
+        .sheet(item: $store.taskCategoryEditorDraft) { draft in
+            TaskCategoryEditorSheet(store: store, initialDraft: draft)
+        }
         .sheet(item: $store.manualTimeDraft) { draft in
             ManualTimeSheet(store: store, initialDraft: draft)
         }

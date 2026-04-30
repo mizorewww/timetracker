@@ -40,11 +40,32 @@ private struct TaskInfoEditorSection: View {
             TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
             TaskStatusPicker(selection: $draft.status)
             parentPicker
+            categoryRow
             SymbolColorPickerRow(
                 colors: colors,
                 symbolName: $draft.iconName,
                 colorHex: $draft.colorHex
             )
+        }
+    }
+
+    @ViewBuilder
+    private var categoryRow: some View {
+        if draft.parentID == nil {
+            Picker(AppStrings.localized("taskCategory.title"), selection: $draft.categoryID) {
+                Text(.app("taskCategory.none")).tag(Optional<UUID>.none)
+                ForEach(store.taskCategories, id: \.id) { category in
+                    Label(category.title, systemImage: category.iconName ?? "square.grid.2x2")
+                        .tag(Optional(category.id))
+                }
+            }
+        } else if let parentID = draft.parentID,
+                  let parent = store.task(for: parentID),
+                  let category = store.effectiveCategory(for: parent) {
+            LabeledContent(AppStrings.localized("taskCategory.title")) {
+                Label(category.title, systemImage: category.iconName ?? "square.grid.2x2")
+                    .foregroundStyle(Color(hex: category.colorHex) ?? .secondary)
+            }
         }
     }
 

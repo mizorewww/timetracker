@@ -141,8 +141,10 @@ struct DataLifecycleTests {
         let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.defaultFocusMinutes.rawValue, valueJSON: "25", deviceID: "test")
         let checklistItem = ChecklistItem(taskID: task.id, title: "Checklist", deviceID: "test")
+        let category = TaskCategory(title: "Work", deviceID: "test")
 
         context.insert(task)
+        context.insert(category)
         context.insert(session)
         context.insert(segment)
         context.insert(run)
@@ -160,12 +162,14 @@ struct DataLifecycleTests {
         #expect(countdown.deletedAt == nil)
         #expect(preference.deletedAt == nil)
         #expect(checklistItem.deletedAt == nil)
+        #expect(category.includesInForecast)
     }
 
     @Test @MainActor
     func cloudSyncedSchemaIncludesChecklistAndAllUserDataModels() throws {
         let requiredModelNames: Set<String> = [
             "TaskNode",
+            "TaskCategory",
             "TimeSession",
             "TimeSegment",
             "PomodoroRun",

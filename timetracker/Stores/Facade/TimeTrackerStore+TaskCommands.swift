@@ -3,10 +3,11 @@ import Foundation
 extension TimeTrackerStore {
     func presentNewTask(
         parentID: UUID? = nil,
-        preservingDestination: DesktopDestination? = nil
+        preservingDestination: DesktopDestination? = nil,
+        categoryID: UUID? = nil
     ) {
         taskEditorReturnDestination = preservingDestination ?? desktopDestination
-        taskEditorDraft = TaskEditorDraft(parentID: parentID)
+        taskEditorDraft = TaskEditorDraft(parentID: parentID, categoryID: categoryID)
     }
 
     func presentEditTask(_ task: TaskNode) {

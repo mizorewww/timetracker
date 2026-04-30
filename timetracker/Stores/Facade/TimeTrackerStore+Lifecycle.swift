@@ -73,6 +73,7 @@ extension TimeTrackerStore {
         guard let taskRepository else { return }
         try taskDomainStore.refresh(repository: taskRepository)
         tasks = taskDomainStore.tasks
+        taskCategories = taskDomainStore.categories
     }
 
     func refreshLedgerDomain(includeHistory: Bool) throws {
@@ -106,6 +107,7 @@ extension TimeTrackerStore {
                 tasks: tasks,
                 segments: allSegments,
                 checklistItems: checklistItems,
+                forecastEligibleTaskIDs: forecastEligibleTaskIDs(),
                 now: Date()
             )
         } else {
@@ -114,6 +116,7 @@ extension TimeTrackerStore {
                 tasks: tasks,
                 segments: allSegments,
                 checklistItems: checklistItems,
+                forecastEligibleTaskIDs: forecastEligibleTaskIDs(),
                 now: Date()
             )
         }

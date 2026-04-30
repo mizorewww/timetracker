@@ -81,6 +81,7 @@ struct UpdateTaskUseCase {
         title: String,
         status: TaskStatus,
         parentID: UUID?,
+        categoryID: UUID?,
         colorHex: String?,
         iconName: String?,
         notes: String?,
@@ -92,6 +93,7 @@ struct UpdateTaskUseCase {
             title: title,
             status: status,
             parentID: parentID,
+            categoryID: categoryID,
             colorHex: colorHex,
             iconName: iconName,
             notes: notes,
@@ -129,8 +131,14 @@ struct CreateTaskUseCase {
     let repository: TaskRepository
 
     @discardableResult
-    func execute(title: String, parentID: UUID? = nil, colorHex: String? = nil, iconName: String? = nil) throws -> TaskNode {
-        try repository.createTask(title: title, parentID: parentID, colorHex: colorHex, iconName: iconName)
+    func execute(
+        title: String,
+        parentID: UUID? = nil,
+        categoryID: UUID? = nil,
+        colorHex: String? = nil,
+        iconName: String? = nil
+    ) throws -> TaskNode {
+        try repository.createTask(title: title, parentID: parentID, categoryID: categoryID, colorHex: colorHex, iconName: iconName)
     }
 }
 

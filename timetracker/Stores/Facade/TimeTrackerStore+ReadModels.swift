@@ -249,6 +249,27 @@ extension TimeTrackerStore {
         childrenByParentID[nil] ?? []
     }
 
+    func taskCategory(for id: UUID?) -> TaskCategory? {
+        guard let id else { return nil }
+        return taskCategoryByID[id]
+    }
+
+    func rootTask(for task: TaskNode) -> TaskNode {
+        var cursor = task
+        var visited: Set<UUID> = [task.id]
+        while let parentID = cursor.parentID,
+              !visited.contains(parentID),
+              let parent = taskByID[parentID] {
+            visited.insert(parentID)
+            cursor = parent
+        }
+        return cursor
+    }
+
+    func effectiveCategory(for task: TaskNode) -> TaskCategory? {
+        taskCategory(for: rootTask(for: task).categoryID)
+    }
+
     func children(of task: TaskNode) -> [TaskNode] {
         childrenByParentID[task.id] ?? []
     }
@@ -291,6 +312,26 @@ extension TimeTrackerStore {
         )
     }
 
+    func taskTreeSections(expandedTaskIDs: Set<UUID>) -> [TaskTreeVisibleSectionModel] {
+        taskTreeService.categorySections(rootTasks: rootTasks(), categories: taskCategories).map { section in
+            TaskTreeVisibleSectionModel(
+                id: section.id,
+                categoryID: section.categoryID,
+                title: section.title,
+                iconName: section.iconName,
+                colorHex: section.colorHex,
+                includesInForecast: section.includesInForecast,
+                rows: TaskTreeFlattener.visibleRows(
+                    rootTasks: section.rootTasks,
+                    children: { [weak self] task in
+                        self?.children(of: task) ?? []
+                    },
+                    expandedTaskIDs: expandedTaskIDs
+                )
+            )
+        }
+    }
+
     func checklistItems(for taskID: UUID) -> [ChecklistItem] {
         checklistByTaskID[taskID] ?? []
     }
@@ -331,7 +372,19 @@ extension TimeTrackerStore {
             }
     }
 
+    func rebuildTaskCategoryIndexes() {
+        taskCategoryByID = Dictionary(uniqueKeysWithValues: taskCategories.filter { $0.deletedAt == nil }.map { ($0.id, $0) })
+    }
+
     private func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
         taskTreeService.taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID, visited: visited)
+    }
+
+    func forecastEligibleTaskIDs() -> Set<UUID> {
+        rootTasks().reduce(into: Set<UUID>()) { result, root in
+            let includesInForecast = taskCategory(for: root.categoryID)?.includesInForecast ?? true
+            guard includesInForecast else { return }
+            result.formUnion(taskAndDescendantIDs(for: root.id))
+        }
     }
 }

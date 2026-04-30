@@ -43,7 +43,10 @@ struct TaskChecklistPanel: View {
                     ProgressView(value: progress.fraction)
                 }
                 ForEach(visibleItems.prefix(5), id: \.id) { item in
-                    ChecklistDisplayRow(item: item) {
+                    ChecklistDisplayRow(
+                        title: item.title,
+                        isCompleted: item.isCompleted
+                    ) {
                         store.toggleChecklistItem(item)
                     }
                 }
@@ -62,59 +65,5 @@ struct TaskChecklistPanel: View {
             }
             .appCard(padding: 14)
         }
-    }
-}
-
-private struct ChecklistDisplayRow: View {
-    let item: ChecklistItem
-    let toggle: () -> Void
-
-    var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: 10) {
-                ChecklistCompletionMark(isCompleted: item.isCompleted)
-
-                Text(item.title)
-                    .lineLimit(1)
-                    .strikethrough(item.isCompleted)
-                    .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                Spacer(minLength: 0)
-            }
-            .font(.subheadline)
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct InlineChecklistAddRow: View {
-    @Binding var title: String
-    let submit: () -> Void
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "plus.circle")
-                .font(.title3)
-                .foregroundStyle(.blue)
-                .frame(width: 30, height: 30)
-            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $title)
-                .textFieldStyle(.plain)
-                .focused($isFocused)
-                .onSubmit(submitIfNeeded)
-                .submitLabel(.done)
-        }
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            isFocused = true
-        }
-    }
-
-    private func submitIfNeeded() {
-        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        submit()
-        isFocused = true
     }
 }

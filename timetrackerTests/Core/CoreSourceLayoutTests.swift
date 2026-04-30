@@ -18,6 +18,8 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Foundation/ColorSupport.swift",
             "timetracker/SharedUI/Components/SharedUI.swift",
             "timetracker/SharedUI/Components/ChecklistControls.swift",
+            "timetracker/SharedUI/Components/DurationLabels.swift",
+            "timetracker/SharedUI/Components/EmptyStates.swift",
             "timetracker/SharedUI/Components/ForecastInfoViews.swift",
             "timetracker/SharedUI/Components/StatusBadges.swift",
             "timetracker/SharedUI/Components/TaskVisuals.swift",

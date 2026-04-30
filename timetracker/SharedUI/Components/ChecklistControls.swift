@@ -25,3 +25,58 @@ struct ChecklistCompletionMark: View {
             .contentShape(Circle())
     }
 }
+
+struct ChecklistDisplayRow: View {
+    let title: String
+    let isCompleted: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 10) {
+                ChecklistCompletionMark(isCompleted: isCompleted)
+
+                Text(title)
+                    .lineLimit(1)
+                    .strikethrough(isCompleted)
+                    .foregroundStyle(isCompleted ? .secondary : .primary)
+                Spacer(minLength: 0)
+            }
+            .font(.subheadline)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct InlineChecklistAddRow: View {
+    @Binding var title: String
+    let submit: () -> Void
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "plus.circle")
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 30, height: 30)
+            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $title)
+                .textFieldStyle(.plain)
+                .focused($isFocused)
+                .onSubmit(submitIfNeeded)
+                .submitLabel(.done)
+        }
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isFocused = true
+        }
+    }
+
+    private func submitIfNeeded() {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        submit()
+        isFocused = true
+    }
+}

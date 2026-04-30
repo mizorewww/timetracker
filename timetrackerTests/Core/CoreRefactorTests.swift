@@ -377,7 +377,8 @@ struct CoreRefactorTests {
     func sidebarUsesSharedFlatTaskTreeContract() throws {
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
 
-        #expect(sidebarSource.contains("store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)"))
+        #expect(sidebarSource.contains("store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)"))
+        #expect(sidebarSource.contains("TaskCategorySectionHeader"))
         #expect(sidebarSource.contains("DisclosureGroup(") == false)
     }
 

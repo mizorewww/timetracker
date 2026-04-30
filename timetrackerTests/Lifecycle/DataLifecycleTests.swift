@@ -202,8 +202,12 @@ struct DataLifecycleTests {
         let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.defaultFocusMinutes.rawValue, valueJSON: "25", deviceID: "test")
         let checklistItem = ChecklistItem(taskID: task.id, title: "Checklist", deviceID: "test")
+        let category = TaskCategory(title: "Work", deviceID: "test")
+        let categoryAssignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
 
         context.insert(task)
+        context.insert(category)
+        context.insert(categoryAssignment)
         context.insert(session)
         context.insert(segment)
         context.insert(run)
@@ -221,12 +225,16 @@ struct DataLifecycleTests {
         #expect(countdown.deletedAt == nil)
         #expect(preference.deletedAt == nil)
         #expect(checklistItem.deletedAt == nil)
+        #expect(category.includesInForecast)
+        #expect(categoryAssignment.deletedAt == nil)
     }
 
     @Test @MainActor
     func cloudSyncedSchemaIncludesChecklistAndAllUserDataModels() throws {
         let requiredModelNames: Set<String> = [
             "TaskNode",
+            "TaskCategory",
+            "TaskCategoryAssignment",
             "TimeSession",
             "TimeSegment",
             "PomodoroRun",
@@ -251,15 +259,20 @@ struct DataLifecycleTests {
         )
         let context = ModelContext(container)
         let task = TaskNode(title: "Cloud task", parentID: nil, deviceID: "test")
+        let category = TaskCategory(title: "Cloud category", deviceID: "test")
+        let assignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
         let checklist = ChecklistItem(taskID: task.id, title: "Cloud checklist", deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
 
         context.insert(task)
+        context.insert(category)
+        context.insert(assignment)
         context.insert(checklist)
         context.insert(preference)
         try context.save()
 
         #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).map(\.title) == ["Cloud checklist"])
+        #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [category.id])
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).map(\.key) == [AppPreferenceKey.showGrossAndWallTogether.rawValue])
     }
 
@@ -303,7 +316,7 @@ struct DataLifecycleTests {
 
     @MainActor
     private func prepareAutomaticDemoSeeding(
-        mode: String = AppCloudSync.modeLocal,
+        mode: String = "Local",
         disabled: Bool = false,
         lastError: String? = nil
     ) {

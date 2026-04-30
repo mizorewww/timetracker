@@ -99,6 +99,7 @@ Views should render existing snapshots. They should not calculate analytics, tre
 | Start, pause, resume, stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Inspector` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
 | Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener` | `Features/Tasks`, `Features/Sidebar` |
+| Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
 | Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks`, `Features/Inspector` |
 | Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Inspector` |
 | Pomodoro | `PomodoroRun`, ledger models | `PomodoroCommandHandler` | `LedgerStore` | Pomodoro state helpers | `Features/Pomodoro` |
@@ -135,6 +136,21 @@ Rules:
 1. Keep raw `TimeSegment` as the source of truth and rebuild buckets when summary rules change.
 2. Keep active timer queries direct and fresh; active timers must never wait for a cache.
 3. Invalidate day buckets from `ledgerChanged` date ranges rather than clearing the whole analytics cache by default.
+
+## Schema Evolution Rules
+
+SwiftData models must stay compatible with existing local and iCloud stores. New features should not casually add columns to `TaskNode`, `TimeSession`, `TimeSegment`, or other fact-layer models.
+
+Rules:
+
+1. Prefer extension models with explicit UUID references for new feature data. Example: task categories use `TaskCategory` plus `TaskCategoryAssignment(taskID, categoryID)` instead of adding `categoryID` to `TaskNode`.
+2. If an existing core model truly needs a new persisted field, add a new schema version, make the field optional or give it a stable default, and add a migration/compatibility test before wiring UI.
+3. Old `VersionedSchema` definitions must keep their historical model shape. A new feature must not mutate older schema versions by reusing a changed model shape without a migration strategy.
+4. Never reuse a schema version identifier for a different model shape. If a bad schema reached a build or branch that may have been installed, the next compatible schema must use a new version number.
+5. CloudKit-backed models should keep `id`, timestamps, `deletedAt`, `deviceID`, and `clientMutationID` semantics stable. Soft delete remains the default for user data that can sync.
+6. Every schema change must update `TimeTrackerModelRegistry.cloudSyncedUserModelNames` expectations and add a test proving old stores can still open or that the change is isolated in a new extension model.
+
+The guiding principle is forward migration, not feature rollback: existing user data opens first, then new feature data is added in a compatible layer.
 
 ## UI Rules
 

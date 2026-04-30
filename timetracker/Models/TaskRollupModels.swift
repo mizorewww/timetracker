@@ -38,6 +38,7 @@ enum ForecastState: String, CaseIterable {
     case needsTrackedTime
     case completed
     case aggregate
+    case disabled
 
     var displayName: String {
         switch self {
@@ -53,6 +54,8 @@ enum ForecastState: String, CaseIterable {
             return AppStrings.localized("forecast.state.completed")
         case .aggregate:
             return AppStrings.localized("forecast.state.aggregate")
+        case .disabled:
+            return AppStrings.localized("forecast.state.disabled")
         }
     }
 }
@@ -88,7 +91,7 @@ struct TaskRollup: Identifiable, Equatable {
         switch forecastState {
         case .ready, .aggregate:
             return estimatedTotalSeconds != nil && remainingSeconds != nil && confidence != .none
-        case .needsChecklist, .needsCompletedItem, .needsTrackedTime, .completed:
+        case .needsChecklist, .needsCompletedItem, .needsTrackedTime, .completed, .disabled:
             return false
         }
     }

@@ -53,6 +53,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 | Start/pause/resume/stop timer behavior | `Commands/TimerCommands.swift` | `Repositories/SwiftDataTimeTrackingRepository.swift`, `Stores/Domains/LedgerStore.swift`, `Services/Ledger/TimeTrackerServices.swift` |
 | Manual time entry or segment edit | `Commands/LedgerCommands.swift` | `Features/Ledger`, `Stores/Domains/LedgerStore.swift`, analytics invalidation tests |
 | Task create/edit/move/delete | `Commands/TaskCommands.swift` | `Services/Tasks/TaskTreeServices.swift`, `Repositories/SwiftDataTaskRepository.swift`, `Features/Tasks` |
+| Task categories | `Stores/Facade/TimeTrackerStore+TaskCategoryCommands.swift` | `Models/TaskModels.swift`, `Repositories/SwiftDataTaskRepository.swift`, `Features/Tasks`, `Features/Sidebar` |
 | Checklist UI or persistence | `Commands/ChecklistCommands.swift` | `Features/Tasks/Editor`, `Features/Inspector/Sections/InspectorChecklistViews.swift`, `Services/Forecasting/TaskRollupService.swift` |
 | Forecast math | `Services/Forecasting/TaskRollupService.swift` | `Services/Forecasting/ForecastDisplayService.swift`, Home/Analytics/Inspector forecast sections |
 | Analytics chart data | `Stores/Domains/AnalyticsStore.swift` | `Services/Analytics/AnalyticsEngine.swift`, `Services/Analytics/LedgerBucketCache.swift`, `Features/Analytics` |
@@ -73,6 +74,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 6. Keep `TimeTrackerStore` as a facade. If a method grows domain logic, move that logic into a command handler, domain store, or service.
 7. If a directory starts collecting unrelated files, split it before adding more.
 8. After moving files, run the scheme visibility check, macOS tests, and generic iOS build from `Docs/Testing.md`.
+9. For schema changes, prefer additive extension models over changing core ledger/task models. Update `Docs/ArchitecturePlan.md` schema rules and add migration/compatibility tests before UI work.
 
 ## Naming Rules
 

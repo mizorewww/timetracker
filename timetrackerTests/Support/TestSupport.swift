@@ -36,3 +36,13 @@ func projectRootURL() throws -> URL {
 func sourceText(_ relativePath: String) throws -> String {
     try String(contentsOf: projectRootURL().appending(path: relativePath), encoding: .utf8)
 }
+
+extension String {
+    func slice(from start: String, to end: String) -> String? {
+        guard let startRange = range(of: start),
+              let endRange = range(of: end, range: startRange.upperBound..<endIndex) else {
+            return nil
+        }
+        return String(self[startRange.lowerBound..<endRange.lowerBound])
+    }
+}

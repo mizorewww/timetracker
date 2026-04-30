@@ -10,6 +10,16 @@ final class TimeTrackerStore: ObservableObject {
             rebuildTaskIndexes()
         }
     }
+    @Published var taskCategories: [TaskCategory] = [] {
+        didSet {
+            rebuildTaskCategoryIndexes()
+        }
+    }
+    @Published var taskCategoryAssignments: [TaskCategoryAssignment] = [] {
+        didSet {
+            rebuildTaskCategoryIndexes()
+        }
+    }
     @Published var activeSegments: [TimeSegment] = []
     @Published var todaySegments: [TimeSegment] = [] {
         didSet {
@@ -34,6 +44,7 @@ final class TimeTrackerStore: ObservableObject {
     @Published var selectedRange: RangePreset = .today
     @Published var errorMessage: String?
     @Published var taskEditorDraft: TaskEditorDraft?
+    @Published var taskCategoryEditorDraft: TaskCategoryEditorDraft?
     @Published var manualTimeDraft: ManualTimeDraft?
     @Published var segmentEditorDraft: SegmentEditorDraft?
     @Published var desktopDestination: DesktopDestination = .today
@@ -118,6 +129,8 @@ final class TimeTrackerStore: ObservableObject {
     var preferenceDomainStore = PreferenceStore()
     var syncObservers: [NSObjectProtocol] = []
     var taskByID: [UUID: TaskNode] = [:]
+    var taskCategoryByID: [UUID: TaskCategory] = [:]
+    var taskCategoryIDByRootTaskID: [UUID: UUID] = [:]
     var childrenByParentID: [UUID?: [TaskNode]] = [:]
     var checklistByTaskID: [UUID: [ChecklistItem]] = [:]
     var taskPathByID: [UUID: String] = [:]

@@ -104,6 +104,26 @@ struct TaskTreeRowModel: Identifiable, Equatable {
     var id: UUID { taskID }
 }
 
+struct TaskTreeCategorySectionModel: Identifiable {
+    let id: String
+    let categoryID: UUID?
+    let title: String
+    let iconName: String
+    let colorHex: String?
+    let includesInForecast: Bool
+    let rootTasks: [TaskNode]
+}
+
+struct TaskTreeVisibleSectionModel: Identifiable {
+    let id: String
+    let categoryID: UUID?
+    let title: String
+    let iconName: String
+    let colorHex: String?
+    let includesInForecast: Bool
+    let rows: [TaskTreeRowModel]
+}
+
 struct TaskExpansionState: Equatable {
     private(set) var expandedTaskIDs: Set<UUID> = []
 
@@ -158,6 +178,51 @@ struct TaskTreeFlattener {
             append(task, depth: 0)
         }
         return rows
+    }
+}
+
+extension TaskTreeService {
+    func categorySections(
+        rootTasks: [TaskNode],
+        categories: [TaskCategory],
+        categoryIDByRootTaskID: [UUID: UUID]
+    ) -> [TaskTreeCategorySectionModel] {
+        let categoryByID = Dictionary(uniqueKeysWithValues: categories.filter { $0.deletedAt == nil }.map { ($0.id, $0) })
+        let rootTasksByCategory = Dictionary(grouping: rootTasks) { task -> UUID? in
+            guard let categoryID = categoryIDByRootTaskID[task.id], categoryByID[categoryID] != nil else { return nil }
+            return categoryID
+        }
+
+        var sections: [TaskTreeCategorySectionModel] = []
+        for category in categories where rootTasksByCategory[category.id]?.isEmpty == false {
+            sections.append(
+                TaskTreeCategorySectionModel(
+                    id: "category-\(category.id.uuidString)",
+                    categoryID: category.id,
+                    title: category.title,
+                    iconName: category.iconName ?? "square.grid.2x2",
+                    colorHex: category.colorHex,
+                    includesInForecast: category.includesInForecast,
+                    rootTasks: rootTasksByCategory[category.id] ?? []
+                )
+            )
+        }
+
+        if let uncategorized = rootTasksByCategory[nil], !uncategorized.isEmpty {
+            sections.append(
+                TaskTreeCategorySectionModel(
+                    id: "uncategorized",
+                    categoryID: nil,
+                    title: AppStrings.localized("taskCategory.uncategorized"),
+                    iconName: "tray",
+                    colorHex: "8E8E93",
+                    includesInForecast: true,
+                    rootTasks: uncategorized
+                )
+            )
+        }
+
+        return sections
     }
 }
 

@@ -5,8 +5,15 @@ protocol TaskRepository {
     func rootNodes() throws -> [TaskNode]
     func children(of parentID: UUID?) throws -> [TaskNode]
     func task(id: UUID) throws -> TaskNode?
-    @discardableResult func createTask(title: String, parentID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
-    func updateTask(taskID: UUID, title: String, status: TaskStatus, parentID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
+    func categories() throws -> [TaskCategory]
+    func categoryAssignments() throws -> [TaskCategoryAssignment]
+    func category(id: UUID) throws -> TaskCategory?
+    func categoryID(forRootTaskID taskID: UUID) throws -> UUID?
+    @discardableResult func createCategory(title: String, colorHex: String?, iconName: String?, includesInForecast: Bool) throws -> TaskCategory
+    func updateCategory(categoryID: UUID, title: String, colorHex: String?, iconName: String?, includesInForecast: Bool) throws
+    func softDeleteCategory(categoryID: UUID) throws
+    @discardableResult func createTask(title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
+    func updateTask(taskID: UUID, title: String, status: TaskStatus, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
     func setTaskStatus(taskID: UUID, status: TaskStatus) throws
     func archiveTask(taskID: UUID) throws

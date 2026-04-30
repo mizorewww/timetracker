@@ -55,6 +55,63 @@ final class TaskNode {
     }
 }
 
+@Model
+final class TaskCategory {
+    var id: UUID = UUID()
+    var title: String = ""
+    var colorHex: String?
+    var iconName: String?
+    var includesInForecast: Bool = true
+    var sortOrder: Double = 0
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var deletedAt: Date?
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
+
+    init(
+        title: String,
+        deviceID: String,
+        colorHex: String? = nil,
+        iconName: String? = nil,
+        includesInForecast: Bool = true,
+        sortOrder: Double = 0
+    ) {
+        self.id = UUID()
+        self.title = title
+        self.colorHex = colorHex
+        self.iconName = iconName
+        self.includesInForecast = includesInForecast
+        self.sortOrder = sortOrder
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.deviceID = deviceID
+        self.clientMutationID = UUID()
+    }
+}
+
+@Model
+final class TaskCategoryAssignment {
+    var id: UUID = UUID()
+    var taskID: UUID = UUID()
+    var categoryID: UUID = UUID()
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var deletedAt: Date?
+    var deviceID: String = ""
+    var clientMutationID: UUID = UUID()
+
+    init(taskID: UUID, categoryID: UUID, deviceID: String) {
+        self.id = UUID()
+        self.taskID = taskID
+        self.categoryID = categoryID
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.deviceID = deviceID
+        self.clientMutationID = UUID()
+    }
+}
+
 extension TaskNode {
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .active }

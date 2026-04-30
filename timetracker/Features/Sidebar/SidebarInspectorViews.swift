@@ -29,14 +29,19 @@ struct SidebarView: View {
                 }
             }
 
-            Section(AppStrings.tasks) {
-                ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)) { row in
-                    if let task = store.task(for: row.taskID) {
-                        SidebarTaskTreeRow(store: store, task: task, row: row, expansionState: $expansionState)
-                            .tag(SidebarSelection.task(task.id))
+            ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
+                Section {
+                    ForEach(section.rows) { row in
+                        if let task = store.task(for: row.taskID) {
+                            SidebarTaskTreeRow(store: store, task: task, row: row, expansionState: $expansionState)
+                                .tag(SidebarSelection.task(task.id))
+                        }
                     }
+                } header: {
+                    TaskCategorySectionHeader(section: section, compact: true)
                 }
             }
+
         }
         .navigationTitle(AppStrings.localized("app.name"))
         .onAppear {

@@ -19,25 +19,34 @@ struct TasksView: View {
     var body: some View {
         List {
             if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Section {
-                    ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs)) { row in
-                        if let task = store.task(for: row.taskID) {
-                            TaskManagementFlatRow(
-                                store: store,
-                                task: task,
-                                treeDepth: row.depth,
-                                hasChildren: row.hasChildren,
-                                isExpanded: row.isExpanded,
-                                toggleExpansion: {
-                                    expansionState.toggle(row.taskID)
-                                }
-                            )
+                ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
+                    Section {
+                        ForEach(section.rows) { row in
+                            if let task = store.task(for: row.taskID) {
+                                TaskManagementFlatRow(
+                                    store: store,
+                                    task: task,
+                                    treeDepth: row.depth,
+                                    hasChildren: row.hasChildren,
+                                    isExpanded: row.isExpanded,
+                                    toggleExpansion: {
+                                        expansionState.toggle(row.taskID)
+                                    }
+                                )
+                            }
                         }
+                    } header: {
+                        TaskCategorySectionHeader(
+                            section: section,
+                            addTask: {
+                                store.presentNewTask(
+                                    preservingDestination: .tasks,
+                                    categoryID: section.categoryID
+                                )
+                            },
+                            editCategory: editAction(for: section)
+                        )
                     }
-                } header: {
-                    Text(.app("tasks.tree"))
-                } footer: {
-                    Text(.app("tasks.tree.footer"))
                 }
             } else if searchResults.isEmpty {
                 EmptyStateRow(title: AppStrings.localized("tasks.empty.search"), icon: "magnifyingglass")
@@ -55,6 +64,12 @@ struct TasksView: View {
                 } label: {
                     Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
                 }
+
+                Button {
+                    store.presentNewTaskCategory()
+                } label: {
+                    Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
+                }
             }
         }
         .navigationTitle(AppStrings.tasks)
@@ -71,10 +86,20 @@ struct TasksView: View {
             transaction.animation = nil
         }
         .toolbar {
-            Button {
-                store.presentNewTask(preservingDestination: .tasks)
+            Menu {
+                Button {
+                    store.presentNewTask(preservingDestination: .tasks)
+                } label: {
+                    Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
+                }
+
+                Button {
+                    store.presentNewTaskCategory()
+                } label: {
+                    Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
+                }
             } label: {
-                Image(systemName: "plus")
+                Image(systemName: "plus.circle")
             }
         }
         .onAppear {
@@ -84,6 +109,16 @@ struct TasksView: View {
                 }
                 didExpandInitialTree = true
             }
+        }
+    }
+
+    private func editAction(for section: TaskTreeVisibleSectionModel) -> (() -> Void)? {
+        guard let categoryID = section.categoryID,
+              let category = store.taskCategory(for: categoryID) else {
+            return nil
+        }
+        return {
+            store.presentEditTaskCategory(category)
         }
     }
 }

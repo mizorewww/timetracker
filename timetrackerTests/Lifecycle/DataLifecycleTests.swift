@@ -69,8 +69,8 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func demoDataContainsMultiDayAnalyticsAndActiveTimers() throws {
-        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
-        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        prepareAutomaticDemoSeeding()
+        defer { resetDemoSeedingDefaults() }
         let context = try makeTestContext()
         try SeedData.replaceWithDemoData(context: context)
 
@@ -92,8 +92,8 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func replacingDemoDataClearsExistingLedgerBeforeSeeding() throws {
-        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
-        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        prepareAutomaticDemoSeeding()
+        defer { resetDemoSeedingDefaults() }
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -115,8 +115,8 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func clearingDemoDataKeepsUserCreatedRecords() throws {
-        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
-        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        prepareAutomaticDemoSeeding()
+        defer { resetDemoSeedingDefaults() }
         let context = try makeTestContext()
         try SeedData.replaceWithDemoData(context: context)
 
@@ -142,8 +142,8 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func clearingDemoDataPreventsAutomaticReseedingOnNextLaunch() throws {
-        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
-        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        prepareAutomaticDemoSeeding()
+        defer { resetDemoSeedingDefaults() }
         let context = try makeTestContext()
 
         try SeedData.ensureSeeded(context: context)
@@ -159,14 +159,38 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func rebuildingDemoDataReenablesAutomaticDemoSeeding() throws {
-        UserDefaults.standard.set(true, forKey: SeedData.automaticDemoSeedingDisabledKey)
-        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        prepareAutomaticDemoSeeding(disabled: true)
+        defer { resetDemoSeedingDefaults() }
         let context = try makeTestContext()
 
         try SeedData.replaceWithDemoData(context: context)
 
         #expect(SeedData.isAutomaticDemoSeedingDisabled == false)
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty == false)
+    }
+
+    @Test @MainActor
+    func automaticDemoDataDoesNotSeedIntoCloudBackedStorage() throws {
+        prepareAutomaticDemoSeeding(mode: AppCloudSync.modeICloud)
+        defer { resetDemoSeedingDefaults() }
+        let context = try makeTestContext()
+
+        try SeedData.ensureSeeded(context: context)
+
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func automaticDemoDataDoesNotSeedIntoFallbackStorage() throws {
+        defer { resetDemoSeedingDefaults() }
+        for mode in [AppCloudSync.modeLocalFallback, AppCloudSync.modeInMemoryFallback] {
+            prepareAutomaticDemoSeeding(mode: mode, lastError: "Persistent store unavailable")
+            let context = try makeTestContext()
+
+            try SeedData.ensureSeeded(context: context)
+
+            #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        }
     }
 
     @Test @MainActor
@@ -281,5 +305,26 @@ struct DataLifecycleTests {
         #expect(csv.contains("CSV Task"))
         #expect(csv.contains("900"))
         #expect(csv.contains("Export note"))
+    }
+
+    private func prepareAutomaticDemoSeeding(
+        mode: String = AppCloudSync.modeLocal,
+        disabled: Bool = false,
+        lastError: String? = nil
+    ) {
+        UserDefaults.standard.set(disabled, forKey: SeedData.automaticDemoSeedingDisabledKey)
+        UserDefaults.standard.set(mode, forKey: AppCloudSync.modeKey)
+        if let lastError {
+            UserDefaults.standard.set(lastError, forKey: AppCloudSync.errorKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.errorKey)
+        }
+    }
+
+    private func resetDemoSeedingDefaults() {
+        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+        UserDefaults.standard.removeObject(forKey: AppCloudSync.modeKey)
+        UserDefaults.standard.removeObject(forKey: AppCloudSync.errorKey)
+        UserDefaults.standard.removeObject(forKey: AppCloudSync.accountStatusKey)
     }
 }

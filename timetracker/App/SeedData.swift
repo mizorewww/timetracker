@@ -15,6 +15,7 @@ enum SeedData {
 
     static func ensureSeeded(context: ModelContext) throws {
         guard !isAutomaticDemoSeedingDisabled else { return }
+        guard AppCloudSync.allowsAutomaticDemoSeeding else { return }
         let taskCount = try context.fetch(FetchDescriptor<TaskNode>()).count
         guard taskCount == 0 else { return }
         try buildDemoData(context: context)

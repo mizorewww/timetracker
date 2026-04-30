@@ -8,6 +8,11 @@ enum AppCloudSync {
     static let modeKey = "TimeTrackerPersistenceMode"
     static let errorKey = "TimeTrackerPersistenceError"
     static let accountStatusKey = "TimeTrackerCloudAccountStatus"
+    static let modeICloud = "iCloud"
+    static let modeLocal = "Local"
+    static let modeLocalFallback = "Local fallback"
+    static let modeInMemoryFallback = "In-memory fallback"
+    static let modeUITest = "UI Test"
 
     static var isEnabled: Bool {
         if UserDefaults.standard.object(forKey: enabledKey) == nil {
@@ -17,11 +22,21 @@ enum AppCloudSync {
     }
 
     static var persistenceMode: String {
-        UserDefaults.standard.string(forKey: modeKey) ?? "Local"
+        UserDefaults.standard.string(forKey: modeKey) ?? modeLocal
     }
 
     static var lastError: String? {
         UserDefaults.standard.string(forKey: errorKey)
+    }
+
+    static var allowsAutomaticDemoSeeding: Bool {
+        guard lastError?.isEmpty ?? true else { return false }
+        switch persistenceMode {
+        case modeLocal, modeUITest:
+            return true
+        default:
+            return false
+        }
     }
 
     static var accountStatus: String {
@@ -29,23 +44,23 @@ enum AppCloudSync {
     }
 
     static func recordCloudKitEnabled() {
-        UserDefaults.standard.set("iCloud", forKey: modeKey)
+        UserDefaults.standard.set(modeICloud, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
     }
 
     static func recordCloudKitDisabledByUser() {
-        UserDefaults.standard.set("Local", forKey: modeKey)
+        UserDefaults.standard.set(modeLocal, forKey: modeKey)
         UserDefaults.standard.set(AppStrings.localized("sync.disabledMessage"), forKey: accountStatusKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
     }
 
     static func recordLocalFallback(error: Error) {
-        UserDefaults.standard.set("Local fallback", forKey: modeKey)
+        UserDefaults.standard.set(modeLocalFallback, forKey: modeKey)
         UserDefaults.standard.set(error.localizedDescription, forKey: errorKey)
     }
 
     static func recordEmergencyInMemoryFallback(error: Error) {
-        UserDefaults.standard.set("In-memory fallback", forKey: modeKey)
+        UserDefaults.standard.set(modeInMemoryFallback, forKey: modeKey)
         UserDefaults.standard.set(
             String(format: AppStrings.localized("sync.temporaryStoreError"), error.localizedDescription),
             forKey: errorKey
@@ -54,7 +69,7 @@ enum AppCloudSync {
     }
 
     static func recordUITesting() {
-        UserDefaults.standard.set("UI Test", forKey: modeKey)
+        UserDefaults.standard.set(modeUITest, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
         UserDefaults.standard.set(AppStrings.localized("sync.uiTestStore"), forKey: accountStatusKey)
     }

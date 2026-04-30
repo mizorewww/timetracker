@@ -1,18 +1,5 @@
 import SwiftUI
 
-struct TaskStatusBadge: View {
-    let status: TaskStatus
-
-    var body: some View {
-        Label(status.displayName, systemImage: status.symbolName)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color(hex: status.colorHex) ?? .secondary)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background((Color(hex: status.colorHex) ?? .secondary).opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-    }
-}
-
 struct TaskContextMenu: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode

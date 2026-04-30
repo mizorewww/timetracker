@@ -225,10 +225,12 @@ struct HomeUIContractTests {
     @Test
     func compactTaskRowsShowChecklistProgressBar() throws {
         let source = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/TaskProgressViews.swift")
 
         #expect(source.contains("CompactChecklistProgressLine("))
-        #expect(source.contains("ProgressView(value: progress.fraction)"))
-        #expect(source.contains("checklist.progressFormat"))
+        #expect(sharedSource.contains("ProgressView(value: progress.fraction)"))
+        #expect(sharedSource.contains("checklist.progressFormat"))
+        #expect(sharedSource.contains("struct TaskProgressLine"))
         #expect(source.contains("if progress.totalCount > 0 {\n                    CompactChecklistProgressLine"))
     }
 
@@ -270,14 +272,18 @@ struct HomeUIContractTests {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
         let sharedSource = try [
             "timetracker/SharedUI/Components/ChecklistControls.swift",
+            "timetracker/SharedUI/Components/StatusBadges.swift",
             "timetracker/SharedUI/Components/TaskVisuals.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
+        #expect(tasksSource.contains("RunningStatusBadge()"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
+        #expect(sharedSource.contains("struct TaskStatusBadge"))
+        #expect(sharedSource.contains("struct RunningStatusBadge"))
     }
 
     @Test

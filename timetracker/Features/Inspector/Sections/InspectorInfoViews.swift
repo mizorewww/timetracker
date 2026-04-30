@@ -11,7 +11,7 @@ struct InspectorInfoGrid: View {
 
             VStack(spacing: 10) {
                 InfoRow(title: AppStrings.localized("task.field.path"), value: store.path(for: task))
-                InfoRow(title: AppStrings.localized("task.field.status"), value: activeStatusText, badge: activeStatusText == AppStrings.running)
+                InfoStatusRow(task: task, isRunning: store.activeSegments.contains { $0.taskID == task.id })
                 InfoRow(
                     title: AppStrings.localized("task.field.total"),
                     value: DurationFormatter.compact(store.rollup(for: task.id)?.workedSeconds ?? store.secondsForTaskTotalRollup(task))
@@ -23,15 +23,31 @@ struct InspectorInfoGrid: View {
         }
     }
 
-    private var activeStatusText: String {
-        store.activeSegments.contains { $0.taskID == task.id } ? AppStrings.running : task.status.displayName
+}
+
+struct InfoStatusRow: View {
+    let task: TaskNode
+    let isRunning: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(AppStrings.localized("task.field.status"))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 54, maxWidth: 86, alignment: .leading)
+            Spacer()
+            if isRunning {
+                RunningStatusBadge()
+            } else {
+                TaskStatusBadge(status: task.status)
+            }
+        }
+        .font(.subheadline)
     }
 }
 
 struct InfoRow: View {
     let title: String
     let value: String
-    var badge: Bool = false
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -42,11 +58,8 @@ struct InfoRow: View {
             Text(value)
                 .lineLimit(2)
                 .multilineTextAlignment(.trailing)
-                .font(badge ? .caption.weight(.medium) : .subheadline)
-                .foregroundStyle(badge ? .green : .primary)
-                .padding(.horizontal, badge ? 8 : 0)
-                .padding(.vertical, badge ? 4 : 0)
-                .background(badge ? Color.green.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
         }
         .font(.subheadline)
     }

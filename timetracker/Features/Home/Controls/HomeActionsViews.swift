@@ -160,16 +160,9 @@ private struct TaskStartPickerRow: View {
                     .lineLimit(1)
             }
             Spacer()
-            runningBadge
-        }
-    }
-
-    @ViewBuilder
-    private var runningBadge: some View {
-        if isRunning {
-            Text(AppStrings.running)
-                .font(.caption)
-                .foregroundStyle(.green)
+            if isRunning {
+                RunningStatusBadge()
+            }
         }
     }
 }

@@ -243,6 +243,8 @@ Completed so far:
 - Source layout now has semantic folders for store facade/domain/refresh code, service algorithms, feature controls/sections/rows, and shared UI foundation/components.
 - `Docs/ProjectMap.md` now explains each source folder, common change entry points, and placement rules for new code.
 - `SharedUI/Components/SharedUI.swift` was reduced to generic shell components; task visuals, forecast help, checklist controls, and color support now live in dedicated files.
+- Task status and running-state badges now live in `SharedUI/Components/StatusBadges.swift`, so Home, Tasks, and Inspector do not each draw their own status treatment.
+- Task checklist and forecast progress lines now live in `SharedUI/Components/TaskProgressViews.swift`, keeping the task list row focused on row layout.
 - Checklist completion uses fixed-size SF Symbols instead of a hand-drawn circle so row layout stays stable when items are toggled.
 - `Features/Settings/SettingsViews.swift` now composes dedicated section views from `Features/Settings/SettingsSectionsViews.swift`, keeping the settings shell smaller and making individual settings groups easier to adjust.
 

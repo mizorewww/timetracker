@@ -10,12 +10,11 @@ struct InspectorSummaryCard: View {
                     Label(AppStrings.localized("task.snapshot"), systemImage: "smallcircle.filled.circle")
                         .foregroundStyle(.blue)
                     Spacer()
-                    Text(store.activeSegments.contains { $0.taskID == task.id } ? AppStrings.running : task.status.displayName)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.green)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    if store.activeSegments.contains(where: { $0.taskID == task.id }) {
+                        RunningStatusBadge(compact: false)
+                    } else {
+                        TaskStatusBadge(status: task.status, compact: false)
+                    }
                 }
 
                 Text(task.title)

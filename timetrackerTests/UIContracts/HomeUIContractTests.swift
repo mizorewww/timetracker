@@ -224,7 +224,7 @@ struct HomeUIContractTests {
 
     @Test
     func compactTaskRowsShowChecklistProgressBar() throws {
-        let source = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
+        let source = try sourceText("timetracker/Features/Tasks/TaskManagementRowViews.swift")
 
         #expect(source.contains("CompactChecklistProgressLine("))
         #expect(source.contains("ProgressView(value: progress.fraction)"))
@@ -234,8 +234,8 @@ struct HomeUIContractTests {
 
     @Test
     func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorViews.swift")
+        let tasksSource = try sourceText("timetracker/Features/Tasks/TaskManagementRowViews.swift")
+        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorInfoViews.swift")
         let forecastSource = try sourceText("timetracker/Features/Inspector/InspectorForecastViews.swift")
 
         #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
@@ -254,7 +254,7 @@ struct HomeUIContractTests {
             try sourceText(path)
         }
         .joined(separator: "\n")
-        let modelsSource = try sourceText("timetracker/Models/TimeTrackerModels.swift")
+        let modelsSource = try sourceText("timetracker/Models/TaskModels.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(editorSource.contains("TaskStatusPicker(selection: $draft.status)"))
@@ -267,7 +267,7 @@ struct HomeUIContractTests {
 
     @Test
     func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
+        let tasksSource = try sourceText("timetracker/Features/Tasks/TaskManagementRowViews.swift")
         let sharedSource = try sourceText("timetracker/SharedUI/SharedUI.swift")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))

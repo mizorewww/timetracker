@@ -150,6 +150,182 @@ The current architecture-plan phase is complete. The items that used to be open 
 
 New architecture work should be added as a specific, testable finding before implementation rather than kept as a vague backlog.
 
+## Next Development Roadmap
+
+The next four phases should be executed in order. Each phase must start from documented expectations, add or update tests before risky implementation, and leave the app buildable on macOS and generic iOS. Do not mix new product features into these phases unless they directly support the phase goal.
+
+### Phase 1: Reduce File Size And Nesting
+
+Goal: make the codebase easier to navigate and lower the chance of layout or command bugs caused by large files and deeply nested SwiftUI bodies.
+
+Scope:
+
+- Continue splitting large SwiftUI files by stable sections:
+  - `Features/Tasks`: editor shell, parent picker, checklist editor, symbol/color picker.
+  - `Features/Home`: empty states, range header, remaining feature-specific row groups.
+- Any SwiftUI `body` that needs more than three nested layout containers should extract named subviews or small helper builders.
+- No behavior change is expected in this phase.
+
+Tests and checks:
+
+- Existing unit tests must keep passing.
+- Generic iOS build must keep passing after file moves.
+- `xcodebuild -list -project timetracker.xcodeproj` must still show the shared `timetracker` app scheme after filesystem moves.
+- Add behavior tests only when extracting code reveals undocumented behavior.
+
+Completed in this phase:
+
+- `Models/TimeTrackerModels.swift` was split into domain model files for task, ledger, pomodoro, checklist, preferences, countdown events, summaries, and schema registration.
+- `Commands/DomainCommands.swift` was split into command-owner files for timer, task, checklist, pomodoro, ledger, preference, and countdown writes.
+- `Features/Pomodoro/PomodoroViews.swift` was split into setup, active-run, and recent-ledger view files.
+- `Features/Inspector/InspectorViews.swift` was split into info, panels, actions, and summary view files.
+- `Features/Tasks/TasksViews.swift` now owns the task-management screen shell while task list rows and progress lines live in `TaskManagementRowViews.swift`.
+- `Features/Home/HomeTimelineViews.swift` now owns timeline/timer section composition while active timer rows, paused rows, and timeline rows live in dedicated files.
+- `Features/Analytics/AnalyticsTimelineViews.swift` now keeps chart composition separate from reusable timeline support shapes and lane entries.
+- `App/ContentView.swift` now keeps app shell responsibilities separate from macOS focused-scene action definitions.
+- Core tests were split by subsystem so command handlers, refresh planning, ledger refresh, performance budgets, preferences, and checklist forecast rules are easier to find.
+
+Exit criteria:
+
+- No production Swift file should exceed roughly 350 lines unless it is a generated or intentionally table-like resource.
+- The largest test files should be split by subsystem until a developer can find ledger, forecast, analytics, localization, and UI contract tests without scanning one giant file.
+- `Architecture.md` ownership guidance remains accurate after moves.
+
+### Phase 2: UI Design System And Interaction Consistency
+
+Goal: make the app feel like one native Apple productivity app instead of several independently styled screens.
+
+Scope:
+
+- Create or finish shared components in `SharedUI`:
+  - section headers
+  - metric rows
+  - task rows
+  - checklist rows
+  - inline add rows
+  - empty states
+  - info popovers
+  - settings rows
+  - compact action rows
+- Prefer system controls before custom drawing:
+  - `List`, `Form`, `Table`, `NavigationSplitView`, `.inspector`, `Menu`, `Picker`, native toolbar items, and system button styles.
+- Establish responsive layout policies for:
+  - compact iPhone
+  - regular iPad landscape
+  - macOS windowed mode
+  - narrow macOS windows
+- Normalize spacing and hierarchy:
+  - one title scale per screen
+  - one row height family per list
+  - one metric-card style
+  - one primary action style
+  - one destructive action style
+- Remove confusing copy and internal terms from UI. User-facing text should explain what will happen, not name implementation concepts.
+- Review animation sources. Any animation that is not clearly improving comprehension should be removed or delegated to system list/form transitions.
+
+Tests and checks:
+
+- Add UI contract tests for key responsive decisions instead of screenshot-perfect assertions.
+- Keep localization parity across English, Simplified Chinese, and Traditional Chinese.
+- Add macOS UI smoke checks for settings window, inspector visibility, task editing, and timeline navigation.
+
+Exit criteria:
+
+- Home, Tasks, Pomodoro, Analytics, Settings, Sidebar, and Inspector use shared row/card/control styles where they present the same kind of information.
+- iPhone layouts avoid horizontal crowding by using two-line rows where needed.
+- iPad and macOS layouts keep alignment and column behavior stable while resizing.
+
+### Phase 3: Sync Reliability And User Feedback
+
+Goal: make iCloud-backed data feel trustworthy and understandable to ordinary users.
+
+Scope:
+
+- Define user-visible sync states:
+  - available
+  - syncing
+  - recently synced
+  - offline
+  - needs restart for storage mode change
+  - failed with recoverable message
+- Add explicit feedback for settings actions:
+  - force sync
+  - iCloud on/off changes
+  - import/export
+  - database optimize
+  - demo data clearing
+- Keep all user-facing settings in `SyncedPreference`; local-only technical state must stay explicitly documented.
+- Add conflict-handling documentation for:
+  - duplicate active timers from different devices
+  - checklist changes arriving while the editor is open
+  - deleted task with existing ledger history
+  - changed preference values across devices
+- Keep command handlers idempotent where possible so Watch, Widget, Live Activity, and future App Intents can reuse the same actions.
+
+Tests and checks:
+
+- Unit-test preference mirroring and migration.
+- Add repository/command tests for repeated start/stop/toggle commands.
+- Add simulated remote-import tests that verify refresh plans stay domain-sized.
+- Add manual device checklist for iPhone + iPad + Mac:
+  - create task on one device and see it on another
+  - start timer on one device and stop it on another
+  - change Pomodoro defaults and Quick Start pinned tasks
+  - add checklist and verify forecast refresh on both devices
+
+Exit criteria:
+
+- Sync failures produce visible, localized, non-technical user feedback.
+- Force sync has a clear success or failure result.
+- Remote changes do not trigger full app refresh unless the domain event requires it.
+
+### Phase 4: Analytics Scale And Runtime Smoothness
+
+Goal: make long histories and native animations stay smooth on real devices and on macOS.
+
+Scope:
+
+- Turn the current disposable day-bucket analytics cache into a documented summary-cache strategy:
+  - raw `TimeSegment` remains the fact layer
+  - daily/monthly/yearly summaries are rebuildable
+  - summary versioning allows recalculation after analytics rule changes
+- Add performance fixtures for:
+  - thousands of tasks
+  - tens of thousands of time segments
+  - deep task trees
+  - dense overlapping timers
+  - long checklist histories
+- Audit macOS animation and scrolling smoothness:
+  - verify whether hitches come from SwiftData fetches, derived-state recomputation, view identity churn, chart layout, or custom animations
+  - remove unnecessary explicit animations
+  - stabilize list row identities
+  - ensure active timer labels refresh only the text that changes
+  - avoid recomputing analytics or rollups from SwiftUI `body`
+- Prefer measured fixes over guessing:
+  - use Instruments Time Profiler for CPU hitches
+  - use SwiftUI body instrumentation or signposts around expensive refresh paths
+  - use Core Animation / animation hitches instruments for macOS animation drops
+  - compare Debug and Release because SwiftUI Debug builds exaggerate some slowness
+- Keep Today and Analytics visualizations readable with long histories:
+  - compact idle periods intentionally
+  - keep time labels legible on iPhone
+  - keep task distribution stable when tiny tasks are present
+  - avoid chart work while the view is not visible
+
+Tests and checks:
+
+- Add performance budget tests for large ledger range summaries and summary-cache invalidation.
+- Add UI automation smoke tests that exercise scrolling in Today, Tasks, and Analytics.
+- Add manual profiling checklist for macOS and real iPhone/iPad.
+- Run generic iOS build and macOS unit tests after summary-cache changes.
+
+Exit criteria:
+
+- Scrolling Today, Tasks, and Analytics on macOS does not visibly stutter with large seeded data in Release.
+- Timer start/pause/stop does not refresh unrelated domains.
+- Analytics Month/Year views render from cached summaries where possible.
+- The app remains correct after deleting summaries and rebuilding them from raw ledger rows.
+
 ## UI Rules
 
 The UI should feel like a native Apple productivity app: predictable navigation, system controls first, restrained custom drawing, and clear information hierarchy.

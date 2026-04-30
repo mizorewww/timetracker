@@ -11,174 +11,75 @@ struct SettingsView: View {
     @State private var syncCheckMessage: String?
     @State private var databaseOptimizationMessage: String?
 
-    private var minuteFormatter: NumberFormatter {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .none
-        formatter.minimum = 1
-        formatter.maximum = 480
-        return formatter
-    }
-
     var body: some View {
         Form {
-            Section {
-                Picker(AppStrings.localized("settings.appearance"), selection: preferredColorSchemeBinding) {
-                    Text(.app("settings.appearance.system")).tag("system")
-                    Text(.app("settings.appearance.light")).tag("light")
-                    Text(.app("settings.appearance.dark")).tag("dark")
-                }
-                .pickerStyle(.segmented)
+            DisplayTimingSettingsSection(
+                preferredColorScheme: preferredColorSchemeBinding,
+                allowParallelTimers: allowParallelTimersBinding,
+                showGrossAndWallTogether: showGrossAndWallTogetherBinding
+            )
 
-                Toggle(AppStrings.localized("settings.allowParallelTimers"), isOn: allowParallelTimersBinding)
-                Toggle(AppStrings.localized("settings.showWallGross"), isOn: showGrossAndWallTogetherBinding)
-            } header: {
-                SettingsHeader(symbol: "paintbrush.pointed.fill", title: AppStrings.localized("settings.displayTiming"))
-            } footer: {
-                Text(.app("settings.displayTiming.footer"))
+            PomodoroSettingsSection(
+                defaultMode: pomodoroDefaultModeBinding,
+                focusMinutes: defaultFocusMinutesBinding,
+                breakMinutes: defaultBreakMinutesBinding,
+                rounds: defaultPomodoroRoundsBinding
+            ) { preset in
+                store.setDefaultFocusMinutes(preset.focusMinutes)
+                store.setDefaultBreakMinutes(preset.breakMinutes)
             }
 
-            Section {
-                Picker(AppStrings.localized("settings.defaultMode"), selection: pomodoroDefaultModeBinding) {
-                    ForEach(PomodoroPreset.allCases) { preset in
-                        Text(preset.title).tag(preset.rawValue)
-                    }
-                }
-                .onChange(of: store.preferences.pomodoroDefaultMode) { _, newValue in
-                    guard let preset = PomodoroPreset(rawValue: newValue), preset != .custom else { return }
-                    store.setDefaultFocusMinutes(preset.focusMinutes)
-                    store.setDefaultBreakMinutes(preset.breakMinutes)
-                }
-
-                TextField(AppStrings.localized("settings.focusMinutes"), value: defaultFocusMinutesBinding, formatter: minuteFormatter)
-                TextField(AppStrings.localized("settings.breakMinutes"), value: defaultBreakMinutesBinding, formatter: minuteFormatter)
-                TextField(AppStrings.localized("settings.defaultRounds"), value: defaultPomodoroRoundsBinding, formatter: minuteFormatter)
-            } header: {
-                SettingsHeader(symbol: "timer", title: AppStrings.pomodoro)
-            } footer: {
-                Text(.app("settings.pomodoro.footer"))
-            }
-
-            Section {
-                if store.countdownEvents.isEmpty {
-                    Text(.app("settings.countdown.empty"))
-                        .foregroundStyle(.secondary)
-                }
-
-                ForEach(store.countdownEvents) { event in
-                    CountdownEventSettingsRow(
-                        event: event,
-                        onChangeTitle: { title in
-                            store.updateCountdownEvent(event, title: title)
-                        },
-                        onChangeDate: { date in
-                            store.updateCountdownEvent(event, date: date)
-                        },
-                        onDelete: {
-                            store.deleteCountdownEvent(event)
-                        }
-                    )
-                }
-
-                Button {
+            CountdownSettingsSection(
+                events: store.countdownEvents,
+                onChangeTitle: { event, title in
+                    store.updateCountdownEvent(event, title: title)
+                },
+                onChangeDate: { event, date in
+                    store.updateCountdownEvent(event, date: date)
+                },
+                onDelete: { event in
+                    store.deleteCountdownEvent(event)
+                },
+                onAdd: {
                     store.addCountdownEvent()
-                } label: {
-                    Label(AppStrings.localized("settings.countdown.add"), systemImage: "plus")
                 }
-            } header: {
-                SettingsHeader(symbol: "calendar.badge.clock", title: AppStrings.localized("settings.countdown"))
-            } footer: {
-                Text(.app("settings.countdown.footer"))
-            }
+            )
 
-            Section {
-                Button {
+            DataSettingsSection(
+                onExport: {
                     isExportPresented = true
-                } label: {
-                    Label(AppStrings.localized("settings.exportCSV"), systemImage: "square.and.arrow.down")
-                }
-
-                Button {
+                },
+                onAddTime: {
                     store.presentManualTime()
-                } label: {
-                    Label(AppStrings.addTime, systemImage: "calendar.badge.plus")
-                }
-
-                Button(role: .destructive) {
+                },
+                onOptimize: {
                     isOptimizeConfirmationPresented = true
-                } label: {
-                    Label(AppStrings.localized("settings.optimizeDatabase"), systemImage: "externaldrive.badge.checkmark")
                 }
-            } header: {
-                SettingsHeader(symbol: "doc.text.fill", title: AppStrings.localized("settings.data"))
-            } footer: {
-                Text(.app("settings.data.footer"))
-            }
+            )
 
-            Section {
-                Toggle(isOn: cloudSyncEnabledBinding) {
-                    Label(AppStrings.localized("settings.icloud"), systemImage: "icloud")
-                }
+            SyncSettingsSection(
+                cloudSyncEnabled: cloudSyncEnabledBinding,
+                currentStorageValue: currentStorageValue,
+                isCheckingSync: isCheckingSync,
+                onCheckSync: checkSyncStatus,
+                onForceSync: forceSyncRefresh
+            )
 
-                LabeledContent(
-                    AppStrings.localized("settings.currentStorage"),
-                    value: store.preferences.cloudSyncEnabled ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud")) : AppStrings.localized("settings.local")
-                )
-
-                Button {
-                    isCheckingSync = true
-                    Task {
-                        await store.refreshCloudAccountStatus()
-                        syncCheckMessage = store.syncStatus.accountStatus
-                        isCheckingSync = false
-                    }
-                } label: {
-                    Label(isCheckingSync ? AppStrings.localized("settings.checking") : AppStrings.localized("settings.checkSync"), systemImage: "arrow.clockwise")
-                }
-                .disabled(isCheckingSync)
-
-                Button {
-                    isCheckingSync = true
-                    Task {
-                        syncCheckMessage = await store.forceCloudSyncRefresh()
-                        isCheckingSync = false
-                    }
-                } label: {
-                    Label(AppStrings.localized("settings.forceSync"), systemImage: "arrow.clockwise.icloud")
-                }
-                .disabled(isCheckingSync)
-            } header: {
-                SettingsHeader(symbol: "icloud.fill", title: AppStrings.localized("settings.sync"))
-            } footer: {
-                Text(.app("settings.sync.footer"))
-            }
-
-            Section {
-                LabeledContent(AppStrings.tasks, value: "\(store.tasks.count)")
-                LabeledContent(AppStrings.localized("settings.timeRecords"), value: "\(store.allSegments.count)")
-                LabeledContent(AppStrings.pomodoro, value: "\(store.pomodoroRuns.count)")
-                LabeledContent(AppStrings.localized("settings.cloudAccount"), value: store.syncStatus.accountStatus)
-                LabeledContent(AppStrings.localized("settings.icloudContainer"), value: store.syncStatus.containerIdentifier)
-                Button(AppStrings.localized("settings.rebuildDemoData"), role: .destructive) {
+            MaintenanceSettingsSection(
+                taskCount: store.tasks.count,
+                timeRecordCount: store.allSegments.count,
+                pomodoroCount: store.pomodoroRuns.count,
+                cloudAccount: store.syncStatus.accountStatus,
+                cloudContainer: store.syncStatus.containerIdentifier,
+                onRebuildDemoData: {
                     isResetConfirmationPresented = true
-                }
-                Button(AppStrings.localized("settings.clearDemoData"), role: .destructive) {
+                },
+                onClearDemoData: {
                     isClearConfirmationPresented = true
                 }
-            } header: {
-                SettingsHeader(symbol: "wrench.and.screwdriver.fill", title: AppStrings.localized("settings.maintenance"))
-            }
+            )
 
-            Section {
-                AboutAppSummary()
-                LabeledContent(AppStrings.localized("settings.about.version"), value: AppBuildInfo.versionSummary)
-                LabeledContent(AppStrings.localized("settings.about.branch"), value: AppBuildInfo.gitBranch)
-                LabeledContent(AppStrings.localized("settings.about.commit"), value: AppBuildInfo.gitCommit + (AppBuildInfo.isDirtyBuild ? " *" : ""))
-                LabeledContent(AppStrings.localized("settings.about.built"), value: AppBuildInfo.buildDate)
-            } header: {
-                SettingsHeader(symbol: "info.circle.fill", title: AppStrings.localized("settings.about"))
-            } footer: {
-                Text(.app("settings.about.footer"))
-            }
+            AboutSettingsSection()
         }
         .formStyle(.grouped)
         .navigationTitle(AppStrings.settings)
@@ -231,6 +132,29 @@ struct SettingsView: View {
             }
         } message: {
             Text(databaseOptimizationMessage ?? "")
+        }
+    }
+
+    private var currentStorageValue: String {
+        store.preferences.cloudSyncEnabled
+            ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud"))
+            : AppStrings.localized("settings.local")
+    }
+
+    private func checkSyncStatus() {
+        isCheckingSync = true
+        Task {
+            await store.refreshCloudAccountStatus()
+            syncCheckMessage = store.syncStatus.accountStatus
+            isCheckingSync = false
+        }
+    }
+
+    private func forceSyncRefresh() {
+        isCheckingSync = true
+        Task {
+            syncCheckMessage = await store.forceCloudSyncRefresh()
+            isCheckingSync = false
         }
     }
 

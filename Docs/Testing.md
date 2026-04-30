@@ -43,6 +43,7 @@ Signed export:
 - Store refresh planning: each user invalidation event must map to domain-sized refresh scopes, carry affected task IDs where available, and combined invalidations must not silently escalate to a full refresh.
 - Command handlers: durable writes such as timer, task, pomodoro, ledger, countdown, checklist, and preference changes must have behavior tests at the command boundary before UI wiring changes.
 - Project structure: app and extension schemes must remain shared and source-controlled; filesystem moves should be followed by `xcodebuild -list` plus a generic iOS build.
+- Project map: semantic folder moves should update `Docs/ProjectMap.md`, and source layout tests should keep the map aligned with current folders and feature entry points.
 - Month analytics labels using real day numbers rather than repeated weekday names.
 - Localization key parity across English, Simplified Chinese, and Traditional Chinese.
 - No hard-coded Chinese text in Swift source files.

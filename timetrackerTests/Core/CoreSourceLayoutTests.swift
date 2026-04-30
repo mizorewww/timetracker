@@ -25,6 +25,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
+            "timetracker/Features/Settings/SettingsSectionsViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Inspector/Sections/InspectorInfoViews.swift"
         ]
@@ -39,5 +40,49 @@ struct CoreSourceLayoutTests {
         .filter { $0.hasPrefix("TimeTrackerStore+") }
 
         #expect(flatStoreExtensions.isEmpty)
+    }
+
+    @Test
+    func projectMapDocumentsPrimaryFoldersAndEntryPoints() throws {
+        let map = try sourceText("Docs/ProjectMap.md")
+        let requiredFolders = [
+            "`timetracker/App`",
+            "`timetracker/Models`",
+            "`timetracker/Repositories`",
+            "`timetracker/Commands`",
+            "`timetracker/Stores/Facade`",
+            "`timetracker/Stores/Domains`",
+            "`timetracker/Stores/Refresh`",
+            "`timetracker/Services/Analytics`",
+            "`timetracker/Services/Forecasting`",
+            "`timetracker/Services/Tasks`",
+            "`timetracker/Features/Home`",
+            "`timetracker/Features/Tasks`",
+            "`timetracker/Features/Analytics`",
+            "`timetracker/Features/Settings`",
+            "`timetracker/SharedUI/Foundation`",
+            "`timetracker/SharedUI/Components`"
+        ]
+
+        for folder in requiredFolders {
+            #expect(map.contains(folder))
+        }
+
+        let requiredEntryPoints = [
+            "Start/pause/resume/stop timer behavior",
+            "Task create/edit/move/delete",
+            "Checklist UI or persistence",
+            "Forecast math",
+            "Analytics chart data",
+            "Today layout",
+            "Settings",
+            "iCloud/user settings sync",
+            "Live Activity display",
+            "Localization"
+        ]
+
+        for entryPoint in requiredEntryPoints {
+            #expect(map.contains(entryPoint))
+        }
     }
 }

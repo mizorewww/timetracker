@@ -40,6 +40,7 @@ final class TimeTrackerStore: ObservableObject {
     @Published var selectedTaskPulseID: UUID?
     @Published var selectedTaskPulseToken = UUID()
     @Published var cloudAccountStatus: String = AppCloudSync.accountStatus
+    @Published var lastSyncRefreshAt: Date?
 
     enum RangePreset: String, CaseIterable, Identifiable {
         case today = "Today"

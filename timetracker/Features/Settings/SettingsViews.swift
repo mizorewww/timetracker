@@ -60,6 +60,7 @@ struct SettingsView: View {
             SyncSettingsSection(
                 cloudSyncEnabled: cloudSyncEnabledBinding,
                 currentStorageValue: currentStorageValue,
+                feedback: syncFeedback,
                 isCheckingSync: isCheckingSync,
                 onCheckSync: checkSyncStatus,
                 onForceSync: forceSyncRefresh
@@ -139,6 +140,14 @@ struct SettingsView: View {
         store.preferences.cloudSyncEnabled
             ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud"))
             : AppStrings.localized("settings.local")
+    }
+
+    private var syncFeedback: SyncFeedback {
+        store.syncStatus.feedback(
+            preferences: store.preferences,
+            isChecking: isCheckingSync,
+            lastRefreshAt: store.lastSyncRefreshAt
+        )
     }
 
     private func checkSyncStatus() {

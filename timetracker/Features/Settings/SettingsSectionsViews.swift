@@ -131,12 +131,15 @@ struct DataSettingsSection: View {
 struct SyncSettingsSection: View {
     let cloudSyncEnabled: Binding<Bool>
     let currentStorageValue: String
+    let feedback: SyncFeedback
     let isCheckingSync: Bool
     let onCheckSync: () -> Void
     let onForceSync: () -> Void
 
     var body: some View {
         Section {
+            SettingsStatusRow(feedback: feedback)
+
             Toggle(isOn: cloudSyncEnabled) {
                 Label(AppStrings.localized("settings.icloud"), systemImage: "icloud")
             }

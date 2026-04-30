@@ -92,6 +92,63 @@ struct PreferencesChecklistForecastTests {
         #expect(defaults.bool(forKey: AppCloudSync.enabledKey) == false)
     }
 
+    @Test
+    func syncFeedbackExplainsUserVisibleState() {
+        let now = Date(timeIntervalSinceReferenceDate: 100_000)
+        var preferences = AppPreferences.defaults
+        preferences.cloudSyncEnabled = true
+
+        let cloudStatus = SyncStatus(
+            mode: "iCloud",
+            containerIdentifier: "iCloud.test",
+            deviceID: "test",
+            lastError: nil,
+            accountStatus: "Available"
+        )
+        let recentFeedback = cloudStatus.feedback(
+            preferences: preferences,
+            isChecking: false,
+            lastRefreshAt: now.addingTimeInterval(-45),
+            now: now
+        )
+        #expect(recentFeedback.state == .recentlySynced)
+        #expect(recentFeedback.message.isEmpty == false)
+
+        let checkingFeedback = cloudStatus.feedback(
+            preferences: preferences,
+            isChecking: true,
+            lastRefreshAt: nil,
+            now: now
+        )
+        #expect(checkingFeedback.state == .syncing)
+
+        preferences.cloudSyncEnabled = false
+        let restartFeedback = cloudStatus.feedback(
+            preferences: preferences,
+            isChecking: false,
+            lastRefreshAt: nil,
+            now: now
+        )
+        #expect(restartFeedback.state == .needsRestart)
+
+        let failedStatus = SyncStatus(
+            mode: "Local fallback",
+            containerIdentifier: "iCloud.test",
+            deviceID: "test",
+            lastError: "CloudKit failed",
+            accountStatus: "Available"
+        )
+        preferences.cloudSyncEnabled = true
+        let failedFeedback = failedStatus.feedback(
+            preferences: preferences,
+            isChecking: false,
+            lastRefreshAt: nil,
+            now: now
+        )
+        #expect(failedFeedback.state == .failed)
+        #expect(failedFeedback.message.contains("CloudKit failed"))
+    }
+
     @Test @MainActor
     func checklistDraftsPersistCompletionSortingAndSoftDelete() throws {
         let context = try makeTestContext()

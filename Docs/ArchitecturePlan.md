@@ -306,6 +306,12 @@ Exit criteria:
 - Force sync has a clear success or failure result.
 - Remote changes do not trigger full app refresh unless the domain event requires it.
 
+Completed so far:
+
+- `SyncStatus.feedback(...)` maps technical persistence/account details into user-facing states: available, syncing, recently refreshed, offline/local, needs restart, failed, and local-only.
+- Settings now shows a native status row before the iCloud toggle, so check/force-sync actions have visible context instead of only exposing raw account strings.
+- Sync feedback copy is localized in English, Simplified Chinese, and Traditional Chinese, with tests covering state transitions and UI wiring.
+
 ### Phase 4: Analytics Scale And Runtime Smoothness
 
 Goal: make long histories and native animations stay smooth on real devices and on macOS.

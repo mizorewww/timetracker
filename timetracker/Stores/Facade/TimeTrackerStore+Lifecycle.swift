@@ -49,6 +49,7 @@ extension TimeTrackerStore {
     func refreshCloudAccountStatus() async {
         await AppCloudSync.refreshAccountStatus()
         cloudAccountStatus = AppCloudSync.accountStatus
+        lastSyncRefreshAt = Date()
     }
 
 
@@ -170,6 +171,7 @@ extension TimeTrackerStore {
             guard let self else { return }
             do {
                 try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))
+                lastSyncRefreshAt = Date()
             } catch {
                 errorMessage = error.localizedDescription
             }

@@ -345,10 +345,14 @@ struct HomeUIContractTests {
     func settingsActionRowsUseSharedComponent() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
         let settingsSource = try sourceText("timetracker/Features/Settings/SettingsSectionsViews.swift")
+        let settingsShellSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
 
         #expect(sharedSource.contains("struct SettingsActionLabel"))
+        #expect(sharedSource.contains("struct SettingsStatusRow"))
         #expect(sharedSource.contains(".font(.body)"))
         #expect(settingsSource.contains("SettingsActionLabel("))
+        #expect(settingsSource.contains("SettingsStatusRow(feedback: feedback)"))
+        #expect(settingsShellSource.contains("store.syncStatus.feedback("))
         #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportCSV\")") == false)
         #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceSync\")") == false)
         #expect(settingsSource.contains("Button(role: .destructive, action: onRebuildDemoData) {\n                Text(") == false)

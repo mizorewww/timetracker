@@ -6,6 +6,56 @@ import Testing
 @Suite(.serialized)
 struct CoreRefactorTests {
     @Test @MainActor
+    func deletingSelectedTaskPreservesCurrentDestination() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Delete in Tasks", parentID: nil, colorHex: nil, iconName: nil)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.desktopDestination = .tasks
+        store.selectTask(task.id, revealInToday: false)
+
+        store.deleteSelectedTask(taskID: task.id)
+
+        #expect(store.desktopDestination == .tasks)
+        #expect(store.selectedTaskID == nil)
+    }
+
+    @Test @MainActor
+    func taskPageDeleteCanPreserveTasksDestinationEvenAfterSelectionRevealedToday() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Delete from row", parentID: nil, colorHex: nil, iconName: nil)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.desktopDestination = .today
+        store.selectTask(task.id)
+
+        store.deleteSelectedTask(taskID: task.id, preservingDestination: .tasks)
+
+        #expect(store.desktopDestination == .tasks)
+        #expect(store.selectedTaskID == nil)
+    }
+
+    @Test @MainActor
+    func taskPageCreatePreservesTasksDestinationAfterSelectingNewTask() throws {
+        let context = try makeTestContext()
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.desktopDestination = .tasks
+        store.presentNewTask(preservingDestination: .tasks)
+        var draft = try #require(store.taskEditorDraft)
+        draft.title = "Created from Tasks"
+
+        store.saveTaskDraft(draft)
+
+        #expect(store.desktopDestination == .tasks)
+        #expect(store.selectedTask?.title == "Created from Tasks")
+        #expect(store.taskEditorDraft == nil)
+        #expect(store.taskEditorReturnDestination == nil)
+    }
+
+    @Test @MainActor
     func analyticsSnapshotCompactsDenseOverlapsWithSweepLine() {
         let start = Date(timeIntervalSince1970: 10_000)
         let tasks = (0..<5).map { index in

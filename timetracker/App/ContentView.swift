@@ -158,7 +158,7 @@ struct iPadRootView: View {
                 .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        if columnVisibility != .all {
+                        if columnVisibility == .detailOnly {
                             Button {
                                 columnVisibility = .all
                             } label: {
@@ -190,7 +190,9 @@ struct iPadRootView: View {
         .navigationSplitViewStyle(.balanced)
         .accessibilityIdentifier("ipad.splitNavigation")
         .onAppear {
-            isInspectorPresented = inspectorIsRelevant
+            if !inspectorIsRelevant {
+                isInspectorPresented = false
+            }
         }
         .onChange(of: store.desktopDestination) { _, _ in
             updateInspectorVisibility()
@@ -213,7 +215,9 @@ struct iPadRootView: View {
     }
 
     private func updateInspectorVisibility() {
-        isInspectorPresented = inspectorIsRelevant
+        if !inspectorIsRelevant {
+            isInspectorPresented = false
+        }
     }
 }
 #endif

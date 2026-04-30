@@ -1,11 +1,16 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func presentNewTask(parentID: UUID? = nil) {
+    func presentNewTask(
+        parentID: UUID? = nil,
+        preservingDestination: DesktopDestination? = nil
+    ) {
+        taskEditorReturnDestination = preservingDestination ?? desktopDestination
         taskEditorDraft = TaskEditorDraft(parentID: parentID)
     }
 
     func presentEditTask(_ task: TaskNode) {
+        taskEditorReturnDestination = desktopDestination
         taskEditorDraft = TaskEditorDraft(task: task, checklistItems: checklistItems(for: task.id))
     }
 
@@ -21,15 +26,20 @@ extension TimeTrackerStore {
             .taskChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID)),
             .checklistChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID))
         ]) {
+            let returnDestination = taskEditorReturnDestination
             selectedTaskID = try taskDraftCommandHandler.save(
                 draft: draft,
                 sanitizedTitle: sanitizedTitle,
                 taskRepository: requiredTaskRepository(),
                 saveChecklistDrafts: saveChecklistDrafts
             )
+            if let returnDestination {
+                desktopDestination = returnDestination
+            }
         }
         if didSave {
             taskEditorDraft = nil
+            taskEditorReturnDestination = nil
         }
         return didSave
     }
@@ -53,14 +63,19 @@ extension TimeTrackerStore {
         }
     }
 
-    func deleteSelectedTask(taskID: UUID? = nil) {
+    func deleteSelectedTask(
+        taskID: UUID? = nil,
+        preservingDestination: DesktopDestination? = nil
+    ) {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
+        let destinationBeforeDelete = preservingDestination ?? desktopDestination
         perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
             try taskDraftCommandHandler.softDelete(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
-                self.selectedTaskID = tasks.first(where: { $0.id != targetID })?.id
+                self.selectedTaskID = nil
             }
+            self.desktopDestination = destinationBeforeDelete
         }
     }
 

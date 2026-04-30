@@ -127,7 +127,7 @@ Pure layout, formatting, and derivation logic belongs in `Services`, `Shared`, o
 
 Avoid root-level "miscellaneous" folders that collect unrelated files. If a file name needs a `+` extension suffix, it should usually live under the owning facade or feature directory instead of being left beside unrelated domain stores. If a directory grows beyond one ownership concept, split it by domain before adding more files.
 
-For the practical "where do I put this change?" map, start with `Docs/ProjectMap.md`. For the longer-term architecture roadmap and feature ownership map, see `Docs/ArchitecturePlan.md`.
+For the practical "where do I put this change?" map, start with `Docs/ProjectMap.md`. For the current architecture and feature ownership map, see `Docs/ArchitecturePlan.md`.
 
 Xcode shared schemes are source-controlled under `timetracker.xcodeproj/xcshareddata/xcschemes`. Do not rely on per-user scheme state for app builds; command-line builds and install scripts must be able to use `-scheme timetracker` from a clean checkout.
 

@@ -116,7 +116,7 @@ struct HomeUIContractTests {
         #expect(source.contains(".navigationSplitViewColumnWidth("))
         #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
         #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
-        #expect(source.contains("if columnVisibility != .all"))
+        #expect(source.contains("if columnVisibility == .detailOnly"))
         #expect(source.contains("\"sidebar.left\""))
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
         #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
@@ -197,11 +197,34 @@ struct HomeUIContractTests {
         let serviceSource = try sourceText("timetracker/Services/Tasks/TaskTreeServices.swift")
 
         #expect(source.contains("ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs))"))
+        #expect(source.contains("didExpandInitialTree"))
         #expect(source.contains("TaskManagementTreeRow") == false)
         #expect(source.contains("DisclosureGroup(") == false)
         #expect(serviceSource.contains("struct TaskTreeFlattener"))
         #expect(serviceSource.contains("TaskTreeRowModel"))
         #expect(source.contains("rotationEffect") == false)
+        #expect(source.contains(".transaction { transaction in\n            transaction.animation = nil\n        }"))
+    }
+
+    @Test
+    func longTaskAndAnalyticsPagesUseInlineTitlesToAvoidScrollJitter() throws {
+        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+
+        #expect(tasksSource.contains(".navigationTitle(AppStrings.tasks)"))
+        #expect(tasksSource.contains(".navigationBarTitleDisplayMode(.inline)"))
+        #expect(tasksSource.contains("store.presentNewTask(preservingDestination: .tasks)"))
+        #expect(analyticsSource.contains(".navigationTitle(AppStrings.analytics)"))
+        #expect(analyticsSource.contains(".navigationBarTitleDisplayMode(.inline)"))
+    }
+
+    @Test
+    func sidebarSelectionSyncDoesNotRevealProgrammaticTaskSelection() throws {
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+
+        #expect(sidebarSource.contains("@State private var isSyncingSelection = false"))
+        #expect(sidebarSource.contains("guard !isSyncingSelection else { return }"))
+        #expect(sidebarSource.contains("DispatchQueue.main.async"))
     }
 
     @Test
@@ -285,6 +308,7 @@ struct HomeUIContractTests {
         .joined(separator: "\n")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
+        #expect(tasksSource.contains("store.selectTask(task.id, revealInToday: false)"))
         #expect(tasksSource.contains("RunningStatusBadge()"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
@@ -305,13 +329,44 @@ struct HomeUIContractTests {
         #expect(editorSource.contains("ChecklistCompletionButton"))
         #expect(editorSource.contains("withAnimation(.snappy") == false)
         #expect(sharedSource.contains(".animation(") == false)
+        #expect(sharedSource.contains(".lineLimit(nil)"))
+        #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.checklist.itemPlaceholder\"), text: $item.title, axis: .vertical)"))
+        #expect(editorSource.contains("EditButton()") == false)
+        #expect(editorSource.contains("arrow.up.arrow.down.circle"))
         #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
         #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
         #expect(inspectorSource.contains("private struct ChecklistDisplayRow") == false)
         #expect(inspectorSource.contains("private struct InlineChecklistAddRow") == false)
         #expect(inspectorSource.contains("withAnimation(.snappy") == false)
-        #expect(inspectorSource.contains("visibleItems.prefix(5)"))
+        #expect(inspectorSource.contains("showsAllItems"))
+        #expect(inspectorSource.contains("EditButton()") == false)
+        #expect(inspectorSource.contains("List {") == false)
+        #expect(inspectorSource.contains("maxHeight: 360") == false)
+        #expect(englishStrings.contains("\"checklist.showLess\""))
         #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
+    }
+
+    @Test
+    func sidebarAndTaskRowsShareSwipeActions() throws {
+        let taskRowSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
+        let managementSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+
+        #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
+        #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
+        #expect(taskRowSource.contains("case iconOnly"))
+        #expect(managementSource.contains(".taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)"))
+        #expect(sidebarSource.contains(".taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)"))
+    }
+
+    @Test
+    func ipadSidebarButtonDoesNotOpenInspector() throws {
+        let contentSource = try sourceText("timetracker/App/ContentView.swift")
+        let ipadSource = try #require(contentSource.components(separatedBy: "struct DesktopRootView").first)
+
+        #expect(ipadSource.contains("if columnVisibility == .detailOnly"))
+        #expect(ipadSource.contains("columnVisibility = .all"))
+        #expect(ipadSource.contains("isInspectorPresented = inspectorIsRelevant") == false)
     }
 
     @Test

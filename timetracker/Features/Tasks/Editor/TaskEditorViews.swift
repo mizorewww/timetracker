@@ -11,6 +11,7 @@ struct TaskEditorSheet: View {
             initialDraft: initialDraft,
             onCancel: {
                 store.taskEditorDraft = nil
+                store.taskEditorReturnDestination = nil
                 dismiss()
             },
             onSave: { draft in
@@ -31,7 +32,7 @@ struct TaskEditorPanel: View {
     let onCancel: () -> Void
     let onSave: (TaskEditorDraft) -> Void
 
-    private let colors = ["1677FF", "16A34A", "7C3AED", "F97316", "EF4444", "0EA5E9", "64748B"]
+    private let colors = TaskColorPalette.hexValues
 
     init(store: TimeTrackerStore, initialDraft: TaskEditorDraft, onCancel: @escaping () -> Void, onSave: @escaping (TaskEditorDraft) -> Void) {
         self.store = store
@@ -95,10 +96,17 @@ struct TaskEditorPanel: View {
 
     private func moveChecklistItem(from source: Int, to destination: Int) {
         guard draft.checklistItems.indices.contains(source),
-              draft.checklistItems.indices.contains(destination) else {
+              draft.checklistItems.indices.contains(destination),
+              draft.checklistItems[source].isCompleted == draft.checklistItems[destination].isCompleted else {
             return
         }
-        draft.checklistItems.swapAt(source, destination)
+        var orderedDrafts = orderedChecklistIndices.map { draft.checklistItems[$0] }
+        guard let sourceVisualIndex = orderedDrafts.firstIndex(where: { $0.id == draft.checklistItems[source].id }),
+              let destinationVisualIndex = orderedDrafts.firstIndex(where: { $0.id == draft.checklistItems[destination].id }) else {
+            return
+        }
+        orderedDrafts.swapAt(sourceVisualIndex, destinationVisualIndex)
+        draft.checklistItems = orderedDrafts
     }
 
     private func moveChecklistItem(atVisualIndex visualIndex: Int, direction: Int) {
@@ -113,12 +121,17 @@ struct TaskEditorPanel: View {
 
     private func addChecklistItem(afterVisualIndex visualIndex: Int? = nil) {
         let newItem = ChecklistEditorDraft()
-        if let visualIndex {
-            let insertionIndex = min(visualIndex + 1, draft.checklistItems.count)
-            draft.checklistItems.insert(newItem, at: insertionIndex)
+        var orderedDrafts = orderedChecklistIndices.map { draft.checklistItems[$0] }
+        if let visualIndex,
+           orderedDrafts.indices.contains(visualIndex),
+           orderedDrafts[visualIndex].isCompleted == false {
+            orderedDrafts.insert(newItem, at: visualIndex + 1)
         } else {
-            draft.checklistItems.append(newItem)
+            let insertionIndex = orderedDrafts.firstIndex { $0.isCompleted } ?? orderedDrafts.count
+            orderedDrafts.insert(newItem, at: insertionIndex)
         }
+        draft.checklistItems = orderedDrafts
         focusedChecklistDraftID = newItem.id
     }
+
 }

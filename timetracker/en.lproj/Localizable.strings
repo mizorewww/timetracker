@@ -60,9 +60,9 @@
 "settings.countdown.add" = "Add Event";
 "settings.countdown.footer" = "Countdown events are optional. Add any date you want to see on Today.";
 "settings.exportCSV" = "Export CSV";
-"settings.optimizeDatabase" = "Optimize Database";
+"settings.optimizeDatabase" = "Clean Deleted Records";
 "settings.data" = "Data";
-"settings.data.footer" = "CSV exports tasks, paths, start and end times, duration, source, and notes. Optimize Database removes orphaned records for deleted tasks.";
+"settings.data.footer" = "CSV exports tasks, paths, start and end times, duration, source, and notes. Cleaning deleted records permanently removes time and pomodoro history for deleted tasks.";
 "settings.icloud" = "iCloud Sync";
 "settings.currentStorage" = "Current Storage";
 "settings.localWillRetryCloud" = "Local, retry iCloud after restart";
@@ -94,13 +94,13 @@
 "dialog.clearDemo.title" = "Clear demo data?";
 "dialog.clearDemo.confirm" = "Clear Demo Tasks and Records";
 "dialog.clearDemo.message" = "This removes tasks, time records, and pomodoros created by demo data. User-created records are kept.";
-"dialog.optimize.title" = "Optimize database?";
-"dialog.optimize.confirm" = "Delete Orphaned Records";
-"dialog.optimize.none" = "No orphaned records were found.";
-"dialog.optimize.removed" = "Removed %d orphaned records.";
-"dialog.optimize.message" = "Soft-deleted tasks keep their history. This action permanently deletes records whose task is no longer visible.";
+"dialog.optimize.title" = "Clean deleted task records?";
+"dialog.optimize.confirm" = "Delete Records";
+"dialog.optimize.none" = "No deleted-task records were found.";
+"dialog.optimize.removed" = "Removed %d deleted-task records.";
+"dialog.optimize.message" = "This permanently deletes time entries and pomodoro runs that belong to deleted or missing tasks. The deleted task tombstones stay in place for sync.";
 "alert.sync.title" = "iCloud Sync Status";
-"alert.optimize.title" = "Database Optimization";
+"alert.optimize.title" = "Deleted Records";
 "common.save" = "Save";
 "common.choose" = "Choose";
 "common.none" = "None";
@@ -341,6 +341,7 @@
 "checklist.progressFormat" = "%d/%d done";
 "checklist.noItems" = "No checklist";
 "checklist.moreFormat" = "%d more";
+"checklist.showLess" = "Show less";
 "checklist.keepCompletedHint" = "Keep completed items when possible; deleting them removes progress history used for estimates.";
 "editor.task.info" = "Info";
 "editor.task.name" = "Task Name";
@@ -351,6 +352,7 @@
 "editor.task.parent" = "Parent Task";
 "editor.task.rootLevel" = "Root";
 "editor.task.symbolColor" = "Symbol and Color";
+"editor.symbol.colorValue" = "Color %@";
 "editor.task.plan" = "Plan";
 "editor.task.estimate" = "Estimate";
 "editor.task.notSet" = "Not Set";
@@ -363,6 +365,7 @@
 "editor.checklist.newItem" = "New checklist item";
 "editor.checklist.itemPlaceholder" = "Checklist item";
 "editor.checklist.completed" = "Completed";
+"common.sort" = "Sort";
 "common.moveUp" = "Move Up";
 "common.moveDown" = "Move Down";
 "editor.task.notes" = "Notes";

@@ -4,6 +4,7 @@ struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var searchText = ""
     @State private var expansionState = TaskExpansionState()
+    @State private var didExpandInitialTree = false
 
     private var searchResults: [TaskNode] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -50,30 +51,38 @@ struct TasksView: View {
 
             Section {
                 Button {
-                    store.presentNewTask()
+                    store.presentNewTask(preservingDestination: .tasks)
                 } label: {
                     Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
                 }
             }
         }
         .navigationTitle(AppStrings.tasks)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
         .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
         #if os(iOS)
         .listStyle(.insetGrouped)
-        .scrollBounceBehavior(.basedOnSize)
         #else
         .listStyle(.inset)
         #endif
+        .transaction { transaction in
+            transaction.animation = nil
+        }
         .toolbar {
             Button {
-                store.presentNewTask()
+                store.presentNewTask(preservingDestination: .tasks)
             } label: {
                 Image(systemName: "plus")
             }
         }
         .onAppear {
-            for task in store.tasks {
-                expansionState.expand(task.id)
+            if !didExpandInitialTree {
+                for task in store.tasks {
+                    expansionState.expand(task.id)
+                }
+                didExpandInitialTree = true
             }
         }
     }

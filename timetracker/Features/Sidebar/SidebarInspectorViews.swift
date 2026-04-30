@@ -9,6 +9,7 @@ struct SidebarView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var selection: SidebarSelection?
     @State private var expansionState = TaskExpansionState()
+    @State private var isSyncingSelection = false
 
     private var destinations: [TimeTrackerStore.DesktopDestination] {
         #if os(macOS)
@@ -42,6 +43,7 @@ struct SidebarView: View {
             syncSelectionFromStore()
         }
         .onChange(of: selection) { _, newValue in
+            guard !isSyncingSelection else { return }
             guard let newValue else { return }
             switch newValue {
             case let .destination(destination):
@@ -67,6 +69,12 @@ struct SidebarView: View {
     }
 
     private func syncSelectionFromStore() {
+        isSyncingSelection = true
+        defer {
+            DispatchQueue.main.async {
+                isSyncingSelection = false
+            }
+        }
         if let selectedTaskID = store.selectedTaskID {
             for ancestorID in store.ancestorTaskIDs(for: selectedTaskID) {
                 expansionState.expand(ancestorID)
@@ -164,6 +172,7 @@ struct SidebarTaskTreeRow: View {
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
+        .taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)
     }
 }
 

@@ -187,4 +187,45 @@ struct PreferencesChecklistForecastTests {
         #expect(store.checklistItems(for: task.id).first?.isCompleted == false)
         #expect(store.checklistItems(for: task.id).first?.completedAt == nil)
     }
+
+    @Test
+    func checklistOrderingRejectsMovesAcrossCompletionBoundary() {
+        let service = ChecklistOrderingService()
+        let openA = UUID()
+        let openB = UUID()
+        let doneA = UUID()
+        let doneB = UUID()
+        let elements = [
+            ChecklistOrderingElement(id: openA, isCompleted: false),
+            ChecklistOrderingElement(id: openB, isCompleted: false),
+            ChecklistOrderingElement(id: doneA, isCompleted: true),
+            ChecklistOrderingElement(id: doneB, isCompleted: true)
+        ]
+
+        #expect(service.reorderedIDs(elements: elements, sourceOffsets: IndexSet(integer: 1), destination: 0) == [openB, openA, doneA, doneB])
+        #expect(service.reorderedIDs(elements: elements, sourceOffsets: IndexSet(integer: 1), destination: 3) == nil)
+        #expect(service.reorderedIDs(elements: elements, sourceOffsets: IndexSet(integer: 2), destination: 1) == nil)
+        #expect(service.reorderedIDs(elements: elements, sourceOffsets: IndexSet(integer: 2), destination: 4) == [openA, openB, doneB, doneA])
+    }
+
+    @Test @MainActor
+    func checklistReorderPersistsWithinCompletionGroups() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Checklist Order", parentID: nil, colorHex: nil, iconName: nil)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        store.addChecklistItem(taskID: task.id, title: "Open A")
+        store.addChecklistItem(taskID: task.id, title: "Open B")
+        store.addChecklistItem(taskID: task.id, title: "Done A")
+        let doneA = try #require(store.checklistItems(for: task.id).last)
+        store.toggleChecklistItem(doneA)
+
+        store.reorderChecklistItems(taskID: task.id, sourceOffsets: IndexSet(integer: 1), destination: 0)
+        #expect(store.checklistItems(for: task.id).map(\.title) == ["Open B", "Open A", "Done A"])
+
+        store.reorderChecklistItems(taskID: task.id, sourceOffsets: IndexSet(integer: 1), destination: 3)
+        #expect(store.checklistItems(for: task.id).map(\.title) == ["Open B", "Open A", "Done A"])
+    }
 }

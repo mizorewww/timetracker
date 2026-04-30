@@ -60,9 +60,9 @@
 "settings.countdown.add" = "添加事件";
 "settings.countdown.footer" = "倒计时事件可以为空，也可以添加任意多个日期。";
 "settings.exportCSV" = "导出 CSV";
-"settings.optimizeDatabase" = "优化数据库";
+"settings.optimizeDatabase" = "清理已删除记录";
 "settings.data" = "数据";
-"settings.data.footer" = "CSV 会导出任务、路径、开始时间、结束时间、时长、来源和备注。优化数据库会清理已删除任务留下的孤立记录。";
+"settings.data.footer" = "CSV 会导出任务、路径、开始时间、结束时间、时长、来源和备注。清理已删除记录会永久删除已删除任务的计时和番茄钟历史。";
 "settings.icloud" = "iCloud 同步";
 "settings.currentStorage" = "当前存储";
 "settings.localWillRetryCloud" = "本地，重启后尝试 iCloud";
@@ -94,13 +94,13 @@
 "dialog.clearDemo.title" = "清除演示数据？";
 "dialog.clearDemo.confirm" = "清除演示任务和记录";
 "dialog.clearDemo.message" = "这会删除由演示数据生成的任务、时间记录和番茄钟，不会主动删除你手动创建的记录。";
-"dialog.optimize.title" = "优化数据库？";
-"dialog.optimize.confirm" = "删除孤立记录";
-"dialog.optimize.none" = "没有发现需要清理的孤立记录。";
-"dialog.optimize.removed" = "已清理 %d 条孤立记录。";
-"dialog.optimize.message" = "任务软删除后，历史时间记录会保留。这个操作会永久删除已经没有可见任务归属的记录。";
+"dialog.optimize.title" = "清理已删除任务记录？";
+"dialog.optimize.confirm" = "删除记录";
+"dialog.optimize.none" = "没有发现已删除任务的记录。";
+"dialog.optimize.removed" = "已清理 %d 条已删除任务记录。";
+"dialog.optimize.message" = "这个操作会永久删除已删除或缺失任务对应的时间记录和番茄钟。任务删除标记会保留，用于同步。";
 "alert.sync.title" = "iCloud 同步状态";
-"alert.optimize.title" = "数据库优化";
+"alert.optimize.title" = "已删除记录";
 "common.save" = "保存";
 "common.choose" = "选择";
 "common.none" = "无";
@@ -341,6 +341,7 @@
 "checklist.progressFormat" = "已完成 %d/%d";
 "checklist.noItems" = "无清单";
 "checklist.moreFormat" = "还有 %d 项";
+"checklist.showLess" = "收起";
 "checklist.keepCompletedHint" = "尽量保留已完成项；删除它们会移除用于估算的进度历史。";
 "editor.task.info" = "基本信息";
 "editor.task.name" = "任务名称";
@@ -351,6 +352,7 @@
 "editor.task.parent" = "父任务";
 "editor.task.rootLevel" = "根级";
 "editor.task.symbolColor" = "符号与颜色";
+"editor.symbol.colorValue" = "颜色 %@";
 "editor.task.plan" = "计划";
 "editor.task.estimate" = "预计时长";
 "editor.task.notSet" = "未设置";
@@ -363,6 +365,7 @@
 "editor.checklist.newItem" = "新清单项";
 "editor.checklist.itemPlaceholder" = "清单项";
 "editor.checklist.completed" = "已完成";
+"common.sort" = "排序";
 "common.moveUp" = "上移";
 "common.moveDown" = "下移";
 "editor.task.notes" = "备注";

@@ -71,6 +71,7 @@ struct SymbolAndColorPicker: View {
                             }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(String(format: AppStrings.localized("editor.symbol.colorValue"), hex))
                 }
             }
         }

@@ -128,8 +128,8 @@ private struct TaskChecklistEditorSection: View {
         ForEach(Array(orderedChecklistIndices.enumerated()), id: \.element) { visualIndex, index in
             ChecklistEditorRow(
                 item: $checklistItems[index],
-                canMoveUp: visualIndex > 0,
-                canMoveDown: visualIndex < orderedChecklistIndices.count - 1,
+                canMoveUp: canMove(visualIndex: visualIndex, direction: -1),
+                canMoveDown: canMove(visualIndex: visualIndex, direction: 1),
                 moveUp: { moveChecklistItem(atVisualIndex: visualIndex, direction: -1) },
                 moveDown: { moveChecklistItem(atVisualIndex: visualIndex, direction: 1) },
                 delete: { checklistItems.remove(at: index) },
@@ -150,13 +150,25 @@ private struct TaskChecklistEditorSection: View {
     private func moveChecklistItem(atVisualIndex visualIndex: Int, direction: Int) {
         let targetVisualIndex = visualIndex + direction
         guard orderedChecklistIndices.indices.contains(visualIndex),
-              orderedChecklistIndices.indices.contains(targetVisualIndex) else {
+              orderedChecklistIndices.indices.contains(targetVisualIndex),
+              canMove(visualIndex: visualIndex, direction: direction) else {
             return
         }
         moveChecklistItem(
             orderedChecklistIndices[visualIndex],
             orderedChecklistIndices[targetVisualIndex]
         )
+    }
+
+    private func canMove(visualIndex: Int, direction: Int) -> Bool {
+        let targetVisualIndex = visualIndex + direction
+        guard orderedChecklistIndices.indices.contains(visualIndex),
+              orderedChecklistIndices.indices.contains(targetVisualIndex) else {
+            return false
+        }
+        let item = checklistItems[orderedChecklistIndices[visualIndex]]
+        let target = checklistItems[orderedChecklistIndices[targetVisualIndex]]
+        return item.isCompleted == target.isCompleted
     }
 }
 
@@ -277,8 +289,9 @@ struct ChecklistEditorRow: View {
                 item.isCompleted.toggle()
             }
 
-            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title)
+            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title, axis: .vertical)
                 .textFieldStyle(.plain)
+                .lineLimit(1...4)
                 .strikethrough(item.isCompleted)
                 .foregroundStyle(item.isCompleted ? .secondary : .primary)
                 .focused(focus, equals: item.id)
@@ -308,10 +321,11 @@ struct ChecklistEditorRow: View {
                     Label(AppStrings.delete, systemImage: "trash")
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Image(systemName: "arrow.up.arrow.down.circle")
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(AppStrings.localized("common.sort"))
         }
         .frame(minHeight: 44)
         .accessibilityElement(children: .contain)

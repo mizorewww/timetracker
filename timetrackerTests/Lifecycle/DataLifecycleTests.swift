@@ -6,18 +6,23 @@ import Testing
 @Suite(.serialized)
 struct DataLifecycleTests {
     @Test @MainActor
-    func optimizeDatabasePreservesLedgerRowsForSoftDeletedTasks() throws {
+    func optimizeDatabaseRemovesLedgerRowsForSoftDeletedTasks() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Temporary Client", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date().addingTimeInterval(-1_800)
-        _ = try timeRepository.addManualSegment(
+        let session = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
             endedAt: start.addingTimeInterval(900),
             note: nil
         )
+        let run = PomodoroRun(taskID: task.id, deviceID: "test")
+        run.sessionID = session.id
+        run.state = .completed
+        context.insert(run)
+        try context.save()
         try taskRepository.softDeleteTask(taskID: task.id)
 
         let store = TimeTrackerStore()
@@ -26,9 +31,11 @@ struct DataLifecycleTests {
 
         let removedCount = store.optimizeDatabase()
 
-        #expect(removedCount == 0)
-        #expect(try timeRepository.allSegments().count == 1)
-        #expect(try timeRepository.sessions().count == 1)
+        #expect(removedCount == 3)
+        #expect(try timeRepository.allSegments().isEmpty)
+        #expect(try timeRepository.sessions().isEmpty)
+        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).contains { $0.id == task.id && $0.deletedAt != nil })
     }
 
     @Test @MainActor

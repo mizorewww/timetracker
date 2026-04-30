@@ -24,6 +24,9 @@ struct AnalyticsView: View {
             }
         }
         .navigationTitle(AppStrings.analytics)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
         .background(AppColors.background)
         .task(id: range) {
             store.refreshAnalyticsSnapshot(for: range, now: now)
@@ -56,6 +59,9 @@ private struct AnalyticsContent: View {
                 AnalyticsOverlapCard(overlaps: snapshot.overlaps)
             }
             .padding()
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
 }

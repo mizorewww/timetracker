@@ -31,37 +31,9 @@ struct TaskManagementFlatRow: View {
             openTask()
         }
         .contextMenu {
-            TaskContextMenu(store: store, task: task)
+            TaskContextMenu(store: store, task: task, preservingDestination: .tasks)
         }
-        .swipeActions(edge: .leading) {
-            Button {
-                store.startTask(task)
-            } label: {
-                Label(AppStrings.localized("task.swipe.start"), systemImage: "play.fill")
-            }
-            .tint(.blue)
-
-            Button {
-                store.presentNewTask(parentID: task.id)
-            } label: {
-                Label(AppStrings.localized("task.swipe.subtask"), systemImage: "plus")
-            }
-            .tint(.green)
-        }
-        .swipeActions(edge: .trailing) {
-            Button {
-                store.presentEditTask(task)
-            } label: {
-                Label(AppStrings.edit, systemImage: "pencil")
-            }
-            .tint(.gray)
-
-            Button(role: .destructive) {
-                store.deleteSelectedTask(taskID: task.id)
-            } label: {
-                Label(AppStrings.delete, systemImage: "trash")
-            }
-        }
+        .taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)
         #if os(iOS)
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         #endif
@@ -104,7 +76,7 @@ struct TaskManagementFlatRow: View {
             return
         }
         #endif
-        store.selectTask(task.id)
+        store.selectTask(task.id, revealInToday: false)
     }
 }
 

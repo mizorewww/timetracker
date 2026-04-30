@@ -33,11 +33,13 @@ struct ChecklistDisplayRow: View {
 
     var body: some View {
         Button(action: toggle) {
-            HStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
                 ChecklistCompletionMark(isCompleted: isCompleted)
+                    .padding(.top, 1)
 
                 Text(title)
-                    .lineLimit(1)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                     .strikethrough(isCompleted)
                     .foregroundStyle(isCompleted ? .secondary : .primary)
                 Spacer(minLength: 0)
@@ -47,6 +49,9 @@ struct ChecklistDisplayRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .transaction { transaction in
+            transaction.animation = nil
+        }
     }
 }
 

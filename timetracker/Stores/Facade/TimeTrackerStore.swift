@@ -95,6 +95,7 @@ final class TimeTrackerStore: ObservableObject {
     var taskRepository: TaskRepository?
     var timeRepository: TimeTrackingRepository?
     var pomodoroRepository: PomodoroRepository?
+    var taskEditorReturnDestination: DesktopDestination?
     let aggregationService = TimeAggregationService()
     let analyticsEngine = AnalyticsEngine()
     let taskTreeService = TaskTreeService()

@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskContextMenu: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
+    var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
 
     var body: some View {
         Button {
@@ -12,7 +13,7 @@ struct TaskContextMenu: View {
         }
 
         Button {
-            store.presentNewTask(parentID: task.id)
+            store.presentNewTask(parentID: task.id, preservingDestination: preservingDestination)
         } label: {
             Label(AppStrings.localized("task.action.newSubtask"), systemImage: "plus")
         }
@@ -48,9 +49,83 @@ struct TaskContextMenu: View {
         }
 
         Button(role: .destructive) {
-            store.deleteSelectedTask(taskID: task.id)
+            store.deleteSelectedTask(taskID: task.id, preservingDestination: preservingDestination)
         } label: {
             Label(AppStrings.localized("task.action.softDelete"), systemImage: "trash")
         }
+    }
+}
+
+enum TaskRowSwipeLabelStyle {
+    case titleAndIcon
+    case iconOnly
+}
+
+struct TaskRowSwipeActions: ViewModifier {
+    @ObservedObject var store: TimeTrackerStore
+    let task: TaskNode
+    var labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon
+    var preservingDestination: TimeTrackerStore.DesktopDestination?
+
+    func body(content: Content) -> some View {
+        content
+            .swipeActions(edge: .leading) {
+                Button {
+                    store.startTask(task)
+                } label: {
+                    actionLabel(AppStrings.localized("task.swipe.start"), systemImage: "play.fill")
+                }
+                .tint(.blue)
+
+                Button {
+                    store.presentNewTask(parentID: task.id, preservingDestination: preservingDestination)
+                } label: {
+                    actionLabel(AppStrings.localized("task.swipe.subtask"), systemImage: "plus")
+                }
+                .tint(.green)
+            }
+            .swipeActions(edge: .trailing) {
+                Button {
+                    store.presentEditTask(task)
+                } label: {
+                    actionLabel(AppStrings.edit, systemImage: "pencil")
+                }
+                .tint(.gray)
+
+                Button(role: .destructive) {
+                    store.deleteSelectedTask(taskID: task.id, preservingDestination: preservingDestination)
+                } label: {
+                    actionLabel(AppStrings.delete, systemImage: "trash")
+                }
+            }
+    }
+
+    @ViewBuilder
+    private func actionLabel(_ title: String, systemImage: String) -> some View {
+        switch labelStyle {
+        case .titleAndIcon:
+            Label(title, systemImage: systemImage)
+        case .iconOnly:
+            Image(systemName: systemImage)
+                .accessibilityLabel(title)
+        }
+    }
+}
+
+extension View {
+    func taskRowSwipeActions(
+        store: TimeTrackerStore,
+        task: TaskNode,
+        labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon,
+        preservingDestination: TimeTrackerStore.DesktopDestination? = nil
+    ) -> some View {
+        modifier(
+            TaskRowSwipeActions(
+                store: store,
+                task: task,
+                labelStyle: labelStyle,
+                preservingDestination: preservingDestination
+            )
+        )
     }
 }

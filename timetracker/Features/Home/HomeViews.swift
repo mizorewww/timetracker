@@ -26,9 +26,6 @@ struct DesktopMainView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(AppColors.background)
-            #if os(iOS)
-            .scrollBounceBehavior(.basedOnSize)
-            #endif
         }
         .toolbar {
             ToolbarItemGroup {
@@ -75,9 +72,6 @@ struct PhoneHomeView: View {
         }
         .background(AppColors.background)
         .navigationTitle(AppStrings.today)
-        #if os(iOS)
-        .scrollBounceBehavior(.basedOnSize)
-        #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
         #endif

@@ -3,18 +3,34 @@ import SwiftData
 
 @MainActor
 enum SeedData {
+    static let automaticDemoSeedingDisabledKey = "TimeTrackerAutomaticDemoSeedingDisabled"
+
+    static var isAutomaticDemoSeedingDisabled: Bool {
+        UserDefaults.standard.bool(forKey: automaticDemoSeedingDisabledKey)
+    }
+
+    static func setAutomaticDemoSeedingDisabled(_ disabled: Bool) {
+        UserDefaults.standard.set(disabled, forKey: automaticDemoSeedingDisabledKey)
+    }
+
     static func ensureSeeded(context: ModelContext) throws {
+        guard !isAutomaticDemoSeedingDisabled else { return }
         let taskCount = try context.fetch(FetchDescriptor<TaskNode>()).count
         guard taskCount == 0 else { return }
         try buildDemoData(context: context)
     }
 
     static func replaceWithDemoData(context: ModelContext) throws {
-        try clearAll(context: context)
+        try clearAll(context: context, disablesAutomaticDemoSeeding: false)
         try buildDemoData(context: context)
+        setAutomaticDemoSeedingDisabled(false)
     }
 
     static func clearAll(context: ModelContext) throws {
+        try clearAll(context: context, disablesAutomaticDemoSeeding: true)
+    }
+
+    private static func clearAll(context: ModelContext, disablesAutomaticDemoSeeding: Bool) throws {
         for model in try context.fetch(FetchDescriptor<DailySummary>()) {
             context.delete(model)
         }
@@ -40,6 +56,9 @@ enum SeedData {
             context.delete(model)
         }
         try context.save()
+        if disablesAutomaticDemoSeeding {
+            setAutomaticDemoSeedingDisabled(true)
+        }
     }
 
     static func clearDemoData(context: ModelContext) throws {
@@ -49,9 +68,18 @@ enum SeedData {
             $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
         }
         let demoSessionIDs = Set(demoSessions.map(\.id))
+        let demoCategories = try context.fetch(FetchDescriptor<TaskCategory>()).filter { $0.deviceID == "demo" }
+        let demoCategoryIDs = Set(demoCategories.map(\.id))
+        let now = Date()
 
         for model in try context.fetch(FetchDescriptor<DailySummary>()) {
             context.delete(model)
+        }
+        for task in try context.fetch(FetchDescriptor<TaskNode>()) where task.deviceID != "demo" {
+            guard let categoryID = task.categoryID, demoCategoryIDs.contains(categoryID) else { continue }
+            task.categoryID = nil
+            task.updatedAt = now
+            task.clientMutationID = UUID()
         }
         for model in try context.fetch(FetchDescriptor<PomodoroRun>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) }) {
             context.delete(model)
@@ -68,10 +96,11 @@ enum SeedData {
         for model in demoTasks {
             context.delete(model)
         }
-        for model in try context.fetch(FetchDescriptor<TaskCategory>()).filter({ $0.deviceID == "demo" }) {
+        for model in demoCategories {
             context.delete(model)
         }
         try context.save()
+        setAutomaticDemoSeedingDisabled(true)
     }
 
     private static func buildDemoData(context: ModelContext) throws {

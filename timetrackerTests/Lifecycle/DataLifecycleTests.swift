@@ -69,6 +69,8 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func demoDataContainsMultiDayAnalyticsAndActiveTimers() throws {
+        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
         let context = try makeTestContext()
         try SeedData.replaceWithDemoData(context: context)
 
@@ -90,6 +92,8 @@ struct DataLifecycleTests {
 
     @Test @MainActor
     func replacingDemoDataClearsExistingLedgerBeforeSeeding() throws {
+        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -106,16 +110,20 @@ struct DataLifecycleTests {
         #expect(try taskRepository.allNodes().contains { $0.title == "Temporary Task" } == false)
         #expect(try timeRepository.allSegments().contains { $0.taskID == oldTask.id } == false)
         #expect(try timeRepository.activeSegments().count == 2)
+        #expect(SeedData.isAutomaticDemoSeedingDisabled == false)
     }
 
     @Test @MainActor
     func clearingDemoDataKeepsUserCreatedRecords() throws {
+        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
         let context = try makeTestContext()
         try SeedData.replaceWithDemoData(context: context)
 
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let userTask = try taskRepository.createTask(title: "Real Work", parentID: nil, colorHex: nil, iconName: nil)
+        let demoCategory = try #require(try taskRepository.categories().first { $0.deviceID == "demo" })
+        let userTask = try taskRepository.createTask(title: "Real Work", parentID: nil, categoryID: demoCategory.id, colorHex: nil, iconName: nil)
         _ = try timeRepository.addManualSegment(
             taskID: userTask.id,
             startedAt: Date().addingTimeInterval(-900),
@@ -126,8 +134,39 @@ struct DataLifecycleTests {
         try SeedData.clearDemoData(context: context)
 
         #expect(try taskRepository.allNodes().map(\.title) == ["Real Work"])
+        #expect(try taskRepository.task(id: userTask.id)?.categoryID == nil)
         #expect(try timeRepository.allSegments().count == 1)
         #expect(try timeRepository.activeSegments().isEmpty)
+        #expect(SeedData.isAutomaticDemoSeedingDisabled)
+    }
+
+    @Test @MainActor
+    func clearingDemoDataPreventsAutomaticReseedingOnNextLaunch() throws {
+        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        let context = try makeTestContext()
+
+        try SeedData.ensureSeeded(context: context)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty == false)
+
+        try SeedData.clearDemoData(context: context)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        #expect(SeedData.isAutomaticDemoSeedingDisabled)
+
+        try SeedData.ensureSeeded(context: context)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func rebuildingDemoDataReenablesAutomaticDemoSeeding() throws {
+        UserDefaults.standard.set(true, forKey: SeedData.automaticDemoSeedingDisabledKey)
+        defer { UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey) }
+        let context = try makeTestContext()
+
+        try SeedData.replaceWithDemoData(context: context)
+
+        #expect(SeedData.isAutomaticDemoSeedingDisabled == false)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty == false)
     }
 
     @Test @MainActor

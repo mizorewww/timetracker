@@ -13,16 +13,14 @@ struct InspectorActionButtons: View {
                     Button {
                         store.presentEditTask(task)
                     } label: {
-                        Label(AppStrings.edit, systemImage: "pencil")
-                            .frame(maxWidth: .infinity)
+                        AppActionLabel(title: AppStrings.edit, systemImage: "pencil")
                     }
                     .buttonStyle(.bordered)
 
                     Button {
                         store.archiveSelectedTask()
                     } label: {
-                        Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
-                            .frame(maxWidth: .infinity)
+                        AppActionLabel(title: AppStrings.localized("task.action.archive"), systemImage: "archivebox")
                     }
                     .buttonStyle(.bordered)
                 }
@@ -30,8 +28,7 @@ struct InspectorActionButtons: View {
                 Button(role: .destructive) {
                     store.deleteSelectedTask()
                 } label: {
-                    Label(AppStrings.localized("task.action.softDeleteTask"), systemImage: "trash")
-                        .frame(maxWidth: .infinity)
+                    AppActionLabel(title: AppStrings.localized("task.action.softDeleteTask"), systemImage: "trash")
                 }
                 .buttonStyle(.bordered)
             }
@@ -45,16 +42,14 @@ struct InspectorActionButtons: View {
                 Button {
                     store.pause(segment: segment)
                 } label: {
-                    Label(AppStrings.localized("timer.action.pause"), systemImage: "pause.fill")
-                        .frame(maxWidth: .infinity)
+                    AppActionLabel(title: AppStrings.localized("timer.action.pause"), systemImage: "pause.fill")
                 }
                 .buttonStyle(.bordered)
 
                 Button(role: .destructive) {
                     store.stop(segment: segment)
                 } label: {
-                    Label(AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
-                        .frame(maxWidth: .infinity)
+                    AppActionLabel(title: AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
                 }
                 .buttonStyle(.bordered)
             }
@@ -64,16 +59,14 @@ struct InspectorActionButtons: View {
                 Button {
                     store.resume(session: session)
                 } label: {
-                    Label(AppStrings.localized("timer.action.resume"), systemImage: "play.fill")
-                        .frame(maxWidth: .infinity)
+                    AppActionLabel(title: AppStrings.localized("timer.action.resume"), systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button(role: .destructive) {
                     store.stop(session: session)
                 } label: {
-                    Label(AppStrings.localized("timer.action.end"), systemImage: "stop.fill")
-                        .frame(maxWidth: .infinity)
+                    AppActionLabel(title: AppStrings.localized("timer.action.end"), systemImage: "stop.fill")
                 }
                 .buttonStyle(.bordered)
             }
@@ -82,8 +75,7 @@ struct InspectorActionButtons: View {
             Button {
                 store.startTask(task)
             } label: {
-                Label(AppStrings.localized("task.action.startTimer"), systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
+                AppActionLabel(title: AppStrings.localized("task.action.startTimer"), systemImage: "play.fill")
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -100,16 +92,14 @@ struct InspectorActionButtons: View {
                     Button {
                         store.resume(session: session)
                     } label: {
-                        Label(AppStrings.localized("pomodoro.action.resume"), systemImage: "play.fill")
-                            .frame(maxWidth: .infinity)
+                        AppActionLabel(title: AppStrings.localized("pomodoro.action.resume"), systemImage: "play.fill")
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
                     Button {
                         store.completeActivePomodoro()
                     } label: {
-                        Label(AppStrings.localized("pomodoro.action.completeRound"), systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity)
+                        AppActionLabel(title: AppStrings.localized("pomodoro.action.completeRound"), systemImage: "checkmark.circle.fill")
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -117,8 +107,7 @@ struct InspectorActionButtons: View {
                 Button(role: .destructive) {
                     store.cancelActivePomodoro()
                 } label: {
-                    Label(AppStrings.cancel, systemImage: "xmark.circle")
-                        .frame(maxWidth: .infinity)
+                    AppActionLabel(title: AppStrings.cancel, systemImage: "xmark.circle")
                 }
                 .buttonStyle(.bordered)
             }
@@ -127,8 +116,7 @@ struct InspectorActionButtons: View {
             Button {
                 store.startPomodoroForSelectedTask()
             } label: {
-                Label(AppStrings.localized("pomodoro.action.start"), systemImage: "timer")
-                    .frame(maxWidth: .infinity)
+                AppActionLabel(title: AppStrings.localized("pomodoro.action.start"), systemImage: "timer")
             }
             .buttonStyle(.bordered)
             .controlSize(.large)

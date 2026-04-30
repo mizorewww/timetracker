@@ -67,7 +67,7 @@ struct ActionStack: View {
             store.startSelectedTask()
 #endif
         } label: {
-            actionLabel(title: AppStrings.startTimer, systemImage: "play.fill")
+            AppActionLabel(title: AppStrings.startTimer, systemImage: "play.fill", fixedHeight: buttonHeight)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.regular)
@@ -78,25 +78,11 @@ struct ActionStack: View {
         Button {
             store.presentNewTask()
         } label: {
-            actionLabel(title: AppStrings.newTask, systemImage: "plus")
+            AppActionLabel(title: AppStrings.newTask, systemImage: "plus", fixedHeight: buttonHeight)
         }
         .buttonStyle(.bordered)
         .controlSize(.regular)
         .accessibilityIdentifier("home.newTask")
-    }
-
-    private func actionLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: 7) {
-            Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
-            Text(title)
-                .font(.body.weight(.medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: buttonHeight)
-        .frame(minHeight: buttonHeight == nil ? 44 : 0)
     }
 }
 

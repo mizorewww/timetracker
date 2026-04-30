@@ -315,4 +315,18 @@ struct HomeUIContractTests {
         #expect(settingsSupportSource.contains("struct SettingsHeader") == false)
         #expect(metricSource.contains("AppSectionHeader(title: title"))
     }
+
+    @Test
+    func primaryActionLabelsUseSharedComponentAcrossHomeAndInspector() throws {
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
+        let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorActionViews.swift")
+
+        #expect(sharedSource.contains("struct AppActionLabel"))
+        #expect(sharedSource.contains(".minimumScaleFactor(0.78)"))
+        #expect(homeSource.contains("AppActionLabel(title: AppStrings.startTimer"))
+        #expect(homeSource.contains("private func actionLabel") == false)
+        #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"task.action.startTimer\")"))
+        #expect(inspectorSource.contains("Label(AppStrings.localized(\"timer.action.pause\")") == false)
+    }
 }

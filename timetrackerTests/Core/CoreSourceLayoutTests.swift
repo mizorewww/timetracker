@@ -23,6 +23,7 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/TaskVisuals.swift",
             "timetracker/SharedUI/Components/TaskProgressViews.swift",
             "timetracker/SharedUI/Components/SectionHeaders.swift",
+            "timetracker/SharedUI/Components/ActionControls.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",

@@ -88,22 +88,44 @@ timetracker/Models
 timetracker/Repositories
 timetracker/Commands
 timetracker/Stores
+  Domains/        Published state owners for tasks, ledger, rollups, analytics, preferences
+  Facade/         TimeTrackerStore shell and UI-facing extension methods
+  Refresh/        Refresh planning and coordination
 timetracker/Services
+  Analytics/      Aggregation, summary cache, and timeline layout algorithms
+  Forecasting/    Checklist forecast and rollup display rules
+  Ledger/         Duration and time aggregation utilities
+  Maintenance/    Database repair, export, and cleanup support
+  Tasks/          Task tree derivation and validation helpers
 timetracker/Features/Home
+  Controls/       Start/new-task controls and task selection sheets
+  Rows/           Active timer, paused session, and timeline rows
+  Sections/       Metrics, forecast, progress, quick start, and timeline sections
 timetracker/Features/Tasks
+  Editor/         Task editor, symbol picker, checklist editing, and editor-specific controls
+  Management/     Task browsing screen and reusable task rows
 timetracker/Features/Pomodoro
+  Sections/       Setup, active-run, and recent-ledger sections
 timetracker/Features/Analytics
+  Sections/       Overview, forecast, distribution, and activity sections
+  Timeline/       Timeline chart composition and support views
 timetracker/Features/Settings
+  Support/        Export documents and settings support rows
 timetracker/Features/Sidebar
 timetracker/Features/Inspector
+  Sections/       Inspector info, checklist, forecast, panels, and actions
 timetracker/Features/Ledger
 timetracker/Shared
 timetracker/SharedUI
+  Foundation/     Design tokens and responsive layout policies
+  Components/     Reusable native-styled controls, badges, rows, and cards
 ```
 
-Within `Features/Home`, keep the Today screen split by responsibility: `HomeViews.swift` composes the page, `HomeMetricsViews.swift` renders the compact time summary, `HomeActionsViews.swift` owns start/new-task controls and the compact task picker, `HomeProgressViews.swift` owns calendar/countdown progress tiles, and the forecast, quick start, and timeline files own their own sections. Within `Features/Settings`, keep the settings form separate from support rows and export document types.
+Within `Features/Home`, keep the Today screen split by responsibility: `HomeViews.swift` composes the page, `Controls/HomeActionsViews.swift` owns start/new-task controls and the compact task picker, `Sections/HomeMetricsViews.swift` renders the compact time summary, `Sections/HomeProgressViews.swift` owns calendar/countdown progress tiles, and forecast, quick start, timeline, and row files own their own sections. Within `Features/Settings`, keep the settings form separate from support rows and export document types.
 
 Pure layout, formatting, and derivation logic belongs in `Services`, `Shared`, or `SharedUI` with unit tests. SwiftUI feature files should render state and collect input; durable writes go through store facade methods and command handlers.
+
+Avoid root-level "miscellaneous" folders that collect unrelated files. If a file name needs a `+` extension suffix, it should usually live under the owning facade or feature directory instead of being left beside unrelated domain stores. If a directory grows beyond one ownership concept, split it by domain before adding more files.
 
 For the longer-term architecture roadmap and feature ownership map, see `Docs/ArchitecturePlan.md`.
 

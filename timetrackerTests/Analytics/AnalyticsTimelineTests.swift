@@ -235,7 +235,7 @@ struct AnalyticsTimelineTests {
 
     @Test
     func analyticsTaskDistributionUsesTaskBucketsAndTaskColors() throws {
-        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsDistributionViews.swift")
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("id: task.taskID.uuidString"))
@@ -248,7 +248,7 @@ struct AnalyticsTimelineTests {
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
         let entrySource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
-        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsActivityViews.swift")
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(entrySource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))

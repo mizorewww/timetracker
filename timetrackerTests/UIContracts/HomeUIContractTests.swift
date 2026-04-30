@@ -145,8 +145,8 @@ struct HomeUIContractTests {
 
     @Test
     func quickStartComposesPinnedAndFrequentRecentTasks() throws {
-        let homeSource = try sourceText("timetracker/Features/Home/HomeQuickStartViews.swift")
-        let storeSource = try sourceText("timetracker/Stores/TimeTrackerStore+ReadModels.swift")
+        let homeSource = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+ReadModels.swift")
 
         #expect(homeSource.contains("private var pinnedTasks"))
         #expect(homeSource.contains("private var recentFillTasks"))
@@ -185,7 +185,7 @@ struct HomeUIContractTests {
 
     @Test
     func compactTaskPickerUsesOpaqueSystemSheet() throws {
-        let source = try sourceText("timetracker/Features/Home/HomeActionsViews.swift")
+        let source = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
 
         #expect(source.contains(".presentationBackground(Color(uiColor: .systemGroupedBackground))"))
         #expect(source.contains(".scrollContentBackground(.hidden)"))
@@ -193,8 +193,8 @@ struct HomeUIContractTests {
 
     @Test
     func taskTreeUsesFlatVisibleRowsSoEachTaskOwnsItsListRow() throws {
-        let source = try sourceText("timetracker/Features/Tasks/TasksViews.swift")
-        let serviceSource = try sourceText("timetracker/Services/TaskTreeServices.swift")
+        let source = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let serviceSource = try sourceText("timetracker/Services/Tasks/TaskTreeServices.swift")
 
         #expect(source.contains("ForEach(store.taskTreeRows(expandedTaskIDs: expansionState.expandedTaskIDs))"))
         #expect(source.contains("TaskManagementTreeRow") == false)
@@ -207,8 +207,8 @@ struct HomeUIContractTests {
     @Test
     func todayMetricsUseSemanticTrendColorsAndEqualCompactActions() throws {
         let source = try [
-            "timetracker/Features/Home/HomeMetricsViews.swift",
-            "timetracker/Features/Home/HomeActionsViews.swift"
+            "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
+            "timetracker/Features/Home/Controls/HomeActionsViews.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")
@@ -224,7 +224,7 @@ struct HomeUIContractTests {
 
     @Test
     func compactTaskRowsShowChecklistProgressBar() throws {
-        let source = try sourceText("timetracker/Features/Tasks/TaskManagementRowViews.swift")
+        let source = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
 
         #expect(source.contains("CompactChecklistProgressLine("))
         #expect(source.contains("ProgressView(value: progress.fraction)"))
@@ -234,9 +234,9 @@ struct HomeUIContractTests {
 
     @Test
     func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/TaskManagementRowViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorInfoViews.swift")
-        let forecastSource = try sourceText("timetracker/Features/Inspector/InspectorForecastViews.swift")
+        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorInfoViews.swift")
+        let forecastSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorForecastViews.swift")
 
         #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
         #expect(tasksSource.contains("secondsForTaskTodayRollup(task)") == false)
@@ -247,8 +247,8 @@ struct HomeUIContractTests {
     @Test
     func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
         let editorSource = try [
-            "timetracker/Features/Tasks/TaskEditorViews.swift",
-            "timetracker/Features/Tasks/TaskEditorComponents.swift"
+            "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift"
         ]
         .map { path in
             try sourceText(path)
@@ -267,8 +267,8 @@ struct HomeUIContractTests {
 
     @Test
     func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/TaskManagementRowViews.swift")
-        let sharedSource = try sourceText("timetracker/SharedUI/SharedUI.swift")
+        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/SharedUI.swift")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
@@ -277,9 +277,9 @@ struct HomeUIContractTests {
 
     @Test
     func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
-        let editorSource = try sourceText("timetracker/Features/Tasks/TaskEditorComponents.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorChecklistViews.swift")
-        let sharedSource = try sourceText("timetracker/SharedUI/SharedUI.swift")
+        let editorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
+        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorChecklistViews.swift")
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/SharedUI.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(sharedSource.contains("\"checkmark.circle.fill\""))

@@ -177,11 +177,13 @@ Completed in this phase:
 
 - `Models/TimeTrackerModels.swift` was split into domain model files for task, ledger, pomodoro, checklist, preferences, countdown events, summaries, and schema registration.
 - `Commands/DomainCommands.swift` was split into command-owner files for timer, task, checklist, pomodoro, ledger, preference, and countdown writes.
-- `Features/Pomodoro/PomodoroViews.swift` was split into setup, active-run, and recent-ledger view files.
-- `Features/Inspector/InspectorViews.swift` was split into info, panels, actions, and summary view files.
-- `Features/Tasks/TasksViews.swift` now owns the task-management screen shell while task list rows and progress lines live in `TaskManagementRowViews.swift`.
-- `Features/Home/HomeTimelineViews.swift` now owns timeline/timer section composition while active timer rows, paused rows, and timeline rows live in dedicated files.
-- `Features/Analytics/AnalyticsTimelineViews.swift` now keeps chart composition separate from reusable timeline support shapes and lane entries.
+- `Features/Pomodoro/PomodoroViews.swift` was split into setup, active-run, and recent-ledger view files under `Features/Pomodoro/Sections`.
+- `Features/Inspector/InspectorViews.swift` was split into info, panels, actions, checklist, forecast, and summary view files under `Features/Inspector/Sections`.
+- `Features/Tasks/Management/TasksViews.swift` now owns the task-management screen shell while task list rows and progress lines live beside it in the management folder.
+- `Features/Tasks/Editor` owns task editing, checklist editing, symbol picking, and editor-specific controls.
+- `Features/Home` now separates page composition, controls, rows, and sections so Today layout changes do not touch timer row internals.
+- `Features/Analytics/Timeline` keeps chart composition separate from reusable timeline support shapes and lane entries, while other analytics sections live under `Features/Analytics/Sections`.
+- `Stores`, `Services`, and `SharedUI` now use semantic subfolders instead of flat utility drawers; extension files such as `TimeTrackerStore+ReadModels.swift` live under `Stores/Facade`.
 - `App/ContentView.swift` now keeps app shell responsibilities separate from macOS focused-scene action definitions.
 - Core tests were split by subsystem so command handlers, refresh planning, ledger refresh, performance budgets, preferences, and checklist forecast rules are easier to find.
 
@@ -197,6 +199,13 @@ Goal: make the app feel like one native Apple productivity app instead of severa
 
 Scope:
 
+- Keep source layout semantic before adding more UI code:
+  - `Stores/Facade` owns `TimeTrackerStore` and its extension files.
+  - `Stores/Domains` owns independently refreshable state stores.
+  - `Stores/Refresh` owns refresh planning and coordination.
+  - `Services` is split by algorithm domain instead of a flat utility drawer.
+  - `SharedUI/Foundation` owns design tokens and layout policies.
+  - `SharedUI/Components` owns reusable controls and rows.
 - Create or finish shared components in `SharedUI`:
   - section headers
   - metric rows

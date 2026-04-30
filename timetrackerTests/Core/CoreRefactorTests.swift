@@ -303,7 +303,7 @@ struct CoreRefactorTests {
         #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
 
         let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
-        let storeSource = try sourceText("timetracker/Stores/TimeTrackerStore.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
 
         #expect(analyticsSource.contains("Text(range.rawValue)") == false)
         #expect(storeSource.contains("return \"Ready\"") == false)

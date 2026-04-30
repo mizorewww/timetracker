@@ -27,9 +27,19 @@ struct LedgerBucketCache {
         calendar: Calendar = .current,
         version: Int = 1
     ) -> [DailySummarySnapshot] {
-        dayIntervals(in: interval, calendar: calendar).compactMap { day in
-            summary(
-                segments: segments,
+        let days = dayIntervals(in: interval, calendar: calendar)
+        let groupedSegments = segmentsByDay(
+            segments,
+            interval: interval,
+            taskID: taskID,
+            now: now,
+            calendar: calendar
+        )
+
+        return days.compactMap { day in
+            let dayStart = calendar.startOfDay(for: day.start)
+            return summary(
+                daySegments: groupedSegments[dayStart] ?? [],
                 day: day,
                 taskID: taskID,
                 now: now,
@@ -54,14 +64,13 @@ struct LedgerBucketCache {
     }
 
     private mutating func summary(
-        segments: [TimeSegment],
+        daySegments: [TimeSegment],
         day: DateInterval,
         taskID: UUID?,
         now: Date,
         calendar: Calendar,
         version: Int
     ) -> DailySummarySnapshot? {
-        let daySegments = segments.filter { overlaps($0, interval: day, taskID: taskID, now: now) }
         let key = CacheKey(dayStart: calendar.startOfDay(for: day.start), taskID: taskID, version: version)
         let signature = signature(for: daySegments, now: now)
 
@@ -82,6 +91,34 @@ struct LedgerBucketCache {
             entries[key] = CacheEntry(signature: signature, snapshot: snapshot)
         }
         return snapshot
+    }
+
+    private func segmentsByDay(
+        _ segments: [TimeSegment],
+        interval: DateInterval,
+        taskID: UUID?,
+        now: Date,
+        calendar: Calendar
+    ) -> [Date: [TimeSegment]] {
+        var result: [Date: [TimeSegment]] = [:]
+
+        for segment in segments where overlaps(segment, interval: interval, taskID: taskID, now: now) {
+            let boundedStart = max(segment.startedAt, interval.start)
+            let boundedEnd = min(segment.endedAt ?? now, interval.end)
+            guard boundedEnd > boundedStart else { continue }
+
+            var cursor = calendar.startOfDay(for: boundedStart)
+            while cursor < boundedEnd {
+                let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? interval.end
+                let day = DateInterval(start: max(cursor, interval.start), end: min(next, interval.end))
+                if day.end > day.start, overlaps(segment, interval: day, taskID: taskID, now: now) {
+                    result[calendar.startOfDay(for: day.start), default: []].append(segment)
+                }
+                cursor = next
+            }
+        }
+
+        return result
     }
 
     private func signature(for segments: [TimeSegment], now: Date) -> Int {

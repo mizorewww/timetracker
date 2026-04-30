@@ -352,6 +352,12 @@ Tests and checks:
 - Add manual profiling checklist for macOS and real iPhone/iPad.
 - Run generic iOS build and macOS unit tests after summary-cache changes.
 
+Completed so far:
+
+- `AnalyticsStore` now slices the requested analytics range once and reuses that range snapshot for overview, daily points, task breakdown, overlap analysis, and cached refreshes.
+- `LedgerBucketCache` now groups range segments into day buckets in one pass instead of scanning the whole range once per day. Multi-day segments are explicitly assigned to every affected bucket, so cross-day ledger rows still rebuild correctly.
+- Performance tests cover large monthly ledger bucket generation and cross-day bucket splitting, alongside the existing analytics snapshot and cache-invalidation budgets.
+
 Exit criteria:
 
 - Scrolling Today, Tasks, and Analytics on macOS does not visibly stutter with large seeded data in Release.

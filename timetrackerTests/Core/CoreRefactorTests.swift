@@ -165,6 +165,40 @@ struct CoreRefactorTests {
     }
 
     @Test @MainActor
+    func ledgerBucketCacheSplitsLongSegmentsAcrossDayBuckets() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let taskID = UUID()
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 4, hour: 23)))
+        let end = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 6, hour: 1)))
+        let interval = DateInterval(
+            start: calendar.startOfDay(for: start),
+            end: calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: end)) ?? end
+        )
+        let session = TimeSession(taskID: taskID, source: .timer, deviceID: "test", startedAt: start)
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: start,
+            endedAt: end
+        )
+        var cache = LedgerBucketCache()
+
+        let summaries = cache.summaries(
+            segments: [segment],
+            interval: interval,
+            now: end,
+            calendar: calendar
+        )
+
+        #expect(summaries.map(\.grossSeconds) == [3_600, 86_400, 3_600])
+        #expect(summaries.map(\.wallClockSeconds) == [3_600, 86_400, 3_600])
+        #expect(cache.bucketCount == 3)
+    }
+
+    @Test @MainActor
     func analyticsStoreBuildsDailyPointsThroughLedgerBuckets() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

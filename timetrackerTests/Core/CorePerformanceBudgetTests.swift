@@ -74,6 +74,48 @@ struct CorePerformanceBudgetTests {
     }
 
     @Test @MainActor
+    func largeLedgerBucketSummariesStayWithinPerformanceBudget() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monthStart = calendar.date(from: DateComponents(year: 2026, month: 4, day: 1, hour: 0)) ?? Date(timeIntervalSince1970: 1_775_000_000)
+        let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart.addingTimeInterval(31 * 24 * 60 * 60)
+        let taskID = UUID()
+        let sessions = (0..<20_000).map { index in
+            TimeSession(
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: monthStart.addingTimeInterval(Double(index * 211))
+            )
+        }
+        let segments = sessions.enumerated().map { index, session in
+            TimeSegment(
+                sessionID: session.id,
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: session.startedAt,
+                endedAt: session.startedAt.addingTimeInterval(Double(120 + (index % 9) * 60))
+            )
+        }
+        var cache = LedgerBucketCache()
+
+        let start = CFAbsoluteTimeGetCurrent()
+        let summaries = cache.summaries(
+            segments: segments,
+            interval: DateInterval(start: monthStart, end: monthEnd),
+            now: monthEnd,
+            calendar: calendar
+        )
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        #expect(summaries.count == 30)
+        #expect(summaries.reduce(0) { $0 + $1.grossSeconds } > 0)
+        #expect(cache.bucketCount == 30)
+        #expect(elapsed < 2.0)
+    }
+
+    @Test @MainActor
     func affectedRollupRefreshStaysWithinPerformanceBudget() throws {
         let parent = TaskNode(title: "Budget Parent", parentID: nil, deviceID: "test")
         let children = (0..<500).map { index in

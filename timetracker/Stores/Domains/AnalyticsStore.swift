@@ -10,8 +10,8 @@ struct AnalyticsSnapshot {
 }
 
 struct AnalyticsStore {
-    private let engine = AnalyticsEngine()
     private let aggregationService = TimeAggregationService()
+    private let dailySummaryService = DailySummaryService()
     private var ledgerBucketCache = LedgerBucketCache()
     private(set) var snapshots: [AnalyticsRange: AnalyticsSnapshot] = [:]
 
@@ -30,10 +30,11 @@ struct AnalyticsStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
+        let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
         let snapshot = cachedDailySnapshot(
             range: range,
             tasks: tasks,
-            segments: segments,
+            rangeSegments: rangeSegments,
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
@@ -81,10 +82,16 @@ struct AnalyticsStore {
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
         let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
+        let daily = dailyBreakdown(
+            segments: rangeSegments,
+            range: range,
+            now: now,
+            calendar: calendar
+        )
         return AnalyticsSnapshot(
             range: range,
-            overview: engine.overview(segments: segments, range: range, now: now, calendar: calendar),
-            daily: engine.dailyBreakdown(segments: segments, range: range, now: now, calendar: calendar),
+            overview: overview(segments: rangeSegments, now: now),
+            daily: daily,
             taskBreakdown: taskBreakdown(
                 segments: rangeSegments,
                 tasks: tasks,
@@ -118,18 +125,17 @@ struct AnalyticsStore {
     private mutating func cachedDailySnapshot(
         range: AnalyticsRange,
         tasks: [TaskNode],
-        segments: [TimeSegment],
+        rangeSegments: [TimeSegment],
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         now: Date,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
-        let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
-        let daily = cachedDailyBreakdown(segments: segments, range: range, now: now, calendar: calendar)
+        let daily = cachedDailyBreakdown(segments: rangeSegments, range: range, now: now, calendar: calendar)
         return AnalyticsSnapshot(
             range: range,
-            overview: engine.overview(segments: segments, range: range, now: now, calendar: calendar),
+            overview: overview(segments: rangeSegments, now: now),
             daily: daily,
             taskBreakdown: taskBreakdown(
                 segments: rangeSegments,
@@ -147,6 +153,38 @@ struct AnalyticsStore {
             ),
             rangeSegments: rangeSegments
         )
+    }
+
+    private func overview(segments: [TimeSegment], now: Date) -> AnalyticsOverview {
+        let gross = aggregationService.totalSeconds(segments: segments, mode: .gross, now: now)
+        let wall = aggregationService.totalSeconds(segments: segments, mode: .wallClock, now: now)
+        let focusSegments = segments.filter { $0.source == .pomodoro }
+        let averageFocus = focusSegments.isEmpty ? 0 : aggregationService.grossSeconds(focusSegments, now: now) / focusSegments.count
+
+        return AnalyticsOverview(
+            grossSeconds: gross,
+            wallSeconds: wall,
+            overlapSeconds: max(0, gross - wall),
+            pomodoroCount: focusSegments.filter { $0.endedAt != nil }.count,
+            averageFocusSeconds: averageFocus
+        )
+    }
+
+    private func dailyBreakdown(
+        segments: [TimeSegment],
+        range: AnalyticsRange,
+        now: Date,
+        calendar: Calendar
+    ) -> [DailyAnalyticsPoint] {
+        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
+        return dailySummaryService.summaries(segments: segments, interval: interval, now: now, calendar: calendar).map { summary in
+            DailyAnalyticsPoint(
+                date: summary.date,
+                grossSeconds: summary.grossSeconds,
+                wallSeconds: summary.wallClockSeconds,
+                label: dayLabel(for: summary.date, range: range, calendar: calendar)
+            )
+        }
     }
 
     private mutating func cachedDailyBreakdown(

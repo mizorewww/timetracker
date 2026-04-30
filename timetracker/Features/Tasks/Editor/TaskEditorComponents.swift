@@ -204,64 +204,6 @@ private struct TaskNotesEditorSection: View {
     }
 }
 
-private struct SymbolColorPickerRow: View {
-    let colors: [String]
-    @Binding var symbolName: String
-    @Binding var colorHex: String
-    @State private var isPickerPresented = false
-
-    var body: some View {
-        HStack {
-            Text(.app("editor.task.symbolColor"))
-            Spacer()
-            pickerButton
-        }
-        #if os(macOS)
-        .popover(isPresented: $isPickerPresented) {
-            picker.frame(width: 460, height: 520)
-        }
-        #else
-        .sheet(isPresented: $isPickerPresented) {
-            NavigationStack {
-                picker
-                    .navigationTitle(AppStrings.localized("editor.symbol.title"))
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(AppStrings.done) {
-                                isPickerPresented = false
-                            }
-                        }
-                    }
-            }
-            .presentationDetents([.large])
-        }
-        #endif
-    }
-
-    private var pickerButton: some View {
-        Button {
-            isPickerPresented = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: symbolName)
-                    .foregroundStyle(Color(hex: colorHex) ?? .blue)
-                Text(.app("common.choose"))
-            }
-        }
-    }
-
-    private var picker: some View {
-        SymbolAndColorPicker(
-            symbols: SymbolCatalog.symbolNames,
-            searchKeywords: SymbolCatalog.searchKeywords,
-            colors: colors,
-            symbolName: $symbolName,
-            colorHex: $colorHex
-        )
-    }
-}
-
 struct TaskStatusPicker: View {
     @Binding var selection: TaskStatus
 

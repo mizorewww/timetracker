@@ -1,5 +1,76 @@
 import SwiftUI
 
+struct SymbolColorPickerRow: View {
+    let colors: [String]
+    let titleKey: String
+    @Binding var symbolName: String
+    @Binding var colorHex: String
+    @State private var isPickerPresented = false
+
+    init(
+        colors: [String],
+        titleKey: String = "editor.task.symbolColor",
+        symbolName: Binding<String>,
+        colorHex: Binding<String>
+    ) {
+        self.colors = colors
+        self.titleKey = titleKey
+        _symbolName = symbolName
+        _colorHex = colorHex
+    }
+
+    var body: some View {
+        HStack {
+            Text(.app(titleKey))
+            Spacer()
+            pickerButton
+        }
+        #if os(macOS)
+        .popover(isPresented: $isPickerPresented) {
+            picker.frame(width: 460, height: 520)
+        }
+        #else
+        .sheet(isPresented: $isPickerPresented) {
+            NavigationStack {
+                picker
+                    .navigationTitle(AppStrings.localized("editor.symbol.title"))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(AppStrings.done) {
+                                isPickerPresented = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.large])
+        }
+        #endif
+    }
+
+    private var pickerButton: some View {
+        Button {
+            isPickerPresented = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: symbolName)
+                    .foregroundStyle(Color(hex: colorHex) ?? .blue)
+                Text(.app("common.choose"))
+            }
+        }
+    }
+
+    private var picker: some View {
+        SymbolAndColorPicker(
+            symbols: SymbolCatalog.symbolNames,
+            searchKeywords: SymbolCatalog.searchKeywords,
+            colors: colors,
+            symbolName: $symbolName,
+            colorHex: $colorHex
+        )
+    }
+}
+
 struct SymbolAndColorPicker: View {
     let symbols: [String]
     let searchKeywords: [String: [String]]

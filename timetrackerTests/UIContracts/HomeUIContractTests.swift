@@ -299,6 +299,19 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func taskCategoryEditorReusesSharedSymbolColorPicker() throws {
+        let categoryEditor = try sourceText("timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift")
+        let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
+
+        #expect(categoryEditor.contains("SymbolColorPickerRow("))
+        #expect(categoryEditor.contains("Picker(AppStrings.localized(\"taskCategory.symbol\")") == false)
+        #expect(categoryEditor.contains("private let symbols") == false)
+        #expect(categoryEditor.contains("private var colorGrid") == false)
+        #expect(symbolPicker.contains("struct SymbolColorPickerRow"))
+        #expect(symbolPicker.contains("SymbolAndColorPicker("))
+    }
+
+    @Test
     func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
         let sharedSource = try [

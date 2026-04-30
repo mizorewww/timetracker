@@ -6,12 +6,6 @@ struct TaskCategoryEditorSheet: View {
     let initialDraft: TaskCategoryEditorDraft
     @State private var draft: TaskCategoryEditorDraft
 
-    private let colors = TaskColorPalette.hexValues
-    private let symbols = [
-        "briefcase", "house", "heart", "figure.run", "book", "graduationcap",
-        "person.2", "paintpalette", "sparkles", "leaf", "cart", "square.grid.2x2"
-    ]
-
     init(store: TimeTrackerStore, initialDraft: TaskCategoryEditorDraft) {
         self.store = store
         self.initialDraft = initialDraft
@@ -23,14 +17,11 @@ struct TaskCategoryEditorSheet: View {
             Form {
                 Section(AppStrings.localized("taskCategory.editor.info")) {
                     TextField(AppStrings.localized("taskCategory.name"), text: $draft.title)
-
-                    Picker(AppStrings.localized("taskCategory.symbol"), selection: $draft.iconName) {
-                        ForEach(symbols, id: \.self) { symbol in
-                            Label(symbol, systemImage: symbol).tag(symbol)
-                        }
-                    }
-
-                    colorGrid
+                    SymbolColorPickerRow(
+                        colors: TaskColorPalette.hexValues,
+                        symbolName: $draft.iconName,
+                        colorHex: $draft.colorHex
+                    )
                 }
 
                 Section {
@@ -77,33 +68,6 @@ struct TaskCategoryEditorSheet: View {
             }
         }
         .platformSheetFrame(width: 460, height: 440)
-    }
-
-    private var colorGrid: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(.app("editor.symbol.color"))
-                .foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 28, maximum: 32), spacing: 10)], alignment: .leading, spacing: 10) {
-                ForEach(colors, id: \.self) { hex in
-                    Button {
-                        draft.colorHex = hex
-                    } label: {
-                        Circle()
-                            .fill(Color(hex: hex) ?? .blue)
-                            .frame(width: 24, height: 24)
-                            .overlay {
-                                if draft.colorHex == hex {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption2.weight(.bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(String(format: AppStrings.localized("editor.symbol.colorValue"), hex))
-                }
-            }
-        }
     }
 
     private func deleteCategory() {

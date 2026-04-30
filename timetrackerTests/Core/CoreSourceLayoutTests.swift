@@ -16,7 +16,6 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Tasks/TaskTreeServices.swift",
             "timetracker/SharedUI/Foundation/LayoutPolicies.swift",
             "timetracker/SharedUI/Foundation/ColorSupport.swift",
-            "timetracker/SharedUI/Components/SharedUI.swift",
             "timetracker/SharedUI/Components/ChecklistControls.swift",
             "timetracker/SharedUI/Components/DurationLabels.swift",
             "timetracker/SharedUI/Components/EmptyStates.swift",
@@ -47,6 +46,10 @@ struct CoreSourceLayoutTests {
         .filter { $0.hasPrefix("TimeTrackerStore+") }
 
         #expect(flatStoreExtensions.isEmpty)
+
+        #expect(FileManager.default.fileExists(
+            atPath: root.appending(path: "timetracker/SharedUI/Components/SharedUI.swift").path
+        ) == false)
     }
 
     @Test

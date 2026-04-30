@@ -29,15 +29,7 @@ struct AnalyticsChartCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.headline)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            AppSectionHeader(title: title, subtitle: subtitle)
             content
         }
         .appCard()

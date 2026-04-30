@@ -1,24 +1,6 @@
 import SwiftData
 import SwiftUI
 
-struct SectionTitle: View {
-    let title: String
-    var trailing: String?
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .font(.headline)
-            Spacer()
-            if let trailing {
-                Text(trailing)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.blue)
-            }
-        }
-    }
-}
-
 struct DurationLabel: View {
     let startedAt: Date
     let endedAt: Date?

@@ -54,21 +54,7 @@ struct AppSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppLayout.sectionSpacing) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if let systemImage {
-                    Image(systemName: systemImage)
-                        .foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.headline)
-                    if let subtitle, !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
+            AppSectionHeader(title: title, subtitle: subtitle, systemImage: systemImage)
             content
         }
     }

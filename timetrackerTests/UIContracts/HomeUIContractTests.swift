@@ -302,4 +302,17 @@ struct HomeUIContractTests {
         #expect(inspectorSource.contains("visibleItems.prefix(5)"))
         #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
     }
+
+    @Test
+    func sectionHeadersUseSharedComponentAcrossSettingsAndAnalytics() throws {
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/SectionHeaders.swift")
+        let settingsSupportSource = try sourceText("timetracker/Features/Settings/Support/SettingsSupportViews.swift")
+        let metricSource = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
+
+        #expect(sharedSource.contains("struct AppSectionHeader"))
+        #expect(sharedSource.contains("struct SettingsHeader"))
+        #expect(sharedSource.contains("struct SectionTitle"))
+        #expect(settingsSupportSource.contains("struct SettingsHeader") == false)
+        #expect(metricSource.contains("AppSectionHeader(title: title"))
+    }
 }

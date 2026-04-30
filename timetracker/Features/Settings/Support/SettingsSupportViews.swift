@@ -24,15 +24,6 @@ struct AboutAppSummary: View {
     }
 }
 
-struct SettingsHeader: View {
-    let symbol: String
-    let title: String
-
-    var body: some View {
-        Label(title, systemImage: symbol)
-    }
-}
-
 struct CountdownEventSettingsRow: View {
     let event: CountdownEvent
     let onChangeTitle: (String) -> Void

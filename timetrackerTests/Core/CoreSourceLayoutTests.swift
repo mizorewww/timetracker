@@ -28,6 +28,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Inspector/Sections/InspectorInfoViews.swift"
         ]

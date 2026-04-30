@@ -247,7 +247,7 @@ struct AnalyticsTimelineTests {
 
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
-        let entrySource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let entrySource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift")
         let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 

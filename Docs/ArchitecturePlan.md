@@ -183,6 +183,7 @@ Completed in this phase:
 - `Features/Tasks/Editor` owns task editing, checklist editing, symbol picking, and editor-specific controls.
 - `Features/Home` now separates page composition, controls, rows, and sections so Today layout changes do not touch timer row internals.
 - `Features/Analytics/Timeline` keeps chart composition separate from reusable timeline support shapes and lane entries, while other analytics sections live under `Features/Analytics/Sections`.
+- `Features/Analytics/AnalyticsViews.swift` now owns only page lifecycle/composition; header, overview metrics, range dispatch, daily trend, and overlap sections live in `Features/Analytics/Sections/AnalyticsOverviewViews.swift`.
 - `Stores`, `Services`, and `SharedUI` now use semantic subfolders instead of flat utility drawers; extension files such as `TimeTrackerStore+ReadModels.swift` live under `Stores/Facade`.
 - `App/ContentView.swift` now keeps app shell responsibilities separate from macOS focused-scene action definitions.
 - Core tests were split by subsystem so command handlers, refresh planning, ledger refresh, performance budgets, preferences, and checklist forecast rules are easier to find.

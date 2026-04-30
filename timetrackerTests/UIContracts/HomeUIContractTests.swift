@@ -289,8 +289,10 @@ struct HomeUIContractTests {
 
         #expect(sharedSource.contains("\"checkmark.circle.fill\""))
         #expect(editorSource.contains("ChecklistCompletionButton"))
+        #expect(editorSource.contains("withAnimation(.snappy") == false)
         #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
         #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
+        #expect(inspectorSource.contains("withAnimation(.snappy") == false)
         #expect(inspectorSource.contains("visibleItems.prefix(5)"))
         #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
     }

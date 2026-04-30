@@ -44,9 +44,7 @@ struct TaskChecklistPanel: View {
                 }
                 ForEach(visibleItems.prefix(5), id: \.id) { item in
                     ChecklistDisplayRow(item: item) {
-                        withAnimation(.snappy(duration: 0.22)) {
-                            store.toggleChecklistItem(item)
-                        }
+                        store.toggleChecklistItem(item)
                     }
                 }
                 InlineChecklistAddRow(title: $newChecklistTitle) {

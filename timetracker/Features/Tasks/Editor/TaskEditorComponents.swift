@@ -274,9 +274,7 @@ struct ChecklistEditorRow: View {
     var body: some View {
         HStack(spacing: 10) {
             ChecklistCompletionButton(isCompleted: item.isCompleted) {
-                withAnimation(.snappy(duration: 0.22)) {
-                    item.isCompleted.toggle()
-                }
+                item.isCompleted.toggle()
             }
 
             TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title)

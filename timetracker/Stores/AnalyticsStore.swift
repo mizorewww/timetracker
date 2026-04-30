@@ -12,6 +12,7 @@ struct AnalyticsSnapshot {
 struct AnalyticsStore {
     private let engine = AnalyticsEngine()
     private let aggregationService = TimeAggregationService()
+    private var ledgerBucketCache = LedgerBucketCache()
     private(set) var snapshots: [AnalyticsRange: AnalyticsSnapshot] = [:]
 
     func cachedSnapshot(for range: AnalyticsRange) -> AnalyticsSnapshot? {
@@ -29,7 +30,7 @@ struct AnalyticsStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
-        let snapshot = snapshot(
+        let snapshot = cachedDailySnapshot(
             range: range,
             tasks: tasks,
             segments: segments,
@@ -50,9 +51,11 @@ struct AnalyticsStore {
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         now: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        invalidatedIntervals: [DateInterval] = []
     ) {
         guard !snapshots.isEmpty else { return }
+        ledgerBucketCache.invalidate(intervals: invalidatedIntervals)
         for range in Array(snapshots.keys) {
             refreshSnapshot(
                 range: range,
@@ -98,6 +101,69 @@ struct AnalyticsStore {
             ),
             rangeSegments: rangeSegments
         )
+    }
+
+    mutating func invalidateLedgerBuckets(intervals: [DateInterval]) {
+        ledgerBucketCache.invalidate(intervals: intervals)
+    }
+
+    mutating func clearLedgerBuckets() {
+        ledgerBucketCache.removeAll()
+    }
+
+    var ledgerBucketCount: Int {
+        ledgerBucketCache.bucketCount
+    }
+
+    private mutating func cachedDailySnapshot(
+        range: AnalyticsRange,
+        tasks: [TaskNode],
+        segments: [TimeSegment],
+        sessions: [TimeSession],
+        taskPathByID: [UUID: String],
+        taskParentPathByID: [UUID: String],
+        now: Date,
+        calendar: Calendar
+    ) -> AnalyticsSnapshot {
+        let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
+        let daily = cachedDailyBreakdown(segments: segments, range: range, now: now, calendar: calendar)
+        return AnalyticsSnapshot(
+            range: range,
+            overview: engine.overview(segments: segments, range: range, now: now, calendar: calendar),
+            daily: daily,
+            taskBreakdown: taskBreakdown(
+                segments: rangeSegments,
+                tasks: tasks,
+                sessions: sessions,
+                taskPathByID: taskPathByID,
+                taskParentPathByID: taskParentPathByID,
+                now: now
+            ),
+            overlaps: overlapSegments(
+                segments: rangeSegments,
+                tasks: tasks,
+                sessions: sessions,
+                now: now
+            ),
+            rangeSegments: rangeSegments
+        )
+    }
+
+    private mutating func cachedDailyBreakdown(
+        segments: [TimeSegment],
+        range: AnalyticsRange,
+        now: Date,
+        calendar: Calendar
+    ) -> [DailyAnalyticsPoint] {
+        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
+        return ledgerBucketCache.summaries(segments: segments, interval: interval, now: now, calendar: calendar).map { summary in
+            DailyAnalyticsPoint(
+                date: summary.date,
+                grossSeconds: summary.grossSeconds,
+                wallSeconds: summary.wallClockSeconds,
+                label: dayLabel(for: summary.date, range: range, calendar: calendar)
+            )
+        }
     }
 
     private func segmentsForAnalytics(_ segments: [TimeSegment], range: AnalyticsRange, now: Date, calendar: Calendar) -> [TimeSegment] {
@@ -227,6 +293,18 @@ struct AnalyticsStore {
             return calendar.dateInterval(of: .weekOfYear, for: now)
         case .month:
             return calendar.dateInterval(of: .month, for: now)
+        }
+    }
+
+    private func dayLabel(for date: Date, range: AnalyticsRange, calendar: Calendar) -> String {
+        switch range {
+        case .today:
+            return DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
+        case .week:
+            let weekday = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: date) - 1]
+            return "\(weekday) \(calendar.component(.day, from: date))"
+        case .month:
+            return "\(calendar.component(.day, from: date))"
         }
     }
 

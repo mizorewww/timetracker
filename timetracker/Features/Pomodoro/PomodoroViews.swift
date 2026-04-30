@@ -7,10 +7,14 @@ struct PomodoroView: View {
     @State private var breakMinutes = 5
     @State private var targetRounds = 1
 
+    private var layout: PomodoroLayoutPolicy {
+        PomodoroLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                if horizontalSizeClass != .compact {
+                if layout.showsInlineHeader {
                     header
                 }
 

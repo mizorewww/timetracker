@@ -50,11 +50,7 @@ struct MetricsPanel: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var isCompactPhone: Bool {
-        #if os(iOS)
-        horizontalSizeClass == .compact
-        #else
-        false
-        #endif
+        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
     }
 
     var body: some View {
@@ -70,11 +66,7 @@ private struct MetricsPanelContent: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var isCompactPhone: Bool {
-        #if os(iOS)
-        horizontalSizeClass == .compact
-        #else
-        false
-        #endif
+        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
     }
 
     var body: some View {

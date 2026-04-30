@@ -192,14 +192,19 @@ struct iPadRootView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isInspectorPresented = false
+    private let layout = SplitColumnLayoutPolicy.iPad
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(store: store)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
+                .navigationSplitViewColumnWidth(
+                    min: layout.sidebar.min,
+                    ideal: layout.sidebar.ideal,
+                    max: layout.sidebar.max ?? layout.sidebar.ideal
+                )
         } detail: {
             DesktopContentView(store: store)
-                .navigationSplitViewColumnWidth(min: 560, ideal: 780)
+                .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         if columnVisibility != .all {
@@ -224,7 +229,11 @@ struct iPadRootView: View {
                 }
                 .inspector(isPresented: inspectorBinding) {
                     InspectorView(store: store)
-                        .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+                        .inspectorColumnWidth(
+                            min: layout.inspector.min,
+                            ideal: layout.inspector.ideal,
+                            max: layout.inspector.max ?? layout.inspector.ideal
+                        )
                 }
         }
         .navigationSplitViewStyle(.balanced)
@@ -261,6 +270,7 @@ struct iPadRootView: View {
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
     @State private var isInspectorPresented = false
+    private let layout = SplitColumnLayoutPolicy.mac
 
     var body: some View {
         NavigationSplitView {
@@ -283,14 +293,18 @@ struct DesktopRootView: View {
     private var sidebarColumn: some View {
         SidebarView(store: store)
             #if os(macOS)
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 270)
+            .navigationSplitViewColumnWidth(
+                min: layout.sidebar.min,
+                ideal: layout.sidebar.ideal,
+                max: layout.sidebar.max ?? layout.sidebar.ideal
+            )
             #endif
     }
 
     private var detailColumn: some View {
         DesktopContentView(store: store)
             #if os(macOS)
-            .navigationSplitViewColumnWidth(min: 520, ideal: 760)
+            .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
             #endif
             .toolbar {
                 ToolbarItem(placement: .automatic) {
@@ -305,7 +319,11 @@ struct DesktopRootView: View {
             }
             .inspector(isPresented: inspectorBinding) {
                 InspectorView(store: store)
-                    .inspectorColumnWidth(min: 240, ideal: 260, max: 320)
+                    .inspectorColumnWidth(
+                        min: layout.inspector.min,
+                        ideal: layout.inspector.ideal,
+                        max: layout.inspector.max ?? layout.inspector.ideal
+                    )
             }
     }
 

@@ -12,7 +12,7 @@ struct ActionStack: View {
     @State private var isTaskPickerPresented = false
 
     private var isCompactPhone: Bool {
-        horizontalSizeClass == .compact
+        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
     }
 #endif
 
@@ -58,7 +58,7 @@ struct ActionStack: View {
     private var startButton: some View {
         Button {
 #if os(iOS)
-            if horizontalSizeClass == .compact {
+            if isCompactPhone {
                 isTaskPickerPresented = true
             } else {
                 store.startSelectedTask()

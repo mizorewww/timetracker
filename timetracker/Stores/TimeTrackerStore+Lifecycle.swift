@@ -57,43 +57,10 @@ extension TimeTrackerStore {
     }
 
     private func refresh(plan: StoreRefreshPlan) throws {
-        guard taskRepository != nil, timeRepository != nil else { return }
-
-        if plan.refreshTasks {
-            try refreshTaskDomain()
-        }
-        if plan.refreshLedger {
-            try refreshLedgerDomain(includeHistory: plan.includeLedgerHistory)
-        }
-        if plan.refreshPomodoro {
-            try refreshPomodoroDomain()
-        }
-        if plan.refreshPreferences {
-            try refreshPreferenceDomain()
-        }
-        if plan.refreshCountdown {
-            countdownEvents = try fetchCountdownEvents()
-        }
-        if plan.refreshChecklist {
-            checklistItems = try fetchChecklistItems()
-        }
-        if plan.refreshRollups {
-            refreshRollupDomain()
-        }
-        if plan.refreshAnalytics {
-            refreshAnalyticsDomain()
-        }
-
-        if plan.validateSelection {
-            validateSelectedTask()
-        }
-
-        if plan.syncLiveActivities {
-            syncLiveActivitiesIfAvailable()
-        }
+        try refreshCoordinator.refresh(self, plan: plan)
     }
 
-    private func validateSelectedTask() {
+    func validateSelectedTask() {
         if selectedTaskID == nil {
             selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
         } else if let selectedTaskID, taskByID[selectedTaskID] == nil {
@@ -101,13 +68,13 @@ extension TimeTrackerStore {
         }
     }
 
-    private func refreshTaskDomain() throws {
+    func refreshTaskDomain() throws {
         guard let taskRepository else { return }
         try taskDomainStore.refresh(repository: taskRepository)
         tasks = taskDomainStore.tasks
     }
 
-    private func refreshLedgerDomain(includeHistory: Bool) throws {
+    func refreshLedgerDomain(includeHistory: Bool) throws {
         guard let timeRepository else { return }
         if includeHistory {
             try ledgerDomainStore.refresh(repository: timeRepository)
@@ -121,29 +88,44 @@ extension TimeTrackerStore {
         todaySegments = ledgerDomainStore.todaySegments
     }
 
-    private func refreshPomodoroDomain() throws {
+    func refreshPomodoroDomain() throws {
         pomodoroRuns = try pomodoroRepository?.runs() ?? []
     }
 
-    private func refreshPreferenceDomain() throws {
+    func refreshPreferenceDomain() throws {
         preferenceDomainStore.refresh(syncedPreferences: try fetchSyncedPreferences())
         syncedPreferences = preferenceDomainStore.syncedPreferences
         preferences = preferenceDomainStore.preferences
     }
 
-    private func refreshRollupDomain() {
+    func refreshRollupDomain(plan: StoreRefreshPlan) {
         var store = rollupDomainStore
-        store.refresh(
-            tasks: tasks,
-            segments: allSegments,
-            checklistItems: checklistItems,
-            now: Date()
-        )
+        if plan.refreshTasks || plan.affectedTaskIDs.isEmpty {
+            store.refresh(
+                tasks: tasks,
+                segments: allSegments,
+                checklistItems: checklistItems,
+                now: Date()
+            )
+        } else {
+            store.refreshAffected(
+                taskIDs: plan.affectedTaskIDs,
+                tasks: tasks,
+                segments: allSegments,
+                checklistItems: checklistItems,
+                now: Date()
+            )
+        }
         rollupDomainStore = store
     }
 
-    private func refreshAnalyticsDomain() {
-        refreshCachedAnalyticsSnapshots(now: Date())
+    func refreshAnalyticsDomain(plan: StoreRefreshPlan) {
+        refreshCachedAnalyticsSnapshots(
+            now: Date(),
+            invalidatedIntervals: plan.affectedLedgerRanges.map {
+                DateInterval(start: $0.start, end: $0.end)
+            }
+        )
     }
 
     @discardableResult
@@ -195,7 +177,7 @@ extension TimeTrackerStore {
     }
 
 
-    private func fetchSyncedPreferences() throws -> [SyncedPreference] {
+    func fetchSyncedPreferences() throws -> [SyncedPreference] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<SyncedPreference>(
             predicate: #Predicate { $0.deletedAt == nil },
@@ -210,7 +192,7 @@ extension TimeTrackerStore {
             .sorted { $0.key < $1.key }
     }
 
-    private func fetchChecklistItems() throws -> [ChecklistItem] {
+    func fetchChecklistItems() throws -> [ChecklistItem] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<ChecklistItem>(
             predicate: #Predicate { $0.deletedAt == nil },
@@ -223,7 +205,7 @@ extension TimeTrackerStore {
         return try modelContext.fetch(descriptor)
     }
 
-    private func fetchCountdownEvents() throws -> [CountdownEvent] {
+    func fetchCountdownEvents() throws -> [CountdownEvent] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<CountdownEvent>(
             predicate: #Predicate { $0.deletedAt == nil },

@@ -43,10 +43,14 @@ private struct AnalyticsContent: View {
     let now: Date
     let horizontalSizeClass: UserInterfaceSizeClass?
 
+    private var layout: AnalyticsLayoutPolicy {
+        AnalyticsLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                AnalyticsHeader(range: $range, horizontalSizeClass: horizontalSizeClass)
+                AnalyticsHeader(range: $range, layout: layout)
                 AnalyticsMetricGrid(overview: snapshot.overview)
                 TaskForecastsCard(store: store)
                 AnalyticsRangeSection(store: store, snapshot: snapshot, range: range, now: now)
@@ -59,7 +63,7 @@ private struct AnalyticsContent: View {
 
 private struct AnalyticsHeader: View {
     @Binding var range: AnalyticsRange
-    let horizontalSizeClass: UserInterfaceSizeClass?
+    let layout: AnalyticsLayoutPolicy
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -70,7 +74,7 @@ private struct AnalyticsHeader: View {
 
     private var horizontalLayout: some View {
         HStack {
-            if horizontalSizeClass != .compact {
+            if layout.showsPageTitleInContent {
                 title
             }
             Spacer()
@@ -80,7 +84,7 @@ private struct AnalyticsHeader: View {
 
     private var compactLayout: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if horizontalSizeClass != .compact {
+            if layout.showsPageTitleInContent {
                 title
             }
             rangePicker
@@ -219,49 +223,5 @@ private struct AnalyticsOverlapCard: View {
                 }
             }
         }
-    }
-}
-
-struct AnalyticsMetric: View {
-    let title: String
-    let value: String
-    let footnote: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title2.weight(.semibold))
-                .monospacedDigit()
-            Text(footnote)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard()
-    }
-}
-
-struct AnalyticsChartCard<Content: View>: View {
-    let title: String
-    var subtitle: String?
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.headline)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            content
-        }
-        .appCard()
     }
 }

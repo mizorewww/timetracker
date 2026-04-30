@@ -148,7 +148,8 @@ struct TaskManagementFlatRow: View {
 
     private var showsNavigationChevron: Bool {
         #if os(iOS)
-        horizontalSizeClass == .compact && !hasChildren
+        TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
+            .showsNavigationChevron(hasChildren: hasChildren)
         #else
         false
         #endif
@@ -176,7 +177,7 @@ struct TaskManagementFlatRow: View {
 
     private func openTask() {
 #if os(iOS)
-        if horizontalSizeClass == .compact {
+        if TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass).usesCompactRows {
             store.selectTask(task.id, revealInToday: false)
             store.presentEditTask(task)
             return
@@ -197,7 +198,7 @@ private struct TaskManagementRowContent: View {
 
     var body: some View {
         #if os(iOS)
-        if horizontalSizeClass == .compact {
+        if TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass).usesCompactRows {
             compactBody
         } else {
             regularBody

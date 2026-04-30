@@ -8,21 +8,21 @@ struct DesktopMainView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let compact = proxy.size.width < 720
+            let layout = HomeLayoutPolicy(width: proxy.size.width)
             ScrollView {
-                VStack(alignment: .leading, spacing: compact ? 16 : 22) {
-                    HeaderBar(store: store, compact: compact)
-                    MetricsAndActions(store: store, horizontal: !compact)
+                VStack(alignment: .leading, spacing: layout.contentSpacing) {
+                    HeaderBar(store: store, compact: layout.isCompact)
+                    MetricsAndActions(store: store, horizontal: layout.usesHorizontalMetrics)
                     TimeProgressSection(store: store)
                     TaskForecastSummarySection(store: store)
                     ActiveTimersSection(store: store)
                     PausedSessionsSection(store: store)
-                    if !compact {
+                    if layout.showsQuickStartInDesktopFlow {
                         QuickStartSection(store: store)
                     }
                     TimelineSection(store: store)
                 }
-                .padding(compact ? 18 : 28)
+                .padding(layout.pagePadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(AppColors.background)

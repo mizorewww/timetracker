@@ -23,7 +23,7 @@ extension TimeTrackerStore {
         analyticsDomainStore = store
     }
 
-    func refreshCachedAnalyticsSnapshots(now: Date = Date()) {
+    func refreshCachedAnalyticsSnapshots(now: Date = Date(), invalidatedIntervals: [DateInterval] = []) {
         var store = analyticsDomainStore
         store.refreshCachedSnapshots(
             tasks: tasks,
@@ -31,7 +31,8 @@ extension TimeTrackerStore {
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
-            now: now
+            now: now,
+            invalidatedIntervals: invalidatedIntervals
         )
         analyticsDomainStore = store
     }

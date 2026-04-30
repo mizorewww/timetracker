@@ -27,10 +27,57 @@ struct TaskRollupService {
         checklistItems: [ChecklistItem],
         now: Date = Date()
     ) -> [UUID: TaskRollup] {
+        calculatedRollups(
+            tasks: tasks,
+            segments: segments,
+            checklistItems: checklistItems,
+            now: now,
+            initialCache: [:],
+            buildIDs: nil
+        )
+    }
+
+    func rollups(
+        updating affectedTaskIDs: Set<UUID>,
+        existingRollups: [UUID: TaskRollup],
+        tasks: [TaskNode],
+        segments: [TimeSegment],
+        checklistItems: [ChecklistItem],
+        now: Date = Date()
+    ) -> [UUID: TaskRollup] {
+        let knownTaskIDs = Set(tasks.map(\.id))
+        let affected = affectedTaskIDs.intersection(knownTaskIDs)
+        guard !affected.isEmpty, !existingRollups.isEmpty else {
+            return rollups(tasks: tasks, segments: segments, checklistItems: checklistItems, now: now)
+        }
+
+        let affectedWithAncestors = affected.union(ancestorIDs(of: affected, tasks: tasks))
+        let seed = existingRollups.filter { taskID, _ in
+            knownTaskIDs.contains(taskID) && !affectedWithAncestors.contains(taskID)
+        }
+
+        return calculatedRollups(
+            tasks: tasks,
+            segments: segments,
+            checklistItems: checklistItems,
+            now: now,
+            initialCache: seed,
+            buildIDs: affectedWithAncestors
+        )
+    }
+
+    private func calculatedRollups(
+        tasks: [TaskNode],
+        segments: [TimeSegment],
+        checklistItems: [ChecklistItem],
+        now: Date,
+        initialCache: [UUID: TaskRollup],
+        buildIDs: Set<UUID>?
+    ) -> [UUID: TaskRollup] {
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         let childrenByParent = Dictionary(grouping: tasks, by: \.parentID)
         let segmentsByTaskID = Dictionary(grouping: segments.filter { $0.deletedAt == nil }, by: \.taskID)
-        var cache: [UUID: TaskRollup] = [:]
+        var cache = initialCache
         var subtreeCache: [UUID: Set<UUID>] = [:]
 
         func subtreeIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
@@ -146,10 +193,28 @@ struct TaskRollupService {
             return rollup
         }
 
-        for task in tasks {
-            _ = build(taskID: task.id, visited: [])
+        let idsToBuild = buildIDs ?? Set(tasks.map(\.id))
+        for taskID in idsToBuild {
+            _ = build(taskID: taskID, visited: [])
         }
-        return cache
+        return cache.filter { taskByID[$0.key] != nil }
+    }
+
+    private func ancestorIDs(of taskIDs: Set<UUID>, tasks: [TaskNode]) -> Set<UUID> {
+        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        var ancestors = Set<UUID>()
+
+        for taskID in taskIDs {
+            var parentID = taskByID[taskID]?.parentID
+            var visited = Set<UUID>()
+            while let currentID = parentID, !visited.contains(currentID) {
+                visited.insert(currentID)
+                ancestors.insert(currentID)
+                parentID = taskByID[currentID]?.parentID
+            }
+        }
+
+        return ancestors
     }
 
     private func ownChecklistForecast(

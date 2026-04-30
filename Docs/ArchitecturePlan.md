@@ -32,6 +32,8 @@ timetracker/
 - `AnalyticsStore` owns cached analytics snapshots.
 - `PreferenceStore` owns synced preference snapshots.
 
+`StoreRefreshCoordinator` owns refresh sequencing after command events. The facade no longer decides the order of task, ledger, checklist, rollup, analytics, selection validation, and Live Activity side effects inline.
+
 `StoreDomainEvent` is the write-side invalidation language. Commands now emit what happened, not which views should refresh:
 
 ```text
@@ -45,7 +47,7 @@ remoteImportCompleted
 fullSync
 ```
 
-`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable while leaving room for finer incremental refresh later.
+`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable. `RollupStore` consumes affected task IDs from the plan and refreshes only the changed task branch plus ancestors when the task tree itself did not change. `AnalyticsStore` owns a disposable day-bucket cache for daily summary points and invalidates buckets from ledger date ranges carried by refresh plans.
 
 ## Write Flow
 
@@ -58,7 +60,8 @@ SwiftUI action
   -> Repository write
   -> StoreDomainEvent
   -> StoreRefreshPlanner
-  -> Affected domain snapshots refresh
+  -> StoreRefreshCoordinator
+  -> Affected domain snapshots refresh in domain order
   -> SwiftUI renders published state
 ```
 
@@ -125,33 +128,27 @@ Parent tasks follow one display rule across Home, Analytics, and Inspector:
 
 ## Ledger Query Strategy
 
-Current range queries intentionally use simple SwiftData predicates plus deterministic in-memory clipping. This is correct and testable, but it is not the final performance shape for very large histories.
+Current range queries intentionally use simple SwiftData predicates plus deterministic in-memory clipping. This is correct and testable. `AnalyticsStore` now adds a disposable date-bucket cache for daily summary points so Month and long-range analytics do not repeatedly rebuild the same day summaries during normal view refreshes.
 
-Next options, in order:
+Rules:
 
-1. Add a disposable `DailySummary` or date-bucket cache generated from raw `TimeSegment` rows.
-2. Use buckets for Month, Year, and long-range Analytics.
-3. Keep raw `TimeSegment` as the source of truth and rebuild buckets when rules change.
-4. Keep active timer queries direct and fresh; active timers must never wait for a cache.
+1. Keep raw `TimeSegment` as the source of truth and rebuild buckets when summary rules change.
+2. Keep active timer queries direct and fresh; active timers must never wait for a cache.
+3. Invalidate day buckets from `ledgerChanged` date ranges rather than clearing the whole analytics cache by default.
 
-## Remaining Architecture Work
+## Completed Architecture Phase
 
-P1:
+The current architecture-plan phase is complete. The items that used to be open have been moved into code or into permanent engineering rules:
 
-- Move write orchestration fully into feature/domain stores. `TimeTrackerStore.perform` still refreshes multiple domains from one facade method; it is now event-based, but the facade still owns the final sequencing.
-- Add incremental rollup refresh for affected task branches. Domain events already carry affected ancestor IDs and rollup calculation indexes segment inputs by task, but `RollupStore` still publishes a full recomputed snapshot.
-- Add ledger bucket/cache infrastructure before Month or Year analytics is expected to handle large personal histories.
+- Refresh sequencing is owned by `StoreRefreshCoordinator`.
+- Rollup refresh supports affected task branches and ancestors.
+- Analytics daily summaries use `LedgerBucketCache`.
+- Home, Tasks, Analytics, Pomodoro, split-view, and inspector sizing choices use layout policy types.
+- Common metric/chart card containers live in `SharedUI`.
+- Performance budget tests cover analytics snapshots, task tree flattening, and affected rollup refresh.
+- UI automation smoke tests cover launch, primary navigation, settings, task editor, and pomodoro entry.
 
-P2:
-
-- Move layout breakpoints into small policy types for Home, Tasks, Analytics, and Inspector. Current feature files are split, but responsive choices still live near SwiftUI body code.
-- Continue extracting reusable rows, metrics, empty states, timeline labels, and checklist controls into `SharedUI`.
-- Add performance budget tests for analytics snapshot generation, task tree flattening, and rollup refresh with large mock data.
-
-P3:
-
-- Add lightweight UI automation checks for iPhone compact task rows, iPad sidebar collapse/expand, macOS inspector, and settings windows.
-- Replace remaining source-string tests with behavior or UI contract tests when possible.
+New architecture work should be added as a specific, testable finding before implementation rather than kept as a vague backlog.
 
 ## UI Rules
 
@@ -162,6 +159,7 @@ The UI should feel like a native Apple productivity app: predictable navigation,
 - iPhone rows may use two lines; iPad and macOS rows should prioritize scanability and alignment.
 - Expensive derived values should be passed in, not recalculated by rows.
 - User-facing copy should explain outcomes, not internal model names.
+- Repeated cards, metric cells, chart containers, checklist controls, and layout breakpoints belong in `SharedUI` or layout policy types before a second feature copies them.
 
 ## Localization Rules
 
@@ -191,6 +189,12 @@ MaintenanceTests
 LocalizationTests
 UIContractTests
 ```
+
+Performance budgets currently cover:
+
+- Large task-tree flattening.
+- Large analytics snapshot generation.
+- Affected branch rollup refresh.
 
 Before merging a feature:
 

@@ -110,6 +110,7 @@ final class TimeTrackerStore: ObservableObject {
     let countdownCommandHandler = CountdownCommandHandler()
     let checklistCommandHandler = ChecklistCommandHandler()
     let preferenceCommandHandler = PreferenceCommandHandler()
+    let refreshCoordinator = StoreRefreshCoordinator()
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var preferenceDomainStore = PreferenceStore()

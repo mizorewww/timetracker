@@ -103,14 +103,17 @@ struct HomeUIContractTests {
         }
     }
 
-    @Test
+    @Test @MainActor
     func regularWidthIOSUsesVisibleSystemSplitView() throws {
         let source = try sourceText("timetracker/App/ContentView.swift")
 
+        #expect(SplitColumnLayoutPolicy.iPad.sidebar == ColumnWidth(min: 240, ideal: 260, max: 300))
+        #expect(SplitColumnLayoutPolicy.iPad.detail.min == 560)
         #expect(source.contains("iPadRootView(store: store)"))
         #expect(source.contains("struct iPadRootView"))
         #expect(source.contains("ipad.splitNavigation"))
-        #expect(source.contains(".navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)"))
+        #expect(source.contains("SplitColumnLayoutPolicy.iPad"))
+        #expect(source.contains(".navigationSplitViewColumnWidth("))
         #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
         #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
         #expect(source.contains("if columnVisibility != .all"))

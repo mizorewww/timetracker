@@ -8,6 +8,23 @@ struct RollupStore {
         taskRollups = rollupService.rollups(tasks: tasks, segments: segments, checklistItems: checklistItems, now: now)
     }
 
+    mutating func refreshAffected(
+        taskIDs: Set<UUID>,
+        tasks: [TaskNode],
+        segments: [TimeSegment],
+        checklistItems: [ChecklistItem],
+        now: Date = Date()
+    ) {
+        taskRollups = rollupService.rollups(
+            updating: taskIDs,
+            existingRollups: taskRollups,
+            tasks: tasks,
+            segments: segments,
+            checklistItems: checklistItems,
+            now: now
+        )
+    }
+
     func rollup(for taskID: UUID) -> TaskRollup? {
         taskRollups[taskID]
     }

@@ -241,6 +241,8 @@ struct DataLifecycleTests {
         #expect(preference.deletedAt == nil)
         #expect(checklistItem.deletedAt == nil)
         #expect(checklistVisual.deletedAt == nil)
+        #expect(checklistVisual.suggestionTitleSnapshot == nil)
+        #expect(checklistVisual.userEditedAt == nil)
         #expect(inboxSuggestion.deletedAt == nil)
         #expect(category.includesInForecast)
         #expect(categoryAssignment.deletedAt == nil)
@@ -348,6 +350,8 @@ struct DataLifecycleTests {
         #expect(checklistItems.first?.taskID == task.id)
         #expect(visuals.map(\.iconName) == ["paintbrush"])
         #expect(visuals.map(\.colorHex) == ["1677FF"])
+        #expect(visuals.map(\.suggestionTitleSnapshot) == ["Polish empty state"])
+        #expect(visuals.map(\.suggestionModelID) == ["gpt-test"])
         #expect(inboxItem.deletedAt != nil)
         #expect(suggestion.deletedAt != nil)
     }

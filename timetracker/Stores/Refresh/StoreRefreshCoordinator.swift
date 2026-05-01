@@ -57,5 +57,9 @@ struct StoreRefreshCoordinator {
         if plan.refreshInbox || plan.refreshTasks || plan.refreshPreferences {
             store.autoSuggestInboxItemsIfNeeded()
         }
+
+        if plan.refreshChecklist || plan.refreshTasks || plan.refreshPreferences {
+            store.autoSuggestChecklistVisualsIfNeeded()
+        }
     }
 }

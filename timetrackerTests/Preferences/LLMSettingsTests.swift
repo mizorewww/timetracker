@@ -174,4 +174,110 @@ struct LLMSettingsTests {
         #expect(result.colorHex == "16A34A")
         #expect(result.reason == "same project")
     }
+
+    @Test
+    func checklistVisualSuggestionRequestUsesAllAvailableSymbols() throws {
+        let service = LLMChecklistVisualSuggestionService()
+        let request = try service.suggestionRequest(
+            checklistTitle: "Polish spacing",
+            taskTitle: "Design",
+            taskPath: "Work / Design",
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "gpt-test"
+        )
+        let body = try #require(request.httpBody.flatMap { String(data: $0, encoding: .utf8) })
+
+        #expect(request.url?.absoluteString == "https://example.test/v1/chat/completions")
+        #expect(body.contains("allowedSymbols"))
+        if let lastSymbol = SymbolCatalog.symbolNames.last {
+            #expect(body.contains(lastSymbol))
+        }
+        #expect(body.contains("prefix(400)") == false)
+    }
+
+    @Test
+    func checklistVisualSuggestionSanitizesWrongSymbolAndColor() {
+        let result = LLMChecklistVisualSuggestionService.sanitize(
+            payload: ChecklistVisualSuggestionPayload(
+                iconName: "fake.symbol",
+                colorHex: "BADBAD",
+                reason: "  visual match "
+            ),
+            modelID: "gpt-test"
+        )
+
+        #expect(result.iconName == ChecklistVisualSanitizer.defaultIcon)
+        #expect(result.colorHex == ChecklistVisualSanitizer.defaultColor)
+        #expect(result.reason == "visual match")
+    }
+
+    @Test
+    func fetchChecklistVisualSuggestionDecodesChatCompletionContent() async throws {
+        let service = LLMChecklistVisualSuggestionService { request in
+            #expect(request.url?.absoluteString == "https://example.test/v1/chat/completions")
+            let payload = """
+            {
+              "choices": [
+                {
+                  "message": {
+                    "content": "{\\"iconName\\":\\"paintbrush\\",\\"colorHex\\":\\"16A34A\\",\\"reason\\":\\"design work\\"}"
+                  }
+                }
+              ]
+            }
+            """
+            let data = Data(payload.utf8)
+            let url = try #require(request.url)
+            let response = try #require(HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            ))
+            return (data, response)
+        }
+
+        let result = try await service.suggest(
+            checklistTitle: "Polish spacing",
+            taskTitle: "Design",
+            taskPath: "Work / Design",
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "gpt-test"
+        )
+
+        #expect(result.iconName == "paintbrush")
+        #expect(result.colorHex == "16A34A")
+        #expect(result.reason == "design work")
+    }
+
+    @Test @MainActor
+    func checklistVisualSuggestionPolicyUsesTitleSnapshotAndManualEdits() {
+        let item = ChecklistItem(taskID: UUID(), title: "Draft launch copy", deviceID: "test")
+        let policy = ChecklistVisualSuggestionPolicy()
+
+        #expect(policy.shouldSuggest(item: item, visual: nil))
+
+        let defaultVisual = ChecklistItemVisual(checklistItemID: item.id, deviceID: "test")
+        #expect(policy.shouldSuggest(item: item, visual: defaultVisual))
+
+        defaultVisual.suggestionTitleSnapshot = "Draft launch copy"
+        defaultVisual.suggestionGeneratedAt = Date()
+        #expect(policy.shouldSuggest(item: item, visual: defaultVisual) == false)
+
+        item.title = "Draft pricing copy"
+        #expect(policy.shouldSuggest(item: item, visual: defaultVisual))
+
+        defaultVisual.userEditedAt = Date()
+        #expect(policy.shouldSuggest(item: item, visual: defaultVisual) == false)
+
+        let customLegacyVisual = ChecklistItemVisual(
+            checklistItemID: item.id,
+            iconName: "book",
+            colorHex: "16A34A",
+            deviceID: "test"
+        )
+        #expect(policy.shouldSuggest(item: item, visual: customLegacyVisual) == false)
+    }
 }

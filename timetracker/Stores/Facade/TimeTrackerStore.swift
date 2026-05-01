@@ -50,6 +50,7 @@ final class TimeTrackerStore: ObservableObject {
     }
     @Published var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
     @Published var inboxSuggestionInFlightIDs: Set<UUID> = []
+    @Published var checklistVisualSuggestionInFlightIDs: Set<UUID> = []
     @Published var preferences = AppPreferences.defaults
     @Published var rollupDomainStore = RollupStore()
     @Published var analyticsDomainStore = AnalyticsStore()

@@ -205,6 +205,57 @@ enum TimeTrackerSchemaV7: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
+            TimeTrackerSchemaV7.ChecklistItemVisual.self
+        ]
+    }
+
+    @Model
+    final class ChecklistItemVisual {
+        var id: UUID = UUID()
+        var checklistItemID: UUID = UUID()
+        var iconName: String = "checkmark.circle"
+        var colorHex: String = "1677FF"
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
+        var deletedAt: Date?
+        var deviceID: String = ""
+        var clientMutationID: UUID = UUID()
+
+        init(
+            checklistItemID: UUID,
+            iconName: String = "checkmark.circle",
+            colorHex: String = "1677FF",
+            deviceID: String
+        ) {
+            self.id = UUID()
+            self.checklistItemID = checklistItemID
+            self.iconName = iconName
+            self.colorHex = colorHex
+            self.createdAt = Date()
+            self.updatedAt = Date()
+            self.deviceID = deviceID
+            self.clientMutationID = UUID()
+        }
+    }
+}
+
+enum TimeTrackerSchemaV8: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 7, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TaskCategory.self,
+            TaskCategoryAssignment.self,
+            InboxItem.self,
+            InboxSuggestion.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            DailySummary.self,
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self,
             ChecklistItemVisual.self
         ]
     }
@@ -219,7 +270,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV4.self,
             TimeTrackerSchemaV5.self,
             TimeTrackerSchemaV6.self,
-            TimeTrackerSchemaV7.self
+            TimeTrackerSchemaV7.self,
+            TimeTrackerSchemaV8.self
         ]
     }
 
@@ -262,7 +314,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                 }
             ),
             .lightweight(fromVersion: TimeTrackerSchemaV5.self, toVersion: TimeTrackerSchemaV6.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV6.self, toVersion: TimeTrackerSchemaV7.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV6.self, toVersion: TimeTrackerSchemaV7.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV7.self, toVersion: TimeTrackerSchemaV8.self)
         ]
     }
 }
@@ -279,11 +332,11 @@ private enum LegacyTaskCategoryMigrationBuffer {
 
 enum TimeTrackerModelRegistry {
     static var currentSchema: Schema {
-        Schema(versionedSchema: TimeTrackerSchemaV7.self)
+        Schema(versionedSchema: TimeTrackerSchemaV8.self)
     }
 
     static var currentModels: [any PersistentModel.Type] {
-        TimeTrackerSchemaV7.models
+        TimeTrackerSchemaV8.models
     }
 
     static var cloudSyncedUserModelNames: Set<String> {

@@ -165,6 +165,9 @@ struct InboxCommandHandler {
                 checklistItemID: checklistItem.id,
                 iconName: ChecklistVisualSanitizer.sanitizedIcon(suggestion.iconName),
                 colorHex: ChecklistVisualSanitizer.sanitizedColor(suggestion.colorHex),
+                suggestionTitleSnapshot: item.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                suggestionModelID: suggestion.modelID,
+                suggestionGeneratedAt: now,
                 deviceID: deviceID
             )
         )

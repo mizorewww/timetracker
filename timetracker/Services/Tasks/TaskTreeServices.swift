@@ -312,6 +312,7 @@ struct ChecklistDraftService {
                     for: item.id,
                     draft: draft,
                     existing: visualByItemID[item.id],
+                    title: title,
                     context: context,
                     now: now,
                     deviceID: deviceID
@@ -331,6 +332,7 @@ struct ChecklistDraftService {
                         checklistItemID: item.id,
                         iconName: ChecklistVisualSanitizer.sanitizedIcon(draft.iconName),
                         colorHex: ChecklistVisualSanitizer.sanitizedColor(draft.colorHex),
+                        userEditedAt: isManualVisual(iconName: draft.iconName, colorHex: draft.colorHex) ? now : nil,
                         deviceID: deviceID
                     )
                 )
@@ -355,6 +357,7 @@ struct ChecklistDraftService {
         for checklistItemID: UUID,
         draft: ChecklistEditorDraft,
         existing: ChecklistItemVisual?,
+        title: String,
         context: ModelContext,
         now: Date,
         deviceID: String
@@ -362,8 +365,16 @@ struct ChecklistDraftService {
         let iconName = ChecklistVisualSanitizer.sanitizedIcon(draft.iconName)
         let colorHex = ChecklistVisualSanitizer.sanitizedColor(draft.colorHex)
         if let existing {
+            let visualChanged = ChecklistVisualSanitizer.sanitizedIcon(existing.iconName) != iconName ||
+                ChecklistVisualSanitizer.sanitizedColor(existing.colorHex) != colorHex
             existing.iconName = iconName
             existing.colorHex = colorHex
+            if visualChanged {
+                existing.userEditedAt = now
+                existing.suggestionTitleSnapshot = title
+                existing.suggestionModelID = "manual"
+                existing.suggestionGeneratedAt = nil
+            }
             existing.deletedAt = nil
             existing.updatedAt = now
             existing.clientMutationID = UUID()
@@ -373,9 +384,14 @@ struct ChecklistDraftService {
                     checklistItemID: checklistItemID,
                     iconName: iconName,
                     colorHex: colorHex,
+                    userEditedAt: isManualVisual(iconName: iconName, colorHex: colorHex) ? now : nil,
                     deviceID: deviceID
                 )
             )
         }
+    }
+
+    private func isManualVisual(iconName: String?, colorHex: String?) -> Bool {
+        !ChecklistVisualSanitizer.isDefault(iconName: iconName, colorHex: colorHex)
     }
 }

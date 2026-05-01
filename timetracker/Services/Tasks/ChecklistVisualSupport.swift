@@ -23,4 +23,40 @@ enum ChecklistVisualSanitizer {
             TaskColorPalette.hexValues.contains(candidate)
         } ?? defaultColor
     }
+
+    nonisolated static func isDefault(iconName: String?, colorHex: String?) -> Bool {
+        sanitizedIcon(iconName) == defaultIcon &&
+            sanitizedColor(colorHex) == defaultColor
+    }
+}
+
+struct ChecklistVisualSuggestionPolicy {
+    func shouldSuggest(item: ChecklistItem, visual: ChecklistItemVisual?) -> Bool {
+        let title = normalizedTitle(item.title)
+        guard item.deletedAt == nil,
+              item.isCompleted == false,
+              title.isEmpty == false else {
+            return false
+        }
+        guard let visual else { return true }
+        guard visual.deletedAt == nil,
+              visual.userEditedAt == nil else {
+            return false
+        }
+        if visual.suggestionTitleSnapshot == title,
+           visual.suggestionGeneratedAt != nil {
+            return false
+        }
+        if visual.suggestionTitleSnapshot != nil {
+            return true
+        }
+        return ChecklistVisualSanitizer.isDefault(
+            iconName: visual.iconName,
+            colorHex: visual.colorHex
+        )
+    }
+
+    func normalizedTitle(_ title: String) -> String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }

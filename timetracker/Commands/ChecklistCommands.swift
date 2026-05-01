@@ -85,4 +85,41 @@ struct ChecklistCommandHandler {
             destination: destination
         )
     }
+
+    func applyVisualSuggestion(
+        item: ChecklistItem,
+        result: LLMChecklistVisualSuggestionResult,
+        existingVisual: ChecklistItemVisual?,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
+        let titleSnapshot = ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+        let iconName = ChecklistVisualSanitizer.sanitizedIcon(result.iconName)
+        let colorHex = ChecklistVisualSanitizer.sanitizedColor(result.colorHex)
+        if let existingVisual {
+            existingVisual.iconName = iconName
+            existingVisual.colorHex = colorHex
+            existingVisual.suggestionTitleSnapshot = titleSnapshot
+            existingVisual.suggestionModelID = result.modelID
+            existingVisual.suggestionGeneratedAt = now
+            existingVisual.userEditedAt = nil
+            existingVisual.deletedAt = nil
+            existingVisual.updatedAt = now
+            existingVisual.clientMutationID = UUID()
+        } else {
+            context.insert(
+                ChecklistItemVisual(
+                    checklistItemID: item.id,
+                    iconName: iconName,
+                    colorHex: colorHex,
+                    suggestionTitleSnapshot: titleSnapshot,
+                    suggestionModelID: result.modelID,
+                    suggestionGeneratedAt: now,
+                    deviceID: deviceID
+                )
+            )
+        }
+        try context.save()
+    }
 }

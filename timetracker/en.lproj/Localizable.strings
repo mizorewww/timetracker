@@ -40,9 +40,10 @@
 "quickStart.defaultHint" = "Pinned tasks first, then frequently used recent tasks.";
 "quickStart.pinnedHint" = "Shows your pinned quick-start tasks.";
 "inbox.empty" = "Nothing in Inbox.";
-"inbox.footer" = "Capture loose checklist items here. Assigning them to tasks can come later.";
+"inbox.subtitle" = "Quickly capture thoughts, errands, and anything that needs attention.";
+"inbox.footer" = "Collect loose items here first, then organize them into tasks later.";
 "inbox.add" = "Add Inbox Item";
-"inbox.addPlaceholder" = "New inbox item";
+"inbox.addPlaceholder" = "New capture item";
 "inbox.itemPlaceholder" = "Inbox item";
 "inbox.markCompleted" = "Mark Completed";
 "inbox.markOpen" = "Mark Open";
@@ -407,6 +408,7 @@
 "common.sort" = "Sort";
 "common.moveUp" = "Move Up";
 "common.moveDown" = "Move Down";
+"common.more" = "More";
 "editor.task.notes" = "Notes";
 "editor.task.newTitle" = "New Task";
 "editor.task.editTitle" = "Edit Task";
@@ -443,6 +445,7 @@
 "inbox.suggestion.apply" = "Add to Task";
 "inbox.suggestion.discard" = "Discard Suggestion";
 "inbox.suggestion.generating" = "Suggesting automatically";
+"inbox.suggestion.prefix" = "Suggested task:";
 "inbox.suggestion.targetFormat" = "Suggested task: %@";
 "inbox.suggestion.editorTitle" = "Inbox Suggestion";
 "inbox.suggestion.editorFooter" = "Choose the task, symbol, and color before adding this inbox item as a checklist item.";

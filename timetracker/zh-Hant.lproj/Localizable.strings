@@ -40,9 +40,10 @@
 "quickStart.defaultHint" = "優先顯示固定任務，再按使用頻率補充最近任務。";
 "quickStart.pinnedHint" = "顯示你固定的快速開始任務。";
 "inbox.empty" = "收件箱裡還沒有內容。";
-"inbox.footer" = "先把零散清單放在這裡，之後再歸入具體任務。";
+"inbox.subtitle" = "快速收集想法、待辦或任何需要處理的事項。";
+"inbox.footer" = "將零散事項先收集到這裡，稍後再整理並分配到任務中。";
 "inbox.add" = "新增收件箱項目";
-"inbox.addPlaceholder" = "新的收件箱項目";
+"inbox.addPlaceholder" = "新增收集項";
 "inbox.itemPlaceholder" = "收件箱項目";
 "inbox.markCompleted" = "標記完成";
 "inbox.markOpen" = "標記未完成";
@@ -407,6 +408,7 @@
 "common.sort" = "排序";
 "common.moveUp" = "上移";
 "common.moveDown" = "下移";
+"common.more" = "更多";
 "editor.task.notes" = "備註";
 "editor.task.newTitle" = "新增任務";
 "editor.task.editTitle" = "編輯任務";
@@ -443,6 +445,7 @@
 "inbox.suggestion.apply" = "加入任務";
 "inbox.suggestion.discard" = "丟棄推薦";
 "inbox.suggestion.generating" = "正在自動推薦";
+"inbox.suggestion.prefix" = "建議任務：";
 "inbox.suggestion.targetFormat" = "推薦任務：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推薦";
 "inbox.suggestion.editorFooter" = "加入任務前，可以手動選擇任務、符號和顏色。";

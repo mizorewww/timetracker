@@ -5,6 +5,7 @@ struct InboxView: View {
     @State private var draftTitle = ""
     @State private var addFocusToken = 0
     #if os(iOS)
+    @Environment(\.editMode) private var editMode
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
@@ -31,34 +32,39 @@ struct InboxView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: isCompact ? 14 : 24, leading: isCompact ? 22 : 32, bottom: 8, trailing: isCompact ? 22 : 32))
 
-            InboxCaptureRow(
-                title: $draftTitle,
-                placeholder: AppStrings.localized("inbox.addPlaceholder"),
-                focusToken: addFocusToken,
-                submit: submitDraft
-            )
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 4, leading: isCompact ? 22 : 32, bottom: 12, trailing: isCompact ? 22 : 32))
-
-            if openItems.isEmpty && completedItems.isEmpty {
-                EmptyStateRow(
-                    title: AppStrings.localized("inbox.empty"),
-                    icon: "tray"
+            Section {
+                InboxCaptureRow(
+                    title: $draftTitle,
+                    placeholder: AppStrings.localized("inbox.addPlaceholder"),
+                    focusToken: addFocusToken,
+                    submit: submitDraft
                 )
-                .listRowBackground(AppColors.cardBackground)
-                .listRowInsets(EdgeInsets(top: 8, leading: isCompact ? 22 : 32, bottom: 8, trailing: isCompact ? 22 : 32))
-            } else {
-                ForEach(openItems) { item in
-                    inboxRow(item)
-                }
-                .onMove(perform: moveInboxItems)
+                .listRowSeparator(.hidden)
+                .listRowInsets(cardRowInsets(top: isCompact ? 14 : 18, bottom: isCompact ? 14 : 18))
+                .moveDisabled(true)
 
-                ForEach(completedItems) { item in
-                    inboxRow(item)
-                        .moveDisabled(true)
+                if openItems.isEmpty && completedItems.isEmpty {
+                    EmptyStateRow(
+                        title: AppStrings.localized("inbox.empty"),
+                        icon: "tray"
+                    )
+                    .listRowInsets(cardRowInsets())
+                    .moveDisabled(true)
+                } else {
+                    ForEach(openItems) { item in
+                        inboxRow(item)
+                    }
+                    .onMove(perform: moveInboxItems)
+
+                    ForEach(completedItems) { item in
+                        inboxRow(item)
+                            .moveDisabled(true)
+                    }
                 }
+            } header: {
+                EmptyView()
             }
+            .listRowBackground(AppColors.cardBackground)
 
             footerHint
                 .listRowBackground(Color.clear)
@@ -73,13 +79,6 @@ struct InboxView: View {
         .scrollContentBackground(.hidden)
         .background(AppColors.background.ignoresSafeArea())
         .navigationTitle(isCompact ? "" : AppStrings.inbox)
-        #if os(iOS)
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                EditButton()
-            }
-        }
-        #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -109,6 +108,23 @@ struct InboxView: View {
             }
 
             Spacer(minLength: 12)
+
+            #if os(iOS)
+            if !openItems.isEmpty {
+                Button {
+                    toggleSorting()
+                } label: {
+                    Label(AppStrings.localized("common.sort"), systemImage: isSorting ? "checkmark" : "arrow.up.arrow.down")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: isCompact ? 17 : 15, weight: .regular))
+                        .frame(width: isCompact ? 40 : 36, height: isCompact ? 40 : 36)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .controlSize(.regular)
+                .accessibilityLabel(isSorting ? AppStrings.done : AppStrings.localized("common.sort"))
+            }
+            #endif
 
             Button {
                 addFocusToken += 1
@@ -144,8 +160,7 @@ struct InboxView: View {
     private func inboxRow(_ item: InboxItem) -> some View {
         InboxItemRow(store: store, item: item, isCompact: isCompact)
             .padding(.vertical, isCompact ? 8 : 10)
-            .listRowBackground(AppColors.cardBackground)
-            .listRowInsets(EdgeInsets(top: 0, leading: isCompact ? 22 : 32, bottom: 0, trailing: isCompact ? 22 : 32))
+            .listRowInsets(cardRowInsets())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 if canApplySuggestion(for: item) {
                     Button {
@@ -166,6 +181,31 @@ struct InboxView: View {
                     .tint(.gray)
                 }
             }
+    }
+
+    private func cardRowInsets(top: CGFloat = 0, bottom: CGFloat = 0) -> EdgeInsets {
+        EdgeInsets(
+            top: top,
+            leading: isCompact ? 16 : 20,
+            bottom: bottom,
+            trailing: isCompact ? 16 : 20
+        )
+    }
+
+    private var isSorting: Bool {
+        #if os(iOS)
+        editMode?.wrappedValue.isEditing == true
+        #else
+        false
+        #endif
+    }
+
+    private func toggleSorting() {
+        #if os(iOS)
+        withAnimation(.snappy(duration: 0.2)) {
+            editMode?.wrappedValue = isSorting ? .inactive : .active
+        }
+        #endif
     }
 
     private func moveInboxItems(from sourceOffsets: IndexSet, to destination: Int) {

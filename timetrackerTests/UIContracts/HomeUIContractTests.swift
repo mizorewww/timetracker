@@ -205,7 +205,7 @@ struct HomeUIContractTests {
         #expect(serviceSource.contains("TaskTreeCategorySectionModel"))
         #expect(serviceSource.contains("TaskTreeRowModel"))
         #expect(source.contains("rotationEffect") == false)
-        #expect(source.contains(".transaction { transaction in\n            transaction.animation = nil\n        }"))
+        #expect(source.contains(".transaction { transaction in\n            transaction.animation = nil\n        }") == false)
     }
 
     @Test
@@ -343,7 +343,8 @@ struct HomeUIContractTests {
         #expect(sharedSource.contains("struct InlineChecklistAddRow"))
         #expect(editorSource.contains("ChecklistCompletionButton"))
         #expect(editorSource.contains("withAnimation(.snappy") == false)
-        #expect(sharedSource.contains(".animation(") == false)
+        #expect(sharedSource.contains(".symbolEffect(.bounce, value: isCompleted)"))
+        #expect(sharedSource.contains(".animation(.snappy"))
         #expect(sharedSource.contains(".lineLimit(nil)"))
         #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.checklist.itemPlaceholder\"), text: $item.title, axis: .vertical)"))
         #expect(editorSource.contains("EditButton()") == false)
@@ -352,7 +353,7 @@ struct HomeUIContractTests {
         #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
         #expect(inspectorSource.contains("private struct ChecklistDisplayRow") == false)
         #expect(inspectorSource.contains("private struct InlineChecklistAddRow") == false)
-        #expect(inspectorSource.contains("withAnimation(.snappy") == false)
+        #expect(inspectorSource.contains("withAnimation(.snappy"))
         #expect(inspectorSource.contains("showsAllItems"))
         #expect(inspectorSource.contains("EditButton()") == false)
         #expect(inspectorSource.contains("List {") == false)
@@ -372,6 +373,52 @@ struct HomeUIContractTests {
         #expect(taskRowSource.contains("case iconOnly"))
         #expect(managementSource.contains(".taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)"))
         #expect(sidebarSource.contains(".taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)"))
+    }
+
+    @Test
+    func taskCategoriesSupportSidebarDividersWithoutDragReassignment() throws {
+        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let editorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift")
+
+        #expect(tasksSource.contains("taskCategoryDropDestination") == false)
+        #expect(tasksSource.contains("dropDestination(") == false)
+        #expect(tasksSource.contains("CategoryDropTargetRow") == false)
+        #expect(rowSource.contains("rootTaskDragIfNeeded") == false)
+        #expect(rowSource.contains(".draggable(") == false)
+        #expect(rowSource.contains("RootTaskDragPayload") == false)
+        #expect(sidebarSource.contains("showsBottomDivider: true"))
+        #expect(editorSource.contains("taskCategory.inherited"))
+        #expect(editorSource.contains("LabeledContent(AppStrings.localized(\"taskCategory.title\")") == false)
+        #expect(storeSource.contains("func moveRootTaskToCategory") == false)
+    }
+
+    @Test
+    func inboxUsesOwnDestinationAndSmoothInlineCapture() throws {
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
+        let contentSource = try sourceText("timetracker/App/ContentView.swift")
+        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let inboxSource = try sourceText("timetracker/Features/Inbox/InboxViews.swift")
+        let schemaSource = try sourceText("timetracker/Models/SchemaModels.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let sharedChecklistSource = try sourceText("timetracker/SharedUI/Components/ChecklistControls.swift")
+
+        #expect(storeSource.contains("case inbox = \"Inbox\""))
+        #expect(contentSource.contains("case .inbox:"))
+        #expect(contentSource.contains("InboxView(store: store)"))
+        #expect(sidebarSource.contains("return TimeTrackerStore.DesktopDestination.allCases.filter { $0 != .settings }"))
+        #expect(tasksSource.contains("InboxNavigationRow(count: store.openInboxItems.count)") == false)
+        #expect(inboxSource.contains("InlineChecklistAddRow("))
+        #expect(inboxSource.contains("EditableChecklistTextRow("))
+        #expect(inboxSource.contains("InlineInboxAddRow") == false)
+        #expect(inboxSource.contains("showsCompleted") == false)
+        #expect(sharedChecklistSource.contains("struct EditableChecklistTextRow"))
+        #expect(sharedChecklistSource.contains(".symbolEffect(.bounce, value: isCompleted)"))
+        #expect(inboxSource.contains("store.addInboxItem(title: title)"))
+        #expect(schemaSource.contains("enum TimeTrackerSchemaV6"))
+        #expect(schemaSource.contains("InboxItem.self"))
     }
 
     @Test

@@ -113,7 +113,7 @@ struct AnalyticsTimelineTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Client Research", parentID: nil, colorHex: "1677FF", iconName: nil)
-        let now = Date()
+        let now = fixedAnalyticsMidday()
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -327,4 +327,10 @@ struct AnalyticsTimelineTests {
         #expect(points.first?.label == "1")
         #expect(points.last?.label == "30")
     }
+}
+
+private func fixedAnalyticsMidday() -> Date {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    return calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 12, minute: 0))!
 }

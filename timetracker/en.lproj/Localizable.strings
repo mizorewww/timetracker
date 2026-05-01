@@ -1,5 +1,6 @@
 "app.name" = "Time Tracker";
 "nav.today" = "Today";
+"nav.inbox" = "Inbox";
 "nav.tasks" = "Tasks";
 "nav.pomodoro" = "Pomodoro";
 "nav.analytics" = "Analytics";
@@ -38,6 +39,13 @@
 "timeline.deleteSegment" = "Delete Time Segment";
 "quickStart.defaultHint" = "Pinned tasks first, then frequently used recent tasks.";
 "quickStart.pinnedHint" = "Shows your pinned quick-start tasks.";
+"inbox.empty" = "Nothing in Inbox.";
+"inbox.footer" = "Capture loose checklist items here. Assigning them to tasks can come later.";
+"inbox.add" = "Add Inbox Item";
+"inbox.addPlaceholder" = "New inbox item";
+"inbox.itemPlaceholder" = "Inbox item";
+"inbox.markCompleted" = "Mark Completed";
+"inbox.markOpen" = "Mark Open";
 "quickStart.edit" = "Edit Quick Start";
 "menu.startSelectedTask" = "Start Selected Task";
 "menu.startPomodoro" = "Start Pomodoro";
@@ -347,6 +355,7 @@
 "taskCategory.nameRequired" = "Category name is required.";
 "taskCategory.none" = "No Category";
 "taskCategory.uncategorized" = "Uncategorized";
+"taskCategory.inherited" = "Inherited from parent: %@";
 "taskCategory.editor.info" = "Category";
 "taskCategory.symbol" = "Symbol";
 "taskCategory.includesForecast" = "Include tasks in forecasts";

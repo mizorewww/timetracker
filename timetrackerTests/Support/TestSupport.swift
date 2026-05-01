@@ -7,7 +7,7 @@ import Testing
 func makeTestContext() throws -> ModelContext {
     let schema = TimeTrackerModelRegistry.currentSchema
     let configuration = ModelConfiguration(
-        "TimeTrackerTests",
+        "TimeTrackerTests-\(UUID().uuidString)",
         schema: schema,
         isStoredInMemoryOnly: true,
         cloudKitDatabase: .none

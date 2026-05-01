@@ -168,6 +168,26 @@ enum TimeTrackerSchemaV5: VersionedSchema {
     }
 }
 
+enum TimeTrackerSchemaV6: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 5, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TaskCategory.self,
+            TaskCategoryAssignment.self,
+            InboxItem.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            DailySummary.self,
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self
+        ]
+    }
+}
+
 enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [
@@ -175,7 +195,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV2.self,
             TimeTrackerSchemaV3.self,
             TimeTrackerSchemaV4.self,
-            TimeTrackerSchemaV5.self
+            TimeTrackerSchemaV5.self,
+            TimeTrackerSchemaV6.self
         ]
     }
 
@@ -216,7 +237,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                     LegacyTaskCategoryMigrationBuffer.pendingAssignments = []
                     try context.save()
                 }
-            )
+            ),
+            .lightweight(fromVersion: TimeTrackerSchemaV5.self, toVersion: TimeTrackerSchemaV6.self)
         ]
     }
 }
@@ -233,11 +255,11 @@ private enum LegacyTaskCategoryMigrationBuffer {
 
 enum TimeTrackerModelRegistry {
     static var currentSchema: Schema {
-        Schema(versionedSchema: TimeTrackerSchemaV5.self)
+        Schema(versionedSchema: TimeTrackerSchemaV6.self)
     }
 
     static var currentModels: [any PersistentModel.Type] {
-        TimeTrackerSchemaV5.models
+        TimeTrackerSchemaV6.models
     }
 
     static var cloudSyncedUserModelNames: Set<String> {

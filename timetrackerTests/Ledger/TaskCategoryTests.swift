@@ -185,4 +185,48 @@ struct TaskCategoryTests {
         #expect(try repository.categoryID(forRootTaskID: keptRoot.id) == nil)
         #expect(store.taskTreeSections(expandedTaskIDs: []).map(\.title) == [AppStrings.localized("taskCategory.uncategorized")])
     }
+
+    @Test @MainActor
+    func rootTaskCategoryCanBeChangedThroughTaskEditorWithoutChangingHierarchy() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let work = try repository.createCategory(
+            title: "Work",
+            colorHex: "1677FF",
+            iconName: "briefcase",
+            includesInForecast: true
+        )
+        let life = try repository.createCategory(
+            title: "Life",
+            colorHex: "FF9F0A",
+            iconName: "house",
+            includesInForecast: false
+        )
+        let root = try repository.createTask(
+            title: "Client Project",
+            parentID: nil,
+            categoryID: work.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let child = try repository.createTask(
+            title: "Research",
+            parentID: root.id,
+            categoryID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        var draft = TaskEditorDraft(task: root, categoryID: work.id, checklistItems: [])
+        draft.categoryID = life.id
+        #expect(store.saveTaskDraft(draft))
+
+        #expect(try repository.categoryID(forRootTaskID: root.id) == life.id)
+        #expect(try repository.task(id: child.id)?.parentID == root.id)
+        #expect(store.effectiveCategory(for: child)?.id == life.id)
+        #expect(try repository.categoryID(forRootTaskID: child.id) == nil)
+    }
 }

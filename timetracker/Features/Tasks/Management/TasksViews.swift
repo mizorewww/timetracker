@@ -21,6 +21,19 @@ struct TasksView: View {
             if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
                     Section {
+                        TaskCategorySectionHeader(
+                            section: section,
+                            addTask: {
+                                store.presentNewTask(
+                                    preservingDestination: .tasks,
+                                    categoryID: section.categoryID
+                                )
+                            },
+                            editCategory: editAction(for: section)
+                        )
+                        .padding(.vertical, 3)
+                        .listRowSeparator(.hidden)
+
                         ForEach(section.rows) { row in
                             if let task = store.task(for: row.taskID) {
                                 TaskManagementFlatRow(
@@ -35,17 +48,6 @@ struct TasksView: View {
                                 )
                             }
                         }
-                    } header: {
-                        TaskCategorySectionHeader(
-                            section: section,
-                            addTask: {
-                                store.presentNewTask(
-                                    preservingDestination: .tasks,
-                                    categoryID: section.categoryID
-                                )
-                            },
-                            editCategory: editAction(for: section)
-                        )
                     }
                 }
             } else if searchResults.isEmpty {
@@ -82,9 +84,6 @@ struct TasksView: View {
         #else
         .listStyle(.inset)
         #endif
-        .transaction { transaction in
-            transaction.animation = nil
-        }
         .toolbar {
             Menu {
                 Button {

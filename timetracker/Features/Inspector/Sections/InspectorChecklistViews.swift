@@ -61,7 +61,9 @@ struct TaskChecklistPanel: View {
                                 title: item.title,
                                 isCompleted: item.isCompleted
                             ) {
-                                store.toggleChecklistItem(item)
+                                withAnimation(.snappy(duration: 0.22)) {
+                                    store.toggleChecklistItem(item)
+                                }
                             }
                         }
                     }

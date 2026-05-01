@@ -8,6 +8,7 @@ enum StoreRefreshScope: Hashable, CaseIterable {
     case preferences
     case countdown
     case checklist
+    case inbox
     case rollups
     case analytics
     case liveActivities
@@ -27,6 +28,7 @@ enum StoreDomainEvent: Hashable {
     case pomodoroChanged(runID: UUID?, sessionID: UUID?, taskID: UUID?)
     case preferenceChanged(key: String?)
     case countdownChanged
+    case inboxChanged
     case remoteImportCompleted
     case fullSync
 
@@ -44,6 +46,7 @@ enum StoreDomainEvent: Hashable {
             return taskID.map { [$0] } ?? []
         case .preferenceChanged,
              .countdownChanged,
+             .inboxChanged,
              .remoteImportCompleted,
              .fullSync:
             return []
@@ -59,6 +62,7 @@ enum StoreDomainEvent: Hashable {
              .checklistChanged,
              .preferenceChanged,
              .countdownChanged,
+             .inboxChanged,
              .remoteImportCompleted,
              .fullSync:
             return []
@@ -77,6 +81,7 @@ struct StoreRefreshPlan: Equatable {
     let refreshPreferences: Bool
     let refreshCountdown: Bool
     let refreshChecklist: Bool
+    let refreshInbox: Bool
     let refreshRollups: Bool
     let refreshAnalytics: Bool
     let validateSelection: Bool
@@ -95,6 +100,7 @@ struct StoreRefreshPlan: Equatable {
         refreshPreferences = isFullRefresh || scopes.contains(.preferences)
         refreshCountdown = isFullRefresh || scopes.contains(.countdown)
         refreshChecklist = isFullRefresh || scopes.contains(.checklist)
+        refreshInbox = isFullRefresh || scopes.contains(.inbox)
 
         refreshRollups = isFullRefresh ||
             scopes.contains(.rollups) ||
@@ -156,6 +162,8 @@ struct StoreRefreshPlanner {
             return [.preferences]
         case .countdownChanged:
             return [.countdown]
+        case .inboxChanged:
+            return [.inbox]
         case .remoteImportCompleted:
             return StoreRefreshScope.full
         case .fullSync:

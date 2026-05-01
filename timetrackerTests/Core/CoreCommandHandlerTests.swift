@@ -33,6 +33,39 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
+    func inboxCommandHandlerCapturesLooseItemsAndInvalidatesSuggestionsOnEdit() throws {
+        let context = try makeTestContext()
+        let handler = InboxCommandHandler()
+
+        let firstResult = try handler.add(title: "  Buy notebook  ", existingItems: [], context: context, deviceID: "test")
+        let first = try #require(firstResult)
+        let blank = try handler.add(title: "   ", existingItems: [first], context: context, deviceID: "test")
+
+        #expect(blank == nil)
+        #expect(first.title == "Buy notebook")
+        #expect(first.suggestedTaskID == nil)
+
+        let suggestedTaskID = UUID()
+        first.suggestedTaskID = suggestedTaskID
+        first.suggestionReason = "Likely writing task"
+        first.suggestionGeneratedAt = Date(timeIntervalSince1970: 900)
+        try context.save()
+
+        try handler.updateTitle(first, title: "Buy ink", context: context, now: Date(timeIntervalSince1970: 1_000))
+        #expect(first.title == "Buy ink")
+        #expect(first.suggestedTaskID == nil)
+        #expect(first.suggestionReason == nil)
+        #expect(first.suggestionGeneratedAt == nil)
+
+        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 2_000))
+        #expect(first.isCompleted)
+        #expect(first.completedAt == Date(timeIntervalSince1970: 2_000))
+
+        try handler.softDelete(first, context: context, now: Date(timeIntervalSince1970: 3_000))
+        #expect(first.deletedAt == Date(timeIntervalSince1970: 3_000))
+    }
+
+    @Test @MainActor
     func timerCommandHandlerCoordinatesLedgerAndParallelTimerPolicy() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")

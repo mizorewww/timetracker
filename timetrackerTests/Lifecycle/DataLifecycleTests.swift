@@ -240,7 +240,8 @@ struct DataLifecycleTests {
             "PomodoroRun",
             "CountdownEvent",
             "SyncedPreference",
-            "ChecklistItem"
+            "ChecklistItem",
+            "InboxItem"
         ]
 
         #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
@@ -262,16 +263,19 @@ struct DataLifecycleTests {
         let category = TaskCategory(title: "Cloud category", deviceID: "test")
         let assignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
         let checklist = ChecklistItem(taskID: task.id, title: "Cloud checklist", deviceID: "test")
+        let inboxItem = InboxItem(title: "Cloud inbox", deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
 
         context.insert(task)
         context.insert(category)
         context.insert(assignment)
         context.insert(checklist)
+        context.insert(inboxItem)
         context.insert(preference)
         try context.save()
 
         #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).map(\.title) == ["Cloud checklist"])
+        #expect(try context.fetch(FetchDescriptor<InboxItem>()).map(\.title) == ["Cloud inbox"])
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [category.id])
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).map(\.key) == [AppPreferenceKey.showGrossAndWallTogether.rawValue])
     }

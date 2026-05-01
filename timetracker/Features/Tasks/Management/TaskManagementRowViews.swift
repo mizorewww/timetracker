@@ -16,6 +16,10 @@ struct TaskManagementFlatRow: View {
     }
 
     var body: some View {
+        rowContent
+    }
+
+    private var rowContent: some View {
         HStack(alignment: .center, spacing: 8) {
             disclosureButton
             TaskManagementRowContent(

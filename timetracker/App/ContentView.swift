@@ -120,6 +120,11 @@ struct PhoneRootView: View {
             .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
 
             NavigationStack {
+                InboxView(store: store)
+            }
+            .tabItem { Label(AppStrings.inbox, systemImage: "tray") }
+
+            NavigationStack {
                 TasksView(store: store)
             }
             .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
@@ -313,6 +318,8 @@ struct DesktopContentView: View {
         switch store.desktopDestination {
         case .today:
             DesktopMainView(store: store)
+        case .inbox:
+            InboxView(store: store)
         case .tasks:
             TasksView(store: store)
         case .pomodoro:

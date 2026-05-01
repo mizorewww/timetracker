@@ -1,5 +1,6 @@
 "app.name" = "時間追蹤";
 "nav.today" = "今日";
+"nav.inbox" = "收件箱";
 "nav.tasks" = "任務";
 "nav.pomodoro" = "番茄鐘";
 "nav.analytics" = "分析";
@@ -38,6 +39,13 @@
 "timeline.deleteSegment" = "刪除時間片段";
 "quickStart.defaultHint" = "優先顯示固定任務，再按使用頻率補充最近任務。";
 "quickStart.pinnedHint" = "顯示你固定的快速開始任務。";
+"inbox.empty" = "收件箱裡還沒有內容。";
+"inbox.footer" = "先把零散清單放在這裡，之後再歸入具體任務。";
+"inbox.add" = "新增收件箱項目";
+"inbox.addPlaceholder" = "新的收件箱項目";
+"inbox.itemPlaceholder" = "收件箱項目";
+"inbox.markCompleted" = "標記完成";
+"inbox.markOpen" = "標記未完成";
 "quickStart.edit" = "編輯快速開始";
 "menu.startSelectedTask" = "開始所選任務計時";
 "menu.startPomodoro" = "開始番茄鐘";
@@ -347,6 +355,7 @@
 "taskCategory.nameRequired" = "請填寫分類名稱。";
 "taskCategory.none" = "無分類";
 "taskCategory.uncategorized" = "未分類";
+"taskCategory.inherited" = "繼承父任務分類：%@";
 "taskCategory.editor.info" = "分類";
 "taskCategory.symbol" = "符號";
 "taskCategory.includesForecast" = "子任務參與預測";

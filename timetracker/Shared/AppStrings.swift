@@ -5,6 +5,7 @@ enum AppStrings {
     static let appName = localized("app.name")
 
     static let today = localized("nav.today")
+    static let inbox = localized("nav.inbox")
     static let tasks = localized("nav.tasks")
     static let pomodoro = localized("nav.pomodoro")
     static let analytics = localized("nav.analytics")

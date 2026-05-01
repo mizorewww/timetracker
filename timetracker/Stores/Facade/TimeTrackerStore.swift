@@ -37,6 +37,7 @@ final class TimeTrackerStore: ObservableObject {
             rebuildChecklistIndexes()
         }
     }
+    @Published var inboxItems: [InboxItem] = []
     @Published var preferences = AppPreferences.defaults
     @Published var rollupDomainStore = RollupStore()
     @Published var analyticsDomainStore = AnalyticsStore()
@@ -74,6 +75,7 @@ final class TimeTrackerStore: ObservableObject {
 
     enum DesktopDestination: String, CaseIterable, Identifiable {
         case today = "Today"
+        case inbox = "Inbox"
         case tasks = "Tasks"
         case pomodoro = "Pomodoro"
         case analytics = "Analytics"
@@ -84,6 +86,7 @@ final class TimeTrackerStore: ObservableObject {
         var title: String {
             switch self {
             case .today: return AppStrings.today
+            case .inbox: return AppStrings.inbox
             case .tasks: return AppStrings.tasks
             case .pomodoro: return AppStrings.pomodoro
             case .analytics: return AppStrings.analytics
@@ -94,6 +97,7 @@ final class TimeTrackerStore: ObservableObject {
         var symbolName: String {
             switch self {
             case .today: return "sun.max"
+            case .inbox: return "tray"
             case .tasks: return "checklist"
             case .pomodoro: return "timer"
             case .analytics: return "chart.bar"
@@ -122,6 +126,7 @@ final class TimeTrackerStore: ObservableObject {
     let ledgerCommandHandler = LedgerCommandHandler()
     let countdownCommandHandler = CountdownCommandHandler()
     let checklistCommandHandler = ChecklistCommandHandler()
+    let inboxCommandHandler = InboxCommandHandler()
     let preferenceCommandHandler = PreferenceCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
     var taskDomainStore = TaskStore()

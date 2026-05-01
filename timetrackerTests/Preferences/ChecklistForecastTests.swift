@@ -10,7 +10,7 @@ struct ChecklistForecastTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Forecast Task", parentID: nil, colorHex: nil, iconName: nil)
-        let end = Date().addingTimeInterval(-60)
+        let end = fixedMidday().addingTimeInterval(-60)
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -56,7 +56,7 @@ struct ChecklistForecastTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Toggle Forecast Task", parentID: nil, colorHex: nil, iconName: nil)
-        let end = Date().addingTimeInterval(-60)
+        let end = fixedMidday().addingTimeInterval(-60)
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -317,4 +317,10 @@ struct ChecklistForecastTests {
         #expect(ForecastDisplayService().displayItem(for: parent.id, tasks: [parent, child], rollups: rollups)?.taskID == parent.id)
         #expect(ForecastDisplayService().displayItems(tasks: [parent, child], rollups: rollups).map(\.taskID) == [parent.id])
     }
+}
+
+private func fixedMidday() -> Date {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    return calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 12, minute: 0))!
 }

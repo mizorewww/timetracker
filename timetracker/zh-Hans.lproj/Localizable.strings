@@ -1,5 +1,6 @@
 "app.name" = "时间追踪";
 "nav.today" = "今日";
+"nav.inbox" = "收件箱";
 "nav.tasks" = "任务";
 "nav.pomodoro" = "番茄钟";
 "nav.analytics" = "分析";
@@ -38,6 +39,13 @@
 "timeline.deleteSegment" = "删除时间片段";
 "quickStart.defaultHint" = "优先显示固定任务，再按使用频率补充最近任务。";
 "quickStart.pinnedHint" = "显示你固定的快捷任务。";
+"inbox.empty" = "收件箱里还没有内容。";
+"inbox.footer" = "先把零散清单放在这里，之后再归入具体任务。";
+"inbox.add" = "添加收件箱项目";
+"inbox.addPlaceholder" = "新的收件箱项目";
+"inbox.itemPlaceholder" = "收件箱项目";
+"inbox.markCompleted" = "标记完成";
+"inbox.markOpen" = "标记未完成";
 "quickStart.edit" = "编辑快速开始";
 "menu.startSelectedTask" = "开始所选任务计时";
 "menu.startPomodoro" = "开始番茄钟";
@@ -347,6 +355,7 @@
 "taskCategory.nameRequired" = "请填写分类名称。";
 "taskCategory.none" = "无分类";
 "taskCategory.uncategorized" = "未分类";
+"taskCategory.inherited" = "继承父任务分类：%@";
 "taskCategory.editor.info" = "分类";
 "taskCategory.symbol" = "符号";
 "taskCategory.includesForecast" = "子任务参与预测";

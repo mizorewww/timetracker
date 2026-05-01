@@ -38,7 +38,7 @@ struct SidebarView: View {
                         }
                     }
                 } header: {
-                    TaskCategorySectionHeader(section: section, compact: true)
+                    TaskCategorySectionHeader(section: section, compact: true, showsBottomDivider: true)
                 }
             }
 
@@ -94,6 +94,8 @@ struct SidebarView: View {
         switch destination {
         case .today:
             return store.activeSegments.count
+        case .inbox:
+            return store.openInboxItems.count
         case .tasks:
             return store.tasks.count
         case .pomodoro:

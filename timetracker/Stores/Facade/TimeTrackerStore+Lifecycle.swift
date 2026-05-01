@@ -211,6 +211,18 @@ extension TimeTrackerStore {
         return try modelContext.fetch(descriptor)
     }
 
+    func fetchInboxItems() throws -> [InboxItem] {
+        guard let modelContext else { return [] }
+        let descriptor = FetchDescriptor<InboxItem>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [
+                SortDescriptor(\.sortOrder),
+                SortDescriptor(\.createdAt)
+            ]
+        )
+        return try modelContext.fetch(descriptor)
+    }
+
     func fetchCountdownEvents() throws -> [CountdownEvent] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<CountdownEvent>(

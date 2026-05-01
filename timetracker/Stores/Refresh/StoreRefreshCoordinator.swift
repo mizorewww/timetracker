@@ -29,6 +29,9 @@ struct StoreRefreshCoordinator {
         if plan.refreshChecklist {
             store.checklistItems = try store.fetchChecklistItems()
         }
+        if plan.refreshInbox {
+            store.inboxItems = try store.fetchInboxItems()
+        }
     }
 
     private func refreshDerivedDomains(on store: TimeTrackerStore, plan: StoreRefreshPlan) {

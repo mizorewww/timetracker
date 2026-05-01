@@ -80,6 +80,19 @@ struct InboxView: View {
         .background(AppColors.background.ignoresSafeArea())
         .navigationTitle(isCompact ? "" : AppStrings.inbox)
         #if os(iOS)
+        .toolbar {
+            if !openItems.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        toggleSorting()
+                    } label: {
+                        Label(AppStrings.localized("common.sort"), systemImage: isSorting ? "checkmark" : "arrow.up.arrow.down")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(isSorting ? AppStrings.done : AppStrings.localized("common.sort"))
+                }
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         #endif
     }
@@ -109,35 +122,16 @@ struct InboxView: View {
 
             Spacer(minLength: 12)
 
-            #if os(iOS)
-            if !openItems.isEmpty {
-                Button {
-                    toggleSorting()
-                } label: {
-                    Label(AppStrings.localized("common.sort"), systemImage: isSorting ? "checkmark" : "arrow.up.arrow.down")
-                        .labelStyle(.iconOnly)
-                        .font(.system(size: isCompact ? 17 : 15, weight: .regular))
-                        .frame(width: isCompact ? 40 : 36, height: isCompact ? 40 : 36)
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.circle)
-                .controlSize(.regular)
-                .accessibilityLabel(isSorting ? AppStrings.done : AppStrings.localized("common.sort"))
-            }
-            #endif
-
             Button {
                 addFocusToken += 1
             } label: {
-                Label(AppStrings.localized("inbox.add"), systemImage: "plus")
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: isCompact ? 19 : 17, weight: .regular))
-                    .frame(width: isCompact ? 40 : 36, height: isCompact ? 40 : 36)
+                Image(systemName: "plus")
+                    .font(.system(size: isCompact ? 24 : 20, weight: .regular))
+                    .foregroundStyle(.blue)
+                    .frame(width: isCompact ? 56 : 44, height: isCompact ? 56 : 44)
+                    .background(.regularMaterial, in: Circle())
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .controlSize(.regular)
-            .tint(.blue)
+            .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.add"))
         }
     }
@@ -172,6 +166,12 @@ struct InboxView: View {
                 }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    store.deleteInboxItem(item)
+                } label: {
+                    Label(AppStrings.delete, systemImage: "trash")
+                }
+
                 if canDiscardSuggestion(for: item) {
                     Button {
                         store.discardInboxSuggestion(item)
@@ -250,15 +250,14 @@ private struct InboxCaptureRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Button(action: addButtonTapped) {
-                Label(AppStrings.localized("inbox.add"), systemImage: "plus")
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 30, height: 30)
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(.blue, in: Circle())
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.circle)
-            .controlSize(.regular)
-            .tint(.blue)
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppStrings.localized("inbox.add"))
 
             TextField(placeholder, text: $title)
                 .textFieldStyle(.plain)
@@ -513,12 +512,12 @@ private struct InboxSuggestionBar: View {
             Button(role: .destructive, action: discard) {
                 Label(AppStrings.localized("inbox.suggestion.discard"), systemImage: "xmark")
                     .labelStyle(.iconOnly)
-                    .font(.headline.weight(.semibold))
-                    .frame(width: 38, height: 38)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 32, height: 32)
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.circle)
-            .controlSize(.regular)
+            .controlSize(.small)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
 
             Button(action: apply) {
@@ -526,11 +525,11 @@ private struct InboxSuggestionBar: View {
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .frame(minWidth: isCompact ? 126 : 150, minHeight: 38)
+                    .frame(minWidth: isCompact ? 118 : 142, minHeight: 34)
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
-            .controlSize(.regular)
+            .controlSize(.small)
         }
     }
 }

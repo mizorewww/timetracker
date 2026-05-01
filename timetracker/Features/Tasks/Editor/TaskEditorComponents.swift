@@ -6,7 +6,7 @@ struct TaskEditorForm: View {
     let colors: [String]
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
-    let moveChecklistItem: (Int, Int) -> Void
+    let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
 
     var body: some View {
@@ -21,7 +21,7 @@ struct TaskEditorForm: View {
                 checklistItems: $draft.checklistItems,
                 focusedChecklistDraftID: focusedChecklistDraftID,
                 orderedChecklistIndices: orderedChecklistIndices,
-                moveChecklistItem: moveChecklistItem,
+                moveChecklistItems: moveChecklistItems,
                 addChecklistItem: addChecklistItem
             )
             TaskNotesEditorSection(notes: $draft.notes)
@@ -142,18 +142,30 @@ private struct TaskChecklistEditorSection: View {
     @Binding var checklistItems: [ChecklistEditorDraft]
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
-    let moveChecklistItem: (Int, Int) -> Void
+    let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
+    @State private var isSorting = false
 
     var body: some View {
         Section {
             checklistRows
             addButton
         } header: {
-            Text(.app("editor.checklist.title"))
+            HStack {
+                Text(.app("editor.checklist.title"))
+                Spacer()
+                Button(isSorting ? AppStrings.done : AppStrings.localized("common.sort")) {
+                    withAnimation(.snappy(duration: 0.2)) {
+                        isSorting.toggle()
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.borderless)
+            }
         } footer: {
             Text(.app("editor.checklist.footer"))
         }
+        .checklistSortingMode(isSorting)
     }
 
     @ViewBuilder
@@ -163,18 +175,17 @@ private struct TaskChecklistEditorSection: View {
                 .foregroundStyle(.secondary)
         }
 
-        ForEach(Array(orderedChecklistIndices.enumerated()), id: \.element) { visualIndex, index in
+        ForEach(rowPlacements) { placement in
             ChecklistEditorRow(
-                item: $checklistItems[index],
-                canMoveUp: canMove(visualIndex: visualIndex, direction: -1),
-                canMoveDown: canMove(visualIndex: visualIndex, direction: 1),
-                moveUp: { moveChecklistItem(atVisualIndex: visualIndex, direction: -1) },
-                moveDown: { moveChecklistItem(atVisualIndex: visualIndex, direction: 1) },
-                delete: { checklistItems.remove(at: index) },
+                item: $checklistItems[placement.sourceIndex],
+                isSorting: isSorting,
+                delete: { deleteChecklistItem(at: placement.sourceIndex) },
                 focus: focusedChecklistDraftID,
-                submit: { addChecklistItem(visualIndex) }
+                submit: { addChecklistItem(placement.visualIndex) }
             )
         }
+        .onMove(perform: moveChecklistItems)
+        .animation(.snappy(duration: 0.2), value: rowAnimationSignature)
     }
 
     private var addButton: some View {
@@ -185,29 +196,44 @@ private struct TaskChecklistEditorSection: View {
         }
     }
 
-    private func moveChecklistItem(atVisualIndex visualIndex: Int, direction: Int) {
-        let targetVisualIndex = visualIndex + direction
-        guard orderedChecklistIndices.indices.contains(visualIndex),
-              orderedChecklistIndices.indices.contains(targetVisualIndex),
-              canMove(visualIndex: visualIndex, direction: direction) else {
-            return
+    private var rowPlacements: [ChecklistEditorRowPlacement] {
+        orderedChecklistIndices.enumerated().compactMap { visualIndex, sourceIndex in
+            guard checklistItems.indices.contains(sourceIndex) else { return nil }
+            return ChecklistEditorRowPlacement(
+                id: checklistItems[sourceIndex].id,
+                visualIndex: visualIndex,
+                sourceIndex: sourceIndex
+            )
         }
-        moveChecklistItem(
-            orderedChecklistIndices[visualIndex],
-            orderedChecklistIndices[targetVisualIndex]
-        )
     }
 
-    private func canMove(visualIndex: Int, direction: Int) -> Bool {
-        let targetVisualIndex = visualIndex + direction
-        guard orderedChecklistIndices.indices.contains(visualIndex),
-              orderedChecklistIndices.indices.contains(targetVisualIndex) else {
-            return false
-        }
-        let item = checklistItems[orderedChecklistIndices[visualIndex]]
-        let target = checklistItems[orderedChecklistIndices[targetVisualIndex]]
-        return item.isCompleted == target.isCompleted
+    private var rowAnimationSignature: [UUID] {
+        rowPlacements.map(\.id)
     }
+
+    private func deleteChecklistItem(at index: Int) {
+        guard checklistItems.indices.contains(index) else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            _ = checklistItems.remove(at: index)
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func checklistSortingMode(_ isSorting: Bool) -> some View {
+        #if os(macOS)
+        self
+        #else
+        environment(\.editMode, .constant(isSorting ? .active : .inactive))
+        #endif
+    }
+}
+
+private struct ChecklistEditorRowPlacement: Identifiable, Equatable {
+    let id: UUID
+    let visualIndex: Int
+    let sourceIndex: Int
 }
 
 private struct TaskNotesEditorSection: View {
@@ -255,10 +281,7 @@ struct TaskStatusPickerOption: View {
 
 struct ChecklistEditorRow: View {
     @Binding var item: ChecklistEditorDraft
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let moveUp: () -> Void
-    let moveDown: () -> Void
+    let isSorting: Bool
     let delete: () -> Void
     let focus: FocusState<UUID?>.Binding
     let submit: () -> Void
@@ -266,7 +289,9 @@ struct ChecklistEditorRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             ChecklistCompletionButton(isCompleted: item.isCompleted, colorHex: item.colorHex) {
-                item.isCompleted.toggle()
+                withAnimation(.snappy(duration: 0.2)) {
+                    item.isCompleted.toggle()
+                }
             }
             .padding(.top, 2)
 
@@ -288,37 +313,19 @@ struct ChecklistEditorRow: View {
                 .submitLabel(.next)
                 .onSubmit(submit)
 
-            Menu {
-                Button {
-                    moveUp()
-                } label: {
-                    Label(AppStrings.localized("common.moveUp"), systemImage: "chevron.up")
-                }
-                .disabled(!canMoveUp)
-
-                Button {
-                    moveDown()
-                } label: {
-                    Label(AppStrings.localized("common.moveDown"), systemImage: "chevron.down")
-                }
-                .disabled(!canMoveDown)
-
-                Divider()
-
-                Button(role: .destructive) {
-                    delete()
-                } label: {
-                    Label(AppStrings.delete, systemImage: "trash")
-                }
+            Button(role: .destructive) {
+                delete()
             } label: {
-                Image(systemName: "arrow.up.arrow.down.circle")
-                    .foregroundStyle(.secondary)
+                Image(systemName: "trash")
+                    .foregroundStyle(.red)
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(AppStrings.localized("common.sort"))
+            .accessibilityLabel(AppStrings.delete)
         }
         .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .opacity(isSorting ? 0.98 : 1)
         .accessibilityElement(children: .contain)
     }
 }

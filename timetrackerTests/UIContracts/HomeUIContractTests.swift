@@ -357,13 +357,17 @@ struct HomeUIContractTests {
         #expect(sharedSource.contains("struct ChecklistDisplayRow"))
         #expect(sharedSource.contains("struct InlineChecklistAddRow"))
         #expect(editorSource.contains("ChecklistCompletionButton"))
-        #expect(editorSource.contains("withAnimation(.snappy") == false)
+        #expect(editorSource.contains("withAnimation(.snappy"))
         #expect(sharedSource.contains(".symbolEffect(.bounce, value: isCompleted)"))
         #expect(sharedSource.contains(".animation(.snappy"))
         #expect(sharedSource.contains(".lineLimit(nil)"))
         #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.checklist.itemPlaceholder\"), text: $item.title, axis: .vertical)"))
         #expect(editorSource.contains("EditButton()") == false)
-        #expect(editorSource.contains("arrow.up.arrow.down.circle"))
+        #expect(editorSource.contains(".onMove(perform: moveChecklistItems)"))
+        #expect(editorSource.contains("Image(systemName: \"trash\")"))
+        #expect(editorSource.contains("arrow.up.arrow.down.circle") == false)
+        #expect(editorSource.contains("moveUp") == false)
+        #expect(editorSource.contains("moveDown") == false)
         #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
         #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
         #expect(inspectorSource.contains("private struct ChecklistDisplayRow") == false)
@@ -434,6 +438,26 @@ struct HomeUIContractTests {
         #expect(inboxSource.contains("store.addInboxItem(title: title)"))
         #expect(schemaSource.contains("enum TimeTrackerSchemaV6"))
         #expect(schemaSource.contains("InboxItem.self"))
+    }
+
+    @Test
+    func inboxSuggestionsAreAutomaticAndExposeOnlyApplyOrDiscardActions() throws {
+        let inboxSource = try sourceText("timetracker/Features/Inbox/InboxViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift")
+        let refreshSource = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")
+        let llmSource = try sourceText("timetracker/Services/LLM/LLMInboxSuggestionService.swift")
+
+        #expect(inboxSource.contains("store.suggestInboxItem(item)") == false)
+        #expect(inboxSource.contains("store.presentInboxSuggestionEditor(item)") == false)
+        #expect(inboxSource.contains("store.applyInboxSuggestion(item)"))
+        #expect(inboxSource.contains("store.discardInboxSuggestion(item)"))
+        #expect(inboxSource.contains("inbox.suggestion.generating"))
+        #expect(inboxSource.contains(".padding(.leading, 74)") == false)
+        #expect(storeSource.contains("func autoSuggestInboxItemsIfNeeded()"))
+        #expect(storeSource.contains("item.suggestionGeneratedAt == nil"))
+        #expect(refreshSource.contains("store.autoSuggestInboxItemsIfNeeded()"))
+        #expect(llmSource.contains("allowedSymbols: SymbolCatalog.symbolNames"))
+        #expect(llmSource.contains("prefix(400)") == false)
     }
 
     @Test

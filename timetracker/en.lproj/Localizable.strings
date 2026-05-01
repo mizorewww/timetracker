@@ -441,6 +441,8 @@
 "inbox.suggestion.suggest" = "Suggest";
 "inbox.suggestion.edit" = "Edit Suggestion";
 "inbox.suggestion.apply" = "Add to Task";
+"inbox.suggestion.discard" = "Discard Suggestion";
+"inbox.suggestion.generating" = "Suggesting automatically";
 "inbox.suggestion.targetFormat" = "Suggested task: %@";
 "inbox.suggestion.editorTitle" = "Inbox Suggestion";
 "inbox.suggestion.editorFooter" = "Choose the task, symbol, and color before adding this inbox item as a checklist item.";

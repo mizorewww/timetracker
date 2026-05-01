@@ -49,8 +49,8 @@ struct TaskEditorPanel: View {
                 colors: colors,
                 focusedChecklistDraftID: $focusedChecklistDraftID,
                 orderedChecklistIndices: orderedChecklistIndices,
-                moveChecklistItem: { source, destination in
-                    moveChecklistItem(from: source, to: destination)
+                moveChecklistItems: { sourceOffsets, destination in
+                    moveChecklistItems(fromOffsets: sourceOffsets, toOffset: destination)
                 },
                 addChecklistItem: { visualIndex in
                     addChecklistItem(afterVisualIndex: visualIndex)
@@ -94,29 +94,21 @@ struct TaskEditorPanel: View {
         }
     }
 
-    private func moveChecklistItem(from source: Int, to destination: Int) {
-        guard draft.checklistItems.indices.contains(source),
-              draft.checklistItems.indices.contains(destination),
-              draft.checklistItems[source].isCompleted == draft.checklistItems[destination].isCompleted else {
+    private func moveChecklistItems(fromOffsets sourceOffsets: IndexSet, toOffset destination: Int) {
+        let orderedDrafts = orderedChecklistIndices.map { draft.checklistItems[$0] }
+        let elements = orderedDrafts.map {
+            ChecklistOrderingElement(id: $0.id, isCompleted: $0.isCompleted)
+        }
+        guard let reorderedIDs = ChecklistOrderingService().reorderedIDs(
+            elements: elements,
+            sourceOffsets: sourceOffsets,
+            destination: destination
+        ) else {
             return
         }
-        var orderedDrafts = orderedChecklistIndices.map { draft.checklistItems[$0] }
-        guard let sourceVisualIndex = orderedDrafts.firstIndex(where: { $0.id == draft.checklistItems[source].id }),
-              let destinationVisualIndex = orderedDrafts.firstIndex(where: { $0.id == draft.checklistItems[destination].id }) else {
-            return
-        }
-        orderedDrafts.swapAt(sourceVisualIndex, destinationVisualIndex)
-        draft.checklistItems = orderedDrafts
-    }
 
-    private func moveChecklistItem(atVisualIndex visualIndex: Int, direction: Int) {
-        let ordered = orderedChecklistIndices
-        let targetVisualIndex = visualIndex + direction
-        guard ordered.indices.contains(visualIndex),
-              ordered.indices.contains(targetVisualIndex) else {
-            return
-        }
-        moveChecklistItem(from: ordered[visualIndex], to: ordered[targetVisualIndex])
+        let draftByID = Dictionary(uniqueKeysWithValues: draft.checklistItems.map { ($0.id, $0) })
+        draft.checklistItems = reorderedIDs.compactMap { draftByID[$0] }
     }
 
     private func addChecklistItem(afterVisualIndex visualIndex: Int? = nil) {

@@ -49,6 +49,16 @@ struct CoreCommandHandlerTests {
         first.suggestedTaskID = suggestedTaskID
         first.suggestionReason = "Likely writing task"
         first.suggestionGeneratedAt = Date(timeIntervalSince1970: 900)
+        let suggestion = InboxSuggestion(
+            inboxItemID: first.id,
+            taskID: suggestedTaskID,
+            reason: "Likely writing task",
+            iconName: "book",
+            colorHex: "16A34A",
+            titleSnapshot: first.title,
+            deviceID: "test"
+        )
+        context.insert(suggestion)
         try context.save()
 
         try handler.updateTitle(first, title: "Buy ink", context: context, now: Date(timeIntervalSince1970: 1_000))
@@ -56,6 +66,28 @@ struct CoreCommandHandlerTests {
         #expect(first.suggestedTaskID == nil)
         #expect(first.suggestionReason == nil)
         #expect(first.suggestionGeneratedAt == nil)
+        #expect(suggestion.deletedAt == Date(timeIntervalSince1970: 1_000))
+
+        let refreshedSuggestion = InboxSuggestion(
+            inboxItemID: first.id,
+            taskID: suggestedTaskID,
+            reason: "Likely writing task",
+            iconName: "book",
+            colorHex: "16A34A",
+            titleSnapshot: first.title,
+            deviceID: "test"
+        )
+        context.insert(refreshedSuggestion)
+        first.suggestedTaskID = suggestedTaskID
+        first.suggestionReason = "Likely writing task"
+        first.suggestionGeneratedAt = Date(timeIntervalSince1970: 1_500)
+        try context.save()
+
+        try handler.discardSuggestion(first, context: context, now: Date(timeIntervalSince1970: 1_600))
+        #expect(first.suggestedTaskID == nil)
+        #expect(first.suggestionReason == nil)
+        #expect(first.suggestionGeneratedAt == Date(timeIntervalSince1970: 1_600))
+        #expect(refreshedSuggestion.deletedAt == Date(timeIntervalSince1970: 1_600))
 
         try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 2_000))
         #expect(first.isCompleted)

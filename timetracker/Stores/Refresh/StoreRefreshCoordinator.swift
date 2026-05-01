@@ -53,5 +53,9 @@ struct StoreRefreshCoordinator {
         if plan.syncLiveActivities {
             store.syncLiveActivitiesIfAvailable()
         }
+
+        if plan.refreshInbox || plan.refreshTasks || plan.refreshPreferences {
+            store.autoSuggestInboxItemsIfNeeded()
+        }
     }
 }

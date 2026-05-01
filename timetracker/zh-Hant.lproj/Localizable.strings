@@ -441,6 +441,8 @@
 "inbox.suggestion.suggest" = "推薦";
 "inbox.suggestion.edit" = "編輯推薦";
 "inbox.suggestion.apply" = "加入任務";
+"inbox.suggestion.discard" = "丟棄推薦";
+"inbox.suggestion.generating" = "正在自動推薦";
 "inbox.suggestion.targetFormat" = "推薦任務：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推薦";
 "inbox.suggestion.editorFooter" = "加入任務前，可以手動選擇任務、符號和顏色。";

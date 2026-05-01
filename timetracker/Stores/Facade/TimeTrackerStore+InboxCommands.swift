@@ -49,24 +49,54 @@ extension TimeTrackerStore {
         }
     }
 
-    func suggestInboxItem(_ item: InboxItem) {
+    func discardInboxSuggestion(_ item: InboxItem) {
+        perform(event: .inboxChanged) {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try inboxCommandHandler.discardSuggestion(item, context: modelContext)
+        }
+    }
+
+    func autoSuggestInboxItemsIfNeeded() {
+        guard canAutoSuggestInboxItems else { return }
+        let candidates = llmTaskCandidates()
+        guard !candidates.isEmpty else { return }
+
+        for item in openInboxItems where shouldAutoSuggestInboxItem(item) {
+            suggestInboxItem(item, candidates: candidates, showsErrors: false)
+        }
+    }
+
+    func suggestInboxItem(_ item: InboxItem, showsErrors: Bool = true) {
+        suggestInboxItem(item, candidates: llmTaskCandidates(), showsErrors: showsErrors)
+    }
+
+    private func suggestInboxItem(_ item: InboxItem, candidates: [LLMTaskCandidate], showsErrors: Bool) {
         guard !inboxSuggestionInFlightIDs.contains(item.id) else { return }
+        guard item.deletedAt == nil,
+              item.isCompleted == false,
+              item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            return
+        }
         let endpoint = preferences.llmEndpoint
         let apiKey = preferences.llmAPIKey
         let modelID = preferences.llmSelectedModel
-        let candidates = llmTaskCandidates()
+        let requestedTitle = item.title
         inboxSuggestionInFlightIDs.insert(item.id)
 
         Task {
             do {
                 let result = try await LLMInboxSuggestionService().suggest(
-                    inboxTitle: item.title,
+                    inboxTitle: requestedTitle,
                     candidates: candidates,
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID
                 )
                 await MainActor.run {
+                    guard item.deletedAt == nil, item.title == requestedTitle else {
+                        inboxSuggestionInFlightIDs.remove(item.id)
+                        return
+                    }
                     _ = perform(event: .inboxChanged) {
                         guard let modelContext else { throw StoreError.notConfigured }
                         try inboxCommandHandler.upsertSuggestion(
@@ -79,7 +109,9 @@ extension TimeTrackerStore {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = error.localizedDescription
+                    if showsErrors {
+                        errorMessage = error.localizedDescription
+                    }
                     inboxSuggestionInFlightIDs.remove(item.id)
                 }
             }
@@ -149,6 +181,21 @@ extension TimeTrackerStore {
                     colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex)
                 )
             }
+    }
+
+    private var canAutoSuggestInboxItems: Bool {
+        preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
+            preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
+            preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    private func shouldAutoSuggestInboxItem(_ item: InboxItem) -> Bool {
+        item.deletedAt == nil &&
+            item.isCompleted == false &&
+            item.suggestionGeneratedAt == nil &&
+            inboxSuggestion(for: item) == nil &&
+            !inboxSuggestionInFlightIDs.contains(item.id) &&
+            !item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func inboxSort(_ lhs: InboxItem, _ rhs: InboxItem) -> Bool {

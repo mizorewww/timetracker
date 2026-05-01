@@ -175,10 +175,9 @@ struct LLMInboxSuggestionService {
     }
 
     private func prompt(inboxTitle: String, candidates: [LLMTaskCandidate]) -> String {
-        let allowedSymbols = Array(SymbolCatalog.symbolNames.prefix(400))
         let payload = PromptPayload(
             inboxTitle: inboxTitle,
-            allowedSymbols: allowedSymbols,
+            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues,
             tasks: candidates
         )

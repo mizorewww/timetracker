@@ -119,57 +119,41 @@ private struct InboxItemRow: View {
     private var suggestionControls: some View {
         if item.isCompleted {
             EmptyView()
+        } else if store.inboxSuggestionInFlightIDs.contains(item.id) {
+            Label(AppStrings.localized("inbox.suggestion.generating"), systemImage: "sparkles")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         } else {
-            VStack(alignment: .leading, spacing: 8) {
-                if let suggestion, let task = store.task(for: suggestion.taskID) {
-                    HStack(alignment: .top, spacing: 8) {
-                        ChecklistItemIcon(iconName: suggestion.iconName, colorHex: suggestion.colorHex)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(String(format: AppStrings.localized("inbox.suggestion.targetFormat"), store.taskPath(for: task)))
-                                .font(.caption.weight(.semibold))
-                            if let reason = suggestion.reason, !reason.isEmpty {
-                                Text(reason)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
-
+            if let suggestion, let task = store.task(for: suggestion.taskID) {
                 HStack(spacing: 8) {
-                    Button {
-                        store.suggestInboxItem(item)
-                    } label: {
-                        if store.inboxSuggestionInFlightIDs.contains(item.id) {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Label(AppStrings.localized("inbox.suggestion.suggest"), systemImage: "sparkles")
-                        }
+                    Image(systemName: ChecklistVisualSanitizer.sanitizedIcon(suggestion.iconName))
+                        .foregroundStyle(Color(hex: ChecklistVisualSanitizer.sanitizedColor(suggestion.colorHex)) ?? .secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(String(format: AppStrings.localized("inbox.suggestion.targetFormat"), store.taskPath(for: task)))
+                            .lineLimit(1)
+                            .foregroundStyle(.secondary)
                     }
-                    .disabled(store.inboxSuggestionInFlightIDs.contains(item.id))
+                    .font(.caption.weight(.semibold))
+
+                    Spacer(minLength: 0)
+
+                    Button(role: .destructive) {
+                        store.discardInboxSuggestion(item)
+                    } label: {
+                        Label(AppStrings.localized("inbox.suggestion.discard"), systemImage: "xmark")
+                    }
+                    .labelStyle(.iconOnly)
 
                     Button {
-                        store.presentInboxSuggestionEditor(item)
+                        store.applyInboxSuggestion(item)
                     } label: {
-                        Label(AppStrings.localized("inbox.suggestion.edit"), systemImage: "slider.horizontal.3")
+                        Label(AppStrings.localized("inbox.suggestion.apply"), systemImage: "arrow.turn.down.right")
                     }
-
-                    if suggestion != nil {
-                        Button {
-                            store.applyInboxSuggestion(item)
-                        } label: {
-                            Label(AppStrings.localized("inbox.suggestion.apply"), systemImage: "arrow.turn.down.right")
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
+                    .buttonStyle(.borderedProminent)
                 }
                 .font(.caption)
-                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            .padding(.leading, 74)
         }
     }
 

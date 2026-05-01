@@ -59,6 +59,16 @@ struct InboxCommandHandler {
         try context.save()
     }
 
+    func discardSuggestion(_ item: InboxItem, context: ModelContext, now: Date = Date()) throws {
+        item.suggestedTaskID = nil
+        item.suggestionReason = nil
+        item.suggestionGeneratedAt = now
+        item.updatedAt = now
+        item.clientMutationID = UUID()
+        try clearSuggestions(for: item.id, context: context, now: now)
+        try context.save()
+    }
+
     func upsertSuggestion(
         item: InboxItem,
         result: LLMInboxSuggestionResult,

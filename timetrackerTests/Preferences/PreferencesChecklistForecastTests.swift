@@ -31,6 +31,10 @@ struct PreferencesChecklistForecastTests {
         defaults.set(false, forKey: AppPreferenceKey.showGrossAndWallTogether.rawValue)
         defaults.set(false, forKey: AppPreferenceKey.cloudSyncEnabled.rawValue)
         defaults.set(pinnedID.uuidString, forKey: AppPreferenceKey.quickStartTaskIDs.rawValue)
+        defaults.set("https://example.test/v1", forKey: AppPreferenceKey.llmEndpoint.rawValue)
+        defaults.set("test-key", forKey: AppPreferenceKey.llmAPIKey.rawValue)
+        defaults.set("gpt-test", forKey: AppPreferenceKey.llmSelectedModel.rawValue)
+        defaults.set("gpt-test,gpt-other", forKey: AppPreferenceKey.llmAvailableModelIDs.rawValue)
 
         let context = try makeTestContext()
         try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context, deviceID: "test")
@@ -47,6 +51,10 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.showGrossAndWallTogether == false)
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
+        #expect(preferences.llmEndpoint == "https://example.test/v1")
+        #expect(preferences.llmAPIKey == "test-key")
+        #expect(preferences.llmSelectedModel == "gpt-test")
+        #expect(preferences.llmAvailableModelIDs == ["gpt-test", "gpt-other"])
     }
 
     @Test @MainActor
@@ -80,6 +88,10 @@ struct PreferencesChecklistForecastTests {
         store.setShowGrossAndWallTogether(false)
         store.setCloudSyncEnabled(false)
         store.setQuickStartTaskIDs([pinnedID])
+        store.setLLMEndpoint(" https://example.test/v1 ")
+        store.setLLMAPIKey(" test-key ")
+        store.setLLMAvailableModelIDs(["gpt-z", "gpt-a", "gpt-a", " "])
+        store.setLLMSelectedModel("gpt-a")
 
         let preferences = AppPreferences(syncedPreferences: try context.fetch(FetchDescriptor<SyncedPreference>()))
         #expect(preferences.defaultFocusMinutes == 45)
@@ -89,6 +101,10 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.showGrossAndWallTogether == false)
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
+        #expect(preferences.llmEndpoint == "https://example.test/v1")
+        #expect(preferences.llmAPIKey == "test-key")
+        #expect(preferences.llmAvailableModelIDs == ["gpt-a", "gpt-z"])
+        #expect(preferences.llmSelectedModel == "gpt-a")
         #expect(defaults.bool(forKey: AppCloudSync.enabledKey) == false)
     }
 

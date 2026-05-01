@@ -169,6 +169,64 @@ struct SyncSettingsSection: View {
     }
 }
 
+struct LLMSettingsSection: View {
+    let endpoint: Binding<String>
+    let apiKey: Binding<String>
+    let selectedModel: Binding<String>
+    let availableModels: [String]
+    let feedbackMessage: String?
+    let isFetchingModels: Bool
+    let onFetchModels: () -> Void
+
+    var body: some View {
+        Section {
+            TextField(AppStrings.localized("settings.llm.endpoint"), text: endpoint)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .autocorrectionDisabled()
+
+            SecureField(AppStrings.localized("settings.llm.apiKey"), text: apiKey)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .autocorrectionDisabled()
+
+            if availableModels.isEmpty {
+                LabeledContent(
+                    AppStrings.localized("settings.llm.model"),
+                    value: AppStrings.localized("settings.llm.noModels")
+                )
+            } else {
+                Picker(AppStrings.localized("settings.llm.model"), selection: selectedModel) {
+                    ForEach(availableModels, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                }
+            }
+
+            Button(action: onFetchModels) {
+                SettingsActionLabel(
+                    title: isFetchingModels ? AppStrings.localized("settings.llm.fetching") : AppStrings.localized("settings.llm.fetchModels"),
+                    systemImage: "arrow.clockwise"
+                )
+            }
+            .disabled(isFetchingModels)
+
+            if let feedbackMessage, !feedbackMessage.isEmpty {
+                Text(feedbackMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } header: {
+            SettingsHeader(symbol: "sparkles", title: AppStrings.localized("settings.llm"))
+        } footer: {
+            Text(.app("settings.llm.footer"))
+        }
+    }
+}
+
 struct MaintenanceSettingsSection: View {
     let taskCount: Int
     let timeRecordCount: Int

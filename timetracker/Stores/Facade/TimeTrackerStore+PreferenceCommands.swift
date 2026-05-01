@@ -38,6 +38,23 @@ extension TimeTrackerStore {
         setPreference(.quickStartTaskIDs, valueJSON: PreferenceJSON.encode(ids.map(\.uuidString)))
     }
 
+    func setLLMEndpoint(_ value: String) {
+        setPreference(.llmEndpoint, valueJSON: PreferenceJSON.encode(value.trimmingCharacters(in: .whitespacesAndNewlines)))
+    }
+
+    func setLLMAPIKey(_ value: String) {
+        setPreference(.llmAPIKey, valueJSON: PreferenceJSON.encode(value.trimmingCharacters(in: .whitespacesAndNewlines)))
+    }
+
+    func setLLMSelectedModel(_ value: String) {
+        setPreference(.llmSelectedModel, valueJSON: PreferenceJSON.encode(value))
+    }
+
+    func setLLMAvailableModelIDs(_ values: [String]) {
+        let normalized = Array(Set(values.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })).sorted()
+        setPreference(.llmAvailableModelIDs, valueJSON: PreferenceJSON.encode(normalized))
+    }
+
     private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
         perform(event: .preferenceChanged(key: key.rawValue)) {
             guard let modelContext else { throw StoreError.notConfigured }

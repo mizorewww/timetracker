@@ -8,8 +8,10 @@ struct SettingsView: View {
     @State private var isOptimizeConfirmationPresented = false
     @State private var isExportPresented = false
     @State private var isCheckingSync = false
+    @State private var isFetchingLLMModels = false
     @State private var syncCheckMessage: String?
     @State private var databaseOptimizationMessage: String?
+    @State private var llmModelFetchMessage: String?
 
     var body: some View {
         Form {
@@ -66,6 +68,16 @@ struct SettingsView: View {
                 onForceSync: forceSyncRefresh
             )
 
+            LLMSettingsSection(
+                endpoint: llmEndpointBinding,
+                apiKey: llmAPIKeyBinding,
+                selectedModel: llmSelectedModelBinding,
+                availableModels: store.preferences.llmAvailableModelIDs,
+                feedbackMessage: llmModelFetchMessage,
+                isFetchingModels: isFetchingLLMModels,
+                onFetchModels: fetchLLMModels
+            )
+
             MaintenanceSettingsSection(
                 taskCount: store.tasks.count,
                 timeRecordCount: store.allSegments.count,
@@ -85,6 +97,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .navigationTitle(AppStrings.settings)
         .accessibilityIdentifier("settings.view")
+        .onAppear(perform: fetchLLMModelsIfNeeded)
         .fileExporter(
             isPresented: $isExportPresented,
             document: CSVExportDocument(text: store.csvExport()),
@@ -167,6 +180,42 @@ struct SettingsView: View {
         }
     }
 
+    private func fetchLLMModels() {
+        let endpoint = store.preferences.llmEndpoint
+        let apiKey = store.preferences.llmAPIKey
+        isFetchingLLMModels = true
+        llmModelFetchMessage = nil
+
+        Task {
+            do {
+                let models = try await LLMModelService().fetchModels(endpoint: endpoint, apiKey: apiKey)
+                await MainActor.run {
+                    store.setLLMAvailableModelIDs(models)
+                    if !models.contains(store.preferences.llmSelectedModel) {
+                        store.setLLMSelectedModel(models.first ?? "")
+                    }
+                    llmModelFetchMessage = String(format: AppStrings.localized("settings.llm.fetchSuccess"), models.count)
+                    isFetchingLLMModels = false
+                }
+            } catch {
+                await MainActor.run {
+                    llmModelFetchMessage = String(format: AppStrings.localized("settings.llm.fetchFailed"), error.localizedDescription)
+                    isFetchingLLMModels = false
+                }
+            }
+        }
+    }
+
+    private func fetchLLMModelsIfNeeded() {
+        guard !isFetchingLLMModels,
+              store.preferences.llmAvailableModelIDs.isEmpty,
+              !store.preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !store.preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        fetchLLMModels()
+    }
+
     private var syncCheckPresented: Binding<Bool> {
         Binding {
             syncCheckMessage != nil
@@ -240,6 +289,27 @@ struct SettingsView: View {
         Binding(
             get: { store.preferences.cloudSyncEnabled },
             set: { store.setCloudSyncEnabled($0) }
+        )
+    }
+
+    private var llmEndpointBinding: Binding<String> {
+        Binding(
+            get: { store.preferences.llmEndpoint },
+            set: { store.setLLMEndpoint($0) }
+        )
+    }
+
+    private var llmAPIKeyBinding: Binding<String> {
+        Binding(
+            get: { store.preferences.llmAPIKey },
+            set: { store.setLLMAPIKey($0) }
+        )
+    }
+
+    private var llmSelectedModelBinding: Binding<String> {
+        Binding(
+            get: { store.preferences.llmSelectedModel },
+            set: { store.setLLMSelectedModel($0) }
         )
     }
 }

@@ -61,6 +61,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 | Task row layout | `Features/Tasks/Management/TaskManagementRowViews.swift` | `SharedUI/Components/TaskVisuals.swift`, task UI contract tests |
 | Settings | `Features/Settings/SettingsViews.swift` | `Features/Settings/SettingsSectionsViews.swift`, `Features/Settings/Support`, `Commands/PreferenceCommands.swift` |
 | iCloud/user settings sync | `Commands/PreferenceCommands.swift` | `Models/SyncedPreferences.swift`, `Stores/Domains/PreferenceStore.swift`, `App/timetrackerApp.swift` |
+| AI model configuration | `Features/Settings/SettingsSectionsViews.swift` | `Services/LLM/LLMModelService.swift`, `Models/SyncedPreferences.swift`, `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` |
 | Live Activity display | `timetrackerLiveActivityExtension` | `Shared/TimeTrackingActivityAttributes.swift`, app Live Activity helpers |
 | Localization | `Shared/AppStrings.swift` | `*.lproj/Localizable.strings`, localization parity tests |
 

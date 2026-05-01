@@ -11,6 +11,10 @@ enum AppPreferenceKey: String, CaseIterable {
     case showGrossAndWallTogether = "ShowGrossAndWallTogether"
     case cloudSyncEnabled = "TimeTrackerCloudSyncEnabled"
     case quickStartTaskIDs = "QuickStartTaskIDs"
+    case llmEndpoint = "LLMEndpoint"
+    case llmAPIKey = "LLMAPIKey"
+    case llmSelectedModel = "LLMSelectedModel"
+    case llmAvailableModelIDs = "LLMAvailableModelIDs"
 }
 
 struct AppPreferences: Equatable {
@@ -23,6 +27,10 @@ struct AppPreferences: Equatable {
     var showGrossAndWallTogether = true
     var cloudSyncEnabled = true
     var quickStartTaskIDs: [UUID] = []
+    var llmEndpoint = "https://api.openai.com/v1"
+    var llmAPIKey = ""
+    var llmSelectedModel = ""
+    var llmAvailableModelIDs: [String] = []
 
     static let defaults = AppPreferences()
 
@@ -57,6 +65,14 @@ struct AppPreferences: Equatable {
         case .quickStartTaskIDs:
             let strings = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
             quickStartTaskIDs = strings.compactMap(UUID.init(uuidString:))
+        case .llmEndpoint:
+            llmEndpoint = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmEndpoint)
+        case .llmAPIKey:
+            llmAPIKey = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmAPIKey)
+        case .llmSelectedModel:
+            llmSelectedModel = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmSelectedModel)
+        case .llmAvailableModelIDs:
+            llmAvailableModelIDs = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
         }
     }
 
@@ -80,6 +96,14 @@ struct AppPreferences: Equatable {
             return PreferenceJSON.encode(cloudSyncEnabled)
         case .quickStartTaskIDs:
             return PreferenceJSON.encode(quickStartTaskIDs.map(\.uuidString))
+        case .llmEndpoint:
+            return PreferenceJSON.encode(llmEndpoint)
+        case .llmAPIKey:
+            return PreferenceJSON.encode(llmAPIKey)
+        case .llmSelectedModel:
+            return PreferenceJSON.encode(llmSelectedModel)
+        case .llmAvailableModelIDs:
+            return PreferenceJSON.encode(llmAvailableModelIDs)
         }
     }
 }
@@ -164,6 +188,17 @@ enum SyncedPreferenceService {
                 .split(separator: ",")
                 .map(String.init) ?? []
             return PreferenceJSON.encode(ids)
+        case .llmEndpoint:
+            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.llmEndpoint)
+        case .llmAPIKey:
+            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.llmAPIKey)
+        case .llmSelectedModel:
+            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.llmSelectedModel)
+        case .llmAvailableModelIDs:
+            let models = defaults.string(forKey: key.rawValue)?
+                .split(separator: ",")
+                .map(String.init) ?? []
+            return PreferenceJSON.encode(models)
         }
     }
 }

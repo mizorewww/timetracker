@@ -68,14 +68,15 @@ struct InboxView: View {
             Button {
                 addFocusToken += 1
             } label: {
-                Image(systemName: "plus")
+                Label(AppStrings.localized("inbox.add"), systemImage: "plus")
+                    .labelStyle(.iconOnly)
                     .font(.system(size: isCompact ? 28 : 24, weight: .regular))
                     .frame(width: isCompact ? 68 : 58, height: isCompact ? 68 : 58)
-                    .background(.regularMaterial, in: Circle())
-                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.blue)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
+            .tint(.blue)
             .accessibilityLabel(AppStrings.localized("inbox.add"))
         }
     }
@@ -154,10 +155,16 @@ private struct InboxCaptureRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "plus.circle.fill")
-                .font(.system(size: 30, weight: .regular))
-                .foregroundStyle(.blue)
-                .frame(width: 34, height: 34)
+            Button(action: addButtonTapped) {
+                Label(AppStrings.localized("inbox.add"), systemImage: "plus")
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.circle)
+            .controlSize(.regular)
+            .tint(.blue)
 
             TextField(placeholder, text: $title)
                 .textFieldStyle(.plain)
@@ -196,6 +203,15 @@ private struct InboxCaptureRow: View {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         submit()
         isFocused = true
+    }
+
+    private func addButtonTapped() {
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            isFocused = true
+        } else {
+            submit()
+            isFocused = true
+        }
     }
 }
 
@@ -268,13 +284,13 @@ private struct InboxItemRow: View {
                 Label(AppStrings.delete, systemImage: "trash")
             }
         } label: {
-            Image(systemName: "ellipsis")
+            Label(AppStrings.localized("common.more"), systemImage: "ellipsis")
+                .labelStyle(.iconOnly)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .frame(width: 36, height: 36)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
         .accessibilityLabel(AppStrings.localized("common.more"))
     }
 
@@ -392,14 +408,14 @@ private struct InboxSuggestionBar: View {
     private var actions: some View {
         HStack(spacing: isCompact ? 8 : 12) {
             Button(role: .destructive, action: discard) {
-                Image(systemName: "xmark")
+                Label(AppStrings.localized("inbox.suggestion.discard"), systemImage: "xmark")
+                    .labelStyle(.iconOnly)
                     .font(.headline.weight(.semibold))
                     .frame(width: 38, height: 38)
-                    .background(Color.secondary.opacity(0.12), in: Circle())
-                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .controlSize(.regular)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
 
             Button(action: apply) {

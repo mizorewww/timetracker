@@ -27,9 +27,9 @@ struct InboxView: View {
                 inboxCard
                 footerHint
             }
-            .frame(maxWidth: isCompact ? .infinity : 1_220, alignment: .leading)
-            .padding(.horizontal, isCompact ? 28 : 32)
-            .padding(.top, isCompact ? 18 : 28)
+            .frame(maxWidth: isCompact ? .infinity : 1_060, alignment: .leading)
+            .padding(.horizontal, isCompact ? 22 : 32)
+            .padding(.top, isCompact ? 14 : 28)
             .padding(.bottom, 36)
             .frame(maxWidth: .infinity, alignment: .top)
         }
@@ -70,8 +70,8 @@ struct InboxView: View {
             } label: {
                 Label(AppStrings.localized("inbox.add"), systemImage: "plus")
                     .labelStyle(.iconOnly)
-                    .font(.system(size: isCompact ? 28 : 24, weight: .regular))
-                    .frame(width: isCompact ? 68 : 58, height: isCompact ? 68 : 58)
+                    .font(.system(size: isCompact ? 22 : 20, weight: .regular))
+                    .frame(width: isCompact ? 48 : 44, height: isCompact ? 48 : 44)
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.circle)
@@ -111,7 +111,7 @@ struct InboxView: View {
                 }
             }
         }
-        .padding(isCompact ? 16 : 24)
+        .padding(isCompact ? 14 : 22)
         .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
@@ -134,15 +134,17 @@ struct InboxView: View {
         .padding(.horizontal, isCompact ? 2 : 4)
     }
 
-    private func submitDraft() {
+    @discardableResult
+    private func submitDraft() -> Bool {
         let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else {
             addFocusToken += 1
-            return
+            return false
         }
         store.addInboxItem(title: title)
         draftTitle = ""
         addFocusToken += 1
+        return true
     }
 }
 
@@ -150,16 +152,16 @@ private struct InboxCaptureRow: View {
     @Binding var title: String
     let placeholder: String
     var focusToken: Int
-    let submit: () -> Void
+    let submit: () -> Bool
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button(action: addButtonTapped) {
                 Label(AppStrings.localized("inbox.add"), systemImage: "plus")
                     .labelStyle(.iconOnly)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 34, height: 34)
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 30, height: 30)
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.circle)
@@ -177,11 +179,11 @@ private struct InboxCaptureRow: View {
             Spacer(minLength: 8)
 
             Image(systemName: "keyboard")
-                .font(.title3)
+                .font(.body)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 58)
+        .padding(.horizontal, 14)
+        .frame(minHeight: 52)
         .background(
             RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
                 .fill(AppColors.cardBackground)
@@ -197,11 +199,18 @@ private struct InboxCaptureRow: View {
         .onChange(of: focusToken) { _, _ in
             isFocused = true
         }
+        .onChange(of: title) { _, newValue in
+            guard newValue.contains(where: \.isNewline) else { return }
+            title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
+            submitIfNeeded()
+        }
     }
 
     private func submitIfNeeded() {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        submit()
+        if submit() {
+            title = ""
+        }
         isFocused = true
     }
 
@@ -209,7 +218,9 @@ private struct InboxCaptureRow: View {
         if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             isFocused = true
         } else {
-            submit()
+            if submit() {
+                title = ""
+            }
             isFocused = true
         }
     }

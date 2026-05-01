@@ -36,9 +36,14 @@ extension TimeTrackerStore {
     }
 
     func updateInboxItemTitle(_ item: InboxItem, title: String) {
-        perform(event: .inboxChanged) {
+        let oldTitle = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let didUpdate = perform(event: .inboxChanged) {
             guard let modelContext else { throw StoreError.notConfigured }
             try inboxCommandHandler.updateTitle(item, title: title, context: modelContext)
+        }
+        if didUpdate, !newTitle.isEmpty, newTitle != oldTitle {
+            suggestInboxItem(item, showsErrors: false)
         }
     }
 

@@ -1,5 +1,16 @@
 import SwiftUI
 
+enum ChecklistInputTextNormalizer {
+    static func collapsingNewlines(in text: String) -> String {
+        text
+            .split(whereSeparator: \.isNewline)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 struct ChecklistCompletionButton: View {
     let isCompleted: Bool
     var colorHex: String = ChecklistVisualSanitizer.defaultColor
@@ -109,11 +120,17 @@ struct InlineChecklistAddRow: View {
         .onChange(of: focusToken) { _, _ in
             isFocused = true
         }
+        .onChange(of: title) { _, newValue in
+            guard newValue.contains(where: \.isNewline) else { return }
+            title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
+            submitIfNeeded()
+        }
     }
 
     private func submitIfNeeded() {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         submit()
+        title = ""
         isFocused = true
     }
 }
@@ -148,6 +165,11 @@ struct EditableChecklistTextRow: View {
                 .submitLabel(.done)
                 .onSubmit(commit)
                 .labelsHidden()
+                .onChange(of: title) { _, newValue in
+                    guard newValue.contains(where: \.isNewline) else { return }
+                    title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
+                    commit()
+                }
         }
         .font(.subheadline)
         .frame(minHeight: 44)

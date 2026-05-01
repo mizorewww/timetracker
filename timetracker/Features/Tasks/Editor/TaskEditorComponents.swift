@@ -339,9 +339,14 @@ struct ChecklistEditorRow: View {
                 .strikethrough(item.isCompleted)
                 .foregroundStyle(item.isCompleted ? .secondary : .primary)
                 .focused(focus, equals: item.id)
-                .submitLabel(.next)
+                .submitLabel(.done)
                 .onSubmit(submit)
                 .labelsHidden()
+                .onChange(of: item.title) { _, newValue in
+                    guard newValue.contains(where: \.isNewline) else { return }
+                    item.title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
+                    submit()
+                }
 
             sortingControls
             Button(role: .destructive) {

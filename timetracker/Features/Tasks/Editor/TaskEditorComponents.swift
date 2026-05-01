@@ -179,6 +179,10 @@ private struct TaskChecklistEditorSection: View {
             ChecklistEditorRow(
                 item: $checklistItems[placement.sourceIndex],
                 isSorting: isSorting,
+                canMoveUp: canMove(visualIndex: placement.visualIndex, direction: -1),
+                canMoveDown: canMove(visualIndex: placement.visualIndex, direction: 1),
+                moveUp: { moveChecklistItem(visualIndex: placement.visualIndex, direction: -1) },
+                moveDown: { moveChecklistItem(visualIndex: placement.visualIndex, direction: 1) },
                 delete: { deleteChecklistItem(at: placement.sourceIndex) },
                 focus: focusedChecklistDraftID,
                 submit: { addChecklistItem(placement.visualIndex) }
@@ -209,6 +213,27 @@ private struct TaskChecklistEditorSection: View {
 
     private var rowAnimationSignature: [UUID] {
         rowPlacements.map(\.id)
+    }
+
+    private func moveChecklistItem(visualIndex: Int, direction: Int) {
+        let destination = direction < 0 ? visualIndex - 1 : visualIndex + 2
+        guard canMove(visualIndex: visualIndex, direction: direction) else { return }
+        moveChecklistItems(IndexSet(integer: visualIndex), destination)
+    }
+
+    private func canMove(visualIndex: Int, direction: Int) -> Bool {
+        let destination = direction < 0 ? visualIndex - 1 : visualIndex + 2
+        let elements = rowPlacements.map { placement in
+            ChecklistOrderingElement(
+                id: placement.id,
+                isCompleted: checklistItems[placement.sourceIndex].isCompleted
+            )
+        }
+        return ChecklistOrderingService().canMove(
+            elements: elements,
+            sourceOffsets: IndexSet(integer: visualIndex),
+            destination: destination
+        )
     }
 
     private func deleteChecklistItem(at index: Int) {
@@ -282,6 +307,10 @@ struct TaskStatusPickerOption: View {
 struct ChecklistEditorRow: View {
     @Binding var item: ChecklistEditorDraft
     let isSorting: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let moveUp: () -> Void
+    let moveDown: () -> Void
     let delete: () -> Void
     let focus: FocusState<UUID?>.Binding
     let submit: () -> Void
@@ -312,7 +341,9 @@ struct ChecklistEditorRow: View {
                 .focused(focus, equals: item.id)
                 .submitLabel(.next)
                 .onSubmit(submit)
+                .labelsHidden()
 
+            sortingControls
             Button(role: .destructive) {
                 delete()
             } label: {
@@ -327,5 +358,30 @@ struct ChecklistEditorRow: View {
         .contentShape(Rectangle())
         .opacity(isSorting ? 0.98 : 1)
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var sortingControls: some View {
+        #if os(macOS)
+        if isSorting {
+            HStack(spacing: 4) {
+                Button(action: moveUp) {
+                    Image(systemName: "chevron.up")
+                        .frame(width: 24, height: 28)
+                }
+                .disabled(!canMoveUp)
+                .accessibilityLabel(AppStrings.localized("common.moveUp"))
+
+                Button(action: moveDown) {
+                    Image(systemName: "chevron.down")
+                        .frame(width: 24, height: 28)
+                }
+                .disabled(!canMoveDown)
+                .accessibilityLabel(AppStrings.localized("common.moveDown"))
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+        }
+        #endif
     }
 }

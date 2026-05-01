@@ -99,6 +99,7 @@ struct InlineChecklistAddRow: View {
                 .focused($isFocused)
                 .onSubmit(submitIfNeeded)
                 .submitLabel(.done)
+                .labelsHidden()
         }
         .frame(minHeight: 44)
         .contentShape(Rectangle())
@@ -146,6 +147,7 @@ struct EditableChecklistTextRow: View {
                 .focused($isFocused)
                 .submitLabel(.done)
                 .onSubmit(commit)
+                .labelsHidden()
         }
         .font(.subheadline)
         .frame(minHeight: 44)

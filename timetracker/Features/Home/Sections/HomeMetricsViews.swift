@@ -45,6 +45,14 @@ var phoneToolbarPlacement: ToolbarItemPlacement {
     #endif
 }
 
+var phoneLeadingToolbarPlacement: ToolbarItemPlacement {
+    #if os(iOS)
+    return .topBarLeading
+    #else
+    return .automatic
+    #endif
+}
+
 struct MetricsPanel: View {
     @ObservedObject var store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass

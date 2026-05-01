@@ -53,6 +53,7 @@ struct DesktopMainView: View {
 
 struct PhoneHomeView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var showsSettings = false
 
     var body: some View {
         ScrollView {
@@ -76,12 +77,33 @@ struct PhoneHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         #endif
         .toolbar {
+            ToolbarItem(placement: phoneLeadingToolbarPlacement) {
+                Button {
+                    showsSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .accessibilityLabel(AppStrings.settings)
+            }
+
             ToolbarItem(placement: phoneToolbarPlacement) {
                 Button {
                     store.presentNewTask()
                 } label: {
                     Image(systemName: "plus")
                 }
+            }
+        }
+        .sheet(isPresented: $showsSettings) {
+            NavigationStack {
+                SettingsView(store: store)
+                    .toolbar {
+                        ToolbarItem(placement: phoneToolbarPlacement) {
+                            Button(AppStrings.done) {
+                                showsSettings = false
+                            }
+                        }
+                    }
             }
         }
     }

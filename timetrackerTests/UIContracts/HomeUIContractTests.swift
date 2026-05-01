@@ -144,6 +144,21 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func phoneTabsStayAtFiveAndSettingsUsesHomeToolbar() throws {
+        let contentSource = try sourceText("timetracker/App/ContentView.swift")
+        let homeSource = try sourceText("timetracker/Features/Home/HomeViews.swift")
+        let phoneRoot = try #require(contentSource.slice(from: "struct PhoneRootView", to: "struct iPadRootView"))
+        let phoneHome = try #require(homeSource.slice(from: "struct PhoneHomeView", to: "struct HeaderBar"))
+
+        #expect(phoneRoot.components(separatedBy: ".tabItem").count - 1 == 5)
+        #expect(phoneRoot.contains("SettingsView(store: store)") == false)
+        #expect(phoneRoot.contains("Label(AppStrings.settings") == false)
+        #expect(phoneHome.contains("Image(systemName: \"gearshape\")"))
+        #expect(phoneHome.contains(".sheet(isPresented: $showsSettings)"))
+        #expect(phoneHome.contains("SettingsView(store: store)"))
+    }
+
+    @Test
     func quickStartComposesPinnedAndFrequentRecentTasks() throws {
         let homeSource = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
         let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+ReadModels.swift")

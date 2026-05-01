@@ -138,11 +138,6 @@ struct PhoneRootView: View {
                 AnalyticsView(store: store)
             }
             .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
-
-            NavigationStack {
-                SettingsView(store: store)
-            }
-            .tabItem { Label(AppStrings.settings, systemImage: "gearshape") }
         }
     }
 }

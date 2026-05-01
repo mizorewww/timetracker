@@ -15,7 +15,8 @@ extension TimeTrackerStore {
         taskEditorDraft = TaskEditorDraft(
             task: task,
             categoryID: taskCategoryIDByRootTaskID[task.id],
-            checklistItems: checklistItems(for: task.id)
+            checklistItems: checklistItems(for: task.id),
+            visualByChecklistID: checklistVisualByItemID
         )
     }
 

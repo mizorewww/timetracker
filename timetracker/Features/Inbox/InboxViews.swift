@@ -69,17 +69,22 @@ private struct InboxItemRow: View {
     @State private var draftTitle = ""
 
     var body: some View {
-        EditableChecklistTextRow(
-            title: $draftTitle,
-            isCompleted: item.isCompleted,
-            placeholder: AppStrings.localized("inbox.itemPlaceholder"),
-            toggle: {
-                withAnimation(.snappy(duration: 0.22)) {
-                    store.toggleInboxItem(item)
-                }
-            },
-            commit: commitTitleIfNeeded
-        )
+        VStack(alignment: .leading, spacing: 8) {
+            EditableChecklistTextRow(
+                title: $draftTitle,
+                isCompleted: item.isCompleted,
+                iconName: suggestion?.iconName ?? ChecklistVisualSanitizer.defaultIcon,
+                colorHex: suggestion?.colorHex ?? ChecklistVisualSanitizer.defaultColor,
+                placeholder: AppStrings.localized("inbox.itemPlaceholder"),
+                toggle: {
+                    withAnimation(.snappy(duration: 0.22)) {
+                        store.toggleInboxItem(item)
+                    }
+                },
+                commit: commitTitleIfNeeded
+            )
+            suggestionControls
+        }
         .onAppear {
             draftTitle = item.title
         }
@@ -108,6 +113,68 @@ private struct InboxItemRow: View {
                 Label(AppStrings.delete, systemImage: "trash")
             }
         }
+    }
+
+    @ViewBuilder
+    private var suggestionControls: some View {
+        if item.isCompleted {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                if let suggestion, let task = store.task(for: suggestion.taskID) {
+                    HStack(alignment: .top, spacing: 8) {
+                        ChecklistItemIcon(iconName: suggestion.iconName, colorHex: suggestion.colorHex)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(format: AppStrings.localized("inbox.suggestion.targetFormat"), store.taskPath(for: task)))
+                                .font(.caption.weight(.semibold))
+                            if let reason = suggestion.reason, !reason.isEmpty {
+                                Text(reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Button {
+                        store.suggestInboxItem(item)
+                    } label: {
+                        if store.inboxSuggestionInFlightIDs.contains(item.id) {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Label(AppStrings.localized("inbox.suggestion.suggest"), systemImage: "sparkles")
+                        }
+                    }
+                    .disabled(store.inboxSuggestionInFlightIDs.contains(item.id))
+
+                    Button {
+                        store.presentInboxSuggestionEditor(item)
+                    } label: {
+                        Label(AppStrings.localized("inbox.suggestion.edit"), systemImage: "slider.horizontal.3")
+                    }
+
+                    if suggestion != nil {
+                        Button {
+                            store.applyInboxSuggestion(item)
+                        } label: {
+                            Label(AppStrings.localized("inbox.suggestion.apply"), systemImage: "arrow.turn.down.right")
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.bordered)
+            }
+            .padding(.leading, 74)
+        }
+    }
+
+    private var suggestion: InboxSuggestion? {
+        store.inboxSuggestion(for: item)
     }
 
     private func commitTitleIfNeeded() {

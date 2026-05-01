@@ -16,7 +16,7 @@ enum AppColors {
 }
 
 enum TaskColorPalette {
-    static let hexValues = [
+    nonisolated static let hexValues = [
         "1677FF", "0A84FF", "5E5CE6", "7C3AED", "AF52DE", "BF5AF2",
         "FF2D55", "EF4444", "FF453A", "F97316", "FF9F0A", "F59E0B",
         "FFD60A", "A3E635", "34C759", "16A34A", "30D158", "00C7BE",

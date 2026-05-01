@@ -11,6 +11,8 @@ struct ChecklistCommandHandler {
         title: String,
         existingItems: [ChecklistItem],
         context: ModelContext,
+        iconName: String = ChecklistVisualSanitizer.defaultIcon,
+        colorHex: String = ChecklistVisualSanitizer.defaultColor,
         deviceID: String = DeviceIdentity.current
     ) throws -> ChecklistItem? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -25,6 +27,14 @@ struct ChecklistCommandHandler {
             deviceID: deviceID
         )
         context.insert(item)
+        context.insert(
+            ChecklistItemVisual(
+                checklistItemID: item.id,
+                iconName: ChecklistVisualSanitizer.sanitizedIcon(iconName),
+                colorHex: ChecklistVisualSanitizer.sanitizedColor(colorHex),
+                deviceID: deviceID
+            )
+        )
         try context.save()
         return item
     }

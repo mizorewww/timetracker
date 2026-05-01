@@ -50,6 +50,15 @@ enum SeedData {
         for model in try context.fetch(FetchDescriptor<ChecklistItem>()) {
             context.delete(model)
         }
+        for model in try context.fetch(FetchDescriptor<ChecklistItemVisual>()) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<InboxSuggestion>()) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<InboxItem>()) {
+            context.delete(model)
+        }
         for model in try context.fetch(FetchDescriptor<TaskNode>()) {
             context.delete(model)
         }
@@ -85,7 +94,18 @@ enum SeedData {
         for model in demoSessions {
             context.delete(model)
         }
-        for model in try context.fetch(FetchDescriptor<ChecklistItem>()).filter({ demoTaskIDs.contains($0.taskID) }) {
+        let demoChecklistItems = try context.fetch(FetchDescriptor<ChecklistItem>()).filter { demoTaskIDs.contains($0.taskID) }
+        let demoChecklistIDs = Set(demoChecklistItems.map(\.id))
+        for model in demoChecklistItems {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<ChecklistItemVisual>()).filter({ $0.deviceID == "demo" || demoChecklistIDs.contains($0.checklistItemID) }) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<InboxSuggestion>()).filter({ $0.deviceID == "demo" }) {
+            context.delete(model)
+        }
+        for model in try context.fetch(FetchDescriptor<InboxItem>()).filter({ $0.deviceID == "demo" }) {
             context.delete(model)
         }
         for model in demoTasks {
@@ -282,6 +302,14 @@ enum SeedData {
                 deviceID: "demo"
             )
             context.insert(item)
+            context.insert(
+                ChecklistItemVisual(
+                    checklistItemID: item.id,
+                    iconName: index < completed ? "checkmark.circle" : "circle.dashed",
+                    colorHex: index < completed ? "16A34A" : "1677FF",
+                    deviceID: "demo"
+                )
+            )
         }
     }
 }

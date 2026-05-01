@@ -437,3 +437,16 @@
 "tasks.collapse" = "Collapse";
 "live.timer.defaultPath" = "Time Record";
 "live.timer.endedTitle" = "Timer Ended";
+
+"inbox.suggestion.suggest" = "Suggest";
+"inbox.suggestion.edit" = "Edit Suggestion";
+"inbox.suggestion.apply" = "Add to Task";
+"inbox.suggestion.targetFormat" = "Suggested task: %@";
+"inbox.suggestion.editorTitle" = "Inbox Suggestion";
+"inbox.suggestion.editorFooter" = "Choose the task, symbol, and color before adding this inbox item as a checklist item.";
+"inbox.suggestion.targetTask" = "Task";
+"inbox.suggestion.symbolColor" = "Checklist Symbol and Color";
+"inbox.suggestion.reason" = "Reason";
+"inbox.suggestion.error.missingModel" = "Choose an LLM model in Settings before asking for a suggestion.";
+"inbox.suggestion.error.noTaskCandidates" = "Create at least one task before asking for a suggestion.";
+"inbox.suggestion.error.noValidTask" = "The suggestion did not match an existing task.";

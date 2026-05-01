@@ -264,10 +264,20 @@ struct ChecklistEditorRow: View {
     let submit: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            ChecklistCompletionButton(isCompleted: item.isCompleted) {
+        HStack(alignment: .top, spacing: 10) {
+            ChecklistCompletionButton(isCompleted: item.isCompleted, colorHex: item.colorHex) {
                 item.isCompleted.toggle()
             }
+            .padding(.top, 2)
+
+            SymbolColorPickerButton(
+                colors: TaskColorPalette.hexValues,
+                symbolName: $item.iconName,
+                colorHex: $item.colorHex,
+                showsTitle: false
+            )
+            .buttonStyle(.plain)
+            .frame(width: 34, height: 34)
 
             TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -303,6 +313,7 @@ struct ChecklistEditorRow: View {
             } label: {
                 Image(systemName: "arrow.up.arrow.down.circle")
                     .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("common.sort"))

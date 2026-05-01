@@ -30,7 +30,12 @@ struct TaskEditorDraft: Identifiable {
         self.checklistItems = []
     }
 
-    init(task: TaskNode, categoryID: UUID? = nil, checklistItems: [ChecklistItem]) {
+    init(
+        task: TaskNode,
+        categoryID: UUID? = nil,
+        checklistItems: [ChecklistItem],
+        visualByChecklistID: [UUID: ChecklistItemVisual] = [:]
+    ) {
         self.taskID = task.id
         self.title = task.title
         self.status = task.status
@@ -42,7 +47,9 @@ struct TaskEditorDraft: Identifiable {
         self.estimatedMinutes = task.estimatedSeconds.map { $0 / 60 }
         self.hasDueDate = task.dueAt != nil
         self.dueAt = task.dueAt ?? Date()
-        self.checklistItems = checklistItems.map(ChecklistEditorDraft.init(item:))
+        self.checklistItems = checklistItems.map { item in
+            ChecklistEditorDraft(item: item, visual: visualByChecklistID[item.id])
+        }
     }
 }
 
@@ -76,19 +83,47 @@ struct ChecklistEditorDraft: Identifiable, Equatable {
     var existingID: UUID?
     var title: String
     var isCompleted: Bool
+    var iconName: String
+    var colorHex: String
 
-    nonisolated init(title: String = "", isCompleted: Bool = false) {
+    nonisolated init(
+        title: String = "",
+        isCompleted: Bool = false,
+        iconName: String = "checkmark.circle",
+        colorHex: String = "1677FF"
+    ) {
         self.id = UUID()
         self.existingID = nil
         self.title = title
         self.isCompleted = isCompleted
+        self.iconName = iconName
+        self.colorHex = colorHex
     }
 
-    nonisolated init(item: ChecklistItem) {
+    nonisolated init(item: ChecklistItem, visual: ChecklistItemVisual? = nil) {
         self.id = item.id
         self.existingID = item.id
         self.title = item.title
         self.isCompleted = item.isCompleted
+        self.iconName = visual?.iconName ?? "checkmark.circle"
+        self.colorHex = visual?.colorHex ?? "1677FF"
+    }
+}
+
+struct InboxSuggestionEditorDraft: Identifiable {
+    let id = UUID()
+    let inboxItemID: UUID
+    var taskID: UUID?
+    var reason: String
+    var iconName: String
+    var colorHex: String
+
+    init(item: InboxItem, suggestion: InboxSuggestion? = nil, fallbackTaskID: UUID? = nil) {
+        self.inboxItemID = item.id
+        self.taskID = suggestion?.taskID ?? item.suggestedTaskID ?? fallbackTaskID
+        self.reason = suggestion?.reason ?? item.suggestionReason ?? ""
+        self.iconName = suggestion?.iconName ?? "checkmark.circle"
+        self.colorHex = suggestion?.colorHex ?? "1677FF"
     }
 }
 

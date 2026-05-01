@@ -28,9 +28,11 @@ struct StoreRefreshCoordinator {
         }
         if plan.refreshChecklist {
             store.checklistItems = try store.fetchChecklistItems()
+            store.checklistItemVisuals = try store.fetchChecklistItemVisuals()
         }
         if plan.refreshInbox {
             store.inboxItems = try store.fetchInboxItems()
+            store.inboxSuggestions = try store.fetchInboxSuggestions()
         }
     }
 

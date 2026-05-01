@@ -188,6 +188,28 @@ enum TimeTrackerSchemaV6: VersionedSchema {
     }
 }
 
+enum TimeTrackerSchemaV7: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 6, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TaskCategory.self,
+            TaskCategoryAssignment.self,
+            InboxItem.self,
+            InboxSuggestion.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            DailySummary.self,
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self,
+            ChecklistItemVisual.self
+        ]
+    }
+}
+
 enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [
@@ -196,7 +218,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV3.self,
             TimeTrackerSchemaV4.self,
             TimeTrackerSchemaV5.self,
-            TimeTrackerSchemaV6.self
+            TimeTrackerSchemaV6.self,
+            TimeTrackerSchemaV7.self
         ]
     }
 
@@ -238,7 +261,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                     try context.save()
                 }
             ),
-            .lightweight(fromVersion: TimeTrackerSchemaV5.self, toVersion: TimeTrackerSchemaV6.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV5.self, toVersion: TimeTrackerSchemaV6.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV6.self, toVersion: TimeTrackerSchemaV7.self)
         ]
     }
 }
@@ -255,11 +279,11 @@ private enum LegacyTaskCategoryMigrationBuffer {
 
 enum TimeTrackerModelRegistry {
     static var currentSchema: Schema {
-        Schema(versionedSchema: TimeTrackerSchemaV6.self)
+        Schema(versionedSchema: TimeTrackerSchemaV7.self)
     }
 
     static var currentModels: [any PersistentModel.Type] {
-        TimeTrackerSchemaV6.models
+        TimeTrackerSchemaV7.models
     }
 
     static var cloudSyncedUserModelNames: Set<String> {

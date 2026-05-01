@@ -37,7 +37,19 @@ final class TimeTrackerStore: ObservableObject {
             rebuildChecklistIndexes()
         }
     }
+    @Published var checklistItemVisuals: [ChecklistItemVisual] = [] {
+        didSet {
+            rebuildChecklistVisualIndexes()
+        }
+    }
     @Published var inboxItems: [InboxItem] = []
+    @Published var inboxSuggestions: [InboxSuggestion] = [] {
+        didSet {
+            rebuildInboxSuggestionIndexes()
+        }
+    }
+    @Published var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
+    @Published var inboxSuggestionInFlightIDs: Set<UUID> = []
     @Published var preferences = AppPreferences.defaults
     @Published var rollupDomainStore = RollupStore()
     @Published var analyticsDomainStore = AnalyticsStore()
@@ -141,5 +153,7 @@ final class TimeTrackerStore: ObservableObject {
     var taskPathByID: [UUID: String] = [:]
     var taskParentPathByID: [UUID: String] = [:]
     var sortedTodaySegments: [TimeSegment] = []
+    var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]
+    var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
     var scheduledSyncRefreshTask: Task<Void, Never>?
 }

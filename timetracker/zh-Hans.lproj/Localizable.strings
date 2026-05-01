@@ -437,3 +437,16 @@
 "tasks.collapse" = "折叠";
 "live.timer.defaultPath" = "时间记录";
 "live.timer.endedTitle" = "计时已结束";
+
+"inbox.suggestion.suggest" = "推荐";
+"inbox.suggestion.edit" = "编辑推荐";
+"inbox.suggestion.apply" = "添加到任务";
+"inbox.suggestion.targetFormat" = "推荐任务：%@";
+"inbox.suggestion.editorTitle" = "Inbox 推荐";
+"inbox.suggestion.editorFooter" = "添加到任务前，可以手动选择任务、符号和颜色。";
+"inbox.suggestion.targetTask" = "任务";
+"inbox.suggestion.symbolColor" = "清单符号与颜色";
+"inbox.suggestion.reason" = "推荐理由";
+"inbox.suggestion.error.missingModel" = "请先在设置里选择 LLM 模型，再获取推荐。";
+"inbox.suggestion.error.noTaskCandidates" = "请先创建至少一个任务，再获取推荐。";
+"inbox.suggestion.error.noValidTask" = "推荐结果没有匹配到已有任务。";

@@ -211,6 +211,24 @@ extension TimeTrackerStore {
         return try modelContext.fetch(descriptor)
     }
 
+    func fetchChecklistItemVisuals() throws -> [ChecklistItemVisual] {
+        guard let modelContext else { return [] }
+        let descriptor = FetchDescriptor<ChecklistItemVisual>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [
+                SortDescriptor(\.checklistItemID),
+                SortDescriptor(\.updatedAt, order: .reverse)
+            ]
+        )
+        let all = try modelContext.fetch(descriptor)
+        return Dictionary(grouping: all, by: \.checklistItemID)
+            .values
+            .compactMap { visuals in
+                visuals.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
+            }
+            .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
+    }
+
     func fetchInboxItems() throws -> [InboxItem] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<InboxItem>(
@@ -221,6 +239,24 @@ extension TimeTrackerStore {
             ]
         )
         return try modelContext.fetch(descriptor)
+    }
+
+    func fetchInboxSuggestions() throws -> [InboxSuggestion] {
+        guard let modelContext else { return [] }
+        let descriptor = FetchDescriptor<InboxSuggestion>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [
+                SortDescriptor(\.inboxItemID),
+                SortDescriptor(\.updatedAt, order: .reverse)
+            ]
+        )
+        let all = try modelContext.fetch(descriptor)
+        return Dictionary(grouping: all, by: \.inboxItemID)
+            .values
+            .compactMap { suggestions in
+                suggestions.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
+            }
+            .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
     }
 
     func fetchCountdownEvents() throws -> [CountdownEvent] {

@@ -283,7 +283,15 @@ struct ChecklistDraftService {
             )
         )
         let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let existingIDs = Set(existing.map(\.id))
+        let visuals = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
+            .filter { existingIDs.contains($0.checklistItemID) }
+        let visualByItemID = Dictionary(grouping: visuals, by: \.checklistItemID)
+            .compactMapValues { values in
+                values.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
+            }
         var keptIDs = Set<UUID>()
+        let now = Date()
 
         for (index, draft) in drafts.enumerated() {
             let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -298,8 +306,16 @@ struct ChecklistDraftService {
                 item.isCompleted = draft.isCompleted
                 item.sortOrder = sortOrder
                 item.deletedAt = nil
-                item.updatedAt = Date()
+                item.updatedAt = now
                 item.clientMutationID = UUID()
+                upsertVisual(
+                    for: item.id,
+                    draft: draft,
+                    existing: visualByItemID[item.id],
+                    context: context,
+                    now: now,
+                    deviceID: deviceID
+                )
                 keptIDs.insert(item.id)
             } else {
                 let item = ChecklistItem(
@@ -310,15 +326,56 @@ struct ChecklistDraftService {
                     deviceID: deviceID
                 )
                 context.insert(item)
+                context.insert(
+                    ChecklistItemVisual(
+                        checklistItemID: item.id,
+                        iconName: ChecklistVisualSanitizer.sanitizedIcon(draft.iconName),
+                        colorHex: ChecklistVisualSanitizer.sanitizedColor(draft.colorHex),
+                        deviceID: deviceID
+                    )
+                )
                 keptIDs.insert(item.id)
             }
         }
 
         for item in existing where item.deletedAt == nil && !keptIDs.contains(item.id) {
-            item.deletedAt = Date()
-            item.updatedAt = Date()
+            item.deletedAt = now
+            item.updatedAt = now
             item.clientMutationID = UUID()
+            if let visual = visualByItemID[item.id] {
+                visual.deletedAt = now
+                visual.updatedAt = now
+                visual.clientMutationID = UUID()
+            }
         }
         try context.save()
+    }
+
+    private func upsertVisual(
+        for checklistItemID: UUID,
+        draft: ChecklistEditorDraft,
+        existing: ChecklistItemVisual?,
+        context: ModelContext,
+        now: Date,
+        deviceID: String
+    ) {
+        let iconName = ChecklistVisualSanitizer.sanitizedIcon(draft.iconName)
+        let colorHex = ChecklistVisualSanitizer.sanitizedColor(draft.colorHex)
+        if let existing {
+            existing.iconName = iconName
+            existing.colorHex = colorHex
+            existing.deletedAt = nil
+            existing.updatedAt = now
+            existing.clientMutationID = UUID()
+        } else {
+            context.insert(
+                ChecklistItemVisual(
+                    checklistItemID: checklistItemID,
+                    iconName: iconName,
+                    colorHex: colorHex,
+                    deviceID: deviceID
+                )
+            )
+        }
     }
 }

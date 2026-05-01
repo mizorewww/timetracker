@@ -72,4 +72,106 @@ struct LLMSettingsTests {
             #expect(error == .responseStatus(401))
         }
     }
+
+    @Test
+    func inboxSuggestionRequestUsesOpenAICompatibleChatEndpoint() throws {
+        let service = LLMInboxSuggestionService()
+        let candidate = LLMTaskCandidate(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            title: "Design",
+            path: "Work / Design",
+            iconName: "paintbrush",
+            colorHex: "1677FF"
+        )
+
+        let request = try service.suggestionRequest(
+            inboxTitle: "Polish spacing",
+            candidates: [candidate],
+            endpoint: " https://api.openai.com/v1 ",
+            apiKey: " test-key ",
+            modelID: "gpt-test"
+        )
+
+        #expect(request.url?.absoluteString == "https://api.openai.com/v1/chat/completions")
+        #expect(request.httpMethod == "POST")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-key")
+        #expect(request.httpBody?.isEmpty == false)
+    }
+
+    @Test
+    func inboxSuggestionSanitizesWrongSymbolAndColor() throws {
+        let taskID = UUID()
+        let result = try LLMInboxSuggestionService.sanitize(
+            payload: InboxSuggestionPayload(
+                taskID: taskID.uuidString,
+                reason: "  related to design ",
+                iconName: "not.a.real.symbol",
+                colorHex: "BADBAD"
+            ),
+            candidates: [
+                LLMTaskCandidate(
+                    id: taskID,
+                    title: "Design",
+                    path: "Work / Design",
+                    iconName: "paintbrush",
+                    colorHex: "16A34A"
+                )
+            ],
+            modelID: "gpt-test"
+        )
+
+        #expect(result.taskID == taskID)
+        #expect(result.reason == "related to design")
+        #expect(result.iconName == ChecklistVisualSanitizer.defaultIcon)
+        #expect(result.colorHex == "16A34A")
+    }
+
+    @Test
+    func fetchInboxSuggestionDecodesChatCompletionContent() async throws {
+        let taskID = UUID()
+        let service = LLMInboxSuggestionService { request in
+            #expect(request.url?.absoluteString == "https://example.test/v1/chat/completions")
+            let payload = """
+            {
+              "choices": [
+                {
+                  "message": {
+                    "content": "{\\"taskID\\":\\"\(taskID.uuidString)\\",\\"reason\\":\\"same project\\",\\"iconName\\":\\"book\\",\\"colorHex\\":\\"16A34A\\"}"
+                  }
+                }
+              ]
+            }
+            """
+            let data = Data(payload.utf8)
+            let url = try #require(request.url)
+            let response = try #require(HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            ))
+            return (data, response)
+        }
+
+        let result = try await service.suggest(
+            inboxTitle: "Read HIG",
+            candidates: [
+                LLMTaskCandidate(
+                    id: taskID,
+                    title: "Study",
+                    path: "Study / UX",
+                    iconName: "book",
+                    colorHex: "16A34A"
+                )
+            ],
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "gpt-test"
+        )
+
+        #expect(result.taskID == taskID)
+        #expect(result.iconName == "book")
+        #expect(result.colorHex == "16A34A")
+        #expect(result.reason == "same project")
+    }
 }

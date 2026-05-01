@@ -59,7 +59,9 @@ struct TaskChecklistPanel: View {
                         ForEach(displayedItems, id: \.id) { item in
                             ChecklistDisplayRow(
                                 title: item.title,
-                                isCompleted: item.isCompleted
+                                isCompleted: item.isCompleted,
+                                iconName: store.checklistIconName(for: item),
+                                colorHex: store.checklistColorHex(for: item)
                             ) {
                                 withAnimation(.snappy(duration: 0.22)) {
                                     store.toggleChecklistItem(item)

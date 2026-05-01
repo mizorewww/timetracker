@@ -341,6 +341,26 @@ extension TimeTrackerStore {
         checklistByTaskID[taskID] ?? []
     }
 
+    func taskPath(for task: TaskNode) -> String {
+        taskPathByID[task.id] ?? task.title
+    }
+
+    func checklistVisual(for item: ChecklistItem) -> ChecklistItemVisual? {
+        checklistVisualByItemID[item.id]
+    }
+
+    func checklistIconName(for item: ChecklistItem) -> String {
+        ChecklistVisualSanitizer.sanitizedIcon(checklistVisual(for: item)?.iconName)
+    }
+
+    func checklistColorHex(for item: ChecklistItem) -> String {
+        ChecklistVisualSanitizer.sanitizedColor(checklistVisual(for: item)?.colorHex)
+    }
+
+    func inboxSuggestion(for item: InboxItem) -> InboxSuggestion? {
+        inboxSuggestionByItemID[item.id]
+    }
+
     func checklistProgress(for taskID: UUID) -> ChecklistProgress {
         rollupDomainStore.checklistProgress(for: taskID, checklistItems: checklistItems)
     }
@@ -374,6 +394,24 @@ extension TimeTrackerStore {
                     }
                     return lhs.sortOrder < rhs.sortOrder
                 }
+            }
+    }
+
+    func rebuildChecklistVisualIndexes() {
+        checklistVisualByItemID = checklistItemVisuals
+            .filter { $0.deletedAt == nil }
+            .sorted { lhs, rhs in lhs.updatedAt < rhs.updatedAt }
+            .reduce(into: [:]) { result, visual in
+                result[visual.checklistItemID] = visual
+            }
+    }
+
+    func rebuildInboxSuggestionIndexes() {
+        inboxSuggestionByItemID = inboxSuggestions
+            .filter { $0.deletedAt == nil }
+            .sorted { lhs, rhs in lhs.updatedAt < rhs.updatedAt }
+            .reduce(into: [:]) { result, suggestion in
+                result[suggestion.inboxItemID] = suggestion
             }
     }
 

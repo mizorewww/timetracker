@@ -2,11 +2,12 @@ import SwiftUI
 
 struct ChecklistCompletionButton: View {
     let isCompleted: Bool
+    var colorHex: String = ChecklistVisualSanitizer.defaultColor
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            ChecklistCompletionMark(isCompleted: isCompleted)
+            ChecklistCompletionMark(isCompleted: isCompleted, colorHex: colorHex)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(AppStrings.localized("editor.checklist.completed"))
@@ -15,28 +16,54 @@ struct ChecklistCompletionButton: View {
 
 struct ChecklistCompletionMark: View {
     let isCompleted: Bool
+    var colorHex: String = ChecklistVisualSanitizer.defaultColor
 
     var body: some View {
-        Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 28, weight: .regular))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(isCompleted ? .green : .secondary)
-            .frame(width: 32, height: 32)
-            .contentShape(Circle())
-            .symbolEffect(.bounce, value: isCompleted)
-            .animation(.snappy(duration: 0.18), value: isCompleted)
+        ZStack {
+            if isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 30, weight: .regular))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .green)
+            } else {
+                Circle()
+                    .strokeBorder(.secondary.opacity(0.55), lineWidth: 1.6)
+            }
+        }
+        .frame(width: 30, height: 30)
+        .contentShape(Circle())
+        .symbolEffect(.bounce, value: isCompleted)
+        .animation(.snappy(duration: 0.18), value: isCompleted)
+    }
+}
+
+struct ChecklistItemIcon: View {
+    let iconName: String
+    let colorHex: String
+
+    var body: some View {
+        let color = Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .blue
+        Image(systemName: ChecklistVisualSanitizer.sanitizedIcon(iconName))
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(color)
+            .frame(width: 30, height: 30)
+            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
 struct ChecklistDisplayRow: View {
     let title: String
     let isCompleted: Bool
+    var iconName: String = ChecklistVisualSanitizer.defaultIcon
+    var colorHex: String = ChecklistVisualSanitizer.defaultColor
     let toggle: () -> Void
 
     var body: some View {
         Button(action: toggle) {
             HStack(alignment: .top, spacing: 10) {
-                ChecklistCompletionMark(isCompleted: isCompleted)
+                ChecklistCompletionMark(isCompleted: isCompleted, colorHex: colorHex)
+                    .padding(.top, 1)
+                ChecklistItemIcon(iconName: iconName, colorHex: colorHex)
                     .padding(.top, 1)
 
                 Text(title)
@@ -93,6 +120,8 @@ struct InlineChecklistAddRow: View {
 struct EditableChecklistTextRow: View {
     @Binding var title: String
     let isCompleted: Bool
+    var iconName: String = ChecklistVisualSanitizer.defaultIcon
+    var colorHex: String = ChecklistVisualSanitizer.defaultColor
     var placeholder: String = AppStrings.localized("editor.checklist.itemPlaceholder")
     let toggle: () -> Void
     let commit: () -> Void
@@ -101,11 +130,13 @@ struct EditableChecklistTextRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            ChecklistCompletionButton(isCompleted: isCompleted) {
+            ChecklistCompletionButton(isCompleted: isCompleted, colorHex: colorHex) {
                 commit()
                 toggle()
             }
             .padding(.top, 1)
+            ChecklistItemIcon(iconName: iconName, colorHex: colorHex)
+                .padding(.top, 1)
 
             TextField(placeholder, text: $title, axis: .vertical)
                 .textFieldStyle(.plain)

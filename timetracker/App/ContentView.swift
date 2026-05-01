@@ -57,6 +57,9 @@ struct ContentView: View {
         .sheet(item: $store.segmentEditorDraft) { draft in
             SegmentEditorSheet(store: store, initialDraft: draft)
         }
+        .sheet(item: $store.inboxSuggestionEditorDraft) { draft in
+            InboxSuggestionEditorSheet(store: store, initialDraft: draft)
+        }
         #if os(macOS)
         .focusedSceneValue(\.newTaskAction) {
             store.presentNewTask()

@@ -202,6 +202,18 @@ struct DataLifecycleTests {
         let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.defaultFocusMinutes.rawValue, valueJSON: "25", deviceID: "test")
         let checklistItem = ChecklistItem(taskID: task.id, title: "Checklist", deviceID: "test")
+        let checklistVisual = ChecklistItemVisual(checklistItemID: checklistItem.id, iconName: "book", colorHex: "16A34A", deviceID: "test")
+        let inboxItem = InboxItem(title: "Inbox", deviceID: "test")
+        let inboxSuggestion = InboxSuggestion(
+            inboxItemID: inboxItem.id,
+            taskID: task.id,
+            reason: "Related",
+            iconName: "book",
+            colorHex: "16A34A",
+            modelID: "test",
+            titleSnapshot: inboxItem.title,
+            deviceID: "test"
+        )
         let category = TaskCategory(title: "Work", deviceID: "test")
         let categoryAssignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
 
@@ -215,6 +227,9 @@ struct DataLifecycleTests {
         context.insert(countdown)
         context.insert(preference)
         context.insert(checklistItem)
+        context.insert(checklistVisual)
+        context.insert(inboxItem)
+        context.insert(inboxSuggestion)
         try context.save()
 
         #expect(task.id.uuidString.isEmpty == false)
@@ -225,6 +240,8 @@ struct DataLifecycleTests {
         #expect(countdown.deletedAt == nil)
         #expect(preference.deletedAt == nil)
         #expect(checklistItem.deletedAt == nil)
+        #expect(checklistVisual.deletedAt == nil)
+        #expect(inboxSuggestion.deletedAt == nil)
         #expect(category.includesInForecast)
         #expect(categoryAssignment.deletedAt == nil)
     }
@@ -241,7 +258,9 @@ struct DataLifecycleTests {
             "CountdownEvent",
             "SyncedPreference",
             "ChecklistItem",
-            "InboxItem"
+            "ChecklistItemVisual",
+            "InboxItem",
+            "InboxSuggestion"
         ]
 
         #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
@@ -263,21 +282,74 @@ struct DataLifecycleTests {
         let category = TaskCategory(title: "Cloud category", deviceID: "test")
         let assignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
         let checklist = ChecklistItem(taskID: task.id, title: "Cloud checklist", deviceID: "test")
+        let checklistVisual = ChecklistItemVisual(checklistItemID: checklist.id, iconName: "book", colorHex: "16A34A", deviceID: "test")
         let inboxItem = InboxItem(title: "Cloud inbox", deviceID: "test")
+        let inboxSuggestion = InboxSuggestion(
+            inboxItemID: inboxItem.id,
+            taskID: task.id,
+            reason: "Cloud reason",
+            iconName: "book",
+            colorHex: "16A34A",
+            modelID: "test",
+            titleSnapshot: inboxItem.title,
+            deviceID: "test"
+        )
         let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
 
         context.insert(task)
         context.insert(category)
         context.insert(assignment)
         context.insert(checklist)
+        context.insert(checklistVisual)
         context.insert(inboxItem)
+        context.insert(inboxSuggestion)
         context.insert(preference)
         try context.save()
 
         #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).map(\.title) == ["Cloud checklist"])
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).map(\.iconName) == ["book"])
         #expect(try context.fetch(FetchDescriptor<InboxItem>()).map(\.title) == ["Cloud inbox"])
+        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).map(\.taskID) == [task.id])
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [category.id])
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).map(\.key) == [AppPreferenceKey.showGrossAndWallTogether.rawValue])
+    }
+
+    @Test @MainActor
+    func applyingInboxSuggestionCreatesChecklistWithVisualAndRemovesInboxItem() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: "1677FF", iconName: "paintbrush")
+        let inboxItem = InboxItem(title: "Polish empty state", deviceID: "test")
+        let suggestion = InboxSuggestion(
+            inboxItemID: inboxItem.id,
+            taskID: task.id,
+            reason: "Same design project",
+            iconName: "paintbrush",
+            colorHex: "1677FF",
+            modelID: "gpt-test",
+            titleSnapshot: inboxItem.title,
+            deviceID: "test"
+        )
+        context.insert(inboxItem)
+        context.insert(suggestion)
+        try context.save()
+
+        _ = try InboxCommandHandler().applySuggestion(
+            item: inboxItem,
+            suggestion: suggestion,
+            existingChecklistItems: [],
+            context: context,
+            deviceID: "test"
+        )
+
+        let checklistItems = try context.fetch(FetchDescriptor<ChecklistItem>())
+        let visuals = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
+        #expect(checklistItems.map(\.title) == ["Polish empty state"])
+        #expect(checklistItems.first?.taskID == task.id)
+        #expect(visuals.map(\.iconName) == ["paintbrush"])
+        #expect(visuals.map(\.colorHex) == ["1677FF"])
+        #expect(inboxItem.deletedAt != nil)
+        #expect(suggestion.deletedAt != nil)
     }
 
     @Test @MainActor

@@ -5,7 +5,6 @@ struct SymbolColorPickerRow: View {
     let titleKey: String
     @Binding var symbolName: String
     @Binding var colorHex: String
-    @State private var isPickerPresented = false
 
     init(
         colors: [String],
@@ -23,8 +22,36 @@ struct SymbolColorPickerRow: View {
         HStack {
             Text(.app(titleKey))
             Spacer()
-            pickerButton
+            SymbolColorPickerButton(
+                colors: colors,
+                symbolName: $symbolName,
+                colorHex: $colorHex
+            )
         }
+    }
+}
+
+struct SymbolColorPickerButton: View {
+    let colors: [String]
+    @Binding var symbolName: String
+    @Binding var colorHex: String
+    var titleKey: String = "common.choose"
+    var showsTitle: Bool = true
+    @State private var isPickerPresented = false
+
+    var body: some View {
+        Button {
+            isPickerPresented = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: ChecklistVisualSanitizer.sanitizedIcon(symbolName))
+                    .foregroundStyle(Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .blue)
+                if showsTitle {
+                    Text(.app(titleKey))
+                }
+            }
+        }
+        .accessibilityLabel(AppStrings.localized("editor.symbol.title"))
         #if os(macOS)
         .popover(isPresented: $isPickerPresented) {
             picker.frame(width: 460, height: 520)
@@ -46,18 +73,6 @@ struct SymbolColorPickerRow: View {
             .presentationDetents([.large])
         }
         #endif
-    }
-
-    private var pickerButton: some View {
-        Button {
-            isPickerPresented = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: symbolName)
-                    .foregroundStyle(Color(hex: colorHex) ?? .blue)
-                Text(.app("common.choose"))
-            }
-        }
     }
 
     private var picker: some View {
@@ -152,7 +167,7 @@ struct SymbolAndColorPicker: View {
 }
 
 enum SymbolCatalog {
-    static let symbolNames: [String] = {
+    nonisolated static let symbolNames: [String] = {
         let loaded = loadSymbolOrder()
         if !loaded.isEmpty {
             return loaded
@@ -160,9 +175,9 @@ enum SymbolCatalog {
         return fallbackSymbols
     }()
 
-    static let searchKeywords: [String: [String]] = loadSearchKeywords()
+    nonisolated static let searchKeywords: [String: [String]] = loadSearchKeywords()
 
-    private static func loadSymbolOrder() -> [String] {
+    nonisolated private static func loadSymbolOrder() -> [String] {
         for url in resourceURLs(fileName: "symbol_order", extension: "plist") {
             guard let data = try? Data(contentsOf: url),
                   let names = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String],
@@ -174,7 +189,7 @@ enum SymbolCatalog {
         return []
     }
 
-    private static func loadSearchKeywords() -> [String: [String]] {
+    nonisolated private static func loadSearchKeywords() -> [String: [String]] {
         for url in resourceURLs(fileName: "symbol_search", extension: "plist") {
             guard let data = try? Data(contentsOf: url),
                   let keywords = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: [String]] else {
@@ -185,7 +200,7 @@ enum SymbolCatalog {
         return [:]
     }
 
-    private static func resourceURLs(fileName: String, extension ext: String) -> [URL] {
+    nonisolated private static func resourceURLs(fileName: String, extension ext: String) -> [URL] {
         let bundled: [URL] = [
             fileName == "symbol_order" ? Bundle.main.url(forResource: "SFSymbolOrder", withExtension: ext) : nil,
             fileName == "symbol_search" ? Bundle.main.url(forResource: "SFSymbolSearch", withExtension: ext) : nil
@@ -203,7 +218,7 @@ enum SymbolCatalog {
         return bundled + system
     }
 
-    private static let fallbackSymbols = [
+    nonisolated private static let fallbackSymbols = [
         "checkmark.circle", "folder", "briefcase", "book", "macwindow",
         "square.grid.2x2", "chevron.left.forwardslash.chevron.right",
         "person.2", "pencil.and.list.clipboard", "target", "calendar",

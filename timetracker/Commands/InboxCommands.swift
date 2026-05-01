@@ -69,6 +69,50 @@ struct InboxCommandHandler {
         try context.save()
     }
 
+    func reorderedOpenItemIDs(
+        items: [InboxItem],
+        sourceOffsets: IndexSet,
+        destination: Int
+    ) -> [UUID] {
+        let ids = items.map(\.id)
+        guard !sourceOffsets.isEmpty else { return ids }
+
+        let moving = sourceOffsets.sorted().compactMap { index in
+            ids.indices.contains(index) ? ids[index] : nil
+        }
+        let sourceSet = Set(sourceOffsets)
+        var remaining = ids.enumerated()
+            .filter { !sourceSet.contains($0.offset) }
+            .map(\.element)
+        let adjustedDestination = destination - sourceOffsets.filter { $0 < destination }.count
+        let clampedDestination = min(max(0, adjustedDestination), remaining.count)
+        remaining.insert(contentsOf: moving, at: clampedDestination)
+        return remaining
+    }
+
+    func reorderOpenItems(
+        orderedItemIDs: [UUID],
+        context: ModelContext,
+        now: Date = Date()
+    ) throws {
+        guard !orderedItemIDs.isEmpty else { return }
+        let items = try context.fetch(
+            FetchDescriptor<InboxItem>(
+                predicate: #Predicate { $0.deletedAt == nil && $0.isCompleted == false }
+            )
+        )
+        let itemByID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        guard orderedItemIDs.count == items.count else { return }
+
+        for (index, itemID) in orderedItemIDs.enumerated() {
+            guard let item = itemByID[itemID] else { return }
+            item.sortOrder = Double(index + 1) * 10
+            item.updatedAt = now
+            item.clientMutationID = UUID()
+        }
+        try context.save()
+    }
+
     func upsertSuggestion(
         item: InboxItem,
         result: LLMInboxSuggestionResult,

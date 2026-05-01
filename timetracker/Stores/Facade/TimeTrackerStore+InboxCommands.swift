@@ -61,6 +61,21 @@ extension TimeTrackerStore {
         }
     }
 
+    func reorderInboxItems(sourceOffsets: IndexSet, destination: Int) {
+        let orderedIDs = inboxCommandHandler.reorderedOpenItemIDs(
+            items: openInboxItems,
+            sourceOffsets: sourceOffsets,
+            destination: destination
+        )
+        perform(event: .inboxChanged) {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try inboxCommandHandler.reorderOpenItems(
+                orderedItemIDs: orderedIDs,
+                context: modelContext
+            )
+        }
+    }
+
     func autoSuggestInboxItemsIfNeeded() {
         guard canAutoSuggestInboxItems else { return }
         let candidates = llmTaskCandidates()
@@ -98,7 +113,9 @@ extension TimeTrackerStore {
                     modelID: modelID
                 )
                 await MainActor.run {
-                    guard item.deletedAt == nil, item.title == requestedTitle else {
+                    guard item.deletedAt == nil,
+                          item.title == requestedTitle,
+                          item.suggestionGeneratedAt == nil else {
                         inboxSuggestionInFlightIDs.remove(item.id)
                         return
                     }

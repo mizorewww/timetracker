@@ -8,8 +8,12 @@ struct InboxView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
-    private var items: [InboxItem] {
-        store.inboxItemsForDisplay
+    private var openItems: [InboxItem] {
+        store.openInboxItems
+    }
+
+    private var completedItems: [InboxItem] {
+        store.completedInboxItems
     }
 
     private var isCompact: Bool {
@@ -21,20 +25,61 @@ struct InboxView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: isCompact ? 18 : 24) {
-                header
-                inboxCard
-                footerHint
+        List {
+            header
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: isCompact ? 14 : 24, leading: isCompact ? 22 : 32, bottom: 8, trailing: isCompact ? 22 : 32))
+
+            InboxCaptureRow(
+                title: $draftTitle,
+                placeholder: AppStrings.localized("inbox.addPlaceholder"),
+                focusToken: addFocusToken,
+                submit: submitDraft
+            )
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 4, leading: isCompact ? 22 : 32, bottom: 12, trailing: isCompact ? 22 : 32))
+
+            if openItems.isEmpty && completedItems.isEmpty {
+                EmptyStateRow(
+                    title: AppStrings.localized("inbox.empty"),
+                    icon: "tray"
+                )
+                .listRowBackground(AppColors.cardBackground)
+                .listRowInsets(EdgeInsets(top: 8, leading: isCompact ? 22 : 32, bottom: 8, trailing: isCompact ? 22 : 32))
+            } else {
+                ForEach(openItems) { item in
+                    inboxRow(item)
+                }
+                .onMove(perform: moveInboxItems)
+
+                ForEach(completedItems) { item in
+                    inboxRow(item)
+                        .moveDisabled(true)
+                }
             }
-            .frame(maxWidth: isCompact ? .infinity : 1_060, alignment: .leading)
-            .padding(.horizontal, isCompact ? 22 : 32)
-            .padding(.top, isCompact ? 14 : 28)
-            .padding(.bottom, 36)
-            .frame(maxWidth: .infinity, alignment: .top)
+
+            footerHint
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 14, leading: isCompact ? 22 : 32, bottom: 28, trailing: isCompact ? 22 : 32))
         }
+        #if os(iOS)
+        .listStyle(.insetGrouped)
+        #else
+        .listStyle(.inset)
+        #endif
+        .scrollContentBackground(.hidden)
         .background(AppColors.background.ignoresSafeArea())
         .navigationTitle(isCompact ? "" : AppStrings.inbox)
+        #if os(iOS)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                EditButton()
+            }
+        }
+        #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -70,54 +115,15 @@ struct InboxView: View {
             } label: {
                 Label(AppStrings.localized("inbox.add"), systemImage: "plus")
                     .labelStyle(.iconOnly)
-                    .font(.system(size: isCompact ? 22 : 20, weight: .regular))
-                    .frame(width: isCompact ? 48 : 44, height: isCompact ? 48 : 44)
+                    .font(.system(size: isCompact ? 19 : 17, weight: .regular))
+                    .frame(width: isCompact ? 40 : 36, height: isCompact ? 40 : 36)
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.circle)
-            .controlSize(.large)
+            .controlSize(.regular)
             .tint(.blue)
             .accessibilityLabel(AppStrings.localized("inbox.add"))
         }
-    }
-
-    private var inboxCard: some View {
-        VStack(spacing: 0) {
-            InboxCaptureRow(
-                title: $draftTitle,
-                placeholder: AppStrings.localized("inbox.addPlaceholder"),
-                focusToken: addFocusToken,
-                submit: submitDraft
-            )
-            .padding(.bottom, 16)
-
-            Divider()
-
-            if items.isEmpty {
-                EmptyStateRow(
-                    title: AppStrings.localized("inbox.empty"),
-                    icon: "tray"
-                )
-                .padding(.top, 16)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 {
-                            Divider()
-                        }
-                        InboxItemRow(store: store, item: item, isCompact: isCompact)
-                            .padding(.vertical, isCompact ? 14 : 16)
-                    }
-                }
-            }
-        }
-        .padding(isCompact ? 14 : 22)
-        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
-                .stroke(AppColors.border)
-        }
-        .shadow(color: .black.opacity(isCompact ? 0.06 : 0.05), radius: isCompact ? 18 : 22, x: 0, y: 10)
     }
 
     private var footerHint: some View {
@@ -132,6 +138,52 @@ struct InboxView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, isCompact ? 2 : 4)
+    }
+
+    @ViewBuilder
+    private func inboxRow(_ item: InboxItem) -> some View {
+        InboxItemRow(store: store, item: item, isCompact: isCompact)
+            .padding(.vertical, isCompact ? 8 : 10)
+            .listRowBackground(AppColors.cardBackground)
+            .listRowInsets(EdgeInsets(top: 0, leading: isCompact ? 22 : 32, bottom: 0, trailing: isCompact ? 22 : 32))
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                if canApplySuggestion(for: item) {
+                    Button {
+                        store.applyInboxSuggestion(item)
+                    } label: {
+                        Label(AppStrings.localized("inbox.suggestion.apply"), systemImage: "checkmark")
+                    }
+                    .tint(.blue)
+                }
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                if canDiscardSuggestion(for: item) {
+                    Button {
+                        store.discardInboxSuggestion(item)
+                    } label: {
+                        Label(AppStrings.localized("inbox.suggestion.discard"), systemImage: "xmark")
+                    }
+                    .tint(.gray)
+                }
+            }
+    }
+
+    private func moveInboxItems(from sourceOffsets: IndexSet, to destination: Int) {
+        store.reorderInboxItems(sourceOffsets: sourceOffsets, destination: destination)
+    }
+
+    private func canApplySuggestion(for item: InboxItem) -> Bool {
+        guard !item.isCompleted,
+              let suggestion = store.inboxSuggestion(for: item),
+              store.task(for: suggestion.taskID) != nil else {
+            return false
+        }
+        return true
+    }
+
+    private func canDiscardSuggestion(for item: InboxItem) -> Bool {
+        !item.isCompleted &&
+            (store.inboxSuggestionInFlightIDs.contains(item.id) || store.inboxSuggestion(for: item) != nil)
     }
 
     @discardableResult

@@ -98,6 +98,40 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
+    func inboxCommandHandlerReordersOnlyOpenItems() throws {
+        let context = try makeTestContext()
+        let handler = InboxCommandHandler()
+
+        let first = try #require(try handler.add(title: "First", existingItems: [], context: context, deviceID: "test"))
+        let second = try #require(try handler.add(title: "Second", existingItems: [first], context: context, deviceID: "test"))
+        let third = try #require(try handler.add(title: "Third", existingItems: [first, second], context: context, deviceID: "test"))
+        let completed = InboxItem(title: "Completed", isCompleted: true, sortOrder: 5, deviceID: "test")
+        context.insert(completed)
+        try context.save()
+
+        let reorderedIDs = handler.reorderedOpenItemIDs(
+            items: [first, second, third],
+            sourceOffsets: IndexSet(integer: 2),
+            destination: 0
+        )
+        try handler.reorderOpenItems(
+            orderedItemIDs: reorderedIDs,
+            context: context,
+            now: Date(timeIntervalSince1970: 4_000)
+        )
+
+        let openItems = try context.fetch(
+            FetchDescriptor<InboxItem>(
+                predicate: #Predicate { $0.deletedAt == nil && $0.isCompleted == false },
+                sortBy: [SortDescriptor(\.sortOrder)]
+            )
+        )
+        #expect(openItems.map(\.title) == ["Third", "First", "Second"])
+        #expect(openItems.allSatisfy { $0.updatedAt == Date(timeIntervalSince1970: 4_000) })
+        #expect(completed.sortOrder == 5)
+    }
+
+    @Test @MainActor
     func timerCommandHandlerCoordinatesLedgerAndParallelTimerPolicy() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")

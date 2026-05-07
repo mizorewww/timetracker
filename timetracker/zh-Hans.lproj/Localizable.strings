@@ -445,7 +445,7 @@
 "inbox.suggestion.apply" = "添加到任务";
 "inbox.suggestion.discard" = "丢弃建议";
 "inbox.suggestion.generating" = "正在自动推荐";
-"inbox.suggestion.prefix" = "建议任务：";
+"inbox.suggestion.prefix" = "Suggest";
 "inbox.suggestion.targetFormat" = "推荐任务：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推荐";
 "inbox.suggestion.editorFooter" = "添加到任务前，可以手动选择任务、符号和颜色。";

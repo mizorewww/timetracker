@@ -42,7 +42,7 @@ struct LLMChecklistVisualSuggestionService {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
 
-        let decoded = try JSONDecoder().decode(OpenAIVisualChatCompletionResponse.self, from: data)
+        let decoded = try JSONDecoder().decode(OpenAIChatCompletionResponse.self, from: data)
         guard let content = decoded.choices.first?.message.content,
               let contentData = content.data(using: .utf8) else {
             throw LLMInboxSuggestionServiceError.invalidResponse
@@ -74,7 +74,7 @@ struct LLMChecklistVisualSuggestionService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONEncoder().encode(
-            OpenAIVisualChatCompletionRequest(
+            OpenAIChatCompletionRequest(
                 model: modelID.trimmingCharacters(in: .whitespacesAndNewlines),
                 messages: [
                     .init(
@@ -143,39 +143,4 @@ private struct ChecklistVisualPromptPayload: Encodable {
     let taskPath: String
     let allowedSymbols: [String]
     let allowedColors: [String]
-}
-
-private struct OpenAIVisualChatCompletionRequest: Encodable {
-    struct Message: Encodable {
-        let role: String
-        let content: String
-    }
-
-    struct ResponseFormat: Encodable {
-        let type: String
-    }
-
-    let model: String
-    let messages: [Message]
-    let temperature: Double
-    let responseFormat: ResponseFormat
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case messages
-        case temperature
-        case responseFormat = "response_format"
-    }
-}
-
-private struct OpenAIVisualChatCompletionResponse: Decodable {
-    struct Choice: Decodable {
-        struct Message: Decodable {
-            let content: String
-        }
-
-        let message: Message
-    }
-
-    let choices: [Choice]
 }

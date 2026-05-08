@@ -1,0 +1,165 @@
+import Foundation
+
+struct TaskEditorDraft: Identifiable {
+    let id = UUID()
+    var taskID: UUID?
+    var title: String
+    var status: TaskStatus
+    var parentID: UUID?
+    var categoryID: UUID?
+    var colorHex: String
+    var iconName: String
+    var notes: String
+    var estimatedMinutes: Int?
+    var hasDueDate: Bool
+    var dueAt: Date
+    var checklistItems: [ChecklistEditorDraft]
+
+    init(parentID: UUID?, categoryID: UUID? = nil) {
+        self.taskID = nil
+        self.title = ""
+        self.status = .active
+        self.parentID = parentID
+        self.categoryID = parentID == nil ? categoryID : nil
+        self.colorHex = "1677FF"
+        self.iconName = "checkmark.circle"
+        self.notes = ""
+        self.estimatedMinutes = nil
+        self.hasDueDate = false
+        self.dueAt = Date()
+        self.checklistItems = []
+    }
+
+    init(
+        task: TaskNode,
+        categoryID: UUID? = nil,
+        checklistItems: [ChecklistItem],
+        visualByChecklistID: [UUID: ChecklistItemVisual] = [:]
+    ) {
+        self.taskID = task.id
+        self.title = task.title
+        self.status = task.status
+        self.parentID = task.parentID
+        self.categoryID = task.parentID == nil ? categoryID : nil
+        self.colorHex = task.colorHex ?? "1677FF"
+        self.iconName = task.iconName ?? "checkmark.circle"
+        self.notes = task.notes ?? ""
+        self.estimatedMinutes = task.estimatedSeconds.map { $0 / 60 }
+        self.hasDueDate = task.dueAt != nil
+        self.dueAt = task.dueAt ?? Date()
+        self.checklistItems = checklistItems.map { item in
+            ChecklistEditorDraft(item: item, visual: visualByChecklistID[item.id])
+        }
+    }
+}
+
+struct TaskCategoryEditorDraft: Identifiable {
+    let id = UUID()
+    var categoryID: UUID?
+    var title: String
+    var colorHex: String
+    var iconName: String
+    var includesInForecast: Bool
+
+    init() {
+        self.categoryID = nil
+        self.title = ""
+        self.colorHex = "1677FF"
+        self.iconName = "square.grid.2x2"
+        self.includesInForecast = true
+    }
+
+    init(category: TaskCategory) {
+        self.categoryID = category.id
+        self.title = category.title
+        self.colorHex = category.colorHex ?? "1677FF"
+        self.iconName = category.iconName ?? "square.grid.2x2"
+        self.includesInForecast = category.includesInForecast
+    }
+}
+
+struct ChecklistEditorDraft: Identifiable, Equatable {
+    let id: UUID
+    var existingID: UUID?
+    var title: String
+    var isCompleted: Bool
+    var iconName: String
+    var colorHex: String
+
+    nonisolated init(
+        title: String = "",
+        isCompleted: Bool = false,
+        iconName: String = "checkmark.circle",
+        colorHex: String = "1677FF"
+    ) {
+        self.id = UUID()
+        self.existingID = nil
+        self.title = title
+        self.isCompleted = isCompleted
+        self.iconName = iconName
+        self.colorHex = colorHex
+    }
+
+    nonisolated init(item: ChecklistItem, visual: ChecklistItemVisual? = nil) {
+        self.id = item.id
+        self.existingID = item.id
+        self.title = item.title
+        self.isCompleted = item.isCompleted
+        self.iconName = visual?.iconName ?? "checkmark.circle"
+        self.colorHex = visual?.colorHex ?? "1677FF"
+    }
+}
+
+struct InboxSuggestionEditorDraft: Identifiable {
+    let id = UUID()
+    let inboxItemID: UUID
+    var taskID: UUID?
+    var reason: String
+    var iconName: String
+    var colorHex: String
+
+    init(item: InboxItem, suggestion: InboxSuggestion? = nil, fallbackTaskID: UUID? = nil) {
+        self.inboxItemID = item.id
+        self.taskID = suggestion?.taskID ?? item.suggestedTaskID ?? fallbackTaskID
+        self.reason = suggestion?.reason ?? item.suggestionReason ?? ""
+        self.iconName = suggestion?.iconName ?? "checkmark.circle"
+        self.colorHex = suggestion?.colorHex ?? "1677FF"
+    }
+}
+
+struct ManualTimeDraft: Identifiable {
+    let id = UUID()
+    var taskID: UUID?
+    var startedAt: Date
+    var endedAt: Date
+    var note: String
+
+    init(taskID: UUID?, tasks: [TaskNode]) {
+        let end = Date()
+        self.taskID = taskID ?? tasks.first?.id
+        self.startedAt = end.addingTimeInterval(-30 * 60)
+        self.endedAt = end
+        self.note = ""
+    }
+}
+
+struct SegmentEditorDraft: Identifiable {
+    let id = UUID()
+    let segmentID: UUID
+    var taskID: UUID?
+    var startedAt: Date
+    var endedAt: Date
+    var isActive: Bool
+    var note: String
+    var source: TimeSessionSource
+
+    init(segment: TimeSegment, note: String) {
+        self.segmentID = segment.id
+        self.taskID = segment.taskID
+        self.startedAt = segment.startedAt
+        self.endedAt = segment.endedAt ?? Date()
+        self.isActive = segment.endedAt == nil
+        self.note = note
+        self.source = segment.source
+    }
+}

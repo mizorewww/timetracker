@@ -22,16 +22,17 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 
 | Path | Owns | Open this when | Do not put here |
 | --- | --- | --- | --- |
-| `timetracker/App` | App entry, scenes, CloudKit/container startup, build info, seed/demo data, Live Activity launch helpers | Changing app startup, scene layout, menu commands, build metadata, or demo seeding | Screen-specific UI sections or domain algorithms |
-| `timetracker/Models` | SwiftData models, schema registration, store/view DTOs | Adding persisted fields, migrations, or shared read models | Query code, SwiftUI layout, or business workflows |
+| `timetracker/App` | App entry, root navigation, scenes, CloudKit/container startup, build info, seed/demo data, Live Activity launch helpers | Changing app startup, platform root views, scene layout, menu commands, build metadata, or demo seeding | Screen-specific UI sections or domain algorithms |
+| `timetracker/Models` | SwiftData models, schema versions, migration plan, registry, and store/view DTOs | Adding persisted fields, migrations, or shared read models | Query code, SwiftUI layout, or business workflows |
 | `timetracker/Repositories` | SwiftData query/write implementations behind repository protocols | Changing fetch predicates, persistence semantics, soft delete, or ledger writes | UI decisions or derived analytics formulas |
 | `timetracker/Commands` | User action handlers and use cases | Adding a durable action such as start timer, toggle checklist, move task, export, or update preference | SwiftUI state formatting or long-lived published state |
 | `timetracker/Stores/Facade` | `TimeTrackerStore` and UI-facing facade extensions | Wiring a view action to a command handler, exposing read models, or coordinating app lifecycle | Domain-sized refresh internals or pure algorithms |
-| `timetracker/Stores/Domains` | Published task, ledger, rollup, analytics, and preference snapshots | Changing what state a feature observes after repository data changes | Button handlers, SwiftData writes, or view-specific layout |
+| `timetracker/Stores/Domains` | Published task, ledger, checklist, rollup, analytics, and preference snapshots | Changing what state a feature observes after repository data changes | Button handlers, SwiftData writes, or view-specific layout |
 | `timetracker/Stores/Refresh` | Refresh event planning and domain refresh coordination | Adding a new write event or deciding which snapshots should update | Feature UI or direct repository mutation |
 | `timetracker/Services/Analytics` | Analytics aggregation, timeline layout, daily bucket cache | Changing charts, overlap math, daily/monthly summaries, or timeline lane allocation | SwiftUI chart styling that does not affect data |
+| `timetracker/Services/Checklist` | Checklist draft persistence and checklist-specific editing helpers | Changing how checklist editor drafts are saved, soft-deleted, or visual metadata is preserved | Forecast formulas or task row layout |
 | `timetracker/Services/Forecasting` | Checklist rollups, forecast eligibility, forecast display selection | Changing remaining-time formulas, parent/child forecast display, or forecast explanations | Checklist editing UI |
-| `timetracker/Services/Ledger` | Duration formatting and gross/wall-clock aggregation utilities | Changing time math used across features | SwiftData fetches or view layout |
+| `timetracker/Services/Ledger` | Duration formatting, summary, and gross/wall-clock aggregation utilities | Changing time math used across features | SwiftData fetches or view layout |
 | `timetracker/Services/Maintenance` | CSV export, database repair, cleanup support | Changing export columns or optimization safety | Normal timer/task write flows |
 | `timetracker/Services/Tasks` | Task tree validation, paths, descendants, flat visible rows | Changing task nesting, legal parent choices, or sidebar/tasks row derivation | Persistent task writes |
 | `timetracker/Features/Home` | Today screen composition | Changing Today metrics, active timers, quick start, progress tiles, forecast, or timeline presentation | Cross-screen components that should be reused |
@@ -50,18 +51,19 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 
 | Task | Start here | Then check |
 | --- | --- | --- |
-| Start/pause/resume/stop timer behavior | `Commands/TimerCommands.swift` | `Repositories/SwiftDataTimeTrackingRepository.swift`, `Stores/Domains/LedgerStore.swift`, `Services/Ledger/TimeTrackerServices.swift` |
+| Start/pause/resume/stop timer behavior | `Commands/TimerCommands.swift` | `Repositories/SwiftDataTimeTrackingRepository+Mutations.swift`, `Repositories/SwiftDataTimeTrackingRepository+Queries.swift`, `Stores/Domains/LedgerStore.swift`, `Services/Ledger/TimeTrackerServices.swift` |
 | Manual time entry or segment edit | `Commands/LedgerCommands.swift` | `Features/Ledger`, `Stores/Domains/LedgerStore.swift`, analytics invalidation tests |
-| Task create/edit/move/delete | `Commands/TaskCommands.swift` | `Services/Tasks/TaskTreeServices.swift`, `Repositories/SwiftDataTaskRepository.swift`, `Features/Tasks` |
-| Task categories | `Stores/Facade/TimeTrackerStore+TaskCategoryCommands.swift` | `Models/TaskModels.swift`, `Repositories/SwiftDataTaskRepository.swift`, `Features/Tasks`, `Features/Sidebar` |
-| Checklist UI or persistence | `Commands/ChecklistCommands.swift` | `Features/Tasks/Editor`, `Features/Inspector/Sections/InspectorChecklistViews.swift`, `Services/Forecasting/TaskRollupService.swift` |
-| Forecast math | `Services/Forecasting/TaskRollupService.swift` | `Services/Forecasting/ForecastDisplayService.swift`, Home/Analytics/Inspector forecast sections |
-| Analytics chart data | `Stores/Domains/AnalyticsStore.swift` | `Services/Analytics/AnalyticsEngine.swift`, `Services/Analytics/LedgerBucketCache.swift`, `Features/Analytics` |
+| Task create/edit/move/delete | `Commands/TaskCommands.swift` | `Services/Tasks/TaskTreeServices.swift`, `Repositories/SwiftDataTaskRepository+TaskMutations.swift`, `Repositories/SwiftDataTaskRepository+Hierarchy.swift`, `Features/Tasks` |
+| Task categories | `Stores/Facade/TimeTrackerStore+TaskCategoryCommands.swift` | `Models/TaskModels.swift`, `Repositories/SwiftDataTaskRepository+Categories.swift`, `Features/Tasks`, `Features/Sidebar` |
+| Checklist UI or persistence | `Commands/ChecklistCommands.swift` | `Stores/Domains/ChecklistStore.swift`, `Features/Tasks/Editor`, `Features/Inspector/Sections/InspectorChecklistViews.swift`, `Services/Checklist/ChecklistDraftService.swift`, `Services/Forecasting/TaskRollupService.swift` |
+| Forecast math | `Services/Forecasting/TaskRollupService.swift` | `Services/Forecasting/TaskRollupCalculationContext.swift`, `Services/Forecasting/ForecastDisplayService.swift`, Home/Analytics/Inspector forecast sections |
+| Analytics chart data | `Stores/Domains/AnalyticsStore.swift` | `Stores/Domains/AnalyticsStore+SnapshotBuilding.swift`, `Services/Analytics/AnalyticsEngine.swift`, `Services/Analytics/LedgerBucketCache.swift`, `Features/Analytics` |
 | Today layout | `Features/Home/HomeViews.swift` | `Features/Home/Sections`, `Features/Home/Rows`, `SharedUI/Foundation/LayoutPolicies.swift` |
 | Task row layout | `Features/Tasks/Management/TaskManagementRowViews.swift` | `SharedUI/Components/TaskVisuals.swift`, task UI contract tests |
-| Settings | `Features/Settings/SettingsViews.swift` | `Features/Settings/SettingsSectionsViews.swift`, `Features/Settings/Support`, `Commands/PreferenceCommands.swift` |
-| iCloud/user settings sync | `Commands/PreferenceCommands.swift` | `Models/SyncedPreferences.swift`, `Stores/Domains/PreferenceStore.swift`, `App/timetrackerApp.swift` |
-| AI model configuration | `Features/Settings/SettingsSectionsViews.swift` | `Services/LLM/LLMModelService.swift`, `Models/SyncedPreferences.swift`, `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` |
+| Settings | `Features/Settings/SettingsViews.swift` | `Features/Settings/SettingsSectionsViews.swift`, `Features/Settings/SettingsDataSectionsViews.swift`, `Features/Settings/SettingsViewBindings.swift`, `Features/Settings/SettingsViewActions.swift`, `Features/Settings/Support`, `Commands/PreferenceCommands.swift` |
+| iCloud/user settings sync | `Commands/PreferenceCommands.swift` | `Models/SyncedPreferences.swift`, `Stores/Domains/PreferenceStore.swift`, `App/AppModelContainerFactory.swift` |
+| Demo data seeding or clearing | `App/SeedData.swift` | `App/SeedData+DemoBuild.swift`, `App/SeedData+Cleanup.swift`, lifecycle tests |
+| AI model configuration | `Features/Settings/SettingsDataSectionsViews.swift` | `Services/LLM/LLMModelService.swift`, `Models/SyncedPreferences.swift`, `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` |
 | Live Activity display | `timetrackerLiveActivityExtension` | `Shared/TimeTrackingActivityAttributes.swift`, app Live Activity helpers |
 | Localization | `Shared/AppStrings.swift` | `*.lproj/Localizable.strings`, localization parity tests |
 
@@ -94,3 +96,13 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 3. Implement the smallest domain owner first.
 4. Wire SwiftUI last.
 5. Run the baseline checks listed in `Docs/Testing.md`.
+
+## Planning Documents
+
+Use these before starting larger work:
+
+| Document | Purpose |
+| --- | --- |
+| `Docs/NextDevelopmentPlan.md` | Product backlog and feature acceptance criteria for the next development cycles. |
+| `Docs/CodeRefactorPlan.md` | Code review findings and architecture refactor order. |
+| `Docs/NativeUIPlan.md` | Native-first UI rules, screen-by-screen UI cleanup plan, and screenshot checklist. |

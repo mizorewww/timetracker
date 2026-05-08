@@ -202,38 +202,3 @@ private struct PromptPayload: Encodable {
     let allowedColors: [String]
     let tasks: [LLMTaskCandidate]
 }
-
-private struct OpenAIChatCompletionRequest: Encodable {
-    struct Message: Encodable {
-        let role: String
-        let content: String
-    }
-
-    struct ResponseFormat: Encodable {
-        let type: String
-    }
-
-    let model: String
-    let messages: [Message]
-    let temperature: Double
-    let responseFormat: ResponseFormat
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case messages
-        case temperature
-        case responseFormat = "response_format"
-    }
-}
-
-private struct OpenAIChatCompletionResponse: Decodable {
-    struct Choice: Decodable {
-        struct Message: Decodable {
-            let content: String
-        }
-
-        let message: Message
-    }
-
-    let choices: [Choice]
-}

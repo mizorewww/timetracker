@@ -15,9 +15,11 @@ struct CoreRefreshPlannerTests {
         #expect(planner.scopes(after: [.pomodoroChanged(runID: nil, sessionID: nil, taskID: taskID)]) == [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities])
         #expect(planner.scopes(after: [.ledgerChanged(taskID: taskID, dateInterval: range, isVisible: false)]) == [.ledgerHistory, .rollups, .analytics, .liveActivities])
         #expect(planner.scopes(after: [.preferenceChanged(key: AppPreferenceKey.quickStartTaskIDs.rawValue)]) == [.preferences])
+        #expect(planner.scopes(after: [.inboxChanged(itemIDs: [taskID])]) == [.inbox])
         #expect(planner.scopes(after: [.fullSync]) == StoreRefreshScope.full)
         #expect(planner.scopes(after: [.remoteImportCompleted]) == StoreRefreshScope.full)
         #expect(StoreDomainEvent.checklistChanged(taskID: taskID, affectedAncestorIDs: []).affectedTaskIDs == [taskID])
+        #expect(StoreDomainEvent.inboxChanged(itemIDs: [taskID]).affectedInboxItemIDs == [taskID])
     }
 
     @Test @MainActor
@@ -74,5 +76,10 @@ struct CoreRefreshPlannerTests {
         #expect(historyPlan.refreshLedger)
         #expect(historyPlan.includeLedgerHistory)
         #expect(historyPlan.validateSelection)
+
+        let inboxPlan = planner.plan(after: [.inboxChanged(itemIDs: [taskID])])
+        #expect(inboxPlan.affectedInboxItemIDs == [taskID])
+        #expect(inboxPlan.refreshInbox)
+        #expect(inboxPlan.refreshTasks == false)
     }
 }

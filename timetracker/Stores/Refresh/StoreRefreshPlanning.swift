@@ -28,7 +28,7 @@ enum StoreDomainEvent: Hashable {
     case pomodoroChanged(runID: UUID?, sessionID: UUID?, taskID: UUID?)
     case preferenceChanged(key: String?)
     case countdownChanged
-    case inboxChanged
+    case inboxChanged(itemIDs: Set<UUID>)
     case remoteImportCompleted
     case fullSync
 
@@ -68,11 +68,28 @@ enum StoreDomainEvent: Hashable {
             return []
         }
     }
+
+    var affectedInboxItemIDs: Set<UUID> {
+        switch self {
+        case .inboxChanged(let itemIDs):
+            return itemIDs
+        case .taskChanged,
+             .checklistChanged,
+             .ledgerChanged,
+             .pomodoroChanged,
+             .preferenceChanged,
+             .countdownChanged,
+             .remoteImportCompleted,
+             .fullSync:
+            return []
+        }
+    }
 }
 
 struct StoreRefreshPlan: Equatable {
     let scopes: Set<StoreRefreshScope>
     let affectedTaskIDs: Set<UUID>
+    let affectedInboxItemIDs: Set<UUID>
     let affectedLedgerRanges: [StoreInvalidationRange]
     let refreshTasks: Bool
     let refreshLedger: Bool
@@ -87,9 +104,15 @@ struct StoreRefreshPlan: Equatable {
     let validateSelection: Bool
     let syncLiveActivities: Bool
 
-    init(scopes: Set<StoreRefreshScope>, affectedTaskIDs: Set<UUID> = [], affectedLedgerRanges: [StoreInvalidationRange] = []) {
+    init(
+        scopes: Set<StoreRefreshScope>,
+        affectedTaskIDs: Set<UUID> = [],
+        affectedInboxItemIDs: Set<UUID> = [],
+        affectedLedgerRanges: [StoreInvalidationRange] = []
+    ) {
         self.scopes = scopes
         self.affectedTaskIDs = affectedTaskIDs
+        self.affectedInboxItemIDs = affectedInboxItemIDs
         self.affectedLedgerRanges = affectedLedgerRanges
         let isFullRefresh = scopes == StoreRefreshScope.full
 
@@ -130,6 +153,7 @@ struct StoreRefreshPlanner {
         StoreRefreshPlan(
             scopes: scopes(after: events),
             affectedTaskIDs: events.reduce(into: Set<UUID>()) { $0.formUnion($1.affectedTaskIDs) },
+            affectedInboxItemIDs: events.reduce(into: Set<UUID>()) { $0.formUnion($1.affectedInboxItemIDs) },
             affectedLedgerRanges: events.flatMap(\.affectedLedgerRanges)
         )
     }

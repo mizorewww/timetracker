@@ -3,7 +3,7 @@ import Foundation
 extension TimeTrackerStore {
     func startPomodoroForSelectedTask(focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) {
         guard let selectedTaskID else {
-            errorMessage = AppStrings.localized("task.selectBeforePomodoro")
+            fail(.pomodoroTaskSelectionRequired)
             return
         }
         perform(event: .pomodoroChanged(runID: nil, sessionID: nil, taskID: selectedTaskID)) {

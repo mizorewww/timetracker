@@ -1,4 +1,3 @@
-import CoreData
 import Foundation
 import SwiftData
 
@@ -57,7 +56,7 @@ extension TimeTrackerStore {
         try refresh(plan: refreshPlanner.plan(after: [.fullSync]))
     }
 
-    private func refresh(plan: StoreRefreshPlan) throws {
+    func refresh(plan: StoreRefreshPlan) throws {
         try refreshCoordinator.refresh(self, plan: plan)
     }
 
@@ -69,70 +68,6 @@ extension TimeTrackerStore {
         }
     }
 
-    func refreshTaskDomain() throws {
-        guard let taskRepository else { return }
-        try taskDomainStore.refresh(repository: taskRepository)
-        tasks = taskDomainStore.tasks
-        taskCategories = taskDomainStore.categories
-        taskCategoryAssignments = taskDomainStore.categoryAssignments
-    }
-
-    func refreshLedgerDomain(includeHistory: Bool) throws {
-        guard let timeRepository else { return }
-        if includeHistory {
-            try ledgerDomainStore.refresh(repository: timeRepository)
-        } else {
-            try ledgerDomainStore.refreshVisible(repository: timeRepository)
-        }
-        activeSegments = ledgerDomainStore.activeSegments
-        pausedSessions = ledgerDomainStore.pausedSessions
-        allSegments = ledgerDomainStore.allSegments
-        sessions = ledgerDomainStore.sessions
-        todaySegments = ledgerDomainStore.todaySegments
-    }
-
-    func refreshPomodoroDomain() throws {
-        pomodoroRuns = try pomodoroRepository?.runs() ?? []
-    }
-
-    func refreshPreferenceDomain() throws {
-        preferenceDomainStore.refresh(syncedPreferences: try fetchSyncedPreferences())
-        syncedPreferences = preferenceDomainStore.syncedPreferences
-        preferences = preferenceDomainStore.preferences
-    }
-
-    func refreshRollupDomain(plan: StoreRefreshPlan) {
-        var store = rollupDomainStore
-        if plan.refreshTasks || plan.affectedTaskIDs.isEmpty {
-            store.refresh(
-                tasks: tasks,
-                segments: allSegments,
-                checklistItems: checklistItems,
-                forecastEligibleTaskIDs: forecastEligibleTaskIDs(),
-                now: Date()
-            )
-        } else {
-            store.refreshAffected(
-                taskIDs: plan.affectedTaskIDs,
-                tasks: tasks,
-                segments: allSegments,
-                checklistItems: checklistItems,
-                forecastEligibleTaskIDs: forecastEligibleTaskIDs(),
-                now: Date()
-            )
-        }
-        rollupDomainStore = store
-    }
-
-    func refreshAnalyticsDomain(plan: StoreRefreshPlan) {
-        refreshCachedAnalyticsSnapshots(
-            now: Date(),
-            invalidatedIntervals: plan.affectedLedgerRanges.map {
-                DateInterval(start: $0.start, end: $0.end)
-            }
-        )
-    }
-
     @discardableResult
     func perform(event: StoreDomainEvent = .fullSync, _ action: () throws -> Void) -> Bool {
         perform(events: [event], action)
@@ -142,7 +77,10 @@ extension TimeTrackerStore {
     func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
         do {
             try action()
-            try refresh(plan: refreshPlanner.plan(after: events))
+            let plan = PerformanceSignpost.interval("Store refresh planning") {
+                refreshPlanner.plan(after: events)
+            }
+            try refresh(plan: plan)
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -150,150 +88,10 @@ extension TimeTrackerStore {
         }
     }
 
-    private func installSyncObservers() {
-        guard syncObservers.isEmpty else { return }
-        let center = NotificationCenter.default
-        let names: [Notification.Name] = [
-            .NSPersistentStoreRemoteChange,
-            NSPersistentCloudKitContainer.eventChangedNotification
-        ]
-        syncObservers = names.map { name in
-            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                guard let store = self else { return }
-                Task { @MainActor in
-                    store.scheduleQuietRefresh()
-                }
-            }
-        }
-    }
-
-    private func scheduleQuietRefresh() {
-        scheduledSyncRefreshTask?.cancel()
-        scheduledSyncRefreshTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            guard !Task.isCancelled else { return }
-            guard let self else { return }
-            do {
-                try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))
-                lastSyncRefreshAt = Date()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-
-    func fetchSyncedPreferences() throws -> [SyncedPreference] {
-        guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<SyncedPreference>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.key),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
-        )
-        let all = try modelContext.fetch(descriptor)
-        return SyncedPreferenceService.latestByKey(all)
-            .values
-            .sorted { $0.key < $1.key }
-    }
-
-    func fetchChecklistItems() throws -> [ChecklistItem] {
-        guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<ChecklistItem>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.taskID),
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try modelContext.fetch(descriptor)
-    }
-
-    func fetchChecklistItemVisuals() throws -> [ChecklistItemVisual] {
-        guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<ChecklistItemVisual>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.checklistItemID),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
-        )
-        let all = try modelContext.fetch(descriptor)
-        return Dictionary(grouping: all, by: \.checklistItemID)
-            .values
-            .compactMap { visuals in
-                visuals.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-            }
-            .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
-    }
-
-    func fetchInboxItems() throws -> [InboxItem] {
-        guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<InboxItem>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try modelContext.fetch(descriptor)
-    }
-
-    func fetchInboxSuggestions() throws -> [InboxSuggestion] {
-        guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<InboxSuggestion>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.inboxItemID),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
-        )
-        let all = try modelContext.fetch(descriptor)
-        return Dictionary(grouping: all, by: \.inboxItemID)
-            .values
-            .compactMap { suggestions in
-                suggestions.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-            }
-            .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
-    }
-
-    func fetchCountdownEvents() throws -> [CountdownEvent] {
-        guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<CountdownEvent>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.date),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try modelContext.fetch(descriptor)
-    }
-
-    private func migrateLegacyCountdownEventsIfNeeded(context: ModelContext) throws {
-        guard !UserDefaults.standard.bool(forKey: "CountdownEventsMigratedToSwiftData"),
-              let json = UserDefaults.standard.string(forKey: "CountdownEventsJSON") else {
-            return
-        }
-
-        let existing = try context.fetch(FetchDescriptor<CountdownEvent>())
-        guard existing.isEmpty else {
-            UserDefaults.standard.set(true, forKey: "CountdownEventsMigratedToSwiftData")
-            return
-        }
-
-        for legacy in LegacyCountdownEvent.decode(json) {
-            context.insert(
-                CountdownEvent(
-                    title: legacy.title,
-                    date: legacy.date,
-                    deviceID: DeviceIdentity.current
-                )
-            )
-        }
-        try context.save()
-        UserDefaults.standard.set(true, forKey: "CountdownEventsMigratedToSwiftData")
+    @discardableResult
+    func fail(_ error: StoreError) -> Bool {
+        errorMessage = error.localizedDescription
+        return false
     }
 
     func requiredTaskRepository() throws -> TaskRepository {
@@ -313,24 +111,31 @@ extension TimeTrackerStore {
 
     enum StoreError: LocalizedError {
         case notConfigured
+        case taskSelectionRequired
+        case pomodoroTaskSelectionRequired
+        case invalidTimeRange
+        case taskCategoryNameRequired
+        case invalidInboxSuggestion
 
         var errorDescription: String? {
-            "TimeTrackerStore has not been configured with a ModelContext."
+            switch self {
+            case .notConfigured:
+                "TimeTrackerStore has not been configured with a ModelContext."
+            case .taskSelectionRequired:
+                Self.localized("task.selectRequired")
+            case .pomodoroTaskSelectionRequired:
+                Self.localized("task.selectBeforePomodoro")
+            case .invalidTimeRange:
+                Self.localized("time.endAfterStart")
+            case .taskCategoryNameRequired:
+                Self.localized("taskCategory.nameRequired")
+            case .invalidInboxSuggestion:
+                Self.localized("inbox.suggestion.error.noValidTask")
+            }
         }
-    }
-}
 
-private struct LegacyCountdownEvent: Codable {
-    var title: String
-    var date: Date
-
-    static func decode(_ json: String) -> [LegacyCountdownEvent] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        guard let data = json.data(using: .utf8),
-              let events = try? decoder.decode([LegacyCountdownEvent].self, from: data) else {
-            return []
+        private static func localized(_ key: String) -> String {
+            NSLocalizedString(key, comment: "")
         }
-        return events.sorted { $0.date < $1.date }
     }
 }

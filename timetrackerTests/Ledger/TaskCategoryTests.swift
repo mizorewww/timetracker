@@ -7,86 +7,24 @@ import Testing
 struct TaskCategoryTests {
     @Test
     func categoryFeatureUsesExtensionModelInsteadOfChangingTaskNodeSchema() throws {
-        let taskModels = try sourceText("timetracker/Models/TaskModels.swift")
-        let taskNodeSource = try #require(
-            taskModels.slice(from: "@Model\nfinal class TaskNode", to: "@Model\nfinal class TaskCategory")
-        )
-        let schemaModels = try sourceText("timetracker/Models/SchemaModels.swift")
-        let v3SchemaSource = try #require(
-            schemaModels.slice(from: "enum TimeTrackerSchemaV3", to: "enum TimeTrackerSchemaV4")
-        )
-        let v4SchemaSource = try #require(
-            schemaModels.slice(from: "enum TimeTrackerSchemaV4", to: "enum TimeTrackerSchemaV5")
-        )
-        let v5SchemaSource = try #require(
-            schemaModels.slice(from: "enum TimeTrackerSchemaV5", to: "enum TimeTrackerMigrationPlan")
-        )
+        let currentTaskProperties = Set(Mirror(reflecting: TaskNode(title: "Current", parentID: nil, deviceID: "test")).children.compactMap(\.label))
 
-        #expect(taskNodeSource.contains("categoryID") == false)
-        #expect(taskModels.contains("final class TaskCategoryAssignment"))
-        #expect(v3SchemaSource.contains("TaskCategory") == false)
-        #expect(v4SchemaSource.contains("categoryID"))
-        #expect(v4SchemaSource.contains("TaskCategoryAssignment.self") == false)
-        #expect(v5SchemaSource.contains("TaskCategoryAssignment.self"))
+        #expect(currentTaskProperties.contains("categoryID") == false)
+        #expect(TimeTrackerSchemaV3.models.contains { $0 == TaskCategory.self } == false)
+        #expect(TimeTrackerSchemaV4.models.contains { $0 == TimeTrackerSchemaV4.TaskCategory.self })
+        #expect(TimeTrackerSchemaV4.models.contains { $0 == TaskCategoryAssignment.self } == false)
+        #expect(TimeTrackerSchemaV5.models.contains { $0 == TaskCategoryAssignment.self })
     }
 
     @Test @MainActor
     func legacyV4CategoryStoreMigratesToCurrentSchema() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appending(path: "TimeTrackerLegacyV4-\(UUID().uuidString)", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        let storeURL = directory.appending(path: "store.sqlite")
-        let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV4.self)
-        let legacyConfiguration = ModelConfiguration(
-            "LegacyV4",
-            schema: legacySchema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let legacyContainer = try ModelContainer(
-            for: legacySchema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [legacyConfiguration]
-        )
-        let legacyContext = ModelContext(legacyContainer)
-        let category = TimeTrackerSchemaV4.TaskCategory(
-            title: "Work",
-            deviceID: "legacy",
-            colorHex: "1677FF",
-            iconName: "briefcase",
-            includesInForecast: true
-        )
-        let root = TimeTrackerSchemaV4.TaskNode(
-            title: "Legacy Root",
-            parentID: nil,
-            deviceID: "legacy",
-            categoryID: category.id,
-            colorHex: nil,
-            iconName: nil
-        )
-        legacyContext.insert(category)
-        legacyContext.insert(root)
-        try legacyContext.save()
-
-        let currentSchema = TimeTrackerModelRegistry.currentSchema
-        let currentConfiguration = ModelConfiguration(
-            "LegacyV4",
-            schema: currentSchema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let currentContainer = try ModelContainer(
-            for: currentSchema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [currentConfiguration]
-        )
-        let currentContext = ModelContext(currentContainer)
+        let fixture = try LegacyV4CategoryStoreFixture.create()
+        defer { fixture.remove() }
+        let currentContext = try fixture.makeCurrentContext()
 
         #expect(try currentContext.fetch(FetchDescriptor<TaskNode>()).map(\.title) == ["Legacy Root"])
         #expect(try currentContext.fetch(FetchDescriptor<TaskCategory>()).map(\.title) == ["Work"])
-        #expect(try currentContext.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [category.id])
+        #expect(try currentContext.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [fixture.categoryID])
     }
 
     @Test @MainActor

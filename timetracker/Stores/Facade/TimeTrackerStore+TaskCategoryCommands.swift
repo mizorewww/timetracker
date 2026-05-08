@@ -13,8 +13,7 @@ extension TimeTrackerStore {
     func saveTaskCategoryDraft(_ draft: TaskCategoryEditorDraft) -> Bool {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
-            errorMessage = AppStrings.localized("taskCategory.nameRequired")
-            return false
+            return fail(.taskCategoryNameRequired)
         }
 
         let didSave = perform(event: .taskChanged(taskID: nil, affectedAncestorIDs: [])) {

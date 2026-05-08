@@ -33,6 +33,40 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
+    func checklistDraftServicePreservesUnrelatedVisualsWhenSavingOneTask() throws {
+        let context = try makeTestContext()
+        let targetTaskID = UUID()
+        let otherItem = ChecklistItem(taskID: UUID(), title: "Other", deviceID: "test")
+        let otherVisual = ChecklistItemVisual(
+            checklistItemID: otherItem.id,
+            iconName: "book",
+            colorHex: "16A34A",
+            deviceID: "test"
+        )
+        context.insert(otherItem)
+        context.insert(otherVisual)
+        try context.save()
+
+        try ChecklistDraftService().save(
+            drafts: [
+                ChecklistEditorDraft(
+                    title: "Target",
+                    isCompleted: false,
+                    iconName: "paintbrush",
+                    colorHex: "1677FF"
+                )
+            ],
+            taskID: targetTaskID,
+            context: context,
+            deviceID: "test"
+        )
+
+        #expect(otherVisual.deletedAt == nil)
+        #expect(otherVisual.iconName == "book")
+        #expect(otherVisual.colorHex == "16A34A")
+    }
+
+    @Test @MainActor
     func inboxCommandHandlerCapturesLooseItemsAndInvalidatesSuggestionsOnEdit() throws {
         let context = try makeTestContext()
         let handler = InboxCommandHandler()

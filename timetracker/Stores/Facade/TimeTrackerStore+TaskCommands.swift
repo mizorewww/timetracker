@@ -28,8 +28,10 @@ extension TimeTrackerStore {
             return false
         }
 
+        let affectedHierarchyIDs = affectedTaskIDsForHierarchyChange(taskID: draft.taskID, parentID: draft.parentID)
+        let primaryDraftTaskIDs = draft.taskID.map { Set([$0]) } ?? []
         let didSave = perform(events: [
-            .taskChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID)),
+            .taskChanged(taskID: draft.taskID, affectedAncestorIDs: affectedHierarchyIDs.subtracting(primaryDraftTaskIDs)),
             .checklistChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID))
         ]) {
             let returnDestination = taskEditorReturnDestination
@@ -76,7 +78,8 @@ extension TimeTrackerStore {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
         let destinationBeforeDelete = preservingDestination ?? desktopDestination
-        perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
+        let affectedHierarchyIDs = affectedTaskIDsForHierarchyChange(taskID: targetID)
+        perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedHierarchyIDs.subtracting([targetID]))) {
             try taskDraftCommandHandler.softDelete(taskID: targetID, repository: requiredTaskRepository())
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = nil

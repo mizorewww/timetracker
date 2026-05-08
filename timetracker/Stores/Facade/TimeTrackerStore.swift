@@ -132,6 +132,7 @@ final class TimeTrackerStore: ObservableObject {
     let forecastDisplayService = ForecastDisplayService()
     let databaseMaintenanceService = DatabaseMaintenanceService()
     let csvExportService = CSVExportService()
+    let selectionCoordinator = StoreSelectionCoordinator()
     let refreshPlanner = StoreRefreshPlanner()
     let timerCommandHandler = TimerCommandHandler()
     let taskDraftCommandHandler = TaskDraftCommandHandler()
@@ -144,6 +145,8 @@ final class TimeTrackerStore: ObservableObject {
     let refreshCoordinator = StoreRefreshCoordinator()
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
+    var checklistDomainStore = ChecklistStore()
+    var inboxDomainStore = InboxStore()
     var preferenceDomainStore = PreferenceStore()
     var syncObservers: [NSObjectProtocol] = []
     var taskByID: [UUID: TaskNode] = [:]

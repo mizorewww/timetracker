@@ -5,6 +5,7 @@ protocol TaskRepository {
     func rootNodes() throws -> [TaskNode]
     func children(of parentID: UUID?) throws -> [TaskNode]
     func task(id: UUID) throws -> TaskNode?
+    func tasks(ids: Set<UUID>) throws -> [TaskNode]
     func categories() throws -> [TaskCategory]
     func categoryAssignments() throws -> [TaskCategoryAssignment]
     func category(id: UUID) throws -> TaskCategory?
@@ -24,6 +25,7 @@ protocol TimeTrackingRepository {
     func activeSegments() throws -> [TimeSegment]
     func pausedSessions() throws -> [TimeSession]
     func sessions() throws -> [TimeSession]
+    func sessions(ids: Set<UUID>) throws -> [TimeSession]
     func segments(from: Date, to: Date) throws -> [TimeSegment]
     func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment]
     func allSegments() throws -> [TimeSegment]

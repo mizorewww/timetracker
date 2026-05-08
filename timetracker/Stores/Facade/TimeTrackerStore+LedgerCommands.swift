@@ -8,11 +8,11 @@ extension TimeTrackerStore {
 
     func saveManualTimeDraft(_ draft: ManualTimeDraft) {
         guard let taskID = draft.taskID else {
-            errorMessage = AppStrings.localized("task.selectRequired")
+            fail(.taskSelectionRequired)
             return
         }
         guard draft.endedAt > draft.startedAt else {
-            errorMessage = AppStrings.localized("time.endAfterStart")
+            fail(.invalidTimeRange)
             return
         }
 
@@ -28,17 +28,29 @@ extension TimeTrackerStore {
 
     func saveSegmentDraft(_ draft: SegmentEditorDraft) {
         guard let taskID = draft.taskID else {
-            errorMessage = AppStrings.localized("task.selectRequired")
+            fail(.taskSelectionRequired)
             return
         }
 
         let endedAt = draft.isActive ? nil : draft.endedAt
         if let endedAt, endedAt <= draft.startedAt {
-            errorMessage = AppStrings.localized("time.endAfterStart")
+            fail(.invalidTimeRange)
             return
         }
 
-        perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
+        let newRange = StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt)
+        var events: Set<StoreDomainEvent> = [
+            .ledgerChanged(taskID: taskID, dateInterval: newRange, isVisible: false)
+        ]
+        if let existingSegment = allSegments.first(where: { $0.id == draft.segmentID }) {
+            let oldRange = StoreInvalidationRange(
+                start: existingSegment.startedAt,
+                end: existingSegment.endedAt ?? draft.endedAt
+            )
+            events.insert(.ledgerChanged(taskID: existingSegment.taskID, dateInterval: oldRange, isVisible: false))
+        }
+
+        perform(events: events) {
             try ledgerCommandHandler.updateSegment(draft: draft, taskID: taskID, repository: requiredTimeRepository())
             selectedTaskID = taskID
         }
@@ -46,7 +58,11 @@ extension TimeTrackerStore {
     }
 
     func deleteSegment(_ segmentID: UUID) {
-        perform(event: .ledgerChanged(taskID: segmentEditorDraft?.taskID, dateInterval: nil, isVisible: false)) {
+        let existingSegment = allSegments.first { $0.id == segmentID }
+        let range = existingSegment.map {
+            StoreInvalidationRange(start: $0.startedAt, end: $0.endedAt ?? Date())
+        }
+        perform(event: .ledgerChanged(taskID: existingSegment?.taskID ?? segmentEditorDraft?.taskID, dateInterval: range, isVisible: existingSegment?.isActive == true)) {
             try ledgerCommandHandler.softDeleteSegment(segmentID, repository: requiredTimeRepository())
         }
         segmentEditorDraft = nil

@@ -1,0 +1,37 @@
+import Foundation
+import Testing
+@testable import timetracker
+
+@Suite(.serialized)
+struct CoreArchitectureBehaviorTests {
+    @Test
+    func sidebarUsesSharedFlatTaskTreeContract() throws {
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+
+        #expect(sidebarSource.contains("store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)"))
+        #expect(sidebarSource.contains("TaskCategorySectionHeader"))
+        #expect(sidebarSource.contains("DisclosureGroup(") == false)
+    }
+
+    @Test
+    func enumDisplayTextUsesLocalizationKeys() throws {
+        #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.today"))
+        #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
+
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
+
+        #expect(analyticsSource.contains("Text(range.rawValue)") == false)
+        #expect(storeSource.contains("return \"Ready\"") == false)
+        #expect(storeSource.contains("return \"Focus\"") == false)
+    }
+
+    @Test @MainActor
+    func layoutPoliciesCentralizeResponsiveChoices() {
+        #expect(HomeLayoutPolicy(width: 600).isCompact)
+        #expect(HomeLayoutPolicy(width: 900).usesHorizontalMetrics)
+        #expect(AnalyticsLayoutPolicy(horizontalSizeClass: nil).showsPageTitleInContent)
+        #expect(SplitColumnLayoutPolicy.iPad.inspector == ColumnWidth(min: 240, ideal: 260, max: 320))
+        #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))
+    }
+}

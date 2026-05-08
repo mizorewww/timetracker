@@ -11,13 +11,15 @@ struct RollupStore {
         forecastEligibleTaskIDs: Set<UUID>? = nil,
         now: Date = Date()
     ) {
-        taskRollups = rollupService.rollups(
-            tasks: tasks,
-            segments: segments,
-            checklistItems: checklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-            now: now
-        )
+        PerformanceSignpost.interval("Rollup service calculation") {
+            taskRollups = rollupService.rollups(
+                tasks: tasks,
+                segments: segments,
+                checklistItems: checklistItems,
+                forecastEligibleTaskIDs: forecastEligibleTaskIDs,
+                now: now
+            )
+        }
     }
 
     mutating func refreshAffected(
@@ -28,15 +30,17 @@ struct RollupStore {
         forecastEligibleTaskIDs: Set<UUID>? = nil,
         now: Date = Date()
     ) {
-        taskRollups = rollupService.rollups(
-            updating: taskIDs,
-            existingRollups: taskRollups,
-            tasks: tasks,
-            segments: segments,
-            checklistItems: checklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-            now: now
-        )
+        PerformanceSignpost.interval("Rollup service calculation") {
+            taskRollups = rollupService.rollups(
+                updating: taskIDs,
+                existingRollups: taskRollups,
+                tasks: tasks,
+                segments: segments,
+                checklistItems: checklistItems,
+                forecastEligibleTaskIDs: forecastEligibleTaskIDs,
+                now: now
+            )
+        }
     }
 
     func rollup(for taskID: UUID) -> TaskRollup? {

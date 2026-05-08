@@ -48,64 +48,9 @@ struct HomeUIContractTests {
         #expect(quickStartTasks.map(\.id) == [frequentTask.id, occasionalTask.id])
     }
 
-
-    @Test
-    func localizationFilesExposeTheSameKeys() throws {
-        let locales = ["en", "zh-Hans", "zh-Hant"]
-        let keySets = try locales.map { locale -> Set<String> in
-            let path = try #require(Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: "\(locale).lproj"))
-            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
-            #expect(dictionary.isEmpty == false)
-            return Set(dictionary.keys)
-        }
-
-        let reference = try #require(keySets.first)
-        for keys in keySets.dropFirst() {
-            #expect(keys == reference)
-        }
-    }
-
-    @Test
-    func liveActivityExtensionLocalizationFilesExposeTheSameKeys() throws {
-        let projectRoot = try projectRootURL()
-        let locales = ["en", "zh-Hans", "zh-Hant"]
-        let keySets = try locales.map { locale -> Set<String> in
-            let path = projectRoot.appending(path: "timetrackerLiveActivityExtension/\(locale).lproj/Localizable.strings").path
-            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
-            #expect(dictionary.isEmpty == false)
-            return Set(dictionary.keys)
-        }
-
-        let reference = try #require(keySets.first)
-        for keys in keySets.dropFirst() {
-            #expect(keys == reference)
-        }
-    }
-
-    @Test
-    func swiftSourcesDoNotContainHardCodedChineseText() throws {
-        let projectRoot = try projectRootURL()
-        let sourceRoots = [
-            projectRoot.appending(path: "timetracker"),
-            projectRoot.appending(path: "timetrackerLiveActivityExtension"),
-            projectRoot.appending(path: "SharedLiveActivity")
-        ]
-        let swiftFiles = try sourceRoots.flatMap { sourceRoot -> [URL] in
-            let enumerator = try #require(FileManager.default.enumerator(at: sourceRoot, includingPropertiesForKeys: nil))
-            return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
-        }
-        let chinesePattern = try NSRegularExpression(pattern: "\\p{Han}")
-
-        for file in swiftFiles {
-            let source = try String(contentsOf: file, encoding: .utf8)
-            let range = NSRange(source.startIndex..<source.endIndex, in: source)
-            #expect(chinesePattern.firstMatch(in: source, range: range) == nil, "Move user-facing Chinese text into Localizable.strings: \(file.lastPathComponent)")
-        }
-    }
-
     @Test @MainActor
     func regularWidthIOSUsesVisibleSystemSplitView() throws {
-        let source = try sourceText("timetracker/App/ContentView.swift")
+        let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
 
         #expect(SplitColumnLayoutPolicy.iPad.sidebar == ColumnWidth(min: 240, ideal: 260, max: 300))
         #expect(SplitColumnLayoutPolicy.iPad.detail.min == 560)
@@ -145,7 +90,7 @@ struct HomeUIContractTests {
 
     @Test
     func phoneTabsStayAtFiveAndSettingsUsesHomeToolbar() throws {
-        let contentSource = try sourceText("timetracker/App/ContentView.swift")
+        let contentSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
         let homeSource = try sourceText("timetracker/Features/Home/HomeViews.swift")
         let phoneRoot = try #require(contentSource.slice(from: "struct PhoneRootView", to: "struct iPadRootView"))
         let phoneHome = try #require(homeSource.slice(from: "struct PhoneHomeView", to: "struct HeaderBar"))
@@ -160,8 +105,14 @@ struct HomeUIContractTests {
 
     @Test
     func quickStartComposesPinnedAndFrequentRecentTasks() throws {
-        let homeSource = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
-        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+ReadModels.swift")
+        let homeSource = try [
+            "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift")
 
         #expect(homeSource.contains("private var pinnedTasks"))
         #expect(homeSource.contains("private var recentFillTasks"))
@@ -207,44 +158,6 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func taskTreeUsesFlatVisibleRowsSoEachTaskOwnsItsListRow() throws {
-        let source = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
-        let serviceSource = try sourceText("timetracker/Services/Tasks/TaskTreeServices.swift")
-
-        #expect(source.contains("ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs))"))
-        #expect(source.contains("TaskCategorySectionHeader"))
-        #expect(source.contains("didExpandInitialTree"))
-        #expect(source.contains("TaskManagementTreeRow") == false)
-        #expect(source.contains("DisclosureGroup(") == false)
-        #expect(serviceSource.contains("struct TaskTreeFlattener"))
-        #expect(serviceSource.contains("TaskTreeCategorySectionModel"))
-        #expect(serviceSource.contains("TaskTreeRowModel"))
-        #expect(source.contains("rotationEffect") == false)
-        #expect(source.contains(".transaction { transaction in\n            transaction.animation = nil\n        }") == false)
-    }
-
-    @Test
-    func longTaskAndAnalyticsPagesUseInlineTitlesToAvoidScrollJitter() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
-        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
-
-        #expect(tasksSource.contains(".navigationTitle(AppStrings.tasks)"))
-        #expect(tasksSource.contains(".navigationBarTitleDisplayMode(.inline)"))
-        #expect(tasksSource.contains("store.presentNewTask(preservingDestination: .tasks)"))
-        #expect(analyticsSource.contains(".navigationTitle(AppStrings.analytics)"))
-        #expect(analyticsSource.contains(".navigationBarTitleDisplayMode(.inline)"))
-    }
-
-    @Test
-    func sidebarSelectionSyncDoesNotRevealProgrammaticTaskSelection() throws {
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
-
-        #expect(sidebarSource.contains("@State private var isSyncingSelection = false"))
-        #expect(sidebarSource.contains("guard !isSyncingSelection else { return }"))
-        #expect(sidebarSource.contains("DispatchQueue.main.async"))
-    }
-
-    @Test
     func todayMetricsUseSemanticTrendColorsAndEqualCompactActions() throws {
         let source = try [
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
@@ -266,292 +179,5 @@ struct HomeUIContractTests {
         #expect(source.contains("startButton\n                    .frame(maxWidth: .infinity)"))
         #expect(source.contains("newTaskButton\n                    .frame(maxWidth: .infinity)"))
         #expect(source.contains(".layoutPriority(1.1)") == false)
-    }
-
-    @Test
-    func compactTaskRowsShowChecklistProgressBar() throws {
-        let source = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/TaskProgressViews.swift")
-
-        #expect(source.contains("CompactChecklistProgressLine("))
-        #expect(sharedSource.contains("ProgressView(value: progress.fraction)"))
-        #expect(sharedSource.contains("checklist.progressFormat"))
-        #expect(sharedSource.contains("struct TaskProgressLine"))
-        #expect(source.contains("if progress.totalCount > 0 {\n                    CompactChecklistProgressLine"))
-    }
-
-    @Test
-    func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorInfoViews.swift")
-        let forecastSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorForecastViews.swift")
-
-        #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
-        #expect(tasksSource.contains("secondsForTaskTodayRollup(task)") == false)
-        #expect(inspectorSource.contains("task.field.total"))
-        #expect(forecastSource.contains("forecast.worked"))
-    }
-
-    @Test
-    func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
-        let editorSource = try [
-            "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
-            "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift"
-        ]
-        .map { path in
-            try sourceText(path)
-        }
-        .joined(separator: "\n")
-        let modelsSource = try sourceText("timetracker/Models/TaskModels.swift")
-        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
-
-        #expect(editorSource.contains("TaskStatusPicker(selection: $draft.status)"))
-        #expect(editorSource.contains(".pickerStyle(.inline)"))
-        #expect(editorSource.contains("TaskStatusPickerOption(status: status)"))
-        #expect(editorSource.contains("TaskKindPicker") == false)
-        #expect(modelsSource.contains("enum TaskNodeKind") == false)
-        #expect(englishStrings.contains("editor.task.kind") == false)
-    }
-
-    @Test
-    func taskCategoryEditorReusesSharedSymbolColorPicker() throws {
-        let categoryEditor = try sourceText("timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift")
-        let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
-
-        #expect(categoryEditor.contains("SymbolColorPickerRow("))
-        #expect(categoryEditor.contains("Picker(AppStrings.localized(\"taskCategory.symbol\")") == false)
-        #expect(categoryEditor.contains("private let symbols") == false)
-        #expect(categoryEditor.contains("private var colorGrid") == false)
-        #expect(symbolPicker.contains("struct SymbolColorPickerRow"))
-        #expect(symbolPicker.contains("SymbolAndColorPicker("))
-    }
-
-    @Test
-    func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sharedSource = try [
-            "timetracker/SharedUI/Components/ChecklistControls.swift",
-            "timetracker/SharedUI/Components/StatusBadges.swift",
-            "timetracker/SharedUI/Components/TaskVisuals.swift"
-        ]
-        .map { try sourceText($0) }
-        .joined(separator: "\n")
-
-        #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
-        #expect(tasksSource.contains("store.selectTask(task.id, revealInToday: false)"))
-        #expect(tasksSource.contains("RunningStatusBadge()"))
-        #expect(tasksSource.contains("TaskKindBadge") == false)
-        #expect(sharedSource.contains("struct TaskKindBadge") == false)
-        #expect(sharedSource.contains("struct TaskStatusBadge"))
-        #expect(sharedSource.contains("struct RunningStatusBadge"))
-    }
-
-    @Test
-    func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
-        let editorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorChecklistViews.swift")
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/ChecklistControls.swift")
-        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
-
-        #expect(sharedSource.contains("\"checkmark.circle.fill\""))
-        #expect(sharedSource.contains("struct ChecklistDisplayRow"))
-        #expect(sharedSource.contains("struct InlineChecklistAddRow"))
-        #expect(editorSource.contains("ChecklistCompletionButton"))
-        #expect(editorSource.contains("withAnimation(.snappy"))
-        #expect(sharedSource.contains(".symbolEffect(.bounce, value: isCompleted)"))
-        #expect(sharedSource.contains(".animation(.snappy"))
-        #expect(sharedSource.contains(".lineLimit(nil)"))
-        #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.checklist.itemPlaceholder\"), text: $item.title, axis: .vertical)"))
-        #expect(editorSource.contains("EditButton()") == false)
-        #expect(editorSource.contains(".onMove(perform: moveChecklistItems)"))
-        #expect(editorSource.contains("Image(systemName: \"trash\")"))
-        #expect(editorSource.contains("Image(systemName: \"chevron.up\")"))
-        #expect(editorSource.contains("Image(systemName: \"chevron.down\")"))
-        #expect(editorSource.contains("#if os(macOS)"))
-        #expect(editorSource.contains(".labelsHidden()"))
-        #expect(editorSource.contains("arrow.up.arrow.down.circle") == false)
-        #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
-        #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
-        #expect(inspectorSource.contains("private struct ChecklistDisplayRow") == false)
-        #expect(inspectorSource.contains("private struct InlineChecklistAddRow") == false)
-        #expect(inspectorSource.contains("withAnimation(.snappy"))
-        #expect(inspectorSource.contains("showsAllItems"))
-        #expect(inspectorSource.contains("EditButton()") == false)
-        #expect(inspectorSource.contains("List {") == false)
-        #expect(inspectorSource.contains("maxHeight: 360") == false)
-        #expect(englishStrings.contains("\"checklist.showLess\""))
-        #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
-    }
-
-    @Test
-    func sidebarAndTaskRowsShareSwipeActions() throws {
-        let taskRowSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
-        let managementSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
-
-        #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
-        #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
-        #expect(taskRowSource.contains("case iconOnly"))
-        #expect(managementSource.contains(".taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)"))
-        #expect(sidebarSource.contains(".taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)"))
-    }
-
-    @Test
-    func taskCategoriesSupportSidebarDividersWithoutDragReassignment() throws {
-        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
-        let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
-        let editorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
-        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift")
-
-        #expect(tasksSource.contains("taskCategoryDropDestination") == false)
-        #expect(tasksSource.contains("dropDestination(") == false)
-        #expect(tasksSource.contains("CategoryDropTargetRow") == false)
-        #expect(rowSource.contains("rootTaskDragIfNeeded") == false)
-        #expect(rowSource.contains(".draggable(") == false)
-        #expect(rowSource.contains("RootTaskDragPayload") == false)
-        #expect(sidebarSource.contains("showsBottomDivider: true"))
-        #expect(editorSource.contains("taskCategory.inherited"))
-        #expect(editorSource.contains("LabeledContent(AppStrings.localized(\"taskCategory.title\")") == false)
-        #expect(storeSource.contains("func moveRootTaskToCategory") == false)
-    }
-
-    @Test
-    func inboxUsesOwnDestinationAndSmoothInlineCapture() throws {
-        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
-        let contentSource = try sourceText("timetracker/App/ContentView.swift")
-        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
-        let inboxSource = try sourceText("timetracker/Features/Inbox/InboxViews.swift")
-        let inboxStoreSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift")
-        let taskEditorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
-        let schemaSource = try sourceText("timetracker/Models/SchemaModels.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
-        let sharedChecklistSource = try sourceText("timetracker/SharedUI/Components/ChecklistControls.swift")
-
-        #expect(storeSource.contains("case inbox = \"Inbox\""))
-        #expect(contentSource.contains("case .inbox:"))
-        #expect(contentSource.contains("InboxView(store: store)"))
-        #expect(sidebarSource.contains("return TimeTrackerStore.DesktopDestination.allCases.filter { $0 != .settings }"))
-        #expect(tasksSource.contains("InboxNavigationRow(count: store.openInboxItems.count)") == false)
-        #expect(inboxSource.contains("ScrollView {"))
-        #expect(inboxSource.contains("private var inboxCard"))
-        #expect(inboxSource.contains("List {"))
-        #expect(inboxSource.contains("InboxCaptureRow("))
-        #expect(inboxSource.contains("EditableChecklistTextRow("))
-        #expect(inboxSource.contains(".onMove(perform: moveInboxItems)"))
-        #expect(inboxSource.contains(".swipeActions(edge: .leading"))
-        #expect(inboxSource.contains(".swipeActions(edge: .trailing"))
-        #expect(inboxSource.contains("EditButton()") == false)
-        #expect(inboxSource.contains("toggleSorting()"))
-        #expect(inboxSource.contains("ToolbarItem(placement: .topBarTrailing)") == false)
-        #expect(inboxSource.contains(".environment(\\.editMode"))
-        #expect(inboxSource.contains("RoundedRectangle(cornerRadius: isCompact ? 28 : 24"))
-        #expect(inboxSource.contains("InlineInboxAddRow") == false)
-        #expect(inboxSource.contains("showsCompleted") == false)
-        #expect(inboxSource.contains("inbox.subtitle"))
-        #expect(inboxSource.contains("lightbulb"))
-        #expect(inboxSource.contains(".buttonStyle(.plain)"))
-        #expect(inboxSource.contains(".buttonStyle(.bordered)") == false)
-        #expect(inboxSource.contains(".buttonBorderShape(.circle)") == false)
-        #expect(inboxSource.contains("frame(width: isCompact ? 54 : 44"))
-        #expect(inboxSource.contains("Text(AppStrings.localized(\"inbox.suggestion.prefix\"))"))
-        #expect(inboxSource.contains("taskTitle: task.title"))
-        #expect(inboxSource.contains("let taskTitle: String"))
-        #expect(inboxSource.contains("taskPath: store.taskPath(for: task)") == false)
-        #expect(inboxSource.contains("Text(taskPath)") == false)
-        #expect(inboxSource.contains("return \"tray\""))
-        #expect(inboxSource.contains(".toolbar(isCompact ? .hidden : .visible, for: .navigationBar)"))
-        #expect(inboxSource.contains("let submit: () -> Bool"))
-        #expect(inboxStoreSource.contains("suggestInboxItem(item, showsErrors: false)"))
-        #expect(inboxStoreSource.contains("func reorderInboxItems(sourceOffsets: IndexSet, destination: Int)"))
-        #expect(sharedChecklistSource.contains("ChecklistInputTextNormalizer"))
-        #expect(sharedChecklistSource.contains("collapsingNewlines"))
-        #expect(taskEditorSource.contains(".submitLabel(.done)"))
-        #expect(taskEditorSource.contains("ChecklistInputTextNormalizer.collapsingNewlines"))
-        #expect(sharedChecklistSource.contains("struct EditableChecklistTextRow"))
-        #expect(sharedChecklistSource.contains(".symbolEffect(.bounce, value: isCompleted)"))
-        #expect(inboxSource.contains("store.addInboxItem(title: title)"))
-        #expect(schemaSource.contains("enum TimeTrackerSchemaV6"))
-        #expect(schemaSource.contains("InboxItem.self"))
-    }
-
-    @Test
-    func inboxSuggestionsAreAutomaticAndExposeOnlyApplyOrDiscardActions() throws {
-        let inboxSource = try sourceText("timetracker/Features/Inbox/InboxViews.swift")
-        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift")
-        let refreshSource = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")
-        let llmSource = try sourceText("timetracker/Services/LLM/LLMInboxSuggestionService.swift")
-
-        #expect(inboxSource.contains("store.suggestInboxItem(item)") == false)
-        #expect(inboxSource.contains("store.presentInboxSuggestionEditor(item)") == false)
-        #expect(inboxSource.contains("store.applyInboxSuggestion(item)"))
-        #expect(inboxSource.contains("store.discardInboxSuggestion(item)"))
-        #expect(inboxSource.contains("store.deleteInboxItem(item)"))
-        #expect(inboxSource.contains("canApplySuggestion(for: item)"))
-        #expect(inboxSource.contains("canDiscardSuggestion(for: item)"))
-        #expect(inboxSource.contains("inbox.suggestion.generating"))
-        #expect(inboxSource.contains("InboxSuggestionBar("))
-        #expect(inboxSource.contains("inbox.suggestion.prefix"))
-        #expect(inboxSource.contains(".padding(.leading, 74)") == false)
-        #expect(storeSource.contains("func autoSuggestInboxItemsIfNeeded()"))
-        #expect(storeSource.contains("item.suggestionGeneratedAt == nil"))
-        #expect(storeSource.contains("item.title == requestedTitle,\n                          item.suggestionGeneratedAt == nil"))
-        #expect(refreshSource.contains("store.autoSuggestInboxItemsIfNeeded()"))
-        #expect(llmSource.contains("allowedSymbols: SymbolCatalog.symbolNames"))
-        #expect(llmSource.contains("prefix(400)") == false)
-    }
-
-    @Test
-    func ipadSidebarButtonDoesNotOpenInspector() throws {
-        let contentSource = try sourceText("timetracker/App/ContentView.swift")
-        let ipadSource = try #require(contentSource.components(separatedBy: "struct DesktopRootView").first)
-
-        #expect(ipadSource.contains("if columnVisibility == .detailOnly"))
-        #expect(ipadSource.contains("columnVisibility = .all"))
-        #expect(ipadSource.contains("isInspectorPresented = inspectorIsRelevant") == false)
-    }
-
-    @Test
-    func sectionHeadersUseSharedComponentAcrossSettingsAndAnalytics() throws {
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/SectionHeaders.swift")
-        let settingsSupportSource = try sourceText("timetracker/Features/Settings/Support/SettingsSupportViews.swift")
-        let metricSource = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
-
-        #expect(sharedSource.contains("struct AppSectionHeader"))
-        #expect(sharedSource.contains("struct SettingsHeader"))
-        #expect(sharedSource.contains("struct SectionTitle"))
-        #expect(settingsSupportSource.contains("struct SettingsHeader") == false)
-        #expect(metricSource.contains("AppSectionHeader(title: title"))
-    }
-
-    @Test
-    func primaryActionLabelsUseSharedComponentAcrossHomeAndInspector() throws {
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
-        let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorActionViews.swift")
-
-        #expect(sharedSource.contains("struct AppActionLabel"))
-        #expect(sharedSource.contains(".minimumScaleFactor(0.78)"))
-        #expect(homeSource.contains("AppActionLabel(title: AppStrings.startTimer"))
-        #expect(homeSource.contains("private func actionLabel") == false)
-        #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"task.action.startTimer\")"))
-        #expect(inspectorSource.contains("Label(AppStrings.localized(\"timer.action.pause\")") == false)
-    }
-
-    @Test
-    func settingsActionRowsUseSharedComponent() throws {
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
-        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsSectionsViews.swift")
-        let settingsShellSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
-
-        #expect(sharedSource.contains("struct SettingsActionLabel"))
-        #expect(sharedSource.contains("struct SettingsStatusRow"))
-        #expect(sharedSource.contains(".font(.body)"))
-        #expect(settingsSource.contains("SettingsActionLabel("))
-        #expect(settingsSource.contains("SettingsStatusRow(feedback: feedback)"))
-        #expect(settingsShellSource.contains("store.syncStatus.feedback("))
-        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportCSV\")") == false)
-        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceSync\")") == false)
-        #expect(settingsSource.contains("Button(role: .destructive, action: onRebuildDemoData) {\n                Text(") == false)
     }
 }

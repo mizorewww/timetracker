@@ -1,0 +1,88 @@
+import SwiftUI
+
+struct ChecklistEditorRow: View {
+    @Binding var item: ChecklistEditorDraft
+    let isSorting: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let moveUp: () -> Void
+    let moveDown: () -> Void
+    let delete: () -> Void
+    let focus: FocusState<UUID?>.Binding
+    let submit: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ChecklistCompletionButton(isCompleted: item.isCompleted, colorHex: item.colorHex) {
+                withAnimation(.snappy(duration: 0.2)) {
+                    item.isCompleted.toggle()
+                }
+            }
+            .padding(.top, 2)
+
+            SymbolColorPickerButton(
+                colors: TaskColorPalette.hexValues,
+                symbolName: $item.iconName,
+                colorHex: $item.colorHex,
+                showsTitle: false
+            )
+            .buttonStyle(.plain)
+            .frame(width: 34, height: 34)
+
+            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title, axis: .vertical)
+                .textFieldStyle(.plain)
+                .lineLimit(1...4)
+                .strikethrough(item.isCompleted)
+                .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                .focused(focus, equals: item.id)
+                .submitLabel(.done)
+                .onSubmit(submit)
+                .labelsHidden()
+                .onChange(of: item.title) { _, newValue in
+                    guard newValue.contains(where: \.isNewline) else { return }
+                    item.title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
+                    submit()
+                }
+
+            sortingControls
+            Button(role: .destructive) {
+                delete()
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(.red)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppStrings.delete)
+        }
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .opacity(isSorting ? 0.98 : 1)
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var sortingControls: some View {
+        #if os(macOS)
+        if isSorting {
+            HStack(spacing: 4) {
+                Button(action: moveUp) {
+                    Image(systemName: "chevron.up")
+                        .frame(width: 24, height: 28)
+                }
+                .disabled(!canMoveUp)
+                .accessibilityLabel(AppStrings.localized("common.moveUp"))
+
+                Button(action: moveDown) {
+                    Image(systemName: "chevron.down")
+                        .frame(width: 24, height: 28)
+                }
+                .disabled(!canMoveDown)
+                .accessibilityLabel(AppStrings.localized("common.moveDown"))
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+        }
+        #endif
+    }
+}

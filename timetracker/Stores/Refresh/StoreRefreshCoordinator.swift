@@ -5,43 +5,61 @@ struct StoreRefreshCoordinator {
     func refresh(_ store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
         guard store.taskRepository != nil, store.timeRepository != nil else { return }
 
-        try refreshPrimaryDomains(on: store, plan: plan)
-        refreshDerivedDomains(on: store, plan: plan)
-        applyPostRefreshEffects(on: store, plan: plan)
+        try PerformanceSignpost.interval("Store refresh") {
+            try refreshPrimaryDomains(on: store, plan: plan)
+            refreshDerivedDomains(on: store, plan: plan)
+            applyPostRefreshEffects(on: store, plan: plan)
+        }
     }
 
     private func refreshPrimaryDomains(on store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
         if plan.refreshTasks {
-            try store.refreshTaskDomain()
+            try PerformanceSignpost.interval("Task domain refresh") {
+                try store.refreshTaskDomain(plan: plan)
+            }
         }
         if plan.refreshLedger {
-            try store.refreshLedgerDomain(includeHistory: plan.includeLedgerHistory)
+            try PerformanceSignpost.interval("Ledger domain refresh") {
+                try store.refreshLedgerDomain(plan: plan)
+            }
         }
         if plan.refreshPomodoro {
-            try store.refreshPomodoroDomain()
+            try PerformanceSignpost.interval("Pomodoro domain refresh") {
+                try store.refreshPomodoroDomain()
+            }
         }
         if plan.refreshPreferences {
-            try store.refreshPreferenceDomain()
+            try PerformanceSignpost.interval("Preference domain refresh") {
+                try store.refreshPreferenceDomain()
+            }
         }
         if plan.refreshCountdown {
-            store.countdownEvents = try store.fetchCountdownEvents()
+            try PerformanceSignpost.interval("Countdown fetch") {
+                store.countdownEvents = try store.fetchCountdownEvents()
+            }
         }
         if plan.refreshChecklist {
-            store.checklistItems = try store.fetchChecklistItems()
-            store.checklistItemVisuals = try store.fetchChecklistItemVisuals()
+            try PerformanceSignpost.interval("Checklist fetch") {
+                try store.refreshChecklistDomain(plan: plan)
+            }
         }
         if plan.refreshInbox {
-            store.inboxItems = try store.fetchInboxItems()
-            store.inboxSuggestions = try store.fetchInboxSuggestions()
+            try PerformanceSignpost.interval("Inbox fetch") {
+                try store.refreshInboxDomain(plan: plan)
+            }
         }
     }
 
     private func refreshDerivedDomains(on store: TimeTrackerStore, plan: StoreRefreshPlan) {
         if plan.refreshRollups {
-            store.refreshRollupDomain(plan: plan)
+            PerformanceSignpost.interval("Rollup refresh") {
+                store.refreshRollupDomain(plan: plan)
+            }
         }
         if plan.refreshAnalytics {
-            store.refreshAnalyticsDomain(plan: plan)
+            PerformanceSignpost.interval("Analytics cache refresh") {
+                store.refreshAnalyticsDomain(plan: plan)
+            }
         }
     }
 

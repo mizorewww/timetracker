@@ -248,7 +248,13 @@ struct AnalyticsTimelineTests {
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
         let entrySource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift")
-        let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift")
+        let analyticsSource = try [
+            "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
+            "timetracker/Services/Analytics/HourStackLayoutEngine.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(entrySource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))

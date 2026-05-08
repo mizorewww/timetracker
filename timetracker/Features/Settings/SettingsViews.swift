@@ -3,15 +3,15 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var isResetConfirmationPresented = false
-    @State private var isClearConfirmationPresented = false
-    @State private var isOptimizeConfirmationPresented = false
-    @State private var isExportPresented = false
-    @State private var isCheckingSync = false
-    @State private var isFetchingLLMModels = false
-    @State private var syncCheckMessage: String?
-    @State private var databaseOptimizationMessage: String?
-    @State private var llmModelFetchMessage: String?
+    @State var isResetConfirmationPresented = false
+    @State var isClearConfirmationPresented = false
+    @State var isOptimizeConfirmationPresented = false
+    @State var isExportPresented = false
+    @State var isCheckingSync = false
+    @State var isFetchingLLMModels = false
+    @State var syncCheckMessage: String?
+    @State var databaseOptimizationMessage: String?
+    @State var llmModelFetchMessage: String?
 
     var body: some View {
         Form {
@@ -147,169 +147,5 @@ struct SettingsView: View {
         } message: {
             Text(databaseOptimizationMessage ?? "")
         }
-    }
-
-    private var currentStorageValue: String {
-        store.preferences.cloudSyncEnabled
-            ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud"))
-            : AppStrings.localized("settings.local")
-    }
-
-    private var syncFeedback: SyncFeedback {
-        store.syncStatus.feedback(
-            preferences: store.preferences,
-            isChecking: isCheckingSync,
-            lastRefreshAt: store.lastSyncRefreshAt
-        )
-    }
-
-    private func checkSyncStatus() {
-        isCheckingSync = true
-        Task {
-            await store.refreshCloudAccountStatus()
-            syncCheckMessage = store.syncStatus.accountStatus
-            isCheckingSync = false
-        }
-    }
-
-    private func forceSyncRefresh() {
-        isCheckingSync = true
-        Task {
-            syncCheckMessage = await store.forceCloudSyncRefresh()
-            isCheckingSync = false
-        }
-    }
-
-    private func fetchLLMModels() {
-        let endpoint = store.preferences.llmEndpoint
-        let apiKey = store.preferences.llmAPIKey
-        isFetchingLLMModels = true
-        llmModelFetchMessage = nil
-
-        Task {
-            do {
-                let models = try await LLMModelService().fetchModels(endpoint: endpoint, apiKey: apiKey)
-                await MainActor.run {
-                    store.setLLMAvailableModelIDs(models)
-                    if !models.contains(store.preferences.llmSelectedModel) {
-                        store.setLLMSelectedModel(models.first ?? "")
-                    }
-                    llmModelFetchMessage = String(format: AppStrings.localized("settings.llm.fetchSuccess"), models.count)
-                    isFetchingLLMModels = false
-                }
-            } catch {
-                await MainActor.run {
-                    llmModelFetchMessage = String(format: AppStrings.localized("settings.llm.fetchFailed"), error.localizedDescription)
-                    isFetchingLLMModels = false
-                }
-            }
-        }
-    }
-
-    private func fetchLLMModelsIfNeeded() {
-        guard !isFetchingLLMModels,
-              store.preferences.llmAvailableModelIDs.isEmpty,
-              !store.preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !store.preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return
-        }
-        fetchLLMModels()
-    }
-
-    private var syncCheckPresented: Binding<Bool> {
-        Binding {
-            syncCheckMessage != nil
-        } set: { isPresented in
-            if !isPresented {
-                syncCheckMessage = nil
-            }
-        }
-    }
-
-    private var optimizationMessagePresented: Binding<Bool> {
-        Binding {
-            databaseOptimizationMessage != nil
-        } set: { isPresented in
-            if !isPresented {
-                databaseOptimizationMessage = nil
-            }
-        }
-    }
-
-    private var preferredColorSchemeBinding: Binding<String> {
-        Binding(
-            get: { store.preferences.preferredColorScheme },
-            set: { store.setPreferredColorScheme($0) }
-        )
-    }
-
-    private var pomodoroDefaultModeBinding: Binding<String> {
-        Binding(
-            get: { store.preferences.pomodoroDefaultMode },
-            set: { store.setPomodoroDefaultMode($0) }
-        )
-    }
-
-    private var defaultFocusMinutesBinding: Binding<Int> {
-        Binding(
-            get: { store.preferences.defaultFocusMinutes },
-            set: { store.setDefaultFocusMinutes($0) }
-        )
-    }
-
-    private var defaultBreakMinutesBinding: Binding<Int> {
-        Binding(
-            get: { store.preferences.defaultBreakMinutes },
-            set: { store.setDefaultBreakMinutes($0) }
-        )
-    }
-
-    private var defaultPomodoroRoundsBinding: Binding<Int> {
-        Binding(
-            get: { store.preferences.defaultPomodoroRounds },
-            set: { store.setDefaultPomodoroRounds($0) }
-        )
-    }
-
-    private var allowParallelTimersBinding: Binding<Bool> {
-        Binding(
-            get: { store.preferences.allowParallelTimers },
-            set: { store.setAllowParallelTimers($0) }
-        )
-    }
-
-    private var showGrossAndWallTogetherBinding: Binding<Bool> {
-        Binding(
-            get: { store.preferences.showGrossAndWallTogether },
-            set: { store.setShowGrossAndWallTogether($0) }
-        )
-    }
-
-    private var cloudSyncEnabledBinding: Binding<Bool> {
-        Binding(
-            get: { store.preferences.cloudSyncEnabled },
-            set: { store.setCloudSyncEnabled($0) }
-        )
-    }
-
-    private var llmEndpointBinding: Binding<String> {
-        Binding(
-            get: { store.preferences.llmEndpoint },
-            set: { store.setLLMEndpoint($0) }
-        )
-    }
-
-    private var llmAPIKeyBinding: Binding<String> {
-        Binding(
-            get: { store.preferences.llmAPIKey },
-            set: { store.setLLMAPIKey($0) }
-        )
-    }
-
-    private var llmSelectedModelBinding: Binding<String> {
-        Binding(
-            get: { store.preferences.llmSelectedModel },
-            set: { store.setLLMSelectedModel($0) }
-        )
     }
 }

@@ -26,6 +26,53 @@ struct LedgerStore {
         sessions = try repository.sessions()
     }
 
+    mutating func refreshHistoryRanges(
+        repository: TimeTrackingRepository,
+        ranges: [StoreInvalidationRange],
+        now: Date = Date()
+    ) throws {
+        let intervals = ranges.compactMap { range -> DateInterval? in
+            guard range.end > range.start else { return nil }
+            return DateInterval(start: range.start, end: range.end)
+        }
+        guard intervals.isEmpty == false else {
+            try refreshHistory(repository: repository)
+            return
+        }
+
+        guard allSegments.isEmpty == false || sessions.isEmpty == false else {
+            try refreshHistory(repository: repository)
+            return
+        }
+
+        let existingImpactedSegments = allSegments.filter { segment in
+            intervals.contains { overlaps(segment, with: $0, now: now) }
+        }
+
+        var fetchedSegments: [TimeSegment] = []
+        for interval in intervals {
+            fetchedSegments += try repository.segments(from: interval.start, to: interval.end, now: now)
+        }
+        fetchedSegments = uniqueSegments(fetchedSegments)
+
+        let impactedSessionIDs = Set(existingImpactedSegments.map(\.sessionID))
+            .union(fetchedSegments.map(\.sessionID))
+        let fetchedSegmentIDs = Set(fetchedSegments.map(\.id))
+
+        allSegments = allSegments.filter { segment in
+            let wasFetched = fetchedSegmentIDs.contains(segment.id)
+            let isInAffectedRange = intervals.contains { overlaps(segment, with: $0, now: now) }
+            return wasFetched == false && isInAffectedRange == false
+        } + fetchedSegments
+        allSegments.sort { $0.startedAt < $1.startedAt }
+
+        if impactedSessionIDs.isEmpty == false {
+            let refreshedSessions = try repository.sessions(ids: impactedSessionIDs)
+            sessions = sessions.filter { impactedSessionIDs.contains($0.id) == false } + refreshedSessions
+            sessions.sort { $0.startedAt > $1.startedAt }
+        }
+    }
+
     private mutating func mergeVisibleSegments(todayInterval: DateInterval, now: Date) {
         guard !allSegments.isEmpty else {
             allSegments = todaySegments
@@ -42,5 +89,17 @@ struct LedgerStore {
                 return !(segment.startedAt < todayInterval.end && end > todayInterval.start)
             } + todaySegments
         allSegments.sort { $0.startedAt < $1.startedAt }
+    }
+
+    private func overlaps(_ segment: TimeSegment, with interval: DateInterval, now: Date) -> Bool {
+        let end = min(segment.endedAt ?? now, interval.end)
+        return segment.startedAt < interval.end && end > interval.start
+    }
+
+    private func uniqueSegments(_ segments: [TimeSegment]) -> [TimeSegment] {
+        var seen = Set<UUID>()
+        return segments.filter { segment in
+            seen.insert(segment.id).inserted
+        }
     }
 }

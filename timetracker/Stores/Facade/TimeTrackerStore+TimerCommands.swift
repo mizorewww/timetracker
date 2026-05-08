@@ -6,15 +6,6 @@ extension TimeTrackerStore {
         startTask(taskID: selectedTaskID)
     }
 
-    func selectTask(_ taskID: UUID, revealInToday: Bool = true) {
-        selectedTaskID = taskID
-        if revealInToday {
-            desktopDestination = .today
-        }
-        selectedTaskPulseID = taskID
-        selectedTaskPulseToken = UUID()
-    }
-
     func startTask(_ task: TaskNode) {
         selectTask(task.id, revealInToday: false)
         startTask(taskID: task.id)

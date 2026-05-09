@@ -163,6 +163,23 @@ struct PreferencesChecklistForecastTests {
         )
         #expect(failedFeedback.state == .failed)
         #expect(failedFeedback.message.contains("CloudKit failed"))
+
+        let temporaryStatus = SyncStatus(
+            mode: AppCloudSync.modeInMemoryFallback,
+            containerIdentifier: "iCloud.test",
+            deviceID: "test",
+            lastError: "Store could not open",
+            accountStatus: "Available"
+        )
+        let temporaryFeedback = temporaryStatus.feedback(
+            preferences: preferences,
+            isChecking: false,
+            lastRefreshAt: nil,
+            now: now
+        )
+        #expect(temporaryFeedback.state == .temporaryStore)
+        #expect(temporaryFeedback.message.contains("Store could not open"))
+        #expect(temporaryFeedback.message.contains(AppStrings.localized("sync.storage.temporary")))
     }
 
     @Test @MainActor

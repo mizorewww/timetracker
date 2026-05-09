@@ -22,7 +22,10 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 
 | Path | Owns | Open this when | Do not put here |
 | --- | --- | --- | --- |
-| `timetracker/App` | App entry, root navigation, scenes, CloudKit/container startup, build info, seed/demo data, Live Activity launch helpers | Changing app startup, platform root views, scene layout, menu commands, build metadata, or demo seeding | Screen-specific UI sections or domain algorithms |
+| `timetracker/App` | App entry, root navigation, scenes, CloudKit/container startup, build info, seed/demo data, deep links, Live Activity launch helpers | Changing app startup, platform root views, scene layout, menu commands, build metadata, deep link routing, or demo seeding | Screen-specific UI sections or domain algorithms |
+| `timetracker/AppIntents` | Siri/Shortcuts App Intents and task entities that wrap shared command handlers | Adding or changing system actions such as capture Inbox item, start timer, or stop timer | Ledger writes, SwiftUI state, or duplicated timer logic |
+| `timetrackerWidgetExtension` | WidgetKit extension UI and timeline provider for glanceable active-timer state | Changing the widget face, widget localization, or widget target plist/entitlements | SwiftData writes, command logic, or app-only models |
+| `timetrackerWatchApp` | watchOS companion UI for active timers, recent tasks, and queued start/stop commands | Changing the watch face, watch localization, or WatchConnectivity presentation state | SwiftData writes, full task-tree management, or duplicated timer logic |
 | `timetracker/Models` | SwiftData models, schema versions, migration plan, registry, and store/view DTOs | Adding persisted fields, migrations, or shared read models | Query code, SwiftUI layout, or business workflows |
 | `timetracker/Repositories` | SwiftData query/write implementations behind repository protocols | Changing fetch predicates, persistence semantics, soft delete, or ledger writes | UI decisions or derived analytics formulas |
 | `timetracker/Commands` | User action handlers and use cases | Adding a durable action such as start timer, toggle checklist, move task, export, or update preference | SwiftUI state formatting or long-lived published state |
@@ -31,9 +34,11 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 | `timetracker/Stores/Refresh` | Refresh event planning and domain refresh coordination | Adding a new write event or deciding which snapshots should update | Feature UI or direct repository mutation |
 | `timetracker/Services/Analytics` | Analytics aggregation, timeline layout, daily bucket cache | Changing charts, overlap math, daily/monthly summaries, or timeline lane allocation | SwiftUI chart styling that does not affect data |
 | `timetracker/Services/Checklist` | Checklist draft persistence and checklist-specific editing helpers | Changing how checklist editor drafts are saved, soft-deleted, or visual metadata is preserved | Forecast formulas or task row layout |
+| `timetracker/Services/Inbox` | Inbox suggestion state and Inbox-specific derivation helpers | Changing when suggestions are shown, hidden, dismissed, stale, or eligible for regeneration | LLM networking or SwiftUI row layout |
 | `timetracker/Services/Forecasting` | Checklist rollups, forecast eligibility, forecast display selection | Changing remaining-time formulas, parent/child forecast display, or forecast explanations | Checklist editing UI |
 | `timetracker/Services/Ledger` | Duration formatting, summary, and gross/wall-clock aggregation utilities | Changing time math used across features | SwiftData fetches or view layout |
 | `timetracker/Services/Maintenance` | CSV export, database repair, cleanup support | Changing export columns or optimization safety | Normal timer/task write flows |
+| `timetracker/Services/SystemIntegration` | App Group/cache DTOs, Watch command processors, WatchConnectivity payload/transport, and system-surface snapshots | Changing Widget-visible active timer or recent-task snapshots, Watch command idempotency, Watch app handoff data, or extension handoff data | Extension UI or durable ledger writes |
 | `timetracker/Services/Tasks` | Task tree validation, paths, descendants, flat visible rows | Changing task nesting, legal parent choices, or sidebar/tasks row derivation | Persistent task writes |
 | `timetracker/Features/Home` | Today screen composition | Changing Today metrics, active timers, quick start, progress tiles, forecast, or timeline presentation | Cross-screen components that should be reused |
 | `timetracker/Features/Tasks` | Task management and task editing | Changing task list rows, editor fields, checklist editing, icon/color picking, or parent selection UI | Time ledger algorithms |
@@ -64,7 +69,13 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 | iCloud/user settings sync | `Commands/PreferenceCommands.swift` | `Models/SyncedPreferences.swift`, `Stores/Domains/PreferenceStore.swift`, `App/AppModelContainerFactory.swift` |
 | Demo data seeding or clearing | `App/SeedData.swift` | `App/SeedData+DemoBuild.swift`, `App/SeedData+Cleanup.swift`, lifecycle tests |
 | AI model configuration | `Features/Settings/SettingsDataSectionsViews.swift` | `Services/LLM/LLMModelService.swift`, `Models/SyncedPreferences.swift`, `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` |
-| Live Activity display | `timetrackerLiveActivityExtension` | `Shared/TimeTrackingActivityAttributes.swift`, app Live Activity helpers |
+| Siri/Shortcuts App Intents | `AppIntents/TimeTrackerAppIntents.swift` | `Commands/SystemActionCommands.swift`, relevant command handlers, localization |
+| Deep links from Widget or system surfaces | `App/AppDeepLinkRouter.swift` | `Stores/Facade/TimeTrackerStore+DeepLinks.swift`, `App/ContentView.swift`, `timetracker/Info.plist` |
+| Widget active timer/recent task snapshot | `Services/SystemIntegration/WidgetSnapshotCache.swift` | `Stores/Facade/TimeTrackerStore+WidgetSnapshot.swift`, `timetrackerWidgetExtension` |
+| Widget extension UI | `timetrackerWidgetExtension/TimeTrackerWidget.swift` | `Shared/WidgetSnapshotModels.swift`, widget localization files, WidgetKit target settings |
+| Watch timer command handoff | `Services/SystemIntegration/WatchCommandProcessor.swift` | `Stores/Facade/TimeTrackerStore+WatchSnapshot.swift`, `Shared/WatchCommandModels.swift`, `Shared/WatchStateSnapshotModels.swift`, `Services/SystemIntegration/WatchConnectivityPayloadCodec.swift`, `Services/SystemIntegration/WatchConnectivityBridge.swift`, `Commands/SystemActionCommands.swift`, `Commands/TimerCommands.swift` |
+| Watch app UI | `timetrackerWatchApp/WatchDashboardView.swift` | `timetrackerWatchApp/WatchAppStore.swift`, `Shared/WatchCommandModels.swift`, `Shared/WatchStateSnapshotModels.swift`, watch localization files |
+| Live Activity display/stop deep link | `timetrackerLiveActivityExtension` | `Shared/TimeTrackingActivityAttributes.swift`, `App/AppDeepLinkRouter.swift`, app Live Activity helpers |
 | Localization | `Shared/AppStrings.swift` | `*.lproj/Localizable.strings`, localization parity tests |
 
 ## Placement Rules

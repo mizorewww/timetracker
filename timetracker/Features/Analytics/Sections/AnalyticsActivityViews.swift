@@ -1,51 +1,14 @@
 import SwiftUI
 
 struct TodayActivityCard: View {
-    @ObservedObject var store: TimeTrackerStore
-    let segments: [TimeSegment]
-    let now: Date
-
-    private var calendar: Calendar { .current }
-
-    private var dayInterval: DateInterval {
-        calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: calendar.startOfDay(for: now), duration: 86_400)
-    }
-
-    private var hourly: [HourTaskActivity] {
-        (0..<24).map { hour in
-            let start = calendar.date(byAdding: .hour, value: hour, to: dayInterval.start) ?? dayInterval.start
-            let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3_600)
-            let interval = DateInterval(start: start, end: min(end, dayInterval.end))
-            var secondsByTaskID: [UUID: Int] = [:]
-
-            for segment in segments where segment.deletedAt == nil {
-                guard let clipped = clippedInterval(for: segment, in: interval) else { continue }
-                secondsByTaskID[segment.taskID, default: 0] += Int(clipped.end.timeIntervalSince(clipped.start))
-            }
-
-            let slices = secondsByTaskID.compactMap { taskID, seconds -> HourTaskSlice? in
-                guard seconds > 0 else { return nil }
-                let task = store.task(for: taskID)
-                return HourTaskSlice(
-                    taskID: taskID,
-                    title: task?.title ?? AppStrings.localized("task.deleted"),
-                    symbolName: task?.iconName ?? "checkmark.circle",
-                    colorHex: task?.colorHex ?? "0A84FF",
-                    seconds: seconds
-                )
-            }
-            .sorted { $0.seconds > $1.seconds }
-
-            return HourTaskActivity(hour: hour, slices: slices)
-        }
-    }
+    let activity: [HourTaskActivity]
 
     private var totalSeconds: Int {
-        hourly.reduce(0) { $0 + $1.totalSeconds }
+        activity.reduce(0) { $0 + $1.totalSeconds }
     }
 
     private var legendItems: [HourTaskSlice] {
-        let grouped = Dictionary(grouping: hourly.flatMap(\.slices), by: \.taskID)
+        let grouped = Dictionary(grouping: activity.flatMap(\.slices), by: \.taskID)
         return grouped.compactMap { _, slices -> HourTaskSlice? in
             guard let first = slices.first else { return nil }
             return HourTaskSlice(
@@ -84,7 +47,7 @@ struct TodayActivityCard: View {
                             .multilineTextAlignment(.trailing)
                     }
 
-                    hourlyBars
+                    activityBars
 
                     HStack {
                         ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
@@ -107,10 +70,10 @@ struct TodayActivityCard: View {
         }
     }
 
-    private var hourlyBars: some View {
+    private var activityBars: some View {
         GeometryReader { proxy in
             HStack(alignment: .bottom, spacing: 3) {
-                ForEach(hourly) { point in
+                ForEach(activity) { point in
                     HourTaskActivityBar(
                         point: point,
                         availableHeight: proxy.size.height
@@ -125,30 +88,8 @@ struct TodayActivityCard: View {
         .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
-    private func clippedInterval(for segment: TimeSegment, in interval: DateInterval) -> DateInterval? {
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return DateInterval(start: start, end: clippedEnd)
-    }
 }
 
-struct HourTaskActivity: Identifiable {
-    let hour: Int
-    let slices: [HourTaskSlice]
-
-    var id: Int { hour }
-    var totalSeconds: Int { slices.reduce(0) { $0 + $1.seconds } }
-}
-
-struct HourTaskSlice: Identifiable {
-    let taskID: UUID
-    let title: String
-    let symbolName: String
-    let colorHex: String
-    let seconds: Int
-
-    var id: UUID { taskID }
+extension HourTaskSlice {
     var color: Color { Color(hex: colorHex) ?? .blue }
 }

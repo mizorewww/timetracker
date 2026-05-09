@@ -77,6 +77,119 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func analyticsSnapshotOwnsTodayTaskActivity() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 12)))
+        let startOfDay = calendar.startOfDay(for: now)
+        let design = TaskNode(
+            title: "Design",
+            parentID: nil,
+            deviceID: "test",
+            colorHex: "5E5CE6",
+            iconName: "paintbrush"
+        )
+        let writing = TaskNode(
+            title: "Writing",
+            parentID: nil,
+            deviceID: "test",
+            colorHex: "34C759",
+            iconName: "doc.text"
+        )
+        let designSession = TimeSession(taskID: design.id, source: .timer, deviceID: "test", startedAt: startOfDay)
+        let writingSession = TimeSession(taskID: writing.id, source: .timer, deviceID: "test", startedAt: startOfDay)
+        let segments = [
+            TimeSegment(
+                sessionID: designSession.id,
+                taskID: design.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 30 * 60),
+                endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 15 * 60)
+            ),
+            TimeSegment(
+                sessionID: writingSession.id,
+                taskID: writing.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(10 * 3_600),
+                endedAt: startOfDay.addingTimeInterval(11 * 3_600)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [design, writing],
+            segments: segments,
+            sessions: [designSession, writingSession],
+            taskPathByID: [design.id: design.title, writing.id: writing.title],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+
+        let nine = try #require(snapshot.todayActivity.first { $0.hour == 9 })
+        let ten = try #require(snapshot.todayActivity.first { $0.hour == 10 })
+
+        #expect(nine.slices.map(\.taskID) == [design.id])
+        #expect(nine.slices.first?.seconds == 30 * 60)
+        #expect(nine.slices.first?.colorHex == "5E5CE6")
+        #expect(nine.slices.first?.symbolName == "paintbrush")
+        #expect(ten.slices.map(\.taskID) == [writing.id, design.id])
+        #expect(ten.slices.map(\.seconds) == [3_600, 15 * 60])
+    }
+
+    @Test @MainActor
+    func analyticsSnapshotOwnsTodayTimelineReadModel() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 10, hour: 12)))
+        let day = calendar.startOfDay(for: now)
+        let parent = TaskNode(title: "Client", parentID: nil, deviceID: "test", colorHex: "FF9500", iconName: "briefcase")
+        let task = TaskNode(title: "Proposal", parentID: parent.id, deviceID: "test", colorHex: "0A84FF", iconName: "doc.text")
+        let firstSession = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: day, titleSnapshot: task.title)
+        let secondSession = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: day, titleSnapshot: task.title)
+        let segments = [
+            TimeSegment(
+                sessionID: firstSession.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: day.addingTimeInterval(9 * 3_600),
+                endedAt: day.addingTimeInterval(10 * 3_600)
+            ),
+            TimeSegment(
+                sessionID: secondSession.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: day.addingTimeInterval(10 * 3_600),
+                endedAt: day.addingTimeInterval(11 * 3_600)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [parent, task],
+            segments: segments,
+            sessions: [firstSession, secondSession],
+            taskPathByID: [parent.id: parent.title, task.id: "\(parent.title) / \(task.title)"],
+            taskParentPathByID: [task.id: parent.title],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.timeline.entries.count == 2)
+        #expect(snapshot.timeline.laneCount == 2)
+        #expect(snapshot.timeline.entries.map(\.title) == ["Proposal", "Proposal"])
+        #expect(snapshot.timeline.entries.first?.path == "Client")
+        #expect(snapshot.timeline.entries.first?.iconName == "doc.text")
+        #expect(snapshot.timeline.entries.first?.colorHex == "0A84FF")
+        #expect(snapshot.timeline.displayInterval?.start == segments[0].startedAt)
+        #expect(snapshot.timeline.displayInterval?.end == segments[1].endedAt)
+    }
+
+    @Test @MainActor
     func dailySummaryServiceClipsCrossDaySegmentsIntoEachDay() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -14,9 +14,7 @@ struct ChecklistEditorRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             ChecklistCompletionButton(isCompleted: item.isCompleted, colorHex: item.colorHex) {
-                withAnimation(.snappy(duration: 0.2)) {
-                    item.isCompleted.toggle()
-                }
+                item.isCompleted.toggle()
             }
             .padding(.top, 2)
 

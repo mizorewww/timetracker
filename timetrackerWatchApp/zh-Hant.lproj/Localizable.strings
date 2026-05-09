@@ -1,0 +1,9 @@
+"watch.title" = "時間追蹤";
+"watch.active.title" = "正在計時";
+"watch.recent.title" = "最近任務";
+"watch.empty.title" = "沒有正在計時";
+"watch.empty.message" = "可從手錶開始最近任務，或在 iPhone 上打開 App。";
+"watch.stop" = "停止";
+"watch.status.reachable" = "iPhone 可連接";
+"watch.status.queued" = "操作會稍後同步";
+"watch.elapsed.accessibility" = "已用時間";

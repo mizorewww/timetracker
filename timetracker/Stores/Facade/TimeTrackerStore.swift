@@ -50,6 +50,7 @@ final class TimeTrackerStore: ObservableObject {
     }
     @Published var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
     @Published var inboxSuggestionInFlightIDs: Set<UUID> = []
+    @Published var inboxSuggestionFailureByItemID: [UUID: String] = [:]
     @Published var checklistVisualSuggestionInFlightIDs: Set<UUID> = []
     @Published var preferences = AppPreferences.defaults
     @Published var rollupDomainStore = RollupStore()
@@ -64,6 +65,7 @@ final class TimeTrackerStore: ObservableObject {
     @Published var desktopDestination: DesktopDestination = .today
     @Published var selectedTaskPulseID: UUID?
     @Published var selectedTaskPulseToken = UUID()
+    @Published var isStartTaskPickerPresented = false
     @Published var cloudAccountStatus: String = AppCloudSync.accountStatus
     @Published var lastSyncRefreshAt: Date?
 
@@ -129,6 +131,7 @@ final class TimeTrackerStore: ObservableObject {
     let taskTreeService = TaskTreeService()
     let ledgerSummaryService = LedgerSummaryService()
     let checklistDraftService = ChecklistDraftService()
+    let inboxSuggestionStateService = InboxSuggestionStateService()
     let forecastDisplayService = ForecastDisplayService()
     let databaseMaintenanceService = DatabaseMaintenanceService()
     let csvExportService = CSVExportService()

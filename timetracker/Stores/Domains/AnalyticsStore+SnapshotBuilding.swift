@@ -27,7 +27,8 @@ extension AnalyticsStore {
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
                 daily: daily,
-                now: now
+                now: now,
+                calendar: calendar
             )
         }
     }
@@ -51,7 +52,8 @@ extension AnalyticsStore {
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
             daily: daily,
-            now: now
+            now: now,
+            calendar: calendar
         )
     }
 
@@ -63,12 +65,34 @@ extension AnalyticsStore {
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         daily: [DailyAnalyticsPoint],
-        now: Date
+        now: Date,
+        calendar: Calendar
     ) -> AnalyticsSnapshot {
         AnalyticsSnapshot(
             range: range,
             overview: overview(segments: rangeSegments, now: now),
             daily: daily,
+            todayActivity: range == .today
+                ? HourTaskActivityService().hourlyActivity(
+                    segments: rangeSegments,
+                    tasks: tasks,
+                    sessions: sessions,
+                    date: now,
+                    now: now,
+                    calendar: calendar
+                )
+                : [],
+            timeline: range == .today
+                ? AnalyticsTimelineSnapshotService().snapshot(
+                    segments: rangeSegments,
+                    tasks: tasks,
+                    sessions: sessions,
+                    taskParentPathByID: taskParentPathByID,
+                    date: now,
+                    now: now,
+                    calendar: calendar
+                )
+                : .empty,
             taskBreakdown: taskBreakdown(
                 segments: rangeSegments,
                 tasks: tasks,

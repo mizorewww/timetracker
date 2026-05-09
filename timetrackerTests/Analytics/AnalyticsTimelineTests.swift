@@ -248,23 +248,39 @@ struct AnalyticsTimelineTests {
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
         let entrySource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift")
-        let analyticsSource = try [
+        let viewSource = try [
             "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
+        let analyticsSource = try [
+            "timetracker/Models/AnalyticsReadModels.swift",
+            "timetracker/Services/Analytics/HourTaskActivityService.swift",
+            "timetracker/Services/Analytics/AnalyticsTimelineSnapshotService.swift",
             "timetracker/Services/Analytics/HourStackLayoutEngine.swift"
         ]
             .map(sourceText)
             .joined(separator: "\n")
+        let combinedSource = viewSource + "\n" + analyticsSource
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(entrySource.contains("TodayActivityCard(store: store, segments: todaySegments, now: now)"))
-        #expect(analyticsSource.contains("struct HourTaskSlice"))
-        #expect(analyticsSource.contains("Color(hex: colorHex)"))
-        #expect(analyticsSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)
-        #expect(analyticsSource.contains("HourStackLayoutEngine.layout"))
-        #expect(analyticsSource.contains("RoundedRectangle(cornerRadius: cornerRadius"))
-        #expect(analyticsSource.contains("availableHeight * CGFloat(point.totalSeconds)") == false)
-        #expect(analyticsSource.contains(".clipShape(Capsule())") == false)
+        #expect(entrySource.contains("TodayActivityCard(activity: snapshot.todayActivity)"))
+        #expect(entrySource.contains("OverlappingTimelineCard(timeline: snapshot.timeline)"))
+        #expect(viewSource.contains("private var hourly") == false)
+        #expect(viewSource.contains("@ObservedObject var store") == false)
+        #expect(viewSource.contains("TimelineLayoutEngine.layout(") == false)
+        #expect(combinedSource.contains("struct HourTaskSlice"))
+        #expect(combinedSource.contains("struct AnalyticsTimelineSnapshot"))
+        #expect(combinedSource.contains("Color(hex: colorHex)"))
+        #expect(combinedSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)
+        #expect(combinedSource.contains("HourStackLayoutEngine.layout"))
+        #expect(combinedSource.contains("RoundedRectangle(cornerRadius: cornerRadius"))
+        #expect(combinedSource.contains("availableHeight * CGFloat(point.totalSeconds)") == false)
+        #expect(combinedSource.contains(".clipShape(Capsule())") == false)
         #expect(englishStrings.contains("\"analytics.hourDistribution.taskColorHint\""))
     }
 

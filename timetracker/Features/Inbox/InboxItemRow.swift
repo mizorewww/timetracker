@@ -19,9 +19,7 @@ struct InboxItemRow: View {
                     colorHex: rowColorHex,
                     placeholder: AppStrings.localized("inbox.itemPlaceholder"),
                     toggle: {
-                        withAnimation(.snappy(duration: 0.22)) {
-                            store.toggleInboxItem(item)
-                        }
+                        store.toggleInboxItem(item)
                     },
                     commit: commitTitleIfNeeded
                 )
@@ -101,6 +99,16 @@ struct InboxItemRow: View {
             EmptyView()
         } else if store.inboxSuggestionInFlightIDs.contains(item.id) {
             InboxGeneratingSuggestionBar()
+        } else if store.inboxSuggestionFailureMessage(for: item) != nil {
+            InboxSuggestionFailureBar(
+                isCompact: isCompact,
+                retry: {
+                    store.retryInboxSuggestion(item)
+                },
+                discard: {
+                    store.clearInboxSuggestionFailure(item)
+                }
+            )
         } else if let suggestion, let task = store.task(for: suggestion.taskID) {
             InboxSuggestionBar(
                 taskTitle: task.title,

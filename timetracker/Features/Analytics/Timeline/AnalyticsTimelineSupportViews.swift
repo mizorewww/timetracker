@@ -15,12 +15,3 @@ struct DashedTimelineLine: Shape {
         return path
     }
 }
-
-struct TimelineLaneEntry: Identifiable {
-    let segment: TimeSegment
-    let lane: Int
-    let labelIndex: Int
-    let interval: DateInterval
-
-    var id: UUID { segment.id }
-}

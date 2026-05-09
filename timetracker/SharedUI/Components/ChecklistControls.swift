@@ -43,8 +43,6 @@ struct ChecklistCompletionMark: View {
         }
         .frame(width: 30, height: 30)
         .contentShape(Circle())
-        .symbolEffect(.bounce, value: isCompleted)
-        .animation(.snappy(duration: 0.18), value: isCompleted)
     }
 }
 
@@ -179,6 +177,5 @@ struct EditableChecklistTextRow: View {
                 commit()
             }
         }
-        .animation(.snappy(duration: 0.18), value: isCompleted)
     }
 }

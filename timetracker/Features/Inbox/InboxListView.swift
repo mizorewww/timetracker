@@ -4,8 +4,12 @@ struct InboxListView: View {
     @ObservedObject var store: TimeTrackerStore
     let openItems: [InboxItem]
     let completedItems: [InboxItem]
-    let isCompact: Bool
+    let layout: InboxLayoutPolicy
     @State private var isSorting = false
+
+    private var isCompact: Bool {
+        layout.isCompact
+    }
 
     var body: some View {
         itemList
@@ -47,12 +51,12 @@ struct InboxListView: View {
 
     private func rowHeight(for item: InboxItem) -> CGFloat {
         guard !item.isCompleted else {
-            return isCompact ? 78 : 82
+            return layout.rowBaseHeight
         }
         if store.inboxSuggestionInFlightIDs.contains(item.id) || store.inboxSuggestion(for: item) != nil {
-            return isCompact ? 142 : 132
+            return layout.suggestedRowHeight
         }
-        return isCompact ? 78 : 82
+        return layout.rowBaseHeight
     }
 
     @ViewBuilder
@@ -65,7 +69,7 @@ struct InboxListView: View {
             canSort: openItems.count > 1,
             toggleSorting: toggleSorting
         )
-        .padding(.vertical, isCompact ? 8 : 10)
+        .padding(.vertical, layout.rowVerticalPadding)
         .listRowInsets(cardRowInsets())
         .listRowBackground(Color.clear)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -99,17 +103,15 @@ struct InboxListView: View {
     private func cardRowInsets(top: CGFloat = 0, bottom: CGFloat = 0) -> EdgeInsets {
         EdgeInsets(
             top: top,
-            leading: isCompact ? 14 : 18,
+            leading: layout.cardHorizontalPadding,
             bottom: bottom,
-            trailing: isCompact ? 14 : 18
+            trailing: layout.cardHorizontalPadding
         )
     }
 
     private func toggleSorting() {
         #if os(iOS)
-        withAnimation(.snappy(duration: 0.2)) {
-            isSorting.toggle()
-        }
+        isSorting.toggle()
         #endif
     }
 
@@ -128,6 +130,10 @@ struct InboxListView: View {
 
     private func canDiscardSuggestion(for item: InboxItem) -> Bool {
         !item.isCompleted &&
-            (store.inboxSuggestionInFlightIDs.contains(item.id) || store.inboxSuggestion(for: item) != nil)
+            (
+                store.inboxSuggestionInFlightIDs.contains(item.id) ||
+                store.inboxSuggestion(for: item) != nil ||
+                store.inboxSuggestionFailureMessage(for: item) != nil
+            )
     }
 }

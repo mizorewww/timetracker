@@ -26,6 +26,7 @@ extension TimeTrackerStore {
         let apiKey = preferences.llmAPIKey
         let modelID = preferences.llmSelectedModel
         let requestedTitle = item.title
+        inboxSuggestionFailureByItemID[item.id] = nil
         inboxSuggestionInFlightIDs.insert(item.id)
 
         Task {
@@ -38,9 +39,11 @@ extension TimeTrackerStore {
                     modelID: modelID
                 )
                 await MainActor.run {
-                    guard item.deletedAt == nil,
-                          item.title == requestedTitle,
-                          item.suggestionGeneratedAt == nil else {
+                    guard inboxSuggestionStateService.canStoreGeneratedSuggestion(
+                        item: item,
+                        requestedTitle: requestedTitle,
+                        currentSuggestion: inboxSuggestionByItemID[item.id]
+                    ) else {
                         inboxSuggestionInFlightIDs.remove(item.id)
                         return
                     }
@@ -52,10 +55,12 @@ extension TimeTrackerStore {
                             context: modelContext
                         )
                     }
+                    inboxSuggestionFailureByItemID[item.id] = nil
                     inboxSuggestionInFlightIDs.remove(item.id)
                 }
             } catch {
                 await MainActor.run {
+                    inboxSuggestionFailureByItemID[item.id] = error.localizedDescription
                     if showsErrors {
                         errorMessage = error.localizedDescription
                     }
@@ -92,11 +97,15 @@ extension TimeTrackerStore {
     }
 
     private func shouldAutoSuggestInboxItem(_ item: InboxItem) -> Bool {
-        item.deletedAt == nil &&
-            item.isCompleted == false &&
-            item.suggestionGeneratedAt == nil &&
-            inboxSuggestion(for: item) == nil &&
-            !inboxSuggestionInFlightIDs.contains(item.id) &&
-            !item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        inboxSuggestionStateService.shouldAutoSuggest(
+            item: item,
+            suggestion: inboxSuggestionByItemID[item.id],
+            isInFlight: inboxSuggestionInFlightIDs.contains(item.id)
+        )
+    }
+
+    func retryInboxSuggestion(_ item: InboxItem) {
+        inboxSuggestionFailureByItemID[item.id] = nil
+        suggestInboxItem(item, showsErrors: true)
     }
 }

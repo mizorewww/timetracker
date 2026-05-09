@@ -42,6 +42,10 @@ struct TimeTrackerLiveActivityWidget: Widget {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                        Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
+                            Label(String(localized: "live.timer.stop"), systemImage: "stop.fill")
+                                .font(.caption2.weight(.semibold))
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -96,6 +100,15 @@ private struct LockScreenTimerView: View {
             Spacer(minLength: 8)
 
             TimerText(startedAt: context.state.startedAt, style: .lockScreen)
+
+            Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
+                Image(systemName: "stop.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(.white.opacity(0.16), in: Circle())
+                    .accessibilityLabel(String(localized: "live.timer.stop"))
+            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
@@ -153,4 +166,10 @@ private func activityColor(_ hex: String) -> Color {
     let green = Double((int >> 8) & 0xFF) / 255
     let blue = Double(int & 0xFF) / 255
     return Color(red: red, green: green, blue: blue)
+}
+
+private enum LiveActivityDeepLinks {
+    static func stopTimer(taskID: String) -> URL {
+        URL(string: "timetracker://timer/stop?taskID=\(taskID)")!
+    }
 }

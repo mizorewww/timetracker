@@ -162,6 +162,8 @@ struct CorePerformanceBudgetTests {
 
         #expect(snapshot.overlaps.isEmpty == false)
         #expect(snapshot.taskBreakdown.count == tasks.count)
+        #expect(snapshot.timeline.entries.isEmpty == false)
+        #expect(snapshot.todayActivity.contains { $0.totalSeconds > 0 })
         #expect(elapsed < 4.0)
     }
 

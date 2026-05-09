@@ -67,23 +67,19 @@ struct iPadRootView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         if columnVisibility == .detailOnly {
-                            Button {
+                            SidebarRevealButton {
                                 columnVisibility = .all
-                            } label: {
-                                Label(AppStrings.localized("sidebar.show"), systemImage: "sidebar.left")
-                                    .labelStyle(.iconOnly)
                             }
-                            .accessibilityLabel(AppStrings.localized("sidebar.show"))
                         }
                     }
 
                     ToolbarItem(placement: .automatic) {
-                        Button {
+                        InspectorToggleButton(
+                            isPresented: isInspectorPresented,
+                            isEnabled: inspectorIsRelevant
+                        ) {
                             isInspectorPresented.toggle()
-                        } label: {
-                            Image(systemName: "sidebar.right")
                         }
-                        .disabled(!inspectorIsRelevant)
                     }
                 }
                 .inspector(isPresented: inspectorBinding) {

@@ -88,6 +88,50 @@ struct InboxSuggestionBar: View {
     }
 }
 
+struct InboxSuggestionFailureBar: View {
+    let isCompact: Bool
+    let retry: () -> Void
+    let discard: () -> Void
+
+    var body: some View {
+        HStack(spacing: isCompact ? 8 : 10) {
+            Label {
+                Text(.app("inbox.suggestion.failed"))
+                    .lineLimit(1)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            Button(action: discard) {
+                Image(systemName: "xmark")
+                    .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
+                    .frame(width: isCompact ? 30 : 32, height: isCompact ? 30 : 32)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
+
+            Button(action: retry) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
+                    .frame(width: isCompact ? 30 : 32, height: isCompact ? 30 : 32)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+            .accessibilityLabel(AppStrings.localized("inbox.suggestion.retry"))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(InboxSuggestionBackground())
+    }
+}
+
 private struct InboxSuggestionBackground: View {
     var body: some View {
         RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)

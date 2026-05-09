@@ -88,19 +88,13 @@ struct AnalyticsMetricGrid: View {
 }
 
 struct AnalyticsRangeSection: View {
-    @ObservedObject var store: TimeTrackerStore
     let snapshot: AnalyticsSnapshot
     let range: AnalyticsRange
-    let now: Date
-
-    private var todaySegments: [TimeSegment] {
-        store.todaySegments
-    }
 
     var body: some View {
         if range == .today {
-            TodayActivityCard(store: store, segments: todaySegments, now: now)
-            OverlappingTimelineCard(store: store, segments: todaySegments, now: now)
+            TodayActivityCard(activity: snapshot.todayActivity)
+            OverlappingTimelineCard(timeline: snapshot.timeline)
             TaskDonutCard(
                 tasks: snapshot.taskBreakdown,
                 totalSeconds: max(snapshot.overview.grossSeconds, 1)

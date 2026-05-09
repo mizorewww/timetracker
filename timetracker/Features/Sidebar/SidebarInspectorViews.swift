@@ -113,7 +113,6 @@ struct SidebarTaskTreeRow: View {
     let task: TaskNode
     let row: TaskTreeRowModel
     @Binding var expansionState: TaskExpansionState
-    @State private var isPulsing = false
 
     var body: some View {
         taskLabel
@@ -167,15 +166,11 @@ struct SidebarTaskTreeRow: View {
                 .help(task.status.displayName)
         }
         .contentShape(Rectangle())
-        .scaleEffect(isPulsing ? 1.045 : 1)
-        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isPulsing)
-        .onChange(of: store.selectedTaskPulseToken) { _, _ in
-            guard store.selectedTaskPulseID == task.id else { return }
-            isPulsing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                isPulsing = false
-            }
-        }
+        .taskSelectionPulse(
+            selectedID: store.selectedTaskPulseID,
+            itemID: task.id,
+            pulseToken: store.selectedTaskPulseToken
+        )
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }

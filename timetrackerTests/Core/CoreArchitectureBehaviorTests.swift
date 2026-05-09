@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import timetracker
 
@@ -31,6 +32,10 @@ struct CoreArchitectureBehaviorTests {
         #expect(HomeLayoutPolicy(width: 600).isCompact)
         #expect(HomeLayoutPolicy(width: 900).usesHorizontalMetrics)
         #expect(AnalyticsLayoutPolicy(horizontalSizeClass: nil).showsPageTitleInContent)
+        #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).isCompact)
+        #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).cardCornerRadius == 28)
+        #expect(InboxLayoutPolicy(horizontalSizeClass: nil).cardCornerRadius == 24)
+        #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).rowBaseHeight == 78)
         #expect(SplitColumnLayoutPolicy.iPad.inspector == ColumnWidth(min: 240, ideal: 260, max: 320))
         #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))
     }

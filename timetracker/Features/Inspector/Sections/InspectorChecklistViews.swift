@@ -63,9 +63,7 @@ struct TaskChecklistPanel: View {
                                 iconName: store.checklistIconName(for: item),
                                 colorHex: store.checklistColorHex(for: item)
                             ) {
-                                withAnimation(.snappy(duration: 0.22)) {
-                                    store.toggleChecklistItem(item)
-                                }
+                                store.toggleChecklistItem(item)
                             }
                         }
                     }

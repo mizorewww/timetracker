@@ -1,0 +1,9 @@
+"watch.title" = "Time Tracker";
+"watch.active.title" = "Active Timers";
+"watch.recent.title" = "Recent Tasks";
+"watch.empty.title" = "No Active Timer";
+"watch.empty.message" = "Start a recent task from your watch or open the app on iPhone.";
+"watch.stop" = "Stop";
+"watch.status.reachable" = "iPhone reachable";
+"watch.status.queued" = "Commands will sync";
+"watch.elapsed.accessibility" = "Elapsed time";

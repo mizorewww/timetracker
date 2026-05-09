@@ -34,7 +34,6 @@ struct InspectorView: View {
 struct SelectedTaskHeader: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
-    @State private var isPulsing = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -53,14 +52,10 @@ struct SelectedTaskHeader: View {
             }
             .buttonStyle(.plain)
         }
-        .scaleEffect(isPulsing ? 1.045 : 1)
-        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isPulsing)
-        .onChange(of: store.selectedTaskPulseToken) { _, _ in
-            guard store.selectedTaskPulseID == task.id else { return }
-            isPulsing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                isPulsing = false
-            }
-        }
+        .taskSelectionPulse(
+            selectedID: store.selectedTaskPulseID,
+            itemID: task.id,
+            pulseToken: store.selectedTaskPulseToken
+        )
     }
 }

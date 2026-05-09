@@ -149,9 +149,13 @@
 "task.nameRequired" = "Task name is required.";
 "task.selectRequired" = "Choose a task.";
 "task.selectBeforePomodoro" = "Choose a task before starting a pomodoro.";
+"systemAction.error.taskNotFound" = "The selected task could not be found.";
 "time.endAfterStart" = "End time must be later than start time.";
 "sync.storage.iCloud" = "iCloud Storage";
 "sync.storage.local" = "Local Storage";
+"sync.storage.localFallback" = "Local fallback storage";
+"sync.storage.temporary" = "Temporary in-memory storage";
+"sync.storage.uiTest" = "UI test storage";
 "sync.refreshSummary" = "%@：%@. This device view has refreshed. If another device just changed data, the system will update this view after import finishes.";
 "sync.unchecked" = "Not checked";
 "sync.disabledMessage" = "iCloud Sync is off. The app will keep using local storage after restart.";
@@ -178,6 +182,8 @@
 "sync.state.failed.message" = "%@";
 "sync.state.localOnly.title" = "iCloud sync is off";
 "sync.state.localOnly.message" = "Your data is stored on this device. Turn iCloud on and restart to sync across devices.";
+"sync.state.temporary.title" = "Temporary storage is active";
+"sync.state.temporary.message" = "%@: persistent storage could not open. Changes made in this launch may not sync or persist. Details: %@";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";
@@ -445,6 +451,8 @@
 "inbox.suggestion.apply" = "Add to Task";
 "inbox.suggestion.discard" = "Discard Suggestion";
 "inbox.suggestion.generating" = "Suggesting automatically";
+"inbox.suggestion.failed" = "Suggestion unavailable";
+"inbox.suggestion.retry" = "Retry suggestion";
 "inbox.suggestion.prefix" = "Suggest";
 "inbox.suggestion.targetFormat" = "Suggested task: %@";
 "inbox.suggestion.editorTitle" = "Inbox Suggestion";

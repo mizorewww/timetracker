@@ -15,7 +15,6 @@ struct AnalyticsView: View {
                     store: store,
                     snapshot: snapshot,
                     range: $range,
-                    now: now,
                     horizontalSizeClass: horizontalSizeClass
                 )
             } else {
@@ -42,7 +41,6 @@ private struct AnalyticsContent: View {
     @ObservedObject var store: TimeTrackerStore
     let snapshot: AnalyticsSnapshot
     @Binding var range: AnalyticsRange
-    let now: Date
     let horizontalSizeClass: UserInterfaceSizeClass?
 
     private var layout: AnalyticsLayoutPolicy {
@@ -55,7 +53,7 @@ private struct AnalyticsContent: View {
                 AnalyticsHeader(range: $range, layout: layout)
                 AnalyticsMetricGrid(overview: snapshot.overview)
                 TaskForecastsCard(store: store)
-                AnalyticsRangeSection(store: store, snapshot: snapshot, range: range, now: now)
+                AnalyticsRangeSection(snapshot: snapshot, range: range)
                 AnalyticsOverlapCard(overlaps: snapshot.overlaps)
             }
             .padding()

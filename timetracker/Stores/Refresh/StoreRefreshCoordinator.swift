@@ -72,6 +72,11 @@ struct StoreRefreshCoordinator {
             store.syncLiveActivitiesIfAvailable()
         }
 
+        if plan.refreshLedger || plan.refreshTasks {
+            store.syncWidgetSnapshotIfAvailable()
+            store.syncWatchSnapshotIfAvailable()
+        }
+
         if plan.refreshInbox || plan.refreshTasks || plan.refreshPreferences {
             store.autoSuggestInboxItemsIfNeeded()
         }

@@ -36,6 +36,9 @@ struct PomodoroView: View {
             .padding()
         }
         .navigationTitle(AppStrings.pomodoro)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
         .background(AppColors.background)
         .onAppear {
             applyDefaultPreferences()

@@ -127,6 +127,144 @@ struct LLMSettingsTests {
     }
 
     @Test
+    func inboxSuggestionRejectsInvalidTaskIDs() throws {
+        let taskID = UUID()
+        let candidates = [
+            LLMTaskCandidate(
+                id: taskID,
+                title: "Design",
+                path: "Work / Design",
+                iconName: "paintbrush",
+                colorHex: "16A34A"
+            )
+        ]
+
+        do {
+            _ = try LLMInboxSuggestionService.sanitize(
+                payload: InboxSuggestionPayload(
+                    taskID: UUID().uuidString,
+                    reason: "wrong task",
+                    iconName: "book",
+                    colorHex: "16A34A"
+                ),
+                candidates: candidates,
+                modelID: "gpt-test"
+            )
+            Issue.record("Expected unknown task ID to be rejected")
+        } catch let error as LLMInboxSuggestionServiceError {
+            #expect(error == .noValidTask)
+        }
+
+        do {
+            _ = try LLMInboxSuggestionService.sanitize(
+                payload: InboxSuggestionPayload(
+                    taskID: "not-a-uuid",
+                    reason: "bad task ID",
+                    iconName: "book",
+                    colorHex: "16A34A"
+                ),
+                candidates: candidates,
+                modelID: "gpt-test"
+            )
+            Issue.record("Expected malformed task ID to be rejected")
+        } catch let error as LLMInboxSuggestionServiceError {
+            #expect(error == .noValidTask)
+        }
+    }
+
+    @Test
+    func fetchInboxSuggestionReportsMalformedContentAsInvalidResponse() async throws {
+        let taskID = UUID()
+        let service = LLMInboxSuggestionService { request in
+            let payload = """
+            {
+              "choices": [
+                { "message": { "content": "not json" } }
+              ]
+            }
+            """
+            let data = Data(payload.utf8)
+            let url = try #require(request.url)
+            let response = try #require(HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            ))
+            return (data, response)
+        }
+
+        do {
+            _ = try await service.suggest(
+                inboxTitle: "Read HIG",
+                candidates: [
+                    LLMTaskCandidate(
+                        id: taskID,
+                        title: "Study",
+                        path: "Study / UX",
+                        iconName: "book",
+                        colorHex: "16A34A"
+                    )
+                ],
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "gpt-test"
+            )
+            Issue.record("Expected malformed content to throw")
+        } catch let error as LLMInboxSuggestionServiceError {
+            #expect(error == .invalidResponse)
+        }
+    }
+
+    @Test
+    func fetchInboxSuggestionReportsMissingFieldsAsInvalidResponse() async throws {
+        let taskID = UUID()
+        let service = LLMInboxSuggestionService { request in
+            let payload = """
+            {
+              "choices": [
+                {
+                  "message": {
+                    "content": "{\\"taskID\\":\\"\(taskID.uuidString)\\"}"
+                  }
+                }
+              ]
+            }
+            """
+            let data = Data(payload.utf8)
+            let url = try #require(request.url)
+            let response = try #require(HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            ))
+            return (data, response)
+        }
+
+        do {
+            _ = try await service.suggest(
+                inboxTitle: "Read HIG",
+                candidates: [
+                    LLMTaskCandidate(
+                        id: taskID,
+                        title: "Study",
+                        path: "Study / UX",
+                        iconName: "book",
+                        colorHex: "16A34A"
+                    )
+                ],
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "gpt-test"
+            )
+            Issue.record("Expected missing content fields to throw")
+        } catch let error as LLMInboxSuggestionServiceError {
+            #expect(error == .invalidResponse)
+        }
+    }
+
+    @Test
     func fetchInboxSuggestionDecodesChatCompletionContent() async throws {
         let taskID = UUID()
         let service = LLMInboxSuggestionService { request in

@@ -12,7 +12,20 @@ struct SyncStatus {
     }
 
     var storageStatusText: String {
-        isCloudBacked ? "SwiftData + iCloud" : mode
+        switch mode {
+        case AppCloudSync.modeICloud:
+            return AppStrings.localized("sync.storage.iCloud")
+        case AppCloudSync.modeLocal:
+            return AppStrings.localized("sync.storage.local")
+        case AppCloudSync.modeLocalFallback:
+            return AppStrings.localized("sync.storage.localFallback")
+        case AppCloudSync.modeInMemoryFallback:
+            return AppStrings.localized("sync.storage.temporary")
+        case AppCloudSync.modeUITest:
+            return AppStrings.localized("sync.storage.uiTest")
+        default:
+            return mode
+        }
     }
 
     func feedback(
@@ -26,6 +39,18 @@ struct SyncStatus {
                 state: .syncing,
                 title: AppStrings.localized("sync.state.syncing.title"),
                 message: AppStrings.localized("sync.state.syncing.message")
+            )
+        }
+
+        if mode == AppCloudSync.modeInMemoryFallback {
+            return SyncFeedback(
+                state: .temporaryStore,
+                title: AppStrings.localized("sync.state.temporary.title"),
+                message: String(
+                    format: AppStrings.localized("sync.state.temporary.message"),
+                    storageStatusText,
+                    lastError?.isEmpty == false ? lastError! : accountStatus
+                )
             )
         }
 
@@ -86,6 +111,7 @@ enum SyncFeedbackState: Equatable {
     case needsRestart
     case failed
     case localOnly
+    case temporaryStore
 
     var symbolName: String {
         switch self {
@@ -103,6 +129,8 @@ enum SyncFeedbackState: Equatable {
             return "exclamationmark.icloud"
         case .localOnly:
             return "externaldrive"
+        case .temporaryStore:
+            return "externaldrive.badge.exclamationmark"
         }
     }
 }

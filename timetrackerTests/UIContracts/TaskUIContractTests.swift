@@ -24,12 +24,18 @@ struct TaskUIContractTests {
     func longTaskAndAnalyticsPagesUseInlineTitlesToAvoidScrollJitter() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let pomodoroSource = try sourceText("timetracker/Features/Pomodoro/PomodoroViews.swift")
+        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
 
         #expect(tasksSource.contains(".navigationTitle(AppStrings.tasks)"))
         #expect(tasksSource.contains(".navigationBarTitleDisplayMode(.inline)"))
         #expect(tasksSource.contains("store.presentNewTask(preservingDestination: .tasks)"))
         #expect(analyticsSource.contains(".navigationTitle(AppStrings.analytics)"))
         #expect(analyticsSource.contains(".navigationBarTitleDisplayMode(.inline)"))
+        #expect(pomodoroSource.contains(".navigationTitle(AppStrings.pomodoro)"))
+        #expect(pomodoroSource.contains(".navigationBarTitleDisplayMode(.inline)"))
+        #expect(settingsSource.contains(".navigationTitle(AppStrings.settings)"))
+        #expect(settingsSource.contains(".navigationBarTitleDisplayMode(.inline)"))
     }
 
     @Test
@@ -123,9 +129,10 @@ struct TaskUIContractTests {
         #expect(sharedSource.contains("struct ChecklistDisplayRow"))
         #expect(sharedSource.contains("struct InlineChecklistAddRow"))
         #expect(editorSource.contains("ChecklistCompletionButton"))
-        #expect(editorSource.contains("withAnimation(.snappy"))
-        #expect(sharedSource.contains(".symbolEffect(.bounce, value: isCompleted)"))
-        #expect(sharedSource.contains(".animation(.snappy"))
+        #expect(sharedSource.contains(".symbolEffect(.bounce, value: isCompleted)") == false)
+        #expect(sharedSource.contains(".animation(.snappy") == false)
+        #expect(editorSource.contains("withAnimation(.snappy") == false)
+        #expect(editorSource.contains(".animation(.snappy") == false)
         #expect(sharedSource.contains(".lineLimit(nil)"))
         #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.checklist.itemPlaceholder\"), text: $item.title, axis: .vertical)"))
         #expect(editorSource.contains("EditButton()") == false)
@@ -140,7 +147,7 @@ struct TaskUIContractTests {
         #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
         #expect(inspectorSource.contains("private struct ChecklistDisplayRow") == false)
         #expect(inspectorSource.contains("private struct InlineChecklistAddRow") == false)
-        #expect(inspectorSource.contains("withAnimation(.snappy"))
+        #expect(inspectorSource.contains("withAnimation(.snappy") == false)
         #expect(inspectorSource.contains("showsAllItems"))
         #expect(inspectorSource.contains("EditButton()") == false)
         #expect(inspectorSource.contains("List {") == false)

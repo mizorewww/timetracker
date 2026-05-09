@@ -1,3 +1,4 @@
 "live.timer.defaultPath" = "正在記錄時間";
 "live.timer.additionalFormat" = "另有 %d 個";
 "live.timer.elapsed" = "已計時";
+"live.timer.stop" = "停止";

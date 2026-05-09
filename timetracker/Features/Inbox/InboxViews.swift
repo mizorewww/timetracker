@@ -16,32 +16,47 @@ struct InboxView: View {
         store.completedInboxItems
     }
 
-    private var isCompact: Bool {
+    private var layout: InboxLayoutPolicy {
         #if os(iOS)
-        horizontalSizeClass == .compact
+        InboxLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
         #else
-        false
+        InboxLayoutPolicy(horizontalSizeClass: nil)
         #endif
+    }
+
+    private var isCompact: Bool {
+        layout.isCompact
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: isCompact ? 14 : 24) {
+            VStack(alignment: .leading, spacing: layout.contentSpacing) {
                 header
                 inboxCard
                 footerHint
             }
-            .frame(maxWidth: isCompact ? .infinity : 1100, alignment: .leading)
-            .padding(.horizontal, isCompact ? 28 : 34)
-            .padding(.top, isCompact ? 18 : 28)
+            .frame(maxWidth: layout.contentMaxWidth ?? .infinity, alignment: .leading)
+            .padding(.horizontal, layout.pageHorizontalPadding)
+            .padding(.top, layout.pageTopPadding)
             .padding(.bottom, 34)
         }
         .scrollContentBackground(.hidden)
         .background(AppColors.background.ignoresSafeArea())
-        .navigationTitle(isCompact ? "" : AppStrings.inbox)
+        .navigationTitle(AppStrings.inbox)
         #if os(iOS)
-        .toolbar(isCompact ? .hidden : .visible, for: .navigationBar)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(isCompact ? .large : .inline)
+        .toolbar {
+            if isCompact {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        addFocusToken += 1
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel(AppStrings.localized("inbox.add"))
+                }
+            }
+        }
         #endif
     }
 
@@ -54,36 +69,36 @@ struct InboxView: View {
                 isCompact: isCompact,
                 submit: submitDraft
             )
-            .padding(.horizontal, isCompact ? 14 : 18)
-            .padding(.top, isCompact ? 14 : 18)
-            .padding(.bottom, isCompact ? 16 : 18)
+            .padding(.horizontal, layout.cardHorizontalPadding)
+            .padding(.top, layout.captureTopPadding)
+            .padding(.bottom, layout.captureBottomPadding)
 
             if openItems.isEmpty && completedItems.isEmpty {
                 Divider()
-                    .padding(.horizontal, isCompact ? 14 : 18)
+                    .padding(.horizontal, layout.cardHorizontalPadding)
                 EmptyStateRow(
                     title: AppStrings.localized("inbox.empty"),
                     icon: "tray"
                 )
-                .padding(.horizontal, isCompact ? 14 : 18)
+                .padding(.horizontal, layout.cardHorizontalPadding)
                 .padding(.vertical, 24)
             } else {
                 Divider()
-                    .padding(.horizontal, isCompact ? 14 : 18)
+                    .padding(.horizontal, layout.cardHorizontalPadding)
                 InboxListView(
                     store: store,
                     openItems: openItems,
                     completedItems: completedItems,
-                    isCompact: isCompact
+                    layout: layout
                 )
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: isCompact ? 28 : 24, style: .continuous)
+            RoundedRectangle(cornerRadius: layout.cardCornerRadius, style: .continuous)
                 .fill(AppColors.cardBackground)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: isCompact ? 28 : 24, style: .continuous)
+            RoundedRectangle(cornerRadius: layout.cardCornerRadius, style: .continuous)
                 .stroke(AppColors.border.opacity(0.55))
         }
     }
@@ -91,10 +106,7 @@ struct InboxView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: isCompact ? 8 : 12) {
-                if isCompact {
-                    Text(AppStrings.inbox)
-                        .font(.largeTitle.bold())
-                } else {
+                if !isCompact {
                     Label {
                         Text(AppStrings.inbox)
                             .font(.title.bold())
@@ -115,17 +127,19 @@ struct InboxView: View {
 
             Spacer(minLength: 12)
 
-            Button {
-                addFocusToken += 1
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: isCompact ? 23 : 20, weight: .regular))
-                    .foregroundStyle(.blue)
-                    .frame(width: isCompact ? 54 : 44, height: isCompact ? 54 : 44)
-                    .background(.regularMaterial, in: Circle())
+            if !isCompact {
+                Button {
+                    addFocusToken += 1
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(.blue)
+                        .frame(width: 44, height: 44)
+                        .background(.regularMaterial, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(AppStrings.localized("inbox.add"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(AppStrings.localized("inbox.add"))
         }
     }
 

@@ -41,13 +41,12 @@ struct DesktopRootView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .automatic) {
-                    Button {
+                    InspectorToggleButton(
+                        isPresented: isInspectorPresented,
+                        isEnabled: inspectorIsRelevant
+                    ) {
                         isInspectorPresented.toggle()
-                    } label: {
-                        Image(systemName: "sidebar.right")
                     }
-                    .help(isInspectorPresented ? AppStrings.localized("inspector.hide") : AppStrings.localized("inspector.show"))
-                    .disabled(!inspectorIsRelevant)
                 }
             }
             .inspector(isPresented: inspectorBinding) {

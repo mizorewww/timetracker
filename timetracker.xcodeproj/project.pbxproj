@@ -10,6 +10,12 @@
 		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E40100000000000000000001 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
 		E40100000000000000000002 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
+		E60000000000000000000001 /* timetrackerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E60000000000000000000002 /* timetrackerWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E6000000000000000000000F /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */; };
+		E70000000000000000000001 /* timetracker/Shared/WatchCommandModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000005 /* timetracker/Shared/WatchCommandModels.swift */; };
+		E70000000000000000000002 /* timetracker/Shared/WatchStateSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */; };
+		E70000000000000000000003 /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */; };
+		E70000000000000000000004 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000007 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +40,13 @@
 			remoteGlobalIDString = E20000000000000000000007;
 			remoteInfo = timetrackerLiveActivityExtension;
 		};
+		E60000000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D41D8E862F9CC4B50024913B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E60000000000000000000007;
+			remoteInfo = timetrackerWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -44,6 +57,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed Foundation Extensions */,
+				E60000000000000000000001 /* timetrackerWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -56,6 +70,12 @@
 		D41D8EA92F9CC4B60024913B /* timetrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = timetrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = timetrackerLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLiveActivity/TimeTrackingActivityAttributes.swift; sourceTree = "<group>"; };
+		E60000000000000000000002 /* timetrackerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = timetrackerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WidgetSnapshotModels.swift; sourceTree = "<group>"; };
+		E70000000000000000000005 /* timetracker/Shared/WatchCommandModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WatchCommandModels.swift; sourceTree = "<group>"; };
+		E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WatchStateSnapshotModels.swift; sourceTree = "<group>"; };
+		E70000000000000000000007 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift; sourceTree = "<group>"; };
+		E70000000000000000000009 /* timetrackerWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = timetrackerWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -72,6 +92,14 @@
 				Info.plist,
 			);
 			target = E20000000000000000000007 /* timetrackerLiveActivityExtension */;
+		};
+		E60000000000000000000005 /* Exceptions for "timetrackerWidgetExtension" folder in "timetrackerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				timetrackerWidgetExtension.entitlements,
+			);
+			target = E60000000000000000000007 /* timetrackerWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -100,6 +128,19 @@
 				E2000000000000000000000E /* Exceptions for "timetrackerLiveActivityExtension" folder in "timetrackerLiveActivityExtension" target */,
 			);
 			path = timetrackerLiveActivityExtension;
+			sourceTree = "<group>";
+		};
+		E60000000000000000000006 /* timetrackerWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E60000000000000000000005 /* Exceptions for "timetrackerWidgetExtension" folder in "timetrackerWidgetExtension" target */,
+			);
+			path = timetrackerWidgetExtension;
+			sourceTree = "<group>";
+		};
+		E70000000000000000000008 /* timetrackerWatchApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = timetrackerWatchApp;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -133,6 +174,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E60000000000000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7000000000000000000000A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -141,7 +196,13 @@
 			children = (
 				D41D8E902F9CC4B50024913B /* timetracker */,
 				E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */,
+				E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */,
+				E70000000000000000000005 /* timetracker/Shared/WatchCommandModels.swift */,
+				E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */,
+				E70000000000000000000007 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift */,
 				E20000000000000000000006 /* timetrackerLiveActivityExtension */,
+				E60000000000000000000006 /* timetrackerWidgetExtension */,
+				E70000000000000000000008 /* timetrackerWatchApp */,
 				D41D8EA22F9CC4B60024913B /* timetrackerTests */,
 				D41D8EAC2F9CC4B60024913B /* timetrackerUITests */,
 				D41D8E8F2F9CC4B50024913B /* Products */,
@@ -153,6 +214,8 @@
 			children = (
 				D41D8E8E2F9CC4B50024913B /* timetracker.app */,
 				E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */,
+				E60000000000000000000002 /* timetrackerWidgetExtension.appex */,
+				E70000000000000000000009 /* timetrackerWatchApp.app */,
 				D41D8E9F2F9CC4B60024913B /* timetrackerTests.xctest */,
 				D41D8EA92F9CC4B60024913B /* timetrackerUITests.xctest */,
 			);
@@ -176,6 +239,7 @@
 			);
 			dependencies = (
 				E20000000000000000000004 /* PBXTargetDependency */,
+				E60000000000000000000004 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D41D8E902F9CC4B50024913B /* timetracker */,
@@ -255,6 +319,50 @@
 			productReference = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		E60000000000000000000007 /* timetrackerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E6000000000000000000000B /* Build configuration list for PBXNativeTarget "timetrackerWidgetExtension" */;
+			buildPhases = (
+				E60000000000000000000008 /* Sources */,
+				E60000000000000000000009 /* Frameworks */,
+				E6000000000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E60000000000000000000006 /* timetrackerWidgetExtension */,
+			);
+			name = timetrackerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = timetrackerWidgetExtension;
+			productReference = E60000000000000000000002 /* timetrackerWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E7000000000000000000000D /* timetrackerWatchApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E7000000000000000000000E /* Build configuration list for PBXNativeTarget "timetrackerWatchApp" */;
+			buildPhases = (
+				E7000000000000000000000B /* Sources */,
+				E7000000000000000000000A /* Frameworks */,
+				E7000000000000000000000C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E70000000000000000000008 /* timetrackerWatchApp */,
+			);
+			name = timetrackerWatchApp;
+			packageProductDependencies = (
+			);
+			productName = timetrackerWatchApp;
+			productReference = E70000000000000000000009 /* timetrackerWatchApp.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -279,6 +387,12 @@
 					E20000000000000000000007 = {
 						CreatedOnToolsVersion = 26.3;
 					};
+					E60000000000000000000007 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					E7000000000000000000000D = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = D41D8E892F9CC4B50024913B /* Build configuration list for PBXProject "timetracker" */;
@@ -299,6 +413,8 @@
 			targets = (
 				D41D8E8D2F9CC4B50024913B /* timetracker */,
 				E20000000000000000000007 /* timetrackerLiveActivityExtension */,
+				E60000000000000000000007 /* timetrackerWidgetExtension */,
+				E7000000000000000000000D /* timetrackerWatchApp */,
 				D41D8E9E2F9CC4B60024913B /* timetrackerTests */,
 				D41D8EA82F9CC4B60024913B /* timetrackerUITests */,
 			);
@@ -328,6 +444,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E2000000000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E6000000000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7000000000000000000000C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -392,6 +522,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E60000000000000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E6000000000000000000000F /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7000000000000000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E70000000000000000000001 /* timetracker/Shared/WatchCommandModels.swift in Sources */,
+				E70000000000000000000002 /* timetracker/Shared/WatchStateSnapshotModels.swift in Sources */,
+				E70000000000000000000003 /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */,
+				E70000000000000000000004 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -410,6 +559,11 @@
 			target = E20000000000000000000007 /* timetrackerLiveActivityExtension */;
 			targetProxy = E20000000000000000000003 /* PBXContainerItemProxy */;
 		};
+		E60000000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E60000000000000000000007 /* timetrackerWidgetExtension */;
+			targetProxy = E60000000000000000000003 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -420,7 +574,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = timetracker/timetracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				ENABLE_APP_SANDBOX = YES;
@@ -445,7 +599,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -470,7 +624,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = timetracker/timetracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				ENABLE_APP_SANDBOX = YES;
@@ -495,7 +649,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -640,13 +794,13 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -667,13 +821,13 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -693,13 +847,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -719,13 +873,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -746,7 +900,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
@@ -756,7 +910,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -777,7 +931,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
@@ -787,7 +941,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.23;
+				MARKETING_VERSION = 1.1.24;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -800,6 +954,126 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E6000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = timetrackerWidgetExtension/timetrackerWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 79;
+				DEVELOPMENT_TEAM = LT98S43NKA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = timetrackerWidgetExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.24;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.WidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E6000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = timetrackerWidgetExtension/timetrackerWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 79;
+				DEVELOPMENT_TEAM = LT98S43NKA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = timetrackerWidgetExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.24;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.WidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E7000000000000000000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 79;
+				DEVELOPMENT_TEAM = LT98S43NKA;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Time Tracker";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = me.mezorewww.timetracker;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.1.24;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		E70000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 79;
+				DEVELOPMENT_TEAM = LT98S43NKA;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Time Tracker";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = me.mezorewww.timetracker;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.1.24;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
 		};
@@ -847,6 +1121,24 @@
 			buildConfigurations = (
 				E2000000000000000000000C /* Debug */,
 				E2000000000000000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E6000000000000000000000B /* Build configuration list for PBXNativeTarget "timetrackerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E6000000000000000000000C /* Debug */,
+				E6000000000000000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E7000000000000000000000E /* Build configuration list for PBXNativeTarget "timetrackerWatchApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E7000000000000000000000F /* Debug */,
+				E70000000000000000000010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

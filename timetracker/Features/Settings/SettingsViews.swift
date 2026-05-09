@@ -96,6 +96,9 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .navigationTitle(AppStrings.settings)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
         .accessibilityIdentifier("settings.view")
         .onAppear(perform: fetchLLMModelsIfNeeded)
         .fileExporter(

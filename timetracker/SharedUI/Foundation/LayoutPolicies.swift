@@ -40,11 +40,7 @@ struct SizeClassLayoutPolicy {
     let horizontalSizeClass: UserInterfaceSizeClass?
 
     var isCompactPhone: Bool {
-        #if os(iOS)
         horizontalSizeClass == .compact
-        #else
-        false
-        #endif
     }
 }
 
@@ -57,6 +53,62 @@ struct AnalyticsLayoutPolicy {
 
     var showsPageTitleInContent: Bool {
         !sizeClassPolicy.isCompactPhone
+    }
+}
+
+struct InboxLayoutPolicy {
+    private let sizeClassPolicy: SizeClassLayoutPolicy
+
+    init(horizontalSizeClass: UserInterfaceSizeClass?) {
+        sizeClassPolicy = SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
+    }
+
+    var isCompact: Bool {
+        sizeClassPolicy.isCompactPhone
+    }
+
+    var contentMaxWidth: CGFloat? {
+        isCompact ? nil : 1100
+    }
+
+    var contentSpacing: CGFloat {
+        isCompact ? 14 : 24
+    }
+
+    var pageHorizontalPadding: CGFloat {
+        isCompact ? 28 : 34
+    }
+
+    var pageTopPadding: CGFloat {
+        isCompact ? 6 : 28
+    }
+
+    var cardCornerRadius: CGFloat {
+        isCompact ? 28 : 24
+    }
+
+    var cardHorizontalPadding: CGFloat {
+        isCompact ? 14 : 18
+    }
+
+    var captureTopPadding: CGFloat {
+        isCompact ? 14 : 18
+    }
+
+    var captureBottomPadding: CGFloat {
+        isCompact ? 16 : 18
+    }
+
+    var rowVerticalPadding: CGFloat {
+        isCompact ? 8 : 10
+    }
+
+    var rowBaseHeight: CGFloat {
+        isCompact ? 78 : 82
+    }
+
+    var suggestedRowHeight: CGFloat {
+        isCompact ? 142 : 132
     }
 }
 

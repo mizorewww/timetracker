@@ -149,9 +149,13 @@
 "task.nameRequired" = "任务名称不能为空。";
 "task.selectRequired" = "请选择任务。";
 "task.selectBeforePomodoro" = "请选择一个任务再开始番茄钟。";
+"systemAction.error.taskNotFound" = "找不到所选任务。";
 "time.endAfterStart" = "结束时间必须晚于开始时间。";
 "sync.storage.iCloud" = "iCloud 存储";
 "sync.storage.local" = "本地存储";
+"sync.storage.localFallback" = "本地备用存储";
+"sync.storage.temporary" = "临时内存存储";
+"sync.storage.uiTest" = "UI 测试存储";
 "sync.refreshSummary" = "%@：%@。已刷新本机视图；若另一台设备刚写入，系统完成导入后这里会自动更新。";
 "sync.unchecked" = "未检查";
 "sync.disabledMessage" = "用户已关闭 iCloud 同步，下次启动继续使用本地存储。";
@@ -178,6 +182,8 @@
 "sync.state.failed.message" = "%@";
 "sync.state.localOnly.title" = "iCloud 同步已关闭";
 "sync.state.localOnly.message" = "数据会存储在这台设备上。打开 iCloud 并重启后可跨设备同步。";
+"sync.state.temporary.title" = "正在使用临时存储";
+"sync.state.temporary.message" = "%@：持久化存储无法打开。本次启动中的改动可能不会同步或保留。详情：%@";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";
@@ -445,6 +451,8 @@
 "inbox.suggestion.apply" = "添加到任务";
 "inbox.suggestion.discard" = "丢弃建议";
 "inbox.suggestion.generating" = "正在自动推荐";
+"inbox.suggestion.failed" = "暂时无法推荐";
+"inbox.suggestion.retry" = "重试推荐";
 "inbox.suggestion.prefix" = "Suggest";
 "inbox.suggestion.targetFormat" = "推荐任务：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推荐";

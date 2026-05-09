@@ -44,5 +44,6 @@ extension TimeTrackerStore {
                 context: modelContext
             )
         }
+        inboxSuggestionFailureByItemID[item.id] = nil
     }
 }

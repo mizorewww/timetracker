@@ -1,0 +1,7 @@
+"widget.active.displayName" = "Active Timers";
+"widget.active.description" = "See the timer currently running in Time Tracker.";
+"widget.active.more" = "+%d more running";
+"widget.empty.title" = "No active timer";
+"widget.empty.message" = "Start tracking from Time Tracker.";
+"widget.action.start" = "Start Timer";
+"widget.quickStart.title" = "Quick Start";

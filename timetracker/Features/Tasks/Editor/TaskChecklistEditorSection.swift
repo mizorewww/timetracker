@@ -17,9 +17,7 @@ struct TaskChecklistEditorSection: View {
                 Text(.app("editor.checklist.title"))
                 Spacer()
                 Button(isSorting ? AppStrings.done : AppStrings.localized("common.sort")) {
-                    withAnimation(.snappy(duration: 0.2)) {
-                        isSorting.toggle()
-                    }
+                    isSorting.toggle()
                 }
                 .font(.caption)
                 .buttonStyle(.borderless)
@@ -51,7 +49,6 @@ struct TaskChecklistEditorSection: View {
             )
         }
         .onMove(perform: moveChecklistItems)
-        .animation(.snappy(duration: 0.2), value: rowAnimationSignature)
     }
 
     private var addButton: some View {
@@ -71,10 +68,6 @@ struct TaskChecklistEditorSection: View {
                 sourceIndex: sourceIndex
             )
         }
-    }
-
-    private var rowAnimationSignature: [UUID] {
-        rowPlacements.map(\.id)
     }
 
     private func moveChecklistItem(visualIndex: Int, direction: Int) {
@@ -100,9 +93,7 @@ struct TaskChecklistEditorSection: View {
 
     private func deleteChecklistItem(at index: Int) {
         guard checklistItems.indices.contains(index) else { return }
-        withAnimation(.snappy(duration: 0.2)) {
-            _ = checklistItems.remove(at: index)
-        }
+        _ = checklistItems.remove(at: index)
     }
 }
 

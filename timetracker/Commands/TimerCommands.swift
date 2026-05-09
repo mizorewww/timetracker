@@ -12,7 +12,8 @@ struct TimerCommandHandler {
         pausedSessions: [TimeSession],
         pomodoroRuns: [PomodoroRun],
         timeRepository: TimeTrackingRepository,
-        context: ModelContext?
+        context: ModelContext?,
+        source: TimeSessionSource = .timer
     ) throws {
         if activeSegments.contains(where: { $0.taskID == taskID && $0.endedAt == nil && $0.deletedAt == nil }) {
             return
@@ -31,7 +32,7 @@ struct TimerCommandHandler {
             try pomodoroCommandHandler.resumeIfNeeded(sessionID: pausedSession.id, runs: pomodoroRuns, context: context)
             return
         }
-        _ = try StartTaskUseCase(repository: timeRepository).execute(taskID: taskID, source: .timer)
+        _ = try StartTaskUseCase(repository: timeRepository).execute(taskID: taskID, source: source)
     }
 
     func stop(segment: TimeSegment, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {

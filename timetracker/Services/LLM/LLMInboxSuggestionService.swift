@@ -78,8 +78,14 @@ struct LLMInboxSuggestionService {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
 
-        let payload = try JSONDecoder().decode(InboxSuggestionPayload.self, from: contentData)
-        return try Self.sanitize(payload: payload, candidates: candidates, modelID: modelID)
+        do {
+            let payload = try JSONDecoder().decode(InboxSuggestionPayload.self, from: contentData)
+            return try Self.sanitize(payload: payload, candidates: candidates, modelID: modelID)
+        } catch let error as LLMInboxSuggestionServiceError {
+            throw error
+        } catch {
+            throw LLMInboxSuggestionServiceError.invalidResponse
+        }
     }
 
     func suggestionRequest(

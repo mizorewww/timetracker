@@ -16,6 +16,12 @@ struct ContentView: View {
         }
         .task {
             store.configureIfNeeded(context: modelContext)
+            #if os(iOS) && canImport(WatchConnectivity)
+            WatchConnectivityBridge.shared.commandHandler = { command in
+                store.handleWatchCommand(command)
+            }
+            WatchConnectivityBridge.shared.activateIfSupported()
+            #endif
             store.refreshQuietly()
         }
         .task(id: scenePhase) {
@@ -30,6 +36,9 @@ struct ContentView: View {
                     store.refreshQuietly()
                 }
             }
+        }
+        .onOpenURL { url in
+            store.handleDeepLink(url)
         }
         .preferredColorScheme(appColorScheme)
         .alert(Text(.app("error.title")), isPresented: errorBinding) {
@@ -54,6 +63,17 @@ struct ContentView: View {
         .sheet(item: $store.inboxSuggestionEditorDraft) { draft in
             InboxSuggestionEditorSheet(store: store, initialDraft: draft)
         }
+        #if os(iOS)
+        .sheet(isPresented: $store.isStartTaskPickerPresented) {
+            NavigationStack {
+                TaskStartPicker(store: store) {
+                    store.isStartTaskPickerPresented = false
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationBackground(.regularMaterial)
+        }
+        #endif
         #if os(macOS)
         .focusedSceneValue(\.newTaskAction) {
             store.presentNewTask()

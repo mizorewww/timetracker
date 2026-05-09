@@ -1,0 +1,7 @@
+"widget.active.displayName" = "正在計時";
+"widget.active.description" = "查看 Time Tracker 目前正在執行的計時。";
+"widget.active.more" = "另有 %d 個正在執行";
+"widget.empty.title" = "沒有正在計時";
+"widget.empty.message" = "在 Time Tracker 中開始記錄。";
+"widget.action.start" = "開始計時";
+"widget.quickStart.title" = "快速開始";

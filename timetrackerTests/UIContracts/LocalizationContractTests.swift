@@ -37,11 +37,47 @@ struct LocalizationContractTests {
     }
 
     @Test
+    func widgetExtensionLocalizationFilesExposeTheSameKeys() throws {
+        let projectRoot = try projectRootURL()
+        let locales = ["en", "zh-Hans", "zh-Hant"]
+        let keySets = try locales.map { locale -> Set<String> in
+            let path = projectRoot.appending(path: "timetrackerWidgetExtension/\(locale).lproj/Localizable.strings").path
+            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
+            #expect(dictionary.isEmpty == false)
+            return Set(dictionary.keys)
+        }
+
+        let reference = try #require(keySets.first)
+        for keys in keySets.dropFirst() {
+            #expect(keys == reference)
+        }
+    }
+
+    @Test
+    func watchAppLocalizationFilesExposeTheSameKeys() throws {
+        let projectRoot = try projectRootURL()
+        let locales = ["en", "zh-Hans", "zh-Hant"]
+        let keySets = try locales.map { locale -> Set<String> in
+            let path = projectRoot.appending(path: "timetrackerWatchApp/\(locale).lproj/Localizable.strings").path
+            let dictionary = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
+            #expect(dictionary.isEmpty == false)
+            return Set(dictionary.keys)
+        }
+
+        let reference = try #require(keySets.first)
+        for keys in keySets.dropFirst() {
+            #expect(keys == reference)
+        }
+    }
+
+    @Test
     func swiftSourcesDoNotContainHardCodedChineseText() throws {
         let projectRoot = try projectRootURL()
         let sourceRoots = [
             projectRoot.appending(path: "timetracker"),
             projectRoot.appending(path: "timetrackerLiveActivityExtension"),
+            projectRoot.appending(path: "timetrackerWidgetExtension"),
+            projectRoot.appending(path: "timetrackerWatchApp"),
             projectRoot.appending(path: "SharedLiveActivity")
         ]
         let swiftFiles = try sourceRoots.flatMap { sourceRoot -> [URL] in

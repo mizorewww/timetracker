@@ -27,11 +27,13 @@ extension TimeTrackerStore {
             try inboxCommandHandler.updateTitle(item, title: title, context: modelContext)
         }
         if didUpdate, !newTitle.isEmpty, newTitle != oldTitle {
+            inboxSuggestionFailureByItemID[item.id] = nil
             suggestInboxItem(item, showsErrors: false)
         }
     }
 
     func deleteInboxItem(_ item: InboxItem) {
+        inboxSuggestionFailureByItemID[item.id] = nil
         perform(event: .inboxChanged(itemIDs: [item.id])) {
             guard let modelContext else { throw StoreError.notConfigured }
             try inboxCommandHandler.softDelete(item, context: modelContext)
@@ -39,6 +41,7 @@ extension TimeTrackerStore {
     }
 
     func discardInboxSuggestion(_ item: InboxItem) {
+        inboxSuggestionFailureByItemID[item.id] = nil
         perform(event: .inboxChanged(itemIDs: [item.id])) {
             guard let modelContext else { throw StoreError.notConfigured }
             try inboxCommandHandler.discardSuggestion(item, context: modelContext)

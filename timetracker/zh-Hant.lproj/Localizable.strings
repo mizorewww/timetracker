@@ -149,9 +149,13 @@
 "task.nameRequired" = "任務名稱不能為空。";
 "task.selectRequired" = "請選擇任務。";
 "task.selectBeforePomodoro" = "請先選擇一個任務再開始番茄鐘。";
+"systemAction.error.taskNotFound" = "找不到所選任務。";
 "time.endAfterStart" = "結束時間必須晚於開始時間。";
 "sync.storage.iCloud" = "iCloud 儲存";
 "sync.storage.local" = "本機儲存";
+"sync.storage.localFallback" = "本機備用儲存";
+"sync.storage.temporary" = "暫時記憶體儲存";
+"sync.storage.uiTest" = "UI 測試儲存";
 "sync.refreshSummary" = "%@：%@。已重新整理本機視圖；若另一台裝置剛寫入，系統完成匯入後這裡會自動更新。";
 "sync.unchecked" = "未檢查";
 "sync.disabledMessage" = "使用者已關閉 iCloud 同步，下次啟動繼續使用本機儲存。";
@@ -178,6 +182,8 @@
 "sync.state.failed.message" = "%@";
 "sync.state.localOnly.title" = "iCloud 同步已關閉";
 "sync.state.localOnly.message" = "資料會儲存在這台裝置上。打開 iCloud 並重新啟動後可跨裝置同步。";
+"sync.state.temporary.title" = "正在使用暫時儲存";
+"sync.state.temporary.message" = "%@：持久化儲存無法打開。本次啟動中的改動可能不會同步或保留。詳情：%@";
 "tab.home" = "首頁";
 "sidebar.show" = "顯示側邊欄";
 "sidebar.hide" = "隱藏側邊欄";
@@ -445,6 +451,8 @@
 "inbox.suggestion.apply" = "加入任務";
 "inbox.suggestion.discard" = "丟棄推薦";
 "inbox.suggestion.generating" = "正在自動推薦";
+"inbox.suggestion.failed" = "暫時無法推薦";
+"inbox.suggestion.retry" = "重試推薦";
 "inbox.suggestion.prefix" = "Suggest";
 "inbox.suggestion.targetFormat" = "推薦任務：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推薦";

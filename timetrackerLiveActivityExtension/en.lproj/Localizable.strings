@@ -1,3 +1,4 @@
 "live.timer.defaultPath" = "Tracking time";
 "live.timer.additionalFormat" = "%d more";
 "live.timer.elapsed" = "Elapsed";
+"live.timer.stop" = "Stop";

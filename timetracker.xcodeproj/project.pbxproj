@@ -16,6 +16,7 @@
 		E70000000000000000000002 /* timetracker/Shared/WatchStateSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */; };
 		E70000000000000000000003 /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */; };
 		E70000000000000000000004 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000007 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift */; };
+		E70100000000000000000001 /* timetrackerWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = E70000000000000000000009 /* timetrackerWatchApp.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,13 @@
 			remoteGlobalIDString = E60000000000000000000007;
 			remoteInfo = timetrackerWidgetExtension;
 		};
+		E70100000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D41D8E862F9CC4B50024913B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E7000000000000000000000D;
+			remoteInfo = timetrackerWatchApp;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -60,6 +68,17 @@
 				E60000000000000000000001 /* timetrackerWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E70100000000000000000003 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				E70100000000000000000001 /* timetrackerWatchApp.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -97,7 +116,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				timetrackerWidgetExtension.entitlements,
 			);
 			target = E60000000000000000000007 /* timetrackerWidgetExtension */;
 		};
@@ -234,12 +252,14 @@
 				D41D8E8C2F9CC4B50024913B /* Resources */,
 				E30000000000000000000001 /* Write Build Info */,
 				E20000000000000000000005 /* Embed Foundation Extensions */,
+				E70100000000000000000003 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				E20000000000000000000004 /* PBXTargetDependency */,
 				E60000000000000000000004 /* PBXTargetDependency */,
+				E70100000000000000000004 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D41D8E902F9CC4B50024913B /* timetracker */,
@@ -564,6 +584,11 @@
 			target = E60000000000000000000007 /* timetrackerWidgetExtension */;
 			targetProxy = E60000000000000000000003 /* PBXContainerItemProxy */;
 		};
+		E70100000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E7000000000000000000000D /* timetrackerWatchApp */;
+			targetProxy = E70100000000000000000002 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -574,7 +599,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = timetracker/timetracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				ENABLE_APP_SANDBOX = YES;
@@ -585,6 +610,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = timetracker/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -599,7 +625,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -624,7 +650,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = timetracker/timetracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				ENABLE_APP_SANDBOX = YES;
@@ -635,6 +661,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = timetracker/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -649,7 +676,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -794,13 +821,13 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -821,13 +848,13 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -847,13 +874,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -873,13 +900,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetrackerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -900,7 +927,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
@@ -910,7 +937,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -931,7 +958,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = timetrackerLiveActivityExtension/Info.plist;
@@ -941,7 +968,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.LiveActivityExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -963,7 +990,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = timetrackerWidgetExtension/timetrackerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = timetrackerWidgetExtension/Info.plist;
@@ -973,7 +1000,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.WidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -995,7 +1022,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = timetrackerWidgetExtension/timetrackerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = timetrackerWidgetExtension/Info.plist;
@@ -1005,7 +1032,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.24;
+				MARKETING_VERSION = 1.1.25;
 				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.WidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1024,16 +1051,20 @@
 		E7000000000000000000000F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Time Tracker";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = me.mezorewww.timetracker;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.1.24;
-				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watchkitapp;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.25;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1052,16 +1083,20 @@
 		E70000000000000000000010 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = LT98S43NKA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Time Tracker";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = me.mezorewww.timetracker;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.1.24;
-				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watchkitapp;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.25;
+				PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;

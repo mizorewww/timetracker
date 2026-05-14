@@ -15,6 +15,7 @@ DEVICE_TIMEOUT="${DEVICE_TIMEOUT:-30}"
 LAUNCH_AFTER_INSTALL="${LAUNCH_AFTER_INSTALL:-0}"
 ALLOW_DEVICE_FAILURES="${ALLOW_DEVICE_FAILURES:-0}"
 ALLOW_INVALID_WATCH_PROFILE="${ALLOW_INVALID_WATCH_PROFILE:-0}"
+BUILD_WATCH_FOR_PHYSICAL="${BUILD_WATCH_FOR_PHYSICAL:-0}"
 
 BUILD_ROOT="$ROOT_DIR/build/Install"
 DERIVED_DATA="$BUILD_ROOT/DerivedData"
@@ -117,18 +118,27 @@ profile_name() {
 }
 
 connected_watch_udids() {
-  xcrun xctrace list devices 2>/dev/null | /usr/bin/python3 -c '
-import re
+  local json_path
+  json_path="$(mktemp "${TMPDIR:-/tmp}/timetracker-watch-udids.XXXXXX.json")"
+  trap 'rm -f "$json_path"; trap - RETURN' RETURN
+
+  xcrun devicectl list devices \
+    --filter "hardwareProperties.platform == 'watchOS' AND hardwareProperties.reality == 'physical'" \
+    --timeout "$DEVICE_TIMEOUT" \
+    --json-output "$json_path" >/dev/null
+
+  /usr/bin/python3 - "$json_path" <<'PY'
+import json
 import sys
 
-for line in sys.stdin:
-    line = line.strip()
-    if "Apple Watch" not in line or "Simulator" in line:
-        continue
-    match = re.search(r"\(([0-9A-Fa-f]{8}-[0-9A-Fa-f]+)\)$", line)
-    if match:
-        print(match.group(1))
-'
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    payload = json.load(handle)
+
+for device in payload.get("result", {}).get("devices", []):
+    udid = device.get("hardwareProperties", {}).get("udid")
+    if udid:
+        print(udid)
+PY
 }
 
 profile_contains_connected_watch() {
@@ -196,7 +206,7 @@ EOF
 available_ios_devices_json() {
   local json_path="$1"
   local filter
-  filter="State BEGINSWITH 'available' AND hardwareProperties.platform == 'iOS' AND hardwareProperties.reality == 'physical' AND deviceProperties.developerModeStatus == 'enabled'"
+  filter="(State BEGINSWITH 'available' OR State BEGINSWITH 'connected') AND hardwareProperties.platform == 'iOS' AND hardwareProperties.reality == 'physical' AND deviceProperties.developerModeStatus == 'enabled'"
 
   xcrun devicectl list devices \
     --filter "$filter" \
@@ -205,6 +215,17 @@ available_ios_devices_json() {
 }
 
 available_watch_devices_json() {
+  local json_path="$1"
+  local filter
+  filter="State BEGINSWITH 'available' AND hardwareProperties.platform == 'watchOS' AND hardwareProperties.reality == 'physical' AND deviceProperties.developerModeStatus == 'enabled' AND deviceProperties.ddiServicesAvailable == true AND connectionProperties.tunnelState == 'connected'"
+
+  xcrun devicectl list devices \
+    --filter "$filter" \
+    --timeout "$DEVICE_TIMEOUT" \
+    --json-output "$json_path"
+}
+
+visible_watch_devices_json() {
   local json_path="$1"
   local filter
   filter="State BEGINSWITH 'available' AND hardwareProperties.platform == 'watchOS' AND hardwareProperties.reality == 'physical'"
@@ -256,7 +277,7 @@ install_on_available_ios_devices() {
   devices_json="$(mktemp "${TMPDIR:-/tmp}/timetracker-devices.XXXXXX.json")"
   trap 'rm -f "$devices_json"; trap - RETURN' RETURN
 
-  echo "==> Looking for available physical iOS/iPadOS development devices"
+  echo "==> Looking for available or connected physical iOS/iPadOS development devices"
   available_ios_devices_json "$devices_json" >/dev/null
 
   local devices=()
@@ -280,9 +301,11 @@ install_on_available_ios_devices() {
 install_on_available_watch_devices() {
   local devices_json
   devices_json="$(mktemp "${TMPDIR:-/tmp}/timetracker-watch-devices.XXXXXX.json")"
-  trap 'rm -f "$devices_json"; trap - RETURN' RETURN
+  local visible_json
+  visible_json="$(mktemp "${TMPDIR:-/tmp}/timetracker-visible-watch-devices.XXXXXX.json")"
+  trap 'rm -f "$devices_json" "$visible_json"; trap - RETURN' RETURN
 
-  echo "==> Looking for available physical watchOS development devices"
+  echo "==> Looking for directly installable physical watchOS development devices"
   available_watch_devices_json "$devices_json" >/dev/null
 
   local devices=()
@@ -291,8 +314,24 @@ install_on_available_watch_devices() {
   done < <(device_entries_from_json "$devices_json")
 
   if [[ ${#devices[@]} -eq 0 ]]; then
-    echo "No available physical watchOS development devices found. Skipping direct watch install."
+    echo "No directly installable physical watchOS development devices found. Skipping direct watch install."
     echo "The iOS app still carries the embedded Watch companion for paired-watch installation."
+    if visible_watch_devices_json "$visible_json" >/dev/null; then
+      /usr/bin/python3 - "$visible_json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    payload = json.load(handle)
+
+for device in payload.get("result", {}).get("devices", []):
+    name = device.get("deviceProperties", {}).get("name", "Apple Watch")
+    tunnel = device.get("connectionProperties", {}).get("tunnelState", "unknown")
+    ddi = device.get("deviceProperties", {}).get("ddiServicesAvailable")
+    developer = device.get("deviceProperties", {}).get("developerModeStatus", "unknown")
+    print(f"  - {name}: tunnel={tunnel}, DDI={ddi}, developerMode={developer}")
+PY
+    fi
     return 0
   fi
 
@@ -305,21 +344,28 @@ install_on_available_watch_devices() {
 }
 
 watch_xcodebuild_destinations() {
-  xcrun xctrace list devices 2>/dev/null | /usr/bin/python3 -c '
+  xcodebuild -project "$PROJECT" -scheme "$WATCH_SCHEME" -showdestinations 2>/dev/null | /usr/bin/python3 -c '
 import re
 import sys
 
 for line in sys.stdin:
     line = line.strip()
-    if "Apple Watch" not in line or "Simulator" in line:
+    if "platform:watchOS" not in line or "Simulator" in line or "error:" in line:
         continue
-    match = re.search(r"\(([0-9A-Fa-f]{8}-[0-9A-Fa-f-]+)\)$", line)
-    if match:
-        print(f"platform=watchOS,id={match.group(1)}")
+    match = re.search(r"id:([^,}]+)", line)
+    if not match or "placeholder" in match.group(1):
+        continue
+    print(f"platform=watchOS,id={match.group(1)}")
 '
 }
 
 build_watch_app() {
+  if [[ "$BUILD_WATCH_FOR_PHYSICAL" != "1" ]]; then
+    echo "==> Building generic watchOS app"
+    run_xcodebuild "$WATCH_SCHEME" -destination "generic/platform=watchOS" build
+    return 0
+  fi
+
   local destinations=()
   while IFS= read -r destination; do
     [[ -n "$destination" ]] && destinations+=("$destination")

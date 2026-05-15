@@ -51,6 +51,7 @@ struct HomeUIContractTests {
     @Test @MainActor
     func regularWidthIOSUsesVisibleSystemSplitView() throws {
         let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let splitButtonsSource = try sourceText("timetracker/SharedUI/Components/SplitViewToolbarButtons.swift")
 
         #expect(SplitColumnLayoutPolicy.iPad.sidebar == ColumnWidth(min: 240, ideal: 260, max: 300))
         #expect(SplitColumnLayoutPolicy.iPad.detail.min == 560)
@@ -62,7 +63,7 @@ struct HomeUIContractTests {
         #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
         #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
         #expect(source.contains("if columnVisibility == .detailOnly"))
-        #expect(source.contains("\"sidebar.left\""))
+        #expect(splitButtonsSource.contains("\"sidebar.left\""))
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
         #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
         #expect(source.contains("ipad.topNavigation") == false)
@@ -86,6 +87,7 @@ struct HomeUIContractTests {
         #expect(phoneHome.contains(".navigationBarTitleDisplayMode(.large)"))
         #expect(phoneHome.contains(".padding(.top, 10)") == false)
         #expect(phoneHome.contains("HeaderBar(store: store") == false)
+        #expect(phoneHome.contains("DaySelectionControl") == false)
     }
 
     @Test

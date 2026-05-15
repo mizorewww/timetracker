@@ -90,7 +90,9 @@ struct DesktopContentView: View {
         case .inbox:
             InboxView(store: store)
         case .tasks:
-            TasksView(store: store)
+            NavigationStack {
+                TasksView(store: store)
+            }
         case .pomodoro:
             PomodoroView(store: store)
         case .analytics:

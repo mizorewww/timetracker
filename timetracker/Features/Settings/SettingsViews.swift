@@ -99,6 +99,15 @@ struct SettingsView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    isExportPresented = true
+                } label: {
+                    Label(AppStrings.localized("settings.exportCSV"), systemImage: "square.and.arrow.down")
+                }
+            }
+        }
         .accessibilityIdentifier("settings.view")
         .onAppear(perform: fetchLLMModelsIfNeeded)
         .fileExporter(

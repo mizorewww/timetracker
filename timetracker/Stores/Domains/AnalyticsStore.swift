@@ -12,6 +12,8 @@ struct AnalyticsStore {
     mutating func refreshSnapshot(
         range: AnalyticsRange,
         tasks: [TaskNode],
+        taskCategories: [TaskCategory] = [],
+        taskCategoryAssignments: [TaskCategoryAssignment] = [],
         segments: [TimeSegment],
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
@@ -24,7 +26,10 @@ struct AnalyticsStore {
             let snapshot = cachedDailySnapshot(
                 range: range,
                 tasks: tasks,
+                taskCategories: taskCategories,
+                taskCategoryAssignments: taskCategoryAssignments,
                 rangeSegments: rangeSegments,
+                allSegments: segments,
                 sessions: sessions,
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
@@ -38,6 +43,8 @@ struct AnalyticsStore {
 
     mutating func refreshCachedSnapshots(
         tasks: [TaskNode],
+        taskCategories: [TaskCategory] = [],
+        taskCategoryAssignments: [TaskCategoryAssignment] = [],
         segments: [TimeSegment],
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
@@ -52,6 +59,8 @@ struct AnalyticsStore {
             refreshSnapshot(
                 range: range,
                 tasks: tasks,
+                taskCategories: taskCategories,
+                taskCategoryAssignments: taskCategoryAssignments,
                 segments: segments,
                 sessions: sessions,
                 taskPathByID: taskPathByID,

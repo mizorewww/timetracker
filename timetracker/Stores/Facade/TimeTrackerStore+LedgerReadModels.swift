@@ -5,6 +5,19 @@ extension TimeTrackerStore {
         sortedTodaySegments
     }
 
+    func timelineSegments(for date: Date, now: Date = Date()) -> [TimeSegment] {
+        guard let interval = Calendar.current.dateInterval(of: .day, for: date) else {
+            return []
+        }
+        return allSegments
+            .filter { segment in
+                guard segment.deletedAt == nil else { return false }
+                let end = segment.endedAt ?? now
+                return segment.startedAt < interval.end && end > interval.start
+            }
+            .sorted { $0.startedAt > $1.startedAt }
+    }
+
     var todayGrossSeconds: Int {
         todayGrossSeconds(now: Date())
     }
@@ -19,6 +32,14 @@ extension TimeTrackerStore {
 
     func todayWallSeconds(now: Date) -> Int {
         aggregationService.totalSeconds(segments: todaySegments, mode: .wallClock, now: now)
+    }
+
+    func dayGrossSeconds(for date: Date, now: Date = Date()) -> Int {
+        daySeconds(for: date, mode: .gross, now: now)
+    }
+
+    func dayWallSeconds(for date: Date, now: Date = Date()) -> Int {
+        daySeconds(for: date, mode: .wallClock, now: now)
     }
 
     func daySeconds(for date: Date, mode: AggregationMode = .gross, now: Date = Date()) -> Int {

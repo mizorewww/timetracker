@@ -119,6 +119,64 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskRowsOpenDetailInsteadOfEditingOnTap() throws {
+        let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let editorSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift")
+        let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
+        let openTaskSource = try #require(rowSource.slice(from: "private func openTask()", to: "private struct TaskManagementRowContent"))
+
+        #expect(tasksSource.contains("TaskDetailView(store: store, taskID: task.id)"))
+        #expect(tasksSource.contains("@State private var detailTaskID"))
+        #expect(rootSource.contains("NavigationStack {\n                TasksView(store: store)\n            }"))
+        #expect(openTaskSource.contains("store.selectTask(task.id, revealInToday: false)"))
+        #expect(openTaskSource.contains("presentEditTask") == false)
+        #expect(detailSource.contains("TaskDetailEditorCard("))
+        #expect(detailSource.contains("TaskDetailAnalysisSection"))
+        #expect(detailSource.contains("TaskChecklistPanel(store: store, task: task)") == false)
+        #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.task.name\")"))
+        #expect(editorSource.contains("TaskDetailStatusSelector(selection: $draft.status)"))
+        #expect(editorSource.contains("status.exampleText") == false)
+        #expect(editorSource.contains("ChecklistEditorRow("))
+    }
+
+    @Test
+    func settingsKeepsCSVExportVisibleInDataSectionAndToolbar() throws {
+        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
+        let dataSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
+
+        #expect(settingsSource.contains(".fileExporter("))
+        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportCSV\"), systemImage: \"square.and.arrow.down\")"))
+        #expect(dataSource.contains("SettingsActionLabel(title: AppStrings.localized(\"settings.exportCSV\"), systemImage: \"square.and.arrow.down\")"))
+    }
+
+    @Test
+    func analyticsPageSurfacesDecisionMetricsAndQualitySections() throws {
+        let analyticsSource = try [
+            "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsDecisionViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
+        let modelsSource = try sourceText("timetracker/Models/AnalyticsReadModels.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(analyticsSource.contains("AnalyticsDecisionSummaryGrid(snapshot: snapshot)"))
+        #expect(analyticsSource.contains("AnalyticsPeriodControl(range: range, referenceDate: $referenceDate, liveNow: now)"))
+        #expect(analyticsSource.contains("effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)"))
+        #expect(analyticsSource.contains("AnalyticsBreakdownSection(snapshot: snapshot)"))
+        #expect(analyticsSource.contains("AnalyticsRhythmQualityGrid(rhythm: snapshot.rhythm, quality: snapshot.quality)"))
+        #expect(analyticsSource.contains("snapshot.categoryBreakdown"))
+        #expect(modelsSource.contains("struct AnalyticsInsight"))
+        #expect(modelsSource.contains("struct TaskAnalyticsSnapshot"))
+        #expect(englishStrings.contains("\"analytics.decisions.title\""))
+        #expect(englishStrings.contains("\"analytics.quality.title\""))
+    }
+
+    @Test
     func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
         let editorSource = try taskEditorFeatureSource()
         let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorChecklistViews.swift")

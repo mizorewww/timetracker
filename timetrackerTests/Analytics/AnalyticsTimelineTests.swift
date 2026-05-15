@@ -133,6 +133,181 @@ struct AnalyticsTimelineTests {
         #expect(breakdown.first?.grossSeconds == 1_800)
     }
 
+    @Test @MainActor
+    func analyticsDecisionSnapshotBuildsComparisonRhythmQualityAndGroups() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 12)))
+        let startOfDay = calendar.startOfDay(for: now)
+        let previousDay = startOfDay.addingTimeInterval(-86_400)
+        let category = TaskCategory(title: "Work", deviceID: "test", colorHex: "1677FF", iconName: "briefcase")
+        let root = TaskNode(title: "Client", parentID: nil, deviceID: "test", colorHex: "1677FF", iconName: "folder")
+        let child = TaskNode(title: "Review", parentID: root.id, deviceID: "test", colorHex: "34C759", iconName: "doc.text")
+        let assignment = TaskCategoryAssignment(taskID: root.id, categoryID: category.id, deviceID: "test")
+        let rootSession = TimeSession(taskID: root.id, source: .timer, deviceID: "test", startedAt: startOfDay)
+        let childSession = TimeSession(taskID: child.id, source: .timer, deviceID: "test", startedAt: startOfDay)
+        let previousSession = TimeSession(taskID: root.id, source: .timer, deviceID: "test", startedAt: previousDay)
+        let segments = [
+            TimeSegment(
+                sessionID: rootSession.id,
+                taskID: root.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(9 * 3_600),
+                endedAt: startOfDay.addingTimeInterval(10 * 3_600)
+            ),
+            TimeSegment(
+                sessionID: childSession.id,
+                taskID: child.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 50 * 60),
+                endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 10 * 60)
+            ),
+            TimeSegment(
+                sessionID: childSession.id,
+                taskID: child.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(11 * 3_600),
+                endedAt: startOfDay.addingTimeInterval(11 * 3_600 + 120)
+            ),
+            TimeSegment(
+                sessionID: previousSession.id,
+                taskID: root.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: previousDay.addingTimeInterval(9 * 3_600),
+                endedAt: previousDay.addingTimeInterval(9 * 3_600 + 30 * 60)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [root, child],
+            taskCategories: [category],
+            taskCategoryAssignments: [assignment],
+            segments: segments,
+            sessions: [rootSession, childSession, previousSession],
+            taskPathByID: [root.id: root.title, child.id: "\(root.title) / \(child.title)"],
+            taskParentPathByID: [child.id: root.title],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.comparison.previousGrossSeconds == 1_800)
+        #expect(snapshot.comparison.currentGrossSeconds == 4_920)
+        #expect(snapshot.rhythm.peakHour == 9)
+        #expect(snapshot.quality.shortSegmentCount == 1)
+        #expect(snapshot.quality.switchCount >= 1)
+        #expect(snapshot.rootBreakdown.first?.title == "Client")
+        #expect(snapshot.categoryBreakdown.first?.title == "Work")
+        #expect(snapshot.insights.isEmpty == false)
+    }
+
+    @Test
+    func analyticsTodayRangeCanAnchorToPreviousDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let todayNoon = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 12)))
+        let yesterdayNoon = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 8, hour: 12)))
+        let todayStart = calendar.startOfDay(for: todayNoon)
+        let yesterdayStart = calendar.startOfDay(for: yesterdayNoon)
+        let task = TaskNode(title: "Review", parentID: nil, deviceID: "test")
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: yesterdayStart)
+        let segments = [
+            TimeSegment(
+                sessionID: session.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: yesterdayStart.addingTimeInterval(9 * 3_600),
+                endedAt: yesterdayStart.addingTimeInterval(10 * 3_600)
+            ),
+            TimeSegment(
+                sessionID: session.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: todayStart.addingTimeInterval(9 * 3_600),
+                endedAt: todayStart.addingTimeInterval(9 * 3_600 + 30 * 60)
+            )
+        ]
+
+        let yesterdaySnapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: segments,
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: yesterdayNoon,
+            calendar: calendar
+        )
+        let todaySnapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: segments,
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: todayNoon,
+            calendar: calendar
+        )
+
+        #expect(yesterdaySnapshot.overview.grossSeconds == 3_600)
+        #expect(todaySnapshot.overview.grossSeconds == 1_800)
+    }
+
+    @Test @MainActor
+    func taskAnalyticsSnapshotIncludesDescendantsAndDirectContribution() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 12)))
+        let startOfDay = calendar.startOfDay(for: now)
+        let root = TaskNode(title: "Build", parentID: nil, deviceID: "test", colorHex: "1677FF", iconName: "hammer")
+        let child = TaskNode(title: "Tests", parentID: root.id, deviceID: "test", colorHex: "FF9500", iconName: "checkmark")
+        let rootSession = TimeSession(taskID: root.id, source: .timer, deviceID: "test", startedAt: startOfDay)
+        let childSession = TimeSession(taskID: child.id, source: .timer, deviceID: "test", startedAt: startOfDay)
+        let segments = [
+            TimeSegment(
+                sessionID: rootSession.id,
+                taskID: root.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(8 * 3_600),
+                endedAt: startOfDay.addingTimeInterval(9 * 3_600)
+            ),
+            TimeSegment(
+                sessionID: childSession.id,
+                taskID: child.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(10 * 3_600),
+                endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 30 * 60)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().taskSnapshot(
+            range: .today,
+            task: root,
+            taskIDs: [root.id, child.id],
+            tasks: [root, child],
+            segments: segments,
+            sessions: [rootSession, childSession],
+            taskPathByID: [root.id: root.title, child.id: "\(root.title) / \(child.title)"],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 5_400)
+        #expect(snapshot.directSeconds == 3_600)
+        #expect(snapshot.descendantSeconds == 1_800)
+        #expect(snapshot.childBreakdown.map(\.title).contains("Build"))
+        #expect(snapshot.childBreakdown.map(\.title).contains("Tests"))
+        #expect(snapshot.recentRecords.count == 2)
+    }
+
 
     @Test
     func timelineLayoutUsesMinimumNumberOfLanes() {

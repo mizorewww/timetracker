@@ -5,6 +5,7 @@ struct TasksView: View {
     @State private var searchText = ""
     @State private var expansionState = TaskExpansionState()
     @State private var didExpandInitialTree = false
+    @State private var detailTaskID: UUID?
 
     private var searchResults: [TaskNode] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -44,6 +45,9 @@ struct TasksView: View {
                                     isExpanded: row.isExpanded,
                                     toggleExpansion: {
                                         expansionState.toggle(row.taskID)
+                                    },
+                                    openTaskDetail: { task in
+                                        detailTaskID = task.id
                                     }
                                 )
                             }
@@ -55,7 +59,13 @@ struct TasksView: View {
             } else {
                 Section(AppStrings.localized("tasks.searchResults")) {
                     ForEach(searchResults, id: \.id) { task in
-                        TaskManagementFlatRow(store: store, task: task)
+                        TaskManagementFlatRow(
+                            store: store,
+                            task: task,
+                            openTaskDetail: { task in
+                                detailTaskID = task.id
+                            }
+                        )
                     }
                 }
             }
@@ -101,12 +111,29 @@ struct TasksView: View {
                 Image(systemName: "plus.circle")
             }
         }
+        .navigationDestination(isPresented: detailBinding) {
+            if let detailTaskID, let task = store.task(for: detailTaskID) {
+                TaskDetailView(store: store, taskID: task.id)
+            } else {
+                EmptyStateRow(title: AppStrings.localized("task.empty.selectTask"), icon: "cursorarrow.click")
+            }
+        }
         .onAppear {
             if !didExpandInitialTree {
                 for task in store.tasks {
                     expansionState.expand(task.id)
                 }
                 didExpandInitialTree = true
+            }
+        }
+    }
+
+    private var detailBinding: Binding<Bool> {
+        Binding {
+            detailTaskID != nil
+        } set: { isPresented in
+            if !isPresented {
+                detailTaskID = nil
             }
         }
     }

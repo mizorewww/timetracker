@@ -4,6 +4,8 @@ extension AnalyticsStore {
     func snapshot(
         range: AnalyticsRange,
         tasks: [TaskNode],
+        taskCategories: [TaskCategory] = [],
+        taskCategoryAssignments: [TaskCategoryAssignment] = [],
         segments: [TimeSegment],
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
@@ -22,7 +24,10 @@ extension AnalyticsStore {
             return analyticsSnapshot(
                 range: range,
                 tasks: tasks,
+                taskCategories: taskCategories,
+                taskCategoryAssignments: taskCategoryAssignments,
                 rangeSegments: rangeSegments,
+                allSegments: segments,
                 sessions: sessions,
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
@@ -36,7 +41,10 @@ extension AnalyticsStore {
     mutating func cachedDailySnapshot(
         range: AnalyticsRange,
         tasks: [TaskNode],
+        taskCategories: [TaskCategory],
+        taskCategoryAssignments: [TaskCategoryAssignment],
         rangeSegments: [TimeSegment],
+        allSegments: [TimeSegment],
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
@@ -47,7 +55,10 @@ extension AnalyticsStore {
         return analyticsSnapshot(
             range: range,
             tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
             rangeSegments: rangeSegments,
+            allSegments: allSegments,
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
@@ -60,7 +71,10 @@ extension AnalyticsStore {
     func analyticsSnapshot(
         range: AnalyticsRange,
         tasks: [TaskNode],
+        taskCategories: [TaskCategory],
+        taskCategoryAssignments: [TaskCategoryAssignment],
         rangeSegments: [TimeSegment],
+        allSegments: [TimeSegment],
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
@@ -68,9 +82,49 @@ extension AnalyticsStore {
         now: Date,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
-        AnalyticsSnapshot(
+        let overview = overview(segments: rangeSegments, now: now)
+        let taskBreakdown = taskBreakdown(
+            segments: rangeSegments,
+            tasks: tasks,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            now: now
+        )
+        let comparison = comparison(segments: allSegments, range: range, now: now, calendar: calendar)
+        let rhythm = rhythm(segments: allSegments, range: range, now: now, calendar: calendar)
+        let quality = quality(segments: allSegments, range: range, now: now, calendar: calendar)
+        let rootBreakdown = rootBreakdown(
+            segments: allSegments,
+            tasks: tasks,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
             range: range,
-            overview: overview(segments: rangeSegments, now: now),
+            now: now,
+            calendar: calendar
+        )
+        let categoryBreakdown = categoryBreakdown(
+            segments: allSegments,
+            tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
+            range: range,
+            now: now,
+            calendar: calendar
+        )
+        return AnalyticsSnapshot(
+            range: range,
+            overview: overview,
+            comparison: comparison,
+            rhythm: rhythm,
+            quality: quality,
+            insights: insights(
+                overview: overview,
+                comparison: comparison,
+                rhythm: rhythm,
+                quality: quality,
+                taskBreakdown: taskBreakdown
+            ),
             daily: daily,
             todayActivity: range == .today
                 ? HourTaskActivityService().hourlyActivity(
@@ -93,14 +147,9 @@ extension AnalyticsStore {
                     calendar: calendar
                 )
                 : .empty,
-            taskBreakdown: taskBreakdown(
-                segments: rangeSegments,
-                tasks: tasks,
-                sessions: sessions,
-                taskPathByID: taskPathByID,
-                taskParentPathByID: taskParentPathByID,
-                now: now
-            ),
+            taskBreakdown: taskBreakdown,
+            rootBreakdown: rootBreakdown,
+            categoryBreakdown: categoryBreakdown,
             overlaps: overlapSegments(
                 segments: rangeSegments,
                 tasks: tasks,

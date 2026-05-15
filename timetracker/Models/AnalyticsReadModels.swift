@@ -27,6 +27,70 @@ struct AnalyticsOverview {
     let averageFocusSeconds: Int
 }
 
+struct AnalyticsComparison {
+    let currentGrossSeconds: Int
+    let previousGrossSeconds: Int
+    let currentWallSeconds: Int
+    let previousWallSeconds: Int
+
+    var grossDeltaSeconds: Int {
+        currentGrossSeconds - previousGrossSeconds
+    }
+
+    var wallDeltaSeconds: Int {
+        currentWallSeconds - previousWallSeconds
+    }
+
+    var grossPercentChange: Double? {
+        percentChange(current: currentGrossSeconds, previous: previousGrossSeconds)
+    }
+
+    var wallPercentChange: Double? {
+        percentChange(current: currentWallSeconds, previous: previousWallSeconds)
+    }
+
+    private func percentChange(current: Int, previous: Int) -> Double? {
+        guard previous > 0 else { return current > 0 ? 1 : nil }
+        return Double(current - previous) / Double(previous)
+    }
+}
+
+struct AnalyticsRhythm {
+    let activeDayCount: Int
+    let dailyAverageGrossSeconds: Int
+    let peakHour: Int?
+    let peakHourSeconds: Int
+    let longestContinuousSeconds: Int
+    let averageSegmentSeconds: Int
+    let medianSegmentSeconds: Int
+    let segmentCount: Int
+}
+
+struct AnalyticsQuality {
+    let overlapRatio: Double
+    let switchCount: Int
+    let shortSegmentCount: Int
+    let shortSegmentRatio: Double
+    let averageSegmentSeconds: Int
+    let longestContinuousSeconds: Int
+}
+
+struct AnalyticsInsight: Identifiable {
+    enum Severity: String {
+        case positive
+        case neutral
+        case warning
+        case critical
+    }
+
+    let id: String
+    let title: String
+    let value: String
+    let body: String
+    let severity: Severity
+    let taskID: UUID?
+}
+
 struct DailyAnalyticsPoint: Identifiable {
     let date: Date
     let grossSeconds: Int
@@ -107,6 +171,47 @@ struct TaskAnalyticsPoint: Identifiable {
     let wallSeconds: Int
 
     var id: UUID { taskID }
+}
+
+struct AnalyticsGroupBreakdownPoint: Identifiable {
+    enum GroupKind: String {
+        case rootTask
+        case category
+    }
+
+    let id: String
+    let kind: GroupKind
+    let title: String
+    let subtitle: String
+    let iconName: String
+    let colorHex: String
+    let grossSeconds: Int
+    let wallSeconds: Int
+}
+
+struct TaskRecentRecordPoint: Identifiable {
+    let id: UUID
+    let taskID: UUID
+    let title: String
+    let path: String
+    let startedAt: Date
+    let endedAt: Date?
+    let durationSeconds: Int
+}
+
+struct TaskAnalyticsSnapshot {
+    let taskID: UUID
+    let range: AnalyticsRange
+    let overview: AnalyticsOverview
+    let comparison: AnalyticsComparison
+    let rhythm: AnalyticsRhythm
+    let quality: AnalyticsQuality
+    let directSeconds: Int
+    let descendantSeconds: Int
+    let childBreakdown: [AnalyticsGroupBreakdownPoint]
+    let daily: [DailyAnalyticsPoint]
+    let recentRecords: [TaskRecentRecordPoint]
+    let rangeSegments: [TimeSegment]
 }
 
 struct OverlapAnalyticsPoint: Identifiable {

@@ -3,6 +3,8 @@ import SwiftUI
 
 struct AnalyticsHeader: View {
     @Binding var range: AnalyticsRange
+    @Binding var referenceDate: Date
+    let now: Date
     let layout: AnalyticsLayoutPolicy
 
     var body: some View {
@@ -18,16 +20,16 @@ struct AnalyticsHeader: View {
                 title
             }
             Spacer()
-            rangePicker
+            controls
         }
     }
 
     private var compactLayout: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
             if layout.showsPageTitleInContent {
                 title
             }
-            rangePicker
+            controls
         }
     }
 
@@ -47,6 +49,20 @@ struct AnalyticsHeader: View {
             : AppStrings.localized("analytics.header.other")
     }
 
+    private var controls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                rangePicker
+                AnalyticsPeriodControl(range: range, referenceDate: $referenceDate, liveNow: now)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                rangePicker
+                AnalyticsPeriodControl(range: range, referenceDate: $referenceDate, liveNow: now)
+            }
+        }
+    }
+
     private var rangePicker: some View {
         Picker(AppStrings.localized("analytics.range"), selection: $range) {
             ForEach(AnalyticsRange.allCases) { range in
@@ -60,18 +76,20 @@ struct AnalyticsHeader: View {
 
 struct AnalyticsMetricGrid: View {
     let overview: AnalyticsOverview
+    let comparison: AnalyticsComparison
+    let rhythm: AnalyticsRhythm
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
             AnalyticsMetric(
                 title: AppStrings.wallTime,
                 value: DurationFormatter.compact(overview.wallSeconds),
-                footnote: AppStrings.localized("analytics.wall.footnote")
+                footnote: String(format: AppStrings.localized("analytics.metric.deltaFootnoteFormat"), deltaText(comparison.wallDeltaSeconds))
             )
             AnalyticsMetric(
                 title: AppStrings.grossTime,
                 value: DurationFormatter.compact(overview.grossSeconds),
-                footnote: AppStrings.localized("analytics.gross.footnote")
+                footnote: String(format: AppStrings.localized("analytics.metric.deltaFootnoteFormat"), deltaText(comparison.grossDeltaSeconds))
             )
             AnalyticsMetric(
                 title: AppStrings.localized("analytics.metric.overlap"),
@@ -83,7 +101,20 @@ struct AnalyticsMetricGrid: View {
                 value: "\(overview.pomodoroCount)",
                 footnote: AppStrings.localized("analytics.pomodoros.footnote")
             )
+            AnalyticsMetric(
+                title: AppStrings.localized("analytics.metric.dailyPace"),
+                value: DurationFormatter.compact(rhythm.dailyAverageGrossSeconds),
+                footnote: String(format: AppStrings.localized("analytics.metric.activeDaysFormat"), rhythm.activeDayCount)
+            )
         }
+    }
+
+    private func deltaText(_ seconds: Int) -> String {
+        if seconds == 0 {
+            return DurationFormatter.compact(0)
+        }
+        let prefix = seconds > 0 ? "+" : "-"
+        return "\(prefix)\(DurationFormatter.compact(abs(seconds)))"
     }
 }
 
@@ -95,10 +126,6 @@ struct AnalyticsRangeSection: View {
         if range == .today {
             TodayActivityCard(activity: snapshot.todayActivity)
             OverlappingTimelineCard(timeline: snapshot.timeline)
-            TaskDonutCard(
-                tasks: snapshot.taskBreakdown,
-                totalSeconds: max(snapshot.overview.grossSeconds, 1)
-            )
         } else {
             DailyTrendCard(daily: snapshot.daily)
         }

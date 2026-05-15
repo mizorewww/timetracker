@@ -12,7 +12,11 @@ extension TimeTrackerStore {
 
     func presentEditTask(_ task: TaskNode) {
         taskEditorReturnDestination = desktopDestination
-        taskEditorDraft = TaskEditorDraft(
+        taskEditorDraft = editorDraft(for: task)
+    }
+
+    func editorDraft(for task: TaskNode) -> TaskEditorDraft {
+        TaskEditorDraft(
             task: task,
             categoryID: taskCategoryIDByRootTaskID[task.id],
             checklistItems: checklistItems(for: task.id),

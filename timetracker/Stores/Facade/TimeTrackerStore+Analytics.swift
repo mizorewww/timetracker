@@ -14,6 +14,8 @@ extension TimeTrackerStore {
         store.refreshSnapshot(
             range: range,
             tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
             segments: allSegments,
             sessions: sessions,
             taskPathByID: taskPathByID,
@@ -27,6 +29,8 @@ extension TimeTrackerStore {
         var store = analyticsDomainStore
         store.refreshCachedSnapshots(
             tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
             segments: allSegments,
             sessions: sessions,
             taskPathByID: taskPathByID,
@@ -41,10 +45,29 @@ extension TimeTrackerStore {
         analyticsDomainStore.snapshot(
             range: range,
             tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
             segments: allSegments,
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
+            now: now
+        )
+    }
+
+    func taskAnalyticsSnapshot(
+        for task: TaskNode,
+        range: AnalyticsRange,
+        now: Date = Date()
+    ) -> TaskAnalyticsSnapshot {
+        analyticsDomainStore.taskSnapshot(
+            range: range,
+            task: task,
+            taskIDs: taskAndDescendantIDs(for: task.id),
+            tasks: tasks,
+            segments: allSegments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
             now: now
         )
     }

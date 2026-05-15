@@ -7,6 +7,7 @@ struct TaskManagementFlatRow: View {
     var hasChildren = false
     var isExpanded = false
     var toggleExpansion: (() -> Void)?
+    var openTaskDetail: ((TaskNode) -> Void)?
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #endif
@@ -73,14 +74,8 @@ struct TaskManagementFlatRow: View {
     }
 
     private func openTask() {
-        #if os(iOS)
-        if TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass).usesCompactRows {
-            store.selectTask(task.id, revealInToday: false)
-            store.presentEditTask(task)
-            return
-        }
-        #endif
         store.selectTask(task.id, revealInToday: false)
+        openTaskDetail?(task)
     }
 }
 

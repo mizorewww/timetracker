@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 import Testing
 @testable import timetracker
 
@@ -40,6 +41,30 @@ struct TimeTrackerUtilityTests {
     func durationFormattingUsesCompactClockText() {
         #expect(DurationFormatter.compact(4 * 3600 + 35 * 60) == "4h 35m")
         #expect(DurationFormatter.clock(84) == "01:24")
+    }
+
+    @Test
+    func inboxRowHeightExpandsForLongTitlesAndSuggestionContent() {
+        let layout = InboxLayoutPolicy(horizontalSizeClass: nil)
+        let short = layout.rowHeight(
+            forTitle: "Short item",
+            isCompleted: false,
+            hasSupplementaryContent: false
+        )
+        let long = layout.rowHeight(
+            forTitle: String(repeating: "很长的收件箱项目标题", count: 8),
+            isCompleted: false,
+            hasSupplementaryContent: false
+        )
+        let withSuggestion = layout.rowHeight(
+            forTitle: "Suggested item",
+            isCompleted: false,
+            hasSupplementaryContent: true
+        )
+
+        #expect(short == layout.rowBaseHeight)
+        #expect(long > short)
+        #expect(withSuggestion > short)
     }
 
     @Test @MainActor

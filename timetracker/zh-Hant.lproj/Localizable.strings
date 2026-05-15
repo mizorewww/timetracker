@@ -334,6 +334,9 @@
 "analytics.metric.deltaFootnoteFormat" = "相比上一範圍：%@";
 "analytics.metric.dailyPace" = "日均節奏";
 "analytics.metric.activeDaysFormat" = "%d 個記錄日";
+"analytics.glossary.gross" = "所有任務計時相加。";
+"analytics.glossary.wall" = "合併重疊後的真實經過時間。";
+"analytics.glossary.overlap" = "並行計時多出來的時間。";
 "analytics.insight.noData.title" = "暫無訊號";
 "analytics.insight.noData.body" = "開始計時或手動補錄後，這個範圍才有分析價值。";
 "analytics.insight.topTask.title" = "主要時間去向";
@@ -370,6 +373,7 @@
 "analytics.none" = "無";
 "task.detail.title" = "任務詳情";
 "task.detail.editor" = "任務資訊";
+"task.detail.editor.expand" = "編輯";
 "task.detail.emptyAnalysis" = "這個任務及其子任務還沒有時間記錄。";
 "task.detail.direct" = "目前任務";
 "task.detail.directFootnote" = "僅直接記錄";

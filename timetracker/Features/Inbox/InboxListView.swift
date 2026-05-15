@@ -50,13 +50,14 @@ struct InboxListView: View {
     }
 
     private func rowHeight(for item: InboxItem) -> CGFloat {
-        guard !item.isCompleted else {
-            return layout.rowBaseHeight
-        }
-        if store.inboxSuggestionInFlightIDs.contains(item.id) || store.inboxSuggestion(for: item) != nil {
-            return layout.suggestedRowHeight
-        }
-        return layout.rowBaseHeight
+        let hasSupplementaryContent = store.inboxSuggestionInFlightIDs.contains(item.id) ||
+            store.inboxSuggestion(for: item) != nil ||
+            store.inboxSuggestionFailureMessage(for: item) != nil
+        return layout.rowHeight(
+            forTitle: item.title,
+            isCompleted: item.isCompleted,
+            hasSupplementaryContent: hasSupplementaryContent
+        )
     }
 
     @ViewBuilder

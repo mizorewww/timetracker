@@ -24,7 +24,7 @@ struct BuildInstallScriptTests {
         #expect(script.contains("watch_xcodebuild_destinations()"))
         #expect(script.contains("build_watch_app()"))
         #expect(script.contains("hardwareProperties.platform == 'watchOS'"))
-        #expect(script.contains("xcrun xctrace list devices"))
+        #expect(script.contains("xcrun devicectl list devices"))
         #expect(script.contains("run_xcodebuild \"$SCHEME\" -sdk iphoneos -destination \"generic/platform=iOS\" build"))
         #expect(script.contains("run_xcodebuild \"$WATCH_SCHEME\" -destination \"$destination\" build"))
         #expect(script.contains("run_xcodebuild \"$WATCH_SCHEME\" -destination \"generic/platform=watchOS\" build"))

@@ -106,6 +106,33 @@ struct DemoDataLifecycleTests {
     }
 
     @Test @MainActor
+    func automaticDemoDataCanBeDisabledByBuildConfiguration() throws {
+        prepareAutomaticDemoSeeding(demoMode: .off)
+        defer { resetDemoSeedingDefaults() }
+        let context = try makeTestContext()
+
+        try SeedData.ensureSeeded(context: context)
+
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func screenshotDemoModeRebuildsDataOnLaunch() throws {
+        prepareAutomaticDemoSeeding(demoMode: .replaceOnLaunch, disabled: true)
+        defer { resetDemoSeedingDefaults() }
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        _ = try taskRepository.createTask(title: "Should Be Replaced", parentID: nil, colorHex: nil, iconName: nil)
+
+        try SeedData.ensureSeeded(context: context)
+
+        let titles = try context.fetch(FetchDescriptor<TaskNode>()).map(\.title)
+        #expect(titles.contains("Should Be Replaced") == false)
+        #expect(titles.contains("Time Tracker App"))
+        #expect(SeedData.isAutomaticDemoSeedingDisabled == false)
+    }
+
+    @Test @MainActor
     func automaticDemoDataDoesNotSeedIntoCloudBackedStorage() throws {
         prepareAutomaticDemoSeeding(mode: AppCloudSync.modeICloud)
         defer { resetDemoSeedingDefaults() }
@@ -132,9 +159,11 @@ struct DemoDataLifecycleTests {
     @MainActor
     private func prepareAutomaticDemoSeeding(
         mode: String = "Local",
+        demoMode: AutomaticDemoDataMode = .seedIfEmpty,
         disabled: Bool = false,
         lastError: String? = nil
     ) {
+        UserDefaults.standard.set(demoMode.rawValue, forKey: AppDemoDataConfiguration.overrideKey)
         UserDefaults.standard.set(disabled, forKey: SeedData.automaticDemoSeedingDisabledKey)
         UserDefaults.standard.set(mode, forKey: AppCloudSync.modeKey)
         if let lastError {
@@ -146,6 +175,7 @@ struct DemoDataLifecycleTests {
 
     @MainActor
     private func resetDemoSeedingDefaults() {
+        UserDefaults.standard.removeObject(forKey: AppDemoDataConfiguration.overrideKey)
         UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
         UserDefaults.standard.removeObject(forKey: AppCloudSync.modeKey)
         UserDefaults.standard.removeObject(forKey: AppCloudSync.errorKey)

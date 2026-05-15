@@ -13,6 +13,7 @@ enum AppCloudSync {
     static let modeLocalFallback = "Local fallback"
     static let modeInMemoryFallback = "In-memory fallback"
     static let modeUITest = "UI Test"
+    static let modeDemoData = "Demo data"
 
     static var isEnabled: Bool {
         if UserDefaults.standard.object(forKey: enabledKey) == nil {
@@ -32,7 +33,7 @@ enum AppCloudSync {
     static var allowsAutomaticDemoSeeding: Bool {
         guard lastError?.isEmpty ?? true else { return false }
         switch persistenceMode {
-        case modeLocal, modeUITest:
+        case modeLocal, modeUITest, modeDemoData:
             return true
         default:
             return false
@@ -72,6 +73,12 @@ enum AppCloudSync {
         UserDefaults.standard.set(modeUITest, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
         UserDefaults.standard.set(AppStrings.localized("sync.uiTestStore"), forKey: accountStatusKey)
+    }
+
+    static func recordDemoDataMode() {
+        UserDefaults.standard.set(modeDemoData, forKey: modeKey)
+        UserDefaults.standard.removeObject(forKey: errorKey)
+        UserDefaults.standard.set(modeDemoData, forKey: accountStatusKey)
     }
 
     static func refreshAccountStatus() async {

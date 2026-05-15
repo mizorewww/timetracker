@@ -21,6 +21,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>TimeTrackerAutomaticDemoDataMode</key>
+	<string>$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

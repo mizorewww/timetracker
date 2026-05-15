@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskDetailEditorCard: View {
     @ObservedObject var store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
+    @Binding var isExpanded: Bool
     let save: () -> Void
     let reset: () -> Void
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
@@ -13,14 +14,18 @@ struct TaskDetailEditorCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
-            Divider()
-            infoSection
-            Divider()
-            planSection
-            Divider()
-            checklistSection
-            Divider()
-            notesSection
+            if isExpanded {
+                Divider()
+                infoSection
+                Divider()
+                planSection
+                Divider()
+                checklistSection
+                Divider()
+                notesSection
+            } else {
+                editorSummary
+            }
         }
         .appCard()
         .accessibilityIdentifier("task.detail.editor")
@@ -31,12 +36,59 @@ struct TaskDetailEditorCard: View {
             Label(AppStrings.localized("task.detail.editor"), systemImage: "pencil")
                 .font(.headline)
             Spacer(minLength: 8)
-            Button(AppStrings.localized("common.reset"), action: reset)
+            if isExpanded {
+                Button(AppStrings.localized("common.reset"), action: reset)
+                    .buttonStyle(.bordered)
+                Button(AppStrings.localized("common.save"), action: save)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canSave)
+            } else {
+                Button {
+                    isExpanded = true
+                } label: {
+                    Label(AppStrings.localized("task.detail.editor.expand"), systemImage: "pencil")
+                }
                 .buttonStyle(.bordered)
-            Button(AppStrings.localized("common.save"), action: save)
-                .buttonStyle(.borderedProminent)
-                .disabled(!canSave)
+            }
         }
+    }
+
+    private var editorSummary: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                summaryBadge(title: AppStrings.localized("editor.task.status"), value: draft.status.displayName, iconName: "circle")
+                summaryBadge(title: AppStrings.localized("editor.task.estimate"), value: estimatedMinutesLabel, iconName: "timer")
+                summaryBadge(title: AppStrings.localized("editor.checklist.title"), value: checklistSummary, iconName: "checklist")
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                summaryBadge(title: AppStrings.localized("editor.task.status"), value: draft.status.displayName, iconName: "circle")
+                summaryBadge(title: AppStrings.localized("editor.task.estimate"), value: estimatedMinutesLabel, iconName: "timer")
+                summaryBadge(title: AppStrings.localized("editor.checklist.title"), value: checklistSummary, iconName: "checklist")
+            }
+        }
+    }
+
+    private func summaryBadge(title: String, value: String, iconName: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: iconName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text(value)
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var infoSection: some View {
@@ -45,7 +97,7 @@ struct TaskDetailEditorCard: View {
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...3)
 
-            TaskDetailStatusSelector(selection: $draft.status)
+            TaskDetailStatusControl(selection: $draft.status)
 
             parentPicker
             if draft.parentID == nil {
@@ -194,6 +246,13 @@ struct TaskDetailEditorCard: View {
         } ?? AppStrings.localized("editor.task.notSet")
     }
 
+    private var checklistSummary: String {
+        let completed = draft.checklistItems.filter(\.isCompleted).count
+        let total = draft.checklistItems.count
+        guard total > 0 else { return AppStrings.localized("checklist.noItems") }
+        return "\(completed)/\(total)"
+    }
+
     private var canSave: Bool {
         !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -300,7 +359,7 @@ private struct TaskDetailEditorSection<Content: View>: View {
     }
 }
 
-private struct TaskDetailStatusSelector: View {
+private struct TaskDetailStatusControl: View {
     @Binding var selection: TaskStatus
 
     var body: some View {
@@ -309,49 +368,15 @@ private struct TaskDetailStatusSelector: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
-                    options
-                }
-
-                VStack(spacing: 8) {
-                    options
-                }
-            }
-        }
-    }
-
-    private var options: some View {
-        ForEach(TaskStatus.editableCases, id: \.self) { status in
-            Button {
-                selection = status
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: status.symbolName)
-                        .foregroundStyle(Color(hex: status.colorHex) ?? .secondary)
+            Picker(AppStrings.localized("editor.task.status"), selection: $selection) {
+                ForEach(TaskStatus.editableCases, id: \.self) { status in
                     Text(status.displayName)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if selection == status {
-                        Image(systemName: "checkmark")
-                            .font(.caption.weight(.bold))
-                    }
+                        .tag(status)
                 }
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 10)
-                .frame(height: 38)
-                .frame(maxWidth: .infinity)
-                .background(optionBackground(for: status), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(status.displayName)
+            .pickerStyle(.segmented)
+            .labelsHidden()
         }
-    }
-
-    private func optionBackground(for status: TaskStatus) -> Color {
-        selection == status
-            ? (Color(hex: status.colorHex) ?? .blue).opacity(0.16)
-            : Color.secondary.opacity(0.08)
     }
 }
 

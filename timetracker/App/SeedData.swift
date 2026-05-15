@@ -14,6 +14,16 @@ enum SeedData {
     }
 
     static func ensureSeeded(context: ModelContext) throws {
+        switch AppDemoDataConfiguration.currentMode {
+        case .off:
+            return
+        case .replaceOnLaunch:
+            try replaceWithDemoData(context: context)
+            return
+        case .seedIfEmpty:
+            break
+        }
+
         guard !isAutomaticDemoSeedingDisabled else { return }
         guard AppCloudSync.allowsAutomaticDemoSeeding else { return }
         let taskCount = try context.fetch(FetchDescriptor<TaskNode>()).count

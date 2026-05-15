@@ -4,16 +4,19 @@ struct AnalyticsDecisionSummaryGrid: View {
     let snapshot: AnalyticsSnapshot
 
     var body: some View {
-        AnalyticsChartCard(
-            title: AppStrings.localized("analytics.decisions.title"),
-            subtitle: AppStrings.localized("analytics.decisions.subtitle")
-        ) {
+        VStack(alignment: .leading, spacing: 12) {
+            AppSectionHeader(
+                title: AppStrings.localized("analytics.decisions.title"),
+                subtitle: AppStrings.localized("analytics.decisions.subtitle")
+            )
+
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 12)], spacing: 12) {
                 ForEach(snapshot.insights) { insight in
                     AnalyticsInsightCard(insight: insight)
                 }
             }
         }
+        .accessibilityIdentifier("analytics.decisionSummary")
     }
 }
 

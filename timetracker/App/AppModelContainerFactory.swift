@@ -46,6 +46,23 @@ extension timetrackerApp {
             cloudKitDatabase: .none
         )
 
+        if AppDemoDataConfiguration.usesLocalDemoStore {
+            AppCloudSync.recordDemoDataMode()
+            do {
+                return try ModelContainer(
+                    for: schema,
+                    migrationPlan: TimeTrackerMigrationPlan.self,
+                    configurations: [localConfiguration]
+                )
+            } catch {
+                return makeEmergencyModelContainer(
+                    schema: schema,
+                    configuration: emergencyConfiguration,
+                    error: error
+                )
+            }
+        }
+
         guard AppCloudSync.isEnabled else {
             AppCloudSync.recordCloudKitDisabledByUser()
             do {

@@ -7,6 +7,7 @@ struct TaskDetailView: View {
     @State private var range: AnalyticsRange = .week
     @State private var now = Date()
     @State private var draft: TaskEditorDraft?
+    @State private var isEditorExpanded = false
     @FocusState private var focusedChecklistDraftID: UUID?
     private let refreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
@@ -31,15 +32,21 @@ struct TaskDetailView: View {
         let snapshot = store.taskAnalyticsSnapshot(for: task, range: range, now: now)
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                TaskDetailHeader(store: store, task: task, snapshot: snapshot)
+                TaskDetailHeader(
+                    store: store,
+                    task: task,
+                    snapshot: snapshot,
+                    edit: { isEditorExpanded = true }
+                )
+                TaskDetailOverviewGrid(snapshot: snapshot)
                 TaskDetailEditorCard(
                     store: store,
                     draft: detailDraftBinding(for: task),
+                    isExpanded: $isEditorExpanded,
                     save: saveDraft,
                     reset: { resetDraft(for: task) },
                     focusedChecklistDraftID: $focusedChecklistDraftID
                 )
-                TaskDetailOverviewGrid(snapshot: snapshot)
                 TaskForecastPanel(store: store, task: task)
                 TaskDetailAnalysisSection(range: $range, snapshot: snapshot)
                 TaskDetailRecentRecordsCard(records: snapshot.recentRecords)
@@ -96,6 +103,7 @@ private struct TaskDetailHeader: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode
     let snapshot: TaskAnalyticsSnapshot
+    let edit: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -121,6 +129,13 @@ private struct TaskDetailHeader: View {
                 }
 
                 Spacer(minLength: 8)
+
+                Button(action: edit) {
+                    Image(systemName: "pencil")
+                        .font(.body.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel(AppStrings.localized("task.detail.editor.expand"))
             }
 
             HStack(spacing: 10) {

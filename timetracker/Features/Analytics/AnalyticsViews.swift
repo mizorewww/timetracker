@@ -56,6 +56,7 @@ private struct AnalyticsContent: View {
                     comparison: snapshot.comparison,
                     rhythm: snapshot.rhythm
                 )
+                AnalyticsMetricGlossaryStrip()
                 TaskForecastsCard(store: store)
                 AnalyticsBreakdownSection(snapshot: snapshot)
                 AnalyticsRangeSection(snapshot: snapshot, range: range)

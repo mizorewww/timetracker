@@ -77,6 +77,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/App/AppModelContainerFactory.swift",
+            "timetracker/App/AppDemoDataConfiguration.swift",
             "timetracker/App/SettingsSceneView.swift",
             "timetracker/App/TimeTrackerCommands.swift",
             "timetracker/App/TimeTrackerAppDelegate.swift",

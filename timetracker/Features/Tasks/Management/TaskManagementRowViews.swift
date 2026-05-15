@@ -108,22 +108,22 @@ private struct TaskManagementRowContent: View {
             TaskIcon(task: task, size: 30)
 
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(task.title)
-                        .font(.headline)
-                        .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                        .strikethrough(task.status == .completed)
-                        .lineLimit(2)
+                Text(task.title)
+                    .font(.headline)
+                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                    .strikethrough(task.status == .completed)
+                    .lineLimit(2)
 
+                HStack(spacing: 6) {
+                    Text(store.path(for: task))
+                        .lineLimit(1)
+                    statusMetadataBadge
                     if isRunning {
                         RunningStatusBadge()
                     }
                 }
-
-                Text(store.path(for: task))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
                 if progress.totalCount > 0 || rollup?.isDisplayableForecast == true {
                     TaskProgressLine(progress: progress, rollup: rollup)
@@ -144,8 +144,6 @@ private struct TaskManagementRowContent: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            TaskStatusBadge(status: task.status)
 
             if showsNavigationChevron {
                 Image(systemName: "chevron.right")
@@ -171,7 +169,7 @@ private struct TaskManagementRowContent: View {
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
-                    TaskStatusBadge(status: task.status)
+                    statusMetadataBadge
                     if isRunning {
                         RunningStatusBadge()
                     }
@@ -212,5 +210,9 @@ private struct TaskManagementRowContent: View {
             }
         }
         .padding(.vertical, 6)
+    }
+
+    private var statusMetadataBadge: some View {
+        TaskStatusBadge(status: task.status)
     }
 }

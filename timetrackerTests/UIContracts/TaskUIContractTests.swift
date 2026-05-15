@@ -48,6 +48,19 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func phoneTabsBindToSharedNavigationDestination() throws {
+        let rootSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+
+        #expect(rootSource.contains("@State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today"))
+        #expect(rootSource.contains("TabView(selection: $selectedDestination)"))
+        #expect(rootSource.contains(".onChange(of: store.desktopDestination)"))
+        #expect(rootSource.contains(".onChange(of: selectedDestination)"))
+        #expect(rootSource.contains("private func phoneDestination(for destination: TimeTrackerStore.DesktopDestination)"))
+        #expect(rootSource.contains(".tag(TimeTrackerStore.DesktopDestination.analytics)"))
+        #expect(rootSource.contains(".tag(TimeTrackerStore.DesktopDestination.tasks)"))
+    }
+
+    @Test
     func compactTaskRowsShowChecklistProgressBar() throws {
         let source = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
         let sharedSource = try sourceText("timetracker/SharedUI/Components/TaskProgressViews.swift")
@@ -133,12 +146,90 @@ struct TaskUIContractTests {
         #expect(openTaskSource.contains("store.selectTask(task.id, revealInToday: false)"))
         #expect(openTaskSource.contains("presentEditTask") == false)
         #expect(detailSource.contains("TaskDetailEditorCard("))
+        #expect(detailSource.contains("@State private var isEditorExpanded = false"))
+        #expect(detailSource.contains("edit: { isEditorExpanded = true }"))
+        #expect(detailSource.contains("isExpanded: $isEditorExpanded"))
         #expect(detailSource.contains("TaskDetailAnalysisSection"))
         #expect(detailSource.contains("TaskChecklistPanel(store: store, task: task)") == false)
         #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.task.name\")"))
-        #expect(editorSource.contains("TaskDetailStatusSelector(selection: $draft.status)"))
+        #expect(editorSource.contains("TaskDetailStatusControl(selection: $draft.status)"))
+        #expect(editorSource.contains("if isExpanded {"))
+        #expect(detailSource.contains("Image(systemName: \"pencil\")"))
         #expect(editorSource.contains("status.exampleText") == false)
         #expect(editorSource.contains("ChecklistEditorRow("))
+    }
+
+    @Test
+    func uiRefactorPlanDocumentsInventoryAndResumableTDDLoop() throws {
+        let doc = try sourceText("Docs/UIOperationRefactorPlan.md")
+        let project = try sourceText("timetracker.xcodeproj/project.pbxproj")
+        let infoPlist = try sourceText("timetracker/Info.plist")
+        let seedSource = try sourceText("timetracker/App/SeedData.swift")
+        let containerSource = try sourceText("timetracker/App/AppModelContainerFactory.swift")
+
+        #expect(doc.contains("## UI Inventory"))
+        #expect(doc.contains("## Operation Logic Inventory"))
+        #expect(doc.contains("## TDD Loop"))
+        #expect(doc.contains("## Context-Persistence Protocol"))
+        #expect(doc.contains("Baseline simulator/app screenshots must happen before any new image generation."))
+        #expect(doc.contains("## Screenshot-First Design Reference Workflow"))
+        #expect(doc.contains("Date navigation belongs in Analytics"))
+        #expect(doc.contains("- [x] Create branch `codex/ui-logic-refactor`."))
+        #expect(doc.contains("- [x] Inventory root navigation, screens, and operation logic in this document."))
+        #expect(doc.contains("- [x] Capture baseline iPhone/iPad/macOS screenshots before image generation."))
+        #expect(doc.contains("- [x] Analyze baseline screenshots and update Screenshot Log."))
+        #expect(doc.contains("- [ ] Generate screenshot-grounded design reference images from the prompts above."))
+        #expect(doc.contains("Sync phone tab selection with shared navigation destination"))
+        #expect(doc.contains("iphone-analytics-baseline.png"))
+        #expect(doc.contains("mac-task-detail-baseline.png"))
+        #expect(doc.contains("invalidated image generation"))
+        #expect(project.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = seedIfEmpty;"))
+        #expect(project.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = off;"))
+        #expect(project.contains("INFOPLIST_KEY_TimeTrackerAutomaticDemoDataMode"))
+        #expect(infoPlist.contains("<key>TimeTrackerAutomaticDemoDataMode</key>"))
+        #expect(infoPlist.contains("<string>$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)</string>"))
+        #expect(seedSource.contains("case .replaceOnLaunch:"))
+        #expect(containerSource.contains("AppDemoDataConfiguration.usesLocalDemoStore"))
+    }
+
+    @Test
+    func taskDetailIsReadFirstBeforeInlineEditing() throws {
+        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let detailContent = try #require(detailSource.slice(from: "return ScrollView", to: ".background(AppColors.background)"))
+        let headerIndex = try #require(detailContent.range(of: "TaskDetailHeader(")?.lowerBound)
+        let overviewIndex = try #require(detailContent.range(of: "TaskDetailOverviewGrid(snapshot: snapshot)")?.lowerBound)
+        let editorIndex = try #require(detailContent.range(of: "TaskDetailEditorCard(")?.lowerBound)
+        let forecastIndex = try #require(detailContent.range(of: "TaskForecastPanel(store: store, task: task)")?.lowerBound)
+        let analysisIndex = try #require(detailContent.range(of: "TaskDetailAnalysisSection(range: $range, snapshot: snapshot)")?.lowerBound)
+
+        #expect(headerIndex < overviewIndex)
+        #expect(overviewIndex < editorIndex)
+        #expect(editorIndex < forecastIndex)
+        #expect(forecastIndex < analysisIndex)
+        #expect(detailContent.contains("TaskDetailHeader("))
+        #expect(detailContent.contains("edit: { isEditorExpanded = true }"))
+        #expect(detailSource.contains("@State private var isEditorExpanded = false"))
+    }
+
+    @Test
+    func taskDetailUsesNativeCompactStatusControl() throws {
+        let editorSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift")
+
+        #expect(editorSource.contains("TaskDetailStatusControl(selection: $draft.status)"))
+        #expect(editorSource.contains("TaskDetailStatusSelector") == false)
+        #expect(editorSource.contains(".pickerStyle(.segmented)"))
+        #expect(editorSource.contains("status.exampleText") == false)
+        #expect(editorSource.contains("HStack(spacing: 8) {\n                    Image(systemName: status.symbolName)") == false)
+    }
+
+    @Test
+    func taskRowsKeepStatusWithMetadataInsteadOfFloatingAtTrailingEdge() throws {
+        let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
+
+        #expect(rowSource.contains("private var statusMetadataBadge"))
+        #expect(rowSource.contains("statusMetadataBadge"))
+        #expect(rowSource.contains("TaskStatusBadge(status: task.status)\n\n            if showsNavigationChevron") == false)
+        #expect(rowSource.contains("TaskStatusBadge(status: task.status)\n                    if isRunning") == false)
     }
 
     @Test
@@ -165,6 +256,7 @@ struct TaskUIContractTests {
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("AnalyticsDecisionSummaryGrid(snapshot: snapshot)"))
+        #expect(analyticsSource.contains(".accessibilityIdentifier(\"analytics.decisionSummary\")"))
         #expect(analyticsSource.contains("AnalyticsPeriodControl(range: range, referenceDate: $referenceDate, liveNow: now)"))
         #expect(analyticsSource.contains("effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)"))
         #expect(analyticsSource.contains("AnalyticsBreakdownSection(snapshot: snapshot)"))
@@ -174,6 +266,33 @@ struct TaskUIContractTests {
         #expect(modelsSource.contains("struct TaskAnalyticsSnapshot"))
         #expect(englishStrings.contains("\"analytics.decisions.title\""))
         #expect(englishStrings.contains("\"analytics.quality.title\""))
+    }
+
+    @Test
+    func analyticsMakesSelectedPeriodAndMetricMeaningsExplicit() throws {
+        let analyticsSource = try [
+            "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(analyticsSource.contains("AnalyticsPeriodTitle(range: range, referenceDate: referenceDate)"))
+        #expect(analyticsSource.contains("AnalyticsMetricGlossaryStrip()"))
+        #expect(englishStrings.contains("\"analytics.glossary.gross\""))
+        #expect(englishStrings.contains("\"analytics.glossary.wall\""))
+        #expect(englishStrings.contains("\"analytics.glossary.overlap\""))
+
+        let decisionSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDecisionViews.swift")
+        let decisionGrid = try #require(decisionSource.slice(from: "struct AnalyticsDecisionSummaryGrid", to: "private struct AnalyticsInsightCard"))
+        #expect(decisionGrid.contains("AnalyticsChartCard(") == false)
+
+        let uiTestSource = try sourceText("timetrackerUITests/timetrackerUITests.swift")
+        #expect(uiTestSource.contains("analyticsIsReady(in app: XCUIApplication)"))
+        #expect(uiTestSource.contains("analytics.decisionSummary"))
+        #expect(uiTestSource.contains("analytics.periodControl"))
     }
 
     @Test

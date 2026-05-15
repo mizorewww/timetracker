@@ -334,6 +334,9 @@
 "analytics.metric.deltaFootnoteFormat" = "vs previous range: %@";
 "analytics.metric.dailyPace" = "Daily Pace";
 "analytics.metric.activeDaysFormat" = "%d active days";
+"analytics.glossary.gross" = "sum of all task timers.";
+"analytics.glossary.wall" = "real elapsed time after overlaps are merged.";
+"analytics.glossary.overlap" = "extra time created by parallel timers.";
 "analytics.insight.noData.title" = "No Signal Yet";
 "analytics.insight.noData.body" = "Track time or add a manual record to make this range useful.";
 "analytics.insight.topTask.title" = "Main Time Sink";
@@ -370,6 +373,7 @@
 "analytics.none" = "None";
 "task.detail.title" = "Task Detail";
 "task.detail.editor" = "Task Info";
+"task.detail.editor.expand" = "Edit";
 "task.detail.emptyAnalysis" = "No time has been recorded for this task or its subtasks yet.";
 "task.detail.direct" = "This Task";
 "task.detail.directFootnote" = "Direct records only";

@@ -16,34 +16,56 @@ struct iOSRootView: View {
 
 struct PhoneRootView: View {
     @ObservedObject var store: TimeTrackerStore
+    @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedDestination) {
             NavigationStack {
                 PhoneHomeView(store: store)
             }
             .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
+            .tag(TimeTrackerStore.DesktopDestination.today)
 
             NavigationStack {
                 InboxView(store: store)
             }
             .tabItem { Label(AppStrings.inbox, systemImage: "tray") }
+            .tag(TimeTrackerStore.DesktopDestination.inbox)
 
             NavigationStack {
                 TasksView(store: store)
             }
             .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
+            .tag(TimeTrackerStore.DesktopDestination.tasks)
 
             NavigationStack {
                 PomodoroView(store: store)
             }
             .tabItem { Label(AppStrings.pomodoro, systemImage: "timer") }
+            .tag(TimeTrackerStore.DesktopDestination.pomodoro)
 
             NavigationStack {
                 AnalyticsView(store: store)
             }
             .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
+            .tag(TimeTrackerStore.DesktopDestination.analytics)
         }
+        .onAppear {
+            selectedDestination = phoneDestination(for: store.desktopDestination)
+        }
+        .onChange(of: store.desktopDestination) { _, destination in
+            let phoneDestination = phoneDestination(for: destination)
+            guard selectedDestination != phoneDestination else { return }
+            selectedDestination = phoneDestination
+        }
+        .onChange(of: selectedDestination) { _, destination in
+            guard store.desktopDestination != destination else { return }
+            store.desktopDestination = destination
+        }
+    }
+
+    private func phoneDestination(for destination: TimeTrackerStore.DesktopDestination) -> TimeTrackerStore.DesktopDestination {
+        destination == .settings ? .today : destination
     }
 }
 

@@ -40,6 +40,7 @@ struct AnalyticsHeader: View {
             Text(headerSubtitle)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            AnalyticsPeriodTitle(range: range, referenceDate: referenceDate)
         }
     }
 
@@ -71,6 +72,26 @@ struct AnalyticsHeader: View {
         }
         .pickerStyle(.segmented)
         .frame(maxWidth: 280)
+    }
+}
+
+struct AnalyticsPeriodTitle: View {
+    let range: AnalyticsRange
+    let referenceDate: Date
+
+    var body: some View {
+        Label {
+            Text(AnalyticsPeriodText.title(for: range, date: referenceDate))
+                .lineLimit(1)
+        } icon: {
+            Image(systemName: "calendar")
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.secondary.opacity(0.10), in: Capsule())
+        .accessibilityIdentifier("analytics.periodTitle")
     }
 }
 
@@ -115,6 +136,38 @@ struct AnalyticsMetricGrid: View {
         }
         let prefix = seconds > 0 ? "+" : "-"
         return "\(prefix)\(DurationFormatter.compact(abs(seconds)))"
+    }
+}
+
+struct AnalyticsMetricGlossaryStrip: View {
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                glossaryItem(title: AppStrings.grossTime, body: AppStrings.localized("analytics.glossary.gross"))
+                glossaryItem(title: AppStrings.wallTime, body: AppStrings.localized("analytics.glossary.wall"))
+                glossaryItem(title: AppStrings.localized("analytics.metric.overlap"), body: AppStrings.localized("analytics.glossary.overlap"))
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                glossaryItem(title: AppStrings.grossTime, body: AppStrings.localized("analytics.glossary.gross"))
+                glossaryItem(title: AppStrings.wallTime, body: AppStrings.localized("analytics.glossary.wall"))
+                glossaryItem(title: AppStrings.localized("analytics.metric.overlap"), body: AppStrings.localized("analytics.glossary.overlap"))
+            }
+        }
+        .appCard(padding: 12)
+    }
+
+    private func glossaryItem(title: String, body: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "info.circle")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text("\(title): \(body)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

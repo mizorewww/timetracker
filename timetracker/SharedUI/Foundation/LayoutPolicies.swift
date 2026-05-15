@@ -110,6 +110,25 @@ struct InboxLayoutPolicy {
     var suggestedRowHeight: CGFloat {
         isCompact ? 142 : 132
     }
+
+    func rowHeight(forTitle title: String, isCompleted: Bool, hasSupplementaryContent: Bool) -> CGFloat {
+        let titleExtra = CGFloat(max(0, estimatedTitleLineCount(for: title) - 1)) * (isCompact ? 18 : 20)
+        if hasSupplementaryContent && !isCompleted {
+            return suggestedRowHeight + titleExtra
+        }
+        return rowBaseHeight + titleExtra
+    }
+
+    private func estimatedTitleLineCount(for title: String) -> Int {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return 1 }
+
+        let characterBudget = isCompact ? 26 : 78
+        let weightedCount = trimmed.reduce(0) { total, character in
+            total + (character.isASCII ? 1 : 2)
+        }
+        return min(5, max(1, Int(ceil(Double(weightedCount) / Double(characterBudget)))))
+    }
 }
 
 struct TaskListLayoutPolicy {

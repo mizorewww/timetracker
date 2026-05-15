@@ -15,6 +15,11 @@ This means the app is not a generic task manager. Time evidence, day context, an
 ## Context-Persistence Protocol
 
 - Treat this document as the source of truth for the refactor sequence.
+- The visual-design loop is non-optional: every screenshot listed in "Per-Screenshot Image-Generation Checklist" must be inspected, passed to image generation as its own design reference request, converted into concrete UI actions, implemented, and verified before this refactor is considered complete.
+- Do not replace per-screenshot image generation with one composite board, one generic prompt, or a text-only design pass.
+- Do not stop after image generation. Generated references are inputs; the required outcome is implemented UI improvement plus simulator/app verification screenshots.
+- Prefer Apple-native SwiftUI and platform components: `NavigationSplitView`, `NavigationStack`, `List`, `Form`, `Section`, `DisclosureGroup`, `Picker`, segmented controls, `DatePicker`, `Menu`, `ToolbarItem`, `.inspector`, native buttons, native materials, SF Symbols, and system typography. Avoid custom-drawn controls unless native components cannot express the behavior.
+- Click-through verification is required for every interactive element family in "Interaction Screenshot Checklist"; capture screenshots after opening or toggling each state so visual regressions are not hidden behind static first-screen screenshots.
 - Before changing UI, add or update a UI contract test that locks the intended behavior.
 - After changing UI, run the smallest relevant test slice first, then broader build/tests.
 - After every simulator/screenshot pass, append device, command, file path, observations, and next fix.
@@ -36,6 +41,63 @@ This means the app is not a generic task manager. Time evidence, day context, an
 7. Generate design references using the screenshots plus product intent.
 8. Implement the UI change and verify with new platform screenshots.
 9. Update this document with `[x]`, commands, and screenshot notes.
+
+## Per-Screenshot Image-Generation Checklist
+
+Each row must complete the sequence: `[ ] inspect screenshot` -> `[ ] pass this exact screenshot to image generation` -> `[ ] save/reference generated design` -> `[ ] extract UI actions` -> `[ ] implement with native components first` -> `[ ] verify with platform screenshot`.
+
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-analytics-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-analytics-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-analytics-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-home-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-home-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-home-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-sidebar-task-detail-fix.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-task-detail-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-task-detail-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-task-detail-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-tasks-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-tasks-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-tasks-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-openurl-check.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-home-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-home-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-home-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-task-detail-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-task-detail-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-task-detail-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-tasks-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-tasks-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-tasks-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-iteration2.png`
+
+## Interaction Screenshot Checklist
+
+Every item below must be clicked or toggled on the appropriate platform, captured, and recorded in the Screenshot Log. Use demo data mode `replaceOnLaunch` unless a test requires empty data.
+
+- [ ] Root navigation: Home, Inbox, Tasks, Pomodoro, Analytics, Settings.
+- [ ] Sidebar task tree: expand/collapse root task, click root task, click child task, switch category section.
+- [ ] Home: start timer, new task, active timer pause, active timer stop, paused session resume, paused session stop, quick-start task, quick-start editor, timeline segment tap, timeline context menu.
+- [ ] Analytics: range segmented control, previous period, next period, date picker, current-period button, forecast row task navigation, distribution mode if visible, overlap/rhythm/quality scroll states.
+- [ ] Tasks: root row tap to detail, child row tap to detail, expand/collapse, row swipe edit/archive/delete, context menu edit/status/archive/delete, new root task, new category, search.
+- [ ] Task Detail: start timer, add manual time, header pencil, collapsed editor expand, status change, estimate field, checklist add/complete/delete, analysis range switch, recent record tap/context if present, back navigation.
+- [ ] Inbox: complete/uncomplete item, suggestion apply, suggestion edit, suggestion reject/regenerate if present, add inbox item.
+- [ ] Pomodoro: task picker, start focus, pause/resume/stop, settings controls.
+- [ ] Settings: CSV export, cloud sync refresh, demo data replace/clear if available, preference toggles.
 
 ## UI Inventory
 

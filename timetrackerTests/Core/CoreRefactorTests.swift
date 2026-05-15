@@ -13,12 +13,44 @@ struct CoreRefactorTests {
         let store = TimeTrackerStore()
         store.configureIfNeeded(context: context)
         store.desktopDestination = .tasks
-        store.selectTask(task.id, revealInToday: false)
+        store.openTaskDetail(task.id)
 
         store.deleteSelectedTask(taskID: task.id)
 
         #expect(store.desktopDestination == .tasks)
         #expect(store.selectedTaskID == nil)
+        #expect(store.desktopTaskDetailID == nil)
+    }
+
+    @Test @MainActor
+    func desktopTaskDetailNavigationIsSeparateFromPlainTaskSelection() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let detailTask = try taskRepository.createTask(title: "Open detail", parentID: nil, colorHex: nil, iconName: nil)
+        let selectedTask = try taskRepository.createTask(title: "Plain selection", parentID: nil, colorHex: nil, iconName: nil)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.desktopDestination = .analytics
+
+        store.openTaskDetail(detailTask.id)
+
+        #expect(store.desktopDestination == .tasks)
+        #expect(store.selectedTaskID == detailTask.id)
+        #expect(store.desktopTaskDetailID == detailTask.id)
+
+        store.closeTaskDetailNavigation()
+        store.selectTask(selectedTask.id, revealInToday: false)
+
+        #expect(store.desktopDestination == .tasks)
+        #expect(store.selectedTaskID == selectedTask.id)
+        #expect(store.desktopTaskDetailID == nil)
+
+        store.openTaskDetail(detailTask.id)
+        store.selectTask(selectedTask.id)
+
+        #expect(store.desktopDestination == .today)
+        #expect(store.selectedTaskID == selectedTask.id)
+        #expect(store.desktopTaskDetailID == nil)
     }
 
     @Test @MainActor

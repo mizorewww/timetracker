@@ -66,6 +66,10 @@ extension TimeTrackerStore {
         } else if let selectedTaskID, taskByID[selectedTaskID] == nil {
             self.selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
         }
+
+        if let desktopTaskDetailID, taskByID[desktopTaskDetailID] == nil {
+            self.desktopTaskDetailID = nil
+        }
     }
 
     @discardableResult

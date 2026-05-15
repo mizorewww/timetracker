@@ -62,8 +62,31 @@ final class timetrackerUITests: XCTestCase {
         try capture("iphone-tasks-baseline", app: app)
 
         app.staticTexts["Design macOS UI"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["开始计时"].waitForExistence(timeout: 3) || app.buttons["Start Timer"].waitForExistence(timeout: 3))
+        XCTAssertTrue(taskDetailIsReady(in: app))
         try capture("iphone-task-detail-baseline", app: app)
+    }
+
+    @MainActor
+    func testSidebarTaskOpensTaskDetailWhenSidebarIsVisible() throws {
+        let app = launchApp()
+
+        XCTAssertTrue(homeIsReady(in: app))
+        let revealSidebar = app.descendants(matching: .any)["sidebar.show"].firstMatch
+        if revealSidebar.waitForExistence(timeout: 1), revealSidebar.isHittable {
+            revealSidebar.tap()
+        }
+
+        let sidebarTask = app.descendants(matching: .any)["sidebar.task.Time Tracker App"].firstMatch
+        guard sidebarTask.waitForExistence(timeout: 3) else {
+            throw XCTSkip("Sidebar is not visible in this size class.")
+        }
+
+        sidebarTask.tap()
+
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        XCTAssertTrue(app.staticTexts["Time Tracker App"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.textFields["任务名称"].waitForExistence(timeout: 1))
+        try capture("ipad-sidebar-task-detail-fix", app: app)
     }
 
     @MainActor
@@ -87,6 +110,13 @@ final class timetrackerUITests: XCTestCase {
         let periodControl = app.descendants(matching: .any)["analytics.periodControl"]
         return decisionSummary.waitForExistence(timeout: 8) &&
         periodControl.waitForExistence(timeout: 2)
+    }
+
+    @MainActor
+    private func taskDetailIsReady(in app: XCUIApplication) -> Bool {
+        app.buttons["补录时间"].waitForExistence(timeout: 3) ||
+        app.buttons["添加时间"].waitForExistence(timeout: 1) ||
+        app.buttons["Add Time"].waitForExistence(timeout: 1)
     }
 
     @MainActor

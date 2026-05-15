@@ -63,6 +63,7 @@ final class TimeTrackerStore: ObservableObject {
     @Published var manualTimeDraft: ManualTimeDraft?
     @Published var segmentEditorDraft: SegmentEditorDraft?
     @Published var desktopDestination: DesktopDestination = .today
+    @Published var desktopTaskDetailID: UUID?
     @Published var selectedTaskPulseID: UUID?
     @Published var selectedTaskPulseToken = UUID()
     @Published var isStartTaskPickerPresented = false

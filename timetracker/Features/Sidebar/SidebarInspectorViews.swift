@@ -52,12 +52,16 @@ struct SidebarView: View {
             guard let newValue else { return }
             switch newValue {
             case let .destination(destination):
+                store.closeTaskDetailNavigation()
                 store.desktopDestination = destination
             case let .task(taskID):
-                store.selectTask(taskID)
+                store.openTaskDetail(taskID)
             }
         }
         .onChange(of: store.selectedTaskID) { _, _ in
+            syncSelectionFromStore()
+        }
+        .onChange(of: store.desktopTaskDetailID) { _, _ in
             syncSelectionFromStore()
         }
         #if os(macOS)
@@ -80,11 +84,11 @@ struct SidebarView: View {
                 isSyncingSelection = false
             }
         }
-        if let selectedTaskID = store.selectedTaskID {
-            for ancestorID in store.ancestorTaskIDs(for: selectedTaskID) {
+        if let desktopTaskDetailID = store.desktopTaskDetailID {
+            for ancestorID in store.ancestorTaskIDs(for: desktopTaskDetailID) {
                 expansionState.expand(ancestorID)
             }
-            selection = .task(selectedTaskID)
+            selection = .task(desktopTaskDetailID)
         } else {
             selection = .destination(store.desktopDestination)
         }
@@ -174,6 +178,7 @@ struct SidebarTaskTreeRow: View {
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
+        .accessibilityIdentifier("sidebar.task.\(task.title)")
         .taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)
     }
 }

@@ -41,10 +41,25 @@ struct TaskUIContractTests {
     @Test
     func sidebarSelectionSyncDoesNotRevealProgrammaticTaskSelection() throws {
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
+        let selectionSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Selection.swift")
+        let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
+        let splitButtonSource = try sourceText("timetracker/SharedUI/Components/SplitViewToolbarButtons.swift")
 
         #expect(sidebarSource.contains("@State private var isSyncingSelection = false"))
         #expect(sidebarSource.contains("guard !isSyncingSelection else { return }"))
         #expect(sidebarSource.contains("DispatchQueue.main.async"))
+        #expect(sidebarSource.contains("store.openTaskDetail(taskID)"))
+        #expect(sidebarSource.contains("store.closeTaskDetailNavigation()"))
+        #expect(sidebarSource.contains("if let desktopTaskDetailID = store.desktopTaskDetailID"))
+        #expect(sidebarSource.contains(".accessibilityIdentifier(\"sidebar.task.\\(task.title)\")"))
+        #expect(storeSource.contains("@Published var desktopTaskDetailID: UUID?"))
+        #expect(selectionSource.contains("func openTaskDetail(_ taskID: UUID)"))
+        #expect(selectionSource.contains("desktopTaskDetailID = taskID"))
+        #expect(selectionSource.contains("desktopDestination = .tasks"))
+        #expect(rootSource.contains("if let taskID = store.desktopTaskDetailID, store.task(for: taskID) != nil"))
+        #expect(rootSource.contains("TaskDetailView(store: store, taskID: taskID)"))
+        #expect(splitButtonSource.contains(".accessibilityIdentifier(\"sidebar.show\")"))
     }
 
     @Test
@@ -142,7 +157,8 @@ struct TaskUIContractTests {
 
         #expect(tasksSource.contains("TaskDetailView(store: store, taskID: task.id)"))
         #expect(tasksSource.contains("@State private var detailTaskID"))
-        #expect(rootSource.contains("NavigationStack {\n                TasksView(store: store)\n            }"))
+        #expect(rootSource.contains("TaskDetailView(store: store, taskID: taskID)"))
+        #expect(rootSource.contains("TasksView(store: store)"))
         #expect(openTaskSource.contains("store.selectTask(task.id, revealInToday: false)"))
         #expect(openTaskSource.contains("presentEditTask") == false)
         #expect(detailSource.contains("TaskDetailEditorCard("))

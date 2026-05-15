@@ -438,6 +438,7 @@ Use `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home
 - [x] Add/adjust UI contract tests for the refactor rules.
 - [x] Sync phone tab selection with shared navigation destination so screenshot/deep-link navigation matches iPad/macOS semantics.
 - [x] Fix Task Detail read/edit hierarchy and status layout.
+- [x] Fix iPad/macOS sidebar task selection so clicking a sidebar task opens Task Detail instead of only selecting task context.
 - [x] Fix Tasks row hierarchy so title/status/time/path do not collide.
 - [x] Refine Analytics header and decision sections so selected period is unmistakable.
 - [x] Add concise explanatory copy/tooltips where Analytics terms can confuse users.
@@ -498,6 +499,10 @@ Use `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home
   - Task Detail now keeps editing collapsed by default. The header pencil and the `任务信息` edit button expand the inline editor; the first screen stays focused on identity, timer actions, totals, forecast, analysis, and recent evidence.
   - Analytics decision summary is flatter and no longer sits inside another chart card. On iPhone, date/range switching is visible in Analytics and Home stays a live cockpit without historical date controls.
   - iPad and macOS screenshots show no blocking overlap in the reviewed first-screen paths. Remaining future polish is stylistic: reduce duplicate large/content titles on wide platforms only if it proves distracting in daily use.
+- 2026-05-15 iPad sidebar detail fix:
+  - File: `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-sidebar-task-detail-fix.png`.
+  - Manual Simulator verification clicked a visible task in the iPad sidebar and confirmed the detail pane switched to `TaskDetailView` with task header, timer actions, overview, forecast, analysis, and recent records.
+  - Root cause: sidebar task clicks used plain `selectTask(taskID)`, whose default behavior revealed Today instead of navigating to Task Detail. Store navigation now separates selected task context from `desktopTaskDetailID`.
 
 ## Verification Log
 
@@ -523,3 +528,7 @@ Use `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home
   - Parallel full test exposed one performance-budget flake under load: `CorePerformanceBudgetTests.denseOverlapAnalyticsSnapshotStaysWithinPerformanceBudget`.
   - The performance test passed individually: `xcodebuild test -quiet -scheme timetracker -destination 'platform=macOS' -derivedDataPath build/DerivedData-UIRefactor -only-testing:timetrackerTests/CorePerformanceBudgetTests/denseOverlapAnalyticsSnapshotStaysWithinPerformanceBudget`.
   - Final serial full test passed: `xcodebuild test -quiet -scheme timetracker -destination 'platform=macOS' -derivedDataPath build/DerivedData-UIRefactor -parallel-testing-enabled NO`.
+- 2026-05-15 iPad sidebar task detail fix:
+  - Targeted state/contract tests passed: `xcodebuild test -quiet -scheme timetracker -destination 'platform=macOS' -derivedDataPath build/DerivedData-UIRefactor -only-testing:timetrackerTests/CoreRefactorTests/desktopTaskDetailNavigationIsSeparateFromPlainTaskSelection -only-testing:timetrackerTests/CoreRefactorTests/deletingSelectedTaskPreservesCurrentDestination -only-testing:timetrackerTests/TaskUIContractTests/sidebarSelectionSyncDoesNotRevealProgrammaticTaskSelection`.
+  - iPad build passed: `xcodebuild build -quiet -scheme timetracker -destination 'id=CE695D7E-AADB-4E49-A98C-61A800FD099C' -derivedDataPath build/DerivedData-UIRefactor TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE=replaceOnLaunch`.
+  - iPad XCTest runner launch failed once at SpringBoard/test-runner level before assertions ran; manual Simulator verification with Computer Use confirmed sidebar task click opens Task Detail and produced `ipad-sidebar-task-detail-fix.png`.

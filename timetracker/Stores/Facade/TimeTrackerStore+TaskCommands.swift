@@ -88,6 +88,9 @@ extension TimeTrackerStore {
             if self.selectedTaskID == targetID {
                 self.selectedTaskID = nil
             }
+            if self.desktopTaskDetailID == targetID {
+                self.desktopTaskDetailID = nil
+            }
             self.desktopDestination = destinationBeforeDelete
         }
     }

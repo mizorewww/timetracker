@@ -7,21 +7,26 @@ extension TimeTrackerStore {
 
         switch action {
         case .open(let destination):
+            closeTaskDetailNavigation()
             desktopDestination = destination
         case .startTimerPicker:
+            closeTaskDetailNavigation()
             desktopDestination = .today
             isStartTaskPickerPresented = true
         case .startTimer(let taskID):
             guard let task = task(for: taskID), task.deletedAt == nil, task.status != .archived else { return }
+            closeTaskDetailNavigation()
             desktopDestination = .today
             startTask(task)
         case .stopTimer(let taskID):
+            closeTaskDetailNavigation()
             desktopDestination = .today
             guard let segment = taskID.flatMap({ id in
                 activeSegments.first { $0.taskID == id }
             }) ?? activeSegments.first else { return }
             stop(segment: segment)
         case .newTask:
+            closeTaskDetailNavigation()
             desktopDestination = .tasks
             presentNewTask(preservingDestination: .tasks)
         }

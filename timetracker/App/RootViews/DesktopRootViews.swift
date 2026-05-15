@@ -90,8 +90,14 @@ struct DesktopContentView: View {
         case .inbox:
             InboxView(store: store)
         case .tasks:
-            NavigationStack {
-                TasksView(store: store)
+            if let taskID = store.desktopTaskDetailID, store.task(for: taskID) != nil {
+                NavigationStack {
+                    TaskDetailView(store: store, taskID: taskID)
+                }
+            } else {
+                NavigationStack {
+                    TasksView(store: store)
+                }
             }
         case .pomodoro:
             PomodoroView(store: store)

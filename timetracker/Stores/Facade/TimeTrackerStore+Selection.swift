@@ -8,10 +8,21 @@ extension TimeTrackerStore {
     func selectTask(_ taskID: UUID, revealInToday: Bool = true) {
         selectedTaskID = taskID
         if revealInToday {
+            desktopTaskDetailID = nil
             desktopDestination = .today
         }
         selectedTaskPulseID = taskID
         selectedTaskPulseToken = UUID()
+    }
+
+    func openTaskDetail(_ taskID: UUID) {
+        desktopTaskDetailID = taskID
+        selectTask(taskID, revealInToday: false)
+        desktopDestination = .tasks
+    }
+
+    func closeTaskDetailNavigation() {
+        desktopTaskDetailID = nil
     }
 
     func ancestorTaskIDs(for taskID: UUID) -> [UUID] {

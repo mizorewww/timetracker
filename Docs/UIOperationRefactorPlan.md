@@ -489,6 +489,160 @@ Use `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-hom
 
 Use `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-baseline.png`, `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-baseline.png`, `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-baseline.png`, and `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-baseline.png` as the current UI references. Create an Apple-native macOS SwiftUI productivity app mockup for time tracking. Three-column layout: sidebar navigation, main task detail or analytics workspace, right inspector. Purpose: record what task the user did at what time and analyze past days/weeks/months for decisions. Preserve the clear macOS Analytics period controls. Fix current problems: dense dark-mode Home competing with inspector, Analytics cards lacking a glossary/hierarchy, task list status/time floating at row edges, and Task Detail opening as a giant editor instead of a readable evidence page. Use macOS toolbar, sidebar selection, table/list rows, compact cards only for metrics, native controls, clear date navigation in Analytics, task detail with summary and inline edit sections. Calm system gray background, SF Symbols, small precise typography, Chinese UI, no marketing page, no decorative gradients.
 
+## Screenshot-Grounded Image Generation Queue
+
+Hard rule: every file below must be sent to ChatGPT in Chrome with Thinking/Deep Research-style reasoning enabled and Create Image selected. The output is a design reference, not production UI. Do not mark an item complete until the screenshot was uploaded, the prompt stated the app intent, the generated design was reviewed, and the resulting UI action was either implemented or explicitly logged as "no code change needed." Prefer Apple native UI patterns and SwiftUI-native components: `NavigationStack`, `NavigationSplitView`, `List`, `Form`, `Section`, `Picker`, `Menu`, `ToolbarItem`, `Button`, `Toggle`, `DisclosureGroup`, `.searchable`, `.inspector`, `.fileExporter`, native segmented controls, SF Symbols, and platform materials. Avoid hand-drawn controls unless SwiftUI has no native equivalent.
+
+### Existing Screenshot Inputs
+
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-home-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-tasks-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-task-detail-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-home-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-tasks-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-task-detail-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-home-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-analytics-openurl-check.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-tasks-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/iphone-task-detail-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-home-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-analytics-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-tasks-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-task-detail-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-home-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-analytics-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-tasks-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-task-detail-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-home-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-analytics-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-tasks-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-task-detail-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/ipad-sidebar-task-detail-fix.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-baseline.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-iteration1.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-home-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-analytics-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-tasks-iteration2.png`
+- [ ] `/Users/gaozexuan/Developer/timetracker/build/UIRefactorScreenshots/mac-task-detail-iteration2.png`
+
+### ChatGPT Image Output Log
+
+Store downloaded/generated design references under `/Users/gaozexuan/Developer/timetracker/build/UIRefactorDesignReferences/`. Name files as `<input-basename>-chatgpt-design.png` or `<input-basename>-chatgpt-design-2.png` when iterating. Mark items below only after the output file exists and the design decision has been written into the log.
+
+- [ ] iPhone design references complete.
+- [ ] iPad design references complete.
+- [ ] macOS design references complete.
+- [ ] Design reference review complete.
+- [ ] SwiftUI UI changes from design references complete.
+- [ ] Post-change screenshots recaptured on iPhone, iPad, and macOS.
+- [ ] Post-change tests pass.
+
+## Interactive Element Click Screenshot Queue
+
+Hard rule: every interactive element in the active UI inventory must be clicked or otherwise activated at least once on a representative platform, with a before/after screenshot or a recorded reason why activation is destructive or redundant. Save screenshots under `/Users/gaozexuan/Developer/timetracker/build/UIInteractionScreenshots/`. Prefer native controls and native navigation affordances when implementing fixes discovered here.
+
+### Home
+
+- [ ] Start Timer button.
+- [ ] New Task button.
+- [ ] Forecast info button.
+- [ ] Forecast task card opens/selects task without corrupting navigation.
+- [ ] Active timer pause button.
+- [ ] Active timer stop button.
+- [ ] Quick start edit button.
+- [ ] Quick start task button.
+- [ ] Timeline row task selection.
+- [ ] Manual/segment edit affordance if visible.
+
+### Analytics
+
+- [ ] Range segmented control: Today.
+- [ ] Range segmented control: Week.
+- [ ] Range segmented control: Month.
+- [ ] Previous period button.
+- [ ] Date picker/current period button.
+- [ ] Next/current period button.
+- [ ] Gross/wall/overlap metric explanation area.
+- [ ] Decision insight card task action if present.
+- [ ] Breakdown task/root/category switch if present.
+- [ ] Forecast recommendation task action if present.
+
+### Tasks
+
+- [ ] Sidebar Tasks destination.
+- [ ] Tasks toolbar add menu.
+- [ ] New root task action.
+- [ ] New task category action.
+- [ ] Category edit action.
+- [ ] Task disclosure expand/collapse.
+- [ ] Task row tap opens Task Detail.
+- [ ] Task row swipe edit.
+- [ ] Task row swipe archive/delete.
+- [ ] Task row context menu edit.
+- [ ] Task row context menu status/archive/delete.
+- [ ] Search field.
+- [ ] Search result row tap opens Task Detail.
+
+### Task Detail
+
+- [ ] Header start timer.
+- [ ] Header manual time.
+- [ ] Header pencil expands editor.
+- [ ] Collapsed editor Edit button.
+- [ ] Inline title field.
+- [ ] Status picker.
+- [ ] Estimate input.
+- [ ] Symbol/color picker if visible.
+- [ ] Checklist add item.
+- [ ] Checklist row complete toggle.
+- [ ] Checklist row text edit.
+- [ ] Checklist row delete/reorder if visible.
+- [ ] Save editor.
+- [ ] Reset editor.
+- [ ] Analysis range picker: Today.
+- [ ] Analysis range picker: Week.
+- [ ] Analysis range picker: Month.
+- [ ] Recent record row opens segment/manual editor if supported.
+
+### Inbox
+
+- [ ] Add inbox item field/action.
+- [ ] Inbox completion toggle.
+- [ ] Inbox row edit.
+- [ ] Inbox row delete.
+- [ ] Suggestion apply.
+- [ ] Suggestion discard.
+- [ ] Suggestion retry/error action.
+
+### Pomodoro
+
+- [ ] Task picker.
+- [ ] Focus duration control.
+- [ ] Break duration control.
+- [ ] Rounds control.
+- [ ] Start focus.
+- [ ] Pause/resume active run.
+- [ ] Complete/skip/stop active run.
+
+### Settings
+
+- [ ] CSV export from settings section.
+- [ ] CSV export from toolbar.
+- [ ] Cloud/sync refresh.
+- [ ] Demo data rebuild.
+- [ ] Clear data confirmation.
+- [ ] Clear demo data confirmation.
+- [ ] Preferences toggles/sliders/menus.
+
 ## Execution Checklist
 
 - [x] Create branch `codex/ui-logic-refactor`.

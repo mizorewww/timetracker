@@ -82,30 +82,9 @@ struct CountdownEventSettingsRow: View {
         }
         .buttonStyle(.plain)
         .settingsRowSeparatorAligned()
-        #if os(macOS)
         .popover(isPresented: $isDatePickerPresented) {
-            datePickerContent
-                .padding()
-                .frame(width: 320)
+            datePickerPopoverContent
         }
-        #else
-        .sheet(isPresented: $isDatePickerPresented) {
-            NavigationStack {
-                datePickerContent
-                    .padding()
-                    .navigationTitle(AppStrings.localized("settings.countdown.date"))
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(AppStrings.done) {
-                                isDatePickerPresented = false
-                            }
-                        }
-                    }
-            }
-            .presentationDetents([.medium])
-        }
-        #endif
 
         Button(role: .destructive, action: onDelete) {
             SettingsActionLabel(
@@ -115,6 +94,14 @@ struct CountdownEventSettingsRow: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private var datePickerPopoverContent: some View {
+        datePickerContent
+            .padding(16)
+            .frame(width: 360)
+            .fixedSize(horizontal: false, vertical: true)
+            .settingsPopoverAdaptation()
     }
 
     private var datePickerContent: some View {

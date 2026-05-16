@@ -245,30 +245,18 @@ private struct SettingsPomodoroMinuteWheelRow: View {
         }
         .buttonStyle(.plain)
         .settingsRowSeparatorAligned()
-        #if os(macOS)
         .popover(isPresented: $isPickerPresented) {
-            minuteSelectionContent
-                .padding()
-                .frame(width: 220)
+            minutePopoverContent
         }
-        #else
-        .sheet(isPresented: $isPickerPresented) {
-            NavigationStack {
-                minuteSelectionContent
-                    .padding()
-                    .navigationTitle(title)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(AppStrings.done) {
-                                isPickerPresented = false
-                            }
-                        }
-                    }
-            }
-            .presentationDetents([.height(280)])
-        }
-        #endif
+    }
+
+    private var minutePopoverContent: some View {
+        minuteSelectionContent
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(width: 240)
+            .fixedSize(horizontal: false, vertical: true)
+            .settingsPopoverAdaptation()
     }
 
     @ViewBuilder
@@ -282,8 +270,7 @@ private struct SettingsPomodoroMinuteWheelRow: View {
         }
         .pickerStyle(.wheel)
         .labelsHidden()
-        .frame(height: 180)
-        .clipped()
+        .frame(width: 208, height: 216)
         #else
         SettingsPomodoroMinuteChoiceList(
             title: title,

@@ -4,6 +4,15 @@ extension View {
     func settingsRowSeparatorAligned() -> some View {
         modifier(SettingsRowSeparatorAlignmentModifier())
     }
+
+    @ViewBuilder
+    func settingsPopoverAdaptation() -> some View {
+        #if os(iOS)
+        self.presentationCompactAdaptation(.popover)
+        #else
+        self
+        #endif
+    }
 }
 
 private struct SettingsRowSeparatorAlignmentModifier: ViewModifier {

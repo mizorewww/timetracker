@@ -4,12 +4,13 @@ import Testing
 @Suite(.serialized)
 struct SharedComponentsContractTests {
     @Test
-    func ipadSidebarButtonDoesNotOpenInspector() throws {
+    func ipadSidebarButtonOnlyRevealsSidebar() throws {
         let ipadSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
 
         #expect(ipadSource.contains("if columnVisibility == .detailOnly"))
         #expect(ipadSource.contains("columnVisibility = .all"))
-        #expect(ipadSource.contains("isInspectorPresented = inspectorIsRelevant") == false)
+        #expect(ipadSource.contains("isInspectorPresented") == false)
+        #expect(ipadSource.contains(".inspector(") == false)
     }
 
     @Test
@@ -26,17 +27,17 @@ struct SharedComponentsContractTests {
     }
 
     @Test
-    func primaryActionLabelsUseSharedComponentAcrossHomeAndInspector() throws {
+    func primaryActionLabelsUseSharedComponentAcrossHomeAndTaskDetail() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorActionViews.swift")
+        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
 
         #expect(sharedSource.contains("struct AppActionLabel"))
         #expect(sharedSource.contains(".minimumScaleFactor(0.78)"))
         #expect(homeSource.contains("AppActionLabel(title: AppStrings.startTimer"))
         #expect(homeSource.contains("private func actionLabel") == false)
-        #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"task.action.startTimer\")"))
-        #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"timer.action.stop\")"))
+        #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.startTimer"))
+        #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.addTime"))
     }
 
     @Test
@@ -44,15 +45,19 @@ struct SharedComponentsContractTests {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
         let settingsSource = try [
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
-            "timetracker/Features/Settings/SettingsDataSectionsViews.swift"
+            "timetracker/Features/Settings/SettingsDataSectionsViews.swift",
+            "timetracker/Features/Settings/Support/SettingsSupportViews.swift"
         ].map(sourceText).joined(separator: "\n")
         let settingsActionsSource = try sourceText("timetracker/Features/Settings/SettingsViewActions.swift")
 
         #expect(sharedSource.contains("struct SettingsActionLabel"))
         #expect(sharedSource.contains("struct SettingsStatusRow"))
+        #expect(sharedSource.contains("func settingsRowSeparatorAligned()"))
+        #expect(sharedSource.contains("alignmentGuide(.listRowSeparatorLeading)"))
         #expect(sharedSource.contains(".font(.body)"))
         #expect(settingsSource.contains("SettingsActionLabel("))
         #expect(settingsSource.contains("SettingsStatusRow(feedback: feedback)"))
+        #expect(settingsSource.contains(".settingsRowSeparatorAligned()"))
         #expect(settingsActionsSource.contains("store.syncStatus.feedback("))
         #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportJSON\")") == false)
         #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceSync\")") == false)
@@ -60,17 +65,14 @@ struct SharedComponentsContractTests {
     }
 
     @Test
-    func selectedTaskPulseIsSharedBetweenSidebarAndInspector() throws {
+    func selectedTaskPulseIsSharedForSidebarRows() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SelectionPulse.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/InspectorViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
 
         #expect(sharedSource.contains("struct TaskSelectionPulseModifier<"))
         #expect(sharedSource.contains("func taskSelectionPulse<"))
         #expect(sidebarSource.contains(".taskSelectionPulse("))
-        #expect(inspectorSource.contains(".taskSelectionPulse("))
         #expect(sidebarSource.contains("@State private var isPulsing") == false)
-        #expect(inspectorSource.contains("@State private var isPulsing") == false)
     }
 
     @Test
@@ -80,19 +82,18 @@ struct SharedComponentsContractTests {
         let desktopSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
 
         #expect(sharedSource.contains("struct SidebarRevealButton"))
-        #expect(sharedSource.contains("struct InspectorToggleButton"))
         #expect(sharedSource.contains("Label(AppStrings.localized(\"sidebar.show\"), systemImage: \"sidebar.left\")"))
-        #expect(sharedSource.contains("Label(title, systemImage: \"sidebar.right\")"))
         #expect(sharedSource.contains(".labelStyle(.iconOnly)"))
         #expect(ipadSource.contains("SidebarRevealButton"))
-        #expect(ipadSource.contains("InspectorToggleButton"))
+        #expect(sharedSource.contains("InspectorToggleButton") == false)
+        #expect(ipadSource.contains("InspectorToggleButton") == false)
         #expect(desktopSource.contains("InspectorToggleButton") == false)
         #expect(ipadSource.contains("Image(systemName: \"sidebar.right\")") == false)
         #expect(desktopSource.contains("Image(systemName: \"sidebar.right\")") == false)
     }
 
     @Test
-    func settingsAndInspectorUsePlatformSurfaces() throws {
+    func settingsUsesPlatformSurfaceAndRootsOmitInspector() throws {
         let appSource = try sourceText("timetracker/App/timetrackerApp.swift")
         let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
         let desktopSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
@@ -101,10 +102,10 @@ struct SharedComponentsContractTests {
         #expect(appSource.contains("Settings {\n            SettingsSceneView()"))
         #expect(settingsSource.contains("Form {"))
         #expect(settingsSource.contains(".formStyle(.grouped)"))
-        #expect(desktopSource.contains(".inspector(isPresented: inspectorBinding)"))
-        #expect(ipadSource.contains(".inspector(isPresented: inspectorBinding)"))
-        #expect(desktopSource.contains(".inspectorColumnWidth("))
-        #expect(ipadSource.contains(".inspectorColumnWidth("))
+        #expect(desktopSource.contains(".inspector(") == false)
+        #expect(ipadSource.contains(".inspector(") == false)
+        #expect(desktopSource.contains(".inspectorColumnWidth(") == false)
+        #expect(ipadSource.contains(".inspectorColumnWidth(") == false)
     }
 
     @Test

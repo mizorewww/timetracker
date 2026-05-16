@@ -103,6 +103,7 @@ struct LLMSettingsSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, 4)
+                .settingsRowSeparatorAligned()
             }
         } header: {
             SettingsHeader(symbol: "sparkles", title: AppStrings.localized("settings.llm"))

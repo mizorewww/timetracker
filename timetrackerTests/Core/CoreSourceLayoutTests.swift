@@ -72,9 +72,11 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/ActionControls.swift",
             "timetracker/SharedUI/Components/SettingsRows.swift",
             "timetracker/SharedUI/Components/SelectionPulse.swift",
+            "timetracker/SharedUI/Components/InfoRows.swift",
             "timetracker/SharedUI/Components/SplitViewToolbarButtons.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
+            "timetracker/Features/Home/Sections/HomeSelectedTaskSummaryViews.swift",
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/App/AppModelContainerFactory.swift",
             "timetracker/App/AppDemoDataConfiguration.swift",
@@ -102,13 +104,13 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift",
+            "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift",
-            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
-            "timetracker/Features/Inspector/Sections/InspectorInfoViews.swift"
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift"
         ]
 
         for relativePath in expectedFiles {

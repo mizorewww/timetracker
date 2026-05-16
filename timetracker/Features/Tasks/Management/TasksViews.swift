@@ -24,16 +24,24 @@ struct TasksView: View {
                     Section {
                         TaskCategorySectionHeader(
                             section: section,
-                            addTask: {
-                                store.presentNewTask(
-                                    preservingDestination: .tasks,
-                                    categoryID: section.categoryID
-                                )
-                            },
+                            addTask: newRootTaskAction(for: section),
                             editCategory: editAction(for: section)
                         )
                         .padding(.vertical, 3)
                         .listRowSeparator(.hidden)
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button(action: newRootTaskAction(for: section)) {
+                                Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
+                            }
+                            .tint(.blue)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if let deleteCategory = deleteAction(for: section) {
+                                Button(role: .destructive, action: deleteCategory) {
+                                    Label(AppStrings.localized("taskCategory.delete"), systemImage: "trash")
+                                }
+                            }
+                        }
 
                         ForEach(section.rows) { row in
                             if let task = store.task(for: row.taskID) {
@@ -138,6 +146,15 @@ struct TasksView: View {
         }
     }
 
+    private func newRootTaskAction(for section: TaskTreeVisibleSectionModel) -> () -> Void {
+        {
+            store.presentNewTask(
+                preservingDestination: .tasks,
+                categoryID: section.categoryID
+            )
+        }
+    }
+
     private func editAction(for section: TaskTreeVisibleSectionModel) -> (() -> Void)? {
         guard let categoryID = section.categoryID,
               let category = store.taskCategory(for: categoryID) else {
@@ -145,6 +162,16 @@ struct TasksView: View {
         }
         return {
             store.presentEditTaskCategory(category)
+        }
+    }
+
+    private func deleteAction(for section: TaskTreeVisibleSectionModel) -> (() -> Void)? {
+        guard let categoryID = section.categoryID,
+              let category = store.taskCategory(for: categoryID) else {
+            return nil
+        }
+        return {
+            store.deleteTaskCategory(category)
         }
     }
 }

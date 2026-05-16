@@ -38,12 +38,12 @@ extension SeedData {
         let hig = try taskRepository.createTask(title: "Read Apple HIG", parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
         let swift = try taskRepository.createTask(title: "SwiftData Docs", parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
 
-        macDesign.notes = "Refine the three-column layout and prioritize the timeline, task tree, and inspector density."
+        macDesign.notes = "Refine the split layout and prioritize the timeline, task tree, and task detail flow."
         iosDesign.notes = "On mobile, prioritize quick start, current state, and an editable Today timeline."
         analytics.notes = "All analytics aggregate from TimeSegment records; cached summaries are never the source of truth."
         sync.notes = "SwiftData CloudKit private database with deviceID and clientMutationID kept for conflict handling."
 
-        addChecklist(context: context, taskID: macDesign.id, titles: ["Align inspector", "Tighten sidebar", "Polish timeline"], completed: 2)
+        addChecklist(context: context, taskID: macDesign.id, titles: ["Align task detail", "Tighten sidebar", "Polish timeline"], completed: 2)
         addChecklist(context: context, taskID: iosDesign.id, titles: ["Compact active timer rows", "Fix task editor sheet", "Review phone analytics"], completed: 1)
         addChecklist(context: context, taskID: ledger.id, titles: ["Schema migration", "Preference import", "Checklist persistence", "CloudKit smoke test"], completed: 3)
         addChecklist(context: context, taskID: analytics.id, titles: ["Month axis", "Forecast card", "Donut cleanup", "Overlap lanes"], completed: 2)

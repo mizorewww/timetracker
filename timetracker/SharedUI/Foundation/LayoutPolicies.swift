@@ -162,18 +162,15 @@ struct PomodoroLayoutPolicy {
 struct SplitColumnLayoutPolicy {
     var sidebar: ColumnWidth = ColumnWidth(min: 220, ideal: 240, max: 300)
     var detail: ColumnWidth = ColumnWidth(min: 520, ideal: 760, max: nil)
-    var inspector: ColumnWidth = ColumnWidth(min: 240, ideal: 260, max: 320)
 
     static let iPad = SplitColumnLayoutPolicy(
         sidebar: ColumnWidth(min: 240, ideal: 260, max: 300),
-        detail: ColumnWidth(min: 560, ideal: 780, max: nil),
-        inspector: ColumnWidth(min: 240, ideal: 260, max: 320)
+        detail: ColumnWidth(min: 560, ideal: 780, max: nil)
     )
 
     static let mac = SplitColumnLayoutPolicy(
         sidebar: ColumnWidth(min: 220, ideal: 240, max: 270),
-        detail: ColumnWidth(min: 520, ideal: 760, max: nil),
-        inspector: ColumnWidth(min: 240, ideal: 260, max: 320)
+        detail: ColumnWidth(min: 520, ideal: 760, max: nil)
     )
 }
 

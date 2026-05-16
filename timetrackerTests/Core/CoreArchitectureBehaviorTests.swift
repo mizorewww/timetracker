@@ -7,7 +7,7 @@ import Testing
 struct CoreArchitectureBehaviorTests {
     @Test
     func sidebarUsesSharedFlatTaskTreeContract() throws {
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
 
         #expect(sidebarSource.contains("store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)"))
         #expect(sidebarSource.contains("TaskCategorySectionHeader"))
@@ -36,7 +36,7 @@ struct CoreArchitectureBehaviorTests {
         #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).cardCornerRadius == 28)
         #expect(InboxLayoutPolicy(horizontalSizeClass: nil).cardCornerRadius == 24)
         #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).rowBaseHeight == 78)
-        #expect(SplitColumnLayoutPolicy.iPad.inspector == ColumnWidth(min: 240, ideal: 260, max: 320))
+        #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 560, ideal: 780, max: nil))
         #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))
     }
 }

@@ -120,6 +120,7 @@ struct CountdownSettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
+                .settingsRowSeparatorAligned()
             }
 
             ForEach(events) { event in

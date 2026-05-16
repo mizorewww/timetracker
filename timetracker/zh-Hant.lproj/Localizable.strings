@@ -209,12 +209,6 @@
 "tab.home" = "首頁";
 "sidebar.show" = "顯示側邊欄";
 "sidebar.hide" = "隱藏側邊欄";
-"inspector.show" = "顯示詳情";
-"inspector.hide" = "隱藏詳情";
-"inspector.selectedTask" = "所選任務";
-"inspector.stats" = "統計";
-"inspector.pomodoroSettings" = "番茄鐘設定";
-"inspector.recentSessions" = "最近記錄";
 "progress.today" = "今天";
 "progress.week" = "本週";
 "progress.month" = "本月";
@@ -244,15 +238,7 @@
 "task.field.today" = "今日";
 "task.field.week" = "本週";
 "task.notes.empty" = "沒有備註";
-"task.stats.todayPomodoros" = "今日番茄";
-"task.stats.averageFocus" = "平均專注";
-"task.field.defaultMode" = "預設模式";
-"task.field.focusDuration" = "專注時長";
-"task.field.breakDuration" = "休息時長";
-"task.field.defaultRounds" = "預設輪次";
-"task.autoStartBreak" = "專注結束後自動開始休息";
 "task.records.empty" = "還沒有記錄";
-"task.records.more" = "還有更多記錄";
 "timer.action.stop" = "停止";
 "timer.action.end" = "結束";
 "pomodoro.action.completeRound" = "完成本輪";
@@ -401,6 +387,7 @@
 "task.detail.emptyRange" = "這個範圍內沒有記錄";
 "task.detail.directTime" = "直接時間";
 "task.detail.childBranch" = "子任務分支";
+"task.detail.recentSessions" = "最近記錄";
 "task.detail.recentSubtitle" = "來自目前任務及其子任務的最近記錄。";
 "forecast.today.title" = "預估進度";
 "forecast.explainer.title" = "這個預測怎麼算";

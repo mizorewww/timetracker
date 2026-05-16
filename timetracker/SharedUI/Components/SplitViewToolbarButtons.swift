@@ -15,25 +15,3 @@ struct SidebarRevealButton: View {
         #endif
     }
 }
-
-struct InspectorToggleButton: View {
-    let isPresented: Bool
-    let isEnabled: Bool
-    let action: () -> Void
-
-    private var title: String {
-        isPresented ? AppStrings.localized("inspector.hide") : AppStrings.localized("inspector.show")
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: "sidebar.right")
-                .labelStyle(.iconOnly)
-        }
-        .disabled(!isEnabled)
-        .accessibilityLabel(title)
-        #if os(macOS)
-        .help(title)
-        #endif
-    }
-}

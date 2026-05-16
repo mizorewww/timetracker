@@ -40,7 +40,7 @@ struct TaskUIContractTests {
 
     @Test
     func sidebarSelectionSyncDoesNotRevealProgrammaticTaskSelection() throws {
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
         let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
         let selectionSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Selection.swift")
         let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
@@ -90,12 +90,12 @@ struct TaskUIContractTests {
     @Test
     func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorInfoViews.swift")
-        let forecastSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorForecastViews.swift")
+        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let forecastSource = try sourceText("timetracker/Features/Tasks/Detail/TaskForecastPanel.swift")
 
         #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
         #expect(tasksSource.contains("secondsForTaskTodayRollup(task)") == false)
-        #expect(inspectorSource.contains("task.field.total"))
+        #expect(detailSource.contains("task.field.total"))
         #expect(forecastSource.contains("forecast.worked"))
     }
 
@@ -317,7 +317,6 @@ struct TaskUIContractTests {
     @Test
     func checklistUsesTodoStyleAndKeepsCompletedHistoryHint() throws {
         let editorSource = try taskEditorFeatureSource()
-        let inspectorSource = try sourceText("timetracker/Features/Inspector/Sections/InspectorChecklistViews.swift")
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ChecklistControls.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
@@ -340,14 +339,6 @@ struct TaskUIContractTests {
         #expect(editorSource.contains(".labelsHidden()"))
         #expect(editorSource.contains("arrow.up.arrow.down.circle") == false)
         #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
-        #expect(inspectorSource.contains("store.toggleChecklistItem(item)"))
-        #expect(inspectorSource.contains("private struct ChecklistDisplayRow") == false)
-        #expect(inspectorSource.contains("private struct InlineChecklistAddRow") == false)
-        #expect(inspectorSource.contains("withAnimation(.snappy") == false)
-        #expect(inspectorSource.contains("showsAllItems"))
-        #expect(inspectorSource.contains("EditButton()") == false)
-        #expect(inspectorSource.contains("List {") == false)
-        #expect(inspectorSource.contains("maxHeight: 360") == false)
         #expect(englishStrings.contains("\"checklist.showLess\""))
         #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
     }
@@ -356,7 +347,7 @@ struct TaskUIContractTests {
     func sidebarAndTaskRowsShareSwipeActions() throws {
         let taskRowSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
         let managementSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
 
         #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
         #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
@@ -369,7 +360,7 @@ struct TaskUIContractTests {
     func taskCategoriesSupportSidebarDividersWithoutDragReassignment() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
         let editorSource = try taskEditorFeatureSource()
         let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift")
 
@@ -379,6 +370,11 @@ struct TaskUIContractTests {
         #expect(rowSource.contains("rootTaskDragIfNeeded") == false)
         #expect(rowSource.contains(".draggable(") == false)
         #expect(rowSource.contains("RootTaskDragPayload") == false)
+        #expect(tasksSource.contains(".swipeActions(edge: .leading, allowsFullSwipe: false)"))
+        #expect(tasksSource.contains(".swipeActions(edge: .trailing, allowsFullSwipe: false)"))
+        #expect(tasksSource.contains("Button(action: newRootTaskAction(for: section))"))
+        #expect(tasksSource.contains("Label(AppStrings.localized(\"taskCategory.delete\"), systemImage: \"trash\")"))
+        #expect(tasksSource.contains("store.deleteTaskCategory(category)"))
         #expect(sidebarSource.contains("showsBottomDivider: true"))
         #expect(editorSource.contains("taskCategory.inherited"))
         #expect(editorSource.contains("LabeledContent(AppStrings.localized(\"taskCategory.title\")") == false)

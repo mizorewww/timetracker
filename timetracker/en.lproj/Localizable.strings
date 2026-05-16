@@ -209,12 +209,6 @@
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";
-"inspector.show" = "Show Details";
-"inspector.hide" = "Hide Details";
-"inspector.selectedTask" = "Selected Task";
-"inspector.stats" = "Stats";
-"inspector.pomodoroSettings" = "Pomodoro Settings";
-"inspector.recentSessions" = "Recent Sessions";
 "progress.today" = "Today";
 "progress.week" = "This Week";
 "progress.month" = "This Month";
@@ -244,15 +238,7 @@
 "task.field.today" = "Today";
 "task.field.week" = "This Week";
 "task.notes.empty" = "No notes";
-"task.stats.todayPomodoros" = "Pomodoros Today";
-"task.stats.averageFocus" = "Average Focus";
-"task.field.defaultMode" = "Default Mode";
-"task.field.focusDuration" = "Focus Duration";
-"task.field.breakDuration" = "Break Duration";
-"task.field.defaultRounds" = "Default Rounds";
-"task.autoStartBreak" = "Auto-start break after focus";
 "task.records.empty" = "No records yet";
-"task.records.more" = "More records";
 "timer.action.stop" = "Stop";
 "timer.action.end" = "End";
 "pomodoro.action.completeRound" = "Complete Round";
@@ -401,6 +387,7 @@
 "task.detail.emptyRange" = "No records in this range";
 "task.detail.directTime" = "Direct time";
 "task.detail.childBranch" = "Subtask branch";
+"task.detail.recentSessions" = "Recent Sessions";
 "task.detail.recentSubtitle" = "Recent records from this task and its subtasks.";
 "forecast.today.title" = "Forecast";
 "forecast.explainer.title" = "How this forecast works";

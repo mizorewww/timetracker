@@ -12,7 +12,7 @@ struct InboxUIContractTests {
         let inboxStoreSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift")
         let taskEditorSource = try taskEditorFeatureSource()
         let schemaSource = try sourceText("timetracker/Models/SchemaModels.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarInspectorViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
         let sharedChecklistSource = try sourceText("timetracker/SharedUI/Components/ChecklistControls.swift")
 
         #expect(storeSource.contains("case inbox = \"Inbox\""))

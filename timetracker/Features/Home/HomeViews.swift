@@ -42,7 +42,7 @@ struct PhoneHomeView: View {
                 ActiveTimersSection(store: store)
                 QuickStartSection(store: store)
                 TimelineSection(store: store)
-                InspectorSummaryCard(store: store)
+                HomeSelectedTaskSummaryCard(store: store)
             }
             .padding(.horizontal, 18)
             .padding(.top, 0)

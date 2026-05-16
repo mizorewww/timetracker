@@ -29,25 +29,6 @@ struct DesktopRootView: View {
             #if os(macOS)
             .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
             #endif
-            .inspector(isPresented: inspectorBinding) {
-                InspectorView(store: store)
-                    .inspectorColumnWidth(
-                        min: layout.inspector.min,
-                        ideal: layout.inspector.ideal,
-                        max: layout.inspector.max ?? layout.inspector.ideal
-                    )
-            }
-    }
-
-    private var inspectorIsRelevant: Bool {
-        store.desktopDestination == .today && store.selectedTask != nil
-    }
-
-    private var inspectorBinding: Binding<Bool> {
-        Binding {
-            inspectorIsRelevant
-        } set: { _ in
-        }
     }
 }
 

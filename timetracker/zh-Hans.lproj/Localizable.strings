@@ -209,12 +209,6 @@
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";
-"inspector.show" = "显示详情";
-"inspector.hide" = "隐藏详情";
-"inspector.selectedTask" = "所选任务";
-"inspector.stats" = "统计";
-"inspector.pomodoroSettings" = "番茄钟设置";
-"inspector.recentSessions" = "最近记录";
 "progress.today" = "今天";
 "progress.week" = "本周";
 "progress.month" = "本月";
@@ -244,15 +238,7 @@
 "task.field.today" = "今日";
 "task.field.week" = "本周";
 "task.notes.empty" = "没有备注";
-"task.stats.todayPomodoros" = "今日番茄";
-"task.stats.averageFocus" = "平均专注";
-"task.field.defaultMode" = "默认模式";
-"task.field.focusDuration" = "专注时长";
-"task.field.breakDuration" = "休息时长";
-"task.field.defaultRounds" = "默认轮次";
-"task.autoStartBreak" = "专注结束后自动开始休息";
 "task.records.empty" = "还没有记录";
-"task.records.more" = "还有更多记录";
 "timer.action.stop" = "停止";
 "timer.action.end" = "结束";
 "pomodoro.action.completeRound" = "完成本轮";
@@ -401,6 +387,7 @@
 "task.detail.emptyRange" = "这个范围内没有记录";
 "task.detail.directTime" = "直接时间";
 "task.detail.childBranch" = "子任务分支";
+"task.detail.recentSessions" = "最近记录";
 "task.detail.recentSubtitle" = "来自当前任务及其子任务的最近记录。";
 "forecast.today.title" = "预计进度";
 "forecast.explainer.title" = "这个预测怎么算";

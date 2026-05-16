@@ -347,7 +347,7 @@ private struct TaskDetailRecentRecordsCard: View {
 
     var body: some View {
         AnalyticsChartCard(
-            title: AppStrings.localized("inspector.recentSessions"),
+            title: AppStrings.localized("task.detail.recentSessions"),
             subtitle: AppStrings.localized("task.detail.recentSubtitle")
         ) {
             if records.isEmpty {

@@ -1,5 +1,22 @@
 import SwiftUI
 
+extension View {
+    func settingsRowSeparatorAligned() -> some View {
+        modifier(SettingsRowSeparatorAlignmentModifier())
+    }
+}
+
+private struct SettingsRowSeparatorAlignmentModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+        #else
+        content
+        #endif
+    }
+}
+
 struct SettingsRowIcon: View {
     let systemImage: String
     var tint: Color = .accentColor
@@ -35,6 +52,7 @@ struct SettingsRowLabel: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
+        .settingsRowSeparatorAligned()
     }
 }
 
@@ -60,6 +78,7 @@ struct SettingsValueRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .settingsRowSeparatorAligned()
     }
 }
 
@@ -87,6 +106,7 @@ struct SettingsTextFieldRow: View {
         } label: {
             SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
         }
+        .settingsRowSeparatorAligned()
     }
 }
 
@@ -105,6 +125,7 @@ struct SettingsNumberFieldRow: View {
         } label: {
             SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
         }
+        .settingsRowSeparatorAligned()
     }
 }
 
@@ -135,6 +156,7 @@ struct SettingsActionLabel: View {
         .contentShape(Rectangle())
         .opacity(isEnabled ? 1 : 0.45)
         .accessibilityElement(children: .combine)
+        .settingsRowSeparatorAligned()
     }
 }
 
@@ -160,6 +182,7 @@ struct SettingsStatusRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .settingsRowSeparatorAligned()
     }
 
     @ViewBuilder

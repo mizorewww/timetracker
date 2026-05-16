@@ -21,6 +21,7 @@ struct AboutAppSummary: View {
         .padding(.vertical, 6)
         .textSelection(.enabled)
         .accessibilityElement(children: .combine)
+        .settingsRowSeparatorAligned()
     }
 }
 
@@ -71,5 +72,6 @@ struct CountdownEventSettingsRow: View {
             }
         }
         .padding(.vertical, 4)
+        .settingsRowSeparatorAligned()
     }
 }

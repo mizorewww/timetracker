@@ -61,7 +61,7 @@
 "settings.focusMinutes" = "Focus Minutes";
 "settings.breakMinutes" = "Break Minutes";
 "settings.defaultRounds" = "Default Rounds";
-"settings.pomodoro.footer" = "These values prefill new pomodoro sessions. You can still adjust them before starting.";
+"settings.pomodoro.footer" = "Pomodoro plans sync through iCloud with the rest of your settings.";
 "settings.countdown" = "Countdown Events";
 "settings.countdown.empty" = "No countdown events. Today will only show day, week, month, and year progress.";
 "settings.countdown.add" = "Add Event";
@@ -261,9 +261,18 @@
 "pomodoro.beforeStart.message" = "Choose a task. Pomodoro is not a standalone countdown; finishing one creates a real time record.";
 "pomodoro.chooseTask" = "Choose Task";
 "pomodoro.applyPreset" = "Apply Preset";
+"pomodoro.addPlan" = "Add Plan";
+"pomodoro.emptyPlans" = "No pomodoro plans yet";
+"pomodoro.planName" = "Plan Name";
+"pomodoro.newPlan" = "New Plan";
+"pomodoro.untitledPlan" = "Untitled Plan";
 "pomodoro.focus" = "Focus";
 "pomodoro.break" = "Break";
+"pomodoro.shortBreak" = "Short Break";
+"pomodoro.longBreak" = "Long Break";
 "pomodoro.rounds" = "Rounds";
+"pomodoro.systemClock" = "Allow System Clock";
+"pomodoro.deletePlan" = "Delete Plan";
 "pomodoro.minuteField" = "Minutes";
 "pomodoro.roundField" = "Count";
 "pomodoro.roundUnit" = "rounds";

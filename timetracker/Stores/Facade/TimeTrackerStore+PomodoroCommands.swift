@@ -1,7 +1,12 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func startPomodoroForSelectedTask(focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) {
+    func startPomodoroForSelectedTask(
+        focusSeconds: Int = 25 * 60,
+        breakSeconds: Int = 5 * 60,
+        longBreakSeconds: Int? = nil,
+        targetRounds: Int = 1
+    ) {
         guard let selectedTaskID else {
             fail(.pomodoroTaskSelectionRequired)
             return
@@ -11,6 +16,7 @@ extension TimeTrackerStore {
                 taskID: selectedTaskID,
                 focusSeconds: focusSeconds,
                 breakSeconds: breakSeconds,
+                longBreakSeconds: longBreakSeconds,
                 targetRounds: targetRounds,
                 allowParallelTimers: preferences.allowParallelTimers,
                 activeSegments: activeSegments,

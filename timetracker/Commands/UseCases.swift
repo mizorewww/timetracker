@@ -129,8 +129,20 @@ struct StartPomodoroUseCase {
     let repository: PomodoroRepository
 
     @discardableResult
-    func execute(taskID: UUID, focusSeconds: Int = 25 * 60, breakSeconds: Int = 5 * 60, targetRounds: Int = 1) throws -> PomodoroRun {
-        try repository.startPomodoro(taskID: taskID, focusSeconds: focusSeconds, breakSeconds: breakSeconds, targetRounds: targetRounds)
+    func execute(
+        taskID: UUID,
+        focusSeconds: Int = 25 * 60,
+        breakSeconds: Int = 5 * 60,
+        longBreakSeconds: Int? = nil,
+        targetRounds: Int = 1
+    ) throws -> PomodoroRun {
+        try repository.startPomodoro(
+            taskID: taskID,
+            focusSeconds: focusSeconds,
+            breakSeconds: breakSeconds,
+            longBreakSeconds: longBreakSeconds,
+            targetRounds: targetRounds
+        )
     }
 }
 

@@ -11,6 +11,124 @@ enum PomodoroState: String, Codable, CaseIterable {
     case interrupted
 }
 
+struct PomodoroPlan: Identifiable, Codable, Equatable {
+    static let minuteOptions = Array(stride(from: 5, through: 60, by: 5))
+    static let roundRange = 1...24
+
+    var id: UUID
+    var name: String
+    var iconName: String
+    var colorHex: String
+    var focusMinutes: Int
+    var shortBreakMinutes: Int
+    var longBreakMinutes: Int
+    var rounds: Int
+    var allowsSystemClock: Bool
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        iconName: String = "timer",
+        colorHex: String = "FF2D55",
+        focusMinutes: Int = 25,
+        shortBreakMinutes: Int = 5,
+        longBreakMinutes: Int = 15,
+        rounds: Int = 4,
+        allowsSystemClock: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.iconName = ChecklistVisualSanitizer.sanitizedIcon(iconName)
+        self.colorHex = ChecklistVisualSanitizer.sanitizedColor(colorHex, fallback: "FF2D55")
+        self.focusMinutes = Self.normalizedMinute(focusMinutes)
+        self.shortBreakMinutes = Self.normalizedMinute(shortBreakMinutes)
+        self.longBreakMinutes = Self.normalizedMinute(longBreakMinutes)
+        self.rounds = rounds.clamped(to: Self.roundRange)
+        self.allowsSystemClock = allowsSystemClock
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? AppStrings.localized("pomodoro.untitledPlan")
+        iconName = ChecklistVisualSanitizer.sanitizedIcon(try container.decodeIfPresent(String.self, forKey: .iconName))
+        colorHex = ChecklistVisualSanitizer.sanitizedColor(
+            try container.decodeIfPresent(String.self, forKey: .colorHex),
+            fallback: "FF2D55"
+        )
+        focusMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .focusMinutes) ?? 25)
+        shortBreakMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .shortBreakMinutes) ?? 5)
+        longBreakMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .longBreakMinutes) ?? 15)
+        rounds = (try container.decodeIfPresent(Int.self, forKey: .rounds) ?? 4).clamped(to: Self.roundRange)
+        allowsSystemClock = try container.decodeIfPresent(Bool.self, forKey: .allowsSystemClock) ?? false
+    }
+
+    var focusSeconds: Int { focusMinutes * 60 }
+    var shortBreakSeconds: Int { shortBreakMinutes * 60 }
+    var longBreakSeconds: Int { longBreakMinutes * 60 }
+
+    var displayName: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? AppStrings.localized("pomodoro.untitledPlan") : trimmed
+    }
+
+    func normalized() -> PomodoroPlan {
+        PomodoroPlan(
+            id: id,
+            name: name,
+            iconName: iconName,
+            colorHex: colorHex,
+            focusMinutes: focusMinutes,
+            shortBreakMinutes: shortBreakMinutes,
+            longBreakMinutes: longBreakMinutes,
+            rounds: rounds,
+            allowsSystemClock: allowsSystemClock
+        )
+    }
+
+    static var defaultPlans: [PomodoroPlan] {
+        [
+            PomodoroPlan(
+                name: AppStrings.localized("pomodoro.preset.classic"),
+                iconName: "timer",
+                colorHex: "FF2D55",
+                focusMinutes: 25,
+                shortBreakMinutes: 5,
+                longBreakMinutes: 15,
+                rounds: 4
+            ),
+            PomodoroPlan(
+                name: AppStrings.localized("pomodoro.preset.deep"),
+                iconName: "target",
+                colorHex: "5E5CE6",
+                focusMinutes: 50,
+                shortBreakMinutes: 10,
+                longBreakMinutes: 20,
+                rounds: 3
+            ),
+            PomodoroPlan(
+                name: AppStrings.localized("pomodoro.preset.quick"),
+                iconName: "clock",
+                colorHex: "FF9F0A",
+                focusMinutes: 15,
+                shortBreakMinutes: 5,
+                longBreakMinutes: 10,
+                rounds: 2
+            )
+        ]
+    }
+
+    static var newPlan: PomodoroPlan {
+        PomodoroPlan(name: AppStrings.localized("pomodoro.newPlan"))
+    }
+
+    static func normalizedMinute(_ value: Int) -> Int {
+        let clamped = value.clamped(to: 5...60)
+        let rounded = Int((Double(clamped) / 5.0).rounded()) * 5
+        return rounded.clamped(to: 5...60)
+    }
+}
+
 @Model
 final class PomodoroRun {
     var id: UUID = UUID()
@@ -34,6 +152,7 @@ final class PomodoroRun {
         taskID: UUID,
         focus: Int = 25 * 60,
         breakSeconds: Int = 5 * 60,
+        longBreakSeconds: Int? = nil,
         targetRounds: Int = 1,
         deviceID: String
     ) {
@@ -41,6 +160,7 @@ final class PomodoroRun {
         self.taskID = taskID
         self.focusSecondsPlanned = focus
         self.breakSecondsPlanned = breakSeconds
+        self.longBreakSecondsPlanned = longBreakSeconds
         self.stateRaw = PomodoroState.planned.rawValue
         self.completedFocusRounds = 0
         self.targetRounds = targetRounds

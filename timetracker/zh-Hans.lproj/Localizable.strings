@@ -61,7 +61,7 @@
 "settings.focusMinutes" = "专注分钟";
 "settings.breakMinutes" = "休息分钟";
 "settings.defaultRounds" = "默认轮次";
-"settings.pomodoro.footer" = "开始番茄钟时会默认填入这里的数值，也可以在开始前临时修改。";
+"settings.pomodoro.footer" = "番茄钟计划会和其他设置一起通过 iCloud 同步。";
 "settings.countdown" = "倒计时事件";
 "settings.countdown.empty" = "没有倒计时事件。今日页只显示今天、本周、本月和今年进度。";
 "settings.countdown.add" = "添加事件";
@@ -261,9 +261,18 @@
 "pomodoro.beforeStart.message" = "请选择任务。番茄钟不是孤立倒计时，完成后会生成真实时间记录。";
 "pomodoro.chooseTask" = "选择任务";
 "pomodoro.applyPreset" = "套用模式";
+"pomodoro.addPlan" = "添加计划";
+"pomodoro.emptyPlans" = "还没有番茄钟计划";
+"pomodoro.planName" = "计划名称";
+"pomodoro.newPlan" = "新计划";
+"pomodoro.untitledPlan" = "未命名计划";
 "pomodoro.focus" = "专注";
 "pomodoro.break" = "休息";
+"pomodoro.shortBreak" = "短休息";
+"pomodoro.longBreak" = "长休息";
 "pomodoro.rounds" = "轮次";
+"pomodoro.systemClock" = "允许调用系统时钟";
+"pomodoro.deletePlan" = "删除计划";
 "pomodoro.minuteField" = "分钟";
 "pomodoro.roundField" = "次数";
 "pomodoro.roundUnit" = "轮";

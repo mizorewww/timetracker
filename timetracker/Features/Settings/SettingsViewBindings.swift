@@ -43,6 +43,14 @@ extension SettingsView {
         }
     }
 
+    var pomodoroPlansBinding: Binding<[PomodoroPlan]> {
+        Binding {
+            store.preferences.pomodoroPlans
+        } set: { value in
+            store.setPomodoroPlans(value)
+        }
+    }
+
     var allowParallelTimersBinding: Binding<Bool> {
         Binding {
             store.preferences.allowParallelTimers

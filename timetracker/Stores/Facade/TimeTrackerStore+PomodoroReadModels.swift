@@ -39,15 +39,16 @@ extension TimeTrackerStore {
 
     func pomodoroRemainingSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
         guard [.focusing, .interrupted].contains(run.state) else {
-            return run.focusSecondsPlanned
+            return pomodoroPlannedSeconds(for: run)
         }
-        return max(0, run.focusSecondsPlanned - pomodoroElapsedFocusSeconds(for: run, now: now))
+        return max(0, pomodoroPlannedSeconds(for: run) - pomodoroElapsedFocusSeconds(for: run, now: now))
     }
 
     func pomodoroProgress(for run: PomodoroRun, now: Date = Date()) -> Double {
-        guard run.focusSecondsPlanned > 0 else { return 0 }
+        let plannedSeconds = pomodoroPlannedSeconds(for: run)
+        guard plannedSeconds > 0 else { return 0 }
         let remaining = pomodoroRemainingSeconds(for: run, now: now)
-        return min(1, max(0, 1 - Double(remaining) / Double(run.focusSecondsPlanned)))
+        return min(1, max(0, 1 - Double(remaining) / Double(plannedSeconds)))
     }
 
     func pomodoroStateLabel(for run: PomodoroRun) -> String {
@@ -77,5 +78,16 @@ extension TimeTrackerStore {
             segment.deletedAt == nil
         }
         return aggregationService.grossSeconds(segments, now: now)
+    }
+
+    private func pomodoroPlannedSeconds(for run: PomodoroRun) -> Int {
+        switch run.state {
+        case .shortBreak:
+            return run.breakSecondsPlanned
+        case .longBreak:
+            return run.longBreakSecondsPlanned ?? run.breakSecondsPlanned
+        case .planned, .focusing, .completed, .cancelled, .interrupted:
+            return run.focusSecondsPlanned
+        }
     }
 }

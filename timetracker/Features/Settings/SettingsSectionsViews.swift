@@ -43,64 +43,299 @@ struct DisplayTimingSettingsSection: View {
 }
 
 struct PomodoroSettingsSection: View {
-    let defaultMode: Binding<String>
-    let focusMinutes: Binding<Int>
-    let breakMinutes: Binding<Int>
-    let rounds: Binding<Int>
-    let onPresetSelected: (PomodoroPreset) -> Void
+    let plans: Binding<[PomodoroPlan]>
 
-    private var minuteFormatter: NumberFormatter {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .none
-        formatter.minimum = 1
-        formatter.maximum = 480
-        return formatter
+    var body: some View {
+        Group {
+            Section {
+                if plans.wrappedValue.isEmpty {
+                    HStack(alignment: .top, spacing: 12) {
+                        SettingsRowIcon(systemImage: "timer", tint: .gray)
+                        Text(.app("pomodoro.emptyPlans"))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                    .settingsRowSeparatorAligned()
+                }
+            } header: {
+                SettingsHeader(symbol: "timer", title: AppStrings.pomodoro)
+            } footer: {
+                Text(.app("settings.pomodoro.footer"))
+            }
+
+            ForEach(plans.wrappedValue) { plan in
+                Section {
+                    PomodoroPlanSettingsRows(
+                        plan: binding(for: plan),
+                        onDelete: {
+                            delete(plan)
+                        }
+                    )
+                } header: {
+                    SettingsHeader(
+                        symbol: ChecklistVisualSanitizer.sanitizedIcon(plan.iconName),
+                        title: plan.displayName
+                    )
+                }
+            }
+
+            Section {
+                Button(action: addPlan) {
+                    SettingsActionLabel(
+                        title: AppStrings.localized("pomodoro.addPlan"),
+                        systemImage: "plus.circle.fill",
+                        tint: .green
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func binding(for plan: PomodoroPlan) -> Binding<PomodoroPlan> {
+        Binding {
+            plans.wrappedValue.first { $0.id == plan.id } ?? plan
+        } set: { updatedPlan in
+            var updatedPlans = plans.wrappedValue
+            if let index = updatedPlans.firstIndex(where: { $0.id == plan.id }) {
+                updatedPlans[index] = updatedPlan.normalized()
+            } else {
+                updatedPlans.append(updatedPlan.normalized())
+            }
+            plans.wrappedValue = updatedPlans
+        }
+    }
+
+    private func addPlan() {
+        var updatedPlans = plans.wrappedValue
+        updatedPlans.append(.newPlan)
+        plans.wrappedValue = updatedPlans
+    }
+
+    private func delete(_ plan: PomodoroPlan) {
+        plans.wrappedValue = plans.wrappedValue.filter { $0.id != plan.id }
+    }
+}
+
+private struct PomodoroPlanSettingsRows: View {
+    @Binding var plan: PomodoroPlan
+    let onDelete: () -> Void
+
+    var body: some View {
+        SettingsTextFieldRow(
+            title: AppStrings.localized("pomodoro.planName"),
+            text: $plan.name,
+            systemImage: "textformat",
+            tint: .blue,
+            textAlignment: .trailing
+        )
+
+        HStack(spacing: 12) {
+            SettingsRowLabel(
+                title: AppStrings.localized("editor.task.symbolColor"),
+                systemImage: "paintpalette",
+                tint: .purple
+            )
+
+            Spacer(minLength: 8)
+
+            SymbolColorPickerButton(
+                colors: TaskColorPalette.hexValues,
+                symbolName: $plan.iconName,
+                colorHex: $plan.colorHex
+            )
+        }
+        .settingsRowSeparatorAligned()
+
+        SettingsPomodoroMinuteWheelRow(
+            title: AppStrings.localized("pomodoro.focus"),
+            systemImage: "brain.head.profile",
+            tint: .indigo,
+            value: $plan.focusMinutes
+        )
+
+        SettingsPomodoroMinuteWheelRow(
+            title: AppStrings.localized("pomodoro.shortBreak"),
+            systemImage: "cup.and.saucer",
+            tint: .mint,
+            value: $plan.shortBreakMinutes
+        )
+
+        SettingsPomodoroMinuteWheelRow(
+            title: AppStrings.localized("pomodoro.longBreak"),
+            systemImage: "moon.zzz",
+            tint: .orange,
+            value: $plan.longBreakMinutes
+        )
+
+        Stepper(value: $plan.rounds, in: PomodoroPlan.roundRange) {
+            HStack(spacing: 12) {
+                SettingsRowLabel(
+                    title: AppStrings.localized("pomodoro.rounds"),
+                    systemImage: "repeat.circle",
+                    tint: .pink
+                )
+
+                Spacer(minLength: 8)
+
+                Text("\(plan.rounds)")
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .settingsRowSeparatorAligned()
+
+        Toggle(isOn: $plan.allowsSystemClock) {
+            SettingsRowLabel(
+                title: AppStrings.localized("pomodoro.systemClock"),
+                systemImage: "alarm",
+                tint: .orange
+            )
+        }
+
+        Button(role: .destructive, action: onDelete) {
+            SettingsActionLabel(
+                title: AppStrings.localized("pomodoro.deletePlan"),
+                systemImage: "trash",
+                tint: .red
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsPomodoroMinuteWheelRow: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    @Binding var value: Int
+    @State private var isPickerPresented = false
+
+    private var normalizedValue: Binding<Int> {
+        Binding {
+            PomodoroPlan.normalizedMinute(value)
+        } set: { newValue in
+            value = PomodoroPlan.normalizedMinute(newValue)
+        }
     }
 
     var body: some View {
-        Section {
-            Picker(selection: defaultMode) {
-                ForEach(PomodoroPreset.allCases) { preset in
-                    Text(preset.title).tag(preset.rawValue)
-                }
-            } label: {
-                SettingsRowLabel(
-                    title: AppStrings.localized("settings.defaultMode"),
-                    systemImage: "dial.medium",
-                    tint: .orange
-                )
-            }
-            .onChange(of: defaultMode.wrappedValue) { _, newValue in
-                guard let preset = PomodoroPreset(rawValue: newValue), preset != .custom else { return }
-                onPresetSelected(preset)
-            }
+        Button {
+            isPickerPresented = true
+        } label: {
+            HStack(spacing: 12) {
+                SettingsRowIcon(systemImage: systemImage, tint: tint)
 
-            SettingsNumberFieldRow(
-                title: AppStrings.localized("settings.focusMinutes"),
-                value: focusMinutes,
-                formatter: minuteFormatter,
-                systemImage: "brain.head.profile",
-                tint: .indigo
-            )
-            SettingsNumberFieldRow(
-                title: AppStrings.localized("settings.breakMinutes"),
-                value: breakMinutes,
-                formatter: minuteFormatter,
-                systemImage: "cup.and.saucer",
-                tint: .mint
-            )
-            SettingsNumberFieldRow(
-                title: AppStrings.localized("settings.defaultRounds"),
-                value: rounds,
-                formatter: minuteFormatter,
-                systemImage: "repeat.circle",
-                tint: .pink
-            )
-        } header: {
-            SettingsHeader(symbol: "timer", title: AppStrings.pomodoro)
-        } footer: {
-            Text(.app("settings.pomodoro.footer"))
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 8)
+
+                Text(String(format: AppStrings.localized("common.minutes"), normalizedValue.wrappedValue))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .settingsRowSeparatorAligned()
+        #if os(macOS)
+        .popover(isPresented: $isPickerPresented) {
+            minuteSelectionContent
+                .padding()
+                .frame(width: 220)
+        }
+        #else
+        .sheet(isPresented: $isPickerPresented) {
+            NavigationStack {
+                minuteSelectionContent
+                    .padding()
+                    .navigationTitle(title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(AppStrings.done) {
+                                isPickerPresented = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.height(280)])
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var minuteSelectionContent: some View {
+        #if os(iOS)
+        Picker(title, selection: normalizedValue) {
+            ForEach(PomodoroPlan.minuteOptions, id: \.self) { minute in
+                Text(String(format: AppStrings.localized("common.minutes"), minute))
+                    .tag(minute)
+            }
+        }
+        .pickerStyle(.wheel)
+        .labelsHidden()
+        .frame(height: 180)
+        .clipped()
+        #else
+        SettingsPomodoroMinuteChoiceList(
+            title: title,
+            value: $value,
+            isPickerPresented: $isPickerPresented
+        )
+        #endif
+    }
+}
+
+private struct SettingsPomodoroMinuteChoiceList: View {
+    let title: String
+    @Binding var value: Int
+    @Binding var isPickerPresented: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+
+            minuteButton(5)
+            minuteButton(10)
+            minuteButton(15)
+            minuteButton(20)
+            minuteButton(25)
+            minuteButton(30)
+            minuteButton(35)
+            minuteButton(40)
+            minuteButton(45)
+            minuteButton(50)
+            minuteButton(55)
+            minuteButton(60)
+        }
+    }
+
+    private func minuteButton(_ minute: Int) -> some View {
+        Button {
+            value = PomodoroPlan.normalizedMinute(minute)
+            isPickerPresented = false
+        } label: {
+            HStack {
+                Text(String(format: AppStrings.localized("common.minutes"), minute))
+                Spacer()
+                if PomodoroPlan.normalizedMinute(value) == minute {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -112,44 +347,57 @@ struct CountdownSettingsSection: View {
     let onAdd: () -> Void
 
     var body: some View {
-        Section {
-            if events.isEmpty {
-                HStack(alignment: .top, spacing: 12) {
-                    SettingsRowIcon(systemImage: "calendar.badge.exclamationmark", tint: .gray)
-                    Text(.app("settings.countdown.empty"))
-                        .foregroundStyle(.secondary)
+        Group {
+            Section {
+                if events.isEmpty {
+                    HStack(alignment: .top, spacing: 12) {
+                        SettingsRowIcon(systemImage: "calendar.badge.exclamationmark", tint: .gray)
+                        Text(.app("settings.countdown.empty"))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                    .settingsRowSeparatorAligned()
                 }
-                .padding(.vertical, 4)
-                .settingsRowSeparatorAligned()
+            } header: {
+                SettingsHeader(symbol: "calendar.badge.clock", title: AppStrings.localized("settings.countdown"))
+            } footer: {
+                Text(.app("settings.countdown.footer"))
             }
 
             ForEach(events) { event in
-                CountdownEventSettingsRow(
-                    event: event,
-                    onChangeTitle: { title in
-                        onChangeTitle(event, title)
-                    },
-                    onChangeDate: { date in
-                        onChangeDate(event, date)
-                    },
-                    onDelete: {
-                        onDelete(event)
-                    }
-                )
+                Section {
+                    CountdownEventSettingsRow(
+                        event: event,
+                        onChangeTitle: { title in
+                            onChangeTitle(event, title)
+                        },
+                        onChangeDate: { date in
+                            onChangeDate(event, date)
+                        },
+                        onDelete: {
+                            onDelete(event)
+                        }
+                    )
+                } header: {
+                    SettingsHeader(
+                        symbol: "calendar",
+                        title: event.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? AppStrings.localized("settings.countdown.eventName")
+                            : event.title
+                    )
+                }
             }
 
-            Button(action: onAdd) {
-                SettingsActionLabel(
-                    title: AppStrings.localized("settings.countdown.add"),
-                    systemImage: "calendar.badge.plus",
-                    tint: .green
-                )
+            Section {
+                Button(action: onAdd) {
+                    SettingsActionLabel(
+                        title: AppStrings.localized("settings.countdown.add"),
+                        systemImage: "calendar.badge.plus",
+                        tint: .green
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-        } header: {
-            SettingsHeader(symbol: "calendar.badge.clock", title: AppStrings.localized("settings.countdown"))
-        } footer: {
-            Text(.app("settings.countdown.footer"))
         }
     }
 }

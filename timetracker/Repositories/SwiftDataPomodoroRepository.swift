@@ -32,7 +32,7 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
     }
 
     @discardableResult
-    func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, targetRounds: Int) throws -> PomodoroRun {
+    func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, longBreakSeconds: Int? = nil, targetRounds: Int) throws -> PomodoroRun {
         let now = Date()
         for existingRun in try activeRuns().filter({ $0.state == .focusing }) {
             if let sessionID = existingRun.sessionID {
@@ -47,7 +47,14 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             try timeRepository.stopSession(sessionID: segment.sessionID)
         }
 
-        let run = PomodoroRun(taskID: taskID, focus: focusSeconds, breakSeconds: breakSeconds, targetRounds: targetRounds, deviceID: deviceID)
+        let run = PomodoroRun(
+            taskID: taskID,
+            focus: focusSeconds,
+            breakSeconds: breakSeconds,
+            longBreakSeconds: longBreakSeconds,
+            targetRounds: targetRounds,
+            deviceID: deviceID
+        )
         let segment = try timeRepository.startTask(taskID: taskID, source: .pomodoro)
         run.sessionID = segment.sessionID
         run.startedAt = now
@@ -68,7 +75,8 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             try timeRepository.stopSession(sessionID: sessionID)
         }
         run.completedFocusRounds += 1
-        run.state = willComplete ? .completed : .shortBreak
+        let nextBreakState: PomodoroState = run.completedFocusRounds.isMultiple(of: 4) ? .longBreak : .shortBreak
+        run.state = willComplete ? .completed : nextBreakState
         run.endedAt = willComplete ? now : nil
         run.updatedAt = now
         try context.save()

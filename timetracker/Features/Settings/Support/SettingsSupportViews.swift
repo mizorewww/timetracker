@@ -30,6 +30,7 @@ struct CountdownEventSettingsRow: View {
     let onChangeTitle: (String) -> Void
     let onChangeDate: (Date) -> Void
     let onDelete: () -> Void
+    @State private var isDatePickerPresented = false
 
     private var titleBinding: Binding<String> {
         Binding {
@@ -48,30 +49,81 @@ struct CountdownEventSettingsRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SettingsTextFieldRow(
-                title: AppStrings.localized("settings.countdown.eventName"),
-                text: titleBinding,
-                systemImage: "textformat",
-                tint: .blue
-            )
-            HStack {
-                DatePicker(selection: dateBinding, displayedComponents: .date) {
-                    SettingsRowLabel(
-                        title: AppStrings.localized("settings.countdown.date"),
-                        systemImage: "calendar",
-                        tint: .green
-                    )
-                }
-                Spacer()
-                Button(role: .destructive, action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.red)
-                }
-                .buttonStyle(.borderless)
+        SettingsTextFieldRow(
+            title: AppStrings.localized("settings.countdown.eventName"),
+            text: titleBinding,
+            systemImage: "textformat",
+            tint: .blue,
+            fieldAlignment: .trailing,
+            textAlignment: .trailing
+        )
+
+        Button {
+            isDatePickerPresented = true
+        } label: {
+            HStack(spacing: 12) {
+                SettingsRowIcon(systemImage: "calendar", tint: .green)
+
+                Text(.app("settings.countdown.date"))
+                    .font(.body)
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 8)
+
+                Text(event.date.formatted(date: .abbreviated, time: .omitted))
+                    .foregroundStyle(.secondary)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
         .settingsRowSeparatorAligned()
+        #if os(macOS)
+        .popover(isPresented: $isDatePickerPresented) {
+            datePickerContent
+                .padding()
+                .frame(width: 320)
+        }
+        #else
+        .sheet(isPresented: $isDatePickerPresented) {
+            NavigationStack {
+                datePickerContent
+                    .padding()
+                    .navigationTitle(AppStrings.localized("settings.countdown.date"))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(AppStrings.done) {
+                                isDatePickerPresented = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium])
+        }
+        #endif
+
+        Button(role: .destructive, action: onDelete) {
+            SettingsActionLabel(
+                title: AppStrings.delete,
+                systemImage: "trash",
+                tint: .red
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var datePickerContent: some View {
+        DatePicker(
+            AppStrings.localized("settings.countdown.date"),
+            selection: dateBinding,
+            displayedComponents: .date
+        )
+        .datePickerStyle(.graphical)
+        .labelsHidden()
     }
 }

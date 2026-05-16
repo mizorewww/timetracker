@@ -88,6 +88,18 @@ struct PreferencesChecklistForecastTests {
         store.setShowGrossAndWallTogether(false)
         store.setCloudSyncEnabled(false)
         store.setQuickStartTaskIDs([pinnedID])
+        store.setPomodoroPlans([
+            PomodoroPlan(
+                name: "Writing",
+                iconName: "pencil.and.list.clipboard",
+                colorHex: "1677FF",
+                focusMinutes: 30,
+                shortBreakMinutes: 10,
+                longBreakMinutes: 20,
+                rounds: 5,
+                allowsSystemClock: true
+            )
+        ])
         store.setLLMEndpoint(" https://example.test/v1 ")
         store.setLLMAPIKey(" test-key ")
         store.setLLMAvailableModelIDs(["gpt-z", "gpt-a", "gpt-a", " "])
@@ -101,6 +113,13 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.showGrossAndWallTogether == false)
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
+        #expect(preferences.pomodoroPlans.count == 1)
+        #expect(preferences.pomodoroPlans.first?.name == "Writing")
+        #expect(preferences.pomodoroPlans.first?.focusMinutes == 30)
+        #expect(preferences.pomodoroPlans.first?.shortBreakMinutes == 10)
+        #expect(preferences.pomodoroPlans.first?.longBreakMinutes == 20)
+        #expect(preferences.pomodoroPlans.first?.rounds == 5)
+        #expect(preferences.pomodoroPlans.first?.allowsSystemClock == true)
         #expect(preferences.llmEndpoint == "https://example.test/v1")
         #expect(preferences.llmAPIKey == "test-key")
         #expect(preferences.llmAvailableModelIDs == ["gpt-a", "gpt-z"])

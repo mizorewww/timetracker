@@ -39,7 +39,7 @@ protocol TimeTrackingRepository {
 protocol PomodoroRepository {
     func runs() throws -> [PomodoroRun]
     func activeRuns() throws -> [PomodoroRun]
-    @discardableResult func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, targetRounds: Int) throws -> PomodoroRun
+    @discardableResult func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, longBreakSeconds: Int?, targetRounds: Int) throws -> PomodoroRun
     func completeFocus(runID: UUID) throws
     func cancel(runID: UUID) throws
 }

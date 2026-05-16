@@ -7,6 +7,7 @@ enum AppPreferenceKey: String, CaseIterable {
     case defaultFocusMinutes = "DefaultFocusMinutes"
     case defaultBreakMinutes = "DefaultBreakMinutes"
     case defaultPomodoroRounds = "DefaultPomodoroRounds"
+    case pomodoroPlans = "PomodoroPlans"
     case allowParallelTimers = "AllowParallelTimers"
     case showGrossAndWallTogether = "ShowGrossAndWallTogether"
     case cloudSyncEnabled = "TimeTrackerCloudSyncEnabled"
@@ -23,6 +24,7 @@ struct AppPreferences: Equatable {
     var defaultFocusMinutes = 25
     var defaultBreakMinutes = 5
     var defaultPomodoroRounds = 1
+    var pomodoroPlans = PomodoroPlan.defaultPlans
     var allowParallelTimers = true
     var showGrossAndWallTogether = true
     var cloudSyncEnabled = true
@@ -56,6 +58,9 @@ struct AppPreferences: Equatable {
             defaultBreakMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultBreakMinutes).clamped(to: 1...480)
         case .defaultPomodoroRounds:
             defaultPomodoroRounds = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultPomodoroRounds).clamped(to: 1...24)
+        case .pomodoroPlans:
+            pomodoroPlans = PreferenceJSON.decode([PomodoroPlan].self, from: preference.valueJSON, default: pomodoroPlans)
+                .map { $0.normalized() }
         case .allowParallelTimers:
             allowParallelTimers = PreferenceJSON.decode(Bool.self, from: preference.valueJSON, default: allowParallelTimers)
         case .showGrossAndWallTogether:
@@ -88,6 +93,8 @@ struct AppPreferences: Equatable {
             return PreferenceJSON.encode(defaultBreakMinutes)
         case .defaultPomodoroRounds:
             return PreferenceJSON.encode(defaultPomodoroRounds)
+        case .pomodoroPlans:
+            return PreferenceJSON.encode(pomodoroPlans.map { $0.normalized() })
         case .allowParallelTimers:
             return PreferenceJSON.encode(allowParallelTimers)
         case .showGrossAndWallTogether:
@@ -177,6 +184,8 @@ enum SyncedPreferenceService {
             return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Int ?? defaultPreferences.defaultBreakMinutes)
         case .defaultPomodoroRounds:
             return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Int ?? defaultPreferences.defaultPomodoroRounds)
+        case .pomodoroPlans:
+            return PreferenceJSON.encode(defaultPreferences.pomodoroPlans)
         case .allowParallelTimers:
             return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Bool ?? defaultPreferences.allowParallelTimers)
         case .showGrossAndWallTogether:

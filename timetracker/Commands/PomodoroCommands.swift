@@ -7,6 +7,7 @@ struct PomodoroCommandHandler {
         taskID: UUID,
         focusSeconds: Int,
         breakSeconds: Int,
+        longBreakSeconds: Int?,
         targetRounds: Int,
         allowParallelTimers: Bool,
         activeSegments: [TimeSegment],
@@ -28,6 +29,7 @@ struct PomodoroCommandHandler {
             taskID: taskID,
             focusSeconds: focusSeconds,
             breakSeconds: breakSeconds,
+            longBreakSeconds: longBreakSeconds,
             targetRounds: targetRounds
         )
     }

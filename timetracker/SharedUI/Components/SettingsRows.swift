@@ -88,6 +88,8 @@ struct SettingsTextFieldRow: View {
     let systemImage: String
     var tint: Color = .accentColor
     var isSecure = false
+    var fieldAlignment: Alignment = .trailing
+    var textAlignment: TextAlignment = .leading
 
     var body: some View {
         LabeledContent {
@@ -103,6 +105,8 @@ struct SettingsTextFieldRow: View {
             .textInputAutocapitalization(.never)
             #endif
             .autocorrectionDisabled()
+            .multilineTextAlignment(textAlignment)
+            .frame(maxWidth: .infinity, alignment: fieldAlignment)
         } label: {
             SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
         }

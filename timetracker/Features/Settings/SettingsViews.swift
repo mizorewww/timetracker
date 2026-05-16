@@ -25,14 +25,8 @@ struct SettingsView: View {
             )
 
             PomodoroSettingsSection(
-                defaultMode: pomodoroDefaultModeBinding,
-                focusMinutes: defaultFocusMinutesBinding,
-                breakMinutes: defaultBreakMinutesBinding,
-                rounds: defaultPomodoroRoundsBinding
-            ) { preset in
-                store.setDefaultFocusMinutes(preset.focusMinutes)
-                store.setDefaultBreakMinutes(preset.breakMinutes)
-            }
+                plans: pomodoroPlansBinding
+            )
 
             CountdownSettingsSection(
                 events: store.countdownEvents,

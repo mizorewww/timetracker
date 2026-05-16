@@ -16,6 +16,7 @@ struct PomodoroTests {
         let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
 
         #expect(run.state == .focusing)
+        #expect(run.longBreakSecondsPlanned == nil)
         let active = try timeRepository.activeSegments()
         #expect(active.count == 1)
         #expect(active.first?.source == .pomodoro)
@@ -29,6 +30,28 @@ struct PomodoroTests {
         #expect(completedRun.completedFocusRounds == 1)
         #expect(completedRun.endedAt != nil)
         #expect(try timeRepository.sessions().first { $0.id == run.sessionID }?.endedAt != nil)
+    }
+
+    @Test @MainActor
+    func pomodoroStoresLongBreakPlanWhenStarting() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Focus", parentID: nil, colorHex: nil, iconName: nil)
+
+        let run = try pomodoroRepository.startPomodoro(
+            taskID: task.id,
+            focusSeconds: 30 * 60,
+            breakSeconds: 10 * 60,
+            longBreakSeconds: 20 * 60,
+            targetRounds: 4
+        )
+
+        #expect(run.focusSecondsPlanned == 30 * 60)
+        #expect(run.breakSecondsPlanned == 10 * 60)
+        #expect(run.longBreakSecondsPlanned == 20 * 60)
+        #expect(run.targetRounds == 4)
     }
 
     @Test @MainActor

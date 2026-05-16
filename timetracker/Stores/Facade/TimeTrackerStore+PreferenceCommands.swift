@@ -21,6 +21,30 @@ extension TimeTrackerStore {
         setPreference(.defaultPomodoroRounds, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...24)))
     }
 
+    func setPomodoroPlans(_ plans: [PomodoroPlan]) {
+        setPreference(.pomodoroPlans, valueJSON: PreferenceJSON.encode(plans.map { $0.normalized() }))
+    }
+
+    func addPomodoroPlan() {
+        var plans = preferences.pomodoroPlans
+        plans.append(.newPlan)
+        setPomodoroPlans(plans)
+    }
+
+    func updatePomodoroPlan(_ plan: PomodoroPlan) {
+        var plans = preferences.pomodoroPlans
+        if let index = plans.firstIndex(where: { $0.id == plan.id }) {
+            plans[index] = plan.normalized()
+        } else {
+            plans.append(plan.normalized())
+        }
+        setPomodoroPlans(plans)
+    }
+
+    func deletePomodoroPlan(id: UUID) {
+        setPomodoroPlans(preferences.pomodoroPlans.filter { $0.id != id })
+    }
+
     func setAllowParallelTimers(_ value: Bool) {
         setPreference(.allowParallelTimers, valueJSON: PreferenceJSON.encode(value))
     }

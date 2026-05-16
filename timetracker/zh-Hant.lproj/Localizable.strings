@@ -61,7 +61,7 @@
 "settings.focusMinutes" = "專注分鐘";
 "settings.breakMinutes" = "休息分鐘";
 "settings.defaultRounds" = "預設輪次";
-"settings.pomodoro.footer" = "開始番茄鐘時會預設填入這裡的數值，也可以在開始前臨時修改。";
+"settings.pomodoro.footer" = "番茄鐘計劃會和其他設定一起透過 iCloud 同步。";
 "settings.countdown" = "倒數事件";
 "settings.countdown.empty" = "沒有倒數事件。今日頁只顯示今天、本週、本月和今年進度。";
 "settings.countdown.add" = "新增事件";
@@ -261,9 +261,18 @@
 "pomodoro.beforeStart.message" = "請選擇任務。番茄鐘不是孤立倒數，完成後會產生真實時間記錄。";
 "pomodoro.chooseTask" = "選擇任務";
 "pomodoro.applyPreset" = "套用模式";
+"pomodoro.addPlan" = "新增計畫";
+"pomodoro.emptyPlans" = "還沒有番茄鐘計畫";
+"pomodoro.planName" = "計畫名稱";
+"pomodoro.newPlan" = "新計畫";
+"pomodoro.untitledPlan" = "未命名計畫";
 "pomodoro.focus" = "專注";
 "pomodoro.break" = "休息";
+"pomodoro.shortBreak" = "短休息";
+"pomodoro.longBreak" = "長休息";
 "pomodoro.rounds" = "輪次";
+"pomodoro.systemClock" = "允許呼叫系統時鐘";
+"pomodoro.deletePlan" = "刪除計畫";
 "pomodoro.minuteField" = "分鐘";
 "pomodoro.roundField" = "次數";
 "pomodoro.roundUnit" = "輪";

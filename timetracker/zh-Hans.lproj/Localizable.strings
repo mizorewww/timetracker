@@ -77,6 +77,8 @@
 "settings.checking" = "正在检查...";
 "settings.checkSync" = "检查同步状态";
 "settings.forceSync" = "立即刷新同步";
+"settings.forceUploadICloud" = "上传本设备到 iCloud";
+"settings.forceDownloadICloud" = "从 iCloud 下载";
 "settings.sync" = "同步";
 "settings.sync.footer" = "打开 App、回到前台、收到 iCloud 导入和前台定时检查时都会刷新。这个开关会在下次启动时生效。";
 "settings.llm" = "AI 助手";
@@ -125,6 +127,10 @@
 "dialog.syncConflict.message" = "这台设备和 iCloud 在上次确认同步后都发生了变化。\n\n本设备：%@\niCloud：%@\n\n请选择哪一侧覆盖另一侧。";
 "dialog.syncConflict.uploadLocal" = "上传本设备数据";
 "dialog.syncConflict.downloadCloud" = "从 iCloud 下载";
+"dialog.forceUpload.title" = "上传本设备数据到 iCloud？";
+"dialog.forceUpload.message" = "这会把当前本设备的数据标记为最新副本。下一次 CloudKit 导出完成后，iCloud 可能会被本设备数据覆盖。";
+"dialog.forceDownload.title" = "在本设备使用 iCloud 数据？";
+"dialog.forceDownload.message" = "这会刷新本机视图，并把当前已从 iCloud 导入的数据作为本设备的可信版本。";
 "alert.sync.title" = "iCloud 同步状态";
 "alert.optimize.title" = "已删除记录";
 "common.save" = "保存";
@@ -160,6 +166,8 @@
 "sync.storage.temporary" = "临时内存存储";
 "sync.storage.uiTest" = "UI 测试存储";
 "sync.refreshSummary" = "%@：%@。已刷新本机视图；若另一台设备刚写入，系统完成导入后这里会自动更新。";
+"sync.forceUpload.started" = "已将本设备数据标记为待上传；CloudKit 完成导出后会更新 iCloud。";
+"sync.forceDownload.accepted" = "已刷新本设备，并接受当前 iCloud 导入的数据。";
 "sync.unchecked" = "未检查";
 "sync.disabledMessage" = "用户已关闭 iCloud 同步，下次启动继续使用本地存储。";
 "sync.temporaryStoreError" = "持久化存储启动失败，已临时使用内存存储：%@";
@@ -191,6 +199,7 @@
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";
 "sync.conflict.summary" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项";
 "sync.conflict.error.localSnapshotMissing" = "找不到已保存的本机快照，无法用本设备覆盖 iCloud。";
+"sync.conflict.error.cloudUnavailable" = "本次启动未使用 iCloud 存储。";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";

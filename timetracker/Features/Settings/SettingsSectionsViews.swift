@@ -110,28 +110,14 @@ struct SyncSettingsSection: View {
     let isCheckingSync: Bool
     let onCheckSync: () -> Void
     let onForceSync: () -> Void
+    let onForceUploadLocal: () -> Void
+    let onForceDownloadCloud: () -> Void
     let onUploadLocal: () -> Void
     let onDownloadCloud: () -> Void
 
     var body: some View {
         Section {
             SettingsStatusRow(feedback: feedback)
-
-            if pendingConflict != nil {
-                Button(action: onUploadLocal) {
-                    SettingsActionLabel(
-                        title: AppStrings.localized("dialog.syncConflict.uploadLocal"),
-                        systemImage: "arrow.up.icloud"
-                    )
-                }
-
-                Button(action: onDownloadCloud) {
-                    SettingsActionLabel(
-                        title: AppStrings.localized("dialog.syncConflict.downloadCloud"),
-                        systemImage: "arrow.down.icloud"
-                    )
-                }
-            }
 
             Toggle(isOn: cloudSyncEnabled) {
                 Label(AppStrings.localized("settings.icloud"), systemImage: "icloud")
@@ -148,16 +134,60 @@ struct SyncSettingsSection: View {
                     systemImage: "arrow.clockwise"
                 )
             }
+            .buttonStyle(.plain)
             .disabled(isCheckingSync)
 
             Button(action: onForceSync) {
                 SettingsActionLabel(title: AppStrings.localized("settings.forceSync"), systemImage: "arrow.clockwise.icloud")
             }
+            .buttonStyle(.plain)
+            .disabled(isCheckingSync)
+
+            Button {
+                if pendingConflict == nil {
+                    onForceUploadLocal()
+                } else {
+                    onUploadLocal()
+                }
+            } label: {
+                SettingsActionLabel(
+                    title: uploadTitle,
+                    systemImage: "arrow.up.icloud"
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isCheckingSync)
+
+            Button {
+                if pendingConflict == nil {
+                    onForceDownloadCloud()
+                } else {
+                    onDownloadCloud()
+                }
+            } label: {
+                SettingsActionLabel(
+                    title: downloadTitle,
+                    systemImage: "arrow.down.icloud"
+                )
+            }
+            .buttonStyle(.plain)
             .disabled(isCheckingSync)
         } header: {
             SettingsHeader(symbol: "icloud.fill", title: AppStrings.localized("settings.sync"))
         } footer: {
             Text(.app("settings.sync.footer"))
         }
+    }
+
+    private var uploadTitle: String {
+        pendingConflict == nil
+            ? AppStrings.localized("settings.forceUploadICloud")
+            : AppStrings.localized("dialog.syncConflict.uploadLocal")
+    }
+
+    private var downloadTitle: String {
+        pendingConflict == nil
+            ? AppStrings.localized("settings.forceDownloadICloud")
+            : AppStrings.localized("dialog.syncConflict.downloadCloud")
     }
 }

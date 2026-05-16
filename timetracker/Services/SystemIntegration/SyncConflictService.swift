@@ -111,6 +111,40 @@ struct SyncConflictService {
         try saveState(state)
     }
 
+    func forceUploadLocalData(context: ModelContext) throws {
+        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
+            throw SyncConflictError.cloudSyncUnavailable
+        }
+        var state = try loadState()
+        let snapshot = try SyncDataSnapshot.capture(context: context)
+        try snapshot.restoreAsLocalWinner(context: context)
+        let exportedSnapshot = try SyncDataSnapshot.capture(context: context)
+        let fingerprint = try exportedSnapshot.fingerprint()
+        state.baseFingerprint = fingerprint
+        state.localSnapshot = exportedSnapshot
+        state.localFingerprint = fingerprint
+        state.pendingConflictID = nil
+        state.pendingDetectedAt = nil
+        state.pendingCloudSnapshot = nil
+        try saveState(state)
+    }
+
+    func acceptCurrentCloudData(context: ModelContext) throws {
+        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
+            throw SyncConflictError.cloudSyncUnavailable
+        }
+        var state = try loadState()
+        let snapshot = try SyncDataSnapshot.capture(context: context)
+        let fingerprint = try snapshot.fingerprint()
+        state.baseFingerprint = fingerprint
+        state.localSnapshot = snapshot
+        state.localFingerprint = fingerprint
+        state.pendingConflictID = nil
+        state.pendingDetectedAt = nil
+        state.pendingCloudSnapshot = nil
+        try saveState(state)
+    }
+
     func resolve(_ resolution: SyncConflictResolution, context: ModelContext) throws {
         guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return }
         var state = try loadState()
@@ -230,11 +264,14 @@ struct SyncConflictService {
 
 private enum SyncConflictError: LocalizedError {
     case localSnapshotMissing
+    case cloudSyncUnavailable
 
     var errorDescription: String? {
         switch self {
         case .localSnapshotMissing:
             return AppStrings.localized("sync.conflict.error.localSnapshotMissing")
+        case .cloudSyncUnavailable:
+            return AppStrings.localized("sync.conflict.error.cloudUnavailable")
         }
     }
 }

@@ -77,6 +77,8 @@
 "settings.checking" = "Checking...";
 "settings.checkSync" = "Check Sync Status";
 "settings.forceSync" = "Refresh Sync Now";
+"settings.forceUploadICloud" = "Upload This Device to iCloud";
+"settings.forceDownloadICloud" = "Download from iCloud";
 "settings.sync" = "Sync";
 "settings.sync.footer" = "The app refreshes on launch, foreground, iCloud imports, and periodic foreground checks. This switch takes effect after restart.";
 "settings.llm" = "AI Assistant";
@@ -125,6 +127,10 @@
 "dialog.syncConflict.message" = "Both this device and iCloud changed data since the last accepted sync.\n\nThis device: %@\niCloud: %@\n\nChoose which side should overwrite the other.";
 "dialog.syncConflict.uploadLocal" = "Upload This Device";
 "dialog.syncConflict.downloadCloud" = "Download from iCloud";
+"dialog.forceUpload.title" = "Upload this device to iCloud?";
+"dialog.forceUpload.message" = "This marks the current data on this device as the newest copy. iCloud will receive it on the next CloudKit export and may overwrite cloud data from other devices.";
+"dialog.forceDownload.title" = "Use iCloud data on this device?";
+"dialog.forceDownload.message" = "This refreshes the local view and accepts the data currently imported from iCloud as the source of truth on this device.";
 "alert.sync.title" = "iCloud Sync Status";
 "alert.optimize.title" = "Deleted Records";
 "common.save" = "Save";
@@ -160,6 +166,8 @@
 "sync.storage.temporary" = "Temporary in-memory storage";
 "sync.storage.uiTest" = "UI test storage";
 "sync.refreshSummary" = "%@：%@. This device view has refreshed. If another device just changed data, the system will update this view after import finishes.";
+"sync.forceUpload.started" = "This device data has been marked for upload. iCloud will update after CloudKit finishes exporting.";
+"sync.forceDownload.accepted" = "This device has refreshed and accepted the current iCloud import.";
 "sync.unchecked" = "Not checked";
 "sync.disabledMessage" = "iCloud Sync is off. The app will keep using local storage after restart.";
 "sync.temporaryStoreError" = "Persistent storage failed to start. The app is temporarily using in-memory storage: %@";
@@ -191,6 +199,7 @@
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";
 "sync.conflict.summary" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items";
 "sync.conflict.error.localSnapshotMissing" = "The saved local snapshot is missing, so this device cannot overwrite iCloud.";
+"sync.conflict.error.cloudUnavailable" = "iCloud storage is not active for this launch.";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";

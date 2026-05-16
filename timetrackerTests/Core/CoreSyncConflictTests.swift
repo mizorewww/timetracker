@@ -56,6 +56,25 @@ struct CoreSyncConflictTests {
         }
     }
 
+    @Test @MainActor
+    func forceUploadLocalDataMarksCurrentRowsAsNewLocalChanges() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let task = TaskNode(title: "Local plan", parentID: nil, deviceID: "test")
+            context.insert(task)
+            try context.save()
+            let originalMutationID = task.clientMutationID
+
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            try service.forceUploadLocalData(context: context)
+
+            let tasks = try context.fetch(FetchDescriptor<TaskNode>())
+            #expect(tasks.map(\.title) == ["Local plan"])
+            #expect(tasks.first?.deviceID == DeviceIdentity.current)
+            #expect(tasks.first?.clientMutationID != originalMutationID)
+        }
+    }
+
     private func temporaryStateURL() -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("TimeTrackerSyncConflictTests-\(UUID().uuidString)", isDirectory: true)

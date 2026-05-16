@@ -9,6 +9,8 @@ struct SettingsView: View {
     @State var isExportPresented = false
     @State var isCheckingSync = false
     @State var isFetchingLLMModels = false
+    @State var isForceUploadConfirmationPresented = false
+    @State var isForceDownloadConfirmationPresented = false
     @State var syncCheckMessage: String?
     @State var databaseOptimizationMessage: String?
     @State var llmModelFetchMessage: String?
@@ -67,11 +69,17 @@ struct SettingsView: View {
                 isCheckingSync: isCheckingSync,
                 onCheckSync: checkSyncStatus,
                 onForceSync: forceSyncRefresh,
+                onForceUploadLocal: {
+                    isForceUploadConfirmationPresented = true
+                },
+                onForceDownloadCloud: {
+                    isForceDownloadConfirmationPresented = true
+                },
                 onUploadLocal: {
-                    store.resolveSyncConflict(.uploadLocal)
+                    isForceUploadConfirmationPresented = true
                 },
                 onDownloadCloud: {
-                    store.resolveSyncConflict(.downloadCloud)
+                    isForceDownloadConfirmationPresented = true
                 }
             )
 
@@ -151,6 +159,24 @@ struct SettingsView: View {
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(.app("dialog.optimize.message"))
+        }
+        .confirmationDialog(AppStrings.localized("dialog.forceUpload.title"), isPresented: $isForceUploadConfirmationPresented, titleVisibility: .visible) {
+            Button(AppStrings.localized("settings.forceUploadICloud"), role: .destructive) {
+                if store.forceUploadLocalDataToCloud() {
+                    syncCheckMessage = AppStrings.localized("sync.forceUpload.started")
+                }
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("dialog.forceUpload.message"))
+        }
+        .confirmationDialog(AppStrings.localized("dialog.forceDownload.title"), isPresented: $isForceDownloadConfirmationPresented, titleVisibility: .visible) {
+            Button(AppStrings.localized("settings.forceDownloadICloud"), role: .destructive) {
+                forceDownloadCloudData()
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("dialog.forceDownload.message"))
         }
         .alert(AppStrings.localized("alert.sync.title"), isPresented: syncCheckPresented) {
             Button(AppStrings.localized("common.ok")) {

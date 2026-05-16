@@ -63,6 +63,40 @@ extension TimeTrackerStore {
         }
     }
 
+    @discardableResult
+    func forceUploadLocalDataToCloud() -> Bool {
+        do {
+            guard let modelContext else { throw StoreError.notConfigured }
+            if pendingSyncConflict != nil {
+                try syncConflictService.resolve(.uploadLocal, context: modelContext)
+            } else {
+                try syncConflictService.forceUploadLocalData(context: modelContext)
+            }
+            try refresh()
+            pendingSyncConflict = nil
+            lastSyncRefreshAt = Date()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func acceptCurrentCloudData() -> Bool {
+        do {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try syncConflictService.acceptCurrentCloudData(context: modelContext)
+            try refresh()
+            pendingSyncConflict = nil
+            lastSyncRefreshAt = Date()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     func refresh() throws {
         try refresh(plan: refreshPlanner.plan(after: [.fullSync]))
     }

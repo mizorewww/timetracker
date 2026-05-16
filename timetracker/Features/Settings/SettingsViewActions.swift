@@ -39,6 +39,17 @@ extension SettingsView {
         }
     }
 
+    func forceDownloadCloudData() {
+        isCheckingSync = true
+        Task {
+            _ = await store.forceCloudSyncRefresh()
+            if store.acceptCurrentCloudData() {
+                syncCheckMessage = AppStrings.localized("sync.forceDownload.accepted")
+            }
+            isCheckingSync = false
+        }
+    }
+
     func fetchLLMModels() {
         let endpoint = store.preferences.llmEndpoint
         let apiKey = store.preferences.llmAPIKey

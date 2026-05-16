@@ -3,14 +3,31 @@ import SwiftUI
 struct SettingsActionLabel: View {
     let title: String
     let systemImage: String
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        Label {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 28, height: 28)
+
             Text(title)
                 .font(.body)
-        } icon: {
-            Image(systemName: systemImage)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .opacity(isEnabled ? 1 : 0.45)
+        .accessibilityElement(children: .combine)
     }
 }
 

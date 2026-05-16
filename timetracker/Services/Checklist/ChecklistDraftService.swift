@@ -16,7 +16,7 @@ struct ChecklistDraftService {
                 sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.createdAt)]
             )
         )
-        let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let existingByID = existing.latestByID()
         let existingIDs = Set(existing.map(\.id))
         let requestedItemIDs = Array(existingIDs)
         let visuals = try context.fetch(

@@ -66,10 +66,10 @@
 "settings.countdown.empty" = "沒有倒數事件。今日頁只顯示今天、本週、本月和今年進度。";
 "settings.countdown.add" = "新增事件";
 "settings.countdown.footer" = "倒數事件可以為空，也可以加入任意多個日期。";
-"settings.exportCSV" = "匯出 CSV";
+"settings.exportJSON" = "匯出 JSON";
 "settings.optimizeDatabase" = "清理已刪除記錄";
 "settings.data" = "資料";
-"settings.data.footer" = "CSV 會匯出任務、路徑、開始時間、結束時間、時長、來源和備註。清理已刪除記錄會永久刪除已刪除任務的計時和番茄鐘歷史。";
+"settings.data.footer" = "JSON 會匯出所有參與 iCloud 同步的資料類型。清理已刪除記錄會永久刪除已刪除任務的計時和番茄鐘歷史。";
 "settings.icloud" = "iCloud 同步";
 "settings.currentStorage" = "目前儲存";
 "settings.localWillRetryCloud" = "本機，重新啟動後嘗試 iCloud";
@@ -128,9 +128,9 @@
 "dialog.syncConflict.uploadLocal" = "上傳本裝置資料";
 "dialog.syncConflict.downloadCloud" = "從 iCloud 下載";
 "dialog.forceUpload.title" = "上傳本裝置資料到 iCloud？";
-"dialog.forceUpload.message" = "這會把目前本裝置的資料標記為最新副本。下一次 CloudKit 匯出完成後，iCloud 可能會被本裝置資料覆蓋。";
+"dialog.forceUpload.message" = "這會把目前本裝置的資料標記為最新副本。即使本次啟動退回了本機儲存，也會在下次啟動先清除衝突快取，再重新嘗試 iCloud，並用本裝置資料覆蓋雲端。";
 "dialog.forceDownload.title" = "在本裝置使用 iCloud 資料？";
-"dialog.forceDownload.message" = "這會重新整理本機視圖，並把目前已從 iCloud 匯入的資料作為本裝置的可信版本。";
+"dialog.forceDownload.message" = "這會忽略目前本機衝突。若本次啟動沒有使用 iCloud 儲存，會在下次啟動清除本機快取並從 iCloud 重新下載。";
 "alert.sync.title" = "iCloud 同步狀態";
 "alert.optimize.title" = "已刪除記錄";
 "common.save" = "儲存";
@@ -167,7 +167,9 @@
 "sync.storage.uiTest" = "UI 測試儲存";
 "sync.refreshSummary" = "%@：%@。已重新整理本機視圖；若另一台裝置剛寫入，系統完成匯入後這裡會自動更新。";
 "sync.forceUpload.started" = "已將本裝置資料標記為待上傳；CloudKit 完成匯出後會更新 iCloud。";
+"sync.forceUpload.queued" = "已儲存本裝置資料並安排下次啟動上傳；請重新啟動 App，啟動後會先清除衝突快取，再重新嘗試 iCloud 並覆蓋雲端。";
 "sync.forceDownload.accepted" = "已重新整理本裝置，並接受目前 iCloud 匯入的資料。";
+"sync.forceDownload.queued" = "已安排下次啟動清除本機快取並從 iCloud 重新下載；請重新啟動 App。";
 "sync.unchecked" = "未檢查";
 "sync.disabledMessage" = "使用者已關閉 iCloud 同步，下次啟動繼續使用本機儲存。";
 "sync.temporaryStoreError" = "持久化儲存啟動失敗，已暫時使用記憶體儲存：%@";
@@ -199,7 +201,7 @@
 "sync.state.conflict.message" = "請選擇上傳本裝置資料覆蓋 iCloud，還是從 iCloud 下載覆蓋本裝置。";
 "sync.conflict.summary" = "%d 個任務，%d 筆時間記錄，%d 個番茄鐘，%d 個清單項，%d 個收件箱項";
 "sync.conflict.error.localSnapshotMissing" = "找不到已儲存的本機快照，無法用本裝置覆蓋 iCloud。";
-"sync.conflict.error.cloudUnavailable" = "本次啟動未使用 iCloud 儲存。";
+"sync.conflict.error.uploadSnapshotMissing" = "沒有找到本裝置的可見資料，已取消排程覆蓋 iCloud。";
 "tab.home" = "首頁";
 "sidebar.show" = "顯示側邊欄";
 "sidebar.hide" = "隱藏側邊欄";

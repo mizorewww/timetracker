@@ -27,16 +27,28 @@ extension timetrackerApp {
             }
         }
 
+        do {
+            let recoveryReset = try AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
+                canResetUpload: SyncConflictService.hasDefaultPendingForcedUploadBackup()
+            )
+            if recoveryReset == .download {
+                try SyncConflictService.removeDefaultState()
+            }
+        } catch {
+            AppCloudSync.recordLocalFallback(error: error)
+        }
+
+        let storeURL = AppCloudSync.persistentStoreURL
         let cloudConfiguration = ModelConfiguration(
             "TimeTracker",
             schema: schema,
-            isStoredInMemoryOnly: false,
+            url: storeURL,
             cloudKitDatabase: .private(AppCloudSync.containerIdentifier)
         )
         let localConfiguration = ModelConfiguration(
             "TimeTracker",
             schema: schema,
-            isStoredInMemoryOnly: false,
+            url: storeURL,
             cloudKitDatabase: .none
         )
         let emergencyConfiguration = ModelConfiguration(

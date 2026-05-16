@@ -13,9 +13,9 @@ extension AnalyticsStore {
             let segmentID: UUID
         }
 
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
-        let boundedSegments = segments.compactMap { segment -> BoundedOverlapSegment? in
+        let taskByID = tasks.latestByID()
+        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
+        let boundedSegments = segments.deduplicatedByID().compactMap { segment -> BoundedOverlapSegment? in
             let end = segment.endedAt ?? now
             guard segment.deletedAt == nil, end > segment.startedAt else { return nil }
             return BoundedOverlapSegment(
@@ -24,7 +24,9 @@ extension AnalyticsStore {
                 title: displayTitle(for: segment, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID)
             )
         }
-        let boundedByID = Dictionary(uniqueKeysWithValues: boundedSegments.map { ($0.segment.id, $0) })
+        let boundedByID = boundedSegments.reduce(into: [UUID: BoundedOverlapSegment]()) { result, item in
+            result[item.segment.id] = item
+        }
 
         var events: [Event] = []
         for item in boundedSegments {

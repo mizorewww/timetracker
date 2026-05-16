@@ -33,7 +33,7 @@ extension TimeTrackerStore {
     }
 
     func refreshPomodoroDomain() throws {
-        pomodoroRuns = try pomodoroRepository?.runs() ?? []
+        pomodoroRuns = try pomodoroRepository?.runs().deduplicatedByID() ?? []
     }
 
     func refreshPreferenceDomain() throws {

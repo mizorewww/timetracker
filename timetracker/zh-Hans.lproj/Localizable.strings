@@ -66,10 +66,10 @@
 "settings.countdown.empty" = "没有倒计时事件。今日页只显示今天、本周、本月和今年进度。";
 "settings.countdown.add" = "添加事件";
 "settings.countdown.footer" = "倒计时事件可以为空，也可以添加任意多个日期。";
-"settings.exportCSV" = "导出 CSV";
+"settings.exportJSON" = "导出 JSON";
 "settings.optimizeDatabase" = "清理已删除记录";
 "settings.data" = "数据";
-"settings.data.footer" = "CSV 会导出任务、路径、开始时间、结束时间、时长、来源和备注。清理已删除记录会永久删除已删除任务的计时和番茄钟历史。";
+"settings.data.footer" = "JSON 会导出所有参与 iCloud 同步的数据类型。清理已删除记录会永久删除已删除任务的计时和番茄钟历史。";
 "settings.icloud" = "iCloud 同步";
 "settings.currentStorage" = "当前存储";
 "settings.localWillRetryCloud" = "本地，重启后尝试 iCloud";
@@ -128,9 +128,9 @@
 "dialog.syncConflict.uploadLocal" = "上传本设备数据";
 "dialog.syncConflict.downloadCloud" = "从 iCloud 下载";
 "dialog.forceUpload.title" = "上传本设备数据到 iCloud？";
-"dialog.forceUpload.message" = "这会把当前本设备的数据标记为最新副本。下一次 CloudKit 导出完成后，iCloud 可能会被本设备数据覆盖。";
+"dialog.forceUpload.message" = "这会把当前本设备的数据标记为最新副本。即使本次启动退回了本地存储，也会在下次启动先清除冲突缓存，再重新尝试 iCloud，并用本设备数据覆盖云端。";
 "dialog.forceDownload.title" = "在本设备使用 iCloud 数据？";
-"dialog.forceDownload.message" = "这会刷新本机视图，并把当前已从 iCloud 导入的数据作为本设备的可信版本。";
+"dialog.forceDownload.message" = "这会忽略当前本地冲突。若本次启动没有使用 iCloud 存储，会在下次启动清除本地缓存并从 iCloud 重新下载。";
 "alert.sync.title" = "iCloud 同步状态";
 "alert.optimize.title" = "已删除记录";
 "common.save" = "保存";
@@ -167,7 +167,9 @@
 "sync.storage.uiTest" = "UI 测试存储";
 "sync.refreshSummary" = "%@：%@。已刷新本机视图；若另一台设备刚写入，系统完成导入后这里会自动更新。";
 "sync.forceUpload.started" = "已将本设备数据标记为待上传；CloudKit 完成导出后会更新 iCloud。";
+"sync.forceUpload.queued" = "已保存本设备数据并安排下次启动上传；请重启 App，启动后会先清除冲突缓存，再重新尝试 iCloud 并覆盖云端。";
 "sync.forceDownload.accepted" = "已刷新本设备，并接受当前 iCloud 导入的数据。";
+"sync.forceDownload.queued" = "已安排下次启动清除本地缓存并从 iCloud 重新下载；请重启 App。";
 "sync.unchecked" = "未检查";
 "sync.disabledMessage" = "用户已关闭 iCloud 同步，下次启动继续使用本地存储。";
 "sync.temporaryStoreError" = "持久化存储启动失败，已临时使用内存存储：%@";
@@ -199,7 +201,7 @@
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";
 "sync.conflict.summary" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项";
 "sync.conflict.error.localSnapshotMissing" = "找不到已保存的本机快照，无法用本设备覆盖 iCloud。";
-"sync.conflict.error.cloudUnavailable" = "本次启动未使用 iCloud 存储。";
+"sync.conflict.error.uploadSnapshotMissing" = "没有找到本设备的可见数据，已取消排队覆盖 iCloud。";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";

@@ -16,8 +16,8 @@ extension TimeTrackerStore {
             try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context)
             try migrateLegacyCountdownEventsIfNeeded(context: context)
             try SeedData.ensureSeeded(context: context)
-            try refresh()
             pendingSyncConflict = try syncConflictService.bootstrap(context: context)
+            try refresh()
             Task {
                 await refreshCloudAccountStatus()
             }
@@ -63,37 +63,31 @@ extension TimeTrackerStore {
         }
     }
 
-    @discardableResult
-    func forceUploadLocalDataToCloud() -> Bool {
+    func forceUploadLocalDataToCloud() -> SyncRecoveryResult? {
         do {
             guard let modelContext else { throw StoreError.notConfigured }
-            if pendingSyncConflict != nil {
-                try syncConflictService.resolve(.uploadLocal, context: modelContext)
-            } else {
-                try syncConflictService.forceUploadLocalData(context: modelContext)
-            }
+            let result = try syncConflictService.forceUploadLocalData(context: modelContext)
             try refresh()
             pendingSyncConflict = nil
             lastSyncRefreshAt = Date()
-            return true
+            return result
         } catch {
             errorMessage = error.localizedDescription
-            return false
+            return nil
         }
     }
 
-    @discardableResult
-    func acceptCurrentCloudData() -> Bool {
+    func acceptCurrentCloudData() -> SyncRecoveryResult? {
         do {
             guard let modelContext else { throw StoreError.notConfigured }
-            try syncConflictService.acceptCurrentCloudData(context: modelContext)
+            let result = try syncConflictService.acceptCurrentCloudData(context: modelContext)
             try refresh()
             pendingSyncConflict = nil
             lastSyncRefreshAt = Date()
-            return true
+            return result
         } catch {
             errorMessage = error.localizedDescription
-            return false
+            return nil
         }
     }
 

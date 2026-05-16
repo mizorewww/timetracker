@@ -68,7 +68,7 @@ struct TaskRollupService {
     }
 
     private func ancestorIDs(of taskIDs: Set<UUID>, tasks: [TaskNode]) -> Set<UUID> {
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        let taskByID = tasks.latestByID()
         var ancestors = Set<UUID>()
 
         for taskID in taskIDs {

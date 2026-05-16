@@ -1,16 +1,123 @@
 import SwiftUI
 
+struct SettingsRowIcon: View {
+    let systemImage: String
+    var tint: Color = .accentColor
+    var secondaryTint: Color?
+
+    var body: some View {
+        Group {
+            if let secondaryTint {
+                Image(systemName: systemImage)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(tint, secondaryTint)
+            } else {
+                Image(systemName: systemImage)
+                    .foregroundStyle(tint)
+            }
+        }
+        .font(.body.weight(.semibold))
+        .frame(width: 28, height: 28)
+    }
+}
+
+struct SettingsRowLabel: View {
+    let title: String
+    let systemImage: String
+    var tint: Color = .accentColor
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsRowIcon(systemImage: systemImage, tint: tint)
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct SettingsValueRow: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    var tint: Color = .accentColor
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsRowIcon(systemImage: systemImage, tint: tint)
+
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 8)
+
+            Text(value)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct SettingsTextFieldRow: View {
+    let title: String
+    @Binding var text: String
+    let systemImage: String
+    var tint: Color = .accentColor
+    var isSecure = false
+
+    var body: some View {
+        LabeledContent {
+            Group {
+                if isSecure {
+                    SecureField(title, text: $text)
+                } else {
+                    TextField(title, text: $text)
+                }
+            }
+            .labelsHidden()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            #endif
+            .autocorrectionDisabled()
+        } label: {
+            SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+        }
+    }
+}
+
+struct SettingsNumberFieldRow: View {
+    let title: String
+    let value: Binding<Int>
+    let formatter: NumberFormatter
+    let systemImage: String
+    var tint: Color = .accentColor
+
+    var body: some View {
+        LabeledContent {
+            TextField(title, value: value, formatter: formatter)
+                .labelsHidden()
+                .multilineTextAlignment(.trailing)
+        } label: {
+            SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+        }
+    }
+}
+
 struct SettingsActionLabel: View {
     let title: String
     let systemImage: String
+    var tint: Color = .accentColor
+    var secondaryTint: Color?
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28, height: 28)
+            SettingsRowIcon(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint)
 
             Text(title)
                 .font(.body)

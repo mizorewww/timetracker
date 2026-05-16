@@ -36,12 +36,13 @@ extension TimeTrackerStore {
         return removedCount
     }
 
-    func csvExport() -> String {
-        csvExportService.export(
-            segments: allSegments,
-            sessions: sessions,
-            taskByID: taskByID,
-            taskParentPathByID: taskParentPathByID
-        )
+    func jsonExport() -> String {
+        do {
+            guard let modelContext else { throw StoreError.notConfigured }
+            return try syncConflictService.exportCloudSyncedData(context: modelContext)
+        } catch {
+            errorMessage = error.localizedDescription
+            return "{}"
+        }
     }
 }

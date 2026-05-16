@@ -114,22 +114,13 @@ struct SettingsView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    isExportPresented = true
-                } label: {
-                    Label(AppStrings.localized("settings.exportCSV"), systemImage: "square.and.arrow.down")
-                }
-            }
-        }
         .accessibilityIdentifier("settings.view")
         .onAppear(perform: fetchLLMModelsIfNeeded)
         .fileExporter(
             isPresented: $isExportPresented,
-            document: CSVExportDocument(text: store.csvExport()),
-            contentType: .commaSeparatedText,
-            defaultFilename: "time-tracker-export.csv"
+            document: JSONExportDocument(text: store.jsonExport()),
+            contentType: .json,
+            defaultFilename: "time-tracker-export.json"
         ) { result in
             if case let .failure(error) = result {
                 store.errorMessage = error.localizedDescription
@@ -161,18 +152,24 @@ struct SettingsView: View {
             Text(.app("dialog.optimize.message"))
         }
         .confirmationDialog(AppStrings.localized("dialog.forceUpload.title"), isPresented: $isForceUploadConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("settings.forceUploadICloud"), role: .destructive) {
-                if store.forceUploadLocalDataToCloud() {
-                    syncCheckMessage = AppStrings.localized("sync.forceUpload.started")
+            Button(role: .destructive) {
+                if let result = store.forceUploadLocalDataToCloud() {
+                    syncCheckMessage = result == .appliedImmediately
+                        ? AppStrings.localized("sync.forceUpload.started")
+                        : AppStrings.localized("sync.forceUpload.queued")
                 }
+            } label: {
+                Label(AppStrings.localized("settings.forceUploadICloud"), systemImage: "icloud.and.arrow.up.fill")
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(.app("dialog.forceUpload.message"))
         }
         .confirmationDialog(AppStrings.localized("dialog.forceDownload.title"), isPresented: $isForceDownloadConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("settings.forceDownloadICloud"), role: .destructive) {
+            Button(role: .destructive) {
                 forceDownloadCloudData()
+            } label: {
+                Label(AppStrings.localized("settings.forceDownloadICloud"), systemImage: "icloud.and.arrow.down.fill")
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {

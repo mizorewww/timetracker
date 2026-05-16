@@ -132,8 +132,9 @@ extension TimeTrackerStore {
     }
 
     func rebuildTaskCategoryIndexes() {
-        taskCategoryByID = Dictionary(uniqueKeysWithValues: taskCategories.filter { $0.deletedAt == nil }.map { ($0.id, $0) })
+        taskCategoryByID = taskCategories.filter { $0.deletedAt == nil }.latestByID()
         taskCategoryIDByRootTaskID = taskCategoryAssignments
+            .deduplicatedByID()
             .filter { $0.deletedAt == nil }
             .sorted { $0.updatedAt < $1.updatedAt }
             .reduce(into: [:]) { result, assignment in

@@ -320,7 +320,9 @@ struct TaskDetailEditorCard: View {
         ) else {
             return
         }
-        let draftByID = Dictionary(uniqueKeysWithValues: draft.checklistItems.map { ($0.id, $0) })
+        let draftByID = draft.checklistItems.reduce(into: [UUID: ChecklistEditorDraft]()) { result, item in
+            result[item.id] = item
+        }
         draft.checklistItems = reorderedIDs.compactMap { draftByID[$0] }
     }
 

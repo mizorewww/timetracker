@@ -23,6 +23,10 @@
 	</array>
 	<key>TimeTrackerAutomaticDemoDataMode</key>
 	<string>$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

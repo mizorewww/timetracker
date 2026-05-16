@@ -185,11 +185,11 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func csvExportIncludesLedgerRows() throws {
+    func jsonExportIncludesCloudSyncedData() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "CSV Task", parentID: nil, colorHex: nil, iconName: nil)
+        let task = try taskRepository.createTask(title: "JSON Task", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date(timeIntervalSince1970: 2_000)
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -200,11 +200,12 @@ struct DataModelContractTests {
 
         let store = TimeTrackerStore()
         store.configureIfNeeded(context: context)
-        let csv = store.csvExport()
+        let json = store.jsonExport()
 
-        #expect(csv.contains("Task,Path,Start,End,Duration Seconds,Source,Note"))
-        #expect(csv.contains("CSV Task"))
-        #expect(csv.contains("900"))
-        #expect(csv.contains("Export note"))
+        #expect(json.contains("\"format\" : \"timetracker.cloudSyncedData\""))
+        #expect(json.contains("\"tasks\""))
+        #expect(json.contains("\"segments\""))
+        #expect(json.contains("JSON Task"))
+        #expect(json.contains("Export note"))
     }
 }

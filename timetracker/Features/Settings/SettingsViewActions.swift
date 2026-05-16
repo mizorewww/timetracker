@@ -43,8 +43,10 @@ extension SettingsView {
         isCheckingSync = true
         Task {
             _ = await store.forceCloudSyncRefresh()
-            if store.acceptCurrentCloudData() {
-                syncCheckMessage = AppStrings.localized("sync.forceDownload.accepted")
+            if let result = store.acceptCurrentCloudData() {
+                syncCheckMessage = result == .appliedImmediately
+                    ? AppStrings.localized("sync.forceDownload.accepted")
+                    : AppStrings.localized("sync.forceDownload.queued")
             }
             isCheckingSync = false
         }

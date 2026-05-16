@@ -17,6 +17,11 @@ struct ContentView: View {
         }
         .task {
             store.configureIfNeeded(context: modelContext)
+            #if DEBUG
+            if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
+                return
+            }
+            #endif
             #if os(iOS) && canImport(WatchConnectivity)
             WatchConnectivityBridge.shared.commandHandler = { command in
                 store.handleWatchCommand(command)

@@ -60,7 +60,7 @@ struct ChecklistCommandHandler {
                 sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.createdAt)]
             )
         )
-        let itemByID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        let itemByID = items.latestByID()
         let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }
         guard orderedItems.count == items.count else { return }
 

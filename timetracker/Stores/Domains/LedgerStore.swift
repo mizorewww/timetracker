@@ -12,16 +12,16 @@ struct LedgerStore {
     }
 
     mutating func refreshVisible(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
-        activeSegments = try repository.activeSegments()
+        activeSegments = try repository.activeSegments().deduplicatedByID()
 
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
-        todaySegments = try repository.segments(from: today.start, to: today.end, now: now)
+        todaySegments = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
         mergeVisibleSegments(todayInterval: today, now: now)
     }
 
     mutating func refreshHistory(repository: TimeTrackingRepository) throws {
-        allSegments = try repository.allSegments()
-        sessions = try repository.sessions()
+        allSegments = try repository.allSegments().deduplicatedByID()
+        sessions = try repository.sessions().deduplicatedByID()
     }
 
     mutating func refreshHistoryRanges(
@@ -51,7 +51,7 @@ struct LedgerStore {
         for interval in intervals {
             fetchedSegments += try repository.segments(from: interval.start, to: interval.end, now: now)
         }
-        fetchedSegments = uniqueSegments(fetchedSegments)
+        fetchedSegments = uniqueSegments(fetchedSegments).deduplicatedByID()
 
         let impactedSessionIDs = Set(existingImpactedSegments.map(\.sessionID))
             .union(fetchedSegments.map(\.sessionID))
@@ -65,8 +65,8 @@ struct LedgerStore {
         allSegments.sort { $0.startedAt < $1.startedAt }
 
         if impactedSessionIDs.isEmpty == false {
-            let refreshedSessions = try repository.sessions(ids: impactedSessionIDs)
-            sessions = sessions.filter { impactedSessionIDs.contains($0.id) == false } + refreshedSessions
+            let refreshedSessions = try repository.sessions(ids: impactedSessionIDs).deduplicatedByID()
+            sessions = (sessions.filter { impactedSessionIDs.contains($0.id) == false } + refreshedSessions).deduplicatedByID()
             sessions.sort { $0.startedAt > $1.startedAt }
         }
     }
@@ -86,6 +86,7 @@ struct LedgerStore {
                 let end = segment.endedAt ?? now
                 return !(segment.startedAt < todayInterval.end && end > todayInterval.start)
             } + todaySegments
+        allSegments = allSegments.deduplicatedByID()
         allSegments.sort { $0.startedAt < $1.startedAt }
     }
 
@@ -96,7 +97,7 @@ struct LedgerStore {
 
     private func uniqueSegments(_ segments: [TimeSegment]) -> [TimeSegment] {
         var seen = Set<UUID>()
-        return segments.filter { segment in
+        return segments.deduplicatedByID().filter { segment in
             seen.insert(segment.id).inserted
         }
     }

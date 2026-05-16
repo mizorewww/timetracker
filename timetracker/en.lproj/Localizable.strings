@@ -66,10 +66,10 @@
 "settings.countdown.empty" = "No countdown events. Today will only show day, week, month, and year progress.";
 "settings.countdown.add" = "Add Event";
 "settings.countdown.footer" = "Countdown events are optional. Add any date you want to see on Today.";
-"settings.exportCSV" = "Export CSV";
+"settings.exportJSON" = "Export JSON";
 "settings.optimizeDatabase" = "Clean Deleted Records";
 "settings.data" = "Data";
-"settings.data.footer" = "CSV exports tasks, paths, start and end times, duration, source, and notes. Cleaning deleted records permanently removes time and pomodoro history for deleted tasks.";
+"settings.data.footer" = "JSON exports every data type that syncs through iCloud. Cleaning deleted records permanently removes time and pomodoro history for deleted tasks.";
 "settings.icloud" = "iCloud Sync";
 "settings.currentStorage" = "Current Storage";
 "settings.localWillRetryCloud" = "Local, retry iCloud after restart";
@@ -128,9 +128,9 @@
 "dialog.syncConflict.uploadLocal" = "Upload This Device";
 "dialog.syncConflict.downloadCloud" = "Download from iCloud";
 "dialog.forceUpload.title" = "Upload this device to iCloud?";
-"dialog.forceUpload.message" = "This marks the current data on this device as the newest copy. iCloud will receive it on the next CloudKit export and may overwrite cloud data from other devices.";
+"dialog.forceUpload.message" = "This marks the current data on this device as the newest copy. If this launch fell back to local storage, the app will clear the conflicted cache on the next launch, retry iCloud, and use this device to overwrite cloud data.";
 "dialog.forceDownload.title" = "Use iCloud data on this device?";
-"dialog.forceDownload.message" = "This refreshes the local view and accepts the data currently imported from iCloud as the source of truth on this device.";
+"dialog.forceDownload.message" = "This ignores the current local conflict. If this launch is not using iCloud storage, the app will clear the local cache on the next launch and download again from iCloud.";
 "alert.sync.title" = "iCloud Sync Status";
 "alert.optimize.title" = "Deleted Records";
 "common.save" = "Save";
@@ -167,7 +167,9 @@
 "sync.storage.uiTest" = "UI test storage";
 "sync.refreshSummary" = "%@：%@. This device view has refreshed. If another device just changed data, the system will update this view after import finishes.";
 "sync.forceUpload.started" = "This device data has been marked for upload. iCloud will update after CloudKit finishes exporting.";
+"sync.forceUpload.queued" = "This device data was saved and queued for upload on the next launch. Restart the app to clear the conflicted cache, retry iCloud, and overwrite the cloud copy.";
 "sync.forceDownload.accepted" = "This device has refreshed and accepted the current iCloud import.";
+"sync.forceDownload.queued" = "The app will clear the local cache and download again from iCloud on the next launch. Restart the app to continue.";
 "sync.unchecked" = "Not checked";
 "sync.disabledMessage" = "iCloud Sync is off. The app will keep using local storage after restart.";
 "sync.temporaryStoreError" = "Persistent storage failed to start. The app is temporarily using in-memory storage: %@";
@@ -199,7 +201,7 @@
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";
 "sync.conflict.summary" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items";
 "sync.conflict.error.localSnapshotMissing" = "The saved local snapshot is missing, so this device cannot overwrite iCloud.";
-"sync.conflict.error.cloudUnavailable" = "iCloud storage is not active for this launch.";
+"sync.conflict.error.uploadSnapshotMissing" = "No visible data was found on this device, so the app did not queue an iCloud overwrite.";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";

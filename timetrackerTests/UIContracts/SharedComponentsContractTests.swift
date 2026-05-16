@@ -54,7 +54,7 @@ struct SharedComponentsContractTests {
         #expect(settingsSource.contains("SettingsActionLabel("))
         #expect(settingsSource.contains("SettingsStatusRow(feedback: feedback)"))
         #expect(settingsActionsSource.contains("store.syncStatus.feedback("))
-        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportCSV\")") == false)
+        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportJSON\")") == false)
         #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceSync\")") == false)
         #expect(settingsSource.contains("Button(role: .destructive, action: onRebuildDemoData) {\n                Text(") == false)
     }

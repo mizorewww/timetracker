@@ -11,8 +11,8 @@ struct HourTaskActivityService {
     ) -> [HourTaskActivity] {
         let dayInterval = calendar.dateInterval(of: .day, for: date)
             ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86_400)
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
+        let taskByID = tasks.latestByID()
+        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
 
         return (0..<24).map { hour in
             let hourStart = calendar.date(byAdding: .hour, value: hour, to: dayInterval.start) ?? dayInterval.start

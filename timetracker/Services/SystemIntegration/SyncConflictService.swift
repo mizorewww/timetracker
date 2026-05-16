@@ -6,8 +6,9 @@ import SwiftData
 
 @MainActor
 struct SyncConflictService {
-    private static let stateFileName = "SyncConflictState.json"
-    private static let stateDirectoryName = "TimeTrackerSync"
+    nonisolated private static let stateFileName = "SyncConflictState.json"
+    nonisolated private static let pendingForcedUploadSnapshotFileName = "PendingForcedUploadSnapshot.json"
+    nonisolated private static let stateDirectoryName = "TimeTrackerSync"
     private let stateURLOverride: URL?
 
     init(stateURL: URL? = nil) {
@@ -15,11 +16,33 @@ struct SyncConflictService {
     }
 
     func bootstrap(context: ModelContext) throws -> SyncConflictPrompt? {
-        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return nil }
         var state = try loadState()
+        if let pendingForcedUploadSnapshot = try pendingForcedUploadSnapshotForRestore(from: state) {
+            try pendingForcedUploadSnapshot.restoreAsLocalWinner(context: context)
+            let uploadedSnapshot = try SyncDataSnapshot.capture(context: context)
+            let fingerprint = try uploadedSnapshot.fingerprint()
+            state.localSnapshot = uploadedSnapshot
+            state.localFingerprint = fingerprint
+
+            if AppCloudSync.persistenceMode == AppCloudSync.modeICloud {
+                state.baseFingerprint = fingerprint
+                state.pendingForcedUploadSnapshot = nil
+                state.pendingConflictID = nil
+                state.pendingDetectedAt = nil
+                state.pendingCloudSnapshot = nil
+                try removePendingForcedUploadSnapshot()
+            } else {
+                state.pendingForcedUploadSnapshot = uploadedSnapshot
+                try savePendingForcedUploadSnapshot(uploadedSnapshot)
+            }
+            try saveState(state)
+            return nil
+        }
+
         if let prompt = prompt(from: state) {
             return prompt
         }
+        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return nil }
         guard state.localSnapshot == nil else { return nil }
 
         let snapshot = try SyncDataSnapshot.capture(context: context)
@@ -33,13 +56,26 @@ struct SyncConflictService {
     }
 
     func recordLocalMutation(context: ModelContext) throws {
-        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return }
         var state = try loadState()
-        guard state.pendingConflictID == nil else { return }
         let snapshot = try SyncDataSnapshot.capture(context: context)
-        state.localSnapshot = snapshot
-        state.localFingerprint = try snapshot.fingerprint()
-        try saveState(state)
+        let fingerprint = try snapshot.fingerprint()
+
+        if AppCloudSync.persistenceMode == AppCloudSync.modeICloud {
+            guard state.pendingConflictID == nil else { return }
+            state.localSnapshot = snapshot
+            state.localFingerprint = fingerprint
+            try saveState(state)
+            return
+        }
+
+        if UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey),
+           snapshot.hasVisibleUserContent {
+            state.localSnapshot = snapshot
+            state.localFingerprint = fingerprint
+            state.pendingForcedUploadSnapshot = snapshot
+            try savePendingForcedUploadSnapshot(snapshot)
+            try saveState(state)
+        }
     }
 
     func handleCloudImport(context: ModelContext) throws -> SyncConflictPrompt? {
@@ -108,30 +144,64 @@ struct SyncConflictService {
         state.localSnapshot = snapshot
         state.localFingerprint = fingerprint
         state.baseFingerprint = fingerprint
+        state.pendingForcedUploadSnapshot = nil
+        try removePendingForcedUploadSnapshot()
         try saveState(state)
     }
 
-    func forceUploadLocalData(context: ModelContext) throws {
-        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
-            throw SyncConflictError.cloudSyncUnavailable
-        }
+    func forceUploadLocalData(context: ModelContext) throws -> SyncRecoveryResult {
         var state = try loadState()
-        let snapshot = try SyncDataSnapshot.capture(context: context)
-        try snapshot.restoreAsLocalWinner(context: context)
-        let exportedSnapshot = try SyncDataSnapshot.capture(context: context)
+        let currentSnapshot = try SyncDataSnapshot.capture(context: context)
+        let snapshot = try snapshotForForcedUpload(currentSnapshot: currentSnapshot, state: state)
+        let isCloudActive = AppCloudSync.persistenceMode == AppCloudSync.modeICloud
+        let shouldRestoreLocalRecoverySnapshot = !isCloudActive &&
+            !currentSnapshot.hasVisibleUserContent &&
+            snapshot.hasVisibleUserContent
+
+        let exportedSnapshot: SyncDataSnapshot
+        if isCloudActive || shouldRestoreLocalRecoverySnapshot {
+            try snapshot.restoreAsLocalWinner(context: context)
+            exportedSnapshot = try SyncDataSnapshot.capture(context: context)
+        } else {
+            exportedSnapshot = snapshot
+        }
+        guard exportedSnapshot.hasVisibleUserContent else {
+            throw SyncConflictError.uploadSnapshotMissing
+        }
         let fingerprint = try exportedSnapshot.fingerprint()
-        state.baseFingerprint = fingerprint
+
+        if isCloudActive {
+            state.baseFingerprint = fingerprint
+            state.pendingForcedUploadSnapshot = nil
+            try removePendingForcedUploadSnapshot()
+        } else {
+            state.pendingForcedUploadSnapshot = exportedSnapshot
+            try savePendingForcedUploadSnapshot(exportedSnapshot)
+            AppCloudSync.requestCloudUploadReset()
+        }
         state.localSnapshot = exportedSnapshot
         state.localFingerprint = fingerprint
         state.pendingConflictID = nil
         state.pendingDetectedAt = nil
         state.pendingCloudSnapshot = nil
         try saveState(state)
+        return isCloudActive ? .appliedImmediately : .queuedForNextLaunch
     }
 
-    func acceptCurrentCloudData(context: ModelContext) throws {
+    func acceptCurrentCloudData(context: ModelContext) throws -> SyncRecoveryResult {
         guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
-            throw SyncConflictError.cloudSyncUnavailable
+            var state = try loadState()
+            state.baseFingerprint = nil
+            state.localSnapshot = nil
+            state.localFingerprint = nil
+            state.pendingForcedUploadSnapshot = nil
+            state.pendingConflictID = nil
+            state.pendingDetectedAt = nil
+            state.pendingCloudSnapshot = nil
+            try saveState(state)
+            try removePendingForcedUploadSnapshot()
+            AppCloudSync.requestCloudDownloadReset()
+            return .queuedForNextLaunch
         }
         var state = try loadState()
         let snapshot = try SyncDataSnapshot.capture(context: context)
@@ -139,14 +209,38 @@ struct SyncConflictService {
         state.baseFingerprint = fingerprint
         state.localSnapshot = snapshot
         state.localFingerprint = fingerprint
+        state.pendingForcedUploadSnapshot = nil
         state.pendingConflictID = nil
         state.pendingDetectedAt = nil
         state.pendingCloudSnapshot = nil
+        try removePendingForcedUploadSnapshot()
         try saveState(state)
+        return .appliedImmediately
+    }
+
+    func exportCloudSyncedData(context: ModelContext, exportedAt: Date = Date()) throws -> String {
+        let export = SyncDataExport(
+            exportedAt: exportedAt,
+            appVersion: AppBuildInfo.versionSummary,
+            data: try SyncDataSnapshot.capture(context: context)
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(export)
+        return String(data: data, encoding: .utf8) ?? "{}"
     }
 
     func resolve(_ resolution: SyncConflictResolution, context: ModelContext) throws {
-        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return }
+        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
+            switch resolution {
+            case .uploadLocal:
+                _ = try forceUploadLocalData(context: context)
+            case .downloadCloud:
+                _ = try acceptCurrentCloudData(context: context)
+            }
+            return
+        }
         var state = try loadState()
         switch resolution {
         case .uploadLocal:
@@ -169,12 +263,22 @@ struct SyncConflictService {
         state.pendingConflictID = nil
         state.pendingDetectedAt = nil
         state.pendingCloudSnapshot = nil
+        state.pendingForcedUploadSnapshot = nil
+        try removePendingForcedUploadSnapshot()
         try saveState(state)
     }
 
     func prompt() -> SyncConflictPrompt? {
         guard let state = try? loadState() else { return nil }
         return prompt(from: state)
+    }
+
+    static func hasDefaultPendingForcedUploadBackup() -> Bool {
+        guard let url = try? defaultPendingForcedUploadSnapshotURL(),
+              let snapshot = try? loadPendingForcedUploadSnapshot(at: url) else {
+            return false
+        }
+        return snapshot.hasVisibleUserContent
     }
 
     nonisolated static func isConflictLikeCloudError(_ error: Error?) -> Bool {
@@ -189,6 +293,40 @@ struct SyncConflictService {
             return true
         }
         return nsError.localizedDescription.localizedCaseInsensitiveContains("conflict")
+    }
+
+    private func snapshotForForcedUpload(
+        currentSnapshot: SyncDataSnapshot,
+        state: SyncConflictState
+    ) throws -> SyncDataSnapshot {
+        if currentSnapshot.hasVisibleUserContent {
+            return currentSnapshot
+        }
+        if let pendingSnapshot = try loadPendingForcedUploadSnapshot(),
+           pendingSnapshot.hasVisibleUserContent {
+            return pendingSnapshot
+        }
+        if let pendingSnapshot = state.pendingForcedUploadSnapshot,
+           pendingSnapshot.hasVisibleUserContent {
+            return pendingSnapshot
+        }
+        if let localSnapshot = state.localSnapshot,
+           localSnapshot.hasVisibleUserContent {
+            return localSnapshot
+        }
+        return currentSnapshot
+    }
+
+    private func pendingForcedUploadSnapshotForRestore(from state: SyncConflictState) throws -> SyncDataSnapshot? {
+        if let pendingSnapshot = try loadPendingForcedUploadSnapshot(),
+           pendingSnapshot.hasVisibleUserContent {
+            return pendingSnapshot
+        }
+        if let pendingSnapshot = state.pendingForcedUploadSnapshot,
+           pendingSnapshot.hasVisibleUserContent {
+            return pendingSnapshot
+        }
+        return nil
     }
 
     private func saveConflict(
@@ -246,10 +384,71 @@ struct SyncConflictService {
         try data.write(to: url, options: [.atomic])
     }
 
+    private func loadPendingForcedUploadSnapshot() throws -> SyncDataSnapshot? {
+        try Self.loadPendingForcedUploadSnapshot(at: pendingForcedUploadSnapshotURL())
+    }
+
+    private func savePendingForcedUploadSnapshot(_ snapshot: SyncDataSnapshot) throws {
+        let url = try pendingForcedUploadSnapshotURL()
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(snapshot)
+        try data.write(to: url, options: [.atomic])
+    }
+
+    private func removePendingForcedUploadSnapshot() throws {
+        let url = try pendingForcedUploadSnapshotURL()
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private static func loadPendingForcedUploadSnapshot(at url: URL) throws -> SyncDataSnapshot? {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+        let data = try Data(contentsOf: url)
+        return try JSONDecoder().decode(SyncDataSnapshot.self, from: data)
+    }
+
+    nonisolated static func removeDefaultState() throws {
+        let url = try defaultStateURL()
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
     private func stateURL() throws -> URL {
         if let stateURLOverride {
             return stateURLOverride
         }
+        return try Self.defaultStateURL()
+    }
+
+    private func pendingForcedUploadSnapshotURL() throws -> URL {
+        if let stateURLOverride {
+            return stateURLOverride
+                .deletingLastPathComponent()
+                .appendingPathComponent(Self.pendingForcedUploadSnapshotFileName)
+        }
+        return try Self.defaultPendingForcedUploadSnapshotURL()
+    }
+
+    nonisolated private static func defaultStateURL() throws -> URL {
+        try defaultStateDirectoryURL()
+            .appendingPathComponent(Self.stateFileName)
+    }
+
+    nonisolated private static func defaultPendingForcedUploadSnapshotURL() throws -> URL {
+        try defaultStateDirectoryURL()
+            .appendingPathComponent(Self.pendingForcedUploadSnapshotFileName)
+    }
+
+    nonisolated private static func defaultStateDirectoryURL() throws -> URL {
         let baseURL = try FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -258,20 +457,19 @@ struct SyncConflictService {
         )
         return baseURL
             .appendingPathComponent(Self.stateDirectoryName, isDirectory: true)
-            .appendingPathComponent(Self.stateFileName)
     }
 }
 
 private enum SyncConflictError: LocalizedError {
     case localSnapshotMissing
-    case cloudSyncUnavailable
+    case uploadSnapshotMissing
 
     var errorDescription: String? {
         switch self {
         case .localSnapshotMissing:
             return AppStrings.localized("sync.conflict.error.localSnapshotMissing")
-        case .cloudSyncUnavailable:
-            return AppStrings.localized("sync.conflict.error.cloudUnavailable")
+        case .uploadSnapshotMissing:
+            return AppStrings.localized("sync.conflict.error.uploadSnapshotMissing")
         }
     }
 }
@@ -280,9 +478,18 @@ private struct SyncConflictState: Codable {
     var baseFingerprint: String?
     var localSnapshot: SyncDataSnapshot?
     var localFingerprint: String?
+    var pendingForcedUploadSnapshot: SyncDataSnapshot?
     var pendingConflictID: UUID?
     var pendingDetectedAt: Date?
     var pendingCloudSnapshot: SyncDataSnapshot?
+}
+
+private struct SyncDataExport: Encodable {
+    let format = "timetracker.cloudSyncedData"
+    let schemaVersion = 1
+    let exportedAt: Date
+    let appVersion: String
+    let data: SyncDataSnapshot
 }
 
 private struct SyncDataSnapshot: Codable, Equatable {
@@ -312,6 +519,19 @@ private struct SyncDataSnapshot: Codable, Equatable {
         !inboxSuggestions.isEmpty
     }
 
+    var hasVisibleUserContent: Bool {
+        tasks.contains { $0.deletedAt == nil } ||
+        taskCategories.contains { $0.deletedAt == nil } ||
+        sessions.contains { $0.deletedAt == nil } ||
+        segments.contains { $0.deletedAt == nil } ||
+        pomodoroRuns.contains { $0.deletedAt == nil } ||
+        countdownEvents.contains { $0.deletedAt == nil } ||
+        checklistItems.contains { $0.deletedAt == nil } ||
+        checklistItemVisuals.contains { $0.deletedAt == nil } ||
+        inboxItems.contains { $0.deletedAt == nil } ||
+        inboxSuggestions.contains { $0.deletedAt == nil }
+    }
+
     var localizedSummary: String {
         String(
             format: AppStrings.localized("sync.conflict.summary"),
@@ -326,18 +546,18 @@ private struct SyncDataSnapshot: Codable, Equatable {
     @MainActor
     static func capture(context: ModelContext) throws -> SyncDataSnapshot {
         SyncDataSnapshot(
-            tasks: try context.fetch(FetchDescriptor<TaskNode>()).map(TaskRecord.init).sortedByID(),
-            taskCategories: try context.fetch(FetchDescriptor<TaskCategory>()).map(TaskCategoryRecord.init).sortedByID(),
-            taskCategoryAssignments: try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(TaskCategoryAssignmentRecord.init).sortedByID(),
-            sessions: try context.fetch(FetchDescriptor<TimeSession>()).map(TimeSessionRecord.init).sortedByID(),
-            segments: try context.fetch(FetchDescriptor<TimeSegment>()).map(TimeSegmentRecord.init).sortedByID(),
-            pomodoroRuns: try context.fetch(FetchDescriptor<PomodoroRun>()).map(PomodoroRunRecord.init).sortedByID(),
-            countdownEvents: try context.fetch(FetchDescriptor<CountdownEvent>()).map(CountdownEventRecord.init).sortedByID(),
-            syncedPreferences: try context.fetch(FetchDescriptor<SyncedPreference>()).map(SyncedPreferenceRecord.init).sortedByID(),
-            checklistItems: try context.fetch(FetchDescriptor<ChecklistItem>()).map(ChecklistItemRecord.init).sortedByID(),
-            checklistItemVisuals: try context.fetch(FetchDescriptor<ChecklistItemVisual>()).map(ChecklistItemVisualRecord.init).sortedByID(),
-            inboxItems: try context.fetch(FetchDescriptor<InboxItem>()).map(InboxItemRecord.init).sortedByID(),
-            inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).map(InboxSuggestionRecord.init).sortedByID()
+            tasks: try context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID().map(TaskRecord.init).sortedByID(),
+            taskCategories: try context.fetch(FetchDescriptor<TaskCategory>()).deduplicatedByID().map(TaskCategoryRecord.init).sortedByID(),
+            taskCategoryAssignments: try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).deduplicatedByID().map(TaskCategoryAssignmentRecord.init).sortedByID(),
+            sessions: try context.fetch(FetchDescriptor<TimeSession>()).deduplicatedByID().map(TimeSessionRecord.init).sortedByID(),
+            segments: try context.fetch(FetchDescriptor<TimeSegment>()).deduplicatedByID().map(TimeSegmentRecord.init).sortedByID(),
+            pomodoroRuns: try context.fetch(FetchDescriptor<PomodoroRun>()).deduplicatedByID().map(PomodoroRunRecord.init).sortedByID(),
+            countdownEvents: try context.fetch(FetchDescriptor<CountdownEvent>()).deduplicatedByID().map(CountdownEventRecord.init).sortedByID(),
+            syncedPreferences: try context.fetch(FetchDescriptor<SyncedPreference>()).deduplicatedByID().map(SyncedPreferenceRecord.init).sortedByID(),
+            checklistItems: try context.fetch(FetchDescriptor<ChecklistItem>()).deduplicatedByID().map(ChecklistItemRecord.init).sortedByID(),
+            checklistItemVisuals: try context.fetch(FetchDescriptor<ChecklistItemVisual>()).deduplicatedByID().map(ChecklistItemVisualRecord.init).sortedByID(),
+            inboxItems: try context.fetch(FetchDescriptor<InboxItem>()).deduplicatedByID().map(InboxItemRecord.init).sortedByID(),
+            inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID()
         )
     }
 
@@ -367,7 +587,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreTasks(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<TaskNode>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<TaskNode>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         for task in existing.values where !tasks.map(\.id).contains(task.id) {
             task.deletedAt = now
             task.updatedAt = now
@@ -403,7 +623,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreTaskCategories(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<TaskCategory>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<TaskCategory>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(taskCategories.map(\.id))
         for category in existing.values where !snapshotIDs.contains(category.id) {
             category.deletedAt = now
@@ -432,7 +652,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreTaskCategoryAssignments(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(taskCategoryAssignments.map(\.id))
         for assignment in existing.values where !snapshotIDs.contains(assignment.id) {
             assignment.deletedAt = now
@@ -458,7 +678,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreSessions(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<TimeSession>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<TimeSession>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(sessions.map(\.id))
         for session in existing.values where !snapshotIDs.contains(session.id) {
             session.deletedAt = now
@@ -488,7 +708,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreSegments(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<TimeSegment>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<TimeSegment>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(segments.map(\.id))
         for segment in existing.values where !snapshotIDs.contains(segment.id) {
             segment.deletedAt = now
@@ -515,7 +735,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restorePomodoroRuns(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<PomodoroRun>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<PomodoroRun>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(pomodoroRuns.map(\.id))
         for run in existing.values where !snapshotIDs.contains(run.id) {
             run.deletedAt = now
@@ -549,7 +769,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreCountdownEvents(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<CountdownEvent>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<CountdownEvent>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(countdownEvents.map(\.id))
         for event in existing.values where !snapshotIDs.contains(event.id) {
             event.deletedAt = now
@@ -575,7 +795,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreSyncedPreferences(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<SyncedPreference>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<SyncedPreference>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(syncedPreferences.map(\.id))
         for preference in existing.values where !snapshotIDs.contains(preference.id) {
             preference.deletedAt = now
@@ -601,7 +821,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreChecklistItems(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<ChecklistItem>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<ChecklistItem>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(checklistItems.map(\.id))
         for item in existing.values where !snapshotIDs.contains(item.id) {
             item.deletedAt = now
@@ -630,7 +850,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreChecklistItemVisuals(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<ChecklistItemVisual>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<ChecklistItemVisual>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(checklistItemVisuals.map(\.id))
         for visual in existing.values where !snapshotIDs.contains(visual.id) {
             visual.deletedAt = now
@@ -661,7 +881,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreInboxItems(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<InboxItem>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<InboxItem>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(inboxItems.map(\.id))
         for item in existing.values where !snapshotIDs.contains(item.id) {
             item.deletedAt = now
@@ -693,7 +913,7 @@ private struct SyncDataSnapshot: Codable, Equatable {
     }
 
     private func restoreInboxSuggestions(context: ModelContext, now: Date, deviceID: String) throws {
-        var existing = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<InboxSuggestion>()).map { ($0.id, $0) })
+        var existing = try context.fetch(FetchDescriptor<InboxSuggestion>()).latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(inboxSuggestions.map(\.id))
         for suggestion in existing.values where !snapshotIDs.contains(suggestion.id) {
             suggestion.deletedAt = now

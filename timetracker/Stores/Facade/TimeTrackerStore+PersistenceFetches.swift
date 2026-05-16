@@ -12,7 +12,7 @@ extension TimeTrackerStore {
             ]
         )
         let all = try modelContext.fetch(descriptor)
-        return SyncedPreferenceService.latestByKey(all)
+        return SyncedPreferenceService.latestByKey(all.deduplicatedByID())
             .values
             .sorted { $0.key < $1.key }
     }
@@ -27,7 +27,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try modelContext.fetch(descriptor)
+        return try modelContext.fetch(descriptor).deduplicatedByID()
     }
 
     func fetchChecklistItems(taskIDs: Set<UUID>) throws -> [ChecklistItem] {
@@ -41,7 +41,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try modelContext.fetch(descriptor)
+        return try modelContext.fetch(descriptor).deduplicatedByID()
     }
 
     func fetchChecklistItemVisuals() throws -> [ChecklistItemVisual] {
@@ -53,7 +53,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.updatedAt, order: .reverse)
             ]
         )
-        let all = try modelContext.fetch(descriptor)
+        let all = try modelContext.fetch(descriptor).deduplicatedByID()
         return Dictionary(grouping: all, by: \.checklistItemID)
             .values
             .compactMap { visuals in
@@ -72,7 +72,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.updatedAt, order: .reverse)
             ]
         )
-        let all = try modelContext.fetch(descriptor)
+        let all = try modelContext.fetch(descriptor).deduplicatedByID()
         return Dictionary(grouping: all, by: \.checklistItemID)
             .values
             .compactMap { visuals in
@@ -90,7 +90,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try modelContext.fetch(descriptor)
+        return try modelContext.fetch(descriptor).deduplicatedByID()
     }
 
     func fetchInboxSuggestions() throws -> [InboxSuggestion] {
@@ -102,7 +102,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.updatedAt, order: .reverse)
             ]
         )
-        let all = try modelContext.fetch(descriptor)
+        let all = try modelContext.fetch(descriptor).deduplicatedByID()
         return Dictionary(grouping: all, by: \.inboxItemID)
             .values
             .compactMap { suggestions in
@@ -121,7 +121,7 @@ extension TimeTrackerStore {
                 SortDescriptor(\.updatedAt, order: .reverse)
             ]
         )
-        let all = try modelContext.fetch(descriptor)
+        let all = try modelContext.fetch(descriptor).deduplicatedByID()
         return Dictionary(grouping: all, by: \.inboxItemID)
             .values
             .compactMap { suggestions in
@@ -139,6 +139,6 @@ extension TimeTrackerStore {
                 SortDescriptor(\.createdAt)
             ]
         )
-        return try modelContext.fetch(descriptor)
+        return try modelContext.fetch(descriptor).deduplicatedByID()
     }
 }

@@ -135,7 +135,6 @@ final class TimeTrackerStore: ObservableObject {
     let inboxSuggestionStateService = InboxSuggestionStateService()
     let forecastDisplayService = ForecastDisplayService()
     let databaseMaintenanceService = DatabaseMaintenanceService()
-    let csvExportService = CSVExportService()
     let selectionCoordinator = StoreSelectionCoordinator()
     let refreshPlanner = StoreRefreshPlanner()
     let timerCommandHandler = TimerCommandHandler()

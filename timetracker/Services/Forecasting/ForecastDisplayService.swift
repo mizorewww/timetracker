@@ -9,7 +9,8 @@ struct ForecastDisplayItem: Identifiable, Equatable {
 
 struct ForecastDisplayService {
     func displayItems(tasks: [TaskNode], rollups: [UUID: TaskRollup], limit: Int? = nil) -> [ForecastDisplayItem] {
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        let tasks = tasks.deduplicatedByID()
+        let taskByID = tasks.latestByID()
         let childrenByParent = Dictionary(grouping: visibleTasks(tasks), by: \.parentID)
         let roots = (childrenByParent[nil] ?? []).sorted(by: taskSort)
         var emitted = Set<UUID>()
@@ -75,7 +76,7 @@ struct ForecastDisplayService {
     }
 
     func displayItem(for taskID: UUID, tasks: [TaskNode], rollups: [UUID: TaskRollup]) -> ForecastDisplayItem? {
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        let taskByID = tasks.latestByID()
         guard let task = taskByID[taskID], isVisible(task), let rollup = rollups[taskID] else { return nil }
         if rollup.isDisplayableForecast, rollup.checklistProgress.totalCount > 0 {
             return ForecastDisplayItem(taskID: taskID, rollup: rollup)

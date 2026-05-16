@@ -65,9 +65,9 @@ extension AnalyticsStore {
         now: Date
     ) -> [TaskAnalyticsPoint] {
         let aggregationService = TimeAggregationService()
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
-        let grouped = Dictionary(grouping: segments, by: \.taskID)
+        let taskByID = tasks.latestByID()
+        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
+        let grouped = Dictionary(grouping: segments.deduplicatedByID(), by: \.taskID)
 
         return grouped.compactMap { taskID, taskSegments -> TaskAnalyticsPoint? in
             let gross = aggregationService.totalSeconds(segments: taskSegments, mode: .gross, now: now)

@@ -5,8 +5,8 @@ struct ChecklistStore {
     private(set) var visuals: [ChecklistItemVisual] = []
 
     mutating func refresh(items: [ChecklistItem], visuals: [ChecklistItemVisual]) {
-        self.items = sortedItems(items)
-        self.visuals = sortedVisuals(visuals)
+        self.items = sortedItems(items.deduplicatedByID())
+        self.visuals = sortedVisuals(visuals.deduplicatedByID())
     }
 
     mutating func refreshTaskScoped(
@@ -21,10 +21,10 @@ struct ChecklistStore {
         let replacedItemIDs = existingItemIDs.union(fetchedItemIDs)
 
         items = sortedItems(
-            items.filter { taskIDs.contains($0.taskID) == false } + fetchedItems
+            (items.filter { taskIDs.contains($0.taskID) == false } + fetchedItems).deduplicatedByID()
         )
         visuals = sortedVisuals(
-            visuals.filter { replacedItemIDs.contains($0.checklistItemID) == false } + fetchedVisuals
+            (visuals.filter { replacedItemIDs.contains($0.checklistItemID) == false } + fetchedVisuals).deduplicatedByID()
         )
     }
 

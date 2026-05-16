@@ -9,7 +9,8 @@ struct TaskTreeIndexes {
 
 struct TaskTreeService {
     func indexes(tasks: [TaskNode]) -> TaskTreeIndexes {
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        let tasks = tasks.deduplicatedByID()
+        let taskByID = tasks.latestByID()
 
         var grouped: [UUID?: [TaskNode]] = [:]
         for task in tasks where task.deletedAt == nil {
@@ -186,7 +187,8 @@ extension TaskTreeService {
         categories: [TaskCategory],
         categoryIDByRootTaskID: [UUID: UUID]
     ) -> [TaskTreeCategorySectionModel] {
-        let categoryByID = Dictionary(uniqueKeysWithValues: categories.filter { $0.deletedAt == nil }.map { ($0.id, $0) })
+        let categories = categories.deduplicatedByID()
+        let categoryByID = categories.filter { $0.deletedAt == nil }.latestByID()
         let rootTasksByCategory = Dictionary(grouping: rootTasks) { task -> UUID? in
             guard let categoryID = categoryIDByRootTaskID[task.id], categoryByID[categoryID] != nil else { return nil }
             return categoryID

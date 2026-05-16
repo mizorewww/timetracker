@@ -91,7 +91,7 @@ struct InboxCommandHandler {
                 predicate: #Predicate { $0.deletedAt == nil && $0.isCompleted == false }
             )
         )
-        let itemByID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        let itemByID = items.latestByID()
         guard orderedItemIDs.count == items.count else { return }
 
         for (index, itemID) in orderedItemIDs.enumerated() {

@@ -7,15 +7,33 @@ struct DisplayTimingSettingsSection: View {
 
     var body: some View {
         Section {
-            Picker(AppStrings.localized("settings.appearance"), selection: preferredColorScheme) {
+            Picker(selection: preferredColorScheme) {
                 Text(.app("settings.appearance.system")).tag("system")
                 Text(.app("settings.appearance.light")).tag("light")
                 Text(.app("settings.appearance.dark")).tag("dark")
+            } label: {
+                SettingsRowLabel(
+                    title: AppStrings.localized("settings.appearance"),
+                    systemImage: "circle.lefthalf.filled",
+                    tint: .purple
+                )
             }
             .pickerStyle(.segmented)
 
-            Toggle(AppStrings.localized("settings.allowParallelTimers"), isOn: allowParallelTimers)
-            Toggle(AppStrings.localized("settings.showWallGross"), isOn: showGrossAndWallTogether)
+            Toggle(isOn: allowParallelTimers) {
+                SettingsRowLabel(
+                    title: AppStrings.localized("settings.allowParallelTimers"),
+                    systemImage: "timer.circle",
+                    tint: .orange
+                )
+            }
+            Toggle(isOn: showGrossAndWallTogether) {
+                SettingsRowLabel(
+                    title: AppStrings.localized("settings.showWallGross"),
+                    systemImage: "rectangle.split.2x1",
+                    tint: .teal
+                )
+            }
         } header: {
             SettingsHeader(symbol: "paintbrush.pointed.fill", title: AppStrings.localized("settings.displayTiming"))
         } footer: {
@@ -41,19 +59,43 @@ struct PomodoroSettingsSection: View {
 
     var body: some View {
         Section {
-            Picker(AppStrings.localized("settings.defaultMode"), selection: defaultMode) {
+            Picker(selection: defaultMode) {
                 ForEach(PomodoroPreset.allCases) { preset in
                     Text(preset.title).tag(preset.rawValue)
                 }
+            } label: {
+                SettingsRowLabel(
+                    title: AppStrings.localized("settings.defaultMode"),
+                    systemImage: "dial.medium",
+                    tint: .orange
+                )
             }
             .onChange(of: defaultMode.wrappedValue) { _, newValue in
                 guard let preset = PomodoroPreset(rawValue: newValue), preset != .custom else { return }
                 onPresetSelected(preset)
             }
 
-            TextField(AppStrings.localized("settings.focusMinutes"), value: focusMinutes, formatter: minuteFormatter)
-            TextField(AppStrings.localized("settings.breakMinutes"), value: breakMinutes, formatter: minuteFormatter)
-            TextField(AppStrings.localized("settings.defaultRounds"), value: rounds, formatter: minuteFormatter)
+            SettingsNumberFieldRow(
+                title: AppStrings.localized("settings.focusMinutes"),
+                value: focusMinutes,
+                formatter: minuteFormatter,
+                systemImage: "brain.head.profile",
+                tint: .indigo
+            )
+            SettingsNumberFieldRow(
+                title: AppStrings.localized("settings.breakMinutes"),
+                value: breakMinutes,
+                formatter: minuteFormatter,
+                systemImage: "cup.and.saucer",
+                tint: .mint
+            )
+            SettingsNumberFieldRow(
+                title: AppStrings.localized("settings.defaultRounds"),
+                value: rounds,
+                formatter: minuteFormatter,
+                systemImage: "repeat.circle",
+                tint: .pink
+            )
         } header: {
             SettingsHeader(symbol: "timer", title: AppStrings.pomodoro)
         } footer: {
@@ -72,8 +114,12 @@ struct CountdownSettingsSection: View {
     var body: some View {
         Section {
             if events.isEmpty {
-                Text(.app("settings.countdown.empty"))
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .top, spacing: 12) {
+                    SettingsRowIcon(systemImage: "calendar.badge.exclamationmark", tint: .gray)
+                    Text(.app("settings.countdown.empty"))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
             }
 
             ForEach(events) { event in
@@ -92,8 +138,13 @@ struct CountdownSettingsSection: View {
             }
 
             Button(action: onAdd) {
-                SettingsActionLabel(title: AppStrings.localized("settings.countdown.add"), systemImage: "plus")
+                SettingsActionLabel(
+                    title: AppStrings.localized("settings.countdown.add"),
+                    systemImage: "calendar.badge.plus",
+                    tint: .green
+                )
             }
+            .buttonStyle(.plain)
         } header: {
             SettingsHeader(symbol: "calendar.badge.clock", title: AppStrings.localized("settings.countdown"))
         } footer: {
@@ -120,25 +171,36 @@ struct SyncSettingsSection: View {
             SettingsStatusRow(feedback: feedback)
 
             Toggle(isOn: cloudSyncEnabled) {
-                Label(AppStrings.localized("settings.icloud"), systemImage: "icloud")
+                SettingsRowLabel(
+                    title: AppStrings.localized("settings.icloud"),
+                    systemImage: "icloud",
+                    tint: .blue
+                )
             }
 
-            LabeledContent(
-                AppStrings.localized("settings.currentStorage"),
-                value: currentStorageValue
+            SettingsValueRow(
+                title: AppStrings.localized("settings.currentStorage"),
+                value: currentStorageValue,
+                systemImage: "externaldrive.connected.to.line.below",
+                tint: .cyan
             )
 
             Button(action: onCheckSync) {
                 SettingsActionLabel(
                     title: isCheckingSync ? AppStrings.localized("settings.checking") : AppStrings.localized("settings.checkSync"),
-                    systemImage: "arrow.clockwise"
+                    systemImage: "arrow.clockwise",
+                    tint: .blue
                 )
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
 
             Button(action: onForceSync) {
-                SettingsActionLabel(title: AppStrings.localized("settings.forceSync"), systemImage: "arrow.clockwise.icloud")
+                SettingsActionLabel(
+                    title: AppStrings.localized("settings.forceSync"),
+                    systemImage: "arrow.clockwise.icloud",
+                    tint: .blue
+                )
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
@@ -152,7 +214,9 @@ struct SyncSettingsSection: View {
             } label: {
                 SettingsActionLabel(
                     title: uploadTitle,
-                    systemImage: "arrow.up.icloud"
+                    systemImage: "icloud.and.arrow.up.fill",
+                    tint: .green,
+                    secondaryTint: .blue
                 )
             }
             .buttonStyle(.plain)
@@ -167,7 +231,9 @@ struct SyncSettingsSection: View {
             } label: {
                 SettingsActionLabel(
                     title: downloadTitle,
-                    systemImage: "arrow.down.icloud"
+                    systemImage: "icloud.and.arrow.down.fill",
+                    tint: .cyan,
+                    secondaryTint: .blue
                 )
             }
             .buttonStyle(.plain)

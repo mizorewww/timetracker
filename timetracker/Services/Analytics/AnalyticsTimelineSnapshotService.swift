@@ -30,9 +30,9 @@ struct AnalyticsTimelineSnapshotService {
             dayInterval: dayInterval,
             minimumLaneGap: minimumLaneGap
         )
-        let segmentByID = Dictionary(uniqueKeysWithValues: visibleSegments.map { ($0.id, $0) })
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
+        let segmentByID = visibleSegments.latestByID()
+        let taskByID = tasks.latestByID()
+        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
         let entries = layout.entries.enumerated().compactMap { index, layoutEntry -> AnalyticsTimelineEntry? in
             guard let segment = segmentByID[layoutEntry.id] else { return nil }
             let task = taskByID[segment.taskID]

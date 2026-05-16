@@ -62,9 +62,9 @@ extension AnalyticsStore {
         calendar: Calendar
     ) -> [AnalyticsGroupBreakdownPoint] {
         guard let interval = decisionInterval(for: range, now: now, calendar: calendar) else { return [] }
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
-        let bounded = boundedSegments(segments, in: interval, now: now)
+        let taskByID = tasks.latestByID()
+        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
+        let bounded = boundedSegments(segments.deduplicatedByID(), in: interval, now: now)
         let grouped = Dictionary(grouping: bounded) { item -> String in
             guard let task = taskByID[item.segment.taskID],
                   let root = rootTask(for: task, taskByID: taskByID) else {
@@ -102,9 +102,10 @@ extension AnalyticsStore {
         calendar: Calendar
     ) -> [AnalyticsGroupBreakdownPoint] {
         guard let interval = decisionInterval(for: range, now: now, calendar: calendar) else { return [] }
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let categoryByID = Dictionary(uniqueKeysWithValues: taskCategories.filter { $0.deletedAt == nil }.map { ($0.id, $0) })
+        let taskByID = tasks.latestByID()
+        let categoryByID = taskCategories.filter { $0.deletedAt == nil }.latestByID()
         let categoryIDByRootTaskID = taskCategoryAssignments
+            .deduplicatedByID()
             .filter { $0.deletedAt == nil }
             .sorted { $0.updatedAt < $1.updatedAt }
             .reduce(into: [UUID: UUID]()) { result, assignment in
@@ -582,9 +583,9 @@ private extension AnalyticsStore {
         taskPathByID: [UUID: String],
         now: Date
     ) -> [TaskRecentRecordPoint] {
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
-        return segments
+        let taskByID = tasks.latestByID()
+        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
+        return segments.deduplicatedByID()
             .filter { taskIDs.contains($0.taskID) && $0.deletedAt == nil }
             .sorted { $0.startedAt > $1.startedAt }
             .prefix(8)

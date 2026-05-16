@@ -6,14 +6,14 @@ struct TaskStore {
     private(set) var categoryAssignments: [TaskCategoryAssignment] = []
 
     mutating func refresh(repository: TaskRepository) throws {
-        tasks = try repository.allNodes()
-        categories = try repository.categories()
-        categoryAssignments = try repository.categoryAssignments()
+        tasks = try repository.allNodes().deduplicatedByID()
+        categories = try repository.categories().deduplicatedByID()
+        categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
     }
 
     mutating func refreshTaskScoped(taskIDs: Set<UUID>, repository: TaskRepository) throws {
         guard taskIDs.isEmpty == false else { return }
-        let fetchedTasks = try repository.tasks(ids: taskIDs)
+        let fetchedTasks = try repository.tasks(ids: taskIDs).deduplicatedByID()
         let fetchedTaskIDs = Set(fetchedTasks.map(\.id))
         let missingTaskIDs = taskIDs.subtracting(fetchedTaskIDs)
         let removedTaskIDs = missingTaskIDs.reduce(into: Set<UUID>()) { result, taskID in
@@ -22,10 +22,10 @@ struct TaskStore {
         let replacedTaskIDs = taskIDs.union(removedTaskIDs)
 
         tasks = sortedTasks(
-            tasks.filter { replacedTaskIDs.contains($0.id) == false } + fetchedTasks
+            (tasks.filter { replacedTaskIDs.contains($0.id) == false } + fetchedTasks).deduplicatedByID()
         )
-        categories = try repository.categories()
-        categoryAssignments = try repository.categoryAssignments()
+        categories = try repository.categories().deduplicatedByID()
+        categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
     }
 
     private func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {

@@ -76,9 +76,12 @@ struct PhoneHomeView: View {
                 SettingsView(store: store)
                     .toolbar {
                         ToolbarItem(placement: phoneToolbarPlacement) {
-                            Button(AppStrings.done) {
+                            Button {
                                 showsSettings = false
+                            } label: {
+                                Image(systemName: "checkmark")
                             }
+                            .accessibilityLabel(AppStrings.done)
                         }
                     }
             }

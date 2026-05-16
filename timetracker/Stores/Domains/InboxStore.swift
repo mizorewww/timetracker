@@ -5,8 +5,8 @@ struct InboxStore {
     private(set) var suggestions: [InboxSuggestion] = []
 
     mutating func refresh(items: [InboxItem], suggestions: [InboxSuggestion]) {
-        self.items = sortedItems(items)
-        self.suggestions = sortedSuggestions(suggestions)
+        self.items = sortedItems(items.deduplicatedByID())
+        self.suggestions = sortedSuggestions(suggestions.deduplicatedByID())
     }
 
     mutating func refreshSuggestionScoped(
@@ -15,7 +15,7 @@ struct InboxStore {
     ) {
         guard inboxItemIDs.isEmpty == false else { return }
         suggestions = sortedSuggestions(
-            suggestions.filter { inboxItemIDs.contains($0.inboxItemID) == false } + fetchedSuggestions
+            (suggestions.filter { inboxItemIDs.contains($0.inboxItemID) == false } + fetchedSuggestions).deduplicatedByID()
         )
     }
 

@@ -32,7 +32,9 @@ struct HourTaskActivityBar: View {
             minSliceHeight: Double(minSliceHeight),
             maxItems: visibleSliceCount
         )
-        let slicesByID = Dictionary(uniqueKeysWithValues: point.slices.map { ($0.id, $0) })
+        let slicesByID = point.slices.reduce(into: [UUID: HourTaskSlice]()) { result, slice in
+            result[slice.id] = slice
+        }
         return layouts.compactMap { layout in
             guard let slice = slicesByID[layout.id] else { return nil }
             return RenderedHourTaskSlice(slice: slice, height: CGFloat(layout.height))

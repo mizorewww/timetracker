@@ -1,13 +1,21 @@
 import Foundation
 import CloudKit
+import OSLog
 import SwiftData
 
 enum AppCloudSync {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        category: "CloudSync"
+    )
+
     static let containerIdentifier = "iCloud.me.mezorewww.timetracker"
     static let enabledKey = "TimeTrackerCloudSyncEnabled"
     static let modeKey = "TimeTrackerPersistenceMode"
     static let errorKey = "TimeTrackerPersistenceError"
     static let accountStatusKey = "TimeTrackerCloudAccountStatus"
+    static let pendingCloudUploadResetKey = "TimeTrackerPendingCloudUploadReset"
+    static let pendingCloudDownloadResetKey = "TimeTrackerPendingCloudDownloadReset"
     static let modeICloud = "iCloud"
     static let modeLocal = "Local"
     static let modeLocalFallback = "Local fallback"
@@ -44,20 +52,72 @@ enum AppCloudSync {
         UserDefaults.standard.string(forKey: accountStatusKey) ?? AppStrings.localized("sync.unchecked")
     }
 
+    static var persistentStoreURL: URL {
+        ModelConfiguration(
+            "TimeTracker",
+            schema: nil,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        ).url
+    }
+
     static func recordCloudKitEnabled() {
+        AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
         UserDefaults.standard.set(modeICloud, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
+        UserDefaults.standard.removeObject(forKey: pendingCloudUploadResetKey)
+        UserDefaults.standard.removeObject(forKey: pendingCloudDownloadResetKey)
+        logger.info("CloudKit storage is active")
+    }
+
+    static func requestCloudRetryAfterRecovery() {
+        AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
+        UserDefaults.standard.set(true, forKey: enabledKey)
+        UserDefaults.standard.removeObject(forKey: errorKey)
+    }
+
+    static func requestCloudUploadReset() {
+        UserDefaults.standard.set(true, forKey: pendingCloudUploadResetKey)
+        requestCloudRetryAfterRecovery()
+        logger.warning("Queued CloudKit upload recovery reset")
+    }
+
+    static func requestCloudDownloadReset() {
+        UserDefaults.standard.set(true, forKey: pendingCloudDownloadResetKey)
+        requestCloudRetryAfterRecovery()
+        logger.warning("Queued CloudKit download recovery reset")
+    }
+
+    @discardableResult
+    static func performPendingCloudRecoveryResetIfNeeded(canResetUpload: Bool = true) throws -> CloudRecoveryReset {
+        let defaults = UserDefaults.standard
+        let shouldResetForDownload = defaults.bool(forKey: pendingCloudDownloadResetKey)
+        let shouldResetForUpload = defaults.bool(forKey: pendingCloudUploadResetKey)
+        guard shouldResetForDownload || shouldResetForUpload else {
+            return .none
+        }
+        guard shouldResetForDownload || canResetUpload else {
+            logger.error("Skipped CloudKit upload recovery reset because no protected upload snapshot was found")
+            return .none
+        }
+        try removePersistentStoreFiles(at: persistentStoreURL)
+        logger.warning(
+            "Removed persistent store files for CloudKit recovery reset: \(shouldResetForDownload ? "download" : "upload", privacy: .public)"
+        )
+        return shouldResetForDownload ? .download : .upload
     }
 
     static func recordCloudKitDisabledByUser() {
         UserDefaults.standard.set(modeLocal, forKey: modeKey)
         UserDefaults.standard.set(AppStrings.localized("sync.disabledMessage"), forKey: accountStatusKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
+        logger.info("CloudKit storage is disabled by user preference")
     }
 
     static func recordLocalFallback(error: Error) {
         UserDefaults.standard.set(modeLocalFallback, forKey: modeKey)
         UserDefaults.standard.set(error.localizedDescription, forKey: errorKey)
+        logger.error("CloudKit storage fell back to local store: \(error.localizedDescription, privacy: .public)")
     }
 
     static func recordEmergencyInMemoryFallback(error: Error) {
@@ -67,6 +127,7 @@ enum AppCloudSync {
             forKey: errorKey
         )
         UserDefaults.standard.set(AppStrings.localized("sync.temporaryStore"), forKey: accountStatusKey)
+        logger.fault("Persistent storage fell back to in-memory store: \(error.localizedDescription, privacy: .public)")
     }
 
     static func recordUITesting() {
@@ -104,6 +165,30 @@ enum AppCloudSync {
             statusText = error.localizedDescription
         }
         UserDefaults.standard.set(statusText, forKey: accountStatusKey)
+        logger.info("CloudKit account status: \(statusText, privacy: .public)")
+    }
+
+    private static func removePersistentStoreFiles(at storeURL: URL) throws {
+        let fileManager = FileManager.default
+        let directory = storeURL.deletingLastPathComponent()
+        guard fileManager.fileExists(atPath: directory.path) else { return }
+
+        let storePrefix = storeURL.lastPathComponent
+        let storeFiles = try fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )
+        .filter { $0.lastPathComponent.hasPrefix(storePrefix) }
+
+        for file in storeFiles {
+            try fileManager.removeItem(at: file)
+        }
+    }
+
+    enum CloudRecoveryReset {
+        case none
+        case upload
+        case download
     }
 }
 

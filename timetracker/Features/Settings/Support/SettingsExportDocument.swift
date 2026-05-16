@@ -1,8 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct CSVExportDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+struct JSONExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
 
     var text: String
 

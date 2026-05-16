@@ -247,37 +247,4 @@ struct CoreCommandHandlerTests {
         #expect(event.deletedAt == Date(timeIntervalSince1970: 60_000))
     }
 
-    @Test @MainActor
-    func csvExportServiceEscapesRowsAndUsesSessionFallbackForDeletedTasks() {
-        let taskID = UUID()
-        let session = TimeSession(
-            taskID: taskID,
-            source: .manual,
-            deviceID: "test",
-            startedAt: Date(timeIntervalSince1970: 30_000),
-            titleSnapshot: "Deleted, Task"
-        )
-        session.endedAt = session.startedAt.addingTimeInterval(120)
-        session.note = "Said \"hello\""
-        let segment = TimeSegment(
-            sessionID: session.id,
-            taskID: taskID,
-            source: .manual,
-            deviceID: "test",
-            startedAt: session.startedAt,
-            endedAt: session.endedAt
-        )
-
-        let csv = CSVExportService().export(
-            segments: [segment],
-            sessions: [session],
-            taskByID: [:],
-            taskParentPathByID: [:],
-            now: session.endedAt ?? session.startedAt
-        )
-
-        #expect(csv.contains("\"Deleted, Task\""))
-        #expect(csv.contains(AppStrings.localized("task.deleted.path")))
-        #expect(csv.contains("\"Said \"\"hello\"\"\""))
-    }
 }

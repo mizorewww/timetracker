@@ -162,7 +162,9 @@ struct LLMInboxSuggestionService {
         candidates: [LLMTaskCandidate],
         modelID: String
     ) throws -> LLMInboxSuggestionResult {
-        let candidateByID = Dictionary(uniqueKeysWithValues: candidates.map { ($0.id, $0) })
+        let candidateByID = candidates.reduce(into: [UUID: LLMTaskCandidate]()) { result, candidate in
+            result[candidate.id] = candidate
+        }
         guard let taskID = UUID(uuidString: payload.taskID),
               let candidate = candidateByID[taskID] else {
             throw LLMInboxSuggestionServiceError.noValidTask

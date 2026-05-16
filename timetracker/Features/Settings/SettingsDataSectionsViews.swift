@@ -8,16 +8,27 @@ struct DataSettingsSection: View {
     var body: some View {
         Section {
             Button(action: onExport) {
-                SettingsActionLabel(title: AppStrings.localized("settings.exportCSV"), systemImage: "square.and.arrow.down")
+                SettingsActionLabel(
+                    title: AppStrings.localized("settings.exportJSON"),
+                    systemImage: "curlybraces.square",
+                    tint: .purple
+                )
             }
+            .buttonStyle(.plain)
 
             Button(action: onAddTime) {
-                SettingsActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus")
+                SettingsActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus", tint: .blue)
             }
+            .buttonStyle(.plain)
 
             Button(role: .destructive, action: onOptimize) {
-                SettingsActionLabel(title: AppStrings.localized("settings.optimizeDatabase"), systemImage: "externaldrive.badge.checkmark")
+                SettingsActionLabel(
+                    title: AppStrings.localized("settings.optimizeDatabase"),
+                    systemImage: "externaldrive.badge.checkmark",
+                    tint: .red
+                )
             }
+            .buttonStyle(.plain)
         } header: {
             SettingsHeader(symbol: "doc.text.fill", title: AppStrings.localized("settings.data"))
         } footer: {
@@ -37,44 +48,61 @@ struct LLMSettingsSection: View {
 
     var body: some View {
         Section {
-            TextField(AppStrings.localized("settings.llm.endpoint"), text: endpoint)
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                #endif
-                .autocorrectionDisabled()
+            SettingsTextFieldRow(
+                title: AppStrings.localized("settings.llm.endpoint"),
+                text: endpoint,
+                systemImage: "link",
+                tint: .purple
+            )
 
-            SecureField(AppStrings.localized("settings.llm.apiKey"), text: apiKey)
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                #endif
-                .autocorrectionDisabled()
+            SettingsTextFieldRow(
+                title: AppStrings.localized("settings.llm.apiKey"),
+                text: apiKey,
+                systemImage: "key.fill",
+                tint: .orange,
+                isSecure: true
+            )
 
             if availableModels.isEmpty {
-                LabeledContent(
-                    AppStrings.localized("settings.llm.model"),
-                    value: AppStrings.localized("settings.llm.noModels")
+                SettingsValueRow(
+                    title: AppStrings.localized("settings.llm.model"),
+                    value: AppStrings.localized("settings.llm.noModels"),
+                    systemImage: "cpu",
+                    tint: .indigo
                 )
             } else {
-                Picker(AppStrings.localized("settings.llm.model"), selection: selectedModel) {
+                Picker(selection: selectedModel) {
                     ForEach(availableModels, id: \.self) { model in
                         Text(model).tag(model)
                     }
+                } label: {
+                    SettingsRowLabel(
+                        title: AppStrings.localized("settings.llm.model"),
+                        systemImage: "cpu",
+                        tint: .indigo
+                    )
                 }
             }
 
             Button(action: onFetchModels) {
                 SettingsActionLabel(
                     title: isFetchingModels ? AppStrings.localized("settings.llm.fetching") : AppStrings.localized("settings.llm.fetchModels"),
-                    systemImage: "arrow.clockwise"
+                    systemImage: "arrow.clockwise",
+                    tint: .purple
                 )
             }
+            .buttonStyle(.plain)
             .disabled(isFetchingModels)
 
             if let feedbackMessage, !feedbackMessage.isEmpty {
-                Text(feedbackMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: 12) {
+                    SettingsRowIcon(systemImage: "info.circle", tint: .gray)
+                    Text(feedbackMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 4)
             }
         } header: {
             SettingsHeader(symbol: "sparkles", title: AppStrings.localized("settings.llm"))
@@ -95,17 +123,19 @@ struct MaintenanceSettingsSection: View {
 
     var body: some View {
         Section {
-            LabeledContent(AppStrings.tasks, value: "\(taskCount)")
-            LabeledContent(AppStrings.localized("settings.timeRecords"), value: "\(timeRecordCount)")
-            LabeledContent(AppStrings.pomodoro, value: "\(pomodoroCount)")
-            LabeledContent(AppStrings.localized("settings.cloudAccount"), value: cloudAccount)
-            LabeledContent(AppStrings.localized("settings.icloudContainer"), value: cloudContainer)
+            SettingsValueRow(title: AppStrings.tasks, value: "\(taskCount)", systemImage: "checklist", tint: .blue)
+            SettingsValueRow(title: AppStrings.localized("settings.timeRecords"), value: "\(timeRecordCount)", systemImage: "clock", tint: .orange)
+            SettingsValueRow(title: AppStrings.pomodoro, value: "\(pomodoroCount)", systemImage: "timer", tint: .red)
+            SettingsValueRow(title: AppStrings.localized("settings.cloudAccount"), value: cloudAccount, systemImage: "person.crop.circle.badge.checkmark", tint: .green)
+            SettingsValueRow(title: AppStrings.localized("settings.icloudContainer"), value: cloudContainer, systemImage: "shippingbox", tint: .cyan)
             Button(role: .destructive, action: onRebuildDemoData) {
-                SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise")
+                SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise", tint: .red)
             }
+            .buttonStyle(.plain)
             Button(role: .destructive, action: onClearDemoData) {
-                SettingsActionLabel(title: AppStrings.localized("settings.clearDemoData"), systemImage: "trash")
+                SettingsActionLabel(title: AppStrings.localized("settings.clearDemoData"), systemImage: "trash", tint: .red)
             }
+            .buttonStyle(.plain)
         } header: {
             SettingsHeader(symbol: "wrench.and.screwdriver.fill", title: AppStrings.localized("settings.maintenance"))
         }
@@ -116,10 +146,10 @@ struct AboutSettingsSection: View {
     var body: some View {
         Section {
             AboutAppSummary()
-            LabeledContent(AppStrings.localized("settings.about.version"), value: AppBuildInfo.versionSummary)
-            LabeledContent(AppStrings.localized("settings.about.branch"), value: AppBuildInfo.gitBranch)
-            LabeledContent(AppStrings.localized("settings.about.commit"), value: AppBuildInfo.gitCommit + (AppBuildInfo.isDirtyBuild ? " *" : ""))
-            LabeledContent(AppStrings.localized("settings.about.built"), value: AppBuildInfo.buildDate)
+            SettingsValueRow(title: AppStrings.localized("settings.about.version"), value: AppBuildInfo.versionSummary, systemImage: "number.circle", tint: .blue)
+            SettingsValueRow(title: AppStrings.localized("settings.about.branch"), value: AppBuildInfo.gitBranch, systemImage: "point.3.connected.trianglepath.dotted", tint: .purple)
+            SettingsValueRow(title: AppStrings.localized("settings.about.commit"), value: AppBuildInfo.gitCommit + (AppBuildInfo.isDirtyBuild ? " *" : ""), systemImage: "chevron.left.forwardslash.chevron.right", tint: .orange)
+            SettingsValueRow(title: AppStrings.localized("settings.about.built"), value: AppBuildInfo.buildDate, systemImage: "hammer", tint: .gray)
         } header: {
             SettingsHeader(symbol: "info.circle.fill", title: AppStrings.localized("settings.about"))
         } footer: {

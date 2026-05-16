@@ -249,13 +249,16 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func settingsKeepsCSVExportVisibleInDataSectionAndToolbar() throws {
+    func settingsKeepsJSONExportVisibleInDataSectionOnly() throws {
         let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
         let dataSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
 
         #expect(settingsSource.contains(".fileExporter("))
-        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportCSV\"), systemImage: \"square.and.arrow.down\")"))
-        #expect(dataSource.contains("SettingsActionLabel(title: AppStrings.localized(\"settings.exportCSV\"), systemImage: \"square.and.arrow.down\")"))
+        #expect(settingsSource.contains("JSONExportDocument(text: store.jsonExport())"))
+        #expect(settingsSource.contains("defaultFilename: \"time-tracker-export.json\""))
+        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportJSON\")") == false)
+        #expect(dataSource.contains("title: AppStrings.localized(\"settings.exportJSON\")"))
+        #expect(dataSource.contains("systemImage: \"curlybraces.square\""))
     }
 
     @Test

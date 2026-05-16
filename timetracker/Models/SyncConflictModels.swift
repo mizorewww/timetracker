@@ -11,3 +11,8 @@ enum SyncConflictResolution {
     case uploadLocal
     case downloadCloud
 }
+
+enum SyncRecoveryResult: Equatable {
+    case appliedImmediately
+    case queuedForNextLaunch
+}

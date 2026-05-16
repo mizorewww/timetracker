@@ -21,11 +21,12 @@ struct TaskRollupCalculationContext {
         now: Date,
         initialCache: [UUID: TaskRollup]
     ) {
+        let tasks = tasks.deduplicatedByID()
         self.service = service
-        self.taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        self.taskByID = tasks.latestByID()
         self.childrenByParent = Dictionary(grouping: tasks, by: \.parentID)
-        self.segmentsByTaskID = Dictionary(grouping: segments.filter { $0.deletedAt == nil }, by: \.taskID)
-        self.checklistItemsByTaskID = Dictionary(grouping: checklistItems.filter { $0.deletedAt == nil }, by: \.taskID)
+        self.segmentsByTaskID = Dictionary(grouping: segments.deduplicatedByID().filter { $0.deletedAt == nil }, by: \.taskID)
+        self.checklistItemsByTaskID = Dictionary(grouping: checklistItems.deduplicatedByID().filter { $0.deletedAt == nil }, by: \.taskID)
         self.forecastEligibleTaskIDs = forecastEligibleTaskIDs
         self.now = now
         self.cache = initialCache

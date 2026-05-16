@@ -48,12 +48,24 @@ struct CountdownEventSettingsRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField(AppStrings.localized("settings.countdown.eventName"), text: titleBinding)
+            SettingsTextFieldRow(
+                title: AppStrings.localized("settings.countdown.eventName"),
+                text: titleBinding,
+                systemImage: "textformat",
+                tint: .blue
+            )
             HStack {
-                DatePicker(AppStrings.localized("settings.countdown.date"), selection: dateBinding, displayedComponents: .date)
+                DatePicker(selection: dateBinding, displayedComponents: .date) {
+                    SettingsRowLabel(
+                        title: AppStrings.localized("settings.countdown.date"),
+                        systemImage: "calendar",
+                        tint: .green
+                    )
+                }
                 Spacer()
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
+                        .foregroundStyle(.red)
                 }
                 .buttonStyle(.borderless)
             }

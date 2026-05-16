@@ -70,7 +70,7 @@ private struct PomodoroRunRow: View {
         case .focusing: return "flame.fill"
         case .shortBreak, .longBreak: return "cup.and.saucer.fill"
         case .planned: return "timer"
-        case .interrupted: return "pause.circle.fill"
+        case .interrupted: return "exclamationmark.circle.fill"
         }
     }
 

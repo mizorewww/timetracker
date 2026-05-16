@@ -27,7 +27,7 @@ timetracker/
 `TimeTrackerStore` is still the SwiftUI facade, but it is now split into lifecycle, read-model, analytics, maintenance, and domain command extensions. Domain stores own state snapshots:
 
 - `TaskStore` owns task tree snapshots.
-- `LedgerStore` owns active, today, paused, and history ledger snapshots.
+- `LedgerStore` owns active, today, and history ledger snapshots.
 - `RollupStore` owns task rollup, checklist progress, and forecast state.
 - `AnalyticsStore` owns cached analytics snapshots.
 - `PreferenceStore` owns synced preference snapshots.
@@ -96,7 +96,7 @@ Views should render existing snapshots. They should not calculate analytics, tre
 
 | Feature | Durable model | Write owner | Snapshot owner | Pure services | UI owner |
 | --- | --- | --- | --- | --- | --- |
-| Start, pause, resume, stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Inspector` |
+| Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Inspector` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
 | Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener` | `Features/Tasks`, `Features/Sidebar` |
 | Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |

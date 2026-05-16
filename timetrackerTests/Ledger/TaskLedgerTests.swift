@@ -79,21 +79,13 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
-    func timerPauseResumeStopUsesSegmentsAsLedger() throws {
+    func timerStopUsesSegmentsAsLedger() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: nil, iconName: nil)
 
         let first = try timeRepository.startTask(taskID: task.id, source: .timer)
-        #expect(try timeRepository.activeSegments().count == 1)
-
-        try timeRepository.pauseSession(sessionID: first.sessionID)
-        #expect(try timeRepository.activeSegments().isEmpty)
-
-        let resumedSegment = try timeRepository.resumeSession(sessionID: first.sessionID)
-        let second = try #require(resumedSegment)
-        #expect(second.sessionID == first.sessionID)
         #expect(try timeRepository.activeSegments().count == 1)
 
         try timeRepository.stopSession(sessionID: first.sessionID)

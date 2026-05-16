@@ -1,52 +1,5 @@
 import SwiftUI
 
-struct PausedSessionRow: View {
-    @ObservedObject var store: TimeTrackerStore
-    let session: TimeSession
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(.orange)
-                .frame(width: 10, height: 10)
-
-            TaskIcon(task: store.task(for: session.taskID))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(store.task(for: session.taskID)?.title ?? AppStrings.localized("task.deleted"))
-                    .font(.headline)
-                Text(AppStrings.paused)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Button {
-                store.resume(session: session)
-            } label: {
-                Image(systemName: "play.fill")
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.bordered)
-            .tint(.blue)
-
-            Button(role: .destructive) {
-                store.stop(session: session)
-            } label: {
-                Image(systemName: "stop.fill")
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.bordered)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectTask(session.taskID, revealInToday: false)
-        }
-        .padding(14)
-    }
-}
-
 struct ActiveTimerRow: View {
     @ObservedObject var store: TimeTrackerStore
     let segment: TimeSegment
@@ -100,7 +53,6 @@ struct ActiveTimerRow: View {
                 .minimumScaleFactor(0.75)
                 .frame(minWidth: 86, alignment: .trailing)
 
-            pauseButton(size: 32)
             stopButton(size: 32)
         }
     }
@@ -131,7 +83,6 @@ struct ActiveTimerRow: View {
                     .minimumScaleFactor(0.82)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                pauseButton(size: 30)
                 stopButton(size: 30)
             }
         }
@@ -140,17 +91,6 @@ struct ActiveTimerRow: View {
     private var displayPathText: String {
         let path = store.displayPath(for: segment)
         return path.isEmpty ? AppStrings.rootTask : path
-    }
-
-    private func pauseButton(size: CGFloat) -> some View {
-        Button {
-            store.pause(segment: segment)
-        } label: {
-            Image(systemName: "pause.fill")
-                .frame(width: size, height: size)
-        }
-        .buttonStyle(.bordered)
-        .tint(.blue)
     }
 
     private func stopButton(size: CGFloat) -> some View {

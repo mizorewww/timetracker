@@ -33,23 +33,26 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
 
     @discardableResult
     func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, targetRounds: Int) throws -> PomodoroRun {
+        let now = Date()
         for existingRun in try activeRuns().filter({ $0.state == .focusing }) {
             if let sessionID = existingRun.sessionID {
-                try timeRepository.pauseSession(sessionID: sessionID)
+                try timeRepository.stopSession(sessionID: sessionID)
             }
-            existingRun.state = .interrupted
-            existingRun.updatedAt = Date()
+            existingRun.state = .cancelled
+            existingRun.endedAt = now
+            existingRun.updatedAt = now
+            existingRun.clientMutationID = UUID()
         }
         for segment in try timeRepository.activeSegments().filter({ $0.taskID == taskID }) {
-            try timeRepository.pauseSession(sessionID: segment.sessionID)
+            try timeRepository.stopSession(sessionID: segment.sessionID)
         }
 
         let run = PomodoroRun(taskID: taskID, focus: focusSeconds, breakSeconds: breakSeconds, targetRounds: targetRounds, deviceID: deviceID)
         let segment = try timeRepository.startTask(taskID: taskID, source: .pomodoro)
         run.sessionID = segment.sessionID
-        run.startedAt = Date()
+        run.startedAt = now
         run.state = .focusing
-        run.updatedAt = Date()
+        run.updatedAt = now
         context.insert(run)
         try context.save()
         return run
@@ -62,11 +65,7 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         let now = Date()
         let willComplete = run.completedFocusRounds + 1 >= run.targetRounds
         if let sessionID = run.sessionID {
-            if willComplete {
-                try timeRepository.stopSession(sessionID: sessionID)
-            } else {
-                try timeRepository.pauseSession(sessionID: sessionID)
-            }
+            try timeRepository.stopSession(sessionID: sessionID)
         }
         run.completedFocusRounds += 1
         run.state = willComplete ? .completed : .shortBreak

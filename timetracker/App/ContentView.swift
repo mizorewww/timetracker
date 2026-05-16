@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var store = TimeTrackerStore()
+    @State private var dismissedSyncConflictID: UUID?
 
     var body: some View {
         Group {
@@ -47,6 +48,24 @@ struct ContentView: View {
             }
         } message: {
             Text(store.errorMessage ?? "")
+        }
+        .confirmationDialog(
+            AppStrings.localized("dialog.syncConflict.title"),
+            isPresented: syncConflictDialogBinding,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("dialog.syncConflict.uploadLocal"), role: .destructive) {
+                store.resolveSyncConflict(.uploadLocal)
+            }
+            Button(AppStrings.localized("dialog.syncConflict.downloadCloud"), role: .destructive) {
+                store.resolveSyncConflict(.downloadCloud)
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(syncConflictMessage)
+        }
+        .onChange(of: store.pendingSyncConflict?.id) { _, _ in
+            dismissedSyncConflictID = nil
         }
         .sheet(item: $store.taskEditorDraft) { draft in
             TaskEditorSheet(store: store, initialDraft: draft)
@@ -101,6 +120,26 @@ struct ContentView: View {
                 store.errorMessage = nil
             }
         }
+    }
+
+    private var syncConflictDialogBinding: Binding<Bool> {
+        Binding {
+            guard let conflict = store.pendingSyncConflict else { return false }
+            return dismissedSyncConflictID != conflict.id
+        } set: { isPresented in
+            if !isPresented {
+                dismissedSyncConflictID = store.pendingSyncConflict?.id
+            }
+        }
+    }
+
+    private var syncConflictMessage: String {
+        guard let conflict = store.pendingSyncConflict else { return "" }
+        return String(
+            format: AppStrings.localized("dialog.syncConflict.message"),
+            conflict.localSummary,
+            conflict.cloudSummary
+        )
     }
 
     private var appColorScheme: ColorScheme? {

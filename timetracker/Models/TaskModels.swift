@@ -4,7 +4,6 @@ import SwiftData
 enum TaskStatus: String, Codable, CaseIterable {
     case planned
     case active
-    case paused
     case completed
     case archived
 }
@@ -117,10 +116,6 @@ extension TaskNode {
         get { TaskStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
     }
-
-    var isRunning: Bool {
-        status == .paused ? false : false
-    }
 }
 
 extension TaskStatus {
@@ -132,7 +127,6 @@ extension TaskStatus {
         switch self {
         case .planned: return AppStrings.localized("status.planned")
         case .active: return AppStrings.localized("status.active")
-        case .paused: return AppStrings.paused
         case .completed: return AppStrings.localized("status.completed")
         case .archived: return AppStrings.localized("status.archived")
         }
@@ -142,7 +136,6 @@ extension TaskStatus {
         switch self {
         case .planned: return AppStrings.localized("editor.task.status.planned.example")
         case .active: return AppStrings.localized("editor.task.status.active.example")
-        case .paused: return AppStrings.paused
         case .completed: return AppStrings.localized("editor.task.status.completed.example")
         case .archived: return AppStrings.localized("status.archived")
         }
@@ -152,7 +145,6 @@ extension TaskStatus {
         switch self {
         case .planned: return "calendar"
         case .active: return "circle"
-        case .paused: return "pause.circle"
         case .completed: return "checkmark.circle.fill"
         case .archived: return "archivebox"
         }
@@ -162,7 +154,6 @@ extension TaskStatus {
         switch self {
         case .planned: return "0EA5E9"
         case .active: return "64748B"
-        case .paused: return "F97316"
         case .completed: return "16A34A"
         case .archived: return "64748B"
         }

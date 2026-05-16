@@ -17,7 +17,6 @@ extension TimeTrackerStore {
                 taskID: taskID,
                 allowParallelTimers: preferences.allowParallelTimers,
                 activeSegments: activeSegments,
-                pausedSessions: pausedSessions,
                 pomodoroRuns: pomodoroRuns,
                 timeRepository: requiredTimeRepository(),
                 context: modelContext
@@ -28,24 +27,6 @@ extension TimeTrackerStore {
     func stop(segment: TimeSegment) {
         perform(event: .ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true)) {
             try timerCommandHandler.stop(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
-        }
-    }
-
-    func pause(segment: TimeSegment) {
-        perform(event: .ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true)) {
-            try timerCommandHandler.pause(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
-        }
-    }
-
-    func resume(session: TimeSession) {
-        perform(event: .ledgerChanged(taskID: session.taskID, dateInterval: nil, isVisible: true)) {
-            try timerCommandHandler.resume(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
-        }
-    }
-
-    func stop(session: TimeSession) {
-        perform(event: .ledgerChanged(taskID: session.taskID, dateInterval: nil, isVisible: true)) {
-            try timerCommandHandler.stop(session: session, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
         }
     }
 }

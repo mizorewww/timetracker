@@ -16,7 +16,6 @@ struct DesktopMainView: View {
                     TimeProgressSection(store: store)
                     TaskForecastSummarySection(store: store)
                     ActiveTimersSection(store: store)
-                    PausedSessionsSection(store: store)
                     if layout.showsQuickStartInDesktopFlow {
                         QuickStartSection(store: store)
                     }
@@ -26,27 +25,6 @@ struct DesktopMainView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(AppColors.background)
-        }
-        .toolbar {
-            ToolbarItemGroup {
-                Button {
-                    store.presentNewTask()
-                } label: {
-                    Label(AppStrings.newTask, systemImage: "plus")
-                }
-
-                Button {
-                    store.presentManualTime()
-                } label: {
-                    Label(AppStrings.addTime, systemImage: "calendar.badge.plus")
-                }
-
-                Button {
-                    store.refreshQuietly()
-                } label: {
-                    Label(AppStrings.refresh, systemImage: "arrow.clockwise")
-                }
-            }
         }
     }
 }
@@ -62,7 +40,6 @@ struct PhoneHomeView: View {
                 TimeProgressSection(store: store)
                 TaskForecastSummarySection(store: store)
                 ActiveTimersSection(store: store)
-                PausedSessionsSection(store: store)
                 QuickStartSection(store: store)
                 TimelineSection(store: store)
                 InspectorSummaryCard(store: store)

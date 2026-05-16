@@ -36,7 +36,7 @@ struct SharedComponentsContractTests {
         #expect(homeSource.contains("AppActionLabel(title: AppStrings.startTimer"))
         #expect(homeSource.contains("private func actionLabel") == false)
         #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"task.action.startTimer\")"))
-        #expect(inspectorSource.contains("Label(AppStrings.localized(\"timer.action.pause\")") == false)
+        #expect(inspectorSource.contains("AppActionLabel(title: AppStrings.localized(\"timer.action.stop\")"))
     }
 
     @Test
@@ -86,7 +86,7 @@ struct SharedComponentsContractTests {
         #expect(sharedSource.contains(".labelStyle(.iconOnly)"))
         #expect(ipadSource.contains("SidebarRevealButton"))
         #expect(ipadSource.contains("InspectorToggleButton"))
-        #expect(desktopSource.contains("InspectorToggleButton"))
+        #expect(desktopSource.contains("InspectorToggleButton") == false)
         #expect(ipadSource.contains("Image(systemName: \"sidebar.right\")") == false)
         #expect(desktopSource.contains("Image(systemName: \"sidebar.right\")") == false)
     }

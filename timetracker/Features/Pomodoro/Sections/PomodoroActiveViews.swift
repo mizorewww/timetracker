@@ -41,7 +41,7 @@ private struct ActivePomodoroHeader: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Label(store.pomodoroStateLabel(for: run), systemImage: run.state == .focusing ? "flame.fill" : "pause.circle")
+            Label(store.pomodoroStateLabel(for: run), systemImage: run.state == .focusing ? "flame.fill" : "timer")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(run.state == .focusing ? .blue : .orange)
             Text(store.taskTitle(for: run))
@@ -83,13 +83,6 @@ private struct ActivePomodoroControls: View {
     let run: PomodoroRun
     let remaining: Int
 
-    private var pausedSession: TimeSession? {
-        guard run.state == .interrupted, let sessionID = run.sessionID else {
-            return nil
-        }
-        return store.sessions.first { $0.id == sessionID }
-    }
-
     var body: some View {
         HStack(spacing: 12) {
             primaryAction
@@ -100,23 +93,13 @@ private struct ActivePomodoroControls: View {
 
     @ViewBuilder
     private var primaryAction: some View {
-        if let session = pausedSession {
-            Button {
-                store.resume(session: session)
-            } label: {
-                Label(AppStrings.localized("pomodoro.resumeFocus"), systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-        } else {
-            Button {
-                store.completeActivePomodoro()
-            } label: {
-                Label(primaryActionTitle, systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
+        Button {
+            store.completeActivePomodoro()
+        } label: {
+            Label(primaryActionTitle, systemImage: "checkmark.circle.fill")
+                .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.borderedProminent)
     }
 
     private var primaryActionTitle: String {

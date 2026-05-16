@@ -2,7 +2,6 @@ import SwiftUI
 
 struct DesktopRootView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var isInspectorPresented = false
     private let layout = SplitColumnLayoutPolicy.mac
 
     var body: some View {
@@ -12,15 +11,6 @@ struct DesktopRootView: View {
             detailColumn
         }
         .navigationSplitViewStyle(.balanced)
-        .onAppear {
-            isInspectorPresented = inspectorIsRelevant
-        }
-        .onChange(of: store.desktopDestination) { _, _ in
-            updateInspectorVisibility()
-        }
-        .onChange(of: store.selectedTaskID) { _, _ in
-            updateInspectorVisibility()
-        }
     }
 
     private var sidebarColumn: some View {
@@ -39,16 +29,6 @@ struct DesktopRootView: View {
             #if os(macOS)
             .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    InspectorToggleButton(
-                        isPresented: isInspectorPresented,
-                        isEnabled: inspectorIsRelevant
-                    ) {
-                        isInspectorPresented.toggle()
-                    }
-                }
-            }
             .inspector(isPresented: inspectorBinding) {
                 InspectorView(store: store)
                     .inspectorColumnWidth(
@@ -65,17 +45,8 @@ struct DesktopRootView: View {
 
     private var inspectorBinding: Binding<Bool> {
         Binding {
-            isInspectorPresented && inspectorIsRelevant
-        } set: { newValue in
-            isInspectorPresented = newValue
-        }
-    }
-
-    private func updateInspectorVisibility() {
-        if inspectorIsRelevant {
-            isInspectorPresented = true
-        } else {
-            isInspectorPresented = false
+            inspectorIsRelevant
+        } set: { _ in
         }
     }
 }

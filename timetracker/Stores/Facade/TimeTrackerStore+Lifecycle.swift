@@ -17,6 +17,7 @@ extension TimeTrackerStore {
             try migrateLegacyCountdownEventsIfNeeded(context: context)
             try SeedData.ensureSeeded(context: context)
             try refresh()
+            pendingSyncConflict = try syncConflictService.bootstrap(context: context)
             Task {
                 await refreshCloudAccountStatus()
             }
@@ -51,6 +52,16 @@ extension TimeTrackerStore {
         lastSyncRefreshAt = Date()
     }
 
+    func resolveSyncConflict(_ resolution: SyncConflictResolution) {
+        do {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try syncConflictService.resolve(resolution, context: modelContext)
+            try refresh()
+            pendingSyncConflict = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 
     func refresh() throws {
         try refresh(plan: refreshPlanner.plan(after: [.fullSync]))
@@ -85,6 +96,7 @@ extension TimeTrackerStore {
                 refreshPlanner.plan(after: events)
             }
             try refresh(plan: plan)
+            try recordLocalSyncSnapshotIfNeeded()
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -141,5 +153,11 @@ extension TimeTrackerStore {
         private static func localized(_ key: String) -> String {
             NSLocalizedString(key, comment: "")
         }
+    }
+
+    private func recordLocalSyncSnapshotIfNeeded() throws {
+        guard let modelContext else { return }
+        try syncConflictService.recordLocalMutation(context: modelContext)
+        pendingSyncConflict = syncConflictService.prompt()
     }
 }

@@ -12,7 +12,6 @@ struct CoreLedgerStoreTests {
         try store.refreshVisible(repository: repository, now: Date(timeIntervalSince1970: 10_000))
 
         #expect(repository.activeSegmentsCallCount == 1)
-        #expect(repository.pausedSessionsCallCount == 1)
         #expect(repository.rangeSegmentsCallCount == 1)
         #expect(repository.allSegmentsCallCount == 0)
         #expect(repository.sessionsCallCount == 0)
@@ -100,7 +99,6 @@ struct CoreLedgerStoreTests {
 
 private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
     var activeSegmentsCallCount = 0
-    var pausedSessionsCallCount = 0
     var rangeSegmentsCallCount = 0
     var allSegmentsCallCount = 0
     var sessionsCallCount = 0
@@ -113,7 +111,6 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
 
     func resetCounters() {
         activeSegmentsCallCount = 0
-        pausedSessionsCallCount = 0
         rangeSegmentsCallCount = 0
         allSegmentsCallCount = 0
         sessionsCallCount = 0
@@ -122,11 +119,6 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
 
     func activeSegments() throws -> [TimeSegment] {
         activeSegmentsCallCount += 1
-        return []
-    }
-
-    func pausedSessions() throws -> [TimeSession] {
-        pausedSessionsCallCount += 1
         return []
     }
 
@@ -165,12 +157,6 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
     func softDeleteSegment(segmentID: UUID) throws {}
 
     func stopSession(sessionID: UUID) throws {}
-
-    func pauseSession(sessionID: UUID) throws {}
-
-    func resumeSession(sessionID: UUID) throws -> TimeSegment? {
-        nil
-    }
 
     func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
         fatalError("Unused in LedgerRefreshSpyRepository")

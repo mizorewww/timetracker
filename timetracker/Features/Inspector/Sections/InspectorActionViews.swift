@@ -38,38 +38,12 @@ struct InspectorActionButtons: View {
     @ViewBuilder
     private func timerControls(for task: TaskNode) -> some View {
         if let segment = store.activeSegment(for: task.id) {
-            HStack(spacing: 10) {
-                Button {
-                    store.pause(segment: segment)
-                } label: {
-                    AppActionLabel(title: AppStrings.localized("timer.action.pause"), systemImage: "pause.fill")
-                }
-                .buttonStyle(.bordered)
-
-                Button(role: .destructive) {
-                    store.stop(segment: segment)
-                } label: {
-                    AppActionLabel(title: AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
-                }
-                .buttonStyle(.bordered)
+            Button(role: .destructive) {
+                store.stop(segment: segment)
+            } label: {
+                AppActionLabel(title: AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
             }
-            .controlSize(.large)
-        } else if let session = store.pausedSession(for: task.id) {
-            HStack(spacing: 10) {
-                Button {
-                    store.resume(session: session)
-                } label: {
-                    AppActionLabel(title: AppStrings.localized("timer.action.resume"), systemImage: "play.fill")
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button(role: .destructive) {
-                    store.stop(session: session)
-                } label: {
-                    AppActionLabel(title: AppStrings.localized("timer.action.end"), systemImage: "stop.fill")
-                }
-                .buttonStyle(.bordered)
-            }
+            .buttonStyle(.bordered)
             .controlSize(.large)
         } else {
             Button {
@@ -84,25 +58,14 @@ struct InspectorActionButtons: View {
 
     @ViewBuilder
     private func pomodoroControls(for task: TaskNode) -> some View {
-        if let run = store.activePomodoroRun(for: task.id) {
+        if store.activePomodoroRun(for: task.id) != nil {
             HStack(spacing: 10) {
-                if run.state == .interrupted,
-                   let sessionID = run.sessionID,
-                   let session = store.sessions.first(where: { $0.id == sessionID }) {
-                    Button {
-                        store.resume(session: session)
-                    } label: {
-                        AppActionLabel(title: AppStrings.localized("pomodoro.action.resume"), systemImage: "play.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                } else {
-                    Button {
-                        store.completeActivePomodoro()
-                    } label: {
-                        AppActionLabel(title: AppStrings.localized("pomodoro.action.completeRound"), systemImage: "checkmark.circle.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
+                Button {
+                    store.completeActivePomodoro()
+                } label: {
+                    AppActionLabel(title: AppStrings.localized("pomodoro.action.completeRound"), systemImage: "checkmark.circle.fill")
                 }
+                .buttonStyle(.borderedProminent)
 
                 Button(role: .destructive) {
                     store.cancelActivePomodoro()

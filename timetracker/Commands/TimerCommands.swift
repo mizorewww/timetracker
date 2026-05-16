@@ -9,7 +9,6 @@ struct TimerCommandHandler {
         taskID: UUID,
         allowParallelTimers: Bool,
         activeSegments: [TimeSegment],
-        pausedSessions: [TimeSession],
         pomodoroRuns: [PomodoroRun],
         timeRepository: TimeTrackingRepository,
         context: ModelContext?,
@@ -19,18 +18,13 @@ struct TimerCommandHandler {
             return
         }
         if allowParallelTimers == false {
-            try pauseOtherActiveSegments(
+            try stopOtherActiveSegments(
                 excluding: taskID,
                 activeSegments: activeSegments,
                 pomodoroRuns: pomodoroRuns,
                 timeRepository: timeRepository,
                 context: context
             )
-        }
-        if let pausedSession = pausedSessions.first(where: { $0.taskID == taskID && $0.endedAt == nil && $0.deletedAt == nil }) {
-            _ = try ResumeSessionUseCase(repository: timeRepository).execute(sessionID: pausedSession.id)
-            try pomodoroCommandHandler.resumeIfNeeded(sessionID: pausedSession.id, runs: pomodoroRuns, context: context)
-            return
         }
         _ = try StartTaskUseCase(repository: timeRepository).execute(taskID: taskID, source: source)
     }
@@ -40,22 +34,7 @@ struct TimerCommandHandler {
         try pomodoroCommandHandler.cancelIfNeeded(sessionID: segment.sessionID, runs: pomodoroRuns, context: context)
     }
 
-    func pause(segment: TimeSegment, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {
-        try PauseSessionUseCase(repository: timeRepository).execute(sessionID: segment.sessionID)
-        try pomodoroCommandHandler.interruptIfNeeded(sessionID: segment.sessionID, runs: pomodoroRuns, context: context)
-    }
-
-    func resume(session: TimeSession, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {
-        _ = try ResumeSessionUseCase(repository: timeRepository).execute(sessionID: session.id)
-        try pomodoroCommandHandler.resumeIfNeeded(sessionID: session.id, runs: pomodoroRuns, context: context)
-    }
-
-    func stop(session: TimeSession, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {
-        try StopSessionUseCase(repository: timeRepository).execute(sessionID: session.id)
-        try pomodoroCommandHandler.cancelIfNeeded(sessionID: session.id, runs: pomodoroRuns, context: context)
-    }
-
-    func pauseOtherActiveSegments(
+    func stopOtherActiveSegments(
         excluding taskID: UUID,
         activeSegments: [TimeSegment],
         pomodoroRuns: [PomodoroRun],
@@ -63,8 +42,7 @@ struct TimerCommandHandler {
         context: ModelContext?
     ) throws {
         for segment in activeSegments where segment.taskID != taskID {
-            try PauseSessionUseCase(repository: timeRepository).execute(sessionID: segment.sessionID)
-            try pomodoroCommandHandler.interruptIfNeeded(sessionID: segment.sessionID, runs: pomodoroRuns, context: context)
+            try stop(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: timeRepository, context: context)
         }
     }
 }

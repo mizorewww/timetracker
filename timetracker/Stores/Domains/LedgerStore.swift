@@ -2,7 +2,6 @@ import Foundation
 
 struct LedgerStore {
     private(set) var activeSegments: [TimeSegment] = []
-    private(set) var pausedSessions: [TimeSession] = []
     private(set) var todaySegments: [TimeSegment] = []
     private(set) var allSegments: [TimeSegment] = []
     private(set) var sessions: [TimeSession] = []
@@ -14,7 +13,6 @@ struct LedgerStore {
 
     mutating func refreshVisible(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
         activeSegments = try repository.activeSegments()
-        pausedSessions = try repository.pausedSessions()
 
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         todaySegments = try repository.segments(from: today.start, to: today.end, now: now)

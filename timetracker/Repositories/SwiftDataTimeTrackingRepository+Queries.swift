@@ -10,15 +10,6 @@ extension SwiftDataTimeTrackingRepository {
         return try context.fetch(descriptor)
     }
 
-    func pausedSessions() throws -> [TimeSession] {
-        let descriptor = FetchDescriptor<TimeSession>(
-            predicate: #Predicate { $0.deletedAt == nil && $0.endedAt == nil },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
-        )
-        let activeSessionIDs = Set(try activeSegments().map(\.sessionID))
-        return try context.fetch(descriptor).filter { !activeSessionIDs.contains($0.id) }
-    }
-
     func sessions() throws -> [TimeSession] {
         let descriptor = FetchDescriptor<TimeSession>(
             predicate: #Predicate { $0.deletedAt == nil },

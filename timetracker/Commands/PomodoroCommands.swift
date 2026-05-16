@@ -16,7 +16,7 @@ struct PomodoroCommandHandler {
         context: ModelContext?
     ) throws -> PomodoroRun {
         if allowParallelTimers == false {
-            try TimerCommandHandler().pauseOtherActiveSegments(
+            try TimerCommandHandler().stopOtherActiveSegments(
                 excluding: taskID,
                 activeSegments: activeSegments,
                 pomodoroRuns: pomodoroRuns,
@@ -38,28 +38,6 @@ struct PomodoroCommandHandler {
 
     func cancel(run: PomodoroRun, repository: PomodoroRepository) throws {
         try CancelPomodoroUseCase(repository: repository).execute(runID: run.id)
-    }
-
-    func interruptIfNeeded(sessionID: UUID, runs: [PomodoroRun], context: ModelContext?, now: Date = Date()) throws {
-        guard let run = runs.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }),
-              run.state == .focusing else {
-            return
-        }
-        run.state = .interrupted
-        run.updatedAt = now
-        run.clientMutationID = UUID()
-        try context?.save()
-    }
-
-    func resumeIfNeeded(sessionID: UUID, runs: [PomodoroRun], context: ModelContext?, now: Date = Date()) throws {
-        guard let run = runs.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }),
-              run.state == .interrupted else {
-            return
-        }
-        run.state = .focusing
-        run.updatedAt = now
-        run.clientMutationID = UUID()
-        try context?.save()
     }
 
     func cancelIfNeeded(sessionID: UUID, runs: [PomodoroRun], context: ModelContext?, now: Date = Date()) throws {

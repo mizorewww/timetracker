@@ -106,13 +106,32 @@ struct SyncSettingsSection: View {
     let cloudSyncEnabled: Binding<Bool>
     let currentStorageValue: String
     let feedback: SyncFeedback
+    let pendingConflict: SyncConflictPrompt?
     let isCheckingSync: Bool
     let onCheckSync: () -> Void
     let onForceSync: () -> Void
+    let onUploadLocal: () -> Void
+    let onDownloadCloud: () -> Void
 
     var body: some View {
         Section {
             SettingsStatusRow(feedback: feedback)
+
+            if pendingConflict != nil {
+                Button(action: onUploadLocal) {
+                    SettingsActionLabel(
+                        title: AppStrings.localized("dialog.syncConflict.uploadLocal"),
+                        systemImage: "arrow.up.icloud"
+                    )
+                }
+
+                Button(action: onDownloadCloud) {
+                    SettingsActionLabel(
+                        title: AppStrings.localized("dialog.syncConflict.downloadCloud"),
+                        systemImage: "arrow.down.icloud"
+                    )
+                }
+            }
 
             Toggle(isOn: cloudSyncEnabled) {
                 Label(AppStrings.localized("settings.icloud"), systemImage: "icloud")

@@ -138,7 +138,7 @@ private struct WatchTaskShortcutCard: View {
                 Spacer(minLength: 2)
 
                 if activeTimer != nil {
-                    Image(systemName: "pause.fill")
+                    Image(systemName: "stop.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(tint)
                         .accessibilityHidden(true)
@@ -196,7 +196,7 @@ private struct WatchActiveTimerCard: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "pause.fill")
+                    Image(systemName: "stop.fill")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(tint)
                 }

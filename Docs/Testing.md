@@ -33,7 +33,7 @@ Signed export:
 - Every new feature should first document its expected behavior in `Docs/Architecture.md`, `Docs/ArchitecturePlan.md`, or a focused feature note, then add failing tests before implementation. If the behavior is UI-only, write the acceptance checklist before changing layout code.
 - Gross vs wall-clock aggregation.
 - Task tree moves and cycle prevention.
-- Timer pause, resume, and stop semantics.
+- Timer start and stop semantics.
 - Pomodoro and timer ledger synchronization.
 - Manual time edit/delete behavior.
 - Demo data and database optimization safety.
@@ -85,7 +85,7 @@ Manual macOS smoothness checklist:
 2. Resize the main window from narrow to wide and back.
 3. Scroll Today timeline, Tasks, and Analytics.
 4. Open and close task editor, settings, and manual time entry.
-5. Start, pause, resume, and stop timers while Today is visible.
+5. Start and stop timers while Today is visible.
 6. Switch Today, Tasks, Pomodoro, Analytics, and Settings several times.
 7. Verify that no action causes visible multi-frame pauses in Release.
 

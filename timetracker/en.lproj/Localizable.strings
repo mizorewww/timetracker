@@ -6,7 +6,6 @@
 "nav.analytics" = "Analytics";
 "nav.settings" = "Settings";
 "home.activeTimers" = "Active Timers";
-"home.pausedSessions" = "Paused Sessions";
 "home.todayTimeline" = "Today Timeline";
 "home.quickStart" = "Quick Start";
 "action.startTimer" = "Start Timer";
@@ -21,7 +20,6 @@
 "empty.noTodaySegments" = "No time has been logged today.";
 "task.root" = "Root";
 "status.running" = "Running";
-"status.paused" = "Paused";
 "metric.wallTime" = "Wall Time";
 "metric.grossTime" = "Gross Time";
 "metric.todayTracked" = "Tracked Today";
@@ -123,6 +121,10 @@
 "dialog.optimize.none" = "No deleted-task records were found.";
 "dialog.optimize.removed" = "Removed %d deleted-task records.";
 "dialog.optimize.message" = "This permanently deletes time entries and pomodoro runs that belong to deleted or missing tasks. The deleted task tombstones stay in place for sync.";
+"dialog.syncConflict.title" = "Choose iCloud Sync Source";
+"dialog.syncConflict.message" = "Both this device and iCloud changed data since the last accepted sync.\n\nThis device: %@\niCloud: %@\n\nChoose which side should overwrite the other.";
+"dialog.syncConflict.uploadLocal" = "Upload This Device";
+"dialog.syncConflict.downloadCloud" = "Download from iCloud";
 "alert.sync.title" = "iCloud Sync Status";
 "alert.optimize.title" = "Deleted Records";
 "common.save" = "Save";
@@ -185,6 +187,10 @@
 "sync.state.localOnly.message" = "Your data is stored on this device. Turn iCloud on and restart to sync across devices.";
 "sync.state.temporary.title" = "Temporary storage is active";
 "sync.state.temporary.message" = "%@: persistent storage could not open. Changes made in this launch may not sync or persist. Details: %@";
+"sync.state.conflict.title" = "Sync conflict needs a choice";
+"sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";
+"sync.conflict.summary" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items";
+"sync.conflict.error.localSnapshotMissing" = "The saved local snapshot is missing, so this device cannot overwrite iCloud.";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";
@@ -232,11 +238,8 @@
 "task.autoStartBreak" = "Auto-start break after focus";
 "task.records.empty" = "No records yet";
 "task.records.more" = "More records";
-"timer.action.pause" = "Pause Timer";
 "timer.action.stop" = "Stop";
-"timer.action.resume" = "Resume Timer";
 "timer.action.end" = "End";
-"pomodoro.action.resume" = "Resume Pomodoro";
 "pomodoro.action.completeRound" = "Complete Round";
 "pomodoro.action.start" = "Start Pomodoro";
 "task.snapshot" = "Task Snapshot";
@@ -267,7 +270,6 @@
 "pomodoro.startFocus" = "Start Focus";
 "pomodoro.canCompleteRound" = "Ready to Complete";
 "pomodoro.remaining" = "Remaining";
-"pomodoro.resumeFocus" = "Resume Focus";
 "pomodoro.finishEarly" = "Finish Early";
 "pomodoro.recent" = "Recent Pomodoros";
 "pomodoro.empty" = "No pomodoro records yet";

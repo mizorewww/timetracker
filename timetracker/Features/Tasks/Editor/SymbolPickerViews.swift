@@ -226,6 +226,6 @@ enum SymbolCatalog {
         "hammer", "lightbulb", "paperplane", "terminal", "keyboard",
         "graduationcap", "heart", "house", "cart", "creditcard",
         "briefcase.fill", "star", "tag", "tray", "archivebox", "trash",
-        "play.fill", "pause.fill", "stop.fill", "plus", "magnifyingglass"
+        "play.fill", "stop.fill", "plus", "magnifyingglass"
     ]
 }

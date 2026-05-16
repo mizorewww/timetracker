@@ -108,9 +108,8 @@ Inbox 用于快速收集还没有整理归属的事项。
 计时系统以 `TimeSession` 和 `TimeSegment` 为核心。
 
 - 开始任务会创建 `TimeSession` 和 active `TimeSegment`。
-- 暂停任务会关闭当前 segment，但保留 session。
-- 恢复任务会在同一个 session 下追加新的 segment。
 - 停止任务会关闭 segment 并结束 session。
+- 在不允许并行计时的设置下，开始新任务会停止其它正在运行的任务。
 - 多个 `endedAt == nil` 的 segment 表示多个任务同时运行。
 - 支持手动补录时间。
 - 支持编辑和软删除时间记录。
@@ -122,7 +121,7 @@ Inbox 用于快速收集还没有整理归属的事项。
 
 - 番茄钟必须绑定任务。
 - 开始番茄钟会创建 `PomodoroRun`、`TimeSession` 和 `TimeSegment`。
-- 暂停、恢复、取消、完成都会同步更新 ledger。
+- 取消和完成都会同步更新 ledger。
 - 完成最终专注轮次会正确结束关联 session。
 - 番茄钟默认时长、休息时长和轮次可在设置中调整。
 

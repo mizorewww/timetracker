@@ -23,7 +23,6 @@ protocol TaskRepository {
 
 protocol TimeTrackingRepository {
     func activeSegments() throws -> [TimeSegment]
-    func pausedSessions() throws -> [TimeSession]
     func sessions() throws -> [TimeSession]
     func sessions(ids: Set<UUID>) throws -> [TimeSession]
     func segments(from: Date, to: Date) throws -> [TimeSegment]
@@ -34,8 +33,6 @@ protocol TimeTrackingRepository {
     func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws
     func softDeleteSegment(segmentID: UUID) throws
     func stopSession(sessionID: UUID) throws
-    func pauseSession(sessionID: UUID) throws
-    @discardableResult func resumeSession(sessionID: UUID) throws -> TimeSegment?
     @discardableResult func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment
 }
 

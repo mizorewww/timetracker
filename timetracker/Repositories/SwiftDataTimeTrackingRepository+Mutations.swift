@@ -78,26 +78,6 @@ extension SwiftDataTimeTrackingRepository {
         try context.save()
     }
 
-    func pauseSession(sessionID: UUID) throws {
-        let now = Date()
-        for segment in try activeSegments().filter({ $0.sessionID == sessionID }) {
-            segment.endedAt = now
-            segment.updatedAt = now
-        }
-        try context.save()
-    }
-
-    @discardableResult
-    func resumeSession(sessionID: UUID) throws -> TimeSegment? {
-        guard let session = try session(id: sessionID), session.deletedAt == nil else { return nil }
-        let segment = TimeSegment(sessionID: session.id, taskID: session.taskID, source: TimeSessionSource(rawValue: session.sourceRaw) ?? .timer, deviceID: deviceID)
-        session.endedAt = nil
-        session.updatedAt = Date()
-        context.insert(segment)
-        try context.save()
-        return segment
-    }
-
     @discardableResult
     func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
         let session = TimeSession(taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt, titleSnapshot: try titleSnapshot(for: taskID))

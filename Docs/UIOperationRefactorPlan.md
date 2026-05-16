@@ -91,12 +91,12 @@ Every item below must be clicked or toggled on the appropriate platform, capture
 
 - [ ] Root navigation: Home, Inbox, Tasks, Pomodoro, Analytics, Settings.
 - [ ] Sidebar task tree: expand/collapse root task, click root task, click child task, switch category section.
-- [ ] Home: start timer, new task, active timer pause, active timer stop, paused session resume, paused session stop, quick-start task, quick-start editor, timeline segment tap, timeline context menu.
+- [ ] Home: start timer, new task, active timer stop, quick-start task, quick-start editor, timeline segment tap, timeline context menu.
 - [ ] Analytics: range segmented control, previous period, next period, date picker, current-period button, forecast row task navigation, distribution mode if visible, overlap/rhythm/quality scroll states.
 - [ ] Tasks: root row tap to detail, child row tap to detail, expand/collapse, row swipe edit/archive/delete, context menu edit/status/archive/delete, new root task, new category, search.
 - [ ] Task Detail: start timer, add manual time, header pencil, collapsed editor expand, status change, estimate field, checklist add/complete/delete, analysis range switch, recent record tap/context if present, back navigation.
 - [ ] Inbox: complete/uncomplete item, suggestion apply, suggestion edit, suggestion reject/regenerate if present, add inbox item.
-- [ ] Pomodoro: task picker, start focus, pause/resume/stop, settings controls.
+- [ ] Pomodoro: task picker, start focus, complete/cancel, settings controls.
 - [ ] Settings: CSV export, cloud sync refresh, demo data replace/clear if available, preference toggles.
 
 ## UI Inventory
@@ -124,7 +124,6 @@ Content:
 - day progress.
 - forecast summary.
 - active timers.
-- paused sessions.
 - quick start.
 - today timeline.
 - selected-task inspector summary on phone.
@@ -135,9 +134,7 @@ Operations:
 - Create new task.
 - Open settings on phone.
 - Active timer row tap selects task.
-- Active timer pause/stop.
-- Paused session row tap selects task.
-- Paused session resume/stop.
+- Active timer stop.
 - Timeline row tap selects task.
 - Timeline context menu edits/adds similar/deletes segment.
 - Quick start task starts task.
@@ -318,7 +315,7 @@ Operations:
 - Choose task.
 - Apply preset.
 - Edit minutes/rounds.
-- Start/pause/resume/stop.
+- Start/stop.
 
 Fit check:
 
@@ -392,7 +389,7 @@ Fit check:
 ### Capture and Timer
 
 - `presentManualTime`, `saveManualTimeDraft`, `presentEditSegment`, `saveSegmentDraft`.
-- `startTask`, `startSelectedTask`, `pause`, `resume`, `stop`.
+- `startTask`, `startSelectedTask`, `stop`.
 - Deep links and watch commands route into the same store commands.
 
 Risk:
@@ -556,7 +553,6 @@ Hard rule: every interactive element in the active UI inventory must be clicked 
 - [ ] New Task button.
 - [ ] Forecast info button.
 - [ ] Forecast task card opens/selects task without corrupting navigation.
-- [ ] Active timer pause button.
 - [ ] Active timer stop button.
 - [ ] Quick start edit button.
 - [ ] Quick start task button.
@@ -630,7 +626,6 @@ Hard rule: every interactive element in the active UI inventory must be clicked 
 - [ ] Break duration control.
 - [ ] Rounds control.
 - [ ] Start focus.
-- [ ] Pause/resume active run.
 - [ ] Complete/skip/stop active run.
 
 ### Settings

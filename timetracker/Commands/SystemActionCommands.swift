@@ -43,7 +43,6 @@ struct SystemActionCommandHandler {
             taskID: taskID,
             allowParallelTimers: allowParallelTimers,
             activeSegments: activeSegments,
-            pausedSessions: try timeRepository.pausedSessions(),
             pomodoroRuns: try pomodoroRepository.runs(),
             timeRepository: timeRepository,
             context: context,

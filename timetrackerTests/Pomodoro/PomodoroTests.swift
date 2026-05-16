@@ -32,7 +32,7 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
-    func pomodoroIntermediateRoundKeepsSessionPausedForResume() throws {
+    func pomodoroIntermediateRoundStopsSessionForBreak() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -42,15 +42,15 @@ struct PomodoroTests {
         let run = try pomodoroRepository.startPomodoro(taskID: task.id, focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 2)
         try pomodoroRepository.completeFocus(runID: run.id)
 
-        let pausedSession = try #require(try timeRepository.pausedSessions().first { $0.id == run.sessionID })
+        let session = try #require(try timeRepository.sessions().first { $0.id == run.sessionID })
         let updatedRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
-        #expect(pausedSession.endedAt == nil)
+        #expect(session.endedAt != nil)
         #expect(updatedRun.state == .shortBreak)
         #expect(updatedRun.endedAt == nil)
     }
 
     @Test @MainActor
-    func startingPomodoroPausesExistingTimerForSameTask() throws {
+    func startingPomodoroStopsExistingTimerForSameTask() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -65,12 +65,12 @@ struct PomodoroTests {
         #expect(active.first?.source == .pomodoro)
         #expect(active.first?.sessionID == run.sessionID)
 
-        let pausedRegular = try #require(try timeRepository.allSegments().first { $0.id == regularSegment.id })
-        #expect(pausedRegular.endedAt != nil)
+        let stoppedRegular = try #require(try timeRepository.allSegments().first { $0.id == regularSegment.id })
+        #expect(stoppedRegular.endedAt != nil)
     }
 
     @Test @MainActor
-    func storeTimerActionsKeepPomodoroRunInSync() throws {
+    func storeStoppingPomodoroTimerCancelsRun() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Synced Focus", parentID: nil, colorHex: nil, iconName: nil)
@@ -90,22 +90,12 @@ struct PomodoroTests {
         #expect(store.pomodoroRemainingSeconds(for: focusingRun) <= 20 * 60)
 
         let currentSegment = try #require(store.activeSegment(for: task.id))
-        store.pause(segment: currentSegment)
-        #expect(store.activeSegment(for: task.id) == nil)
-        #expect(store.pausedSession(for: task.id) != nil)
-        #expect(store.activePomodoroRun(for: task.id)?.state == .interrupted)
-        #expect(store.activePomodoroRun(for: task.id)?.startedAt == startedAt)
-
-        let pausedSession = try #require(store.pausedSession(for: task.id))
-        store.resume(session: pausedSession)
-        #expect(store.activeSegment(for: task.id)?.source == .pomodoro)
-        #expect(store.activePomodoroRun(for: task.id)?.state == .focusing)
-        #expect(store.activePomodoroRun(for: task.id)?.startedAt == startedAt)
-
-        let resumedSegment = try #require(store.activeSegment(for: task.id))
-        store.stop(segment: resumedSegment)
+        store.stop(segment: currentSegment)
         #expect(store.activeSegment(for: task.id) == nil)
         #expect(store.activePomodoroRun(for: task.id) == nil)
+        let cancelledRun = try #require(store.pomodoroRuns.first { $0.taskID == task.id })
+        #expect(cancelledRun.state == .cancelled)
+        #expect(cancelledRun.startedAt == startedAt)
     }
 
     @Test @MainActor

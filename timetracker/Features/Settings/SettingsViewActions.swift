@@ -8,7 +8,14 @@ extension SettingsView {
     }
 
     var syncFeedback: SyncFeedback {
-        store.syncStatus.feedback(
+        if store.pendingSyncConflict != nil {
+            return SyncFeedback(
+                state: .conflict,
+                title: AppStrings.localized("sync.state.conflict.title"),
+                message: AppStrings.localized("sync.state.conflict.message")
+            )
+        }
+        return store.syncStatus.feedback(
             preferences: store.preferences,
             isChecking: isCheckingSync,
             lastRefreshAt: store.lastSyncRefreshAt

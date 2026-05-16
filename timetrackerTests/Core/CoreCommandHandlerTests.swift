@@ -177,7 +177,6 @@ struct CoreCommandHandlerTests {
             taskID: secondTaskID,
             allowParallelTimers: false,
             activeSegments: [firstSegment],
-            pausedSessions: [],
             pomodoroRuns: [],
             timeRepository: repository,
             context: context
@@ -190,7 +189,7 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
-    func pomodoroCommandHandlerOwnsTimerStateTransitions() throws {
+    func pomodoroCommandHandlerCancelsRunForStoppedSession() throws {
         let context = try makeTestContext()
         let sessionID = UUID()
         let run = PomodoroRun(taskID: UUID(), deviceID: "test")
@@ -200,16 +199,6 @@ struct CoreCommandHandlerTests {
         try context.save()
 
         let handler = PomodoroCommandHandler()
-        let interruptedAt = Date(timeIntervalSince1970: 1_000)
-        try handler.interruptIfNeeded(sessionID: sessionID, runs: [run], context: context, now: interruptedAt)
-        #expect(run.state == .interrupted)
-        #expect(run.updatedAt == interruptedAt)
-
-        let resumedAt = Date(timeIntervalSince1970: 2_000)
-        try handler.resumeIfNeeded(sessionID: sessionID, runs: [run], context: context, now: resumedAt)
-        #expect(run.state == .focusing)
-        #expect(run.updatedAt == resumedAt)
-
         let cancelledAt = Date(timeIntervalSince1970: 3_000)
         try handler.cancelIfNeeded(sessionID: sessionID, runs: [run], context: context, now: cancelledAt)
         #expect(run.state == .cancelled)

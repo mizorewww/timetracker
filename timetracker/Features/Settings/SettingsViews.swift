@@ -63,9 +63,16 @@ struct SettingsView: View {
                 cloudSyncEnabled: cloudSyncEnabledBinding,
                 currentStorageValue: currentStorageValue,
                 feedback: syncFeedback,
+                pendingConflict: store.pendingSyncConflict,
                 isCheckingSync: isCheckingSync,
                 onCheckSync: checkSyncStatus,
-                onForceSync: forceSyncRefresh
+                onForceSync: forceSyncRefresh,
+                onUploadLocal: {
+                    store.resolveSyncConflict(.uploadLocal)
+                },
+                onDownloadCloud: {
+                    store.resolveSyncConflict(.downloadCloud)
+                }
             )
 
             LLMSettingsSection(

@@ -6,7 +6,6 @@
 "nav.analytics" = "分析";
 "nav.settings" = "设置";
 "home.activeTimers" = "正在计时";
-"home.pausedSessions" = "已暂停";
 "home.todayTimeline" = "今日时间线";
 "home.quickStart" = "快速开始";
 "action.startTimer" = "开始计时";
@@ -21,7 +20,6 @@
 "empty.noTodaySegments" = "今天还没有时间记录。";
 "task.root" = "根任务";
 "status.running" = "运行中";
-"status.paused" = "已暂停";
 "metric.wallTime" = "实际时间";
 "metric.grossTime" = "累计时间";
 "metric.todayTracked" = "今日记录";
@@ -123,6 +121,10 @@
 "dialog.optimize.none" = "没有发现已删除任务的记录。";
 "dialog.optimize.removed" = "已清理 %d 条已删除任务记录。";
 "dialog.optimize.message" = "这个操作会永久删除已删除或缺失任务对应的时间记录和番茄钟。任务删除标记会保留，用于同步。";
+"dialog.syncConflict.title" = "选择 iCloud 同步来源";
+"dialog.syncConflict.message" = "这台设备和 iCloud 在上次确认同步后都发生了变化。\n\n本设备：%@\niCloud：%@\n\n请选择哪一侧覆盖另一侧。";
+"dialog.syncConflict.uploadLocal" = "上传本设备数据";
+"dialog.syncConflict.downloadCloud" = "从 iCloud 下载";
 "alert.sync.title" = "iCloud 同步状态";
 "alert.optimize.title" = "已删除记录";
 "common.save" = "保存";
@@ -185,6 +187,10 @@
 "sync.state.localOnly.message" = "数据会存储在这台设备上。打开 iCloud 并重启后可跨设备同步。";
 "sync.state.temporary.title" = "正在使用临时存储";
 "sync.state.temporary.message" = "%@：持久化存储无法打开。本次启动中的改动可能不会同步或保留。详情：%@";
+"sync.state.conflict.title" = "同步冲突需要选择";
+"sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";
+"sync.conflict.summary" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项";
+"sync.conflict.error.localSnapshotMissing" = "找不到已保存的本机快照，无法用本设备覆盖 iCloud。";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";
@@ -232,11 +238,8 @@
 "task.autoStartBreak" = "专注结束后自动开始休息";
 "task.records.empty" = "还没有记录";
 "task.records.more" = "还有更多记录";
-"timer.action.pause" = "暂停计时";
 "timer.action.stop" = "停止";
-"timer.action.resume" = "继续计时";
 "timer.action.end" = "结束";
-"pomodoro.action.resume" = "继续番茄钟";
 "pomodoro.action.completeRound" = "完成本轮";
 "pomodoro.action.start" = "开始番茄钟";
 "task.snapshot" = "任务快照";
@@ -267,7 +270,6 @@
 "pomodoro.startFocus" = "开始专注";
 "pomodoro.canCompleteRound" = "可以完成本轮";
 "pomodoro.remaining" = "剩余时间";
-"pomodoro.resumeFocus" = "继续专注";
 "pomodoro.finishEarly" = "提前完成";
 "pomodoro.recent" = "最近番茄";
 "pomodoro.empty" = "还没有番茄钟记录";

@@ -39,31 +39,6 @@ struct SoftDeleteSegmentUseCase {
     }
 }
 
-struct StopSessionUseCase {
-    let repository: TimeTrackingRepository
-
-    func execute(sessionID: UUID) throws {
-        try repository.stopSession(sessionID: sessionID)
-    }
-}
-
-struct PauseSessionUseCase {
-    let repository: TimeTrackingRepository
-
-    func execute(sessionID: UUID) throws {
-        try repository.pauseSession(sessionID: sessionID)
-    }
-}
-
-struct ResumeSessionUseCase {
-    let repository: TimeTrackingRepository
-
-    @discardableResult
-    func execute(sessionID: UUID) throws -> TimeSegment? {
-        try repository.resumeSession(sessionID: sessionID)
-    }
-}
-
 struct AddManualTimeUseCase {
     let repository: TimeTrackingRepository
 

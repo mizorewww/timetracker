@@ -56,7 +56,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 
 | Task | Start here | Then check |
 | --- | --- | --- |
-| Start/pause/resume/stop timer behavior | `Commands/TimerCommands.swift` | `Repositories/SwiftDataTimeTrackingRepository+Mutations.swift`, `Repositories/SwiftDataTimeTrackingRepository+Queries.swift`, `Stores/Domains/LedgerStore.swift`, `Services/Ledger/TimeTrackerServices.swift` |
+| Start/stop timer behavior | `Commands/TimerCommands.swift` | `Repositories/SwiftDataTimeTrackingRepository+Mutations.swift`, `Repositories/SwiftDataTimeTrackingRepository+Queries.swift`, `Stores/Domains/LedgerStore.swift`, `Services/Ledger/TimeTrackerServices.swift` |
 | Manual time entry or segment edit | `Commands/LedgerCommands.swift` | `Features/Ledger`, `Stores/Domains/LedgerStore.swift`, analytics invalidation tests |
 | Task create/edit/move/delete | `Commands/TaskCommands.swift` | `Services/Tasks/TaskTreeServices.swift`, `Repositories/SwiftDataTaskRepository+TaskMutations.swift`, `Repositories/SwiftDataTaskRepository+Hierarchy.swift`, `Features/Tasks` |
 | Task categories | `Stores/Facade/TimeTrackerStore+TaskCategoryCommands.swift` | `Models/TaskModels.swift`, `Repositories/SwiftDataTaskRepository+Categories.swift`, `Features/Tasks`, `Features/Sidebar` |

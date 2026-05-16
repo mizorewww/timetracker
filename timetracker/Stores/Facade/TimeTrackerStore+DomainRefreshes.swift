@@ -27,7 +27,6 @@ extension TimeTrackerStore {
             try ledgerDomainStore.refreshVisible(repository: timeRepository)
         }
         activeSegments = ledgerDomainStore.activeSegments
-        pausedSessions = ledgerDomainStore.pausedSessions
         allSegments = ledgerDomainStore.allSegments
         sessions = ledgerDomainStore.sessions
         todaySegments = ledgerDomainStore.todaySegments

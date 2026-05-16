@@ -21,7 +21,7 @@ Views may format and present state, but durable business actions should go throu
 
 `TaskNode` represents a task tree node. All tasks can contain child tasks and all tasks can be timed. The `parentID`, `path`, `depth`, and `sortOrder` fields make the tree stable for drag/move, sync, and export. Moving a task must prevent cycles and update descendants.
 
-`TimeSession` represents one work intention. `TimeSegment` represents actual worked time and is the ledger fact used for analytics. A paused and resumed session should have multiple segments under the same session.
+`TimeSession` represents one work intention. `TimeSegment` represents actual worked time and is the ledger fact used for analytics. Active work has an open segment; stopping closes the segment and its session.
 
 `PomodoroRun` represents the pomodoro workflow. It must create and update ledger records instead of replacing them.
 
@@ -99,7 +99,7 @@ timetracker/Services
   Tasks/          Task tree derivation and validation helpers
 timetracker/Features/Home
   Controls/       Start/new-task controls and task selection sheets
-  Rows/           Active timer, paused session, and timeline rows
+  Rows/           Active timer and timeline rows
   Sections/       Metrics, forecast, progress, quick start, and timeline sections
 timetracker/Features/Tasks
   Editor/         Task editor, symbol picker, checklist editing, and editor-specific controls

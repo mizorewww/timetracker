@@ -112,6 +112,7 @@ enum SyncFeedbackState: Equatable {
     case failed
     case localOnly
     case temporaryStore
+    case conflict
 
     var symbolName: String {
         switch self {
@@ -131,6 +132,8 @@ enum SyncFeedbackState: Equatable {
             return "externaldrive"
         case .temporaryStore:
             return "externaldrive.badge.exclamationmark"
+        case .conflict:
+            return "exclamationmark.triangle"
         }
     }
 }

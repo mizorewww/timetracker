@@ -28,7 +28,6 @@ final class TimeTrackerStore: ObservableObject {
     }
     @Published var allSegments: [TimeSegment] = []
     @Published var sessions: [TimeSession] = []
-    @Published var pausedSessions: [TimeSession] = []
     @Published var pomodoroRuns: [PomodoroRun] = []
     @Published var countdownEvents: [CountdownEvent] = []
     @Published var syncedPreferences: [SyncedPreference] = []
@@ -69,6 +68,7 @@ final class TimeTrackerStore: ObservableObject {
     @Published var isStartTaskPickerPresented = false
     @Published var cloudAccountStatus: String = AppCloudSync.accountStatus
     @Published var lastSyncRefreshAt: Date?
+    @Published var pendingSyncConflict: SyncConflictPrompt?
 
     enum RangePreset: String, CaseIterable, Identifiable {
         case today = "Today"
@@ -147,6 +147,7 @@ final class TimeTrackerStore: ObservableObject {
     let inboxCommandHandler = InboxCommandHandler()
     let preferenceCommandHandler = PreferenceCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
+    let syncConflictService = SyncConflictService()
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var checklistDomainStore = ChecklistStore()
@@ -164,4 +165,5 @@ final class TimeTrackerStore: ObservableObject {
     var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
     var scheduledSyncRefreshTask: Task<Void, Never>?
+    var scheduledSyncRefreshReason: SyncRefreshReason?
 }

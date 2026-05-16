@@ -65,10 +65,6 @@ extension TimeTrackerStore {
         activeSegments.first { $0.taskID == taskID }
     }
 
-    func pausedSession(for taskID: UUID) -> TimeSession? {
-        pausedSessions.first { $0.taskID == taskID }
-    }
-
     func displayTitle(for segment: TimeSegment) -> String {
         task(for: segment.taskID)?.title ?? AppStrings.localized("task.deleted")
     }

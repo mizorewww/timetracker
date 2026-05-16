@@ -56,6 +56,26 @@ struct TaskCategoryTests {
     }
 
     @Test @MainActor
+    func taskTreeShowsEmptyCategories() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let category = try repository.createCategory(
+            title: "Learning",
+            colorHex: "5856D6",
+            iconName: "book",
+            includesInForecast: true
+        )
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        let sections = store.taskTreeSections(expandedTaskIDs: [])
+        #expect(sections.map(\.title) == ["Learning"])
+        #expect(sections.first?.categoryID == category.id)
+        #expect(sections.first?.rows.isEmpty == true)
+    }
+
+    @Test @MainActor
     func categoriesCanDisableForecastForTheirWholeRootTree() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

@@ -195,7 +195,7 @@ extension TaskTreeService {
         }
 
         var sections: [TaskTreeCategorySectionModel] = []
-        for category in categories where rootTasksByCategory[category.id]?.isEmpty == false {
+        for category in categories where category.deletedAt == nil {
             sections.append(
                 TaskTreeCategorySectionModel(
                     id: "category-\(category.id.uuidString)",

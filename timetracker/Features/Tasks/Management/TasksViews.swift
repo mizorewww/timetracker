@@ -29,17 +29,19 @@ struct TasksView: View {
                         )
                         .padding(.vertical, 3)
                         .listRowSeparator(.hidden)
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button(action: newRootTaskAction(for: section)) {
-                                Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
+                                Image(systemName: "plus")
                             }
+                            .accessibilityLabel(AppStrings.localized("tasks.newRoot"))
                             .tint(.blue)
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             if let deleteCategory = deleteAction(for: section) {
                                 Button(role: .destructive, action: deleteCategory) {
-                                    Label(AppStrings.localized("taskCategory.delete"), systemImage: "trash")
+                                    Image(systemName: "trash")
                                 }
+                                .accessibilityLabel(AppStrings.localized("taskCategory.delete"))
                             }
                         }
 

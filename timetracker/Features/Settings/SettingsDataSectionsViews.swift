@@ -63,36 +63,7 @@ struct LLMSettingsSection: View {
                 isSecure: true
             )
 
-            if availableModels.isEmpty {
-                SettingsValueRow(
-                    title: AppStrings.localized("settings.llm.model"),
-                    value: AppStrings.localized("settings.llm.noModels"),
-                    systemImage: "cpu",
-                    tint: .indigo
-                )
-            } else {
-                Picker(selection: selectedModel) {
-                    ForEach(availableModels, id: \.self) { model in
-                        Text(model).tag(model)
-                    }
-                } label: {
-                    SettingsRowLabel(
-                        title: AppStrings.localized("settings.llm.model"),
-                        systemImage: "cpu",
-                        tint: .indigo
-                    )
-                }
-            }
-
-            Button(action: onFetchModels) {
-                SettingsActionLabel(
-                    title: isFetchingModels ? AppStrings.localized("settings.llm.fetching") : AppStrings.localized("settings.llm.fetchModels"),
-                    systemImage: "arrow.clockwise",
-                    tint: .purple
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isFetchingModels)
+            modelSelectionRow
 
             if let feedbackMessage, !feedbackMessage.isEmpty {
                 HStack(alignment: .top, spacing: 12) {
@@ -110,6 +81,80 @@ struct LLMSettingsSection: View {
         } footer: {
             Text(.app("settings.llm.footer"))
         }
+    }
+
+    @ViewBuilder
+    private var modelSelectionRow: some View {
+        if isFetchingModels {
+            SettingsModelSelectionRow(
+                title: AppStrings.localized("settings.llm.model"),
+                value: AppStrings.localized("settings.llm.fetching"),
+                isLoading: true
+            )
+        } else if availableModels.isEmpty {
+            Button(action: onFetchModels) {
+                SettingsModelSelectionRow(
+                    title: AppStrings.localized("settings.llm.model"),
+                    value: AppStrings.localized("settings.llm.noModels"),
+                    showsChevron: true
+                )
+            }
+            .buttonStyle(.plain)
+        } else {
+            Picker(selection: selectedModel) {
+                ForEach(availableModels, id: \.self) { model in
+                    Text(model).tag(model)
+                }
+            } label: {
+                SettingsRowLabel(
+                    title: AppStrings.localized("settings.llm.model"),
+                    systemImage: "cpu",
+                    tint: .indigo
+                )
+            }
+        }
+    }
+}
+
+private struct SettingsModelSelectionRow: View {
+    let title: String
+    let value: String
+    var isLoading = false
+    var showsChevron = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 28, height: 28)
+            } else {
+                SettingsRowIcon(systemImage: "cpu", tint: .indigo)
+            }
+
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 8)
+
+            Text(value)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .opacity(isEnabled ? 1 : 0.45)
+        .accessibilityElement(children: .combine)
+        .settingsRowSeparatorAligned()
     }
 }
 

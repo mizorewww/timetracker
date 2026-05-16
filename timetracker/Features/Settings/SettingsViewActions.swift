@@ -78,16 +78,6 @@ extension SettingsView {
         }
     }
 
-    func fetchLLMModelsIfNeeded() {
-        guard !isFetchingLLMModels,
-              store.preferences.llmAvailableModelIDs.isEmpty,
-              !store.preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !store.preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return
-        }
-        fetchLLMModels()
-    }
-
     var syncCheckPresented: Binding<Bool> {
         Binding {
             syncCheckMessage != nil

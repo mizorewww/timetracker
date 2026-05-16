@@ -120,7 +120,6 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .accessibilityIdentifier("settings.view")
-        .onAppear(perform: fetchLLMModelsIfNeeded)
         .fileExporter(
             isPresented: $isExportPresented,
             document: JSONExportDocument(text: store.jsonExport()),

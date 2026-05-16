@@ -65,6 +65,24 @@ struct SharedComponentsContractTests {
     }
 
     @Test
+    func llmModelSelectionFetchesFromModelRow() throws {
+        let settingsDataSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
+        let settingsViewSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
+        let settingsActionsSource = try sourceText("timetracker/Features/Settings/SettingsViewActions.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(settingsDataSource.contains("private var modelSelectionRow"))
+        #expect(settingsDataSource.contains("SettingsModelSelectionRow("))
+        #expect(settingsDataSource.contains("Button(action: onFetchModels)"))
+        #expect(settingsDataSource.contains("ProgressView()"))
+        #expect(settingsDataSource.contains("AppStrings.localized(\"settings.llm.fetching\")"))
+        #expect(settingsDataSource.contains("AppStrings.localized(\"settings.llm.fetchModels\")") == false)
+        #expect(settingsViewSource.contains(".onAppear(perform: fetchLLMModelsIfNeeded)") == false)
+        #expect(settingsActionsSource.contains("func fetchLLMModelsIfNeeded") == false)
+        #expect(englishStrings.contains("\"settings.llm.fetchModels\"") == false)
+    }
+
+    @Test
     func selectedTaskPulseIsSharedForSidebarRows() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SelectionPulse.swift")
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")

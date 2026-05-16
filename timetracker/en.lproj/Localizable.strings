@@ -86,7 +86,6 @@
 "settings.llm.apiKey" = "API Key";
 "settings.llm.model" = "Model";
 "settings.llm.noModels" = "No models loaded";
-"settings.llm.fetchModels" = "Fetch Models";
 "settings.llm.fetching" = "Fetching Models...";
 "settings.llm.fetchSuccess" = "Loaded %d models.";
 "settings.llm.fetchFailed" = "Could not fetch models: %@";

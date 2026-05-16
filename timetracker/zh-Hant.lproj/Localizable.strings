@@ -86,7 +86,6 @@
 "settings.llm.apiKey" = "API Key";
 "settings.llm.model" = "模型";
 "settings.llm.noModels" = "尚未擷取模型";
-"settings.llm.fetchModels" = "擷取模型";
 "settings.llm.fetching" = "正在擷取模型...";
 "settings.llm.fetchSuccess" = "已載入 %d 個模型。";
 "settings.llm.fetchFailed" = "無法擷取模型：%@";

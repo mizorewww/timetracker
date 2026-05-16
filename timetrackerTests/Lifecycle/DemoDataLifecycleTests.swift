@@ -116,6 +116,21 @@ struct DemoDataLifecycleTests {
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
     }
 
+    @Test
+    func nonDebugBuildsCannotEnableOrCreateDemoData() throws {
+        let configurationSource = try sourceText("timetracker/App/AppDemoDataConfiguration.swift")
+        let seedSource = try sourceText("timetracker/App/SeedData.swift")
+        let demoBuildSource = try sourceText("timetracker/App/SeedData+DemoBuild.swift")
+        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
+
+        #expect(configurationSource.contains("guard allowsDemoDataCreation else { return .off }"))
+        #expect(seedSource.contains("guard AppDemoDataConfiguration.allowsDemoDataCreation else { return }"))
+        #expect(seedSource.contains("throw SeedDataError.demoDataCreationUnavailable"))
+        #expect(demoBuildSource.contains("#if DEBUG"))
+        #expect(demoBuildSource.contains("#else\nextension SeedData"))
+        #expect(settingsSource.contains("if allowsDemoDataCreation {"))
+    }
+
     @Test @MainActor
     func screenshotDemoModeRebuildsDataOnLaunch() throws {
         prepareAutomaticDemoSeeding(demoMode: .replaceOnLaunch, disabled: true)

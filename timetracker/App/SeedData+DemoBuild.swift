@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+#if DEBUG
 extension SeedData {
     static func buildDemoData(context: ModelContext) throws {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "demo")
@@ -194,3 +195,10 @@ extension SeedData {
         }
     }
 }
+#else
+extension SeedData {
+    static func buildDemoData(context: ModelContext) throws {
+        throw SeedDataError.demoDataCreationUnavailable
+    }
+}
+#endif

@@ -5,6 +5,17 @@ import SwiftData
 enum SeedData {
     static let automaticDemoSeedingDisabledKey = "TimeTrackerAutomaticDemoSeedingDisabled"
 
+    enum SeedDataError: LocalizedError {
+        case demoDataCreationUnavailable
+
+        var errorDescription: String? {
+            switch self {
+            case .demoDataCreationUnavailable:
+                "Demo data can only be created in Debug builds."
+            }
+        }
+    }
+
     static var isAutomaticDemoSeedingDisabled: Bool {
         UserDefaults.standard.bool(forKey: automaticDemoSeedingDisabledKey)
     }
@@ -14,6 +25,8 @@ enum SeedData {
     }
 
     static func ensureSeeded(context: ModelContext) throws {
+        guard AppDemoDataConfiguration.allowsDemoDataCreation else { return }
+
         switch AppDemoDataConfiguration.currentMode {
         case .off:
             return
@@ -32,12 +45,16 @@ enum SeedData {
     }
 
     static func replaceWithDemoData(context: ModelContext) throws {
-        try clearAll(context: context, disablesAutomaticDemoSeeding: false)
+        guard AppDemoDataConfiguration.allowsDemoDataCreation else {
+            throw SeedDataError.demoDataCreationUnavailable
+        }
+
+        try clearAll(context: context, disablesAutomaticDemoSeeding: false, includesPreferences: false)
         try buildDemoData(context: context)
         setAutomaticDemoSeedingDisabled(false)
     }
 
     static func clearAll(context: ModelContext) throws {
-        try clearAll(context: context, disablesAutomaticDemoSeeding: true)
+        try clearAll(context: context, disablesAutomaticDemoSeeding: true, includesPreferences: true)
     }
 }

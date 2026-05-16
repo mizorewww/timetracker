@@ -101,6 +101,7 @@
 "settings.icloudContainer" = "iCloud Container";
 "settings.rebuildDemoData" = "Rebuild Demo Data";
 "settings.clearDemoData" = "Clear Demo Data";
+"settings.resetData" = "Reset Data";
 "settings.maintenance" = "Maintenance";
 "settings.about" = "About";
 "settings.about.version" = "Version";
@@ -118,6 +119,9 @@
 "dialog.clearDemo.title" = "Clear demo data?";
 "dialog.clearDemo.confirm" = "Clear Demo Tasks and Records";
 "dialog.clearDemo.message" = "This removes tasks, time records, and pomodoros created by demo data. User-created records are kept.";
+"dialog.resetData.title" = "Delete all data?";
+"dialog.resetData.confirm" = "Delete All Data";
+"dialog.resetData.message" = "This permanently deletes tasks, time records, pomodoro runs, countdowns, inbox items, categories, and synced preferences. If iCloud sync is enabled, the deletion may sync to iCloud. This cannot be undone.";
 "dialog.optimize.title" = "Clean deleted task records?";
 "dialog.optimize.confirm" = "Delete Records";
 "dialog.optimize.none" = "No deleted-task records were found.";

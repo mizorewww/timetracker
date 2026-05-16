@@ -10,14 +10,22 @@ enum AppDemoDataConfiguration {
     static let infoDictionaryKey = "TimeTrackerAutomaticDemoDataMode"
     static let overrideKey = "TimeTrackerAutomaticDemoDataModeOverride"
 
-    static var currentMode: AutomaticDemoDataMode {
+    static var allowsDemoDataCreation: Bool {
         #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
+    static var currentMode: AutomaticDemoDataMode {
+        guard allowsDemoDataCreation else { return .off }
+
         if CommandLine.arguments.contains("--cloud-smoke-test"),
            CommandLine.arguments.contains("queueDownloadFromDemo"),
            UserDefaults.standard.string(forKey: overrideKey) == nil {
             return .seedIfEmpty
         }
-        #endif
         if let override = UserDefaults.standard.string(forKey: overrideKey),
            let mode = AutomaticDemoDataMode(rawValue: override) {
             return mode
@@ -26,11 +34,7 @@ enum AppDemoDataConfiguration {
            let mode = AutomaticDemoDataMode(rawValue: configured) {
             return mode
         }
-        #if DEBUG
         return .seedIfEmpty
-        #else
-        return .off
-        #endif
     }
 
     static var usesLocalDemoStore: Bool {

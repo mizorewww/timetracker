@@ -5,6 +5,7 @@ struct SettingsView: View {
     @ObservedObject var store: TimeTrackerStore
     @State var isResetConfirmationPresented = false
     @State var isClearConfirmationPresented = false
+    @State var isResetAllDataConfirmationPresented = false
     @State var isOptimizeConfirmationPresented = false
     @State var isExportPresented = false
     @State var isCheckingSync = false
@@ -99,11 +100,15 @@ struct SettingsView: View {
                 pomodoroCount: store.pomodoroRuns.count,
                 cloudAccount: store.syncStatus.accountStatus,
                 cloudContainer: store.syncStatus.containerIdentifier,
+                allowsDemoDataCreation: AppDemoDataConfiguration.allowsDemoDataCreation,
                 onRebuildDemoData: {
                     isResetConfirmationPresented = true
                 },
                 onClearDemoData: {
                     isClearConfirmationPresented = true
+                },
+                onResetAllData: {
+                    isResetAllDataConfirmationPresented = true
                 }
             )
 
@@ -141,6 +146,14 @@ struct SettingsView: View {
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(.app("dialog.clearDemo.message"))
+        }
+        .confirmationDialog(AppStrings.localized("dialog.resetData.title"), isPresented: $isResetAllDataConfirmationPresented, titleVisibility: .visible) {
+            Button(AppStrings.localized("dialog.resetData.confirm"), role: .destructive) {
+                store.clearAllData()
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("dialog.resetData.message"))
         }
         .confirmationDialog(AppStrings.localized("dialog.optimize.title"), isPresented: $isOptimizeConfirmationPresented, titleVisibility: .visible) {
             Button(AppStrings.localized("dialog.optimize.confirm"), role: .destructive) {

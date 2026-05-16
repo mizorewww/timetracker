@@ -13,6 +13,7 @@ extension TimeTrackerStore {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.clearAll(context: modelContext)
             selectedTaskID = nil
+            desktopTaskDetailID = nil
         }
     }
 

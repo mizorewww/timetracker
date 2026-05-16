@@ -101,6 +101,7 @@
 "settings.icloudContainer" = "iCloud 容器";
 "settings.rebuildDemoData" = "重建演示数据";
 "settings.clearDemoData" = "清除演示数据";
+"settings.resetData" = "重置数据";
 "settings.maintenance" = "维护";
 "settings.about" = "关于";
 "settings.about.version" = "版本";
@@ -118,6 +119,9 @@
 "dialog.clearDemo.title" = "清除演示数据？";
 "dialog.clearDemo.confirm" = "清除演示任务和记录";
 "dialog.clearDemo.message" = "这会删除由演示数据生成的任务、时间记录和番茄钟，不会主动删除你手动创建的记录。";
+"dialog.resetData.title" = "删除所有数据？";
+"dialog.resetData.confirm" = "删除所有数据";
+"dialog.resetData.message" = "这会永久删除任务、时间记录、番茄钟、倒计时、收件箱内容、分类和已同步设置。如果已开启 iCloud 同步，删除可能会同步到 iCloud。此操作不可撤销。";
 "dialog.optimize.title" = "清理已删除任务记录？";
 "dialog.optimize.confirm" = "删除记录";
 "dialog.optimize.none" = "没有发现已删除任务的记录。";

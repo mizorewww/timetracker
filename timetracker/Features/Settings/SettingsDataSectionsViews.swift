@@ -118,8 +118,10 @@ struct MaintenanceSettingsSection: View {
     let pomodoroCount: Int
     let cloudAccount: String
     let cloudContainer: String
+    let allowsDemoDataCreation: Bool
     let onRebuildDemoData: () -> Void
     let onClearDemoData: () -> Void
+    let onResetAllData: () -> Void
 
     var body: some View {
         Section {
@@ -128,12 +130,18 @@ struct MaintenanceSettingsSection: View {
             SettingsValueRow(title: AppStrings.pomodoro, value: "\(pomodoroCount)", systemImage: "timer", tint: .red)
             SettingsValueRow(title: AppStrings.localized("settings.cloudAccount"), value: cloudAccount, systemImage: "person.crop.circle.badge.checkmark", tint: .green)
             SettingsValueRow(title: AppStrings.localized("settings.icloudContainer"), value: cloudContainer, systemImage: "shippingbox", tint: .cyan)
-            Button(role: .destructive, action: onRebuildDemoData) {
-                SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise", tint: .red)
+            if allowsDemoDataCreation {
+                Button(role: .destructive, action: onRebuildDemoData) {
+                    SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise", tint: .red)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Button(role: .destructive, action: onClearDemoData) {
                 SettingsActionLabel(title: AppStrings.localized("settings.clearDemoData"), systemImage: "trash", tint: .red)
+            }
+            .buttonStyle(.plain)
+            Button(role: .destructive, action: onResetAllData) {
+                SettingsActionLabel(title: AppStrings.localized("settings.resetData"), systemImage: "trash.slash", tint: .red)
             }
             .buttonStyle(.plain)
         } header: {

@@ -48,12 +48,21 @@ extension SeedData {
         setAutomaticDemoSeedingDisabled(true)
     }
 
-    static func clearAll(context: ModelContext, disablesAutomaticDemoSeeding: Bool) throws {
+    static func clearAll(
+        context: ModelContext,
+        disablesAutomaticDemoSeeding: Bool,
+        includesPreferences: Bool
+    ) throws {
         for model in try context.fetch(FetchDescriptor<DailySummary>()) {
             context.delete(model)
         }
         for model in try context.fetch(FetchDescriptor<CountdownEvent>()) {
             context.delete(model)
+        }
+        if includesPreferences {
+            for model in try context.fetch(FetchDescriptor<SyncedPreference>()) {
+                context.delete(model)
+            }
         }
         for model in try context.fetch(FetchDescriptor<PomodoroRun>()) {
             context.delete(model)

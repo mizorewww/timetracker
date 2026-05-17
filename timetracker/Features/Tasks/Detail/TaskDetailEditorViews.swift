@@ -134,10 +134,7 @@ struct TaskDetailEditorCard: View {
     }
 
     private var checklistSection: some View {
-        TaskDetailChecklistEditorSection(
-            draft: $draft,
-            focusedChecklistDraftID: focusedChecklistDraftID
-        )
+        TaskDetailChecklistEditorSection(draft: $draft, focusedChecklistDraftID: focusedChecklistDraftID)
     }
     private var notesSection: some View {
         TaskDetailEditorSection(title: AppStrings.localized("editor.task.notes")) {

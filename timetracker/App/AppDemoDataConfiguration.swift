@@ -38,7 +38,7 @@ enum AppDemoDataConfiguration {
     }
 
     static var usesLocalDemoStore: Bool {
-        currentMode != .off
+        currentMode != .off || AppStressDataConfiguration.requestedProfile != nil
     }
 
     static func disableLocalDemoStoreForCloudSync() {

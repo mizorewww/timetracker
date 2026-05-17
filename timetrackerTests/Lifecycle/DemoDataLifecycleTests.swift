@@ -52,6 +52,49 @@ struct DemoDataLifecycleTests {
     }
 
     @Test @MainActor
+    func stressDataProfileBuildsNestedMutableTaskGraph() throws {
+        prepareAutomaticDemoSeeding(demoMode: .off)
+        defer { resetDemoSeedingDefaults() }
+        let context = try makeTestContext()
+        let profile = StressDataProfile(
+            name: "unit",
+            rootCount: 2,
+            maxDepth: 3,
+            childrenPerNode: 2,
+            checklistItemsPerTask: 2,
+            segmentsPerTask: 1,
+            categoryCount: 2,
+            inboxItemCount: 5,
+            countdownEventCount: 3
+        )
+
+        try SeedData.replaceWithStressData(context: context, profile: profile)
+
+        let tasks = try context.fetch(FetchDescriptor<TaskNode>())
+        let taskIDs = Set(tasks.map(\.id))
+        let checklistItems = try context.fetch(FetchDescriptor<ChecklistItem>())
+        let checklistVisuals = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
+        let sessions = try context.fetch(FetchDescriptor<TimeSession>())
+        let segments = try context.fetch(FetchDescriptor<TimeSegment>())
+        let inboxItems = try context.fetch(FetchDescriptor<InboxItem>())
+        let inboxSuggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
+
+        #expect(tasks.count == profile.estimatedTaskCount)
+        #expect(tasks.contains { $0.depth == 2 && $0.parentID != nil })
+        #expect(tasks.allSatisfy { $0.path.contains($0.id.uuidString) })
+        #expect(tasks.allSatisfy { $0.estimatedSeconds != nil && $0.dueAt != nil && $0.notes?.isEmpty == false })
+        #expect(checklistItems.count == tasks.count * profile.checklistItemsPerTask)
+        #expect(checklistVisuals.count == checklistItems.count)
+        #expect(sessions.count == tasks.count * profile.segmentsPerTask + min(3, tasks.count))
+        #expect(segments.count == sessions.count)
+        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).isEmpty == false)
+        #expect(inboxItems.count == profile.inboxItemCount)
+        #expect(inboxSuggestions.count == profile.inboxItemCount)
+        #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).count == profile.countdownEventCount)
+        #expect(inboxItems.compactMap(\.suggestedTaskID).allSatisfy { taskIDs.contains($0) })
+    }
+
+    @Test @MainActor
     func clearingDemoDataKeepsUserCreatedRecords() throws {
         prepareAutomaticDemoSeeding()
         defer { resetDemoSeedingDefaults() }
@@ -140,6 +183,7 @@ struct DemoDataLifecycleTests {
         let configurationSource = try sourceText("timetracker/App/AppDemoDataConfiguration.swift")
         let seedSource = try sourceText("timetracker/App/SeedData.swift")
         let demoBuildSource = try sourceText("timetracker/App/SeedData+DemoBuild.swift")
+        let stressBuildSource = try sourceText("timetracker/App/SeedData+StressBuild.swift")
         let settingsSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
 
         #expect(configurationSource.contains("guard allowsDemoDataCreation else { return .off }"))
@@ -147,6 +191,8 @@ struct DemoDataLifecycleTests {
         #expect(seedSource.contains("throw SeedDataError.demoDataCreationUnavailable"))
         #expect(demoBuildSource.contains("#if DEBUG"))
         #expect(demoBuildSource.contains("#else\nextension SeedData"))
+        #expect(stressBuildSource.contains("#if DEBUG"))
+        #expect(stressBuildSource.contains("throw SeedDataError.demoDataCreationUnavailable"))
         #expect(settingsSource.contains("if allowsDemoDataCreation {"))
     }
 
@@ -214,5 +260,14 @@ struct DemoDataLifecycleTests {
         UserDefaults.standard.removeObject(forKey: AppCloudSync.modeKey)
         UserDefaults.standard.removeObject(forKey: AppCloudSync.errorKey)
         UserDefaults.standard.removeObject(forKey: AppCloudSync.accountStatusKey)
+        UserDefaults.standard.removeObject(forKey: AppStressDataConfiguration.profileKey)
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressRootCount")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressMaxDepth")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressChildrenPerNode")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressChecklistItemsPerTask")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressSegmentsPerTask")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressCategoryCount")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressInboxItemCount")
+        UserDefaults.standard.removeObject(forKey: "TimeTrackerStressCountdownEventCount")
     }
 }

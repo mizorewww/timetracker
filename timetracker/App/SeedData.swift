@@ -27,6 +27,11 @@ enum SeedData {
     static func ensureSeeded(context: ModelContext) throws {
         guard AppDemoDataConfiguration.allowsDemoDataCreation else { return }
 
+        if let stressProfile = AppStressDataConfiguration.requestedProfile {
+            try replaceWithStressData(context: context, profile: stressProfile)
+            return
+        }
+
         switch AppDemoDataConfiguration.currentMode {
         case .off:
             return

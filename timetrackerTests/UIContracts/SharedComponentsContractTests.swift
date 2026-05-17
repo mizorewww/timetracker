@@ -163,6 +163,20 @@ struct SharedComponentsContractTests {
     }
 
     @Test
+    func countdownDateSettingsUseNativeDatePickerRow() throws {
+        let supportSource = try sourceText("timetracker/Features/Settings/Support/SettingsSupportViews.swift")
+
+        #expect(supportSource.contains("struct CountdownEventSettingsRow"))
+        #expect(supportSource.contains("DatePicker("))
+        #expect(supportSource.contains(".datePickerStyle(.compact)"))
+        #expect(supportSource.contains("SettingsRowLabel("))
+        #expect(supportSource.contains("isDatePickerPresented") == false)
+        #expect(supportSource.contains("datePickerPopoverContent") == false)
+        #expect(supportSource.contains(".popover(") == false)
+        #expect(supportSource.contains("Image(systemName: \"chevron.right\")") == false)
+    }
+
+    @Test
     func compactPrimaryAndSuggestionActionsStayLegible() throws {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")

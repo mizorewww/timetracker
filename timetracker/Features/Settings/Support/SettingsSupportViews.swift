@@ -30,7 +30,6 @@ struct CountdownEventSettingsRow: View {
     let onChangeTitle: (String) -> Void
     let onChangeDate: (Date) -> Void
     let onDelete: () -> Void
-    @State private var isDatePickerPresented = false
 
     private var titleBinding: Binding<String> {
         Binding {
@@ -58,33 +57,18 @@ struct CountdownEventSettingsRow: View {
             textAlignment: .trailing
         )
 
-        Button {
-            isDatePickerPresented = true
-        } label: {
-            HStack(spacing: 12) {
-                SettingsRowIcon(systemImage: "calendar", tint: .green)
-
-                Text(.app("settings.countdown.date"))
-                    .font(.body)
-                    .foregroundStyle(.primary)
-
-                Spacer(minLength: 8)
-
-                Text(event.date.formatted(date: .abbreviated, time: .omitted))
-                    .foregroundStyle(.secondary)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+        DatePicker(
+            selection: dateBinding,
+            displayedComponents: .date
+        ) {
+            SettingsRowLabel(
+                title: AppStrings.localized("settings.countdown.date"),
+                systemImage: "calendar",
+                tint: .green
+            )
         }
-        .buttonStyle(.plain)
+        .datePickerStyle(.compact)
         .settingsRowSeparatorAligned()
-        .popover(isPresented: $isDatePickerPresented) {
-            datePickerPopoverContent
-        }
 
         Button(role: .destructive, action: onDelete) {
             SettingsActionLabel(
@@ -94,23 +78,5 @@ struct CountdownEventSettingsRow: View {
             )
         }
         .buttonStyle(.plain)
-    }
-
-    private var datePickerPopoverContent: some View {
-        datePickerContent
-            .padding(16)
-            .frame(width: 360)
-            .fixedSize(horizontal: false, vertical: true)
-            .settingsPopoverAdaptation()
-    }
-
-    private var datePickerContent: some View {
-        DatePicker(
-            AppStrings.localized("settings.countdown.date"),
-            selection: dateBinding,
-            displayedComponents: .date
-        )
-        .datePickerStyle(.graphical)
-        .labelsHidden()
     }
 }

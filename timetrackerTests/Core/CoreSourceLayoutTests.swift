@@ -107,6 +107,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
+            "timetracker/Features/Settings/SettingsPomodoroSection.swift",
+            "timetracker/Features/Settings/SettingsPomodoroMinuteRows.swift",
+            "timetracker/Features/Settings/SettingsCountdownSection.swift",
+            "timetracker/Features/Settings/SettingsSyncSection.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift",
@@ -160,6 +164,26 @@ struct CoreSourceLayoutTests {
             let file = editorURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func settingsFilesStaySplitBySection() throws {
+        let root = try projectRootURL()
+        let settingsURL = root.appending(path: "timetracker/Features/Settings")
+        let focusedFiles = [
+            "SettingsSectionsViews.swift",
+            "SettingsDataSectionsViews.swift",
+            "SettingsPomodoroSection.swift",
+            "SettingsPomodoroMinuteRows.swift",
+            "SettingsCountdownSection.swift",
+            "SettingsSyncSection.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = settingsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
         }
     }
 

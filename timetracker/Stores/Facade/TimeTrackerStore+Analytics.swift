@@ -9,6 +9,10 @@ extension TimeTrackerStore {
         analyticsDomainStore.cachedSnapshot(for: range)
     }
 
+    func displayAnalyticsSnapshot(for request: AnalyticsSnapshotRequest) -> AnalyticsSnapshot {
+        cachedAnalyticsSnapshot(for: request.range) ?? .empty(range: request.range)
+    }
+
     func refreshAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) {
         var store = analyticsDomainStore
         store.refreshSnapshot(
@@ -23,6 +27,17 @@ extension TimeTrackerStore {
             now: now
         )
         analyticsDomainStore = store
+    }
+
+    func prewarmAnalyticsSnapshots(now: Date = Date()) {
+        for range in [AnalyticsRange.today, .week] where cachedAnalyticsSnapshot(for: range) == nil {
+            refreshAnalyticsSnapshot(for: range, now: now)
+        }
+    }
+
+    func prewarmDestinationCache(for destination: DesktopDestination, now: Date = Date()) {
+        guard destination == .analytics else { return }
+        prewarmAnalyticsSnapshots(now: now)
     }
 
     func refreshCachedAnalyticsSnapshots(now: Date = Date(), invalidatedIntervals: [DateInterval] = []) {

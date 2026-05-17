@@ -89,7 +89,7 @@ final class TimeTrackerStore: ObservableObject {
         }
     }
 
-    enum DesktopDestination: String, CaseIterable, Identifiable {
+    enum DesktopDestination: String, CaseIterable, Identifiable, Hashable {
         case today = "Today"
         case inbox = "Inbox"
         case tasks = "Tasks"

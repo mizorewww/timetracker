@@ -3,6 +3,7 @@ import SwiftUI
 
 struct AnalyticsView: View {
     @ObservedObject var store: TimeTrackerStore
+    var isActive = true
     @State private var range: AnalyticsRange = .today
     @State private var referenceDate = Date()
     @State private var now = Date()
@@ -20,11 +21,10 @@ struct AnalyticsView: View {
     }
 
     var body: some View {
-        let snapshotDate = range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)
-        let snapshot = store.analyticsSnapshot(for: range, now: snapshotDate)
+        let request = snapshotRequest
         AnalyticsContent(
             store: store,
-            snapshot: snapshot,
+            snapshot: store.displayAnalyticsSnapshot(for: request),
             range: $range,
             referenceDate: $referenceDate,
             now: now,
@@ -36,12 +36,32 @@ struct AnalyticsView: View {
         .phoneRootChrome(destination: .analytics, enabled: isCompactPhone)
         #endif
         .background(AppColors.background)
+        .task(id: request) {
+            refreshSnapshot(for: request)
+        }
+        .onChange(of: isActive) { _, active in
+            guard active else { return }
+            refreshSnapshot(for: snapshotRequest)
+        }
         .onReceive(analyticsRefreshTimer) { date in
+            guard isActive else { return }
             now = date
             if referenceDate > date {
                 referenceDate = date
             }
         }
+    }
+
+    private var snapshotRequest: AnalyticsSnapshotRequest {
+        AnalyticsSnapshotRequest(
+            range: range,
+            snapshotDate: range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)
+        )
+    }
+
+    private func refreshSnapshot(for request: AnalyticsSnapshotRequest) {
+        guard isActive else { return }
+        store.refreshAnalyticsSnapshot(for: request.range, now: request.snapshotDate)
     }
 }
 

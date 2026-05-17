@@ -101,6 +101,7 @@ struct HomeUIContractTests {
 
         #expect(destinationSource.contains("[.today, .inbox, .tasks, .pomodoro, .analytics, .settings]"))
         #expect(destinationSource.contains("return index / 4"))
+        #expect(phoneRoot.contains("PhoneDestinationDeck(store: store, selectedDestination: chrome.selectedDestination)"))
         #expect(phoneRoot.contains("PhonePagedBottomSelector("))
         #expect(phoneRoot.contains("destinations: TimeTrackerStore.DesktopDestination.phoneDestinations"))
         #expect(phoneRoot.contains("case .settings:"))

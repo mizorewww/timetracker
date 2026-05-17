@@ -37,6 +37,22 @@ struct CoreArchitectureBehaviorTests {
         #expect(settingsSceneSource.contains("default: return nil"))
     }
 
+    @Test
+    func analyticsViewsPreferCachedSnapshotsOutsideBody() throws {
+        let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let detailSource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailViews.swift")
+        let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift")
+
+        #expect(analyticsSource.contains("store.displayAnalyticsSnapshot(for: request)"))
+        #expect(analyticsSource.contains(".task(id: request)"))
+        #expect(analyticsSource.contains("guard isActive else { return }"))
+        #expect(analyticsSource.contains("store.analyticsSnapshot(for: range, now:") == false)
+        #expect(detailSource.contains("store.displayAnalyticsSnapshot(for: request)"))
+        #expect(detailSource.contains(".task(id: request)"))
+        #expect(storeSource.contains("func prewarmAnalyticsSnapshots"))
+        #expect(storeSource.contains("func prewarmDestinationCache"))
+    }
+
     @Test @MainActor
     func layoutPoliciesCentralizeResponsiveChoices() {
         #expect(HomeLayoutPolicy(width: 600).isCompact)

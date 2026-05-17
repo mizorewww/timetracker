@@ -214,6 +214,32 @@ struct TaskAnalyticsSnapshot {
     let rangeSegments: [TimeSegment]
 }
 
+struct AnalyticsSnapshotRequest: Hashable {
+    let range: AnalyticsRange
+    let snapshotDate: Date
+}
+
+extension AnalyticsSnapshot {
+    static func empty(range: AnalyticsRange) -> AnalyticsSnapshot {
+        AnalyticsSnapshot(
+            range: range,
+            overview: AnalyticsOverview(grossSeconds: 0, wallSeconds: 0, overlapSeconds: 0, pomodoroCount: 0, averageFocusSeconds: 0),
+            comparison: AnalyticsComparison(currentGrossSeconds: 0, previousGrossSeconds: 0, currentWallSeconds: 0, previousWallSeconds: 0),
+            rhythm: AnalyticsRhythm(activeDayCount: 0, dailyAverageGrossSeconds: 0, peakHour: nil, peakHourSeconds: 0, longestContinuousSeconds: 0, averageSegmentSeconds: 0, medianSegmentSeconds: 0, segmentCount: 0),
+            quality: AnalyticsQuality(overlapRatio: 0, switchCount: 0, shortSegmentCount: 0, shortSegmentRatio: 0, averageSegmentSeconds: 0, longestContinuousSeconds: 0),
+            insights: [],
+            daily: [],
+            todayActivity: [],
+            timeline: .empty,
+            taskBreakdown: [],
+            rootBreakdown: [],
+            categoryBreakdown: [],
+            overlaps: [],
+            rangeSegments: []
+        )
+    }
+}
+
 struct OverlapAnalyticsPoint: Identifiable {
     let start: Date
     let end: Date

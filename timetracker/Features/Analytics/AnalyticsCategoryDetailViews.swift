@@ -8,12 +8,11 @@ struct AnalyticsCategoryDetailView: View {
     let now: Date
 
     var body: some View {
-        let snapshotDate = range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)
-        let snapshot = store.analyticsSnapshot(for: range, now: snapshotDate)
+        let request = snapshotRequest
 
         List {
             AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: now)
-            categoryContent(snapshot: snapshot)
+            categoryContent(snapshot: store.displayAnalyticsSnapshot(for: request))
         }
         #if os(iOS)
         .listStyle(.insetGrouped)
@@ -30,6 +29,16 @@ struct AnalyticsCategoryDetailView: View {
         .transaction { transaction in
             transaction.animation = nil
         }
+        .task(id: request) {
+            store.refreshAnalyticsSnapshot(for: request.range, now: request.snapshotDate)
+        }
+    }
+
+    private var snapshotRequest: AnalyticsSnapshotRequest {
+        AnalyticsSnapshotRequest(
+            range: range,
+            snapshotDate: range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)
+        )
     }
 
     @ViewBuilder

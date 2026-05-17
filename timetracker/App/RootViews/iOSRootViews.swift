@@ -23,7 +23,7 @@ struct PhoneRootView: View {
     @State private var isKeyboardVisible = false
 
     var body: some View {
-        PhoneDestinationStack(store: store, destination: chrome.selectedDestination)
+        PhoneDestinationDeck(store: store, selectedDestination: chrome.selectedDestination)
             .environmentObject(chrome)
             .transaction { transaction in
                 transaction.animation = nil
@@ -56,9 +56,55 @@ struct PhoneRootView: View {
     }
 }
 
+private struct PhoneDestinationDeck: View {
+    @ObservedObject var store: TimeTrackerStore
+    let selectedDestination: TimeTrackerStore.DesktopDestination
+    @State private var cachedDestinations: Set<TimeTrackerStore.DesktopDestination> = [.today]
+    var body: some View {
+        ZStack {
+            ForEach(TimeTrackerStore.DesktopDestination.phoneDestinations) { destination in
+                if cachedDestinations.contains(destination) {
+                    PhoneDestinationStack(
+                        store: store,
+                        destination: destination,
+                        isActive: destination == selectedDestination
+                    )
+                    .opacity(destination == selectedDestination ? 1 : 0)
+                    .allowsHitTesting(destination == selectedDestination)
+                    .accessibilityHidden(destination != selectedDestination)
+                }
+            }
+        }
+        .onAppear {
+            cache(selectedDestination)
+        }
+        .onChange(of: selectedDestination) { _, destination in
+            cache(destination)
+            store.prewarmDestinationCache(for: destination)
+        }
+        .task {
+            await prewarmDestinations()
+        }
+    }
+
+    private func cache(_ destination: TimeTrackerStore.DesktopDestination) {
+        cachedDestinations.insert(destination)
+    }
+
+    private func prewarmDestinations() async {
+        for destination in TimeTrackerStore.DesktopDestination.phoneDestinations where !cachedDestinations.contains(destination) {
+            try? await Task.sleep(for: .milliseconds(140))
+            guard !Task.isCancelled else { return }
+            store.prewarmDestinationCache(for: destination)
+            cache(destination)
+        }
+    }
+}
+
 private struct PhoneDestinationStack: View {
     @ObservedObject var store: TimeTrackerStore
     let destination: TimeTrackerStore.DesktopDestination
+    let isActive: Bool
 
     var body: some View {
         NavigationStack {
@@ -72,7 +118,7 @@ private struct PhoneDestinationStack: View {
             case .pomodoro:
                 PomodoroView(store: store)
             case .analytics:
-                AnalyticsView(store: store)
+                AnalyticsView(store: store, isActive: isActive)
             case .settings:
                 SettingsView(store: store)
             }

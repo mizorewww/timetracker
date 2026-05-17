@@ -28,6 +28,8 @@ Use these links as the source of truth while refactoring:
 - [SwiftUI `Form`](https://developer.apple.com/documentation/swiftui/form) applies platform-appropriate styling to settings and data-entry controls.
 - [SwiftUI `LabeledContent`](https://developer.apple.com/documentation/swiftui/labeledcontent) aligns labels and value-bearing controls consistently, especially in forms.
 - [SwiftUI `ContentUnavailableView`](https://developer.apple.com/documentation/swiftui/contentunavailableview) is recommended for empty, error, and unavailable states.
+- [SwiftUI `Picker`](https://developer.apple.com/documentation/swiftui/picker) is the native control for selecting from a finite set of values.
+- [SwiftUI menu picker style](https://developer.apple.com/documentation/swiftui/pickerstyle/menu) presents a picker as a menu and Apple recommends it for more than five options.
 - [SwiftUI `Button`](https://developer.apple.com/documentation/swiftui/button/) is the native control for initiating an action, and its label describes the action.
 - [SwiftUI `ButtonStyle`](https://developer.apple.com/documentation/swiftui/buttonstyle) keeps standard platform button behavior while customizing appearance.
 - [SwiftUI `accessibilityAction(_:_:)]`](https://developer.apple.com/documentation/swiftui/view/accessibilityaction%28_%3A_%3A%29) adds actions that assistive technologies can invoke.

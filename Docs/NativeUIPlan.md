@@ -221,6 +221,64 @@ Before merging UI work:
 9. Are visual-only changes covered by a manual screenshot checklist rather than brittle source-string tests?
 10. Are user-facing strings localized in all three languages?
 
+## 2026-05-17 Native Migration Execution Plan
+
+This section is the detailed continuation plan for the SwiftUI modernization branch. When work resumes after context compaction, continue from this table and update the matching checklist in `Docs/SwiftUIModernizationChecklist-2026-05-17.md`.
+
+### Decision Rules
+
+- Prefer native controls for settings, forms, action rows, empty states, finite selections, text entry, navigation, and row actions.
+- Keep custom drawing only when it represents product-specific data visualization or interaction that native controls do not cover cleanly: Pomodoro timer face, iPhone bottom chrome, analytics timelines, activity distribution bars, and compact task visual badges.
+- Every migration must keep or improve accessibility labels, Dynamic Type behavior, keyboard support, VoiceOver actions, and Reduce Motion behavior.
+- Every migration must be independently revertible: one small behavior-preserving change, one focused test/update, then one commit.
+- Source-string tests may be used as temporary guardrails, but new behavior should prefer state, command, accessibility, or UI tests when practical.
+
+### Apple Documentation Anchors
+
+- SwiftUI `Form`: settings and inspectors should use platform-appropriate form styling.
+- SwiftUI `LabeledContent`: value-bearing controls in forms should align labels and controls consistently.
+- SwiftUI `Picker`: finite choices should use native picker controls instead of hand-built popovers or button lists.
+- SwiftUI `MenuPickerStyle.menu`: use menu style when there are more than five options.
+- SwiftUI `ContentUnavailableView`: empty, unavailable, and error states should use the system empty-state presentation.
+- SwiftUI `Button`, `Menu`, `contextMenu`, and `swipeActions`: row actions should use native action surfaces instead of gesture-only rows.
+
+### Migration Matrix
+
+| Area | Current Pattern | Native Target | Keep Custom? | Verification |
+| --- | --- | --- | --- | --- |
+| Settings empty rows | Hand-built icon/text `HStack` rows | Shared `SettingsUnavailableRow` backed by `ContentUnavailableView` | No | Source contract plus visual smoke in Settings |
+| Pomodoro minute values | Button opens custom popover/wheel/list | `Picker` with `.menu` in `Form` | No | Contract test rejects `.popover` and wheel/list helper |
+| Settings action rows | Shared row label with chevron | Keep only while it wraps native `Button`; consider `Label`-based row helper next | Temporary | Shared component contract and VoiceOver labels |
+| LLM model loading row | Custom status row with `ProgressView` | Keep compact progress row; consider native `Picker` once models exist | Temporary | Existing LLM source contract |
+| Countdown event editing | Native `TextField`, `DatePicker`, delete button | Keep native controls; replace empty row only | No for empty row | Settings contract and compile |
+| Task detail editor | Card-style editor using native fields | Future: move full editing into `Form` sheet on macOS/iOS where possible | Product-dependent | Task detail UI contract and iOS build |
+| Inbox suggestion row | Custom compact action surface | Keep for width-sensitive apply/discard workflow; ensure buttons are native | Yes, for compact layout | Existing Inbox UI contract and smallest-width screenshot |
+| Today cards | Repeated custom cards | Use `List`/`Section` where possible; keep metric cards only when they present dense dashboard data | Partial | Home UI contract plus screenshots |
+| Analytics charts | Swift Charts plus custom timeline/bar drawing | Keep custom drawing where chart semantics require it; use native empty states and legends | Yes | Analytics service tests and UI smoke |
+| Phone bottom chrome | Custom bottom destination selector | Keep as product-specific navigation chrome; no UIKit wrappers | Yes | Phone chrome source-layout tests and iOS build |
+
+### Execution Order
+
+1. Settings native pass:
+   - Replace empty Pomodoro/Countdown rows with `ContentUnavailableView`.
+   - Replace Pomodoro minute popover/list with native `Picker(.menu)`.
+   - Keep `Form`, `Section`, `Toggle`, `TextField`, `SecureField`, `DatePicker`, and `Picker` as the baseline settings language.
+   - Verify macOS target tests and generic iOS build.
+2. Source-contract reconciliation:
+   - Update stale Analytics, Inbox, and Phone source-string tests so they read split files and assert intended behavior, not obsolete file-local strings.
+   - Keep failing behavior test `TaskCategoryTests.taskTreeShowsEmptyCategories` separate from UI source-contract cleanup.
+3. HIG visual pass:
+   - Review Settings, Today, Tasks, Inbox, Analytics, Pomodoro in light and dark modes.
+   - Record screenshot or manual acceptance notes for macOS and compact iPhone.
+   - Fix only concrete issues: forced dark surfaces, clipped text, competing primary actions, insufficient tap targets, or duplicated custom controls.
+4. Performance evidence pass:
+   - Build Release.
+   - Run Instruments SwiftUI profiling on Today, Tasks search, Task Detail, Analytics, Settings, and Pomodoro.
+   - Only optimize code paths confirmed by Instruments or existing performance tests.
+5. Architecture pass:
+   - Move facade logic into domain stores/services only when touching the feature.
+   - Evaluate Observation migration as a dedicated branch-sized change, not as incidental cleanup.
+
 ## Manual Screenshot Checklist
 
 For each future UI polish round, capture or manually inspect:

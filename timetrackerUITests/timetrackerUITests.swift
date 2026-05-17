@@ -139,9 +139,29 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func openSection(_ tabTitle: String, sidebarIdentifier: String, in app: XCUIApplication) {
-        let identifiedElement = app.descendants(matching: .any)[sidebarIdentifier]
-        if identifiedElement.waitForExistence(timeout: 1) {
-            identifiedElement.firstMatch.tap()
+        if tapElement(identifier: sidebarIdentifier, in: app, timeout: 1) {
+            return
+        }
+
+        let rawDestination = sidebarIdentifier.replacingOccurrences(of: "sidebar.", with: "")
+        let phoneIdentifier = "phone.bottom.\(rawDestination)"
+        if tapElement(identifier: phoneIdentifier, in: app, timeout: 1) {
+            return
+        }
+
+        let bottomBar = app.descendants(matching: .any)["phone.bottomBar"].firstMatch
+        if bottomBar.waitForExistence(timeout: 1) {
+            bottomBar.swipeLeft()
+            if tapElement(identifier: phoneIdentifier, in: app, timeout: 1) {
+                return
+            }
+            bottomBar.swipeRight()
+            if tapElement(identifier: phoneIdentifier, in: app, timeout: 1) {
+                return
+            }
+        }
+
+        if tapElement(identifier: tabTitle, in: app, timeout: 1) {
             return
         }
 
@@ -150,17 +170,40 @@ final class timetrackerUITests: XCTestCase {
             return
         }
 
-        if app.buttons[tabTitle].waitForExistence(timeout: 1) {
-            app.buttons[tabTitle].firstMatch.tap()
-            return
-        }
-
-        if app.staticTexts[tabTitle].waitForExistence(timeout: 1) {
-            app.staticTexts[tabTitle].firstMatch.tap()
-            return
-        }
-
         XCTFail("Could not open section \(tabTitle)")
+    }
+
+    @MainActor
+    private func tapElement(identifier: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let preferredQueries = [
+            app.buttons[identifier].firstMatch,
+            app.cells[identifier].firstMatch,
+            app.otherElements[identifier].firstMatch,
+            app.staticTexts[identifier].firstMatch
+        ]
+
+        for element in preferredQueries {
+            if element.waitForExistence(timeout: timeout), element.isHittable {
+                element.tap()
+                return true
+            }
+        }
+
+        let matches = app.descendants(matching: .any).matching(identifier: identifier)
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            let count = min(matches.count, 24)
+            for index in 0..<count {
+                let element = matches.element(boundBy: index)
+                if element.exists, element.isHittable {
+                    element.tap()
+                    return true
+                }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+
+        return false
     }
 
     @MainActor

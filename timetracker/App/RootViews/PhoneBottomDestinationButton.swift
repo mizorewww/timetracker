@@ -48,6 +48,7 @@ struct PhoneBottomDestinationButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(destination.title)
+        .accessibilityIdentifier("phone.bottom.\(destination.rawValue)")
     }
 }
 #endif

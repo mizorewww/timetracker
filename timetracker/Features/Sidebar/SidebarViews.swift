@@ -25,7 +25,6 @@ struct SidebarView: View {
                 ForEach(destinations) { destination in
                     SidebarDestinationLabel(destination: destination, count: count(for: destination))
                         .tag(SidebarSelection.destination(destination))
-                        .accessibilityIdentifier("sidebar.\(destination.rawValue)")
                 }
             }
 
@@ -205,7 +204,9 @@ struct SidebarDestinationLabel: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
                     .background(.thinMaterial, in: Capsule())
-            }
+                }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("sidebar.\(destination.rawValue)")
     }
 }

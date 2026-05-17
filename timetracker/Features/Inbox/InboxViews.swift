@@ -66,6 +66,7 @@ struct InboxView: View {
         #endif
         .scrollContentBackground(.hidden)
         .background(AppColors.background.ignoresSafeArea())
+        .accessibilityIdentifier("inbox.view")
         .navigationTitle(AppStrings.inbox)
         #if os(iOS)
         .navigationBarTitleDisplayMode(isCompact ? .inline : .large)

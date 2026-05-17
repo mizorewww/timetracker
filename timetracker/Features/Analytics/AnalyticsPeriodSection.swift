@@ -63,6 +63,7 @@ struct AnalyticsPeriodSection: View {
         } footer: {
             Text(AnalyticsPeriodText.title(for: range, date: referenceDate))
         }
+        .accessibilityIdentifier("analytics.periodControl")
     }
 
     private func movePeriod(by value: Int) {

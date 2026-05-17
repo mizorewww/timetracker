@@ -60,6 +60,7 @@ struct PhonePagedBottomSelector: View {
         .frame(height: chrome.isBottomBarCollapsed ? PhoneRootChromeMetrics.collapsedIndicatorSize : PhoneRootChromeMetrics.bottomBarExpandedHeight, alignment: .bottomLeading)
         .padding(.horizontal, PhoneRootChromeMetrics.bottomBarSidePadding)
         .padding(.bottom, PhoneRootChromeMetrics.bottomBarBottomPadding)
+        .accessibilityIdentifier("phone.bottomBar")
         .animation(modeAnimation, value: chrome.isBottomBarCollapsed)
     }
 

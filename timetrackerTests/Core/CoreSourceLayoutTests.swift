@@ -37,6 +37,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Models/AnalyticsReadModels.swift",
             "timetracker/Models/SyncFeedbackModels.swift",
             "timetracker/Services/Analytics/AnalyticsEngine.swift",
+            "timetracker/Services/Analytics/TimelineLayoutLaneHeap.swift",
             "timetracker/Services/Analytics/TimelineLayoutModels.swift",
             "timetracker/Services/Analytics/TimelineAxisCompression.swift",
             "timetracker/Services/Checklist/ChecklistDraftService.swift",
@@ -314,6 +315,7 @@ struct CoreSourceLayoutTests {
         let analyticsURL = root.appending(path: "timetracker/Services/Analytics")
         let focusedFiles = [
             "TimelineLayoutEngine.swift",
+            "TimelineLayoutLaneHeap.swift",
             "TimelineLayoutModels.swift",
             "TimelineAxisCompression.swift",
             "HourStackLayoutEngine.swift",

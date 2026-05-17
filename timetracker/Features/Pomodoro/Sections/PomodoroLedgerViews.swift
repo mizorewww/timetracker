@@ -37,10 +37,10 @@ private struct PomodoroRecentRunsList: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(runs.enumerated(), id: \.element.id) { index, run in
+            ForEach(runs) { run in
                 PomodoroRunRow(store: store, run: run)
 
-                if index < runs.count - 1 {
+                if run.id != runs.last?.id {
                     Divider()
                 }
             }

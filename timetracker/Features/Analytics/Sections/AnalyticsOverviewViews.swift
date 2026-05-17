@@ -238,6 +238,8 @@ struct AnalyticsOverlapContent: View {
     let overlaps: [OverlapAnalyticsPoint]
 
     var body: some View {
+        let visibleOverlaps = overlaps.prefix(6)
+
         VStack(spacing: 0) {
             if overlaps.isEmpty {
                 EmptyStateRow(
@@ -245,9 +247,9 @@ struct AnalyticsOverlapContent: View {
                     icon: "rectangle.2.swap"
                 )
             } else {
-                ForEach(overlaps.prefix(6).enumerated(), id: \.element.id) { index, overlap in
+                ForEach(visibleOverlaps) { overlap in
                     OverlapRow(overlap: overlap)
-                    if index < min(overlaps.count, 6) - 1 {
+                    if overlap.id != visibleOverlaps.last?.id {
                         Divider()
                     }
                 }

@@ -94,7 +94,7 @@ final class LiveActivityCoordinator {
 
 private extension TimeSegment {
     var titleSnapshotFallback: String {
-        AppStrings.activeTimers
+        AppStrings.localized("home.activeTimers")
     }
 }
 

@@ -1,7 +1,7 @@
 import Foundation
 import OSLog
 
-enum PerformanceSignpost {
+nonisolated enum PerformanceSignpost {
     private static let signposter = OSSignposter(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
         category: "Performance"

@@ -1,6 +1,6 @@
 import Foundation
 
-struct WatchTimerCommand: Codable, Equatable, Identifiable {
+struct WatchTimerCommand: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var type: WatchTimerCommandType
     var taskID: UUID?
@@ -9,12 +9,12 @@ struct WatchTimerCommand: Codable, Equatable, Identifiable {
     var deviceID: String
 }
 
-enum WatchTimerCommandType: String, Codable, Equatable {
+enum WatchTimerCommandType: String, Codable, Equatable, Sendable {
     case startTask
     case stopSegment
 }
 
-enum WatchCommandProcessingResult: Equatable {
+enum WatchCommandProcessingResult: Equatable, Sendable {
     case started(UUID)
     case stopped(UUID)
     case duplicate(UUID)

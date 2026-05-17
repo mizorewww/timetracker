@@ -1,11 +1,11 @@
 import Foundation
 
-struct TimelineLaneAvailability {
+nonisolated struct TimelineLaneAvailability {
     let lane: Int
     let endedAt: Date
 }
 
-struct MinHeap<Element> {
+nonisolated struct MinHeap<Element> {
     private var elements: [Element] = []
     private let sort: (Element, Element) -> Bool
 

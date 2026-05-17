@@ -1,6 +1,6 @@
 import Foundation
 
-enum TimelineLayoutEngine {
+nonisolated enum TimelineLayoutEngine {
     static func layout(
         items: [TimelineLayoutItem],
         dayInterval: DateInterval,

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct WidthLayoutPolicy {
+nonisolated struct WidthLayoutPolicy {
     let width: CGFloat
 
     var isNarrow: Bool {
@@ -8,7 +8,7 @@ struct WidthLayoutPolicy {
     }
 }
 
-struct HomeLayoutPolicy {
+nonisolated struct HomeLayoutPolicy {
     private let widthPolicy: WidthLayoutPolicy
 
     init(width: CGFloat) {
@@ -36,7 +36,7 @@ struct HomeLayoutPolicy {
     }
 }
 
-struct SizeClassLayoutPolicy {
+nonisolated struct SizeClassLayoutPolicy {
     let horizontalSizeClass: UserInterfaceSizeClass?
 
     var isCompactPhone: Bool {
@@ -44,7 +44,7 @@ struct SizeClassLayoutPolicy {
     }
 }
 
-struct AnalyticsLayoutPolicy {
+nonisolated struct AnalyticsLayoutPolicy {
     private let sizeClassPolicy: SizeClassLayoutPolicy
 
     init(horizontalSizeClass: UserInterfaceSizeClass?) {
@@ -56,7 +56,7 @@ struct AnalyticsLayoutPolicy {
     }
 }
 
-struct InboxLayoutPolicy {
+nonisolated struct InboxLayoutPolicy {
     private let sizeClassPolicy: SizeClassLayoutPolicy
 
     init(horizontalSizeClass: UserInterfaceSizeClass?) {
@@ -131,7 +131,7 @@ struct InboxLayoutPolicy {
     }
 }
 
-struct TaskListLayoutPolicy {
+nonisolated struct TaskListLayoutPolicy {
     private let sizeClassPolicy: SizeClassLayoutPolicy
 
     init(horizontalSizeClass: UserInterfaceSizeClass?) {
@@ -147,7 +147,7 @@ struct TaskListLayoutPolicy {
     }
 }
 
-struct PomodoroLayoutPolicy {
+nonisolated struct PomodoroLayoutPolicy {
     private let sizeClassPolicy: SizeClassLayoutPolicy
 
     init(horizontalSizeClass: UserInterfaceSizeClass?) {
@@ -159,7 +159,7 @@ struct PomodoroLayoutPolicy {
     }
 }
 
-struct SplitColumnLayoutPolicy {
+nonisolated struct SplitColumnLayoutPolicy {
     var sidebar: ColumnWidth = ColumnWidth(min: 220, ideal: 240, max: 300)
     var detail: ColumnWidth = ColumnWidth(min: 520, ideal: 760, max: nil)
 
@@ -174,7 +174,7 @@ struct SplitColumnLayoutPolicy {
     )
 }
 
-struct ColumnWidth: Equatable {
+nonisolated struct ColumnWidth: Equatable {
     let min: CGFloat
     let ideal: CGFloat
     let max: CGFloat?

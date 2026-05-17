@@ -21,6 +21,12 @@ struct QuickStartEditorSheet: View {
             .filter { $0.deletedAt == nil && $0.status != .archived }
     }
 
+    private var pinnedRows: [QuickStartPinnedTaskPlacement] {
+        pinnedTasks.enumerated().map { index, task in
+            QuickStartPinnedTaskPlacement(task: task, order: index + 1)
+        }
+    }
+
     private func isPinned(_ task: TaskNode) -> Bool {
         selectedIDs.contains(task.id)
     }
@@ -48,8 +54,12 @@ struct QuickStartEditorSheet: View {
                         Label(AppStrings.localized("quickStart.auto"), systemImage: "clock.arrow.circlepath")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(pinnedTasks.enumerated(), id: \.element.id) { index, task in
-                            QuickStartPinnedTaskRow(task: task, path: store.path(for: task), order: index + 1)
+                        ForEach(pinnedRows) { placement in
+                            QuickStartPinnedTaskRow(
+                                task: placement.task,
+                                path: store.path(for: placement.task),
+                                order: placement.order
+                            )
                         }
                         .onDelete { offsets in
                             selectedIDs.remove(atOffsets: offsets)
@@ -104,6 +114,15 @@ struct QuickStartEditorSheet: View {
             }
         }
         .platformSheetFrame(width: 420, height: 520)
+    }
+}
+
+private struct QuickStartPinnedTaskPlacement: Identifiable {
+    let task: TaskNode
+    let order: Int
+
+    var id: UUID {
+        task.id
     }
 }
 

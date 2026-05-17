@@ -238,6 +238,7 @@ This section is the detailed continuation plan for the SwiftUI modernization bra
 
 - SwiftUI `Form`: settings and inspectors should use platform-appropriate form styling.
 - SwiftUI `LabeledContent`: value-bearing controls in forms should align labels and controls consistently.
+- SwiftUI `DatePicker`: date values in settings should use the system date picker before introducing custom calendar popovers.
 - SwiftUI `Picker`: finite choices should use native picker controls instead of hand-built popovers or button lists.
 - SwiftUI `MenuPickerStyle.menu`: use menu style when there are more than five options.
 - SwiftUI `ContentUnavailableView`: empty, unavailable, and error states should use the system empty-state presentation.
@@ -253,7 +254,7 @@ This section is the detailed continuation plan for the SwiftUI modernization bra
 | Pomodoro minute values | Button opens custom popover/wheel/list | `Picker` with `.menu` in `Form` | No | Contract test rejects `.popover` and wheel/list helper |
 | Settings action rows | Shared row label with chevron | Keep only while it wraps native `Button`; consider `Label`-based row helper next | Temporary | Shared component contract and VoiceOver labels |
 | LLM model loading row | Custom status row with `ProgressView` | Keep compact progress row; consider native `Picker` once models exist | Temporary | Existing LLM source contract |
-| Countdown event editing | Native `TextField`, `DatePicker`, delete button | Keep native controls; replace empty row only | No for empty row | Settings contract and compile |
+| Countdown event editing | Native title field plus formerly custom date button/popover | Native `TextField`, compact `DatePicker`, and delete button in the settings form | No | `countdownDateSettingsUseNativeDatePickerRow`, full macOS test, and iOS build |
 | Task detail editor | Card-style editor using native fields | Future: move full editing into `Form` sheet on macOS/iOS where possible | Product-dependent | Task detail UI contract and iOS build |
 | Inbox suggestion row | Custom compact action surface | Keep for width-sensitive apply/discard workflow; ensure buttons are native | Yes, for compact layout | Existing Inbox UI contract and smallest-width screenshot |
 | Today cards | Repeated custom cards | Use `List`/`Section` where possible; keep metric cards only when they present dense dashboard data | Partial | Home UI contract plus screenshots |
@@ -268,11 +269,14 @@ Settings stays in the bottom model because it is a primary app surface, it needs
 
 Refactor rule: keep the custom bottom chrome, keep Settings as a bottom destination, and improve the component itself. Preferred improvements are stable accessibility identifiers for every destination, clearer page indicators, stronger Reduce Motion behavior, preloading or caching destination state where profiling proves benefit, and tighter source-layout boundaries. Do not move Settings to Today unless the product navigation model changes explicitly. If the roadmap later chooses native-only navigation, evaluate `TabView` overflow behavior, `TabSection`, and iPad sidebar conversion as a separate information-architecture change rather than a drive-by refactor.
 
+Swift 6 compatibility note: bottom chrome may still receive internal source maintenance, such as replacing direct `ForEach(...enumerated())` with index-based iteration for deployment-target compatibility. That is not a navigation-model change and must not be used as a reason to replace the paged selector or move Settings.
+
 ### Execution Order
 
 1. Settings native pass:
    - Replace empty Pomodoro/Countdown rows with `ContentUnavailableView`.
    - Replace Pomodoro minute popover/list with native `Picker(.menu)`.
+   - Replace Countdown date button/popover rows with native compact `DatePicker`.
    - Keep `Form`, `Section`, `Toggle`, `TextField`, `SecureField`, `DatePicker`, and `Picker` as the baseline settings language.
    - Verify macOS target tests and generic iOS build.
 2. Source-contract reconciliation:

@@ -1,6 +1,6 @@
 import Foundation
 
-struct WatchStateSnapshot: Codable, Equatable {
+struct WatchStateSnapshot: Codable, Equatable, Sendable {
     var generatedAt: Date
     var todayGrossSeconds: Int
     var todayWallSeconds: Int
@@ -58,7 +58,7 @@ struct WatchStateSnapshot: Codable, Equatable {
     }
 }
 
-struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable {
+struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var taskID: UUID
     var title: String
@@ -68,7 +68,7 @@ struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable {
     var iconName: String?
 }
 
-struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable {
+struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Sendable {
     var taskID: UUID
     var title: String
     var path: String

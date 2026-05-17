@@ -36,8 +36,7 @@ final class WatchConnectivityBridge: NSObject {
         session.sendMessage(WatchConnectivityPayloadCodec.encode(state: snapshot), replyHandler: nil)
     }
 
-    private func handle(_ payload: [String: Any]) {
-        guard let command = WatchConnectivityPayloadCodec.decodeCommand(from: payload) else { return }
+    private func handle(_ command: WatchTimerCommand) {
         commandHandler?(command)
     }
 }
@@ -59,8 +58,9 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         _ session: WCSession,
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
-        Task { @MainActor [weak self] in
-            self?.handle(userInfo)
+        guard let command = WatchConnectivityPayloadCodec.decodeCommand(from: userInfo) else { return }
+        Task { @MainActor [weak self, command] in
+            self?.handle(command)
         }
     }
 
@@ -68,8 +68,9 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         _ session: WCSession,
         didReceiveMessage message: [String: Any]
     ) {
-        Task { @MainActor [weak self] in
-            self?.handle(message)
+        guard let command = WatchConnectivityPayloadCodec.decodeCommand(from: message) else { return }
+        Task { @MainActor [weak self, command] in
+            self?.handle(command)
         }
     }
 
@@ -78,10 +79,14 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        Task { @MainActor [weak self] in
-            self?.handle(message)
-            replyHandler(["received": true])
+        guard let command = WatchConnectivityPayloadCodec.decodeCommand(from: message) else {
+            replyHandler(["received": false])
+            return
         }
+        Task { @MainActor [weak self, command] in
+            self?.handle(command)
+        }
+        replyHandler(["received": true])
     }
 }
 #endif

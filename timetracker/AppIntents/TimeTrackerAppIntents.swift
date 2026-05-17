@@ -3,9 +3,9 @@ import Foundation
 import SwiftData
 
 struct AddInboxItemIntent: AppIntent {
-    static var title: LocalizedStringResource = "Add Inbox Item"
-    static var description = IntentDescription("Capture a loose item in Time Tracker Inbox.")
-    static var openAppWhenRun = false
+    static let title: LocalizedStringResource = "Add Inbox Item"
+    static let description = IntentDescription("Capture a loose item in Time Tracker Inbox.")
+    static let openAppWhenRun = false
 
     @Parameter(title: "Title")
     var titleText: String
@@ -19,9 +19,9 @@ struct AddInboxItemIntent: AppIntent {
 }
 
 struct StartTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Start Timer"
-    static var description = IntentDescription("Start tracking time for a Time Tracker task.")
-    static var openAppWhenRun = false
+    static let title: LocalizedStringResource = "Start Timer"
+    static let description = IntentDescription("Start tracking time for a Time Tracker task.")
+    static let openAppWhenRun = false
 
     @Parameter(title: "Task")
     var task: TaskNodeAppEntity
@@ -40,9 +40,9 @@ struct StartTimerIntent: AppIntent {
 }
 
 struct StopTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Stop Timer"
-    static var description = IntentDescription("Stop the current Time Tracker timer.")
-    static var openAppWhenRun = false
+    static let title: LocalizedStringResource = "Stop Timer"
+    static let description = IntentDescription("Stop the current Time Tracker timer.")
+    static let openAppWhenRun = false
 
     @MainActor
     func perform() async throws -> some IntentResult {
@@ -87,8 +87,8 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
 }
 
 struct TaskNodeAppEntity: AppEntity, Identifiable {
-    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Task")
-    static var defaultQuery = TaskNodeEntityQuery()
+    static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Task")
+    static let defaultQuery = TaskNodeEntityQuery()
 
     let id: String
     let title: String

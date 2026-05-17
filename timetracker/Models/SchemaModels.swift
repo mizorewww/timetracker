@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 enum TimeTrackerSchemaV1: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 0, 0)
+    static let versionIdentifier = Schema.Version(1, 0, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -16,7 +16,7 @@ enum TimeTrackerSchemaV1: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV2: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 1, 0)
+    static let versionIdentifier = Schema.Version(1, 1, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -31,7 +31,7 @@ enum TimeTrackerSchemaV2: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV3: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 2, 0)
+    static let versionIdentifier = Schema.Version(1, 2, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -48,7 +48,7 @@ enum TimeTrackerSchemaV3: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV4: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 3, 0)
+    static let versionIdentifier = Schema.Version(1, 3, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -67,7 +67,7 @@ enum TimeTrackerSchemaV4: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV5: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 4, 0)
+    static let versionIdentifier = Schema.Version(1, 4, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -86,7 +86,7 @@ enum TimeTrackerSchemaV5: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV6: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 5, 0)
+    static let versionIdentifier = Schema.Version(1, 5, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -106,7 +106,7 @@ enum TimeTrackerSchemaV6: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV7: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 6, 0)
+    static let versionIdentifier = Schema.Version(1, 6, 0)
 
     static var models: [any PersistentModel.Type] {
         [
@@ -129,7 +129,7 @@ enum TimeTrackerSchemaV7: VersionedSchema {
 }
 
 enum TimeTrackerSchemaV8: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 7, 0)
+    static let versionIdentifier = Schema.Version(1, 7, 0)
 
     static var models: [any PersistentModel.Type] {
         [

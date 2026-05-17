@@ -84,21 +84,29 @@ extension WatchAppStore: WCSessionDelegate {
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {
-        Task { @MainActor in
-            isReachable = session.isReachable
-            applyApplicationContext(session.receivedApplicationContext)
+        let isReachable = session.isReachable
+        let snapshot = WatchConnectivityPayloadCodec.decodeState(from: session.receivedApplicationContext)
+        Task { @MainActor [weak self, snapshot] in
+            self?.isReachable = isReachable
+            if let snapshot {
+                self?.snapshot = snapshot
+            }
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
-        Task { @MainActor in
-            isReachable = session.isReachable
+        let isReachable = session.isReachable
+        Task { @MainActor [weak self] in
+            self?.isReachable = isReachable
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        Task { @MainActor in
-            applyApplicationContext(applicationContext)
+        let snapshot = WatchConnectivityPayloadCodec.decodeState(from: applicationContext)
+        Task { @MainActor [weak self, snapshot] in
+            if let snapshot {
+                self?.snapshot = snapshot
+            }
         }
     }
 }

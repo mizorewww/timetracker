@@ -9,19 +9,19 @@ enum AppCloudSync {
         category: "CloudSync"
     )
 
-    static let containerIdentifier = "iCloud.me.mezorewww.timetracker"
-    static let enabledKey = "TimeTrackerCloudSyncEnabled"
-    static let modeKey = "TimeTrackerPersistenceMode"
-    static let errorKey = "TimeTrackerPersistenceError"
-    static let accountStatusKey = "TimeTrackerCloudAccountStatus"
-    static let pendingCloudUploadResetKey = "TimeTrackerPendingCloudUploadReset"
-    static let pendingCloudDownloadResetKey = "TimeTrackerPendingCloudDownloadReset"
-    static let modeICloud = "iCloud"
-    static let modeLocal = "Local"
-    static let modeLocalFallback = "Local fallback"
-    static let modeInMemoryFallback = "In-memory fallback"
-    static let modeUITest = "UI Test"
-    static let modeDemoData = "Demo data"
+    nonisolated static let containerIdentifier = "iCloud.me.mezorewww.timetracker"
+    nonisolated static let enabledKey = "TimeTrackerCloudSyncEnabled"
+    nonisolated static let modeKey = "TimeTrackerPersistenceMode"
+    nonisolated static let errorKey = "TimeTrackerPersistenceError"
+    nonisolated static let accountStatusKey = "TimeTrackerCloudAccountStatus"
+    nonisolated static let pendingCloudUploadResetKey = "TimeTrackerPendingCloudUploadReset"
+    nonisolated static let pendingCloudDownloadResetKey = "TimeTrackerPendingCloudDownloadReset"
+    nonisolated static let modeICloud = "iCloud"
+    nonisolated static let modeLocal = "Local"
+    nonisolated static let modeLocalFallback = "Local fallback"
+    nonisolated static let modeInMemoryFallback = "In-memory fallback"
+    nonisolated static let modeUITest = "UI Test"
+    nonisolated static let modeDemoData = "Demo data"
 
     static var isEnabled: Bool {
         if UserDefaults.standard.object(forKey: enabledKey) == nil {

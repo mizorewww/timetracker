@@ -474,6 +474,35 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
+    func productionForEachAvoidsEnumeratedSequences() throws {
+        let root = try projectRootURL()
+        let sourceRoots = [
+            "timetracker",
+            "timetrackerWatchApp",
+            "timetrackerWidgetExtension",
+            "timetrackerLiveActivityExtension",
+            "SharedLiveActivity"
+        ]
+
+        for sourceRoot in sourceRoots {
+            let sourceURL = root.appending(path: sourceRoot)
+            guard let enumerator = FileManager.default.enumerator(at: sourceURL, includingPropertiesForKeys: nil) else {
+                continue
+            }
+
+            for case let fileURL as URL in enumerator where fileURL.pathExtension == "swift" {
+                let source = try String(contentsOf: fileURL, encoding: .utf8)
+                for line in source.split(separator: "\n") {
+                    #expect(
+                        line.contains("ForEach(") == false || line.contains(".enumerated()") == false,
+                        "\(fileURL.path) feeds an enumerated sequence directly into ForEach"
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     func performanceSignpostsCoverRefreshAnalyticsRollupAndTimelineBoundaries() throws {
         let lifecycle = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift")
         let coordinator = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")

@@ -30,7 +30,7 @@ enum AppStrings {
     static let grossTime = localized("metric.grossTime")
     static let todayTracked = localized("metric.todayTracked")
 
-    static func localized(_ key: String) -> String {
+    nonisolated static func localized(_ key: String) -> String {
         NSLocalizedString(key, comment: "")
     }
 }

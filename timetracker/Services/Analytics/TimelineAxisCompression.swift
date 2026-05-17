@@ -1,6 +1,6 @@
 import Foundation
 
-struct TimelineAxisCompression: Equatable {
+nonisolated struct TimelineAxisCompression: Equatable {
     let displayInterval: DateInterval
     let omittedGaps: [TimelineOmittedGap]
     let compressedDuration: TimeInterval

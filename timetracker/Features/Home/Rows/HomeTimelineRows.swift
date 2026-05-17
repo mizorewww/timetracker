@@ -138,10 +138,8 @@ struct TimelineRow: View {
     }
 
     private var timeRangeText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let start = formatter.string(from: segment.startedAt)
-        let end = segment.endedAt.map { formatter.string(from: $0) } ?? AppStrings.localized("common.now")
+        let start = TimeDisplayFormatter.hourMinute(segment.startedAt)
+        let end = segment.endedAt.map { TimeDisplayFormatter.hourMinute($0) } ?? AppStrings.localized("common.now")
         return "\(start) - \(end)"
     }
 }

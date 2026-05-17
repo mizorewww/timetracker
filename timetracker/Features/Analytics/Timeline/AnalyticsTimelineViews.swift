@@ -41,9 +41,10 @@ struct OverlappingTimelineContent: View {
                 Divider()
 
                 VStack(spacing: 0) {
+                    let lastEntryID = laneEntries.last?.id
                     ForEach(laneEntries) { entry in
                         timelineLegendRow(entry)
-                        if entry.id != laneEntries.last?.id {
+                        if entry.id != lastEntryID {
                             Divider()
                         }
                     }

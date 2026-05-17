@@ -83,8 +83,6 @@ extension OverlappingTimelineContent {
     }
 
     func shortRange(_ entry: AnalyticsTimelineEntry) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return "\(formatter.string(from: entry.startedAt))-\(formatter.string(from: entry.endedAt))"
+        "\(TimeDisplayFormatter.hourMinute(entry.startedAt))-\(TimeDisplayFormatter.hourMinute(entry.endedAt))"
     }
 }

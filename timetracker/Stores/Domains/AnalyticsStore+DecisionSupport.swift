@@ -539,8 +539,13 @@ private extension AnalyticsStore {
         now: Date
     ) -> [AnalyticsGroupBreakdownPoint] {
         let childrenByParentID = Dictionary(grouping: tasks.filter { $0.deletedAt == nil }, by: \.parentID)
+        let boundedByTaskID = Dictionary(
+            grouping: boundedSegments(segments, in: interval, taskIDs: taskIDs, now: now),
+            by: { $0.segment.taskID }
+        )
+        var subtreeIDsByTaskID: [UUID: Set<UUID>] = [:]
         var points: [AnalyticsGroupBreakdownPoint] = []
-        let directItems = boundedSegments(segments, in: interval, taskIDs: [task.id], now: now)
+        let directItems = boundedByTaskID[task.id] ?? []
         if !directItems.isEmpty {
             points.append(
                 groupPoint(
@@ -556,8 +561,15 @@ private extension AnalyticsStore {
         }
 
         for child in childrenByParentID[task.id] ?? [] {
-            let childIDs = taskAndDescendantIDs(for: child.id, childrenByParentID: childrenByParentID).intersection(taskIDs)
-            let items = boundedSegments(segments, in: interval, taskIDs: childIDs, now: now)
+            let childIDs: Set<UUID>
+            if let cached = subtreeIDsByTaskID[child.id] {
+                childIDs = cached.intersection(taskIDs)
+            } else {
+                let calculated = taskAndDescendantIDs(for: child.id, childrenByParentID: childrenByParentID)
+                subtreeIDsByTaskID[child.id] = calculated
+                childIDs = calculated.intersection(taskIDs)
+            }
+            let items = childIDs.flatMap { boundedByTaskID[$0] ?? [] }
             guard !items.isEmpty else { continue }
             points.append(
                 groupPoint(

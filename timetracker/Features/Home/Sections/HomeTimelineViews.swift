@@ -8,12 +8,14 @@ struct ActiveTimersSection: View {
             SectionTitle(title: AppStrings.activeTimers)
 
             VStack(spacing: 0) {
-                if store.activeSegments.isEmpty {
+                let activeSegments = store.activeSegments
+                let lastActiveSegmentID = activeSegments.last?.id
+                if activeSegments.isEmpty {
                     EmptyStateRow(title: AppStrings.noActiveTimers, icon: "timer")
                 } else {
-                    ForEach(store.activeSegments, id: \.id) { segment in
+                    ForEach(activeSegments, id: \.id) { segment in
                         ActiveTimerRow(store: store, segment: segment)
-                        if segment.id != store.activeSegments.last?.id {
+                        if segment.id != lastActiveSegmentID {
                             Divider()
                         }
                     }
@@ -33,12 +35,14 @@ struct TimelineSection: View {
             SectionTitle(title: AppStrings.todayTimeline)
 
             VStack(spacing: 0) {
-                if store.timelineSegments.isEmpty {
+                let timelineSegments = store.timelineSegments
+                let lastTimelineSegmentID = timelineSegments.last?.id
+                if timelineSegments.isEmpty {
                     EmptyStateRow(title: AppStrings.noTodaySegments, icon: "clock")
                 } else {
-                    ForEach(store.timelineSegments, id: \.id) { segment in
+                    ForEach(timelineSegments, id: \.id) { segment in
                         TimelineRow(store: store, segment: segment)
-                        if segment.id != store.timelineSegments.last?.id {
+                        if segment.id != lastTimelineSegmentID {
                             Divider().padding(.leading, 18)
                         }
                     }

@@ -92,10 +92,10 @@ extension AnalyticsStore {
             now: now
         )
         let comparison = comparison(segments: allSegments, range: range, now: now, calendar: calendar)
-        let rhythm = rhythm(segments: allSegments, range: range, now: now, calendar: calendar)
-        let quality = quality(segments: allSegments, range: range, now: now, calendar: calendar)
+        let rhythm = rhythm(segments: rangeSegments, range: range, now: now, calendar: calendar)
+        let quality = quality(segments: rangeSegments, range: range, now: now, calendar: calendar)
         let rootBreakdown = rootBreakdown(
-            segments: allSegments,
+            segments: rangeSegments,
             tasks: tasks,
             sessions: sessions,
             taskPathByID: taskPathByID,
@@ -104,7 +104,7 @@ extension AnalyticsStore {
             calendar: calendar
         )
         let categoryBreakdown = categoryBreakdown(
-            segments: allSegments,
+            segments: rangeSegments,
             tasks: tasks,
             taskCategories: taskCategories,
             taskCategoryAssignments: taskCategoryAssignments,

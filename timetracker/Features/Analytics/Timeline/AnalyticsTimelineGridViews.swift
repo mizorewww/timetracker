@@ -135,9 +135,7 @@ extension OverlappingTimelineContent {
     }
 
     func hourLabel(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        TimeDisplayFormatter.hourMinute(date)
     }
 
     func omittedGapText(_ gap: TimelineOmittedGap) -> String {

@@ -147,10 +147,6 @@ struct OverlapRow: View {
     }
 
     private var timeRangeText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd HH:mm"
-        let endFormatter = DateFormatter()
-        endFormatter.dateFormat = "HH:mm"
-        return "\(formatter.string(from: overlap.start)) - \(endFormatter.string(from: overlap.end))"
+        "\(TimeDisplayFormatter.monthDayHourMinute(overlap.start)) - \(TimeDisplayFormatter.hourMinute(overlap.end))"
     }
 }

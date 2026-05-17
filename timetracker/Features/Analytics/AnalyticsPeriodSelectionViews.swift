@@ -84,9 +84,7 @@ enum AnalyticsPeriodText {
             let label = DateFormatter.localizedString(from: start, dateStyle: .medium, timeStyle: .none)
             return String(format: AppStrings.localized("analytics.period.weekOfFormat"), label)
         case .month:
-            let formatter = DateFormatter()
-            formatter.setLocalizedDateFormatFromTemplate("MMMM y")
-            return formatter.string(from: date)
+            return date.formatted(.dateTime.month(.wide).year())
         }
     }
 }

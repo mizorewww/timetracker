@@ -16,8 +16,9 @@ struct TaskStore {
         let fetchedTasks = try repository.tasks(ids: taskIDs).deduplicatedByID()
         let fetchedTaskIDs = Set(fetchedTasks.map(\.id))
         let missingTaskIDs = taskIDs.subtracting(fetchedTaskIDs)
+        let childrenByParentID = Dictionary(grouping: tasks, by: \.parentID)
         let removedTaskIDs = missingTaskIDs.reduce(into: Set<UUID>()) { result, taskID in
-            result.formUnion(taskAndDescendantIDs(for: taskID))
+            result.formUnion(taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID))
         }
         let replacedTaskIDs = taskIDs.union(removedTaskIDs)
 
@@ -28,14 +29,16 @@ struct TaskStore {
         categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
     }
 
-    private func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
+    private func taskAndDescendantIDs(
+        for taskID: UUID,
+        childrenByParentID: [UUID?: [TaskNode]],
+        visited: Set<UUID> = []
+    ) -> Set<UUID> {
         guard !visited.contains(taskID) else { return [] }
         let nextVisited = visited.union([taskID])
-        let childIDs = tasks
-            .filter { $0.parentID == taskID }
-            .reduce(into: Set<UUID>()) { result, child in
-                result.formUnion(taskAndDescendantIDs(for: child.id, visited: nextVisited))
-            }
+        let childIDs = (childrenByParentID[taskID] ?? []).reduce(into: Set<UUID>()) { result, child in
+            result.formUnion(taskAndDescendantIDs(for: child.id, childrenByParentID: childrenByParentID, visited: nextVisited))
+        }
         return childIDs.union([taskID])
     }
 

@@ -283,6 +283,24 @@ enum DurationFormatter {
     }
 }
 
+enum TimeDisplayFormatter {
+    nonisolated static func hourMinute(_ date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+    }
+
+    nonisolated static func monthDayHourMinute(_ date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.month, .day, .hour, .minute], from: date)
+        return String(
+            format: "%02d/%02d %02d:%02d",
+            components.month ?? 0,
+            components.day ?? 0,
+            components.hour ?? 0,
+            components.minute ?? 0
+        )
+    }
+}
+
 enum DeviceIdentity {
     nonisolated static let current: String = {
         let storageKey = "TimeTrackerDeviceID"

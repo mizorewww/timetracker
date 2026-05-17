@@ -13,17 +13,15 @@ struct HourTaskActivityService {
             ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86_400)
         let taskByID = tasks.latestByID()
         let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
+        let secondsByHourAndTaskID = secondsByHourAndTask(
+            segments: segments,
+            dayInterval: dayInterval,
+            now: now,
+            calendar: calendar
+        )
 
         return (0..<24).map { hour in
-            let hourStart = calendar.date(byAdding: .hour, value: hour, to: dayInterval.start) ?? dayInterval.start
-            let hourEnd = calendar.date(byAdding: .hour, value: 1, to: hourStart) ?? hourStart.addingTimeInterval(3_600)
-            let interval = DateInterval(start: hourStart, end: min(hourEnd, dayInterval.end))
-            let secondsByTaskID = secondsByTask(
-                segments: segments,
-                interval: interval,
-                now: now
-            )
-            let slices = secondsByTaskID.compactMap { taskID, seconds -> HourTaskSlice? in
+            let slices = secondsByHourAndTaskID[hour].compactMap { taskID, seconds -> HourTaskSlice? in
                 guard seconds > 0 else { return nil }
                 let task = taskByID[taskID]
                 let fallbackTitle = sessionsByTaskID[taskID]?.first?.titleSnapshot ?? AppStrings.localized("task.deleted")
@@ -46,14 +44,38 @@ struct HourTaskActivityService {
         }
     }
 
-    private func secondsByTask(
+    private func secondsByHourAndTask(
         segments: [TimeSegment],
-        interval: DateInterval,
-        now: Date
-    ) -> [UUID: Int] {
-        segments.reduce(into: [UUID: Int]()) { result, segment in
-            guard let clipped = clippedInterval(for: segment, in: interval, now: now) else { return }
-            result[segment.taskID, default: 0] += Int(clipped.end.timeIntervalSince(clipped.start))
+        dayInterval: DateInterval,
+        now: Date,
+        calendar: Calendar
+    ) -> [[UUID: Int]] {
+        var result = Array(repeating: [UUID: Int](), count: 24)
+
+        for segment in segments {
+            guard let clipped = clippedInterval(for: segment, in: dayInterval, now: now) else { continue }
+            distribute(clipped, taskID: segment.taskID, into: &result, calendar: calendar)
+        }
+
+        return result
+    }
+
+    private func distribute(
+        _ interval: DateInterval,
+        taskID: UUID,
+        into secondsByHourAndTaskID: inout [[UUID: Int]],
+        calendar: Calendar
+    ) {
+        var cursor = interval.start
+        while cursor < interval.end {
+            let hour = calendar.component(.hour, from: cursor)
+            let nextHour = calendar.dateInterval(of: .hour, for: cursor)?.end ?? interval.end
+            let end = min(nextHour, interval.end)
+            guard end > cursor else { break }
+            if (0..<24).contains(hour) {
+                secondsByHourAndTaskID[hour][taskID, default: 0] += max(0, Int(end.timeIntervalSince(cursor)))
+            }
+            cursor = end
         }
     }
 

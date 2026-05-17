@@ -239,10 +239,11 @@ private struct TaskDetailAnalysisSection: View {
                     }
 
                     if !snapshot.childBreakdown.isEmpty {
+                        let lastChildBreakdownID = snapshot.childBreakdown.last?.id
                         VStack(spacing: 0) {
                             ForEach(snapshot.childBreakdown) { item in
                                 AnalyticsGroupBreakdownRowForTask(item: item, totalSeconds: max(snapshot.overview.grossSeconds, 1))
-                                if item.id != snapshot.childBreakdown.last?.id {
+                                if item.id != lastChildBreakdownID {
                                     Divider()
                                 }
                             }
@@ -353,10 +354,11 @@ private struct TaskDetailRecentRecordsCard: View {
             if records.isEmpty {
                 EmptyStateRow(title: AppStrings.localized("task.records.empty"), icon: "clock")
             } else {
+                let lastRecordID = records.last?.id
                 VStack(spacing: 0) {
                     ForEach(records) { record in
                         TaskDetailRecentRecordRow(record: record)
-                        if record.id != records.last?.id {
+                        if record.id != lastRecordID {
                             Divider()
                         }
                     }
@@ -397,11 +399,7 @@ private struct TaskDetailRecentRecordRow: View {
     }
 
     private var timeRangeText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd HH:mm"
-        let endFormatter = DateFormatter()
-        endFormatter.dateFormat = "HH:mm"
-        let end = record.endedAt.map { endFormatter.string(from: $0) } ?? AppStrings.localized("common.now")
-        return "\(formatter.string(from: record.startedAt)) - \(end)"
+        let end = record.endedAt.map { TimeDisplayFormatter.hourMinute($0) } ?? AppStrings.localized("common.now")
+        return "\(TimeDisplayFormatter.monthDayHourMinute(record.startedAt)) - \(end)"
     }
 }

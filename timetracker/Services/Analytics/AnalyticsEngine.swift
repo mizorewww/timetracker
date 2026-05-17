@@ -34,17 +34,16 @@ struct AnalyticsEngine {
 
     func hourlyBreakdown(segments: [TimeSegment], date: Date = Date(), now: Date = Date(), calendar: Calendar = .current) -> [HourlyAnalyticsPoint] {
         let startOfDay = calendar.startOfDay(for: date)
+        let dayInterval = calendar.dateInterval(of: .day, for: date)
+            ?? DateInterval(start: startOfDay, duration: 86_400)
+        let buckets = hourlyBuckets(segments: segments, dayInterval: dayInterval, now: now, calendar: calendar)
+
         return (0..<24).map { hour in
-            let start = calendar.date(byAdding: .hour, value: hour, to: startOfDay) ?? startOfDay
-            let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3_600)
-            let interval = DateInterval(start: start, end: end)
-            let hourSegments = segments.filter { overlaps($0, interval: interval, now: now) }
-            let gross = secondsOverlapping(segments: hourSegments, interval: interval, now: now)
-            let wallIntervals = hourSegments.compactMap { clippedInterval(for: $0, in: interval, now: now) }
-            let wall = aggregationService.mergeOverlappingIntervals(wallIntervals).reduce(0) {
+            let bucket = buckets[hour]
+            let wall = aggregationService.mergeOverlappingIntervals(bucket.wallIntervals).reduce(0) {
                 $0 + Int($1.end.timeIntervalSince($1.start))
             }
-            return HourlyAnalyticsPoint(hour: hour, grossSeconds: gross, wallSeconds: wall)
+            return HourlyAnalyticsPoint(hour: hour, grossSeconds: bucket.grossSeconds, wallSeconds: wall)
         }
     }
 
@@ -90,10 +89,44 @@ struct AnalyticsEngine {
         return DateInterval(start: start, end: clippedEnd)
     }
 
-    private func secondsOverlapping(segments: [TimeSegment], interval: DateInterval, now: Date) -> Int {
-        segments.reduce(0) { result, segment in
-            guard let clipped = clippedInterval(for: segment, in: interval, now: now) else { return result }
-            return result + Int(clipped.end.timeIntervalSince(clipped.start))
+    private func hourlyBuckets(
+        segments: [TimeSegment],
+        dayInterval: DateInterval,
+        now: Date,
+        calendar: Calendar
+    ) -> [HourlyAnalyticsBucket] {
+        var buckets = Array(repeating: HourlyAnalyticsBucket(), count: 24)
+
+        for segment in segments {
+            guard let clipped = clippedInterval(for: segment, in: dayInterval, now: now) else { continue }
+            distribute(clipped, into: &buckets, calendar: calendar)
+        }
+
+        return buckets
+    }
+
+    private func distribute(
+        _ interval: DateInterval,
+        into buckets: inout [HourlyAnalyticsBucket],
+        calendar: Calendar
+    ) {
+        var cursor = interval.start
+        while cursor < interval.end {
+            let hour = calendar.component(.hour, from: cursor)
+            let nextHour = calendar.dateInterval(of: .hour, for: cursor)?.end ?? interval.end
+            let end = min(nextHour, interval.end)
+            guard end > cursor else { break }
+            if (0..<24).contains(hour) {
+                let clipped = DateInterval(start: cursor, end: end)
+                buckets[hour].grossSeconds += max(0, Int(end.timeIntervalSince(cursor)))
+                buckets[hour].wallIntervals.append(clipped)
+            }
+            cursor = end
         }
     }
+}
+
+private struct HourlyAnalyticsBucket {
+    var grossSeconds: Int = 0
+    var wallIntervals: [DateInterval] = []
 }

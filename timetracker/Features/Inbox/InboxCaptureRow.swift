@@ -48,6 +48,9 @@ struct InboxCaptureRow: View {
         .onTapGesture {
             isFocused = true
         }
+        .accessibilityAction {
+            isFocused = true
+        }
         .onChange(of: focusToken) { _, _ in
             isFocused = true
         }

@@ -48,48 +48,50 @@ private struct ForecastAnalyticsRow: View {
     let rollup: TaskRollup
 
     var body: some View {
-        HStack(spacing: 12) {
-            TaskIcon(task: task, size: 32)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                Text(rollup.reason)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                if let sourceLabel = rollup.forecastSourceLabel {
-                    Text(sourceLabel)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if let paceText = rollup.historicalPaceDisplayText {
-                    Text(paceText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                ProgressView(value: rollup.completionFraction)
-                    .tint(Color(hex: task.colorHex) ?? .blue)
-            }
-
-            Spacer(minLength: 12)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(rollup.remainingDisplayText)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                Text(daysText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button {
             store.selectTask(task.id)
+        } label: {
+            HStack(spacing: 12) {
+                TaskIcon(task: task, size: 32)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(task.title)
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(1)
+                    Text(rollup.reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    if let sourceLabel = rollup.forecastSourceLabel {
+                        Text(sourceLabel)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    if let paceText = rollup.historicalPaceDisplayText {
+                        Text(paceText)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    ProgressView(value: rollup.completionFraction)
+                        .tint(Color(hex: task.colorHex) ?? .blue)
+                }
+
+                Spacer(minLength: 12)
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(rollup.remainingDisplayText)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                    Text(daysText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 10)
+        .buttonStyle(.plain)
     }
 
     private var daysText: String {

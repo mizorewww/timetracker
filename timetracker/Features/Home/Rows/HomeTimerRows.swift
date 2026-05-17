@@ -24,6 +24,9 @@ struct ActiveTimerRow: View {
         .onTapGesture {
             store.selectTask(segment.taskID, revealInToday: false)
         }
+        .accessibilityAction {
+            store.selectTask(segment.taskID, revealInToday: false)
+        }
         .padding(isCompactPhone ? 10 : 14)
     }
 

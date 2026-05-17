@@ -46,64 +46,66 @@ private struct ForecastSummaryRow: View {
     let rollup: TaskRollup
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            TaskIcon(task: task, size: 34)
+        Button {
+            store.selectTask(task.id)
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                TaskIcon(task: task, size: 34)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(task.title)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    if rollup.checklistProgress.totalCount > 0 {
-                        Text(rollup.checklistProgress.label)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(task.title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        if rollup.checklistProgress.totalCount > 0 {
+                            Text(rollup.checklistProgress.label)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        }
                     }
-                }
-                Text(store.path(for: task))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                ProgressView(value: rollup.completionFraction)
-                    .tint(Color(hex: task.colorHex) ?? .blue)
-                if let sourceLabel = rollup.forecastSourceLabel {
-                    Text(sourceLabel)
-                        .font(.caption2.weight(.medium))
+                    Text(store.path(for: task))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                }
-                Text(rollup.reason)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                if let paceText = rollup.historicalPaceDisplayText {
-                    Text(paceText)
+                    ProgressView(value: rollup.completionFraction)
+                        .tint(Color(hex: task.colorHex) ?? .blue)
+                    if let sourceLabel = rollup.forecastSourceLabel {
+                        Text(sourceLabel)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Text(rollup.reason)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    if let paceText = rollup.historicalPaceDisplayText {
+                        Text(paceText)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 10)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(remainingText)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .lineLimit(1)
+                    Text(daysText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }
-
-            Spacer(minLength: 10)
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(remainingText)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .lineLimit(1)
-                Text(daysText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            .padding(14)
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectTask(task.id)
-        }
-        .padding(14)
+        .buttonStyle(.plain)
     }
 
     private var remainingText: String {

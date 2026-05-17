@@ -18,20 +18,24 @@ struct TimelineRow: View {
     }
 
     var body: some View {
-        Group {
-            if isCompactPhone {
-                compactContent
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    regularContent
+        Button {
+            store.selectTask(segment.taskID, revealInToday: false)
+        } label: {
+            Group {
+                if isCompactPhone {
                     compactContent
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        regularContent
+                        compactContent
+                    }
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, isCompactPhone ? 11 : 10)
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectTask(segment.taskID, revealInToday: false)
-        }
+        .buttonStyle(.plain)
         .contextMenu {
             Button {
                 store.presentEditSegment(segment)
@@ -53,8 +57,6 @@ struct TimelineRow: View {
                 Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, isCompactPhone ? 11 : 10)
     }
 
     private var regularContent: some View {

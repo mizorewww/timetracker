@@ -23,18 +23,21 @@ struct TaskManagementFlatRow: View {
     private var rowContent: some View {
         HStack(alignment: .center, spacing: 8) {
             disclosureButton
-            TaskManagementRowContent(
-                store: store,
-                task: task,
-                isRunning: isRunning,
-                showsNavigationChevron: showsNavigationChevron
-            )
+            Button {
+                openTask()
+            } label: {
+                TaskManagementRowContent(
+                    store: store,
+                    task: task,
+                    isRunning: isRunning,
+                    showsNavigationChevron: showsNavigationChevron
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.leading, CGFloat(treeDepth) * 14)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            openTask()
-        }
         .contextMenu {
             TaskContextMenu(store: store, task: task, preservingDestination: .tasks)
         }

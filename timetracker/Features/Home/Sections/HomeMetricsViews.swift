@@ -175,7 +175,7 @@ struct MiniBars: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 3) {
-            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+            ForEach(values.enumerated(), id: \.offset) { _, value in
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(tint)
                     .frame(width: 4, height: CGFloat(max(3, value * 2)))

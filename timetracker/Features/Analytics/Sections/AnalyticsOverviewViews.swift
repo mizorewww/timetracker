@@ -245,7 +245,7 @@ struct AnalyticsOverlapContent: View {
                     icon: "rectangle.2.swap"
                 )
             } else {
-                ForEach(Array(overlaps.prefix(6).enumerated()), id: \.element.id) { index, overlap in
+                ForEach(overlaps.prefix(6).enumerated(), id: \.element.id) { index, overlap in
                     OverlapRow(overlap: overlap)
                     if index < min(overlaps.count, 6) - 1 {
                         Divider()

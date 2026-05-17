@@ -223,7 +223,7 @@ struct PhonePagedBottomSelector: View {
             GeometryReader { proxy in
                 let pageWidth = proxy.size.width
                 HStack(spacing: 0) {
-                    ForEach(Array(pages.enumerated()), id: \.offset) { _, page in
+                    ForEach(pages.enumerated(), id: \.offset) { _, page in
                         HStack(spacing: 0) {
                             ForEach(0..<page.count, id: \.self) { itemIndex in
                                 if let destination = page[itemIndex] {

@@ -680,7 +680,7 @@ private struct AnalyticsInsightList: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(Array(insights.enumerated()), id: \.element.id) { index, insight in
+            ForEach(insights.enumerated(), id: \.element.id) { index, insight in
                 AnalyticsInsightRow(insight: insight)
                 if index < insights.count - 1 {
                     Divider()

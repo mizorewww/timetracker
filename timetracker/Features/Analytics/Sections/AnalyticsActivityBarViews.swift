@@ -49,7 +49,7 @@ struct HourTaskActivityBar: View {
 
             if point.totalSeconds > 0, renderedSlices.isEmpty == false {
                 VStack(spacing: sliceSpacing) {
-                    ForEach(Array(renderedSlices.reversed())) { rendered in
+                    ForEach(renderedSlices.reversed()) { rendered in
                         Rectangle()
                             .fill(rendered.slice.color)
                             .frame(height: rendered.height)

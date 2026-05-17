@@ -48,7 +48,7 @@ struct QuickStartEditorSheet: View {
                         Label(AppStrings.localized("quickStart.auto"), systemImage: "clock.arrow.circlepath")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(Array(pinnedTasks.enumerated()), id: \.element.id) { index, task in
+                        ForEach(pinnedTasks.enumerated(), id: \.element.id) { index, task in
                             QuickStartPinnedTaskRow(task: task, path: store.path(for: task), order: index + 1)
                         }
                         .onDelete { offsets in

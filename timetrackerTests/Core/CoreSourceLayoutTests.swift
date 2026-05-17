@@ -319,6 +319,33 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
+    func productionForEachAvoidsArrayMaterialization() throws {
+        let root = try projectRootURL()
+        let sourceRoots = [
+            "timetracker",
+            "timetrackerWatchApp",
+            "timetrackerWidgetExtension",
+            "timetrackerLiveActivityExtension",
+            "SharedLiveActivity"
+        ]
+
+        for sourceRoot in sourceRoots {
+            let sourceURL = root.appending(path: sourceRoot)
+            guard let enumerator = FileManager.default.enumerator(at: sourceURL, includingPropertiesForKeys: nil) else {
+                continue
+            }
+
+            for case let fileURL as URL in enumerator where fileURL.pathExtension == "swift" {
+                let source = try String(contentsOf: fileURL, encoding: .utf8)
+                #expect(
+                    source.contains("ForEach(Array(") == false,
+                    "\(fileURL.path) materializes ForEach data with Array"
+                )
+            }
+        }
+    }
+
+    @Test
     func performanceSignpostsCoverRefreshAnalyticsRollupAndTimelineBoundaries() throws {
         let lifecycle = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift")
         let coordinator = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")

@@ -62,6 +62,61 @@ The current minimum clickable matrix is:
 4. Custom phone bottom chrome: test it as a product-specific navigation surface rather than replacing it with native tabs. It is expected to grow beyond five pages, so improvements should preserve the bottom model unless the product decision changes.
 5. Settings: keep it as a primary destination in the current navigation model. Do not hide it inside Today or move it as part of unrelated refactors; improve its native form controls and appearance in place.
 
+## Stress Data UI Test Runner
+
+Use the stress data runner before large refactors to make crashes and slow rendering visible on oversized, deeply nested data. The runner uses the UI test in-memory store through `--uitesting`, so it does not mutate the user's real local database.
+
+Default large profile on macOS:
+
+```sh
+./scripts/run_stress_data_ui_test.sh large
+```
+
+Fast smoke profile:
+
+```sh
+./scripts/run_stress_data_ui_test.sh compact
+```
+
+Custom profile:
+
+```sh
+TIMETRACKER_STRESS_ROOTS=40 \
+TIMETRACKER_STRESS_DEPTH=5 \
+TIMETRACKER_STRESS_CHILDREN=3 \
+TIMETRACKER_STRESS_CHECKLIST_ITEMS=3 \
+TIMETRACKER_STRESS_SEGMENTS=2 \
+TIMETRACKER_STRESS_INBOX_ITEMS=1000 \
+./scripts/run_stress_data_ui_test.sh custom
+```
+
+iPad or iPhone simulator destination:
+
+```sh
+TIMETRACKER_STRESS_DESTINATION="platform=iOS Simulator,name=iPad Air 11-inch (M4),OS=26.5" \
+./scripts/run_stress_data_ui_test.sh compact
+```
+
+Profiles:
+
+1. `compact`: quick launch/click validation with hundreds of tasks.
+2. `large`: default performance pass with thousands of tasks plus mutable checklist, ledger, inbox, and countdown records.
+3. `extreme`: intentionally heavy stress case; use it after `compact` and `large` are stable.
+4. `custom`: starts from `large` and applies environment overrides.
+
+Supported overrides:
+
+- `TIMETRACKER_STRESS_ROOTS`
+- `TIMETRACKER_STRESS_DEPTH`
+- `TIMETRACKER_STRESS_CHILDREN`
+- `TIMETRACKER_STRESS_CHECKLIST_ITEMS`
+- `TIMETRACKER_STRESS_SEGMENTS`
+- `TIMETRACKER_STRESS_CATEGORIES`
+- `TIMETRACKER_STRESS_INBOX_ITEMS`
+- `TIMETRACKER_STRESS_COUNTDOWNS`
+
+Each run writes an `.xcresult` bundle under `build/StressDataResults`. Keep the result path in the modernization checklist when the run proves a crash fix or performance change.
+
 ## Performance And Smoothness Verification
 
 Runtime smoothness is a product requirement. The app should not feel slower than a native Apple productivity app on macOS, iPad, or iPhone.

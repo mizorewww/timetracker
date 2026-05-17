@@ -29,6 +29,16 @@ Branch: `codex/performance-optimization-20260517`
 
 ## Findings And Actions
 
+- [x] P0 Large task trees expand every node on first Tasks-page appearance.
+  - Location: `timetracker/Features/Tasks/Management/TasksViews.swift:170`
+  - Current pattern: first appearance inserted every task ID into `TaskExpansionState`, forcing very large stress trees to render and diff far more visible rows than the user can inspect immediately.
+  - Estimated current complexity: `O(n)` expansion work plus a visible-row/rendering surface that can approach the whole task tree on launch.
+  - Recommended change: preserve full expansion for normal-sized trees, but cap initial expansion depth as data size grows. Let users expand deeper branches explicitly.
+  - Estimated after: `O(n)` policy pass with a bounded initial visible tree: all nodes for small trees, depth 0-1 for medium trees, and root nodes only for very large trees.
+  - Risk: low; this changes initial presentation only for large datasets and keeps all manual expand/collapse behavior intact.
+  - Change made: added `TaskInitialExpansionPolicy` and `TaskExpansionState.replace(with:)`; stress unit coverage verifies large trees expand roots only.
+  - Verification: focused stress unit tests plus compact and large stress UI runner profiles passed.
+
 - [x] P0 Analytics snapshot repeatedly scans all historical segments for current-period rhythm, quality, root breakdown, and category breakdown.
   - Location: `timetracker/Stores/Domains/AnalyticsStore+SnapshotBuilding.swift:85`
   - Current pattern: compute `rangeSegments`, but several current-period metrics are rebuilt from `allSegments`.

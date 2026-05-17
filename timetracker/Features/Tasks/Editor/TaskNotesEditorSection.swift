@@ -5,8 +5,9 @@ struct TaskNotesEditorSection: View {
 
     var body: some View {
         Section(AppStrings.localized("editor.task.notes")) {
-            TextEditor(text: $notes)
-                .frame(minHeight: 88)
+            TextField(AppStrings.localized("editor.task.notes"), text: $notes, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(3...8)
         }
     }
 }

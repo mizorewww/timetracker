@@ -181,12 +181,9 @@ struct TaskDetailEditorCard: View {
 
     private var notesSection: some View {
         TaskDetailEditorSection(title: AppStrings.localized("editor.task.notes")) {
-            TextEditor(text: $draft.notes)
-                .frame(minHeight: 96)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.secondary.opacity(0.18))
-                }
+            TextField(AppStrings.localized("editor.task.notes"), text: $draft.notes, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(3...8)
         }
     }
 

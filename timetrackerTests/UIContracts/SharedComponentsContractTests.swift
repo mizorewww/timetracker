@@ -148,6 +148,21 @@ struct SharedComponentsContractTests {
     }
 
     @Test
+    func pomodoroMinuteSettingsUseNativeMenuPicker() throws {
+        let pomodoroSource = try sourceText("timetracker/Features/Settings/SettingsPomodoroSection.swift")
+        let minuteSource = try sourceText("timetracker/Features/Settings/SettingsPomodoroMinuteRows.swift")
+
+        #expect(pomodoroSource.contains("SettingsPomodoroMinutePickerRow("))
+        #expect(minuteSource.contains("struct SettingsPomodoroMinutePickerRow"))
+        #expect(minuteSource.contains("Picker(selection: normalizedValue)"))
+        #expect(minuteSource.contains(".pickerStyle(.menu)"))
+        #expect(minuteSource.contains("SettingsPomodoroMinuteChoiceList") == false)
+        #expect(minuteSource.contains("SettingsPomodoroMinuteWheelRow") == false)
+        #expect(minuteSource.contains(".popover(") == false)
+        #expect(minuteSource.contains(".pickerStyle(.wheel)") == false)
+    }
+
+    @Test
     func compactPrimaryAndSuggestionActionsStayLegible() throws {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")

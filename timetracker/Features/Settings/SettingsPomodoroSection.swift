@@ -103,21 +103,21 @@ private struct PomodoroPlanSettingsRows: View {
         }
         .settingsRowSeparatorAligned()
 
-        SettingsPomodoroMinuteWheelRow(
+        SettingsPomodoroMinutePickerRow(
             title: AppStrings.localized("pomodoro.focus"),
             systemImage: "brain.head.profile",
             tint: .indigo,
             value: $plan.focusMinutes
         )
 
-        SettingsPomodoroMinuteWheelRow(
+        SettingsPomodoroMinutePickerRow(
             title: AppStrings.localized("pomodoro.shortBreak"),
             systemImage: "cup.and.saucer",
             tint: .mint,
             value: $plan.shortBreakMinutes
         )
 
-        SettingsPomodoroMinuteWheelRow(
+        SettingsPomodoroMinutePickerRow(
             title: AppStrings.localized("pomodoro.longBreak"),
             systemImage: "moon.zzz",
             tint: .orange,

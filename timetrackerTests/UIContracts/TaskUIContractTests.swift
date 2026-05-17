@@ -280,7 +280,10 @@ struct TaskUIContractTests {
     func analyticsPageSurfacesDecisionMetricsAndQualitySections() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailViews.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
+            "timetracker/Features/Analytics/AnalyticsInsightListViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsDecisionViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift"
         ]
@@ -289,12 +292,18 @@ struct TaskUIContractTests {
         let modelsSource = try sourceText("timetracker/Models/AnalyticsReadModels.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(analyticsSource.contains("AnalyticsDecisionSummaryGrid(snapshot: snapshot)"))
-        #expect(analyticsSource.contains(".accessibilityIdentifier(\"analytics.decisionSummary\")"))
+        #expect(analyticsSource.contains("AnalyticsCategory.allCases"))
+        #expect(analyticsSource.contains("AnalyticsCategoryDetailView("))
+        #expect(analyticsSource.contains("case .decisions:"))
+        #expect(analyticsSource.contains("AnalyticsInsightList(insights: snapshot.insights)"))
+        #expect(analyticsSource.contains("TaskForecastsContent(store: store)"))
         #expect(analyticsSource.contains("AnalyticsPeriodControl(range: range, referenceDate: $referenceDate, liveNow: now)"))
+        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: now)"))
         #expect(analyticsSource.contains("effectiveSnapshotDate(referenceDate: referenceDate, liveNow: now)"))
-        #expect(analyticsSource.contains("AnalyticsBreakdownSection(snapshot: snapshot)"))
-        #expect(analyticsSource.contains("AnalyticsRhythmQualityGrid(rhythm: snapshot.rhythm, quality: snapshot.quality)"))
+        #expect(analyticsSource.contains("case .quality:"))
+        #expect(analyticsSource.contains("AnalyticsRhythmContent(rhythm: snapshot.rhythm)"))
+        #expect(analyticsSource.contains("AnalyticsQualityContent(quality: snapshot.quality)"))
+        #expect(analyticsSource.contains("AnalyticsOverlapContent(overlaps: snapshot.overlaps)"))
         #expect(analyticsSource.contains("snapshot.categoryBreakdown"))
         #expect(modelsSource.contains("struct AnalyticsInsight"))
         #expect(modelsSource.contains("struct TaskAnalyticsSnapshot"))
@@ -306,7 +315,10 @@ struct TaskUIContractTests {
     func analyticsMakesSelectedPeriodAndMetricMeaningsExplicit() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailViews.swift",
+            "timetracker/Features/Analytics/AnalyticsOverviewDetailViews.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift"
         ]
         .map { try sourceText($0) }
@@ -314,7 +326,9 @@ struct TaskUIContractTests {
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("AnalyticsPeriodTitle(range: range, referenceDate: referenceDate)"))
-        #expect(analyticsSource.contains("AnalyticsMetricGlossaryStrip()"))
+        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: now)"))
+        #expect(analyticsSource.contains("AnalyticsMetricList("))
+        #expect(analyticsSource.contains("AnalyticsGlossaryList()"))
         #expect(englishStrings.contains("\"analytics.glossary.gross\""))
         #expect(englishStrings.contains("\"analytics.glossary.wall\""))
         #expect(englishStrings.contains("\"analytics.glossary.overlap\""))

@@ -11,13 +11,11 @@ struct CountdownSettingsSection: View {
         Group {
             Section {
                 if events.isEmpty {
-                    HStack(alignment: .top, spacing: 12) {
-                        SettingsRowIcon(systemImage: "calendar.badge.exclamationmark", tint: .gray)
-                        Text(.app("settings.countdown.empty"))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                    .settingsRowSeparatorAligned()
+                    SettingsUnavailableRow(
+                        title: AppStrings.localized("settings.countdown.empty"),
+                        message: AppStrings.localized("settings.countdown.emptyDescription"),
+                        systemImage: "calendar.badge.exclamationmark"
+                    )
                 }
             } header: {
                 SettingsHeader(symbol: "calendar.badge.clock", title: AppStrings.localized("settings.countdown"))

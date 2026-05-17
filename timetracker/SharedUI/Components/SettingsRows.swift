@@ -65,6 +65,23 @@ struct SettingsRowLabel: View {
     }
 }
 
+struct SettingsUnavailableRow: View {
+    let title: String
+    let message: String
+    let systemImage: String
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: systemImage)
+        } description: {
+            Text(message)
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .settingsRowSeparatorAligned()
+    }
+}
+
 struct SettingsValueRow: View {
     let title: String
     let value: String

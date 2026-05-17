@@ -131,6 +131,23 @@ struct SharedComponentsContractTests {
     }
 
     @Test
+    func settingsEmptyStatesUseNativeContentUnavailableView() throws {
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
+        let pomodoroSource = try sourceText("timetracker/Features/Settings/SettingsPomodoroSection.swift")
+        let countdownSource = try sourceText("timetracker/Features/Settings/SettingsCountdownSection.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(sharedSource.contains("struct SettingsUnavailableRow"))
+        #expect(sharedSource.contains("ContentUnavailableView"))
+        #expect(pomodoroSource.contains("SettingsUnavailableRow("))
+        #expect(countdownSource.contains("SettingsUnavailableRow("))
+        #expect(pomodoroSource.contains("HStack(alignment: .top, spacing: 12)") == false)
+        #expect(countdownSource.contains("HStack(alignment: .top, spacing: 12)") == false)
+        #expect(englishStrings.contains("\"settings.pomodoro.emptyDescription\""))
+        #expect(englishStrings.contains("\"settings.countdown.emptyDescription\""))
+    }
+
+    @Test
     func compactPrimaryAndSuggestionActionsStayLegible() throws {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")

@@ -7,13 +7,11 @@ struct PomodoroSettingsSection: View {
         Group {
             Section {
                 if plans.wrappedValue.isEmpty {
-                    HStack(alignment: .top, spacing: 12) {
-                        SettingsRowIcon(systemImage: "timer", tint: .gray)
-                        Text(.app("pomodoro.emptyPlans"))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                    .settingsRowSeparatorAligned()
+                    SettingsUnavailableRow(
+                        title: AppStrings.localized("pomodoro.emptyPlans"),
+                        message: AppStrings.localized("settings.pomodoro.emptyDescription"),
+                        systemImage: "timer"
+                    )
                 }
             } header: {
                 SettingsHeader(symbol: "timer", title: AppStrings.pomodoro)

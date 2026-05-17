@@ -62,8 +62,10 @@
 "settings.breakMinutes" = "Break Minutes";
 "settings.defaultRounds" = "Default Rounds";
 "settings.pomodoro.footer" = "Pomodoro plans sync through iCloud with the rest of your settings.";
+"settings.pomodoro.emptyDescription" = "Add a plan to configure focus, break, and long break durations.";
 "settings.countdown" = "Countdown Events";
 "settings.countdown.empty" = "No countdown events. Today will only show day, week, month, and year progress.";
+"settings.countdown.emptyDescription" = "Add important dates to show them alongside Today progress.";
 "settings.countdown.add" = "Add Event";
 "settings.countdown.footer" = "Countdown events are optional. Add any date you want to see on Today.";
 "settings.exportJSON" = "Export JSON";

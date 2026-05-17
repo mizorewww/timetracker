@@ -104,6 +104,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailHeaderView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailAnalysisViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailRecentRecordsViews.swift",
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
@@ -164,6 +168,25 @@ struct CoreSourceLayoutTests {
             let file = editorURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func taskDetailFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let detailURL = root.appending(path: "timetracker/Features/Tasks/Detail")
+        let focusedFiles = [
+            "TaskDetailView.swift",
+            "TaskDetailHeaderView.swift",
+            "TaskDetailAnalysisViews.swift",
+            "TaskDetailRecentRecordsViews.swift",
+            "TaskForecastPanel.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = detailURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
         }
     }
 

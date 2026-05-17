@@ -30,7 +30,7 @@ struct SharedComponentsContractTests {
     func primaryActionLabelsUseSharedComponentAcrossHomeAndTaskDetail() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
-        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailHeaderView.swift")
 
         #expect(sharedSource.contains("struct AppActionLabel"))
         #expect(sharedSource.contains(".minimumScaleFactor(0.78)"))
@@ -46,6 +46,10 @@ struct SharedComponentsContractTests {
         let settingsSource = try [
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
             "timetracker/Features/Settings/SettingsDataSectionsViews.swift",
+            "timetracker/Features/Settings/SettingsPomodoroSection.swift",
+            "timetracker/Features/Settings/SettingsPomodoroMinuteRows.swift",
+            "timetracker/Features/Settings/SettingsCountdownSection.swift",
+            "timetracker/Features/Settings/SettingsSyncSection.swift",
             "timetracker/Features/Settings/Support/SettingsSupportViews.swift"
         ].map(sourceText).joined(separator: "\n")
         let settingsActionsSource = try sourceText("timetracker/Features/Settings/SettingsViewActions.swift")

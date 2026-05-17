@@ -103,7 +103,7 @@ struct TaskUIContractTests {
     @Test
     func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let detailSource = try taskDetailFeatureSource()
         let forecastSource = try sourceText("timetracker/Features/Tasks/Detail/TaskForecastPanel.swift")
 
         #expect(tasksSource.contains("rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)"))
@@ -163,7 +163,7 @@ struct TaskUIContractTests {
     func taskRowsOpenDetailInsteadOfEditingOnTap() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
-        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let detailSource = try taskDetailFeatureSource()
         let editorSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift")
         let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
         let openTaskSource = try #require(rowSource.slice(from: "private func openTask()", to: "private struct TaskManagementRowContent"))
@@ -415,6 +415,18 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
+    }
+
+    private func taskDetailFeatureSource() throws -> String {
+        try [
+            "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailHeaderView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailAnalysisViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailRecentRecordsViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")

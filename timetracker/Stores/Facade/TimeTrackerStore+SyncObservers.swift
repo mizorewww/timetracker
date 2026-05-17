@@ -70,7 +70,7 @@ extension TimeTrackerStore {
             .max { lhs, rhs in lhs.priority < rhs.priority }
         scheduledSyncRefreshTask?.cancel()
         scheduledSyncRefreshTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 350_000_000)
+            try? await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled else { return }
             guard let self else { return }
             let reason = scheduledSyncRefreshReason ?? reason

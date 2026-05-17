@@ -158,7 +158,7 @@ struct PomodoroView: View {
         }
 
         pendingCancelTask = Task {
-            try? await Task.sleep(nanoseconds: UInt64(PomodoroStyle.timerTransitionDuration * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(PomodoroStyle.timerTransitionDuration))
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 completePendingCancelIfNeeded()

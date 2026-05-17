@@ -96,7 +96,7 @@ private struct ActivePomodoroContent: View {
             holdProgress = 1
         }
         holdCompletionTask = Task {
-            try? await Task.sleep(nanoseconds: UInt64(holdDuration * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(holdDuration))
             guard !Task.isCancelled else { return }
             let shouldReturnToSetup = await MainActor.run {
                 guard isHolding else { return false }
@@ -113,7 +113,7 @@ private struct ActivePomodoroContent: View {
                 return true
             }
             guard shouldReturnToSetup else { return }
-            try? await Task.sleep(nanoseconds: UInt64(resetBeforeReturnDelay * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(resetBeforeReturnDelay))
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 requestCancel()

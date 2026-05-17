@@ -129,7 +129,7 @@ enum CloudSyncSmokeTestRunner {
             guard Date() < deadline else {
                 throw SmokeTestError.recoveredTaskMissing
             }
-            try await Task.sleep(nanoseconds: 2_000_000_000)
+            try await Task.sleep(for: .seconds(2))
         }
     }
 

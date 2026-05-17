@@ -37,8 +37,8 @@ Use these links as the source of truth while refactoring:
 
 ## Active Refactor Checklist
 
-- [ ] Baseline build/test: run `xcodebuild test -scheme timetracker -destination 'platform=macOS'` or the closest available Apple destination, then record failures here.
-- [ ] Replace `Task.sleep(nanoseconds:)` with `Task.sleep(for:)` in production code.
+- [x] Baseline build/test: run `xcodebuild test -scheme timetracker -destination 'platform=macOS'` or the closest available Apple destination, then record failures here.
+- [x] Replace `Task.sleep(nanoseconds:)` with `Task.sleep(for:)` in production code.
 - [ ] Replace remaining `DispatchQueue` main-thread delays with Swift concurrency where behavior is equivalent.
 - [ ] Replace the custom UIKit `SystemSearchBar` in Tasks with native `.searchable`, unless a verified platform bug requires keeping the wrapper.
 - [ ] Replace safe `ForEach(Array(values.enumerated()))` cases with modern direct enumeration or a stable indexed helper after compiler verification.
@@ -62,3 +62,8 @@ Use these links as the source of truth while refactoring:
 ## Commit Discipline
 
 Every completed item above should be its own small commit when practical. Each commit should include only the code and test/documentation updates needed for that item, so future reversions are precise.
+
+## Verification Log
+
+- 2026-05-17: Baseline `xcodebuild test -scheme timetracker -destination 'platform=macOS'` compiled successfully but failed before code refactors with existing failures in `timetrackerUITests.testPrimaryNavigationAndSettingsLoad`, `timetrackerUITests.testUIRefactorBaselineScreenshots`, outdated phone/home UI contract assertions, analytics source-contract assertions, `InboxUIContractTests.inboxUsesOwnDestinationAndSmoothInlineCapture`, `TaskCategoryTests.taskTreeShowsEmptyCategories`, and `CoreSourceLayoutTests.analyticsServiceFilesStaySplitByResponsibility`.
+- 2026-05-17: After replacing `Task.sleep(nanoseconds:)`, `xcodebuild test -scheme timetracker -destination 'platform=macOS' -only-testing:timetrackerTests/PomodoroTests` succeeded.

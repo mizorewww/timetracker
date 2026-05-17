@@ -27,6 +27,16 @@ struct CoreArchitectureBehaviorTests {
         #expect(storeSource.contains("return \"Focus\"") == false)
     }
 
+    @Test
+    func macSettingsSceneAppliesPreferredColorScheme() throws {
+        let settingsSceneSource = try sourceText("timetracker/App/SettingsSceneView.swift")
+
+        #expect(settingsSceneSource.contains(".preferredColorScheme(settingsColorScheme)"))
+        #expect(settingsSceneSource.contains("case \"light\": return .light"))
+        #expect(settingsSceneSource.contains("case \"dark\": return .dark"))
+        #expect(settingsSceneSource.contains("default: return nil"))
+    }
+
     @Test @MainActor
     func layoutPoliciesCentralizeResponsiveChoices() {
         #expect(HomeLayoutPolicy(width: 600).isCompact)

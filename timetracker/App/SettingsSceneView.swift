@@ -8,9 +8,18 @@ struct SettingsSceneView: View {
 
     var body: some View {
         SettingsView(store: store)
+            .preferredColorScheme(settingsColorScheme)
             .task {
                 store.configureIfNeeded(context: modelContext)
             }
+    }
+
+    private var settingsColorScheme: ColorScheme? {
+        switch store.preferences.preferredColorScheme {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
     }
 }
 #endif

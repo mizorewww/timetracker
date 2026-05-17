@@ -164,7 +164,7 @@ struct TaskUIContractTests {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let rowSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
         let detailSource = try taskDetailFeatureSource()
-        let editorSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift")
+        let editorSource = try taskDetailEditorFeatureSource()
         let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
         let openTaskSource = try #require(rowSource.slice(from: "private func openTask()", to: "private struct TaskManagementRowContent"))
 
@@ -244,7 +244,7 @@ struct TaskUIContractTests {
 
     @Test
     func taskDetailUsesNativeCompactStatusControl() throws {
-        let editorSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift")
+        let editorSource = try taskDetailEditorFeatureSource()
 
         #expect(editorSource.contains("TaskDetailStatusControl(selection: $draft.status)"))
         #expect(editorSource.contains("TaskDetailStatusSelector") == false)
@@ -427,6 +427,16 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Detail/TaskDetailAnalysisViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailRecentRecordsViews.swift",
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
+    }
+
+    private func taskDetailEditorFeatureSource() throws -> String {
+        try [
+            "timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailChecklistEditorSection.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailEditorSupportViews.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")

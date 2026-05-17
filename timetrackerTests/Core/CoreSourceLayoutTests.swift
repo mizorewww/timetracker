@@ -108,6 +108,9 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Detail/TaskDetailHeaderView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailAnalysisViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailRecentRecordsViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailChecklistEditorSection.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailEditorSupportViews.swift",
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
@@ -180,6 +183,9 @@ struct CoreSourceLayoutTests {
             "TaskDetailHeaderView.swift",
             "TaskDetailAnalysisViews.swift",
             "TaskDetailRecentRecordsViews.swift",
+            "TaskDetailEditorViews.swift",
+            "TaskDetailChecklistEditorSection.swift",
+            "TaskDetailEditorSupportViews.swift",
             "TaskForecastPanel.swift"
         ]
 

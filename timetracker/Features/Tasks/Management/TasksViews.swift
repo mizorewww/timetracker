@@ -1,7 +1,4 @@
 import SwiftUI
-#if os(iOS)
-import UIKit
-#endif
 
 struct TasksView: View {
     @ObservedObject var store: TimeTrackerStore
@@ -37,13 +34,6 @@ struct TasksView: View {
             if isCompactPhone {
                 PhoneLargePageHeader(destination: .tasks)
                     .listRowInsets(PhoneRootChromeMetrics.groupedHeaderRowInsets)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-
-                SystemSearchBar(text: $searchText, placeholder: AppStrings.localized("tasks.searchPrompt"))
-                    .frame(height: 44)
-                    .padding(.horizontal, PhoneRootChromeMetrics.groupedSearchHorizontalAdjustment)
-                    .listRowInsets(PhoneRootChromeMetrics.groupedSearchRowInsets)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -233,7 +223,11 @@ private struct TaskSearchPlacementModifier: ViewModifier {
     func body(content: Content) -> some View {
         #if os(iOS)
         if isCompactPhone {
-            content
+            content.searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: AppStrings.localized("tasks.searchPrompt")
+            )
         } else {
             content.searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
         }
@@ -242,90 +236,3 @@ private struct TaskSearchPlacementModifier: ViewModifier {
         #endif
     }
 }
-
-#if os(iOS)
-private struct SystemSearchBar: UIViewRepresentable {
-    @Binding var text: String
-    let placeholder: String
-
-    func makeUIView(context: Context) -> UISearchBar {
-        let searchBar = UISearchBar(frame: .zero)
-        searchBar.searchBarStyle = .minimal
-        searchBar.backgroundColor = .clear
-        searchBar.backgroundImage = UIImage()
-        searchBar.setBackgroundImage(UIImage(), for: .any, barMetrics: .default)
-        searchBar.isTranslucent = true
-        searchBar.layer.shadowOpacity = 0
-        searchBar.placeholder = placeholder
-        searchBar.autocapitalizationType = .none
-        searchBar.autocorrectionType = .no
-        searchBar.returnKeyType = .done
-        searchBar.enablesReturnKeyAutomatically = false
-        searchBar.delegate = context.coordinator
-        searchBar.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        configureSearchTextField(searchBar.searchTextField)
-        return searchBar
-    }
-
-    func updateUIView(_ searchBar: UISearchBar, context: Context) {
-        searchBar.backgroundColor = .clear
-        searchBar.backgroundImage = UIImage()
-        searchBar.setBackgroundImage(UIImage(), for: .any, barMetrics: .default)
-        configureSearchTextField(searchBar.searchTextField)
-        if searchBar.text != text {
-            searchBar.text = text
-        }
-        if searchBar.placeholder != placeholder {
-            searchBar.placeholder = placeholder
-        }
-        let shouldShowCancel = searchBar.isFirstResponder || !text.isEmpty
-        if searchBar.showsCancelButton != shouldShowCancel {
-            searchBar.setShowsCancelButton(shouldShowCancel, animated: false)
-        }
-    }
-
-    private func configureSearchTextField(_ textField: UISearchTextField) {
-        textField.backgroundColor = .secondarySystemGroupedBackground
-        textField.borderStyle = .none
-        textField.layer.cornerCurve = .continuous
-        textField.layer.cornerRadius = 16
-        textField.layer.masksToBounds = true
-        textField.layer.shadowOpacity = 0
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text)
-    }
-
-    final class Coordinator: NSObject, UISearchBarDelegate {
-        @Binding private var text: String
-
-        init(text: Binding<String>) {
-            _text = text
-        }
-
-        func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-            text = searchText
-        }
-
-        func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
-            searchBar.setShowsCancelButton(true, animated: true)
-        }
-
-        func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
-            searchBar.setShowsCancelButton(!text.isEmpty, animated: true)
-        }
-
-        func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-            searchBar.resignFirstResponder()
-        }
-
-        func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
-            text = ""
-            searchBar.text = ""
-            searchBar.setShowsCancelButton(false, animated: true)
-            searchBar.resignFirstResponder()
-        }
-    }
-}
-#endif

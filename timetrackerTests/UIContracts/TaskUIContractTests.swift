@@ -89,6 +89,18 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func tasksSearchUsesNativeSearchableInsteadOfUIKitWrapper() throws {
+        let source = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+
+        #expect(source.contains(".searchable("))
+        #expect(source.contains(".navigationBarDrawer(displayMode: .always)"))
+        #expect(source.contains("SystemSearchBar") == false)
+        #expect(source.contains("UIViewRepresentable") == false)
+        #expect(source.contains("UISearchBar") == false)
+        #expect(source.contains("import UIKit") == false)
+    }
+
+    @Test
     func taskRowsUseLifetimeRollupDurationInsteadOfTodayOnlyDuration() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TaskManagementRowViews.swift")
         let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")

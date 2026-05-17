@@ -24,7 +24,11 @@ final class timetrackerUITestsLaunchTests: XCTestCase {
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "-ApplePersistenceIgnoreState", "YES"]
+        app.launchArguments = [
+            "--uitesting",
+            "-ApplePersistenceIgnoreState", "YES",
+            "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch"
+        ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.terminate()
         app.launch()

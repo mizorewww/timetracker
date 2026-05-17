@@ -89,7 +89,11 @@ final class timetrackerUITests: XCTestCase {
     @MainActor
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "-ApplePersistenceIgnoreState", "YES"]
+        app.launchArguments = [
+            "--uitesting",
+            "-ApplePersistenceIgnoreState", "YES",
+            "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch"
+        ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.launch()
         app.activate()
@@ -123,11 +127,11 @@ final class timetrackerUITests: XCTestCase {
         let taskIdentifier = "tasks.task.\(title)"
         let sidebarIdentifier = "sidebar.task.\(title)"
         let taskRow = app.descendants(matching: .any)[taskIdentifier].firstMatch
-        if taskRow.exists {
+        if taskRow.waitForExistence(timeout: 2) {
             return taskRow
         }
         let sidebarRow = app.descendants(matching: .any)[sidebarIdentifier].firstMatch
-        if sidebarRow.exists {
+        if sidebarRow.waitForExistence(timeout: 1) {
             return sidebarRow
         }
         return app.staticTexts[title].firstMatch

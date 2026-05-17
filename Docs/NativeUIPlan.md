@@ -242,6 +242,8 @@ This section is the detailed continuation plan for the SwiftUI modernization bra
 - SwiftUI `MenuPickerStyle.menu`: use menu style when there are more than five options.
 - SwiftUI `ContentUnavailableView`: empty, unavailable, and error states should use the system empty-state presentation.
 - SwiftUI `Button`, `Menu`, `contextMenu`, and `swipeActions`: row actions should use native action surfaces instead of gesture-only rows.
+- SwiftUI `TabView`: use as the baseline native comparison for top-level tabs before choosing custom phone navigation.
+- HIG Tab bars: system tab bars can reveal overflow with a More tab or convert to sidebar patterns in more complex iPadOS layouts; if the app ever abandons its product-specific bottom chrome, re-evaluate those native options before designing another custom replacement.
 
 ### Migration Matrix
 
@@ -260,9 +262,11 @@ This section is the detailed continuation plan for the SwiftUI modernization bra
 
 ### Bottom Chrome Rationale
 
-The iPhone bottom chrome is intentionally custom. It already behaves as a paged selector, which is the right shape for a roadmap with many pages. A fixed native `TabView` would force an early information-architecture cap and would likely require moving important destinations, such as Settings, into unrelated screens. That would make future expansion harder and would make Settings less discoverable.
+The iPhone bottom chrome is intentionally custom. It already behaves as a paged selector, which is the right shape for a roadmap with many pages. A fixed native `TabView` would force an early information-architecture cap in this app and would likely require moving important destinations, such as Settings, into unrelated screens. That would make future expansion harder and would make Settings less discoverable.
 
-Refactor rule: keep the custom bottom chrome, keep Settings as a bottom destination, and improve the component itself. Preferred improvements are stable accessibility identifiers for every destination, clearer page indicators, stronger Reduce Motion behavior, preloading or caching destination state where profiling proves benefit, and tighter source-layout boundaries. Do not move Settings to Today unless the product navigation model changes explicitly.
+Settings stays in the bottom model because it is a primary app surface, it needs to remain predictable across phone sessions, and hiding it under Today would couple unrelated destinations. The user has also explicitly chosen this product direction: do not move Settings during the modernization pass.
+
+Refactor rule: keep the custom bottom chrome, keep Settings as a bottom destination, and improve the component itself. Preferred improvements are stable accessibility identifiers for every destination, clearer page indicators, stronger Reduce Motion behavior, preloading or caching destination state where profiling proves benefit, and tighter source-layout boundaries. Do not move Settings to Today unless the product navigation model changes explicitly. If the roadmap later chooses native-only navigation, evaluate `TabView` overflow behavior, `TabSection`, and iPad sidebar conversion as a separate information-architecture change rather than a drive-by refactor.
 
 ### Execution Order
 

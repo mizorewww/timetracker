@@ -1,5 +1,4 @@
 import SwiftUI
-
 struct TaskManagementFlatRow: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode

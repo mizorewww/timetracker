@@ -5,6 +5,7 @@ struct TasksView: View {
     @State private var searchText = ""
     @State private var expansionState = TaskExpansionState()
     @State private var didExpandInitialTree = false
+    private let initialExpansionPolicy = TaskInitialExpansionPolicy()
     @State private var detailTaskID: UUID?
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -169,9 +170,7 @@ struct TasksView: View {
         }
         .onAppear {
             if !didExpandInitialTree {
-                for task in store.tasks {
-                    expansionState.expand(task.id)
-                }
+                expansionState.replace(with: initialExpansionPolicy.expandedTaskIDs(for: store.tasks))
                 didExpandInitialTree = true
             }
         }

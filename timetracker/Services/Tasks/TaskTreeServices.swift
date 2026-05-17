@@ -146,6 +146,10 @@ struct TaskExpansionState: Equatable {
     mutating func collapse(_ taskID: UUID) {
         expandedTaskIDs.remove(taskID)
     }
+
+    mutating func replace(with taskIDs: Set<UUID>) {
+        expandedTaskIDs = taskIDs
+    }
 }
 
 struct TaskTreeFlattener {

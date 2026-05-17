@@ -79,6 +79,21 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
+    func taskInitialExpansionPolicyCapsLargeStressTrees() throws {
+        let smallTasks = makeTasks(count: 12, depthCycle: 3)
+        let largeTasks = makeTasks(count: 3_500, depthCycle: 4)
+        let policy = TaskInitialExpansionPolicy()
+
+        #expect(policy.expandedTaskIDs(for: smallTasks).count == smallTasks.count)
+
+        let expandedLargeIDs = policy.expandedTaskIDs(for: largeTasks)
+        let expandedLargeTasks = largeTasks.filter { expandedLargeIDs.contains($0.id) }
+        #expect(expandedLargeTasks.isEmpty == false)
+        #expect(expandedLargeTasks.allSatisfy { $0.depth == 0 })
+        #expect(expandedLargeTasks.count < largeTasks.count)
+    }
+
+    @Test @MainActor
     func timerStopUsesSegmentsAsLedger() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -238,5 +253,14 @@ struct TaskLedgerTests {
         #expect(store.secondsForTaskTotalRollup(parent, now: now) == 4_200)
         #expect(store.secondsForTaskTotalRollup(child, now: now) == 3_600)
         #expect(store.rollup(for: parent.id)?.workedSeconds == 4_200)
+    }
+}
+
+@MainActor
+private func makeTasks(count: Int, depthCycle: Int) -> [TaskNode] {
+    (0..<count).map { index in
+        let task = TaskNode(title: "Task \(index)", parentID: nil, deviceID: "test")
+        task.depth = index % depthCycle
+        return task
     }
 }

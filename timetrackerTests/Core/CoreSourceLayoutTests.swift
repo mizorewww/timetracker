@@ -86,6 +86,13 @@ struct CoreSourceLayoutTests {
             "timetracker/App/AppDeepLinkRouter.swift",
             "timetracker/App/RootViews/DesktopRootViews.swift",
             "timetracker/App/RootViews/iOSRootViews.swift",
+            "timetracker/App/RootViews/PhoneChromeCoordinator.swift",
+            "timetracker/App/RootViews/PhoneChromeViews.swift",
+            "timetracker/App/RootViews/PhoneRootChromeMetrics.swift",
+            "timetracker/App/RootViews/PhoneBottomDestinationButton.swift",
+            "timetracker/App/RootViews/PhoneRootChromeModifiers.swift",
+            "timetracker/App/RootViews/PhoneRootChromeSupplementaryViews.swift",
+            "timetracker/App/RootViews/PhoneDestinationPresentation.swift",
             "timetracker/AppIntents/TimeTrackerAppIntents.swift",
             "timetrackerWidgetExtension/TimeTrackerWidget.swift",
             "timetrackerWidgetExtension/Info.plist",
@@ -157,6 +164,27 @@ struct CoreSourceLayoutTests {
         for file in files {
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 250, "\(file.lastPathComponent) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func phoneChromeFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let rootViewsURL = root.appending(path: "timetracker/App/RootViews")
+        let focusedFiles = [
+            "PhoneChromeCoordinator.swift",
+            "PhoneChromeViews.swift",
+            "PhoneRootChromeMetrics.swift",
+            "PhoneBottomDestinationButton.swift",
+            "PhoneRootChromeModifiers.swift",
+            "PhoneRootChromeSupplementaryViews.swift",
+            "PhoneDestinationPresentation.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = rootViewsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
         }
     }
 

@@ -48,7 +48,8 @@ struct TaskUIContractTests {
 
         #expect(sidebarSource.contains("@State private var isSyncingSelection = false"))
         #expect(sidebarSource.contains("guard !isSyncingSelection else { return }"))
-        #expect(sidebarSource.contains("DispatchQueue.main.async"))
+        #expect(sidebarSource.contains("Task { @MainActor in"))
+        #expect(sidebarSource.contains("DispatchQueue.main.async") == false)
         #expect(sidebarSource.contains("store.openTaskDetail(taskID)"))
         #expect(sidebarSource.contains("store.closeTaskDetailNavigation()"))
         #expect(sidebarSource.contains("if let desktopTaskDetailID = store.desktopTaskDetailID"))

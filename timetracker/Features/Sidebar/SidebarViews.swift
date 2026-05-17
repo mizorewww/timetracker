@@ -80,7 +80,7 @@ struct SidebarView: View {
     private func syncSelectionFromStore() {
         isSyncingSelection = true
         defer {
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isSyncingSelection = false
             }
         }

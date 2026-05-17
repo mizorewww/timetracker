@@ -3,6 +3,7 @@ import AppKit
 import SwiftData
 import SwiftUI
 
+@MainActor
 final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
     private var uiTestWindow: NSWindow?
 
@@ -12,7 +13,8 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
         NSApp.setActivationPolicy(.regular)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
             NSApp.activate(ignoringOtherApps: true)
             let hasVisibleContentWindow = NSApp.windows.contains { window in
                 window.isVisible && window.canBecomeMain && !window.title.isEmpty
@@ -22,9 +24,8 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.sendAction(Selector(("newWindow:")), to: nil, from: nil)
             }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                self.openUITestWindowIfNeeded()
-            }
+            try? await Task.sleep(for: .milliseconds(400))
+            self.openUITestWindowIfNeeded()
         }
     }
 

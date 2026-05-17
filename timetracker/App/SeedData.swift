@@ -39,9 +39,31 @@ enum SeedData {
 
         guard !isAutomaticDemoSeedingDisabled else { return }
         guard AppCloudSync.allowsAutomaticDemoSeeding else { return }
-        let taskCount = try context.fetch(FetchDescriptor<TaskNode>()).count
-        guard taskCount == 0 else { return }
+        guard try !hasUserVisibleContent(context: context) else { return }
         try buildDemoData(context: context)
+    }
+
+    private static func hasUserVisibleContent(context: ModelContext) throws -> Bool {
+        try containsAny(TaskNode.self, context: context) ||
+            containsAny(TaskCategory.self, context: context) ||
+            containsAny(TaskCategoryAssignment.self, context: context) ||
+            containsAny(ChecklistItem.self, context: context) ||
+            containsAny(ChecklistItemVisual.self, context: context) ||
+            containsAny(InboxItem.self, context: context) ||
+            containsAny(InboxSuggestion.self, context: context) ||
+            containsAny(CountdownEvent.self, context: context) ||
+            containsAny(TimeSession.self, context: context) ||
+            containsAny(TimeSegment.self, context: context) ||
+            containsAny(PomodoroRun.self, context: context)
+    }
+
+    private static func containsAny<Model: PersistentModel>(
+        _ model: Model.Type,
+        context: ModelContext
+    ) throws -> Bool {
+        var descriptor = FetchDescriptor<Model>()
+        descriptor.fetchLimit = 1
+        return try !context.fetch(descriptor).isEmpty
     }
 
     static func replaceWithDemoData(context: ModelContext) throws {

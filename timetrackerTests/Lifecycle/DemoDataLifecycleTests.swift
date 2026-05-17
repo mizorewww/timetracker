@@ -116,6 +116,25 @@ struct DemoDataLifecycleTests {
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
     }
 
+    @Test @MainActor
+    func automaticDemoDataDoesNotSeedIntoPartiallyInitializedUserContentStore() throws {
+        prepareAutomaticDemoSeeding()
+        defer { resetDemoSeedingDefaults() }
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        _ = try repository.createCategory(
+            title: "Learning",
+            colorHex: "5856D6",
+            iconName: "book",
+            includesInForecast: true
+        )
+
+        try SeedData.ensureSeeded(context: context)
+
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TaskCategory>()).map(\.title) == ["Learning"])
+    }
+
     @Test
     func nonDebugBuildsCannotEnableOrCreateDemoData() throws {
         let configurationSource = try sourceText("timetracker/App/AppDemoDataConfiguration.swift")

@@ -52,6 +52,16 @@ Signed export:
 
 UI tests should rely on accessibility identifiers for core controls, not translated strings, whenever possible.
 
+Clickable-surface coverage is now a refactor gate. Before moving or rewriting a UI area, add or update UI tests that activate every user-reachable control in that area on the representative platform, then record the result in `Docs/SwiftUIModernizationChecklist-2026-05-17.md`.
+
+The current minimum clickable matrix is:
+
+1. Root navigation: Today, Inbox, Tasks, Pomodoro, Analytics, and Settings.
+2. Tasks: every seeded demo task row opens Task Detail without terminating the app.
+3. Analytics: every category row opens its detail page, and the period control can be activated without terminating the app.
+4. Custom phone bottom chrome: test it as a product-specific navigation surface rather than replacing it with native tabs. It is expected to grow beyond five pages, so improvements should preserve the bottom model unless the product decision changes.
+5. Settings: keep it as a primary destination in the current navigation model. Do not hide it inside Today or move it as part of unrelated refactors; improve its native form controls and appearance in place.
+
 ## Performance And Smoothness Verification
 
 Runtime smoothness is a product requirement. The app should not feel slower than a native Apple productivity app on macOS, iPad, or iPhone.

@@ -41,7 +41,13 @@ protocol PomodoroRepository {
     func activeRuns() throws -> [PomodoroRun]
     @discardableResult func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, longBreakSeconds: Int?, targetRounds: Int) throws -> PomodoroRun
     func completeFocus(runID: UUID) throws
-    func cancel(runID: UUID) throws
+    func cancel(runID: UUID, discardRecord: Bool) throws
+}
+
+extension PomodoroRepository {
+    func cancel(runID: UUID) throws {
+        try cancel(runID: runID, discardRecord: false)
+    }
 }
 
 enum TaskRepositoryError: LocalizedError, Equatable {

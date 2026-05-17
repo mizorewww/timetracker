@@ -157,7 +157,7 @@ struct CompletePomodoroFocusUseCase {
 struct CancelPomodoroUseCase {
     let repository: PomodoroRepository
 
-    func execute(runID: UUID) throws {
-        try repository.cancel(runID: runID)
+    func execute(runID: UUID, discardRecord: Bool = false) throws {
+        try repository.cancel(runID: runID, discardRecord: discardRecord)
     }
 }

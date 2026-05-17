@@ -54,7 +54,9 @@ struct DesktopContentView: View {
         case .pomodoro:
             PomodoroView(store: store)
         case .analytics:
-            AnalyticsView(store: store)
+            NavigationStack {
+                AnalyticsView(store: store)
+            }
         case .settings:
             SettingsView(store: store)
         }

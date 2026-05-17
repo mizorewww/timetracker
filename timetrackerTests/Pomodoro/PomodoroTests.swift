@@ -122,6 +122,34 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func cancellingPomodoroBelowTwentyPercentDiscardsRecordAndLedger() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Tiny Focus", parentID: nil, colorHex: nil, iconName: nil)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.selectedTaskID = task.id
+
+        store.startPomodoroForSelectedTask(focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 1)
+        let run = try #require(store.activePomodoroRun(for: task.id))
+        let sessionID = try #require(run.sessionID)
+        let segment = try #require(store.activeSegment(for: task.id))
+        let startedAt = Date().addingTimeInterval(-4 * 60)
+        run.startedAt = startedAt
+        segment.startedAt = startedAt
+        try context.save()
+        store.refreshQuietly()
+
+        store.cancelActivePomodoro()
+
+        #expect(store.pomodoroRuns.contains { $0.id == run.id } == false)
+        #expect(store.allSegments.contains { $0.sessionID == sessionID } == false)
+        #expect(try timeRepository.allSegments().contains { $0.sessionID == sessionID } == false)
+        #expect(try timeRepository.sessions().contains { $0.id == sessionID } == false)
+    }
+
+    @Test @MainActor
     func cancellingPomodoroStopsLedgerSession() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

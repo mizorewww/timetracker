@@ -3,23 +3,31 @@ import SwiftUI
 struct PomodoroLedgerCard: View {
     @ObservedObject var store: TimeTrackerStore
 
-    private var recentRuns: [PomodoroRun] {
-        Array(store.pomodoroRuns.prefix(5))
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(.app("pomodoro.recent"))
                 .font(.headline)
 
-            if recentRuns.isEmpty {
-                EmptyStateRow(title: AppStrings.localized("pomodoro.empty"), icon: "timer")
-            } else {
-                PomodoroRecentRunsList(store: store, runs: recentRuns)
-            }
+            PomodoroLedgerContent(store: store)
         }
         .padding(18)
         .appCard(padding: 0)
+    }
+}
+
+struct PomodoroLedgerContent: View {
+    @ObservedObject var store: TimeTrackerStore
+
+    private var recentRuns: [PomodoroRun] {
+        Array(store.pomodoroRuns.prefix(5))
+    }
+
+    var body: some View {
+        if recentRuns.isEmpty {
+            EmptyStateRow(title: AppStrings.localized("pomodoro.empty"), icon: "timer")
+        } else {
+            PomodoroRecentRunsList(store: store, runs: recentRuns)
+        }
     }
 }
 

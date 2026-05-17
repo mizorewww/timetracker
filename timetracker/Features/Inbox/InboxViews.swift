@@ -28,23 +28,47 @@ struct InboxView: View {
         layout.isCompact
     }
 
+    private var bottomPadding: CGFloat {
+        #if os(iOS)
+        isCompact ? PhoneRootChromeMetrics.scrollBottomClearance : 34
+        #else
+        34
+        #endif
+    }
+
+    private var horizontalPadding: CGFloat {
+        #if os(iOS)
+        isCompact ? PhoneRootChromeMetrics.pageHorizontalPadding : layout.pageHorizontalPadding
+        #else
+        layout.pageHorizontalPadding
+        #endif
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: layout.contentSpacing) {
+                #if os(iOS)
+                if isCompact {
+                    PhoneLargePageHeader(destination: .inbox)
+                }
+                #endif
                 header
                 inboxCard
                 footerHint
             }
             .frame(maxWidth: layout.contentMaxWidth ?? .infinity, alignment: .leading)
-            .padding(.horizontal, layout.pageHorizontalPadding)
+            .padding(.horizontal, horizontalPadding)
             .padding(.top, layout.pageTopPadding)
-            .padding(.bottom, 34)
+            .padding(.bottom, bottomPadding)
         }
+        #if os(iOS)
+        .phoneRootScrollBehavior(enabled: isCompact)
+        #endif
         .scrollContentBackground(.hidden)
         .background(AppColors.background.ignoresSafeArea())
         .navigationTitle(AppStrings.inbox)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(isCompact ? .large : .inline)
+        .navigationBarTitleDisplayMode(isCompact ? .inline : .large)
         .toolbar {
             if isCompact {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -57,6 +81,8 @@ struct InboxView: View {
                 }
             }
         }
+        .phoneChromeScrollObserver(destination: .inbox, enabled: isCompact)
+        .phoneRootChrome(destination: .inbox, enabled: isCompact)
         #endif
     }
 

@@ -3,6 +3,16 @@ import SwiftUI
 struct TodayActivityCard: View {
     let activity: [HourTaskActivity]
 
+    var body: some View {
+        AnalyticsChartCard(title: AppStrings.localized("analytics.hourDistribution.title"), subtitle: AppStrings.localized("analytics.hourDistribution.subtitle")) {
+            TodayActivityContent(activity: activity)
+        }
+    }
+}
+
+struct TodayActivityContent: View {
+    let activity: [HourTaskActivity]
+
     private var totalSeconds: Int {
         activity.reduce(0) { $0 + $1.totalSeconds }
     }
@@ -25,45 +35,43 @@ struct TodayActivityCard: View {
     }
 
     var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.hourDistribution.title"), subtitle: AppStrings.localized("analytics.hourDistribution.subtitle")) {
-            if totalSeconds == 0 {
-                EmptyStateRow(title: AppStrings.localized("analytics.empty.todayTaskTime"), icon: "chart.bar")
-            } else {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(DurationFormatter.compact(totalSeconds))
-                                .font(.title3.weight(.semibold).monospacedDigit())
-                            Text(AppStrings.todayTracked)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Text(AppStrings.localized("analytics.hourDistribution.taskColorHint"))
+        if totalSeconds == 0 {
+            EmptyStateRow(title: AppStrings.localized("analytics.empty.todayTaskTime"), icon: "chart.bar")
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(DurationFormatter.compact(totalSeconds))
+                            .font(.title3.weight(.semibold).monospacedDigit())
+                        Text(AppStrings.todayTracked)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.trailing)
                     }
 
-                    activityBars
+                    Spacer()
 
-                    HStack {
-                        ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
-                            Text(String(format: "%02d", hour))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                            if hour != 24 {
-                                Spacer()
-                            }
+                    Text(AppStrings.localized("analytics.hourDistribution.taskColorHint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                }
+
+                activityBars
+
+                HStack {
+                    ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
+                        Text(String(format: "%02d", hour))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        if hour != 24 {
+                            Spacer()
                         }
                     }
+                }
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), alignment: .leading)], alignment: .leading, spacing: 8) {
-                        ForEach(legendItems) { item in
-                            AnalyticsLegendSwatch(color: item.color, title: item.title)
-                        }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), alignment: .leading)], alignment: .leading, spacing: 8) {
+                    ForEach(legendItems) { item in
+                        AnalyticsLegendSwatch(color: item.color, title: item.title)
                     }
                 }
             }

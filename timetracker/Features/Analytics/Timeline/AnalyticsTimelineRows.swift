@@ -1,6 +1,6 @@
 import SwiftUI
 
-extension OverlappingTimelineCard {
+extension OverlappingTimelineContent {
     func horizontalBar(entry: AnalyticsTimelineEntry, width: CGFloat) -> some View {
         let interval = entry.interval
         let startRatio = axisCompression.ratio(for: interval.start)

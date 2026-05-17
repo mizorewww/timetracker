@@ -193,23 +193,31 @@ struct DailyTrendCard: View {
             title: AppStrings.localized("analytics.dailyTrend.title"),
             subtitle: AppStrings.localized("analytics.dailyTrend.subtitle")
         ) {
-            Chart(daily) { point in
-                BarMark(
-                    x: .value("Day", point.label),
-                    y: .value("Wall Minutes", point.wallSeconds / 60)
-                )
-                .foregroundStyle(.blue)
-
-                LineMark(
-                    x: .value("Day", point.label),
-                    y: .value("Gross Minutes", point.grossSeconds / 60)
-                )
-                .foregroundStyle(.green)
-                .symbol(.circle)
-            }
-            .chartYAxisLabel(AppStrings.localized("analytics.minutes"))
-            .frame(height: 240)
+            DailyTrendContent(daily: daily)
         }
+    }
+}
+
+struct DailyTrendContent: View {
+    let daily: [DailyAnalyticsPoint]
+
+    var body: some View {
+        Chart(daily) { point in
+            BarMark(
+                x: .value("Day", point.label),
+                y: .value("Wall Minutes", point.wallSeconds / 60)
+            )
+            .foregroundStyle(.blue)
+
+            LineMark(
+                x: .value("Day", point.label),
+                y: .value("Gross Minutes", point.grossSeconds / 60)
+            )
+            .foregroundStyle(.green)
+            .symbol(.circle)
+        }
+        .chartYAxisLabel(AppStrings.localized("analytics.minutes"))
+        .frame(height: 240)
     }
 }
 
@@ -221,18 +229,26 @@ struct AnalyticsOverlapCard: View {
             title: AppStrings.localized("analytics.overlap.title"),
             subtitle: AppStrings.localized("analytics.overlap.subtitle")
         ) {
-            VStack(spacing: 0) {
-                if overlaps.isEmpty {
-                    EmptyStateRow(
-                        title: AppStrings.localized("analytics.empty.overlap"),
-                        icon: "rectangle.2.swap"
-                    )
-                } else {
-                    ForEach(Array(overlaps.prefix(6).enumerated()), id: \.element.id) { index, overlap in
-                        OverlapRow(overlap: overlap)
-                        if index < min(overlaps.count, 6) - 1 {
-                            Divider()
-                        }
+            AnalyticsOverlapContent(overlaps: overlaps)
+        }
+    }
+}
+
+struct AnalyticsOverlapContent: View {
+    let overlaps: [OverlapAnalyticsPoint]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if overlaps.isEmpty {
+                EmptyStateRow(
+                    title: AppStrings.localized("analytics.empty.overlap"),
+                    icon: "rectangle.2.swap"
+                )
+            } else {
+                ForEach(Array(overlaps.prefix(6).enumerated()), id: \.element.id) { index, overlap in
+                    OverlapRow(overlap: overlap)
+                    if index < min(overlaps.count, 6) - 1 {
+                        Divider()
                     }
                 }
             }

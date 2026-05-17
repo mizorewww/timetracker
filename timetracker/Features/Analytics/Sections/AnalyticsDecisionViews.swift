@@ -128,29 +128,38 @@ struct AnalyticsGroupBreakdownCard: View {
     let items: [AnalyticsGroupBreakdownPoint]
     let totalSeconds: Int
 
+    var body: some View {
+        AnalyticsChartCard(title: title, subtitle: subtitle) {
+            AnalyticsGroupBreakdownContent(items: items, totalSeconds: totalSeconds)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct AnalyticsGroupBreakdownContent: View {
+    let items: [AnalyticsGroupBreakdownPoint]
+    let totalSeconds: Int
+
     private var visibleItems: [AnalyticsGroupBreakdownPoint] {
         Array(items.prefix(6))
     }
 
     var body: some View {
-        AnalyticsChartCard(title: title, subtitle: subtitle) {
-            if visibleItems.isEmpty {
-                EmptyStateRow(title: AppStrings.localized("analytics.empty.rangeTaskTime"), icon: "chart.pie")
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    stackedBar
-                    VStack(spacing: 0) {
-                        ForEach(visibleItems) { item in
-                            AnalyticsGroupBreakdownRow(item: item, totalSeconds: totalSeconds)
-                            if item.id != visibleItems.last?.id {
-                                Divider()
-                            }
+        if visibleItems.isEmpty {
+            EmptyStateRow(title: AppStrings.localized("analytics.empty.rangeTaskTime"), icon: "chart.pie")
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                stackedBar
+                VStack(spacing: 0) {
+                    ForEach(visibleItems) { item in
+                        AnalyticsGroupBreakdownRow(item: item, totalSeconds: totalSeconds)
+                        if item.id != visibleItems.last?.id {
+                            Divider()
                         }
                     }
                 }
             }
         }
-        .frame(maxWidth: .infinity)
     }
 
     private var stackedBar: some View {
@@ -235,14 +244,22 @@ private struct AnalyticsRhythmCard: View {
             title: AppStrings.localized("analytics.rhythm.title"),
             subtitle: AppStrings.localized("analytics.rhythm.subtitle")
         ) {
-            VStack(spacing: 10) {
-                InfoRow(title: AppStrings.localized("analytics.rhythm.peakHour"), value: peakHourText)
-                InfoRow(title: AppStrings.localized("analytics.rhythm.activeDays"), value: "\(rhythm.activeDayCount)")
-                InfoRow(title: AppStrings.localized("analytics.rhythm.longest"), value: DurationFormatter.compact(rhythm.longestContinuousSeconds))
-                InfoRow(title: AppStrings.localized("analytics.rhythm.averageSegment"), value: DurationFormatter.compact(rhythm.averageSegmentSeconds))
-            }
+            AnalyticsRhythmContent(rhythm: rhythm)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+struct AnalyticsRhythmContent: View {
+    let rhythm: AnalyticsRhythm
+
+    var body: some View {
+        VStack(spacing: 10) {
+            InfoRow(title: AppStrings.localized("analytics.rhythm.peakHour"), value: peakHourText)
+            InfoRow(title: AppStrings.localized("analytics.rhythm.activeDays"), value: "\(rhythm.activeDayCount)")
+            InfoRow(title: AppStrings.localized("analytics.rhythm.longest"), value: DurationFormatter.compact(rhythm.longestContinuousSeconds))
+            InfoRow(title: AppStrings.localized("analytics.rhythm.averageSegment"), value: DurationFormatter.compact(rhythm.averageSegmentSeconds))
+        }
     }
 
     private var peakHourText: String {
@@ -261,14 +278,22 @@ private struct AnalyticsQualityCard: View {
             title: AppStrings.localized("analytics.quality.title"),
             subtitle: AppStrings.localized("analytics.quality.subtitle")
         ) {
-            VStack(spacing: 10) {
-                InfoRow(title: AppStrings.localized("analytics.quality.overlapRatio"), value: percentText(quality.overlapRatio))
-                InfoRow(title: AppStrings.localized("analytics.quality.switches"), value: "\(quality.switchCount)")
-                InfoRow(title: AppStrings.localized("analytics.quality.shortSegments"), value: String(format: AppStrings.localized("analytics.quality.shortSegmentsFormat"), quality.shortSegmentCount, percentText(quality.shortSegmentRatio)))
-                InfoRow(title: AppStrings.localized("analytics.quality.longest"), value: DurationFormatter.compact(quality.longestContinuousSeconds))
-            }
+            AnalyticsQualityContent(quality: quality)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+struct AnalyticsQualityContent: View {
+    let quality: AnalyticsQuality
+
+    var body: some View {
+        VStack(spacing: 10) {
+            InfoRow(title: AppStrings.localized("analytics.quality.overlapRatio"), value: percentText(quality.overlapRatio))
+            InfoRow(title: AppStrings.localized("analytics.quality.switches"), value: "\(quality.switchCount)")
+            InfoRow(title: AppStrings.localized("analytics.quality.shortSegments"), value: String(format: AppStrings.localized("analytics.quality.shortSegmentsFormat"), quality.shortSegmentCount, percentText(quality.shortSegmentRatio)))
+            InfoRow(title: AppStrings.localized("analytics.quality.longest"), value: DurationFormatter.compact(quality.longestContinuousSeconds))
+        }
     }
 
     private func percentText(_ value: Double) -> String {

@@ -3,6 +3,16 @@ import SwiftUI
 struct OverlappingTimelineCard: View {
     let timeline: AnalyticsTimelineSnapshot
 
+    var body: some View {
+        AnalyticsChartCard(title: AppStrings.localized("analytics.timeline.title"), subtitle: AppStrings.localized("analytics.timeline.subtitle")) {
+            OverlappingTimelineContent(timeline: timeline)
+        }
+    }
+}
+
+struct OverlappingTimelineContent: View {
+    let timeline: AnalyticsTimelineSnapshot
+
     var displayInterval: DateInterval {
         timeline.displayInterval ?? DateInterval(start: Date(timeIntervalSince1970: 0), duration: 1)
     }
@@ -16,27 +26,25 @@ struct OverlappingTimelineCard: View {
     }
 
     var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.timeline.title"), subtitle: AppStrings.localized("analytics.timeline.subtitle")) {
-            if laneEntries.isEmpty {
-                EmptyStateRow(title: AppStrings.localized("analytics.timeline.empty"), icon: "timeline.selection")
-            } else {
-                VStack(alignment: .leading, spacing: 14) {
-                    if isCompact {
-                        verticalTimeline
-                            .frame(height: 520)
-                    } else {
-                        horizontalTimeline
-                            .frame(height: horizontalTimelineHeight)
-                    }
+        if laneEntries.isEmpty {
+            EmptyStateRow(title: AppStrings.localized("analytics.timeline.empty"), icon: "timeline.selection")
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                if isCompact {
+                    verticalTimeline
+                        .frame(height: 520)
+                } else {
+                    horizontalTimeline
+                        .frame(height: horizontalTimelineHeight)
+                }
 
-                    Divider()
+                Divider()
 
-                    VStack(spacing: 0) {
-                        ForEach(laneEntries) { entry in
-                            timelineLegendRow(entry)
-                            if entry.id != laneEntries.last?.id {
-                                Divider()
-                            }
+                VStack(spacing: 0) {
+                    ForEach(laneEntries) { entry in
+                        timelineLegendRow(entry)
+                        if entry.id != laneEntries.last?.id {
+                            Divider()
                         }
                     }
                 }

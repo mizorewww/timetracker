@@ -15,9 +15,28 @@ struct SettingsView: View {
     @State var syncCheckMessage: String?
     @State var databaseOptimizationMessage: String?
     @State var llmModelFetchMessage: String?
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         Form {
+            #if os(iOS)
+            if isCompactPhone {
+                PhoneLargePageHeader(destination: .settings)
+                    .listRowInsets(PhoneRootChromeMetrics.groupedHeaderRowInsets)
+                    .listRowBackground(Color.clear)
+            }
+            #endif
+
             DisplayTimingSettingsSection(
                 preferredColorScheme: preferredColorSchemeBinding,
                 allowParallelTimers: allowParallelTimersBinding,
@@ -107,11 +126,22 @@ struct SettingsView: View {
             )
 
             AboutSettingsSection()
+
+            #if os(iOS)
+            if isCompactPhone {
+                PhoneRootListBottomClearanceRow()
+            }
+            #endif
         }
         .formStyle(.grouped)
+        #if os(iOS)
+        .phoneRootScrollMargins(enabled: isCompactPhone)
+        #endif
         .navigationTitle(AppStrings.settings)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .phoneChromeScrollObserver(destination: .settings, enabled: isCompactPhone)
+        .phoneRootChrome(destination: .settings, enabled: isCompactPhone)
         #endif
         .accessibilityIdentifier("settings.view")
         .fileExporter(

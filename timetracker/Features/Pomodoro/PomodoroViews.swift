@@ -2,72 +2,207 @@ import SwiftUI
 
 struct PomodoroView: View {
     @ObservedObject var store: TimeTrackerStore
+    #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var focusMinutes = 25
-    @State private var breakMinutes = 5
-    @State private var targetRounds = 1
+    #endif
+    @State private var selectedPlanID: UUID?
+    @State private var isReturningToSetup = false
+    @State private var returningFocusSeconds: Int?
+    @State private var pendingCancelTask: Task<Void, Never>?
+    @State private var timerFaceFrames: [PomodoroTimerFaceSource: CGRect] = [:]
 
-    private var layout: PomodoroLayoutPolicy {
-        PomodoroLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
+    private var availablePlans: [PomodoroPlan] {
+        let plans = store.preferences.pomodoroPlans.map { $0.normalized() }
+        return plans.isEmpty ? PomodoroPlan.defaultPlans : plans
+    }
+
+    private var selectedPlan: PomodoroPlan {
+        availablePlans.first { $0.id == selectedPlanID } ?? availablePlans[0]
+    }
+
+    private var selectedTask: TaskNode? {
+        store.selectedTaskID.flatMap { store.task(for: $0) }
+    }
+
+    private var selectedTaskColor: Color {
+        Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
+    }
+
+    private var isCompactPhone: Bool {
+        #if os(iOS)
+        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
+        #else
+        false
+        #endif
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                if layout.showsInlineHeader {
-                    header
-                }
-
-                if let run = store.activePomodoroRun {
-                    ActivePomodoroCard(store: store, run: run)
-                } else {
-                    PomodoroSetupCard(
-                        store: store,
-                        focusMinutes: $focusMinutes,
-                        breakMinutes: $breakMinutes,
-                        targetRounds: $targetRounds
-                    )
-                }
-
-                PomodoroLedgerCard(store: store)
+        VStack(spacing: 0) {
+            #if os(iOS)
+            if isCompactPhone {
+                PhoneLargePageHeader(destination: .pomodoro)
+                    .padding(.horizontal, PhoneRootChromeMetrics.pageHorizontalPadding)
+                    .padding(.top, 0)
             }
-            .frame(maxWidth: 720)
-            .frame(maxWidth: .infinity)
-            .padding()
+            #endif
+
+            GeometryReader { proxy in
+                ZStack {
+                    VStack(spacing: 0) {
+                        if let run = store.activePomodoroRun, !isReturningToSetup {
+                            ActivePomodoroCard(
+                                store: store,
+                                run: run,
+                                requestCancel: {
+                                    returnToSetupThenCancel(run)
+                                }
+                            )
+                        } else {
+                            PomodoroSetupCard(
+                                store: store,
+                                plan: selectedPlan,
+                                availablePlans: availablePlans,
+                                selectedPlanID: $selectedPlanID,
+                                displayedFocusSecondsOverride: returningFocusSeconds,
+                                rendersTimerContent: !isReturningToSetup
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: proxy.size.height)
+
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        PomodoroHighRefreshTimerFace(content: timerFaceContent(now: context.date), frame: timerFaceFrame)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .opacity(showsTimerOverlay ? 1 : 0)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .coordinateSpace(name: PomodoroStyle.timerCoordinateSpace)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(AppStrings.pomodoro)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .phoneRootChrome(destination: .pomodoro, enabled: isCompactPhone)
         #endif
-        .background(AppColors.background)
+        .background(PomodoroBackgroundColor().ignoresSafeArea())
         .onAppear {
-            applyDefaultPreferences()
+            normalizeSelectedPlan()
         }
-        .onChange(of: store.preferences) { _, _ in
-            applyDefaultPreferences()
+        .onChange(of: store.preferences.pomodoroPlans) { _, _ in
+            normalizeSelectedPlan()
         }
-    }
-
-    private func applyDefaultPreferences() {
-        focusMinutes = store.preferences.defaultFocusMinutes
-        breakMinutes = store.preferences.defaultBreakMinutes
-        targetRounds = max(1, store.preferences.defaultPomodoroRounds)
-        if let preset = PomodoroPreset(rawValue: store.preferences.pomodoroDefaultMode), preset != .custom {
-            focusMinutes = preset.focusMinutes
-            breakMinutes = preset.breakMinutes
+        .onPreferenceChange(PomodoroTimerFaceFramePreferenceKey.self) { frames in
+            timerFaceFrames.merge(frames, uniquingKeysWith: { _, new in new })
+        }
+        .onDisappear {
+            completePendingCancelIfNeeded()
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(AppStrings.pomodoro)
-                .font(.largeTitle.bold())
-                .accessibilityIdentifier("pomodoro.title")
-            Text(.app("pomodoro.header.subtitle"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    private func timerFaceContent(now: Date = Date()) -> PomodoroTimerFaceContent {
+        if let run = store.activePomodoroRun, !isReturningToSetup {
+            return PomodoroTimerFaceContent(
+                timeText: DurationFormatter.clock(store.pomodoroRemainingSeconds(for: run, now: now)),
+                title: store.taskTitle(for: run),
+                titleColor: Color(hex: store.task(for: run.taskID)?.colorHex) ?? PomodoroStyle.accent
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+
+        return PomodoroTimerFaceContent(
+            timeText: DurationFormatter.clock(returningFocusSeconds ?? selectedPlan.focusSeconds),
+            title: selectedTask?.title ?? AppStrings.localized("pomodoro.chooseTask"),
+            titleColor: selectedTaskColor
+        )
+    }
+
+    private var timerFaceFrame: CGRect? {
+        timerFaceFrames[timerFaceSource] ?? timerFaceFrames[timerFaceSource.fallback]
+    }
+
+    private var timerFaceSource: PomodoroTimerFaceSource {
+        if store.activePomodoroRun != nil && !isReturningToSetup {
+            return .active
+        }
+        return .setup
+    }
+
+    private var showsTimerOverlay: Bool {
+        store.activePomodoroRun != nil || isReturningToSetup
+    }
+
+    private func normalizeSelectedPlan() {
+        guard !availablePlans.isEmpty else { return }
+        if selectedPlanID == nil || !availablePlans.contains(where: { $0.id == selectedPlanID }) {
+            selectedPlanID = availablePlans[0].id
+        }
+    }
+
+    private func returnToSetupThenCancel(_ run: PomodoroRun) {
+        guard !isReturningToSetup else { return }
+        pendingCancelTask?.cancel()
+
+        var resetTransaction = Transaction(animation: nil)
+        resetTransaction.disablesAnimations = true
+        withTransaction(resetTransaction) {
+            returningFocusSeconds = run.focusSecondsPlanned
+        }
+
+        var swapTransaction = Transaction(animation: nil)
+        swapTransaction.disablesAnimations = true
+        withTransaction(swapTransaction) {
+            isReturningToSetup = true
+        }
+
+        pendingCancelTask = Task {
+            try? await Task.sleep(nanoseconds: UInt64(PomodoroStyle.timerTransitionDuration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                completePendingCancelIfNeeded()
+            }
+        }
+    }
+
+    private func completePendingCancelIfNeeded() {
+        pendingCancelTask?.cancel()
+        pendingCancelTask = nil
+        guard isReturningToSetup else { return }
+
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            store.cancelActivePomodoro()
+            isReturningToSetup = false
+            returningFocusSeconds = nil
+        }
+    }
+}
+
+private struct PomodoroBackgroundColor: View {
+    var body: some View {
+        PomodoroStyle.background
+    }
+}
+
+enum PomodoroStyle {
+    static let background = AppColors.background
+    static let timerText = Color.primary
+    static let accent = Color(red: 0, green: 0.533, blue: 1)
+    static let progressTrack = Color.primary.opacity(0.16)
+    static let timerCoordinateSpace = "pomodoro.timerFace.coordinateSpace"
+    static let timerTransitionDuration: TimeInterval = 0.62
+    static let timerTransitionAnimation = Animation.timingCurve(0.2, 0.86, 0.22, 1, duration: timerTransitionDuration)
+}
+
+private extension PomodoroTimerFaceSource {
+    var fallback: PomodoroTimerFaceSource {
+        switch self {
+        case .setup: return .active
+        case .active: return .setup
+        }
     }
 }
 

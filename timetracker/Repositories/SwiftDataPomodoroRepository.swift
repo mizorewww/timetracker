@@ -82,16 +82,55 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         try context.save()
     }
 
-    func cancel(runID: UUID) throws {
+    func cancel(runID: UUID, discardRecord: Bool = false) throws {
         let descriptor = FetchDescriptor<PomodoroRun>()
         guard let run = try context.fetch(descriptor).first(where: { $0.id == runID && $0.deletedAt == nil }) else { return }
+        let now = Date()
         if let sessionID = run.sessionID {
-            try timeRepository.stopSession(sessionID: sessionID)
+            if discardRecord {
+                try discardPomodoroSession(sessionID, now: now)
+            } else {
+                try timeRepository.stopSession(sessionID: sessionID)
+            }
         }
         run.state = .cancelled
-        run.endedAt = Date()
-        run.updatedAt = Date()
+        run.endedAt = now
+        run.deletedAt = discardRecord ? now : nil
+        run.updatedAt = now
         run.clientMutationID = UUID()
         try context.save()
+    }
+
+    private func discardPomodoroSession(_ sessionID: UUID, now: Date) throws {
+        let segments = try segments(in: sessionID)
+        for segment in segments {
+            segment.endedAt = segment.endedAt ?? now
+            segment.deletedAt = now
+            segment.updatedAt = now
+        }
+
+        if let session = try session(id: sessionID) {
+            session.endedAt = session.endedAt ?? now
+            session.deletedAt = now
+            session.updatedAt = now
+        }
+    }
+
+    private func segments(in sessionID: UUID) throws -> [TimeSegment] {
+        let targetSessionID = sessionID
+        let descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.sessionID == targetSessionID },
+            sortBy: [SortDescriptor(\.startedAt)]
+        )
+        return try context.fetch(descriptor)
+    }
+
+    private func session(id: UUID) throws -> TimeSession? {
+        let sessionID = id
+        var descriptor = FetchDescriptor<TimeSession>(
+            predicate: #Predicate { $0.id == sessionID }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
     }
 }

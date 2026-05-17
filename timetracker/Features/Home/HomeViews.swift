@@ -29,13 +29,14 @@ struct DesktopMainView: View {
     }
 }
 
+#if os(iOS)
 struct PhoneHomeView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var showsSettings = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                PhoneLargePageHeader(destination: .today)
                 MetricsAndActions(store: store, horizontal: false)
                 TimeProgressSection(store: store)
                 TaskForecastSummarySection(store: store)
@@ -44,25 +45,15 @@ struct PhoneHomeView: View {
                 TimelineSection(store: store)
                 HomeSelectedTaskSummaryCard(store: store)
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, PhoneRootChromeMetrics.pageHorizontalPadding)
             .padding(.top, 0)
-            .padding(.bottom, 24)
+            .padding(.bottom, PhoneRootChromeMetrics.scrollBottomClearance)
         }
+        .phoneRootScrollBehavior()
+        .phoneChromeScrollObserver(destination: .today)
         .background(AppColors.background)
-        .navigationTitle(AppStrings.today)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.large)
-        #endif
+        .phoneRootChrome(destination: .today)
         .toolbar {
-            ToolbarItem(placement: phoneLeadingToolbarPlacement) {
-                Button {
-                    showsSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                }
-                .accessibilityLabel(AppStrings.settings)
-            }
-
             ToolbarItem(placement: phoneToolbarPlacement) {
                 Button {
                     store.presentNewTask()
@@ -71,23 +62,9 @@ struct PhoneHomeView: View {
                 }
             }
         }
-        .sheet(isPresented: $showsSettings) {
-            NavigationStack {
-                SettingsView(store: store)
-                    .toolbar {
-                        ToolbarItem(placement: phoneToolbarPlacement) {
-                            Button {
-                                showsSettings = false
-                            } label: {
-                                Image(systemName: "checkmark")
-                            }
-                            .accessibilityLabel(AppStrings.done)
-                        }
-                    }
-            }
-        }
     }
 }
+#endif
 
 struct HeaderBar: View {
     @ObservedObject var store: TimeTrackerStore

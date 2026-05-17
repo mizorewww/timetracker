@@ -1,6 +1,6 @@
 import SwiftUI
 
-extension OverlappingTimelineCard {
+extension OverlappingTimelineContent {
     var horizontalTimeline: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {

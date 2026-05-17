@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 #if os(iOS)
 struct iOSRootView: View {
@@ -16,56 +19,64 @@ struct iOSRootView: View {
 
 struct PhoneRootView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
+    @StateObject private var chrome = PhoneChromeCoordinator()
+    @State private var isKeyboardVisible = false
 
     var body: some View {
-        TabView(selection: $selectedDestination) {
-            NavigationStack {
-                PhoneHomeView(store: store)
+        PhoneDestinationStack(store: store, destination: chrome.selectedDestination)
+            .environmentObject(chrome)
+            .transaction { transaction in
+                transaction.animation = nil
             }
-            .tabItem { Label(AppStrings.localized("tab.home"), systemImage: "house.fill") }
-            .tag(TimeTrackerStore.DesktopDestination.today)
-
-            NavigationStack {
-                InboxView(store: store)
+            .safeAreaBar(edge: .bottom, spacing: 0) {
+                if !isKeyboardVisible {
+                    PhonePagedBottomSelector(
+                        chrome: chrome,
+                        destinations: TimeTrackerStore.DesktopDestination.phoneDestinations
+                    )
+                }
             }
-            .tabItem { Label(AppStrings.inbox, systemImage: "tray") }
-            .tag(TimeTrackerStore.DesktopDestination.inbox)
-
-            NavigationStack {
-                TasksView(store: store)
+            .onAppear {
+                chrome.select(store.desktopDestination)
             }
-            .tabItem { Label(AppStrings.tasks, systemImage: "list.bullet") }
-            .tag(TimeTrackerStore.DesktopDestination.tasks)
-
-            NavigationStack {
-                PomodoroView(store: store)
+            .onChange(of: store.desktopDestination) { _, destination in
+                guard chrome.selectedDestination != destination else { return }
+                chrome.select(destination)
             }
-            .tabItem { Label(AppStrings.pomodoro, systemImage: "timer") }
-            .tag(TimeTrackerStore.DesktopDestination.pomodoro)
-
-            NavigationStack {
-                AnalyticsView(store: store)
+            .onChange(of: chrome.selectedDestination) { _, destination in
+                guard store.desktopDestination != destination else { return }
+                store.desktopDestination = destination
             }
-            .tabItem { Label(AppStrings.analytics, systemImage: "chart.bar.xaxis") }
-            .tag(TimeTrackerStore.DesktopDestination.analytics)
-        }
-        .onAppear {
-            selectedDestination = phoneDestination(for: store.desktopDestination)
-        }
-        .onChange(of: store.desktopDestination) { _, destination in
-            let phoneDestination = phoneDestination(for: destination)
-            guard selectedDestination != phoneDestination else { return }
-            selectedDestination = phoneDestination
-        }
-        .onChange(of: selectedDestination) { _, destination in
-            guard store.desktopDestination != destination else { return }
-            store.desktopDestination = destination
-        }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                isKeyboardVisible = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                isKeyboardVisible = false
+            }
     }
+}
 
-    private func phoneDestination(for destination: TimeTrackerStore.DesktopDestination) -> TimeTrackerStore.DesktopDestination {
-        destination == .settings ? .today : destination
+private struct PhoneDestinationStack: View {
+    @ObservedObject var store: TimeTrackerStore
+    let destination: TimeTrackerStore.DesktopDestination
+
+    var body: some View {
+        NavigationStack {
+            switch destination {
+            case .today:
+                PhoneHomeView(store: store)
+            case .inbox:
+                InboxView(store: store)
+            case .tasks:
+                TasksView(store: store)
+            case .pomodoro:
+                PomodoroView(store: store)
+            case .analytics:
+                AnalyticsView(store: store)
+            case .settings:
+                SettingsView(store: store)
+            }
+        }
     }
 }
 

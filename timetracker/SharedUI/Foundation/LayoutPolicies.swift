@@ -80,7 +80,7 @@ struct InboxLayoutPolicy {
     }
 
     var pageTopPadding: CGFloat {
-        isCompact ? 6 : 28
+        isCompact ? 0 : 28
     }
 
     var cardCornerRadius: CGFloat {

@@ -3,29 +3,37 @@ import SwiftUI
 struct TaskForecastsCard: View {
     @ObservedObject var store: TimeTrackerStore
 
+    var body: some View {
+        AnalyticsChartCard(title: AppStrings.localized("analytics.forecasts.title"), subtitle: AppStrings.localized("analytics.forecasts.subtitle")) {
+            TaskForecastsContent(store: store)
+        }
+    }
+}
+
+struct TaskForecastsContent: View {
+    @ObservedObject var store: TimeTrackerStore
+
     private var forecastItems: [ForecastDisplayItem] {
         store.forecastDisplayItems(limit: 6)
     }
 
     var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.forecasts.title"), subtitle: AppStrings.localized("analytics.forecasts.subtitle")) {
-            if forecastItems.isEmpty {
-                EmptyStateRow(title: AppStrings.localized("analytics.forecasts.empty"), icon: "checklist")
-            } else {
-                VStack(spacing: 12) {
-                    HStack(alignment: .top, spacing: 8) {
-                        ForecastExplanationCallout()
-                        ForecastInfoButton()
-                    }
+        if forecastItems.isEmpty {
+            EmptyStateRow(title: AppStrings.localized("analytics.forecasts.empty"), icon: "checklist")
+        } else {
+            VStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
+                    ForecastExplanationCallout()
+                    ForecastInfoButton()
+                }
 
-                    VStack(spacing: 0) {
-                        ForEach(forecastItems) { item in
-                            if let task = store.task(for: item.taskID) {
-                                ForecastAnalyticsRow(store: store, task: task, rollup: item.rollup)
-                            }
-                            if item.id != forecastItems.last?.id {
-                                Divider()
-                            }
+                VStack(spacing: 0) {
+                    ForEach(forecastItems) { item in
+                        if let task = store.task(for: item.taskID) {
+                            ForecastAnalyticsRow(store: store, task: task, rollup: item.rollup)
+                        }
+                        if item.id != forecastItems.last?.id {
+                            Divider()
                         }
                     }
                 }

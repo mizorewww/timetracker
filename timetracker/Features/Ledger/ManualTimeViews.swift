@@ -73,6 +73,7 @@ struct ManualTimePanel: View {
                         onCancel()
                     }
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("manualTime.cancel")
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -81,9 +82,11 @@ struct ManualTimePanel: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .disabled(draft.taskID == nil || draft.endedAt <= draft.startedAt)
+                    .accessibilityIdentifier("manualTime.save")
                 }
             }
         }
+        .accessibilityIdentifier("manualTime.sheet")
     }
 
     private var taskBinding: Binding<UUID?> {

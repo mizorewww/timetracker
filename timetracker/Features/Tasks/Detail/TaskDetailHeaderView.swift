@@ -37,6 +37,7 @@ struct TaskDetailHeader: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityLabel(AppStrings.localized("task.detail.editor.expand"))
+                .accessibilityIdentifier("task.detail.header.edit")
             }
 
             HStack(spacing: 10) {

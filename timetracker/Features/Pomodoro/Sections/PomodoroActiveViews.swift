@@ -14,7 +14,6 @@ struct ActivePomodoroCard: View {
                 requestCancel: requestCancel
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityIdentifier("pomodoro.active")
         }
     }
 }
@@ -160,6 +159,7 @@ private struct PomodoroStopControl: View {
         .animation(.easeInOut(duration: 0.16), value: showsProgress)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(AppStrings.localized("pomodoro.holdToStopFocus"))
+        .accessibilityIdentifier("pomodoro.stopControl")
     }
 }
 

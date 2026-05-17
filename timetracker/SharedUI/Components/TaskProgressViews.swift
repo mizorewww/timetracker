@@ -9,6 +9,7 @@ struct CompactChecklistProgressLine: View {
             ProgressView(value: progress.fraction)
                 .tint(tint)
                 .frame(maxWidth: 76)
+                .accessibilityHidden(true)
 
             Text(String(format: AppStrings.localized("checklist.progressFormat"), progress.completedCount, progress.totalCount))
                 .font(.caption2.weight(.medium).monospacedDigit())
@@ -59,6 +60,7 @@ struct TaskProgressLine: View {
             if progress.totalCount > 0 {
                 ProgressView(value: progress.fraction)
                     .frame(width: 48)
+                    .accessibilityHidden(true)
                 Text(String(format: AppStrings.localized("checklist.progressFormat"), progress.completedCount, progress.totalCount))
             } else {
                 Text(AppStrings.localized("checklist.noItems"))

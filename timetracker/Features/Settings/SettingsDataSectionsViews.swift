@@ -15,12 +15,12 @@ struct DataSettingsSection: View {
                 )
             }
             .buttonStyle(.plain)
-
+            .accessibilityIdentifier("settings.exportJSON")
             Button(action: onAddTime) {
                 SettingsActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus", tint: .blue)
             }
             .buttonStyle(.plain)
-
+            .accessibilityIdentifier("settings.addTime")
             Button(role: .destructive, action: onOptimize) {
                 SettingsActionLabel(
                     title: AppStrings.localized("settings.optimizeDatabase"),
@@ -29,6 +29,7 @@ struct DataSettingsSection: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.optimizeDatabase")
         } header: {
             SettingsHeader(symbol: "doc.text.fill", title: AppStrings.localized("settings.data"))
         } footer: {
@@ -62,9 +63,7 @@ struct LLMSettingsSection: View {
                 tint: .orange,
                 isSecure: true
             )
-
             modelSelectionRow
-
             if let feedbackMessage, !feedbackMessage.isEmpty {
                 HStack(alignment: .top, spacing: 12) {
                     SettingsRowIcon(systemImage: "info.circle", tint: .gray)
@@ -100,6 +99,7 @@ struct LLMSettingsSection: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.llm.fetchModels")
         } else {
             Picker(selection: selectedModel) {
                 ForEach(availableModels, id: \.self) { model in
@@ -181,15 +181,18 @@ struct MaintenanceSettingsSection: View {
                     SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise", tint: .red)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.rebuildDemoData")
             }
             Button(role: .destructive, action: onClearDemoData) {
                 SettingsActionLabel(title: AppStrings.localized("settings.clearDemoData"), systemImage: "trash", tint: .red)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.clearDemoData")
             Button(role: .destructive, action: onResetAllData) {
                 SettingsActionLabel(title: AppStrings.localized("settings.resetData"), systemImage: "trash.slash", tint: .red)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.resetData")
         } header: {
             SettingsHeader(symbol: "wrench.and.screwdriver.fill", title: AppStrings.localized("settings.maintenance"))
         }

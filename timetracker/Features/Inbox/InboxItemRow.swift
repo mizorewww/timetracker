@@ -36,6 +36,7 @@ struct InboxItemRow: View {
         .onChange(of: item.title) { _, newValue in
             draftTitle = newValue
         }
+        .accessibilityIdentifier("inbox.item.\(item.title)")
         .contextMenu {
             Button {
                 store.toggleInboxItem(item)
@@ -91,6 +92,7 @@ struct InboxItemRow: View {
                 .contentShape(Circle())
         }
         .accessibilityLabel(AppStrings.localized("common.more"))
+        .accessibilityIdentifier("inbox.item.more.\(item.title)")
     }
 
     @ViewBuilder

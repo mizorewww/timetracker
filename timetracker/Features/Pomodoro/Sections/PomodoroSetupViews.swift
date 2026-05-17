@@ -26,7 +26,7 @@ struct PomodoroSetupCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 92)
+            Spacer(minLength: 40)
 
             PomodoroSelectableTimerFace(
                 store: store,
@@ -40,7 +40,7 @@ struct PomodoroSetupCard: View {
             )
             .pomodoroTimerFaceSource(.setup)
 
-            Spacer(minLength: 281)
+            Spacer(minLength: 72)
 
             Button {
                 startPomodoro()
@@ -60,7 +60,7 @@ struct PomodoroSetupCard: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 10)
 
-            Spacer(minLength: 120)
+            Spacer(minLength: 40)
         }
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
@@ -103,6 +103,7 @@ struct PomodoroTimerFace: View {
                 .frame(height: 50)
         }
         .frame(width: 255)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("pomodoro.timerFace")
     }
 }
@@ -134,7 +135,10 @@ private struct PomodoroSelectableTimerFace: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel(AppStrings.localized("pomodoro.choosePlan"))
+            .accessibilityIdentifier("pomodoro.choosePlan")
+            .accessibilityAddTraits(.isButton)
             .popover(isPresented: $isPlanPickerPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                 planPopoverContent
             }
@@ -151,13 +155,16 @@ private struct PomodoroSelectableTimerFace: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel(AppStrings.localized("pomodoro.chooseTask"))
+            .accessibilityIdentifier("pomodoro.chooseTask")
+            .accessibilityAddTraits(.isButton)
             .popover(isPresented: $isTaskPickerPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                 taskPopoverContent
             }
         }
         .frame(width: 255)
-        .accessibilityIdentifier("pomodoro.timerFace")
+        .accessibilityElement(children: .contain)
     }
 
     private var taskPopoverContent: some View {
@@ -166,7 +173,7 @@ private struct PomodoroSelectableTimerFace: View {
                 ForEach(tasks, id: \.id) { task in
                     let taskColor = Color(hex: task.colorHex) ?? PomodoroStyle.accent
                     Button {
-                        store.selectedTaskID = task.id
+                        store.selectTask(task.id, revealInToday: false)
                         isTaskPickerPresented = false
                     } label: {
                         HStack(spacing: 12) {
@@ -187,6 +194,7 @@ private struct PomodoroSelectableTimerFace: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("pomodoro.task.\(task.title)")
 
                     if task.id != tasks.last?.id {
                         Divider().padding(.leading, 54)
@@ -202,7 +210,8 @@ private struct PomodoroSelectableTimerFace: View {
     private var planPopoverContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                ForEach(plans) { plan in
+                ForEach(plans.indices, id: \.self) { index in
+                    let plan = plans[index]
                     let planColor = Color(hex: plan.colorHex) ?? PomodoroStyle.accent
                     Button {
                         selectedPlanID = plan.id
@@ -229,6 +238,7 @@ private struct PomodoroSelectableTimerFace: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("pomodoro.plan.\(index)")
 
                     if plan.id != plans.last?.id {
                         Divider().padding(.leading, 54)

@@ -17,6 +17,7 @@ struct TaskCategoryEditorSheet: View {
             Form {
                 Section(AppStrings.localized("taskCategory.editor.info")) {
                     TextField(AppStrings.localized("taskCategory.name"), text: $draft.title)
+                        .accessibilityIdentifier("taskCategory.editor.title")
                     SymbolColorPickerRow(
                         colors: TaskColorPalette.hexValues,
                         symbolName: $draft.iconName,
@@ -54,6 +55,7 @@ struct TaskCategoryEditorSheet: View {
                         dismiss()
                     }
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("taskCategory.editor.cancel")
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -64,10 +66,12 @@ struct TaskCategoryEditorSheet: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("taskCategory.editor.save")
                 }
             }
         }
         .platformSheetFrame(width: 460, height: 440)
+        .accessibilityIdentifier("taskCategory.editor.sheet")
     }
 
     private func deleteCategory() {

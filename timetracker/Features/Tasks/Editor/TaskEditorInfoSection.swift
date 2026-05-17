@@ -8,6 +8,7 @@ struct TaskInfoEditorSection: View {
     var body: some View {
         Section {
             TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
+                .accessibilityIdentifier("task.editor.title")
             TaskStatusPicker(selection: $draft.status)
             parentPicker
             if draft.parentID == nil {

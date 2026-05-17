@@ -74,6 +74,7 @@ struct InboxSuggestionBar: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
+            .accessibilityIdentifier("inbox.suggestion.discard")
 
             Button(action: apply) {
                 Image(systemName: "checkmark")
@@ -84,6 +85,7 @@ struct InboxSuggestionBar: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.apply"))
+            .accessibilityIdentifier("inbox.suggestion.apply")
         }
     }
 }
@@ -116,6 +118,7 @@ struct InboxSuggestionFailureBar: View {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
+            .accessibilityIdentifier("inbox.suggestion.discard")
 
             Button(action: retry) {
                 Image(systemName: "arrow.clockwise")
@@ -125,6 +128,7 @@ struct InboxSuggestionFailureBar: View {
             .buttonStyle(.plain)
             .foregroundStyle(.blue)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.retry"))
+            .accessibilityIdentifier("inbox.suggestion.retry")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

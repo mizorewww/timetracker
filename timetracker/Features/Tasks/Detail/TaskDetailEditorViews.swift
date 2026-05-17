@@ -37,10 +37,11 @@ struct TaskDetailEditorCard: View {
             Spacer(minLength: 8)
             if isExpanded {
                 Button(AppStrings.localized("common.reset"), action: reset)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.bordered).accessibilityIdentifier("task.detail.editor.reset")
                 Button(AppStrings.localized("common.save"), action: save)
                     .buttonStyle(.borderedProminent)
                     .disabled(!canSave)
+                    .accessibilityIdentifier("task.detail.editor.save")
             } else {
                 Button {
                     isExpanded = true
@@ -48,6 +49,7 @@ struct TaskDetailEditorCard: View {
                     Label(AppStrings.localized("task.detail.editor.expand"), systemImage: "pencil")
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier("task.detail.editor.expand")
             }
         }
     }
@@ -59,7 +61,6 @@ struct TaskDetailEditorCard: View {
                 summaryBadge(title: AppStrings.localized("editor.task.estimate"), value: estimatedMinutesLabel, iconName: "timer")
                 summaryBadge(title: AppStrings.localized("editor.checklist.title"), value: checklistSummary, iconName: "checklist")
             }
-
             VStack(alignment: .leading, spacing: 8) {
                 summaryBadge(title: AppStrings.localized("editor.task.status"), value: draft.status.displayName, iconName: "circle")
                 summaryBadge(title: AppStrings.localized("editor.task.estimate"), value: estimatedMinutesLabel, iconName: "timer")
@@ -95,9 +96,9 @@ struct TaskDetailEditorCard: View {
             TextField(AppStrings.localized("editor.task.name"), text: $draft.title, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...3)
+                .accessibilityIdentifier("task.detail.editor.title")
 
             TaskDetailStatusControl(selection: $draft.status)
-
             parentPicker
             if draft.parentID == nil {
                 categoryPicker
@@ -132,7 +133,6 @@ struct TaskDetailEditorCard: View {
             }
         }
     }
-
     private var checklistSection: some View {
         TaskDetailChecklistEditorSection(draft: $draft, focusedChecklistDraftID: focusedChecklistDraftID)
     }

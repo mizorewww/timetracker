@@ -97,18 +97,32 @@ final class timetrackerStressDataUITests: XCTestCase {
 
     @MainActor
     private func tapElement(identifier: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
-        let preferredQueries = [
-            app.buttons[identifier].firstMatch,
-            app.cells[identifier].firstMatch,
-            app.otherElements[identifier].firstMatch,
-            app.staticTexts[identifier].firstMatch
-        ]
+        let preferredQueries: [XCUIElement]
+        if identifier.hasPrefix("sidebar.") {
+            preferredQueries = [
+                app.staticTexts[identifier].firstMatch,
+                app.buttons[identifier].firstMatch,
+                app.cells[identifier].firstMatch,
+                app.otherElements[identifier].firstMatch
+            ]
+        } else {
+            preferredQueries = [
+                app.buttons[identifier].firstMatch,
+                app.cells[identifier].firstMatch,
+                app.otherElements[identifier].firstMatch,
+                app.staticTexts[identifier].firstMatch
+            ]
+        }
         let matches = app.descendants(matching: .any).matching(identifier: identifier)
         let deadline = Date().addingTimeInterval(timeout)
 
         repeat {
             for element in preferredQueries where element.exists && element.isHittable {
                 element.tap()
+                return true
+            }
+            for element in preferredQueries where element.exists && hasVisibleFrame(element) {
+                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 return true
             }
             let count = min(matches.count, 24)
@@ -118,10 +132,19 @@ final class timetrackerStressDataUITests: XCTestCase {
                     element.tap()
                     return true
                 }
+                if element.exists && hasVisibleFrame(element) {
+                    element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                    return true
+                }
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         } while Date() < deadline
 
         return false
+    }
+
+    @MainActor
+    private func hasVisibleFrame(_ element: XCUIElement) -> Bool {
+        !element.frame.isEmpty && element.frame.width > 0 && element.frame.height > 0
     }
 }

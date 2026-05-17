@@ -33,6 +33,8 @@ struct TaskManagementFlatRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(task.title)
             .accessibilityIdentifier("tasks.task.\(task.title)")
         }
         .padding(.leading, CGFloat(treeDepth) * 14)
@@ -44,7 +46,6 @@ struct TaskManagementFlatRow: View {
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         #endif
     }
-
     private var showsNavigationChevron: Bool {
         #if os(iOS)
         TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
@@ -79,7 +80,6 @@ struct TaskManagementFlatRow: View {
         openTaskDetail?(task)
     }
 }
-
 private struct TaskManagementRowContent: View {
     @ObservedObject var store: TimeTrackerStore
     let task: TaskNode

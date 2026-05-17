@@ -24,6 +24,7 @@ struct SyncSettingsSection: View {
                     tint: .blue
                 )
             }
+            .accessibilityIdentifier("settings.icloud.toggle")
 
             SettingsValueRow(
                 title: AppStrings.localized("settings.currentStorage"),
@@ -41,6 +42,7 @@ struct SyncSettingsSection: View {
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
+            .accessibilityIdentifier("settings.checkSync")
 
             Button(action: onForceSync) {
                 SettingsActionLabel(
@@ -51,6 +53,7 @@ struct SyncSettingsSection: View {
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
+            .accessibilityIdentifier("settings.forceSync")
 
             Button {
                 if pendingConflict == nil {
@@ -68,6 +71,7 @@ struct SyncSettingsSection: View {
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
+            .accessibilityIdentifier("settings.forceUpload")
 
             Button {
                 if pendingConflict == nil {
@@ -85,6 +89,7 @@ struct SyncSettingsSection: View {
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
+            .accessibilityIdentifier("settings.forceDownload")
         } header: {
             SettingsHeader(symbol: "icloud.fill", title: AppStrings.localized("settings.sync"))
         } footer: {

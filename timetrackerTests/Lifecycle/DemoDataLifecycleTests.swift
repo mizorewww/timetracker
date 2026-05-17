@@ -92,6 +92,8 @@ struct DemoDataLifecycleTests {
         #expect(inboxSuggestions.count == profile.inboxItemCount)
         #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).count == profile.countdownEventCount)
         #expect(inboxItems.compactMap(\.suggestedTaskID).allSatisfy { taskIDs.contains($0) })
+        let inboxTitleByID = Dictionary(uniqueKeysWithValues: inboxItems.map { ($0.id, $0.title) })
+        #expect(inboxSuggestions.allSatisfy { $0.titleSnapshot == inboxTitleByID[$0.inboxItemID] })
     }
 
     @Test @MainActor

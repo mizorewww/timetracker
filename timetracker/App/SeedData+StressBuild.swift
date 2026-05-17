@@ -295,7 +295,7 @@ extension SeedData {
                     iconName: task.iconName ?? "checkmark.circle",
                     colorHex: task.colorHex ?? "1677FF",
                     modelID: "stress-generator",
-                    titleSnapshot: task.title,
+                    titleSnapshot: item.title,
                     generatedAt: now,
                     deviceID: deviceID
                 )

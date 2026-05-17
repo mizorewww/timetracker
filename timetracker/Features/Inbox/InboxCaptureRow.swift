@@ -19,14 +19,17 @@ struct InboxCaptureRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.add"))
+            .accessibilityIdentifier("inbox.capture.add")
 
             TextField(placeholder, text: $title)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.automatic)
                 .font(.body)
                 .focused($isFocused)
                 .submitLabel(.done)
                 .onSubmit(submitIfNeeded)
                 .labelsHidden()
+                .accessibilityLabel(placeholder)
+                .accessibilityIdentifier("inbox.capture.title")
 
             Spacer(minLength: 8)
 
@@ -48,9 +51,7 @@ struct InboxCaptureRow: View {
         .onTapGesture {
             isFocused = true
         }
-        .accessibilityAction {
-            isFocused = true
-        }
+        .accessibilityElement(children: .contain)
         .onChange(of: focusToken) { _, _ in
             isFocused = true
         }

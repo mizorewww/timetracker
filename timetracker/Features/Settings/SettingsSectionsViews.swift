@@ -19,6 +19,7 @@ struct DisplayTimingSettingsSection: View {
                 )
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("settings.appearance")
 
             Toggle(isOn: allowParallelTimers) {
                 SettingsRowLabel(
@@ -27,6 +28,7 @@ struct DisplayTimingSettingsSection: View {
                     tint: .orange
                 )
             }
+            .accessibilityIdentifier("settings.allowParallelTimers")
             Toggle(isOn: showGrossAndWallTogether) {
                 SettingsRowLabel(
                     title: AppStrings.localized("settings.showWallGross"),
@@ -34,6 +36,7 @@ struct DisplayTimingSettingsSection: View {
                     tint: .teal
                 )
             }
+            .accessibilityIdentifier("settings.showWallGross")
         } header: {
             SettingsHeader(symbol: "paintbrush.pointed.fill", title: AppStrings.localized("settings.displayTiming"))
         } footer: {

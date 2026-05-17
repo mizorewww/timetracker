@@ -9,6 +9,9 @@ struct SettingsSceneView: View {
     var body: some View {
         SettingsView(store: store)
             .preferredColorScheme(settingsColorScheme)
+            .sheet(item: $store.manualTimeDraft) { draft in
+                ManualTimeSheet(store: store, initialDraft: draft)
+            }
             .task {
                 store.configureIfNeeded(context: modelContext)
             }

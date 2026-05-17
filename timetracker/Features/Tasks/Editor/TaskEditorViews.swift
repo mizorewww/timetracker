@@ -66,6 +66,7 @@ struct TaskEditorPanel: View {
                         onCancel()
                     }
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("task.editor.cancel")
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -74,9 +75,11 @@ struct TaskEditorPanel: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
+                    .accessibilityIdentifier("task.editor.save")
                 }
             }
         }
+        .accessibilityIdentifier("task.editor.sheet")
     }
 
     private var canSave: Bool {

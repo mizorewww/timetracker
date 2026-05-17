@@ -56,6 +56,7 @@ struct CountdownSettingsSection: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.countdown.add")
             }
         }
     }

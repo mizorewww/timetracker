@@ -18,7 +18,6 @@ struct TasksView: View {
         false
         #endif
     }
-
     private var searchResults: [TaskNode] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
@@ -39,7 +38,6 @@ struct TasksView: View {
                     .listRowSeparator(.hidden)
             }
             #endif
-
             if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
                     Section {
@@ -114,7 +112,6 @@ struct TasksView: View {
                     Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
                 }
             }
-
             #if os(iOS)
             if isCompactPhone {
                 PhoneRootListBottomClearanceRow()
@@ -140,15 +137,18 @@ struct TasksView: View {
                 } label: {
                     Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
                 }
+                .accessibilityIdentifier("tasks.addRoot")
 
                 Button {
                     store.presentNewTaskCategory()
                 } label: {
                     Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
                 }
+                .accessibilityIdentifier("tasks.addCategory")
             } label: {
                 Image(systemName: "plus.circle")
             }
+            .accessibilityIdentifier("tasks.addMenu")
         }
         .accessibilityIdentifier("tasks.view")
         #if os(iOS)

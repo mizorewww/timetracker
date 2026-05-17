@@ -79,6 +79,7 @@ struct InboxView: View {
                         Image(systemName: "plus")
                     }
                     .accessibilityLabel(AppStrings.localized("inbox.add"))
+                    .accessibilityIdentifier("inbox.add")
                 }
             }
         }
@@ -166,6 +167,7 @@ struct InboxView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(AppStrings.localized("inbox.add"))
+                .accessibilityIdentifier("inbox.add")
             }
         }
     }

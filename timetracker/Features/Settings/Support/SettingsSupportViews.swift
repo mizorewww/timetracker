@@ -69,6 +69,7 @@ struct CountdownEventSettingsRow: View {
         }
         .datePickerStyle(.compact)
         .settingsRowSeparatorAligned()
+        .accessibilityIdentifier("settings.countdown.date")
 
         Button(role: .destructive, action: onDelete) {
             SettingsActionLabel(
@@ -78,5 +79,6 @@ struct CountdownEventSettingsRow: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.countdown.delete")
     }
 }

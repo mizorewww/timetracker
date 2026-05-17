@@ -66,14 +66,25 @@ struct TaskUIContractTests {
     @Test
     func phoneTabsBindToSharedNavigationDestination() throws {
         let rootSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let coordinatorSource = try sourceText("timetracker/App/RootViews/PhoneChromeCoordinator.swift")
+        let destinationSource = try sourceText("timetracker/App/RootViews/PhoneDestinationPresentation.swift")
 
-        #expect(rootSource.contains("@State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today"))
-        #expect(rootSource.contains("TabView(selection: $selectedDestination)"))
+        #expect(rootSource.contains("@StateObject private var chrome = PhoneChromeCoordinator()"))
+        #expect(rootSource.contains("PhoneDestinationStack(store: store, destination: chrome.selectedDestination)"))
+        #expect(rootSource.contains("PhonePagedBottomSelector("))
+        #expect(rootSource.contains("destinations: TimeTrackerStore.DesktopDestination.phoneDestinations"))
+        #expect(rootSource.contains(".safeAreaBar(edge: .bottom"))
         #expect(rootSource.contains(".onChange(of: store.desktopDestination)"))
-        #expect(rootSource.contains(".onChange(of: selectedDestination)"))
-        #expect(rootSource.contains("private func phoneDestination(for destination: TimeTrackerStore.DesktopDestination)"))
-        #expect(rootSource.contains(".tag(TimeTrackerStore.DesktopDestination.analytics)"))
-        #expect(rootSource.contains(".tag(TimeTrackerStore.DesktopDestination.tasks)"))
+        #expect(rootSource.contains(".onChange(of: chrome.selectedDestination)"))
+        #expect(rootSource.contains("store.desktopDestination = destination"))
+        #expect(rootSource.contains("case .analytics:"))
+        #expect(rootSource.contains("case .tasks:"))
+        #expect(rootSource.contains("case .settings:"))
+        #expect(rootSource.contains("TabView(selection:") == false)
+        #expect(rootSource.contains(".tabItem") == false)
+        #expect(coordinatorSource.contains("@Published var selectedDestination: TimeTrackerStore.DesktopDestination = .today"))
+        #expect(coordinatorSource.contains("selectedPageIndex = destination.phonePageIndex"))
+        #expect(destinationSource.contains("[.today, .inbox, .tasks, .pomodoro, .analytics, .settings]"))
     }
 
     @Test

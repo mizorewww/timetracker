@@ -3,7 +3,6 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @ObservedObject var store: TimeTrackerStore
-    let showsPhoneChrome: Bool
     @State var isResetConfirmationPresented = false
     @State var isClearConfirmationPresented = false
     @State var isResetAllDataConfirmationPresented = false
@@ -20,11 +19,6 @@ struct SettingsView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
-    init(store: TimeTrackerStore, showsPhoneChrome: Bool = true) {
-        self.store = store
-        self.showsPhoneChrome = showsPhoneChrome
-    }
-
     private var isCompactPhone: Bool {
         #if os(iOS)
         SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
@@ -36,7 +30,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             #if os(iOS)
-            if isCompactPhone && showsPhoneChrome {
+            if isCompactPhone {
                 PhoneLargePageHeader(destination: .settings)
                     .listRowInsets(PhoneRootChromeMetrics.groupedHeaderRowInsets)
                     .listRowBackground(Color.clear)
@@ -134,20 +128,20 @@ struct SettingsView: View {
             AboutSettingsSection()
 
             #if os(iOS)
-            if isCompactPhone && showsPhoneChrome {
+            if isCompactPhone {
                 PhoneRootListBottomClearanceRow()
             }
             #endif
         }
         .formStyle(.grouped)
         #if os(iOS)
-        .phoneRootScrollMargins(enabled: isCompactPhone && showsPhoneChrome)
+        .phoneRootScrollMargins(enabled: isCompactPhone)
         #endif
         .navigationTitle(AppStrings.settings)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        .phoneChromeScrollObserver(destination: .settings, enabled: isCompactPhone && showsPhoneChrome)
-        .phoneRootChrome(destination: .settings, enabled: isCompactPhone && showsPhoneChrome)
+        .phoneChromeScrollObserver(destination: .settings, enabled: isCompactPhone)
+        .phoneRootChrome(destination: .settings, enabled: isCompactPhone)
         #endif
         .accessibilityIdentifier("settings.view")
         .fileExporter(

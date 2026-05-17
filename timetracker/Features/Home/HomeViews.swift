@@ -32,7 +32,6 @@ struct DesktopMainView: View {
 #if os(iOS)
 struct PhoneHomeView: View {
     @ObservedObject var store: TimeTrackerStore
-    @State private var showsSettings = false
 
     var body: some View {
         ScrollView {
@@ -56,26 +55,12 @@ struct PhoneHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         .phoneRootChrome(destination: .today)
         .toolbar {
-            ToolbarItem(placement: phoneLeadingToolbarPlacement) {
-                Button {
-                    showsSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                }
-                .accessibilityLabel(AppStrings.settings)
-            }
-
             ToolbarItem(placement: phoneToolbarPlacement) {
                 Button {
                     store.presentNewTask()
                 } label: {
                     Image(systemName: "plus")
                 }
-            }
-        }
-        .sheet(isPresented: $showsSettings) {
-            NavigationStack {
-                SettingsView(store: store, showsPhoneChrome: false)
             }
         }
     }

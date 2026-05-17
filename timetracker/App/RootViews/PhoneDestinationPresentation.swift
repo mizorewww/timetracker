@@ -3,7 +3,7 @@ import SwiftUI
 
 extension TimeTrackerStore.DesktopDestination {
     static var phoneDestinations: [TimeTrackerStore.DesktopDestination] {
-        [.today, .inbox, .tasks, .pomodoro, .analytics]
+        [.today, .inbox, .tasks, .pomodoro, .analytics, .settings]
     }
 
     var phonePageIndex: Int {

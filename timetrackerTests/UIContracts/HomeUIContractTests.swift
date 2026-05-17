@@ -91,18 +91,25 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func phoneTabsStayAtFiveAndSettingsUsesHomeToolbar() throws {
+    func phoneBottomBarKeepsSettingsAsPagedDestination() throws {
         let contentSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let destinationSource = try sourceText("timetracker/App/RootViews/PhoneDestinationPresentation.swift")
         let homeSource = try sourceText("timetracker/Features/Home/HomeViews.swift")
+        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
         let phoneRoot = try #require(contentSource.slice(from: "struct PhoneRootView", to: "struct iPadRootView"))
         let phoneHome = try #require(homeSource.slice(from: "struct PhoneHomeView", to: "struct HeaderBar"))
 
-        #expect(phoneRoot.components(separatedBy: ".tabItem").count - 1 == 5)
-        #expect(phoneRoot.contains("SettingsView(store: store)") == false)
-        #expect(phoneRoot.contains("Label(AppStrings.settings") == false)
-        #expect(phoneHome.contains("Image(systemName: \"gearshape\")"))
-        #expect(phoneHome.contains(".sheet(isPresented: $showsSettings)"))
-        #expect(phoneHome.contains("SettingsView(store: store)"))
+        #expect(destinationSource.contains("[.today, .inbox, .tasks, .pomodoro, .analytics, .settings]"))
+        #expect(destinationSource.contains("return index / 4"))
+        #expect(phoneRoot.contains("PhonePagedBottomSelector("))
+        #expect(phoneRoot.contains("destinations: TimeTrackerStore.DesktopDestination.phoneDestinations"))
+        #expect(phoneRoot.contains("case .settings:"))
+        #expect(phoneRoot.contains("SettingsView(store: store)"))
+        #expect(phoneRoot.contains("TabView(selection:") == false)
+        #expect(phoneRoot.contains(".tabItem") == false)
+        #expect(phoneHome.contains("Image(systemName: \"gearshape\")") == false)
+        #expect(phoneHome.contains(".sheet(isPresented: $showsSettings)") == false)
+        #expect(settingsSource.contains("PhoneLargePageHeader(destination: .settings)"))
     }
 
     @Test

@@ -25,7 +25,7 @@ Use these before building a custom view:
 | Screen navigation | `NavigationStack`, `NavigationSplitView`, `TabView`, `.inspector` |
 | Dense item list | `List`, `Section`, `ForEach`, `swipeActions`, `contextMenu` |
 | Editing structured data | `Form`, `LabeledContent`, `Picker`, `Toggle`, `TextField`, `DatePicker`, toolbar cancel/save |
-| Settings | `Form` in a settings window on macOS, pushed page or sheet on iOS |
+| Settings | `Form` in a settings window on macOS; keep Settings as a bottom-chrome destination on iPhone |
 | Choice from finite options | `Picker` with menu/inline/segmented style depending on space |
 | Context actions | `Menu`, `contextMenu`, native toolbar items |
 | Primary/secondary actions | `Button` with `.borderedProminent`, `.bordered`, `.plain` only for icon-only affordances |
@@ -151,7 +151,7 @@ Current risk: settings can drift into debug panels.
 Plan:
 
 - macOS settings should open as a settings window.
-- iOS settings can be a sheet or pushed page.
+- iPhone settings remain a first-class bottom-chrome destination, not a Today toolbar sheet.
 - Use native `Form`, grouped sections, `Toggle`, `Picker`, `TextField`, and `Button`.
 - Keep debug/status-only information under About or Advanced.
 - User settings should explain the outcome, not implementation details.
@@ -229,6 +229,7 @@ This section is the detailed continuation plan for the SwiftUI modernization bra
 
 - Prefer native controls for settings, forms, action rows, empty states, finite selections, text entry, navigation, and row actions.
 - Keep custom drawing only when it represents product-specific data visualization or interaction that native controls do not cover cleanly: Pomodoro timer face, iPhone bottom chrome, analytics timelines, activity distribution bars, and compact task visual badges.
+- Keep iPhone bottom chrome as a product-specific custom navigation surface. The product roadmap expects more than five destinations, so the paged bottom selector is the scalability path; do not replace it with a fixed five-item `TabView`, and do not move Settings into Today just to reduce the destination count.
 - Every migration must keep or improve accessibility labels, Dynamic Type behavior, keyboard support, VoiceOver actions, and Reduce Motion behavior.
 - Every migration must be independently revertible: one small behavior-preserving change, one focused test/update, then one commit.
 - Source-string tests may be used as temporary guardrails, but new behavior should prefer state, command, accessibility, or UI tests when practical.
@@ -255,7 +256,13 @@ This section is the detailed continuation plan for the SwiftUI modernization bra
 | Inbox suggestion row | Custom compact action surface | Keep for width-sensitive apply/discard workflow; ensure buttons are native | Yes, for compact layout | Existing Inbox UI contract and smallest-width screenshot |
 | Today cards | Repeated custom cards | Use `List`/`Section` where possible; keep metric cards only when they present dense dashboard data | Partial | Home UI contract plus screenshots |
 | Analytics charts | Swift Charts plus custom timeline/bar drawing | Keep custom drawing where chart semantics require it; use native empty states and legends | Yes | Analytics service tests and UI smoke |
-| Phone bottom chrome | Custom bottom destination selector | Keep as product-specific navigation chrome; no UIKit wrappers | Yes | Phone chrome source-layout tests and iOS build |
+| Phone bottom chrome | Custom paged bottom destination selector | Keep as product-specific navigation chrome; Settings stays in the destination list; improve pagination, accessibility identifiers, Reduce Motion, and hit targets instead of replacing with a fixed `TabView` | Yes | Phone chrome source-layout tests, source-contract tests, iOS build, and UI smoke |
+
+### Bottom Chrome Rationale
+
+The iPhone bottom chrome is intentionally custom. It already behaves as a paged selector, which is the right shape for a roadmap with many pages. A fixed native `TabView` would force an early information-architecture cap and would likely require moving important destinations, such as Settings, into unrelated screens. That would make future expansion harder and would make Settings less discoverable.
+
+Refactor rule: keep the custom bottom chrome, keep Settings as a bottom destination, and improve the component itself. Preferred improvements are stable accessibility identifiers for every destination, clearer page indicators, stronger Reduce Motion behavior, preloading or caching destination state where profiling proves benefit, and tighter source-layout boundaries. Do not move Settings to Today unless the product navigation model changes explicitly.
 
 ### Execution Order
 

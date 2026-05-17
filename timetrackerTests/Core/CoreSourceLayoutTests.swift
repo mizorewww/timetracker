@@ -119,6 +119,12 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Settings/SettingsPomodoroMinuteRows.swift",
             "timetracker/Features/Settings/SettingsCountdownSection.swift",
             "timetracker/Features/Settings/SettingsSyncSection.swift",
+            "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryListViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailViews.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
+            "timetracker/Features/Analytics/AnalyticsOverviewDetailViews.swift",
+            "timetracker/Features/Analytics/AnalyticsInsightListViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift",
@@ -230,6 +236,26 @@ struct CoreSourceLayoutTests {
 
         for fileName in focusedFiles {
             let file = settingsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func analyticsViewFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let analyticsURL = root.appending(path: "timetracker/Features/Analytics")
+        let focusedFiles = [
+            "AnalyticsViews.swift",
+            "AnalyticsCategoryListViews.swift",
+            "AnalyticsCategoryDetailViews.swift",
+            "AnalyticsPeriodSection.swift",
+            "AnalyticsOverviewDetailViews.swift",
+            "AnalyticsInsightListViews.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = analyticsURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
         }

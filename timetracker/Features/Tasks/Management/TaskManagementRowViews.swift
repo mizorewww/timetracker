@@ -16,9 +16,7 @@ struct TaskManagementFlatRow: View {
         store.activeSegments.contains { $0.taskID == task.id }
     }
 
-    var body: some View {
-        rowContent
-    }
+    var body: some View { rowContent }
 
     private var rowContent: some View {
         HStack(alignment: .center, spacing: 8) {

@@ -90,7 +90,7 @@ struct TaskUIContractTests {
 
     @Test
     func tasksSearchUsesNativeSearchableInsteadOfUIKitWrapper() throws {
-        let source = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let source = try taskManagementFeatureSource()
 
         #expect(source.contains(".searchable("))
         #expect(source.contains(".navigationBarDrawer(displayMode: .always)"))
@@ -437,6 +437,15 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Detail/TaskDetailEditorViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailEditorSupportViews.swift"
+        ]
+        .map { try sourceText($0) }
+        .joined(separator: "\n")
+    }
+
+    private func taskManagementFeatureSource() throws -> String {
+        try [
+            "timetracker/Features/Tasks/Management/TasksViews.swift",
+            "timetracker/Features/Tasks/Management/TaskSearchPlacementModifier.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")

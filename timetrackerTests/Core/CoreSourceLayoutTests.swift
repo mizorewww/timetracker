@@ -113,6 +113,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Detail/TaskDetailEditorSupportViews.swift",
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
+            "timetracker/Features/Tasks/Management/TaskSearchPlacementModifier.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
             "timetracker/Features/Settings/SettingsPomodoroSection.swift",
             "timetracker/Features/Settings/SettingsPomodoroMinuteRows.swift",
@@ -191,6 +192,24 @@ struct CoreSourceLayoutTests {
 
         for fileName in focusedFiles {
             let file = detailURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func taskManagementFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let managementURL = root.appending(path: "timetracker/Features/Tasks/Management")
+        let focusedFiles = [
+            "TasksViews.swift",
+            "TaskSearchPlacementModifier.swift",
+            "TaskManagementRowViews.swift",
+            "TaskRowComponents.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = managementURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
         }

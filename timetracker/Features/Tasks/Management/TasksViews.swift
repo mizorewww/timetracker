@@ -149,6 +149,7 @@ struct TasksView: View {
                 Image(systemName: "plus.circle")
             }
         }
+        .accessibilityIdentifier("tasks.view")
         #if os(iOS)
         .phoneChromeScrollObserver(destination: .tasks, enabled: isCompactPhone)
         .phoneRootChrome(destination: .tasks, enabled: isCompactPhone)
@@ -157,12 +158,12 @@ struct TasksView: View {
             if let detailTaskID, let task = store.task(for: detailTaskID) {
                 TaskDetailView(store: store, taskID: task.id)
                     #if os(iOS)
-                    .phoneSecondaryDestination(.tasks)
+                    .phoneSecondaryDestination(.tasks, enabled: isCompactPhone)
                     #endif
             } else {
                 EmptyStateRow(title: AppStrings.localized("task.empty.selectTask"), icon: "cursorarrow.click")
                     #if os(iOS)
-                    .phoneSecondaryDestination(.tasks)
+                    .phoneSecondaryDestination(.tasks, enabled: isCompactPhone)
                     #endif
             }
         }

@@ -82,7 +82,7 @@ private struct AnalyticsContent: View {
                             now: now
                         )
                         #if os(iOS)
-                        .phoneSecondaryDestination(.analytics)
+                        .phoneSecondaryDestination(.analytics, enabled: isCompactPhone)
                         #endif
                     } label: {
                         AnalyticsCategoryRow(category: category, snapshot: snapshot)

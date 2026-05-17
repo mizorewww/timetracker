@@ -114,8 +114,12 @@ extension View {
     }
 
     @ViewBuilder
-    func phoneSecondaryDestination(_ destination: TimeTrackerStore.DesktopDestination) -> some View {
-        modifier(PhoneSecondaryDestinationModifier(destination: destination))
+    func phoneSecondaryDestination(_ destination: TimeTrackerStore.DesktopDestination, enabled: Bool = true) -> some View {
+        if enabled {
+            modifier(PhoneSecondaryDestinationModifier(destination: destination))
+        } else {
+            self
+        }
     }
 
     @ViewBuilder

@@ -53,6 +53,7 @@ struct TaskDetailHeader: View {
                     AppActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus")
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier("task.detail.addTime")
             }
 
             if snapshot.overview.grossSeconds == 0 {

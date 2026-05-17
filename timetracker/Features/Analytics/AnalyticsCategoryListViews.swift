@@ -153,6 +153,7 @@ struct AnalyticsHomeSummaryRow: View {
         }
         .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("analytics.homeSummary")
     }
 }
 
@@ -186,5 +187,6 @@ struct AnalyticsCategoryRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("analytics.category.\(category.rawValue)")
     }
 }

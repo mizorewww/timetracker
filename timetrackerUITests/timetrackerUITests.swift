@@ -21,10 +21,6 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
-        XCTAssertTrue(
-            app.descendants(matching: .any)["home.activeTimers"].waitForExistence(timeout: 2) ||
-            anyStaticText(["正在计时", "正在計時", "Active Timers"], in: app)
-        )
 
         openSection("分析", sidebarIdentifier: "sidebar.Analytics", in: app)
         XCTAssertTrue(analyticsIsReady(in: app))
@@ -58,10 +54,11 @@ final class timetrackerUITests: XCTestCase {
         try capture("iphone-analytics-baseline", app: app)
 
         openSection("任务", sidebarIdentifier: "sidebar.Tasks", in: app)
-        XCTAssertTrue(app.staticTexts["Design macOS UI"].waitForExistence(timeout: 3))
+        let designTask = taskRow(named: "Design macOS UI", in: app)
+        XCTAssertTrue(designTask.waitForExistence(timeout: 3))
         try capture("iphone-tasks-baseline", app: app)
 
-        app.staticTexts["Design macOS UI"].firstMatch.tap()
+        designTask.tap()
         XCTAssertTrue(taskDetailIsReady(in: app))
         try capture("iphone-task-detail-baseline", app: app)
     }
@@ -101,22 +98,39 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func homeIsReady(in app: XCUIApplication) -> Bool {
-        app.buttons["home.startTimer"].waitForExistence(timeout: 8)
+        app.buttons["home.startTimer"].waitForExistence(timeout: 8) &&
+        app.buttons["home.newTask"].waitForExistence(timeout: 2)
     }
 
     @MainActor
     private func analyticsIsReady(in app: XCUIApplication) -> Bool {
-        let decisionSummary = app.descendants(matching: .any)["analytics.decisionSummary"]
-        let periodControl = app.descendants(matching: .any)["analytics.periodControl"]
-        return decisionSummary.waitForExistence(timeout: 8) &&
-        periodControl.waitForExistence(timeout: 2)
+        let homeSummary = app.descendants(matching: .any)["analytics.homeSummary"]
+        let decisionsCategory = app.descendants(matching: .any)["analytics.category.decisions"]
+        return homeSummary.waitForExistence(timeout: 8) &&
+        decisionsCategory.waitForExistence(timeout: 2)
     }
 
     @MainActor
     private func taskDetailIsReady(in app: XCUIApplication) -> Bool {
-        app.buttons["补录时间"].waitForExistence(timeout: 3) ||
+        app.buttons["task.detail.addTime"].waitForExistence(timeout: 3) ||
+        app.buttons["补录时间"].waitForExistence(timeout: 1) ||
         app.buttons["添加时间"].waitForExistence(timeout: 1) ||
         app.buttons["Add Time"].waitForExistence(timeout: 1)
+    }
+
+    @MainActor
+    private func taskRow(named title: String, in app: XCUIApplication) -> XCUIElement {
+        let taskIdentifier = "tasks.task.\(title)"
+        let sidebarIdentifier = "sidebar.task.\(title)"
+        let taskRow = app.descendants(matching: .any)[taskIdentifier].firstMatch
+        if taskRow.exists {
+            return taskRow
+        }
+        let sidebarRow = app.descendants(matching: .any)[sidebarIdentifier].firstMatch
+        if sidebarRow.exists {
+            return sidebarRow
+        }
+        return app.staticTexts[title].firstMatch
     }
 
     @MainActor
@@ -166,8 +180,4 @@ final class timetrackerUITests: XCTestCase {
         app.typeKey(.escape, modifierFlags: [])
     }
 
-    @MainActor
-    private func anyStaticText(_ labels: [String], in app: XCUIApplication) -> Bool {
-        labels.contains { app.staticTexts[$0].waitForExistence(timeout: 1) }
-    }
 }

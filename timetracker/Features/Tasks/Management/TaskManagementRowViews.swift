@@ -34,6 +34,7 @@ struct TaskManagementFlatRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("tasks.task.\(task.title)")
         }
         .padding(.leading, CGFloat(treeDepth) * 14)
         .contextMenu {

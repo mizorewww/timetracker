@@ -144,30 +144,39 @@ struct SidebarTaskTreeRow: View {
                     .frame(width: 14, height: 18)
             }
 
-            Image(systemName: task.iconName ?? "checkmark.circle")
-                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-            Text(task.title)
-                .strikethrough(task.status == .completed)
-                .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                .lineLimit(1)
-            Spacer()
-            let progress = store.checklistProgress(for: task.id)
-            if progress.totalCount > 0 {
-                Text(progress.label)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            Button {
+                store.openTaskDetail(task.id)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: task.iconName ?? "checkmark.circle")
+                        .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+                    Text(task.title)
+                        .strikethrough(task.status == .completed)
+                        .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                        .lineLimit(1)
+                    Spacer()
+                    let progress = store.checklistProgress(for: task.id)
+                    if progress.totalCount > 0 {
+                        Text(progress.label)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    let childCount = row.hasChildren ? store.children(of: task).count : 0
+                    if childCount > 0 {
+                        Text("\(childCount)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Image(systemName: task.status.symbolName)
+                        .font(.caption)
+                        .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
+                        .frame(width: 14)
+                        .help(task.status.displayName)
+                }
+                .contentShape(Rectangle())
             }
-            let childCount = row.hasChildren ? store.children(of: task).count : 0
-            if childCount > 0 {
-                Text("\(childCount)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Image(systemName: task.status.symbolName)
-                .font(.caption)
-                .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
-                .frame(width: 14)
-                .help(task.status.displayName)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("sidebar.task.\(task.title)")
         }
         .contentShape(Rectangle())
         .taskSelectionPulse(
@@ -178,7 +187,6 @@ struct SidebarTaskTreeRow: View {
         .contextMenu {
             TaskContextMenu(store: store, task: task)
         }
-        .accessibilityIdentifier("sidebar.task.\(task.title)")
         .taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)
     }
 }

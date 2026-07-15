@@ -69,12 +69,7 @@ struct TaskTreeService {
         }
 
         let childrenByParentID = grouped.mapValues { children in
-            children.sorted { first, second in
-                if first.sortOrder == second.sortOrder {
-                    return first.title.localizedStandardCompare(second.title) == .orderedAscending
-                }
-                return first.sortOrder < second.sortOrder
-            }
+            children.sorted(by: Self.siblingDisplayOrder)
         }
 
         var pathCache: [UUID: String] = [:]
@@ -143,25 +138,34 @@ struct TaskTreeService {
     }
 
     func canMove(taskID: UUID, to newParentID: UUID?, tasks: [TaskNode]) -> Bool {
+        let visibleTasks = tasks.visibleDeduplicatedByID()
+        guard visibleTasks.contains(where: { $0.id == taskID }) else { return false }
         guard let newParentID else { return true }
         guard taskID != newParentID else { return false }
-        guard tasks.contains(where: { $0.id == newParentID && $0.deletedAt == nil }) else { return false }
-        return !descendantIDs(of: taskID, tasks: tasks).contains(newParentID)
+        guard visibleTasks.contains(where: { $0.id == newParentID }) else { return false }
+        return !descendantIDs(of: taskID, tasks: visibleTasks).contains(newParentID)
     }
 
     func validParentTasks(for taskID: UUID?, tasks: [TaskNode]) -> [TaskNode] {
+        let visibleTasks = tasks.visibleDeduplicatedByID()
         guard let taskID else {
-            return tasks.filter { $0.deletedAt == nil }
+            return visibleTasks
         }
-        let invalidIDs = descendantIDs(of: taskID, tasks: tasks).union([taskID])
-        return tasks.filter { task in
-            task.deletedAt == nil && !invalidIDs.contains(task.id)
-        }
+        let invalidIDs = descendantIDs(of: taskID, tasks: visibleTasks).union([taskID])
+        return visibleTasks.filter { !invalidIDs.contains($0.id) }
     }
 
     private static func displayPath(components: [String], wasTruncated: Bool) -> String {
         let path = components.joined(separator: " / ")
         return wasTruncated ? "… / \(path)" : path
+    }
+
+    private static func siblingDisplayOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        let titleOrder = lhs.title.localizedStandardCompare(rhs.title)
+        if titleOrder != .orderedSame { return titleOrder == .orderedAscending }
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }
 

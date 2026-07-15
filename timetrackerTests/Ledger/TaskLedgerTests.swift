@@ -442,6 +442,42 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
+    func taskTreeCandidatesHonorTombstonesAndSiblingTiesAreDeterministic() throws {
+        let source = TaskNode(title: "Source", parentID: nil, deviceID: "test")
+        let olderParent = TaskNode(title: "Removed", parentID: nil, deviceID: "test")
+        let newerTombstone = TaskNode(title: "Removed", parentID: nil, deviceID: "cloud")
+        newerTombstone.id = olderParent.id
+        olderParent.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        newerTombstone.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        newerTombstone.deletedAt = newerTombstone.updatedAt
+
+        let laterID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        let earlierID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let later = TaskNode(title: "Same", parentID: nil, deviceID: "test", sortOrder: 10)
+        let earlier = TaskNode(title: "Same", parentID: nil, deviceID: "test", sortOrder: 10)
+        let sharedCreationDate = Date(timeIntervalSinceReferenceDate: 300)
+        later.id = laterID
+        earlier.id = earlierID
+        later.createdAt = sharedCreationDate
+        earlier.createdAt = sharedCreationDate
+
+        let service = TaskTreeService()
+        let candidates = service.validParentTasks(
+            for: source.id,
+            tasks: [source, olderParent, newerTombstone, later, earlier]
+        )
+        #expect(candidates.map(\.id) == [laterID, earlierID])
+        #expect(service.canMove(
+            taskID: source.id,
+            to: olderParent.id,
+            tasks: [source, olderParent, newerTombstone]
+        ) == false)
+
+        let indexes = service.indexes(tasks: [later, earlier])
+        #expect(indexes.childrenByParentID[nil]?.map(\.id) == [earlierID, laterID])
+    }
+
+    @Test @MainActor
     func cyclicRemoteHierarchyIsDeterministicallyDetachedAndEveryTaskRemainsVisible() throws {
         let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
         let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))

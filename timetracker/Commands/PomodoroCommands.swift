@@ -106,6 +106,12 @@ struct PomodoroCommandHandler {
                   run.endedAt == nil else {
                 return nil
             }
+            let canonicalTasks = try context.fetch(FetchDescriptor<TaskNode>())
+            let trackableTaskIDs = TaskTrackingAvailabilityService()
+                .trackableTaskIDs(tasks: canonicalTasks)
+            guard trackableTaskIDs.contains(run.taskID) else {
+                return nil
+            }
             let activeSegments = try timeRepository.activeSegments()
             let pomodoroRuns = try repository.runs()
             let admission = TimerStartAdmissionPolicy().evaluate(

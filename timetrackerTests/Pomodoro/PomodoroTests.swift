@@ -481,6 +481,93 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func breakResumeRejectsTaskCompletedAfterFocus() throws {
+        try assertBreakResumeRejectsUnavailableTask(.completed)
+    }
+
+    @Test @MainActor
+    func breakResumeRejectsTaskArchivedAfterFocus() throws {
+        try assertBreakResumeRejectsUnavailableTask(.archived)
+    }
+
+    @Test @MainActor
+    func breakResumeRejectsTaskRemovedAfterFocus() throws {
+        try assertBreakResumeRejectsUnavailableTask(.missing)
+    }
+
+    @MainActor
+    private func assertBreakResumeRejectsUnavailableTask(
+        _ mutation: BreakResumeTaskMutation
+    ) throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroTask = try taskRepository.createTask(
+            title: "Pomodoro admission",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let pomodoroTaskID = pomodoroTask.id
+        let otherTask = try taskRepository.createTask(
+            title: "Keep running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.preferences.allowParallelTimers = false
+        store.selectedTaskID = pomodoroTaskID
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 2
+        )
+        #expect(store.completeActivePomodoroFocus())
+        let breakRun = try #require(store.activePomodoroRun)
+        let expectedState = breakRun.state
+        #expect(expectedState == .shortBreak)
+
+        store.startTask(otherTask)
+        let otherSegment = try #require(store.activeSegment(for: otherTask.id))
+        let segmentIDsBeforeResume = Set(try timeRepository.allSegments().map(\.id))
+
+        switch mutation {
+        case .completed:
+            try taskRepository.setTaskStatus(taskID: pomodoroTaskID, status: .completed)
+        case .archived:
+            try taskRepository.setTaskStatus(taskID: pomodoroTaskID, status: .archived)
+        case .missing:
+            context.delete(pomodoroTask)
+            try context.save()
+        }
+
+        // The facade cache intentionally remains stale so the command must
+        // resolve admission from canonical SwiftData state inside its mutation.
+        #expect(store.trackableTaskIDs.contains(pomodoroTaskID))
+        let analyticsRevision = store.analyticsRevision
+        let errorMessage = store.errorMessage
+
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: breakRun.id,
+            expectedState: expectedState
+        ) == false)
+
+        let canonicalRun = try #require(
+            try store.requiredPomodoroRepository().run(id: breakRun.id)
+        )
+        #expect(canonicalRun.state == expectedState)
+        #expect(canonicalRun.sessionID == nil)
+        #expect(otherSegment.endedAt == nil)
+        #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
+        #expect(Set(try timeRepository.allSegments().map(\.id)) == segmentIDsBeforeResume)
+        #expect(store.analyticsRevision == analyticsRevision)
+        #expect(store.errorMessage == errorMessage)
+    }
+
+    @Test @MainActor
     func staleFocusCommandReportsCanonicalNoOpWithoutStoppingLedger() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -1241,6 +1328,12 @@ struct PomodoroTests {
         #expect(plan.displayName == "Legacy")
         #expect(encodedText.contains("allowsSystemClock") == false)
     }
+}
+
+private enum BreakResumeTaskMutation {
+    case completed
+    case archived
+    case missing
 }
 
 @MainActor

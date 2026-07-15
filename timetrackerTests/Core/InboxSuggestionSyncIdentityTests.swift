@@ -66,6 +66,59 @@ struct InboxSuggestionSyncIdentityTests {
     }
 
     @Test @MainActor
+    func snapshotRestorePreservesCanonicalSuggestionOrdering() throws {
+        let sourceContext = try makeTestContext()
+        let task = TaskNode(title: "Target", parentID: nil, deviceID: "test")
+        let item = InboxItem(title: "Choose the latest", deviceID: "test")
+        item.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let canonical = makeSuggestion(item: item, taskID: task.id)
+        canonical.id = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        canonical.updatedAt = Date(timeIntervalSinceReferenceDate: 300)
+        let stale = makeSuggestion(item: item, taskID: task.id)
+        stale.id = try #require(UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"))
+        stale.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        sourceContext.insert(task)
+        sourceContext.insert(item)
+        sourceContext.insert(canonical)
+        sourceContext.insert(stale)
+        try sourceContext.save()
+
+        let sourceWinner = InboxSuggestionIdentityService().index(
+            items: [item],
+            suggestions: [stale, canonical]
+        )[item.id]
+        #expect(sourceWinner?.id == canonical.id)
+
+        let encoded = try JSONEncoder().encode(
+            SyncDataSnapshot.capture(context: sourceContext)
+        )
+        let snapshot = try JSONDecoder().decode(SyncDataSnapshot.self, from: encoded)
+        let restoredContext = try makeTestContext()
+        try snapshot.restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 1_000)
+        )
+
+        let restoredItems = try restoredContext.fetch(FetchDescriptor<InboxItem>())
+        let restoredItem = try #require(restoredItems.first { $0.id == item.id })
+        let restoredSuggestions = try restoredContext.fetch(FetchDescriptor<InboxSuggestion>())
+        let restoredCanonical = try #require(
+            restoredSuggestions.first { $0.id == canonical.id }
+        )
+        let restoredStale = try #require(
+            restoredSuggestions.first { $0.id == stale.id }
+        )
+        let restoredWinner = InboxSuggestionIdentityService().index(
+            items: [restoredItem],
+            suggestions: restoredSuggestions
+        )[restoredItem.id]
+
+        #expect(restoredCanonical.updatedAt == Date(timeIntervalSinceReferenceDate: 1_000))
+        #expect(restoredStale.updatedAt == Date(timeIntervalSinceReferenceDate: 200))
+        #expect(restoredWinner?.id == canonical.id)
+    }
+
+    @Test @MainActor
     func titleEditSnapshotAcceptsHistoricalSuggestionTombstone() throws {
         let sourceContext = try makeTestContext()
         let task = TaskNode(title: "Target", parentID: nil, deviceID: "test")

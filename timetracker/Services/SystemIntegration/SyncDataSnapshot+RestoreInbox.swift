@@ -108,6 +108,9 @@ extension SyncDataSnapshot {
                 revisionID: item.suggestionRevisionID ?? item.id
             )
         }
+        let canonicalSuggestionIDs = canonicalInboxSuggestionIDs(
+            itemIdentityByID: itemIdentityByID
+        )
         for suggestion in existing.values where !snapshotIDs.contains(suggestion.id) {
             suggestion.deletedAt = now
             suggestion.updatedAt = now
@@ -147,10 +150,38 @@ extension SyncDataSnapshot {
             model.titleSnapshot = record.titleSnapshot
             model.generatedAt = record.generatedAt
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            // Advance only the source snapshot's active canonical winner. Lifting
+            // every sibling erases source ordering and lets the UUID tie-breaker
+            // select a formerly stale suggestion after restore.
+            model.updatedAt = canonicalSuggestionIDs.contains(record.id)
+                ? max(record.updatedAt, now)
+                : record.updatedAt
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.clientMutationID = record.id
         }
+    }
+
+    private func canonicalInboxSuggestionIDs(
+        itemIdentityByID: [UUID: InboxSuggestionIdentity]
+    ) -> Set<UUID> {
+        var winnersByIdentity: [InboxSuggestionIdentity: InboxSuggestionRecord] = [:]
+        winnersByIdentity.reserveCapacity(inboxSuggestions.count)
+        for record in inboxSuggestions where record.deletedAt == nil {
+            let itemIdentity = itemIdentityByID[record.inboxItemID]
+            let identity = InboxSuggestionIdentity(
+                contextID: record.inboxItemContextID ?? itemIdentity?.contextID ?? record.inboxItemID,
+                revisionID: record.inboxItemRevisionID ?? itemIdentity?.revisionID ?? record.inboxItemID
+            )
+            guard let current = winnersByIdentity[identity] else {
+                winnersByIdentity[identity] = record
+                continue
+            }
+            if record.updatedAt > current.updatedAt ||
+                (record.updatedAt == current.updatedAt && record.id.uuidString > current.id.uuidString) {
+                winnersByIdentity[identity] = record
+            }
+        }
+        return Set(winnersByIdentity.values.map(\.id))
     }
 }

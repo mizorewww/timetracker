@@ -189,7 +189,9 @@ CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态�
 - `SyncConflictService+State.swift`、`+StateWriting.swift`、`+StateLock.swift`、`+StateLocations.swift` 与 `SyncConflictState.swift`：有界本机状态读写、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state。
 - `SyncConflictService+Export.swift`：过滤后的 JSON export encoding。
 - `SyncDataSnapshot.swift`：版本化全域快照、摘要和 fingerprint。
-- `SyncDataSnapshot+Capture.swift`、`SyncDataSnapshot+Restore.swift`、`SyncDataSnapshot+RestoreTasks.swift`、`SyncDataSnapshot+RestoreLedger.swift`、`SyncDataSnapshot+RestorePlanning.swift`、`SyncDataSnapshot+RestoreChecklist.swift` 与 `SyncDataSnapshot+RestoreInbox.swift`：按域捕获与一个原子事务中的分域恢复。
+- `SyncDataSnapshot+Capture.swift`：按域捕获当前事实。
+- `SyncDataSnapshot+Preflight.swift`、`SyncDataSnapshot+PreflightContent.swift` 与 `SyncDataSnapshot+PreflightSemantics.swift`：在恢复事务前对不可信 transport 做结构、内容和语义预检。
+- `SyncDataSnapshot+Restore.swift`、`SyncDataSnapshot+RestoreTasks.swift`、`SyncDataSnapshot+RestoreLedger.swift`、`SyncDataSnapshot+RestorePlanning.swift`、`SyncDataSnapshot+RestoreChecklist.swift` 与 `SyncDataSnapshot+RestoreInbox.swift`：预检通过后，在一个原子事务中分域恢复。
 - `SyncSnapshotRecords.swift`、`SyncSnapshotLedgerRecords.swift`、`SyncSnapshotPlanningRecords.swift`、`SyncSnapshotChecklistRecords.swift` 与 `SyncSnapshotInboxRecords.swift`：组织/任务基础和分域跨版本 Codable record DTO；它们不是第二套业务模型。
 
 `SyncConflictState.json` 的每次 read-modify-write 都在 `SyncConflictService.withExclusiveStateAccess` 内完成。进程内使用递归锁，跨主应用/Shortcuts 进程使用 POSIX advisory `lockf` 文件锁；两个进程不会用各自的旧状态副本互相覆盖。状态 JSON 原子替换，forced-upload mirror 只在权威 state 缺失/损坏隔离时恢复，并在下一次 locked load 校正。权威 state 读写上限为 128 MiB，recovery mirror 为 64 MiB。读取先用 file metadata 预检，再通过 `FileHandle.read(upToCount: limit + 1)` 抵御预检后文件增长的 TOCTOU，不做无界 `Data(contentsOf:)`。写入先编码并同时验证权威 state 与所需 mirror，只有两者都在上限内才解析目标路径、建目录或原子替换；独立 mirror rewrite 在最终写边界再次验长。大小拒绝不能改写旧的有效 state 或 mirror。损坏或超限的权威 state 会隔离并进入显式恢复；损坏或超限的 pending mirror 会隔离并安全忽略，不能阻塞主库。超限隔离直接移动文件，不把整份 JSON 载入内存。
@@ -198,7 +200,9 @@ CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态�
 
 Cloud export 不以“收到任意成功回调”作为本机已同步证明。每次 local mutation 推进 `localGeneration`；import/强制恢复推进 `syncEpoch`；export start 记录 event ID、epoch、generation、fingerprint 和 startedAt。成功 finish 只确认同 epoch 且不早于已确认 generation 的 checkpoint，乱序旧回调不能回退 base 或清除较新的 pending forced upload。旧 state 清理被排除偏好时会重算 fingerprint 并同时清空清理前 payload 的在途 checkpoints，使延迟回调不能恢复旧 base。checkpoint 最多保留 16 个、最长 24 小时，不为每个事件复制整份用户 snapshot。
 
-Snapshot restore 把历史/外部 transport 当作不可信输入：同一 record 数组中的重复 UUID 会先按稳定规则确定性去重，再进入 three-way merge，避免 `Dictionary(uniqueKeysWithValues:)` 的 duplicate-key trap。Pomodoro restore 会把 focus/break/long-break 时长限制为至少 1 秒、target rounds 限制为 `1...24`、completed rounds 限制为 `0...target`，再写入领域模型。
+Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子 mutation 前，纯 preflight 会拒绝：单表超过 100,000 条或总计超过 250,000 条、任一表内重复 UUID、超过字段/总文本 UTF-8 预算（标题 4 KiB、note/reason 64 KiB、紧凑字段 256 B、preference JSON 256 KiB、总文本 32 MiB）、非有限或不在 `[1900-01-01, 2201-01-01)` 的日期、非有限/无法安全加 10 的 sort order、未知 enum raw value、越界 Pomodoro 计划（时长 `1...28,800` 秒、target rounds `1...24`、completed `0...target`）、类型不匹配或非法 JSON 偏好，以及能证明的 session/task 关系矛盾。当前 payload 中缺少被引用记录允许通过，以兼容 CloudKit staged import；已同时存在但任务不一致则拒绝。任一预检失败都不能改写现有记录或生成 tombstone；不做静默去重或钳制。
+
+这个边界覆盖显式 `SyncDataSnapshot.restoreAsLocalWinner` 恢复路径；已被 SwiftData/CloudKit 直接 materialize 进 context 的初始 import 不会倒流经该 snapshot preflight，不得用此证据宣称所有 CloudKit 输入已被同等拦截。
 
 ### 演示与测试数据
 

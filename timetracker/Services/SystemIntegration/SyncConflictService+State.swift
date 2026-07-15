@@ -2,6 +2,9 @@ import Foundation
 import OSLog
 
 extension SyncConflictService {
+    nonisolated static var maximumStateFileByteCount: Int { 128 * 1_024 * 1_024 }
+    nonisolated static var maximumRecoverySnapshotFileByteCount: Int { 64 * 1_024 * 1_024 }
+
     private static let stateLogger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
         category: "SyncConflictState"
@@ -30,7 +33,23 @@ extension SyncConflictService {
             return recoveredState
         }
 
-        let data = try Data(contentsOf: url)
+        let data: Data
+        do {
+            data = try Self.boundedData(
+                at: url,
+                maximumByteCount: Self.maximumStateFileByteCount
+            )
+        } catch SyncConflictLocalStateReadError.exceedsMaximumByteCount {
+            let quarantineURL = try quarantineCorruptFile(
+                at: url,
+                data: nil,
+                prefix: Self.corruptStateFilePrefix
+            )
+            Self.stateLogger.error(
+                "Quarantined oversized sync state at \(quarantineURL.path, privacy: .public)"
+            )
+            throw SyncConflictStateFileError.corruptStateQuarantined
+        }
         let decodedState: SyncConflictState
         do {
             decodedState = try JSONDecoder().decode(SyncConflictState.self, from: data)
@@ -117,7 +136,23 @@ extension SyncConflictService {
     private func loadPendingForcedUploadSnapshotWithoutLock() throws -> SyncDataSnapshot? {
         let url = try pendingForcedUploadSnapshotURL()
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        let data = try Data(contentsOf: url)
+        let data: Data
+        do {
+            data = try Self.boundedData(
+                at: url,
+                maximumByteCount: Self.maximumRecoverySnapshotFileByteCount
+            )
+        } catch SyncConflictLocalStateReadError.exceedsMaximumByteCount {
+            let quarantineURL = try quarantineCorruptFile(
+                at: url,
+                data: nil,
+                prefix: Self.corruptPendingSnapshotFilePrefix
+            )
+            Self.stateLogger.error(
+                "Quarantined oversized recovery snapshot at \(quarantineURL.path, privacy: .public)"
+            )
+            return nil
+        }
         do {
             return try JSONDecoder().decode(SyncDataSnapshot.self, from: data)
         } catch {
@@ -137,13 +172,34 @@ extension SyncConflictService {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         return try JSONDecoder().decode(
             SyncDataSnapshot.self,
-            from: Data(contentsOf: url)
+            from: boundedData(
+                at: url,
+                maximumByteCount: maximumRecoverySnapshotFileByteCount
+            )
         )
+    }
+
+    private nonisolated static func boundedData(
+        at url: URL,
+        maximumByteCount: Int
+    ) throws -> Data {
+        let fileSize = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize
+        guard fileSize.map({ $0 <= maximumByteCount }) ?? true else {
+            throw SyncConflictLocalStateReadError.exceedsMaximumByteCount
+        }
+
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        let data = try handle.read(upToCount: maximumByteCount + 1) ?? Data()
+        guard data.count <= maximumByteCount else {
+            throw SyncConflictLocalStateReadError.exceedsMaximumByteCount
+        }
+        return data
     }
 
     private func quarantineCorruptFile(
         at url: URL,
-        data: Data,
+        data: Data?,
         prefix: String
     ) throws -> URL {
         let quarantineURL = url.deletingLastPathComponent().appendingPathComponent(
@@ -152,6 +208,7 @@ extension SyncConflictService {
         do {
             try FileManager.default.moveItem(at: url, to: quarantineURL)
         } catch {
+            guard let data else { throw error }
             try data.write(to: quarantineURL, options: [.atomic])
             try FileManager.default.removeItem(at: url)
         }
@@ -168,3 +225,5 @@ extension SyncConflictService {
         #endif
     }
 }
+
+enum SyncConflictLocalStateReadError: Error { case exceedsMaximumByteCount }

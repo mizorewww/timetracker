@@ -1075,6 +1075,74 @@ struct CoreSyncConflictTests {
     }
 
     @Test @MainActor
+    func oversizedAuxiliaryStateIsQuarantinedWithoutReadingItIntoMemory() throws {
+        let stateURL = temporaryStateURL()
+        let oversizedByteCount = SyncConflictService.maximumStateFileByteCount + 1
+        try writeSparseFile(byteCount: oversizedByteCount, to: stateURL)
+
+        let service = SyncConflictService(stateURL: stateURL)
+        #expect(throws: SyncConflictStateFileError.self) {
+            try service.loadState()
+        }
+        #expect(FileManager.default.fileExists(atPath: stateURL.path) == false)
+
+        let quarantinedFiles = try FileManager.default.contentsOfDirectory(
+            at: stateURL.deletingLastPathComponent(),
+            includingPropertiesForKeys: [.fileSizeKey]
+        ).filter { $0.lastPathComponent.hasPrefix(SyncConflictService.corruptStateFilePrefix) }
+        let quarantinedFile = try #require(quarantinedFiles.first)
+        #expect(quarantinedFiles.count == 1)
+        #expect(
+            try quarantinedFile.resourceValues(forKeys: [.fileSizeKey]).fileSize
+                == oversizedByteCount
+        )
+    }
+
+    @Test @MainActor
+    func oversizedRecoveryMirrorIsQuarantinedAndIgnored() throws {
+        let stateURL = temporaryStateURL()
+        let service = SyncConflictService(stateURL: stateURL)
+        let mirrorURL = try service.pendingForcedUploadSnapshotURL()
+        let oversizedByteCount = SyncConflictService.maximumRecoverySnapshotFileByteCount + 1
+        try writeSparseFile(byteCount: oversizedByteCount, to: mirrorURL)
+
+        let state = try service.loadState()
+        #expect(state.pendingForcedUploadSnapshot == nil)
+        #expect(FileManager.default.fileExists(atPath: mirrorURL.path) == false)
+
+        let quarantinedFiles = try FileManager.default.contentsOfDirectory(
+            at: mirrorURL.deletingLastPathComponent(),
+            includingPropertiesForKeys: [.fileSizeKey]
+        ).filter {
+            $0.lastPathComponent.hasPrefix(
+                SyncConflictService.corruptPendingSnapshotFilePrefix
+            )
+        }
+        let quarantinedFile = try #require(quarantinedFiles.first)
+        #expect(quarantinedFiles.count == 1)
+        #expect(
+            try quarantinedFile.resourceValues(forKeys: [.fileSizeKey]).fileSize
+                == oversizedByteCount
+        )
+    }
+
+    @Test @MainActor
+    func staticRecoveryFallbackRejectsOversizedFileBeforeDecode() throws {
+        let stateURL = temporaryStateURL()
+        let service = SyncConflictService(stateURL: stateURL)
+        let mirrorURL = try service.pendingForcedUploadSnapshotURL()
+        try writeSparseFile(
+            byteCount: SyncConflictService.maximumRecoverySnapshotFileByteCount + 1,
+            to: mirrorURL
+        )
+
+        #expect(throws: SyncConflictLocalStateReadError.exceedsMaximumByteCount) {
+            try SyncConflictService.loadPendingForcedUploadSnapshot(at: mirrorURL)
+        }
+        #expect(FileManager.default.fileExists(atPath: mirrorURL.path))
+    }
+
+    @Test @MainActor
     func cloudExportExcludesSensitiveAndDeviceLocalPreferences() throws {
         let context = try makeTestContext()
         context.insert(
@@ -1186,6 +1254,17 @@ struct CoreSyncConflictTests {
             .appendingPathComponent("state.json")
         try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
         return url
+    }
+
+    private func writeSparseFile(byteCount: Int, to url: URL) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+        try handle.truncate(atOffset: UInt64(byteCount))
     }
 
     private func writeStaleEmptyConflictState(to stateURL: URL) throws {

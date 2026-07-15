@@ -257,6 +257,47 @@ struct LLMSuggestionCancellationTests {
     }
 
     @Test @MainActor
+    func titleRoundTripRejectsFailureAndStartsQueuedCurrentRevisionRequest() async throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Planning", parentID: nil, deviceID: "test")
+        let inboxItem = InboxItem(title: "Draft launch plan", deviceID: "test")
+        context.insert(task)
+        context.insert(inboxItem)
+        try context.save()
+
+        let gate = ControlledLLMTransport(payload: .failureThenInbox(taskID: task.id))
+        let store = Self.configuredStore(
+            context: context,
+            task: task,
+            inboxItems: [inboxItem],
+            checklistItems: [],
+            inboxGate: gate
+        )
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+        let requestedRevisionID = inboxItem.effectiveSuggestionRevisionID
+
+        store.suggestInboxItem(inboxItem, showsErrors: true)
+        #expect(await Self.eventually { await gate.requestCount == 1 })
+
+        store.updateInboxItemTitle(inboxItem, title: "Draft launch checklist")
+        store.updateInboxItemTitle(inboxItem, title: "Draft launch plan")
+        #expect(inboxItem.effectiveSuggestionRevisionID != requestedRevisionID)
+        #expect(store.inboxSuggestionPendingIDs == [inboxItem.id])
+
+        await gate.resumeRequest(at: 0)
+        #expect(await Self.eventually { await gate.requestCount == 2 })
+        #expect(store.inboxSuggestionFailureByItemID[inboxItem.id] == nil)
+        #expect(store.errorMessage == nil)
+
+        await gate.resumeRequest(at: 1)
+        #expect(await Self.eventually {
+            store.inboxSuggestionInFlightIDs.isEmpty && store.inboxSuggestion(for: inboxItem) != nil
+        })
+        #expect(store.inboxSuggestionFailureByItemID[inboxItem.id] == nil)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
     func inFlightRequestDoesNotRetainStoreAndIsCancelledOnDeinit() async throws {
         let task = TaskNode(title: "Personal", parentID: nil, deviceID: "test")
         let inboxItem = InboxItem(title: "Plan the weekend", deviceID: "test")
@@ -339,6 +380,7 @@ private actor ControlledLLMTransport {
     enum Payload: Sendable {
         case inbox(taskID: UUID)
         case checklist
+        case failureThenInbox(taskID: UUID)
     }
 
     private let payload: Payload
@@ -360,9 +402,17 @@ private actor ControlledLLMTransport {
             cancelledRequestCount += 1
         }
 
+        if case .failureThenInbox = payload, requestIndex == 0 {
+            throw ControlledLLMTransportError.intentionalFailure
+        }
+
         let content: String
         switch payload {
         case let .inbox(taskID):
+            content = """
+            {"taskID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
+            """
+        case let .failureThenInbox(taskID):
             content = """
             {"taskID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
             """
@@ -422,4 +472,5 @@ private final class InMemoryLLMCredentialStore: LLMCredentialStoring {
 
 private enum ControlledLLMTransportError: Error {
     case invalidResponse
+    case intentionalFailure
 }

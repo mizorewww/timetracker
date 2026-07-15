@@ -46,6 +46,8 @@ extension TimeTrackerStore {
         _ error: Error,
         itemID: UUID,
         requestID: UUID,
+        requestedTitle: String,
+        requestedIdentity: InboxSuggestionIdentity,
         endpoint: String,
         apiKey: String,
         modelID: String,
@@ -68,7 +70,14 @@ extension TimeTrackerStore {
             endpoint: endpoint,
             apiKey: apiKey,
             modelID: modelID
-        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled,
+              let item = inboxItems.first(where: { $0.id == itemID }),
+              inboxSuggestionStateService.canStoreGeneratedSuggestion(
+                  item: item,
+                  requestedTitle: requestedTitle,
+                  requestedIdentity: requestedIdentity,
+                  currentSuggestion: inboxSuggestionByItemID[itemID]
+              ) else {
             return
         }
         inboxSuggestionFailureByItemID[itemID] = error.localizedDescription

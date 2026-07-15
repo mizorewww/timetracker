@@ -92,6 +92,8 @@ extension TimeTrackerStore {
                     error,
                     itemID: itemID,
                     requestID: requestID,
+                    requestedTitle: requestedTitle,
+                    requestedIdentity: requestedIdentity,
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID,

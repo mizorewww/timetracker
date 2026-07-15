@@ -40,6 +40,9 @@ struct LedgerStore {
         let impactedIDs = segmentIDs(overlapping: [today], now: now)
             .union(activeSegmentIDs)
             .union(fetched.map(\.id))
+        let impactedSessionIDs = Set(
+            impactedIDs.compactMap { segmentSnapshotByID[$0]?.sessionID }
+        ).union(fetched.map(\.sessionID))
 
         replaceSegments(
             ids: impactedIDs,
@@ -48,6 +51,12 @@ struct LedgerStore {
             calendar: calendar,
             refreshUnchangedTimeSensitiveSegments: true
         )
+        if impactedSessionIDs.isEmpty == false {
+            sessionIndex.replace(
+                ids: impactedSessionIDs,
+                with: try repository.sessions(ids: impactedSessionIDs)
+            )
+        }
         activeSegments = refreshedActive
         todaySegments = refreshedToday
     }

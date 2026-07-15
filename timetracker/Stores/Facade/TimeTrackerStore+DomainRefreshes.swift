@@ -11,6 +11,7 @@ extension TimeTrackerStore {
         tasks = taskDomainStore.tasks
         taskCategories = taskDomainStore.categories
         taskCategoryAssignments = taskDomainStore.categoryAssignments
+        try refreshLedgerRelationshipVisibility()
         cancelInvalidChecklistVisualSuggestionRequests()
     }
 
@@ -28,10 +29,7 @@ extension TimeTrackerStore {
         } else {
             try ledgerDomainStore.refreshVisible(repository: timeRepository)
         }
-        activeSegments = ledgerDomainStore.activeSegments
-        allSegments = ledgerDomainStore.allSegments
-        sessions = ledgerDomainStore.sessions
-        todaySegments = ledgerDomainStore.todaySegments
+        try refreshLedgerRelationshipVisibility()
     }
 
     func refreshPomodoroDomain() throws {

@@ -136,6 +136,7 @@ extension TimeTrackerStore {
     func visibleSegments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {
         if ledgerDomainStore.hasIndexedSegmentHistory {
             return ledgerDomainStore.segments(overlapping: interval, now: now)
+                .filter(isReadableLedgerSegment)
         }
         return allSegments.filter { segment in
             guard segment.deletedAt == nil else { return false }
@@ -151,6 +152,7 @@ extension TimeTrackerStore {
     func visibleSegments(forTaskIDs taskIDs: Set<UUID>) -> [TimeSegment] {
         if ledgerDomainStore.hasIndexedSegmentHistory {
             return ledgerDomainStore.segments(forTaskIDs: taskIDs)
+                .filter(isReadableLedgerSegment)
         }
         return allSegments.filter { $0.deletedAt == nil && taskIDs.contains($0.taskID) }
     }

@@ -89,6 +89,7 @@ extension TimeTrackerStore {
             ? ledgerDomainStore.segments(forSessionID: sessionID)
             : allSegments.visibleDeduplicatedByID()
         let segments = candidates.filter { segment in
+            isReadableLedgerSegment(segment) &&
             segment.sessionID == sessionID &&
             segment.source == .pomodoro &&
             segment.deletedAt == nil

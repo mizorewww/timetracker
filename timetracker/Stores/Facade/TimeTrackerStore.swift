@@ -235,6 +235,7 @@ final class TimeTrackerStore {
     var trackableTaskIDs: Set<UUID> = []
     var activeSegmentByTaskID: [UUID: TimeSegment] = [:]
     var sortedTodaySegments: [TimeSegment] = []
+    @ObservationIgnored var readableLedgerSegmentIDs: Set<UUID> = []
     var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?

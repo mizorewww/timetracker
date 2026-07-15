@@ -68,7 +68,7 @@ extension SyncedPreferenceService {
             defaults.removeObject(forKey: legacyLLMAPIKey)
         }
 
-        let redactedValue = PreferenceJSON.encode("")
+        let redactedValue = try PreferenceJSON.encodeChecked("")
         let requiresRedaction = storedPreferences.contains {
             $0.valueJSON != redactedValue || $0.deletedAt == nil
         }
@@ -90,22 +90,23 @@ extension SyncedPreferenceService {
 
     private static func legacyValueJSON(for key: AppPreferenceKey, defaults: UserDefaults) -> String? {
         guard defaults.object(forKey: key.rawValue) != nil else { return nil }
+        let encodedValue: String?
         switch key {
         case .preferredColorScheme:
             guard let value = defaults.string(forKey: key.rawValue) else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .pomodoroDefaultMode:
             guard let value = defaults.string(forKey: key.rawValue) else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .defaultFocusMinutes:
             guard let value = defaults.object(forKey: key.rawValue) as? Int else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .defaultBreakMinutes:
             guard let value = defaults.object(forKey: key.rawValue) as? Int else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .defaultPomodoroRounds:
             guard let value = defaults.object(forKey: key.rawValue) as? Int else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .pomodoroPlans:
             guard let json = defaults.string(forKey: key.rawValue),
                   json.utf8.count <= PreferenceJSON.maximumPayloadByteCount,
@@ -113,30 +114,32 @@ extension SyncedPreferenceService {
                   let plans = try? JSONDecoder().decode(LegacyPomodoroPlans.self, from: data).values else {
                 return nil
             }
-            return PreferenceJSON.encode(plans)
+            encodedValue = try? PreferenceJSON.encodeChecked(plans)
         case .allowParallelTimers:
             guard let value = defaults.object(forKey: key.rawValue) as? Bool else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .showGrossAndWallTogether:
             guard let value = defaults.object(forKey: key.rawValue) as? Bool else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .quickStartTaskIDs:
             let ids = defaults.string(forKey: key.rawValue)?
                 .split(separator: ",")
                 .map(String.init) ?? []
-            return PreferenceJSON.encode(ids)
+            encodedValue = try? PreferenceJSON.encodeChecked(ids)
         case .llmEndpoint:
             guard let value = defaults.string(forKey: key.rawValue) else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .llmSelectedModel:
             guard let value = defaults.string(forKey: key.rawValue) else { return nil }
-            return PreferenceJSON.encode(value)
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         case .llmAvailableModelIDs:
             let models = defaults.string(forKey: key.rawValue)?
                 .split(separator: ",")
                 .map(String.init) ?? []
-            return PreferenceJSON.encode(models)
+            encodedValue = try? PreferenceJSON.encodeChecked(models)
         }
+        guard let encodedValue else { return nil }
+        return try? PreferenceJSON.canonicalValueJSON(for: key, from: encodedValue)
     }
 }
 

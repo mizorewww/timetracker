@@ -689,6 +689,9 @@
 "inbox.suggestion.error.requestTooLarge" = "推荐请求包含的信息过多。请缩短文本后重试。";
 "inbox.suggestion.error.noValidTask" = "推荐结果没有匹配到已有任务。";
 "error.savedRefreshFailed" = "更改已保存，但无法重新载入最新数据。%@";
+"preference.error.invalidValue" = "设置值无效，未保存任何更改。";
+"preference.error.payloadTooLarge" = "设置包含的数据过多，未保存任何更改。";
+"preference.error.encodingFailed" = "无法安全编码此设置，未保存任何更改。";
 "error.widgetSnapshotSaveFailed" = "无法更新小组件。%@";
 "error.keychain.invalidData" = "保存的 API 密钥不是有效的 UTF-8 文本。";
 "error.keychain.unknownFailure" = "未知的钥匙串错误";

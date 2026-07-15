@@ -12,10 +12,18 @@ struct PreferenceCommandHandler {
         context: ModelContext,
         now: Date = Date()
     ) throws {
-        for (key, valueJSON) in values {
-            try apply(key: key, valueJSON: valueJSON, context: context, now: now)
+        let preparedValues = try values.map { key, valueJSON in
+            (
+                key,
+                try PreferenceJSON.canonicalValueJSON(for: key, from: valueJSON)
+            )
         }
-        try context.saveAfterMutationStep()
+
+        try context.performAtomicMutation {
+            for (key, valueJSON) in preparedValues {
+                try apply(key: key, valueJSON: valueJSON, context: context, now: now)
+            }
+        }
     }
 
     private func apply(

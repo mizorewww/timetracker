@@ -689,6 +689,9 @@
 "inbox.suggestion.error.requestTooLarge" = "推薦請求包含的資訊過多。請縮短文字後再試。";
 "inbox.suggestion.error.noValidTask" = "推薦結果沒有匹配到既有任務。";
 "error.savedRefreshFailed" = "變更已儲存，但無法重新載入最新資料。%@";
+"preference.error.invalidValue" = "設定值無效，未儲存任何變更。";
+"preference.error.payloadTooLarge" = "設定包含的資料過多，未儲存任何變更。";
+"preference.error.encodingFailed" = "無法安全編碼此設定，未儲存任何變更。";
 "error.widgetSnapshotSaveFailed" = "無法更新小工具。%@";
 "error.keychain.invalidData" = "儲存的 API 金鑰不是有效的 UTF-8 文字。";
 "error.keychain.unknownFailure" = "未知的鑰匙圈錯誤";

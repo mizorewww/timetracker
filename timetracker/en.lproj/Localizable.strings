@@ -689,6 +689,9 @@
 "inbox.suggestion.error.requestTooLarge" = "The suggestion request contains too much information. Shorten the text and try again.";
 "inbox.suggestion.error.noValidTask" = "The suggestion did not match an existing task.";
 "error.savedRefreshFailed" = "Your change was saved, but the latest data could not be reloaded. %@";
+"preference.error.invalidValue" = "A saved setting has an invalid value. No changes were made.";
+"preference.error.payloadTooLarge" = "This setting contains too much data. No changes were made.";
+"preference.error.encodingFailed" = "This setting could not be encoded safely. No changes were made.";
 "error.widgetSnapshotSaveFailed" = "The widget could not be updated. %@";
 "error.keychain.invalidData" = "The saved API key is not valid UTF-8 text.";
 "error.keychain.unknownFailure" = "Unknown Keychain error";

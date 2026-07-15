@@ -131,29 +131,6 @@ struct AppPreferences: Equatable {
     }
 }
 
-enum PreferenceJSON {
-    static let maximumPayloadByteCount = 256 * 1_024
-
-    static func encode<T: Encodable>(_ value: T) -> String {
-        let encoder = JSONEncoder()
-        guard let data = try? encoder.encode(value),
-              data.count <= maximumPayloadByteCount,
-              let string = String(data: data, encoding: .utf8) else {
-            return "null"
-        }
-        return string
-    }
-
-    static func decode<T: Decodable>(_ type: T.Type, from json: String, default defaultValue: T) -> T {
-        guard json.utf8.count <= maximumPayloadByteCount,
-              let data = json.data(using: .utf8),
-              let value = try? JSONDecoder().decode(type, from: data) else {
-            return defaultValue
-        }
-        return value
-    }
-}
-
 enum SyncedPreferenceService {
     static let migrationKey = "SyncedPreferencesMigratedToSwiftDataV1"
     static let legacyLLMAPIKey = "LLMAPIKey"

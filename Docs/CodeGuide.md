@@ -275,7 +275,9 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 仅 `localhost`/`.localhost` 保留域名以及经 `inet_pton` 数值解析确认的 `127.0.0.0/8` 或 `::1` 可使用 HTTP；`127.evil.com` 一类主机名不能靠字符串前缀伪装成本机。
 - API key 只在请求 Authorization header 中使用。
 - 带 Authorization 的 redirect 只允许保持相同 scheme、host 和有效端口；跨源、HTTPS 降级或模糊主机跳转必须拒绝，防止 credential 泄漏。
-- 发送前按功能构造最小请求，不附带无关数据。
+- 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/16 KiB JSON，prompt 最多 24 KiB，request body 最多 32 KiB，字段按 UTF-8 bytes 以完整 `Character` 裁剪。这些裁剪仅用于网络 DTO，不回写 canonical facts。
+- Inbox 候选集先取 Quick Start 固定任务，再取高频/近期任务，最后稳定补足。候选归一化去重后再按实际 JSON 字节预算取舍；不能回退成对全库纯字母截断。
+- `SymbolCatalog.symbolNames` 保留完整本机 picker 目录，`aiSuggestionSymbolNames` 是请求中的 78 项精选语义集。普通 icon sanitizer 用 `symbolNameSet` O(1) 查找；AI 返回 icon 只接受已公告精选集，Inbox task UUID 只接受实际发送候选。
 - 日志和错误信息不得打印密钥或完整敏感请求。
 - 解码错误、限流、超时和无效模型必须转换为可操作错误。
 

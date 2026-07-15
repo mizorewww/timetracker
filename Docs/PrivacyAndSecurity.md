@@ -68,6 +68,8 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 - 候选任务标题与层级路径。
 - 候选任务图标名与颜色十六进制值。
 
+一次最多选取 48 个可工作任务，先保留 Quick Start 固定任务，再使用已有计时索引选高频/近期任务，最后才按稳定路径顺序补足。候选 JSON 最多 16 KiB；Inbox 标题最多 512 UTF-8 bytes，单个候选标题/路径最多 256/512 bytes。候选去重和取舍是输入顺序无关的确定结果。
+
 ### 清单视觉建议
 
 请求可能包含：
@@ -75,6 +77,10 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 - 清单标题。
 - 所属任务标题与任务路径。
 - 允许选择的系统图标名和颜色列表。
+
+Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路径最多 1,024 bytes。Inbox 与 checklist 共用 78 个常见语义 SF Symbols 的精选发送列表，不会把完整的 8,000+ 图标目录附在每个请求中；这不会缩减用户本机图标选择器。
+
+两类建议的 user prompt 最多 24 KiB，最终 JSON request body 最多 32 KiB，model ID 512 bytes，endpoint/API key 分别最多 4/8 KiB。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
 
 ### 凭证与传输
 
@@ -172,6 +178,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] App Store 隐私标签与 AI/CloudKit 实际数据流一致。
 - [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
+- [ ] Inbox/checklist 请求的候选数、字段/prompt/body UTF-8 预算、精选图标列表、非候选 UUID 拒绝和结果字段归一化通过回归。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
 - [ ] Watch DTO 不包含 secret；codec/queue 的字段、数量、唯一 ID、时间和 512 KiB 恢复边界通过自动测试；持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过配对真机验证。
 - [ ] V8→V9 `DailySummary` cache 移除在真实磁盘 fixture 上保留用户事实；其他 breaking migration 也在对应真实旧 store 上通过。

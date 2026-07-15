@@ -5,9 +5,7 @@ extension SwiftDataTimeTrackingRepository {
     @discardableResult
     func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
         let now = nowProvider()
-        let titleSnapshot = try LedgerPersistencePolicy.prepareTitleSnapshot(
-            try titleSnapshot(for: taskID)
-        )
+        let titleSnapshot = try preparedTrackableTitleSnapshot(for: taskID)
         return try context.performAtomicMutation {
             let session = TimeSession(
                 taskID: taskID,
@@ -65,10 +63,7 @@ extension SwiftDataTimeTrackingRepository {
         let isRebindingTask = segment.taskID != taskID || linkedSession.map { $0.taskID != taskID } == true
         let reboundTitleSnapshot: String?
         if isRebindingTask {
-            guard let targetTitle = try titleSnapshot(for: taskID) else {
-                throw TimeTrackingRepositoryError.taskUnavailable
-            }
-            reboundTitleSnapshot = try LedgerPersistencePolicy.prepareTitleSnapshot(targetTitle)
+            reboundTitleSnapshot = try preparedTrackableTitleSnapshot(for: taskID)
         } else {
             reboundTitleSnapshot = nil
         }
@@ -146,9 +141,7 @@ extension SwiftDataTimeTrackingRepository {
             throw TimeTrackingRepositoryError.futureTime
         }
         let preparedNote = try LedgerPersistencePolicy.prepareNote(note)
-        let titleSnapshot = try LedgerPersistencePolicy.prepareTitleSnapshot(
-            try titleSnapshot(for: taskID)
-        )
+        let titleSnapshot = try preparedTrackableTitleSnapshot(for: taskID)
         return try context.performAtomicMutation {
             let session = TimeSession(
                 taskID: taskID,
@@ -214,9 +207,13 @@ extension SwiftDataTimeTrackingRepository {
         try canonicalSessions(ids: [id]).first
     }
 
-    private func titleSnapshot(for taskID: UUID) throws -> String? {
-        let id = taskID
-        let descriptor = FetchDescriptor<TaskNode>(predicate: #Predicate { $0.id == id })
-        return try context.fetch(descriptor).visibleDeduplicatedByID().first?.title
+    private func preparedTrackableTitleSnapshot(for taskID: UUID) throws -> String? {
+        let tasks = try context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID()
+        let trackableTaskIDs = TaskTrackingAvailabilityService().trackableTaskIDs(tasks: tasks)
+        guard trackableTaskIDs.contains(taskID),
+              let task = tasks.first(where: { $0.id == taskID }) else {
+            throw TimeTrackingRepositoryError.taskUnavailable
+        }
+        return try LedgerPersistencePolicy.prepareTitleSnapshot(task.title)
     }
 }

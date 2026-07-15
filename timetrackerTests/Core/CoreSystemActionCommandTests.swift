@@ -92,13 +92,24 @@ struct CoreSystemActionCommandTests {
     @Test @MainActor
     func activeSetDiffPublishesBothStoppedAndStartedTimerDomains() throws {
         let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let firstTaskID = UUID()
-        let secondTaskID = UUID()
-        let stopped = try timeRepository.startTask(taskID: firstTaskID, source: .timer)
+        let firstTask = try taskRepository.createTask(
+            title: "Stopped event task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let secondTask = try taskRepository.createTask(
+            title: "Started event task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let stopped = try timeRepository.startTask(taskID: firstTask.id, source: .timer)
         let before = try timeRepository.activeSegments()
         try timeRepository.stopSegment(segmentID: stopped.id)
-        let started = try timeRepository.startTask(taskID: secondTaskID, source: .timer)
+        let started = try timeRepository.startTask(taskID: secondTask.id, source: .timer)
         let after = try timeRepository.activeSegments()
 
         let events = TimerActiveSetMutationService().events(
@@ -106,17 +117,17 @@ struct CoreSystemActionCommandTests {
             afterActiveSegments: after
         )
 
-        #expect(events.contains(.ledgerChanged(taskID: firstTaskID, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.ledgerChanged(taskID: firstTask.id, dateInterval: nil, isVisible: true)))
         #expect(events.contains(.pomodoroChanged(
             runID: nil,
             sessionID: stopped.sessionID,
-            taskID: firstTaskID
+            taskID: firstTask.id
         )))
-        #expect(events.contains(.ledgerChanged(taskID: secondTaskID, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.ledgerChanged(taskID: secondTask.id, dateInterval: nil, isVisible: true)))
         #expect(events.contains(.pomodoroChanged(
             runID: nil,
             sessionID: started.sessionID,
-            taskID: secondTaskID
+            taskID: secondTask.id
         )))
         #expect(events.count == 4)
     }
@@ -191,9 +202,22 @@ struct CoreSystemActionCommandTests {
     @Test @MainActor
     func untargetedSystemStopClosesTheMostRecentlyStartedParallelTimer() throws {
         let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let older = try timeRepository.startTask(taskID: UUID(), source: .timer)
-        let newer = try timeRepository.startTask(taskID: UUID(), source: .timer)
+        let olderTask = try taskRepository.createTask(
+            title: "Older timer task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let newerTask = try taskRepository.createTask(
+            title: "Newer timer task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let older = try timeRepository.startTask(taskID: olderTask.id, source: .timer)
+        let newer = try timeRepository.startTask(taskID: newerTask.id, source: .timer)
         older.startedAt = Date(timeIntervalSinceReferenceDate: 100)
         newer.startedAt = Date(timeIntervalSinceReferenceDate: 200)
         try context.save()

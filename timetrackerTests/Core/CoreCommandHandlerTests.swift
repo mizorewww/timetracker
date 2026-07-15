@@ -479,13 +479,24 @@ struct CoreCommandHandlerTests {
     @Test @MainActor
     func timerCommandHandlerCoordinatesLedgerAndParallelTimerPolicy() throws {
         let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let firstTaskID = UUID()
-        let secondTaskID = UUID()
-        let firstSegment = try repository.startTask(taskID: firstTaskID, source: .timer)
+        let firstTask = try taskRepository.createTask(
+            title: "First timer task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let secondTask = try taskRepository.createTask(
+            title: "Second timer task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let firstSegment = try repository.startTask(taskID: firstTask.id, source: .timer)
 
         try TimerCommandHandler().startTask(
-            taskID: secondTaskID,
+            taskID: secondTask.id,
             allowParallelTimers: false,
             activeSegments: [firstSegment],
             pomodoroRuns: [],
@@ -496,20 +507,31 @@ struct CoreCommandHandlerTests {
         let activeSegments = try repository.activeSegments()
         #expect(firstSegment.endedAt != nil)
         #expect(activeSegments.count == 1)
-        #expect(activeSegments.first?.taskID == secondTaskID)
+        #expect(activeSegments.first?.taskID == secondTask.id)
     }
 
     @Test @MainActor
     func restartingAnExistingTaskStillReconcilesUnexpectedParallelTimers() throws {
         let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let selectedTaskID = UUID()
-        let otherTaskID = UUID()
-        let selectedSegment = try repository.startTask(taskID: selectedTaskID, source: .timer)
-        let otherSegment = try repository.startTask(taskID: otherTaskID, source: .timer)
+        let selectedTask = try taskRepository.createTask(
+            title: "Selected task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let otherTask = try taskRepository.createTask(
+            title: "Other task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let selectedSegment = try repository.startTask(taskID: selectedTask.id, source: .timer)
+        let otherSegment = try repository.startTask(taskID: otherTask.id, source: .timer)
 
         try TimerCommandHandler().startTask(
-            taskID: selectedTaskID,
+            taskID: selectedTask.id,
             allowParallelTimers: false,
             activeSegments: [selectedSegment, otherSegment],
             pomodoroRuns: [],
@@ -621,7 +643,12 @@ struct CoreCommandHandlerTests {
     func ledgerCommandHandlerOwnsManualSegmentWrites() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let task = TaskNode(title: "Ledger Task", parentID: nil, deviceID: "test")
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
+            title: "Ledger Task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
         var draft = ManualTimeDraft(taskID: task.id, tasks: [task])
         draft.startedAt = Date(timeIntervalSince1970: 10_000)
         draft.endedAt = draft.startedAt.addingTimeInterval(1_200)

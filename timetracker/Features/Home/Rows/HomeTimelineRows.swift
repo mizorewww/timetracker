@@ -5,6 +5,7 @@ struct TimelineRow: View {
     let segment: TimeSegment
     var openTaskDetail: ((UUID) -> Void)? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isDeleteConfirmationPresented = false
 
     private var isCompactPhone: Bool {
@@ -68,7 +69,9 @@ struct TimelineRow: View {
 
         return Button(action: openTask) {
             Group {
-                if isCompactPhone {
+                if dynamicTypeSize.isAccessibilitySize {
+                    accessibilityContent(display: display)
+                } else if isCompactPhone {
                     compactContent(display: display)
                 } else {
                     ViewThatFits(in: .horizontal) {
@@ -81,6 +84,33 @@ struct TimelineRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+    }
+
+    private func accessibilityContent(display: TrackedTimeDisplaySnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(store.displayTitle(for: segment))
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(timeRangeText(display: display))
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    tagBadge
+                    Spacer(minLength: 8)
+                    durationText(display: display)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    tagBadge
+                    durationText(display: display)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

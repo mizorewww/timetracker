@@ -9,6 +9,8 @@
 "home.todayTimeline" = "今日時間軸";
 "home.quickStart" = "快速開始";
 "home.startAnotherTimer" = "再開始一個計時";
+"home.now.title" = "現在";
+"home.overview.title" = "概覽";
 "action.startTimer" = "開始計時";
 "action.newTask" = "新增任務";
 "action.addTime" = "補錄時間";
@@ -19,6 +21,7 @@
 "action.delete" = "刪除";
 "empty.noActiveTimers" = "沒有正在執行的計時。";
 "empty.noTodaySegments" = "今天還沒有時間記錄。";
+"empty.noTodaySegments.description" = "開始計時，或從任務中補登時間來建立今天的時間軸。";
 "task.root" = "根任務";
 "status.running" = "執行中";
 "metric.wallTime" = "實際時間";
@@ -304,6 +307,7 @@
 "task.notes.empty" = "沒有備註";
 "task.records.empty" = "還沒有記錄";
 "timer.action.stop" = "停止";
+"timer.action.stopTaskFormat" = "停止「%@」";
 "timer.action.end" = "結束";
 "pomodoro.action.completeRound" = "完成本輪";
 "pomodoro.action.start" = "開始番茄鐘";
@@ -526,6 +530,7 @@
 "task.detail.recentSessions" = "最近記錄";
 "task.detail.recentSubtitle" = "來自目前任務及其子任務的最近記錄。";
 "forecast.today.title" = "預估進度";
+"forecast.accessibilityValueFormat" = "%@，%@。%@";
 "forecast.explainer.title" = "這個預測怎麼算";
 "forecast.explainer.body" = "手動設定預估時長即可立即取得預測。否則，請新增清單項、至少完成一項並記錄時間；已完成項目決定平均進度，歷史記錄用於估算天數。";
 "forecast.info.title" = "預測說明";

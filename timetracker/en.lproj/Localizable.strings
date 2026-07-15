@@ -9,6 +9,8 @@
 "home.todayTimeline" = "Today Timeline";
 "home.quickStart" = "Quick Start";
 "home.startAnotherTimer" = "Start Another Timer";
+"home.now.title" = "Now";
+"home.overview.title" = "Overview";
 "action.startTimer" = "Start Timer";
 "action.newTask" = "New Task";
 "action.addTime" = "Add Time";
@@ -19,6 +21,7 @@
 "action.delete" = "Delete";
 "empty.noActiveTimers" = "No timers are running.";
 "empty.noTodaySegments" = "No time has been logged today.";
+"empty.noTodaySegments.description" = "Start a timer or add time from a task to build today’s timeline.";
 "task.root" = "Root";
 "status.running" = "Running";
 "metric.wallTime" = "Wall Time";
@@ -304,6 +307,7 @@
 "task.notes.empty" = "No notes";
 "task.records.empty" = "No records yet";
 "timer.action.stop" = "Stop";
+"timer.action.stopTaskFormat" = "Stop %@";
 "timer.action.end" = "End";
 "pomodoro.action.completeRound" = "Complete Round";
 "pomodoro.action.start" = "Start Pomodoro";
@@ -526,6 +530,7 @@
 "task.detail.recentSessions" = "Recent Sessions";
 "task.detail.recentSubtitle" = "Recent records from this task and its subtasks.";
 "forecast.today.title" = "Forecast";
+"forecast.accessibilityValueFormat" = "%@, %@. %@";
 "forecast.explainer.title" = "How this forecast works";
 "forecast.explainer.body" = "Set an Estimate to get a forecast immediately. Otherwise, add checklist items, complete at least one, and track time. Completed items set the pace; history estimates days.";
 "forecast.info.title" = "Forecast Guide";

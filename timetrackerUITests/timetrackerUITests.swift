@@ -183,6 +183,29 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayPrimaryTimerActionOpensTaskPicker() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today compact interaction screenshots are iOS-specific.")
+        #else
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let startTimer = app.buttons["home.startTimer"].firstMatch
+        scrollUntilHittable(startTimer, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(startTimer, timeout: 5, diagnosticName: "today-start-timer", in: app)
+                && startTimer.isHittable
+        )
+        try capture("today-overview", app: app)
+
+        activate(startTimer)
+        let picker = app.descendants(matching: .any)["timer.taskPicker"].firstMatch
+        XCTAssertTrue(waitForElement(picker, timeout: 5, diagnosticName: "today-task-picker", in: app))
+        try capture("today-task-picker", app: app)
+        #endif
+    }
+
+    @MainActor
     func testCountdownTitleDraftShowsInlineValidation() throws {
         #if os(macOS)
         throw XCTSkip("The countdown draft interaction screenshot is iPhone-specific.")

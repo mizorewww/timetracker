@@ -9,6 +9,8 @@
 "home.todayTimeline" = "今日时间线";
 "home.quickStart" = "快速开始";
 "home.startAnotherTimer" = "再开始一个计时";
+"home.now.title" = "现在";
+"home.overview.title" = "概览";
 "action.startTimer" = "开始计时";
 "action.newTask" = "新建任务";
 "action.addTime" = "补录时间";
@@ -19,6 +21,7 @@
 "action.delete" = "删除";
 "empty.noActiveTimers" = "没有正在运行的计时。";
 "empty.noTodaySegments" = "今天还没有时间记录。";
+"empty.noTodaySegments.description" = "开始计时，或从任务中补录时间来构建今天的时间线。";
 "task.root" = "根任务";
 "status.running" = "运行中";
 "metric.wallTime" = "实际时间";
@@ -304,6 +307,7 @@
 "task.notes.empty" = "没有备注";
 "task.records.empty" = "还没有记录";
 "timer.action.stop" = "停止";
+"timer.action.stopTaskFormat" = "停止“%@”";
 "timer.action.end" = "结束";
 "pomodoro.action.completeRound" = "完成本轮";
 "pomodoro.action.start" = "开始番茄钟";
@@ -526,6 +530,7 @@
 "task.detail.recentSessions" = "最近记录";
 "task.detail.recentSubtitle" = "来自当前任务及其子任务的最近记录。";
 "forecast.today.title" = "预计进度";
+"forecast.accessibilityValueFormat" = "%@，%@。%@";
 "forecast.explainer.title" = "这个预测怎么算";
 "forecast.explainer.body" = "手动设置预计时长即可立即获得预测。否则，请添加清单项、至少完成一项并记录时间；已完成项决定平均进度，历史记录用于估算天数。";
 "forecast.info.title" = "预测说明";

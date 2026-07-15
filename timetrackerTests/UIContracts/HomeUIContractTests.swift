@@ -106,7 +106,12 @@ struct HomeUIContractTests {
     @Test
     func phoneNavigationExposesFivePrimaryDestinationsAndSettingsAction() throws {
         let contentSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
-        let homeSource = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
+        let homeSource = try [
+            "timetracker/Features/Home/PhoneHomeView.swift",
+            "timetracker/Features/Home/PhoneHomeSections.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
 
         #expect(contentSource.components(separatedBy: ".accessibilityIdentifier(\"phone.tab.").count - 1 == 5)
         #expect(contentSource.contains("phone.tab.today"))
@@ -121,6 +126,7 @@ struct HomeUIContractTests {
         #expect(contentSource.contains("case settings"))
         #expect(homeSource.contains("Button(action: openSettings)"))
         #expect(homeSource.contains(".accessibilityIdentifier(\"settings.open\")"))
+        #expect(homeSource.contains("home.toolbar.newTask") == false)
     }
 
     @Test
@@ -147,7 +153,12 @@ struct HomeUIContractTests {
 
     @Test
     func homeExposesQuickStartAndTimelineAsAccessibleSections() throws {
-        let homeSource = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
+        let homeSource = try [
+            "timetracker/Features/Home/PhoneHomeView.swift",
+            "timetracker/Features/Home/PhoneHomeSections.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
         let quickStartSource = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
         let timelineSource = try sourceText("timetracker/Features/Home/Sections/HomeTimelineViews.swift")
 
@@ -184,13 +195,17 @@ struct HomeUIContractTests {
 
         #expect(source.contains(".presentationBackground(") == false)
         #expect(source.contains(".scrollContentBackground(.hidden)"))
+        #expect(source.contains("struct TaskStartPickerSheet"))
+        #expect(source.contains("dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large]"))
     }
 
     @Test
     func trackingEntrypointsShareAvailabilityAndRunningStateSemantics() throws {
         let source = try [
+            "timetracker/Features/Home/HomeReadModels.swift",
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Home/PhoneHomeSections.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
@@ -210,6 +225,34 @@ struct HomeUIContractTests {
         #expect(source.contains("isRunning ? \"stop.fill\" : \"play.fill\""))
         #expect(source.contains("timer.task.stopHint"))
         #expect(source.contains(".presentationBackground(") == false)
+    }
+
+    @Test
+    func phoneTodayPrioritizesCurrentStateAndReflowsAtAccessibilitySizes() throws {
+        let homeSource = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
+        let timerSource = try sourceText("timetracker/Features/Home/Rows/HomeTimerRows.swift")
+        let timelineSource = try sourceText("timetracker/Features/Home/Rows/HomeTimelineRows.swift")
+        let forecastSource = try sourceText("timetracker/Features/Home/Sections/HomeForecastViews.swift")
+
+        let nowIndex = try #require(homeSource.range(of: "PhoneNowSection(")?.lowerBound)
+        let overviewIndex = try #require(homeSource.range(of: "home.overview.title")?.lowerBound)
+        let quickStartIndex = try #require(homeSource.range(of: "PhoneQuickStartSection(")?.lowerBound)
+        let timelineIndex = try #require(homeSource.range(of: "PhoneTimelineSection(")?.lowerBound)
+        let forecastIndex = try #require(homeSource.range(of: "PhoneForecastSection(")?.lowerBound)
+
+        #expect(nowIndex < overviewIndex)
+        #expect(overviewIndex < quickStartIndex)
+        #expect(quickStartIndex < timelineIndex)
+        #expect(timelineIndex < forecastIndex)
+        #expect(homeSource.contains("TodayHomeContent(store: store)"))
+        #expect(homeSource.contains("home.toolbar.newTask") == false)
+        let sectionSource = try sourceText("timetracker/Features/Home/PhoneHomeSections.swift")
+        #expect(sectionSource.contains("allowsParallelTimers && !dynamicTypeSize.isAccessibilitySize"))
+        #expect(sectionSource.contains("allowsParallelTimers && dynamicTypeSize.isAccessibilitySize"))
+        #expect(sectionSource.contains(".frame(width: 44, height: 44)"))
+        #expect(timerSource.contains("if dynamicTypeSize.isAccessibilitySize"))
+        #expect(timelineSource.contains("if dynamicTypeSize.isAccessibilitySize"))
+        #expect(forecastSource.contains("if dynamicTypeSize.isAccessibilitySize"))
     }
 
     @Test

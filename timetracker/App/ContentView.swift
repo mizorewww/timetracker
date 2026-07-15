@@ -111,16 +111,9 @@ struct ContentView: View {
             InboxSuggestionEditorSheet(store: store, initialDraft: draft)
         }
         .sheet(isPresented: $bindableStore.isStartTaskPickerPresented) {
-            NavigationStack {
-                TaskStartPicker(store: store) {
-                    store.isStartTaskPickerPresented = false
-                }
+            TaskStartPickerSheet(store: store) {
+                store.isStartTaskPickerPresented = false
             }
-            #if os(iOS)
-            .presentationDetents([.medium, .large])
-            #else
-            .frame(minWidth: 420, minHeight: 520)
-            #endif
         }
     }
 

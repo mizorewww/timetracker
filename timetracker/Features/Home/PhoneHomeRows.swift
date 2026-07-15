@@ -6,10 +6,11 @@ struct PhoneTodaySummaryRow: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
+            let snapshot = store.todayMetricsSnapshot(now: context.date)
             VStack(spacing: 12) {
                 PhoneSummaryMetric(
                     title: AppStrings.grossTime,
-                    value: DurationFormatter.compact(store.todayGrossSeconds(now: context.date)),
+                    value: DurationFormatter.compact(snapshot.grossSeconds),
                     systemImage: "square.stack.3d.up",
                     tint: .blue
                 )
@@ -18,7 +19,7 @@ struct PhoneTodaySummaryRow: View {
                     Divider()
                     PhoneSummaryMetric(
                         title: AppStrings.wallTime,
-                        value: DurationFormatter.compact(store.todayWallSeconds(now: context.date)),
+                        value: DurationFormatter.compact(snapshot.wallSeconds),
                         systemImage: "timeline.selection",
                         tint: .green
                     )

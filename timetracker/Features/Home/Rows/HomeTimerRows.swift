@@ -13,7 +13,7 @@ struct ActiveTimerRow: View {
 
     var body: some View {
         Group {
-            if isCompactPhone && dynamicTypeSize.isAccessibilitySize {
+            if dynamicTypeSize.isAccessibilitySize {
                 accessibilityContent
             } else if isCompactPhone {
                 compactContent
@@ -28,36 +28,34 @@ struct ActiveTimerRow: View {
     }
 
     private var accessibilityContent: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 Button(action: openTask) {
-                    HStack(alignment: .top, spacing: 12) {
-                        TaskIcon(task: store.task(for: segment.taskID), size: 34)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(store.displayTitle(for: segment))
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(displayPathText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(store.displayTitle(for: segment))
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(displayPathText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(store.displayTitle(for: segment))
+                .accessibilityValue(displayPathText)
                 .accessibilityHint(AppStrings.localized("tasks.openDetail"))
 
-                stopButton(size: 30)
+                stopButton(size: 28)
             }
 
             DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                .font(.title3.weight(.semibold))
+                .font(.body.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
-                .padding(.leading, 46)
         }
     }
 
@@ -148,7 +146,14 @@ struct ActiveTimerRow: View {
         }
         .buttonStyle(.bordered)
         .frame(minWidth: 44, minHeight: 44)
-        .accessibilityLabel(AppStrings.localized("timer.action.stop"))
+        .accessibilityLabel(
+            String.localizedStringWithFormat(
+                AppStrings.localized("timer.action.stopTaskFormat"),
+                store.displayTitle(for: segment)
+            )
+        )
+        .accessibilityHint(AppStrings.localized("timer.task.stopHint"))
+        .accessibilityIdentifier("home.timer.stop.\(segment.id.uuidString)")
     }
 
     private func openTask() {

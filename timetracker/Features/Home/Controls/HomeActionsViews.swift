@@ -19,27 +19,10 @@ struct ActionStack: View {
     var body: some View {
         actionLayout
         .sheet(isPresented: $isTaskPickerPresented) {
-            taskPicker
-        }
-    }
-
-    @ViewBuilder
-    private var taskPicker: some View {
-        #if os(iOS)
-        NavigationStack {
-            TaskStartPicker(store: store) {
+            TaskStartPickerSheet(store: store) {
                 isTaskPickerPresented = false
             }
         }
-        .presentationDetents([.medium, .large])
-        #else
-        NavigationStack {
-            TaskStartPicker(store: store) {
-                isTaskPickerPresented = false
-            }
-        }
-        .frame(minWidth: 420, minHeight: 520)
-        #endif
     }
 
     @ViewBuilder
@@ -86,6 +69,25 @@ struct ActionStack: View {
         .buttonStyle(.bordered)
         .controlSize(.regular)
         .accessibilityIdentifier("home.newTask")
+    }
+}
+
+struct TaskStartPickerSheet: View {
+    let store: TimeTrackerStore
+    let onDone: () -> Void
+#if os(iOS)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+#endif
+
+    var body: some View {
+        NavigationStack {
+            TaskStartPicker(store: store, onDone: onDone)
+        }
+#if os(iOS)
+        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+#else
+        .frame(minWidth: 420, minHeight: 520)
+#endif
     }
 }
 
@@ -175,6 +177,7 @@ struct TaskStartPicker: View {
         #endif
         .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
         .navigationTitle(AppStrings.startTimer)
+        .accessibilityIdentifier("timer.taskPicker")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

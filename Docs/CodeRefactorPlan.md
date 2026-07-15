@@ -57,6 +57,7 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 - Settings timing, Pomodoro, countdown, sync, data, action, binding, and support responsibilities are split; `SettingsSectionsViews.swift` is retired.
 - Reusable Settings rows are split into `SettingsRows.swift`, `SettingsActionRows.swift`, `SettingsInputRows.swift`, `SettingsPresentationModifiers.swift`, and `SettingsSyncFeedbackRow.swift`; large Dynamic Type composition and VoiceOver title/value semantics remain part of those shared owners.
 - Task Detail identity, checklist, overview, analytics, navigation, and record sections are split from the canonical detail router.
+- Task symbol-picker presentation/search state is split from the system/bundled SF Symbols catalogue loader and AI-safe vocabulary.
 - Ledger cloud mode, transaction diagnostics, timer DTO, aggregation, formatting, device identity, and summary responsibilities are split; `TimeTrackerServices.swift` is retired.
 - Sync-conflict bootstrap/prompt, local mutation, Cloud import/export, recovery/resolution, state persistence, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and organization/ledger/planning/checklist/Inbox record DTOs are split by responsibility.
 - `TimeTrackerStore+Configuration.swift` owns first configuration, repository-only attachment, and committed-mutation surface refresh; `TimeTrackerStore+Lifecycle.swift` owns generic refresh, mutation, recovery, and error boundaries.

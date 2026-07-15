@@ -608,6 +608,18 @@
 
 验证：当前 4 月 28 日只生成 1...28，完整历史 4 月生成 1...30，未来月生成空数组；相同缓存仍保留 30 个 bucket；30 秒与 15 秒分别得到 0.5 与 0.25 分钟。source contract 固定 fractional properties、foreground scale、底部图例与逐点 VoiceOver；三语键和 iPhone 周/月趋势截图必须通过。
 
+## AD-047：UI 测试 runner 单目标串行，验证矩阵显式并行
+
+状态：Accepted
+
+背景：UI 测试会启动同一个有状态 App、扩展与自动演示数据，并按顺序截图。共享 scheme 曾把 UI test target 标记为 parallelizable；一次断言失败后 Xcode 自动创建多个 Clone，第二个 runner 被 SpringBoard 拒绝启动，`xcodebuild` 随后卡在 test-session 清理，同时留下扩展进程和崩溃弹窗。继续增加 worker 不会提高这种有序端到端用例的有效吞吐量。
+
+决策：主 scheme 只把 `timetrackerUITests` 标记为 nonparallelizable；`timetrackerTests` 继续并行。验收截图命令显式使用 `-parallel-testing-enabled NO -maximum-parallel-testing-workers 1`，每个 destination 只有一个 runner。多 agent 与 iPhone/iPad/macOS/watchOS 验证仍受鼓励；需要并行矩阵时，由主 Agent 为每个 destination 分配独立、可追踪的 UDID、result bundle 和 DerivedData，而不是让 Xcode 隐式克隆同一个有状态 runner。
+
+后果：这是资源所有权和测试确定性约束，不是单 Agent 或低负载策略。每个模拟器批次结束时必须 terminate App、shutdown/delete 本批自建设备、关闭 Simulator/Problem Reporter，并确认没有 Booted 设备、`xcodebuild`、`xctest`、UI runner 或 App 扩展残留；不得关闭其他 agent 明确拥有的设备。不得为了让 UI 测试通过而禁用付费开发者签名或 entitlement。
+
+验证：源码契约固定 unit target 为 `parallelizable=YES`、UI target 为 `parallelizable=NO`。iPhone 17 Pro 月导航用例在禁用并行克隆后只创建一个 runner，完整 xcresult 通过并输出两张截图；清理后 CoreSimulator 与进程审计为空。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -498,18 +498,29 @@ struct CoreWatchCommandTests {
         let task = try taskRepository.createTask(title: "Watch task", parentID: nil, colorHex: nil, iconName: nil)
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .startTask,
             taskID: task.id,
             segmentID: nil,
-            issuedAt: Date(timeIntervalSinceReferenceDate: 1_000),
+            issuedAt: issuedAt,
             deviceID: "watch-test"
         )
 
-        let firstResult = try processor.process(command, allowParallelTimers: true, context: context)
+        let firstResult = try processor.process(
+            command,
+            allowParallelTimers: true,
+            context: context,
+            now: issuedAt
+        )
         try SystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
-        let duplicateResult = try processor.process(command, allowParallelTimers: true, context: context)
+        let duplicateResult = try processor.process(
+            command,
+            allowParallelTimers: true,
+            context: context,
+            now: issuedAt.addingTimeInterval(WatchTransportLimits.maximumCommandAge + 1)
+        )
 
         let segments = try context.fetch(FetchDescriptor<TimeSegment>())
         #expect(firstResult.isProcessed)
@@ -524,21 +535,32 @@ struct CoreWatchCommandTests {
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = WatchCommandProcessor(receiptStore: receiptStore)
         let taskID = UUID()
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .startTask,
             taskID: taskID,
             segmentID: nil,
-            issuedAt: Date(timeIntervalSinceReferenceDate: 1_000),
+            issuedAt: issuedAt,
             deviceID: "watch-test"
         )
 
-        let missingResult = try processor.process(command, allowParallelTimers: true, context: context)
+        let missingResult = try processor.process(
+            command,
+            allowParallelTimers: true,
+            context: context,
+            now: issuedAt
+        )
         let task = TaskNode(title: "Late task", parentID: nil, deviceID: "test")
         task.id = taskID
         context.insert(task)
         try context.save()
-        let retryResult = try processor.process(command, allowParallelTimers: true, context: context)
+        let retryResult = try processor.process(
+            command,
+            allowParallelTimers: true,
+            context: context,
+            now: issuedAt.addingTimeInterval(1)
+        )
 
         #expect(missingResult == .missingTask(taskID))
         #expect(retryResult.isProcessed)
@@ -554,22 +576,83 @@ struct CoreWatchCommandTests {
         let segment = try timeRepository.startTask(taskID: task.id, source: .watch)
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_100)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .stopSegment,
             taskID: nil,
             segmentID: segment.id,
-            issuedAt: Date(timeIntervalSinceReferenceDate: 1_100),
+            issuedAt: issuedAt,
             deviceID: "watch-test"
         )
 
-        let firstResult = try processor.process(command, allowParallelTimers: true, context: context)
-        let duplicateResult = try processor.process(command, allowParallelTimers: true, context: context)
+        let firstResult = try processor.process(
+            command,
+            allowParallelTimers: true,
+            context: context,
+            now: issuedAt
+        )
+        let duplicateResult = try processor.process(
+            command,
+            allowParallelTimers: true,
+            context: context,
+            now: issuedAt.addingTimeInterval(WatchTransportLimits.maximumCommandAge + 1)
+        )
 
         let stopped = try #require(try timeRepository.allSegments().first)
         #expect(firstResult == .stopped(segment.id))
         #expect(duplicateResult == .duplicate(command.id))
         #expect(stopped.endedAt != nil)
+    }
+
+    @Test @MainActor
+    func staleWatchCommandCannotMutateLedgerAndCanBeExplicitlyRetried() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Delayed Watch command",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let receiptStore = InMemoryWatchCommandReceiptStore()
+        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let commandID = UUID()
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_200)
+        let staleCommand = WatchTimerCommand(
+            id: commandID,
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: issuedAt,
+            deviceID: "watch-test"
+        )
+        let retryDate = issuedAt.addingTimeInterval(WatchTransportLimits.maximumCommandAge + 1)
+
+        let staleResult = try processor.process(
+            staleCommand,
+            allowParallelTimers: true,
+            context: context,
+            now: retryDate
+        )
+
+        #expect(staleResult == .invalid)
+        #expect(try timeRepository.activeSegments().isEmpty)
+        #expect(receiptStore.contains(commandID) == false)
+
+        var retriedCommand = staleCommand
+        retriedCommand.issuedAt = retryDate
+        let retryResult = try processor.process(
+            retriedCommand,
+            allowParallelTimers: true,
+            context: context,
+            now: retryDate
+        )
+
+        #expect(retryResult.isProcessed)
+        #expect(try timeRepository.activeSegments().count == 1)
+        #expect(receiptStore.contains(commandID))
     }
 
     @Test @MainActor

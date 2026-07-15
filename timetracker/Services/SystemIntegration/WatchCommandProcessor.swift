@@ -67,10 +67,14 @@ struct WatchCommandProcessor {
     func process(
         _ command: WatchTimerCommand,
         allowParallelTimers: Bool,
-        context: ModelContext
+        context: ModelContext,
+        now: Date = Date()
     ) throws -> WatchCommandProcessingResult {
         guard receiptStore.contains(command.id) == false else {
             return .duplicate(command.id)
+        }
+        guard command.isValid(at: now) else {
+            return .invalid
         }
         try AppCloudSync.requireUserWritesAllowed()
 

@@ -3,6 +3,7 @@ import SwiftUI
 struct PomodoroPageLayout<Primary: View, Secondary: View>: View {
     private let primary: Primary
     private let secondary: Secondary
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(
         @ViewBuilder primary: () -> Primary,
@@ -13,26 +14,61 @@ struct PomodoroPageLayout<Primary: View, Secondary: View>: View {
     }
 
     var body: some View {
-        ScrollView {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 24) {
-                    primary
-                        .frame(minWidth: 440, maxWidth: 580)
-                    secondary
-                        .frame(minWidth: 280, maxWidth: 360)
-                }
+        GeometryReader { proxy in
+            let layout = PomodoroPageLayoutPolicy(
+                viewportWidth: proxy.size.width,
+                prefersSingleColumn: dynamicTypeSize.isAccessibilitySize
+            )
 
-                VStack(spacing: 20) {
-                    primary
-                    secondary
+            ScrollView {
+                Group {
+                    if layout.usesTwoColumnContent {
+                        HStack(alignment: .top, spacing: layout.columnSpacing) {
+                            primary
+                                .frame(maxWidth: layout.primaryColumnMaxWidth)
+                            secondary
+                                .frame(width: layout.supportingColumnWidth)
+                        }
+                    } else {
+                        VStack(spacing: layout.singleColumnSpacing) {
+                            primary
+                            secondary
+                        }
+                        .frame(maxWidth: layout.singleColumnMaxWidth)
+                    }
                 }
-                .frame(maxWidth: 600)
+                .frame(width: layout.contentWidth)
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: AppLayout.desktopReadableWidth)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, AppLayout.compactPagePadding)
-            .padding(.vertical, 24)
         }
         .accessibilityIdentifier("pomodoro.dashboard")
+    }
+}
+
+struct PomodoroPageLayoutPolicy {
+    static let twoColumnMinimumWidth: CGFloat = 744
+
+    let viewportWidth: CGFloat
+    let prefersSingleColumn: Bool
+
+    let columnSpacing: CGFloat = 24
+    let singleColumnSpacing: CGFloat = 20
+    let primaryColumnMaxWidth: CGFloat = 580
+    let singleColumnMaxWidth: CGFloat = 600
+
+    var contentWidth: CGFloat {
+        min(
+            max(0, viewportWidth - (AppLayout.compactPagePadding * 2)),
+            AppLayout.desktopReadableWidth
+        )
+    }
+
+    var usesTwoColumnContent: Bool {
+        !prefersSingleColumn && contentWidth >= Self.twoColumnMinimumWidth
+    }
+
+    var supportingColumnWidth: CGFloat {
+        min(340, max(280, contentWidth * 0.34))
     }
 }

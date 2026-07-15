@@ -58,4 +58,26 @@ struct PomodoroPresentationTests {
         #expect(ready.titleKey == "pomodoro.startNextFocus")
         #expect(ready.systemImage == "play.circle.fill")
     }
+
+    @Test
+    func pageLayoutUsesFiniteViewportWidthAndReflowsForAccessibilityText() {
+        let phone = PomodoroPageLayoutPolicy(
+            viewportWidth: 402,
+            prefersSingleColumn: false
+        )
+        let wide = PomodoroPageLayoutPolicy(
+            viewportWidth: 1_024,
+            prefersSingleColumn: false
+        )
+        let accessibility = PomodoroPageLayoutPolicy(
+            viewportWidth: 1_024,
+            prefersSingleColumn: true
+        )
+
+        #expect(phone.contentWidth == 366)
+        #expect(phone.usesTwoColumnContent == false)
+        #expect(wide.contentWidth == AppLayout.desktopReadableWidth)
+        #expect(wide.usesTwoColumnContent)
+        #expect(accessibility.usesTwoColumnContent == false)
+    }
 }

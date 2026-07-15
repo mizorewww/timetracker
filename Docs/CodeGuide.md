@@ -64,7 +64,7 @@
 
 - Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
 - Analytics：root landing page 与 `AnalyticsCategoryDetailView` 分文件；category 使用 typed `NavigationLink(value:)` / `navigationDestination` 路由，overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 各有所有者。分布图切片值由 `AnalyticsDistributionSlice.swift` 持有，分组聚合与 “Other” 折叠规则由 `AnalyticsGroupBreakdownPresentation.swift` 持有，分段宽度算法由 `AnalyticsGroupBarLayout.swift` 持有，视图文件只保留组合与展示。
-- Pomodoro presentation：`PomodoroPageLayout` 负责宽屏双栏/窄屏单栏；setup composition、空状态、参数控件、Plan/Task 选择、timer face、active composition、active countdown、有限 timeline schedule 和 ledger 各有所有者。页面容器不承担 deadline 或账本写入。
+- Pomodoro presentation：`PomodoroPageLayout` 从外层 `GeometryReader` 的有限 viewport 派生唯一布局分支，负责宽屏双栏、窄屏/辅助字号单栏；禁止用嵌套 `ViewThatFits` 同时测量整棵 primary/secondary 子树。setup composition、空状态、参数控件、Plan/Task 选择、timer face、active composition、active countdown、有限 timeline schedule 和 ledger 各有所有者。页面容器不承担 deadline 或账本写入。
 - Settings：display/timing、Pomodoro、countdown、sync、data、actions、bindings 与 support 分文件；`SharedUI/Components` 中的 foundation/value row、action/destructive label、text/number input、presentation modifier 和 sync feedback 也各有所有者。
 - Task Detail：canonical router 与 identity/checklist/overview/analytics/navigation/record sections 分文件。
 - Ledger infrastructure：Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 与 summary 分文件。

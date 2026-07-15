@@ -93,6 +93,7 @@ private struct AnalyticsContent: View {
                     NavigationLink(value: category) {
                         AnalyticsCategoryRow(category: category, snapshot: snapshot)
                     }
+                    .accessibilityIdentifier("analytics.category.\(category.rawValue)")
                 }
             } header: {
                 Text(AppStrings.localized("analytics.categories.title"))

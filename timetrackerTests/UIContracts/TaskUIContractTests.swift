@@ -469,6 +469,9 @@ struct TaskUIContractTests {
         let uiTestSource = try sourceText("timetrackerUITests/timetrackerUITests.swift")
         #expect(uiTestSource.contains("analyticsIsReady(in app: XCUIApplication)"))
         #expect(uiTestSource.contains("analytics.view"))
+        #expect(uiTestSource.contains("testAnalyticsFinalCategoryScrollsAboveSystemChrome"))
+        #expect(uiTestSource.contains("analytics.category.quality"))
+        #expect(analyticsSource.contains("analytics.category.\\(category.rawValue)"))
     }
 
     @Test

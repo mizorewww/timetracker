@@ -169,6 +169,33 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsFinalCategoryScrollsAboveSystemChrome() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics system-chrome clearance requires an iOS simulator.")
+        #else
+        let app = launchApp(route: "analytics")
+
+        XCTAssertTrue(analyticsIsReady(in: app))
+        let finalCategory = app.descendants(matching: .any)["analytics.category.quality"].firstMatch
+        scrollUntilHittable(finalCategory, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                finalCategory,
+                timeout: 5,
+                diagnosticName: "analytics-final-category",
+                in: app
+            )
+        )
+        scrollUntilFullyVisibleAboveSystemChrome(finalCategory, in: app)
+        XCTAssertTrue(
+            isFullyVisibleAboveSystemChrome(finalCategory, in: app),
+            "The final Analytics category must be completely visible above the floating tab bar."
+        )
+        try capture("iphone-analytics-final-category", app: app)
+        #endif
+    }
+
+    @MainActor
     func testUIRefactorBaselineScreenshots() throws {
         let app = launchApp()
 

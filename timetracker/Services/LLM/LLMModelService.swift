@@ -40,13 +40,13 @@ struct LLMModelService {
     func fetchModels(endpoint: String, apiKey: String) async throws -> [String] {
         let request = try modelListRequest(endpoint: endpoint, apiKey: apiKey)
         let (data, response) = try await transport(request)
-        try LLMSecureHTTPTransport.validateBufferedResponse(data)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMModelServiceError.invalidResponse
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
+        try LLMSecureHTTPTransport.validateBufferedResponse(data)
 
         let decoded = try JSONDecoder().decode(LLMModelListResponse.self, from: data)
         return decoded.modelIDs

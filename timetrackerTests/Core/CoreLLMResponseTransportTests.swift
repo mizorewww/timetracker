@@ -137,6 +137,28 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
+    func injectedTransportPreservesHTTPStatusPriorityOverBufferedBodyLimit() async throws {
+        let service = LLMModelService { request in
+            let response = try #require(
+                HTTPURLResponse(
+                    url: request.url ?? URL(string: "https://example.test")!,
+                    statusCode: 429,
+                    httpVersion: nil,
+                    headerFields: nil
+                )
+            )
+            return (Data(count: LLMSecureHTTPTransport.maximumResponseByteCount + 1), response)
+        }
+
+        do {
+            _ = try await service.fetchModels(endpoint: "https://example.test/v1", apiKey: "key")
+            Issue.record("Expected HTTP status failure")
+        } catch let error as LLMModelServiceError {
+            #expect(error == .responseStatus(429))
+        }
+    }
+
+    @Test
     func inboxServiceDefendsAgainstOversizedInjectedTransportData() async throws {
         let service = LLMInboxSuggestionService(transport: Self.oversizedInjectedTransport)
         let candidate = LLMTaskCandidate(

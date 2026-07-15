@@ -71,13 +71,13 @@ struct LLMInboxSuggestionService {
             apiKey: apiKey
         )
         let (data, response) = try await transport(request)
-        try LLMSecureHTTPTransport.validateBufferedResponse(data)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
+        try LLMSecureHTTPTransport.validateBufferedResponse(data)
 
         let decoded = try JSONDecoder().decode(OpenAIChatCompletionResponse.self, from: data)
         guard let content = decoded.choices.first?.message.content,

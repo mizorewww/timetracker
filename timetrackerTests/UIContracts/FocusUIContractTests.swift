@@ -53,9 +53,20 @@ struct FocusUIContractTests {
         #expect(page.contains("PomodoroPageLayout"))
         #expect(countdown.contains("TimelineView(PomodoroCountdownSchedule"))
         #expect(countdown.contains("pomodoro.skipBreak"))
+        #expect(countdown.contains(".disabled(canResumeFocus == false)"))
+        #expect(countdown.contains("pomodoro.resume.unavailable"))
         #expect(countdown.contains(".accessibilityHidden(true)"))
         #expect(schedule.contains("guard currentDate < endDate else { return nil }"))
         #expect(schedule.contains("mode == .lowFrequency ? 60 : 1"))
+    }
+
+    @Test
+    func stopConfirmationCannotTargetAReplacementRun() throws {
+        let page = try sourceText("timetracker/Features/Pomodoro/PomodoroViews.swift")
+
+        #expect(page.contains("stopConfirmationRunID = run.id"))
+        #expect(page.contains("store.activePomodoroRun?.id == stopConfirmationRunID"))
+        #expect(page.contains(".onChange(of: store.activePomodoroRun?.id)"))
     }
 
     @Test
@@ -68,6 +79,7 @@ struct FocusUIContractTests {
             "pomodoro.skipBreak",
             "pomodoro.skipBreak.hint",
             "pomodoro.startNextFocus.hint",
+            "pomodoro.resume.unavailable",
             "pomodoro.roundsCompleted",
             "pomodoro.phaseTask.accessibility",
             "pomodoro.remaining.accessibility"

@@ -7,6 +7,7 @@ struct PomodoroActiveCountdownView: View {
     let taskParentPath: String?
     let taskIdentity: String
     let taskColor: Color
+    let canResumeFocus: Bool
 
     private var isBreak: Bool {
         run.state == .shortBreak || run.state == .longBreak
@@ -43,6 +44,16 @@ struct PomodoroActiveCountdownView: View {
                 .accessibilityHidden(true)
 
             if isBreak {
+                if canResumeFocus == false {
+                    Label(
+                        AppStrings.localized("pomodoro.resume.unavailable"),
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("pomodoro.resumeUnavailable")
+                }
                 resumeButton(remaining: remaining)
             }
         }
@@ -69,7 +80,12 @@ struct PomodoroActiveCountdownView: View {
         .controlSize(.large)
         .tint(taskColor)
         .frame(maxWidth: 320)
-        .accessibilityHint(AppStrings.localized(presentation.hintKey))
+        .disabled(canResumeFocus == false)
+        .accessibilityHint(
+            AppStrings.localized(
+                canResumeFocus ? presentation.hintKey : "pomodoro.resume.unavailable"
+            )
+        )
         .accessibilityIdentifier("pomodoro.startNextFocus")
     }
 }

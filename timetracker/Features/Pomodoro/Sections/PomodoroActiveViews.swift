@@ -32,7 +32,8 @@ struct ActivePomodoroCard: View {
                     taskTitle: taskTitle,
                     taskParentPath: task.flatMap(store.parentPath(for:)),
                     taskIdentity: taskIdentity,
-                    taskColor: taskColor
+                    taskColor: taskColor,
+                    canResumeFocus: task.map(store.isTaskAvailableForTracking) == true
                 )
 
                 Divider()

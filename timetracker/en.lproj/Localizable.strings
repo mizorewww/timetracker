@@ -384,6 +384,7 @@
 "pomodoro.startNextFocus.hint" = "Starts a new focus segment for this task.";
 "pomodoro.skipBreak" = "Skip Break";
 "pomodoro.skipBreak.hint" = "Ends the break now and starts the next focus round.";
+"pomodoro.resume.unavailable" = "Reopen this task before starting the next focus round.";
 "pomodoro.roundProgress" = "Round %d of %d";
 "pomodoro.roundsCompleted" = "%d of %d rounds complete";
 "pomodoro.phaseTask.accessibility" = "%@, %@";

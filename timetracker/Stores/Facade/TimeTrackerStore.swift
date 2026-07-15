@@ -3,12 +3,6 @@ import Foundation
 import Observation
 import SwiftData
 
-struct StoreLLMSuggestionTask {
-    let requestID: UUID
-    let isAutomatic: Bool
-    let task: Task<Void, Never>
-}
-
 @MainActor
 @Observable
 final class TimeTrackerStore {

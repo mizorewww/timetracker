@@ -244,8 +244,3 @@ extension TimeTrackerStore {
         }
     }
 }
-
-private struct LLMSuggestionTaskSnapshot {
-    let inboxRequestIDsByItemID: [UUID: UUID]
-    let checklistRequestIDsByItemID: [UUID: UUID]
-}

@@ -1,6 +1,6 @@
 import Foundation
 
-enum TaskPersistenceField: Equatable {
+nonisolated enum TaskPersistenceField: Equatable {
     case taskTitle
     case categoryTitle
     case notes

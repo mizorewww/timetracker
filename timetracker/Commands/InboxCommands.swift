@@ -45,13 +45,16 @@ struct InboxCommandHandler {
             notes: item.notes,
             suggestionReason: item.suggestionReason
         )
+        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
         try context.performAtomicMutation {
+            item.materializeSuggestionIdentity()
             preparedText.apply(to: item)
             item.isCompleted.toggle()
             item.completedAt = item.isCompleted ? now : nil
             item.updatedAt = now
             item.deviceID = deviceID
             item.clientMutationID = UUID()
+            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
         }
     }
 
@@ -73,19 +76,21 @@ struct InboxCommandHandler {
             suggestionReason: nil
         )
         guard item.title != preparedText.title else { return }
-        let preparedSuggestions = try preparedSuggestionMutations(
-            for: item.id,
-            context: context
-        )
+        let preparedSuggestions = try preparedSuggestionMutations(for: item, context: context)
+        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
 
         try context.performAtomicMutation {
+            item.materializeSuggestionIdentity()
             preparedText.apply(to: item)
             item.suggestedTaskID = nil
             item.suggestionGeneratedAt = nil
+            item.suggestionRevisionID = UUID()
+            item.dismissedSuggestionRevisionID = nil
             item.updatedAt = now
             item.deviceID = deviceID
             item.clientMutationID = UUID()
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
         }
     }
 
@@ -100,18 +105,18 @@ struct InboxCommandHandler {
             notes: item.notes,
             suggestionReason: item.suggestionReason
         )
-        let preparedSuggestions = try preparedSuggestionMutations(
-            for: item.id,
-            context: context
-        )
+        let preparedSuggestions = try preparedSuggestionMutations(for: item, context: context)
+        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
 
         try context.performAtomicMutation {
+            item.materializeSuggestionIdentity()
             preparedText.apply(to: item)
             item.deletedAt = now
             item.updatedAt = now
             item.deviceID = deviceID
             item.clientMutationID = UUID()
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+            tombstone(preparedSiblings, now: now, deviceID: deviceID)
         }
     }
 
@@ -143,8 +148,9 @@ struct InboxCommandHandler {
         deviceID: String = DeviceIdentity.current
     ) throws {
         guard !orderedItemIDs.isEmpty else { return }
-        let items = try context.fetch(FetchDescriptor<InboxItem>())
-            .visibleDeduplicatedByID()
+        let items = InboxSuggestionIdentityService().visibleLogicalItems(
+            from: try context.fetch(FetchDescriptor<InboxItem>())
+        )
             .filter { $0.isCompleted == false }
         let itemByID = items.latestByID()
         guard orderedItemIDs.count == items.count,
@@ -166,6 +172,7 @@ struct InboxCommandHandler {
         try context.performAtomicMutation {
             for (index, preparedItem) in preparedItems.enumerated() {
                 let item = preparedItem.0
+                item.materializeSuggestionIdentity()
                 preparedItem.1.apply(to: item)
                 item.sortOrder = Double(index + 1) * 10
                 item.updatedAt = now

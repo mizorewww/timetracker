@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-15
+校对日期：2026-07-16
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -23,7 +23,7 @@
 
 业务实体存放在 SwiftData store。启用 iCloud 后，同一业务模型可由 CloudKit 同步。应用可能在持久容器无法建立时进入诊断或临时内存模式；内存模式的数据在进程结束后消失。
 
-当前 V9 schema 不再持久化或同步 `DailySummary` 派生缓存。V8→V9 lightweight migration 会删除这份可重建 cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。Legacy 类型只用于读取 V1...V8 store，不应重新进入当前导出或 CloudKit registry。
+当前 V10 schema 不再持久化或同步 `DailySummary` 派生缓存。V8→V9 lightweight migration 会删除这份可重建 cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。V9→V10 为 Inbox AI dismissal 增加可同步的不透明 context/revision UUID。它们是随机值或 legacy record UUID，不包含标题、规范化标题或标题哈希；每条记录只保存固定数量字段。Legacy 类型只用于读取旧 store，不应重新进入当前导出或 CloudKit registry。
 
 LLM API 密钥使用 Keychain generic password：
 
@@ -183,7 +183,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] Inbox/checklist 请求的候选数、字段/prompt/body UTF-8 预算、精选图标列表、非候选 UUID 拒绝和结果字段归一化通过回归。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
 - [ ] Watch DTO 不包含 secret；codec/queue 的字段、数量、唯一 ID、时间和 512 KiB 恢复边界通过自动测试；持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过配对真机验证。
-- [ ] V8→V9 `DailySummary` cache 移除在真实磁盘 fixture 上保留用户事实；其他 breaking migration 也在对应真实旧 store 上通过。
+- [ ] V8→V9 `DailySummary` cache 移除与 V9→V10 Inbox suggestion identity/dismissal 迁移都在真实磁盘 fixture 上保留用户事实；旧 JSON 快照缺少新 UUID 字段时也能兼容恢复。
 - [ ] 导出文案明确“不是备份”。
 
 ## 11. 用户建议

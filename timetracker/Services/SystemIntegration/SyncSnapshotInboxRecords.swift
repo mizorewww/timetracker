@@ -2,6 +2,9 @@ import Foundation
 
 struct InboxItemRecord: Codable, Equatable, SyncSnapshotRecord {
     let id: UUID
+    let suggestionContextID: UUID?
+    let suggestionRevisionID: UUID?
+    let dismissedSuggestionRevisionID: UUID?
     let title: String
     let notes: String?
     let isCompleted: Bool
@@ -16,6 +19,9 @@ struct InboxItemRecord: Codable, Equatable, SyncSnapshotRecord {
 
     init(_ model: InboxItem) {
         id = model.id
+        suggestionContextID = model.effectiveSuggestionContextID
+        suggestionRevisionID = model.effectiveSuggestionRevisionID
+        dismissedSuggestionRevisionID = model.dismissedSuggestionRevisionID
         title = model.title
         notes = model.notes
         isCompleted = model.isCompleted
@@ -33,6 +39,8 @@ struct InboxItemRecord: Codable, Equatable, SyncSnapshotRecord {
 struct InboxSuggestionRecord: Codable, Equatable, SyncSnapshotRecord {
     let id: UUID
     let inboxItemID: UUID
+    let inboxItemContextID: UUID?
+    let inboxItemRevisionID: UUID?
     let taskID: UUID
     let reason: String?
     let iconName: String
@@ -47,6 +55,8 @@ struct InboxSuggestionRecord: Codable, Equatable, SyncSnapshotRecord {
     init(_ model: InboxSuggestion) {
         id = model.id
         inboxItemID = model.inboxItemID
+        inboxItemContextID = model.inboxItemContextID
+        inboxItemRevisionID = model.inboxItemRevisionID
         taskID = model.taskID
         reason = model.reason
         iconName = model.iconName

@@ -25,7 +25,12 @@ struct InboxSuggestionStateService {
             return .pending
         }
 
+        if item.isCurrentSuggestionRevisionDismissed {
+            return .dismissed
+        }
+
         guard let suggestion, suggestion.deletedAt == nil else {
+            // Compatibility for rows created before explicit revision identities existed.
             return item.suggestionGeneratedAt == nil ? .eligible : .dismissed
         }
 
@@ -70,7 +75,8 @@ struct InboxSuggestionStateService {
     }
 
     private func suggestionMatchesItem(_ suggestion: InboxSuggestion, item: InboxItem) -> Bool {
-        normalizedTitle(suggestion.titleSnapshot) == normalizedTitle(item.title)
+        suggestion.belongs(to: item) &&
+            normalizedTitle(suggestion.titleSnapshot) == normalizedTitle(item.title)
     }
 
     private func normalizedTitle(_ title: String) -> String {

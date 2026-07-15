@@ -59,6 +59,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Analytics/TimelineLayoutModels.swift",
             "timetracker/Services/Analytics/TimelineAxisCompression.swift",
             "timetracker/Services/Checklist/ChecklistDraftService.swift",
+            "timetracker/Services/Inbox/InboxSuggestionIdentityService.swift",
             "timetracker/Services/Inbox/InboxSuggestionStateService.swift",
             "timetracker/Services/Forecasting/TaskRollupService.swift",
             "timetracker/Services/Forecasting/TaskRollupCalculationContext.swift",
@@ -773,11 +774,12 @@ struct CoreSourceLayoutTests {
         ]
         .map(sourceText)
         .joined(separator: "\n")
-        let v9Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV9").last ?? ""
+        let v10Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV10").last ?? ""
 
-        #expect(v9Schema.contains("DailySummary.self") == false)
-        #expect(currentRegistry.contains("TimeTrackerSchemaV9"))
+        #expect(v10Schema.contains("DailySummary.self") == false)
+        #expect(currentRegistry.contains("TimeTrackerSchemaV10"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self"))
+        #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV9.self,\n                toVersion: TimeTrackerSchemaV10.self"))
         #expect(legacyModel.contains("Legacy persisted cache retained only"))
         #expect(productionPaths.contains("FetchDescriptor<DailySummary>") == false)
         #expect(productionPaths.contains("-> DailySummary {") == false)

@@ -6,6 +6,7 @@ extension SyncDataSnapshot {
         try validatePomodoroValues()
         try validatePreferenceValues()
         try validateSessionRelationships()
+        try validateInboxSuggestionRelationships()
     }
 
     private func validateRawValues() throws {
@@ -162,6 +163,30 @@ extension SyncDataSnapshot {
                     sessionID: sessionID,
                     expectedTaskID: sessionTaskID,
                     actualTaskID: record.taskID
+                )
+            }
+        }
+    }
+
+    private func validateInboxSuggestionRelationships() throws {
+        let itemIdentityByID = inboxItems.reduce(into: [UUID: InboxSuggestionIdentity]()) { result, item in
+            result[item.id] = InboxSuggestionIdentity(
+                contextID: item.suggestionContextID ?? item.id,
+                revisionID: item.suggestionRevisionID ?? item.id
+            )
+        }
+        for suggestion in inboxSuggestions {
+            guard let itemIdentity = itemIdentityByID[suggestion.inboxItemID] else {
+                continue
+            }
+            let suggestionIdentity = InboxSuggestionIdentity(
+                contextID: suggestion.inboxItemContextID ?? itemIdentity.contextID,
+                revisionID: suggestion.inboxItemRevisionID ?? itemIdentity.revisionID
+            )
+            guard suggestionIdentity == itemIdentity else {
+                throw SyncDataSnapshotPreflightError.inconsistentInboxSuggestionIdentity(
+                    id: suggestion.id,
+                    inboxItemID: suggestion.inboxItemID
                 )
             }
         }

@@ -93,7 +93,7 @@ enum TimeTrackerSchemaV6: VersionedSchema {
             TaskNode.self,
             TaskCategory.self,
             TaskCategoryAssignment.self,
-            InboxItem.self,
+            TimeTrackerSchemaV9.InboxItem.self,
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
@@ -113,8 +113,8 @@ enum TimeTrackerSchemaV7: VersionedSchema {
             TaskNode.self,
             TaskCategory.self,
             TaskCategoryAssignment.self,
-            InboxItem.self,
-            InboxSuggestion.self,
+            TimeTrackerSchemaV9.InboxItem.self,
+            TimeTrackerSchemaV9.InboxSuggestion.self,
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
@@ -136,8 +136,8 @@ enum TimeTrackerSchemaV8: VersionedSchema {
             TaskNode.self,
             TaskCategory.self,
             TaskCategoryAssignment.self,
-            InboxItem.self,
-            InboxSuggestion.self,
+            TimeTrackerSchemaV9.InboxItem.self,
+            TimeTrackerSchemaV9.InboxSuggestion.self,
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
@@ -152,6 +152,27 @@ enum TimeTrackerSchemaV8: VersionedSchema {
 
 enum TimeTrackerSchemaV9: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 8, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TaskCategory.self,
+            TaskCategoryAssignment.self,
+            TimeTrackerSchemaV9.InboxItem.self,
+            TimeTrackerSchemaV9.InboxSuggestion.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self,
+            ChecklistItemVisual.self
+        ]
+    }
+}
+
+enum TimeTrackerSchemaV10: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 9, 0)
 
     static var models: [any PersistentModel.Type] {
         [

@@ -5,6 +5,9 @@ import SwiftData
 final class InboxSuggestion {
     var id: UUID = UUID()
     var inboxItemID: UUID = UUID()
+    /// Logical item and title revision used instead of relying on a physical row UUID.
+    var inboxItemContextID: UUID?
+    var inboxItemRevisionID: UUID?
     var taskID: UUID = UUID()
     var reason: String?
     var iconName: String = "checkmark.circle"
@@ -20,6 +23,8 @@ final class InboxSuggestion {
 
     init(
         inboxItemID: UUID,
+        inboxItemContextID: UUID? = nil,
+        inboxItemRevisionID: UUID? = nil,
         taskID: UUID,
         reason: String? = nil,
         iconName: String = "checkmark.circle",
@@ -31,6 +36,8 @@ final class InboxSuggestion {
     ) {
         self.id = UUID()
         self.inboxItemID = inboxItemID
+        self.inboxItemContextID = inboxItemContextID
+        self.inboxItemRevisionID = inboxItemRevisionID
         self.taskID = taskID
         self.reason = reason
         self.iconName = iconName

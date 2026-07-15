@@ -39,12 +39,10 @@ extension TimeTrackerStore {
     }
 
     func rebuildInboxSuggestionIndexes() {
-        inboxSuggestionByItemID = inboxSuggestions
-            .filter { $0.deletedAt == nil }
-            .sorted { lhs, rhs in lhs.updatedAt < rhs.updatedAt }
-            .reduce(into: [:]) { result, suggestion in
-                result[suggestion.inboxItemID] = suggestion
-            }
+        inboxSuggestionByItemID = InboxSuggestionIdentityService().index(
+            items: inboxItems,
+            suggestions: inboxSuggestions
+        )
     }
 
     private func inboxSort(_ lhs: InboxItem, _ rhs: InboxItem) -> Bool {

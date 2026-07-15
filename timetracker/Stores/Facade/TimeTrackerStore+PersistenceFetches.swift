@@ -67,8 +67,9 @@ extension TimeTrackerStore {
 
     func fetchInboxItems() throws -> [InboxItem] {
         guard let modelContext else { return [] }
-        return try modelContext.fetch(FetchDescriptor<InboxItem>())
-            .visibleDeduplicatedByID()
+        return InboxSuggestionIdentityService().visibleLogicalItems(
+            from: try modelContext.fetch(FetchDescriptor<InboxItem>())
+        )
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
                 if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
@@ -78,13 +79,8 @@ extension TimeTrackerStore {
 
     func fetchInboxSuggestions() throws -> [InboxSuggestion] {
         guard let modelContext else { return [] }
-        let all = try modelContext.fetch(FetchDescriptor<InboxSuggestion>())
+        return try modelContext.fetch(FetchDescriptor<InboxSuggestion>())
             .visibleDeduplicatedByID()
-        return Dictionary(grouping: all, by: \.inboxItemID)
-            .values
-            .compactMap { suggestions in
-                suggestions.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-            }
             .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
     }
 
@@ -94,14 +90,9 @@ extension TimeTrackerStore {
         let descriptor = FetchDescriptor<InboxSuggestion>(
             predicate: #Predicate { requestedItemIDs.contains($0.inboxItemID) }
         )
-        let all = try modelContext.fetch(descriptor)
+        return try modelContext.fetch(descriptor)
             .visibleDeduplicatedByID()
             .filter { inboxItemIDs.contains($0.inboxItemID) }
-        return Dictionary(grouping: all, by: \.inboxItemID)
-            .values
-            .compactMap { suggestions in
-                suggestions.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-            }
             .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
     }
 

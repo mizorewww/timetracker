@@ -175,7 +175,7 @@ Rules:
 5. CloudKit-backed models should keep `id`, timestamps, `deletedAt`, `deviceID`, and `clientMutationID` semantics stable. Soft delete remains the default for user data that can sync.
 6. Every schema change must update `TimeTrackerModelRegistry.cloudSyncedUserModelNames` expectations and add a test proving old stores can still open or that the change is isolated in a new extension model.
 
-Current example: V9 (`1.8.0`) removes the derived `DailySummary` cache from the active schema with a lightweight V8→V9 migration. The legacy type remains in V1...V8 declarations so old stores open, while current analytics rebuilds `DailySummarySnapshot` from the ledger. Removing a reconstructable cache must never remove its source facts.
+Current examples: V9 (`1.8.0`) removes the derived `DailySummary` cache from the active schema with a lightweight V8→V9 migration. V10 (`1.9.0`) freezes the V9 Inbox model shape and uses a custom V9→V10 migration to initialize optional opaque suggestion context/revision UUIDs while preserving legacy dismissal state. Real V8 and V9 disk fixtures must continue to open. Removing a reconstructable cache must never remove its source facts, and adding sync identity must not derive it from user text.
 
 The guiding principle is forward migration, not feature rollback: existing user data opens first, then new feature data is added in a compatible layer.
 

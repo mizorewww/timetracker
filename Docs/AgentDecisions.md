@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-07-15
+最近更新：2026-07-16
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现写入带日期的 Audit 文档，未来计划写入 Plan 文档。
 
@@ -410,7 +410,7 @@
 
 背景：`DailySummary` 可由 canonical `TimeSegment` 与聚合规则完全重建。把它留在当前 SwiftData/CloudKit schema 会形成第二份可漂移事实，也扩大同步、迁移和维护面。
 
-决策：当前 schema 为 V9，版本标识 `1.8.0`。V8→V9 使用 lightweight migration 从当前 registry 移除 `DailySummary`，保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时与偏好等用户事实。Legacy `DailySummary` 类型只保留在 V1...V8 schema 历史中，使旧 store 可被迁移计划读取；当前 Analytics 只创建可丢弃、可重建的 `DailySummarySnapshot`。
+决策：V9 的版本标识为 `1.8.0`。V8→V9 使用 lightweight migration 从当前 registry 移除 `DailySummary`，保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时与偏好等用户事实。Legacy `DailySummary` 类型只保留在 V1...V8 schema 历史中，使旧 store 可被迁移计划读取；当前 Analytics 只创建可丢弃、可重建的 `DailySummarySnapshot`。
 
 后果：生产查询、同步 registry、导出与维护路径不得重新持久化 `DailySummary`。以后移除任何派生缓存都必须先证明其事实来源完整、迁移不删除事实，并保留旧 schema 声明直到支持窗口结束。
 
@@ -499,6 +499,18 @@
 后果：未提交文字不是同步事实，输入过程不会按字符写入 SwiftData；用户仍可明确看到保存状态和失败原因。
 
 验证：覆盖草稿状态、失败时模型零变更、UTF-8 精确边界、界面契约与本地化，并以 iOS 模拟器截图和 UI 测试确认实际交互。
+
+## AD-038：Inbox 建议驳回绑定不透明逻辑修订
+
+状态：Accepted
+
+背景：旧实现用物理 `InboxItem.id` 关联建议，并把“生成过但当前无建议”当作驳回。iCloud 合并、快照恢复或去重若以另一物理 UUID 重建同一逻辑条目，旧驳回会丢失并再次触发 AI；按标题或标题哈希关联又会泄露可推测标识并错误合并同名独立条目。
+
+决策：V10（`1.9.0`）为每个 Inbox item 保存不透明 `suggestionContextID` 与 `suggestionRevisionID`，suggestion 同步保存二者，item 只保存当前 `dismissedSuggestionRevisionID`。context 在物理 row 重建时保持，真实标题修改轮换 revision 并允许重新建议；同一 revision 的 dismissal 在逻辑合并中单调胜出。删除/显式恢复按 `updatedAt` last-write-wins、同时间 tombstone 优先。所有 item mutation 同时 tombstone 同 context 的物理 sibling，建议 mutation 同时处理同 context/revision 的记录。identity 只能是随机 UUID 或迁移时的 legacy record UUID，禁止从用户文本、规范化文本或哈希派生。
+
+后果：同名独立 Inbox 条目不合并，旧副本不能复活已驳回建议，标题真正改变后仍可获得新建议。每个 item/suggestion 只增加固定数量 optional UUID，不新增无界 dismissal log。字段会随业务记录进入 CloudKit/JSON，但不增加用户文本或内容指纹。V9 model shape 必须冻结，旧 snapshot 缺少字段时以物理 UUID 兼容恢复并推断旧 dismissal；以 snapshot 为本地赢家时，缺席的逻辑 sibling 墓碑必须早于恢复 row。
+
+验证：不同物理 UUID 的 dismissal winner、相同标题独立 context、revision 轮换、suggestion index、discard/delete sibling 清理、V9 真实磁盘迁移、缺字段旧 JSON 恢复、opaque 字段导出和 tombstone sibling restore 测试通过；所有签名构建保留团队 `LT98S43NKA`。
 
 ## 2. Agent 工作清单
 

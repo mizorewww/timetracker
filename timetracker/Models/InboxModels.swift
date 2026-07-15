@@ -4,6 +4,12 @@ import SwiftData
 @Model
 final class InboxItem {
     var id: UUID = UUID()
+    /// Stable identity for suggestion state even if persistence rebuilds this row with another `id`.
+    var suggestionContextID: UUID?
+    /// Changes only when the title changes, so a dismissal applies to one title revision.
+    var suggestionRevisionID: UUID?
+    /// A monotonic dismissal marker for the current suggestion revision.
+    var dismissedSuggestionRevisionID: UUID?
     var title: String = ""
     var notes: String?
     var isCompleted: Bool = false
@@ -25,6 +31,8 @@ final class InboxItem {
         deviceID: String
     ) {
         self.id = UUID()
+        self.suggestionContextID = self.id
+        self.suggestionRevisionID = UUID()
         self.title = title
         self.isCompleted = isCompleted
         self.sortOrder = sortOrder

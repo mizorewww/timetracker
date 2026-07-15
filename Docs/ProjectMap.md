@@ -2,7 +2,7 @@
 
 Status: current source map
 
-Reviewed: 2026-07-15
+Reviewed: 2026-07-16
 
 This document is the first stop for a developer who has not worked in this repository before. It explains where code lives, which file to open first, and which boundary should own a change.
 
@@ -34,7 +34,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 | `timetrackerLiveActivityExtension` | ActivityKit/Dynamic Island UI | Changing Live Activity layout, privacy, stale state, localization, or stop/open links | Durable timer facts or duplicated commands |
 | `timetrackerWidgetExtension` | WidgetKit entry/provider/config, active-timer layouts, supplementary/error states, and deep-link/localization/color support | Changing the widget face, widget localization, or widget target plist/entitlements | SwiftData writes, command logic, or app-only models |
 | `timetrackerWatchApp` | watchOS dashboard/timer/status UI plus the `WatchAppStore` family: observable/restored state, durable command queue lifecycle, and WatchConnectivity transport | Changing the watch face, watch localization, command retry/timeout presentation, or WatchConnectivity state | SwiftData writes, full task-tree management, or duplicated timer logic |
-| `timetracker/Models` | SwiftData models, V1...V9 schema history, migration plan, registry, shared read models, and `TaskEstimatePolicy` | Adding persisted fields, migrations, shared read models, or estimate normalization | Query code, SwiftUI layout, or business workflows |
+| `timetracker/Models` | SwiftData models, V1...V10 schema history, migration plan, registry, shared read models, and `TaskEstimatePolicy` | Adding persisted fields, migrations, shared read models, or estimate normalization | Query code, SwiftUI layout, or business workflows |
 | `timetracker/Repositories` | SwiftData query/write implementations behind repository protocols | Changing fetch predicates, persistence semantics, soft delete, or ledger writes | UI decisions or derived analytics formulas |
 | `timetracker/Repositories/ModelContext+AtomicMutation.swift` | Store/system action transaction boundary, nested save deferral, rollback | Adding a multi-step durable user action | Read-model refresh or post-commit projection |
 | `timetracker/Commands` | User action handlers and use cases | Adding a durable action such as start timer, toggle checklist, move task, or update preference | SwiftUI state formatting or long-lived observable state |
@@ -88,7 +88,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 | iCloud/user settings sync | `Commands/PreferenceCommands.swift` | `Models/SyncedPreferences.swift`, `Models/SyncedPreferenceMigrations.swift`, `Stores/Domains/PreferenceStore.swift`, `Stores/Facade/TimeTrackerStore+SyncObservers.swift`, `Services/SystemIntegration/SyncConflictService.swift`, local/cloud/recovery/resolution extensions, `SyncConflictService+StateLock.swift` (file lock), `SyncConflictService+State.swift` (persistence/file protection), `SyncConflictState.swift` (epoch/generation/checkpoints), snapshot capture/domain restore/record families, `App/AppModelContainerFactory.swift`; iCloud enablement itself is device-local startup state |
 | Demo data seeding or clearing | `App/AppDemoDataConfiguration.swift` | `App/AppModelContainerFactory.swift`, `App/SeedData.swift`, demo build/cleanup files, lifecycle tests; Debug/Release default off and demo store is separate |
 | AI model configuration | `Features/Settings/LLMSettingsViews.swift` | `Services/LLM/LLMModelService.swift`, `Services/SystemIntegration/LLMCredentialStore.swift`, `Models/SyncedPreferences.swift`, `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` |
-| AI Inbox/checklist suggestions | `Services/LLM/LLMInboxSuggestionService.swift` and `Services/LLM/LLMChecklistVisualSuggestionService.swift` | `Services/LLM/LLMSuggestionInputPolicy.swift`, `Features/Tasks/Editor/SymbolPickerViews.swift` curated/full symbol catalogues, Inbox/checklist facade suggestion files, `Services/Inbox/InboxSuggestionStateService.swift`, request budget/concurrency/backoff tests, privacy documentation |
+| AI Inbox/checklist suggestions | `Services/LLM/LLMInboxSuggestionService.swift` and `Services/LLM/LLMChecklistVisualSuggestionService.swift` | `Services/LLM/LLMSuggestionInputPolicy.swift`, `Features/Tasks/Editor/SymbolPickerViews.swift` curated/full symbol catalogues, Inbox/checklist facade suggestion files, `Services/Inbox/InboxSuggestionStateService.swift`, `Services/Inbox/InboxSuggestionIdentityService.swift`, request budget/concurrency/backoff/identity tests, privacy documentation |
 | Performance signposts and profiling | `Services/Instrumentation/PerformanceSignpost.swift` | `CorePerformanceBudgetTests`, `Docs/Testing.md`, frozen-source trace evidence in the dated Audit |
 | JSON export | `Stores/Facade/TimeTrackerStore+MaintenanceCommands.swift` | `Features/Settings/Support/SettingsExportDocument.swift`, sensitive-key filtering tests |
 | Siri/Shortcuts App Intents | `AppIntents/TimeTrackerAppIntents.swift` | `Commands/SystemActionCommands.swift` including post-commit snapshot/surface synchronizers, relevant command handlers, localization/discovery tests |

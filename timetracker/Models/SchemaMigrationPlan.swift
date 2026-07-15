@@ -13,7 +13,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV6.self,
             TimeTrackerSchemaV7.self,
             TimeTrackerSchemaV8.self,
-            TimeTrackerSchemaV9.self
+            TimeTrackerSchemaV9.self,
+            TimeTrackerSchemaV10.self
         ]
     }
 
@@ -57,8 +58,39 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: TimeTrackerSchemaV5.self, toVersion: TimeTrackerSchemaV6.self),
             .lightweight(fromVersion: TimeTrackerSchemaV6.self, toVersion: TimeTrackerSchemaV7.self),
             .lightweight(fromVersion: TimeTrackerSchemaV7.self, toVersion: TimeTrackerSchemaV8.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self),
+            .custom(
+                fromVersion: TimeTrackerSchemaV9.self,
+                toVersion: TimeTrackerSchemaV10.self,
+                willMigrate: nil,
+                didMigrate: migrateInboxSuggestionIdentity
+            )
         ]
+    }
+
+    private static func migrateInboxSuggestionIdentity(context: ModelContext) throws {
+        let items = try context.fetch(FetchDescriptor<InboxItem>())
+        let suggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
+        let activeSuggestionItemIDs = Set(
+            suggestions.lazy.filter { $0.deletedAt == nil }.map(\.inboxItemID)
+        )
+        let itemByID = items.reduce(into: [UUID: InboxItem]()) { result, item in
+            result[item.id] = item
+        }
+
+        for item in items {
+            item.materializeSuggestionIdentity()
+            if item.suggestionGeneratedAt != nil,
+               activeSuggestionItemIDs.contains(item.id) == false {
+                item.dismissedSuggestionRevisionID = item.effectiveSuggestionRevisionID
+            }
+        }
+        for suggestion in suggestions {
+            let item = itemByID[suggestion.inboxItemID]
+            suggestion.inboxItemContextID = item?.effectiveSuggestionContextID ?? suggestion.inboxItemID
+            suggestion.inboxItemRevisionID = item?.effectiveSuggestionRevisionID ?? suggestion.inboxItemID
+        }
+        try context.save()
     }
 }
 

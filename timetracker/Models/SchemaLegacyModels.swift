@@ -117,3 +117,62 @@ extension TimeTrackerSchemaV7 {
         }
     }
 }
+
+extension TimeTrackerSchemaV9 {
+    @Model
+    final class InboxItem {
+        var id: UUID = UUID()
+        var title: String = ""
+        var notes: String?
+        var isCompleted: Bool = false
+        var sortOrder: Double = 0
+        var completedAt: Date?
+        var suggestedTaskID: UUID?
+        var suggestionReason: String?
+        var suggestionGeneratedAt: Date?
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
+        var deletedAt: Date?
+        var deviceID: String = ""
+        var clientMutationID: UUID = UUID()
+
+        init(title: String, deviceID: String) {
+            self.id = UUID()
+            self.title = title
+            self.createdAt = Date()
+            self.updatedAt = Date()
+            self.deviceID = deviceID
+            self.clientMutationID = UUID()
+        }
+    }
+
+    @Model
+    final class InboxSuggestion {
+        var id: UUID = UUID()
+        var inboxItemID: UUID = UUID()
+        var taskID: UUID = UUID()
+        var reason: String?
+        var iconName: String = "checkmark.circle"
+        var colorHex: String = "1677FF"
+        var modelID: String?
+        var titleSnapshot: String = ""
+        var generatedAt: Date = Date()
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
+        var deletedAt: Date?
+        var deviceID: String = ""
+        var clientMutationID: UUID = UUID()
+
+        init(inboxItemID: UUID, taskID: UUID, titleSnapshot: String, deviceID: String) {
+            self.id = UUID()
+            self.inboxItemID = inboxItemID
+            self.taskID = taskID
+            self.titleSnapshot = titleSnapshot
+            self.generatedAt = Date()
+            self.createdAt = Date()
+            self.updatedAt = Date()
+            self.deviceID = deviceID
+            self.clientMutationID = UUID()
+        }
+    }
+}

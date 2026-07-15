@@ -13,19 +13,20 @@ extension InboxCommandHandler {
             notes: item.notes,
             suggestionReason: nil
         )
-        let preparedSuggestions = try preparedSuggestionMutations(
-            for: item.id,
-            context: context
-        )
+        let preparedSuggestions = try preparedSuggestionMutations(for: item, context: context)
+        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
 
         try context.performAtomicMutation {
+            item.materializeSuggestionIdentity()
             preparedItem.apply(to: item)
             item.suggestedTaskID = nil
             item.suggestionGeneratedAt = now
+            item.dismissedSuggestionRevisionID = item.effectiveSuggestionRevisionID
             item.updatedAt = now
             item.deviceID = deviceID
             item.clientMutationID = UUID()
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
         }
     }
 
@@ -48,27 +49,30 @@ extension InboxCommandHandler {
             modelID: result.modelID,
             titleSnapshot: preparedItem.title
         )
-        let inboxItemID = item.id
-        let existing = try context.fetch(
-            FetchDescriptor<InboxSuggestion>(
-                predicate: #Predicate { $0.inboxItemID == inboxItemID }
-            )
-        )
+        let existing = try suggestions(for: item, context: context)
             .deduplicatedByID()
             .sorted { lhs, rhs in
                 if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
                 return lhs.id.uuidString > rhs.id.uuidString
             }
-        let active = existing.first { $0.deletedAt == nil }
+        let identity = item.suggestionIdentity
+        let active = existing.first {
+            $0.deletedAt == nil &&
+                ($0.explicitInboxItemIdentity == identity ||
+                    ($0.explicitInboxItemIdentity == nil && $0.inboxItemID == item.id))
+        }
         let duplicateMutations = try existing
             .filter { $0.deletedAt == nil && $0.id != active?.id }
             .map(prepareSuggestionMutation)
+        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
 
         try context.performAtomicMutation {
+            item.materializeSuggestionIdentity()
             preparedItem.apply(to: item)
             if let active {
                 update(
                     active,
+                    item: item,
                     taskID: result.taskID,
                     text: preparedResult,
                     now: now,
@@ -78,6 +82,8 @@ extension InboxCommandHandler {
                 context.insert(
                     InboxSuggestion(
                         inboxItemID: item.id,
+                        inboxItemContextID: item.effectiveSuggestionContextID,
+                        inboxItemRevisionID: item.effectiveSuggestionRevisionID,
                         taskID: result.taskID,
                         reason: preparedResult.reason,
                         iconName: preparedResult.iconName,
@@ -94,9 +100,11 @@ extension InboxCommandHandler {
 
             item.suggestedTaskID = result.taskID
             item.suggestionGeneratedAt = now
+            item.dismissedSuggestionRevisionID = nil
             item.updatedAt = now
             item.deviceID = deviceID
             item.clientMutationID = UUID()
+            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
         }
     }
 
@@ -139,10 +147,16 @@ extension InboxCommandHandler {
             modelID: suggestion.modelID,
             titleSnapshot: suggestion.titleSnapshot
         )
+        let otherSuggestionMutations = try preparedSuggestionMutations(for: item, context: context)
+            .filter { $0.suggestion.id != suggestion.id }
+        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
         let nextSortOrder = ((existingChecklistItems.map(\.sortOrder).max() ?? 0) + 10)
         return try context.performAtomicMutation {
+            item.materializeSuggestionIdentity()
             preparedItem.apply(to: item)
             preparedSuggestion.apply(to: suggestion)
+            suggestion.inboxItemContextID = item.effectiveSuggestionContextID
+            suggestion.inboxItemRevisionID = item.effectiveSuggestionRevisionID
 
             let checklistItem = ChecklistItem(
                 taskID: suggestion.taskID,
@@ -169,6 +183,8 @@ extension InboxCommandHandler {
             item.deviceID = deviceID
             item.clientMutationID = UUID()
             softDelete(suggestion, now: now, deviceID: deviceID)
+            tombstone(otherSuggestionMutations, now: now, deviceID: deviceID)
+            tombstone(preparedSiblings, now: now, deviceID: deviceID)
             return checklistItem
         }
     }
@@ -189,64 +205,4 @@ extension InboxCommandHandler {
         }
     }
 
-    private func update(
-        _ suggestion: InboxSuggestion,
-        taskID: UUID,
-        text: PreparedInboxSuggestionText,
-        now: Date,
-        deviceID: String
-    ) {
-        text.apply(to: suggestion)
-        suggestion.taskID = taskID
-        suggestion.generatedAt = now
-        suggestion.updatedAt = now
-        suggestion.deviceID = deviceID
-        suggestion.clientMutationID = UUID()
-    }
-
-    func preparedSuggestionMutations(
-        for inboxItemID: UUID,
-        context: ModelContext
-    ) throws -> [PreparedInboxSuggestionMutation] {
-        try context.fetch(
-            FetchDescriptor<InboxSuggestion>(
-                predicate: #Predicate { $0.inboxItemID == inboxItemID }
-            )
-        )
-        .visibleDeduplicatedByID()
-        .map(prepareSuggestionMutation)
-    }
-
-    func prepareSuggestionMutation(
-        _ suggestion: InboxSuggestion
-    ) throws -> PreparedInboxSuggestionMutation {
-        PreparedInboxSuggestionMutation(
-            suggestion: suggestion,
-            text: try InboxPersistencePolicy.prepareSuggestion(
-                reason: suggestion.reason,
-                iconName: suggestion.iconName,
-                colorHex: suggestion.colorHex,
-                modelID: suggestion.modelID,
-                titleSnapshot: suggestion.titleSnapshot
-            )
-        )
-    }
-
-    func tombstone(
-        _ preparedSuggestions: [PreparedInboxSuggestionMutation],
-        now: Date,
-        deviceID: String
-    ) {
-        for preparedSuggestion in preparedSuggestions {
-            preparedSuggestion.text.apply(to: preparedSuggestion.suggestion)
-            softDelete(preparedSuggestion.suggestion, now: now, deviceID: deviceID)
-        }
-    }
-
-    private func softDelete(_ suggestion: InboxSuggestion, now: Date, deviceID: String) {
-        suggestion.deletedAt = now
-        suggestion.updatedAt = now
-        suggestion.deviceID = deviceID
-        suggestion.clientMutationID = UUID()
-    }
 }

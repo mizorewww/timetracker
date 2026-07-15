@@ -145,3 +145,85 @@ struct LegacyV8DailySummaryStoreFixture {
         try? FileManager.default.removeItem(at: directory)
     }
 }
+
+@MainActor
+struct LegacyV9InboxStoreFixture {
+    let directory: URL
+    let storeURL: URL
+    let dismissedItemID: UUID
+    let readyItemID: UUID
+    let suggestionID: UUID
+
+    static func create() throws -> LegacyV9InboxStoreFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "TimeTrackerLegacyV9-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let storeURL = directory.appending(path: "store.sqlite")
+        let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV9.self)
+        let legacyConfiguration = ModelConfiguration(
+            "LegacyV9",
+            schema: legacySchema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [legacyConfiguration]
+        )
+        let legacyContext = ModelContext(legacyContainer)
+        let task = TaskNode(title: "Migration target", parentID: nil, deviceID: "legacy")
+        let dismissedItem = TimeTrackerSchemaV9.InboxItem(
+            title: "Dismissed before migration",
+            deviceID: "legacy"
+        )
+        dismissedItem.suggestionGeneratedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let readyItem = TimeTrackerSchemaV9.InboxItem(
+            title: "Suggestion survives migration",
+            deviceID: "legacy"
+        )
+        readyItem.suggestedTaskID = task.id
+        readyItem.suggestionGeneratedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let suggestion = TimeTrackerSchemaV9.InboxSuggestion(
+            inboxItemID: readyItem.id,
+            taskID: task.id,
+            titleSnapshot: readyItem.title,
+            deviceID: "legacy"
+        )
+
+        legacyContext.insert(task)
+        legacyContext.insert(dismissedItem)
+        legacyContext.insert(readyItem)
+        legacyContext.insert(suggestion)
+        try legacyContext.save()
+
+        return LegacyV9InboxStoreFixture(
+            directory: directory,
+            storeURL: storeURL,
+            dismissedItemID: dismissedItem.id,
+            readyItemID: readyItem.id,
+            suggestionID: suggestion.id
+        )
+    }
+
+    func makeCurrentContext() throws -> ModelContext {
+        let currentSchema = TimeTrackerModelRegistry.currentSchema
+        let currentConfiguration = ModelConfiguration(
+            "LegacyV9",
+            schema: currentSchema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        let currentContainer = try ModelContainer(
+            for: currentSchema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [currentConfiguration]
+        )
+        return ModelContext(currentContainer)
+    }
+
+    func remove() {
+        try? FileManager.default.removeItem(at: directory)
+    }
+}

@@ -1,7 +1,7 @@
 # TimeTracker 代码文档
 
 状态：当前实现说明
-校对日期：2026-07-15
+校对日期：2026-07-16
 
 本文面向维护者，说明当前代码边界、数据流、扩展方式和验证入口。架构目标与未完成计划分别见 [Architecture](Architecture.md) 和 [NextDevelopmentPlan](NextDevelopmentPlan.md)。
 
@@ -139,6 +139,8 @@ Task、TaskCategory、ChecklistItem 和 InboxItem 形成用户组织层。树形
 
 Inbox capture 以 `TimeTrackerStore.addInboxItem` 的 `Bool` 返回值作为 durable commit 契约。`InboxCaptureDraft` 只在返回 true 后清空；空输入、recovery write guard、未配置 context 或保存错误都保留原始草稿。`InboxCaptureRow` 不再自行假定 callback 成功并重复清空 binding。任何新增 quick-capture 表面都必须复用相同语义。
 
+Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是逻辑条目的不透明 UUID，`suggestionRevisionID` 在真实标题修改时轮换，`dismissedSuggestionRevisionID` 只标记当前修订。`InboxSuggestionIdentityService` 负责跨物理 row 的 winner、索引和兼容回退；command 在驳回、删除、应用或标题修改时同时处理同一 context 的 sibling 与 suggestion。禁止用标题、规范化标题或其哈希生成 identity；相同标题的独立条目必须保持独立。每条 item/suggestion 只增加固定数量 UUID 字段，不维护无界驳回历史。
+
 任务状态与可见性是两个维度。`completed` 表示“保留在任务树和历史中、暂停接收新工作”，`archived` 表示“隐藏整个分支”。完成祖先会阻塞所有后代的新 timer、manual entry、Pomodoro、Quick Start、Inbox conversion、App Intent 以及新建/移动目标；既有活动 timer 仍必须可见并可停止。重新开始工作时应恢复从所选任务到根路径上的全部完成阻塞项，而不是偷偷改变后代自身的状态。
 
 归档与删除语义不同。删除任务树会在一个原子动作中先结束该树的活动 Pomodoro 和 timer，再软删除任务；历史 segment/session/run 继续保留。普通 Local、iCloud、local-fallback 和 emergency 生产模式没有跨设备删除确认，因此 `AppCloudSync.allowsPermanentTombstonePurge` 为 false，`DatabaseMaintenanceService` 直接返回 0。只有隔离的 Demo/UI Test store 可物理清理过期 tombstone graph。
@@ -166,7 +168,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ## 5. 持久化、CloudKit 与迁移
 
-当前 schema 为 V9（版本标识 `1.8.0`），迁移计划覆盖 V1 至 V9。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，当前 registry 不包含它；分析使用可从 ledger 重建的内存 `DailySummarySnapshot`。版本升级时：
+当前 schema 为 V10（版本标识 `1.9.0`），迁移计划覆盖 V1 至 V10。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；V10 通过 V9→V10 custom migration 为 Inbox item/suggestion 初始化不透明 context/revision UUID，并把旧版“已有 generatedAt 且没有 active suggestion”转换为该修订的显式 dismissal。任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，V9 Inbox 类型保留冻结旧形状；当前 registry 不包含 `DailySummary`。版本升级时：
 
 1. 先声明哪些用户数据必须保留。
 2. 为旧 schema 准备真实 store fixture。
@@ -175,7 +177,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 5. 明确失败后的回退边界；不要用空库或内存库静默伪装成功。
 6. 更新 [Versioning](Versioning.md) 与 [AgentDecisions](AgentDecisions.md)。
 
-当前真实 store fixture 覆盖 V4 分类迁移与 V8 `DailySummary` 移除迁移；仍需按风险补齐其余重要历史版本。迁移测试必须打开磁盘 store 并核对事实记录，不能只比较 schema 常量。
+当前真实 store fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除迁移与 V9 Inbox suggestion identity/dismissal 迁移；仍需按风险补齐其余重要历史版本。迁移测试必须打开磁盘 store 并核对事实记录，不能只比较 schema 常量。
 
 legacy `CountdownEventsJSON` 是一次性 `UserDefaults`→SwiftData 迁移，不是可信的当前数据源。`LegacyCountdownMigrationPolicy` 限制 JSON 为 256 KiB UTF-8、源数组最多 256 条、标题最多 4 KiB UTF-8，日期必须有限且处于 `[1900-01-01, 2201-01-01)`。合法 legacy UUID 原样保留；同一 UUID 只接受源顺序中第一条通过所有校验的记录，无 ID 的不同记录不按内容合并。实际导入时只有 `context.save()` 成功后才设置完成 flag 并删除旧 payload；保存失败必须保留两者以便重试。若 SwiftData 已有 Countdown 事实，则不重复导入并直接退役旧 payload。
 

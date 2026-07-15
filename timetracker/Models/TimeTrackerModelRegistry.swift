@@ -2,11 +2,11 @@ import SwiftData
 
 enum TimeTrackerModelRegistry {
     static var currentSchema: Schema {
-        Schema(versionedSchema: TimeTrackerSchemaV9.self)
+        Schema(versionedSchema: TimeTrackerSchemaV10.self)
     }
 
     static var currentModels: [any PersistentModel.Type] {
-        TimeTrackerSchemaV9.models
+        TimeTrackerSchemaV10.models
     }
 
     static var cloudSyncedUserModelNames: Set<String> {

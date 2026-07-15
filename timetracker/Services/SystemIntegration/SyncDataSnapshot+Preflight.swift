@@ -47,6 +47,7 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
         expectedTaskID: UUID,
         actualTaskID: UUID
     )
+    case inconsistentInboxSuggestionIdentity(id: UUID, inboxItemID: UUID)
 
     var errorDescription: String? {
         switch self {
@@ -76,6 +77,8 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
             return "Sync snapshot preference \(key) for \(id.uuidString) does not contain the expected JSON value type."
         case let .inconsistentSessionTask(table, id, sessionID, expectedTaskID, actualTaskID):
             return "Sync snapshot \(table.rawValue) record \(id.uuidString) references session \(sessionID.uuidString) for task \(expectedTaskID.uuidString), not \(actualTaskID.uuidString)."
+        case let .inconsistentInboxSuggestionIdentity(id, inboxItemID):
+            return "Sync snapshot Inbox suggestion \(id.uuidString) disagrees with Inbox item \(inboxItemID.uuidString) about logical suggestion identity."
         }
     }
 }

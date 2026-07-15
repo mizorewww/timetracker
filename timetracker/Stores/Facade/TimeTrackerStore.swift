@@ -84,7 +84,11 @@ final class TimeTrackerStore {
             }
         }
     }
-    var inboxItems: [InboxItem] = []
+    var inboxItems: [InboxItem] = [] {
+        didSet {
+            rebuildInboxSuggestionIndexes()
+        }
+    }
     var inboxSuggestions: [InboxSuggestion] = [] {
         didSet {
             rebuildInboxSuggestionIndexes()

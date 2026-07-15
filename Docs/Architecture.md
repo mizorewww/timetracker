@@ -154,7 +154,8 @@ timetracker/Features/Pomodoro
   Sections/       Setup composition, empty state, focus controls, Plan/Task selection,
                    timer face, active-run, and recent-ledger sections
 timetracker/Features/Analytics
-  root files      Category router, summary rows, metric/detail lists, period controls
+  root files      Landing page, typed category model/detail destination, summary rows,
+                   metric/detail lists, and period controls
   Sections/       Overview, forecast, distribution, and activity sections
   Timeline/       Timeline chart composition and support views
 timetracker/Features/Settings

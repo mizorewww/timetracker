@@ -63,7 +63,7 @@
 本轮已完成九组关键职责拆分：
 
 - Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
-- Analytics：root/category、overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 分文件。
+- Analytics：root landing page 与 `AnalyticsCategoryDetailView` 分文件；category 使用 typed `NavigationLink(value:)` / `navigationDestination` 路由，overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 各有所有者。
 - Pomodoro setup：组合容器、空状态、focus 参数控件、Plan/Task 选择和 timer face 分文件；容器不再同时承担全部展示与交互细节。
 - Settings：display/timing、Pomodoro、countdown、sync、data、actions、bindings 与 support 分文件。
 - Task Detail：canonical router 与 identity/checklist/overview/analytics/navigation/record sections 分文件。

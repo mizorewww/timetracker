@@ -136,7 +136,7 @@ Acceptance:
 
 ### Analytics
 
-Current risk: analytics charts require custom drawing, but surrounding UI should still be native.
+Current state: the landing page uses typed category navigation and the category destination has a focused owner. Analytics charts still require some custom drawing, but surrounding UI should remain native.
 
 Plan:
 

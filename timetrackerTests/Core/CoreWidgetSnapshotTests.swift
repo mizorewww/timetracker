@@ -268,6 +268,94 @@ struct CoreWidgetSnapshotTests {
         #expect(snapshot.recentTasks.map(\.iconName) == ["bolt", "book"])
         #expect(snapshot.recentTasks.map(\.colorHex) == ["#0A84FF", "#BF5AF2"])
     }
+
+    @Test @MainActor
+    func widgetSnapshotProjectionFitsTransportLimitsWithoutBreakingUnicode() throws {
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 40_000)
+        let longTitle = String(repeating: "🧑🏽‍💻", count: 1_000)
+        let longPath = String(repeating: "工作／项目／", count: 2_000)
+        let longStyle = String(repeating: "x", count: 1_000)
+        let task = TaskNode(
+            title: longTitle,
+            parentID: nil,
+            deviceID: "test",
+            colorHex: longStyle,
+            iconName: longStyle
+        )
+        let segments = (0...WidgetSnapshotLimits.maximumActiveTimers).map { index in
+            let startedAt: Date
+            switch index {
+            case 0:
+                startedAt = generatedAt.addingTimeInterval(60)
+            case 1:
+                startedAt = generatedAt.addingTimeInterval(
+                    -WidgetSnapshotLimits.maximumActiveTimerAge - 60
+                )
+            default:
+                startedAt = generatedAt.addingTimeInterval(-60)
+            }
+            return TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startedAt
+            )
+        }
+
+        let snapshot = WidgetSnapshotCache.snapshot(
+            activeSegments: segments,
+            taskByID: [task.id: task],
+            taskParentPathByID: [task.id: longPath],
+            recentTasks: [task],
+            todayGrossSeconds: -1,
+            todayWallSeconds: Int.max,
+            generatedAt: generatedAt
+        )
+
+        #expect(snapshot.todayGrossSeconds == 0)
+        #expect(snapshot.todayWallSeconds == WidgetSnapshotLimits.maximumSummarySeconds)
+        #expect(snapshot.activeTimers.count == WidgetSnapshotLimits.maximumActiveTimers)
+        #expect(snapshot.activeTimers[0].startedAt == generatedAt)
+        #expect(
+            snapshot.activeTimers[1].startedAt == generatedAt.addingTimeInterval(
+                -WidgetSnapshotLimits.maximumActiveTimerAge
+            )
+        )
+        let titlesAreBounded = snapshot.activeTimers.allSatisfy {
+            $0.title.utf8.count <= WidgetSnapshotLimits.maximumProjectedTitleBytes
+        }
+        let pathsAreBounded = snapshot.activeTimers.allSatisfy {
+            $0.path.utf8.count <= WidgetSnapshotLimits.maximumProjectedPathBytes
+        }
+        let stylesAreBounded = snapshot.activeTimers.allSatisfy {
+            ($0.colorHex?.utf8.count ?? 0) <= WidgetSnapshotLimits.maximumProjectedStyleValueBytes &&
+                ($0.iconName?.utf8.count ?? 0) <= WidgetSnapshotLimits.maximumProjectedStyleValueBytes
+        }
+        let unicodePrefixesAreIntact = snapshot.activeTimers.allSatisfy {
+            longTitle.hasPrefix($0.title) && longPath.hasPrefix($0.path)
+        }
+        #expect(titlesAreBounded)
+        #expect(pathsAreBounded)
+        #expect(stylesAreBounded)
+        #expect(unicodePrefixesAreIntact)
+        #expect(snapshot.isValid(at: generatedAt))
+        let encodedSnapshot = try JSONEncoder().encode(snapshot)
+        #expect(encodedSnapshot.count <= WidgetSnapshotLimits.maximumEncodedBytes)
+
+        var textHeavySnapshot = snapshot
+        textHeavySnapshot.recentTasks = (0..<WidgetSnapshotLimits.maximumRecentTasks).map { _ in
+            WidgetRecentTaskSnapshot(
+                taskID: UUID(),
+                title: String(repeating: "t", count: WidgetSnapshotLimits.maximumProjectedTitleBytes),
+                path: String(repeating: "p", count: WidgetSnapshotLimits.maximumProjectedPathBytes),
+                colorHex: nil,
+                iconName: nil
+            )
+        }
+        #expect(textHeavySnapshot.recentTasks.allSatisfy { $0.isStructurallyValid })
+        #expect(textHeavySnapshot.isValid(at: generatedAt) == false)
+    }
 }
 
 private func readAppGroups(in url: URL) throws -> Set<String> {

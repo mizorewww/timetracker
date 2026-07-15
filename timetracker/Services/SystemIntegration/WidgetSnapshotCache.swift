@@ -26,31 +26,71 @@ struct WidgetSnapshotCache {
         todayWallSeconds: Int,
         generatedAt: Date
     ) -> WidgetSnapshot {
-        WidgetSnapshot(
+        var remainingTextBytes = WidgetSnapshotLimits.maximumSnapshotTextBytes
+        var activeTimers: [WidgetTimerSnapshot] = []
+        for segment in activeSegments.prefix(WidgetSnapshotLimits.maximumActiveTimers) {
+            let task = taskByID[segment.taskID]
+            let timer = WidgetTimerSnapshot(
+                id: segment.id,
+                taskID: segment.taskID,
+                title: WidgetSnapshotLimits.boundedUTF8Prefix(
+                    task?.title ?? AppStrings.localized("task.deleted"),
+                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
+                ),
+                path: WidgetSnapshotLimits.boundedUTF8Prefix(
+                    taskParentPathByID[segment.taskID] ?? "",
+                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedPathBytes
+                ),
+                startedAt: WidgetSnapshotLimits.boundedTimerStart(
+                    segment.startedAt,
+                    generatedAt: generatedAt
+                ),
+                colorHex: WidgetSnapshotLimits.boundedProjectedStyleValue(task?.colorHex),
+                iconName: WidgetSnapshotLimits.boundedProjectedStyleValue(task?.iconName)
+            )
+            let textByteCount = WidgetSnapshotLimits.textByteCount(
+                title: timer.title,
+                path: timer.path,
+                colorHex: timer.colorHex,
+                iconName: timer.iconName
+            )
+            guard textByteCount <= remainingTextBytes else { break }
+            activeTimers.append(timer)
+            remainingTextBytes -= textByteCount
+        }
+
+        var recentTaskSnapshots: [WidgetRecentTaskSnapshot] = []
+        for task in recentTasks.prefix(min(3, WidgetSnapshotLimits.maximumRecentTasks)) {
+            let recentTask = WidgetRecentTaskSnapshot(
+                taskID: task.id,
+                title: WidgetSnapshotLimits.boundedUTF8Prefix(
+                    task.title,
+                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
+                ),
+                path: WidgetSnapshotLimits.boundedUTF8Prefix(
+                    taskParentPathByID[task.id] ?? "",
+                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedPathBytes
+                ),
+                colorHex: WidgetSnapshotLimits.boundedProjectedStyleValue(task.colorHex),
+                iconName: WidgetSnapshotLimits.boundedProjectedStyleValue(task.iconName)
+            )
+            let textByteCount = WidgetSnapshotLimits.textByteCount(
+                title: recentTask.title,
+                path: recentTask.path,
+                colorHex: recentTask.colorHex,
+                iconName: recentTask.iconName
+            )
+            guard textByteCount <= remainingTextBytes else { break }
+            recentTaskSnapshots.append(recentTask)
+            remainingTextBytes -= textByteCount
+        }
+
+        return WidgetSnapshot(
             generatedAt: generatedAt,
-            todayGrossSeconds: todayGrossSeconds,
-            todayWallSeconds: todayWallSeconds,
-            activeTimers: activeSegments.map { segment in
-                let task = taskByID[segment.taskID]
-                return WidgetTimerSnapshot(
-                    id: segment.id,
-                    taskID: segment.taskID,
-                    title: task?.title ?? AppStrings.localized("task.deleted"),
-                    path: taskParentPathByID[segment.taskID] ?? "",
-                    startedAt: segment.startedAt,
-                    colorHex: task?.colorHex,
-                    iconName: task?.iconName
-                )
-            },
-            recentTasks: recentTasks.prefix(3).map { task in
-                WidgetRecentTaskSnapshot(
-                    taskID: task.id,
-                    title: task.title,
-                    path: taskParentPathByID[task.id] ?? "",
-                    colorHex: task.colorHex,
-                    iconName: task.iconName
-                )
-            }
+            todayGrossSeconds: min(max(0, todayGrossSeconds), WidgetSnapshotLimits.maximumSummarySeconds),
+            todayWallSeconds: min(max(0, todayWallSeconds), WidgetSnapshotLimits.maximumSummarySeconds),
+            activeTimers: activeTimers,
+            recentTasks: recentTaskSnapshots
         )
     }
 }

@@ -354,6 +354,46 @@ struct CoreWatchCommandTests {
     }
 
     @Test
+    func watchSnapshotTransportBoundsAggregateTextAndPreservesUnicodePrefixes() {
+        let original = String(repeating: "🧑🏽‍💻", count: 100)
+        let bounded = WatchTransportLimits.boundedUTF8Prefix(
+            original,
+            maximumUTF8Bytes: 17
+        )
+
+        #expect(bounded.utf8.count <= 17)
+        #expect(original.hasPrefix(bounded))
+        #expect(String(data: Data(bounded.utf8), encoding: .utf8) == bounded)
+
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 2_500)
+        let recentTasks = (0..<WatchTransportLimits.maximumRecentTasks).map { _ in
+            WatchRecentTaskSnapshot(
+                taskID: UUID(),
+                title: String(
+                    repeating: "t",
+                    count: WatchTransportLimits.maximumProjectedTitleBytes
+                ),
+                path: String(
+                    repeating: "p",
+                    count: WatchTransportLimits.maximumProjectedPathBytes
+                ),
+                colorHex: nil,
+                iconName: nil
+            )
+        }
+        let snapshot = WatchStateSnapshot(
+            generatedAt: generatedAt,
+            todayGrossSeconds: 0,
+            todayWallSeconds: 0,
+            activeTimers: [],
+            recentTasks: recentTasks
+        )
+
+        #expect(recentTasks.allSatisfy { $0.isStructurallyValid })
+        #expect(snapshot.isValid(at: generatedAt) == false)
+    }
+
+    @Test
     func watchStartCommandWaitsForANewerSnapshotContainingTheTask() {
         let taskID = UUID()
         let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
@@ -576,6 +616,9 @@ struct CoreWatchCommandTests {
         #expect(source.contains("syncWatchSnapshotIfAvailable"))
         #expect(facade.contains("watchTaskShortcuts()"))
         #expect(facade.contains("preferences.quickStartTaskIDs"))
+        #expect(facade.contains("prefix(WatchTransportLimits.maximumRecentTasks)"))
+        #expect(facade.contains("maximumSnapshotTextBytes"))
+        #expect(facade.contains("boundedUTF8Prefix"))
         #expect(facade.contains("WatchConnectivityBridge.shared.updateApplicationContext"))
     }
 

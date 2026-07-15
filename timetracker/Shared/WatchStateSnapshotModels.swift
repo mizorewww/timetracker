@@ -10,6 +10,10 @@ nonisolated enum WatchTransportLimits {
     static let maximumTitleBytes = 4 * 1_024
     static let maximumPathBytes = 16 * 1_024
     static let maximumStyleValueBytes = 256
+    static let maximumProjectedTitleBytes = 512
+    static let maximumProjectedPathBytes = 1_024
+    static let maximumProjectedStyleValueBytes = 128
+    static let maximumSnapshotTextBytes = 128 * 1_024
     static let maximumActiveTimers = 64
     static let maximumRecentTasks = 256
     static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
@@ -30,6 +34,35 @@ nonisolated enum WatchTransportLimits {
     static func isValidStyleValue(_ value: String?) -> Bool {
         guard let value else { return true }
         return isBounded(value, maximumUTF8Bytes: maximumStyleValueBytes)
+    }
+
+    static func boundedUTF8Prefix(_ value: String, maximumUTF8Bytes: Int) -> String {
+        guard value.utf8.count > maximumUTF8Bytes else { return value }
+        var result = ""
+        var byteCount = 0
+        for character in value {
+            let characterByteCount = String(character).utf8.count
+            guard byteCount + characterByteCount <= maximumUTF8Bytes else { break }
+            result.append(character)
+            byteCount += characterByteCount
+        }
+        return result
+    }
+
+    static func boundedProjectedStyleValue(_ value: String?) -> String? {
+        value.map {
+            boundedUTF8Prefix($0, maximumUTF8Bytes: maximumProjectedStyleValueBytes)
+        }
+    }
+
+    static func textByteCount(
+        title: String,
+        path: String,
+        colorHex: String?,
+        iconName: String?
+    ) -> Int {
+        title.utf8.count + path.utf8.count +
+            (colorHex?.utf8.count ?? 0) + (iconName?.utf8.count ?? 0)
     }
 }
 
@@ -100,6 +133,21 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     }
 
     func isValid(at now: Date) -> Bool {
+        let textByteCount = activeTimers.reduce(into: 0) { total, timer in
+            total += WatchTransportLimits.textByteCount(
+                title: timer.title,
+                path: timer.path,
+                colorHex: timer.colorHex,
+                iconName: timer.iconName
+            )
+        } + recentTasks.reduce(into: 0) { total, task in
+            total += WatchTransportLimits.textByteCount(
+                title: task.title,
+                path: task.path,
+                colorHex: task.colorHex,
+                iconName: task.iconName
+            )
+        }
         guard WatchTransportLimits.isFinite(now),
               WatchTransportLimits.isFinite(generatedAt),
               generatedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew,
@@ -107,6 +155,7 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
               (0...WatchTransportLimits.maximumSummarySeconds).contains(todayWallSeconds),
               activeTimers.count <= WatchTransportLimits.maximumActiveTimers,
               recentTasks.count <= WatchTransportLimits.maximumRecentTasks,
+              textByteCount <= WatchTransportLimits.maximumSnapshotTextBytes,
               activeTimers.allSatisfy({ $0.isStructurallyValid(relativeTo: generatedAt) }),
               recentTasks.allSatisfy(\.isStructurallyValid),
               Set(activeTimers.map(\.id)).count == activeTimers.count,

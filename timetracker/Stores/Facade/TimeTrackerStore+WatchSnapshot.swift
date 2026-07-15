@@ -83,30 +83,58 @@ extension TimeTrackerStore {
             todayWallSeconds: todayWallSeconds(now: now),
             generatedAt: now
         )
+        let activeTimers = widgetSnapshot.activeTimers.map {
+            WatchActiveTimerSnapshot(
+                id: $0.id,
+                taskID: $0.taskID,
+                title: $0.title,
+                path: $0.path,
+                startedAt: $0.startedAt,
+                colorHex: $0.colorHex,
+                iconName: $0.iconName
+            )
+        }
+        var remainingTextBytes = WatchTransportLimits.maximumSnapshotTextBytes
+        for timer in activeTimers {
+            remainingTextBytes -= WatchTransportLimits.textByteCount(
+                title: timer.title,
+                path: timer.path,
+                colorHex: timer.colorHex,
+                iconName: timer.iconName
+            )
+        }
+        var recentTasks: [WatchRecentTaskSnapshot] = []
+        for task in watchTasks.prefix(WatchTransportLimits.maximumRecentTasks) {
+            let recentTask = WatchRecentTaskSnapshot(
+                taskID: task.id,
+                title: WatchTransportLimits.boundedUTF8Prefix(
+                    task.title,
+                    maximumUTF8Bytes: WatchTransportLimits.maximumProjectedTitleBytes
+                ),
+                path: WatchTransportLimits.boundedUTF8Prefix(
+                    taskParentPathByID[task.id] ?? "",
+                    maximumUTF8Bytes: WatchTransportLimits.maximumProjectedPathBytes
+                ),
+                colorHex: WatchTransportLimits.boundedProjectedStyleValue(task.colorHex),
+                iconName: WatchTransportLimits.boundedProjectedStyleValue(task.iconName)
+            )
+            let textByteCount = WatchTransportLimits.textByteCount(
+                title: recentTask.title,
+                path: recentTask.path,
+                colorHex: recentTask.colorHex,
+                iconName: recentTask.iconName
+            )
+            guard textByteCount <= remainingTextBytes else { break }
+            recentTasks.append(recentTask)
+            remainingTextBytes -= textByteCount
+        }
+
         return WatchStateSnapshot(
             generatedAt: widgetSnapshot.generatedAt,
             todayGrossSeconds: widgetSnapshot.todayGrossSeconds,
             todayWallSeconds: widgetSnapshot.todayWallSeconds,
-            activeTimers: widgetSnapshot.activeTimers.map {
-                WatchActiveTimerSnapshot(
-                    id: $0.id,
-                    taskID: $0.taskID,
-                    title: $0.title,
-                    path: $0.path,
-                    startedAt: $0.startedAt,
-                    colorHex: $0.colorHex,
-                    iconName: $0.iconName
-                )
-            },
-            recentTasks: watchTasks.map {
-                WatchRecentTaskSnapshot(
-                    taskID: $0.id,
-                    title: $0.title,
-                    path: taskParentPathByID[$0.id] ?? "",
-                    colorHex: $0.colorHex,
-                    iconName: $0.iconName
-                )
-            }
+            activeTimers: activeTimers,
+            recentTasks: recentTasks
         )
     }
 

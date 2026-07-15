@@ -153,6 +153,24 @@ Acceptance:
 - Long task names do not overlap charts.
 - The landing page keeps a small summary plus category navigation; at accessibility sizes the range picker may become a menu instead of forcing a segmented control to clip.
 
+### Pomodoro
+
+Current state: setup uses explicit Plan and Task menus. Its composition, empty state, focus controls, selection controls, and timer face have separate owners; active-run and ledger presentation remain separate sections.
+
+Plan:
+
+- Keep Plan and Task as labeled, discoverable controls; do not restore title/timer-face tap gestures as hidden selection shortcuts.
+- Prefer native menus, buttons, progress, and text over custom hit testing. Keep every primary touch action at least 44 pt.
+- Let setup controls reflow under Dynamic Type instead of shrinking the timer or truncating task identity.
+- Keep the timer face presentational: durable phase, deadline, and ledger changes belong to the store/commands.
+
+Acceptance:
+
+- Empty state explains why focus cannot start and exposes the next valid action.
+- Long localized Plan/Task names remain readable at Accessibility Extra Large.
+- VoiceOver announces selected plan, selected task, phase, remaining time, and the primary action without relying on color or shape alone.
+- Background/foreground reconciliation does not create a new focus segment without an explicit user action.
+
 ### Settings
 
 Current state: settings uses category navigation for General, Focus, Data & Sync, AI Assistant and Advanced. The app follows system appearance.

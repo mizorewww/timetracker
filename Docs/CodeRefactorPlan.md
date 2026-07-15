@@ -8,6 +8,7 @@ The current pass established semantic folders, split domain stores and repositor
 
 - `SyncConflictService.swift` was reduced to bootstrap/prompt ownership; local mutation, Cloud import/export, recovery/resolution, persisted state, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and domain record DTOs now have focused files.
 - Analytics root composition and decision-support derivation were split into category, overview-row, metric-list, detail-list, period, group-breakdown, metrics, overlap, and task-snapshot owners.
+- Pomodoro setup composition was split from its empty state, focus controls, Plan/Task selection controls, and timer face.
 - The retired `SettingsSectionsViews.swift` was replaced by focused display/timing, Pomodoro, countdown, sync, data, action, binding, and support files.
 - Task Detail is now one focused orchestration view plus identity, checklist, overview, analytics, navigation, and record section files.
 - The retired `TimeTrackerServices.swift` was replaced by `AppCloudSync`, persistence-write safety, timer command, aggregation, formatting, device identity, and ledger-summary files.
@@ -50,6 +51,7 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 - Timeline layout models and axis compression are split from the lane-placement engine.
 - Home Quick Start and Analytics activity sections are split into smaller reusable files.
 - Analytics category routing, overview rows, metric/detail lists, period controls, and decision-support builders are split by responsibility.
+- Pomodoro setup is split into `PomodoroSetupViews.swift`, `PomodoroSetupEmptyState.swift`, `PomodoroFocusSetupControls.swift`, `PomodoroSetupSelectionViews.swift`, and `PomodoroTimerFace.swift`; the setup container remains the composition owner.
 - Settings timing, Pomodoro, countdown, sync, data, action, binding, and support responsibilities are split; `SettingsSectionsViews.swift` is retired.
 - Task Detail identity, checklist, overview, analytics, navigation, and record sections are split from the canonical detail router.
 - Ledger cloud mode, transaction diagnostics, timer DTO, aggregation, formatting, device identity, and summary responsibilities are split; `TimeTrackerServices.swift` is retired.

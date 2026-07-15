@@ -231,7 +231,7 @@ SwiftUI Feature
 - `Models`：SwiftData 模型、schema、迁移计划、read models。
 - `SharedLiveActivity` / `timetrackerLiveActivityExtension`：Live Activity 共享模型和扩展 UI。
 
-本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics root/store、Settings sections、Task Detail sections、ledger infrastructure、facade configuration/lifecycle、Widget provider/view/support、Watch dashboard/timer/status/color，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、分域 snapshot restore 和 record DTO 都已分离。当前仍较集中的 Watch connectivity store、Home root composition 和大型 row 文件如实记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不以“所有文件都已单一职责”作泛化承诺。
+本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics root/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections、Task Detail sections、ledger infrastructure、facade configuration/lifecycle、Widget provider/view/support、Watch dashboard/timer/status/color，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、分域 snapshot restore 和 record DTO 都已分离。当前仍较集中的 Watch connectivity store、Home root composition 和大型 row 文件如实记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不以“所有文件都已单一职责”作泛化承诺。
 
 CloudKit 刷新由持久存储远程变更和 CloudKit import/export 事件驱动，并做短暂合并；前台激活仍会进行一次一致性刷新。没有常驻的 5 秒全量轮询。
 

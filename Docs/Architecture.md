@@ -151,7 +151,8 @@ timetracker/Features/Tasks
   Editor/         Task editor, symbol picker, checklist editing, and editor-specific controls
   Management/     Task browsing screen and reusable task rows
 timetracker/Features/Pomodoro
-  Sections/       Setup, active-run, and recent-ledger sections
+  Sections/       Setup composition, empty state, focus controls, Plan/Task selection,
+                   timer face, active-run, and recent-ledger sections
 timetracker/Features/Analytics
   root files      Category router, summary rows, metric/detail lists, period controls
   Sections/       Overview, forecast, distribution, and activity sections

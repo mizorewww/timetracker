@@ -60,10 +60,11 @@
 
 `Features/Inspector`、`PhoneChromeViews`、Home 通用年月日进度卡、Pomodoro 自绘高刷新转场、`SettingsSectionsViews.swift` 和 `TimeTrackerServices.swift` 已不存在；不要继续把它们当作当前模块或扩展点。
 
-本轮已完成八组关键职责拆分：
+本轮已完成九组关键职责拆分：
 
 - Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
 - Analytics：root/category、overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 分文件。
+- Pomodoro setup：组合容器、空状态、focus 参数控件、Plan/Task 选择和 timer face 分文件；容器不再同时承担全部展示与交互细节。
 - Settings：display/timing、Pomodoro、countdown、sync、data、actions、bindings 与 support 分文件。
 - Task Detail：canonical router 与 identity/checklist/overview/analytics/navigation/record sections 分文件。
 - Ledger infrastructure：Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 与 summary 分文件。
@@ -71,7 +72,7 @@
 - Widget：entry/provider/config、active-timer family layouts、supplementary/error states 与 deep-link/localization/color support 分文件。
 - Watch：dashboard orchestration、timer rows、status/error/empty states 与 color support 分文件；`WatchAppStore` 保持 queue/connectivity state 单一所有者。
 
-分层不等于所有文件都已完成单一职责拆分。当前仍集中的 Watch connectivity store、Home 根组合与部分大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的八组拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
+分层不等于所有文件都已完成单一职责拆分。当前仍集中的 Watch connectivity store、Home 根组合与部分大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的九组拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
 
 ## 3. 运行时数据流
 

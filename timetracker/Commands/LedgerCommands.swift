@@ -3,6 +3,17 @@ import SwiftData
 
 @MainActor
 struct LedgerCommandHandler {
+    private let deviceID: String
+    private let nowProvider: () -> Date
+
+    init(
+        deviceID: String? = nil,
+        nowProvider: @escaping () -> Date = Date.init
+    ) {
+        self.deviceID = deviceID ?? DeviceIdentity.current
+        self.nowProvider = nowProvider
+    }
+
     @discardableResult
     func addManualTime(draft: ManualTimeDraft, taskID: UUID, repository: TimeTrackingRepository) throws -> TimeSegment {
         try AddManualTimeUseCase(repository: repository).execute(
@@ -20,6 +31,31 @@ struct LedgerCommandHandler {
         pomodoroRuns: [PomodoroRun] = [],
         repository: TimeTrackingRepository,
         context: ModelContext? = nil
+    ) throws {
+        let mutation = {
+            try updateSegmentMutation(
+                draft: draft,
+                taskID: taskID,
+                activePomodoroSessionID: activePomodoroSessionID,
+                pomodoroRuns: pomodoroRuns,
+                repository: repository,
+                context: context
+            )
+        }
+        if let context {
+            try context.performAtomicMutation(mutation)
+        } else {
+            try mutation()
+        }
+    }
+
+    private func updateSegmentMutation(
+        draft: SegmentEditorDraft,
+        taskID: UUID,
+        activePomodoroSessionID: UUID?,
+        pomodoroRuns: [PomodoroRun],
+        repository: TimeTrackingRepository,
+        context: ModelContext?
     ) throws {
         let endedAt = draft.isActive ? nil : draft.endedAt
         try UpdateSegmentUseCase(repository: repository).execute(
@@ -40,7 +76,10 @@ struct LedgerCommandHandler {
         if draft.isActive {
             return
         } else {
-            try PomodoroCommandHandler().cancelIfNeeded(
+            try PomodoroCommandHandler(
+                deviceID: deviceID,
+                nowProvider: nowProvider
+            ).cancelIfNeeded(
                 sessionID: activePomodoroSessionID,
                 runs: pomodoroRuns,
                 context: context,
@@ -56,14 +95,24 @@ struct LedgerCommandHandler {
         repository: TimeTrackingRepository,
         context: ModelContext? = nil
     ) throws {
-        if let activePomodoroSessionID {
-            try PomodoroCommandHandler().discardIfNeeded(
-                sessionID: activePomodoroSessionID,
-                runs: pomodoroRuns,
-                context: context
-            )
+        let mutation = {
+            if let activePomodoroSessionID {
+                try PomodoroCommandHandler(
+                    deviceID: deviceID,
+                    nowProvider: nowProvider
+                ).discardIfNeeded(
+                    sessionID: activePomodoroSessionID,
+                    runs: pomodoroRuns,
+                    context: context
+                )
+            }
+            try SoftDeleteSegmentUseCase(repository: repository).execute(segmentID: segmentID)
         }
-        try SoftDeleteSegmentUseCase(repository: repository).execute(segmentID: segmentID)
+        if let context {
+            try context.performAtomicMutation(mutation)
+        } else {
+            try mutation()
+        }
     }
 
     private func rebindActivePomodoro(
@@ -81,12 +130,9 @@ struct LedgerCommandHandler {
         }) else {
             return
         }
-        let mutationDate = Date()
+        let mutationDate = nowProvider()
         run.taskID = taskID
         run.startedAt = startedAt
-        run.updatedAt = mutationDate
-        run.deviceID = DeviceIdentity.current
-        run.clientMutationID = UUID()
-        try context?.saveAfterMutationStep()
+        run.markMutated(at: mutationDate, deviceID: deviceID)
     }
 }

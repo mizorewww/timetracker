@@ -3,7 +3,17 @@ import SwiftData
 
 @MainActor
 struct TimerCommandHandler {
-    private let pomodoroCommandHandler = PomodoroCommandHandler()
+    private let pomodoroCommandHandler: PomodoroCommandHandler
+
+    init(
+        deviceID: String? = nil,
+        nowProvider: @escaping () -> Date = Date.init
+    ) {
+        pomodoroCommandHandler = PomodoroCommandHandler(
+            deviceID: deviceID,
+            nowProvider: nowProvider
+        )
+    }
 
     func startTask(
         taskID: UUID,
@@ -30,12 +40,23 @@ struct TimerCommandHandler {
     }
 
     func stop(segment: TimeSegment, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {
-        // Reconcile/cancel the business run before issuing the generic ledger
-        // stop. An expired Pomodoro clips its session to the persisted phase
-        // deadline here; the idempotent segment stop then has nothing left to
-        // extend to the current wall clock.
-        try pomodoroCommandHandler.cancelIfNeeded(sessionID: segment.sessionID, runs: pomodoroRuns, context: context)
-        try StopSegmentUseCase(repository: timeRepository).execute(segmentID: segment.id)
+        let mutation = {
+            // Reconcile/cancel the business run before issuing the generic
+            // ledger stop. An expired Pomodoro clips its session to the
+            // persisted phase deadline here; the idempotent segment stop then
+            // has nothing left to extend to the current wall clock.
+            try pomodoroCommandHandler.cancelIfNeeded(
+                sessionID: segment.sessionID,
+                runs: pomodoroRuns,
+                context: context
+            )
+            try StopSegmentUseCase(repository: timeRepository).execute(segmentID: segment.id)
+        }
+        if let context {
+            try context.performAtomicMutation(mutation)
+        } else {
+            try mutation()
+        }
     }
 
     func stopOtherActiveSegments(

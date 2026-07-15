@@ -3,6 +3,17 @@ import SwiftData
 
 @MainActor
 struct PomodoroCommandHandler {
+    private let deviceID: String
+    private let nowProvider: () -> Date
+
+    init(
+        deviceID: String? = nil,
+        nowProvider: @escaping () -> Date = Date.init
+    ) {
+        self.deviceID = deviceID ?? DeviceIdentity.current
+        self.nowProvider = nowProvider
+    }
+
     func start(
         taskID: UUID,
         focusSeconds: Int,
@@ -16,22 +27,31 @@ struct PomodoroCommandHandler {
         pomodoroRepository: PomodoroRepository,
         context: ModelContext?
     ) throws -> PomodoroRun {
-        if allowParallelTimers == false {
-            try TimerCommandHandler().stopOtherActiveSegments(
-                excluding: taskID,
-                activeSegments: activeSegments,
-                pomodoroRuns: pomodoroRuns,
-                timeRepository: timeRepository,
-                context: context
+        let mutation = { () throws -> PomodoroRun in
+            if allowParallelTimers == false {
+                try TimerCommandHandler(
+                    deviceID: deviceID,
+                    nowProvider: nowProvider
+                ).stopOtherActiveSegments(
+                    excluding: taskID,
+                    activeSegments: activeSegments,
+                    pomodoroRuns: pomodoroRuns,
+                    timeRepository: timeRepository,
+                    context: context
+                )
+            }
+            return try StartPomodoroUseCase(repository: pomodoroRepository).execute(
+                taskID: taskID,
+                focusSeconds: focusSeconds,
+                breakSeconds: breakSeconds,
+                longBreakSeconds: longBreakSeconds,
+                targetRounds: targetRounds
             )
         }
-        return try StartPomodoroUseCase(repository: pomodoroRepository).execute(
-            taskID: taskID,
-            focusSeconds: focusSeconds,
-            breakSeconds: breakSeconds,
-            longBreakSeconds: longBreakSeconds,
-            targetRounds: targetRounds
-        )
+        if let context {
+            return try context.performAtomicMutation(mutation)
+        }
+        return try mutation()
     }
 
     func advance(run: PomodoroRun, repository: PomodoroRepository) throws {
@@ -54,29 +74,79 @@ struct PomodoroCommandHandler {
         try CancelPomodoroUseCase(repository: repository).execute(runID: run.id, discardRecord: discardRecord)
     }
 
-    func cancelIfNeeded(sessionID: UUID, runs: [PomodoroRun], context: ModelContext?, now: Date = Date()) throws {
+    func cancelIfNeeded(
+        sessionID: UUID,
+        runs: [PomodoroRun],
+        context: ModelContext?,
+        now: Date? = nil
+    ) throws {
         guard let run = runs.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }) else {
             return
         }
-        if try settleExpiredFocusIfNeeded(run, sessionID: sessionID, context: context, now: now) {
+        let mutationDate = nowProvider()
+        let effectiveEndDate = now ?? mutationDate
+        let mutation = {
+            try cancelIfNeededMutation(
+                run,
+                sessionID: sessionID,
+                context: context,
+                effectiveEndDate: effectiveEndDate,
+                mutationDate: mutationDate
+            )
+        }
+        if let context {
+            try context.performAtomicMutation(mutation)
+        } else {
+            try mutation()
+        }
+    }
+
+    private func cancelIfNeededMutation(
+        _ run: PomodoroRun,
+        sessionID: UUID,
+        context: ModelContext?,
+        effectiveEndDate: Date,
+        mutationDate: Date
+    ) throws {
+        if try settleExpiredFocusIfNeeded(
+            run,
+            sessionID: sessionID,
+            context: context,
+            observedAt: effectiveEndDate,
+            mutationDate: mutationDate
+        ) {
             return
         }
-        let shouldDiscard = try shouldDiscardCancelledRun(run, sessionID: sessionID, context: context, now: now)
+        let shouldDiscard = try shouldDiscardCancelledRun(
+            run,
+            sessionID: sessionID,
+            context: context,
+            now: effectiveEndDate
+        )
         if shouldDiscard {
-            try discardRunAndSession(run, sessionID: sessionID, context: context, now: now)
+            try discardRunAndSession(
+                run,
+                sessionID: sessionID,
+                context: context,
+                effectiveEndDate: effectiveEndDate,
+                mutationDate: mutationDate
+            )
             return
         }
         run.state = .cancelled
-        run.endedAt = run.startedAt.map { max(now, $0) } ?? now
-        run.updatedAt = now
-        run.clientMutationID = UUID()
-        try context?.saveAfterMutationStep()
+        run.endedAt = run.startedAt.map { max(effectiveEndDate, $0) } ?? effectiveEndDate
+        run.markMutated(at: mutationDate, deviceID: deviceID)
     }
 
     /// Deleting a ledger record is distinct from stopping it. Tombstone the
     /// corresponding Pomodoro regardless of elapsed time or phase deadline so
     /// the run cannot outlive the record the user explicitly removed.
-    func discardIfNeeded(sessionID: UUID, runs: [PomodoroRun], context: ModelContext?, now: Date = Date()) throws {
+    func discardIfNeeded(
+        sessionID: UUID,
+        runs: [PomodoroRun],
+        context: ModelContext?,
+        now: Date? = nil
+    ) throws {
         guard let run = runs.first(where: {
             $0.sessionID == sessionID &&
                 $0.deletedAt == nil &&
@@ -84,7 +154,22 @@ struct PomodoroCommandHandler {
         }) else {
             return
         }
-        try discardRunAndSession(run, sessionID: sessionID, context: context, now: now)
+        let mutationDate = nowProvider()
+        let effectiveEndDate = now ?? mutationDate
+        let mutation = {
+            try discardRunAndSession(
+                run,
+                sessionID: sessionID,
+                context: context,
+                effectiveEndDate: effectiveEndDate,
+                mutationDate: mutationDate
+            )
+        }
+        if let context {
+            try context.performAtomicMutation(mutation)
+        } else {
+            try mutation()
+        }
     }
 
     /// General timer commands can close a Pomodoro session without going
@@ -95,15 +180,15 @@ struct PomodoroCommandHandler {
         _ run: PomodoroRun,
         sessionID: UUID,
         context: ModelContext?,
-        now: Date
+        observedAt: Date,
+        mutationDate: Date
     ) throws -> Bool {
         guard (run.state == .focusing || run.state == .interrupted),
               let deadline = run.phaseDeadline,
-              deadline <= now else {
+              deadline <= observedAt else {
             return false
         }
 
-        let mutationDate = Date()
         let sessionSegments = try context.map { try segments(in: sessionID, context: $0) } ?? []
         let phaseEndDate = max(
             deadline,
@@ -116,7 +201,7 @@ struct PomodoroCommandHandler {
             if segment.endedAt.map({ $0 > phaseEndDate }) ?? true {
                 segment.endedAt = max(segment.startedAt, phaseEndDate)
                 segment.updatedAt = mutationDate
-                segment.deviceID = DeviceIdentity.current
+                segment.deviceID = deviceID
             }
         }
 
@@ -128,11 +213,14 @@ struct PomodoroCommandHandler {
                 .compactMap(\.endedAt)
                 .max() ?? phaseEndDate
             session.endedAt = max(session.startedAt, latestEnd)
-            session.markMutated(at: mutationDate, deviceID: DeviceIdentity.current)
+            session.markMutated(at: mutationDate, deviceID: deviceID)
         }
 
-        run.completeFocusPhase(endedAt: phaseEndDate, mutationDate: mutationDate)
-        try context?.saveAfterMutationStep()
+        run.completeFocusPhase(
+            endedAt: phaseEndDate,
+            mutationDate: mutationDate,
+            deviceID: deviceID
+        )
         return true
     }
 
@@ -164,29 +252,28 @@ struct PomodoroCommandHandler {
         _ run: PomodoroRun,
         sessionID: UUID,
         context: ModelContext?,
-        now: Date
+        effectiveEndDate: Date,
+        mutationDate: Date
     ) throws {
         run.state = .cancelled
-        run.endedAt = run.startedAt.map { max(now, $0) } ?? now
-        run.deletedAt = now
-        run.updatedAt = now
-        run.clientMutationID = UUID()
+        run.endedAt = run.startedAt.map { max(effectiveEndDate, $0) } ?? effectiveEndDate
+        run.deletedAt = mutationDate
+        run.markMutated(at: mutationDate, deviceID: deviceID)
 
         guard let context else { return }
         let sessionSegments = try segments(in: sessionID, context: context)
         for segment in sessionSegments {
-            segment.endedAt = max(segment.startedAt, segment.endedAt ?? now)
-            segment.deletedAt = now
-            segment.updatedAt = now
-            segment.deviceID = DeviceIdentity.current
+            segment.endedAt = max(segment.startedAt, segment.endedAt ?? effectiveEndDate)
+            segment.deletedAt = mutationDate
+            segment.updatedAt = mutationDate
+            segment.deviceID = deviceID
         }
         if let session = try session(id: sessionID, context: context) {
-            let latestSegmentEnd = sessionSegments.compactMap(\.endedAt).max() ?? now
+            let latestSegmentEnd = sessionSegments.compactMap(\.endedAt).max() ?? effectiveEndDate
             session.endedAt = max(session.startedAt, session.endedAt ?? latestSegmentEnd)
-            session.deletedAt = now
-            session.markMutated(at: now, deviceID: DeviceIdentity.current)
+            session.deletedAt = mutationDate
+            session.markMutated(at: mutationDate, deviceID: deviceID)
         }
-        try context.saveAfterMutationStep()
     }
 
     private func segments(in sessionID: UUID, context: ModelContext) throws -> [TimeSegment] {

@@ -202,7 +202,7 @@ extension PomodoroRun {
 
     /// Applies the shared focus-to-break/completed state transition after the
     /// caller has bounded the associated ledger session to `endedAt`.
-    func completeFocusPhase(endedAt: Date, mutationDate: Date) {
+    func completeFocusPhase(endedAt: Date, mutationDate: Date, deviceID: String) {
         guard state == .focusing || state == .interrupted else { return }
         completedFocusRounds += 1
         let didComplete = completedFocusRounds >= targetRounds
@@ -212,7 +212,14 @@ extension PomodoroRun {
         sessionID = nil
         startedAt = didComplete ? startedAt : endedAt
         self.endedAt = didComplete ? endedAt : nil
+        markMutated(at: mutationDate, deviceID: deviceID)
+    }
+
+    /// Keeps the sync conflict tuple aligned with the writer that performed a
+    /// local state transition. Call this after changing any persisted run field.
+    func markMutated(at mutationDate: Date, deviceID: String) {
         updatedAt = mutationDate
+        self.deviceID = deviceID
         clientMutationID = UUID()
     }
 }

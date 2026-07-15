@@ -14,32 +14,48 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
     }
 
     func runs() throws -> [PomodoroRun] {
-        let descriptor = FetchDescriptor<PomodoroRun>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-        )
-        return try context.fetch(descriptor).filter { $0.deletedAt == nil }
+        try context.fetch(FetchDescriptor<PomodoroRun>())
+            .visibleDeduplicatedByID()
+            .sorted(by: runCreationOrder)
     }
 
     func activeRuns() throws -> [PomodoroRun] {
-        try runs().filter { run in
-            switch run.state {
-            case .planned, .focusing, .shortBreak, .longBreak, .interrupted:
-                return run.endedAt == nil
-            case .completed, .cancelled:
-                return false
+        let completed = PomodoroState.completed.rawValue
+        let cancelled = PomodoroState.cancelled.rawValue
+        let descriptor = FetchDescriptor<PomodoroRun>(
+            predicate: #Predicate {
+                $0.endedAt == nil &&
+                $0.stateRaw != completed &&
+                $0.stateRaw != cancelled
             }
-        }
+        )
+        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        return try canonicalRuns(ids: candidateIDs)
+            .filter {
+                $0.endedAt == nil &&
+                    $0.stateRaw != completed &&
+                    $0.stateRaw != cancelled
+            }
+            .sorted(by: runCreationOrder)
     }
 
     @discardableResult
     func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, longBreakSeconds: Int? = nil, targetRounds: Int) throws -> PomodoroRun {
         let now = Date()
-        for existingRun in try activeRuns().filter({ $0.state == .focusing }) {
+        for existingRun in try activeRuns() {
+            if existingRun.phaseHasExpired(at: now),
+               existingRun.state == .focusing || existingRun.state == .interrupted,
+               let deadline = existingRun.phaseDeadline {
+                try completeFocus(runID: existingRun.id, endedAt: deadline)
+            }
+            if existingRun.state == .completed {
+                continue
+            }
             if let sessionID = existingRun.sessionID {
                 try timeRepository.stopSession(sessionID: sessionID)
             }
             existingRun.state = .cancelled
-            existingRun.endedAt = now
+            existingRun.endedAt = existingRun.startedAt.map { max(now, $0) } ?? now
             existingRun.updatedAt = now
             existingRun.clientMutationID = UUID()
         }
@@ -49,43 +65,73 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
 
         let run = PomodoroRun(
             taskID: taskID,
-            focus: focusSeconds,
-            breakSeconds: breakSeconds,
-            longBreakSeconds: longBreakSeconds,
-            targetRounds: targetRounds,
+            focus: max(1, focusSeconds),
+            breakSeconds: max(1, breakSeconds),
+            longBreakSeconds: longBreakSeconds.map { max(1, $0) },
+            targetRounds: max(1, targetRounds),
             deviceID: deviceID
         )
         let segment = try timeRepository.startTask(taskID: taskID, source: .pomodoro)
         run.sessionID = segment.sessionID
-        run.startedAt = now
+        run.startedAt = segment.startedAt
         run.state = .focusing
         run.updatedAt = now
         context.insert(run)
-        try context.save()
+        try context.saveAfterMutationStep()
         return run
     }
 
-    func completeFocus(runID: UUID) throws {
-        let descriptor = FetchDescriptor<PomodoroRun>()
-        guard let run = try context.fetch(descriptor).first(where: { $0.id == runID && $0.deletedAt == nil }) else { return }
+    func completeFocus(runID: UUID, endedAt requestedEndDate: Date) throws {
+        guard let run = try run(id: runID) else { return }
         guard run.state == .focusing || run.state == .interrupted else { return }
-        let now = Date()
-        let willComplete = run.completedFocusRounds + 1 >= run.targetRounds
+        let mutationDate = Date()
+        let phaseEndDate = try clampedPhaseEndDate(for: run, requestedEndDate: requestedEndDate)
         if let sessionID = run.sessionID {
-            try timeRepository.stopSession(sessionID: sessionID)
+            try stopPomodoroSession(sessionID, endedAt: phaseEndDate, mutationDate: mutationDate)
         }
-        run.completedFocusRounds += 1
-        let nextBreakState: PomodoroState = run.completedFocusRounds.isMultiple(of: 4) ? .longBreak : .shortBreak
-        run.state = willComplete ? .completed : nextBreakState
-        run.endedAt = willComplete ? now : nil
+        run.completeFocusPhase(endedAt: phaseEndDate, mutationDate: mutationDate)
+        try context.saveAfterMutationStep()
+    }
+
+    func completeBreak(runID: UUID) throws {
+        guard let run = try run(id: runID) else { return }
+        guard run.state == .shortBreak || run.state == .longBreak else { return }
+
+        let now = Date()
+        let segment = try timeRepository.startTask(taskID: run.taskID, source: .pomodoro)
+        run.sessionID = segment.sessionID
+        run.startedAt = segment.startedAt
+        run.state = .focusing
+        run.endedAt = nil
         run.updatedAt = now
-        try context.save()
+        run.clientMutationID = UUID()
+        try context.saveAfterMutationStep()
+    }
+
+    @discardableResult
+    func reconcileExpiredPhase(runID: UUID, now: Date) throws -> Bool {
+        guard let run = try run(id: runID),
+              run.state == .focusing || run.state == .interrupted,
+              let deadline = run.phaseDeadline,
+              deadline <= now else {
+            return false
+        }
+        try completeFocus(runID: run.id, endedAt: deadline)
+        return true
     }
 
     func cancel(runID: UUID, discardRecord: Bool = false) throws {
-        let descriptor = FetchDescriptor<PomodoroRun>()
-        guard let run = try context.fetch(descriptor).first(where: { $0.id == runID && $0.deletedAt == nil }) else { return }
         let now = Date()
+        guard var run = try run(id: runID) else { return }
+        if (run.state == .focusing || run.state == .interrupted),
+           let deadline = run.phaseDeadline,
+           deadline <= now {
+            try completeFocus(runID: run.id, endedAt: deadline)
+            guard let reconciledRun = try self.run(id: runID), reconciledRun.state != .completed else {
+                return
+            }
+            run = reconciledRun
+        }
         if let sessionID = run.sessionID {
             if discardRecord {
                 try discardPomodoroSession(sessionID, now: now)
@@ -94,43 +140,111 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             }
         }
         run.state = .cancelled
-        run.endedAt = now
+        run.endedAt = run.startedAt.map { max(now, $0) } ?? now
         run.deletedAt = discardRecord ? now : nil
         run.updatedAt = now
         run.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     private func discardPomodoroSession(_ sessionID: UUID, now: Date) throws {
         let segments = try segments(in: sessionID)
         for segment in segments {
-            segment.endedAt = segment.endedAt ?? now
+            segment.endedAt = max(segment.startedAt, segment.endedAt ?? now)
             segment.deletedAt = now
             segment.updatedAt = now
+            segment.deviceID = deviceID
         }
 
         if let session = try session(id: sessionID) {
-            session.endedAt = session.endedAt ?? now
+            let latestSegmentEnd = segments.compactMap(\.endedAt).max() ?? now
+            session.endedAt = max(session.startedAt, session.endedAt ?? latestSegmentEnd)
             session.deletedAt = now
-            session.updatedAt = now
+            session.markMutated(at: now, deviceID: deviceID)
+        }
+    }
+
+    private func clampedPhaseEndDate(for run: PomodoroRun, requestedEndDate: Date) throws -> Date {
+        var lowerBound = run.startedAt ?? run.updatedAt
+        if let sessionID = run.sessionID {
+            let activeStarts = try segments(in: sessionID)
+                .filter { $0.deletedAt == nil && $0.endedAt == nil }
+                .map(\.startedAt)
+            if let latestActiveStart = activeStarts.max() {
+                lowerBound = max(lowerBound, latestActiveStart)
+            }
+        }
+        return max(lowerBound, requestedEndDate)
+    }
+
+    /// Stops the ledger at the business deadline. Calling the general timer
+    /// repository here would stamp `Date()` and turn background suspension into
+    /// fabricated focus time.
+    private func stopPomodoroSession(
+        _ sessionID: UUID,
+        endedAt: Date,
+        mutationDate: Date
+    ) throws {
+        let sessionSegments = try segments(in: sessionID)
+        for segment in sessionSegments where segment.deletedAt == nil && segment.endedAt == nil {
+            segment.endedAt = max(segment.startedAt, endedAt)
+            segment.updatedAt = mutationDate
+            segment.deviceID = deviceID
+        }
+
+        if let session = try session(id: sessionID), session.deletedAt == nil {
+            let latestEnd = sessionSegments
+                .filter { $0.deletedAt == nil }
+                .compactMap(\.endedAt)
+                .max() ?? max(session.startedAt, endedAt)
+            session.endedAt = max(session.startedAt, latestEnd)
+            session.markMutated(at: mutationDate, deviceID: deviceID)
         }
     }
 
     private func segments(in sessionID: UUID) throws -> [TimeSegment] {
         let targetSessionID = sessionID
         let descriptor = FetchDescriptor<TimeSegment>(
-            predicate: #Predicate { $0.sessionID == targetSessionID },
-            sortBy: [SortDescriptor(\.startedAt)]
+            predicate: #Predicate { $0.sessionID == targetSessionID }
         )
-        return try context.fetch(descriptor)
+        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        guard candidateIDs.isEmpty == false else { return [] }
+        let requestedIDs = Array(candidateIDs)
+        let duplicateDescriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { requestedIDs.contains($0.id) }
+        )
+        return try context.fetch(duplicateDescriptor)
+            .visibleDeduplicatedByID()
+            .filter { $0.sessionID == targetSessionID }
+            .sorted { lhs, rhs in
+                if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
     }
 
     private func session(id: UUID) throws -> TimeSession? {
         let sessionID = id
-        var descriptor = FetchDescriptor<TimeSession>(
+        let descriptor = FetchDescriptor<TimeSession>(
             predicate: #Predicate { $0.id == sessionID }
         )
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
+        return try context.fetch(descriptor).visibleDeduplicatedByID().first
+    }
+
+    private func run(id: UUID) throws -> PomodoroRun? {
+        try canonicalRuns(ids: [id]).first
+    }
+
+    private func canonicalRuns(ids: Set<UUID>) throws -> [PomodoroRun] {
+        guard ids.isEmpty == false else { return [] }
+        let requestedIDs = Array(ids)
+        let descriptor = FetchDescriptor<PomodoroRun>(
+            predicate: #Predicate { requestedIDs.contains($0.id) }
+        )
+        return try context.fetch(descriptor).visibleDeduplicatedByID()
+    }
+
+    private func runCreationOrder(_ lhs: PomodoroRun, _ rhs: PomodoroRun) -> Bool {
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }

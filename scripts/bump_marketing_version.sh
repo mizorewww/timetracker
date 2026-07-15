@@ -9,8 +9,8 @@ if [[ ! -f "$PROJECT_FILE" ]]; then
   exit 1
 fi
 
-CURRENT_VERSION="$(grep -E -m 1 'MARKETING_VERSION = [0-9]+(\.[0-9]+){1,2};' "$PROJECT_FILE" | sed -E 's/.*MARKETING_VERSION = ([0-9]+(\.[0-9]+){1,2});.*/\1/')"
-CURRENT_BUILD="$(grep -E -m 1 'CURRENT_PROJECT_VERSION = [0-9]+;' "$PROJECT_FILE" | sed -E 's/.*CURRENT_PROJECT_VERSION = ([0-9]+);.*/\1/')"
+CURRENT_VERSION="$(grep -E -m 1 'MARKETING_VERSION = [0-9]+(\.[0-9]+){1,2};' "$PROJECT_FILE" | sed -E 's/.*MARKETING_VERSION = ([0-9]+(\.[0-9]+){1,2});.*/\1/' || true)"
+CURRENT_BUILD="$(grep -E -m 1 'CURRENT_PROJECT_VERSION = [0-9]+;' "$PROJECT_FILE" | sed -E 's/.*CURRENT_PROJECT_VERSION = ([0-9]+);.*/\1/' || true)"
 
 if [[ -z "$CURRENT_VERSION" || -z "$CURRENT_BUILD" ]]; then
   echo "Unable to read MARKETING_VERSION or CURRENT_PROJECT_VERSION from $PROJECT_FILE" >&2

@@ -9,7 +9,7 @@ extension InboxCommandHandler {
         item.updatedAt = now
         item.clientMutationID = UUID()
         try clearSuggestions(for: item.id, context: context, now: now)
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func upsertSuggestion(
@@ -22,10 +22,14 @@ extension InboxCommandHandler {
         let inboxItemID = item.id
         let existing = try context.fetch(
             FetchDescriptor<InboxSuggestion>(
-                predicate: #Predicate { $0.inboxItemID == inboxItemID },
-                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+                predicate: #Predicate { $0.inboxItemID == inboxItemID }
             )
         )
+            .deduplicatedByID()
+            .sorted { lhs, rhs in
+                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+                return lhs.id.uuidString > rhs.id.uuidString
+            }
         let active = existing.first { $0.deletedAt == nil }
         if let active {
             update(active, with: result, item: item, now: now)
@@ -54,7 +58,7 @@ extension InboxCommandHandler {
         item.suggestionGeneratedAt = now
         item.updatedAt = now
         item.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func saveSuggestionDraft(
@@ -109,16 +113,16 @@ extension InboxCommandHandler {
         item.updatedAt = now
         item.clientMutationID = UUID()
         softDelete(suggestion, now: now)
-        try context.save()
+        try context.saveAfterMutationStep()
         return checklistItem
     }
 
     func clearSuggestions(for inboxItemID: UUID, context: ModelContext, now: Date) throws {
         let suggestions = try context.fetch(
             FetchDescriptor<InboxSuggestion>(
-                predicate: #Predicate { $0.inboxItemID == inboxItemID && $0.deletedAt == nil }
+                predicate: #Predicate { $0.inboxItemID == inboxItemID }
             )
-        )
+        ).visibleDeduplicatedByID()
         for suggestion in suggestions {
             softDelete(suggestion, now: now)
         }

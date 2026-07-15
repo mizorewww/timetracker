@@ -26,11 +26,11 @@ final class timetrackerUITests: XCTestCase {
             anyStaticText(["正在计时", "正在計時", "Active Timers"], in: app)
         )
 
-        openSection("分析", sidebarIdentifier: "sidebar.Analytics", in: app)
+        openSection("Analytics", tabIdentifier: "phone.tab.analytics", sidebarIdentifier: "sidebar.Analytics", in: app)
         XCTAssertTrue(analyticsIsReady(in: app))
 
-        openSection("设置", sidebarIdentifier: "settings.open", in: app)
-        XCTAssertTrue(app.otherElements["settings.view"].waitForExistence(timeout: 3) || app.staticTexts["设置"].waitForExistence(timeout: 3) || app.staticTexts["Settings"].waitForExistence(timeout: 3))
+        openSettings(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -38,12 +38,19 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
-        app.buttons["home.newTask"].tap()
-        XCTAssertTrue(app.buttons["保存"].waitForExistence(timeout: 3) || app.buttons["Save"].waitForExistence(timeout: 3) || app.textFields["任务名称"].waitForExistence(timeout: 3))
+        activate(app.buttons["home.newTask"])
+        XCTAssertTrue(
+            waitForElement(
+                app.descendants(matching: .any)["task.editor"],
+                timeout: 5,
+                diagnosticName: "task-editor-open",
+                in: app
+            )
+        )
         closePresentedEditor(in: app)
 
-        openSection("番茄钟", sidebarIdentifier: "sidebar.Pomodoro", in: app)
-        XCTAssertTrue(app.staticTexts["pomodoro.title"].waitForExistence(timeout: 3) || app.staticTexts["番茄钟"].waitForExistence(timeout: 3) || app.staticTexts["Pomodoro"].waitForExistence(timeout: 3))
+        openSection("Focus", tabIdentifier: "phone.tab.focus", sidebarIdentifier: "sidebar.Pomodoro", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["pomodoro.view"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -53,17 +60,39 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
         try capture("iphone-home-baseline", app: app)
 
-        openSection("分析", sidebarIdentifier: "sidebar.Analytics", in: app)
+        openSection("Inbox", tabIdentifier: "phone.tab.inbox", sidebarIdentifier: "sidebar.Inbox", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.view"].waitForExistence(timeout: 8))
+        try capture("iphone-inbox-baseline", app: app)
+
+        openSection("Tasks", tabIdentifier: "phone.tab.tasks", sidebarIdentifier: "sidebar.Tasks", in: app)
+        let firstTaskRow = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                firstTaskRow,
+                timeout: 8,
+                diagnosticName: "tasks-first-row",
+                in: app
+            )
+        )
+        try capture("iphone-tasks-baseline", app: app)
+
+        activate(firstTaskRow)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        try capture("iphone-task-detail-baseline", app: app)
+
+        openSection("Focus", tabIdentifier: "phone.tab.focus", sidebarIdentifier: "sidebar.Pomodoro", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["pomodoro.view"].waitForExistence(timeout: 8))
+        try capture("iphone-focus-baseline", app: app)
+
+        openSection("Analytics", tabIdentifier: "phone.tab.analytics", sidebarIdentifier: "sidebar.Analytics", in: app)
         XCTAssertTrue(analyticsIsReady(in: app))
         try capture("iphone-analytics-baseline", app: app)
 
-        openSection("任务", sidebarIdentifier: "sidebar.Tasks", in: app)
-        XCTAssertTrue(app.staticTexts["Design macOS UI"].waitForExistence(timeout: 3))
-        try capture("iphone-tasks-baseline", app: app)
-
-        app.staticTexts["Design macOS UI"].firstMatch.tap()
-        XCTAssertTrue(taskDetailIsReady(in: app))
-        try capture("iphone-task-detail-baseline", app: app)
+        openSettings(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
+        try capture("iphone-settings-baseline", app: app)
     }
 
     @MainActor
@@ -73,26 +102,34 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
         let revealSidebar = app.descendants(matching: .any)["sidebar.show"].firstMatch
         if revealSidebar.waitForExistence(timeout: 1), revealSidebar.isHittable {
-            revealSidebar.tap()
+            activate(revealSidebar)
         }
 
-        let sidebarTask = app.descendants(matching: .any)["sidebar.task.Time Tracker App"].firstMatch
+        let sidebarTask = app.staticTexts
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "sidebar.task."))
+            .firstMatch
         guard sidebarTask.waitForExistence(timeout: 3) else {
             throw XCTSkip("Sidebar is not visible in this size class.")
         }
 
-        sidebarTask.tap()
+        activate(sidebarTask)
 
         XCTAssertTrue(taskDetailIsReady(in: app))
-        XCTAssertTrue(app.staticTexts["Time Tracker App"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.textFields["任务名称"].waitForExistence(timeout: 1))
+        XCTAssertFalse(app.descendants(matching: .any)["task.editor"].waitForExistence(timeout: 1))
         try capture("ipad-sidebar-task-detail-fix", app: app)
     }
 
     @MainActor
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "-ApplePersistenceIgnoreState", "YES"]
+        app.launchArguments = [
+            "--uitesting",
+            "-ApplePersistenceIgnoreState", "YES",
+            "-AppleLanguages", "(en)",
+            "-AppleLocale", "en_US",
+            "-TimeTrackerAutomaticDemoDataModeOverride", "seedIfEmpty",
+            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
+        ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.launch()
         app.activate()
@@ -106,43 +143,96 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func analyticsIsReady(in app: XCUIApplication) -> Bool {
-        let decisionSummary = app.descendants(matching: .any)["analytics.decisionSummary"]
-        let periodControl = app.descendants(matching: .any)["analytics.periodControl"]
-        return decisionSummary.waitForExistence(timeout: 8) &&
-        periodControl.waitForExistence(timeout: 2)
+        app.descendants(matching: .any)["analytics.view"].waitForExistence(timeout: 8)
     }
 
     @MainActor
     private func taskDetailIsReady(in app: XCUIApplication) -> Bool {
-        app.buttons["补录时间"].waitForExistence(timeout: 3) ||
-        app.buttons["添加时间"].waitForExistence(timeout: 1) ||
-        app.buttons["Add Time"].waitForExistence(timeout: 1)
+        app.descendants(matching: .any)["task.detail"].waitForExistence(timeout: 5)
     }
 
     @MainActor
-    private func openSection(_ tabTitle: String, sidebarIdentifier: String, in app: XCUIApplication) {
+    private func openSection(
+        _ tabTitle: String,
+        tabIdentifier: String,
+        sidebarIdentifier: String,
+        in app: XCUIApplication
+    ) {
+        #if os(macOS)
+        let sidebarRow = app.outlines
+            .descendants(matching: .cell)
+            .containing(.staticText, identifier: sidebarIdentifier)
+            .firstMatch
+        if sidebarRow.waitForExistence(timeout: 1), sidebarRow.isHittable {
+            sidebarRow.click()
+            return
+        }
+        #endif
+
         let identifiedElement = app.descendants(matching: .any)[sidebarIdentifier]
         if identifiedElement.waitForExistence(timeout: 1) {
-            identifiedElement.firstMatch.tap()
+            activate(identifiedElement.firstMatch)
+            return
+        }
+
+        let identifiedTab = app.descendants(matching: .any)[tabIdentifier]
+        if identifiedTab.waitForExistence(timeout: 2) {
+            activate(identifiedTab.firstMatch)
             return
         }
 
         if app.tabBars.buttons[tabTitle].waitForExistence(timeout: 3) {
-            app.tabBars.buttons[tabTitle].tap()
+            activate(app.tabBars.buttons[tabTitle])
             return
         }
 
         if app.buttons[tabTitle].waitForExistence(timeout: 1) {
-            app.buttons[tabTitle].firstMatch.tap()
+            activate(app.buttons[tabTitle].firstMatch)
             return
         }
 
         if app.staticTexts[tabTitle].waitForExistence(timeout: 1) {
-            app.staticTexts[tabTitle].firstMatch.tap()
+            activate(app.staticTexts[tabTitle].firstMatch)
             return
         }
 
         XCTFail("Could not open section \(tabTitle)")
+    }
+
+    @MainActor
+    private func openSettings(in app: XCUIApplication) {
+        let settingsButton = app.descendants(matching: .any)["settings.open"]
+        if settingsButton.waitForExistence(timeout: 1), settingsButton.firstMatch.isHittable {
+            activate(settingsButton.firstMatch)
+            return
+        }
+
+        let sidebarSettings = app.descendants(matching: .any)["sidebar.Settings"]
+        if sidebarSettings.waitForExistence(timeout: 1), sidebarSettings.firstMatch.isHittable {
+            activate(sidebarSettings.firstMatch)
+            return
+        }
+
+        #if os(macOS)
+        let appMenu = app.menuBars.menuBarItems["Time Tracker"]
+        if appMenu.waitForExistence(timeout: 1) {
+            appMenu.click()
+            let settingsMenuItem = app.menuItems["Settings…"]
+            if settingsMenuItem.waitForExistence(timeout: 1) {
+                settingsMenuItem.click()
+                if app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 3) {
+                    return
+                }
+            }
+        }
+
+        XCTFail("Could not open Settings from the macOS app menu")
+        return
+        #else
+        openSection("Today", tabIdentifier: "phone.tab.today", sidebarIdentifier: "sidebar.Today", in: app)
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
+        activate(settingsButton.firstMatch)
+        #endif
     }
 
     @MainActor
@@ -157,9 +247,15 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func closePresentedEditor(in app: XCUIApplication) {
+        let identifiedCancel = app.buttons["task.editor.cancel"].firstMatch
+        if identifiedCancel.waitForExistence(timeout: 2), identifiedCancel.isHittable {
+            activate(identifiedCancel)
+            return
+        }
+
         let cancel = app.buttons["取消"].exists ? app.buttons["取消"].firstMatch : app.buttons["Cancel"].firstMatch
         if cancel.exists, cancel.isHittable {
-            cancel.tap()
+            activate(cancel)
             return
         }
 
@@ -167,7 +263,37 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func activate(_ element: XCUIElement) {
+        #if os(macOS)
+        element.click()
+        #else
+        element.tap()
+        #endif
+    }
+
+    @MainActor
     private func anyStaticText(_ labels: [String], in app: XCUIApplication) -> Bool {
         labels.contains { app.staticTexts[$0].waitForExistence(timeout: 1) }
+    }
+
+    @MainActor
+    private func waitForElement(
+        _ element: XCUIElement,
+        timeout: TimeInterval,
+        diagnosticName: String,
+        in app: XCUIApplication
+    ) -> Bool {
+        guard !element.waitForExistence(timeout: timeout) else { return true }
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Failure - \(diagnosticName)"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "Accessibility - \(diagnosticName)"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        return false
     }
 }

@@ -1,16 +1,33 @@
 import SwiftUI
 
 struct DesktopRootView: View {
-    @ObservedObject var store: TimeTrackerStore
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
+    let store: TimeTrackerStore
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    #if os(macOS)
+    @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
+    #endif
     private let layout = SplitColumnLayoutPolicy.mac
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebarColumn
         } detail: {
             detailColumn
         }
         .navigationSplitViewStyle(.balanced)
+        .accessibilityIdentifier("mac.splitNavigation")
+        #if os(macOS)
+        .focusedSceneValue(\.timeTrackerStore, store)
+        .onAppear {
+            routeSettingsDestination(store.desktopDestination)
+        }
+        .onChange(of: store.desktopDestination) { _, destination in
+            routeSettingsDestination(destination)
+        }
+        #endif
     }
 
     private var sidebarColumn: some View {
@@ -30,17 +47,33 @@ struct DesktopRootView: View {
             .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
             #endif
     }
+
+    #if os(macOS)
+    private func routeSettingsDestination(_ destination: TimeTrackerStore.DesktopDestination) {
+        guard destination == .settings else {
+            lastContentDestination = destination
+            return
+        }
+
+        openSettings()
+        store.desktopDestination = lastContentDestination
+    }
+    #endif
 }
 
 struct DesktopContentView: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
 
     var body: some View {
         switch store.desktopDestination {
         case .today:
-            DesktopMainView(store: store)
+            NavigationStack {
+                DesktopMainView(store: store)
+            }
         case .inbox:
-            InboxView(store: store)
+            NavigationStack {
+                InboxView(store: store)
+            }
         case .tasks:
             if let taskID = store.desktopTaskDetailID, store.task(for: taskID) != nil {
                 NavigationStack {
@@ -52,13 +85,17 @@ struct DesktopContentView: View {
                 }
             }
         case .pomodoro:
-            PomodoroView(store: store)
+            NavigationStack {
+                PomodoroView(store: store)
+            }
         case .analytics:
             NavigationStack {
                 AnalyticsView(store: store)
             }
         case .settings:
-            SettingsView(store: store)
+            NavigationStack {
+                SettingsView(store: store)
+            }
         }
     }
 }

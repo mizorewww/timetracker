@@ -11,5 +11,6 @@ struct TaskIcon: View {
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
+            .accessibilityHidden(true)
     }
 }

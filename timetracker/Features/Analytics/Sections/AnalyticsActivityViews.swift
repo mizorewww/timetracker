@@ -1,16 +1,8 @@
 import SwiftUI
 
-struct TodayActivityCard: View {
-    let activity: [HourTaskActivity]
-
-    var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.hourDistribution.title"), subtitle: AppStrings.localized("analytics.hourDistribution.subtitle")) {
-            TodayActivityContent(activity: activity)
-        }
-    }
-}
-
 struct TodayActivityContent: View {
+    @Environment(\.calendar) private var calendar
+    @Environment(\.locale) private var locale
     let activity: [HourTaskActivity]
 
     private var totalSeconds: Int {
@@ -60,7 +52,7 @@ struct TodayActivityContent: View {
 
                 HStack {
                     ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
-                        Text(String(format: "%02d", hour))
+                        Text(AnalyticsHourLabelFormatter.string(for: hour, calendar: calendar, locale: locale))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
                         if hour != 24 {
@@ -94,6 +86,8 @@ struct TodayActivityContent: View {
         .padding(.top, 8)
         .padding(.bottom, 4)
         .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(AppStrings.localized("analytics.hourDistribution.accessibility.chart"))
     }
 
 }

@@ -7,14 +7,65 @@ struct TaskTreeIndexes {
     let taskParentPathByID: [UUID: String]
 }
 
+struct TaskHierarchyRepairPlan: Equatable {
+    let cycleBreakerTaskIDs: Set<UUID>
+    let taskIDsToDisplayAsRoots: Set<UUID>
+
+    init(tasks: [TaskNode]) {
+        let visibleTasks = tasks
+            .deduplicatedByID()
+            .filter { $0.deletedAt == nil }
+        let taskByID = visibleTasks.latestByID()
+        let missingParentTaskIDs = Set(
+            visibleTasks.compactMap { task -> UUID? in
+                guard let parentID = task.parentID else { return nil }
+                return taskByID[parentID] == nil ? task.id : nil
+            }
+        )
+        var cycleBreakers = Set<UUID>()
+        var processed = Set<UUID>()
+
+        for startID in taskByID.keys.sorted(by: { $0.uuidString < $1.uuidString }) where !processed.contains(startID) {
+            var path: [UUID] = []
+            var indexByID: [UUID: Int] = [:]
+            var cursor: UUID? = startID
+
+            while let currentID = cursor,
+                  let current = taskByID[currentID],
+                  !processed.contains(currentID) {
+                if let cycleStart = indexByID[currentID] {
+                    let cycle = path[cycleStart...]
+                    if let breaker = cycle.min(by: { $0.uuidString < $1.uuidString }) {
+                        cycleBreakers.insert(breaker)
+                    }
+                    break
+                }
+                indexByID[currentID] = path.count
+                path.append(currentID)
+                cursor = current.parentID
+            }
+            processed.formUnion(path)
+        }
+
+        cycleBreakerTaskIDs = cycleBreakers
+        taskIDsToDisplayAsRoots = missingParentTaskIDs.union(cycleBreakers)
+    }
+}
+
 struct TaskTreeService {
+    static let maximumDisplayedPathComponents = 6
+
     func indexes(tasks: [TaskNode]) -> TaskTreeIndexes {
         let tasks = tasks.deduplicatedByID()
         let taskByID = tasks.latestByID()
+        let repairPlan = TaskHierarchyRepairPlan(tasks: tasks)
+        let effectiveParentIDByTaskID = tasks.reduce(into: [UUID: UUID?]()) { result, task in
+            result[task.id] = repairPlan.taskIDsToDisplayAsRoots.contains(task.id) ? nil : task.parentID
+        }
 
         var grouped: [UUID?: [TaskNode]] = [:]
         for task in tasks where task.deletedAt == nil {
-            grouped[task.parentID, default: []].append(task)
+            grouped[effectiveParentIDByTaskID[task.id] ?? nil, default: []].append(task)
         }
 
         let childrenByParentID = grouped.mapValues { children in
@@ -29,27 +80,28 @@ struct TaskTreeService {
         var pathCache: [UUID: String] = [:]
         var parentPathCache: [UUID: String] = [:]
         var componentCache: [UUID: [String]] = [:]
+        var pathWasTruncatedByTaskID: [UUID: Bool] = [:]
+        var pending = childrenByParentID[nil] ?? []
+        var cursor = 0
+        var visited = Set<UUID>()
 
-        func pathComponents(for task: TaskNode, visited: Set<UUID> = []) -> [String] {
-            if let cached = componentCache[task.id] {
-                return cached
-            }
-            guard !visited.contains(task.id) else { return [task.title] }
+        while cursor < pending.count {
+            let task = pending[cursor]
+            cursor += 1
+            guard visited.insert(task.id).inserted else { continue }
 
-            let components: [String]
-            if let parentID = task.parentID, let parent = taskByID[parentID], parent.deletedAt == nil {
-                components = pathComponents(for: parent, visited: visited.union([task.id])) + [task.title]
-            } else {
-                components = [task.title]
-            }
+            let parentID = effectiveParentIDByTaskID[task.id] ?? nil
+            let parentComponents = parentID.flatMap { componentCache[$0] } ?? []
+            let inheritedTruncation = parentID.flatMap { pathWasTruncatedByTaskID[$0] } ?? false
+            let unboundedComponents = parentComponents + [task.title]
+            let wasTruncated = inheritedTruncation ||
+                unboundedComponents.count > Self.maximumDisplayedPathComponents
+            let components = Array(unboundedComponents.suffix(Self.maximumDisplayedPathComponents))
             componentCache[task.id] = components
-            return components
-        }
-
-        for task in tasks where task.deletedAt == nil {
-            let components = pathComponents(for: task)
-            pathCache[task.id] = components.joined(separator: " / ")
-            parentPathCache[task.id] = components.dropLast().joined(separator: " / ")
+            pathWasTruncatedByTaskID[task.id] = wasTruncated
+            parentPathCache[task.id] = parentID.flatMap { pathCache[$0] } ?? ""
+            pathCache[task.id] = Self.displayPath(components: components, wasTruncated: wasTruncated)
+            pending.append(contentsOf: childrenByParentID[task.id] ?? [])
         }
 
         return TaskTreeIndexes(
@@ -65,22 +117,35 @@ struct TaskTreeService {
         childrenByParentID: [UUID?: [TaskNode]],
         visited: Set<UUID> = []
     ) -> Set<UUID> {
-        guard !visited.contains(taskID) else { return [] }
-        let nextVisited = visited.union([taskID])
-        let childIDs = (childrenByParentID[taskID] ?? []).reduce(into: Set<UUID>()) { result, child in
-            result.formUnion(taskAndDescendantIDs(for: child.id, childrenByParentID: childrenByParentID, visited: nextVisited))
+        var seen = visited
+        var pending = [taskID]
+        var result = Set<UUID>()
+
+        while let currentID = pending.popLast() {
+            guard seen.insert(currentID).inserted else { continue }
+            result.insert(currentID)
+            pending.append(contentsOf: (childrenByParentID[currentID] ?? []).map(\.id))
         }
-        return childIDs.union([taskID])
+        return result
     }
 
     func descendantIDs(of taskID: UUID, tasks: [TaskNode]) -> Set<UUID> {
-        let childrenByParentID = indexes(tasks: tasks).childrenByParentID
-        return taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID).subtracting([taskID])
+        let visibleTasks = tasks.deduplicatedByID().filter { $0.deletedAt == nil }
+        let childIDsByParentID = Dictionary(grouping: visibleTasks, by: \.parentID)
+            .mapValues { $0.map(\.id) }
+        var pending = childIDsByParentID[taskID] ?? []
+        var descendants = Set<UUID>()
+        while let candidateID = pending.popLast() {
+            guard candidateID != taskID, descendants.insert(candidateID).inserted else { continue }
+            pending.append(contentsOf: childIDsByParentID[candidateID] ?? [])
+        }
+        return descendants
     }
 
     func canMove(taskID: UUID, to newParentID: UUID?, tasks: [TaskNode]) -> Bool {
         guard let newParentID else { return true }
         guard taskID != newParentID else { return false }
+        guard tasks.contains(where: { $0.id == newParentID && $0.deletedAt == nil }) else { return false }
         return !descendantIDs(of: taskID, tasks: tasks).contains(newParentID)
     }
 
@@ -92,6 +157,11 @@ struct TaskTreeService {
         return tasks.filter { task in
             task.deletedAt == nil && !invalidIDs.contains(task.id)
         }
+    }
+
+    private static func displayPath(components: [String], wasTruncated: Bool) -> String {
+        let path = components.joined(separator: " / ")
+        return wasTruncated ? "… / \(path)" : path
     }
 }
 
@@ -155,27 +225,27 @@ struct TaskTreeFlattener {
         expandedTaskIDs: Set<UUID>
     ) -> [TaskTreeRowModel] {
         var rows: [TaskTreeRowModel] = []
+        var pending = rootTasks.reversed().map { (task: $0, depth: 0) }
+        var visited = Set<UUID>()
 
-        func append(_ task: TaskNode, depth: Int) {
+        while let current = pending.popLast() {
+            guard visited.insert(current.task.id).inserted else { continue }
+            let task = current.task
             let childTasks = children(task)
             let isExpanded = expandedTaskIDs.contains(task.id)
             rows.append(
                 TaskTreeRowModel(
                     taskID: task.id,
-                    depth: depth,
+                    depth: current.depth,
                     hasChildren: !childTasks.isEmpty,
                     isExpanded: isExpanded
                 )
             )
 
-            guard isExpanded else { return }
-            for child in childTasks {
-                append(child, depth: depth + 1)
+            guard isExpanded else { continue }
+            for child in childTasks.reversed() {
+                pending.append((task: child, depth: current.depth + 1))
             }
-        }
-
-        for task in rootTasks {
-            append(task, depth: 0)
         }
         return rows
     }
@@ -188,7 +258,7 @@ extension TaskTreeService {
         categoryIDByRootTaskID: [UUID: UUID]
     ) -> [TaskTreeCategorySectionModel] {
         let categories = categories.deduplicatedByID()
-        let categoryByID = categories.filter { $0.deletedAt == nil }.latestByID()
+        let categoryByID = categories.visibleDeduplicatedByID().latestByID()
         let rootTasksByCategory = Dictionary(grouping: rootTasks) { task -> UUID? in
             guard let categoryID = categoryIDByRootTaskID[task.id], categoryByID[categoryID] != nil else { return nil }
             return categoryID

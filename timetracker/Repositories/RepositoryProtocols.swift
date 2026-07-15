@@ -1,6 +1,7 @@
 import Foundation
 
 protocol TaskRepository {
+    @discardableResult func repairInvalidHierarchy() throws -> Set<UUID>
     func allNodes() throws -> [TaskNode]
     func rootNodes() throws -> [TaskNode]
     func children(of parentID: UUID?) throws -> [TaskNode]
@@ -19,6 +20,11 @@ protocol TaskRepository {
     func setTaskStatus(taskID: UUID, status: TaskStatus) throws
     func archiveTask(taskID: UUID) throws
     func softDeleteTask(taskID: UUID) throws
+}
+
+extension TaskRepository {
+    @discardableResult
+    func repairInvalidHierarchy() throws -> Set<UUID> { [] }
 }
 
 protocol TimeTrackingRepository {
@@ -40,11 +46,17 @@ protocol PomodoroRepository {
     func runs() throws -> [PomodoroRun]
     func activeRuns() throws -> [PomodoroRun]
     @discardableResult func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, longBreakSeconds: Int?, targetRounds: Int) throws -> PomodoroRun
-    func completeFocus(runID: UUID) throws
+    func completeFocus(runID: UUID, endedAt: Date) throws
+    func completeBreak(runID: UUID) throws
     func cancel(runID: UUID, discardRecord: Bool) throws
+    @discardableResult func reconcileExpiredPhase(runID: UUID, now: Date) throws -> Bool
 }
 
 extension PomodoroRepository {
+    func completeFocus(runID: UUID) throws {
+        try completeFocus(runID: runID, endedAt: Date())
+    }
+
     func cancel(runID: UUID) throws {
         try cancel(runID: runID, discardRecord: false)
     }
@@ -55,5 +67,13 @@ enum TaskRepositoryError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         AppStrings.localized("task.error.invalidMove")
+    }
+}
+
+enum TimeTrackingRepositoryError: LocalizedError, Equatable {
+    case invalidTimeRange
+
+    var errorDescription: String? {
+        AppStrings.localized("time.endAfterStart")
     }
 }

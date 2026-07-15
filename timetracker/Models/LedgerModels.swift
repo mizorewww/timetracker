@@ -76,6 +76,17 @@ final class TimeSession {
     }
 }
 
+extension TimeSession {
+    /// Refreshes the conflict metadata together with every persisted content
+    /// mutation so equal-timestamp CloudKit conflicts represent the latest
+    /// writer rather than the device that originally created the session.
+    func markMutated(at date: Date, deviceID: String) {
+        updatedAt = date
+        self.deviceID = deviceID
+        clientMutationID = UUID()
+    }
+}
+
 @Model
 final class TimeSegment {
     var id: UUID = UUID()

@@ -1,17 +1,11 @@
 import SwiftUI
 
-struct OverlappingTimelineCard: View {
-    let timeline: AnalyticsTimelineSnapshot
-
-    var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.timeline.title"), subtitle: AppStrings.localized("analytics.timeline.subtitle")) {
-            OverlappingTimelineContent(timeline: timeline)
-        }
-    }
-}
-
 struct OverlappingTimelineContent: View {
     let timeline: AnalyticsTimelineSnapshot
+    @Environment(\.dynamicTypeSize) var dynamicTypeSize
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
     var displayInterval: DateInterval {
         timeline.displayInterval ?? DateInterval(start: Date(timeIntervalSince1970: 0), duration: 1)
@@ -33,9 +27,11 @@ struct OverlappingTimelineContent: View {
                 if isCompact {
                     verticalTimeline
                         .frame(height: 520)
+                        .accessibilityHidden(true)
                 } else {
                     horizontalTimeline
                         .frame(height: horizontalTimelineHeight)
+                        .accessibilityHidden(true)
                 }
 
                 Divider()
@@ -55,7 +51,7 @@ struct OverlappingTimelineContent: View {
 
     var isCompact: Bool {
         #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone
+        horizontalSizeClass == .compact
         #else
         false
         #endif

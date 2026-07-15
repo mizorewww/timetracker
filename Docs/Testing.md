@@ -1,5 +1,9 @@
 # Testing
 
+Status: current verification policy
+
+Reviewed: 2026-07-15
+
 ## Baseline Commands
 
 Unit tests on macOS:
@@ -13,6 +17,15 @@ Build for iOS device:
 ```sh
 xcodebuild build -project timetracker.xcodeproj -scheme timetracker -destination 'generic/platform=iOS'
 ```
+
+Final signed Release builds:
+
+```sh
+xcodebuild build -project timetracker.xcodeproj -scheme timetracker -configuration Release -destination 'generic/platform=iOS'
+xcodebuild build -project timetracker.xcodeproj -scheme timetracker -configuration Release -destination 'platform=macOS,arch=arm64'
+```
+
+Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`. Do not add `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO`, or an empty team to make these commands pass. Simulator `Sign to Run Locally` is expected and is not device entitlement evidence.
 
 Scheme visibility check:
 
@@ -33,24 +46,44 @@ Signed export:
 - Every new feature should first document its expected behavior in `Docs/Architecture.md`, `Docs/ArchitecturePlan.md`, or a focused feature note, then add failing tests before implementation. If the behavior is UI-only, write the acceptance checklist before changing layout code.
 - Gross vs wall-clock aggregation.
 - Task tree moves and cycle prevention.
+- Task hierarchy normalization: missing parent/cycle repair, canonical `/<UUID>` locator, derived title paths, bounded display depth, and no descendant write amplification on same-depth moves.
+- Task availability boundaries: Today picker, Quick Start, Pomodoro, manual entry, Inbox suggestion, App Intent, and task actions agree on archived/deleted ancestors; archiving a running subtree requires stopping first, while editing an existing historical segment may retain its original task.
 - Timer start and stop semantics.
-- Pomodoro and timer ledger synchronization.
-- Manual time edit/delete behavior.
-- Demo data and database optimization safety.
+- Pomodoro persisted-phase deadline reconciliation: background/startup clipping, idempotency, explicit break continuation, generic timer stop, active segment edit/delete, and task-tree deletion consistency.
+- Manual time edit/delete behavior, including active Pomodoro rebind/cancel/tombstone invariants.
+- Demo data isolation: Debug/Release default off, separate local demo store, no CloudKit, UI-test in-memory store. Production tombstone purge must stay disabled; isolated Demo/UI Test purge only removes expired tombstone graphs.
 - Timeline lane layout for overlaps, adjacent tasks, and cross-day segments.
-- Synced user preferences, including legacy UserDefaults import and the local iCloud startup mirror.
+- Synced user preferences, including legacy UserDefaults import. Test iCloud enablement separately as device-local startup state, including next-launch behavior and filtering of the historical synced key.
 - Checklist add/update/delete/sort behavior and recursive rollup forecasting, including `0 completed`, `0 tracked time`, completion to `0` remaining, and parent/child forecast display rules.
 - Store refresh planning: each user invalidation event must map to domain-sized refresh scopes, carry affected task IDs where available, and combined invalidations must not silently escalate to a full refresh.
+- Observation and external refresh: the main facade stays `@Observable` without `@Published`; CloudKit/remote-store notifications coalesce correctly, foreground activation refreshes once, and no permanent polling timer is reintroduced.
+- Deterministic sync: entity and preference LWW behavior is input-order independent, equal-time tombstones win, restored newer rows remain active, and duplicate cleanup cannot overwrite the canonical row.
+- Atomic writes: a multi-step store/system action saves once, rolls back all pending changes when any step/final save fails, and does not call an already committed mutation a failure when only post-commit refresh fails.
+- Sync snapshot scope: Local/Demo/UI Test writes skip conflict capture; CloudKit/recovery writes refresh only domains selected by `StoreDomainEvent`; full import/baseline still captures all domains.
+- Sync state serialization: same-process and external-process file-lock mutual exclusion, no lost update between service instances, authoritative-state quarantine/mirror precedence, corrupt pending-mirror quarantine without blocking the main store, bounded checkpoints, epoch/generation matching, failed and out-of-order export callbacks, and legacy excluded-preference scrubbing that invalidates checkpoints tied to the old fingerprint.
+- Snapshot restore hardening: deterministic duplicate-UUID collapse before three-way dictionaries, atomic per-domain restore, hierarchy normalization, and Pomodoro focus/break/long-break/round/completed-range clamps for malformed or historical payloads.
+- Local file protection: on iOS the authoritative sync state, pending forced-upload mirror, and corrupt-state quarantine files resolve to `completeUntilFirstUserAuthentication`; test the first-unlock/background availability contract without treating the lock file as user data.
+- System actions: App Intents reuse the application model container, respect the parallel-timer preference, filter tombstone/archived tasks, obey recovery read-only mode, and refresh Widget/Watch/Live Activity only after commit without converting projection failure into mutation failure.
+- Calendar boundaries and caching: 23/25-hour DST days, cross-midnight intervals, same-day clipped subranges, cache-key separation, and local invalidation.
+- LLM transport: valid localhost/IPv4/IPv6 loopback, spoofed loopback names, remote HTTP, same-origin redirect, cross-host/port redirect, and HTTPS downgrade.
+- LLM configuration: Test→Save draft normalization, stale request cancellation, valid model gating, one batched preference save, Keychain compensation on preference failure, discard confirmation, device-only Keychain migration/filtering, and automatic suggestions default-off/local-only consent.
+- Privacy-complete reset: successful “clear all” removes the Keychain API key and device-local automatic-suggestion consent; an injected SwiftData failure restores both external values and leaves the device-local iCloud startup switch unchanged.
+- Watch command lifecycle: persistent queue encoding, seven terminal statuses, durable result payload, 20-second timeout, retry with the same ID, discard, duplicate idempotency, and legacy snapshot-reflection compatibility.
+- Incremental read models: range-scoped ledger/session replacement, task-scoped checklist/visual replacement, rollup delta plus ancestor propagation, 90-local-day active-day pace window, active-segment tick, and equality with a full rebuild.
+- Analytics caches: same-period hits, cross-day/week/month misses, task-specific keys, active-only minute buckets, mutation invalidation, and intersecting ledger day-bucket invalidation.
 - Command handlers: durable writes such as timer, task, pomodoro, ledger, countdown, checklist, and preference changes must have behavior tests at the command boundary before UI wiring changes.
 - Project structure: app and extension schemes must remain shared and source-controlled; filesystem moves should be followed by `xcodebuild -list` plus a generic iOS build.
+- Platform declarations: verify main App `1C8F.1`/`CA92.1`, Widget `1C8F.1`, and Watch `CA92.1` Privacy manifest reasons against actual UserDefaults/App Group use, and verify no `CADisableMinimumFrameDurationOnPhone` override is reintroduced without a measured, reviewed need.
 - Project map: semantic folder moves should update `Docs/ProjectMap.md`, and source layout tests should keep the map aligned with current folders and feature entry points.
 - Month analytics labels using real day numbers rather than repeated weekday names.
-- Localization key parity across English, Simplified Chinese, and Traditional Chinese.
+- Localization key parity across English, Simplified Chinese, and Traditional Chinese. `Localizable.strings` is covered for the main app, Live Activity, Widget, and Watch; main-app `AppShortcuts.strings` and every target's `InfoPlist.strings` also require a direct parity/plist check because the current localization unit suite does not cover those two resource families.
 - No hard-coded Chinese text in Swift source files.
 
 ## UI Testing
 
 UI tests should rely on accessibility identifiers for core controls, not translated strings, whenever possible.
+
+The root-flow matrix must cover iPhone five-tab navigation plus Today-hosted Settings, iPad/macOS split navigation, sidebar-to-task-detail routing, read-first Task Detail edit entry, searchable start-task picker, visible timeline action menu, Settings categories, AI Test→Save draft/discard, and explicit Pomodoro Plan/Task menus. On macOS verify there is one main app window and that the standard Settings scene shares live state without duplicating automatic work. At minimum, manually inspect light/dark appearance, the largest accessibility Dynamic Type size, long localized task names, VoiceOver chart values, destructive confirmations, and bottom-of-list actions that could be obscured by the tab bar.
 
 ## Performance And Smoothness Verification
 
@@ -58,7 +91,7 @@ Runtime smoothness is a product requirement. The app should not feel slower than
 
 Use two complementary checks:
 
-1. Automated performance budget tests for deterministic domain work. These belong in `CorePerformanceBudgetTests` and should cover analytics snapshots, day-bucket summaries, overlap detection, task tree flattening, checklist rollups, and timeline layout. They protect against accidental algorithmic regressions during refactors.
+1. Automated performance budget tests for deterministic domain work. These belong in `CorePerformanceBudgetTests` and cover analytics snapshots, day-bucket summaries, overlap detection, task tree flattening, checklist rollups, timeline layout, and a 50,000-segment single-record rollup mutation plus cached recent-task ranking. The current alarms are `< 0.25 s` for incremental refresh and `< 0.10 s` for cached ranking. The incremental result must equal a fresh full rebuild; these wall-time thresholds are regression alarms for the test environment, not a device SLA.
 2. Release profiling on macOS and real iPhone/iPad for frame pacing, scrolling, chart drawing, resize behavior, sheet presentation, and touch latency. These cannot be proven reliably by unit tests because SwiftUI rendering, device thermals, refresh rate, and OS scheduling all affect the result.
 
 Before attempting performance fixes:
@@ -86,8 +119,19 @@ Manual macOS smoothness checklist:
 3. Scroll Today timeline, Tasks, and Analytics.
 4. Open and close task editor, settings, and manual time entry.
 5. Start and stop timers while Today is visible.
-6. Switch Today, Tasks, Pomodoro, Analytics, and Settings several times.
+6. Switch Today, Tasks, Pomodoro, and Analytics several times, then repeatedly open and close Settings from its platform-standard entry.
 7. Verify that no action causes visible multi-frame pauses in Release.
+
+For an iOS Simulator, use the Time Profiler template because the SwiftUI instrument lane is empty there. For a real iPhone/iPad or host Mac, use the SwiftUI template. Record the exact app PID/installation used, then confirm the `.trace` is nonempty before drawing conclusions.
+
+Simulator cleanup is part of every screenshot/profile run, not a final courtesy step. Keep the exact UDID in `SIMULATOR_UDID`, then run:
+
+```sh
+xcrun simctl shutdown "$SIMULATOR_UDID"
+xcrun simctl list devices
+```
+
+Confirm the simulator started by the run is no longer `Booted`, and verify no XCTest runner or trace process from that run remains. If multiple sessions share CoreSimulator, shut down only the UDID owned by this run rather than disrupting another session.
 
 ## Device Verification
 
@@ -98,3 +142,7 @@ Before handing a build to manual testing:
 3. Build a generic iOS device archive or export signed artifacts.
 4. Install the exported iOS app bundle on the paired iPad and iPhone with `devicectl`.
 5. Launch the app once on each device to catch signing, extension, and launch-time persistence failures.
+
+## Final Evidence Record
+
+Only the last run against the frozen source state is the final result. Record its commands, pass/fail/skip counts, xcresult paths, signing identity/profile/entitlement checks, simulator screenshots, trace, and simulator shutdown check in [Audit-2026-07-14](Audit-2026-07-14.md) under “最终证据槽位”. Targeted suites and earlier green builds remain useful diagnostics but cannot be added together and presented as one full pass. As of this documentation pass, the complete unit/UI suites, final signed Release builds, final screenshots, frozen-source trace, and shutdown audit remain explicit placeholders until the main task reruns them.

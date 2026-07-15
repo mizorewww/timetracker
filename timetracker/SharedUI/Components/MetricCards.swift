@@ -36,6 +36,7 @@ enum MetricTextAlignment {
 struct MetricCell: View {
     let metric: MetricSummaryItem
     var compact: Bool = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: metric.alignment.horizontalAlignment, spacing: compact ? 4 : 6) {
@@ -43,65 +44,36 @@ struct MetricCell: View {
                 Image(systemName: metric.iconName)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(metric.tint)
+                    .accessibilityHidden(true)
                 Text(metric.title)
                     .font((compact ? Font.caption2 : Font.caption).weight(.medium))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                    .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.82)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
 
             Text(metric.value)
-                .font(.system(size: compact ? 20 : 24, weight: .semibold, design: .rounded))
+                .font((compact ? Font.title3 : Font.title2).weight(.semibold).monospacedDigit())
                 .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.72)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
 
             Text(metric.trendText)
                 .font(.caption2)
                 .foregroundStyle(metric.trendColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
         }
         .frame(maxWidth: .infinity, alignment: metric.alignment.frameAlignment)
         .padding(.horizontal, compact ? 4 : 10)
-    }
-}
-
-struct AnalyticsMetric: View {
-    let title: String
-    let value: String
-    let footnote: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title2.weight(.semibold))
-                .monospacedDigit()
-            Text(footnote)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard()
-    }
-}
-
-struct AnalyticsChartCard<Content: View>: View {
-    let title: String
-    var subtitle: String?
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            AppSectionHeader(title: title, subtitle: subtitle)
-            content
-        }
-        .appCard()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(metric.title)
+        .accessibilityValue("\(metric.value), \(metric.trendText)")
     }
 }

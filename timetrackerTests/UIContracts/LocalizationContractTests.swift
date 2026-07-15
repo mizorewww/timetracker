@@ -92,4 +92,17 @@ struct LocalizationContractTests {
             #expect(chinesePattern.firstMatch(in: source, range: range) == nil, "Move user-facing Chinese text into Localizable.strings: \(file.lastPathComponent)")
         }
     }
+
+    @Test
+    func destructiveResetWarningNamesLocalCredentialsAndConsent() throws {
+        let projectRoot = try projectRootURL()
+        let englishPath = projectRoot.appending(path: "timetracker/en.lproj/Localizable.strings").path
+        let english = try #require(NSDictionary(contentsOfFile: englishPath) as? [String: String])
+        let warning = try #require(english["dialog.resetData.message"])
+
+        #expect(warning.contains("local LLM API key"))
+        #expect(warning.contains("automatic-suggestion consent"))
+        #expect(english["task.action.archive.stopFirst"] != nil)
+        #expect(english["task.archived.trackingUnavailable"] != nil)
+    }
 }

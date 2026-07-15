@@ -39,8 +39,8 @@ struct TaskChecklistEditorSection: View {
             ChecklistEditorRow(
                 item: $checklistItems[placement.sourceIndex],
                 isSorting: isSorting,
-                canMoveUp: canMove(visualIndex: placement.visualIndex, direction: -1),
-                canMoveDown: canMove(visualIndex: placement.visualIndex, direction: 1),
+                canMoveUp: canMove(placement: placement, direction: -1),
+                canMoveDown: canMove(placement: placement, direction: 1),
                 moveUp: { moveChecklistItem(visualIndex: placement.visualIndex, direction: -1) },
                 moveDown: { moveChecklistItem(visualIndex: placement.visualIndex, direction: 1) },
                 delete: { deleteChecklistItem(at: placement.sourceIndex) },
@@ -72,23 +72,20 @@ struct TaskChecklistEditorSection: View {
 
     private func moveChecklistItem(visualIndex: Int, direction: Int) {
         let destination = direction < 0 ? visualIndex - 1 : visualIndex + 2
-        guard canMove(visualIndex: visualIndex, direction: direction) else { return }
+        guard rowPlacements.indices.contains(visualIndex),
+              canMove(placement: rowPlacements[visualIndex], direction: direction) else { return }
         moveChecklistItems(IndexSet(integer: visualIndex), destination)
     }
 
-    private func canMove(visualIndex: Int, direction: Int) -> Bool {
-        let destination = direction < 0 ? visualIndex - 1 : visualIndex + 2
-        let elements = rowPlacements.map { placement in
-            ChecklistOrderingElement(
-                id: placement.id,
-                isCompleted: checklistItems[placement.sourceIndex].isCompleted
-            )
+    private func canMove(placement: ChecklistEditorRowPlacement, direction: Int) -> Bool {
+        let neighborVisualIndex = placement.visualIndex + direction
+        guard orderedChecklistIndices.indices.contains(neighborVisualIndex),
+              checklistItems.indices.contains(placement.sourceIndex),
+              checklistItems.indices.contains(orderedChecklistIndices[neighborVisualIndex]) else {
+            return false
         }
-        return ChecklistOrderingService().canMove(
-            elements: elements,
-            sourceOffsets: IndexSet(integer: visualIndex),
-            destination: destination
-        )
+        let neighborSourceIndex = orderedChecklistIndices[neighborVisualIndex]
+        return checklistItems[placement.sourceIndex].isCompleted == checklistItems[neighborSourceIndex].isCompleted
     }
 
     private func deleteChecklistItem(at index: Int) {

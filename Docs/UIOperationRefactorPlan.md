@@ -1,6 +1,10 @@
 # UI and Operation Refactor Plan
 
-This document is the working memory for the UI/operation refactor. Keep it updated after every solved item by changing `[ ]` to `[x]`, adding the verification command or screenshot note, and recording any remaining risk. If context is compacted, resume from the highest unchecked item in "Execution Checklist".
+> Historical snapshot: this was the working plan for an earlier UI/operation refactor. It is retained for rationale and verification history, but it is not the current product or architecture specification. For current behavior use [UserGuide](UserGuide.md), [CodeGuide](CodeGuide.md), and [AgentDecisions](AgentDecisions.md). Unchecked items below are historical unless they are re-triaged into a current plan.
+
+Freeze notice: everything below this paragraph is retained verbatim as historical working memory. Imperative phrases such as “source of truth,” “must,” “resume,” or “keep updated” are no longer active instructions, and unchecked boxes are not current backlog. Do not continue from this file; re-triage any still-relevant item into [NextDevelopmentPlan](NextDevelopmentPlan.md) first.
+
+At the time of the snapshot, the following paragraph described the old workflow: this document was the working memory for the UI/operation refactor, and solved items were marked with verification evidence.
 
 ## Product Intent
 
@@ -24,8 +28,8 @@ This means the app is not a generic task manager. Time evidence, day context, an
 - After changing UI, run the smallest relevant test slice first, then broader build/tests.
 - After every simulator/screenshot pass, append device, command, file path, observations, and next fix.
 - Baseline simulator/app screenshots must happen before any new image generation. The image-generation prompt must reference the real screenshots and the app intent, then the generated design becomes a direction to implement and verify back in the simulators.
-- Baseline screenshots must use representative demo data. The app reads `TimeTrackerAutomaticDemoDataMode` from the generated Info.plist via `TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE`: Debug defaults to `seedIfEmpty`, Release defaults to `off`, and screenshot builds may override it to `replaceOnLaunch`.
-- Demo-data modes force a local store before seeding so screenshot/demo data is never written into iCloud.
+- Baseline screenshots must use representative demo data. The app reads `TimeTrackerAutomaticDemoDataMode` from the generated Info.plist via `TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE`: Debug and Release both default to `off`; screenshot builds must explicitly override it to `replaceOnLaunch`.
+- Explicit demo-data modes use the isolated `TimeTracker-Demo.store`, so screenshot/demo data can neither replace the normal local database nor enter iCloud.
 - Do not move date navigation to Home unless the product goal explicitly changes. Date navigation belongs in Analytics.
 - Task row tap must open Task Detail. Editing is a secondary action inside detail, swipe actions, or context menus.
 - If context is compacted, run `git status --short --branch`, read this document, and continue from the first unchecked item.

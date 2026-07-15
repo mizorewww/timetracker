@@ -4,4 +4,13 @@
 "widget.empty.title" = "No active timer";
 "widget.empty.message" = "Start tracking from Time Tracker.";
 "widget.action.start" = "Start Timer";
+"widget.action.open" = "Open Time Tracker";
 "widget.quickStart.title" = "Quick Start";
+"widget.preview.task" = "Build weekly report";
+"widget.preview.path" = "Work";
+"widget.elapsed.label" = "Elapsed time";
+"widget.stale.label" = "Last updated";
+"widget.unavailable.title" = "Open Time Tracker";
+"widget.unavailable.message" = "Open the app to load your timers.";
+"widget.corrupted.title" = "Refresh required";
+"widget.corrupted.message" = "Open the app to refresh this widget.";

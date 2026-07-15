@@ -160,7 +160,7 @@ enum CloudSyncSmokeTestRunner {
 
     private static func visibleTasks(context: ModelContext) throws -> [TaskNode] {
         try context.fetch(FetchDescriptor<TaskNode>())
-            .filter { $0.deletedAt == nil }
+            .visibleDeduplicatedByID()
     }
 
     private static func logVisibleState(context: ModelContext, prefix: String) {

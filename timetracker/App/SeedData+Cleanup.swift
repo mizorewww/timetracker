@@ -1,7 +1,17 @@
+import Foundation
 import SwiftData
 
 extension SeedData {
     static func clearDemoData(context: ModelContext) throws {
+        try context.performAtomicMutation {
+            try clearDemoDataChanges(context: context)
+        }
+        setAutomaticDemoSeedingDisabled(true)
+    }
+
+    private static func clearDemoDataChanges(context: ModelContext) throws {
+        let now = Date()
+        let deviceID = DeviceIdentity.current
         let demoTasks = try context.fetch(FetchDescriptor<TaskNode>()).filter { $0.deviceID == "demo" }
         let demoTaskIDs = Set(demoTasks.map(\.id))
         let demoSessions = try context.fetch(FetchDescriptor<TimeSession>()).filter {
@@ -9,94 +19,94 @@ extension SeedData {
         }
         let demoSessionIDs = Set(demoSessions.map(\.id))
 
-        for model in try context.fetch(FetchDescriptor<DailySummary>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<PomodoroRun>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) }) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TimeSegment>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) || demoSessionIDs.contains($0.sessionID) }) {
-            context.delete(model)
-        }
-        for model in demoSessions {
-            context.delete(model)
-        }
+        tombstone(
+            try context.fetch(FetchDescriptor<PomodoroRun>()).filter {
+                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+            },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(
+            try context.fetch(FetchDescriptor<TimeSegment>()).filter {
+                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) || demoSessionIDs.contains($0.sessionID)
+            },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(demoSessions, now: now, deviceID: deviceID)
         let demoChecklistItems = try context.fetch(FetchDescriptor<ChecklistItem>()).filter { demoTaskIDs.contains($0.taskID) }
         let demoChecklistIDs = Set(demoChecklistItems.map(\.id))
-        for model in demoChecklistItems {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<ChecklistItemVisual>()).filter({ $0.deviceID == "demo" || demoChecklistIDs.contains($0.checklistItemID) }) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<InboxSuggestion>()).filter({ $0.deviceID == "demo" }) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<InboxItem>()).filter({ $0.deviceID == "demo" }) {
-            context.delete(model)
-        }
-        for model in demoTasks {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TaskCategory>()).filter({ $0.deviceID == "demo" }) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).filter({ $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) }) {
-            context.delete(model)
-        }
-        try context.save()
-        setAutomaticDemoSeedingDisabled(true)
+        tombstone(demoChecklistItems, now: now, deviceID: deviceID)
+        tombstone(
+            try context.fetch(FetchDescriptor<ChecklistItemVisual>()).filter {
+                $0.deviceID == "demo" || demoChecklistIDs.contains($0.checklistItemID)
+            },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(
+            try context.fetch(FetchDescriptor<InboxSuggestion>()).filter {
+                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+            },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(
+            try context.fetch(FetchDescriptor<InboxItem>()).filter { $0.deviceID == "demo" },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(demoTasks, now: now, deviceID: deviceID)
+        tombstone(
+            try context.fetch(FetchDescriptor<TaskCategory>()).filter { $0.deviceID == "demo" },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(
+            try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).filter {
+                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+            },
+            now: now,
+            deviceID: deviceID
+        )
+        try context.saveAfterMutationStep()
     }
 
-    static func clearAll(
+    static func clearAllChanges(
         context: ModelContext,
-        disablesAutomaticDemoSeeding: Bool,
         includesPreferences: Bool
     ) throws {
-        for model in try context.fetch(FetchDescriptor<DailySummary>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<CountdownEvent>()) {
-            context.delete(model)
-        }
+        let now = Date()
+        let deviceID = DeviceIdentity.current
+        // CloudKit user-fact models retain a tombstone so offline devices receive
+        // the reset instead of resurrecting old rows.
+        tombstone(try context.fetch(FetchDescriptor<CountdownEvent>()), now: now, deviceID: deviceID)
         if includesPreferences {
-            for model in try context.fetch(FetchDescriptor<SyncedPreference>()) {
-                context.delete(model)
-            }
+            tombstone(try context.fetch(FetchDescriptor<SyncedPreference>()), now: now, deviceID: deviceID)
         }
-        for model in try context.fetch(FetchDescriptor<PomodoroRun>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TimeSegment>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TimeSession>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<ChecklistItem>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<ChecklistItemVisual>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<InboxSuggestion>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<InboxItem>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TaskNode>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TaskCategory>()) {
-            context.delete(model)
-        }
-        for model in try context.fetch(FetchDescriptor<TaskCategoryAssignment>()) {
-            context.delete(model)
-        }
-        try context.save()
-        if disablesAutomaticDemoSeeding {
-            setAutomaticDemoSeedingDisabled(true)
+        tombstone(try context.fetch(FetchDescriptor<PomodoroRun>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TimeSegment>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TimeSession>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<ChecklistItem>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<ChecklistItemVisual>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<InboxSuggestion>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<InboxItem>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskNode>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskCategory>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()), now: now, deviceID: deviceID)
+        try context.saveAfterMutationStep()
+    }
+
+    private static func tombstone<Model>(
+        _ models: [Model],
+        now: Date,
+        deviceID: String
+    ) where Model: SoftDeletablePersistentUUIDModel {
+        for model in models {
+            model.deletedAt = now
+            model.updatedAt = now
+            model.deviceID = deviceID
+            (model as? ClientMutationTrackedModel)?.clientMutationID = UUID()
         }
     }
 }

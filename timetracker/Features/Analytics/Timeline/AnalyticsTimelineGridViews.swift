@@ -31,7 +31,7 @@ extension OverlappingTimelineContent {
 
     func horizontalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach(hourTicks().filter { !axisCompression.isInsideOmittedGap($0) }, id: \.self) { tick in
+            ForEach(visibleHourTicks, id: \.self) { tick in
                 let ratio = axisCompression.ratio(for: tick)
                 let x = width * CGFloat(ratio)
                 VStack(alignment: .leading, spacing: 4) {
@@ -52,7 +52,7 @@ extension OverlappingTimelineContent {
 
     func verticalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach(hourTicks().filter { !axisCompression.isInsideOmittedGap($0) }, id: \.self) { tick in
+            ForEach(visibleHourTicks, id: \.self) { tick in
                 let ratio = axisCompression.ratio(for: tick)
                 let y = height * CGFloat(ratio)
                 HStack(spacing: 8) {
@@ -132,6 +132,10 @@ extension OverlappingTimelineContent {
             result.append(displayInterval.end)
         }
         return result
+    }
+
+    var visibleHourTicks: [Date] {
+        hourTicks().filter { !axisCompression.isInsideOmittedGap($0) }
     }
 
     func hourLabel(_ date: Date) -> String {

@@ -13,7 +13,15 @@ struct AddInboxItemIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         let context = SystemActionContextProvider.makeContext()
-        try SystemActionCommandHandler().addInboxItem(title: titleText, context: context)
+        let itemID = try SystemActionCommandHandler().addInboxItem(title: titleText, context: context)
+        if let itemID {
+            let events: Set<StoreDomainEvent> = [.inboxChanged(itemIDs: [itemID])]
+            CommittedMutationSnapshotRecorder().recordLocalMutation(
+                context: context,
+                events: events
+            )
+            CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
+        }
         return .result()
     }
 }
@@ -30,11 +38,25 @@ struct StartTimerIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let context = SystemActionContextProvider.makeContext()
         let taskID = try task.uuid()
-        try SystemActionCommandHandler().startTimer(
+        let commandHandler = SystemActionCommandHandler()
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context)
+        let activeSegmentsBefore = try timeRepository.activeSegments()
+        _ = try commandHandler.startTimer(
             taskID: taskID,
-            allowParallelTimers: true,
+            allowParallelTimers: try commandHandler.allowParallelTimersPreference(context: context),
             context: context
         )
+        let events = TimerActiveSetMutationService().events(
+            beforeActiveSegments: activeSegmentsBefore,
+            afterActiveSegments: try timeRepository.activeSegments()
+        )
+        if events.isEmpty == false {
+            CommittedMutationSnapshotRecorder().recordLocalMutation(
+                context: context,
+                events: events
+            )
+            CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
+        }
         return .result()
     }
 }
@@ -47,7 +69,25 @@ struct StopTimerIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         let context = SystemActionContextProvider.makeContext()
-        try SystemActionCommandHandler().stopTimer(taskID: nil, context: context)
+        let targetSegment = try SwiftDataTimeTrackingRepository(context: context)
+            .activeSegments()
+            .last
+        let segmentID = try SystemActionCommandHandler().stopTimer(taskID: nil, context: context)
+        if segmentID != nil, let targetSegment {
+            let events: Set<StoreDomainEvent> = [
+                .ledgerChanged(taskID: targetSegment.taskID, dateInterval: nil, isVisible: true),
+                .pomodoroChanged(
+                    runID: nil,
+                    sessionID: targetSegment.sessionID,
+                    taskID: targetSegment.taskID
+                )
+            ]
+            CommittedMutationSnapshotRecorder().recordLocalMutation(
+                context: context,
+                events: events
+            )
+            CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
+        }
         return .result()
     }
 }
@@ -139,16 +179,16 @@ struct TaskNodeEntityQuery: EntityStringQuery {
     @MainActor
     private func fetchTaskEntities() throws -> [TaskNodeAppEntity] {
         let context = SystemActionContextProvider.makeContext()
-        let descriptor = FetchDescriptor<TaskNode>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.createdAt)]
-        )
-        let tasks = try context.fetch(descriptor)
-        return tasks.map { task in
+        let tasks = try SwiftDataTaskRepository(context: context)
+            .allNodes()
+        let trackableTaskIDs = TaskTrackingAvailabilityService().trackableTaskIDs(tasks: tasks)
+        let trackableTasks = tasks.filter { trackableTaskIDs.contains($0.id) }
+        let parentPathByID = TaskTreeService().indexes(tasks: trackableTasks).taskParentPathByID
+        return trackableTasks.map { task in
             TaskNodeAppEntity(
                 id: task.id.uuidString,
                 title: task.title,
-                path: task.path
+                path: parentPathByID[task.id] ?? ""
             )
         }
     }
@@ -157,6 +197,6 @@ struct TaskNodeEntityQuery: EntityStringQuery {
 @MainActor
 enum SystemActionContextProvider {
     static func makeContext() -> ModelContext {
-        ModelContext(timetrackerApp.makeModelContainer())
+        ModelContext(timetrackerApp.applicationModelContainer)
     }
 }

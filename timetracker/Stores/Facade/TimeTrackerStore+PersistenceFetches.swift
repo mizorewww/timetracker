@@ -5,7 +5,6 @@ extension TimeTrackerStore {
     func fetchSyncedPreferences() throws -> [SyncedPreference] {
         guard let modelContext else { return [] }
         let descriptor = FetchDescriptor<SyncedPreference>(
-            predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [
                 SortDescriptor(\.key),
                 SortDescriptor(\.updatedAt, order: .reverse)
@@ -14,46 +13,33 @@ extension TimeTrackerStore {
         let all = try modelContext.fetch(descriptor)
         return SyncedPreferenceService.latestByKey(all.deduplicatedByID())
             .values
+            .filter { $0.deletedAt == nil && SyncedPreferenceService.shouldSyncKey($0.key) }
             .sorted { $0.key < $1.key }
     }
 
     func fetchChecklistItems() throws -> [ChecklistItem] {
         guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<ChecklistItem>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.taskID),
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try modelContext.fetch(descriptor).deduplicatedByID()
+        return try modelContext.fetch(FetchDescriptor<ChecklistItem>())
+            .visibleDeduplicatedByID()
+            .sorted(by: checklistItemOrder)
     }
 
     func fetchChecklistItems(taskIDs: Set<UUID>) throws -> [ChecklistItem] {
         guard let modelContext, taskIDs.isEmpty == false else { return [] }
         let requestedTaskIDs = Array(taskIDs)
         let descriptor = FetchDescriptor<ChecklistItem>(
-            predicate: #Predicate { requestedTaskIDs.contains($0.taskID) && $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.taskID),
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
+            predicate: #Predicate { requestedTaskIDs.contains($0.taskID) }
         )
-        return try modelContext.fetch(descriptor).deduplicatedByID()
+        return try modelContext.fetch(descriptor)
+            .visibleDeduplicatedByID()
+            .filter { taskIDs.contains($0.taskID) }
+            .sorted(by: checklistItemOrder)
     }
 
     func fetchChecklistItemVisuals() throws -> [ChecklistItemVisual] {
         guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<ChecklistItemVisual>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.checklistItemID),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
-        )
-        let all = try modelContext.fetch(descriptor).deduplicatedByID()
+        let all = try modelContext.fetch(FetchDescriptor<ChecklistItemVisual>())
+            .visibleDeduplicatedByID()
         return Dictionary(grouping: all, by: \.checklistItemID)
             .values
             .compactMap { visuals in
@@ -66,13 +52,11 @@ extension TimeTrackerStore {
         guard let modelContext, checklistItemIDs.isEmpty == false else { return [] }
         let requestedItemIDs = Array(checklistItemIDs)
         let descriptor = FetchDescriptor<ChecklistItemVisual>(
-            predicate: #Predicate { requestedItemIDs.contains($0.checklistItemID) && $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.checklistItemID),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
+            predicate: #Predicate { requestedItemIDs.contains($0.checklistItemID) }
         )
-        let all = try modelContext.fetch(descriptor).deduplicatedByID()
+        let all = try modelContext.fetch(descriptor)
+            .visibleDeduplicatedByID()
+            .filter { checklistItemIDs.contains($0.checklistItemID) }
         return Dictionary(grouping: all, by: \.checklistItemID)
             .values
             .compactMap { visuals in
@@ -83,26 +67,19 @@ extension TimeTrackerStore {
 
     func fetchInboxItems() throws -> [InboxItem] {
         guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<InboxItem>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try modelContext.fetch(descriptor).deduplicatedByID()
+        return try modelContext.fetch(FetchDescriptor<InboxItem>())
+            .visibleDeduplicatedByID()
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
     }
 
     func fetchInboxSuggestions() throws -> [InboxSuggestion] {
         guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<InboxSuggestion>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.inboxItemID),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
-        )
-        let all = try modelContext.fetch(descriptor).deduplicatedByID()
+        let all = try modelContext.fetch(FetchDescriptor<InboxSuggestion>())
+            .visibleDeduplicatedByID()
         return Dictionary(grouping: all, by: \.inboxItemID)
             .values
             .compactMap { suggestions in
@@ -115,13 +92,11 @@ extension TimeTrackerStore {
         guard let modelContext, inboxItemIDs.isEmpty == false else { return [] }
         let requestedItemIDs = Array(inboxItemIDs)
         let descriptor = FetchDescriptor<InboxSuggestion>(
-            predicate: #Predicate { requestedItemIDs.contains($0.inboxItemID) && $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.inboxItemID),
-                SortDescriptor(\.updatedAt, order: .reverse)
-            ]
+            predicate: #Predicate { requestedItemIDs.contains($0.inboxItemID) }
         )
-        let all = try modelContext.fetch(descriptor).deduplicatedByID()
+        let all = try modelContext.fetch(descriptor)
+            .visibleDeduplicatedByID()
+            .filter { inboxItemIDs.contains($0.inboxItemID) }
         return Dictionary(grouping: all, by: \.inboxItemID)
             .values
             .compactMap { suggestions in
@@ -132,13 +107,19 @@ extension TimeTrackerStore {
 
     func fetchCountdownEvents() throws -> [CountdownEvent] {
         guard let modelContext else { return [] }
-        let descriptor = FetchDescriptor<CountdownEvent>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.date),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try modelContext.fetch(descriptor).deduplicatedByID()
+        return try modelContext.fetch(FetchDescriptor<CountdownEvent>())
+            .visibleDeduplicatedByID()
+            .sorted { lhs, rhs in
+                if lhs.date != rhs.date { return lhs.date < rhs.date }
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+    }
+
+    private func checklistItemOrder(_ lhs: ChecklistItem, _ rhs: ChecklistItem) -> Bool {
+        if lhs.taskID != rhs.taskID { return lhs.taskID.uuidString < rhs.taskID.uuidString }
+        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }

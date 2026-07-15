@@ -14,9 +14,6 @@ struct TimerCommandHandler {
         context: ModelContext?,
         source: TimeSessionSource = .timer
     ) throws {
-        if activeSegments.contains(where: { $0.taskID == taskID && $0.endedAt == nil && $0.deletedAt == nil }) {
-            return
-        }
         if allowParallelTimers == false {
             try stopOtherActiveSegments(
                 excluding: taskID,
@@ -26,12 +23,19 @@ struct TimerCommandHandler {
                 context: context
             )
         }
+        if activeSegments.contains(where: { $0.taskID == taskID && $0.endedAt == nil && $0.deletedAt == nil }) {
+            return
+        }
         _ = try StartTaskUseCase(repository: timeRepository).execute(taskID: taskID, source: source)
     }
 
     func stop(segment: TimeSegment, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {
-        try StopSegmentUseCase(repository: timeRepository).execute(segmentID: segment.id)
+        // Reconcile/cancel the business run before issuing the generic ledger
+        // stop. An expired Pomodoro clips its session to the persisted phase
+        // deadline here; the idempotent segment stop then has nothing left to
+        // extend to the current wall clock.
         try pomodoroCommandHandler.cancelIfNeeded(sessionID: segment.sessionID, runs: pomodoroRuns, context: context)
+        try StopSegmentUseCase(repository: timeRepository).execute(segmentID: segment.id)
     }
 
     func stopOtherActiveSegments(

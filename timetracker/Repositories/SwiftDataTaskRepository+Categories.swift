@@ -3,37 +3,32 @@ import SwiftData
 
 extension SwiftDataTaskRepository {
     func categories() throws -> [TaskCategory] {
-        let descriptor = FetchDescriptor<TaskCategory>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.sortOrder),
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try context.fetch(descriptor)
+        try context.fetch(FetchDescriptor<TaskCategory>())
+            .visibleDeduplicatedByID()
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
     }
 
     func categoryAssignments() throws -> [TaskCategoryAssignment] {
-        let descriptor = FetchDescriptor<TaskCategoryAssignment>(
-            predicate: #Predicate { $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.createdAt)
-            ]
-        )
-        return try context.fetch(descriptor)
+        try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
+            .visibleDeduplicatedByID()
+            .sorted { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
     }
 
     func category(id: UUID) throws -> TaskCategory? {
         let categoryID = id
-        var descriptor = FetchDescriptor<TaskCategory>(
-            predicate: #Predicate { $0.id == categoryID && $0.deletedAt == nil }
-        )
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
+        let descriptor = FetchDescriptor<TaskCategory>(predicate: #Predicate { $0.id == categoryID })
+        return try context.fetch(descriptor).visibleDeduplicatedByID().first
     }
 
     func categoryID(forRootTaskID taskID: UUID) throws -> UUID? {
-        try activeCategoryAssignment(forRootTaskID: taskID)?.categoryID
+        try activeCategoryAssignments(forRootTaskID: taskID).first?.categoryID
     }
 
     @discardableResult
@@ -53,7 +48,7 @@ extension SwiftDataTaskRepository {
             sortOrder: (existing.last?.sortOrder ?? 0) + 10
         )
         context.insert(category)
-        try context.save()
+        try context.saveAfterMutationStep()
         return category
     }
 
@@ -71,7 +66,7 @@ extension SwiftDataTaskRepository {
         category.includesInForecast = includesInForecast
         category.updatedAt = Date()
         category.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func softDeleteCategory(categoryID: UUID) throws {
@@ -86,41 +81,47 @@ extension SwiftDataTaskRepository {
             assignment.updatedAt = now
             assignment.clientMutationID = UUID()
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func setCategoryAssignment(categoryID: UUID?, forRootTaskID taskID: UUID) throws {
         let now = Date()
-        let existing = try activeCategoryAssignment(forRootTaskID: taskID)
+        let existing = try activeCategoryAssignments(forRootTaskID: taskID)
 
         guard let categoryID, try category(id: categoryID) != nil else {
-            if let existing {
-                existing.deletedAt = now
-                existing.updatedAt = now
-                existing.clientMutationID = UUID()
+            for assignment in existing {
+                markCategoryAssignmentDeleted(assignment, now: now)
             }
             return
         }
 
-        if let existing {
-            existing.categoryID = categoryID
-            existing.updatedAt = now
-            existing.clientMutationID = UUID()
+        if let winner = existing.first {
+            winner.categoryID = categoryID
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
+            for duplicate in existing.dropFirst() {
+                markCategoryAssignmentDeleted(duplicate, now: now)
+            }
         } else {
             context.insert(TaskCategoryAssignment(taskID: taskID, categoryID: categoryID, deviceID: deviceID))
         }
     }
 
-    private func activeCategoryAssignment(forRootTaskID taskID: UUID) throws -> TaskCategoryAssignment? {
+    private func activeCategoryAssignments(forRootTaskID taskID: UUID) throws -> [TaskCategoryAssignment] {
         let rootTaskID = taskID
-        var descriptor = FetchDescriptor<TaskCategoryAssignment>(
-            predicate: #Predicate { $0.taskID == rootTaskID && $0.deletedAt == nil },
-            sortBy: [
-                SortDescriptor(\.updatedAt, order: .reverse),
-                SortDescriptor(\.createdAt, order: .reverse)
-            ]
+        let descriptor = FetchDescriptor<TaskCategoryAssignment>(
+            predicate: #Predicate { $0.taskID == rootTaskID }
         )
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
+        return try context.fetch(descriptor)
+            .visibleDeduplicatedByID()
+            .sorted { $0.isPreferredLogicalWinner(over: $1) }
+    }
+
+    private func markCategoryAssignmentDeleted(_ assignment: TaskCategoryAssignment, now: Date) {
+        assignment.deletedAt = now
+        assignment.updatedAt = now
+        assignment.deviceID = deviceID
+        assignment.clientMutationID = UUID()
     }
 }

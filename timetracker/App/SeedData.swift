@@ -41,7 +41,9 @@ enum SeedData {
         guard AppCloudSync.allowsAutomaticDemoSeeding else { return }
         let taskCount = try context.fetch(FetchDescriptor<TaskNode>()).count
         guard taskCount == 0 else { return }
-        try buildDemoData(context: context)
+        try context.performAtomicMutation {
+            try buildDemoData(context: context)
+        }
     }
 
     static func replaceWithDemoData(context: ModelContext) throws {
@@ -49,12 +51,17 @@ enum SeedData {
             throw SeedDataError.demoDataCreationUnavailable
         }
 
-        try clearAll(context: context, disablesAutomaticDemoSeeding: false, includesPreferences: false)
-        try buildDemoData(context: context)
+        try context.performAtomicMutation {
+            try clearAllChanges(context: context, includesPreferences: false)
+            try buildDemoData(context: context)
+        }
         setAutomaticDemoSeedingDisabled(false)
     }
 
     static func clearAll(context: ModelContext) throws {
-        try clearAll(context: context, disablesAutomaticDemoSeeding: true, includesPreferences: true)
+        try context.performAtomicMutation {
+            try clearAllChanges(context: context, includesPreferences: true)
+        }
+        setAutomaticDemoSeedingDisabled(true)
     }
 }

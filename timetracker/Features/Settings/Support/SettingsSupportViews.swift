@@ -1,27 +1,48 @@
 import SwiftUI
 
 struct AboutAppSummary: View {
-    var body: some View {
-        HStack(spacing: 14) {
-            AppIconImage()
-                .frame(width: 58, height: 58)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(AppBuildInfo.displayName)
-                    .font(.headline)
-                Text(String(format: AppStrings.localized("settings.about.versionFormat"), AppBuildInfo.versionSummary))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(AppBuildInfo.gitBranch)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 10) {
+                    appIcon
+                    appDetails
+                }
+            } else {
+                HStack(spacing: 14) {
+                    appIcon
+                    appDetails
+                    Spacer(minLength: 0)
+                }
             }
-            Spacer(minLength: 0)
         }
         .padding(.vertical, 6)
         .textSelection(.enabled)
         .accessibilityElement(children: .combine)
         .settingsRowSeparatorAligned()
+    }
+
+    private var appIcon: some View {
+        AppIconImage()
+            .frame(width: 58, height: 58)
+            .accessibilityHidden(true)
+    }
+
+    private var appDetails: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(AppBuildInfo.displayName)
+                .font(.headline)
+            Text(String(format: AppStrings.localized("settings.about.versionFormat"), AppBuildInfo.versionSummary))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(AppBuildInfo.gitBranch)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
@@ -31,6 +52,7 @@ struct CountdownEventSettingsRow: View {
     let onChangeDate: (Date) -> Void
     let onDelete: () -> Void
     @State private var isDatePickerPresented = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var titleBinding: Binding<String> {
         Binding {
@@ -55,28 +77,14 @@ struct CountdownEventSettingsRow: View {
             systemImage: "textformat",
             tint: .blue,
             fieldAlignment: .trailing,
-            textAlignment: .trailing
+            textAlignment: .trailing,
+            usesSentenceCapitalization: true
         )
 
         Button {
             isDatePickerPresented = true
         } label: {
-            HStack(spacing: 12) {
-                SettingsRowIcon(systemImage: "calendar", tint: .green)
-
-                Text(.app("settings.countdown.date"))
-                    .font(.body)
-                    .foregroundStyle(.primary)
-
-                Spacer(minLength: 8)
-
-                Text(event.date.formatted(date: .abbreviated, time: .omitted))
-                    .foregroundStyle(.secondary)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
+            countdownDateLabel
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
@@ -99,7 +107,7 @@ struct CountdownEventSettingsRow: View {
     private var datePickerPopoverContent: some View {
         datePickerContent
             .padding(16)
-            .frame(width: 360)
+            .settingsPopoverContentFrame(idealWidth: 360)
             .fixedSize(horizontal: false, vertical: true)
             .settingsPopoverAdaptation()
     }
@@ -112,5 +120,41 @@ struct CountdownEventSettingsRow: View {
         )
         .datePickerStyle(.graphical)
         .labelsHidden()
+    }
+
+    @ViewBuilder
+    private var countdownDateLabel: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 12) {
+                    SettingsRowIcon(systemImage: "calendar", tint: .green)
+                    Text(.app("settings.countdown.date"))
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+                Text(event.date.formatted(date: .abbreviated, time: .omitted))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 40)
+            }
+        } else {
+            HStack(spacing: 12) {
+                SettingsRowIcon(systemImage: "calendar", tint: .green)
+                Text(.app("settings.countdown.date"))
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 8)
+                Text(event.date.formatted(date: .abbreviated, time: .omitted))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }

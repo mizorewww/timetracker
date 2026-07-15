@@ -9,7 +9,9 @@ struct LedgerSummaryService {
         mode: AggregationMode = .gross,
         now: Date = Date()
     ) -> Int {
-        let filtered = segments.filter { taskIDs.contains($0.taskID) && $0.deletedAt == nil }
+        let filtered = segments
+            .visibleDeduplicatedByID()
+            .filter { taskIDs.contains($0.taskID) }
         return aggregationService.totalSeconds(segments: filtered, mode: mode, now: now)
     }
 
@@ -20,8 +22,8 @@ struct LedgerSummaryService {
         mode: AggregationMode = .gross,
         now: Date = Date()
     ) -> Int {
-        let intervals = segments.compactMap { segment -> DateInterval? in
-            guard taskIDs.contains(segment.taskID), segment.deletedAt == nil else { return nil }
+        let intervals = segments.visibleDeduplicatedByID().compactMap { segment -> DateInterval? in
+            guard taskIDs.contains(segment.taskID) else { return nil }
             let end = segment.endedAt ?? now
             guard segment.startedAt < interval.end, end > interval.start else { return nil }
             let start = max(segment.startedAt, interval.start)

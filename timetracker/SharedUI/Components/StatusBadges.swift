@@ -5,6 +5,7 @@ struct AppStatusBadge: View {
     var systemImage: String?
     var tint: Color = .secondary
     var compact = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Label {
@@ -20,7 +21,9 @@ struct AppStatusBadge: View {
         .padding(.horizontal, compact ? 6 : 8)
         .padding(.vertical, compact ? 3 : 4)
         .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .lineLimit(1)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -46,6 +49,19 @@ struct TaskStatusBadge: View {
             title: status.displayName,
             systemImage: status.symbolName,
             tint: Color(hex: status.colorHex) ?? .secondary,
+            compact: compact
+        )
+    }
+}
+
+struct TaskWorkBlockedStatusBadge: View {
+    var compact = true
+
+    var body: some View {
+        AppStatusBadge(
+            title: AppStrings.localized("task.status.blockedByCompletion"),
+            systemImage: "pause.circle.fill",
+            tint: .orange,
             compact: compact
         )
     }

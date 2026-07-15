@@ -103,7 +103,7 @@ struct SyncStatus {
     }
 }
 
-enum SyncFeedbackState: Equatable {
+nonisolated enum SyncFeedbackState: Equatable, Sendable {
     case available
     case syncing
     case recentlySynced
@@ -138,7 +138,7 @@ enum SyncFeedbackState: Equatable {
     }
 }
 
-struct SyncFeedback: Equatable {
+nonisolated struct SyncFeedback: Equatable, Sendable {
     let state: SyncFeedbackState
     let title: String
     let message: String

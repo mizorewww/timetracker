@@ -6,6 +6,7 @@ struct TaskStore {
     private(set) var categoryAssignments: [TaskCategoryAssignment] = []
 
     mutating func refresh(repository: TaskRepository) throws {
+        try repository.repairInvalidHierarchy()
         tasks = try repository.allNodes().deduplicatedByID()
         categories = try repository.categories().deduplicatedByID()
         categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
@@ -13,13 +14,18 @@ struct TaskStore {
 
     mutating func refreshTaskScoped(taskIDs: Set<UUID>, repository: TaskRepository) throws {
         guard taskIDs.isEmpty == false else { return }
+        if try repository.repairInvalidHierarchy().isEmpty == false {
+            try refresh(repository: repository)
+            return
+        }
         let fetchedTasks = try repository.tasks(ids: taskIDs).deduplicatedByID()
         let fetchedTaskIDs = Set(fetchedTasks.map(\.id))
         let missingTaskIDs = taskIDs.subtracting(fetchedTaskIDs)
         let childrenByParentID = Dictionary(grouping: tasks, by: \.parentID)
-        let removedTaskIDs = missingTaskIDs.reduce(into: Set<UUID>()) { result, taskID in
-            result.formUnion(taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID))
-        }
+        let removedTaskIDs = taskAndDescendantIDs(
+            for: missingTaskIDs,
+            childrenByParentID: childrenByParentID
+        )
         let replacedTaskIDs = taskIDs.union(removedTaskIDs)
 
         tasks = sortedTasks(
@@ -30,16 +36,16 @@ struct TaskStore {
     }
 
     private func taskAndDescendantIDs(
-        for taskID: UUID,
-        childrenByParentID: [UUID?: [TaskNode]],
-        visited: Set<UUID> = []
+        for taskIDs: Set<UUID>,
+        childrenByParentID: [UUID?: [TaskNode]]
     ) -> Set<UUID> {
-        guard !visited.contains(taskID) else { return [] }
-        let nextVisited = visited.union([taskID])
-        let childIDs = (childrenByParentID[taskID] ?? []).reduce(into: Set<UUID>()) { result, child in
-            result.formUnion(taskAndDescendantIDs(for: child.id, childrenByParentID: childrenByParentID, visited: nextVisited))
+        var result = Set<UUID>()
+        var pending = Array(taskIDs)
+        while let currentID = pending.popLast() {
+            guard result.insert(currentID).inserted else { continue }
+            pending.append(contentsOf: (childrenByParentID[currentID] ?? []).map(\.id))
         }
-        return childIDs.union([taskID])
+        return result
     }
 
     private func sortedTasks(_ tasks: [TaskNode]) -> [TaskNode] {

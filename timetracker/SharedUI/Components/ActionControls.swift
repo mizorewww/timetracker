@@ -5,6 +5,7 @@ struct AppActionLabel: View {
     let systemImage: String
     var fixedHeight: CGFloat?
     var minHeight: CGFloat = 44
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         HStack(spacing: 7) {
@@ -12,12 +13,18 @@ struct AppActionLabel: View {
                 .font(.subheadline.weight(.semibold))
             Text(title)
                 .font(.body.weight(.medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: fixedHeight)
-        .frame(minHeight: fixedHeight == nil ? minHeight : 0)
+        .frame(height: dynamicTypeSize.isAccessibilitySize ? nil : fixedHeight)
+        .frame(
+            minHeight: dynamicTypeSize.isAccessibilitySize || fixedHeight == nil
+                ? minHeight
+                : 0
+        )
+        .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 4 : 0)
         .contentShape(Rectangle())
     }
 }

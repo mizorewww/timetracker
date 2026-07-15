@@ -1,17 +1,6 @@
 import Charts
 import SwiftUI
 
-struct TaskDonutCard: View {
-    let tasks: [TaskAnalyticsPoint]
-    let totalSeconds: Int
-
-    var body: some View {
-        AnalyticsChartCard(title: AppStrings.localized("analytics.taskUsage.title"), subtitle: AppStrings.localized("analytics.taskUsage.subtitle")) {
-            TaskDonutContent(tasks: tasks, totalSeconds: totalSeconds)
-        }
-    }
-}
-
 struct TaskDonutContent: View {
     let tasks: [TaskAnalyticsPoint]
     let totalSeconds: Int
@@ -34,20 +23,22 @@ struct TaskDonutContent: View {
     }
 
     var body: some View {
-        if tasks.isEmpty {
+        let displayedSlices = slices
+
+        if displayedSlices.isEmpty {
             EmptyStateRow(title: AppStrings.localized("analytics.empty.rangeTaskTime"), icon: "chart.pie")
         } else {
             VStack(alignment: .leading, spacing: 16) {
-                StableDonutChart(slices: slices, totalSeconds: max(totalSeconds, 1))
+                StableDonutChart(slices: displayedSlices, totalSeconds: max(totalSeconds, 1))
                     .frame(maxWidth: .infinity)
-                distributionLegend
+                distributionLegend(displayedSlices)
             }
         }
     }
 
-    private var distributionLegend: some View {
+    private func distributionLegend(_ displayedSlices: [TaskDistributionSlice]) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 10) {
-            ForEach(slices) { slice in
+            ForEach(displayedSlices) { slice in
                 TaskDistributionLegendItem(slice: slice, totalSeconds: max(totalSeconds, 1))
             }
         }
@@ -80,6 +71,8 @@ private struct StableDonutChart: View {
             )
             .cornerRadius(4)
             .foregroundStyle(slice.color)
+            .accessibilityLabel(slice.title)
+            .accessibilityValue(DurationFormatter.compact(slice.grossSeconds))
         }
         .chartLegend(.hidden)
         .chartBackground { _ in
@@ -93,11 +86,13 @@ private struct StableDonutChart: View {
         }
         .frame(width: 190, height: 190)
         .aspectRatio(1, contentMode: .fit)
-        .accessibilityElement(children: .combine)
+        .accessibilityLabel(AppStrings.localized("analytics.taskUsage.title"))
     }
 }
 
 private struct TaskDistributionLegendItem: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let slice: TaskDistributionSlice
     let totalSeconds: Int
 
@@ -111,13 +106,14 @@ private struct TaskDistributionLegendItem: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(slice.title)
                     .font(.caption.weight(.semibold))
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 Text("\(DurationFormatter.compact(slice.grossSeconds)) · \(percentage)%")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var percentage: Int {

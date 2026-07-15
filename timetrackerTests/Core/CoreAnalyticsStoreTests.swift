@@ -4,6 +4,46 @@ import Testing
 
 @Suite(.serialized)
 struct CoreAnalyticsStoreTests {
+    @Test
+    func recentRecordsUseTheMatchingSessionTitleSnapshot() throws {
+        let taskID = UUID()
+        let oldSession = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: Date(timeIntervalSince1970: 100),
+            titleSnapshot: "Old title"
+        )
+        let newSession = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: Date(timeIntervalSince1970: 300),
+            titleSnapshot: "New title"
+        )
+        let segments = [oldSession, newSession].map { session in
+            TimeSegment(
+                sessionID: session.id,
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: session.startedAt,
+                endedAt: session.startedAt.addingTimeInterval(60)
+            )
+        }
+
+        let records = AnalyticsStore().recentRecords(
+            segments: segments,
+            sessions: [oldSession, newSession],
+            tasks: [],
+            taskIDs: [taskID],
+            taskPathByID: [:],
+            now: Date(timeIntervalSince1970: 1_000)
+        )
+
+        #expect(records.map(\.title) == ["New title", "Old title"])
+    }
+
     @Test @MainActor
     func analyticsSnapshotCompactsDenseOverlapsWithSweepLine() {
         let start = Date(timeIntervalSince1970: 10_000)
@@ -47,6 +87,121 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func analyticsGlobalStatisticsClipSegmentsToTheSelectedRange() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 11, hour: 12)))
+        let startOfDay = calendar.startOfDay(for: now)
+        let firstTask = TaskNode(title: "First", parentID: nil, deviceID: "test")
+        let secondTask = TaskNode(title: "Second", parentID: nil, deviceID: "test")
+        let firstSession = TimeSession(taskID: firstTask.id, source: .timer, deviceID: "test", startedAt: startOfDay.addingTimeInterval(-1_800))
+        let secondSession = TimeSession(taskID: secondTask.id, source: .timer, deviceID: "test", startedAt: startOfDay.addingTimeInterval(-900))
+        let segments = [
+            TimeSegment(
+                sessionID: firstSession.id,
+                taskID: firstTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(-1_800),
+                endedAt: startOfDay.addingTimeInterval(1_800)
+            ),
+            TimeSegment(
+                sessionID: secondSession.id,
+                taskID: secondTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startOfDay.addingTimeInterval(-900),
+                endedAt: startOfDay.addingTimeInterval(900)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [firstTask, secondTask],
+            segments: segments,
+            sessions: [firstSession, secondSession],
+            taskPathByID: [firstTask.id: firstTask.title, secondTask.id: secondTask.title],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+        let engineOverview = AnalyticsEngine().overview(
+            segments: segments,
+            range: .today,
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 2_700)
+        #expect(snapshot.overview.wallSeconds == 1_800)
+        #expect(snapshot.overview.overlapSeconds == 900)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 2_700)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.wallSeconds } == 1_800)
+        #expect(snapshot.taskBreakdown.first { $0.taskID == firstTask.id }?.grossSeconds == 1_800)
+        #expect(snapshot.taskBreakdown.first { $0.taskID == secondTask.id }?.grossSeconds == 900)
+        #expect(snapshot.overlaps.count == 1)
+        #expect(snapshot.overlaps.first?.start == startOfDay)
+        #expect(snapshot.overlaps.first?.end == startOfDay.addingTimeInterval(900))
+        #expect(engineOverview.grossSeconds == snapshot.overview.grossSeconds)
+        #expect(engineOverview.wallSeconds == snapshot.overview.wallSeconds)
+        #expect(engineOverview.overlapSeconds == snapshot.overview.overlapSeconds)
+    }
+
+    @Test @MainActor
+    func analyticsSnapshotResolvesDuplicateCloudRowsBeforeEveryAggregation() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let task = TaskNode(title: "Canonical", parentID: nil, deviceID: "device-a")
+        let session = TimeSession(
+            taskID: task.id,
+            source: .timer,
+            deviceID: "device-a",
+            startedAt: now.addingTimeInterval(-3_600),
+            titleSnapshot: task.title
+        )
+        let stale = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "device-a",
+            startedAt: now.addingTimeInterval(-3_600),
+            endedAt: now.addingTimeInterval(-3_000)
+        )
+        stale.updatedAt = now.addingTimeInterval(-120)
+
+        let winner = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "device-b",
+            startedAt: now.addingTimeInterval(-3_600),
+            endedAt: now.addingTimeInterval(-2_700)
+        )
+        winner.id = stale.id
+        winner.updatedAt = now.addingTimeInterval(-60)
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: [stale, winner],
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 900)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 900)
+        #expect(snapshot.taskBreakdown.first?.grossSeconds == 900)
+        #expect(snapshot.rhythm.segmentCount == 1)
+        #expect(snapshot.rangeSegments.count == 1)
+    }
+
+    @Test @MainActor
     func analyticsStoreOwnsSnapshotCache() {
         let task = TaskNode(title: "Cached Task", parentID: nil, deviceID: "test")
         let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 20_000), titleSnapshot: task.title)
@@ -74,6 +229,161 @@ struct CoreAnalyticsStoreTests {
 
         #expect(store.cachedSnapshot(for: .today)?.overview.grossSeconds == 600)
         #expect(store.cachedSnapshot(for: .today)?.taskBreakdown.first?.title == "Cached Task")
+    }
+
+    @Test @MainActor
+    func taskSnapshotCacheReplacesLiveBucketsAndStaysGloballyBounded() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstRefresh = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let secondRefresh = firstRefresh.addingTimeInterval(60)
+        let task = TaskNode(title: "Live task", parentID: nil, deviceID: "test")
+        var store = AnalyticsStore()
+        let snapshot = store.taskSnapshot(
+            range: .today,
+            task: task,
+            taskIDs: [task.id],
+            tasks: [task],
+            segments: [],
+            sessions: [],
+            taskPathByID: [task.id: task.title],
+            now: firstRefresh,
+            calendar: calendar
+        )
+
+        store.cacheTaskSnapshot(snapshot, now: firstRefresh, liveRefreshBucket: 1, calendar: calendar)
+        store.cacheTaskSnapshot(snapshot, now: secondRefresh, liveRefreshBucket: 2, calendar: calendar)
+
+        #expect(store.taskSnapshotCacheCount == 1)
+        #expect(store.cachedTaskSnapshot(
+            taskID: task.id,
+            range: .today,
+            now: secondRefresh,
+            liveRefreshBucket: 1,
+            calendar: calendar
+        ) == nil)
+        #expect(store.cachedTaskSnapshot(
+            taskID: task.id,
+            range: .today,
+            now: secondRefresh,
+            liveRefreshBucket: 2,
+            calendar: calendar
+        ) != nil)
+
+        for index in 0..<40 {
+            let anotherTask = TaskNode(title: "Task \(index)", parentID: nil, deviceID: "test")
+            let anotherSnapshot = store.taskSnapshot(
+                range: .today,
+                task: anotherTask,
+                taskIDs: [anotherTask.id],
+                tasks: [anotherTask],
+                segments: [],
+                sessions: [],
+                taskPathByID: [anotherTask.id: anotherTask.title],
+                now: secondRefresh,
+                calendar: calendar
+            )
+            store.cacheTaskSnapshot(
+                anotherSnapshot,
+                now: secondRefresh,
+                liveRefreshBucket: nil,
+                calendar: calendar
+            )
+        }
+
+        #expect(store.taskSnapshotCacheCount == 24)
+    }
+
+    @Test @MainActor
+    func pomodoroCompletionIsCountedOnlyInTheIntervalWhereItEnds() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let firstDayStart = calendar.startOfDay(for: firstDay)
+        let secondDay = try #require(calendar.date(byAdding: .day, value: 1, to: firstDay))
+        let task = TaskNode(title: "Cross-day focus", parentID: nil, deviceID: "test")
+        let session = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: firstDayStart.addingTimeInterval(23 * 3_600 + 30 * 60)
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: session.startedAt,
+            endedAt: firstDayStart.addingTimeInterval(24 * 3_600 + 30 * 60)
+        )
+
+        let firstSnapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: [segment],
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: firstDay,
+            calendar: calendar
+        )
+        let secondSnapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: [segment],
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: secondDay,
+            calendar: calendar
+        )
+        let firstEngineOverview = AnalyticsEngine().overview(
+            segments: [segment],
+            range: .today,
+            now: firstDay,
+            calendar: calendar
+        )
+        let secondEngineOverview = AnalyticsEngine().overview(
+            segments: [segment],
+            range: .today,
+            now: secondDay,
+            calendar: calendar
+        )
+
+        #expect(firstSnapshot.overview.pomodoroCount == 0)
+        #expect(secondSnapshot.overview.pomodoroCount == 1)
+        #expect(firstEngineOverview.pomodoroCount == 0)
+        #expect(secondEngineOverview.pomodoroCount == 1)
+    }
+
+    @Test @MainActor
+    func analyticsSnapshotCacheIsScopedToTheSelectedCalendarPeriodAndCanBeInvalidated() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let firstDay = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12)))
+        let nextDay = try #require(calendar.date(byAdding: .day, value: 1, to: firstDay))
+        var store = AnalyticsStore()
+
+        store.refreshSnapshot(
+            range: .today,
+            tasks: [],
+            segments: [],
+            sessions: [],
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: firstDay,
+            calendar: calendar
+        )
+
+        #expect(store.cachedSnapshot(for: .today, now: firstDay, calendar: calendar) != nil)
+        #expect(store.cachedSnapshot(for: .today, now: nextDay, calendar: calendar) == nil)
+
+        store.invalidateSnapshots()
+        #expect(store.cachedSnapshot(for: .today) == nil)
     }
 
     @Test @MainActor
@@ -213,6 +523,40 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func rhythmCountsEveryCalendarDayTouchedByCrossDayWork() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let monday = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 13, hour: 23))
+        )
+        let wednesday = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 1))
+        )
+        let taskID = UUID()
+        let segment = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: monday,
+            endedAt: wednesday
+        )
+        let rangeStart = calendar.startOfDay(for: monday)
+        let rangeEnd = try #require(calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: wednesday)))
+
+        let rhythm = AnalyticsStore().rhythm(
+            segments: [segment],
+            interval: DateInterval(start: rangeStart, end: rangeEnd),
+            taskIDs: nil,
+            now: wednesday,
+            calendar: calendar
+        )
+
+        #expect(rhythm.activeDayCount == 3)
+        #expect(rhythm.dailyAverageGrossSeconds == (26 * 3_600) / 3)
+    }
+
+    @Test @MainActor
     func ledgerBucketCacheInvalidatesOnlyAffectedDayBuckets() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -273,6 +617,75 @@ struct CoreAnalyticsStoreTests {
         )
 
         #expect(refreshedSummaries.map(\.grossSeconds) == [600, 1_800])
+        #expect(cache.bucketCount == 2)
+    }
+
+    @Test @MainActor
+    func ledgerBucketCacheUsesCalendarDayForDSTInvalidation() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let firstDay = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 8)))
+        let secondDay = try #require(calendar.date(byAdding: .day, value: 1, to: firstDay))
+        let intervalEnd = try #require(calendar.date(byAdding: .day, value: 1, to: secondDay))
+        var cache = LedgerBucketCache()
+
+        _ = cache.summaries(
+            segments: [],
+            interval: DateInterval(start: firstDay, end: intervalEnd),
+            now: intervalEnd,
+            calendar: calendar
+        )
+        #expect(cache.bucketCount == 2)
+
+        cache.invalidate(intervals: [
+            DateInterval(start: secondDay.addingTimeInterval(1_800), duration: 60)
+        ])
+
+        #expect(cache.bucketCount == 1)
+    }
+
+    @Test @MainActor
+    func ledgerBucketCacheSeparatesPartialIntervalsOnTheSameDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let taskID = UUID()
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 7,
+            hour: 10
+        )))
+        let session = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: start
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(7_200)
+        )
+        var cache = LedgerBucketCache()
+
+        let oneHour = cache.summaries(
+            segments: [segment],
+            interval: DateInterval(start: start, duration: 3_600),
+            now: start.addingTimeInterval(7_200),
+            calendar: calendar
+        )
+        let twoHours = cache.summaries(
+            segments: [segment],
+            interval: DateInterval(start: start, duration: 7_200),
+            now: start.addingTimeInterval(7_200),
+            calendar: calendar
+        )
+
+        #expect(oneHour.map(\.grossSeconds) == [3_600])
+        #expect(twoHours.map(\.grossSeconds) == [7_200])
         #expect(cache.bucketCount == 2)
     }
 

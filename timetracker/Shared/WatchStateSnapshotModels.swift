@@ -1,6 +1,36 @@
 import Foundation
 
-struct WatchStateSnapshot: Codable, Equatable {
+nonisolated enum WatchTransportLimits {
+    /// Watch commands are immediate controls. A durable delivery that arrives
+    /// later than this must ask the user to retry instead of acting silently.
+    static let maximumCommandAge: TimeInterval = 30
+    static let maximumFutureClockSkew: TimeInterval = 5 * 60
+    static let maximumDeviceIDBytes = 256
+    static let maximumFailureCodeBytes = 256
+    static let maximumTitleBytes = 4 * 1_024
+    static let maximumPathBytes = 16 * 1_024
+    static let maximumStyleValueBytes = 256
+    static let maximumActiveTimers = 64
+    static let maximumRecentTasks = 256
+    static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
+    static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
+    static let maximumIncomingCommands = 64
+    static let maximumPersistedPendingCommands = 64
+    static let maximumPersistedFailedCommands = 64
+    static let maximumQueueEncodedBytes = 512 * 1_024
+
+    static func isBounded(_ value: String, maximumUTF8Bytes: Int) -> Bool {
+        value.utf8.count <= maximumUTF8Bytes
+    }
+
+    static func isFinite(_ date: Date) -> Bool {
+        date.timeIntervalSinceReferenceDate.isFinite
+    }
+}
+
+nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
+    static let staleAfter: TimeInterval = 15 * 60
+
     var generatedAt: Date
     var todayGrossSeconds: Int
     var todayWallSeconds: Int
@@ -56,9 +86,21 @@ struct WatchStateSnapshot: Codable, Equatable {
             )
         }
     }
+
+    func freshness(
+        at now: Date,
+        staleAfter threshold: TimeInterval = WatchStateSnapshot.staleAfter
+    ) -> WatchSnapshotFreshness {
+        now.timeIntervalSince(generatedAt) > threshold ? .stale : .current
+    }
 }
 
-struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable {
+nonisolated enum WatchSnapshotFreshness: Equatable, Sendable {
+    case current
+    case stale
+}
+
+nonisolated struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var taskID: UUID
     var title: String
@@ -68,7 +110,7 @@ struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable {
     var iconName: String?
 }
 
-struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable {
+nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Sendable {
     var taskID: UUID
     var title: String
     var path: String

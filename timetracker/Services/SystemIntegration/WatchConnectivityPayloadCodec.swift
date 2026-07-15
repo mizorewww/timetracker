@@ -3,6 +3,7 @@ import Foundation
 enum WatchConnectivityPayloadCodec {
     nonisolated private static let kindKey = "kind"
     nonisolated private static let commandKind = "timerCommand"
+    nonisolated private static let commandResultKind = "commandResult"
     nonisolated private static let stateKind = "stateSnapshot"
 
     nonisolated private static let idKey = "id"
@@ -11,6 +12,12 @@ enum WatchConnectivityPayloadCodec {
     nonisolated private static let segmentIDKey = "segmentID"
     nonisolated private static let issuedAtKey = "issuedAt"
     nonisolated private static let deviceIDKey = "deviceID"
+    nonisolated private static let commandIDKey = "commandID"
+    nonisolated private static let statusKey = "status"
+    nonisolated private static let completedAtKey = "completedAt"
+    nonisolated private static let relatedIDKey = "relatedID"
+    nonisolated private static let failureCodeKey = "failureCode"
+    nonisolated private static let receivedKey = "received"
 
     nonisolated private static let generatedAtKey = "generatedAt"
     nonisolated private static let todayGrossSecondsKey = "todayGrossSeconds"
@@ -54,6 +61,39 @@ enum WatchConnectivityPayloadCodec {
             segmentID: uuid(from: payload[segmentIDKey]),
             issuedAt: Date(timeIntervalSinceReferenceDate: issuedAtInterval),
             deviceID: deviceID
+        )
+    }
+
+    nonisolated static func encode(result: WatchCommandResult) -> [String: Any] {
+        var payload: [String: Any] = [
+            kindKey: commandResultKind,
+            commandIDKey: result.commandID.uuidString,
+            statusKey: result.status.rawValue,
+            completedAtKey: result.completedAt.timeIntervalSinceReferenceDate,
+            // Preserve the legacy receipt bit for older watch builds while newer
+            // builds use the typed terminal status above.
+            receivedKey: true
+        ]
+        payload[relatedIDKey] = result.relatedID?.uuidString
+        payload[failureCodeKey] = result.failureCode
+        return payload
+    }
+
+    nonisolated static func decodeCommandResult(from payload: [String: Any]) -> WatchCommandResult? {
+        guard payload[kindKey] as? String == commandResultKind,
+              let commandID = uuid(from: payload[commandIDKey]),
+              let statusValue = payload[statusKey] as? String,
+              let status = WatchCommandResultStatus(rawValue: statusValue),
+              let completedAtInterval = payload[completedAtKey] as? TimeInterval else {
+            return nil
+        }
+
+        return WatchCommandResult(
+            commandID: commandID,
+            status: status,
+            completedAt: Date(timeIntervalSinceReferenceDate: completedAtInterval),
+            relatedID: uuid(from: payload[relatedIDKey]),
+            failureCode: payload[failureCodeKey] as? String
         )
     }
 

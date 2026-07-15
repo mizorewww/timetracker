@@ -1,5 +1,7 @@
 # Native UI Plan
 
+Status: future UI guardrails and manual acceptance checklist. Current user behavior is documented in [UserGuide](UserGuide.md); completed redesign history is documented in [Audit-2026-07-14](Audit-2026-07-14.md).
+
 This document defines how future UI work should move toward native Apple components and away from fragile custom drawing. It should be checked before redesigning or adding any screen.
 
 ## Goal
@@ -43,18 +45,19 @@ Avoid:
 - Animation on scroll title size changes, row identity changes, or list height changes.
 - Cards inside cards.
 - Using color alone to convey meaning.
+- Keeping a dense horizontal row at Accessibility Dynamic Type sizes when a vertical composition or native menu can preserve the full title, value, and action.
 
 ## Screen Plans
 
 ### Inbox
 
-Current risk: the screen uses custom card layout plus an embedded `List`, and the suggestion row is sensitive to width.
+Current state: the screen uses one native `List`; the earlier custom card plus embedded-list shell was removed. Remaining work is behavioral and device acceptance, not another container rewrite.
 
 Plan:
 
 - Keep native list behaviors for rows: swipe, context menu, edit/reorder.
 - Split the screen into small components before more visual work.
-- Consider replacing the custom card with `List` sections on iPhone if the current card continues to fight native scrolling.
+- Keep capture, open items, completed items and suggestion feedback in native list sections.
 - Suggestion row should stay compact:
   - label: `Suggest`
   - content: task name only
@@ -67,16 +70,16 @@ Acceptance:
 
 - No horizontal clipping on the smallest iPhone width.
 - Swipe actions remain visible after suggestion dismissal.
-- The large top plus and inline plus do not compete visually.
+- Capture and navigation actions do not compete visually.
 
 ### Today
 
-Current risk: Today contains many concepts: metrics, active timers, forecast, timeline, quick start, and settings entry.
+Current state: iPhone Today is a native priority-ordered `List` with active timers, summary, Quick Start, forecast, timeline and optional countdown. Generic day/week/month/year progress and selected-task cards were removed.
 
 Plan:
 
 - Use native large title on iPhone.
-- Keep metric height low and avoid decorative charts when the data is not useful.
+- Keep gross/wall summary compact and avoid adding decorative progress or duplicate metrics.
 - Use system buttons for Start Timer and New Task.
 - On iPhone, active timer rows can split into two lines:
   - line 1: icon, title, parent path
@@ -88,6 +91,7 @@ Acceptance:
 - Today does not jitter when scrolling from bottom to top.
 - Active timer controls remain tappable at 44 pt minimum.
 - Metrics do not dominate the first screen.
+- Accessibility Extra Large keeps task titles, paths, durations, stop actions, Quick Start labels, countdown dates, and the final list rows visible without overlap or tab-bar obstruction.
 
 ### Tasks
 
@@ -143,10 +147,11 @@ Acceptance:
 - Today, Week, and Month share data semantics.
 - Empty states explain what data is missing.
 - Long task names do not overlap charts.
+- The landing page keeps a small summary plus category navigation; at accessibility sizes the range picker may become a menu instead of forcing a segmented control to clip.
 
 ### Settings
 
-Current risk: settings can drift into debug panels.
+Current state: settings uses category navigation for General, Focus, Data & Sync, AI Assistant and Advanced. The app follows system appearance.
 
 Plan:
 
@@ -162,21 +167,21 @@ Acceptance:
 - API key/model settings are clearly marked and secure.
 - Destructive maintenance actions have confirmation text.
 
-### Sidebar And Inspector
+### Sidebar And Detail
 
-Current risk: split view controls have been fragile on iPad.
+Current state: iPad and macOS use `NavigationSplitView`; selecting a sidebar task opens the canonical read-first Task Detail. There is no separate Inspector feature.
 
 Plan:
 
 - Let `NavigationSplitView` own sidebar visibility when possible.
 - Do not duplicate the system sidebar toggle.
-- Inspector appears only when the current destination has meaningful selected-task detail.
+- Keep task detail as the single canonical selected-task surface; do not add a second inspector that diverges from it without a product need.
 - Sidebar task rows should be simple navigation rows, not mini task editors.
 
 Acceptance:
 
 - Collapsing the sidebar always leaves a native way to reopen it.
-- Sidebar and inspector can be controlled independently.
+- Collapsing and restoring the sidebar preserves the current detail.
 - Selecting a task makes the detail destination clear to the user.
 
 ## Component Inventory
@@ -212,7 +217,7 @@ Before merging UI work:
 
 1. Is there a native component that already does this?
 2. Does it work on the smallest iPhone width?
-3. Does it work in iPad split view with sidebar and inspector states?
+3. Does it work in iPad split view with sidebar visible and collapsed?
 4. Does it work in macOS narrow and full-screen windows?
 5. Does long localized text wrap or truncate intentionally?
 6. Are all tappable targets at least 44 pt on touch platforms?
@@ -220,6 +225,7 @@ Before merging UI work:
 8. Is custom animation necessary, or can the system interaction speak for itself?
 9. Are visual-only changes covered by a manual screenshot checklist rather than brittle source-string tests?
 10. Are user-facing strings localized in all three languages?
+11. At Accessibility Extra Large, do dense horizontal rows reflow and can the final content scroll above the tab bar?
 
 ## Manual Screenshot Checklist
 
@@ -228,6 +234,7 @@ For each future UI polish round, capture or manually inspect:
 - iPhone Inbox with no items, one suggestion, many items, and dismissed suggestion.
 - iPhone Today with no active timers, one timer, multiple timers.
 - iPhone Tasks with nested tasks and long titles.
-- iPad landscape with sidebar visible, collapsed, and inspector visible.
+- iPhone dark appearance at Accessibility Extra Large for Today, Tasks, Task Detail, Analytics, and Settings.
+- iPad landscape Today and Task Detail with the sidebar visible and collapsed.
 - macOS settings window and main split view.
 - Analytics Today with short tasks, overlapping tasks, and empty data.

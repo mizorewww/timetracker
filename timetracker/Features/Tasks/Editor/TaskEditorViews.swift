@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TaskEditorSheet: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     let initialDraft: TaskEditorDraft
 
@@ -26,18 +26,30 @@ struct TaskEditorSheet: View {
 }
 
 struct TaskEditorPanel: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @State private var draft: TaskEditorDraft
     @FocusState private var focusedChecklistDraftID: UUID?
+    @State private var isDiscardConfirmationPresented = false
+    let initialDraft: TaskEditorDraft
     let onCancel: () -> Void
     let onSave: (TaskEditorDraft) -> Void
+    let parentCandidates: [TaskNode]
 
     private let colors = TaskColorPalette.hexValues
 
     init(store: TimeTrackerStore, initialDraft: TaskEditorDraft, onCancel: @escaping () -> Void, onSave: @escaping (TaskEditorDraft) -> Void) {
         self.store = store
+        self.initialDraft = initialDraft
         self.onCancel = onCancel
         self.onSave = onSave
+        var candidates = store.validParentTasks(for: initialDraft.taskID)
+        if let currentParentID = initialDraft.parentID,
+           let currentParent = store.task(for: currentParentID),
+           store.isTaskVisible(currentParent),
+           candidates.contains(where: { $0.id == currentParentID }) == false {
+            candidates.append(currentParent)
+        }
+        parentCandidates = candidates
         _draft = State(initialValue: initialDraft)
     }
 
@@ -47,6 +59,7 @@ struct TaskEditorPanel: View {
                 store: store,
                 draft: $draft,
                 colors: colors,
+                parentCandidates: parentCandidates,
                 focusedChecklistDraftID: $focusedChecklistDraftID,
                 orderedChecklistIndices: orderedChecklistIndices,
                 moveChecklistItems: { sourceOffsets, destination in
@@ -63,9 +76,10 @@ struct TaskEditorPanel: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {
-                        onCancel()
+                        requestCancel()
                     }
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("task.editor.cancel")
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -74,24 +88,43 @@ struct TaskEditorPanel: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
+                    .accessibilityIdentifier("task.editor.save")
                 }
             }
         }
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: draft != initialDraft,
+            discard: onCancel
+        )
     }
 
     private var canSave: Bool {
-        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !isBlockedCompletionTransition
+    }
+
+    private var isBlockedCompletionTransition: Bool {
+        guard let taskID = draft.taskID,
+              draft.status == .completed,
+              initialDraft.status != .completed else {
+            return false
+        }
+        return store.hasActiveTimer(inTaskSubtree: taskID)
+    }
+
+    private func requestCancel() {
+        if draft == initialDraft {
+            onCancel()
+        } else {
+            isDiscardConfirmationPresented = true
+        }
     }
 
     private var orderedChecklistIndices: [Int] {
-        draft.checklistItems.indices.sorted { lhs, rhs in
-            let left = draft.checklistItems[lhs]
-            let right = draft.checklistItems[rhs]
-            if left.isCompleted != right.isCompleted {
-                return !left.isCompleted
-            }
-            return lhs < rhs
-        }
+        let indices = draft.checklistItems.indices
+        return indices.filter { !draft.checklistItems[$0].isCompleted }
+            + indices.filter { draft.checklistItems[$0].isCompleted }
     }
 
     private func moveChecklistItems(fromOffsets sourceOffsets: IndexSet, toOffset destination: Int) {

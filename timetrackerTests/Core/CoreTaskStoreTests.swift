@@ -4,6 +4,129 @@ import Testing
 
 @Suite(.serialized)
 struct CoreTaskStoreTests {
+    @Test
+    func taskEligibilitySeparatesVisibleHistoryFromNewWork() {
+        let archivedRoot = TaskNode(title: "Archived", parentID: nil, deviceID: "test")
+        archivedRoot.status = .archived
+        let child = TaskNode(title: "Child", parentID: archivedRoot.id, deviceID: "test")
+        let grandchild = TaskNode(title: "Grandchild", parentID: child.id, deviceID: "test")
+        let availableRoot = TaskNode(title: "Available", parentID: nil, deviceID: "test")
+        let deletedRoot = TaskNode(title: "Deleted", parentID: nil, deviceID: "test")
+        deletedRoot.deletedAt = Date()
+        let deletedDescendant = TaskNode(title: "Hidden descendant", parentID: deletedRoot.id, deviceID: "test")
+        let completedRoot = TaskNode(title: "Completed", parentID: nil, deviceID: "test")
+        completedRoot.status = .completed
+        let completedChild = TaskNode(title: "Visible blocked child", parentID: completedRoot.id, deviceID: "test")
+
+        let eligibility = TaskTrackingAvailabilityService().eligibility(
+            tasks: [
+                archivedRoot,
+                child,
+                grandchild,
+                availableRoot,
+                deletedRoot,
+                deletedDescendant,
+                completedRoot,
+                completedChild
+            ]
+        )
+
+        #expect(eligibility.visibleTaskIDs == Set([availableRoot.id, completedRoot.id, completedChild.id]))
+        #expect(eligibility.trackableTaskIDs == Set([availableRoot.id]))
+        #expect(child.status == .active)
+        #expect(grandchild.status == .active)
+        #expect(completedChild.status == .active)
+    }
+
+    @Test @MainActor
+    func repositoryRejectsCreatingOrMovingTasksIntoAnArchivedSubtree() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let archivedRoot = try repository.createTask(
+            title: "Archived root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let activeRoot = try repository.createTask(
+            title: "Active root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.archiveTask(taskID: archivedRoot.id)
+
+        #expect(throws: TaskRepositoryError.invalidMove) {
+            try repository.createTask(
+                title: "Invalid child",
+                parentID: archivedRoot.id,
+                colorHex: nil,
+                iconName: nil
+            )
+        }
+        #expect(throws: TaskRepositoryError.invalidMove) {
+            try repository.moveTask(taskID: activeRoot.id, newParentID: archivedRoot.id, sortOrder: 10)
+        }
+        #expect(try repository.allNodes().map(\.id).contains(activeRoot.id))
+    }
+
+    @Test @MainActor
+    func repositoryRequiresReopeningBeforeCreatingOrMovingWorkInCompletedBranch() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let completedRoot = try repository.createTask(
+            title: "Completed root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let child = try repository.createTask(
+            title: "Existing child",
+            parentID: completedRoot.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let activeRoot = try repository.createTask(
+            title: "Active root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.setTaskStatus(taskID: completedRoot.id, status: .completed)
+
+        #expect(throws: TaskRepositoryError.invalidMove) {
+            try repository.createTask(
+                title: "New child",
+                parentID: completedRoot.id,
+                colorHex: nil,
+                iconName: nil
+            )
+        }
+        #expect(throws: TaskRepositoryError.invalidMove) {
+            try repository.moveTask(taskID: child.id, newParentID: activeRoot.id, sortOrder: 10)
+        }
+
+        // Metadata on visible history remains editable while its parent stays
+        // unchanged; editing must not become a hidden move operation.
+        try repository.updateTask(
+            taskID: child.id,
+            title: "Updated history",
+            status: .active,
+            parentID: completedRoot.id,
+            categoryID: nil,
+            colorHex: nil,
+            iconName: nil,
+            notes: "Preserved",
+            estimatedSeconds: nil,
+            dueAt: nil
+        )
+        #expect(try repository.task(id: child.id)?.title == "Updated history")
+
+        try repository.setTaskStatus(taskID: completedRoot.id, status: .active)
+        try repository.moveTask(taskID: child.id, newParentID: activeRoot.id, sortOrder: 10)
+        #expect(try repository.task(id: child.id)?.parentID == activeRoot.id)
+    }
+
     @Test @MainActor
     func taskScopedRefreshRemovesMissingTaskSubtreeAndKeepsUnchangedRows() throws {
         let parent = TaskNode(title: "Deleted parent", parentID: nil, deviceID: "test", sortOrder: 10)

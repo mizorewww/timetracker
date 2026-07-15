@@ -11,7 +11,7 @@ struct CountdownCommandHandler {
             deviceID: deviceID
         )
         context.insert(event)
-        try context.save()
+        try context.saveAfterMutationStep()
         return event
     }
 
@@ -24,13 +24,13 @@ struct CountdownCommandHandler {
         }
         event.updatedAt = now
         event.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func softDelete(_ event: CountdownEvent, context: ModelContext, now: Date = Date()) throws {
         event.deletedAt = now
         event.updatedAt = now
         event.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 }

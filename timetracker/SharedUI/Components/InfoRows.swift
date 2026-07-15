@@ -5,17 +5,33 @@ struct InfoRow: View {
     let value: String
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 54, maxWidth: 86, alignment: .leading)
-            Spacer()
-            Text(value)
-                .lineLimit(2)
-                .multilineTextAlignment(.trailing)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                titleText
+                    .frame(minWidth: 54, maxWidth: 112, alignment: .leading)
+                Spacer(minLength: 8)
+                valueText
+                    .multilineTextAlignment(.trailing)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                titleText
+                valueText
+            }
         }
         .font(.subheadline)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var titleText: some View {
+        Text(title)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valueText: some View {
+        Text(value)
+            .foregroundStyle(.primary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

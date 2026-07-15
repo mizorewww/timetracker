@@ -12,7 +12,7 @@ The app should feel like a focused Apple productivity tool: clear hierarchy, nat
 - Checklist UI belongs inside task editing and task detail surfaces. Do not present checklist items as timed subtasks; they are progress markers under a timed task.
 - Checklist rows should behave like native to-do rows: a large circular check button, at least 44 pt row height, unfinished items first, completed items after them with strikethrough text. Adding a checklist item should create a focused empty row immediately.
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
-- iPad and macOS may use a detail inspector, but the inspector should stay narrow and collapse when it is not useful.
+- Task Detail is the one canonical deep surface on iPhone, iPad, and macOS. Do not add a second inspector that can drift from it unless a separately reviewed product need justifies the extra selection and synchronization state.
 - Sheets should use system `NavigationStack` + `Form` + toolbar cancel/save actions. Avoid custom modal title bars unless the content is not an editor.
 - Fixed sheet sizes are macOS-only. iPhone and iPad sheets must follow the platform presentation width so they do not overflow compact devices.
 - The analytics timeline should separate graphic bars from task text. Bars show time, color, and icon; rows below carry labels.
@@ -28,16 +28,18 @@ Preferred terms:
 - "Actual Time" or localized equivalent for wall-clock time when space allows.
 - "Total Task Time" or localized equivalent for gross time when space allows.
 - "Time Segment" should appear only in advanced edit/debug contexts.
-- "Optimize Database" belongs in settings and must explain that it permanently deletes orphaned records.
+- Production UI must not offer permanent tombstone cleanup: an offline CloudKit device could otherwise resurrect old rows. The destructive "Clean Deleted Records" action is limited to isolated Demo/UI Test stores, must describe the 90-day scope, and must never treat a temporarily missing parent as deletion evidence.
 
 ## Responsive Checks
 
 Before merging UI work, verify:
 
 - iPhone portrait Today, Tasks, Pomodoro, Analytics, Settings.
-- iPad landscape Today with sidebar and optional inspector.
+- iPhone dark appearance at Accessibility Extra Large for Today, Tasks, Task Detail, Analytics, and Settings; dense rows must reflow instead of colliding or truncating primary text.
+- iPad landscape Today and Task Detail with the sidebar both visible and collapsed.
 - macOS narrow minimum window and full-screen window.
 - Long task names, localized strings, and dynamic timer text do not overlap.
+- The bottom of every iPhone list can scroll above the system tab bar at ordinary and accessibility sizes.
 
 ## Timeline Rules
 
@@ -51,4 +53,4 @@ Adjacent tasks with no visible gap should use different lanes so their bars rema
 
 The task management screen must render each visible task as its own `List` row. Do not place an entire subtree inside one row, because iPhone context menus and swipe actions would attach to the parent subtree instead of the child task the user touched.
 
-Children are shown by flattening the expanded task tree into visible rows with indentation. This preserves infinite nesting while keeping native row behavior: tap to edit on iPhone, swipe to start/edit/delete, and context menu on each individual task.
+Children are shown by flattening the expanded task tree into visible rows with indentation. This preserves infinite nesting while keeping native row behavior: tap opens the read-first Task Detail, an explicit pencil opens editing, and any swipe/context actions remain attached to the exact row the user touched.

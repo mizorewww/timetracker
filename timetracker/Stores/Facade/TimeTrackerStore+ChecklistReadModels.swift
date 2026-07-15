@@ -18,7 +18,15 @@ extension TimeTrackerStore {
     }
 
     func checklistProgress(for taskID: UUID) -> ChecklistProgress {
-        rollupDomainStore.checklistProgress(for: taskID, checklistItems: checklistItems)
+        if let cached = rollupDomainStore.rollup(for: taskID)?.checklistProgress {
+            return cached
+        }
+        let items = checklistByTaskID[taskID] ?? []
+        return ChecklistProgress(
+            taskID: taskID,
+            totalCount: items.count,
+            completedCount: items.lazy.filter(\.isCompleted).count
+        )
     }
 
     func rollup(for taskID: UUID) -> TaskRollup? {

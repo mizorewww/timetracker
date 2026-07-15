@@ -6,7 +6,17 @@ import Testing
 @Suite(.serialized)
 struct DataMaintenanceLifecycleTests {
     @Test @MainActor
-    func resetDataDeletesAllPersistentModels() throws {
+    func resetDataHidesAllUserFactsAndRetainsCloudDeletionTombstones() throws {
+        let defaults = UserDefaults.standard
+        let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+        let previousAutomaticSuggestions = defaults.object(forKey: automaticSuggestionsKey)
+        defer {
+            if let previousAutomaticSuggestions {
+                defaults.set(previousAutomaticSuggestions, forKey: automaticSuggestionsKey)
+            } else {
+                defaults.removeObject(forKey: automaticSuggestionsKey)
+            }
+        }
         let context = try makeTestContext()
         let task = TaskNode(title: "Reset me", parentID: nil, deviceID: "test")
         let category = TaskCategory(title: "Reset category", deviceID: "test")
@@ -22,7 +32,6 @@ struct DataMaintenanceLifecycleTests {
             endedAt: Date()
         )
         let pomodoro = PomodoroRun(taskID: task.id, deviceID: "test")
-        let summary = DailySummary(date: Date(), taskID: task.id, grossSeconds: 900, wallClockSeconds: 900, pomodoroCount: 1, interruptionCount: 0)
         let countdown = CountdownEvent(title: "Reset countdown", date: Date(), deviceID: "test")
         let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
         let checklistItem = ChecklistItem(taskID: task.id, title: "Reset checklist", deviceID: "test")
@@ -36,7 +45,6 @@ struct DataMaintenanceLifecycleTests {
         context.insert(session)
         context.insert(segment)
         context.insert(pomodoro)
-        context.insert(summary)
         context.insert(countdown)
         context.insert(preference)
         context.insert(checklistItem)
@@ -45,7 +53,10 @@ struct DataMaintenanceLifecycleTests {
         context.insert(inboxSuggestion)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let credentialStore = ResetTestCredentialStore()
+        try credentialStore.writeAPIKey("private-test-key")
+        defaults.set(true, forKey: automaticSuggestionsKey)
+        let store = TimeTrackerStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
         store.desktopTaskDetailID = task.id
@@ -58,38 +69,43 @@ struct DataMaintenanceLifecycleTests {
         #expect(store.pomodoroRuns.isEmpty)
         #expect(store.countdownEvents.isEmpty)
         #expect(store.syncedPreferences.isEmpty)
+        #expect(try credentialStore.readAPIKey() == nil)
+        #expect(defaults.object(forKey: automaticSuggestionsKey) == nil)
         #expect(store.selectedTaskID == nil)
         #expect(store.desktopTaskDetailID == nil)
-        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<TaskCategory>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<TimeSession>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<DailySummary>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<InboxItem>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<TaskCategory>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<InboxItem>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).allSatisfy { $0.deletedAt != nil })
+
+        let deletionSnapshot = try SyncDataSnapshot.capture(context: context)
+        #expect(deletionSnapshot.hasProtectableUserContent)
+        #expect(deletionSnapshot.hasVisibleUserContent == false)
     }
 
     @Test @MainActor
-    func optimizeDatabaseRemovesLedgerRowsForSoftDeletedTasks() throws {
+    func optimizeDatabasePreservesLedgerRowsForSoftDeletedTasks() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Temporary Client", parentID: nil, colorHex: nil, iconName: nil)
         let start = Date().addingTimeInterval(-1_800)
-        let session = try timeRepository.addManualSegment(
+        let segment = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
             endedAt: start.addingTimeInterval(900),
             note: nil
         )
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
-        run.sessionID = session.id
+        run.sessionID = segment.sessionID
         run.state = .completed
         context.insert(run)
         try context.save()
@@ -101,15 +117,15 @@ struct DataMaintenanceLifecycleTests {
 
         let removedCount = store.optimizeDatabase()
 
-        #expect(removedCount == 3)
-        #expect(try timeRepository.allSegments().isEmpty)
-        #expect(try timeRepository.sessions().isEmpty)
-        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).isEmpty)
+        #expect(removedCount == 0)
+        #expect(try timeRepository.allSegments().contains { $0.id == segment.id })
+        #expect(try timeRepository.sessions().contains { $0.id == segment.sessionID })
+        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).contains { $0.id == run.id })
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).contains { $0.id == task.id && $0.deletedAt != nil })
     }
 
     @Test @MainActor
-    func optimizeDatabaseRemovesOnlyTrulyOrphanedLedgerRows() throws {
+    func optimizeDatabasePreservesVisibleOrphansDuringStagedCloudImport() throws {
         let context = try makeTestContext()
         let missingTaskID = UUID()
         let session = TimeSession(taskID: missingTaskID, source: .manual, deviceID: "test")
@@ -131,8 +147,132 @@ struct DataMaintenanceLifecycleTests {
 
         let removedCount = store.optimizeDatabase()
 
-        #expect(removedCount == 2)
-        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).contains { $0.id == segment.id } == false)
-        #expect(try context.fetch(FetchDescriptor<TimeSession>()).contains { $0.id == session.id } == false)
+        #expect(removedCount == 0)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).contains { $0.id == segment.id })
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).contains { $0.id == session.id })
+    }
+
+    @Test @MainActor
+    func optimizeDatabaseDoesNotDeleteVisibleRelationshipRowsBeforeTheirParentsImport() throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Existing", parentID: nil, deviceID: "test")
+        let missingTaskID = UUID()
+        let missingCategoryID = UUID()
+        let missingSessionID = UUID()
+        let missingInboxItemID = UUID()
+        let orphanSegment = TimeSegment(
+            sessionID: missingSessionID,
+            taskID: task.id,
+            source: .manual,
+            deviceID: "test",
+            startedAt: Date().addingTimeInterval(-300),
+            endedAt: Date()
+        )
+        let orphanAssignment = TaskCategoryAssignment(
+            taskID: task.id,
+            categoryID: missingCategoryID,
+            deviceID: "test"
+        )
+        let orphanChecklistItem = ChecklistItem(
+            taskID: missingTaskID,
+            title: "Orphan checklist",
+            deviceID: "test"
+        )
+        let orphanVisual = ChecklistItemVisual(
+            checklistItemID: orphanChecklistItem.id,
+            deviceID: "test"
+        )
+        let orphanSuggestion = InboxSuggestion(
+            inboxItemID: missingInboxItemID,
+            taskID: task.id,
+            titleSnapshot: "Orphan suggestion",
+            deviceID: "test"
+        )
+        context.insert(task)
+        context.insert(orphanSegment)
+        context.insert(orphanAssignment)
+        context.insert(orphanChecklistItem)
+        context.insert(orphanVisual)
+        context.insert(orphanSuggestion)
+        try context.save()
+
+        let removedCount = try DatabaseMaintenanceService().optimizeDatabase(
+            context: context,
+            allowsPermanentTombstonePurge: true
+        )
+
+        #expect(removedCount == 0)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).map(\.id) == [task.id])
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).count == 1)
+    }
+
+    @Test @MainActor
+    func optimizeDatabasePurgesOnlyExpiredTombstoneGraphs() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Long deleted task", parentID: nil, colorHex: nil, iconName: nil)
+        let segment = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: Date(timeIntervalSinceReferenceDate: 1_000),
+            endedAt: Date(timeIntervalSinceReferenceDate: 1_600),
+            note: nil
+        )
+        let run = PomodoroRun(taskID: task.id, deviceID: "test")
+        run.sessionID = segment.sessionID
+        context.insert(run)
+        let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
+        task.deletedAt = now.addingTimeInterval(-DatabaseMaintenanceService.defaultTombstoneRetention - 1)
+        task.updatedAt = task.deletedAt ?? task.updatedAt
+        try context.save()
+
+        let removedCount = try DatabaseMaintenanceService().optimizeDatabase(
+            context: context,
+            now: now,
+            allowsPermanentTombstonePurge: true
+        )
+
+        #expect(removedCount == 4)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func optimizeDatabasePreservesExpiredTombstonesWhenCloudCanResume() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
+        let task = TaskNode(title: "Offline deletion guard", parentID: nil, deviceID: "test")
+        task.deletedAt = now.addingTimeInterval(-DatabaseMaintenanceService.defaultTombstoneRetention - 1)
+        task.updatedAt = task.deletedAt ?? task.updatedAt
+        context.insert(task)
+        try context.save()
+
+        let removedCount = try DatabaseMaintenanceService().optimizeDatabase(
+            context: context,
+            now: now,
+            allowsPermanentTombstonePurge: false
+        )
+
+        #expect(removedCount == 0)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).contains { $0.id == task.id })
+    }
+}
+
+private final class ResetTestCredentialStore: LLMCredentialStoring {
+    private var apiKey: String?
+
+    func readAPIKey() throws -> String? {
+        apiKey
+    }
+
+    func writeAPIKey(_ apiKey: String) throws {
+        let normalized = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.apiKey = normalized.isEmpty ? nil : normalized
     }
 }

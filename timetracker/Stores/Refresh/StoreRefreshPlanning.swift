@@ -19,6 +19,18 @@ enum StoreRefreshScope: Hashable, CaseIterable {
 struct StoreInvalidationRange: Hashable {
     let start: Date
     let end: Date
+
+    init(start: Date, end: Date) {
+        // Foundation traps when DateInterval is initialized with a reversed
+        // range. Normalize here because invalidations may also describe legacy
+        // or remotely imported records that predate current editor validation.
+        self.start = min(start, end)
+        self.end = max(start, end)
+    }
+
+    var dateInterval: DateInterval {
+        DateInterval(start: start, end: end)
+    }
 }
 
 enum StoreDomainEvent: Hashable {
@@ -51,6 +63,43 @@ enum StoreDomainEvent: Hashable {
              .fullSync:
             return []
         }
+    }
+
+    var directlyAffectedTaskIDs: Set<UUID> {
+        switch self {
+        case .taskChanged(let taskID, _),
+             .checklistChanged(let taskID, _),
+             .ledgerChanged(let taskID, _, _),
+             .pomodoroChanged(_, _, let taskID):
+            return taskID.map { [$0] } ?? []
+        case .preferenceChanged,
+             .countdownChanged,
+             .inboxChanged,
+             .remoteImportCompleted,
+             .fullSync:
+            return []
+        }
+    }
+
+    var explicitlyAffectedAncestorTaskIDs: Set<UUID> {
+        switch self {
+        case .taskChanged(_, let ancestorIDs),
+             .checklistChanged(_, let ancestorIDs):
+            return ancestorIDs
+        case .ledgerChanged,
+             .pomodoroChanged,
+             .preferenceChanged,
+             .countdownChanged,
+             .inboxChanged,
+             .remoteImportCompleted,
+             .fullSync:
+            return []
+        }
+    }
+
+    var directlyAffectedChecklistTaskIDs: Set<UUID> {
+        guard case .checklistChanged(let taskID, _) = self else { return [] }
+        return taskID.map { [$0] } ?? []
     }
 
     var affectedLedgerRanges: [StoreInvalidationRange] {
@@ -89,6 +138,9 @@ enum StoreDomainEvent: Hashable {
 struct StoreRefreshPlan: Equatable {
     let scopes: Set<StoreRefreshScope>
     let affectedTaskIDs: Set<UUID>
+    let directlyAffectedTaskIDs: Set<UUID>
+    let explicitlyAffectedAncestorTaskIDs: Set<UUID>
+    let directlyAffectedChecklistTaskIDs: Set<UUID>
     let affectedInboxItemIDs: Set<UUID>
     let affectedLedgerRanges: [StoreInvalidationRange]
     let refreshTasks: Bool
@@ -107,11 +159,17 @@ struct StoreRefreshPlan: Equatable {
     init(
         scopes: Set<StoreRefreshScope>,
         affectedTaskIDs: Set<UUID> = [],
+        directlyAffectedTaskIDs: Set<UUID> = [],
+        explicitlyAffectedAncestorTaskIDs: Set<UUID> = [],
+        directlyAffectedChecklistTaskIDs: Set<UUID> = [],
         affectedInboxItemIDs: Set<UUID> = [],
         affectedLedgerRanges: [StoreInvalidationRange] = []
     ) {
         self.scopes = scopes
         self.affectedTaskIDs = affectedTaskIDs
+        self.directlyAffectedTaskIDs = directlyAffectedTaskIDs
+        self.explicitlyAffectedAncestorTaskIDs = explicitlyAffectedAncestorTaskIDs
+        self.directlyAffectedChecklistTaskIDs = directlyAffectedChecklistTaskIDs
         self.affectedInboxItemIDs = affectedInboxItemIDs
         self.affectedLedgerRanges = affectedLedgerRanges
         let isFullRefresh = scopes == StoreRefreshScope.full
@@ -153,6 +211,15 @@ struct StoreRefreshPlanner {
         StoreRefreshPlan(
             scopes: scopes(after: events),
             affectedTaskIDs: events.reduce(into: Set<UUID>()) { $0.formUnion($1.affectedTaskIDs) },
+            directlyAffectedTaskIDs: events.reduce(into: Set<UUID>()) {
+                $0.formUnion($1.directlyAffectedTaskIDs)
+            },
+            explicitlyAffectedAncestorTaskIDs: events.reduce(into: Set<UUID>()) {
+                $0.formUnion($1.explicitlyAffectedAncestorTaskIDs)
+            },
+            directlyAffectedChecklistTaskIDs: events.reduce(into: Set<UUID>()) {
+                $0.formUnion($1.directlyAffectedChecklistTaskIDs)
+            },
             affectedInboxItemIDs: events.reduce(into: Set<UUID>()) { $0.formUnion($1.affectedInboxItemIDs) },
             affectedLedgerRanges: events.flatMap(\.affectedLedgerRanges)
         )

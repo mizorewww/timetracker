@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MetricsAndActions: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let horizontal: Bool
 
     var body: some View {
@@ -54,7 +54,7 @@ var phoneLeadingToolbarPlacement: ToolbarItemPlacement {
 }
 
 struct MetricsPanel: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var isCompactPhone: Bool {
@@ -70,8 +70,9 @@ struct MetricsPanel: View {
 }
 
 private struct MetricsPanelContent: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var isCompactPhone: Bool {
         SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
@@ -80,7 +81,7 @@ private struct MetricsPanelContent: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let metrics = metricItems(now: context.date)
-            if isCompactPhone {
+            if isCompactPhone && !dynamicTypeSize.isAccessibilitySize {
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(metrics) { metric in
                         MetricCell(metric: metric, compact: true)
@@ -120,17 +121,21 @@ private struct MetricsPanelContent: View {
         let grossTrend = trend(current: todayGross, previous: yesterdayGross)
         let wallTrend = trend(current: todayWall, previous: yesterdayWall)
 
+        let grossMetric = MetricSummaryItem(
+            id: "gross",
+            title: AppStrings.grossTime,
+            value: DurationFormatter.compact(todayGross),
+            iconName: "square.stack.3d.up",
+            tint: .blue,
+            trendText: grossTrend.text,
+            trendColor: grossTrend.color,
+            alignment: .leading
+        )
+        guard store.preferences.showGrossAndWallTogether else {
+            return [grossMetric]
+        }
         return [
-            MetricSummaryItem(
-                id: "tracked",
-                title: AppStrings.todayTracked,
-                value: DurationFormatter.compact(todayGross),
-                iconName: "clock.badge.checkmark",
-                tint: .blue,
-                trendText: grossTrend.text,
-                trendColor: grossTrend.color,
-                alignment: .leading
-            ),
+            grossMetric,
             MetricSummaryItem(
                 id: "wall",
                 title: AppStrings.wallTime,
@@ -139,16 +144,6 @@ private struct MetricsPanelContent: View {
                 tint: .green,
                 trendText: wallTrend.text,
                 trendColor: wallTrend.color,
-                alignment: .center
-            ),
-            MetricSummaryItem(
-                id: "gross",
-                title: AppStrings.grossTime,
-                value: DurationFormatter.compact(todayGross),
-                iconName: "square.stack.3d.up",
-                tint: .orange,
-                trendText: grossTrend.text,
-                trendColor: grossTrend.color,
                 alignment: .trailing
             )
         ]

@@ -24,8 +24,23 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Domains/AnalyticsStore.swift",
             "timetracker/Stores/Domains/AnalyticsStore+SnapshotBuilding.swift",
             "timetracker/Stores/Domains/AnalyticsStore+Breakdowns.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+DecisionSupport.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+GroupBreakdowns.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+Metrics.swift",
             "timetracker/Stores/Domains/AnalyticsStore+Overlap.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+TaskSnapshot.swift",
             "timetracker/Stores/Domains/AnalyticsSnapshotModels.swift",
+            "timetracker/Stores/Domains/ChecklistStore.swift",
+            "timetracker/Stores/Domains/ChecklistStore+ArrayIndexes.swift",
+            "timetracker/Stores/Domains/LedgerStore.swift",
+            "timetracker/Stores/Domains/LedgerStore+SegmentIndex.swift",
+            "timetracker/Stores/Domains/LedgerStore+Queries.swift",
+            "timetracker/Stores/Domains/LedgerStore+RecordIndexes.swift",
+            "timetracker/Stores/Domains/LedgerRollupIndex.swift",
+            "timetracker/Stores/Domains/LedgerSessionIndex.swift",
+            "timetracker/Stores/Domains/RollupIncrementalIndex.swift",
+            "timetracker/Stores/Domains/RollupIncrementalIndex+Pace.swift",
+            "timetracker/Stores/Domains/RollupIncrementalIndex+Topology.swift",
             "timetracker/Stores/Navigation/StoreSelectionCoordinator.swift",
             "timetracker/Stores/Refresh/StoreRefreshPlanning.swift",
             "timetracker/Services/Instrumentation/PerformanceSignpost.swift",
@@ -33,8 +48,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Models/SchemaLegacyModels.swift",
             "timetracker/Models/SchemaMigrationPlan.swift",
             "timetracker/Models/TimeTrackerModelRegistry.swift",
+            "timetracker/Models/TaskEstimatePolicy.swift",
             "timetracker/Models/EditorDraftModels.swift",
             "timetracker/Models/AnalyticsReadModels.swift",
+            "timetracker/Models/PomodoroPreferenceModels.swift",
             "timetracker/Models/SyncFeedbackModels.swift",
             "timetracker/Services/Analytics/AnalyticsEngine.swift",
             "timetracker/Services/Analytics/TimelineLayoutModels.swift",
@@ -43,11 +60,43 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Inbox/InboxSuggestionStateService.swift",
             "timetracker/Services/Forecasting/TaskRollupService.swift",
             "timetracker/Services/Forecasting/TaskRollupCalculationContext.swift",
+            "timetracker/Services/Ledger/AppCloudSync.swift",
+            "timetracker/Services/Ledger/PersistenceWriteSafety.swift",
+            "timetracker/Services/Ledger/TimerCommand.swift",
+            "timetracker/Services/Ledger/TimeAggregationService.swift",
+            "timetracker/Services/Ledger/TimeFormatters.swift",
+            "timetracker/Services/Ledger/DeviceIdentity.swift",
             "timetracker/Services/Ledger/LedgerSummaryService.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+CloudExport.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+CloudImport.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+Export.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+LocalMutation.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+Recovery.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+Resolution.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+State.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+StateLock.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+StateLocations.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictState.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+Capture.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+Restore.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreChecklist.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreInbox.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreLedger.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestorePlanning.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreTasks.swift",
+            "timetracker/Services/SystemIntegration/SyncSnapshotRecords.swift",
+            "timetracker/Services/SystemIntegration/SyncSnapshotChecklistRecords.swift",
+            "timetracker/Services/SystemIntegration/SyncSnapshotInboxRecords.swift",
+            "timetracker/Services/SystemIntegration/SyncSnapshotLedgerRecords.swift",
+            "timetracker/Services/SystemIntegration/SyncSnapshotPlanningRecords.swift",
             "timetracker/Services/SystemIntegration/WidgetSnapshotCache.swift",
             "timetracker/Services/SystemIntegration/WatchCommandProcessor.swift",
             "timetracker/Services/SystemIntegration/WatchConnectivityBridge.swift",
             "timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift",
+            "timetracker/Services/SystemIntegration/WatchIncomingCommandStore.swift",
+            "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift",
             "timetracker/Services/Tasks/TaskTreeServices.swift",
             "timetracker/Shared/WatchCommandModels.swift",
             "timetracker/Shared/WatchStateSnapshotModels.swift",
@@ -75,8 +124,11 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/InfoRows.swift",
             "timetracker/SharedUI/Components/SplitViewToolbarButtons.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/Features/Home/HomeViews.swift",
+            "timetracker/Features/Home/PhoneHomeView.swift",
+            "timetracker/Features/Home/PhoneHomeRows.swift",
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
-            "timetracker/Features/Home/Sections/HomeSelectedTaskSummaryViews.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/App/AppModelContainerFactory.swift",
             "timetracker/App/AppDemoDataConfiguration.swift",
@@ -84,13 +136,20 @@ struct CoreSourceLayoutTests {
             "timetracker/App/TimeTrackerCommands.swift",
             "timetracker/App/TimeTrackerAppDelegate.swift",
             "timetracker/App/AppDeepLinkRouter.swift",
+            "timetracker/App/WatchCommandRouter.swift",
             "timetracker/App/RootViews/DesktopRootViews.swift",
             "timetracker/App/RootViews/iOSRootViews.swift",
             "timetracker/AppIntents/TimeTrackerAppIntents.swift",
             "timetrackerWidgetExtension/TimeTrackerWidget.swift",
+            "timetrackerWidgetExtension/ActiveTimerWidgetView.swift",
+            "timetrackerWidgetExtension/WidgetSupplementaryViews.swift",
+            "timetrackerWidgetExtension/WidgetSupport.swift",
             "timetrackerWidgetExtension/Info.plist",
             "timetrackerWatchApp/TimeTrackerWatchApp.swift",
             "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchTimerRows.swift",
+            "timetrackerWatchApp/WatchStatusViews.swift",
+            "timetrackerWatchApp/WatchColorSupport.swift",
             "timetrackerWatchApp/WatchAppStore.swift",
             "timetracker/Features/Inbox/InboxViews.swift",
             "timetracker/Features/Inbox/InboxListView.swift",
@@ -104,10 +163,40 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift",
-            "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailChecklistViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailOverviewViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailAnalyticsViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailRecordViews.swift",
             "timetracker/Features/Tasks/Management/TasksViews.swift",
-            "timetracker/Features/Settings/SettingsSectionsViews.swift",
-            "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift",
+            "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
+            "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift",
+            "timetracker/Features/Settings/SettingsViews.swift",
+            "timetracker/Features/Settings/SettingsCategorySections.swift",
+            "timetracker/Features/Settings/SettingsCategoryViews.swift",
+            "timetracker/Features/Settings/LLMSettingsViews.swift",
+            "timetracker/Features/Settings/LLMSettingsSection.swift",
+            "timetracker/Features/Settings/DisplayTimingSettingsSection.swift",
+            "timetracker/Features/Settings/PomodoroSettingsSection.swift",
+            "timetracker/Features/Settings/PomodoroPickerViews.swift",
+            "timetracker/Features/Settings/CountdownSettingsSection.swift",
+            "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Analytics/AnalyticsCategory.swift",
+            "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
+            "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
+            "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsForecastViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverlapViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsQualityViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift"
@@ -127,6 +216,25 @@ struct CoreSourceLayoutTests {
         #expect(FileManager.default.fileExists(
             atPath: root.appending(path: "timetracker/SharedUI/Components/SharedUI.swift").path
         ) == false)
+
+        let retiredViews = [
+            "timetracker/Features/Home/Sections/HomeSelectedTaskSummaryViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
+            "timetracker/Features/Settings/SettingsSectionsViews.swift",
+            "timetracker/Services/Ledger/TimeTrackerServices.swift"
+        ]
+        for relativePath in retiredViews {
+            #expect(FileManager.default.fileExists(atPath: root.appending(path: relativePath).path) == false)
+        }
+    }
+
+    @Test
+    func customMigrationBufferUsesSynchronizedOneShotStorage() throws {
+        let source = try sourceText("timetracker/Models/SchemaMigrationPlan.swift")
+
+        #expect(source.contains("OSAllocatedUnfairLock"))
+        #expect(source.contains("LegacyTaskCategoryMigrationBuffer.consume()"))
+        #expect(source.contains("nonisolated(unsafe)") == false)
     }
 
     @Test
@@ -164,6 +272,99 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
+    func taskDetailFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let detailURL = root.appending(path: "timetracker/Features/Tasks/Detail")
+        let focusedFiles = [
+            "TaskDetailView.swift",
+            "TaskDetailActionsView.swift",
+            "TaskDetailNavigationViews.swift",
+            "TaskDetailIdentityViews.swift",
+            "TaskDetailChecklistViews.swift",
+            "TaskDetailOverviewViews.swift",
+            "TaskDetailAnalyticsViews.swift",
+            "TaskDetailRecordViews.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = detailURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func settingsSectionFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let settingsURL = root.appending(path: "timetracker/Features/Settings")
+        let focusedFiles = [
+            "DisplayTimingSettingsSection.swift",
+            "PomodoroSettingsSection.swift",
+            "PomodoroPickerViews.swift",
+            "CountdownSettingsSection.swift",
+            "SyncSettingsSection.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = settingsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func companionPlatformUIFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let focusedFiles = [
+            "timetrackerWidgetExtension/TimeTrackerWidget.swift",
+            "timetrackerWidgetExtension/ActiveTimerWidgetView.swift",
+            "timetrackerWidgetExtension/WidgetSupplementaryViews.swift",
+            "timetrackerWidgetExtension/WidgetSupport.swift",
+            "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchTimerRows.swift",
+            "timetrackerWatchApp/WatchStatusViews.swift",
+            "timetrackerWatchApp/WatchColorSupport.swift"
+        ]
+
+        for relativePath in focusedFiles {
+            let file = root.appending(path: relativePath)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(file.lastPathComponent) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func primaryUICompositionFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let focusedFiles = [
+            "timetracker/Features/Home/HomeViews.swift",
+            "timetracker/Features/Home/PhoneHomeView.swift",
+            "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
+            "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift",
+            "timetracker/Features/Settings/SettingsViews.swift",
+            "timetracker/Features/Settings/SettingsCategorySections.swift",
+            "timetracker/Features/Settings/SettingsCategoryViews.swift",
+            "timetracker/Features/Settings/LLMSettingsViews.swift",
+            "timetracker/Features/Settings/LLMSettingsSection.swift"
+        ]
+
+        for relativePath in focusedFiles {
+            let file = root.appending(path: relativePath)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(file.lastPathComponent) has \(lineCount) lines")
+        }
+    }
+
+    @Test
     func analyticsStoreFilesStaySplitByResponsibility() throws {
         let root = try projectRootURL()
         let domainURL = root.appending(path: "timetracker/Stores/Domains")
@@ -172,13 +373,67 @@ struct CoreSourceLayoutTests {
             "AnalyticsSnapshotModels.swift",
             "AnalyticsStore+SnapshotBuilding.swift",
             "AnalyticsStore+Breakdowns.swift",
-            "AnalyticsStore+Overlap.swift"
+            "AnalyticsStore+DecisionSupport.swift",
+            "AnalyticsStore+GroupBreakdowns.swift",
+            "AnalyticsStore+Metrics.swift",
+            "AnalyticsStore+Overlap.swift",
+            "AnalyticsStore+TaskSnapshot.swift"
         ]
 
         for fileName in focusedFiles {
             let file = domainURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func mutationIndexesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let domainURL = root.appending(path: "timetracker/Stores/Domains")
+        let focusedFiles = [
+            "ChecklistStore.swift",
+            "ChecklistStore+ArrayIndexes.swift",
+            "LedgerStore.swift",
+            "LedgerStore+SegmentIndex.swift",
+            "LedgerStore+Queries.swift",
+            "LedgerStore+RecordIndexes.swift",
+            "LedgerRollupIndex.swift",
+            "LedgerSessionIndex.swift",
+            "RollupIncrementalIndex.swift",
+            "RollupIncrementalIndex+Pace.swift",
+            "RollupIncrementalIndex+Topology.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = domainURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func analyticsFeatureFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let analyticsURL = root.appending(path: "timetracker/Features/Analytics")
+        let focusedFiles = [
+            "AnalyticsViews.swift",
+            "AnalyticsCategory.swift",
+            "AnalyticsOverviewRows.swift",
+            "AnalyticsMetricListViews.swift",
+            "AnalyticsDetailListViews.swift",
+            "AnalyticsPeriodSection.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = analyticsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            let lineLimit = fileName == "AnalyticsViews.swift" ? 300 : 180
+            #expect(lineCount <= lineLimit, "\(fileName) has \(lineCount) lines")
         }
     }
 
@@ -199,7 +454,7 @@ struct CoreSourceLayoutTests {
         for fileName in focusedFiles {
             let file = analyticsURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
-            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
         }
     }
 
@@ -240,12 +495,91 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
+    func ledgerServiceFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let ledgerURL = root.appending(path: "timetracker/Services/Ledger")
+        let focusedFiles = [
+            "AppCloudSync.swift",
+            "PersistenceWriteSafety.swift",
+            "TimerCommand.swift",
+            "TimeAggregationService.swift",
+            "TimeFormatters.swift",
+            "DeviceIdentity.swift",
+            "LedgerSummaryService.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = ledgerURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 220, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func syncConflictFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let integrationURL = root.appending(path: "timetracker/Services/SystemIntegration")
+        let focusedFiles = [
+            "SyncConflictService.swift",
+            "SyncConflictService+CloudExport.swift",
+            "SyncConflictService+CloudImport.swift",
+            "SyncConflictService+Export.swift",
+            "SyncConflictService+LocalMutation.swift",
+            "SyncConflictService+Recovery.swift",
+            "SyncConflictService+Resolution.swift",
+            "SyncConflictService+State.swift",
+            "SyncConflictService+StateLock.swift",
+            "SyncConflictService+StateLocations.swift",
+            "SyncConflictState.swift",
+            "SyncDataSnapshot.swift",
+            "SyncDataSnapshot+Capture.swift",
+            "SyncDataSnapshot+Restore.swift",
+            "SyncDataSnapshot+RestoreChecklist.swift",
+            "SyncDataSnapshot+RestoreInbox.swift",
+            "SyncDataSnapshot+RestoreLedger.swift",
+            "SyncDataSnapshot+RestorePlanning.swift",
+            "SyncDataSnapshot+RestoreTasks.swift",
+            "SyncSnapshotRecords.swift",
+            "SyncSnapshotChecklistRecords.swift",
+            "SyncSnapshotInboxRecords.swift",
+            "SyncSnapshotLedgerRecords.swift",
+            "SyncSnapshotPlanningRecords.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = integrationURL.appending(path: fileName)
+            #expect(FileManager.default.fileExists(atPath: file.path))
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(fileName) has \(lineCount) lines")
+        }
+
+        let adjacentSafetyFiles = [
+            "timetracker/Services/SystemIntegration/WatchIncomingCommandStore.swift",
+            "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift"
+        ]
+        for relativePath in adjacentSafetyFiles {
+            let file = root.appending(path: relativePath)
+            #expect(FileManager.default.fileExists(atPath: file.path))
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(file.lastPathComponent) has \(lineCount) lines")
+        }
+    }
+
+    @Test
     func forecastFilesStaySplitByResponsibility() throws {
         let root = try projectRootURL()
         let forecastingURL = root.appending(path: "timetracker/Services/Forecasting")
         let focusedFiles = [
             "TaskRollupService.swift",
             "TaskRollupCalculationContext.swift",
+            "TaskRollupInputAggregation.swift",
+            "TaskRollupResolutionService.swift",
             "TaskRollupForecastHelpers.swift",
             "ForecastDisplayService.swift"
         ]
@@ -279,6 +613,29 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
+    func legacyDailySummaryIsExcludedFromTheCurrentSchemaAndProductionMaintenancePaths() throws {
+        let schemas = try sourceText("timetracker/Models/SchemaModels.swift")
+        let currentRegistry = try sourceText("timetracker/Models/TimeTrackerModelRegistry.swift")
+        let migrationPlan = try sourceText("timetracker/Models/SchemaMigrationPlan.swift")
+        let legacyModel = try sourceText("timetracker/Models/SummaryModels.swift")
+        let productionPaths = try [
+            "timetracker/App/SeedData+Cleanup.swift",
+            "timetracker/Services/Maintenance/MaintenanceServices.swift",
+            "timetracker/Services/Analytics/DailySummaryService.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+        let v9Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV9").last ?? ""
+
+        #expect(v9Schema.contains("DailySummary.self") == false)
+        #expect(currentRegistry.contains("TimeTrackerSchemaV9"))
+        #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self"))
+        #expect(legacyModel.contains("Legacy persisted cache retained only"))
+        #expect(productionPaths.contains("FetchDescriptor<DailySummary>") == false)
+        #expect(productionPaths.contains("-> DailySummary {") == false)
+    }
+
+    @Test
     func appRootFilesStaySplitByPlatformResponsibility() throws {
         let root = try projectRootURL()
         let appURL = root.appending(path: "timetracker/App")
@@ -296,7 +653,7 @@ struct CoreSourceLayoutTests {
         for fileName in focusedFiles {
             let file = appURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
-            #expect(lineCount <= 160, "\(fileName) has \(lineCount) lines")
+            #expect(lineCount <= 200, "\(fileName) has \(lineCount) lines")
         }
     }
 

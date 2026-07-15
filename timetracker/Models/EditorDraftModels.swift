@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskEditorDraft: Identifiable {
+struct TaskEditorDraft: Identifiable, Equatable {
     let id = UUID()
     var taskID: UUID?
     var title: String
@@ -44,7 +44,7 @@ struct TaskEditorDraft: Identifiable {
         self.colorHex = task.colorHex ?? "1677FF"
         self.iconName = task.iconName ?? "checkmark.circle"
         self.notes = task.notes ?? ""
-        self.estimatedMinutes = task.estimatedSeconds.map { $0 / 60 }
+        self.estimatedMinutes = TaskEstimatePolicy.normalized(seconds: task.estimatedSeconds).map { $0 / 60 }
         self.hasDueDate = task.dueAt != nil
         self.dueAt = task.dueAt ?? Date()
         self.checklistItems = checklistItems.map { item in
@@ -53,7 +53,7 @@ struct TaskEditorDraft: Identifiable {
     }
 }
 
-struct TaskCategoryEditorDraft: Identifiable {
+struct TaskCategoryEditorDraft: Identifiable, Equatable {
     let id = UUID()
     var categoryID: UUID?
     var title: String
@@ -110,7 +110,7 @@ struct ChecklistEditorDraft: Identifiable, Equatable {
     }
 }
 
-struct InboxSuggestionEditorDraft: Identifiable {
+struct InboxSuggestionEditorDraft: Identifiable, Equatable {
     let id = UUID()
     let inboxItemID: UUID
     var taskID: UUID?
@@ -127,7 +127,7 @@ struct InboxSuggestionEditorDraft: Identifiable {
     }
 }
 
-struct ManualTimeDraft: Identifiable {
+struct ManualTimeDraft: Identifiable, Equatable {
     let id = UUID()
     var taskID: UUID?
     var startedAt: Date
@@ -143,7 +143,7 @@ struct ManualTimeDraft: Identifiable {
     }
 }
 
-struct SegmentEditorDraft: Identifiable {
+struct SegmentEditorDraft: Identifiable, Equatable {
     let id = UUID()
     let segmentID: UUID
     var taskID: UUID?

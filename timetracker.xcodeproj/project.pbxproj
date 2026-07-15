@@ -12,6 +12,7 @@
 		E40100000000000000000002 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
 		E60000000000000000000001 /* timetrackerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E60000000000000000000002 /* timetrackerWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E6000000000000000000000F /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */; };
+		E60000000000000000000011 /* timetracker/Shared/WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60000000000000000000010 /* timetracker/Shared/WidgetSnapshotStore.swift */; };
 		E70000000000000000000001 /* timetracker/Shared/WatchCommandModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000005 /* timetracker/Shared/WatchCommandModels.swift */; };
 		E70000000000000000000002 /* timetracker/Shared/WatchStateSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */; };
 		E70000000000000000000003 /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */; };
@@ -91,6 +92,7 @@
 		E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLiveActivity/TimeTrackingActivityAttributes.swift; sourceTree = "<group>"; };
 		E60000000000000000000002 /* timetrackerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = timetrackerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WidgetSnapshotModels.swift; sourceTree = "<group>"; };
+		E60000000000000000000010 /* timetracker/Shared/WidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WidgetSnapshotStore.swift; sourceTree = "<group>"; };
 		E70000000000000000000005 /* timetracker/Shared/WatchCommandModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WatchCommandModels.swift; sourceTree = "<group>"; };
 		E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/WatchStateSnapshotModels.swift; sourceTree = "<group>"; };
 		E70000000000000000000007 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift; sourceTree = "<group>"; };
@@ -547,6 +549,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6000000000000000000000F /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */,
+				E60000000000000000000011 /* timetracker/Shared/WidgetSnapshotStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -640,7 +643,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = seedIfEmpty;
+				TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = off;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Debug;

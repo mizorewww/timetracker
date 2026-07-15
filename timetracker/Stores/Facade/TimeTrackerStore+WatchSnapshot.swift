@@ -1,7 +1,30 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func handleWatchCommand(_ command: WatchTimerCommand) {
+    @discardableResult
+    func handleWatchCommand(_ command: WatchTimerCommand) -> WatchCommandResult {
+        handleWatchCommand(command, recordingWith: syncConflictService)
+    }
+
+    @discardableResult
+    func handleWatchCommand(
+        _ command: WatchTimerCommand,
+        recordingWith snapshotService: SyncConflictService
+    ) -> WatchCommandResult {
+        let targetSegment = command.segmentID.flatMap { segmentID in
+            activeSegments.first { $0.id == segmentID }
+        }
+        let events: Set<StoreDomainEvent>
+        switch command.type {
+        case .startTask:
+            events = command.taskID.map { timerStartMutationEvents(taskID: $0) } ?? []
+        case .stopSegment:
+            events = targetSegment.map { timerStopMutationEvents(segment: $0) } ?? [
+                .ledgerChanged(taskID: nil, dateInterval: nil, isVisible: true),
+                .pomodoroChanged(runID: nil, sessionID: nil, taskID: nil)
+            ]
+        }
+
         do {
             guard let modelContext else { throw StoreError.notConfigured }
             let result = try WatchCommandProcessor().process(
@@ -9,15 +32,43 @@ extension TimeTrackerStore {
                 allowParallelTimers: preferences.allowParallelTimers,
                 context: modelContext
             )
-            guard result.isProcessed else { return }
-            let event = StoreDomainEvent.ledgerChanged(
-                taskID: command.taskID,
-                dateInterval: nil,
-                isVisible: true
-            )
-            try refresh(plan: refreshPlanner.plan(after: [event]))
+            let terminalResult = result.terminalResult(commandID: command.id)
+
+            if result.isProcessed {
+                var postCommitError: Error?
+                do {
+                    if let surfaceError = try refreshCommittedMutationSurfaces(events: events) {
+                        postCommitError = surfaceError
+                    }
+                } catch {
+                    postCommitError = error
+                }
+                if let snapshotError = CommittedMutationSnapshotRecorder(
+                    syncConflictService: snapshotService
+                ).recordLocalMutation(context: modelContext, events: events) {
+                    postCommitError = postCommitError ?? snapshotError
+                } else {
+                    pendingSyncConflict = snapshotService.prompt()
+                }
+
+                if let postCommitError {
+                    errorMessage = String(
+                        format: AppStrings.localized("error.savedRefreshFailed"),
+                        postCommitError.localizedDescription
+                    )
+                }
+            }
+
+            // Always publish after a terminal outcome. This also covers duplicate,
+            // missing, and invalid commands whose watch may hold a stale snapshot.
+            syncWatchSnapshotIfAvailable()
+            return terminalResult
         } catch {
             errorMessage = error.localizedDescription
+            // A failed command still receives a terminal result and a best-effort
+            // state refresh, allowing the watch row to unlock immediately.
+            syncWatchSnapshotIfAvailable()
+            return .failed(commandID: command.id)
         }
     }
 
@@ -71,7 +122,7 @@ extension TimeTrackerStore {
 
     private func watchTaskShortcuts() -> [TaskNode] {
         let availableTasks = tasks.filter {
-            $0.deletedAt == nil && $0.status != .archived
+            isTaskAvailableForTracking($0)
         }
         let pinnedTasks = preferences.quickStartTaskIDs
             .compactMap { taskID in availableTasks.first { $0.id == taskID } }

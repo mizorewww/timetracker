@@ -5,18 +5,29 @@ struct AnalyticsEngine {
     private let dailySummaryService = DailySummaryService()
 
     func overview(segments: [TimeSegment], range: AnalyticsRange, now: Date = Date(), calendar: Calendar = .current) -> AnalyticsOverview {
-        let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
-        let gross = aggregationService.totalSeconds(segments: rangeSegments, mode: .gross, now: now)
-        let wall = aggregationService.totalSeconds(segments: rangeSegments, mode: .wallClock, now: now)
-        let focusSegments = rangeSegments.filter { $0.source == .pomodoro }
-        let averageFocus = focusSegments.isEmpty ? 0 : aggregationService.grossSeconds(focusSegments, now: now) / focusSegments.count
+        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else {
+            return AnalyticsOverview(grossSeconds: 0, wallSeconds: 0, overlapSeconds: 0, pomodoroCount: 0, averageFocusSeconds: 0)
+        }
+        let bounded = segments.compactMap { segment -> (segment: TimeSegment, interval: DateInterval)? in
+            guard let clipped = clippedInterval(for: segment, in: interval, now: now) else { return nil }
+            return (segment, clipped)
+        }
+        let gross = bounded.reduce(0) { $0 + Int($1.interval.duration) }
+        let wall = aggregationService.mergeOverlappingIntervals(bounded.map { $0.interval }).reduce(0) {
+            $0 + Int($1.duration)
+        }
+        let focusSegments = bounded.filter { $0.segment.source == .pomodoro }
+        let focusSeconds = focusSegments.reduce(0) { $0 + Int($1.interval.duration) }
 
         return AnalyticsOverview(
             grossSeconds: gross,
             wallSeconds: wall,
             overlapSeconds: max(0, gross - wall),
-            pomodoroCount: focusSegments.filter { $0.endedAt != nil }.count,
-            averageFocusSeconds: averageFocus
+            pomodoroCount: focusSegments.filter { item in
+                guard let endedAt = item.segment.endedAt else { return false }
+                return endedAt > item.interval.start && endedAt <= item.interval.end
+            }.count,
+            averageFocusSeconds: focusSegments.isEmpty ? 0 : focusSeconds / focusSegments.count
         )
     }
 
@@ -47,11 +58,6 @@ struct AnalyticsEngine {
         }
     }
 
-    private func segmentsForAnalytics(_ segments: [TimeSegment], range: AnalyticsRange, now: Date, calendar: Calendar) -> [TimeSegment] {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return segments }
-        return segments.filter { overlaps($0, interval: interval, now: now) }
-    }
-
     private func analyticsInterval(for range: AnalyticsRange, now: Date, calendar: Calendar) -> DateInterval? {
         switch range {
         case .today:
@@ -73,11 +79,6 @@ struct AnalyticsEngine {
         case .month:
             return "\(calendar.component(.day, from: date))"
         }
-    }
-
-    private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
-        let end = segment.endedAt ?? now
-        return segment.deletedAt == nil && segment.startedAt < interval.end && end > interval.start
     }
 
     private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {

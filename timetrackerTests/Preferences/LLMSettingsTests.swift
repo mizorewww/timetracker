@@ -1,8 +1,68 @@
 import Foundation
+import Security
 import Testing
 @testable import timetracker
 
 struct LLMSettingsTests {
+    @Test
+    func keychainUpdatesUpgradeLegacyAccessibilityAndKeepSecretsDeviceLocal() throws {
+        let service = "me.mezorewww.timetracker.tests.\(UUID().uuidString)"
+        let account = "llm-api-key"
+        let store = KeychainLLMCredentialStore(service: service, account: account)
+        let baseQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any
+        ]
+        SecItemDelete(baseQuery as CFDictionary)
+        defer { try? store.writeAPIKey("") }
+
+        var legacyItem = baseQuery
+        legacyItem[kSecValueData as String] = Data("legacy-key".utf8)
+        legacyItem[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        #expect(SecItemAdd(legacyItem as CFDictionary, nil) == errSecSuccess)
+
+        try store.writeAPIKey(" updated-key ")
+        #expect(try store.readAPIKey() == "updated-key")
+
+        #expect(
+            KeychainLLMCredentialStore.credentialAccessibility as String
+                == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String
+        )
+
+        var synchronizableQuery = baseQuery
+        synchronizableQuery[kSecAttrSynchronizable as String] = kCFBooleanTrue
+        synchronizableQuery[kSecReturnData as String] = true
+        synchronizableQuery[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        #expect(SecItemCopyMatching(synchronizableQuery as CFDictionary, &result) == errSecItemNotFound)
+    }
+
+    @Test
+    func configurationDraftNormalizesCredentialsAndRejectsStaleModelSelection() {
+        let draft = LLMConfigurationDraft(
+            endpoint: " https://example.test/v1 ",
+            apiKey: " test-key ",
+            selectedModel: "stale-model",
+            availableModels: ["gpt-z", "gpt-a", "gpt-a"]
+        ).normalized
+
+        #expect(draft.endpoint == "https://example.test/v1")
+        #expect(draft.apiKey == "test-key")
+        #expect(draft.availableModels == ["gpt-a", "gpt-z"])
+        #expect(draft.selectedModel.isEmpty)
+
+        let validDraft = LLMConfigurationDraft(
+            endpoint: " https://example.test/v1 ",
+            apiKey: " test-key ",
+            selectedModel: " gpt-a ",
+            availableModels: [" gpt-a ", "", "   "]
+        ).normalized
+        #expect(validDraft.availableModels == ["gpt-a"])
+        #expect(validDraft.selectedModel == "gpt-a")
+    }
+
     @Test
     func modelListRequestUsesOpenAICompatibleModelsEndpoint() throws {
         let service = LLMModelService()
@@ -24,6 +84,36 @@ struct LLMSettingsTests {
     }
 
     @Test
+    func modelEndpointRejectsPlainHTTPExceptForLoopbackDevelopment() throws {
+        #expect(LLMModelService.modelsURL(endpoint: "http://example.test/v1") == nil)
+        #expect(LLMInboxSuggestionService.chatCompletionsURL(endpoint: "http://example.test/v1") == nil)
+        #expect(LLMModelService.modelsURL(endpoint: "http://127.evil.test/v1") == nil)
+        #expect(LLMModelService.modelsURL(endpoint: "http://127.0.0.999/v1") == nil)
+        #expect(LLMModelService.modelsURL(endpoint: "https://user:password@example.test/v1") == nil)
+
+        let localModels = try #require(LLMModelService.modelsURL(endpoint: "http://127.0.0.1:11434/v1"))
+        let localChat = try #require(LLMInboxSuggestionService.chatCompletionsURL(endpoint: "http://localhost:11434/v1"))
+        let ipv6Models = try #require(LLMModelService.modelsURL(endpoint: "http://[0:0:0:0:0:0:0:1]:11434/v1"))
+        #expect(localModels.absoluteString == "http://127.0.0.1:11434/v1/models")
+        #expect(localChat.absoluteString == "http://localhost:11434/v1/chat/completions")
+        #expect(ipv6Models.absoluteString == "http://[0:0:0:0:0:0:0:1]:11434/v1/models")
+    }
+
+    @Test
+    func modelRedirectsStayWithinTheValidatedOrigin() throws {
+        let source = try #require(URL(string: "https://example.test/v1/models"))
+        let sameOrigin = try #require(URL(string: "https://example.test:443/v2/models"))
+        let otherHost = try #require(URL(string: "https://api.example.test/v2/models"))
+        let otherPort = try #require(URL(string: "https://example.test:8443/v2/models"))
+        let downgrade = try #require(URL(string: "http://example.test/v2/models"))
+
+        #expect(LLMModelService.isSafeRedirect(from: source, to: sameOrigin))
+        #expect(!LLMModelService.isSafeRedirect(from: source, to: otherHost))
+        #expect(!LLMModelService.isSafeRedirect(from: source, to: otherPort))
+        #expect(!LLMModelService.isSafeRedirect(from: source, to: downgrade))
+    }
+
+    @Test
     func fetchModelsDecodesUniqueSortedModelIDs() async throws {
         let service = LLMModelService { request in
             #expect(request.url?.absoluteString == "https://example.test/v1/models")
@@ -31,9 +121,10 @@ struct LLMSettingsTests {
             {
               "object": "list",
               "data": [
-                { "id": "gpt-z", "object": "model" },
+                { "id": " gpt-z ", "object": "model" },
                 { "id": "gpt-a", "object": "model" },
-                { "id": "gpt-a", "object": "model" }
+                { "id": "gpt-a", "object": "model" },
+                { "id": "   ", "object": "model" }
               ]
             }
             """.utf8)

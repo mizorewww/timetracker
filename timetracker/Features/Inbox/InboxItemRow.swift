@@ -1,12 +1,13 @@
 import SwiftUI
 
 struct InboxItemRow: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let item: InboxItem
     let isCompact: Bool
     let isSorting: Bool
     let canSort: Bool
     let toggleSorting: () -> Void
+    let requestDelete: () -> Void
     @State private var draftTitle = ""
 
     var body: some View {
@@ -46,7 +47,7 @@ struct InboxItemRow: View {
                 )
             }
             Button(role: .destructive) {
-                store.deleteInboxItem(item)
+                requestDelete()
             } label: {
                 Label(AppStrings.delete, systemImage: "trash")
             }
@@ -78,7 +79,7 @@ struct InboxItemRow: View {
             }
 
             Button(role: .destructive) {
-                store.deleteInboxItem(item)
+                requestDelete()
             } label: {
                 Label(AppStrings.delete, systemImage: "trash")
             }
@@ -87,7 +88,7 @@ struct InboxItemRow: View {
                 .labelStyle(.iconOnly)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 36, height: 36)
+                .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
         .accessibilityLabel(AppStrings.localized("common.more"))

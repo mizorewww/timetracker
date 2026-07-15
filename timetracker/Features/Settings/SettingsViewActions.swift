@@ -1,6 +1,15 @@
 import SwiftUI
 
 extension SettingsView {
+    var hasDemoData: Bool {
+        store.tasks.contains { $0.deviceID == "demo" } ||
+            store.allSegments.contains { $0.deviceID == "demo" } ||
+            store.pomodoroRuns.contains { $0.deviceID == "demo" } ||
+            store.countdownEvents.contains { $0.deviceID == "demo" } ||
+            store.checklistItems.contains { $0.deviceID == "demo" } ||
+            store.inboxItems.contains { $0.deviceID == "demo" }
+    }
+
     var currentStorageValue: String {
         store.preferences.cloudSyncEnabled
             ? (store.syncStatus.isCloudBacked ? "iCloud" : AppStrings.localized("settings.localWillRetryCloud"))
@@ -42,39 +51,15 @@ extension SettingsView {
     func forceDownloadCloudData() {
         isCheckingSync = true
         Task {
-            _ = await store.forceCloudSyncRefresh()
-            if let result = store.acceptCurrentCloudData() {
-                syncCheckMessage = result == .appliedImmediately
-                    ? AppStrings.localized("sync.forceDownload.accepted")
-                    : AppStrings.localized("sync.forceDownload.queued")
+            if store.pendingSyncConflict != nil {
+                store.resolveSyncConflict(.downloadCloud)
+                if store.pendingSyncConflict == nil {
+                    syncCheckMessage = AppStrings.localized("sync.forceDownload.conflictResolved")
+                }
+            } else if store.acceptCurrentCloudData() != nil {
+                syncCheckMessage = AppStrings.localized("sync.forceDownload.queued")
             }
             isCheckingSync = false
-        }
-    }
-
-    func fetchLLMModels() {
-        let endpoint = store.preferences.llmEndpoint
-        let apiKey = store.preferences.llmAPIKey
-        isFetchingLLMModels = true
-        llmModelFetchMessage = nil
-
-        Task {
-            do {
-                let models = try await LLMModelService().fetchModels(endpoint: endpoint, apiKey: apiKey)
-                await MainActor.run {
-                    store.setLLMAvailableModelIDs(models)
-                    if !models.contains(store.preferences.llmSelectedModel) {
-                        store.setLLMSelectedModel(models.first ?? "")
-                    }
-                    llmModelFetchMessage = String(format: AppStrings.localized("settings.llm.fetchSuccess"), models.count)
-                    isFetchingLLMModels = false
-                }
-            } catch {
-                await MainActor.run {
-                    llmModelFetchMessage = String(format: AppStrings.localized("settings.llm.fetchFailed"), error.localizedDescription)
-                    isFetchingLLMModels = false
-                }
-            }
         }
     }
 

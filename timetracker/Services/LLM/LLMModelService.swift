@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 enum LLMModelServiceError: LocalizedError, Equatable {
@@ -27,7 +28,7 @@ struct LLMModelService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
 
     var transport: Transport = { request in
-        try await URLSession.shared.data(for: request)
+        try await LLMSecureHTTPTransport.data(for: request)
     }
 
     func fetchModels(endpoint: String, apiKey: String) async throws -> [String] {
@@ -67,11 +68,7 @@ struct LLMModelService {
     }
 
     static func modelsURL(endpoint: String) -> URL? {
-        let trimmed = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard var components = URLComponents(string: trimmed),
-              let scheme = components.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              components.host?.isEmpty == false else {
+        guard var components = validatedEndpointComponents(endpoint) else {
             return nil
         }
 
@@ -85,6 +82,113 @@ struct LLMModelService {
         components.path = path
         return components.url
     }
+
+    nonisolated static func validatedEndpointComponents(_ endpoint: String) -> URLComponents? {
+        let trimmed = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let components = URLComponents(string: trimmed),
+              let scheme = components.scheme?.lowercased(),
+              let host = components.host?.lowercased(),
+              !host.isEmpty,
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil else {
+            return nil
+        }
+
+        guard scheme == "https" || (scheme == "http" && isLoopbackHost(host)) else {
+            return nil
+        }
+        return components
+    }
+
+    nonisolated static func isSafeRedirect(from sourceURL: URL, to destinationURL: URL) -> Bool {
+        guard let source = URLComponents(url: sourceURL, resolvingAgainstBaseURL: false),
+              let destination = validatedEndpointComponents(destinationURL.absoluteString),
+              let sourceScheme = source.scheme?.lowercased(),
+              let destinationScheme = destination.scheme?.lowercased(),
+              let sourceHost = source.host?.lowercased(),
+              let destinationHost = destination.host?.lowercased() else {
+            return false
+        }
+
+        return sourceScheme == destinationScheme &&
+            sourceHost == destinationHost &&
+            effectivePort(for: source) == effectivePort(for: destination)
+    }
+
+    nonisolated private static func effectivePort(for components: URLComponents) -> Int? {
+        if let port = components.port {
+            return port
+        }
+        switch components.scheme?.lowercased() {
+        case "https": return 443
+        case "http": return 80
+        default: return nil
+        }
+    }
+
+    nonisolated private static func isLoopbackHost(_ host: String) -> Bool {
+        let address = if host.hasPrefix("[") && host.hasSuffix("]") {
+            String(host.dropFirst().dropLast())
+        } else {
+            host
+        }
+
+        if address == "localhost" || address.hasSuffix(".localhost") {
+            return true
+        }
+
+        var ipv4 = in_addr()
+        if inet_pton(AF_INET, address, &ipv4) == 1 {
+            return withUnsafeBytes(of: &ipv4) { bytes in
+                bytes.first == 127
+            }
+        }
+
+        var ipv6 = in6_addr()
+        if inet_pton(AF_INET6, address, &ipv6) == 1 {
+            return withUnsafeBytes(of: &ipv6) { bytes in
+                bytes.dropLast().allSatisfy { $0 == 0 } && bytes.last == 1
+            }
+        }
+
+        return false
+    }
+}
+
+enum LLMSecureHTTPTransport {
+    static func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        try await URLSession.shared.data(
+            for: request,
+            delegate: LLMRedirectPolicyDelegate()
+        )
+    }
+}
+
+private final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    nonisolated func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        guard let sourceURL = response.url,
+              let destinationURL = request.url,
+              LLMModelService.isSafeRedirect(from: sourceURL, to: destinationURL) else {
+            completionHandler(nil)
+            return
+        }
+
+        var redirectedRequest = request
+        if redirectedRequest.value(forHTTPHeaderField: "Authorization") == nil,
+           let authorization = task.currentRequest?.value(forHTTPHeaderField: "Authorization") ??
+            task.originalRequest?.value(forHTTPHeaderField: "Authorization") {
+            redirectedRequest.setValue(authorization, forHTTPHeaderField: "Authorization")
+        }
+        completionHandler(redirectedRequest)
+    }
 }
 
 struct LLMModelListResponse: Decodable {
@@ -95,6 +199,8 @@ struct LLMModelListResponse: Decodable {
     let data: [Model]
 
     var modelIDs: [String] {
-        Array(Set(data.map(\.id).filter { !$0.isEmpty })).sorted()
+        Array(Set(data.map {
+            $0.id.trimmingCharacters(in: .whitespacesAndNewlines)
+        }.filter { !$0.isEmpty })).sorted()
     }
 }

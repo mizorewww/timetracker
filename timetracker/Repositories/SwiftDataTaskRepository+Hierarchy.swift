@@ -1,39 +1,105 @@
 import Foundation
 
 extension SwiftDataTaskRepository {
+    @discardableResult
+    func repairInvalidHierarchy() throws -> Set<UUID> {
+        let nodes = try allNodes().deduplicatedByID()
+        let normalizedMetadata = TaskHierarchyMetadataService().normalizedMetadata(tasks: nodes)
+        let now = Date()
+        var affectedIDs = Set<UUID>()
+        for node in nodes {
+            guard let metadata = normalizedMetadata[node.id],
+                  node.parentID != metadata.parentID ||
+                  node.depth != metadata.depth ||
+                  node.path != metadata.path else { continue }
+            node.parentID = metadata.parentID
+            node.depth = metadata.depth
+            node.path = metadata.path
+            node.updatedAt = now
+            node.clientMutationID = UUID()
+            affectedIDs.insert(node.id)
+        }
+        if affectedIDs.isEmpty == false {
+            try context.saveAfterMutationStep()
+        }
+        return affectedIDs
+    }
+
     func canMove(nodeID: UUID, to newParentID: UUID?, nodes: [TaskNode]) -> Bool {
+        guard let node = nodes.first(where: { $0.id == nodeID }) else { return false }
+        let isChangingParent = node.parentID != newParentID
+        let trackableTaskIDs = TaskTrackingAvailabilityService()
+            .trackableTaskIDs(tasks: nodes)
+        if isChangingParent, trackableTaskIDs.contains(nodeID) == false {
+            return false
+        }
         guard let newParentID else { return true }
         guard nodeID != newParentID else { return false }
+        guard nodes.contains(where: { $0.id == newParentID }) else { return false }
+        if isChangingParent, trackableTaskIDs.contains(newParentID) == false {
+            return false
+        }
         return !descendantIDs(of: nodeID, nodes: nodes).contains(newParentID)
     }
 
-    func descendantIDs(of nodeID: UUID, nodes: [TaskNode], visited: Set<UUID> = []) -> Set<UUID> {
-        guard !visited.contains(nodeID) else { return [] }
-        let nextVisited = visited.union([nodeID])
-        let directChildren = nodes.filter { $0.parentID == nodeID }
-        return directChildren.reduce(into: Set<UUID>()) { result, child in
+    func descendantIDs(of nodeID: UUID, nodes: [TaskNode]) -> Set<UUID> {
+        let childrenByParentID = Dictionary(grouping: nodes) { $0.parentID }
+        var pending = childrenByParentID[nodeID] ?? []
+        var visited: Set<UUID> = [nodeID]
+        var result = Set<UUID>()
+
+        while let child = pending.popLast() {
+            guard visited.insert(child.id).inserted else { continue }
             result.insert(child.id)
-            result.formUnion(descendantIDs(of: child.id, nodes: nodes, visited: nextVisited))
+            pending.append(contentsOf: childrenByParentID[child.id] ?? [])
         }
+        return result
     }
 
-    func applyHierarchy(to node: TaskNode, parentID: UUID?) throws {
-        if let parentID, let parent = try task(id: parentID) {
+    func applyHierarchy(
+        to node: TaskNode,
+        parentID: UUID?,
+        requiresTrackableParent: Bool = true
+    ) throws {
+        if let parentID {
+            guard let parent = try task(id: parentID) else {
+                throw TaskRepositoryError.invalidMove
+            }
+            if requiresTrackableParent {
+                guard TaskTrackingAvailabilityService()
+                    .trackableTaskIDs(tasks: try allNodes())
+                    .contains(parentID) else {
+                    throw TaskRepositoryError.invalidMove
+                }
+            }
             node.depth = parent.depth + 1
-            node.path = parent.path + "/" + node.id.uuidString
+            node.path = TaskHierarchyMetadata.canonicalPath(for: node.id)
         } else {
             node.depth = 0
-            node.path = "/" + node.id.uuidString
+            node.path = TaskHierarchyMetadata.canonicalPath(for: node.id)
         }
     }
 
-    func updateDescendantHierarchy(of node: TaskNode) throws {
-        let children = try children(of: node.id)
-        for child in children {
-            child.depth = node.depth + 1
-            child.path = node.path + "/" + child.id.uuidString
-            child.updatedAt = Date()
-            try updateDescendantHierarchy(of: child)
+    func updateDescendantHierarchy(of node: TaskNode, nodes: [TaskNode], now: Date) {
+        let childrenByParentID = Dictionary(grouping: nodes) { $0.parentID }
+        var pending = (childrenByParentID[node.id] ?? []).map { child in
+            (node: child, depth: node.depth + 1)
+        }
+        var visited: Set<UUID> = [node.id]
+
+        while let next = pending.popLast() {
+            guard visited.insert(next.node.id).inserted else { continue }
+            let expectedPath = TaskHierarchyMetadata.canonicalPath(for: next.node.id)
+            if next.node.depth != next.depth || next.node.path != expectedPath {
+                next.node.depth = next.depth
+                next.node.path = expectedPath
+                next.node.updatedAt = now
+                next.node.clientMutationID = UUID()
+            }
+
+            pending.append(contentsOf: (childrenByParentID[next.node.id] ?? []).map { child in
+                (node: child, depth: next.depth + 1)
+            })
         }
     }
 }

@@ -2,7 +2,9 @@ import Foundation
 
 struct TaskRollupService {
     func checklistProgress(for taskID: UUID, checklistItems: [ChecklistItem]) -> ChecklistProgress {
-        let items = checklistItems.filter { $0.taskID == taskID && $0.deletedAt == nil }
+        let items = checklistItems
+            .visibleDeduplicatedByID()
+            .filter { $0.taskID == taskID }
         return ChecklistProgress(
             taskID: taskID,
             totalCount: items.count,

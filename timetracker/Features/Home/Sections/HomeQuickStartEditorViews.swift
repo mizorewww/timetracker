@@ -1,24 +1,28 @@
+import Foundation
 import SwiftUI
 
 struct QuickStartEditorSheet: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     @State private var selectedIDs: [UUID]
-    let onSave: ([UUID]) -> Void
+    @State private var isDiscardConfirmationPresented = false
+    let initialSelectedIDs: [UUID]
+    let onSave: ([UUID]) -> Bool
 
-    init(store: TimeTrackerStore, selectedIDs: [UUID], onSave: @escaping ([UUID]) -> Void) {
+    init(store: TimeTrackerStore, selectedIDs: [UUID], onSave: @escaping ([UUID]) -> Bool) {
         self.store = store
+        initialSelectedIDs = selectedIDs
         self.onSave = onSave
         _selectedIDs = State(initialValue: selectedIDs)
     }
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }
+        store.tasks.filter(store.isTaskAvailableForTracking)
     }
 
     private var pinnedTasks: [TaskNode] {
         selectedIDs.compactMap { store.task(for: $0) }
-            .filter { $0.deletedAt == nil && $0.status != .archived }
+            .filter(store.isTaskAvailableForTracking)
     }
 
     private func isPinned(_ task: TaskNode) -> Bool {
@@ -36,7 +40,7 @@ struct QuickStartEditorSheet: View {
     private func cleanedPinnedIDs() -> [UUID] {
         selectedIDs.filter { id in
             guard let task = store.task(for: id) else { return false }
-            return task.deletedAt == nil && task.status != .archived
+            return store.isTaskAvailableForTracking(task)
         }
     }
 
@@ -84,6 +88,16 @@ struct QuickStartEditorSheet: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(task.title)
+                        .accessibilityValue(selectionValue(isPinned: pinned, order: selectedIDs.firstIndex(of: task.id).map { $0 + 1 }))
+                        .accessibilityHint(
+                            AppStrings.localized(
+                                pinned
+                                    ? "quickStart.selection.unpinHint"
+                                    : "quickStart.selection.pinHint"
+                            )
+                        )
+                        .accessibilityAddTraits(pinned ? .isSelected : [])
                     }
                 }
             }
@@ -93,17 +107,41 @@ struct QuickStartEditorSheet: View {
             .navigationTitle(AppStrings.localized("quickStart.edit"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel) { dismiss() }
+                    Button(AppStrings.cancel, action: requestCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.localized("common.save")) {
-                        onSave(cleanedPinnedIDs())
-                        dismiss()
+                        if onSave(cleanedPinnedIDs()) {
+                            dismiss()
+                        }
                     }
                 }
             }
         }
         .platformSheetFrame(width: 420, height: 520)
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: selectedIDs != initialSelectedIDs,
+            discard: { dismiss() }
+        )
+    }
+
+    private func requestCancel() {
+        if selectedIDs == initialSelectedIDs {
+            dismiss()
+        } else {
+            isDiscardConfirmationPresented = true
+        }
+    }
+
+    private func selectionValue(isPinned: Bool, order: Int?) -> String {
+        guard isPinned, let order else {
+            return AppStrings.localized("quickStart.selection.notPinned")
+        }
+        return String.localizedStringWithFormat(
+            AppStrings.localized("quickStart.selection.pinnedOrder"),
+            order
+        )
     }
 }
 
@@ -160,6 +198,7 @@ private struct QuickStartSelectableTaskRow: View {
             }
             Image(systemName: isPinned ? "checkmark.circle.fill" : "plus.circle")
                 .foregroundStyle(isPinned ? .blue : .secondary)
+                .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
         .opacity(isDisabled ? 0.55 : 1)

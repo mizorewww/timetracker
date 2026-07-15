@@ -9,6 +9,11 @@ enum AppLayout {
     static let compactPagePadding: CGFloat = 18
     static let regularPagePadding: CGFloat = 28
     static let desktopReadableWidth: CGFloat = 980
+    #if os(iOS)
+    static let minimumInteractiveTarget: CGFloat = 44
+    #else
+    static let minimumInteractiveTarget: CGFloat = 28
+    #endif
 }
 
 struct AppCardBackground: ViewModifier {
@@ -66,9 +71,10 @@ struct AppRowIcon: View {
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.body.weight(.semibold))
+            .font(.system(size: 17, weight: .semibold))
             .foregroundStyle(tint)
             .frame(width: 30, height: 30)
             .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
+            .accessibilityHidden(true)
     }
 }

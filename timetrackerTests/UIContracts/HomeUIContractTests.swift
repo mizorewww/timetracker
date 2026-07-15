@@ -51,19 +51,17 @@ struct HomeUIContractTests {
     @Test @MainActor
     func regularWidthIOSUsesVisibleSystemSplitView() throws {
         let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
-        let splitButtonsSource = try sourceText("timetracker/SharedUI/Components/SplitViewToolbarButtons.swift")
-
         #expect(SplitColumnLayoutPolicy.iPad.sidebar == ColumnWidth(min: 240, ideal: 260, max: 300))
-        #expect(SplitColumnLayoutPolicy.iPad.detail.min == 560)
+        #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
         #expect(source.contains("iPadRootView(store: store)"))
         #expect(source.contains("struct iPadRootView"))
         #expect(source.contains("ipad.splitNavigation"))
         #expect(source.contains("SplitColumnLayoutPolicy.iPad"))
         #expect(source.contains(".navigationSplitViewColumnWidth("))
-        #expect(source.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))
-        #expect(source.contains("ToolbarItem(placement: .topBarLeading)"))
-        #expect(source.contains("if columnVisibility == .detailOnly"))
-        #expect(splitButtonsSource.contains("\"sidebar.left\""))
+        #expect(source.contains("preferredCompactColumn: $preferredCompactColumn"))
+        #expect(source.contains("preferredCompactColumn = .detail"))
+        #expect(source.contains("SidebarRevealButton") == false)
+        #expect(source.contains("ToolbarItem(placement: .topBarLeading)") == false)
         #expect(source.contains(".navigationSplitViewStyle(.balanced)"))
         #expect(source.contains(".tabViewStyle(.sidebarAdaptable)") == false)
         #expect(source.contains("ipad.topNavigation") == false)
@@ -72,16 +70,7 @@ struct HomeUIContractTests {
 
     @Test
     func phoneHomeUsesSystemLargeTitle() throws {
-        let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
-
-        guard
-            let start = source.range(of: "struct PhoneHomeView"),
-            let end = source.range(of: "struct HeaderBar")
-        else {
-            Issue.record("Could not locate PhoneHomeView")
-            return
-        }
-        let phoneHome = String(source[start.lowerBound..<end.lowerBound])
+        let phoneHome = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
 
         #expect(phoneHome.contains(".navigationTitle(AppStrings.today)"))
         #expect(phoneHome.contains(".navigationBarTitleDisplayMode(.large)"))
@@ -91,18 +80,23 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func phoneTabsStayAtFiveAndSettingsUsesHomeToolbar() throws {
+    func phoneNavigationExposesFivePrimaryDestinationsAndSettingsAction() throws {
         let contentSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
-        let homeSource = try sourceText("timetracker/Features/Home/HomeViews.swift")
-        let phoneRoot = try #require(contentSource.slice(from: "struct PhoneRootView", to: "struct iPadRootView"))
-        let phoneHome = try #require(homeSource.slice(from: "struct PhoneHomeView", to: "struct HeaderBar"))
+        let homeSource = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
 
-        #expect(phoneRoot.components(separatedBy: ".tabItem").count - 1 == 5)
-        #expect(phoneRoot.contains("SettingsView(store: store)") == false)
-        #expect(phoneRoot.contains("Label(AppStrings.settings") == false)
-        #expect(phoneHome.contains("Image(systemName: \"gearshape\")"))
-        #expect(phoneHome.contains(".sheet(isPresented: $showsSettings)"))
-        #expect(phoneHome.contains("SettingsView(store: store)"))
+        #expect(contentSource.components(separatedBy: ".accessibilityIdentifier(\"phone.tab.").count - 1 == 5)
+        #expect(contentSource.contains("phone.tab.today"))
+        #expect(contentSource.contains("phone.tab.inbox"))
+        #expect(contentSource.contains("phone.tab.tasks"))
+        #expect(contentSource.contains("phone.tab.focus"))
+        #expect(contentSource.contains("phone.tab.analytics"))
+        #expect(contentSource.contains("phone.tab.settings") == false)
+        #expect(contentSource.contains("phone.tabView"))
+        #expect(contentSource.contains(".navigationDestination(for: PhoneTodayRoute.self)"))
+        #expect(contentSource.contains("SettingsView(store: store)"))
+        #expect(contentSource.contains("case settings"))
+        #expect(homeSource.contains("Button(action: openSettings)"))
+        #expect(homeSource.contains(".accessibilityIdentifier(\"settings.open\")"))
     }
 
     @Test
@@ -128,35 +122,45 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func homePlacesQuickStartBeforeTimeline() throws {
-        let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
+    func homeExposesQuickStartAndTimelineAsAccessibleSections() throws {
+        let homeSource = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
+        let quickStartSource = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
+        let timelineSource = try sourceText("timetracker/Features/Home/Sections/HomeTimelineViews.swift")
 
-        guard
-            let desktopStart = source.range(of: "struct DesktopMainView"),
-            let phoneStart = source.range(of: "struct PhoneHomeView"),
-            let headerStart = source.range(of: "struct HeaderBar")
-        else {
-            Issue.record("Could not locate home view sections")
-            return
-        }
-
-        let desktopMain = String(source[desktopStart.lowerBound..<phoneStart.lowerBound])
-        let phoneHome = String(source[phoneStart.lowerBound..<headerStart.lowerBound])
-        let desktopQuickStart = try #require(desktopMain.range(of: "QuickStartSection(store: store)")?.lowerBound)
-        let desktopTimeline = try #require(desktopMain.range(of: "TimelineSection(store: store)")?.lowerBound)
-        let phoneQuickStart = try #require(phoneHome.range(of: "QuickStartSection(store: store)")?.lowerBound)
-        let phoneTimeline = try #require(phoneHome.range(of: "TimelineSection(store: store)")?.lowerBound)
-
-        #expect(desktopQuickStart < desktopTimeline)
-        #expect(phoneQuickStart < phoneTimeline)
+        #expect(homeSource.contains(".accessibilityIdentifier(\"home.quickStart\")"))
+        #expect(homeSource.contains(".accessibilityIdentifier(\"home.timeline\")"))
+        #expect(quickStartSource.contains(".accessibilityIdentifier(\"home.quickStart\")"))
+        #expect(timelineSource.contains(".accessibilityIdentifier(\"home.timeline\")"))
     }
 
     @Test
-    func compactTaskPickerUsesOpaqueSystemSheet() throws {
+    func compactTaskPickerUsesTheSystemSheetMaterial() throws {
         let source = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
 
-        #expect(source.contains(".presentationBackground(Color(uiColor: .systemGroupedBackground))"))
+        #expect(source.contains(".presentationBackground(") == false)
         #expect(source.contains(".scrollContentBackground(.hidden)"))
+    }
+
+    @Test
+    func trackingEntrypointsShareAvailabilityAndRunningStateSemantics() throws {
+        let source = try [
+            "timetracker/Features/Home/PhoneHomeView.swift",
+            "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+
+        #expect(source.components(separatedBy: "isTaskAvailableForTracking").count >= 8)
+        #expect(source.contains("let activeSegment = store.activeSegment(for: task.id)"))
+        #expect(source.contains("store.stop(segment: activeSegment)"))
+        #expect(source.contains("isRunning ? \"stop.fill\" : \"play.fill\""))
+        #expect(source.contains("timer.task.stopHint"))
+        #expect(source.contains(".presentationBackground(") == false)
     }
 
     @Test

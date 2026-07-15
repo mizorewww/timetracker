@@ -17,6 +17,11 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("TimeSegment(") == false)
         #expect(source.contains("TimeSession(") == false)
         #expect(source.contains("context.insert") == false)
+        #expect(source.contains("allowParallelTimers: true") == false)
+        #expect(source.contains("allowParallelTimersPreference(context: context)"))
+        #expect(source.contains("timetrackerApp.applicationModelContainer"))
+        #expect(source.components(separatedBy: "CommittedMutationSnapshotRecorder()").count - 1 == 3)
+        #expect(source.components(separatedBy: "CommittedMutationSurfaceSynchronizer()").count - 1 == 3)
     }
 
     @Test @MainActor
@@ -53,6 +58,121 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
+    func systemActionExistingTimerStillReconcilesUnexpectedParallelTimers() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let selectedTask = try taskRepository.createTask(
+            title: "Selected",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let otherTask = try taskRepository.createTask(
+            title: "Other",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let selectedSegment = try timeRepository.startTask(taskID: selectedTask.id, source: .timer)
+        let otherSegment = try timeRepository.startTask(taskID: otherTask.id, source: .timer)
+
+        let returnedID = try SystemActionCommandHandler().startTimer(
+            taskID: selectedTask.id,
+            allowParallelTimers: false,
+            context: context
+        )
+
+        #expect(returnedID == selectedSegment.id)
+        #expect(try timeRepository.activeSegments().map(\.id) == [selectedSegment.id])
+        #expect(otherSegment.endedAt != nil)
+        #expect(try timeRepository.allSegments().count == 2)
+    }
+
+    @Test @MainActor
+    func activeSetDiffPublishesBothStoppedAndStartedTimerDomains() throws {
+        let context = try makeTestContext()
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstTaskID = UUID()
+        let secondTaskID = UUID()
+        let stopped = try timeRepository.startTask(taskID: firstTaskID, source: .timer)
+        let before = try timeRepository.activeSegments()
+        try timeRepository.stopSegment(segmentID: stopped.id)
+        let started = try timeRepository.startTask(taskID: secondTaskID, source: .timer)
+        let after = try timeRepository.activeSegments()
+
+        let events = TimerActiveSetMutationService().events(
+            beforeActiveSegments: before,
+            afterActiveSegments: after
+        )
+
+        #expect(events.contains(.ledgerChanged(taskID: firstTaskID, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.pomodoroChanged(
+            runID: nil,
+            sessionID: stopped.sessionID,
+            taskID: firstTaskID
+        )))
+        #expect(events.contains(.ledgerChanged(taskID: secondTaskID, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.pomodoroChanged(
+            runID: nil,
+            sessionID: started.sessionID,
+            taskID: secondTaskID
+        )))
+        #expect(events.count == 4)
+    }
+
+    @Test @MainActor
+    func systemActionCannotRestartAnArchivedTaskFromAStaleShortcut() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Archived shortcut task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try taskRepository.archiveTask(taskID: task.id)
+
+        #expect(throws: SystemActionCommandError.taskNotFound) {
+            try SystemActionCommandHandler().startTimer(
+                taskID: task.id,
+                allowParallelTimers: true,
+                context: context
+            )
+        }
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func systemActionCannotStartAChildWhoseAncestorIsArchived() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let parent = try taskRepository.createTask(
+            title: "Archived parent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let child = try taskRepository.createTask(
+            title: "Previously active child",
+            parentID: parent.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        try taskRepository.archiveTask(taskID: parent.id)
+
+        #expect(throws: SystemActionCommandError.taskNotFound) {
+            try SystemActionCommandHandler().startTimer(
+                taskID: child.id,
+                allowParallelTimers: true,
+                context: context
+            )
+        }
+        #expect(child.status == .active)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
+    }
+
+    @Test @MainActor
     func systemActionStopTimerClosesActiveSegment() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -67,4 +187,175 @@ struct CoreSystemActionCommandTests {
         let stoppedSegment = try #require(try timeRepository.allSegments().first)
         #expect(stoppedSegment.endedAt != nil)
     }
+
+    @Test @MainActor
+    func untargetedSystemStopClosesTheMostRecentlyStartedParallelTimer() throws {
+        let context = try makeTestContext()
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let older = try timeRepository.startTask(taskID: UUID(), source: .timer)
+        let newer = try timeRepository.startTask(taskID: UUID(), source: .timer)
+        older.startedAt = Date(timeIntervalSinceReferenceDate: 100)
+        newer.startedAt = Date(timeIntervalSinceReferenceDate: 200)
+        try context.save()
+
+        let stoppedID = try SystemActionCommandHandler().stopTimer(taskID: nil, context: context)
+
+        #expect(stoppedID == newer.id)
+        #expect(older.endedAt == nil)
+        #expect(newer.endedAt != nil)
+        #expect(try timeRepository.activeSegments().map(\.id) == [older.id])
+    }
+
+    @Test @MainActor
+    func systemActionStopClipsExpiredPomodoroToPersistedDeadline() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroRepository = SwiftDataPomodoroRepository(
+            context: context,
+            timeRepository: timeRepository,
+            deviceID: "test"
+        )
+        let task = try taskRepository.createTask(
+            title: "Expired shortcut focus",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let run = try pomodoroRepository.startPomodoro(
+            taskID: task.id,
+            focusSeconds: 60,
+            breakSeconds: 30,
+            targetRounds: 1
+        )
+        let sessionID = try #require(run.sessionID)
+        let segment = try #require(try timeRepository.activeSegments().first { $0.sessionID == sessionID })
+        let session = try #require(try timeRepository.sessions().first { $0.id == sessionID })
+        let phaseStartedAt = Date().addingTimeInterval(-120)
+        let deadline = phaseStartedAt.addingTimeInterval(60)
+        run.startedAt = phaseStartedAt
+        segment.startedAt = phaseStartedAt
+        session.startedAt = phaseStartedAt
+        try context.save()
+
+        let stoppedID = try #require(
+            try SystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
+        )
+
+        let persistedRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
+        let persistedSegment = try #require(try timeRepository.allSegments().first { $0.id == segment.id })
+        let persistedSession = try #require(try timeRepository.sessions().first { $0.id == sessionID })
+        #expect(stoppedID == segment.id)
+        #expect(persistedRun.state == .completed)
+        #expect(persistedRun.endedAt == deadline)
+        #expect(persistedSegment.endedAt == deadline)
+        #expect(persistedSession.endedAt == deadline)
+    }
+
+    @Test @MainActor
+    func systemActionReadsTheSyncedParallelTimerPreference() throws {
+        let context = try makeTestContext()
+        try PreferenceCommandHandler().set(
+            key: .allowParallelTimers,
+            valueJSON: PreferenceJSON.encode(false),
+            context: context
+        )
+
+        #expect(try SystemActionCommandHandler().allowParallelTimersPreference(context: context) == false)
+    }
+
+    @Test @MainActor
+    func postCommitSnapshotFailureDoesNotUndoOrThrowForTheCommittedSystemAction() throws {
+        try withSystemActionCloudSyncMode {
+            let context = try makeTestContext()
+            let itemID = try #require(
+                try SystemActionCommandHandler().addInboxItem(
+                    title: "Committed before snapshot",
+                    context: context,
+                    deviceID: "test"
+                )
+            )
+            let unwritableStateURL = URL(fileURLWithPath: "/dev/null")
+                .appendingPathComponent("TimeTrackerState-\(UUID().uuidString).json")
+            let error = CommittedMutationSnapshotRecorder(
+                syncConflictService: SyncConflictService(stateURL: unwritableStateURL)
+            ).recordLocalMutation(
+                context: context,
+                events: [.inboxChanged(itemIDs: [itemID])]
+            )
+
+            #expect(error != nil)
+            let persistedItems = try context.fetch(FetchDescriptor<InboxItem>())
+            #expect(persistedItems.contains { $0.id == itemID && $0.deletedAt == nil })
+        }
+    }
+
+    @Test @MainActor
+    func committedTimerMutationRefreshesAndClearsClosedAppWidgetState() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "External timer",
+            parentID: nil,
+            colorHex: "#0A84FF",
+            iconName: "timer"
+        )
+        let suiteName = "CommittedMutationSurfaceTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let sharedStore = SharedWidgetSnapshotStore(defaults: defaults)
+        let synchronizer = CommittedMutationSurfaceSynchronizer(
+            widgetCache: WidgetSnapshotCache(store: sharedStore)
+        )
+        let events: Set<StoreDomainEvent> = [
+            .ledgerChanged(taskID: task.id, dateInterval: nil, isVisible: true),
+            .pomodoroChanged(runID: nil, sessionID: nil, taskID: task.id)
+        ]
+
+        let segmentID = try #require(
+            try SystemActionCommandHandler().startTimer(
+                taskID: task.id,
+                allowParallelTimers: true,
+                context: context
+            )
+        )
+        #expect(synchronizer.synchronize(context: context, events: events) == nil)
+        let runningSnapshot = try #require(sharedStore.load())
+        #expect(runningSnapshot.activeTimers.map(\.id) == [segmentID])
+        #expect(runningSnapshot.activeTimers.map(\.title) == ["External timer"])
+
+        _ = try SystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
+        #expect(synchronizer.synchronize(context: context, events: events) == nil)
+        let stoppedSnapshot = try #require(sharedStore.load())
+        #expect(stoppedSnapshot.activeTimers.isEmpty)
+    }
+}
+
+@MainActor
+private func withSystemActionCloudSyncMode(_ body: () throws -> Void) throws {
+    let defaults = UserDefaults.standard
+    let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
+    let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
+    let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+    defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+    defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defer {
+        if let previousMode {
+            defaults.set(previousMode, forKey: AppCloudSync.modeKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.modeKey)
+        }
+        if let previousUploadReset {
+            defaults.set(previousUploadReset, forKey: AppCloudSync.pendingCloudUploadResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+        }
+        if let previousDownloadReset {
+            defaults.set(previousDownloadReset, forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        }
+    }
+    try body()
 }

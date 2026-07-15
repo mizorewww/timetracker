@@ -1,12 +1,20 @@
 import Foundation
 
 struct ForecastingService {
+    static let maximumRecentDayCount = 366
+
     private let aggregationService = TimeAggregationService()
 
-    func recentDailyAvailableSeconds(segments: [TimeSegment], now: Date = Date(), days: Int = 14) -> Int {
-        let calendar = Calendar.current
-        let end = calendar.startOfDay(for: now).addingTimeInterval(24 * 60 * 60)
-        guard let start = calendar.date(byAdding: .day, value: -max(1, days), to: end) else { return 0 }
+    func recentDailyAvailableSeconds(
+        segments: [TimeSegment],
+        now: Date = Date(),
+        days: Int = 14,
+        calendar: Calendar = .current
+    ) -> Int {
+        let dayCount = min(max(1, days), Self.maximumRecentDayCount)
+        let todayStart = calendar.startOfDay(for: now)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: todayStart) else { return 0 }
+        guard let start = calendar.date(byAdding: .day, value: -dayCount, to: end) else { return 0 }
         let interval = DateInterval(start: start, end: end)
         let recent = segments.filter { segment in
             segment.deletedAt == nil &&

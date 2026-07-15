@@ -1,14 +1,6 @@
 import SwiftUI
 
 extension SettingsView {
-    var preferredColorSchemeBinding: Binding<String> {
-        Binding {
-            store.preferences.preferredColorScheme
-        } set: { value in
-            store.setPreferredColorScheme(value)
-        }
-    }
-
     var pomodoroDefaultModeBinding: Binding<String> {
         Binding {
             store.preferences.pomodoroDefaultMode
@@ -75,27 +67,11 @@ extension SettingsView {
         }
     }
 
-    var llmEndpointBinding: Binding<String> {
+    var llmAutomaticSuggestionsEnabledBinding: Binding<Bool> {
         Binding {
-            store.preferences.llmEndpoint
+            store.preferences.llmAutomaticSuggestionsEnabled
         } set: { value in
-            store.setLLMEndpoint(value)
-        }
-    }
-
-    var llmAPIKeyBinding: Binding<String> {
-        Binding {
-            store.preferences.llmAPIKey
-        } set: { value in
-            store.setLLMAPIKey(value)
-        }
-    }
-
-    var llmSelectedModelBinding: Binding<String> {
-        Binding {
-            store.preferences.llmSelectedModel
-        } set: { value in
-            store.setLLMSelectedModel(value)
+            store.setLLMAutomaticSuggestionsEnabled(value)
         }
     }
 }

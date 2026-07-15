@@ -1,6 +1,6 @@
 import Foundation
 
-struct LLMChecklistVisualSuggestionResult: Equatable {
+nonisolated struct LLMChecklistVisualSuggestionResult: Equatable, Sendable {
     let iconName: String
     let colorHex: String
     let reason: String
@@ -11,7 +11,7 @@ struct LLMChecklistVisualSuggestionService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
 
     var transport: Transport = { request in
-        try await URLSession.shared.data(for: request)
+        try await LLMSecureHTTPTransport.data(for: request)
     }
 
     func suggest(

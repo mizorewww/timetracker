@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct TimelineRow: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let segment: TimeSegment
+    var openTaskDetail: ((UUID) -> Void)? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var isDeleteConfirmationPresented = false
 
     private var isCompactPhone: Bool {
         SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
@@ -18,43 +20,72 @@ struct TimelineRow: View {
     }
 
     var body: some View {
-        Group {
-            if isCompactPhone {
-                compactContent
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    regularContent
-                    compactContent
+        HStack(spacing: 4) {
+            Button(action: openTask) {
+                Group {
+                    if isCompactPhone {
+                        compactContent
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            regularContent
+                            compactContent
+                        }
+                    }
                 }
+                .contentShape(Rectangle())
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectTask(segment.taskID, revealInToday: false)
-        }
-        .contextMenu {
-            Button {
-                store.presentEditSegment(segment)
+            .buttonStyle(.plain)
+            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+
+            Menu {
+                segmentActions
             } label: {
-                Label(AppStrings.localized("timeline.editSegment"), systemImage: "pencil")
+                Image(systemName: "ellipsis")
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .menuStyle(.borderlessButton)
+            .accessibilityLabel(AppStrings.localized("common.more"))
+        }
+        .contextMenu { segmentActions }
 
-            Button {
-                store.presentManualTime(taskID: segment.taskID)
-            } label: {
-                Label(AppStrings.localized("timeline.addSimilarTime"), systemImage: "calendar.badge.plus")
-            }
-
-            Divider()
-
-            Button(role: .destructive) {
+        .confirmationDialog(
+            AppStrings.localized("segment.delete.confirm.title"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("timeline.deleteSegment"), role: .destructive) {
                 store.deleteSegment(segment.id)
-            } label: {
-                Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")
             }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("segment.delete.confirm.message"))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, isCompactPhone ? 11 : 10)
+    }
+
+    @ViewBuilder
+    private var segmentActions: some View {
+        Button {
+            store.presentEditSegment(segment)
+        } label: {
+            Label(AppStrings.localized("timeline.editSegment"), systemImage: "pencil")
+        }
+
+        Button {
+            store.presentManualTime(taskID: segment.taskID)
+        } label: {
+            Label(AppStrings.localized("timeline.addSimilarTime"), systemImage: "calendar.badge.plus")
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            isDeleteConfirmationPresented = true
+        } label: {
+            Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")
+        }
     }
 
     private var regularContent: some View {
@@ -141,5 +172,13 @@ struct TimelineRow: View {
         let start = TimeDisplayFormatter.hourMinute(segment.startedAt)
         let end = segment.endedAt.map { TimeDisplayFormatter.hourMinute($0) } ?? AppStrings.localized("common.now")
         return "\(start) - \(end)"
+    }
+
+    private func openTask() {
+        if let openTaskDetail {
+            openTaskDetail(segment.taskID)
+        } else {
+            store.openTaskDetail(segment.taskID)
+        }
     }
 }

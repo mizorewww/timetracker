@@ -2,151 +2,32 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State var isResetConfirmationPresented = false
     @State var isClearConfirmationPresented = false
     @State var isResetAllDataConfirmationPresented = false
     @State var isOptimizeConfirmationPresented = false
     @State var isExportPresented = false
+    @State private var exportDocument = JSONExportDocument(text: "")
     @State var isCheckingSync = false
-    @State var isFetchingLLMModels = false
     @State var isForceUploadConfirmationPresented = false
     @State var isForceDownloadConfirmationPresented = false
+    @State var isLLMConfigurationPresented = false
     @State var syncCheckMessage: String?
     @State var databaseOptimizationMessage: String?
-    @State var llmModelFetchMessage: String?
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
-
-    private var isCompactPhone: Bool {
-        #if os(iOS)
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
-        #else
-        false
-        #endif
-    }
+    @State private var selectedCategory: SettingsCategory? = .general
 
     var body: some View {
-        Form {
-            #if os(iOS)
-            if isCompactPhone {
-                PhoneLargePageHeader(destination: .settings)
-                    .listRowInsets(PhoneRootChromeMetrics.groupedHeaderRowInsets)
-                    .listRowBackground(Color.clear)
-            }
-            #endif
-
-            DisplayTimingSettingsSection(
-                preferredColorScheme: preferredColorSchemeBinding,
-                allowParallelTimers: allowParallelTimersBinding,
-                showGrossAndWallTogether: showGrossAndWallTogetherBinding
-            )
-
-            PomodoroSettingsSection(
-                plans: pomodoroPlansBinding
-            )
-
-            CountdownSettingsSection(
-                events: store.countdownEvents,
-                onChangeTitle: { event, title in
-                    store.updateCountdownEvent(event, title: title)
-                },
-                onChangeDate: { event, date in
-                    store.updateCountdownEvent(event, date: date)
-                },
-                onDelete: { event in
-                    store.deleteCountdownEvent(event)
-                },
-                onAdd: {
-                    store.addCountdownEvent()
-                }
-            )
-
-            DataSettingsSection(
-                onExport: {
-                    isExportPresented = true
-                },
-                onAddTime: {
-                    store.presentManualTime()
-                },
-                onOptimize: {
-                    isOptimizeConfirmationPresented = true
-                }
-            )
-
-            SyncSettingsSection(
-                cloudSyncEnabled: cloudSyncEnabledBinding,
-                currentStorageValue: currentStorageValue,
-                feedback: syncFeedback,
-                pendingConflict: store.pendingSyncConflict,
-                isCheckingSync: isCheckingSync,
-                onCheckSync: checkSyncStatus,
-                onForceSync: forceSyncRefresh,
-                onForceUploadLocal: {
-                    isForceUploadConfirmationPresented = true
-                },
-                onForceDownloadCloud: {
-                    isForceDownloadConfirmationPresented = true
-                },
-                onUploadLocal: {
-                    isForceUploadConfirmationPresented = true
-                },
-                onDownloadCloud: {
-                    isForceDownloadConfirmationPresented = true
-                }
-            )
-
-            LLMSettingsSection(
-                endpoint: llmEndpointBinding,
-                apiKey: llmAPIKeyBinding,
-                selectedModel: llmSelectedModelBinding,
-                availableModels: store.preferences.llmAvailableModelIDs,
-                feedbackMessage: llmModelFetchMessage,
-                isFetchingModels: isFetchingLLMModels,
-                onFetchModels: fetchLLMModels
-            )
-
-            MaintenanceSettingsSection(
-                taskCount: store.tasks.count,
-                timeRecordCount: store.allSegments.count,
-                pomodoroCount: store.pomodoroRuns.count,
-                cloudAccount: store.syncStatus.accountStatus,
-                cloudContainer: store.syncStatus.containerIdentifier,
-                allowsDemoDataCreation: AppDemoDataConfiguration.allowsDemoDataCreation,
-                onRebuildDemoData: {
-                    isResetConfirmationPresented = true
-                },
-                onClearDemoData: {
-                    isClearConfirmationPresented = true
-                },
-                onResetAllData: {
-                    isResetAllDataConfirmationPresented = true
-                }
-            )
-
-            AboutSettingsSection()
-
-            #if os(iOS)
-            if isCompactPhone {
-                PhoneRootListBottomClearanceRow()
-            }
-            #endif
-        }
-        .formStyle(.grouped)
-        #if os(iOS)
-        .phoneRootScrollMargins(enabled: isCompactPhone)
-        #endif
+        settingsNavigation
         .navigationTitle(AppStrings.settings)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        .phoneChromeScrollObserver(destination: .settings, enabled: isCompactPhone)
-        .phoneRootChrome(destination: .settings, enabled: isCompactPhone)
         #endif
         .accessibilityIdentifier("settings.view")
         .fileExporter(
             isPresented: $isExportPresented,
-            document: JSONExportDocument(text: store.jsonExport()),
+            document: exportDocument,
             contentType: .json,
             defaultFilename: "time-tracker-export.json"
         ) { result in
@@ -225,5 +106,73 @@ struct SettingsView: View {
         } message: {
             Text(databaseOptimizationMessage ?? "")
         }
+        .sheet(isPresented: $isLLMConfigurationPresented) {
+            LLMConfigurationEditor(
+                endpoint: store.preferences.llmEndpoint,
+                apiKey: store.preferences.llmAPIKey,
+                selectedModel: store.preferences.llmSelectedModel,
+                availableModels: store.preferences.llmAvailableModelIDs,
+                onSave: saveLLMConfiguration
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var settingsNavigation: some View {
+        #if os(macOS)
+        NavigationSplitView {
+            List(SettingsCategory.allCases, selection: $selectedCategory) { category in
+                SettingsCategoryRow(category: category)
+                    .tag(category)
+            }
+            .navigationTitle(AppStrings.settings)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+        } detail: {
+            settingsForm(for: selectedCategory ?? .general)
+        }
+        #else
+        List {
+            Section {
+                ForEach(SettingsCategory.allCases) { category in
+                    NavigationLink(value: category) {
+                        SettingsCategoryRow(category: category)
+                    }
+                }
+            } footer: {
+                Text(.app("settings.categories.footer"))
+            }
+        }
+        .listStyle(.insetGrouped)
+        .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
+        .navigationDestination(for: SettingsCategory.self) { category in
+            settingsForm(for: category)
+        }
+        #endif
+    }
+
+    private func settingsForm(for category: SettingsCategory) -> some View {
+        Form {
+            settingsSections(for: category)
+        }
+        .formStyle(.grouped)
+        .accessibilityIdentifier("settings.view")
+        .navigationTitle(category.title)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    func prepareJSONExport() {
+        exportDocument = JSONExportDocument(text: store.jsonExport())
+        isExportPresented = true
+    }
+
+    private func saveLLMConfiguration(_ configuration: LLMConfigurationDraft) -> Bool {
+        store.setLLMConfiguration(
+            endpoint: configuration.endpoint,
+            apiKey: configuration.apiKey,
+            selectedModel: configuration.selectedModel,
+            availableModelIDs: configuration.availableModels
+        )
     }
 }

@@ -79,3 +79,69 @@ struct LegacyV4CategoryStoreFixture {
         try? FileManager.default.removeItem(at: directory)
     }
 }
+
+@MainActor
+struct LegacyV8DailySummaryStoreFixture {
+    let directory: URL
+    let storeURL: URL
+    let taskID: UUID
+
+    static func create() throws -> LegacyV8DailySummaryStoreFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "TimeTrackerLegacyV8-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let storeURL = directory.appending(path: "store.sqlite")
+        let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV8.self)
+        let legacyConfiguration = ModelConfiguration(
+            "LegacyV8",
+            schema: legacySchema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [legacyConfiguration]
+        )
+        let legacyContext = ModelContext(legacyContainer)
+        let task = TaskNode(title: "V8 task", parentID: nil, deviceID: "legacy")
+        let summary = DailySummary(
+            date: Date(timeIntervalSinceReferenceDate: 100_000),
+            taskID: task.id,
+            grossSeconds: 900,
+            wallClockSeconds: 900,
+            pomodoroCount: 1,
+            interruptionCount: 0
+        )
+        legacyContext.insert(task)
+        legacyContext.insert(summary)
+        try legacyContext.save()
+
+        return LegacyV8DailySummaryStoreFixture(
+            directory: directory,
+            storeURL: storeURL,
+            taskID: task.id
+        )
+    }
+
+    func makeCurrentContext() throws -> ModelContext {
+        let currentSchema = TimeTrackerModelRegistry.currentSchema
+        let currentConfiguration = ModelConfiguration(
+            "LegacyV8",
+            schema: currentSchema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        let currentContainer = try ModelContainer(
+            for: currentSchema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [currentConfiguration]
+        )
+        return ModelContext(currentContainer)
+    }
+
+    func remove() {
+        try? FileManager.default.removeItem(at: directory)
+    }
+}

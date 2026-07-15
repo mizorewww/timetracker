@@ -4,8 +4,8 @@ struct TaskPlanEditorSection: View {
     @Binding var draft: TaskEditorDraft
 
     var body: some View {
-        Section(AppStrings.localized("editor.task.plan")) {
-            Stepper(value: estimatedMinutesBinding, in: 0...600, step: 15) {
+        Section {
+            Stepper(value: estimatedMinutesBinding, in: TaskEstimatePolicy.minuteRange, step: 15) {
                 LabeledContent(
                     AppStrings.localized("editor.task.estimate"),
                     value: estimatedMinutesLabel
@@ -20,12 +20,16 @@ struct TaskPlanEditorSection: View {
                     displayedComponents: [.date, .hourAndMinute]
                 )
             }
+        } header: {
+            Text(.app("editor.task.plan"))
+        } footer: {
+            Text(.app("editor.task.estimate.footer"))
         }
     }
 
     private var estimatedMinutesBinding: Binding<Int> {
         Binding {
-            draft.estimatedMinutes ?? 0
+            (draft.estimatedMinutes ?? 0).clamped(to: TaskEstimatePolicy.minuteRange)
         } set: { value in
             draft.estimatedMinutes = value == 0 ? nil : value
         }

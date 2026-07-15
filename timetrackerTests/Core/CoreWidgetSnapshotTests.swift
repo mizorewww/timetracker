@@ -70,9 +70,70 @@ struct CoreWidgetSnapshotTests {
 
         #expect(cache.isAvailable == false)
         #expect(cache.load() == nil)
+        #expect(cache.loadResult() == .sharedContainerUnavailable)
         #expect(throws: WidgetSnapshotStoreError.sharedContainerUnavailable) {
             try cache.save(snapshot)
         }
+    }
+
+    @Test @MainActor
+    func widgetSnapshotSaveFailureIsSurfacedByTheMainStore() {
+        let store = TimeTrackerStore()
+        let unavailableCache = WidgetSnapshotCache(
+            store: SharedWidgetSnapshotStore(defaults: nil)
+        )
+
+        store.syncWidgetSnapshotIfAvailable(
+            now: Date(timeIntervalSinceReferenceDate: 12_000),
+            cache: unavailableCache
+        )
+
+        #expect(store.errorMessage != nil)
+        #expect(
+            store.errorMessage?.contains(
+                WidgetSnapshotStoreError.sharedContainerUnavailable.localizedDescription
+            ) == true
+        )
+    }
+
+    @Test
+    func widgetSnapshotStoreDistinguishesMissingAndCorruptedData() throws {
+        let suiteName = "WidgetSnapshotLoadTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let cache = SharedWidgetSnapshotStore(defaults: defaults)
+
+        #expect(cache.loadResult() == .missing)
+
+        defaults.set(Data("not-json".utf8), forKey: SharedWidgetSnapshotStore.snapshotKey)
+        #expect(cache.loadResult() == .corrupted)
+    }
+
+    @Test
+    func widgetSnapshotFreshnessUsesTheSharedFifteenMinuteBoundary() {
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        var snapshot = WidgetSnapshot.empty
+        snapshot.generatedAt = generatedAt
+
+        #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)) == .current)
+        #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter + 1)) == .stale)
+    }
+
+    @Test
+    func widgetUsesEventDrivenReloadsAndAccessibleSystemSurfaces() throws {
+        let widget = try [
+            "timetrackerWidgetExtension/TimeTrackerWidget.swift",
+            "timetrackerWidgetExtension/ActiveTimerWidgetView.swift",
+            "timetrackerWidgetExtension/WidgetSupplementaryViews.swift"
+        ].map(sourceText).joined(separator: "\n")
+        let cache = try sourceText("timetracker/Services/SystemIntegration/WidgetSnapshotCache.swift")
+
+        #expect(widget.contains("context.isPreview"))
+        #expect(widget.contains("policy: .never"))
+        #expect(widget.contains(".privacySensitive()"))
+        #expect(widget.contains("minHeight: 44"))
+        #expect(!widget.contains("byAdding: .minute"))
+        #expect(cache.contains("reloadTimelines(ofKind: SharedWidgetSnapshotStore.widgetKind)"))
     }
 
     @Test @MainActor

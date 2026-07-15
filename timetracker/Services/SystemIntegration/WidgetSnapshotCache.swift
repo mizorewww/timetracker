@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 struct WidgetSnapshotCache {
     var store: SharedWidgetSnapshotStore
@@ -9,6 +12,9 @@ struct WidgetSnapshotCache {
 
     func save(_ snapshot: WidgetSnapshot) throws {
         try store.save(snapshot)
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedWidgetSnapshotStore.widgetKind)
+        #endif
     }
 
     static func snapshot(

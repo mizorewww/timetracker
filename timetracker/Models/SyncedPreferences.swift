@@ -10,12 +10,14 @@ enum AppPreferenceKey: String, CaseIterable {
     case pomodoroPlans = "PomodoroPlans"
     case allowParallelTimers = "AllowParallelTimers"
     case showGrossAndWallTogether = "ShowGrossAndWallTogether"
-    case cloudSyncEnabled = "TimeTrackerCloudSyncEnabled"
     case quickStartTaskIDs = "QuickStartTaskIDs"
     case llmEndpoint = "LLMEndpoint"
-    case llmAPIKey = "LLMAPIKey"
     case llmSelectedModel = "LLMSelectedModel"
     case llmAvailableModelIDs = "LLMAvailableModelIDs"
+}
+
+enum AppLocalPreferenceKey {
+    static let llmAutomaticSuggestionsEnabled = "LLMAutomaticSuggestionsEnabled"
 }
 
 struct AppPreferences: Equatable {
@@ -27,14 +29,15 @@ struct AppPreferences: Equatable {
     var pomodoroPlans = PomodoroPlan.defaultPlans
     var allowParallelTimers = true
     var showGrossAndWallTogether = true
-    var cloudSyncEnabled = true
+    var cloudSyncEnabled = AppCloudSync.isEnabled
     var quickStartTaskIDs: [UUID] = []
     var llmEndpoint = "https://api.openai.com/v1"
     var llmAPIKey = ""
     var llmSelectedModel = ""
     var llmAvailableModelIDs: [String] = []
+    var llmAutomaticSuggestionsEnabled = false
 
-    static let defaults = AppPreferences()
+    static var defaults: AppPreferences { AppPreferences() }
 
     init() {}
 
@@ -43,15 +46,20 @@ struct AppPreferences: Equatable {
         for preference in SyncedPreferenceService.latestByKey(syncedPreferences).values {
             apply(preference)
         }
+        normalizeRelatedValues()
     }
 
     mutating func apply(_ preference: SyncedPreference) {
         guard let key = AppPreferenceKey(rawValue: preference.key), preference.deletedAt == nil else { return }
         switch key {
         case .preferredColorScheme:
-            preferredColorScheme = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: preferredColorScheme)
+            preferredColorScheme = AppPreferenceValueSanitizer.preferredColorScheme(
+                PreferenceJSON.decode(String.self, from: preference.valueJSON, default: preferredColorScheme)
+            )
         case .pomodoroDefaultMode:
-            pomodoroDefaultMode = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: pomodoroDefaultMode)
+            pomodoroDefaultMode = AppPreferenceValueSanitizer.pomodoroMode(
+                PreferenceJSON.decode(String.self, from: preference.valueJSON, default: pomodoroDefaultMode)
+            )
         case .defaultFocusMinutes:
             defaultFocusMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultFocusMinutes).clamped(to: 1...480)
         case .defaultBreakMinutes:
@@ -59,34 +67,45 @@ struct AppPreferences: Equatable {
         case .defaultPomodoroRounds:
             defaultPomodoroRounds = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultPomodoroRounds).clamped(to: 1...24)
         case .pomodoroPlans:
-            pomodoroPlans = PreferenceJSON.decode([PomodoroPlan].self, from: preference.valueJSON, default: pomodoroPlans)
-                .map { $0.normalized() }
+            pomodoroPlans = AppPreferenceValueSanitizer.pomodoroPlans(
+                PreferenceJSON.decode([PomodoroPlan].self, from: preference.valueJSON, default: pomodoroPlans)
+            )
         case .allowParallelTimers:
             allowParallelTimers = PreferenceJSON.decode(Bool.self, from: preference.valueJSON, default: allowParallelTimers)
         case .showGrossAndWallTogether:
             showGrossAndWallTogether = PreferenceJSON.decode(Bool.self, from: preference.valueJSON, default: showGrossAndWallTogether)
-        case .cloudSyncEnabled:
-            cloudSyncEnabled = PreferenceJSON.decode(Bool.self, from: preference.valueJSON, default: cloudSyncEnabled)
         case .quickStartTaskIDs:
             let strings = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
-            quickStartTaskIDs = strings.compactMap(UUID.init(uuidString:))
+            quickStartTaskIDs = AppPreferenceValueSanitizer.quickStartTaskIDs(
+                strings.compactMap(UUID.init(uuidString:))
+            )
         case .llmEndpoint:
-            llmEndpoint = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmEndpoint)
-        case .llmAPIKey:
-            llmAPIKey = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmAPIKey)
+            llmEndpoint = AppPreferenceValueSanitizer.llmEndpoint(
+                PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmEndpoint)
+            )
         case .llmSelectedModel:
-            llmSelectedModel = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmSelectedModel)
+            llmSelectedModel = AppPreferenceValueSanitizer.llmModelID(
+                PreferenceJSON.decode(String.self, from: preference.valueJSON, default: llmSelectedModel)
+            )
         case .llmAvailableModelIDs:
-            llmAvailableModelIDs = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
+            llmAvailableModelIDs = AppPreferenceValueSanitizer.llmModelIDs(
+                PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
+            )
+        }
+    }
+
+    private mutating func normalizeRelatedValues() {
+        if !llmSelectedModel.isEmpty, !llmAvailableModelIDs.contains(llmSelectedModel) {
+            llmSelectedModel = ""
         }
     }
 
     func valueJSON(for key: AppPreferenceKey) -> String {
         switch key {
         case .preferredColorScheme:
-            return PreferenceJSON.encode(preferredColorScheme)
+            return PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(preferredColorScheme))
         case .pomodoroDefaultMode:
-            return PreferenceJSON.encode(pomodoroDefaultMode)
+            return PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroMode(pomodoroDefaultMode))
         case .defaultFocusMinutes:
             return PreferenceJSON.encode(defaultFocusMinutes)
         case .defaultBreakMinutes:
@@ -94,31 +113,32 @@ struct AppPreferences: Equatable {
         case .defaultPomodoroRounds:
             return PreferenceJSON.encode(defaultPomodoroRounds)
         case .pomodoroPlans:
-            return PreferenceJSON.encode(pomodoroPlans.map { $0.normalized() })
+            return PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(pomodoroPlans))
         case .allowParallelTimers:
             return PreferenceJSON.encode(allowParallelTimers)
         case .showGrossAndWallTogether:
             return PreferenceJSON.encode(showGrossAndWallTogether)
-        case .cloudSyncEnabled:
-            return PreferenceJSON.encode(cloudSyncEnabled)
         case .quickStartTaskIDs:
-            return PreferenceJSON.encode(quickStartTaskIDs.map(\.uuidString))
+            return PreferenceJSON.encode(
+                AppPreferenceValueSanitizer.quickStartTaskIDs(quickStartTaskIDs).map(\.uuidString)
+            )
         case .llmEndpoint:
-            return PreferenceJSON.encode(llmEndpoint)
-        case .llmAPIKey:
-            return PreferenceJSON.encode(llmAPIKey)
+            return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(llmEndpoint))
         case .llmSelectedModel:
-            return PreferenceJSON.encode(llmSelectedModel)
+            return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
         case .llmAvailableModelIDs:
-            return PreferenceJSON.encode(llmAvailableModelIDs)
+            return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
         }
     }
 }
 
 enum PreferenceJSON {
+    static let maximumPayloadByteCount = 256 * 1_024
+
     static func encode<T: Encodable>(_ value: T) -> String {
         let encoder = JSONEncoder()
         guard let data = try? encoder.encode(value),
+              data.count <= maximumPayloadByteCount,
               let string = String(data: data, encoding: .utf8) else {
             return "null"
         }
@@ -126,7 +146,8 @@ enum PreferenceJSON {
     }
 
     static func decode<T: Decodable>(_ type: T.Type, from json: String, default defaultValue: T) -> T {
-        guard let data = json.data(using: .utf8),
+        guard json.utf8.count <= maximumPayloadByteCount,
+              let data = json.data(using: .utf8),
               let value = try? JSONDecoder().decode(type, from: data) else {
             return defaultValue
         }
@@ -136,16 +157,36 @@ enum PreferenceJSON {
 
 enum SyncedPreferenceService {
     static let migrationKey = "SyncedPreferencesMigratedToSwiftDataV1"
+    static let legacyLLMAPIKey = "LLMAPIKey"
+    static let legacyCloudSyncEnabledKey = AppCloudSync.enabledKey
+
+    static func isSensitiveKey(_ key: String) -> Bool {
+        key == legacyLLMAPIKey
+    }
+
+    static func isDeviceLocalKey(_ key: String) -> Bool {
+        key == legacyCloudSyncEnabledKey
+    }
+
+    static func shouldSyncKey(_ key: String) -> Bool {
+        !isSensitiveKey(key) && !isDeviceLocalKey(key)
+    }
 
     static func latestByKey(_ preferences: [SyncedPreference]) -> [String: SyncedPreference] {
         preferences
-            .filter { $0.deletedAt == nil }
             .reduce(into: [String: SyncedPreference]()) { result, preference in
                 guard let existing = result[preference.key] else {
                     result[preference.key] = preference
                     return
                 }
-                if preference.updatedAt >= existing.updatedAt {
+                if preference.updatedAt > existing.updatedAt ||
+                    (preference.updatedAt == existing.updatedAt &&
+                        preference.deletedAt != nil && existing.deletedAt == nil) ||
+                    (preference.updatedAt == existing.updatedAt &&
+                        (preference.deletedAt == nil) == (existing.deletedAt == nil) &&
+                        (preference.createdAt > existing.createdAt ||
+                            (preference.createdAt == existing.createdAt &&
+                                preference.id.uuidString > existing.id.uuidString))) {
                     result[preference.key] = preference
                 }
             }
@@ -155,54 +196,120 @@ enum SyncedPreferenceService {
     static func migrateLegacyPreferencesIfNeeded(context: ModelContext, deviceID: String = DeviceIdentity.current) throws {
         guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
         let existing = try context.fetch(FetchDescriptor<SyncedPreference>())
-        let existingKeys = Set(existing.filter { $0.deletedAt == nil }.map(\.key))
-        let defaults = AppPreferences.defaults
+        let existingKeys = Set(existing.visibleDeduplicatedByID().map(\.key))
 
-        for key in AppPreferenceKey.allCases where !existingKeys.contains(key.rawValue) {
-            let valueJSON = legacyValueJSON(for: key, defaultPreferences: defaults)
-            context.insert(SyncedPreference(key: key.rawValue, valueJSON: valueJSON, deviceID: deviceID))
+        for key in AppPreferenceKey.allCases
+        where shouldSyncKey(key.rawValue) && !existingKeys.contains(key.rawValue) {
+            if let valueJSON = legacyValueJSON(for: key) {
+                context.insert(SyncedPreference(key: key.rawValue, valueJSON: valueJSON, deviceID: deviceID))
+            }
         }
 
         try context.save()
         UserDefaults.standard.set(true, forKey: migrationKey)
     }
 
-    static func syncLocalMirrors(_ preferences: AppPreferences) {
-        UserDefaults.standard.set(preferences.cloudSyncEnabled, forKey: AppCloudSync.enabledKey)
+    @MainActor
+    static func migrateSensitivePreferences(
+        context: ModelContext,
+        credentialStore: any LLMCredentialStoring,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
+        let sensitiveKey = legacyLLMAPIKey
+        let descriptor = FetchDescriptor<SyncedPreference>(
+            predicate: #Predicate { $0.key == sensitiveKey },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        let storedPreferences = try context.fetch(descriptor)
+        let syncedCandidate = latestByKey(storedPreferences.deduplicatedByID())[sensitiveKey]
+            .flatMap { preference -> String? in
+                guard preference.deletedAt == nil else { return nil }
+                let value = PreferenceJSON.decode(String.self, from: preference.valueJSON, default: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return value.isEmpty ? nil : value
+            }
+        let defaults = UserDefaults.standard
+        let legacyLocalCandidate = defaults.string(forKey: legacyLLMAPIKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if try credentialStore.readAPIKey() == nil {
+            if let candidate = syncedCandidate ?? legacyLocalCandidate, !candidate.isEmpty {
+                try credentialStore.writeAPIKey(candidate)
+            }
+        }
+
+        var changed = false
+        let redactedValue = PreferenceJSON.encode("")
+        for preference in storedPreferences {
+            var recordChanged = false
+            if preference.valueJSON != redactedValue {
+                preference.valueJSON = redactedValue
+                recordChanged = true
+            }
+            if preference.deletedAt == nil {
+                preference.deletedAt = now
+                recordChanged = true
+            }
+            if recordChanged {
+                preference.updatedAt = now
+                preference.deviceID = deviceID
+                preference.clientMutationID = UUID()
+                changed = true
+            }
+        }
+
+        if defaults.object(forKey: legacyLLMAPIKey) != nil {
+            defaults.removeObject(forKey: legacyLLMAPIKey)
+        }
+        if changed {
+            try context.save()
+        }
     }
 
-    private static func legacyValueJSON(for key: AppPreferenceKey, defaultPreferences: AppPreferences) -> String {
+    private static func legacyValueJSON(for key: AppPreferenceKey) -> String? {
         let defaults = UserDefaults.standard
+        guard defaults.object(forKey: key.rawValue) != nil else { return nil }
         switch key {
         case .preferredColorScheme:
-            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.preferredColorScheme)
+            guard let value = defaults.string(forKey: key.rawValue) else { return nil }
+            return PreferenceJSON.encode(value)
         case .pomodoroDefaultMode:
-            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.pomodoroDefaultMode)
+            guard let value = defaults.string(forKey: key.rawValue) else { return nil }
+            return PreferenceJSON.encode(value)
         case .defaultFocusMinutes:
-            return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Int ?? defaultPreferences.defaultFocusMinutes)
+            guard let value = defaults.object(forKey: key.rawValue) as? Int else { return nil }
+            return PreferenceJSON.encode(value)
         case .defaultBreakMinutes:
-            return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Int ?? defaultPreferences.defaultBreakMinutes)
+            guard let value = defaults.object(forKey: key.rawValue) as? Int else { return nil }
+            return PreferenceJSON.encode(value)
         case .defaultPomodoroRounds:
-            return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Int ?? defaultPreferences.defaultPomodoroRounds)
+            guard let value = defaults.object(forKey: key.rawValue) as? Int else { return nil }
+            return PreferenceJSON.encode(value)
         case .pomodoroPlans:
-            return PreferenceJSON.encode(defaultPreferences.pomodoroPlans)
+            guard let json = defaults.string(forKey: key.rawValue),
+                  let data = json.data(using: .utf8),
+                  let plans = try? JSONDecoder().decode([PomodoroPlan].self, from: data) else {
+                return nil
+            }
+            return PreferenceJSON.encode(plans)
         case .allowParallelTimers:
-            return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Bool ?? defaultPreferences.allowParallelTimers)
+            guard let value = defaults.object(forKey: key.rawValue) as? Bool else { return nil }
+            return PreferenceJSON.encode(value)
         case .showGrossAndWallTogether:
-            return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Bool ?? defaultPreferences.showGrossAndWallTogether)
-        case .cloudSyncEnabled:
-            return PreferenceJSON.encode(defaults.object(forKey: key.rawValue) as? Bool ?? defaultPreferences.cloudSyncEnabled)
+            guard let value = defaults.object(forKey: key.rawValue) as? Bool else { return nil }
+            return PreferenceJSON.encode(value)
         case .quickStartTaskIDs:
             let ids = defaults.string(forKey: key.rawValue)?
                 .split(separator: ",")
                 .map(String.init) ?? []
             return PreferenceJSON.encode(ids)
         case .llmEndpoint:
-            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.llmEndpoint)
-        case .llmAPIKey:
-            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.llmAPIKey)
+            guard let value = defaults.string(forKey: key.rawValue) else { return nil }
+            return PreferenceJSON.encode(value)
         case .llmSelectedModel:
-            return PreferenceJSON.encode(defaults.string(forKey: key.rawValue) ?? defaultPreferences.llmSelectedModel)
+            guard let value = defaults.string(forKey: key.rawValue) else { return nil }
+            return PreferenceJSON.encode(value)
         case .llmAvailableModelIDs:
             let models = defaults.string(forKey: key.rawValue)?
                 .split(separator: ",")

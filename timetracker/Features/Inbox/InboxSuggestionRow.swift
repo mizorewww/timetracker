@@ -25,7 +25,10 @@ struct InboxSuggestionBar: View {
     let apply: () -> Void
 
     var body: some View {
-        horizontalLayout
+        ViewThatFits(in: .horizontal) {
+            horizontalLayout
+            compactLayout
+        }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(InboxSuggestionBackground())
@@ -41,46 +44,59 @@ struct InboxSuggestionBar: View {
         }
     }
 
+    private var compactLayout: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            suggestionLabel
+            HStack {
+                Spacer(minLength: 0)
+                actions
+            }
+        }
+    }
+
     private var suggestionLabel: some View {
         HStack(spacing: 8) {
             Image(systemName: "sparkles")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.blue)
 
-            Text(AppStrings.localized("inbox.suggestion.prefix"))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-
-            Text(taskTitle)
-                .fontWeight(.semibold)
-                .foregroundStyle(.blue)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            suggestionText
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .layoutPriority(1)
         }
         .font(.subheadline)
-        .minimumScaleFactor(0.78)
+    }
+
+    private var suggestionText: Text {
+        let prefix = Text(AppStrings.localized("inbox.suggestion.prefix"))
+            .foregroundStyle(.secondary)
+        let title = Text(taskTitle)
+            .fontWeight(.semibold)
+            .foregroundStyle(.blue)
+        return Text("\(prefix) \(title)")
     }
 
     private var actions: some View {
         HStack(spacing: isCompact ? 8 : 12) {
-            Button(role: .destructive, action: discard) {
+            Button(action: discard) {
                 Image(systemName: "xmark")
-                    .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
-                    .foregroundStyle(.red)
-                    .frame(width: isCompact ? 34 : 38, height: isCompact ? 34 : 38)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: isCompact ? 30 : 32, height: isCompact ? 30 : 32)
                     .background(Color.secondary.opacity(0.12), in: Circle())
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
 
             Button(action: apply) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: isCompact ? 14 : 15, weight: .bold))
+                    .font(.callout.weight(.bold))
                     .foregroundStyle(.white)
-                    .frame(width: isCompact ? 34 : 38, height: isCompact ? 34 : 38)
+                    .frame(width: isCompact ? 30 : 32, height: isCompact ? 30 : 32)
                     .background(Color.blue, in: Circle())
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.apply"))
@@ -94,24 +110,46 @@ struct InboxSuggestionFailureBar: View {
     let discard: () -> Void
 
     var body: some View {
-        HStack(spacing: isCompact ? 8 : 10) {
-            Label {
-                Text(.app("inbox.suggestion.failed"))
-                    .lineLimit(1)
-            } icon: {
-                Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: isCompact ? 8 : 10) {
+                failureLabel
+                    .layoutPriority(1)
+
+                Spacer(minLength: 4)
+                actions
             }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .layoutPriority(1)
 
-            Spacer(minLength: 4)
+            VStack(alignment: .leading, spacing: 8) {
+                failureLabel
+                HStack {
+                    Spacer(minLength: 0)
+                    actions
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(InboxSuggestionBackground())
+    }
 
+    private var failureLabel: some View {
+        Label {
+            Text(.app("inbox.suggestion.failed"))
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+        }
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+    }
+
+    private var actions: some View {
+        HStack(spacing: isCompact ? 8 : 10) {
             Button(action: discard) {
                 Image(systemName: "xmark")
-                    .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
-                    .frame(width: isCompact ? 30 : 32, height: isCompact ? 30 : 32)
+                    .font(.caption.weight(.semibold))
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
@@ -119,16 +157,13 @@ struct InboxSuggestionFailureBar: View {
 
             Button(action: retry) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
-                    .frame(width: isCompact ? 30 : 32, height: isCompact ? 30 : 32)
+                    .font(.caption.weight(.semibold))
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.blue)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.retry"))
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(InboxSuggestionBackground())
     }
 }
 

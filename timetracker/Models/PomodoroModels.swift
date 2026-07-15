@@ -23,7 +23,6 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
     var shortBreakMinutes: Int
     var longBreakMinutes: Int
     var rounds: Int
-    var allowsSystemClock: Bool
 
     init(
         id: UUID = UUID(),
@@ -33,24 +32,25 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
         focusMinutes: Int = 25,
         shortBreakMinutes: Int = 5,
         longBreakMinutes: Int = 15,
-        rounds: Int = 4,
-        allowsSystemClock: Bool = false
+        rounds: Int = 4
     ) {
         self.id = id
-        self.name = name
+        self.name = AppPreferenceValueSanitizer.pomodoroPlanName(name)
         self.iconName = ChecklistVisualSanitizer.sanitizedIcon(iconName)
         self.colorHex = ChecklistVisualSanitizer.sanitizedColor(colorHex, fallback: "FF2D55")
         self.focusMinutes = Self.normalizedMinute(focusMinutes)
         self.shortBreakMinutes = Self.normalizedMinute(shortBreakMinutes)
         self.longBreakMinutes = Self.normalizedMinute(longBreakMinutes)
         self.rounds = rounds.clamped(to: Self.roundRange)
-        self.allowsSystemClock = allowsSystemClock
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? AppStrings.localized("pomodoro.untitledPlan")
+        name = AppPreferenceValueSanitizer.pomodoroPlanName(
+            try container.decodeIfPresent(String.self, forKey: .name)
+                ?? AppStrings.localized("pomodoro.untitledPlan")
+        )
         iconName = ChecklistVisualSanitizer.sanitizedIcon(try container.decodeIfPresent(String.self, forKey: .iconName))
         colorHex = ChecklistVisualSanitizer.sanitizedColor(
             try container.decodeIfPresent(String.self, forKey: .colorHex),
@@ -60,7 +60,6 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
         shortBreakMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .shortBreakMinutes) ?? 5)
         longBreakMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .longBreakMinutes) ?? 15)
         rounds = (try container.decodeIfPresent(Int.self, forKey: .rounds) ?? 4).clamped(to: Self.roundRange)
-        allowsSystemClock = try container.decodeIfPresent(Bool.self, forKey: .allowsSystemClock) ?? false
     }
 
     var focusSeconds: Int { focusMinutes * 60 }
@@ -81,8 +80,7 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
             focusMinutes: focusMinutes,
             shortBreakMinutes: shortBreakMinutes,
             longBreakMinutes: longBreakMinutes,
-            rounds: rounds,
-            allowsSystemClock: allowsSystemClock
+            rounds: rounds
         )
     }
 
@@ -175,5 +173,46 @@ extension PomodoroRun {
     var state: PomodoroState {
         get { PomodoroState(rawValue: stateRaw) ?? .planned }
         set { stateRaw = newValue.rawValue }
+    }
+
+    /// The current phase deadline is derived from persisted phase state instead
+    /// of a view-owned timer. `startedAt` intentionally means the start of the
+    /// active focus or break phase.
+    var phaseDeadline: Date? {
+        guard deletedAt == nil, endedAt == nil else { return nil }
+        let duration: Int
+        switch state {
+        case .focusing, .interrupted:
+            duration = focusSecondsPlanned
+        case .shortBreak:
+            duration = breakSecondsPlanned
+        case .longBreak:
+            duration = longBreakSecondsPlanned ?? breakSecondsPlanned
+        case .planned, .completed, .cancelled:
+            return nil
+        }
+        let phaseStartedAt = startedAt ?? updatedAt
+        return phaseStartedAt.addingTimeInterval(TimeInterval(max(1, duration)))
+    }
+
+    func phaseHasExpired(at date: Date) -> Bool {
+        guard let phaseDeadline else { return false }
+        return date >= phaseDeadline
+    }
+
+    /// Applies the shared focus-to-break/completed state transition after the
+    /// caller has bounded the associated ledger session to `endedAt`.
+    func completeFocusPhase(endedAt: Date, mutationDate: Date) {
+        guard state == .focusing || state == .interrupted else { return }
+        completedFocusRounds += 1
+        let didComplete = completedFocusRounds >= targetRounds
+        state = didComplete
+            ? .completed
+            : (completedFocusRounds.isMultiple(of: 4) ? .longBreak : .shortBreak)
+        sessionID = nil
+        startedAt = didComplete ? startedAt : endedAt
+        self.endedAt = didComplete ? endedAt : nil
+        updatedAt = mutationDate
+        clientMutationID = UUID()
     }
 }

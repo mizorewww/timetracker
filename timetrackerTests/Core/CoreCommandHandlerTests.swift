@@ -189,6 +189,30 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
+    func restartingAnExistingTaskStillReconcilesUnexpectedParallelTimers() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let selectedTaskID = UUID()
+        let otherTaskID = UUID()
+        let selectedSegment = try repository.startTask(taskID: selectedTaskID, source: .timer)
+        let otherSegment = try repository.startTask(taskID: otherTaskID, source: .timer)
+
+        try TimerCommandHandler().startTask(
+            taskID: selectedTaskID,
+            allowParallelTimers: false,
+            activeSegments: [selectedSegment, otherSegment],
+            pomodoroRuns: [],
+            timeRepository: repository,
+            context: context
+        )
+
+        let activeSegments = try repository.activeSegments()
+        #expect(activeSegments.map(\.id) == [selectedSegment.id])
+        #expect(otherSegment.endedAt != nil)
+        #expect(try repository.allSegments().count == 2)
+    }
+
+    @Test @MainActor
     func pomodoroCommandHandlerCancelsRunForStoppedSession() throws {
         let context = try makeTestContext()
         let sessionID = UUID()
@@ -203,6 +227,83 @@ struct CoreCommandHandlerTests {
         try handler.cancelIfNeeded(sessionID: sessionID, runs: [run], context: context, now: cancelledAt)
         #expect(run.state == .cancelled)
         #expect(run.endedAt == cancelledAt)
+    }
+
+    @Test @MainActor
+    func pomodoroCancellationDefersItsSaveToTheOuterAtomicMutation() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 10_000)
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-50)
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-50)
+        )
+        let run = PomodoroRun(
+            taskID: taskID,
+            focus: 100,
+            breakSeconds: 20,
+            deviceID: "test"
+        )
+        run.sessionID = session.id
+        run.state = .focusing
+        run.startedAt = session.startedAt
+        context.insert(session)
+        context.insert(segment)
+        context.insert(run)
+        try context.save()
+
+        #expect(throws: ForcedCommandFailure.self) {
+            try context.performAtomicMutation {
+                try PomodoroCommandHandler().cancelIfNeeded(
+                    sessionID: session.id,
+                    runs: [run],
+                    context: context,
+                    now: now
+                )
+                throw ForcedCommandFailure.expected
+            }
+        }
+
+        let persistedRun = try #require(
+            try context.fetch(FetchDescriptor<PomodoroRun>()).first { $0.id == run.id }
+        )
+        #expect(persistedRun.state == .focusing)
+        #expect(persistedRun.endedAt == nil)
+    }
+
+    @Test @MainActor
+    func timerMutationEventsCoverLedgerAndPomodoroForEveryStoppedTimer() throws {
+        let context = try makeTestContext()
+        let firstTask = TaskNode(title: "First", parentID: nil, deviceID: "test")
+        let secondTask = TaskNode(title: "Second", parentID: nil, deviceID: "test")
+        context.insert(firstTask)
+        context.insert(secondTask)
+        try context.save()
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstSegment = try timeRepository.startTask(taskID: firstTask.id, source: .pomodoro)
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        store.preferences.allowParallelTimers = false
+        let events = store.timerStartMutationEvents(taskID: secondTask.id)
+
+        #expect(events.contains(.ledgerChanged(taskID: secondTask.id, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.pomodoroChanged(runID: nil, sessionID: nil, taskID: secondTask.id)))
+        #expect(events.contains(.ledgerChanged(taskID: firstTask.id, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.pomodoroChanged(
+            runID: nil,
+            sessionID: firstSegment.sessionID,
+            taskID: firstTask.id
+        )))
     }
 
     @Test @MainActor
@@ -247,4 +348,8 @@ struct CoreCommandHandlerTests {
         #expect(event.deletedAt == Date(timeIntervalSince1970: 60_000))
     }
 
+}
+
+private enum ForcedCommandFailure: Error {
+    case expected
 }

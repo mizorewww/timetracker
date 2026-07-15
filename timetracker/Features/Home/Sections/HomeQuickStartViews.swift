@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct QuickStartSection: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @State private var isEditorPresented = false
 
     private var selectedIDs: [UUID] {
@@ -10,7 +10,7 @@ struct QuickStartSection: View {
 
     private var pinnedTasks: [TaskNode] {
         selectedIDs.compactMap { store.task(for: $0) }
-            .filter { $0.deletedAt == nil && $0.status != .archived }
+            .filter(store.isTaskAvailableForTracking)
     }
 
     private var recentFillTasks: [TaskNode] {
@@ -65,6 +65,7 @@ struct QuickStartSection: View {
                 }
             }
         }
+        .accessibilityIdentifier("home.quickStart")
         .sheet(isPresented: $isEditorPresented) {
             QuickStartEditorSheet(
                 store: store,

@@ -4,7 +4,6 @@ struct InboxCaptureRow: View {
     @Binding var title: String
     let placeholder: String
     var focusToken: Int
-    let isCompact: Bool
     let submit: () -> Bool
     @FocusState private var isFocused: Bool
 
@@ -12,13 +11,16 @@ struct InboxCaptureRow: View {
         HStack(spacing: 10) {
             Button(action: addButtonTapped) {
                 Image(systemName: "plus")
-                    .font(.system(size: isCompact ? 16 : 18, weight: .semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.white)
-                    .frame(width: isCompact ? 26 : 34, height: isCompact ? 26 : 34)
+                    .frame(width: 28, height: 28)
                     .background(.blue, in: Circle())
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.localized("inbox.add"))
+            .accessibilityIdentifier("inbox.capture.add")
 
             TextField(placeholder, text: $title)
                 .textFieldStyle(.plain)
@@ -27,27 +29,11 @@ struct InboxCaptureRow: View {
                 .submitLabel(.done)
                 .onSubmit(submitIfNeeded)
                 .labelsHidden()
-
-            Spacer(minLength: 8)
-
-            Image(systemName: "keyboard")
-                .font(.body)
-                .foregroundStyle(.secondary)
+                .accessibilityLabel(AppStrings.localized("inbox.addPlaceholder"))
+                .accessibilityHint(AppStrings.localized("inbox.capture.hint"))
+                .accessibilityIdentifier("inbox.capture.field")
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: isCompact ? 48 : 52)
-        .background(
-            RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
-                .fill(AppColors.cardBackground)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
-                .stroke(AppColors.border)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            isFocused = true
-        }
+        .frame(minHeight: 44)
         .onChange(of: focusToken) { _, _ in
             isFocused = true
         }

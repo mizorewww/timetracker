@@ -1,0 +1,168 @@
+import SwiftUI
+
+struct SidebarTaskTreeRowContainer: View {
+    let store: TimeTrackerStore
+    let row: TaskTreeRowModel
+    @Binding var expansionState: TaskExpansionState
+
+    var body: some View {
+        if let task = store.task(for: row.taskID) {
+            SidebarTaskTreeRow(
+                store: store,
+                task: task,
+                row: row,
+                expansionState: $expansionState
+            )
+        }
+    }
+}
+
+struct SidebarTaskTreeRow: View {
+    let store: TimeTrackerStore
+    let task: TaskNode
+    let row: TaskTreeRowModel
+    @Binding var expansionState: TaskExpansionState
+    @State private var isDeleteConfirmationPresented = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Color.clear
+                .frame(width: CGFloat(min(row.depth, 6)) * 14)
+                .accessibilityHidden(true)
+
+            disclosureControl
+            taskContent
+        }
+        .contentShape(Rectangle())
+        .taskSelectionPulse(
+            selectedID: store.selectedTaskPulseID,
+            itemID: task.id,
+            pulseToken: store.selectedTaskPulseToken
+        )
+        .contextMenu {
+            TaskContextMenu(
+                store: store,
+                task: task,
+                requestDelete: { isDeleteConfirmationPresented = true }
+            )
+        }
+        .confirmationDialog(
+            AppStrings.localized("task.delete.confirm.title"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.delete, role: .destructive) {
+                store.deleteSelectedTask(taskID: task.id)
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("task.delete.confirm.message"))
+        }
+        .taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)
+    }
+
+    @ViewBuilder
+    private var disclosureControl: some View {
+        if row.hasChildren {
+            Button {
+                expansionState.toggle(task.id)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .rotationEffect(.degrees(row.isExpanded ? 90 : 0))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14, height: 18)
+            }
+            .buttonStyle(.plain)
+            .frame(width: disclosureTargetSize, height: disclosureTargetSize)
+            .contentShape(Rectangle())
+            .accessibilityLabel(
+                "\(task.title), \(row.isExpanded ? AppStrings.localized("task.tree.collapse") : AppStrings.localized("task.tree.expand"))"
+            )
+        } else {
+            Color.clear
+                .frame(width: disclosureTargetSize, height: disclosureTargetSize)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var taskContent: some View {
+        let progress = store.checklistProgress(for: task.id)
+        let childCount = row.hasChildren ? store.children(of: task).count : 0
+        let blocked = task.status != .completed && !store.isTaskAvailableForTracking(task)
+
+        return HStack(spacing: 8) {
+            Image(systemName: task.iconName ?? "checkmark.circle")
+                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
+                .accessibilityHidden(true)
+
+            Text(task.title)
+                .strikethrough(task.status == .completed)
+                .foregroundStyle(task.status == .completed ? .secondary : .primary)
+                .lineLimit(1)
+                .accessibilityIdentifier("sidebar.task.\(task.id.uuidString)")
+
+            Spacer(minLength: 4)
+
+            if progress.totalCount > 0 {
+                Text(progress.label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            if childCount > 0 {
+                Text("\(childCount)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Image(systemName: blocked ? "pause.circle.fill" : task.status.symbolName)
+                .font(.caption)
+                .foregroundStyle(
+                    blocked ? .orange : (Color(hex: task.status.colorHex) ?? .secondary)
+                )
+                .frame(width: 14)
+                .accessibilityHidden(true)
+                .help(
+                    blocked
+                        ? AppStrings.localized("task.status.blockedByCompletion")
+                        : task.status.displayName
+                )
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(task.title)
+        .accessibilityValue(
+            accessibilityValue(progress: progress, childCount: childCount, blocked: blocked)
+        )
+    }
+
+    private func accessibilityValue(
+        progress: ChecklistProgress,
+        childCount: Int,
+        blocked: Bool
+    ) -> String {
+        var values = [
+            blocked
+                ? AppStrings.localized("task.status.blockedByCompletion")
+                : task.status.displayName
+        ]
+        if progress.totalCount > 0 {
+            values.append(progress.label)
+        }
+        if childCount > 0 {
+            values.append(
+                String.localizedStringWithFormat(
+                    AppStrings.localized("tasks.childCount"),
+                    childCount
+                )
+            )
+        }
+        return values.joined(separator: ", ")
+    }
+
+    private var disclosureTargetSize: CGFloat {
+        #if os(iOS)
+        44
+        #else
+        24
+        #endif
+    }
+}

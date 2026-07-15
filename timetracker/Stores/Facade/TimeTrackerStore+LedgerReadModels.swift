@@ -9,12 +9,7 @@ extension TimeTrackerStore {
         guard let interval = Calendar.current.dateInterval(of: .day, for: date) else {
             return []
         }
-        return allSegments
-            .filter { segment in
-                guard segment.deletedAt == nil else { return false }
-                let end = segment.endedAt ?? now
-                return segment.startedAt < interval.end && end > interval.start
-            }
+        return visibleSegments(overlapping: interval, now: now)
             .sorted { $0.startedAt > $1.startedAt }
     }
 
@@ -26,12 +21,12 @@ extension TimeTrackerStore {
         todayWallSeconds(now: Date())
     }
 
-    func todayGrossSeconds(now: Date) -> Int {
-        aggregationService.totalSeconds(segments: todaySegments, mode: .gross, now: now)
+    func todayGrossSeconds(now: Date, calendar: Calendar = .current) -> Int {
+        todaySeconds(now: now, mode: .gross, calendar: calendar)
     }
 
-    func todayWallSeconds(now: Date) -> Int {
-        aggregationService.totalSeconds(segments: todaySegments, mode: .wallClock, now: now)
+    func todayWallSeconds(now: Date, calendar: Calendar = .current) -> Int {
+        todaySeconds(now: now, mode: .wallClock, calendar: calendar)
     }
 
     func dayGrossSeconds(for date: Date, now: Date = Date()) -> Int {
@@ -44,9 +39,22 @@ extension TimeTrackerStore {
 
     func daySeconds(for date: Date, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .day, for: date) else { return 0 }
+        let segments = visibleSegments(overlapping: interval, now: now)
         return ledgerSummaryService.secondsInInterval(
-            taskIDs: Set(allSegments.map(\.taskID)),
-            segments: allSegments,
+            taskIDs: Set(segments.map(\.taskID)),
+            segments: segments,
+            interval: interval,
+            mode: mode,
+            now: now
+        )
+    }
+
+    private func todaySeconds(now: Date, mode: AggregationMode, calendar: Calendar) -> Int {
+        guard let interval = calendar.dateInterval(of: .day, for: now) else { return 0 }
+        let segments = visibleSegments(overlapping: interval, now: now)
+        return ledgerSummaryService.secondsInInterval(
+            taskIDs: Set(segments.map(\.taskID)),
+            segments: segments,
             interval: interval,
             mode: mode,
             now: now
@@ -62,7 +70,7 @@ extension TimeTrackerStore {
     }
 
     func activeSegment(for taskID: UUID) -> TimeSegment? {
-        activeSegments.first { $0.taskID == taskID }
+        activeSegmentByTaskID[taskID]
     }
 
     func displayTitle(for segment: TimeSegment) -> String {
@@ -75,7 +83,10 @@ extension TimeTrackerStore {
     }
 
     func note(for segment: TimeSegment) -> String {
-        sessions.first { $0.id == segment.sessionID }?.note ?? ""
+        if ledgerDomainStore.hasIndexedSegmentHistory {
+            return ledgerDomainStore.session(for: segment.sessionID)?.note ?? ""
+        }
+        return sessions.first { $0.id == segment.sessionID }?.note ?? ""
     }
 
     func secondsForTaskTotal(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
@@ -90,24 +101,28 @@ extension TimeTrackerStore {
     func secondsForTaskToday(_ task: TaskNode, mode: AggregationMode = .gross) -> Int {
         let now = Date()
         guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
-        return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: allSegments, interval: interval, mode: mode, now: now)
+        let segments = visibleSegments(overlapping: interval, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: segments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskTodayRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
         let ids = taskAndDescendantIDs(for: task.id)
-        return ledgerSummaryService.secondsInInterval(taskIDs: ids, segments: allSegments, interval: interval, mode: mode, now: now)
+        let segments = visibleSegments(overlapping: interval, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: ids, segments: segments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskThisWeek(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
-        return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: allSegments, interval: interval, mode: mode, now: now)
+        let segments = visibleSegments(overlapping: interval, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: segments, interval: interval, mode: mode, now: now)
     }
 
     func secondsForTaskThisWeekRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: now) else { return 0 }
         let ids = taskAndDescendantIDs(for: task.id)
-        return ledgerSummaryService.secondsInInterval(taskIDs: ids, segments: allSegments, interval: interval, mode: mode, now: now)
+        let segments = visibleSegments(overlapping: interval, now: now)
+        return ledgerSummaryService.secondsInInterval(taskIDs: ids, segments: segments, interval: interval, mode: mode, now: now)
     }
 
     func recentSegments(for task: TaskNode, limit: Int = 6) -> [TimeSegment] {
@@ -116,5 +131,31 @@ extension TimeTrackerStore {
             .sorted { $0.startedAt > $1.startedAt }
             .prefix(limit)
             .map { $0 }
+    }
+
+    func visibleSegments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {
+        if ledgerDomainStore.hasIndexedSegmentHistory {
+            return ledgerDomainStore.segments(overlapping: interval, now: now)
+        }
+        return allSegments.filter { segment in
+            guard segment.deletedAt == nil else { return false }
+            let end = segment.endedAt ?? now
+            return segment.startedAt < interval.end && end > interval.start
+        }
+    }
+
+    func visibleSegments(forTaskIDs taskIDs: Set<UUID>) -> [TimeSegment] {
+        if ledgerDomainStore.hasIndexedSegmentHistory {
+            return ledgerDomainStore.segments(forTaskIDs: taskIDs)
+        }
+        return allSegments.filter { $0.deletedAt == nil && taskIDs.contains($0.taskID) }
+    }
+
+    func visibleSessions(for segments: [TimeSegment]) -> [TimeSession] {
+        let sessionIDs = Set(segments.map(\.sessionID))
+        if ledgerDomainStore.hasIndexedSegmentHistory {
+            return ledgerDomainStore.sessions(for: sessionIDs)
+        }
+        return sessions.filter { sessionIDs.contains($0.id) && $0.deletedAt == nil }
     }
 }

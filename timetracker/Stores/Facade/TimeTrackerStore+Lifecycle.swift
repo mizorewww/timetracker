@@ -2,30 +2,6 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func configureIfNeeded(context: ModelContext) {
-        guard taskRepository == nil else { return }
-        self.modelContext = context
-        let taskRepository = SwiftDataTaskRepository(context: context)
-        let timeRepository = SwiftDataTimeTrackingRepository(context: context)
-        self.taskRepository = taskRepository
-        self.timeRepository = timeRepository
-        self.pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
-        installSyncObservers()
-
-        do {
-            try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context)
-            try migrateLegacyCountdownEventsIfNeeded(context: context)
-            try SeedData.ensureSeeded(context: context)
-            pendingSyncConflict = try syncConflictService.bootstrap(context: context)
-            try refresh()
-            Task {
-                await refreshCloudAccountStatus()
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
     func refreshQuietly() {
         do {
             try refresh()
@@ -36,6 +12,7 @@ extension TimeTrackerStore {
 
     func refreshForForeground() async {
         refreshQuietly()
+        reconcileActivePomodoro(now: Date())
         await refreshCloudAccountStatus()
     }
 
@@ -101,9 +78,9 @@ extension TimeTrackerStore {
 
     func validateSelectedTask() {
         if selectedTaskID == nil {
-            selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
+            selectedTaskID = preferredTaskIDForSelection()
         } else if let selectedTaskID, taskByID[selectedTaskID] == nil {
-            self.selectedTaskID = activeSegments.first?.taskID ?? tasks.first?.id
+            self.selectedTaskID = preferredTaskIDForSelection()
         }
 
         if let desktopTaskDetailID, taskByID[desktopTaskDetailID] == nil {
@@ -119,17 +96,41 @@ extension TimeTrackerStore {
     @discardableResult
     func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
         do {
-            try action()
-            let plan = PerformanceSignpost.interval("Store refresh planning") {
-                refreshPlanner.plan(after: events)
+            try AppCloudSync.requireUserWritesAllowed()
+            if let modelContext {
+                try modelContext.performAtomicMutation {
+                    try action()
+                }
+            } else {
+                try action()
             }
-            try refresh(plan: plan)
-            try recordLocalSyncSnapshotIfNeeded()
-            return true
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
+
+        var postCommitError: Error?
+        let plan = PerformanceSignpost.interval("Store refresh planning") {
+            refreshPlanner.plan(after: events)
+        }
+        do {
+            try refresh(plan: plan)
+        } catch {
+            postCommitError = error
+        }
+        do {
+            try recordLocalSyncSnapshotIfNeeded(events: events)
+        } catch {
+            postCommitError = postCommitError ?? error
+        }
+
+        if let postCommitError {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                postCommitError.localizedDescription
+            )
+        }
+        return true
     }
 
     @discardableResult
@@ -158,8 +159,10 @@ extension TimeTrackerStore {
         case taskSelectionRequired
         case pomodoroTaskSelectionRequired
         case invalidTimeRange
+        case activeTimerStartInFuture
         case taskCategoryNameRequired
         case invalidInboxSuggestion
+        case taskTrackingUnavailable
 
         var errorDescription: String? {
             switch self {
@@ -171,10 +174,14 @@ extension TimeTrackerStore {
                 Self.localized("task.selectBeforePomodoro")
             case .invalidTimeRange:
                 Self.localized("time.endAfterStart")
+            case .activeTimerStartInFuture:
+                Self.localized("segment.error.startNotFuture")
             case .taskCategoryNameRequired:
                 Self.localized("taskCategory.nameRequired")
             case .invalidInboxSuggestion:
                 Self.localized("inbox.suggestion.error.noValidTask")
+            case .taskTrackingUnavailable:
+                Self.localized("task.archived.trackingUnavailable")
             }
         }
 
@@ -183,9 +190,12 @@ extension TimeTrackerStore {
         }
     }
 
-    private func recordLocalSyncSnapshotIfNeeded() throws {
+    private func recordLocalSyncSnapshotIfNeeded(events: Set<StoreDomainEvent>) throws {
         guard let modelContext else { return }
-        try syncConflictService.recordLocalMutation(context: modelContext)
+        let snapshotEvents: Set<StoreDomainEvent> = scheduledSyncRefreshReason == nil
+            ? events
+            : [.fullSync]
+        try syncConflictService.recordLocalMutation(context: modelContext, events: snapshotEvents)
         pendingSyncConflict = syncConflictService.prompt()
     }
 }

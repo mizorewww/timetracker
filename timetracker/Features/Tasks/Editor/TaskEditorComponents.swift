@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct TaskEditorForm: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
     let colors: [String]
+    let parentCandidates: [TaskNode]
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
     let moveChecklistItems: (IndexSet, Int) -> Void
@@ -14,7 +15,8 @@ struct TaskEditorForm: View {
             TaskInfoEditorSection(
                 store: store,
                 draft: $draft,
-                colors: colors
+                colors: colors,
+                parentCandidates: parentCandidates
             )
             TaskPlanEditorSection(draft: $draft)
             TaskChecklistEditorSection(
@@ -27,5 +29,6 @@ struct TaskEditorForm: View {
             TaskNotesEditorSection(notes: $draft.notes)
         }
         .formStyle(.grouped)
+        .accessibilityIdentifier("task.editor")
     }
 }

@@ -14,7 +14,7 @@ extension TimeTrackerStore {
             desktopDestination = .today
             isStartTaskPickerPresented = true
         case .startTimer(let taskID):
-            guard let task = task(for: taskID), task.deletedAt == nil, task.status != .archived else { return }
+            guard let task = task(for: taskID), isTaskAvailableForTracking(task) else { return }
             closeTaskDetailNavigation()
             desktopDestination = .today
             startTask(task)
@@ -22,13 +22,16 @@ extension TimeTrackerStore {
             closeTaskDetailNavigation()
             desktopDestination = .today
             guard let segment = taskID.flatMap({ id in
-                activeSegments.first { $0.taskID == id }
-            }) ?? activeSegments.first else { return }
+                activeSegment(for: id)
+            }) ?? activeSegments.last else { return }
             stop(segment: segment)
         case .newTask:
             closeTaskDetailNavigation()
             desktopDestination = .tasks
             presentNewTask(preservingDestination: .tasks)
+        case .openTask(let taskID):
+            guard let task = task(for: taskID), task.deletedAt == nil else { return }
+            openTaskDetail(taskID)
         }
     }
 }

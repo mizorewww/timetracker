@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct SymbolColorPickerRow: View {
@@ -52,6 +53,7 @@ struct SymbolColorPickerButton: View {
             }
         }
         .accessibilityLabel(AppStrings.localized("editor.symbol.title"))
+        .accessibilityValue(TaskColorPalette.accessibilityName(for: colorHex))
         #if os(macOS)
         .popover(isPresented: $isPickerPresented) {
             picker.frame(width: 460, height: 520)
@@ -93,13 +95,21 @@ struct SymbolAndColorPicker: View {
     @Binding var symbolName: String
     @Binding var colorHex: String
     @State private var searchText = ""
+    @State private var filteredSymbols: [String]
 
-    private var filteredSymbols: [String] {
-        guard !searchText.isEmpty else { return symbols }
-        return symbols.filter { symbol in
-            symbol.localizedCaseInsensitiveContains(searchText) ||
-            (searchKeywords[symbol]?.contains { $0.localizedCaseInsensitiveContains(searchText) } ?? false)
-        }
+    init(
+        symbols: [String],
+        searchKeywords: [String: [String]],
+        colors: [String],
+        symbolName: Binding<String>,
+        colorHex: Binding<String>
+    ) {
+        self.symbols = symbols
+        self.searchKeywords = searchKeywords
+        self.colors = colors
+        _symbolName = symbolName
+        _colorHex = colorHex
+        _filteredSymbols = State(initialValue: symbols)
     }
 
     var body: some View {
@@ -117,20 +127,38 @@ struct SymbolAndColorPicker: View {
                 .textFieldStyle(.roundedBorder)
 
             ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 42), spacing: 8)], spacing: 8) {
-                    ForEach(filteredSymbols, id: \.self) { symbol in
-                        Button {
-                            symbolName = symbol
-                        } label: {
-                            Image(systemName: symbol)
-                                .font(.title3)
-                                .foregroundStyle(symbolName == symbol ? .white : (Color(hex: colorHex) ?? .blue))
-                                .frame(width: 38, height: 38)
-                                .background(symbolName == symbol ? (Color(hex: colorHex) ?? .blue) : Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Group {
+                if filteredSymbols.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: AppLayout.minimumInteractiveTarget), spacing: 8)], spacing: 8) {
+                        ForEach(filteredSymbols, id: \.self) { symbol in
+                            Button {
+                                symbolName = symbol
+                            } label: {
+                                Image(systemName: symbol)
+                                    .font(.title3)
+                                    .foregroundStyle(symbolName == symbol ? .white : (Color(hex: colorHex) ?? .blue))
+                                    .frame(
+                                        width: AppLayout.minimumInteractiveTarget,
+                                        height: AppLayout.minimumInteractiveTarget
+                                    )
+                                    .background(symbolName == symbol ? (Color(hex: colorHex) ?? .blue) : Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            .help(symbol)
+                            .accessibilityLabel(
+                                String.localizedStringWithFormat(
+                                    AppStrings.localized("editor.symbol.symbolValue"),
+                                    symbol
+                                )
+                            )
+                            .accessibilityAddTraits(symbolName == symbol ? .isSelected : [])
                         }
-                        .buttonStyle(.plain)
-                        .help(symbol)
                     }
+                }
                 }
                 .padding(.vertical, 2)
             }
@@ -140,7 +168,7 @@ struct SymbolAndColorPicker: View {
             Text(.app("editor.symbol.color"))
                 .font(.headline)
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 10)], alignment: .leading, spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: AppLayout.minimumInteractiveTarget), spacing: 10)], alignment: .leading, spacing: 10) {
                 ForEach(colors, id: \.self) { hex in
                     Button {
                         colorHex = hex
@@ -155,14 +183,44 @@ struct SymbolAndColorPicker: View {
                                         .foregroundStyle(.white)
                                 }
                             }
+                            .frame(
+                                width: AppLayout.minimumInteractiveTarget,
+                                height: AppLayout.minimumInteractiveTarget
+                            )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(String(format: AppStrings.localized("editor.symbol.colorValue"), hex))
+                    .accessibilityLabel(
+                        String.localizedStringWithFormat(
+                            AppStrings.localized("editor.symbol.colorValue"),
+                            TaskColorPalette.accessibilityName(for: hex)
+                        )
+                    )
+                    .accessibilityAddTraits(colorHex == hex ? .isSelected : [])
                 }
             }
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onChange(of: searchText, initial: true) { _, query in
+            updateFilteredSymbols(query: query)
+        }
+        .onChange(of: symbols) { _, _ in
+            updateFilteredSymbols(query: searchText)
+        }
+    }
+
+    private func updateFilteredSymbols(query: String) {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
+            filteredSymbols = symbols
+            return
+        }
+        filteredSymbols = symbols.filter { symbol in
+            symbol.localizedCaseInsensitiveContains(normalizedQuery) ||
+                (searchKeywords[symbol]?.contains {
+                    $0.localizedCaseInsensitiveContains(normalizedQuery)
+                } ?? false)
+        }
     }
 }
 

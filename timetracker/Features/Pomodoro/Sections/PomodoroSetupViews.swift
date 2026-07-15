@@ -1,73 +1,92 @@
 import SwiftUI
 
 struct PomodoroSetupCard: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let plan: PomodoroPlan
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
-    let displayedFocusSecondsOverride: Int?
-    let rendersTimerContent: Bool
 
     private var selectedTask: TaskNode? {
-        store.selectedTaskID.flatMap { store.task(for: $0) }
+        guard let task = store.selectedTaskID.flatMap({ store.task(for: $0) }),
+              store.isTaskAvailableForTracking(task) else {
+            return nil
+        }
+        return task
     }
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }
-    }
-
-    private var accent: Color {
-        PomodoroStyle.accent
+        store.tasks.filter(store.isTaskAvailableForTracking)
     }
 
     private var taskColor: Color {
-        Color(hex: selectedTask?.colorHex) ?? accent
+        Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 92)
+        ScrollView {
+            VStack(spacing: 24) {
+                Spacer(minLength: 16)
 
-            PomodoroSelectableTimerFace(
-                store: store,
-                tasks: availableTasks,
-                plans: availablePlans,
-                selectedPlanID: $selectedPlanID,
-                timeText: DurationFormatter.clock(displayedFocusSeconds),
-                title: selectedTask?.title ?? AppStrings.localized("pomodoro.chooseTask"),
-                titleColor: taskColor,
-                rendersContent: rendersTimerContent
-            )
-            .pomodoroTimerFaceSource(.setup)
+                if availableTasks.isEmpty {
+                    ContentUnavailableView {
+                        Label(AppStrings.localized("pomodoro.noTasks.title"), systemImage: "timer")
+                    } description: {
+                        Text(.app("pomodoro.noTasks.description"))
+                    } actions: {
+                        Button(AppStrings.newTask) {
+                            store.presentNewTask(preservingDestination: .pomodoro)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                } else {
+                    PomodoroTimerFace(
+                        timeText: DurationFormatter.clock(plan.focusSeconds),
+                        title: selectedTask?.title ?? AppStrings.localized("pomodoro.chooseTask"),
+                        titleColor: taskColor
+                    )
 
-            Spacer(minLength: 281)
+                    PomodoroSetupSelectionControls(
+                        store: store,
+                        selectedTask: selectedTask,
+                        plans: availablePlans,
+                        selectedPlanID: $selectedPlanID
+                    )
 
-            Button {
-                startPomodoro()
-            } label: {
-                Label(AppStrings.localized("segment.start"), systemImage: "play.fill")
-                    .font(.body)
+                    Text(planSummary)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button(action: startPomodoro) {
+                        Label(AppStrings.localized("segment.start"), systemImage: "play.fill")
+                            .font(.headline)
+                            .frame(maxWidth: 260, minHeight: 44)
+                    }
+                    .controlSize(.large)
+                    .buttonStyle(.borderedProminent)
+                    .tint(taskColor)
+                    .disabled(selectedTask == nil)
+                    .accessibilityIdentifier("pomodoro.startFocus")
+                }
+
+                Spacer(minLength: 16)
             }
-            .controlSize(.large)
-            .buttonStyle(.borderedProminent)
-            .tint(accent)
-            .disabled(selectedTask == nil)
-            .accessibilityIdentifier("pomodoro.startFocus")
-
-            Text(.app("pomodoro.tapTimeToChoosePreset"))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.top, 10)
-
-            Spacer(minLength: 120)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity)
     }
 
-    private var displayedFocusSeconds: Int {
-        displayedFocusSecondsOverride ?? plan.focusSeconds
+    private var planSummary: String {
+        let focus = String(format: AppStrings.localized("common.minutes"), plan.focusMinutes)
+        let shortBreak = String(format: AppStrings.localized("common.minutes"), plan.shortBreakMinutes)
+        return String(
+            format: AppStrings.localized("pomodoro.planSummary"),
+            focus,
+            shortBreak,
+            plan.rounds
+        )
     }
 
     private func startPomodoro() {
@@ -86,162 +105,153 @@ struct PomodoroTimerFace: View {
     let titleColor: Color
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 10) {
             Text(timeText)
-                .font(.system(size: 96, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.56)
-                .frame(height: 116)
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(PomodoroStyle.timerText)
 
             Text(title)
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.64)
+                .font(.title2.bold())
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .foregroundStyle(titleColor)
-                .frame(height: 50)
         }
-        .frame(width: 255)
+        .frame(maxWidth: .infinity, minHeight: 132)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityValue(timeText)
         .accessibilityIdentifier("pomodoro.timerFace")
     }
 }
 
-private struct PomodoroSelectableTimerFace: View {
-    @ObservedObject var store: TimeTrackerStore
-    let tasks: [TaskNode]
+private struct PomodoroSetupSelectionControls: View {
+    let store: TimeTrackerStore
+    let selectedTask: TaskNode?
     let plans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
-    let timeText: String
-    let title: String
-    let titleColor: Color
-    let rendersContent: Bool
-    @State private var isTaskPickerPresented = false
-    @State private var isPlanPickerPresented = false
+
+    private var availableTasks: [TaskNode] {
+        store.tasks.filter(store.isTaskAvailableForTracking)
+    }
+
+    private var selectedPlan: PomodoroPlan? {
+        plans.first { $0.id == selectedPlanID }
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Button {
-                isPlanPickerPresented = true
-            } label: {
-                Text(timeText)
-                    .font(.system(size: 96, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.56)
-                    .frame(width: 255, height: 116)
-                    .foregroundStyle(rendersContent ? PomodoroStyle.timerText : Color.clear)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                planMenu
+                taskMenu
             }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .accessibilityLabel(AppStrings.localized("pomodoro.choosePlan"))
-            .popover(isPresented: $isPlanPickerPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                planPopoverContent
-            }
-
-            Button {
-                isTaskPickerPresented = true
-            } label: {
-                Text(title)
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.64)
-                    .foregroundStyle(rendersContent ? titleColor : Color.clear)
-                    .frame(width: 255, height: 50)
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .accessibilityLabel(AppStrings.localized("pomodoro.chooseTask"))
-            .popover(isPresented: $isTaskPickerPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                taskPopoverContent
+            VStack(spacing: 12) {
+                planMenu
+                taskMenu
             }
         }
-        .frame(width: 255)
-        .accessibilityIdentifier("pomodoro.timerFace")
     }
 
-    private var taskPopoverContent: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(tasks, id: \.id) { task in
-                    let taskColor = Color(hex: task.colorHex) ?? PomodoroStyle.accent
-                    Button {
-                        store.selectedTaskID = task.id
-                        isTaskPickerPresented = false
-                    } label: {
-                        HStack(spacing: 12) {
-                            TaskIcon(task: task, size: 28)
-                            Text(store.path(for: task))
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Spacer(minLength: 12)
-                            if store.selectedTaskID == task.id {
-                                Image(systemName: "checkmark")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(taskColor)
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(height: 48)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    if task.id != tasks.last?.id {
-                        Divider().padding(.leading, 54)
-                    }
+    private var planMenu: some View {
+        Menu {
+            ForEach(plans) { plan in
+                Button {
+                    selectedPlanID = plan.id
+                } label: {
+                    Label(plan.displayName, systemImage: plan.iconName)
                 }
             }
-            .padding(.vertical, 8)
+        } label: {
+            PomodoroSelectionLabel(
+                title: AppStrings.localized("pomodoro.choosePlan"),
+                value: selectedPlan?.displayName ?? AppStrings.localized("common.choose"),
+                systemImage: selectedPlan?.iconName ?? "slider.horizontal.3",
+                tint: Color(hex: selectedPlan?.colorHex) ?? PomodoroStyle.accent
+            )
         }
-        .frame(width: 320, height: popoverHeight(for: tasks.count))
-        .settingsPopoverAdaptation()
+        .buttonStyle(.bordered)
+        .frame(maxWidth: .infinity)
     }
 
-    private var planPopoverContent: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(plans) { plan in
-                    let planColor = Color(hex: plan.colorHex) ?? PomodoroStyle.accent
-                    Button {
-                        selectedPlanID = plan.id
-                        isPlanPickerPresented = false
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: plan.iconName)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(planColor)
-                                .frame(width: 28, height: 28)
-                            Text(plan.displayName)
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Spacer(minLength: 12)
-                            if selectedPlanID == plan.id {
-                                Image(systemName: "checkmark")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(planColor)
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(height: 48)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    if plan.id != plans.last?.id {
-                        Divider().padding(.leading, 54)
-                    }
+    private var taskMenu: some View {
+        Menu {
+            ForEach(availableTasks, id: \.id) { task in
+                Button {
+                    store.selectedTaskID = task.id
+                } label: {
+                    Label(store.path(for: task), systemImage: task.iconName ?? "checklist")
                 }
             }
-            .padding(.vertical, 8)
+        } label: {
+            PomodoroSelectionLabel(
+                title: AppStrings.localized("pomodoro.chooseTask"),
+                value: selectedTask?.title ?? AppStrings.localized("common.choose"),
+                systemImage: selectedTask?.iconName ?? "checklist",
+                tint: Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
+            )
         }
-        .frame(width: 280, height: popoverHeight(for: plans.count))
-        .settingsPopoverAdaptation()
+        .buttonStyle(.bordered)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct PomodoroSelectionLabel: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    let tint: Color
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label {
+                        Text(title)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: systemImage)
+                            .foregroundStyle(tint)
+                    }
+
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(value)
+                            .foregroundStyle(.primary)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 4)
+                        chevron
+                    }
+                }
+            } else {
+                HStack(spacing: 10) {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(tint)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(value)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    chevron
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .contentShape(Rectangle())
     }
 
-    private func popoverHeight(for count: Int) -> CGFloat {
-        min(CGFloat(max(count, 1)) * 48 + 16, 360)
+    private var chevron: some View {
+        Image(systemName: "chevron.up.chevron.down")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
     }
 }

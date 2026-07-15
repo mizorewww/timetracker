@@ -2,62 +2,66 @@
 import SwiftUI
 
 struct TimeTrackerCommands: Commands {
-    @FocusedValue(\.newTaskAction) private var newTask
-    @FocusedValue(\.manualTimeAction) private var manualTime
-    @FocusedValue(\.startTimerAction) private var startTimer
-    @FocusedValue(\.startPomodoroAction) private var startPomodoro
-    @FocusedValue(\.refreshAction) private var refresh
+    @FocusedValue(\.timeTrackerStore) private var store
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button(AppStrings.newTask) {
-                newTask?()
+                store?.presentNewTask()
             }
             .keyboardShortcut("n", modifiers: [.command])
-            .disabled(newTask == nil)
+            .disabled(store == nil)
 
             Button(AppStrings.addTime) {
-                manualTime?()
+                store?.presentManualTime()
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
-            .disabled(manualTime == nil)
-        }
-
-        CommandMenu(AppStrings.appName) {
-            Button(AppStrings.newTask) {
-                newTask?()
-            }
-            .keyboardShortcut("n", modifiers: [.command])
-            .disabled(newTask == nil)
-
-            Button(AppStrings.addTime) {
-                manualTime?()
-            }
-            .keyboardShortcut("m", modifiers: [.command, .shift])
-            .disabled(manualTime == nil)
+            .disabled(store == nil)
 
             Divider()
 
             Button(AppStrings.localized("menu.startSelectedTask")) {
-                startTimer?()
+                store?.startSelectedTask()
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
-            .disabled(startTimer == nil)
+            .disabled(store?.selectedTask == nil)
 
             Button(AppStrings.localized("menu.startPomodoro")) {
-                startPomodoro?()
+                store?.startPomodoroForSelectedTask()
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
-            .disabled(startPomodoro == nil)
+            .disabled(store?.selectedTask == nil)
+        }
+
+        CommandGroup(after: .sidebar) {
+            Divider()
+
+            destinationButton(.today, key: "1")
+            destinationButton(.inbox, key: "2")
+            destinationButton(.tasks, key: "3")
+            destinationButton(.pomodoro, key: "4")
+            destinationButton(.analytics, key: "5")
 
             Divider()
 
             Button(AppStrings.localized("menu.refreshData")) {
-                refresh?()
+                store?.refreshQuietly()
             }
             .keyboardShortcut("r", modifiers: [.command])
-            .disabled(refresh == nil)
+            .disabled(store == nil)
         }
+    }
+
+    private func destinationButton(
+        _ destination: TimeTrackerStore.DesktopDestination,
+        key: KeyEquivalent
+    ) -> some View {
+        Button(destination.title) {
+            store?.closeTaskDetailNavigation()
+            store?.desktopDestination = destination
+        }
+        .keyboardShortcut(key, modifiers: [.command])
+        .disabled(store == nil)
     }
 }
 #endif

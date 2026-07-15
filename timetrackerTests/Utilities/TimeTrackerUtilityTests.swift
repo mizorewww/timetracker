@@ -38,33 +38,60 @@ struct TimeTrackerUtilityTests {
     }
 
     @Test
-    func durationFormattingUsesCompactClockText() {
-        #expect(DurationFormatter.compact(4 * 3600 + 35 * 60) == "4h 35m")
+    func durationFormattingUsesLocalizedCompactTextAndStableTimerClock() {
+        let seconds = 4 * 3600 + 35 * 60
+        #expect(DurationFormatter.compact(seconds, locale: Locale(identifier: "en_US")) == "4 hr, 35 min")
+        #expect(DurationFormatter.compact(seconds, locale: Locale(identifier: "zh_Hans")) == "4小时35分钟")
+        #expect(DurationFormatter.compact(seconds, locale: Locale(identifier: "zh_Hant")) == "4小時35分鐘")
+        #expect(DurationFormatter.compact(40, locale: Locale(identifier: "en_US")) == "0 min")
         #expect(DurationFormatter.clock(84) == "01:24")
     }
 
     @Test
-    func inboxRowHeightExpandsForLongTitlesAndSuggestionContent() {
-        let layout = InboxLayoutPolicy(horizontalSizeClass: nil)
-        let short = layout.rowHeight(
-            forTitle: "Short item",
-            isCompleted: false,
-            hasSupplementaryContent: false
-        )
-        let long = layout.rowHeight(
-            forTitle: String(repeating: "很长的收件箱项目标题", count: 8),
-            isCompleted: false,
-            hasSupplementaryContent: false
-        )
-        let withSuggestion = layout.rowHeight(
-            forTitle: "Suggested item",
-            isCompleted: false,
-            hasSupplementaryContent: true
+    func dateFormattingRespectsLocaleDateOrderAndHourCycle() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let date = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 13, minute: 5))
         )
 
-        #expect(short == layout.rowBaseHeight)
-        #expect(long > short)
-        #expect(withSuggestion > short)
+        let usTime = TimeDisplayFormatter.hourMinute(
+            date,
+            calendar: calendar,
+            locale: Locale(identifier: "en_US")
+        )
+        let britishTime = TimeDisplayFormatter.hourMinute(
+            date,
+            calendar: calendar,
+            locale: Locale(identifier: "en_GB")
+        )
+        let usDateTime = TimeDisplayFormatter.monthDayHourMinute(
+            date,
+            calendar: calendar,
+            locale: Locale(identifier: "en_US")
+        )
+        let chineseDateTime = TimeDisplayFormatter.monthDayHourMinute(
+            date,
+            calendar: calendar,
+            locale: Locale(identifier: "zh_Hans")
+        )
+
+        #expect(usTime.contains("PM"))
+        #expect(britishTime.contains("13:05"))
+        #expect(usDateTime.contains("Jul 14"))
+        #expect(chineseDateTime.contains("7月14日"))
+        #expect(chineseDateTime.contains("13:05"))
+    }
+
+    @Test
+    func customTaskColorsMeetNonTextContrastTargetsInBothAppearances() {
+        let bright = AccessibleSRGB(red: 1, green: 0.84, blue: 0.04)
+            .adapted(forDarkBackground: false)
+        let dark = AccessibleSRGB(red: 0.02, green: 0.04, blue: 0.08)
+            .adapted(forDarkBackground: true)
+
+        #expect(bright.relativeLuminance <= 0.301)
+        #expect(dark.relativeLuminance >= 0.099)
     }
 
     @Test @MainActor

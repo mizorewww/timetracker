@@ -8,9 +8,18 @@ extension View {
     @ViewBuilder
     func settingsPopoverAdaptation() -> some View {
         #if os(iOS)
-        self.presentationCompactAdaptation(.popover)
+        self.presentationCompactAdaptation(.sheet)
         #else
         self
+        #endif
+    }
+
+    @ViewBuilder
+    func settingsPopoverContentFrame(idealWidth: CGFloat) -> some View {
+        #if os(macOS)
+        frame(width: idealWidth)
+        #else
+        frame(maxWidth: .infinity)
         #endif
     }
 }
@@ -42,8 +51,9 @@ struct SettingsRowIcon: View {
                     .foregroundStyle(tint)
             }
         }
-        .font(.body.weight(.semibold))
+        .font(.system(size: 18, weight: .semibold))
         .frame(width: 28, height: 28)
+        .accessibilityHidden(true)
     }
 }
 
@@ -70,20 +80,33 @@ struct SettingsValueRow: View {
     let value: String
     let systemImage: String
     var tint: Color = .accentColor
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: 12) {
-            SettingsRowIcon(systemImage: systemImage, tint: tint)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+                    Text(value)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, 40)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    SettingsRowIcon(systemImage: systemImage, tint: tint)
 
-            Text(title)
-                .font(.body)
-                .foregroundStyle(.primary)
+                    Text(title)
+                        .font(.body)
+                        .foregroundStyle(.primary)
 
-            Spacer(minLength: 8)
+                    Spacer(minLength: 8)
 
-            Text(value)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
+                    Text(value)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
@@ -99,27 +122,46 @@ struct SettingsTextFieldRow: View {
     var isSecure = false
     var fieldAlignment: Alignment = .trailing
     var textAlignment: TextAlignment = .leading
+    var usesSentenceCapitalization = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        LabeledContent {
-            Group {
-                if isSecure {
-                    SecureField(title, text: $text)
-                } else {
-                    TextField(title, text: $text)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+                    inputField
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                LabeledContent {
+                    inputField
+                        .frame(maxWidth: .infinity, alignment: fieldAlignment)
+                } label: {
+                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
                 }
             }
-            .labelsHidden()
-            #if os(iOS)
-            .textInputAutocapitalization(.never)
-            #endif
-            .autocorrectionDisabled()
-            .multilineTextAlignment(textAlignment)
-            .frame(maxWidth: .infinity, alignment: fieldAlignment)
-        } label: {
-            SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
         }
         .settingsRowSeparatorAligned()
+    }
+
+    @ViewBuilder
+    private var inputField: some View {
+        Group {
+            if isSecure {
+                SecureField(title, text: $text)
+            } else {
+                TextField(title, text: $text)
+            }
+        }
+        .labelsHidden()
+        .accessibilityLabel(title)
+        #if os(iOS)
+        .textInputAutocapitalization(usesSentenceCapitalization ? .sentences : .never)
+        #endif
+        .autocorrectionDisabled(!usesSentenceCapitalization)
+        .multilineTextAlignment(textAlignment)
     }
 }
 
@@ -129,16 +171,32 @@ struct SettingsNumberFieldRow: View {
     let formatter: NumberFormatter
     let systemImage: String
     var tint: Color = .accentColor
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        LabeledContent {
-            TextField(title, value: value, formatter: formatter)
-                .labelsHidden()
-                .multilineTextAlignment(.trailing)
-        } label: {
-            SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+                    numberField
+                        .textFieldStyle(.roundedBorder)
+                }
+            } else {
+                LabeledContent {
+                    numberField
+                } label: {
+                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
+                }
+            }
         }
         .settingsRowSeparatorAligned()
+    }
+
+    private var numberField: some View {
+        TextField(title, value: value, formatter: formatter)
+            .labelsHidden()
+            .accessibilityLabel(title)
+            .multilineTextAlignment(dynamicTypeSize.isAccessibilitySize ? .leading : .trailing)
     }
 }
 
@@ -160,9 +218,6 @@ struct SettingsActionLabel: View {
 
             Spacer(minLength: 8)
 
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -205,8 +260,9 @@ struct SettingsStatusRow: View {
                 .controlSize(.small)
         } else {
             Image(systemName: feedback.state.symbolName)
-                .font(.body.weight(.semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(tint)
+                .accessibilityHidden(true)
         }
     }
 

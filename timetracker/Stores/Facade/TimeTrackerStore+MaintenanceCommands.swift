@@ -9,32 +9,67 @@ extension TimeTrackerStore {
     }
 
     func clearAllData() {
-        perform {
+        let previousAPIKey: String?
+        do {
+            previousAPIKey = try llmCredentialStore.readAPIKey()
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        let defaults = UserDefaults.standard
+        let previousAutomaticSuggestions = defaults.object(
+            forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+        )
+        var localSettingsWereCleared = false
+        let didClear = perform {
             guard let modelContext else { throw StoreError.notConfigured }
+            try llmCredentialStore.writeAPIKey("")
+            defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+            localSettingsWereCleared = true
             try SeedData.clearAll(context: modelContext)
+        }
+        if !didClear, localSettingsWereCleared {
+            do {
+                try llmCredentialStore.writeAPIKey(previousAPIKey ?? "")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            if let previousAutomaticSuggestions {
+                defaults.set(
+                    previousAutomaticSuggestions,
+                    forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+                )
+            } else {
+                defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+            }
+        }
+        if didClear {
             selectedTaskID = nil
             desktopTaskDetailID = nil
         }
     }
 
     func clearDemoData() {
-        perform {
+        let selectedDemoTaskID = selectedTaskID.flatMap { selectedID in
+            tasks.first { $0.id == selectedID && $0.deviceID == "demo" }?.id
+        }
+        let didClear = perform {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.clearDemoData(context: modelContext)
-            if let selectedTaskID, tasks.contains(where: { $0.id == selectedTaskID && $0.deviceID == "demo" }) {
-                self.selectedTaskID = nil
-            }
+        }
+        if didClear, selectedDemoTaskID != nil {
+            selectedTaskID = tasks.first?.id
         }
     }
 
     @discardableResult
     func optimizeDatabase() -> Int {
         var removedCount = 0
-        perform {
+        let didOptimize = perform {
             guard let modelContext else { throw StoreError.notConfigured }
             removedCount = try databaseMaintenanceService.optimizeDatabase(context: modelContext)
         }
-        return removedCount
+        return didOptimize ? removedCount : 0
     }
 
     func jsonExport() -> String {

@@ -151,7 +151,9 @@ profile_contains_connected_watch() {
     [[ -n "$watch_id" ]] && watch_ids+=("$watch_id")
   done < <(connected_watch_udids)
 
-  for watch_id in "${watch_ids[@]}"; do
+  # macOS ships Bash 3.2. With `set -u`, expanding an empty array is an
+  # unbound-variable error, so supply an empty fallback when no Watch is seen.
+  for watch_id in "${watch_ids[@]:-}"; do
     if [[ "$devices" == *"$watch_id"* ]]; then
       return 0
     fi
@@ -396,7 +398,7 @@ report_device_failures() {
 copy_mac_app_to_applications() {
   require_app_bundle "$MAC_APP" "macOS"
 
-  if [[ -z "$PRODUCT_NAME" || "$MAC_DEST" != "$APPLICATIONS_DIR"/*.app ]]; then
+  if [[ -z "$PRODUCT_NAME" || "$PRODUCT_NAME" == *"/"* || "$PRODUCT_NAME" == "." || "$PRODUCT_NAME" == ".." || "$MAC_DEST" != "$APPLICATIONS_DIR"/*.app ]]; then
     echo "Refusing to replace an unsafe Applications path: $MAC_DEST" >&2
     exit 1
   fi

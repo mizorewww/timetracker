@@ -94,6 +94,97 @@ struct CoreLedgerStoreTests {
         #expect(store.allSegments.map(\.id) == [updatedSegment.id, unchangedSegment.id])
         #expect(store.sessions.map(\.id).contains(updatedSession.id))
         #expect(store.sessions.map(\.id).contains(unchangedSession.id))
+        let rollupChange = try #require(store.rollupChanges.first { $0.id == oldSegment.id })
+        #expect(rollupChange.before == LedgerSegmentSnapshot(oldSegment))
+        #expect(rollupChange.after == LedgerSegmentSnapshot(updatedSegment))
+    }
+
+    @Test @MainActor
+    func rangeRefreshCanRemoveAnActiveSegmentBeyondItsPreviousDayIndex() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = Date(timeIntervalSince1970: 172_800)
+        let secondDay = firstDay.addingTimeInterval(86_400)
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: firstDay.addingTimeInterval(3_600)
+        )
+        let activeSegment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: session.startedAt
+        )
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSegments = [activeSegment]
+        repository.fullSessions = [session]
+
+        var store = LedgerStore()
+        try store.refreshHistory(
+            repository: repository,
+            now: firstDay.addingTimeInterval(12 * 3_600),
+            calendar: calendar
+        )
+        repository.resetCounters()
+        repository.rangeSegments = []
+
+        try store.refreshHistoryRanges(
+            repository: repository,
+            ranges: [StoreInvalidationRange(
+                start: secondDay,
+                end: secondDay.addingTimeInterval(86_400)
+            )],
+            now: secondDay.addingTimeInterval(12 * 3_600)
+        )
+
+        #expect(store.segment(for: activeSegment.id) == nil)
+        let change = try #require(store.rollupChanges.first { $0.id == activeSegment.id })
+        #expect(change.before == LedgerSegmentSnapshot(activeSegment))
+        #expect(change.after == nil)
+        #expect(repository.allSegmentsCallCount == 0)
+    }
+
+    @Test @MainActor
+    func indexedQueriesIncludeAnActiveSegmentAfterItCrossesIntoANewDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = Date(timeIntervalSince1970: 172_800)
+        let secondDay = firstDay.addingTimeInterval(86_400)
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: firstDay.addingTimeInterval(3_600)
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: session.startedAt
+        )
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSegments = [segment]
+        repository.fullSessions = [session]
+        var store = LedgerStore()
+
+        try store.refreshHistory(
+            repository: repository,
+            now: firstDay.addingTimeInterval(12 * 3_600),
+            calendar: calendar
+        )
+
+        let queryNow = secondDay.addingTimeInterval(12 * 3_600)
+        let interval = DateInterval(start: secondDay, end: secondDay.addingTimeInterval(86_400))
+        #expect(store.segments(overlapping: interval, now: queryNow).map(\.id) == [segment.id])
+        #expect(store.segments(forTaskIDs: [taskID]).map(\.id) == [segment.id])
+        #expect(store.segments(forSessionID: session.id).map(\.id) == [segment.id])
+        #expect(store.sessions(for: [session.id]).map(\.id) == [session.id])
     }
 }
 

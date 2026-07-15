@@ -2,6 +2,9 @@ import Foundation
 import SwiftData
 
 @Model
+/// Legacy persisted cache retained only so stores created with schemas V1...V8
+/// remain readable by the V9 migration plan. The current schema deliberately
+/// excludes this model; analytics builds `DailySummarySnapshot` values in memory.
 final class DailySummary {
     var id: UUID = UUID()
     var date: Date = Date()

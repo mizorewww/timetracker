@@ -422,7 +422,7 @@ struct AnalyticsTimelineTests {
 
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
-        let entrySource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift")
+        let entrySource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
         let viewSource = try [
             "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
@@ -443,8 +443,8 @@ struct AnalyticsTimelineTests {
         let combinedSource = viewSource + "\n" + analyticsSource
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(entrySource.contains("TodayActivityCard(activity: snapshot.todayActivity)"))
-        #expect(entrySource.contains("OverlappingTimelineCard(timeline: snapshot.timeline)"))
+        #expect(entrySource.contains("TodayActivityContent(activity: snapshot.todayActivity)"))
+        #expect(entrySource.contains("OverlappingTimelineContent(timeline: snapshot.timeline)"))
         #expect(viewSource.contains("private var hourly") == false)
         #expect(viewSource.contains("@ObservedObject var store") == false)
         #expect(viewSource.contains("TimelineLayoutEngine.layout(") == false)

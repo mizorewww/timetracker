@@ -131,6 +131,16 @@ struct DemoDataLifecycleTests {
         #expect(settingsSource.contains("if allowsDemoDataCreation {"))
     }
 
+    @Test
+    func demoModeIsExplicitAndUsesAnIsolatedPersistentStore() throws {
+        let configurationSource = try sourceText("timetracker/App/AppDemoDataConfiguration.swift")
+        let projectSource = try sourceText("timetracker.xcodeproj/project.pbxproj")
+
+        #expect(configurationSource.contains("return .off"))
+        #expect(configurationSource.contains("TimeTracker-Demo.store"))
+        #expect(projectSource.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = seedIfEmpty;") == false)
+    }
+
     @Test @MainActor
     func screenshotDemoModeRebuildsDataOnLaunch() throws {
         prepareAutomaticDemoSeeding(demoMode: .replaceOnLaunch, disabled: true)

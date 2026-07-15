@@ -1,6 +1,9 @@
+import Foundation
 import SwiftUI
 
 struct HourTaskActivityBar: View {
+    @Environment(\.calendar) private var calendar
+    @Environment(\.locale) private var locale
     let point: HourTaskActivity
     let availableHeight: CGFloat
     private let sliceSpacing: CGFloat = 1
@@ -41,6 +44,36 @@ struct HourTaskActivityBar: View {
         }
     }
 
+    private var hourLabel: String {
+        AnalyticsHourLabelFormatter.string(for: point.hour, calendar: calendar, locale: locale)
+    }
+
+    private var accessibilityValue: String {
+        guard point.totalSeconds > 0 else {
+            return AppStrings.localized("analytics.hourDistribution.accessibility.empty")
+        }
+
+        let total = String.localizedStringWithFormat(
+            AppStrings.localized("analytics.hourDistribution.accessibility.total"),
+            DurationFormatter.compact(point.totalSeconds, locale: locale)
+        )
+        let taskValues = point.slices
+            .filter { $0.seconds > 0 }
+            .map { slice in
+                String.localizedStringWithFormat(
+                    AppStrings.localized("analytics.hourDistribution.accessibility.task"),
+                    slice.title,
+                    DurationFormatter.compact(slice.seconds, locale: locale)
+                )
+            }
+
+        guard !taskValues.isEmpty else { return total }
+        let formatter = ListFormatter()
+        formatter.locale = locale
+        let tasks = formatter.string(from: taskValues) ?? taskValues.joined(separator: ", ")
+        return "\(total). \(tasks)"
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -49,7 +82,7 @@ struct HourTaskActivityBar: View {
 
             if point.totalSeconds > 0, renderedSlices.isEmpty == false {
                 VStack(spacing: sliceSpacing) {
-                    ForEach(Array(renderedSlices.reversed())) { rendered in
+                    ForEach(renderedSlices.reversed()) { rendered in
                         Rectangle()
                             .fill(rendered.slice.color)
                             .frame(height: rendered.height)
@@ -59,7 +92,39 @@ struct HourTaskActivityBar: View {
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
         }
-        .help("\(String(format: "%02d:00", point.hour)) \(DurationFormatter.compact(point.totalSeconds))")
+        .help("\(hourLabel), \(DurationFormatter.compact(point.totalSeconds, locale: locale))")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            String.localizedStringWithFormat(
+                AppStrings.localized("analytics.hourDistribution.accessibility.hour"),
+                hourLabel
+            )
+        )
+        .accessibilityValue(accessibilityValue)
+    }
+}
+
+enum AnalyticsHourLabelFormatter {
+    static func string(for hour: Int, calendar: Calendar, locale: Locale) -> String {
+        var components = DateComponents()
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
+        components.year = 2001
+        components.month = 1
+        components.day = hour >= 24 ? 2 : 1
+        components.hour = hour % 24
+
+        guard let date = calendar.date(from: components) else {
+            return hour.formatted(.number.locale(locale).grouping(.never))
+        }
+        return date.formatted(
+            Date.FormatStyle(
+                locale: locale,
+                calendar: calendar,
+                timeZone: calendar.timeZone
+            )
+            .hour(.defaultDigits(amPM: .abbreviated))
+        )
     }
 }
 

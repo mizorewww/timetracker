@@ -210,7 +210,8 @@ struct CorePerformanceBudgetTests {
         let elapsed = CFAbsoluteTimeGetCurrent() - start
 
         #expect(rollups[root.id]?.remainingSeconds ?? 0 > 0)
-        #expect(rollups[root.id]?.forecastSourceTaskIDs.count == children.count)
+        #expect(rollups[root.id]?.forecastSourceTaskCount == children.count)
+        #expect((rollups[root.id]?.forecastSourceTaskIDs.count ?? 0) <= 32)
         #expect(elapsed < 2.0)
     }
 
@@ -273,5 +274,91 @@ struct CorePerformanceBudgetTests {
 
         #expect(store.rollup(for: parent.id)?.workedSeconds ?? 0 > 0)
         #expect(elapsed < 2.0)
+    }
+
+    @Test @MainActor
+    func fiftyThousandSegmentMutationUsesConstantSizedRollupDelta() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 14,
+            hour: 12
+        )))
+        let task = TaskNode(title: "Large History", parentID: nil, deviceID: "test")
+        let historyStart = try #require(calendar.date(byAdding: .day, value: -60, to: now))
+        let segments = (0..<50_000).map { index in
+            let start = historyStart.addingTimeInterval(Double(index * 90))
+            return TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(60)
+            )
+        }
+        let checklist = [
+            ChecklistItem(taskID: task.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
+            ChecklistItem(taskID: task.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test")
+        ]
+        var incremental = RollupStore()
+        incremental.refresh(
+            tasks: [task],
+            segments: segments,
+            checklistItems: checklist,
+            now: now,
+            calendar: calendar
+        )
+
+        let original = try #require(segments.last)
+        let updated = TimeSegment(
+            sessionID: original.sessionID,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: original.startedAt,
+            endedAt: try #require(original.endedAt).addingTimeInterval(120)
+        )
+        updated.id = original.id
+        let start = CFAbsoluteTimeGetCurrent()
+        incremental.refreshAffected(
+            directTaskIDs: [task.id],
+            explicitAncestorTaskIDs: [],
+            segmentChanges: [
+                LedgerSegmentChange(
+                    id: original.id,
+                    before: LedgerSegmentSnapshot(original),
+                    after: LedgerSegmentSnapshot(updated)
+                )
+            ],
+            checklistItemsByTaskID: [:],
+            now: now,
+            calendar: calendar
+        )
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        let facade = TimeTrackerStore()
+        facade.tasks = [task]
+        facade.allSegments = segments
+        facade.rollupDomainStore = incremental
+        let rankingStart = CFAbsoluteTimeGetCurrent()
+        for _ in 0..<100 {
+            #expect(facade.frequentRecentTasks(limit: 1).first?.id == task.id)
+        }
+        let rankingElapsed = CFAbsoluteTimeGetCurrent() - rankingStart
+
+        var rebuilt = RollupStore()
+        rebuilt.refresh(
+            tasks: [task],
+            segments: Array(segments.dropLast()) + [updated],
+            checklistItems: checklist,
+            now: now,
+            calendar: calendar
+        )
+        #expect(incremental.rollup(for: task.id) == rebuilt.rollup(for: task.id))
+        #expect(elapsed < 0.25, "Incremental refresh took \(elapsed) seconds")
+        #expect(rankingElapsed < 0.1, "Cached frequent-task ranking took \(rankingElapsed) seconds")
     }
 }

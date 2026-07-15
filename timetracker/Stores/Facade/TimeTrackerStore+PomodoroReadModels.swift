@@ -19,9 +19,22 @@ extension TimeTrackerStore {
     }
 
     var averageFocusSeconds: Int {
-        let focus = todaySegments.filter { $0.source == .pomodoro }
+        averageFocusSeconds(now: Date())
+    }
+
+    func averageFocusSeconds(now: Date, calendar: Calendar = .current) -> Int {
+        guard let interval = calendar.dateInterval(of: .day, for: now) else { return 0 }
+        let focus = visibleSegments(overlapping: interval, now: now)
+            .filter { $0.source == .pomodoro }
         guard !focus.isEmpty else { return 0 }
-        return aggregationService.grossSeconds(focus) / focus.count
+        let seconds = ledgerSummaryService.secondsInInterval(
+            taskIDs: Set(focus.map(\.taskID)),
+            segments: focus,
+            interval: interval,
+            mode: .gross,
+            now: now
+        )
+        return seconds / focus.count
     }
 
     func activePomodoroRun(for taskID: UUID) -> PomodoroRun? {
@@ -38,10 +51,10 @@ extension TimeTrackerStore {
     }
 
     func pomodoroRemainingSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
-        guard [.focusing, .interrupted].contains(run.state) else {
+        guard let deadline = run.phaseDeadline else {
             return pomodoroPlannedSeconds(for: run)
         }
-        return max(0, pomodoroPlannedSeconds(for: run) - pomodoroElapsedFocusSeconds(for: run, now: now))
+        return max(0, Int(ceil(deadline.timeIntervalSince(now))))
     }
 
     func pomodoroProgress(for run: PomodoroRun, now: Date = Date()) -> Double {
@@ -72,7 +85,10 @@ extension TimeTrackerStore {
 
     func pomodoroElapsedFocusSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
         guard let sessionID = run.sessionID else { return 0 }
-        let segments = allSegments.filter { segment in
+        let candidates = ledgerDomainStore.hasIndexedSegmentHistory
+            ? ledgerDomainStore.segments(forSessionID: sessionID)
+            : allSegments.visibleDeduplicatedByID()
+        let segments = candidates.filter { segment in
             segment.sessionID == sessionID &&
             segment.source == .pomodoro &&
             segment.deletedAt == nil

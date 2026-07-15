@@ -27,6 +27,57 @@ struct CoreArchitectureBehaviorTests {
         #expect(storeSource.contains("return \"Focus\"") == false)
     }
 
+    @Test
+    func analyticsLoadsVersionedSnapshotsOutsideTheViewBody() throws {
+        let viewSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let facadeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift")
+
+        #expect(viewSource.contains("TimelineView(.periodic"))
+        #expect(viewSource.contains(".task(id: request)"))
+        #expect(facadeSource.contains("liveRefreshBucket: liveRefreshBucket"))
+        #expect(facadeSource.contains("cachedSnapshot("))
+        #expect(taskDetailSource.contains(".task(id: request)"))
+        #expect(taskDetailSource.contains("snapshot: store.taskAnalyticsSnapshot") == false)
+        #expect(facadeSource.contains("cachedTaskSnapshot("))
+    }
+
+    @Test
+    func checklistRowsUseIndexedOrCachedProgress() throws {
+        let source = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+ChecklistReadModels.swift")
+
+        #expect(source.contains("rollupDomainStore.rollup(for: taskID)?.checklistProgress"))
+        #expect(source.contains("checklistByTaskID[taskID]"))
+        #expect(source.contains("checklistItems: checklistItems") == false)
+    }
+
+    @Test
+    func mutationRefreshUsesPersistentIndexesInsteadOfWholeSnapshotCopies() throws {
+        let refreshSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+DomainRefreshes.swift"
+        )
+        let taskReadSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift"
+        )
+        let calculationSource = try sourceText(
+            "timetracker/Services/Forecasting/TaskRollupCalculationContext.swift"
+        )
+        let ledgerCommandSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+LedgerCommands.swift"
+        )
+
+        #expect(refreshSource.contains("var store = rollupDomainStore") == false)
+        #expect(refreshSource.contains("rollupDomainStore.refreshAffected("))
+        #expect(refreshSource.contains("checklistDomainStore.items(for: taskID)"))
+        #expect(taskReadSource.contains(
+            "func forecastEligibleTaskIDs() -> Set<UUID> {\n        forecastEligibleTaskIDCache"
+        ))
+        #expect(calculationSource.contains("calculateUpdates(buildOrder:"))
+        #expect(calculationSource.contains("return updates"))
+        #expect(ledgerCommandSource.contains("ledgerDomainStore.segment(for:"))
+        #expect(ledgerCommandSource.contains("allSegments.first") == false)
+    }
+
     @Test @MainActor
     func layoutPoliciesCentralizeResponsiveChoices() {
         #expect(HomeLayoutPolicy(width: 600).isCompact)
@@ -35,8 +86,8 @@ struct CoreArchitectureBehaviorTests {
         #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).isCompact)
         #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).cardCornerRadius == 28)
         #expect(InboxLayoutPolicy(horizontalSizeClass: nil).cardCornerRadius == 24)
-        #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).rowBaseHeight == 78)
-        #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 560, ideal: 780, max: nil))
+        #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
         #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))
+        #expect(SplitColumnLayoutPolicy.mac.detail == ColumnWidth(min: 420, ideal: 720, max: nil))
     }
 }

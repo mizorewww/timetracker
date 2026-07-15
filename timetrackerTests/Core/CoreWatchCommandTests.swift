@@ -5,6 +5,33 @@ import Testing
 
 @Suite(.serialized)
 struct CoreWatchCommandTests {
+    @Test @MainActor
+    func incomingPhoneQueueSurvivesRestartAndRecoversFromCorruption() throws {
+        let suiteName = "WatchIncomingCommandStoreTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let key = "incoming"
+        let store = WatchIncomingCommandStore(defaults: defaults, key: key)
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: UUID(),
+            segmentID: nil,
+            issuedAt: Date(timeIntervalSinceReferenceDate: 42),
+            deviceID: "watch"
+        )
+
+        store.save([command])
+        #expect(WatchIncomingCommandStore(defaults: defaults, key: key).load() == [command])
+
+        store.save([])
+        #expect(defaults.object(forKey: key) == nil)
+
+        defaults.set(Data("not-json".utf8), forKey: key)
+        #expect(store.load().isEmpty)
+        #expect(defaults.object(forKey: key) == nil)
+    }
+
     @Test
     func watchConnectivityPayloadCodecRoundTripsTimerCommands() throws {
         let command = WatchTimerCommand(
@@ -20,6 +47,171 @@ struct CoreWatchCommandTests {
         let decoded = try #require(WatchConnectivityPayloadCodec.decodeCommand(from: payload))
 
         #expect(decoded == command)
+    }
+
+    @Test
+    func watchConnectivityPayloadCodecRoundTripsTypedCommandResults() throws {
+        let result = WatchCommandResult(
+            commandID: UUID(),
+            status: .missingTask,
+            completedAt: Date(timeIntervalSinceReferenceDate: 1_500),
+            relatedID: UUID(),
+            failureCode: "missing"
+        )
+
+        let payload = WatchConnectivityPayloadCodec.encode(result: result)
+        let decoded = try #require(WatchConnectivityPayloadCodec.decodeCommandResult(from: payload))
+
+        #expect(decoded == result)
+        #expect(payload["received"] as? Bool == true)
+        #expect(WatchConnectivityPayloadCodec.decodeCommand(from: payload) == nil)
+    }
+
+    @Test
+    func watchProcessingResultsMapToEveryTypedTerminalStatus() {
+        let commandID = UUID()
+        let relatedID = UUID()
+
+        #expect(
+            WatchCommandProcessingResult.started(relatedID)
+                .terminalResult(commandID: commandID).status == .success
+        )
+        #expect(
+            WatchCommandProcessingResult.stopped(relatedID)
+                .terminalResult(commandID: commandID).status == .success
+        )
+        #expect(
+            WatchCommandProcessingResult.duplicate(commandID)
+                .terminalResult(commandID: commandID).status == .duplicate
+        )
+        #expect(
+            WatchCommandProcessingResult.missingTask(relatedID)
+                .terminalResult(commandID: commandID).status == .missingTask
+        )
+        #expect(
+            WatchCommandProcessingResult.missingSegment(relatedID)
+                .terminalResult(commandID: commandID).status == .missingSegment
+        )
+        #expect(
+            WatchCommandProcessingResult.invalid
+                .terminalResult(commandID: commandID).status == .invalid
+        )
+        #expect(WatchCommandResult.failed(commandID: commandID).status == .failed)
+    }
+
+    @Test
+    func timedOutWatchCommandUnlocksAndRetriesWithTheSameIdempotencyKey() throws {
+        let commandID = UUID()
+        let originalIssueDate = Date(timeIntervalSinceReferenceDate: 100)
+        let retryDate = Date(timeIntervalSinceReferenceDate: 200)
+        let command = WatchTimerCommand(
+            id: commandID,
+            type: .startTask,
+            taskID: UUID(),
+            segmentID: nil,
+            issuedAt: originalIssueDate,
+            deviceID: "watch"
+        )
+        var queue = WatchCommandQueueState()
+        queue.enqueue(command)
+
+        let timeoutResult = queue.timeOut(commandID: commandID, completedAt: retryDate)
+        let timeout = try #require(timeoutResult)
+
+        #expect(timeout.status == .timeout)
+        #expect(queue.pendingCommands.isEmpty)
+        #expect(queue.failedCommands.first?.result.status == .timeout)
+
+        let retryCommand = queue.retry(commandID: commandID, issuedAt: retryDate)
+        let retry = try #require(retryCommand)
+
+        #expect(retry.id == commandID)
+        #expect(retry.issuedAt == retryDate)
+        #expect(queue.failedCommands.isEmpty)
+        #expect(queue.pendingCommands == [retry])
+
+        _ = queue.resolve(
+            WatchCommandResult(
+                commandID: commandID,
+                status: .duplicate,
+                completedAt: retryDate.addingTimeInterval(1),
+                relatedID: nil,
+                failureCode: nil
+            )
+        )
+        #expect(queue.pendingCommands.isEmpty)
+        #expect(queue.failedCommands.isEmpty)
+    }
+
+    @Test
+    func failedWatchCommandCanBeDiscardedAndLateSnapshotSuccessClearsTimeout() throws {
+        let taskID = UUID()
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: taskID,
+            segmentID: nil,
+            issuedAt: Date(timeIntervalSinceReferenceDate: 300),
+            deviceID: "watch"
+        )
+        var queue = WatchCommandQueueState()
+        queue.enqueue(command)
+        _ = queue.timeOut(commandID: command.id, completedAt: command.issuedAt.addingTimeInterval(20))
+
+        let activeTimer = WatchActiveTimerSnapshot(
+            id: UUID(),
+            taskID: taskID,
+            title: "Task",
+            path: "",
+            startedAt: command.issuedAt,
+            colorHex: nil,
+            iconName: nil
+        )
+        let confirmed = queue.confirmReflectedCommands(
+            in: watchSnapshot(
+                generatedAt: command.issuedAt.addingTimeInterval(21),
+                activeTimers: [activeTimer]
+            )
+        )
+
+        #expect(confirmed == Set([command.id]))
+        #expect(queue.failedCommands.isEmpty)
+
+        queue.enqueue(command)
+        _ = queue.timeOut(commandID: command.id)
+        queue.discard(commandID: command.id)
+        #expect(queue.failedCommands.isEmpty)
+    }
+
+    @Test
+    func watchCommandQueuePersistsPendingAndRetryableFailures() throws {
+        let pending = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: UUID(),
+            segmentID: nil,
+            issuedAt: Date(timeIntervalSinceReferenceDate: 400),
+            deviceID: "watch"
+        )
+        let failed = WatchTimerCommand(
+            id: UUID(),
+            type: .stopSegment,
+            taskID: nil,
+            segmentID: UUID(),
+            issuedAt: Date(timeIntervalSinceReferenceDate: 500),
+            deviceID: "watch"
+        )
+        var queue = WatchCommandQueueState()
+        queue.enqueue(pending)
+        queue.enqueue(failed)
+        _ = queue.timeOut(commandID: failed.id, completedAt: failed.issuedAt.addingTimeInterval(20))
+
+        let data = try JSONEncoder().encode(queue)
+        let decoded = try JSONDecoder().decode(WatchCommandQueueState.self, from: data)
+
+        #expect(decoded == queue)
+        #expect(decoded.pendingCommands == [pending])
+        #expect(decoded.failedCommands.map(\.command) == [failed])
     }
 
     @Test
@@ -56,6 +248,69 @@ struct CoreWatchCommandTests {
         let decoded = try #require(WatchConnectivityPayloadCodec.decodeState(from: payload))
 
         #expect(decoded == snapshot)
+    }
+
+    @Test
+    func watchStartCommandWaitsForANewerSnapshotContainingTheTask() {
+        let taskID = UUID()
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: taskID,
+            segmentID: nil,
+            issuedAt: issuedAt,
+            deviceID: "watch"
+        )
+        let activeTimer = WatchActiveTimerSnapshot(
+            id: UUID(),
+            taskID: taskID,
+            title: "Task",
+            path: "",
+            startedAt: issuedAt,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        #expect(command.isReflected(in: watchSnapshot(generatedAt: issuedAt.addingTimeInterval(-1), activeTimers: [activeTimer])) == false)
+        #expect(command.isReflected(in: watchSnapshot(generatedAt: issuedAt.addingTimeInterval(1), activeTimers: [])) == false)
+        #expect(command.isReflected(in: watchSnapshot(generatedAt: issuedAt.addingTimeInterval(1), activeTimers: [activeTimer])))
+    }
+
+    @Test
+    func watchStopCommandWaitsForANewerSnapshotWithoutTheSegment() {
+        let segmentID = UUID()
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 2_000)
+        let activeTimer = WatchActiveTimerSnapshot(
+            id: segmentID,
+            taskID: UUID(),
+            title: "Task",
+            path: "",
+            startedAt: issuedAt.addingTimeInterval(-100),
+            colorHex: nil,
+            iconName: nil
+        )
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .stopSegment,
+            taskID: nil,
+            segmentID: segmentID,
+            issuedAt: issuedAt,
+            deviceID: "watch"
+        )
+
+        #expect(command.isReflected(in: watchSnapshot(generatedAt: issuedAt.addingTimeInterval(-1), activeTimers: [])) == false)
+        #expect(command.isReflected(in: watchSnapshot(generatedAt: issuedAt.addingTimeInterval(1), activeTimers: [activeTimer])) == false)
+        #expect(command.isReflected(in: watchSnapshot(generatedAt: issuedAt.addingTimeInterval(1), activeTimers: [])))
+    }
+
+    @Test
+    func watchSnapshotFreshnessUsesTheSharedFifteenMinuteBoundary() {
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 3_000)
+        let snapshot = watchSnapshot(generatedAt: generatedAt, activeTimers: [])
+
+        #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WatchStateSnapshot.staleAfter)) == .current)
+        #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WatchStateSnapshot.staleAfter + 1)) == .stale)
     }
 
     @Test @MainActor
@@ -134,18 +389,48 @@ struct CoreWatchCommandTests {
     }
 
     @Test
-    func watchDashboardUsesTwoPageTaskAndRunningLayout() throws {
-        let source = try sourceText("timetrackerWatchApp/WatchDashboardView.swift")
+    func watchDashboardUsesASingleGlanceableCrownScrollableLayout() throws {
+        let source = try [
+            "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchTimerRows.swift"
+        ].map(sourceText).joined(separator: "\n")
 
-        #expect(source.contains("TabView"))
-        #expect(source.contains(".tabViewStyle(.page"))
-        #expect(source.contains("WatchTaskShortcutsPage"))
-        #expect(source.contains("WatchRunningPage"))
-        #expect(source.contains("toggleTask"))
-        #expect(source.contains("snapshot.activeTimers.first(where: { $0.taskID == task.taskID })"))
-        #expect(!source.contains("Text(activeTimer.startedAt"))
-        #expect(!source.contains("Label(\"watch.stop\""))
-        #expect(!source.contains("Button(role: .destructive"))
+        #expect(source.contains("NavigationStack"))
+        #expect(source.contains("List {"))
+        #expect(source.contains("WatchActiveTimerRow"))
+        #expect(source.contains("WatchTaskShortcutRow"))
+        #expect(source.contains("minHeight: 44"))
+        #expect(source.contains(".privacySensitive()"))
+        #expect(source.contains("\\.isLuminanceReduced"))
+        #expect(!source.contains("TabView"))
+        #expect(!source.contains("TimelineView"))
+        #expect(!source.contains("handGestureShortcut"))
+    }
+
+    @Test
+    func watchStoreReleasesTimedOutRowsAndOffersRetryAndDiscard() throws {
+        let source = try sourceText("timetrackerWatchApp/WatchAppStore.swift")
+        let dashboard = try [
+            "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchStatusViews.swift"
+        ].map(sourceText).joined(separator: "\n")
+
+        #expect(source.contains("commandQueue.enqueue(command)"))
+        #expect(source.contains("commandQueue.timeOut(commandID:"))
+        #expect(source.contains("func retryCommand(commandID:"))
+        #expect(source.contains("func discardCommand(commandID:"))
+        #expect(source.contains("decodeCommandResult"))
+        #expect(source.contains("session.transferUserInfo(payload)"))
+        #expect(source.contains("scheduleConfirmationTimeout"))
+        #expect(source.contains("confirmationTasks[commandID]?.cancel()"))
+        #expect(source.contains("confirmationTasks[commandID] = nil"))
+        #expect(source.contains("scheduleSnapshotFreshness"))
+        #expect(source.contains("hasReceivedSnapshot = true"))
+        #expect(source.contains("recordConnectivityError"))
+        #expect(!source.contains("unconfirmedCommandIDs"))
+        #expect(dashboard.contains("WatchCommandFailureRow"))
+        #expect(dashboard.contains("watch.command.retry"))
+        #expect(dashboard.contains("watch.command.discard"))
     }
 
     @Test
@@ -156,6 +441,22 @@ struct CoreWatchCommandTests {
         #expect(source.contains("didReceiveUserInfo"))
         #expect(source.contains("didReceiveMessage"))
         #expect(source.contains("WatchConnectivityPayloadCodec.decodeCommand"))
+        #expect(source.contains("WatchConnectivityPayloadCodec.encode(result:"))
+        #expect(source.contains("deliverDurableCommandResult"))
+        #expect(source.contains("(WatchTimerCommand) -> WatchCommandResult"))
+        #expect(source.contains("WatchConnectivityDeliveryStatus"))
+        #expect(source.contains("diagnosticHandler"))
+        #expect(source.contains("errorHandler:"))
+        #expect(source.contains("recordFailure(operation: .activation"))
+        #expect(!source.contains("try? session.updateApplicationContext"))
+    }
+
+    @Test
+    func watchConnectivityFailureStatusPreservesItsDiagnosticMessage() {
+        let status = WatchConnectivityDeliveryStatus.failed("transport failed")
+
+        #expect(status == .failed("transport failed"))
+        #expect(status != .submitted)
     }
 
     @Test
@@ -170,12 +471,19 @@ struct CoreWatchCommandTests {
     }
 
     @Test
-    func contentViewActivatesWatchBridgeAndRoutesIncomingCommands() throws {
+    func appActivatesWatchBridgeAndWeakSceneRouterRoutesIncomingCommands() throws {
+        let app = try sourceText("timetracker/App/timetrackerApp.swift")
         let contentView = try sourceText("timetracker/App/ContentView.swift")
+        let router = try sourceText("timetracker/App/WatchCommandRouter.swift")
         let facade = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+WatchSnapshot.swift")
 
-        #expect(contentView.contains("WatchConnectivityBridge.shared.commandHandler"))
-        #expect(contentView.contains("WatchConnectivityBridge.shared.activateIfSupported"))
+        #expect(app.contains("WatchConnectivityBridge.shared.activateIfSupported"))
+        #expect(contentView.contains("WatchCommandRouter.shared.register"))
+        #expect(contentView.contains("WatchCommandRouter.shared.unregister"))
+        #expect(!contentView.contains("WatchConnectivityBridge.shared.commandHandler"))
+        #expect(router.contains("weak var value: TimeTrackerStore?"))
+        #expect(router.contains("[weak self] command"))
+        #expect(router.contains("WatchConnectivityBridge.shared.commandHandler = nil"))
         #expect(facade.contains("handleWatchCommand"))
         #expect(facade.contains("WatchCommandProcessor().process"))
     }
@@ -260,4 +568,139 @@ struct CoreWatchCommandTests {
         #expect(duplicateResult == .duplicate(command.id))
         #expect(stopped.endedAt != nil)
     }
+
+    @Test @MainActor
+    func watchStopClipsExpiredPomodoroToPersistedDeadline() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroRepository = SwiftDataPomodoroRepository(
+            context: context,
+            timeRepository: timeRepository,
+            deviceID: "test"
+        )
+        let task = try taskRepository.createTask(
+            title: "Expired Watch focus",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let run = try pomodoroRepository.startPomodoro(
+            taskID: task.id,
+            focusSeconds: 60,
+            breakSeconds: 30,
+            targetRounds: 1
+        )
+        let sessionID = try #require(run.sessionID)
+        let segment = try #require(try timeRepository.activeSegments().first { $0.sessionID == sessionID })
+        let session = try #require(try timeRepository.sessions().first { $0.id == sessionID })
+        let phaseStartedAt = Date().addingTimeInterval(-120)
+        let deadline = phaseStartedAt.addingTimeInterval(60)
+        run.startedAt = phaseStartedAt
+        segment.startedAt = phaseStartedAt
+        session.startedAt = phaseStartedAt
+        try context.save()
+        let receiptStore = InMemoryWatchCommandReceiptStore()
+        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .stopSegment,
+            taskID: nil,
+            segmentID: segment.id,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        let result = try processor.process(command, allowParallelTimers: true, context: context)
+
+        let persistedRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
+        let persistedSegment = try #require(try timeRepository.allSegments().first { $0.id == segment.id })
+        let persistedSession = try #require(try timeRepository.sessions().first { $0.id == sessionID })
+        #expect(result == .stopped(segment.id))
+        #expect(persistedRun.state == .completed)
+        #expect(persistedRun.endedAt == deadline)
+        #expect(persistedSegment.endedAt == deadline)
+        #expect(persistedSession.endedAt == deadline)
+    }
+
+    @Test @MainActor
+    func watchStoreRecordsTheCommittedTimerInTheConflictSnapshot() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Watch snapshot task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+
+        try withWatchCloudSyncMode {
+            let stateURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("TimeTrackerWatchSnapshot-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("state.json")
+            let service = SyncConflictService(stateURL: stateURL)
+            #expect(try service.bootstrap(context: context) == nil)
+            let baselineExportID = UUID()
+            try service.markCloudExportStarted(eventID: baselineExportID)
+            try service.markCloudExportFinished(eventID: baselineExportID, succeeded: true)
+            let command = WatchTimerCommand(
+                id: UUID(),
+                type: .startTask,
+                taskID: task.id,
+                segmentID: nil,
+                issuedAt: Date(),
+                deviceID: "watch-test"
+            )
+
+            store.handleWatchCommand(command, recordingWith: service)
+
+            let segment = try #require(store.activeSegment(for: task.id))
+            let stateJSON = try String(contentsOf: stateURL, encoding: .utf8)
+            #expect(stateJSON.contains(segment.id.uuidString))
+        }
+    }
+}
+
+@MainActor
+private func withWatchCloudSyncMode(_ body: () throws -> Void) throws {
+    let defaults = UserDefaults.standard
+    let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
+    let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
+    let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+    defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+    defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defer {
+        if let previousMode {
+            defaults.set(previousMode, forKey: AppCloudSync.modeKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.modeKey)
+        }
+        if let previousUploadReset {
+            defaults.set(previousUploadReset, forKey: AppCloudSync.pendingCloudUploadResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+        }
+        if let previousDownloadReset {
+            defaults.set(previousDownloadReset, forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        }
+    }
+    try body()
+}
+
+private func watchSnapshot(
+    generatedAt: Date,
+    activeTimers: [WatchActiveTimerSnapshot]
+) -> WatchStateSnapshot {
+    WatchStateSnapshot(
+        generatedAt: generatedAt,
+        todayGrossSeconds: 0,
+        todayWallSeconds: 0,
+        activeTimers: activeTimers,
+        recentTasks: []
+    )
 }

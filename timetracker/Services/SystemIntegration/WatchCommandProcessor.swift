@@ -72,6 +72,7 @@ struct WatchCommandProcessor {
         guard receiptStore.contains(command.id) == false else {
             return .duplicate(command.id)
         }
+        try AppCloudSync.requireUserWritesAllowed()
 
         switch command.type {
         case .startTask:
@@ -112,13 +113,15 @@ struct WatchCommandProcessor {
         guard let segment = try timeRepository.activeSegments().first(where: { $0.id == segmentID }) else {
             return .missingSegment(segmentID)
         }
-        let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
-        try TimerCommandHandler().stop(
-            segment: segment,
-            pomodoroRuns: try pomodoroRepository.runs(),
-            timeRepository: timeRepository,
-            context: context
-        )
+        try context.performAtomicMutation {
+            let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
+            try TimerCommandHandler().stop(
+                segment: segment,
+                pomodoroRuns: try pomodoroRepository.runs(),
+                timeRepository: timeRepository,
+                context: context
+            )
+        }
         receiptStore.markProcessed(command.id)
         return .stopped(segmentID)
     }

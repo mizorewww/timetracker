@@ -1,0 +1,6 @@
+"Add inbox item in ${applicationName}" = "在${applicationName}中添加收件箱项目";
+"Capture in ${applicationName}" = "用${applicationName}记录";
+"Start timer in ${applicationName}" = "在${applicationName}中开始计时";
+"Track time in ${applicationName}" = "用${applicationName}追踪时间";
+"Stop timer in ${applicationName}" = "在${applicationName}中停止计时";
+"Stop tracking in ${applicationName}" = "用${applicationName}停止追踪";

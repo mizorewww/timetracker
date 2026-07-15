@@ -4,3 +4,5 @@ DerivedData/
 .DerivedData/
 *.xcresult
 **/xcdebugger/
+**/xcuserdata/
+*.xcuserstate

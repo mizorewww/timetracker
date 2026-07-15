@@ -35,7 +35,7 @@ struct ChecklistCommandHandler {
                 deviceID: deviceID
             )
         )
-        try context.save()
+        try context.saveAfterMutationStep()
         return item
     }
 
@@ -44,7 +44,7 @@ struct ChecklistCommandHandler {
         item.completedAt = item.isCompleted ? now : nil
         item.updatedAt = now
         item.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func reorder(
@@ -53,13 +53,14 @@ struct ChecklistCommandHandler {
         context: ModelContext,
         now: Date = Date()
     ) throws {
-        let targetTaskID = taskID
-        let items = try context.fetch(
-            FetchDescriptor<ChecklistItem>(
-                predicate: #Predicate { $0.taskID == targetTaskID && $0.deletedAt == nil },
-                sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.createdAt)]
-            )
-        )
+        let items = try context.fetch(FetchDescriptor<ChecklistItem>())
+            .visibleDeduplicatedByID()
+            .filter { $0.taskID == taskID }
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
         let itemByID = items.latestByID()
         let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }
         guard orderedItems.count == items.count else { return }
@@ -69,7 +70,7 @@ struct ChecklistCommandHandler {
             item.updatedAt = now
             item.clientMutationID = UUID()
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func reorderedIDs(
@@ -120,6 +121,6 @@ struct ChecklistCommandHandler {
                 )
             )
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 }

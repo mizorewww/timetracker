@@ -7,7 +7,14 @@ import ActivityKit
 final class LiveActivityCoordinator {
     static let shared = LiveActivityCoordinator()
 
-    private var lastSignature: String?
+    private struct Request: Equatable {
+        let taskID: String
+        let state: TimeTrackingActivityAttributes.ContentState
+    }
+
+    private var lastRequest: Request?
+    private var pendingRequest: Request?
+    private var generation = 0
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
         let usableSegments = activeSegments
@@ -15,9 +22,17 @@ final class LiveActivityCoordinator {
             .sorted { $0.startedAt < $1.startedAt }
 
         guard let primary = usableSegments.first else {
-            lastSignature = nil
-            Task {
-                await endAllActivities()
+            let hasWork = lastRequest != nil
+                || pendingRequest != nil
+                || !Activity<TimeTrackingActivityAttributes>.activities.isEmpty
+            guard hasWork else { return }
+
+            generation &+= 1
+            let expectedGeneration = generation
+            lastRequest = nil
+            pendingRequest = nil
+            Task { [weak self] in
+                await self?.endAllActivities(expectedGeneration: expectedGeneration)
             }
             return
         }
@@ -31,40 +46,75 @@ final class LiveActivityCoordinator {
             startedAt: primary.startedAt,
             additionalTimerCount: max(0, usableSegments.count - 1)
         )
-        let attributes = TimeTrackingActivityAttributes(taskID: primary.taskID.uuidString)
-        let signature = "\(attributes.taskID)|\(state.taskTitle)|\(state.taskPath)|\(state.iconName)|\(state.colorHex)|\(state.startedAt.timeIntervalSince1970)|\(state.additionalTimerCount)"
+        let request = Request(taskID: primary.taskID.uuidString, state: state)
+        let hasMatchingActivity = Activity<TimeTrackingActivityAttributes>.activities.contains {
+            $0.attributes.taskID == request.taskID
+        }
 
-        guard signature != lastSignature else { return }
-        lastSignature = signature
+        guard request != pendingRequest else { return }
+        guard request != lastRequest || !hasMatchingActivity else { return }
 
-        Task {
-            await updateOrStart(attributes: attributes, state: state)
+        generation &+= 1
+        let expectedGeneration = generation
+        pendingRequest = request
+        Task { [weak self] in
+            await self?.updateOrStart(request, expectedGeneration: expectedGeneration)
         }
     }
 
     private func updateOrStart(
-        attributes: TimeTrackingActivityAttributes,
-        state: TimeTrackingActivityAttributes.ContentState
+        _ request: Request,
+        expectedGeneration: Int
     ) async {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let content = ActivityContent(state: state, staleDate: nil)
+        guard expectedGeneration == generation else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            finish(request, expectedGeneration: expectedGeneration, succeeded: false)
+            return
+        }
+
+        let attributes = TimeTrackingActivityAttributes(taskID: request.taskID)
+        let content = ActivityContent(
+            state: request.state,
+            staleDate: request.state.startedAt.addingTimeInterval(8 * 60 * 60)
+        )
         let activities = Activity<TimeTrackingActivityAttributes>.activities
 
-        if let existing = activities.first {
+        if let existing = activities.first(where: { $0.attributes.taskID == request.taskID }) {
             await existing.update(content)
-            for stale in activities.dropFirst() {
+            guard expectedGeneration == generation else { return }
+
+            for stale in activities where stale.id != existing.id {
                 await stale.end(content, dismissalPolicy: .immediate)
+                guard expectedGeneration == generation else { return }
             }
+            finish(request, expectedGeneration: expectedGeneration, succeeded: true)
         } else {
+            for stale in activities {
+                await stale.end(content, dismissalPolicy: .immediate)
+                guard expectedGeneration == generation else { return }
+            }
+
             do {
                 _ = try Activity.request(attributes: attributes, content: content, pushType: nil)
+                finish(request, expectedGeneration: expectedGeneration, succeeded: true)
             } catch {
-                lastSignature = nil
+                finish(request, expectedGeneration: expectedGeneration, succeeded: false)
             }
         }
     }
 
-    private func endAllActivities() async {
+    private func finish(_ request: Request, expectedGeneration: Int, succeeded: Bool) {
+        guard expectedGeneration == generation else { return }
+        if succeeded {
+            lastRequest = request
+        }
+        if pendingRequest == request {
+            pendingRequest = nil
+        }
+    }
+
+    private func endAllActivities(expectedGeneration: Int) async {
+        guard expectedGeneration == generation else { return }
         let content = ActivityContent(
             state: TimeTrackingActivityAttributes.ContentState(
                 taskTitle: AppStrings.localized("live.timer.endedTitle"),
@@ -78,13 +128,17 @@ final class LiveActivityCoordinator {
         )
         for activity in Activity<TimeTrackingActivityAttributes>.activities {
             await activity.end(content, dismissalPolicy: .immediate)
+            guard expectedGeneration == generation else { return }
         }
     }
 
     private func displayPath(for task: TaskNode, tasks: [TaskNode]) -> String {
         var parentNames: [String] = []
         var cursor = task.parentID
-        while let parentID = cursor, let parent = tasks.first(where: { $0.id == parentID }) {
+        var visited: Set<UUID> = [task.id]
+        while let parentID = cursor,
+              visited.insert(parentID).inserted,
+              let parent = tasks.first(where: { $0.id == parentID }) {
             parentNames.insert(parent.title, at: 0)
             cursor = parent.parentID
         }

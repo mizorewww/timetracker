@@ -21,7 +21,7 @@ struct InboxCommandHandler {
             deviceID: deviceID
         )
         context.insert(item)
-        try context.save()
+        try context.saveAfterMutationStep()
         return item
     }
 
@@ -30,7 +30,7 @@ struct InboxCommandHandler {
         item.completedAt = item.isCompleted ? now : nil
         item.updatedAt = now
         item.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func updateTitle(_ item: InboxItem, title: String, context: ModelContext, now: Date = Date()) throws {
@@ -48,7 +48,7 @@ struct InboxCommandHandler {
         item.updatedAt = now
         item.clientMutationID = UUID()
         try clearSuggestions(for: item.id, context: context, now: now)
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func softDelete(_ item: InboxItem, context: ModelContext, now: Date = Date()) throws {
@@ -56,7 +56,7 @@ struct InboxCommandHandler {
         item.updatedAt = now
         item.clientMutationID = UUID()
         try clearSuggestions(for: item.id, context: context, now: now)
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func reorderedOpenItemIDs(
@@ -86,11 +86,9 @@ struct InboxCommandHandler {
         now: Date = Date()
     ) throws {
         guard !orderedItemIDs.isEmpty else { return }
-        let items = try context.fetch(
-            FetchDescriptor<InboxItem>(
-                predicate: #Predicate { $0.deletedAt == nil && $0.isCompleted == false }
-            )
-        )
+        let items = try context.fetch(FetchDescriptor<InboxItem>())
+            .visibleDeduplicatedByID()
+            .filter { $0.isCompleted == false }
         let itemByID = items.latestByID()
         guard orderedItemIDs.count == items.count else { return }
 
@@ -100,6 +98,6 @@ struct InboxCommandHandler {
             item.updatedAt = now
             item.clientMutationID = UUID()
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 }

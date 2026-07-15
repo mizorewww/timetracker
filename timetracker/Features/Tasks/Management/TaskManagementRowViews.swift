@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TaskManagementFlatRow: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let task: TaskNode
     var treeDepth: Int = 0
     var hasChildren = false
@@ -10,10 +10,12 @@ struct TaskManagementFlatRow: View {
     var openTaskDetail: ((TaskNode) -> Void)?
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 #endif
+    @State private var isDeleteConfirmationPresented = false
 
     private var isRunning: Bool {
-        store.activeSegments.contains { $0.taskID == task.id }
+        store.activeSegment(for: task.id) != nil
     }
 
     var body: some View {
@@ -21,26 +23,54 @@ struct TaskManagementFlatRow: View {
     }
 
     private var rowContent: some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: rowAlignment, spacing: 4) {
             disclosureButton
-            TaskManagementRowContent(
+            Button(action: openTask) {
+                TaskManagementRowContent(
+                    store: store,
+                    task: task,
+                    isRunning: isRunning,
+                    showsNavigationChevron: showsNavigationChevron
+                )
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("tasks.row.\(task.id.uuidString)")
+            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+        }
+        .padding(.leading, CGFloat(min(treeDepth, 6)) * 12)
+        .contextMenu {
+            TaskContextMenu(
                 store: store,
                 task: task,
-                isRunning: isRunning,
-                showsNavigationChevron: showsNavigationChevron
+                preservingDestination: .tasks,
+                requestDelete: { isDeleteConfirmationPresented = true }
             )
         }
-        .padding(.leading, CGFloat(treeDepth) * 14)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            openTask()
-        }
-        .contextMenu {
-            TaskContextMenu(store: store, task: task, preservingDestination: .tasks)
+        .confirmationDialog(
+            AppStrings.localized("task.delete.confirm.title"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.delete, role: .destructive) {
+                store.deleteSelectedTask(taskID: task.id, preservingDestination: .tasks)
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("task.delete.confirm.message"))
         }
         .taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)
         #if os(iOS)
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+        #endif
+    }
+
+    private var rowAlignment: VerticalAlignment {
+        #if os(iOS)
+        dynamicTypeSize.isAccessibilitySize ? .top : .center
+        #else
+        .center
         #endif
     }
 
@@ -62,157 +92,26 @@ struct TaskManagementFlatRow: View {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 16, height: 24)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("tasks.disclosure.\(task.id.uuidString)")
             .accessibilityLabel(isExpanded ? AppStrings.localized("tasks.collapse") : AppStrings.localized("tasks.expand"))
+            .accessibilityValue(task.title)
         } else if treeDepth > 0 {
             Color.clear
-                .frame(width: 16, height: 24)
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
+        } else {
+            Color.clear
+                .frame(width: 4, height: 44)
+                .accessibilityHidden(true)
         }
     }
 
     private func openTask() {
         store.selectTask(task.id, revealInToday: false)
         openTaskDetail?(task)
-    }
-}
-
-private struct TaskManagementRowContent: View {
-    @ObservedObject var store: TimeTrackerStore
-    let task: TaskNode
-    let isRunning: Bool
-    let showsNavigationChevron: Bool
-#if os(iOS)
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-#endif
-
-    var body: some View {
-        #if os(iOS)
-        if TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass).usesCompactRows {
-            compactBody
-        } else {
-            regularBody
-        }
-        #else
-        regularBody
-        #endif
-    }
-
-    @ViewBuilder
-    private var regularBody: some View {
-        let progress = store.checklistProgress(for: task.id)
-        let rollup = store.rollup(for: task.id)
-        HStack(spacing: 12) {
-            TaskIcon(task: task, size: 30)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(task.title)
-                    .font(.headline)
-                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                    .strikethrough(task.status == .completed)
-                    .lineLimit(2)
-
-                HStack(spacing: 6) {
-                    Text(store.path(for: task))
-                        .lineLimit(1)
-                    statusMetadataBadge
-                    if isRunning {
-                        RunningStatusBadge()
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-                if progress.totalCount > 0 || rollup?.isDisplayableForecast == true {
-                    TaskProgressLine(progress: progress, rollup: rollup)
-                }
-            }
-
-            Spacer(minLength: 10)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-
-                let childCount = store.children(of: task).count
-                if childCount > 0 {
-                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if showsNavigationChevron {
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private var compactBody: some View {
-        let progress = store.checklistProgress(for: task.id)
-        let rollup = store.rollup(for: task.id)
-        HStack(alignment: .center, spacing: 10) {
-            TaskIcon(task: task, size: 30)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(task.title)
-                    .font(.headline)
-                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                    .strikethrough(task.status == .completed)
-                    .lineLimit(1)
-
-                HStack(spacing: 6) {
-                    statusMetadataBadge
-                    if isRunning {
-                        RunningStatusBadge()
-                    }
-                }
-
-                if progress.totalCount > 0 {
-                    CompactChecklistProgressLine(
-                        progress: progress,
-                        tint: Color(hex: task.colorHex) ?? .blue
-                    )
-                }
-
-                if rollup?.isDisplayableForecast == true {
-                    TaskProgressLine(progress: progress, rollup: rollup, showsChecklist: false)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-
-                let childCount = store.children(of: task).count
-                if childCount > 0 {
-                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                if showsNavigationChevron {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .padding(.vertical, 6)
-    }
-
-    private var statusMetadataBadge: some View {
-        TaskStatusBadge(status: task.status)
     }
 }

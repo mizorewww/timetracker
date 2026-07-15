@@ -121,7 +121,7 @@ extension SeedData {
             note: "Parallel reading"
         )
 
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     private static func addSegment(

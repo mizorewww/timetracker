@@ -39,7 +39,7 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         do {
             let container = try timetrackerApp.makeUITestModelContainer()
             let rootView = ContentView()
-                .frame(minWidth: 960, minHeight: 680)
+                .frame(minWidth: 680, minHeight: 500)
                 .modelContainer(container)
             let hostingController = NSHostingController(rootView: rootView)
             let window = NSWindow(

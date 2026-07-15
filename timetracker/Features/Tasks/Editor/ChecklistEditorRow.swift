@@ -25,7 +25,10 @@ struct ChecklistEditorRow: View {
                 showsTitle: false
             )
             .buttonStyle(.plain)
-            .frame(width: 34, height: 34)
+            .frame(
+                width: AppLayout.minimumInteractiveTarget,
+                height: AppLayout.minimumInteractiveTarget
+            )
 
             TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -36,6 +39,7 @@ struct ChecklistEditorRow: View {
                 .submitLabel(.done)
                 .onSubmit(submit)
                 .labelsHidden()
+                .accessibilityLabel(AppStrings.localized("editor.checklist.itemPlaceholder"))
                 .onChange(of: item.title) { _, newValue in
                     guard newValue.contains(where: \.isNewline) else { return }
                     item.title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
@@ -48,7 +52,10 @@ struct ChecklistEditorRow: View {
             } label: {
                 Image(systemName: "trash")
                     .foregroundStyle(.red)
-                    .frame(width: 32, height: 32)
+                    .frame(
+                        width: AppLayout.minimumInteractiveTarget,
+                        height: AppLayout.minimumInteractiveTarget
+                    )
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppStrings.delete)
@@ -66,14 +73,14 @@ struct ChecklistEditorRow: View {
             HStack(spacing: 4) {
                 Button(action: moveUp) {
                     Image(systemName: "chevron.up")
-                        .frame(width: 24, height: 28)
+                        .frame(width: 28, height: 28)
                 }
                 .disabled(!canMoveUp)
                 .accessibilityLabel(AppStrings.localized("common.moveUp"))
 
                 Button(action: moveDown) {
                     Image(systemName: "chevron.down")
-                        .frame(width: 24, height: 28)
+                        .frame(width: 28, height: 28)
                 }
                 .disabled(!canMoveDown)
                 .accessibilityLabel(AppStrings.localized("common.moveDown"))

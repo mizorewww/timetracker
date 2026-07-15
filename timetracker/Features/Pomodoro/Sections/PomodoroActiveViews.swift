@@ -1,184 +1,118 @@
 import SwiftUI
 
 struct ActivePomodoroCard: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let run: PomodoroRun
     let requestCancel: () -> Void
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
+        timeline
+            .sensoryFeedback(.success, trigger: run.completedFocusRounds)
+    }
+
+    private var timeline: TimelineView<PeriodicTimelineSchedule, ActivePomodoroContent> {
+        TimelineView(.periodic(from: Date.now, by: 1)) { context in
             ActivePomodoroContent(
                 store: store,
                 run: run,
-                remaining: store.pomodoroRemainingSeconds(for: run, now: context.date),
+                now: context.date,
                 requestCancel: requestCancel
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityIdentifier("pomodoro.active")
         }
     }
 }
 
 private struct ActivePomodoroContent: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let run: PomodoroRun
-    let remaining: Int
+    let now: Date
     let requestCancel: () -> Void
-    @State private var isHolding = false
-    @State private var isCompletingStop = false
-    @State private var holdProgress = 0.0
-    @State private var holdCompletionTask: Task<Void, Never>?
-    @State private var displayedRemainingOverride: Int?
 
-    private let holdDuration: TimeInterval = 0.9
-    private let resetBeforeReturnDelay: TimeInterval = 0.08
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 286)
-
-            PomodoroTimerFace(
-                timeText: DurationFormatter.clock(displayedRemaining),
-                title: store.taskTitle(for: run),
-                titleColor: taskColor
-            )
-            .pomodoroTimerFaceSource(.active)
-            .opacity(0)
-
-            Spacer(minLength: 214)
-
-            PomodoroStopControl(progress: holdProgress, showsProgress: isHolding)
-
-            Spacer(minLength: 120)
-        }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .gesture(stopGesture)
-        .onDisappear {
-            holdCompletionTask?.cancel()
-        }
-    }
-
-    private var accent: Color {
-        PomodoroStyle.accent
+    private var remaining: Int {
+        store.pomodoroRemainingSeconds(for: run, now: now)
     }
 
     private var taskColor: Color {
-        Color(hex: store.task(for: run.taskID)?.colorHex) ?? accent
+        Color(hex: store.task(for: run.taskID)?.colorHex) ?? PomodoroStyle.accent
     }
 
-    private var displayedRemaining: Int {
-        displayedRemainingOverride ?? remaining
+    private var isBreakReady: Bool {
+        remaining == 0 && (run.state == .shortBreak || run.state == .longBreak)
     }
-
-    private var stopGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                startHoldIfNeeded()
-            }
-            .onEnded { _ in
-                cancelHold()
-            }
-    }
-
-    private func startHoldIfNeeded() {
-        guard !isHolding && !isCompletingStop else { return }
-        holdCompletionTask?.cancel()
-        isCompletingStop = false
-        displayedRemainingOverride = nil
-        holdProgress = 0
-        let plannedSeconds = run.focusSecondsPlanned
-        withAnimation(.easeOut(duration: 0.12)) {
-            isHolding = true
-        }
-        withAnimation(.linear(duration: holdDuration)) {
-            holdProgress = 1
-        }
-        holdCompletionTask = Task {
-            try? await Task.sleep(nanoseconds: UInt64(holdDuration * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            let shouldReturnToSetup = await MainActor.run {
-                guard isHolding else { return false }
-                isCompletingStop = true
-                var resetTransaction = Transaction(animation: nil)
-                resetTransaction.disablesAnimations = true
-                withTransaction(resetTransaction) {
-                    displayedRemainingOverride = plannedSeconds
-                }
-                withAnimation(.easeOut(duration: 0.12)) {
-                    isHolding = false
-                    holdProgress = 0
-                }
-                return true
-            }
-            guard shouldReturnToSetup else { return }
-            try? await Task.sleep(nanoseconds: UInt64(resetBeforeReturnDelay * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                requestCancel()
-            }
-        }
-    }
-
-    private func cancelHold() {
-        guard !isCompletingStop else { return }
-        holdCompletionTask?.cancel()
-        holdCompletionTask = nil
-        guard isHolding else { return }
-        withAnimation(.easeOut(duration: 0.18)) {
-            isHolding = false
-            holdProgress = 0
-        }
-    }
-}
-
-private struct PomodoroStopControl: View {
-    let progress: Double
-    let showsProgress: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            Group {
-                if showsProgress {
-                    PomodoroLinearProgress(progress: progress)
-                } else {
-                    Color.clear
-                }
-            }
-            .frame(width: 152, height: 30)
+        ScrollView {
+            VStack(spacing: 28) {
+                Spacer(minLength: 24)
+                phaseSummary
+                progress
 
-            Text(.app("pomodoro.holdToStopFocus"))
-                .font(.system(size: showsProgress ? 24 : 20, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                if isBreakReady {
+                    startNextFocusButton
+                }
+
+                stopButton
+                Spacer(minLength: 24)
+            }
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+        }
+        .accessibilityIdentifier("pomodoro.active")
+    }
+
+    private var phaseSummary: some View {
+        VStack(spacing: 8) {
+            Text(store.pomodoroStateLabel(for: run))
+                .font(.headline)
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 34)
+
+            PomodoroTimerFace(
+                timeText: DurationFormatter.clock(remaining),
+                title: store.taskTitle(for: run),
+                titleColor: taskColor
+            )
+
+            Text(roundDescription)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        .scaleEffect(showsProgress ? 0.98 : 1)
-        .animation(.easeInOut(duration: 0.16), value: showsProgress)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(AppStrings.localized("pomodoro.holdToStopFocus"))
     }
-}
 
-private struct PomodoroLinearProgress: View {
-    let progress: Double
+    private var progress: some View {
+        ProgressView(value: store.pomodoroProgress(for: run, now: now))
+            .tint(taskColor)
+            .accessibilityLabel(store.pomodoroStateLabel(for: run))
+            .accessibilityValue(DurationFormatter.clock(remaining))
+    }
 
-    var body: some View {
-        GeometryReader { proxy in
-            let trackHeight: CGFloat = 6
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(PomodoroStyle.progressTrack)
-                    .frame(height: trackHeight)
-
-                Capsule()
-                    .fill(PomodoroStyle.accent)
-                    .frame(width: max(trackHeight, proxy.size.width * progress.clamped(to: 0...1)), height: trackHeight)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private var startNextFocusButton: some View {
+        Button {
+            store.advanceActivePomodoroPhase()
+        } label: {
+            Label(AppStrings.localized("pomodoro.startNextFocus"), systemImage: "play.circle.fill")
+                .frame(maxWidth: 260, minHeight: 44)
         }
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("pomodoro.startNextFocus")
+    }
+
+    private var stopButton: some View {
+        Button(role: .destructive, action: requestCancel) {
+            Label(AppStrings.localized("pomodoro.stop"), systemImage: "stop.fill")
+                .frame(maxWidth: 260)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .accessibilityIdentifier("pomodoro.stop")
+    }
+
+    private var roundDescription: String {
+        String(
+            format: AppStrings.localized("pomodoro.roundProgress"),
+            min(run.completedFocusRounds + 1, run.targetRounds),
+            run.targetRounds
+        )
     }
 }

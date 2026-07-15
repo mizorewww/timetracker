@@ -36,18 +36,6 @@ struct DailySummaryService {
         }
     }
 
-    func model(from snapshot: DailySummarySnapshot) -> DailySummary {
-        DailySummary(
-            date: snapshot.date,
-            taskID: snapshot.taskID,
-            grossSeconds: snapshot.grossSeconds,
-            wallClockSeconds: snapshot.wallClockSeconds,
-            pomodoroCount: snapshot.pomodoroCount,
-            interruptionCount: snapshot.interruptionCount,
-            version: snapshot.version
-        )
-    }
-
     private func summary(
         segments: [TimeSegment],
         day: DateInterval,

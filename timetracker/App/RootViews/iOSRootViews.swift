@@ -1,11 +1,8 @@
 import SwiftUI
-#if os(iOS)
-import UIKit
-#endif
 
 #if os(iOS)
 struct iOSRootView: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
@@ -18,76 +15,146 @@ struct iOSRootView: View {
 }
 
 struct PhoneRootView: View {
-    @ObservedObject var store: TimeTrackerStore
-    @StateObject private var chrome = PhoneChromeCoordinator()
-    @State private var isKeyboardVisible = false
+    let store: TimeTrackerStore
+    @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
+    @State private var todayPath: [PhoneTodayRoute] = []
 
     var body: some View {
-        PhoneDestinationStack(store: store, destination: chrome.selectedDestination)
-            .environmentObject(chrome)
-            .transaction { transaction in
-                transaction.animation = nil
-            }
-            .safeAreaBar(edge: .bottom, spacing: 0) {
-                if !isKeyboardVisible {
-                    PhonePagedBottomSelector(
-                        chrome: chrome,
-                        destinations: TimeTrackerStore.DesktopDestination.phoneDestinations
+        TabView(selection: $selectedDestination) {
+            Tab(value: .today) {
+                NavigationStack(path: $todayPath) {
+                    PhoneHomeView(
+                        store: store,
+                        openSettings: openSettings,
+                        openTask: openTask
                     )
+                        .navigationDestination(for: PhoneTodayRoute.self) { route in
+                            switch route {
+                            case .settings:
+                                SettingsView(store: store)
+                            }
+                        }
                 }
+            } label: {
+                Label(AppStrings.today, systemImage: "house")
+                    .accessibilityIdentifier("phone.tab.today")
             }
-            .onAppear {
-                chrome.select(store.desktopDestination)
+
+            Tab(value: .inbox) {
+                NavigationStack {
+                    InboxView(store: store)
+                }
+            } label: {
+                Label(AppStrings.inbox, systemImage: "tray")
+                    .accessibilityIdentifier("phone.tab.inbox")
             }
-            .onChange(of: store.desktopDestination) { _, destination in
-                guard chrome.selectedDestination != destination else { return }
-                chrome.select(destination)
+
+            Tab(value: .tasks) {
+                NavigationStack {
+                    TasksView(store: store)
+                }
+            } label: {
+                Label(AppStrings.tasks, systemImage: "checklist")
+                    .accessibilityIdentifier("phone.tab.tasks")
             }
-            .onChange(of: chrome.selectedDestination) { _, destination in
-                guard store.desktopDestination != destination else { return }
-                store.desktopDestination = destination
+
+            Tab(value: .pomodoro) {
+                NavigationStack {
+                    PomodoroView(store: store)
+                }
+            } label: {
+                Label(AppStrings.localized("pomodoro.focus"), systemImage: "timer")
+                    .accessibilityIdentifier("phone.tab.focus")
             }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                isKeyboardVisible = true
+
+            Tab(value: .analytics) {
+                NavigationStack {
+                    AnalyticsView(store: store)
+                }
+            } label: {
+                Label(AppStrings.analytics, systemImage: "chart.bar.xaxis")
+                    .accessibilityIdentifier("phone.tab.analytics")
             }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                isKeyboardVisible = false
-            }
+        }
+        .accessibilityIdentifier("phone.tabView")
+        .onAppear {
+            synchronize(with: store.desktopDestination)
+        }
+        .onChange(of: store.desktopDestination) { _, destination in
+            synchronize(with: destination)
+        }
+        .onChange(of: selectedDestination) { _, destination in
+            let storeDestination = destination == .today && todayPath.last == .settings
+                ? TimeTrackerStore.DesktopDestination.settings
+                : destination
+            guard store.desktopDestination != storeDestination else { return }
+            store.desktopDestination = storeDestination
+        }
+        .onChange(of: todayPath) { _, path in
+            guard selectedDestination == .today else { return }
+            let destination: TimeTrackerStore.DesktopDestination = path.last == .settings ? .settings : .today
+            guard store.desktopDestination != destination else { return }
+            store.desktopDestination = destination
+        }
     }
-}
 
-private struct PhoneDestinationStack: View {
-    @ObservedObject var store: TimeTrackerStore
-    let destination: TimeTrackerStore.DesktopDestination
+    private func openSettings() {
+        selectedDestination = .today
+        if todayPath.last != .settings {
+            todayPath.append(.settings)
+        }
+        if store.desktopDestination != .settings {
+            store.desktopDestination = .settings
+        }
+    }
 
-    var body: some View {
-        NavigationStack {
-            switch destination {
-            case .today:
-                PhoneHomeView(store: store)
-            case .inbox:
-                InboxView(store: store)
-            case .tasks:
-                TasksView(store: store)
-            case .pomodoro:
-                PomodoroView(store: store)
-            case .analytics:
-                AnalyticsView(store: store)
-            case .settings:
-                SettingsView(store: store)
+    private func openTask(_ taskID: UUID) {
+        store.openTaskDetail(taskID)
+        selectedDestination = .tasks
+    }
+
+    private func synchronize(with destination: TimeTrackerStore.DesktopDestination) {
+        switch destination {
+        case .settings:
+            if selectedDestination != .today {
+                selectedDestination = .today
+            }
+            if todayPath.last != .settings {
+                todayPath.append(.settings)
+            }
+        case .today:
+            if selectedDestination != .today {
+                selectedDestination = .today
+            }
+            if !todayPath.isEmpty {
+                todayPath.removeAll()
+            }
+        case .inbox, .tasks, .pomodoro, .analytics:
+            if selectedDestination != destination {
+                selectedDestination = destination
             }
         }
     }
 }
 
+private enum PhoneTodayRoute: Hashable {
+    case settings
+}
+
 struct iPadRootView: View {
-    @ObservedObject var store: TimeTrackerStore
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    let store: TimeTrackerStore
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
     private let layout = SplitColumnLayoutPolicy.iPad
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(store: store)
+        NavigationSplitView(
+            columnVisibility: $columnVisibility,
+            preferredCompactColumn: $preferredCompactColumn
+        ) {
+            SidebarView(store: store) {
+                preferredCompactColumn = .detail
+            }
                 .navigationSplitViewColumnWidth(
                     min: layout.sidebar.min,
                     ideal: layout.sidebar.ideal,
@@ -96,18 +163,12 @@ struct iPadRootView: View {
         } detail: {
             DesktopContentView(store: store)
                 .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        if columnVisibility == .detailOnly {
-                            SidebarRevealButton {
-                                columnVisibility = .all
-                            }
-                        }
-                    }
-                }
         }
         .navigationSplitViewStyle(.balanced)
         .accessibilityIdentifier("ipad.splitNavigation")
+        .onChange(of: store.desktopDestination) { _, _ in
+            preferredCompactColumn = .detail
+        }
     }
 }
 #endif

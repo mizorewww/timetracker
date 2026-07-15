@@ -66,13 +66,14 @@ struct TaskCategoryTests {
             includesInForecast: true
         )
 
-        let store = TimeTrackerStore()
-        store.configureIfNeeded(context: context)
-
-        let sections = store.taskTreeSections(expandedTaskIDs: [])
+        let sections = TaskTreeService().categorySections(
+            rootTasks: [],
+            categories: [category],
+            categoryIDByRootTaskID: [:]
+        )
         #expect(sections.map(\.title) == ["Learning"])
         #expect(sections.first?.categoryID == category.id)
-        #expect(sections.first?.rows.isEmpty == true)
+        #expect(sections.first?.rootTasks.isEmpty == true)
     }
 
     @Test @MainActor
@@ -186,5 +187,134 @@ struct TaskCategoryTests {
         #expect(try repository.task(id: child.id)?.parentID == root.id)
         #expect(store.effectiveCategory(for: child)?.id == life.id)
         #expect(try repository.categoryID(forRootTaskID: child.id) == nil)
+    }
+
+    @Test @MainActor
+    func categoryAssignmentMutationCollapsesConcurrentActiveAssignments() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
+        let firstCategory = try repository.createCategory(
+            title: "First",
+            colorHex: nil,
+            iconName: nil,
+            includesInForecast: true
+        )
+        let secondCategory = try repository.createCategory(
+            title: "Second",
+            colorHex: nil,
+            iconName: nil,
+            includesInForecast: true
+        )
+        let root = try repository.createTask(
+            title: "Concurrent root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let older = TaskCategoryAssignment(
+            taskID: root.id,
+            categoryID: firstCategory.id,
+            deviceID: "remote-a"
+        )
+        older.updatedAt = Date().addingTimeInterval(-60)
+        let newer = TaskCategoryAssignment(
+            taskID: root.id,
+            categoryID: secondCategory.id,
+            deviceID: "remote-b"
+        )
+        context.insert(older)
+        context.insert(newer)
+        try context.save()
+
+        try repository.setCategoryAssignment(categoryID: firstCategory.id, forRootTaskID: root.id)
+        try context.save()
+        var assignments = try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
+            .filter { $0.taskID == root.id }
+        #expect(assignments.filter { $0.deletedAt == nil }.count == 1)
+        #expect(assignments.first { $0.deletedAt == nil }?.categoryID == firstCategory.id)
+        #expect(assignments.filter { $0.deletedAt != nil }.count == 1)
+
+        try repository.setCategoryAssignment(categoryID: nil, forRootTaskID: root.id)
+        try context.save()
+        assignments = try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
+            .filter { $0.taskID == root.id }
+        #expect(assignments.allSatisfy { $0.deletedAt != nil })
+        #expect(try repository.categoryID(forRootTaskID: root.id) == nil)
+    }
+
+    @Test @MainActor
+    func equalTimestampCategoryAssignmentsUseOneWinnerAcrossRepositoryStoreAndAnalytics() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
+        let losingCategory = try repository.createCategory(
+            title: "Losing category",
+            colorHex: nil,
+            iconName: nil,
+            includesInForecast: true
+        )
+        let winningCategory = try repository.createCategory(
+            title: "Winning category",
+            colorHex: nil,
+            iconName: nil,
+            includesInForecast: true
+        )
+        let root = try repository.createTask(
+            title: "Concurrent root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let timestamp = Date().addingTimeInterval(-60)
+        let losingAssignment = TaskCategoryAssignment(
+            taskID: root.id,
+            categoryID: losingCategory.id,
+            deviceID: "device-a"
+        )
+        losingAssignment.createdAt = timestamp
+        losingAssignment.updatedAt = timestamp
+        let winningAssignment = TaskCategoryAssignment(
+            taskID: root.id,
+            categoryID: winningCategory.id,
+            deviceID: "device-z"
+        )
+        winningAssignment.createdAt = timestamp
+        winningAssignment.updatedAt = timestamp
+        context.insert(winningAssignment)
+        context.insert(losingAssignment)
+        try context.save()
+
+        #expect(
+            [losingAssignment, winningAssignment]
+                .logicalWinnersByTaskID()[root.id]?.id == winningAssignment.id
+        )
+        #expect(
+            [winningAssignment, losingAssignment]
+                .logicalWinnersByTaskID()[root.id]?.id == winningAssignment.id
+        )
+        #expect(try repository.categoryID(forRootTaskID: root.id) == winningCategory.id)
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.effectiveCategory(for: root)?.id == winningCategory.id)
+
+        let now = Date()
+        let segment = TimeSegment(
+            sessionID: UUID(),
+            taskID: root.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-30),
+            endedAt: now
+        )
+        let breakdown = AnalyticsStore().categoryBreakdown(
+            segments: [segment],
+            tasks: [root],
+            taskCategories: [losingCategory, winningCategory],
+            taskCategoryAssignments: [winningAssignment, losingAssignment],
+            range: .today,
+            now: now,
+            calendar: .current
+        )
+        #expect(breakdown.first?.title == winningCategory.title)
     }
 }

@@ -2,7 +2,7 @@
 
 Time Tracker 是一个使用 SwiftUI、SwiftData、Swift Charts、ActivityKit 和 CloudKit/iCloud 能力构建的本地优先时间账本应用。它的核心不是“待办事项列表”，也不是“番茄钟”，而是把用户真实发生过的工作、学习、生活和琐事记录成可追溯、可修正、可分析的时间账本。
 
-应用当前覆盖 iPhone、iPad 和 macOS，并包含 Live Activity 扩展。项目代码已经按功能、领域和数据流拆分，目标是让后续接入 Widget、App Intents、Shortcuts、Apple Watch、HealthKit 或更强的 LLM 辅助时，不需要重写底层时间模型。
+应用当前覆盖 iPhone、iPad 和 macOS，并包含 Live Activity、App Intents/Shortcuts、Widget 和 Apple Watch target。工程保持 Xcode 自动签名并使用开发团队 `LT98S43NKA`；主应用与 Widget 已配置同一 App Group。代码侧构建和模拟器验证不能替代真实设备验收，发行前仍需完成 Widget 共享容器、Watch durable command/terminal-result 往返和 Live Activity 系统行为的真机验证。项目代码已经按功能、领域和数据流拆分，后续系统入口必须复用底层时间模型。
 
 ## 设计宗旨
 
@@ -19,7 +19,7 @@ Time Tracker 的第一原则是：时间记录是事实，任务、番茄钟、�
 
 因此，项目坚持这些原则：
 
-- `TimeSegment` 是事实来源。任何普通计时、手动补录、番茄钟、Live Activity 或未来 Widget/Watch 操作，最终都必须写入统一的时间账本。
+- `TimeSegment` 是事实来源。任何普通计时、手动补录、番茄钟、Live Activity、Widget 或 Watch 操作，最终都必须通过共享命令落入统一的时间账本。
 - 任务是时间的归属对象，不是时间本身。任务可以移动、归档、软删除，但历史时间记录不应随意消失。
 - UI 可以重构，分析可以重算，原始账本数据必须尽量稳定。
 - Forecast 必须可解释。没有 checklist 进度和真实计时时，不凭空预测。
@@ -34,11 +34,12 @@ Today 是日常使用的核心入口，回答三个问题：现在正在追踪�
 
 - 查看当前所有 Active Timers。
 - 支持多个任务同时计时。
-- 展示今日时间统计、趋势和时间线。
+- 以原生 `List` 展示今日总时长、可选墙钟时间和时间线。
 - Quick Start 支持固定任务和最近高频任务。
 - 显示 checklist 驱动的剩余时间预测。
-- 显示今日、本周、本月、本年进度，以及用户自定义倒计时事件。
-- iPhone 使用紧凑底部标签；iPad/macOS 使用更适合大屏的分栏布局。
+- iPhone、iPad 与 macOS Today 都显示用户自定义倒计时事件；日、周、月、年这类低价值通用进度不再占据 Today。
+- Active Timer、Forecast 和 Timeline 行可以直接打开只读优先的任务详情。
+- iPhone 使用系统原生五标签 `TabView`，Settings 从 Today 工具栏进入；iPad regular width 和 macOS 使用 `NavigationSplitView`，iPad compact width 自适应为五标签根导航，macOS 设置使用独立 Settings 场景。
 
 ### 任务与任务树
 
@@ -49,7 +50,7 @@ Today 是日常使用的核心入口，回答三个问题：现在正在追踪�
 - 任务支持状态，例如未完成、计划中、已完成。
 - 任务支持颜色、SF Symbol、备注、预计时间、截止时间等编辑信息。
 - 任务支持归档和软删除。
-- 移动任务时会防止循环，并更新子孙任务路径。
+- 移动任务时会防止循环。`parentID` 是层级权威；启动/同步恢复会修复 orphan/cycle，持久 `path` 是稳定 `/<UUID>` locator，用户可见标题路径即时派生，避免移动根节点时重写整棵子树。
 - 父任务的展示时间会递归包含自身和子任务时间。
 - 根任务可以归入用户自定义 Category，用于区分工作、学习、生活、健康等不同语境。
 - Category 可控制该分支是否参与预测，为后续不同预测模型和 HealthKit 等能力预留空间。
@@ -123,13 +124,17 @@ Inbox 用于快速收集还没有整理归属的事项。
 - 开始番茄钟会创建 `PomodoroRun`、`TimeSession` 和 `TimeSegment`。
 - 取消和完成都会同步更新 ledger。
 - 完成最终专注轮次会正确结束关联 session。
-- 番茄钟默认时长、休息时长和轮次可在设置中调整。
+- 开始前通过明确的“计划”和“任务”菜单完成选择，不再依赖点击计时器或标题的隐藏交互。
+- 专注计划的时长、休息和轮次可在“设置 → 专注”中管理。
+- 当前阶段由持久 phase 状态和计划时长派生 deadline；后台挂起或重启后，过期专注会在同一 deadline 截断账本。休息结束后由用户明确开始下一轮，不在后台擅自创建 focus segment。
+- 编辑/删除活动番茄时间片和删除任务树会同步结束或 tombstone 对应 run，防止番茄状态与账本脱节。
 
 ### Analytics
 
 Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 
 - Today、Week、Month 多范围统计。
+- 首页只展示当前范围摘要和六个用途分类；概览、时间、任务、番茄钟、决策和质量分别进入原生列表详情，不再把所有图表堆在一个滚动页面。
 - Gross Time 和 Wall Time 双口径：
   - Gross Time：所有任务时间直接相加。
   - Wall Time：去重后的真实时钟时间。
@@ -139,6 +144,7 @@ Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 - Month 图表使用真实日期，不用重复 weekday 作为数据 identity。
 - Overlap 分析展示多任务同时计时造成的差异。
 - Analytics 使用缓存 snapshot，避免 SwiftUI view body 内做重计算。
+- 辅助功能大字体下，范围选择自动从横向 segmented control 变为菜单，详情行允许纵向生长。
 
 ### Live Activity
 
@@ -148,18 +154,30 @@ Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 - 共享 ActivityAttributes，避免主 App 和扩展模型漂移。
 - 文案走本地化，不在扩展中硬编码中文。
 
+### App Intents、Shortcuts 与 Apple Watch
+
+- App Intents 支持添加收件箱项目、开始计时和停止计时，并由系统快捷指令发现。
+- Apple Watch 通过 WatchConnectivity 接收主应用快照，并持久排队用户命令；命令与 terminal result 使用 durable `transferUserInfo`，可达消息仅用于加速。
+- Watch 上的操作以手机 typed terminal result 为主要确认；20 秒超时后可用同一 command ID 安全重试或丢弃，旧手机的快照反射保留为兼容路径。
+- 这些入口复用领域命令，不单独维护第二套账本逻辑。
+
+### Widget
+
+Widget extension 与快照代码已经存在，主应用和扩展已启用 `group.me.mezorewww.timetracker`，自动签名构建也生成了相应 profile。完成共享容器和真机读取/刷新验证前，仍不把它列为已完成发行验证的功能。
+
 ### 设置与维护
 
-设置页用于用户可理解的偏好、数据维护和服务配置。
+设置按“通用、专注、数据与同步、AI 助手、高级”分类，避免把普通偏好、危险维护操作与开发诊断混在一页。应用外观跟随系统，不提供与系统偏好冲突的独立亮色/深色开关。
 
-- 外观设置。
-- Pomodoro 默认模式和时长。
-- iCloud 同步开关和同步状态反馈。
-- OpenAI endpoint、API key 和模型选择。
-- 自动拉取可用模型。
-- CSV 导出。
-- 清除演示数据。
-- 优化数据库，清理缺失或已删除任务关联的历史记录。
+- 并行计时、总时长/墙钟时间显示和倒计时事件。
+- Pomodoro 专注计划。
+- iCloud 同步开关和同步状态反馈。开关仅保存在当前设备，并在下次启动时决定是否创建 CloudKit 容器；它不会跨设备同步。
+- OpenAI-compatible endpoint、API key 和模型选择使用 Test→Save 草稿：键入不持久化，测试只加载模型，用户明确保存后才写入偏好/Keychain。API key 仅存于本机不同步的 Keychain，每台设备需单独设置。
+- 自动 AI 建议是默认关闭、设备本地的第二个明确开关；配置成功不会自动开启内容发送。
+- JSON 数据导出。当前没有 importer、校验和或事务恢复，因此导出不是可恢复备份。
+- “清空全部数据”会逻辑删除业务数据，并同时清除本机 Keychain 中的 LLM API key 和设备本地的自动建议同意；当前设备的 iCloud 启动开关不会被这个动作悄悄改写。
+- Debug 与 Release 的自动演示模式都默认为关闭；Debug/内部明确启用后使用独立、无 CloudKit 的 `TimeTracker-Demo.store`，不会把 demo 写入用户 store。
+- 普通生产 Local/iCloud/local-fallback/emergency store 永不物理 purge tombstone，避免离线设备复活旧数据；永久优化入口只在隔离 Demo/UI Test store 可用。
 - About 页面展示 app 图标、版本号、build number、branch、commit hash 和构建时间。
 
 ## 数据模型
@@ -176,13 +194,13 @@ Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 | `TimeSegment` | 真实发生的一段时间，是时间账本事实来源。 |
 | `PomodoroRun` | 番茄钟流程状态，最终生成或更新 TimeSegment。 |
 | `CountdownEvent` | 用户自定义倒计时事件。 |
-| `SyncedPreference` | 用户可感知设置，以 JSON 存入 SwiftData 并可通过 iCloud 同步。 |
+| `SyncedPreference` | 非敏感用户设置，以 JSON 存入 SwiftData 并可通过 iCloud 同步；API key 等秘密明确排除。 |
 
 核心数据普遍包含 `id`、`createdAt`、`updatedAt`、`deletedAt`、`deviceID` 和 `clientMutationID`，用于软删除、同步、冲突处理和幂等操作。
 
 ## 架构概览
 
-项目采用本地优先的模块化单体结构。UI 不直接写 SwiftData，持久化和业务动作通过 command、repository、domain store 和 service 分层。
+项目采用本地优先的模块化单体结构。UI 不直接写 SwiftData，持久化和业务动作通过 command、repository、domain store 和 service 分层。`TimeTrackerStore` 是 `@MainActor @Observable` 门面；SwiftUI 使用 `@State` 持有它，并只在需要双向绑定时建立 `@Bindable`。
 
 ```text
 SwiftUI Feature
@@ -203,9 +221,21 @@ SwiftUI Feature
 - `Stores/Domains`：Task、Ledger、Checklist、Rollup、Analytics、Preference 等领域状态。
 - `Commands`：持久写入动作，例如开始计时、移动任务、切换 checklist、应用 Inbox 建议。
 - `Repositories`：SwiftData 查询与写入实现。
-- `Services`：可测试算法，例如时间聚合、forecast、timeline layout、CSV export、database maintenance。
+- `Services`：可测试算法，例如时间聚合、forecast、timeline layout 和 database maintenance。
 - `Models`：SwiftData 模型、schema、迁移计划、read models。
 - `SharedLiveActivity` / `timetrackerLiveActivityExtension`：Live Activity 共享模型和扩展 UI。
+
+本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics root/store、Settings sections、Task Detail sections、ledger infrastructure、facade configuration/lifecycle、Widget provider/view/support、Watch dashboard/timer/status/color，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、分域 snapshot restore 和 record DTO 都已分离。当前仍较集中的 Watch connectivity store、Home root composition 和大型 row 文件如实记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不以“所有文件都已单一职责”作泛化承诺。
+
+CloudKit 刷新由持久存储远程变更和 CloudKit import/export 事件驱动，并做短暂合并；前台激活仍会进行一次一致性刷新。没有常驻的 5 秒全量轮询。
+
+正常 mutation 使用增量 read model：Ledger 按相交日期范围更新 segment/session index，Checklist 按 task 更新，Rollup 消费 segment delta 并只重算任务与祖先；完整历史 worked seconds 保持精确，预测 pace 只使用最近 90 个本地日的活跃日平均。Analytics overview/task snapshot 按 range、真实 period start 和活动计时的分钟 bucket 缓存，不在 SwiftUI `body` 或历史视图时钟 tick 中重算。性能套件包含 50,000 segment 的单记录增量等价性与预算测试。
+
+同步冲突状态的 read-modify-write 由进程内递归锁和跨进程 POSIX file lock 串行化。Cloud export 使用 epoch、generation、fingerprint 与 bounded event checkpoint，乱序旧回调不能把较新的本机变更误标为已同步。
+
+一次用户写入由 store/system command 包在单个 `ModelContext` 原子 mutation 中；嵌套仓储步骤延迟到最后统一保存，失败会 rollback。保存完成后的界面刷新或同步快照失败会明确提示“更改已保存但刷新失败”，不会把已经提交的事实误报成回滚。
+
+Mac 只创建一个主 `Window`；系统 Settings 是独立场景，但与主窗口共享同一个应用级 store，避免重复安装同步 observers、自动 AI 工作和系统表面同步。
 
 详细文件定位请看 [Docs/ProjectMap.md](Docs/ProjectMap.md)。架构规则请看 [Docs/Architecture.md](Docs/Architecture.md) 和 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)。
 
@@ -214,8 +244,9 @@ SwiftUI Feature
 ```text
 timetracker/
   App/                 App entry, scenes, root views, build metadata, demo data
+  AppIntents/          Shortcuts and system intent entry points
   Commands/            Durable write actions and use-case-style handlers
-  Features/            Home, Inbox, Tasks, Pomodoro, Analytics, Settings, Sidebar, Inspector
+  Features/            Home, Inbox, Tasks, Ledger, Pomodoro, Analytics, Settings, Sidebar
   Models/              SwiftData models, schema versions, migration, read models
   Repositories/        SwiftData-backed repository implementations
   Services/            Analytics, forecasting, checklist, ledger, LLM, maintenance, tasks
@@ -224,6 +255,8 @@ timetracker/
   SharedUI/            Native-styled shared components and layout policies
 
 timetrackerLiveActivityExtension/
+timetrackerWidgetExtension/
+timetrackerWatchApp/
 SharedLiveActivity/
 timetrackerTests/
 timetrackerUITests/
@@ -244,6 +277,10 @@ DesignAssets/
 ```sh
 git config core.hooksPath .githooks
 ```
+
+工程使用 `CODE_SIGN_STYLE = Automatic` 和开发团队 `LT98S43NKA`。不要用 `CODE_SIGNING_ALLOWED=NO` 或清空团队配置绕过能力问题；需要 CloudKit、App Group、Widget、Watch 或 Live Activity 时，应保留真实 entitlement/profile 并修复签名原因。
+
+本轮只定向参考了 [Lakr233/FlowDown](https://github.com/Lakr233/FlowDown) commit `694ba5d` 的恢复、备份格式和测试组织模式，没有把它的第三方依赖栈带入工程；当前工程没有因该参考新增 Swift Package 依赖。取舍与未来触发条件见 [Agent 决策 AD-011](Docs/AgentDecisions.md)。
 
 ### 运行测试
 
@@ -273,6 +310,10 @@ xcodebuild -list -project timetracker.xcodeproj
 
 更多测试要求见 [Docs/Testing.md](Docs/Testing.md)。
 
+### 当前验证状态
+
+最终工作树的完整单元测试、完整 UI 测试、签名 Release 构建、模拟器截图与 SwiftUI Instruments 结果统一记录在 [Docs/Audit-2026-07-14.md](Docs/Audit-2026-07-14.md)。本轮源码和测试仍在收口时，历史批次的通过数不能替代最终复验；审核报告中的“待最终证据”标记清零前，不应把当前工作树描述为已通过全部发行门禁。
+
 ## 版本与构建信息
 
 版本号由仓库管理，而不是靠聊天上下文记忆。
@@ -283,6 +324,8 @@ xcodebuild -list -project timetracker.xcodeproj
 - `scripts/write_build_info_plist.sh` 会在 build phase 中写入 `AppBuildInfo.plist`，包含 branch、commit hash、dirty flag 和构建时间。
 
 详见 [Docs/Versioning.md](Docs/Versioning.md)。
+
+构建、安装、签名导出和版本维护脚本的完整说明见 [Docs/Scripts.md](Docs/Scripts.md)。
 
 ## 开发规则
 
@@ -304,11 +347,17 @@ xcodebuild -list -project timetracker.xcodeproj
 | 文档 | 内容 |
 | --- | --- |
 | [Docs/ProjectMap.md](Docs/ProjectMap.md) | 新人定位文件夹和模块的入口。 |
+| [Docs/UserGuide.md](Docs/UserGuide.md) | 当前用户操作、同步、导出和系统入口说明。 |
+| [Docs/CodeGuide.md](Docs/CodeGuide.md) | 当前代码地图、数据流、迁移和扩展方式。 |
+| [Docs/AgentDecisions.md](Docs/AgentDecisions.md) | Agent 与维护者必须遵守的架构和安全决策。 |
+| [Docs/PrivacyAndSecurity.md](Docs/PrivacyAndSecurity.md) | 数据存储、CloudKit、AI、Keychain 和扩展的数据边界。 |
+| [Docs/Audit-2026-07-14.md](Docs/Audit-2026-07-14.md) | 本轮全面审核的红色基线、重构结果、验证证据和真机门禁。 |
 | [Docs/Architecture.md](Docs/Architecture.md) | 领域模型、ledger 原则、forecast 规则和数据流。 |
-| [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md) | 当前架构状态和重构护栏。 |
-| [Docs/NativeUIPlan.md](Docs/NativeUIPlan.md) | 原生优先 UI 规则和屏幕级 UI 清理计划。 |
+| [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md) | 已完成的结构拆分、当前集中点和重构护栏。 |
+| [Docs/NativeUIPlan.md](Docs/NativeUIPlan.md) | 原生优先 UI 规则和未来截图/设备验收清单。 |
 | [Docs/NextDevelopmentPlan.md](Docs/NextDevelopmentPlan.md) | 后续产品方向和验收标准。 |
 | [Docs/Testing.md](Docs/Testing.md) | 测试命令、覆盖要求、性能验证和设备验证。 |
+| [Docs/Scripts.md](Docs/Scripts.md) | 版本递增、构建信息、签名导出和多平台安装脚本。 |
 | [Docs/Localization.md](Docs/Localization.md) | 多语言和文案治理。 |
 | [Docs/Versioning.md](Docs/Versioning.md) | 版本号、build number 和构建信息写入。 |
 
@@ -319,7 +368,7 @@ xcodebuild -list -project timetracker.xcodeproj
 - 打磨 Inbox 和 LLM 归类体验。
 - 改进 checklist forecast 的解释和可信度。
 - 继续优化 Analytics 的可读性和性能。
-- 增加 App Intents、Widget、Shortcuts 和 Apple Watch，但必须复用 command 层。
+- 稳定 App Intents、Shortcuts 和 Apple Watch 的测试；完成 Widget App Group 真机读写与刷新验证。
 - 为不同 TaskCategory 引入更合理的预测策略，例如工作线性外推、生活/健康更偏习惯统计。
 - 加强 iCloud schema 兼容测试，避免旧设备数据被新版本破坏。
 

@@ -2,69 +2,158 @@ import Foundation
 
 extension TimeTrackerStore {
     func presentManualTime(taskID: UUID? = nil) {
-        let target = taskID ?? selectedTaskID ?? tasks.first?.id
-        manualTimeDraft = ManualTimeDraft(taskID: target, tasks: tasks)
+        let availableTasks = tasks.filter(isTaskAvailableForTracking)
+        let requestedTask = taskID.flatMap { taskByID[$0] }
+        let selectedTask = selectedTaskID.flatMap { taskByID[$0] }
+        let target = requestedTask.flatMap { isTaskAvailableForTracking($0) ? $0.id : nil } ??
+            selectedTask.flatMap { isTaskAvailableForTracking($0) ? $0.id : nil } ??
+            availableTasks.first?.id
+        manualTimeDraft = ManualTimeDraft(taskID: target, tasks: availableTasks)
     }
 
-    func saveManualTimeDraft(_ draft: ManualTimeDraft) {
+    @discardableResult
+    func saveManualTimeDraft(_ draft: ManualTimeDraft) -> Bool {
         guard let taskID = draft.taskID else {
             fail(.taskSelectionRequired)
-            return
+            return false
         }
         guard draft.endedAt > draft.startedAt else {
             fail(.invalidTimeRange)
-            return
+            return false
+        }
+        guard trackableTaskIDs.contains(taskID) else {
+            fail(.taskTrackingUnavailable)
+            return false
         }
 
-        perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
+        let didSave = perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
             try ledgerCommandHandler.addManualTime(draft: draft, taskID: taskID, repository: requiredTimeRepository())
         }
-        manualTimeDraft = nil
+        if didSave {
+            manualTimeDraft = nil
+        }
+        return didSave
     }
 
     func presentEditSegment(_ segment: TimeSegment) {
         segmentEditorDraft = SegmentEditorDraft(segment: segment, note: note(for: segment))
     }
 
-    func saveSegmentDraft(_ draft: SegmentEditorDraft) {
+    @discardableResult
+    func saveSegmentDraft(_ draft: SegmentEditorDraft) -> Bool {
         guard let taskID = draft.taskID else {
             fail(.taskSelectionRequired)
-            return
+            return false
+        }
+        let existingSegment = ledgerDomainStore.segment(for: draft.segmentID)
+        let isRetainingUnavailableHistoricalAssignment =
+            existingSegment?.taskID == taskID && draft.isActive == false
+        guard trackableTaskIDs.contains(taskID) || isRetainingUnavailableHistoricalAssignment else {
+            fail(.taskTrackingUnavailable)
+            return false
+        }
+
+        let now = Date()
+        if draft.isActive, draft.startedAt > now {
+            fail(.activeTimerStartInFuture)
+            return false
         }
 
         let endedAt = draft.isActive ? nil : draft.endedAt
         if let endedAt, endedAt <= draft.startedAt {
             fail(.invalidTimeRange)
-            return
+            return false
         }
 
-        let newRange = StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt)
+        let effectiveEnd = endedAt ?? max(now, draft.startedAt)
+        let newRange = StoreInvalidationRange(start: draft.startedAt, end: effectiveEnd)
         var events: Set<StoreDomainEvent> = [
             .ledgerChanged(taskID: taskID, dateInterval: newRange, isVisible: false)
         ]
-        if let existingSegment = allSegments.first(where: { $0.id == draft.segmentID }) {
+        let activePomodoroSessionID = activePomodoroSessionID(for: existingSegment)
+        if let existingSegment {
             let oldRange = StoreInvalidationRange(
                 start: existingSegment.startedAt,
-                end: existingSegment.endedAt ?? draft.endedAt
+                end: existingSegment.endedAt ?? max(now, existingSegment.startedAt)
             )
             events.insert(.ledgerChanged(taskID: existingSegment.taskID, dateInterval: oldRange, isVisible: false))
         }
-
-        perform(events: events) {
-            try ledgerCommandHandler.updateSegment(draft: draft, taskID: taskID, repository: requiredTimeRepository())
-            selectedTaskID = taskID
+        if let activePomodoroSessionID,
+           let run = pomodoroRuns.first(where: { $0.sessionID == activePomodoroSessionID }) {
+            events.insert(.pomodoroChanged(runID: run.id, sessionID: activePomodoroSessionID, taskID: taskID))
         }
-        segmentEditorDraft = nil
+
+        let didSave = perform(events: events) {
+            try ledgerCommandHandler.updateSegment(
+                draft: draft,
+                taskID: taskID,
+                activePomodoroSessionID: activePomodoroSessionID,
+                pomodoroRuns: pomodoroRuns,
+                repository: requiredTimeRepository(),
+                context: modelContext
+            )
+        }
+        if didSave {
+            selectedTaskID = taskID
+            segmentEditorDraft = nil
+        }
+        return didSave
     }
 
-    func deleteSegment(_ segmentID: UUID) {
-        let existingSegment = allSegments.first { $0.id == segmentID }
+    @discardableResult
+    func deleteSegment(_ segmentID: UUID) -> Bool {
+        let existingSegment = ledgerDomainStore.segment(for: segmentID)
+        let activePomodoroSessionID = activePomodoroSessionID(for: existingSegment)
+        let now = Date()
         let range = existingSegment.map {
-            StoreInvalidationRange(start: $0.startedAt, end: $0.endedAt ?? Date())
+            StoreInvalidationRange(
+                start: $0.startedAt,
+                end: $0.endedAt ?? max(now, $0.startedAt)
+            )
         }
-        perform(event: .ledgerChanged(taskID: existingSegment?.taskID ?? segmentEditorDraft?.taskID, dateInterval: range, isVisible: existingSegment?.isActive == true)) {
-            try ledgerCommandHandler.softDeleteSegment(segmentID, repository: requiredTimeRepository())
+        var events: Set<StoreDomainEvent> = [
+            .ledgerChanged(
+                taskID: existingSegment?.taskID ?? segmentEditorDraft?.taskID,
+                dateInterval: range,
+                isVisible: existingSegment?.isActive == true
+            )
+        ]
+        if let activePomodoroSessionID,
+           let run = pomodoroRuns.first(where: { $0.sessionID == activePomodoroSessionID }) {
+            events.insert(
+                .pomodoroChanged(
+                    runID: run.id,
+                    sessionID: activePomodoroSessionID,
+                    taskID: run.taskID
+                )
+            )
         }
-        segmentEditorDraft = nil
+        let didDelete = perform(events: events) {
+            try ledgerCommandHandler.softDeleteSegment(
+                segmentID,
+                activePomodoroSessionID: activePomodoroSessionID,
+                pomodoroRuns: pomodoroRuns,
+                repository: requiredTimeRepository(),
+                context: modelContext
+            )
+        }
+        if didDelete {
+            segmentEditorDraft = nil
+        }
+        return didDelete
+    }
+
+    private func activePomodoroSessionID(for segment: TimeSegment?) -> UUID? {
+        guard let segment,
+              segment.source == .pomodoro,
+              segment.isActive,
+              pomodoroRuns.contains(where: {
+                  $0.sessionID == segment.sessionID &&
+                      $0.deletedAt == nil &&
+                      $0.endedAt == nil
+              }) else {
+            return nil
+        }
+        return segment.sessionID
     }
 }

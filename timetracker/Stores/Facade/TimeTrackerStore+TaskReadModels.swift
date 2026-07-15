@@ -2,26 +2,26 @@ import Foundation
 
 extension TimeTrackerStore {
     var recentTasks: [TaskNode] {
-        tasks.filter { $0.status == .active }.prefix(4).map { $0 }
+        tasks
+            .filter { $0.status == .active && isTaskAvailableForTracking($0) }
+            .sorted { lhs, rhs in
+                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .prefix(4)
+            .map { $0 }
     }
 
     func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3) -> [TaskNode] {
         guard limit > 0 else { return [] }
 
         let availableTasks = tasks.filter {
-            $0.deletedAt == nil &&
-            $0.status != .archived &&
+            isTaskAvailableForTracking($0) &&
             !excludedIDs.contains($0.id)
         }
-        let availableIDs = Set(availableTasks.map(\.id))
-        let segmentsByTaskID = Dictionary(grouping: allSegments.filter {
-            $0.deletedAt == nil && availableIDs.contains($0.taskID)
-        }, by: \.taskID)
-
         let rankedTasks = availableTasks.compactMap { task -> (task: TaskNode, count: Int, lastStartedAt: Date)? in
-            guard let segments = segmentsByTaskID[task.id], !segments.isEmpty else { return nil }
-            let lastStartedAt = segments.map(\.startedAt).max() ?? task.updatedAt
-            return (task, segments.count, lastStartedAt)
+            guard let activity = rollupDomainStore.activitySummary(for: task.id) else { return nil }
+            return (task, activity.segmentCount, activity.lastStartedAt)
         }
         .sorted { lhs, rhs in
             if lhs.count != rhs.count {
@@ -48,7 +48,7 @@ extension TimeTrackerStore {
     }
 
     func rootTasks() -> [TaskNode] {
-        childrenByParentID[nil] ?? []
+        (childrenByParentID[nil] ?? []).filter(isTaskVisible)
     }
 
     func taskCategory(for id: UUID?) -> TaskCategory? {
@@ -74,11 +74,49 @@ extension TimeTrackerStore {
     }
 
     func children(of task: TaskNode) -> [TaskNode] {
-        childrenByParentID[task.id] ?? []
+        (childrenByParentID[task.id] ?? []).filter(isTaskVisible)
     }
 
     func validParentTasks(for taskID: UUID?) -> [TaskNode] {
         taskTreeService.validParentTasks(for: taskID, tasks: tasks)
+            .filter(isTaskAvailableForTracking)
+    }
+
+    func isTaskAvailableForTracking(_ task: TaskNode) -> Bool {
+        trackableTaskIDs.contains(task.id)
+    }
+
+    func isTaskVisible(_ task: TaskNode) -> Bool {
+        visibleTaskIDs.contains(task.id)
+    }
+
+    func completedWorkBlockers(for task: TaskNode) -> [TaskNode] {
+        taskTrackingAvailabilityService
+            .completedBlockingTaskIDs(for: task.id, tasks: tasks)
+            .compactMap { taskByID[$0] }
+    }
+
+    func completedWorkBlocker(for task: TaskNode) -> TaskNode? {
+        completedWorkBlockers(for: task).last
+    }
+
+    func preferredTaskIDForSelection() -> UUID? {
+        activeSegments.first(where: { taskByID[$0.taskID] != nil })?.taskID ??
+            tasks.first(where: isTaskAvailableForTracking)?.id
+    }
+
+    func hasActiveTimer(inTaskSubtree taskID: UUID) -> Bool {
+        let subtreeIDs = taskAndDescendantIDs(for: taskID)
+        if activeSegments.contains(where: { subtreeIDs.contains($0.taskID) }) {
+            return true
+        }
+        return pomodoroRuns.contains { run in
+            subtreeIDs.contains(run.taskID) &&
+                run.deletedAt == nil &&
+                run.endedAt == nil &&
+                run.state != .completed &&
+                run.state != .cancelled
+        }
     }
 
     func taskTreeRows(expandedTaskIDs: Set<UUID>) -> [TaskTreeRowModel] {
@@ -123,23 +161,34 @@ extension TimeTrackerStore {
         taskPathByID[task.id] ?? task.title
     }
 
+    func parentPath(for task: TaskNode) -> String? {
+        guard let path = taskParentPathByID[task.id], !path.isEmpty else { return nil }
+        return path
+    }
+
     func rebuildTaskIndexes() {
         let indexes = taskTreeService.indexes(tasks: tasks)
         taskByID = indexes.taskByID
         childrenByParentID = indexes.childrenByParentID
         taskPathByID = indexes.taskPathByID
         taskParentPathByID = indexes.taskParentPathByID
+        let eligibility = taskTrackingAvailabilityService.eligibility(tasks: tasks)
+        visibleTaskIDs = eligibility.visibleTaskIDs
+        trackableTaskIDs = eligibility.trackableTaskIDs
+        rebuildForecastEligibilityIndex()
     }
 
     func rebuildTaskCategoryIndexes() {
-        taskCategoryByID = taskCategories.filter { $0.deletedAt == nil }.latestByID()
-        taskCategoryIDByRootTaskID = taskCategoryAssignments
+        taskCategoryByID = taskCategories.visibleDeduplicatedByID().latestByID()
+        let logicalWinners = taskCategoryAssignments
             .deduplicatedByID()
-            .filter { $0.deletedAt == nil }
-            .sorted { $0.updatedAt < $1.updatedAt }
-            .reduce(into: [:]) { result, assignment in
-                result[assignment.taskID] = assignment.categoryID
-            }
+            .logicalWinnersByTaskID()
+        let categoryIDs: [UUID: UUID] = logicalWinners.compactMapValues { assignment -> UUID? in
+            guard assignment.deletedAt == nil else { return nil }
+            return assignment.categoryID
+        }
+        taskCategoryIDByRootTaskID = categoryIDs
+        rebuildForecastEligibilityIndex()
     }
 
     func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
@@ -147,10 +196,14 @@ extension TimeTrackerStore {
     }
 
     func forecastEligibleTaskIDs() -> Set<UUID> {
-        rootTasks().reduce(into: Set<UUID>()) { result, root in
+        forecastEligibleTaskIDCache
+    }
+
+    private func rebuildForecastEligibilityIndex() {
+        forecastEligibleTaskIDCache = rootTasks().reduce(into: Set<UUID>()) { result, root in
             let includesInForecast = taskCategory(for: taskCategoryIDByRootTaskID[root.id])?.includesInForecast ?? true
             guard includesInForecast else { return }
-            result.formUnion(taskAndDescendantIDs(for: root.id))
+            result.formUnion(taskAndDescendantIDs(for: root.id).intersection(trackableTaskIDs))
         }
     }
 }

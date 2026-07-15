@@ -103,32 +103,6 @@ struct InboxLayoutPolicy {
         isCompact ? 8 : 10
     }
 
-    var rowBaseHeight: CGFloat {
-        isCompact ? 78 : 82
-    }
-
-    var suggestedRowHeight: CGFloat {
-        isCompact ? 142 : 132
-    }
-
-    func rowHeight(forTitle title: String, isCompleted: Bool, hasSupplementaryContent: Bool) -> CGFloat {
-        let titleExtra = CGFloat(max(0, estimatedTitleLineCount(for: title) - 1)) * (isCompact ? 18 : 20)
-        if hasSupplementaryContent && !isCompleted {
-            return suggestedRowHeight + titleExtra
-        }
-        return rowBaseHeight + titleExtra
-    }
-
-    private func estimatedTitleLineCount(for title: String) -> Int {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return 1 }
-
-        let characterBudget = isCompact ? 26 : 78
-        let weightedCount = trimmed.reduce(0) { total, character in
-            total + (character.isASCII ? 1 : 2)
-        }
-        return min(5, max(1, Int(ceil(Double(weightedCount) / Double(characterBudget)))))
-    }
 }
 
 struct TaskListLayoutPolicy {
@@ -165,12 +139,12 @@ struct SplitColumnLayoutPolicy {
 
     static let iPad = SplitColumnLayoutPolicy(
         sidebar: ColumnWidth(min: 240, ideal: 260, max: 300),
-        detail: ColumnWidth(min: 560, ideal: 780, max: nil)
+        detail: ColumnWidth(min: 480, ideal: 760, max: nil)
     )
 
     static let mac = SplitColumnLayoutPolicy(
         sidebar: ColumnWidth(min: 220, ideal: 240, max: 270),
-        detail: ColumnWidth(min: 520, ideal: 760, max: nil)
+        detail: ColumnWidth(min: 420, ideal: 720, max: nil)
     )
 }
 

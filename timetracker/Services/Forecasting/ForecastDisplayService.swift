@@ -21,44 +21,39 @@ struct ForecastDisplayService {
             items.append(item)
         }
 
-        func visit(_ task: TaskNode) {
+        var pending = Array(roots.reversed())
+        var visited = Set<UUID>()
+        while let task = pending.popLast() {
+            guard visited.insert(task.id).inserted else { continue }
+            let children = (childrenByParent[task.id] ?? []).sorted(by: taskSort)
             guard isVisible(task), let rollup = rollups[task.id] else {
-                for child in (childrenByParent[task.id] ?? []).sorted(by: taskSort) {
-                    visit(child)
-                }
-                return
+                pending.append(contentsOf: children.reversed())
+                continue
             }
 
             if rollup.isDisplayableForecast {
                 if rollup.checklistProgress.totalCount > 0 {
                     append(ForecastDisplayItem(taskID: task.id, rollup: rollup))
-                    return
+                    continue
                 }
 
                 let sourceIDs = rollup.forecastSourceTaskIDs.filter { sourceID in
-                    guard let source = taskByID[sourceID] else { return false }
-                    return isVisible(source)
+                    isHierarchyVisible(sourceID, taskByID: taskByID)
                 }
-                if sourceIDs.count == 1,
+                if rollup.forecastSourceTaskCount == 1,
                    let sourceID = sourceIDs.first,
                    let sourceTask = taskByID[sourceID],
                    let sourceRollup = rollups[sourceTask.id],
-                   sourceRollup.isDisplayableForecast {
+                    sourceRollup.isDisplayableForecast {
                     append(ForecastDisplayItem(taskID: sourceTask.id, rollup: sourceRollup))
-                    return
+                    continue
                 }
 
                 append(ForecastDisplayItem(taskID: task.id, rollup: rollup))
-                return
+                continue
             }
 
-            for child in (childrenByParent[task.id] ?? []).sorted(by: taskSort) {
-                visit(child)
-            }
-        }
-
-        for root in roots {
-            visit(root)
+            pending.append(contentsOf: children.reversed())
         }
 
         let sorted = items.sorted {
@@ -77,7 +72,10 @@ struct ForecastDisplayService {
 
     func displayItem(for taskID: UUID, tasks: [TaskNode], rollups: [UUID: TaskRollup]) -> ForecastDisplayItem? {
         let taskByID = tasks.latestByID()
-        guard let task = taskByID[taskID], isVisible(task), let rollup = rollups[taskID] else { return nil }
+        guard isHierarchyVisible(taskID, taskByID: taskByID),
+              let rollup = rollups[taskID] else {
+            return nil
+        }
         if rollup.isDisplayableForecast, rollup.checklistProgress.totalCount > 0 {
             return ForecastDisplayItem(taskID: taskID, rollup: rollup)
         }
@@ -85,12 +83,11 @@ struct ForecastDisplayService {
             return nil
         }
         if rollup.isDisplayableForecast,
-           rollup.forecastSourceTaskIDs.count > 1 {
+           rollup.forecastSourceTaskCount > 1 {
             return ForecastDisplayItem(taskID: taskID, rollup: rollup)
         }
         if let sourceID = rollup.forecastSourceTaskIDs.first,
-           let source = taskByID[sourceID],
-           isVisible(source),
+           isHierarchyVisible(sourceID, taskByID: taskByID),
            let sourceRollup = rollups[sourceID],
            sourceRollup.isDisplayableForecast {
             return ForecastDisplayItem(taskID: sourceID, rollup: sourceRollup)
@@ -104,6 +101,20 @@ struct ForecastDisplayService {
 
     private func isVisible(_ task: TaskNode) -> Bool {
         task.deletedAt == nil && task.status != .archived && task.status != .completed
+    }
+
+    private func isHierarchyVisible(_ taskID: UUID, taskByID: [UUID: TaskNode]) -> Bool {
+        var currentID: UUID? = taskID
+        var visited = Set<UUID>()
+        while let candidateID = currentID {
+            guard visited.insert(candidateID).inserted,
+                  let task = taskByID[candidateID],
+                  isVisible(task) else {
+                return false
+            }
+            currentID = task.parentID
+        }
+        return true
     }
 
     private func taskSort(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {

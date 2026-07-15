@@ -15,6 +15,29 @@ extension TaskRollupService {
         ownWorkedSeconds: Int,
         progress: ChecklistProgress
     ) -> OwnChecklistForecast {
+        if task.status == .completed ||
+            (progress.totalCount > 0 && progress.completedCount == progress.totalCount) {
+            return OwnChecklistForecast(
+                estimatedTotalSeconds: max(ownWorkedSeconds, 0),
+                remainingSeconds: 0,
+                state: .completed,
+                confidence: .high,
+                reason: AppStrings.localized("forecast.reason.completed"),
+                contributesSource: true
+            )
+        }
+
+        if let explicitEstimate = TaskEstimatePolicy.normalized(seconds: task.estimatedSeconds) {
+            return OwnChecklistForecast(
+                estimatedTotalSeconds: max(explicitEstimate, ownWorkedSeconds),
+                remainingSeconds: max(0, explicitEstimate - ownWorkedSeconds),
+                state: .ready,
+                confidence: .medium,
+                reason: AppStrings.localized("forecast.reason.explicitEstimate"),
+                contributesSource: true
+            )
+        }
+
         guard progress.totalCount > 0 else {
             return OwnChecklistForecast(
                 estimatedTotalSeconds: nil,
@@ -23,17 +46,6 @@ extension TaskRollupService {
                 confidence: .none,
                 reason: AppStrings.localized("forecast.reason.needsChecklist"),
                 contributesSource: false
-            )
-        }
-
-        if task.status == .completed || progress.completedCount == progress.totalCount {
-            return OwnChecklistForecast(
-                estimatedTotalSeconds: max(ownWorkedSeconds, 0),
-                remainingSeconds: 0,
-                state: .completed,
-                confidence: .high,
-                reason: AppStrings.localized("forecast.reason.completed"),
-                contributesSource: true
             )
         }
 
@@ -78,13 +90,17 @@ extension TaskRollupService {
         )
     }
 
-    func sourceLabel(for sourceIDs: [UUID], ownTaskID: UUID, hasOwnChecklist: Bool) -> String? {
-        let uniqueCount = sourceIDs.count
-        guard uniqueCount > 0 else { return nil }
-        if hasOwnChecklist, uniqueCount == 1, sourceIDs.first == ownTaskID {
+    func sourceLabel(
+        sourceCount: Int,
+        sampledSourceIDs: [UUID],
+        ownTaskID: UUID,
+        hasOwnSource: Bool
+    ) -> String? {
+        guard sourceCount > 0 else { return nil }
+        if hasOwnSource, sourceCount == 1, sampledSourceIDs.first == ownTaskID {
             return AppStrings.localized("forecast.source.currentTask")
         }
-        return String(format: AppStrings.localized("forecast.source.aggregate"), uniqueCount)
+        return String(format: AppStrings.localized("forecast.source.aggregate"), sourceCount)
     }
 
     func orderedUnique(_ ids: [UUID]) -> [UUID] {
@@ -96,38 +112,6 @@ extension TaskRollupService {
         guard let remainingSeconds, remainingSeconds > 0 else { return 0 }
         guard let daily = dailyAverageSeconds, daily > 0 else { return nil }
         return max(0.1, Double(remainingSeconds) / Double(daily))
-    }
-
-    func historicalDailyPace(
-        for taskIDs: Set<UUID>,
-        segmentsByTaskID: [UUID: [TimeSegment]],
-        now: Date,
-        calendar: Calendar = .current
-    ) -> (averageSeconds: Int, activeDayCount: Int)? {
-        guard !taskIDs.isEmpty else { return nil }
-
-        var dayTotals: [Date: Int] = [:]
-        for taskID in taskIDs {
-            for segment in segmentsByTaskID[taskID] ?? [] {
-                let end = segment.endedAt ?? now
-                guard end > segment.startedAt else { continue }
-
-                var cursor = calendar.startOfDay(for: segment.startedAt)
-                while cursor < end {
-                    guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-                    let sliceStart = max(segment.startedAt, cursor)
-                    let sliceEnd = min(end, nextDay)
-                    if sliceEnd > sliceStart {
-                        dayTotals[cursor, default: 0] += Int(sliceEnd.timeIntervalSince(sliceStart))
-                    }
-                    cursor = nextDay
-                }
-            }
-        }
-
-        let activeTotals = dayTotals.values.filter { $0 > 0 }
-        guard !activeTotals.isEmpty else { return nil }
-        return (activeTotals.reduce(0, +) / activeTotals.count, activeTotals.count)
     }
 
     func confidence(ownForecast: OwnChecklistForecast?, childRollups: [TaskRollup], estimate: Int?) -> ForecastConfidence {

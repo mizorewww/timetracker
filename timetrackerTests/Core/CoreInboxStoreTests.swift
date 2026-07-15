@@ -1,9 +1,267 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
 @Suite(.serialized)
 struct CoreInboxStoreTests {
+    @Test @MainActor
+    func automaticChecklistVisualSuggestionsKeepAThreeRequestPeak() async throws {
+        let probe = LLMSuggestionConcurrencyProbe()
+        let service = LLMChecklistVisualSuggestionService { request in
+            await probe.beginRequest()
+            do {
+                try await Task.sleep(for: .milliseconds(80))
+            } catch {
+                await probe.endRequest()
+                throw error
+            }
+            await probe.endRequest()
+
+            guard let url = request.url,
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw InboxSuggestionTestError.invalidResponse
+            }
+            return (Data("{\"choices\":[]}".utf8), response)
+        }
+        let store = TimeTrackerStore(
+            llmCredentialStore: InboxTestCredentialStore(),
+            inboxSuggestionService: LLMInboxSuggestionService(),
+            checklistVisualSuggestionService: service
+        )
+        let task = TaskNode(title: "Study", parentID: nil, deviceID: "test")
+        let items = (0..<8).map {
+            ChecklistItem(taskID: task.id, title: "Checklist item \($0)", deviceID: "test")
+        }
+        store.tasks = [task]
+        store.checklistItems = items
+        store.preferences.llmEndpoint = "https://example.test/v1"
+        store.preferences.llmAPIKey = "test-key"
+        store.preferences.llmSelectedModel = "test-model"
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+
+        store.autoSuggestChecklistVisualsIfNeeded()
+
+        for _ in 0..<100 {
+            if await probe.completedRequestCount == items.count,
+               store.checklistVisualSuggestionInFlightIDs.isEmpty {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        #expect(await probe.peakRequestCount == 3)
+        #expect(await probe.completedRequestCount == items.count)
+        #expect(store.checklistVisualSuggestionInFlightIDs.isEmpty)
+    }
+
+    @Test @MainActor
+    func allInboxSuggestionEntryPointsShareTheThreeRequestLimit() async throws {
+        let probe = LLMSuggestionConcurrencyProbe()
+        let service = LLMInboxSuggestionService { request in
+            await probe.beginRequest()
+            do {
+                try await Task.sleep(for: .milliseconds(80))
+            } catch {
+                await probe.endRequest()
+                throw error
+            }
+            await probe.endRequest()
+
+            guard let url = request.url,
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw InboxSuggestionTestError.invalidResponse
+            }
+            return (Data("{\"choices\":[]}".utf8), response)
+        }
+        let store = TimeTrackerStore(
+            llmCredentialStore: InboxTestCredentialStore(),
+            inboxSuggestionService: service
+        )
+        let task = TaskNode(title: "Study", parentID: nil, deviceID: "test")
+        let items = (0..<8).map { InboxItem(title: "Inbox item \($0)", deviceID: "test") }
+        store.tasks = [task]
+        store.inboxItems = items
+        store.preferences.llmEndpoint = "https://example.test/v1"
+        store.preferences.llmAPIKey = "test-key"
+        store.preferences.llmSelectedModel = "test-model"
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+
+        for item in items {
+            store.suggestInboxItem(item, showsErrors: false)
+        }
+        items[0].title = "Inbox item 0, edited while generating"
+        store.suggestInboxItem(items[0], showsErrors: false)
+        let expectedRequestCount = items.count + 1
+
+        for _ in 0..<100 {
+            if await probe.completedRequestCount == expectedRequestCount,
+               store.inboxSuggestionInFlightIDs.isEmpty,
+               store.inboxSuggestionPendingIDs.isEmpty {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        #expect(await probe.peakRequestCount == 3)
+        #expect(await probe.completedRequestCount == expectedRequestCount)
+        #expect(store.inboxSuggestionInFlightIDs.isEmpty)
+        #expect(store.inboxSuggestionPendingIDs.isEmpty)
+    }
+
+    @Test @MainActor
+    func automaticSuggestionsDoNotSendUserTextWithoutDeviceConsent() async throws {
+        let probe = LLMSuggestionConcurrencyProbe()
+        let service = LLMInboxSuggestionService { request in
+            await probe.beginRequest()
+            await probe.endRequest()
+            guard let url = request.url,
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw InboxSuggestionTestError.invalidResponse
+            }
+            return (Data("{\"choices\":[]}".utf8), response)
+        }
+        let store = TimeTrackerStore(
+            llmCredentialStore: InboxTestCredentialStore(),
+            inboxSuggestionService: service
+        )
+        let task = TaskNode(title: "Private task", parentID: nil, deviceID: "test")
+        let item = InboxItem(title: "Private inbox text", deviceID: "test")
+        store.tasks = [task]
+        store.inboxItems = [item]
+        store.preferences.llmEndpoint = "https://example.test/v1"
+        store.preferences.llmAPIKey = "test-key"
+        store.preferences.llmSelectedModel = "test-model"
+
+        store.autoSuggestInboxItemsIfNeeded()
+        store.suggestInboxItem(item, showsErrors: false)
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(store.preferences.llmAutomaticSuggestionsEnabled == false)
+        #expect(await probe.completedRequestCount == 0)
+    }
+
+    @Test @MainActor
+    func staleLLMFailuresAreDiscardedAfterTheConfigurationChanges() async throws {
+        let inboxService = LLMInboxSuggestionService { _ in
+            try await Task.sleep(for: .milliseconds(60))
+            throw InboxSuggestionTestError.invalidResponse
+        }
+        let checklistService = LLMChecklistVisualSuggestionService { _ in
+            try await Task.sleep(for: .milliseconds(60))
+            throw InboxSuggestionTestError.invalidResponse
+        }
+        let store = TimeTrackerStore(
+            llmCredentialStore: InboxTestCredentialStore(),
+            inboxSuggestionService: inboxService,
+            checklistVisualSuggestionService: checklistService
+        )
+        let task = TaskNode(title: "Private task", parentID: nil, deviceID: "test")
+        let inboxItem = InboxItem(title: "Private inbox text", deviceID: "test")
+        let checklistItem = ChecklistItem(
+            taskID: task.id,
+            title: "Private checklist text",
+            deviceID: "test"
+        )
+        store.tasks = [task]
+        store.inboxItems = [inboxItem]
+        store.checklistItems = [checklistItem]
+        store.preferences.llmEndpoint = "https://example.test/v1"
+        store.preferences.llmAPIKey = "old-key"
+        store.preferences.llmSelectedModel = "old-model"
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+
+        store.suggestInboxItem(inboxItem, showsErrors: false)
+        store.autoSuggestChecklistVisualsIfNeeded()
+        try await Task.sleep(for: .milliseconds(10))
+        store.preferences.llmSelectedModel = "new-model"
+        store.preferences.llmAutomaticSuggestionsEnabled = false
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(store.inboxSuggestionFailureByItemID[inboxItem.id] == nil)
+        #expect(store.checklistVisualSuggestionFailureFingerprintByItemID[checklistItem.id] == nil)
+        #expect(store.inboxSuggestionInFlightIDs.isEmpty)
+        #expect(store.checklistVisualSuggestionInFlightIDs.isEmpty)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
+    func delayedChecklistVisualSuggestionCannotWriteIntoAnArchivedSubtree() async throws {
+        let service = LLMChecklistVisualSuggestionService { request in
+            try await Task.sleep(for: .milliseconds(60))
+            let payload = """
+            {
+              "choices": [
+                {
+                  "message": {
+                    "content": "{\\"iconName\\":\\"paintbrush\\",\\"colorHex\\":\\"16A34A\\",\\"reason\\":\\"design work\\"}"
+                  }
+                }
+              ]
+            }
+            """
+            guard let url = request.url,
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw InboxSuggestionTestError.invalidResponse
+            }
+            return (Data(payload.utf8), response)
+        }
+        let context = try makeTestContext()
+        let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
+        let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
+        let item = ChecklistItem(taskID: child.id, title: "Polish spacing", deviceID: "test")
+        context.insert(parent)
+        context.insert(child)
+        context.insert(item)
+        try context.save()
+
+        let store = TimeTrackerStore(
+            llmCredentialStore: InboxTestCredentialStore(),
+            inboxSuggestionService: LLMInboxSuggestionService(),
+            checklistVisualSuggestionService: service
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.tasks = [parent, child]
+        store.checklistItems = [item]
+        store.preferences.llmEndpoint = "https://example.test/v1"
+        store.preferences.llmAPIKey = "test-key"
+        store.preferences.llmSelectedModel = "test-model"
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+
+        store.autoSuggestChecklistVisualsIfNeeded()
+        try await Task.sleep(for: .milliseconds(10))
+        parent.status = .archived
+        store.tasks = [parent, child]
+
+        for _ in 0..<50 where !store.checklistVisualSuggestionInFlightIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(store.checklistVisualSuggestionInFlightIDs.isEmpty)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
+        #expect(store.errorMessage == nil)
+    }
+
     @Test @MainActor
     func inboxSuggestionStateHidesStaleSuggestionsAndAllowsRegeneration() {
         let service = InboxSuggestionStateService()
@@ -101,6 +359,33 @@ struct CoreInboxStoreTests {
     }
 
     @Test @MainActor
+    func staleSuggestionCannotWriteIntoAChildOfAnArchivedTask() {
+        let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
+        let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
+        parent.status = .archived
+        let item = InboxItem(title: "Should stay in inbox", deviceID: "test")
+        let suggestion = InboxSuggestion(
+            inboxItemID: item.id,
+            taskID: child.id,
+            reason: "Generated before archive",
+            iconName: "checkmark.circle",
+            colorHex: "1677FF",
+            titleSnapshot: item.title,
+            deviceID: "test"
+        )
+        let store = TimeTrackerStore()
+        store.tasks = [parent, child]
+        store.inboxItems = [item]
+        store.inboxSuggestions = [suggestion]
+
+        store.applyInboxSuggestion(item)
+
+        #expect(item.deletedAt == nil)
+        #expect(store.checklistItems.isEmpty)
+        #expect(store.errorMessage == AppStrings.localized("inbox.suggestion.error.noValidTask"))
+    }
+
+    @Test @MainActor
     func itemScopedSuggestionRefreshReplacesOnlyAffectedInboxSuggestion() {
         let affectedItemID = UUID()
         let unchangedItemID = UUID()
@@ -156,4 +441,29 @@ struct CoreInboxStoreTests {
         #expect(store.suggestions.first { $0.inboxItemID == unchangedItemID }?.reason == "Keep")
         #expect(store.suggestions.contains { $0.id == oldAffectedSuggestion.id } == false)
     }
+}
+
+private actor LLMSuggestionConcurrencyProbe {
+    private var activeRequestCount = 0
+    private(set) var peakRequestCount = 0
+    private(set) var completedRequestCount = 0
+
+    func beginRequest() {
+        activeRequestCount += 1
+        peakRequestCount = max(peakRequestCount, activeRequestCount)
+    }
+
+    func endRequest() {
+        activeRequestCount -= 1
+        completedRequestCount += 1
+    }
+}
+
+private final class InboxTestCredentialStore: LLMCredentialStoring {
+    func readAPIKey() throws -> String? { nil }
+    func writeAPIKey(_ apiKey: String) throws {}
+}
+
+private enum InboxSuggestionTestError: Error {
+    case invalidResponse
 }

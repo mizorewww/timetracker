@@ -4,12 +4,12 @@ import UIKit
 #endif
 
 struct ActionStack: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     var buttonHeight: CGFloat?
     var spacing: CGFloat = 12
+    @State private var isTaskPickerPresented = false
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var isTaskPickerPresented = false
 
     private var isCompactPhone: Bool {
         SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
@@ -18,17 +18,28 @@ struct ActionStack: View {
 
     var body: some View {
         actionLayout
-#if os(iOS)
         .sheet(isPresented: $isTaskPickerPresented) {
-            NavigationStack {
-                TaskStartPicker(store: store) {
-                    isTaskPickerPresented = false
-                }
-            }
-            .presentationDetents([.medium, .large])
-            .presentationBackground(Color(uiColor: .systemGroupedBackground))
+            taskPicker
         }
-#endif
+    }
+
+    @ViewBuilder
+    private var taskPicker: some View {
+        #if os(iOS)
+        NavigationStack {
+            TaskStartPicker(store: store) {
+                isTaskPickerPresented = false
+            }
+        }
+        .presentationDetents([.medium, .large])
+        #else
+        NavigationStack {
+            TaskStartPicker(store: store) {
+                isTaskPickerPresented = false
+            }
+        }
+        .frame(minWidth: 420, minHeight: 520)
+        #endif
     }
 
     @ViewBuilder
@@ -57,15 +68,7 @@ struct ActionStack: View {
 
     private var startButton: some View {
         Button {
-#if os(iOS)
-            if isCompactPhone {
-                isTaskPickerPresented = true
-            } else {
-                store.startSelectedTask()
-            }
-#else
-            store.startSelectedTask()
-#endif
+            isTaskPickerPresented = true
         } label: {
             AppActionLabel(title: AppStrings.startTimer, systemImage: "play.fill", fixedHeight: buttonHeight)
         }
@@ -86,45 +89,107 @@ struct ActionStack: View {
     }
 }
 
-#if os(iOS)
 struct TaskStartPicker: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let onDone: () -> Void
+    @State private var searchText = ""
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter { $0.deletedAt == nil && $0.status != .archived }
+        store.tasks.filter(store.isTaskAvailableForTracking)
+    }
+
+    private var filteredTasks: [TaskNode] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.isEmpty == false else { return availableTasks }
+        return availableTasks.filter { task in
+            task.title.localizedCaseInsensitiveContains(query) ||
+                store.path(for: task).localizedCaseInsensitiveContains(query)
+        }
     }
 
     var body: some View {
-        List {
-            Section {
-                ForEach(availableTasks, id: \.id) { task in
+        Group {
+            if filteredTasks.isEmpty {
+                ContentUnavailableView {
+                    Label(
+                        availableTasks.isEmpty
+                            ? AppStrings.localized("tasks.empty.title")
+                            : AppStrings.localized("tasks.empty.search"),
+                        systemImage: availableTasks.isEmpty ? "checklist" : "magnifyingglass"
+                    )
+                } description: {
+                    Text(
+                        availableTasks.isEmpty
+                            ? AppStrings.localized("tasks.empty.description")
+                            : AppStrings.localized("timer.search.empty.description")
+                    )
+                } actions: {
                     Button {
-                        store.startTask(task)
-                        onDone()
+                        createTask()
                     } label: {
-                        TaskStartPickerRow(
-                            task: task,
-                            path: store.path(for: task),
-                            isRunning: store.activeSegment(for: task.id) != nil
-                        )
+                        Label(AppStrings.newTask, systemImage: "plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else {
+                List {
+                    Section {
+                        ForEach(filteredTasks, id: \.id) { task in
+                            let activeSegment = store.activeSegment(for: task.id)
+                            Button {
+                                if let activeSegment {
+                                    store.stop(segment: activeSegment)
+                                } else {
+                                    store.startTask(task)
+                                }
+                                onDone()
+                            } label: {
+                                TaskStartPickerRow(
+                                    task: task,
+                                    path: store.path(for: task),
+                                    isRunning: activeSegment != nil
+                                )
+                            }
+                            .accessibilityHint(AppStrings.localized(
+                                activeSegment == nil ? "timer.task.startHint" : "timer.task.stopHint"
+                            ))
+                        }
+                    } header: {
+                        Text(.app("timer.chooseTaskHeader"))
+                    } footer: {
+                        Text(.app("timer.chooseTaskFooter"))
                     }
                 }
-            } header: {
-                Text(.app("timer.chooseTaskHeader"))
-            } footer: {
-                Text(.app("timer.chooseTaskFooter"))
+                #if os(iOS)
+                .listStyle(.insetGrouped)
+                #else
+                .listStyle(.inset)
+                #endif
+                .scrollContentBackground(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
+        #if os(iOS)
         .background(Color(uiColor: .systemGroupedBackground))
+        #else
+        .background(AppColors.background)
+        #endif
+        .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
         .navigationTitle(AppStrings.startTimer)
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppStrings.cancel, action: onDone)
             }
+        }
+    }
+
+    private func createTask() {
+        onDone()
+        Task { @MainActor in
+            await Task.yield()
+            store.presentNewTask()
         }
     }
 }
@@ -152,4 +217,3 @@ private struct TaskStartPickerRow: View {
         }
     }
 }
-#endif

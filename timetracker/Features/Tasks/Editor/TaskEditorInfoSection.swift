@@ -1,15 +1,24 @@
 import SwiftUI
 
 struct TaskInfoEditorSection: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
     let colors: [String]
+    let parentCandidates: [TaskNode]
+    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
         Section {
             TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
-            TaskStatusPicker(selection: $draft.status)
+                .focused($isTitleFocused)
+            TaskStatusPicker(
+                selection: $draft.status,
+                disabledStatuses: hasActiveTimerInSubtree && originalTask?.status != .completed
+                    ? [.completed]
+                    : []
+            )
             parentPicker
+                .disabled(isParentSelectionLocked)
             if draft.parentID == nil {
                 categoryPicker
             }
@@ -21,7 +30,27 @@ struct TaskInfoEditorSection: View {
         } header: {
             Text(AppStrings.localized("editor.task.info"))
         } footer: {
-            inheritedCategoryHint
+            VStack(alignment: .leading, spacing: 6) {
+                inheritedCategoryHint
+                if isParentSelectionLocked {
+                    Label(
+                        AppStrings.localized("task.parent.completedLocked"),
+                        systemImage: "lock.fill"
+                    )
+                }
+                if hasActiveTimerInSubtree, originalTask?.status != .completed {
+                    Label(
+                        AppStrings.localized("task.action.complete.stopFirst"),
+                        systemImage: "stop.circle"
+                    )
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .task {
+            guard draft.taskID == nil else { return }
+            isTitleFocused = true
         }
     }
 
@@ -56,10 +85,24 @@ struct TaskInfoEditorSection: View {
         return store.effectiveCategory(for: parent)
     }
 
+    private var originalTask: TaskNode? {
+        draft.taskID.flatMap { store.task(for: $0) }
+    }
+
+    private var isParentSelectionLocked: Bool {
+        guard let originalTask else { return false }
+        return !store.isTaskAvailableForTracking(originalTask)
+    }
+
+    private var hasActiveTimerInSubtree: Bool {
+        guard let taskID = draft.taskID else { return false }
+        return store.hasActiveTimer(inTaskSubtree: taskID)
+    }
+
     private var parentPicker: some View {
         Picker(AppStrings.localized("editor.task.parent"), selection: $draft.parentID) {
             Text(.app("editor.task.rootLevel")).tag(Optional<UUID>.none)
-            ForEach(store.validParentTasks(for: draft.taskID), id: \.id) { task in
+            ForEach(parentCandidates, id: \.id) { task in
                 Text(indentedTitle(task)).tag(Optional(task.id))
             }
         }

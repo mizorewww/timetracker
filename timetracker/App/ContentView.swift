@@ -4,49 +4,72 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var store = TimeTrackerStore()
+    @State private var store: TimeTrackerStore
     @State private var dismissedSyncConflictID: UUID?
+    @State private var pendingDeepLinks = PendingDeepLinkQueue()
+    @State private var hasFinishedInitialConfiguration = false
+    #if os(iOS) && canImport(WatchConnectivity)
+    @State private var watchCommandRegistrationID: UUID?
+    #endif
+
+    init() {
+        _store = State(initialValue: TimeTrackerStore())
+    }
+
+    init(store: TimeTrackerStore) {
+        _store = State(initialValue: store)
+    }
 
     var body: some View {
+        @Bindable var bindableStore = store
         Group {
-            #if os(macOS)
-            DesktopRootView(store: store)
-            #else
-            iOSRootView(store: store)
-            #endif
+            if AppCloudSync.allowsUserWrites {
+                #if os(macOS)
+                DesktopRootView(store: store)
+                #else
+                iOSRootView(store: store)
+                #endif
+            } else {
+                PersistenceRecoveryView(safety: AppCloudSync.persistenceWriteSafety)
+            }
         }
         .task {
+            guard AppCloudSync.allowsUserWrites else { return }
             store.configureIfNeeded(context: modelContext)
+            hasFinishedInitialConfiguration = true
+            drainPendingDeepLinks()
+            registerForWatchCommandsIfNeeded()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
                 return
             }
             #endif
-            #if os(iOS) && canImport(WatchConnectivity)
-            WatchConnectivityBridge.shared.commandHandler = { command in
-                store.handleWatchCommand(command)
-            }
-            WatchConnectivityBridge.shared.activateIfSupported()
+            #if DEBUG
+            store.applyUIAuditRouteIfRequested()
             #endif
-            store.refreshQuietly()
         }
-        .task(id: scenePhase) {
-            guard scenePhase == .active else { return }
-            await store.refreshForForeground()
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
-                guard scenePhase == .active, AppCloudSync.isEnabled else { continue }
-                await MainActor.run {
-                    store.refreshQuietly()
-                }
+        .onChange(of: scenePhase) { _, phase in
+            updateWatchCommandRoute(for: phase)
+            guard phase == .active,
+                  hasFinishedInitialConfiguration,
+                  AppCloudSync.allowsUserWrites else { return }
+            Task { @MainActor in
+                await store.refreshForForeground()
             }
         }
         .onOpenURL { url in
+            guard AppDeepLinkRouter().action(for: url) != nil else { return }
+            guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else {
+                pendingDeepLinks.enqueue(url)
+                return
+            }
             store.handleDeepLink(url)
         }
-        .preferredColorScheme(appColorScheme)
+        .onDisappear {
+            pendingDeepLinks.removeAll()
+            hasFinishedInitialConfiguration = false
+            unregisterFromWatchCommands()
+        }
         .alert(Text(.app("error.title")), isPresented: errorBinding) {
             Button(AppStrings.localized("common.ok")) {
                 store.errorMessage = nil
@@ -72,48 +95,67 @@ struct ContentView: View {
         .onChange(of: store.pendingSyncConflict?.id) { _, _ in
             dismissedSyncConflictID = nil
         }
-        .sheet(item: $store.taskEditorDraft) { draft in
+        .sheet(item: $bindableStore.taskEditorDraft) { draft in
             TaskEditorSheet(store: store, initialDraft: draft)
         }
-        .sheet(item: $store.taskCategoryEditorDraft) { draft in
+        .sheet(item: $bindableStore.taskCategoryEditorDraft) { draft in
             TaskCategoryEditorSheet(store: store, initialDraft: draft)
         }
-        .sheet(item: $store.manualTimeDraft) { draft in
+        .sheet(item: $bindableStore.manualTimeDraft) { draft in
             ManualTimeSheet(store: store, initialDraft: draft)
         }
-        .sheet(item: $store.segmentEditorDraft) { draft in
+        .sheet(item: $bindableStore.segmentEditorDraft) { draft in
             SegmentEditorSheet(store: store, initialDraft: draft)
         }
-        .sheet(item: $store.inboxSuggestionEditorDraft) { draft in
+        .sheet(item: $bindableStore.inboxSuggestionEditorDraft) { draft in
             InboxSuggestionEditorSheet(store: store, initialDraft: draft)
         }
-        #if os(iOS)
-        .sheet(isPresented: $store.isStartTaskPickerPresented) {
+        .sheet(isPresented: $bindableStore.isStartTaskPickerPresented) {
             NavigationStack {
                 TaskStartPicker(store: store) {
                     store.isStartTaskPickerPresented = false
                 }
             }
+            #if os(iOS)
             .presentationDetents([.medium, .large])
-            .presentationBackground(.regularMaterial)
+            #else
+            .frame(minWidth: 420, minHeight: 520)
+            #endif
         }
+    }
+
+    private func drainPendingDeepLinks() {
+        guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else { return }
+        for url in pendingDeepLinks.drain() {
+            store.handleDeepLink(url)
+        }
+    }
+
+    private func registerForWatchCommandsIfNeeded() {
+        #if os(iOS) && canImport(WatchConnectivity)
+        guard watchCommandRegistrationID == nil else { return }
+        watchCommandRegistrationID = WatchCommandRouter.shared.register(
+            store: store,
+            isActive: scenePhase == .active
+        )
         #endif
-        #if os(macOS)
-        .focusedSceneValue(\.newTaskAction) {
-            store.presentNewTask()
-        }
-        .focusedSceneValue(\.manualTimeAction) {
-            store.presentManualTime()
-        }
-        .focusedSceneValue(\.startTimerAction) {
-            store.startSelectedTask()
-        }
-        .focusedSceneValue(\.startPomodoroAction) {
-            store.startPomodoroForSelectedTask()
-        }
-        .focusedSceneValue(\.refreshAction) {
-            store.refreshQuietly()
-        }
+    }
+
+    private func updateWatchCommandRoute(for phase: ScenePhase) {
+        #if os(iOS) && canImport(WatchConnectivity)
+        guard let watchCommandRegistrationID else { return }
+        WatchCommandRouter.shared.update(
+            registrationID: watchCommandRegistrationID,
+            isActive: phase == .active
+        )
+        #endif
+    }
+
+    private func unregisterFromWatchCommands() {
+        #if os(iOS) && canImport(WatchConnectivity)
+        guard let watchCommandRegistrationID else { return }
+        WatchCommandRouter.shared.unregister(registrationID: watchCommandRegistrationID)
+        self.watchCommandRegistrationID = nil
         #endif
     }
 
@@ -147,11 +189,4 @@ struct ContentView: View {
         )
     }
 
-    private var appColorScheme: ColorScheme? {
-        switch store.preferences.preferredColorScheme {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
-        }
-    }
 }

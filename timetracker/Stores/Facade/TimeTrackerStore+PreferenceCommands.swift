@@ -2,11 +2,14 @@ import Foundation
 
 extension TimeTrackerStore {
     func setPreferredColorScheme(_ value: String) {
-        setPreference(.preferredColorScheme, valueJSON: PreferenceJSON.encode(value))
+        setPreference(
+            .preferredColorScheme,
+            valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(value))
+        )
     }
 
     func setPomodoroDefaultMode(_ value: String) {
-        setPreference(.pomodoroDefaultMode, valueJSON: PreferenceJSON.encode(value))
+        setPreference(.pomodoroDefaultMode, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroMode(value)))
     }
 
     func setDefaultFocusMinutes(_ value: Int) {
@@ -22,7 +25,7 @@ extension TimeTrackerStore {
     }
 
     func setPomodoroPlans(_ plans: [PomodoroPlan]) {
-        setPreference(.pomodoroPlans, valueJSON: PreferenceJSON.encode(plans.map { $0.normalized() }))
+        setPreference(.pomodoroPlans, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(plans)))
     }
 
     func addPomodoroPlan() {
@@ -53,33 +56,144 @@ extension TimeTrackerStore {
         setPreference(.showGrossAndWallTogether, valueJSON: PreferenceJSON.encode(value))
     }
 
-    func setCloudSyncEnabled(_ value: Bool) {
-        setPreference(.cloudSyncEnabled, valueJSON: PreferenceJSON.encode(value))
-        UserDefaults.standard.set(value, forKey: AppCloudSync.enabledKey)
+    @discardableResult
+    func setCloudSyncEnabled(_ value: Bool) -> Bool {
+        guard value != preferences.cloudSyncEnabled else { return true }
+        if !value {
+            UserDefaults.standard.set(false, forKey: AppCloudSync.enabledKey)
+            preferences.cloudSyncEnabled = false
+            return true
+        }
+
+        do {
+            try AppCloudSync.requireUserWritesAllowed()
+            guard let modelContext else { throw StoreError.notConfigured }
+            UserDefaults.standard.set(true, forKey: AppCloudSync.enabledKey)
+            preferences.cloudSyncEnabled = true
+            if AppCloudSync.persistenceMode != AppCloudSync.modeICloud {
+                _ = try syncConflictService.stageCurrentLocalSnapshotForCloudEnablement(
+                    context: modelContext
+                )
+            }
+            return true
+        } catch {
+            UserDefaults.standard.set(false, forKey: AppCloudSync.enabledKey)
+            preferences.cloudSyncEnabled = false
+            errorMessage = error.localizedDescription
+            return false
+        }
     }
 
-    func setQuickStartTaskIDs(_ ids: [UUID]) {
-        setPreference(.quickStartTaskIDs, valueJSON: PreferenceJSON.encode(ids.map(\.uuidString)))
+    @discardableResult
+    func setQuickStartTaskIDs(_ ids: [UUID]) -> Bool {
+        let normalized = AppPreferenceValueSanitizer.quickStartTaskIDs(ids)
+        return setPreference(.quickStartTaskIDs, valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString)))
     }
 
     func setLLMEndpoint(_ value: String) {
-        setPreference(.llmEndpoint, valueJSON: PreferenceJSON.encode(value.trimmingCharacters(in: .whitespacesAndNewlines)))
+        setPreference(.llmEndpoint, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(value)))
     }
 
     func setLLMAPIKey(_ value: String) {
-        setPreference(.llmAPIKey, valueJSON: PreferenceJSON.encode(value.trimmingCharacters(in: .whitespacesAndNewlines)))
+        do {
+            try AppCloudSync.requireUserWritesAllowed()
+            try llmCredentialStore.writeAPIKey(value)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+
+        do {
+            let event = StoreDomainEvent.preferenceChanged(key: SyncedPreferenceService.legacyLLMAPIKey)
+            try refresh(plan: refreshPlanner.plan(after: [event]))
+        } catch {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                error.localizedDescription
+            )
+        }
     }
 
     func setLLMSelectedModel(_ value: String) {
-        setPreference(.llmSelectedModel, valueJSON: PreferenceJSON.encode(value))
+        setPreference(.llmSelectedModel, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(value)))
+    }
+
+    func setLLMAutomaticSuggestionsEnabled(_ value: Bool) {
+        UserDefaults.standard.set(value, forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+        preferences.llmAutomaticSuggestionsEnabled = value
+        if value {
+            autoSuggestInboxItemsIfNeeded()
+            autoSuggestChecklistVisualsIfNeeded()
+        } else {
+            inboxSuggestionPendingIDs.removeAll {
+                inboxSuggestionPendingShowsErrors.contains($0) == false
+            }
+        }
     }
 
     func setLLMAvailableModelIDs(_ values: [String]) {
-        let normalized = Array(Set(values.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })).sorted()
+        let normalized = AppPreferenceValueSanitizer.llmModelIDs(values)
         setPreference(.llmAvailableModelIDs, valueJSON: PreferenceJSON.encode(normalized))
     }
 
-    private func setPreference(_ key: AppPreferenceKey, valueJSON: String) {
+    @discardableResult
+    func setLLMConfiguration(
+        endpoint: String,
+        apiKey: String,
+        selectedModel: String,
+        availableModelIDs: [String]
+    ) -> Bool {
+        let normalizedEndpoint = AppPreferenceValueSanitizer.llmEndpoint(endpoint)
+        let normalizedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSelectedModel = AppPreferenceValueSanitizer.llmModelID(selectedModel)
+        let normalizedModels = AppPreferenceValueSanitizer.llmModelIDs(availableModelIDs)
+        guard LLMModelService.modelsURL(endpoint: normalizedEndpoint) != nil,
+              !normalizedAPIKey.isEmpty,
+              normalizedModels.contains(normalizedSelectedModel) else {
+            errorMessage = AppStrings.localized("settings.llm.needsSetup")
+            return false
+        }
+
+        let previousAPIKey: String?
+        do {
+            previousAPIKey = try llmCredentialStore.readAPIKey()
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+
+        var credentialWasWritten = false
+        let didCommit = perform(event: .preferenceChanged(key: nil)) {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try llmCredentialStore.writeAPIKey(normalizedAPIKey)
+            credentialWasWritten = true
+            try preferenceCommandHandler.set(
+                values: [
+                    (.llmEndpoint, PreferenceJSON.encode(normalizedEndpoint)),
+                    (.llmAvailableModelIDs, PreferenceJSON.encode(normalizedModels)),
+                    (.llmSelectedModel, PreferenceJSON.encode(normalizedSelectedModel))
+                ],
+                context: modelContext
+            )
+        }
+
+        if !didCommit, credentialWasWritten {
+            do {
+                try llmCredentialStore.writeAPIKey(previousAPIKey ?? "")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+        if didCommit {
+            inboxSuggestionFailureByItemID.removeAll(keepingCapacity: true)
+            autoSuggestInboxItemsIfNeeded()
+            autoSuggestChecklistVisualsIfNeeded()
+        }
+        return didCommit
+    }
+
+    @discardableResult
+    private func setPreference(_ key: AppPreferenceKey, valueJSON: String) -> Bool {
         perform(event: .preferenceChanged(key: key.rawValue)) {
             guard let modelContext else { throw StoreError.notConfigured }
             try preferenceCommandHandler.set(key: key, valueJSON: valueJSON, context: modelContext)

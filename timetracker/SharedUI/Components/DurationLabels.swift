@@ -8,6 +8,7 @@ struct DurationLabel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let end = endedAt ?? context.date
             Text(DurationFormatter.clock(Int(end.timeIntervalSince(startedAt))))
+                .monospacedDigit()
         }
     }
 }

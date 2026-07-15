@@ -12,6 +12,7 @@ struct AppSectionHeader: View {
             if let systemImage {
                 Image(systemName: systemImage)
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -33,6 +34,8 @@ struct AppSectionHeader: View {
                     .lineLimit(1)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -51,5 +54,8 @@ struct SettingsHeader: View {
 
     var body: some View {
         AppSectionHeader(title: title, systemImage: symbol)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(.isHeader)
     }
 }

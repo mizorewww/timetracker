@@ -1,6 +1,8 @@
 import Foundation
 
-struct WidgetSnapshot: Codable, Equatable {
+nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
+    nonisolated static let staleAfter: TimeInterval = 15 * 60
+
     var generatedAt: Date
     var todayGrossSeconds: Int
     var todayWallSeconds: Int
@@ -16,9 +18,21 @@ struct WidgetSnapshot: Codable, Equatable {
             recentTasks: []
         )
     }
+
+    nonisolated func freshness(
+        at now: Date,
+        staleAfter threshold: TimeInterval = WidgetSnapshot.staleAfter
+    ) -> WidgetSnapshotFreshness {
+        now.timeIntervalSince(generatedAt) > threshold ? .stale : .current
+    }
 }
 
-struct WidgetTimerSnapshot: Codable, Equatable, Identifiable {
+nonisolated enum WidgetSnapshotFreshness: Equatable, Sendable {
+    case current
+    case stale
+}
+
+nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var taskID: UUID
     var title: String
@@ -28,7 +42,7 @@ struct WidgetTimerSnapshot: Codable, Equatable, Identifiable {
     var iconName: String?
 }
 
-struct WidgetRecentTaskSnapshot: Codable, Equatable, Identifiable {
+nonisolated struct WidgetRecentTaskSnapshot: Codable, Equatable, Identifiable, Sendable {
     var taskID: UUID
     var title: String
     var path: String
@@ -36,43 +50,4 @@ struct WidgetRecentTaskSnapshot: Codable, Equatable, Identifiable {
     var iconName: String?
 
     var id: UUID { taskID }
-}
-
-enum WidgetSnapshotStoreError: Error, Equatable {
-    case sharedContainerUnavailable
-}
-
-struct SharedWidgetSnapshotStore {
-    static let suiteName = "group.me.mezorewww.timetracker"
-    static let snapshotKey = "widget.activeTimerSnapshot.v1"
-
-    var defaults: UserDefaults?
-    var encoder: JSONEncoder = JSONEncoder()
-    var decoder: JSONDecoder = JSONDecoder()
-
-    init(defaults: UserDefaults? = UserDefaults(suiteName: Self.suiteName)) {
-        self.defaults = defaults
-    }
-
-    var isAvailable: Bool {
-        defaults != nil
-    }
-
-    func save(_ snapshot: WidgetSnapshot) throws {
-        guard let defaults else {
-            throw WidgetSnapshotStoreError.sharedContainerUnavailable
-        }
-        let data = try encoder.encode(snapshot)
-        defaults.set(data, forKey: Self.snapshotKey)
-    }
-
-    func load() -> WidgetSnapshot? {
-        guard let defaults else { return nil }
-        guard let data = defaults.data(forKey: Self.snapshotKey) else { return nil }
-        return try? decoder.decode(WidgetSnapshot.self, from: data)
-    }
-
-    func clear() {
-        defaults?.removeObject(forKey: Self.snapshotKey)
-    }
 }

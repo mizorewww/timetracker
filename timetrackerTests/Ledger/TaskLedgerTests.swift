@@ -6,6 +6,143 @@ import Testing
 @Suite(.serialized)
 struct TaskLedgerTests {
     @Test @MainActor
+    func stoppingAfterAClockRollbackNeverCreatesNegativeLedgerTime() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Clock rollback",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
+        let futureStart = Date().addingTimeInterval(3_600)
+        segment.startedAt = futureStart
+        let session = try #require(try timeRepository.sessions().first)
+        session.startedAt = futureStart
+        try context.save()
+
+        try timeRepository.stopSegment(segmentID: segment.id)
+
+        let stoppedSegment = try #require(try timeRepository.allSegments().first)
+        let stoppedSession = try #require(try timeRepository.sessions().first)
+        #expect(stoppedSegment.endedAt == futureStart)
+        #expect(stoppedSession.endedAt == futureStart)
+    }
+
+    @Test @MainActor
+    func repositoryRejectsInvalidManualAndEditedTimeRanges() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Validated range",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let start = Date()
+
+        #expect(throws: TimeTrackingRepositoryError.invalidTimeRange) {
+            try timeRepository.addManualSegment(
+                taskID: task.id,
+                startedAt: start,
+                endedAt: start,
+                note: nil
+            )
+        }
+
+        let segment = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(60),
+            note: nil
+        )
+        #expect(throws: TimeTrackingRepositoryError.invalidTimeRange) {
+            try timeRepository.updateSegment(
+                segmentID: segment.id,
+                taskID: task.id,
+                startedAt: start,
+                endedAt: start.addingTimeInterval(-1),
+                note: nil
+            )
+        }
+        #expect(try timeRepository.allSegments().first?.endedAt == start.addingTimeInterval(60))
+    }
+
+    @Test @MainActor
+    func todayMetricsClipCrossMidnightSegmentsToTheCalendarDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 14)))
+        let task = TaskNode(title: "Night work", parentID: nil, deviceID: "test")
+        let session = TimeSession(taskID: task.id, source: .pomodoro, deviceID: "test", startedAt: dayStart.addingTimeInterval(-3_600))
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: dayStart.addingTimeInterval(-3_600),
+            endedAt: dayStart.addingTimeInterval(3_600)
+        )
+        let store = TimeTrackerStore()
+        store.allSegments = [segment]
+        let run = PomodoroRun(taskID: task.id, deviceID: "test")
+        run.sessionID = session.id
+        let now = dayStart.addingTimeInterval(2 * 3_600)
+
+        #expect(store.todayGrossSeconds(now: now, calendar: calendar) == 3_600)
+        #expect(store.todayWallSeconds(now: now, calendar: calendar) == 3_600)
+        #expect(store.averageFocusSeconds(now: now, calendar: calendar) == 3_600)
+        #expect(store.pomodoroElapsedFocusSeconds(for: run, now: now) == 2 * 3_600)
+    }
+
+    @Test @MainActor
+    func pomodoroReadModelsUseIndexedLedgerHistoryWhenConfigured() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14))
+        )
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Indexed focus", parentID: nil, deviceID: "test")
+        let session = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: dayStart.addingTimeInterval(-3_600)
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: dayStart.addingTimeInterval(-3_600),
+            endedAt: dayStart.addingTimeInterval(3_600)
+        )
+        context.insert(task)
+        context.insert(session)
+        context.insert(segment)
+        try context.save()
+
+        let store = TimeTrackerStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        let run = PomodoroRun(taskID: task.id, deviceID: "test")
+        run.sessionID = session.id
+
+        #expect(store.ledgerDomainStore.hasIndexedSegmentHistory)
+        // Clear the published compatibility array to prove these reads are
+        // served by the domain indexes after configuration.
+        store.allSegments = []
+        let now = dayStart.addingTimeInterval(2 * 3_600)
+
+        #expect(store.averageFocusSeconds(now: now, calendar: calendar) == 3_600)
+        #expect(store.pomodoroElapsedFocusSeconds(for: run, now: now) == 2 * 3_600)
+    }
+
+    @Test @MainActor
     func taskMovePreventsCyclesAndUpdatesHierarchy() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -27,6 +164,64 @@ struct TaskLedgerTests {
         let moved = try #require(movedTask)
         #expect(moved.parentID == nil)
         #expect(moved.depth == 0)
+    }
+
+    @Test @MainActor
+    func taskMoveKeepsPathsBoundedAndAvoidsUnchangedDescendantMutations() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let firstRoot = try repository.createTask(title: "First", parentID: nil, colorHex: nil, iconName: nil)
+        let secondRoot = try repository.createTask(title: "Second", parentID: nil, colorHex: nil, iconName: nil)
+        let child = try repository.createTask(title: "Child", parentID: firstRoot.id, colorHex: nil, iconName: nil)
+        let grandchild = try repository.createTask(title: "Grandchild", parentID: child.id, colorHex: nil, iconName: nil)
+        let previousGrandchildMutationID = grandchild.clientMutationID
+
+        try repository.moveTask(taskID: child.id, newParentID: secondRoot.id, sortOrder: 10)
+
+        let movedChild = try #require(try repository.task(id: child.id))
+        let movedGrandchild = try #require(try repository.task(id: grandchild.id))
+        #expect(movedChild.depth == 1)
+        #expect(movedChild.path == "/" + child.id.uuidString)
+        #expect(movedGrandchild.depth == 2)
+        #expect(movedGrandchild.path == "/" + grandchild.id.uuidString)
+        #expect(movedGrandchild.clientMutationID == previousGrandchildMutationID)
+    }
+
+    @Test @MainActor
+    func taskHierarchyRejectsMissingParentsWithoutMutatingTheTask() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(title: "Root", parentID: nil, colorHex: nil, iconName: nil)
+        let originalPath = task.path
+
+        do {
+            try repository.moveTask(taskID: task.id, newParentID: UUID(), sortOrder: 20)
+            Issue.record("Expected a missing parent move to throw")
+        } catch TaskRepositoryError.invalidMove {
+        } catch {
+            Issue.record("Unexpected move error: \(error)")
+        }
+
+        let unchanged = try #require(try repository.task(id: task.id))
+        #expect(unchanged.parentID == nil)
+        #expect(unchanged.depth == 0)
+        #expect(unchanged.path == originalPath)
+        #expect(!TaskTreeService().canMove(taskID: task.id, to: UUID(), tasks: [task]))
+
+        do {
+            _ = try repository.createTask(
+                title: "Orphan",
+                parentID: UUID(),
+                colorHex: nil,
+                iconName: nil
+            )
+            Issue.record("Expected creating an orphan task to throw")
+        } catch TaskRepositoryError.invalidMove {
+        } catch {
+            Issue.record("Unexpected create error: \(error)")
+        }
+        let remainingCount = try repository.allNodes().count
+        #expect(remainingCount == 1)
     }
 
     @Test @MainActor
@@ -79,6 +274,72 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
+    func cyclicRemoteHierarchyIsDeterministicallyDetachedAndEveryTaskRemainsVisible() throws {
+        let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        let first = TaskNode(title: "First", parentID: secondID, deviceID: "device-a")
+        first.id = firstID
+        let second = TaskNode(title: "Second", parentID: firstID, deviceID: "device-b")
+        second.id = secondID
+
+        let repairPlan = TaskHierarchyRepairPlan(tasks: [first, second])
+        #expect(repairPlan.cycleBreakerTaskIDs == [firstID])
+        #expect(repairPlan.taskIDsToDisplayAsRoots == [firstID])
+
+        let indexes = TaskTreeService().indexes(tasks: [first, second])
+        let rows = TaskTreeFlattener.visibleRows(
+            rootTasks: indexes.childrenByParentID[nil] ?? [],
+            children: { indexes.childrenByParentID[$0.id] ?? [] },
+            expandedTaskIDs: [firstID, secondID]
+        )
+        #expect(rows.map(\.taskID) == [firstID, secondID])
+        #expect(Set(rows.map(\.taskID)) == [firstID, secondID])
+
+        let context = try makeTestContext()
+        context.insert(first)
+        context.insert(second)
+        try context.save()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "repair-device")
+        #expect(try repository.repairInvalidHierarchy() == [firstID, secondID])
+
+        let repaired = try repository.allNodes().latestByID()
+        #expect(repaired[firstID]?.parentID == nil)
+        #expect(repaired[firstID]?.depth == 0)
+        #expect(repaired[secondID]?.parentID == firstID)
+        #expect(repaired[secondID]?.depth == 1)
+    }
+
+    @Test @MainActor
+    func taskWithMissingRemoteParentIsRecoveredAsARoot() throws {
+        let task = TaskNode(title: "Orphaned during staged import", parentID: UUID(), deviceID: "cloud")
+        let plan = TaskHierarchyRepairPlan(tasks: [task])
+        #expect(plan.cycleBreakerTaskIDs.isEmpty)
+        #expect(plan.taskIDsToDisplayAsRoots == [task.id])
+        let indexes = TaskTreeService().indexes(tasks: [task])
+        #expect(indexes.childrenByParentID[nil]?.map(\.id) == [task.id])
+    }
+
+    @Test @MainActor
+    func deeplyNestedTaskPathsAreIterativeAndDisplayBounded() throws {
+        var tasks: [TaskNode] = []
+        var parentID: UUID?
+        for index in 0..<5_000 {
+            let task = TaskNode(title: "Level \(index)", parentID: parentID, deviceID: "test")
+            tasks.append(task)
+            parentID = task.id
+        }
+
+        let service = TaskTreeService()
+        let indexes = service.indexes(tasks: tasks)
+        let deepest = try #require(tasks.last)
+        let displayedPath = try #require(indexes.taskPathByID[deepest.id])
+
+        #expect(displayedPath.hasPrefix("… / "))
+        #expect(displayedPath.components(separatedBy: " / ").count == TaskTreeService.maximumDisplayedPathComponents + 1)
+        #expect(service.descendantIDs(of: tasks[0].id, tasks: tasks).count == tasks.count - 1)
+    }
+
+    @Test @MainActor
     func timerStopUsesSegmentsAsLedger() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -127,6 +388,140 @@ struct TaskLedgerTests {
 
         try timeRepository.softDeleteSegment(segmentID: segment.id)
         #expect(try timeRepository.segments(from: start, to: start.addingTimeInterval(3_000)).isEmpty)
+    }
+
+    @Test @MainActor
+    func deletingTheEarliestSegmentRebuildsTheRemainingSessionBounds() throws {
+        let context = try makeTestContext()
+        let taskID = UUID()
+        let start = Date(timeIntervalSinceReferenceDate: 10_000)
+        let session = TimeSession(
+            taskID: taskID,
+            source: .manual,
+            deviceID: "creation-device",
+            startedAt: start
+        )
+        session.endedAt = start.addingTimeInterval(300)
+        let earliest = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "creation-device",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(100)
+        )
+        let remaining = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "creation-device",
+            startedAt: start.addingTimeInterval(200),
+            endedAt: start.addingTimeInterval(300)
+        )
+        context.insert(session)
+        context.insert(earliest)
+        context.insert(remaining)
+        try context.save()
+
+        try SwiftDataTimeTrackingRepository(context: context, deviceID: "delete-device")
+            .softDeleteSegment(segmentID: earliest.id)
+
+        #expect(session.deletedAt == nil)
+        #expect(session.startedAt == remaining.startedAt)
+        #expect(session.endedAt == remaining.endedAt)
+        #expect(session.deviceID == "delete-device")
+    }
+
+    @Test @MainActor
+    func ledgerMutationsRefreshSessionConflictMetadata() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "task-device")
+        let firstTask = try taskRepository.createTask(title: "First", parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Second", parentID: nil, colorHex: nil, iconName: nil)
+        let creationRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "creation-device")
+
+        let activeSegment = try creationRepository.startTask(taskID: firstTask.id, source: .timer)
+        let activeSession = try #require(
+            try context.fetch(FetchDescriptor<TimeSession>()).first { $0.id == activeSegment.sessionID }
+        )
+        let creationMutationID = activeSession.clientMutationID
+        try SwiftDataTimeTrackingRepository(context: context, deviceID: "segment-stop-device")
+            .stopSegment(segmentID: activeSegment.id)
+        #expect(activeSegment.deviceID == "segment-stop-device")
+        #expect(activeSession.deviceID == "segment-stop-device")
+        #expect(activeSession.clientMutationID != creationMutationID)
+
+        let start = Date(timeIntervalSince1970: 20_000)
+        let manualSegment = try creationRepository.addManualSegment(
+            taskID: firstTask.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            note: "Original"
+        )
+        let manualSession = try #require(
+            try context.fetch(FetchDescriptor<TimeSession>()).first { $0.id == manualSegment.sessionID }
+        )
+        let manualCreationMutationID = manualSession.clientMutationID
+        let editRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "edit-device")
+        try editRepository.updateSegment(
+            segmentID: manualSegment.id,
+            taskID: secondTask.id,
+            startedAt: start.addingTimeInterval(60),
+            endedAt: start.addingTimeInterval(900),
+            note: "Edited"
+        )
+        #expect(manualSegment.deviceID == "edit-device")
+        #expect(manualSession.deviceID == "edit-device")
+        #expect(manualSession.clientMutationID != manualCreationMutationID)
+
+        let editedMutationID = manualSession.clientMutationID
+        try SwiftDataTimeTrackingRepository(context: context, deviceID: "delete-device")
+            .softDeleteSegment(segmentID: manualSegment.id)
+        #expect(manualSegment.deviceID == "delete-device")
+        #expect(manualSession.deletedAt != nil)
+        #expect(manualSession.deviceID == "delete-device")
+        #expect(manualSession.clientMutationID != editedMutationID)
+
+        let sessionStopSegment = try creationRepository.startTask(taskID: firstTask.id, source: .timer)
+        let sessionToStop = try #require(
+            try context.fetch(FetchDescriptor<TimeSession>()).first { $0.id == sessionStopSegment.sessionID }
+        )
+        let sessionStopCreationMutationID = sessionToStop.clientMutationID
+        try SwiftDataTimeTrackingRepository(context: context, deviceID: "session-stop-device")
+            .stopSession(sessionID: sessionToStop.id)
+        #expect(sessionStopSegment.deviceID == "session-stop-device")
+        #expect(sessionToStop.deviceID == "session-stop-device")
+        #expect(sessionToStop.clientMutationID != sessionStopCreationMutationID)
+    }
+
+    @Test @MainActor
+    func activeSegmentEditorRejectsFutureStartsWithoutMutatingLedger() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Active", parentID: nil, colorHex: nil, iconName: nil)
+        let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        var draft = SegmentEditorDraft(segment: segment, note: "")
+        draft.startedAt = Date().addingTimeInterval(3_600)
+        draft.isActive = true
+
+        #expect(store.saveSegmentDraft(draft) == false)
+        #expect(store.errorMessage == AppStrings.localized("segment.error.startNotFuture"))
+        let unchanged = try #require(try timeRepository.activeSegments().first { $0.id == segment.id })
+        #expect(unchanged.startedAt == segment.startedAt)
+    }
+
+    @Test
+    func invalidationRangeNormalizesReversedRemoteDates() {
+        let later = Date(timeIntervalSinceReferenceDate: 2_000)
+        let earlier = Date(timeIntervalSinceReferenceDate: 1_000)
+        let range = StoreInvalidationRange(start: later, end: earlier)
+
+        #expect(range.start == earlier)
+        #expect(range.end == later)
+        #expect(DateInterval(start: range.start, end: range.end).duration == 1_000)
     }
 
     @Test @MainActor

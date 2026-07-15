@@ -4,4 +4,13 @@
 "widget.empty.title" = "沒有正在計時";
 "widget.empty.message" = "在 Time Tracker 中開始記錄。";
 "widget.action.start" = "開始計時";
+"widget.action.open" = "打開 Time Tracker";
 "widget.quickStart.title" = "快速開始";
+"widget.preview.task" = "製作週報";
+"widget.preview.path" = "工作";
+"widget.elapsed.label" = "已用時間";
+"widget.stale.label" = "上次更新";
+"widget.unavailable.title" = "打開 Time Tracker";
+"widget.unavailable.message" = "打開 App 以載入計時資料。";
+"widget.corrupted.title" = "需要重新整理";
+"widget.corrupted.message" = "打開 App 以重新整理此小工具。";

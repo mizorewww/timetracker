@@ -1,5 +1,7 @@
 # Time Tracker Architecture Plan
 
+Status: current architecture guardrails. Concrete file entry points are maintained in [ProjectMap](ProjectMap.md); completed and remaining structure work is maintained in [CodeRefactorPlan](CodeRefactorPlan.md).
+
 This document is the working map for keeping Time Tracker understandable as it grows. It should answer two practical questions:
 
 1. Where does a new feature belong?
@@ -18,18 +20,21 @@ timetracker/
   Repositories/     SwiftData query/write implementations
   Commands/         User action handlers and use cases
   Services/         Pure calculations and maintenance logic
-  Stores/           Published domain snapshots and facade wiring
+  Stores/           Observable domain snapshots and facade wiring
   Features/         Screen-specific SwiftUI
   Shared/           Shared extension-safe models
   SharedUI/         Reusable UI pieces
 ```
 
-`TimeTrackerStore` is still the SwiftUI facade, but it is now split into lifecycle, read-model, analytics, maintenance, and domain command extensions. Domain stores own state snapshots:
+`TimeTrackerStore` is still the SwiftUI facade, but it is now split into lifecycle, read-model, analytics, maintenance, and domain command extensions. The facade is `@MainActor @Observable`. App roots own it with `@State`; injected feature views keep a plain reference, and presentation bindings use a local `@Bindable`. Do not reintroduce `ObservableObject/@Published` on the facade or store action closures in focused values.
+
+Domain stores own state snapshots:
 
 - `TaskStore` owns task tree snapshots.
-- `LedgerStore` owns active, today, and history ledger snapshots.
-- `RollupStore` owns task rollup, checklist progress, and forecast state.
-- `AnalyticsStore` owns cached analytics snapshots.
+- `LedgerStore` owns active, today, history, segment/day/session indexes and mutation deltas.
+- `ChecklistStore` owns global bootstrap plus task-scoped item/visual replacement indexes.
+- `RollupStore` owns exact worked totals, checklist progress, forecast state and the bounded 90-local-day pace index.
+- `AnalyticsStore` owns range/period/live-bucket overview and task snapshot caches plus disposable ledger day buckets.
 - `PreferenceStore` owns synced preference snapshots.
 
 `StoreRefreshCoordinator` owns refresh sequencing after command events. The facade no longer decides the order of task, ledger, checklist, rollup, analytics, selection validation, and Live Activity side effects inline.
@@ -47,7 +52,22 @@ remoteImportCompleted
 fullSync
 ```
 
-`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable. `RollupStore` consumes affected task IDs from the plan and refreshes only the changed task branch plus ancestors when the task tree itself did not change. `AnalyticsStore` owns a disposable day-bucket cache for daily summary points and invalidates buckets from ledger date ranges carried by refresh plans.
+`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable. When the task topology is stable, `LedgerStore` fetches only invalidated ranges, `ChecklistStore` replaces only affected task buckets, and `RollupStore` consumes segment before/after deltas plus direct/ancestor IDs. `AnalyticsStore` invalidates snapshot caches and only the day buckets intersecting ledger ranges. Full rebuild remains the explicit path for startup, topology/full-sync changes, remote import without a safe scope, and calendar/time-zone changes.
+
+External CloudKit changes enter the same pipeline through remote-store and completed import/export notifications. The observer coalesces bursts before emitting `remoteImportCompleted`; launch and foreground activation remain consistency boundaries. There is no permanent foreground polling timer.
+
+Sync-conflict state is a separate cross-process state machine. A recursive local lock plus POSIX `lockf` serializes app/Shortcuts read-modify-write transactions. Epoch/generation/fingerprint checkpoints tie Cloud export completion to the exact version that started it, so stale or out-of-order callbacks cannot acknowledge newer local mutations. The state uses bounded lightweight checkpoints, not a full snapshot per event.
+
+The 2026-07-14 split established focused owners instead of the former aggregation files:
+
+- Analytics root/category/period/detail lists and store metrics/breakdowns/overlap/task snapshots.
+- Settings display/timing, Pomodoro, picker, countdown, sync, data, actions, bindings, and support.
+- Task Detail router plus identity, checklist, overview, analytics, navigation, and record sections.
+- Ledger Cloud startup, persistence safety, timer DTO, aggregation, formatting, device identity, and summary.
+- SyncConflict bootstrap/prompt, local mutation, Cloud import/export, recovery/resolution, state persistence/lock/locations, filtered export, snapshot capture/domain restore/state, and domain record DTOs.
+- Facade first configuration/repository-only system-surface attachment versus refresh/mutation/recovery lifecycle.
+
+`SettingsSectionsViews.swift` and `TimeTrackerServices.swift` are retired; do not use those names for new miscellaneous code. Remaining concentrated files and their next boundaries are explicit in `CodeRefactorPlan`.
 
 ## Write Flow
 
@@ -62,7 +82,7 @@ SwiftUI action
   -> StoreRefreshPlanner
   -> StoreRefreshCoordinator
   -> Affected domain snapshots refresh in domain order
-  -> SwiftUI renders published state
+  -> SwiftUI renders observed state
 ```
 
 Example: checklist toggle
@@ -86,7 +106,7 @@ Target read flow:
 Repository query
   -> domain-sized snapshot
   -> pure services derive secondary state
-  -> domain store publishes immutable view state
+  -> domain store exposes immutable view state
   -> SwiftUI view renders
 ```
 
@@ -96,18 +116,18 @@ Views should render existing snapshots. They should not calculate analytics, tre
 
 | Feature | Durable model | Write owner | Snapshot owner | Pure services | UI owner |
 | --- | --- | --- | --- | --- | --- |
-| Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Inspector` |
+| Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
-| Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener` | `Features/Tasks`, `Features/Sidebar` |
+| Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService` | `Features/Tasks`, `Features/Sidebar` |
 | Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
-| Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks`, `Features/Inspector` |
-| Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Inspector` |
-| Pomodoro | `PomodoroRun`, ledger models | `PomodoroCommandHandler` | `LedgerStore` | Pomodoro state helpers | `Features/Pomodoro` |
+| Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `ChecklistStore`, `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks/Editor`, `Features/Tasks/Detail` |
+| Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Tasks/Detail` |
+| Pomodoro | `PomodoroRun`, ledger models | `PomodoroCommandHandler`, ledger/task commands | `LedgerStore`, Pomodoro read models | persisted-phase deadline/reconciliation helpers | `Features/Pomodoro` |
 | Analytics | none, derived | none | `AnalyticsStore` | `AnalyticsEngine`, `TimeAggregationService` | `Features/Analytics` |
 | Synced settings | `SyncedPreference` | `PreferenceCommandHandler` | `PreferenceStore` | `AppPreferenceCodec`, `SyncedPreferenceService` | `Features/Settings` |
 | Countdown events | `CountdownEvent` | `CountdownCommandHandler` | `TimeTrackerStore` countdown snapshot | date formatting helpers | `Features/Home`, `Features/Settings` |
-| CSV export | none | none | none | `CSVExportService` | `Features/Settings` |
-| Database optimize | destructive maintenance | `MaintenanceCommands` | affected stores | `DatabaseMaintenanceService` | `Features/Settings` |
+| JSON export | none | facade maintenance command | none | export DTO encoding | `Features/Settings/Support/SettingsExportDocument` |
+| Tombstone maintenance | destructive maintenance, Demo/UI Test only | maintenance facade | affected stores | `DatabaseMaintenanceService` | hidden for production stores |
 | Live Activity | ledger snapshot | shared ledger commands/intents | `LedgerStore` | shared activity attributes | extension UI |
 
 ## Forecast Rules
@@ -118,10 +138,10 @@ Forecast is checklist-driven. Do not invent remaining hours from unrelated histo
 Eligible = task has checklist + at least one completed item + tracked time on that task
 Completed checklist = own remaining time is zero
 Manual estimate = planning metadata only
-Historical time = used only to turn remaining hours into projected days
+Recent pace = active-day average over the latest 90 local days, used only to turn existing remaining seconds into projected active days
 ```
 
-Parent tasks follow one display rule across Home, Analytics, and Inspector:
+Parent tasks follow one display rule across Home, Analytics, and Task Detail:
 
 - If the parent has its own checklist, show the parent and include child forecast recursively.
 - If the parent has no checklist and exactly one forecastable child branch, drill into that child so the user sees the task that owns the checklist.
@@ -129,13 +149,15 @@ Parent tasks follow one display rule across Home, Analytics, and Inspector:
 
 ## Ledger Query Strategy
 
-Current range queries intentionally use simple SwiftData predicates plus deterministic in-memory clipping. This is correct and testable. `AnalyticsStore` now adds a disposable date-bucket cache for daily summary points so Month and long-range analytics do not repeatedly rebuild the same day summaries during normal view refreshes.
+Initial/full range queries use SwiftData predicates plus deterministic clipping. Normal mutations use `LedgerStore` day/ID indexes to fetch and replace only segments overlapping `StoreInvalidationRange`, update related session IDs, and emit coalesced `LedgerSegmentChange` values. `AnalyticsStore` caches daily summaries plus full overview/task snapshots by range and true calendar period start; a minute key is added only when an active segment overlaps that range.
 
 Rules:
 
 1. Keep raw `TimeSegment` as the source of truth and rebuild buckets when summary rules change.
 2. Keep active timer queries direct and fresh; active timers must never wait for a cache.
-3. Invalidate day buckets from `ledgerChanged` date ranges rather than clearing the whole analytics cache by default.
+3. Invalidate full overview/task snapshots after relevant facts change, and invalidate only intersecting day buckets from `ledgerChanged` ranges.
+4. Keep rollup full-history totals exact; only forecast pace is bounded to 90 local days.
+5. Preserve the 50,000-segment single-mutation budget and equality with a full rebuild.
 
 ## Schema Evolution Rules
 
@@ -156,9 +178,10 @@ The guiding principle is forward migration, not feature rollback: existing user 
 
 The UI should feel like a native Apple productivity app: predictable navigation, system controls first, restrained custom drawing, and clear information hierarchy.
 
-- Prefer `NavigationSplitView`, `List`, `Form`, `Table`, `.inspector`, `Menu`, `Picker`, and system toolbar items before custom containers.
+- Prefer `NavigationSplitView`, `NavigationStack`, `List`, `Form`, `Table`, `Menu`, `Picker`, and system toolbar items before custom containers. Task Detail is currently the canonical selected-task surface; adding an inspector requires an explicit product decision rather than being a default layout assumption.
+- macOS uses one main `Window`, not `WindowGroup`; its Settings scene receives the same application store. Multi-window support requires a prior split between app-scoped persistence/automation and scene-scoped navigation/editor drafts.
 - Cards are only for grouped content that benefits from framing. Avoid nested cards.
-- iPhone rows may use two lines; iPad and macOS rows should prioritize scanability and alignment.
+- iPhone rows may use two lines; iPad and macOS rows should prioritize scanability and alignment. At accessibility Dynamic Type sizes, dense rows must reflow vertically or use a space-efficient native control such as a menu; truncating primary text is not an acceptable substitute.
 - Expensive derived values should be passed in, not recalculated by rows.
 - User-facing copy should explain outcomes, not internal model names.
 - Repeated cards, metric cells, chart containers, checklist controls, and layout breakpoints belong in `SharedUI` or layout policy types before a second feature copies them.
@@ -210,7 +233,7 @@ Before merging a feature:
 4. Are active timers still derived from open `TimeSegment` rows?
 5. Are soft-deleted tasks and historical ledger rows handled intentionally?
 6. Does iCloud remote import coalesce refresh work?
-7. Are compact iPhone, iPad split view, and macOS inspector layouts considered separately?
+7. Are compact iPhone, iPad split view, and macOS sidebar/detail layouts considered separately?
 8. Are all strings localized in English, Simplified Chinese, and Traditional Chinese?
 9. Are tests behavior-based rather than fragile source scans?
-10. Did macOS tests and generic iOS build pass?
+10. Did the final working-tree macOS tests, UI tests, signed builds, simulator screenshots, and required trace pass, with evidence recorded in the dated Audit rather than inferred from an earlier batch?

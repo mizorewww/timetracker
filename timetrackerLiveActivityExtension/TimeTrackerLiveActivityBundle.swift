@@ -1,4 +1,5 @@
 import ActivityKit
+import Foundation
 import SwiftUI
 import WidgetKit
 
@@ -13,15 +14,20 @@ struct TimeTrackerLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TimeTrackingActivityAttributes.self) { context in
             LockScreenTimerView(context: context)
-                .activityBackgroundTint(.black.opacity(0.82))
+                .activityBackgroundTint(.black)
                 .activitySystemActionForegroundColor(.white)
+                .widgetURL(LiveActivityDeepLinks.today)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     ActivityIconView(state: context.state, size: 44)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    TimerText(startedAt: context.state.startedAt, style: .expanded)
+                    TimerText(
+                        startedAt: context.state.startedAt,
+                        isStale: context.isStale,
+                        style: .expanded
+                    )
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -29,6 +35,7 @@ struct TimeTrackerLiveActivityWidget: Widget {
                             Text(context.state.taskTitle)
                                 .font(.headline.weight(.semibold))
                                 .lineLimit(1)
+                                .privacySensitive()
                             if context.state.additionalTimerCount > 0 {
                                 Text("+\(context.state.additionalTimerCount)")
                                     .font(.caption2.weight(.bold))
@@ -38,138 +45,46 @@ struct TimeTrackerLiveActivityWidget: Widget {
                                     .background(.white.opacity(0.16), in: Capsule())
                             }
                         }
-                        Text(context.state.taskPath.isEmpty ? String(localized: "live.timer.defaultPath") : context.state.taskPath)
+
+                        Text(path(for: context.state))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                            .privacySensitive()
+
                         Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
                             Label(String(localized: "live.timer.stop"), systemImage: "stop.fill")
-                                .font(.caption2.weight(.semibold))
+                                .font(.caption.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } compactLeading: {
-                ActivityIconView(state: context.state, size: 24)
+                Link(destination: LiveActivityDeepLinks.today) {
+                    ActivityIconView(state: context.state, size: 24)
+                }
+                .accessibilityLabel(String(localized: "live.timer.open"))
             } compactTrailing: {
-                Text(context.state.startedAt, style: .timer)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: 46)
-            } minimal: {
-                Image(systemName: context.state.iconName)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 22, height: 22)
-                    .background(activityColor(context.state.colorHex), in: Circle())
-            }
-            .keylineTint(activityColor(context.state.colorHex))
-        }
-    }
-}
-
-private struct LockScreenTimerView: View {
-    let context: ActivityViewContext<TimeTrackingActivityAttributes>
-
-    var body: some View {
-        HStack(spacing: 14) {
-            ActivityIconView(state: context.state, size: 52)
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(context.state.taskTitle)
-                        .font(.headline.weight(.semibold))
+                Link(destination: LiveActivityDeepLinks.today) {
+                    Text(context.state.startedAt, style: .timer)
+                        .font(.caption2.monospacedDigit().weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    if context.state.additionalTimerCount > 0 {
-                        Text(String(format: String(localized: "live.timer.additionalFormat"), context.state.additionalTimerCount))
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(.white.opacity(0.14), in: Capsule())
-                    }
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: 50)
                 }
-
-                Text(context.state.taskPath.isEmpty ? String(localized: "live.timer.defaultPath") : context.state.taskPath)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.66))
-                    .lineLimit(1)
+                .accessibilityLabel(String(localized: "live.timer.elapsed"))
+                .accessibilityValue(Text(context.state.startedAt, style: .timer))
+            } minimal: {
+                Link(destination: LiveActivityDeepLinks.today) {
+                    ActivityIconView(state: context.state, size: 25)
+                }
+                .accessibilityLabel(String(localized: "live.timer.open"))
             }
-
-            Spacer(minLength: 8)
-
-            TimerText(startedAt: context.state.startedAt, style: .lockScreen)
-
-            Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
-                Image(systemName: "stop.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 34, height: 34)
-                    .background(.white.opacity(0.16), in: Circle())
-                    .accessibilityLabel(String(localized: "live.timer.stop"))
-            }
+            .keylineTint(activityColor(context.state.colorHex))
+            .widgetURL(LiveActivityDeepLinks.today)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-    }
-}
-
-private struct ActivityIconView: View {
-    let state: TimeTrackingActivityAttributes.ContentState
-    let size: CGFloat
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(activityColor(state.colorHex).gradient)
-            Circle()
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-            Image(systemName: state.iconName)
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .frame(width: size, height: size)
-        .shadow(color: activityColor(state.colorHex).opacity(0.35), radius: 10, x: 0, y: 4)
-    }
-}
-
-private struct TimerText: View {
-    enum Style {
-        case lockScreen
-        case expanded
-    }
-
-    let startedAt: Date
-    let style: Style
-
-    var body: some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            Text(startedAt, style: .timer)
-                .font(style == .lockScreen ? .title2.monospacedDigit().weight(.semibold) : .headline.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.white)
-            Text(String(localized: "live.timer.elapsed"))
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.58))
-        }
-    }
-}
-
-private func activityColor(_ hex: String) -> Color {
-    var value = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-    if value.count == 3 {
-        value = value.map { "\($0)\($0)" }.joined()
-    }
-    var int: UInt64 = 0
-    Scanner(string: value).scanHexInt64(&int)
-    let red = Double((int >> 16) & 0xFF) / 255
-    let green = Double((int >> 8) & 0xFF) / 255
-    let blue = Double(int & 0xFF) / 255
-    return Color(red: red, green: green, blue: blue)
-}
-
-private enum LiveActivityDeepLinks {
-    static func stopTimer(taskID: String) -> URL {
-        URL(string: "timetracker://timer/stop?taskID=\(taskID)")!
     }
 }

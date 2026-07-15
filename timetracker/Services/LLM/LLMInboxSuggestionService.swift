@@ -20,7 +20,7 @@ enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
     }
 }
 
-struct LLMTaskCandidate: Encodable, Equatable {
+nonisolated struct LLMTaskCandidate: Encodable, Equatable, Sendable {
     let id: UUID
     let title: String
     let path: String
@@ -28,7 +28,7 @@ struct LLMTaskCandidate: Encodable, Equatable {
     let colorHex: String
 }
 
-struct LLMInboxSuggestionResult: Equatable {
+nonisolated struct LLMInboxSuggestionResult: Equatable, Sendable {
     let taskID: UUID
     let reason: String
     let iconName: String
@@ -40,7 +40,7 @@ struct LLMInboxSuggestionService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
 
     var transport: Transport = { request in
-        try await URLSession.shared.data(for: request)
+        try await LLMSecureHTTPTransport.data(for: request)
     }
 
     func suggest(
@@ -135,11 +135,7 @@ struct LLMInboxSuggestionService {
     }
 
     static func chatCompletionsURL(endpoint: String) -> URL? {
-        let trimmed = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard var components = URLComponents(string: trimmed),
-              let scheme = components.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              components.host?.isEmpty == false else {
+        guard var components = LLMModelService.validatedEndpointComponents(endpoint) else {
             return nil
         }
 

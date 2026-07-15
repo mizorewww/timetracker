@@ -33,18 +33,22 @@ extension TimeTrackerStore {
     }
 
     func deleteInboxItem(_ item: InboxItem) {
-        inboxSuggestionFailureByItemID[item.id] = nil
-        perform(event: .inboxChanged(itemIDs: [item.id])) {
+        let didDelete = perform(event: .inboxChanged(itemIDs: [item.id])) {
             guard let modelContext else { throw StoreError.notConfigured }
             try inboxCommandHandler.softDelete(item, context: modelContext)
+        }
+        if didDelete {
+            inboxSuggestionFailureByItemID[item.id] = nil
         }
     }
 
     func discardInboxSuggestion(_ item: InboxItem) {
-        inboxSuggestionFailureByItemID[item.id] = nil
-        perform(event: .inboxChanged(itemIDs: [item.id])) {
+        let didDiscard = perform(event: .inboxChanged(itemIDs: [item.id])) {
             guard let modelContext else { throw StoreError.notConfigured }
             try inboxCommandHandler.discardSuggestion(item, context: modelContext)
+        }
+        if didDiscard {
+            inboxSuggestionFailureByItemID[item.id] = nil
         }
     }
 

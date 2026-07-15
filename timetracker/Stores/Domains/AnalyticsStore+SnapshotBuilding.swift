@@ -14,7 +14,13 @@ extension AnalyticsStore {
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
         PerformanceSignpost.interval("Analytics snapshot generation") {
-            let rangeSegments = segmentsForAnalytics(segments, range: range, now: now, calendar: calendar)
+            let canonicalSegments = segments.deduplicatedByID()
+            let rangeSegments = segmentsForAnalytics(
+                canonicalSegments,
+                range: range,
+                now: now,
+                calendar: calendar
+            )
             let daily = dailyBreakdown(
                 segments: rangeSegments,
                 range: range,
@@ -27,7 +33,7 @@ extension AnalyticsStore {
                 taskCategories: taskCategories,
                 taskCategoryAssignments: taskCategoryAssignments,
                 rangeSegments: rangeSegments,
-                allSegments: segments,
+                allSegments: canonicalSegments,
                 sessions: sessions,
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
@@ -82,14 +88,15 @@ extension AnalyticsStore {
         now: Date,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
-        let overview = overview(segments: rangeSegments, now: now)
+        let boundedRangeSegments = analyticsInterval(for: range, now: now, calendar: calendar).map {
+            boundedSegments(rangeSegments.deduplicatedByID(), in: $0, now: now)
+        } ?? []
+        let overview = overview(items: boundedRangeSegments)
         let taskBreakdown = taskBreakdown(
-            segments: rangeSegments,
+            items: boundedRangeSegments,
             tasks: tasks,
             sessions: sessions,
-            taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            now: now
+            taskPathByID: taskPathByID
         )
         let comparison = comparison(segments: allSegments, range: range, now: now, calendar: calendar)
         let rhythm = rhythm(segments: rangeSegments, range: range, now: now, calendar: calendar)
@@ -151,10 +158,9 @@ extension AnalyticsStore {
             rootBreakdown: rootBreakdown,
             categoryBreakdown: categoryBreakdown,
             overlaps: overlapSegments(
-                segments: rangeSegments,
+                items: boundedRangeSegments,
                 tasks: tasks,
-                sessions: sessions,
-                now: now
+                sessions: sessions
             ),
             rangeSegments: rangeSegments
         )

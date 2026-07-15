@@ -51,6 +51,12 @@ extension timetrackerApp {
             url: storeURL,
             cloudKitDatabase: .none
         )
+        let demoConfiguration = ModelConfiguration(
+            "TimeTrackerDemo",
+            schema: schema,
+            url: AppDemoDataConfiguration.persistentStoreURL,
+            cloudKitDatabase: .none
+        )
         let emergencyConfiguration = ModelConfiguration(
             "TimeTrackerEmergency",
             schema: schema,
@@ -64,7 +70,7 @@ extension timetrackerApp {
                 return try ModelContainer(
                     for: schema,
                     migrationPlan: TimeTrackerMigrationPlan.self,
-                    configurations: [localConfiguration]
+                    configurations: [demoConfiguration]
                 )
             } catch {
                 return makeEmergencyModelContainer(

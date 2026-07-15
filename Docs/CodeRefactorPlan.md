@@ -1,10 +1,21 @@
-# Code Refactor Plan
+# Code Refactor Status And Guardrails
 
-This document records the current architecture state and the engineering rules that keep the project maintainable. It is not a feature backlog. Completed refactor work is removed from the active plan so future development does not keep revisiting the same tasks.
+Status: current source-structure record after the 2026-07-14 repository-wide split. This document records what was split, what is still concentrated, and the engineering rules that keep the project maintainable. It is not a product feature backlog and it does not substitute for the final build, test, simulator, and Instruments evidence in [Audit-2026-07-14](Audit-2026-07-14.md).
 
 ## Review Summary
 
-The current structural refactor pass is complete. The app now has semantic folders, split domain stores, split repositories, split feature views, and source-layout guard tests for the areas that were previously most fragile.
+The current pass established semantic folders, split domain stores and repositories, and then removed the largest mixed-responsibility production files:
+
+- `SyncConflictService.swift` was reduced to bootstrap/prompt ownership; local mutation, Cloud import/export, recovery/resolution, persisted state, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and domain record DTOs now have focused files.
+- Analytics root composition and decision-support derivation were split into category, overview-row, metric-list, detail-list, period, group-breakdown, metrics, overlap, and task-snapshot owners.
+- The retired `SettingsSectionsViews.swift` was replaced by focused display/timing, Pomodoro, countdown, sync, data, action, binding, and support files.
+- Task Detail is now one focused orchestration view plus identity, checklist, overview, analytics, navigation, and record section files.
+- The retired `TimeTrackerServices.swift` was replaced by `AppCloudSync`, persistence-write safety, timer command, aggregation, formatting, device identity, and ledger-summary files.
+- Facade startup/configuration and post-commit system-surface attachment were split from refresh/mutation/recovery lifecycle; both files now stay under the facade source-layout budget.
+- Widget entry/provider/configuration, active-timer layouts, supplementary/error states, and deep-link/localization/color support are separate files.
+- Watch dashboard orchestration, timer rows, status/error/empty states, and color support are separate files; durable queue/transport state remains in `WatchAppStore`.
+
+This structural work is real, but it does not make every production file small or single-purpose. The remaining concentrations below must not be hidden behind a blanket “refactor complete” claim.
 
 Remaining risks are policy-level and should be handled when the related subsystem is touched:
 
@@ -13,6 +24,20 @@ Remaining risks are policy-level and should be handled when the related subsyste
 - SwiftData schema changes are high-risk because iCloud users can have older stores.
 - Custom layout remains allowed only when the behavior is covered by service tests or a manual screenshot/device acceptance checklist.
 - Tests are allowed to be larger when they group one subsystem, but production Swift files should stay small enough to review quickly.
+
+## Current Responsibility Concentrations
+
+These are the highest-priority mixed-responsibility owners, not an exhaustive line-count report and not automatic failures. Split them along the named ownership boundaries when the subsystem is next changed, and protect behavior before moving code. Recompute the exact repository-wide line inventory at each review instead of treating this table as a frozen size snapshot:
+
+| Area | Current concentration | Preferred boundary |
+| --- | --- | --- |
+| `timetrackerWatchApp/WatchAppStore.swift` | Observable snapshot state, durable queue/timeout lifecycle, transport, payload application, freshness, error recording, and `WCSessionDelegate` callbacks share one owner | Separate queue lifecycle from the WCSession adapter only when tests can preserve same-ID retry, durable ack, timeout, stale-state, and reconnect semantics |
+| `Features/Home/HomeViews.swift` | Desktop wrapper, phone root, priority-ordered Today list, accessibility-size alternatives, and header support remain together | Keep Today section ordering in one composition owner, but move platform wrappers/header support when the next Home change requires it |
+| `Features/Tasks/Management/TaskManagementRowViews.swift` | Flat-row presentation and its complete action/menu/accessibility surface remain together | Extract action/menu support from the canonical row without splitting one logical row into unstable identities |
+| `Features/Analytics/Sections/AnalyticsDecisionViews.swift` | Insight, forecast, rhythm, quality, and overlap presentation remain in one section family | Split by decision, forecast, and quality/overlap section families if those screens evolve independently |
+| `Features/Settings/SettingsViews.swift` | Category navigation, export/confirmation presentation, AI configuration presentation, and category-to-section routing remain together | Keep the category router authoritative; move modal/export orchestration into focused support only when it improves reviewability |
+
+Sync is no longer a line-size concentration, but it remains the highest semantic-risk subsystem because it combines security-, migration-, export-, and synchronization-sensitive behavior. Mechanical file movement alone is not completion: deterministic LWW/tombstone behavior, sensitive-key filtering, atomic restore behavior, force-upload recovery, legacy-state checkpoint invalidation, and per-domain snapshot tests must remain green after every change. The largest remaining production concentrations are now the Watch connectivity store plus a few feature composition/row files listed above.
 
 ## Completed Structural Work
 
@@ -24,15 +49,23 @@ Remaining risks are policy-level and should be handled when the related subsyste
 - Forecast rollup recursion is isolated in `TaskRollupCalculationContext`.
 - Timeline layout models and axis compression are split from the lane-placement engine.
 - Home Quick Start and Analytics activity sections are split into smaller reusable files.
+- Analytics category routing, overview rows, metric/detail lists, period controls, and decision-support builders are split by responsibility.
+- Settings timing, Pomodoro, countdown, sync, data, action, binding, and support responsibilities are split; `SettingsSectionsViews.swift` is retired.
+- Task Detail identity, checklist, overview, analytics, navigation, and record sections are split from the canonical detail router.
+- Ledger cloud mode, transaction diagnostics, timer DTO, aggregation, formatting, device identity, and summary responsibilities are split; `TimeTrackerServices.swift` is retired.
+- Sync-conflict bootstrap/prompt, local mutation, Cloud import/export, recovery/resolution, state persistence, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and organization/ledger/planning/checklist/Inbox record DTOs are split by responsibility.
+- `TimeTrackerStore+Configuration.swift` owns first configuration, repository-only attachment, and committed-mutation surface refresh; `TimeTrackerStore+Lifecycle.swift` owns generic refresh, mutation, recovery, and error boundaries.
+- Widget entry/provider/configuration, active-timer views, supplementary states, and support helpers are split into `TimeTrackerWidget.swift`, `ActiveTimerWidgetView.swift`, `WidgetSupplementaryViews.swift`, and `WidgetSupport.swift`.
+- Watch UI composition is split into `WatchDashboardView.swift`, `WatchTimerRows.swift`, `WatchStatusViews.swift`, and `WatchColorSupport.swift`; `WatchAppStore.swift` remains the single queue/connectivity state owner.
 - Source-layout tests guard the important boundaries so new work does not rebuild the earlier large-file problem.
 
 ## Refactor Principles
 
-1. Keep `TimeSegment` as the immutable fact source.
+1. Keep canonical `TimeSegment` as the editable/soft-deletable fact source; caches and summaries remain rebuildable projections.
 2. Put durable writes in command handlers.
 3. Put SwiftData reads/writes in repositories.
 4. Put calculations in services.
-5. Put published feature state in domain stores.
+5. Put observable feature state in domain stores and expose it through the `@Observable` facade.
 6. Keep SwiftUI views mostly declarative: render state, do not derive heavy state.
 7. Prefer behavior tests, service tests, command tests, and accessibility/UI tests over source-string tests.
 8. Prefer new extension models over modifying core SwiftData models.
@@ -44,7 +77,7 @@ Remaining risks are policy-level and should be handled when the related subsyste
 Rules:
 
 - Facade methods longer than 30 lines require a documented reason.
-- Read-model helpers that do not need `@Published` state move out of the facade.
+- Read-model helpers that do not need observation move out of the facade.
 - Domain commands return typed results/events.
 
 Tests:
@@ -118,11 +151,11 @@ Rules:
 
 ## File And Folder Rules
 
-The folder structure is now semantic. Keep the existing size guards in place so new work does not rebuild the earlier large-file problem.
+The folder structure is now semantic. Keep the family-specific guards in `CoreSourceLayoutTests` aligned with the current owners so new work does not rebuild the earlier large-file problem. A line limit is a review signal, not a substitute for cohesion or behavior coverage.
 
 Rules:
 
-- A SwiftUI feature file over 250 lines should be split by section or row.
+- A new SwiftUI feature file over 250 lines requires a responsibility review; existing larger files require the same review even when they are not among the prioritized mixed-responsibility owners above.
 - A facade extension over 250 lines should be split by command/read-model responsibility.
 - A test file over 400 lines should be split by subsystem.
 - New shared controls belong in `SharedUI` only after a second caller exists or is imminent.

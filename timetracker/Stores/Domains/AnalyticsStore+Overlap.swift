@@ -2,10 +2,9 @@ import Foundation
 
 extension AnalyticsStore {
     func overlapSegments(
-        segments: [TimeSegment],
+        items: [AnalyticsBoundedSegment],
         tasks: [TaskNode],
-        sessions: [TimeSession],
-        now: Date
+        sessions: [TimeSession]
     ) -> [OverlapAnalyticsPoint] {
         struct Event {
             let date: Date
@@ -15,23 +14,21 @@ extension AnalyticsStore {
 
         let taskByID = tasks.latestByID()
         let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
-        let boundedSegments = segments.deduplicatedByID().compactMap { segment -> BoundedOverlapSegment? in
-            let end = segment.endedAt ?? now
-            guard segment.deletedAt == nil, end > segment.startedAt else { return nil }
+        let overlapItems = items.map { item in
             return BoundedOverlapSegment(
-                segment: segment,
-                end: end,
-                title: displayTitle(for: segment, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID)
+                segment: item.segment,
+                interval: item.interval,
+                title: displayTitle(for: item.segment, taskByID: taskByID, sessionsByTaskID: sessionsByTaskID)
             )
         }
-        let boundedByID = boundedSegments.reduce(into: [UUID: BoundedOverlapSegment]()) { result, item in
+        let boundedByID = overlapItems.reduce(into: [UUID: BoundedOverlapSegment]()) { result, item in
             result[item.segment.id] = item
         }
 
         var events: [Event] = []
-        for item in boundedSegments {
-            events.append(Event(date: item.segment.startedAt, isStart: true, segmentID: item.segment.id))
-            events.append(Event(date: item.end, isStart: false, segmentID: item.segment.id))
+        for item in overlapItems {
+            events.append(Event(date: item.interval.start, isStart: true, segmentID: item.segment.id))
+            events.append(Event(date: item.interval.end, isStart: false, segmentID: item.segment.id))
         }
 
         events.sort { lhs, rhs in
@@ -95,13 +92,13 @@ extension AnalyticsStore {
     }
 
     private func overlapPrecedes(_ lhs: BoundedOverlapSegment, _ rhs: BoundedOverlapSegment) -> Bool {
-        if lhs.segment.startedAt == rhs.segment.startedAt {
+        if lhs.interval.start == rhs.interval.start {
             if lhs.title == rhs.title {
                 return lhs.segment.id.uuidString < rhs.segment.id.uuidString
             }
             return lhs.title < rhs.title
         }
-        return lhs.segment.startedAt < rhs.segment.startedAt
+        return lhs.interval.start < rhs.interval.start
     }
 
     private func displayTitle(
@@ -115,7 +112,7 @@ extension AnalyticsStore {
 
 private struct BoundedOverlapSegment {
     let segment: TimeSegment
-    let end: Date
+    let interval: DateInterval
     let title: String
 }
 

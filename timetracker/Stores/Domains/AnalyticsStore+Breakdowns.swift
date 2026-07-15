@@ -1,20 +1,48 @@
 import Foundation
 
 extension AnalyticsStore {
-    func overview(segments: [TimeSegment], now: Date) -> AnalyticsOverview {
-        let aggregationService = TimeAggregationService()
-        let gross = aggregationService.totalSeconds(segments: segments, mode: .gross, now: now)
-        let wall = aggregationService.totalSeconds(segments: segments, mode: .wallClock, now: now)
-        let focusSegments = segments.filter { $0.source == .pomodoro }
-        let averageFocus = focusSegments.isEmpty ? 0 : aggregationService.grossSeconds(focusSegments, now: now) / focusSegments.count
+    func overview(items: [AnalyticsBoundedSegment]) -> AnalyticsOverview {
+        let gross = items.reduce(0) { $0 + $1.durationSeconds }
+        let intervals = items.map(\.interval)
+        let wall = TimeAggregationService().mergeOverlappingIntervals(intervals).reduce(0) {
+            $0 + Int($1.end.timeIntervalSince($1.start))
+        }
+        let focusItems = items.filter { $0.segment.source == .pomodoro }
+        let focusSeconds = focusItems.reduce(0) { $0 + $1.durationSeconds }
 
         return AnalyticsOverview(
             grossSeconds: gross,
             wallSeconds: wall,
             overlapSeconds: max(0, gross - wall),
-            pomodoroCount: focusSegments.filter { $0.endedAt != nil }.count,
-            averageFocusSeconds: averageFocus
+            pomodoroCount: focusItems.filter { item in
+                guard let endedAt = item.segment.endedAt else { return false }
+                return endedAt > item.interval.start && endedAt <= item.interval.end
+            }.count,
+            averageFocusSeconds: focusItems.isEmpty ? 0 : focusSeconds / focusItems.count
         )
+    }
+
+    func boundedSegments(
+        _ segments: [TimeSegment],
+        in interval: DateInterval,
+        taskIDs: Set<UUID>? = nil,
+        now: Date
+    ) -> [AnalyticsBoundedSegment] {
+        segments.compactMap { segment in
+            guard segment.deletedAt == nil else { return nil }
+            if let taskIDs, !taskIDs.contains(segment.taskID) {
+                return nil
+            }
+            let end = segment.endedAt ?? now
+            guard segment.startedAt < interval.end, end > interval.start else { return nil }
+            let start = max(segment.startedAt, interval.start)
+            let clippedEnd = min(end, interval.end)
+            guard clippedEnd > start else { return nil }
+            return AnalyticsBoundedSegment(
+                segment: segment,
+                interval: DateInterval(start: start, end: clippedEnd)
+            )
+        }
     }
 
     func dailyBreakdown(
@@ -57,20 +85,17 @@ extension AnalyticsStore {
     }
 
     func taskBreakdown(
-        segments: [TimeSegment],
+        items: [AnalyticsBoundedSegment],
         tasks: [TaskNode],
         sessions: [TimeSession],
-        taskPathByID: [UUID: String],
-        taskParentPathByID: [UUID: String],
-        now: Date
+        taskPathByID: [UUID: String]
     ) -> [TaskAnalyticsPoint] {
-        let aggregationService = TimeAggregationService()
         let taskByID = tasks.latestByID()
         let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
-        let grouped = Dictionary(grouping: segments.deduplicatedByID(), by: \.taskID)
+        let grouped = Dictionary(grouping: items) { $0.segment.taskID }
 
-        return grouped.compactMap { taskID, taskSegments -> TaskAnalyticsPoint? in
-            let gross = aggregationService.totalSeconds(segments: taskSegments, mode: .gross, now: now)
+        return grouped.compactMap { taskID, taskItems -> TaskAnalyticsPoint? in
+            let gross = taskItems.reduce(0) { $0 + $1.durationSeconds }
             guard gross > 0 else { return nil }
 
             let task = taskByID[taskID]
@@ -83,13 +108,15 @@ extension AnalyticsStore {
                 iconName: task?.iconName,
                 status: task?.status,
                 grossSeconds: gross,
-                wallSeconds: aggregationService.totalSeconds(segments: taskSegments, mode: .wallClock, now: now)
+                wallSeconds: TimeAggregationService().mergeOverlappingIntervals(taskItems.map(\.interval)).reduce(0) {
+                    $0 + Int($1.end.timeIntervalSince($1.start))
+                }
             )
         }
         .sorted { $0.grossSeconds > $1.grossSeconds }
     }
 
-    private func analyticsInterval(for range: AnalyticsRange, now: Date, calendar: Calendar) -> DateInterval? {
+    func analyticsInterval(for range: AnalyticsRange, now: Date, calendar: Calendar) -> DateInterval? {
         switch range {
         case .today:
             return calendar.dateInterval(of: .day, for: now)
@@ -115,5 +142,14 @@ extension AnalyticsStore {
     private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
         let end = segment.endedAt ?? now
         return segment.deletedAt == nil && segment.startedAt < interval.end && end > interval.start
+    }
+}
+
+struct AnalyticsBoundedSegment {
+    let segment: TimeSegment
+    let interval: DateInterval
+
+    var durationSeconds: Int {
+        max(0, Int(interval.end.timeIntervalSince(interval.start)))
     }
 }

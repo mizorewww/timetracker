@@ -154,6 +154,14 @@ struct CompletePomodoroFocusUseCase {
     }
 }
 
+struct CompletePomodoroBreakUseCase {
+    let repository: PomodoroRepository
+
+    func execute(runID: UUID) throws {
+        try repository.completeBreak(runID: runID)
+    }
+}
+
 struct CancelPomodoroUseCase {
     let repository: PomodoroRepository
 

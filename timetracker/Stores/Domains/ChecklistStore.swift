@@ -1,12 +1,33 @@
 import Foundation
 
 struct ChecklistStore {
-    private(set) var items: [ChecklistItem] = []
-    private(set) var visuals: [ChecklistItemVisual] = []
+    var items: [ChecklistItem] = []
+    var visuals: [ChecklistItemVisual] = []
+    private(set) var isInitialized = false
+    var itemsByTaskID: [UUID: [ChecklistItem]] = [:]
+    var itemArrayIndexByID: [UUID: Int] = [:]
+    var visualIDsByChecklistItemID: [UUID: Set<UUID>] = [:]
+    var visualArrayIndexByID: [UUID: Int] = [:]
+    var visualByChecklistItemID: [UUID: ChecklistItemVisual] = [:]
 
     mutating func refresh(items: [ChecklistItem], visuals: [ChecklistItemVisual]) {
         self.items = sortedItems(items.deduplicatedByID())
         self.visuals = sortedVisuals(visuals.deduplicatedByID())
+        itemsByTaskID = Dictionary(grouping: self.items, by: \.taskID)
+        itemArrayIndexByID = Dictionary(uniqueKeysWithValues: self.items.indices.map {
+            (self.items[$0].id, $0)
+        })
+        visualIDsByChecklistItemID = Dictionary(grouping: self.visuals, by: \.checklistItemID)
+            .mapValues { Set($0.map(\.id)) }
+        visualArrayIndexByID = Dictionary(uniqueKeysWithValues: self.visuals.indices.map {
+            (self.visuals[$0].id, $0)
+        })
+        visualByChecklistItemID = self.visuals.reduce(into: [:]) { result, visual in
+            if result[visual.checklistItemID] == nil {
+                result[visual.checklistItemID] = visual
+            }
+        }
+        isInitialized = true
     }
 
     mutating func refreshTaskScoped(
@@ -16,36 +37,58 @@ struct ChecklistStore {
     ) {
         guard taskIDs.isEmpty == false else { return }
 
-        let existingItemIDs = Set(items.filter { taskIDs.contains($0.taskID) }.map(\.id))
-        let fetchedItemIDs = Set(fetchedItems.map(\.id))
+        let canonicalFetchedItems = sortedItems(
+            fetchedItems.deduplicatedByID().filter { taskIDs.contains($0.taskID) }
+        )
+        let existingItemIDs = Set(taskIDs.flatMap { itemsByTaskID[$0] ?? [] }.map(\.id))
+        let fetchedItemIDs = Set(canonicalFetchedItems.map(\.id))
         let replacedItemIDs = existingItemIDs.union(fetchedItemIDs)
 
-        items = sortedItems(
-            (items.filter { taskIDs.contains($0.taskID) == false } + fetchedItems).deduplicatedByID()
+        if !canReuseItemArray(taskIDs: taskIDs, fetchedItems: canonicalFetchedItems) {
+            removeItems(ids: replacedItemIDs)
+            insertItems(canonicalFetchedItems)
+        }
+        for taskID in taskIDs {
+            let taskItems = canonicalFetchedItems.filter { $0.taskID == taskID }
+            if taskItems.isEmpty {
+                itemsByTaskID.removeValue(forKey: taskID)
+            } else {
+                itemsByTaskID[taskID] = taskItems
+            }
+        }
+
+        let canonicalFetchedVisuals = sortedVisuals(
+            fetchedVisuals.deduplicatedByID().filter {
+                replacedItemIDs.contains($0.checklistItemID)
+            }
         )
-        visuals = sortedVisuals(
-            (visuals.filter { replacedItemIDs.contains($0.checklistItemID) == false } + fetchedVisuals).deduplicatedByID()
-        )
+        let existingVisualIDs = replacedItemIDs.reduce(into: Set<UUID>()) { result, itemID in
+            result.formUnion(visualIDsByChecklistItemID[itemID] ?? [])
+        }
+        if !canReuseVisualArray(
+            checklistItemIDs: replacedItemIDs,
+            fetchedVisuals: canonicalFetchedVisuals
+        ) {
+            removeVisuals(ids: existingVisualIDs.union(canonicalFetchedVisuals.map(\.id)))
+            insertVisuals(canonicalFetchedVisuals)
+        }
+        for itemID in replacedItemIDs {
+            visualIDsByChecklistItemID.removeValue(forKey: itemID)
+            visualByChecklistItemID.removeValue(forKey: itemID)
+        }
+        for (itemID, itemVisuals) in Dictionary(grouping: canonicalFetchedVisuals, by: \.checklistItemID) {
+            visualIDsByChecklistItemID[itemID] = Set(itemVisuals.map(\.id))
+            visualByChecklistItemID[itemID] = itemVisuals.first
+        }
+        isInitialized = true
     }
 
-    private func sortedItems(_ items: [ChecklistItem]) -> [ChecklistItem] {
-        items.sorted { lhs, rhs in
-            if lhs.taskID != rhs.taskID {
-                return lhs.taskID.uuidString < rhs.taskID.uuidString
-            }
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-            return lhs.createdAt < rhs.createdAt
-        }
+    func items(for taskID: UUID) -> [ChecklistItem] {
+        itemsByTaskID[taskID] ?? []
     }
 
-    private func sortedVisuals(_ visuals: [ChecklistItemVisual]) -> [ChecklistItemVisual] {
-        visuals.sorted { lhs, rhs in
-            if lhs.checklistItemID != rhs.checklistItemID {
-                return lhs.checklistItemID.uuidString < rhs.checklistItemID.uuidString
-            }
-            return lhs.updatedAt > rhs.updatedAt
-        }
+    func visual(for checklistItemID: UUID) -> ChecklistItemVisual? {
+        visualByChecklistItemID[checklistItemID]
     }
+
 }

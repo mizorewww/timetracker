@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SegmentEditorSheet: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     let initialDraft: SegmentEditorDraft
 
@@ -14,12 +14,14 @@ struct SegmentEditorSheet: View {
                 dismiss()
             },
             onSave: { draft in
-                store.saveSegmentDraft(draft)
-                dismiss()
+                if store.saveSegmentDraft(draft) {
+                    dismiss()
+                }
             },
             onDelete: { segmentID in
-                store.deleteSegment(segmentID)
-                dismiss()
+                if store.deleteSegment(segmentID) {
+                    dismiss()
+                }
             }
         )
         .platformSheetFrame(width: 620, height: 620)
@@ -28,8 +30,11 @@ struct SegmentEditorSheet: View {
 }
 
 struct SegmentEditorPanel: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @State private var draft: SegmentEditorDraft
+    @State private var isDiscardConfirmationPresented = false
+    @State private var isDeleteConfirmationPresented = false
+    let initialDraft: SegmentEditorDraft
     let onCancel: () -> Void
     let onSave: (SegmentEditorDraft) -> Void
     let onDelete: (UUID) -> Void
@@ -42,6 +47,7 @@ struct SegmentEditorPanel: View {
         onDelete: @escaping (UUID) -> Void
     ) {
         self.store = store
+        self.initialDraft = initialDraft
         self.onCancel = onCancel
         self.onSave = onSave
         self.onDelete = onDelete
@@ -54,7 +60,7 @@ struct SegmentEditorPanel: View {
                 Section(AppStrings.localized("segment.assignment")) {
                     Picker(AppStrings.localized("segment.task"), selection: taskBinding) {
                         Text(.app("segment.choose")).tag(Optional<UUID>.none)
-                        ForEach(store.tasks, id: \.id) { task in
+                        ForEach(availableTasks, id: \.id) { task in
                             Text(store.path(for: task)).tag(Optional(task.id))
                         }
                     }
@@ -63,7 +69,20 @@ struct SegmentEditorPanel: View {
                 }
 
                 Section(AppStrings.localized("segment.time")) {
-                    DatePicker(AppStrings.localized("segment.start"), selection: $draft.startedAt, displayedComponents: [.date, .hourAndMinute])
+                    if draft.isActive {
+                        DatePicker(
+                            AppStrings.localized("segment.start"),
+                            selection: $draft.startedAt,
+                            in: ...Date(),
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+                    } else {
+                        DatePicker(
+                            AppStrings.localized("segment.start"),
+                            selection: $draft.startedAt,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+                    }
                     Toggle(AppStrings.localized("segment.active"), isOn: $draft.isActive)
                     if !draft.isActive {
                         DatePicker(AppStrings.localized("segment.end"), selection: $draft.endedAt, displayedComponents: [.date, .hourAndMinute])
@@ -72,6 +91,15 @@ struct SegmentEditorPanel: View {
                                 .font(.headline.monospacedDigit())
                                 .foregroundStyle(draft.endedAt > draft.startedAt ? Color.primary : Color.red)
                         }
+                        if draft.endedAt <= draft.startedAt {
+                            Label(AppStrings.localized("segment.error.endAfterStart"), systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    } else if draft.startedAt > Date() {
+                        Label(AppStrings.localized("segment.error.startNotFuture"), systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 }
 
@@ -81,7 +109,7 @@ struct SegmentEditorPanel: View {
 
                 Section {
                     Button(role: .destructive) {
-                        onDelete(draft.segmentID)
+                        isDeleteConfirmationPresented = true
                     } label: {
                         Label(AppStrings.localized("segment.softDelete"), systemImage: "trash")
                     }
@@ -95,7 +123,7 @@ struct SegmentEditorPanel: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {
-                        onCancel()
+                        requestCancel()
                     }
                     .keyboardShortcut(.cancelAction)
                 }
@@ -105,9 +133,37 @@ struct SegmentEditorPanel: View {
                         onSave(draft)
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(draft.taskID == nil || (!draft.isActive && draft.endedAt <= draft.startedAt))
+                    .disabled(
+                        draft.taskID == nil ||
+                            (draft.isActive ? draft.startedAt > Date() : draft.endedAt <= draft.startedAt)
+                    )
                 }
             }
+        }
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: draft != initialDraft,
+            discard: onCancel
+        )
+        .confirmationDialog(
+            AppStrings.localized("segment.delete.confirm.title"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("segment.softDelete"), role: .destructive) {
+                onDelete(draft.segmentID)
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("segment.delete.confirm.message"))
+        }
+    }
+
+    private func requestCancel() {
+        if draft == initialDraft {
+            onCancel()
+        } else {
+            isDiscardConfirmationPresented = true
         }
     }
 
@@ -116,6 +172,12 @@ struct SegmentEditorPanel: View {
             draft.taskID
         } set: { value in
             draft.taskID = value
+        }
+    }
+
+    private var availableTasks: [TaskNode] {
+        store.tasks.filter { task in
+            store.isTaskAvailableForTracking(task) || task.id == initialDraft.taskID
         }
     }
 }

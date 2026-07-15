@@ -7,6 +7,7 @@ struct ForecastExplanationCallout: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.blue)
                 .frame(width: 22, height: 22)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(.app("forecast.explainer.title"))
@@ -25,6 +26,7 @@ struct ForecastExplanationCallout: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(Color.blue.opacity(0.12), lineWidth: 1)
         )
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -39,6 +41,11 @@ struct ForecastInfoButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
+        .frame(
+            minWidth: AppLayout.minimumInteractiveTarget,
+            minHeight: AppLayout.minimumInteractiveTarget
+        )
+        .contentShape(Rectangle())
         .accessibilityLabel(AppStrings.localized("forecast.info.title"))
         .popover(isPresented: $isPresented) {
             ForecastInfoView()
@@ -118,6 +125,7 @@ private struct InfoGuideRow: View {
                 .font(.title3)
                 .foregroundStyle(.blue)
                 .frame(width: 28)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -128,5 +136,6 @@ private struct InfoGuideRow: View {
             }
         }
         .padding(.vertical, 3)
+        .accessibilityElement(children: .combine)
     }
 }

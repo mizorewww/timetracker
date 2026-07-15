@@ -23,7 +23,7 @@ extension SwiftDataTaskRepository {
         try applyHierarchy(to: node, parentID: parentID)
         context.insert(node)
         try setCategoryAssignment(categoryID: parentID == nil ? categoryID : nil, forRootTaskID: node.id)
-        try context.save()
+        try context.saveAfterMutationStep()
         return node
     }
 
@@ -41,6 +41,7 @@ extension SwiftDataTaskRepository {
     ) throws {
         let nodes = try allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
+        let isChangingParent = node.parentID != parentID
         guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else {
             throw TaskRepositoryError.invalidMove
         }
@@ -51,14 +52,19 @@ extension SwiftDataTaskRepository {
         node.colorHex = colorHex
         node.iconName = iconName
         node.notes = notes
-        node.estimatedSeconds = estimatedSeconds
+        node.estimatedSeconds = TaskEstimatePolicy.normalized(seconds: estimatedSeconds)
         node.dueAt = dueAt
-        node.updatedAt = Date()
+        let now = Date()
+        node.updatedAt = now
         node.clientMutationID = UUID()
-        try applyHierarchy(to: node, parentID: parentID)
-        try updateDescendantHierarchy(of: node)
+        try applyHierarchy(
+            to: node,
+            parentID: parentID,
+            requiresTrackableParent: isChangingParent
+        )
+        updateDescendantHierarchy(of: node, nodes: nodes, now: now)
         try setCategoryAssignment(categoryID: parentID == nil ? categoryID : nil, forRootTaskID: node.id)
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {
@@ -70,14 +76,15 @@ extension SwiftDataTaskRepository {
 
         node.parentID = newParentID
         node.sortOrder = sortOrder
-        node.updatedAt = Date()
+        let now = Date()
+        node.updatedAt = now
         node.clientMutationID = UUID()
         try applyHierarchy(to: node, parentID: newParentID)
-        try updateDescendantHierarchy(of: node)
+        updateDescendantHierarchy(of: node, nodes: nodes, now: now)
         if newParentID != nil {
             try setCategoryAssignment(categoryID: nil, forRootTaskID: node.id)
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func setTaskStatus(taskID: UUID, status: TaskStatus) throws {
@@ -86,7 +93,7 @@ extension SwiftDataTaskRepository {
         node.archivedAt = status == .archived ? Date() : nil
         node.updatedAt = Date()
         node.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func archiveTask(taskID: UUID) throws {
@@ -95,7 +102,7 @@ extension SwiftDataTaskRepository {
         node.archivedAt = Date()
         node.updatedAt = Date()
         node.clientMutationID = UUID()
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     func softDeleteTask(taskID: UUID) throws {
@@ -113,6 +120,6 @@ extension SwiftDataTaskRepository {
             assignment.updatedAt = now
             assignment.clientMutationID = UUID()
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 }

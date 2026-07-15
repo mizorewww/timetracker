@@ -1,74 +1,133 @@
-import Combine
 import CoreData
 import Foundation
+import Observation
 import SwiftData
 
 @MainActor
-final class TimeTrackerStore: ObservableObject {
-    @Published var tasks: [TaskNode] = [] {
+@Observable
+final class TimeTrackerStore {
+    let llmCredentialStore: any LLMCredentialStoring
+    let inboxSuggestionService: LLMInboxSuggestionService
+    let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
+
+    init() {
+        llmCredentialStore = KeychainLLMCredentialStore()
+        inboxSuggestionService = LLMInboxSuggestionService()
+        checklistVisualSuggestionService = LLMChecklistVisualSuggestionService()
+    }
+
+    init(llmCredentialStore: any LLMCredentialStoring) {
+        self.llmCredentialStore = llmCredentialStore
+        inboxSuggestionService = LLMInboxSuggestionService()
+        checklistVisualSuggestionService = LLMChecklistVisualSuggestionService()
+    }
+
+    init(
+        llmCredentialStore: any LLMCredentialStoring,
+        inboxSuggestionService: LLMInboxSuggestionService
+    ) {
+        self.llmCredentialStore = llmCredentialStore
+        self.inboxSuggestionService = inboxSuggestionService
+        checklistVisualSuggestionService = LLMChecklistVisualSuggestionService()
+    }
+
+    init(
+        llmCredentialStore: any LLMCredentialStoring,
+        inboxSuggestionService: LLMInboxSuggestionService,
+        checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
+    ) {
+        self.llmCredentialStore = llmCredentialStore
+        self.inboxSuggestionService = inboxSuggestionService
+        self.checklistVisualSuggestionService = checklistVisualSuggestionService
+    }
+
+    deinit {
+        pomodoroReconciliationTask?.cancel()
+        scheduledSyncRefreshTask?.cancel()
+    }
+
+    var tasks: [TaskNode] = [] {
         didSet {
             rebuildTaskIndexes()
         }
     }
-    @Published var taskCategories: [TaskCategory] = [] {
+    var taskCategories: [TaskCategory] = [] {
         didSet {
             rebuildTaskCategoryIndexes()
         }
     }
-    @Published var taskCategoryAssignments: [TaskCategoryAssignment] = [] {
+    var taskCategoryAssignments: [TaskCategoryAssignment] = [] {
         didSet {
             rebuildTaskCategoryIndexes()
         }
     }
-    @Published var activeSegments: [TimeSegment] = []
-    @Published var todaySegments: [TimeSegment] = [] {
+    var activeSegments: [TimeSegment] = [] {
+        didSet {
+            activeSegmentByTaskID = activeSegments.reduce(into: [:]) { result, segment in
+                if result[segment.taskID] == nil {
+                    result[segment.taskID] = segment
+                }
+            }
+        }
+    }
+    var todaySegments: [TimeSegment] = [] {
         didSet {
             sortedTodaySegments = todaySegments.sorted { $0.startedAt > $1.startedAt }
         }
     }
-    @Published var allSegments: [TimeSegment] = []
-    @Published var sessions: [TimeSession] = []
-    @Published var pomodoroRuns: [PomodoroRun] = []
-    @Published var countdownEvents: [CountdownEvent] = []
-    @Published var syncedPreferences: [SyncedPreference] = []
-    @Published var checklistItems: [ChecklistItem] = [] {
+    var allSegments: [TimeSegment] = []
+    var sessions: [TimeSession] = []
+    var pomodoroRuns: [PomodoroRun] = []
+    @ObservationIgnored var pomodoroReconciliationTask: Task<Void, Never>?
+    var countdownEvents: [CountdownEvent] = []
+    var syncedPreferences: [SyncedPreference] = []
+    var checklistItems: [ChecklistItem] = [] {
         didSet {
-            rebuildChecklistIndexes()
+            if !suppressChecklistIndexRebuild {
+                rebuildChecklistIndexes()
+            }
         }
     }
-    @Published var checklistItemVisuals: [ChecklistItemVisual] = [] {
+    var checklistItemVisuals: [ChecklistItemVisual] = [] {
         didSet {
-            rebuildChecklistVisualIndexes()
+            if !suppressChecklistVisualIndexRebuild {
+                rebuildChecklistVisualIndexes()
+            }
         }
     }
-    @Published var inboxItems: [InboxItem] = []
-    @Published var inboxSuggestions: [InboxSuggestion] = [] {
+    var inboxItems: [InboxItem] = []
+    var inboxSuggestions: [InboxSuggestion] = [] {
         didSet {
             rebuildInboxSuggestionIndexes()
         }
     }
-    @Published var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
-    @Published var inboxSuggestionInFlightIDs: Set<UUID> = []
-    @Published var inboxSuggestionFailureByItemID: [UUID: String] = [:]
-    @Published var checklistVisualSuggestionInFlightIDs: Set<UUID> = []
-    @Published var preferences = AppPreferences.defaults
-    @Published var rollupDomainStore = RollupStore()
-    @Published var analyticsDomainStore = AnalyticsStore()
-    @Published var selectedTaskID: UUID?
-    @Published var selectedRange: RangePreset = .today
-    @Published var errorMessage: String?
-    @Published var taskEditorDraft: TaskEditorDraft?
-    @Published var taskCategoryEditorDraft: TaskCategoryEditorDraft?
-    @Published var manualTimeDraft: ManualTimeDraft?
-    @Published var segmentEditorDraft: SegmentEditorDraft?
-    @Published var desktopDestination: DesktopDestination = .today
-    @Published var desktopTaskDetailID: UUID?
-    @Published var selectedTaskPulseID: UUID?
-    @Published var selectedTaskPulseToken = UUID()
-    @Published var isStartTaskPickerPresented = false
-    @Published var cloudAccountStatus: String = AppCloudSync.accountStatus
-    @Published var lastSyncRefreshAt: Date?
-    @Published var pendingSyncConflict: SyncConflictPrompt?
+    var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
+    var inboxSuggestionInFlightIDs: Set<UUID> = []
+    var inboxSuggestionFailureByItemID: [UUID: String] = [:]
+    @ObservationIgnored var inboxSuggestionPendingIDs: [UUID] = []
+    @ObservationIgnored var inboxSuggestionPendingShowsErrors: Set<UUID> = []
+    var checklistVisualSuggestionInFlightIDs: Set<UUID> = []
+    @ObservationIgnored var checklistVisualSuggestionFailureFingerprintByItemID: [UUID: String] = [:]
+    @ObservationIgnored var checklistVisualSuggestionRetryAfterByItemID: [UUID: Date] = [:]
+    var preferences = AppPreferences.defaults
+    var rollupDomainStore = RollupStore()
+    var analyticsDomainStore = AnalyticsStore()
+    var analyticsRevision: UInt = 0
+    var selectedTaskID: UUID?
+    var selectedRange: RangePreset = .today
+    var errorMessage: String?
+    var taskEditorDraft: TaskEditorDraft?
+    var taskCategoryEditorDraft: TaskCategoryEditorDraft?
+    var manualTimeDraft: ManualTimeDraft?
+    var segmentEditorDraft: SegmentEditorDraft?
+    var desktopDestination: DesktopDestination = .today
+    var desktopTaskDetailID: UUID?
+    var selectedTaskPulseID: UUID?
+    var selectedTaskPulseToken = UUID()
+    var isStartTaskPickerPresented = false
+    var cloudAccountStatus: String = AppCloudSync.accountStatus
+    var lastSyncRefreshAt: Date?
+    var pendingSyncConflict: SyncConflictPrompt?
 
     enum RangePreset: String, CaseIterable, Identifiable {
         case today = "Today"
@@ -130,6 +189,7 @@ final class TimeTrackerStore: ObservableObject {
     let aggregationService = TimeAggregationService()
     let analyticsEngine = AnalyticsEngine()
     let taskTreeService = TaskTreeService()
+    let taskTrackingAvailabilityService = TaskTrackingAvailabilityService()
     let ledgerSummaryService = LedgerSummaryService()
     let checklistDraftService = ChecklistDraftService()
     let inboxSuggestionStateService = InboxSuggestionStateService()
@@ -150,19 +210,26 @@ final class TimeTrackerStore: ObservableObject {
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var checklistDomainStore = ChecklistStore()
+    @ObservationIgnored var suppressChecklistIndexRebuild = false
+    @ObservationIgnored var suppressChecklistVisualIndexRebuild = false
     var inboxDomainStore = InboxStore()
     var preferenceDomainStore = PreferenceStore()
-    var syncObservers: [NSObjectProtocol] = []
+    var syncObservers: [SyncNotificationObserverToken] = []
     var taskByID: [UUID: TaskNode] = [:]
     var taskCategoryByID: [UUID: TaskCategory] = [:]
     var taskCategoryIDByRootTaskID: [UUID: UUID] = [:]
+    var forecastEligibleTaskIDCache: Set<UUID> = []
     var childrenByParentID: [UUID?: [TaskNode]] = [:]
     var checklistByTaskID: [UUID: [ChecklistItem]] = [:]
     var taskPathByID: [UUID: String] = [:]
     var taskParentPathByID: [UUID: String] = [:]
+    var visibleTaskIDs: Set<UUID> = []
+    var trackableTaskIDs: Set<UUID> = []
+    var activeSegmentByTaskID: [UUID: TimeSegment] = [:]
     var sortedTodaySegments: [TimeSegment] = []
     var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
-    var scheduledSyncRefreshTask: Task<Void, Never>?
+    @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?
     var scheduledSyncRefreshReason: SyncRefreshReason?
+    var completedCloudExportResults: [UUID: Bool] = [:]
 }

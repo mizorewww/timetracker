@@ -34,11 +34,17 @@ enum AppDemoDataConfiguration {
            let mode = AutomaticDemoDataMode(rawValue: configured) {
             return mode
         }
-        return .seedIfEmpty
+        return .off
     }
 
     static var usesLocalDemoStore: Bool {
         currentMode != .off
+    }
+
+    static var persistentStoreURL: URL {
+        AppCloudSync.persistentStoreURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("TimeTracker-Demo.store")
     }
 
     static func disableLocalDemoStoreForCloudSync() {

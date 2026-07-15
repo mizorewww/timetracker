@@ -1,5 +1,9 @@
 import Foundation
 
+enum TaskRollupHistoricalPolicy {
+    static let paceDayCount = 90
+}
+
 struct ChecklistProgress: Equatable {
     let taskID: UUID
     let totalCount: Int
@@ -72,6 +76,9 @@ struct TaskRollup: Identifiable, Equatable {
     let confidence: ForecastConfidence
     let reason: String
     let forecastState: ForecastState
+    /// Exact count for aggregate copy. The ID sample is intentionally bounded
+    /// so a deep hierarchy cannot make every ancestor own every descendant ID.
+    let forecastSourceTaskCount: Int
     let forecastSourceTaskIDs: [UUID]
     let forecastSourceLabel: String?
 

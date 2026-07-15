@@ -1,80 +1,27 @@
 import SwiftUI
 
-struct InboxListView: View {
-    @ObservedObject var store: TimeTrackerStore
-    let openItems: [InboxItem]
-    let completedItems: [InboxItem]
-    let layout: InboxLayoutPolicy
-    @State private var isSorting = false
-
-    private var isCompact: Bool {
-        layout.isCompact
-    }
+struct InboxListRow: View {
+    let store: TimeTrackerStore
+    let item: InboxItem
+    let isCompact: Bool
+    let isSorting: Bool
+    let canSort: Bool
+    let toggleSorting: () -> Void
+    @State private var isDeleteConfirmationPresented = false
 
     var body: some View {
-        itemList
-            .frame(height: itemListHeight)
-    }
-
-    @ViewBuilder
-    private var itemList: some View {
-        let list = List {
-            ForEach(openItems) { item in
-                inboxRow(item)
-            }
-            .onMove(perform: moveInboxItems)
-
-            ForEach(completedItems) { item in
-                inboxRow(item)
-                    .moveDisabled(true)
-            }
-        }
-        .listStyle(.plain)
-        .scrollDisabled(true)
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
-
-        #if os(iOS)
-        list.environment(\.editMode, .constant(isSorting ? EditMode.active : EditMode.inactive))
-        #else
-        list
-        #endif
-    }
-
-    private var itemListHeight: CGFloat {
-        let rows = openItems + completedItems
-        guard !rows.isEmpty else { return 0 }
-        return rows.reduce(CGFloat.zero) { total, item in
-            total + rowHeight(for: item)
-        }
-    }
-
-    private func rowHeight(for item: InboxItem) -> CGFloat {
-        let hasSupplementaryContent = store.inboxSuggestionInFlightIDs.contains(item.id) ||
-            store.inboxSuggestion(for: item) != nil ||
-            store.inboxSuggestionFailureMessage(for: item) != nil
-        return layout.rowHeight(
-            forTitle: item.title,
-            isCompleted: item.isCompleted,
-            hasSupplementaryContent: hasSupplementaryContent
-        )
-    }
-
-    @ViewBuilder
-    private func inboxRow(_ item: InboxItem) -> some View {
         InboxItemRow(
             store: store,
             item: item,
             isCompact: isCompact,
             isSorting: isSorting,
-            canSort: openItems.count > 1,
-            toggleSorting: toggleSorting
+            canSort: canSort,
+            toggleSorting: toggleSorting,
+            requestDelete: requestDelete
         )
-        .padding(.vertical, layout.rowVerticalPadding)
-        .listRowInsets(cardRowInsets())
-        .listRowBackground(Color.clear)
+        .padding(.vertical, 4)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            if canApplySuggestion(for: item) {
+            if canApplySuggestion {
                 Button {
                     store.applyInboxSuggestion(item)
                 } label: {
@@ -85,12 +32,12 @@ struct InboxListView: View {
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
-                store.deleteInboxItem(item)
+                requestDelete()
             } label: {
                 Label(AppStrings.delete, systemImage: "trash")
             }
 
-            if canDiscardSuggestion(for: item) {
+            if canDiscardSuggestion {
                 Button {
                     store.discardInboxSuggestion(item)
                 } label: {
@@ -99,28 +46,26 @@ struct InboxListView: View {
                 .tint(.gray)
             }
         }
+        .confirmationDialog(
+            AppStrings.localized("inbox.delete.confirm.title"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.delete, role: .destructive) {
+                store.deleteInboxItem(item)
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("inbox.delete.confirm.message"))
+        }
+        .accessibilityIdentifier("inbox.item.\(item.id.uuidString)")
     }
 
-    private func cardRowInsets(top: CGFloat = 0, bottom: CGFloat = 0) -> EdgeInsets {
-        EdgeInsets(
-            top: top,
-            leading: layout.cardHorizontalPadding,
-            bottom: bottom,
-            trailing: layout.cardHorizontalPadding
-        )
+    private func requestDelete() {
+        isDeleteConfirmationPresented = true
     }
 
-    private func toggleSorting() {
-        #if os(iOS)
-        isSorting.toggle()
-        #endif
-    }
-
-    private func moveInboxItems(from sourceOffsets: IndexSet, to destination: Int) {
-        store.reorderInboxItems(sourceOffsets: sourceOffsets, destination: destination)
-    }
-
-    private func canApplySuggestion(for item: InboxItem) -> Bool {
+    private var canApplySuggestion: Bool {
         guard !item.isCompleted,
               let suggestion = store.inboxSuggestion(for: item),
               store.task(for: suggestion.taskID) != nil else {
@@ -129,7 +74,7 @@ struct InboxListView: View {
         return true
     }
 
-    private func canDiscardSuggestion(for item: InboxItem) -> Bool {
+    private var canDiscardSuggestion: Bool {
         !item.isCompleted &&
             (
                 store.inboxSuggestionInFlightIDs.contains(item.id) ||

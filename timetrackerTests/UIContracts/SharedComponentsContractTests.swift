@@ -4,47 +4,95 @@ import Testing
 @Suite(.serialized)
 struct SharedComponentsContractTests {
     @Test
-    func ipadSidebarButtonOnlyRevealsSidebar() throws {
+    func accessibilityTextUsesAlternateRowsAndNonScalingDecorativeIcons() throws {
+        let homeSource = try [
+            "timetracker/Features/Home/PhoneHomeView.swift",
+            "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Home/Rows/HomeTimerRows.swift"
+        ].map(sourceText).joined(separator: "\n")
+        let settingsSource = try [
+            "timetracker/Features/Settings/SettingsViews.swift",
+            "timetracker/Features/Settings/SettingsCategoryViews.swift",
+            "timetracker/SharedUI/Components/SettingsRows.swift",
+            "timetracker/Features/Settings/SettingsDataSectionsViews.swift",
+            "timetracker/Features/Settings/DisplayTimingSettingsSection.swift",
+            "timetracker/Features/Settings/PomodoroSettingsSection.swift",
+            "timetracker/Features/Settings/PomodoroPickerViews.swift",
+            "timetracker/Features/Settings/CountdownSettingsSection.swift",
+            "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Settings/LLMSettingsViews.swift",
+            "timetracker/Features/Settings/LLMSettingsSection.swift"
+        ].map(sourceText).joined(separator: "\n")
+        let designSystemSource = try sourceText("timetracker/SharedUI/Foundation/DesignSystem.swift")
+
+        #expect(homeSource.contains("dynamicTypeSize.isAccessibilitySize"))
+        #expect(homeSource.contains("private var accessibilityContent"))
+        #expect(homeSource.contains(".contentMargins(.bottom"))
+        #expect(settingsSource.contains("dynamicTypeSize.isAccessibilitySize"))
+        #expect(settingsSource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(settingsSource.contains(".font(.system(size: 18, weight: .semibold))"))
+        #expect(designSystemSource.contains(".font(.system(size: 17, weight: .semibold))"))
+    }
+
+    @Test
+    func ipadSplitViewUsesTheNativeAdaptiveSidebarControl() throws {
         let ipadSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
 
-        #expect(ipadSource.contains("if columnVisibility == .detailOnly"))
-        #expect(ipadSource.contains("columnVisibility = .all"))
+        #expect(ipadSource.contains("preferredCompactColumn: $preferredCompactColumn"))
+        #expect(ipadSource.contains("preferredCompactColumn = .detail"))
+        #expect(ipadSource.contains("SidebarRevealButton") == false)
+        #expect(ipadSource.contains("ToolbarItem(placement: .topBarLeading)") == false)
         #expect(ipadSource.contains("isInspectorPresented") == false)
         #expect(ipadSource.contains(".inspector(") == false)
     }
 
     @Test
-    func sectionHeadersUseSharedComponentAcrossSettingsAndAnalytics() throws {
+    func sectionHeadersUseSharedComponentAcrossSettingsAndHome() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SectionHeaders.swift")
         let settingsSupportSource = try sourceText("timetracker/Features/Settings/Support/SettingsSupportViews.swift")
-        let metricSource = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
+        let homeSource = try [
+            "timetracker/Features/Home/Sections/HomeTimelineViews.swift",
+            "timetracker/Features/Home/Sections/HomeForecastViews.swift",
+            "timetracker/Features/Home/Sections/HomeCountdownViews.swift"
+        ].map(sourceText).joined(separator: "\n")
 
         #expect(sharedSource.contains("struct AppSectionHeader"))
         #expect(sharedSource.contains("struct SettingsHeader"))
         #expect(sharedSource.contains("struct SectionTitle"))
         #expect(settingsSupportSource.contains("struct SettingsHeader") == false)
-        #expect(metricSource.contains("AppSectionHeader(title: title"))
+        #expect(homeSource.contains("SectionTitle(title:"))
     }
 
     @Test
-    func primaryActionLabelsUseSharedComponentAcrossHomeAndTaskDetail() throws {
+    func primaryActionLabelsWrapLegiblyAndExposeStableActions() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
         let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
 
         #expect(sharedSource.contains("struct AppActionLabel"))
-        #expect(sharedSource.contains(".minimumScaleFactor(0.78)"))
+        #expect(sharedSource.contains(".lineLimit(2)"))
+        #expect(sharedSource.contains(".multilineTextAlignment(.center)"))
+        #expect(sharedSource.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(sharedSource.contains(".frame(minHeight: fixedHeight == nil ? minHeight : 0)"))
         #expect(homeSource.contains("AppActionLabel(title: AppStrings.startTimer"))
-        #expect(homeSource.contains("private func actionLabel") == false)
+        #expect(homeSource.contains(".accessibilityIdentifier(\"home.startTimer\")"))
+        #expect(homeSource.contains(".accessibilityIdentifier(\"home.newTask\")"))
         #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.startTimer"))
         #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.addTime"))
+        #expect(taskDetailSource.contains(".accessibilityIdentifier(\"task.detail.actions\")"))
     }
 
     @Test
     func settingsActionRowsUseSharedComponent() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
         let settingsSource = try [
-            "timetracker/Features/Settings/SettingsSectionsViews.swift",
+            "timetracker/Features/Settings/DisplayTimingSettingsSection.swift",
+            "timetracker/Features/Settings/PomodoroSettingsSection.swift",
+            "timetracker/Features/Settings/PomodoroPickerViews.swift",
+            "timetracker/Features/Settings/CountdownSettingsSection.swift",
+            "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Settings/LLMSettingsViews.swift",
+            "timetracker/Features/Settings/LLMSettingsSection.swift",
             "timetracker/Features/Settings/SettingsDataSectionsViews.swift",
             "timetracker/Features/Settings/Support/SettingsSupportViews.swift"
         ].map(sourceText).joined(separator: "\n")
@@ -65,27 +113,37 @@ struct SharedComponentsContractTests {
     }
 
     @Test
-    func llmModelSelectionFetchesFromModelRow() throws {
-        let settingsDataSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
+    func llmConfigurationUsesAnExplicitTestAndSaveDraft() throws {
+        let llmSource = try [
+            "timetracker/Features/Settings/LLMSettingsViews.swift",
+            "timetracker/Features/Settings/LLMSettingsSection.swift"
+        ].map(sourceText).joined(separator: "\n")
         let settingsViewSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
-        let settingsActionsSource = try sourceText("timetracker/Features/Settings/SettingsViewActions.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(settingsDataSource.contains("private var modelSelectionRow"))
-        #expect(settingsDataSource.contains("SettingsModelSelectionRow("))
-        #expect(settingsDataSource.contains("Button(action: onFetchModels)"))
-        #expect(settingsDataSource.contains("ProgressView()"))
-        #expect(settingsDataSource.contains("AppStrings.localized(\"settings.llm.fetching\")"))
-        #expect(settingsDataSource.contains("AppStrings.localized(\"settings.llm.fetchModels\")") == false)
-        #expect(settingsViewSource.contains(".onAppear(perform: fetchLLMModelsIfNeeded)") == false)
-        #expect(settingsActionsSource.contains("func fetchLLMModelsIfNeeded") == false)
-        #expect(englishStrings.contains("\"settings.llm.fetchModels\"") == false)
+        #expect(llmSource.contains("struct LLMConfigurationDraft: Equatable"))
+        #expect(llmSource.contains("Button(action: testConnection)"))
+        #expect(llmSource.contains("Button(AppStrings.localized(\"common.save\"), action: save)"))
+        #expect(llmSource.contains(".editorDiscardConfirmation("))
+        #expect(settingsViewSource.contains(".sheet(isPresented: $isLLMConfigurationPresented)"))
+        #expect(settingsViewSource.contains("store.setLLMConfiguration("))
+        #expect(settingsViewSource.contains("store.setLLMEndpoint(configuration.endpoint)") == false)
+        #expect(englishStrings.contains("\"settings.llm.testConnection\""))
+    }
+
+    @Test
+    func settingsDiscardsModelResponsesAfterCredentialsChange() throws {
+        let source = try sourceText("timetracker/Features/Settings/LLMSettingsViews.swift")
+
+        #expect(source.contains("fetchTask?.cancel()"))
+        #expect(source.components(separatedBy: "draft.credentialFingerprint == fingerprint").count == 3)
+        #expect(source.contains("guard !Task.isCancelled"))
     }
 
     @Test
     func selectedTaskPulseIsSharedForSidebarRows() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SelectionPulse.swift")
-        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
+        let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarTaskTreeViews.swift")
 
         #expect(sharedSource.contains("struct TaskSelectionPulseModifier<"))
         #expect(sharedSource.contains("func taskSelectionPulse<"))
@@ -94,7 +152,7 @@ struct SharedComponentsContractTests {
     }
 
     @Test
-    func splitViewToolbarButtonsUseSharedNativeLabels() throws {
+    func splitViewReliesOnTheSystemSidebarToggleInsteadOfDuplicateChrome() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SplitViewToolbarButtons.swift")
         let ipadSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
         let desktopSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
@@ -102,7 +160,7 @@ struct SharedComponentsContractTests {
         #expect(sharedSource.contains("struct SidebarRevealButton"))
         #expect(sharedSource.contains("Label(AppStrings.localized(\"sidebar.show\"), systemImage: \"sidebar.left\")"))
         #expect(sharedSource.contains(".labelStyle(.iconOnly)"))
-        #expect(ipadSource.contains("SidebarRevealButton"))
+        #expect(ipadSource.contains("SidebarRevealButton") == false)
         #expect(sharedSource.contains("InspectorToggleButton") == false)
         #expect(ipadSource.contains("InspectorToggleButton") == false)
         #expect(desktopSource.contains("InspectorToggleButton") == false)
@@ -117,7 +175,8 @@ struct SharedComponentsContractTests {
         let desktopSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
         let ipadSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
 
-        #expect(appSource.contains("Settings {\n            SettingsSceneView()"))
+        #expect(appSource.contains("Settings {\n            SettingsSceneView(store: store)"))
+        #expect(appSource.contains("ContentView(store: store)"))
         #expect(settingsSource.contains("Form {"))
         #expect(settingsSource.contains(".formStyle(.grouped)"))
         #expect(desktopSource.contains(".inspector(") == false)
@@ -127,18 +186,22 @@ struct SharedComponentsContractTests {
     }
 
     @Test
-    func compactPrimaryAndSuggestionActionsStayLegible() throws {
+    func compactActionsAdaptLayoutAndKeepAccessibleHitTargets() throws {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
         let inboxSuggestionSource = try sourceText("timetracker/Features/Inbox/InboxSuggestionRow.swift")
 
-        #expect(actionSource.contains(".minimumScaleFactor(0.78)"))
+        #expect(actionSource.contains(".lineLimit(2)"))
+        #expect(actionSource.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(actionSource.contains(".frame(minHeight: fixedHeight == nil ? minHeight : 0)"))
         #expect(homeActionSource.contains("startButton\n                    .frame(maxWidth: .infinity)"))
         #expect(homeActionSource.contains("newTaskButton\n                    .frame(maxWidth: .infinity)"))
+        #expect(inboxSuggestionSource.contains("ViewThatFits(in: .horizontal)"))
+        #expect(inboxSuggestionSource.contains("compactLayout"))
         #expect(inboxSuggestionSource.contains("Image(systemName: \"checkmark\")"))
         #expect(inboxSuggestionSource.contains("Image(systemName: \"xmark\")"))
-        #expect(inboxSuggestionSource.contains("Text(AppStrings.localized(\"inbox.suggestion.apply\"))") == false)
-        #expect(inboxSuggestionSource.contains(".frame(width: isCompact ? 34 : 38, height: isCompact ? 34 : 38)"))
+        #expect(inboxSuggestionSource.components(separatedBy: ".frame(width: 44, height: 44)").count >= 3)
+        #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.apply\"))"))
+        #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.discard\"))"))
     }
 }

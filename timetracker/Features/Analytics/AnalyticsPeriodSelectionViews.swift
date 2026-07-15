@@ -32,7 +32,7 @@ struct AnalyticsPeriodControl: View {
                 movePeriod(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
-                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
             }
             .accessibilityLabel(AppStrings.localized("analytics.period.previous"))
 
@@ -48,7 +48,7 @@ struct AnalyticsPeriodControl: View {
                 movePeriod(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
-                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
             }
             .disabled(isCurrentPeriod)
             .accessibilityLabel(AppStrings.localized("analytics.period.next"))
@@ -128,5 +128,48 @@ extension AnalyticsRange {
         case .month:
             return calendar.date(byAdding: .month, value: value, to: date)
         }
+    }
+}
+
+struct AnalyticsSnapshotRequest: Hashable {
+    let range: AnalyticsRange
+    let periodStart: Date
+    let revision: UInt
+    let liveRefreshBucket: Int?
+
+    init(
+        range: AnalyticsRange,
+        referenceDate: Date,
+        revision: UInt,
+        liveRefreshBucket: Int?,
+        calendar: Calendar = .current
+    ) {
+        self.range = range
+        periodStart = range.interval(containing: referenceDate, calendar: calendar)?.start ?? referenceDate
+        self.revision = revision
+        self.liveRefreshBucket = liveRefreshBucket
+    }
+}
+
+struct TaskAnalyticsSnapshotRequest: Hashable {
+    let taskID: UUID
+    let range: AnalyticsRange
+    let periodStart: Date
+    let revision: UInt
+    let liveRefreshBucket: Int?
+
+    init(
+        taskID: UUID,
+        range: AnalyticsRange,
+        referenceDate: Date,
+        revision: UInt,
+        liveRefreshBucket: Int?,
+        calendar: Calendar = .current
+    ) {
+        self.taskID = taskID
+        self.range = range
+        periodStart = range.interval(containing: referenceDate, calendar: calendar)?.start ?? referenceDate
+        self.revision = revision
+        self.liveRefreshBucket = liveRefreshBucket
     }
 }

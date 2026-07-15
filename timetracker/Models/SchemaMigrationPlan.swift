@@ -1,4 +1,5 @@
 import Foundation
+import os
 import SwiftData
 
 enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
@@ -11,7 +12,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV5.self,
             TimeTrackerSchemaV6.self,
             TimeTrackerSchemaV7.self,
-            TimeTrackerSchemaV8.self
+            TimeTrackerSchemaV8.self,
+            TimeTrackerSchemaV9.self
         ]
     }
 
@@ -25,7 +27,7 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                 toVersion: TimeTrackerSchemaV5.self,
                 willMigrate: { context in
                     let tasks = try context.fetch(FetchDescriptor<TimeTrackerSchemaV4.TaskNode>())
-                    LegacyTaskCategoryMigrationBuffer.pendingAssignments = tasks.compactMap { task in
+                    LegacyTaskCategoryMigrationBuffer.replace(tasks.compactMap { task in
                         guard task.parentID == nil,
                               task.deletedAt == nil,
                               let categoryID = task.categoryID else {
@@ -36,12 +38,12 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                             categoryID: categoryID,
                             deviceID: task.deviceID
                         )
-                    }
+                    })
                 },
                 didMigrate: { context in
                     let tasks = Set(try context.fetch(FetchDescriptor<TaskNode>()).map(\.id))
                     let categories = Set(try context.fetch(FetchDescriptor<TaskCategory>()).map(\.id))
-                    for assignment in LegacyTaskCategoryMigrationBuffer.pendingAssignments
+                    for assignment in LegacyTaskCategoryMigrationBuffer.consume()
                     where tasks.contains(assignment.taskID) && categories.contains(assignment.categoryID) {
                         context.insert(TaskCategoryAssignment(
                             taskID: assignment.taskID,
@@ -49,13 +51,13 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                             deviceID: assignment.deviceID
                         ))
                     }
-                    LegacyTaskCategoryMigrationBuffer.pendingAssignments = []
                     try context.save()
                 }
             ),
             .lightweight(fromVersion: TimeTrackerSchemaV5.self, toVersion: TimeTrackerSchemaV6.self),
             .lightweight(fromVersion: TimeTrackerSchemaV6.self, toVersion: TimeTrackerSchemaV7.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV7.self, toVersion: TimeTrackerSchemaV8.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV7.self, toVersion: TimeTrackerSchemaV8.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self)
         ]
     }
 }
@@ -67,5 +69,20 @@ private struct LegacyTaskCategoryAssignment {
 }
 
 private enum LegacyTaskCategoryMigrationBuffer {
-    nonisolated(unsafe) static var pendingAssignments: [LegacyTaskCategoryAssignment] = []
+    private static let storage = OSAllocatedUnfairLock(
+        initialState: [LegacyTaskCategoryAssignment]()
+    )
+
+    static func replace(_ assignments: [LegacyTaskCategoryAssignment]) {
+        storage.withLock { pendingAssignments in
+            pendingAssignments = assignments
+        }
+    }
+
+    static func consume() -> [LegacyTaskCategoryAssignment] {
+        storage.withLock { pendingAssignments in
+            defer { pendingAssignments.removeAll(keepingCapacity: true) }
+            return pendingAssignments
+        }
+    }
 }

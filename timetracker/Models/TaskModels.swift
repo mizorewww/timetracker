@@ -111,6 +111,36 @@ final class TaskCategoryAssignment {
     }
 }
 
+extension TaskCategoryAssignment {
+    /// Defines one deterministic last-write-wins order for the logical
+    /// "root task has category" key. Assignment rows have independent UUIDs,
+    /// so normal model-ID deduplication alone cannot resolve concurrent writes.
+    func isPreferredLogicalWinner(over other: TaskCategoryAssignment) -> Bool {
+        if updatedAt != other.updatedAt { return updatedAt > other.updatedAt }
+        if (deletedAt == nil) != (other.deletedAt == nil) { return deletedAt != nil }
+        if createdAt != other.createdAt { return createdAt > other.createdAt }
+        if deviceID != other.deviceID { return deviceID > other.deviceID }
+        if clientMutationID != other.clientMutationID {
+            return clientMutationID.uuidString > other.clientMutationID.uuidString
+        }
+        return id.uuidString > other.id.uuidString
+    }
+}
+
+extension Sequence where Element == TaskCategoryAssignment {
+    func logicalWinnersByTaskID() -> [UUID: TaskCategoryAssignment] {
+        reduce(into: [:]) { winners, assignment in
+            guard let current = winners[assignment.taskID] else {
+                winners[assignment.taskID] = assignment
+                return
+            }
+            if assignment.isPreferredLogicalWinner(over: current) {
+                winners[assignment.taskID] = assignment
+            }
+        }
+    }
+}
+
 extension TaskNode {
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .active }

@@ -32,8 +32,7 @@ if [[ -z "$COMMIT_SHORT" ]]; then
 fi
 
 DIRTY="false"
-if ! git -C "$SRCROOT" diff --quiet --ignore-submodules -- 2>/dev/null || \
-   ! git -C "$SRCROOT" diff --cached --quiet --ignore-submodules -- 2>/dev/null; then
+if [[ -n "$(git_value status --porcelain --untracked-files=normal)" ]]; then
   DIRTY="true"
 fi
 
@@ -57,8 +56,11 @@ payload = {
     "BuildDate": os.environ["BUILD_DATE"],
 }
 
-with open(sys.argv[1], "wb") as handle:
+output_path = sys.argv[1]
+temporary_path = f"{output_path}.tmp"
+with open(temporary_path, "wb") as handle:
     plistlib.dump(payload, handle, sort_keys=True)
+os.replace(temporary_path, output_path)
 PY
 
 echo "Wrote build info: $PLIST_PATH ($BRANCH $COMMIT_SHORT dirty=$DIRTY)"

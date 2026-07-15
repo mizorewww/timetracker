@@ -2,3 +2,5 @@
 "live.timer.additionalFormat" = "%d more";
 "live.timer.elapsed" = "Elapsed";
 "live.timer.stop" = "Stop";
+"live.timer.open" = "Open Time Tracker";
+"live.timer.stale" = "Update delayed";

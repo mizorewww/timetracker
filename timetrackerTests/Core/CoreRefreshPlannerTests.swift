@@ -48,6 +48,9 @@ struct CoreRefreshPlannerTests {
 
         let checklistPlan = planner.plan(after: [.checklistChanged(taskID: taskID, affectedAncestorIDs: [ancestorID])])
         #expect(checklistPlan.affectedTaskIDs == [taskID, ancestorID])
+        #expect(checklistPlan.directlyAffectedTaskIDs == [taskID])
+        #expect(checklistPlan.explicitlyAffectedAncestorTaskIDs == [ancestorID])
+        #expect(checklistPlan.directlyAffectedChecklistTaskIDs == [taskID])
         #expect(checklistPlan.affectedLedgerRanges.isEmpty)
         #expect(checklistPlan.refreshChecklist)
         #expect(checklistPlan.refreshRollups)

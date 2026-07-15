@@ -2,3 +2,5 @@
 "live.timer.additionalFormat" = "另有 %d 個";
 "live.timer.elapsed" = "已計時";
 "live.timer.stop" = "停止";
+"live.timer.open" = "打開 Time Tracker";
+"live.timer.stale" = "更新延遲";

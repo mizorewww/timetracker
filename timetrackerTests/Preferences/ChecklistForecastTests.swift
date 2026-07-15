@@ -5,6 +5,86 @@ import Testing
 @Suite(.serialized)
 struct ChecklistForecastTests {
     @Test @MainActor
+    func recentDailyAvailabilityUsesCalendarDayBoundariesAcrossDST() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 12
+        )))
+        let sameDayStart = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 10
+        )))
+        let nextDayStart = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 9,
+            hour: 0
+        )))
+        let taskID = UUID()
+        let segments = [
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: sameDayStart,
+                endedAt: sameDayStart.addingTimeInterval(3_600)
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: nextDayStart,
+                endedAt: nextDayStart.addingTimeInterval(1_800)
+            )
+        ]
+
+        let seconds = ForecastingService().recentDailyAvailableSeconds(
+            segments: segments,
+            now: now,
+            days: 1,
+            calendar: calendar
+        )
+
+        #expect(seconds == 3_600)
+    }
+
+    @Test @MainActor
+    func recentDailyAvailabilityBoundsUntrustedLookbackRequests() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let segmentStart = try #require(calendar.date(byAdding: .day, value: -200, to: now))
+        let segment = TimeSegment(
+            sessionID: UUID(),
+            taskID: UUID(),
+            source: .timer,
+            deviceID: "test",
+            startedAt: segmentStart,
+            endedAt: segmentStart.addingTimeInterval(3_600)
+        )
+
+        let seconds = ForecastingService().recentDailyAvailableSeconds(
+            segments: [segment],
+            now: now,
+            days: Int.max,
+            calendar: calendar
+        )
+
+        #expect(ForecastingService.maximumRecentDayCount == 366)
+        #expect(seconds == 3_600)
+    }
+
+    @Test @MainActor
     func checklistChangesImmediatelyRecalculateForecastEstimates() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -182,14 +262,14 @@ struct ChecklistForecastTests {
         let parentRollup = try #require(rollups[parent.id])
 
         #expect(parentRollup.workedSeconds == 1_900)
-        #expect(parentRollup.estimatedTotalSeconds == 2_900)
-        #expect(parentRollup.remainingSeconds == 1_000)
+        #expect(parentRollup.estimatedTotalSeconds == 3_800)
+        #expect(parentRollup.remainingSeconds == 1_900)
         #expect(parentRollup.historicalDailyAverageSeconds == 1_900)
         #expect(parentRollup.historicalActiveDayCount == 1)
-        #expect(abs((parentRollup.projectedDays ?? 0) - 0.53) < 0.05)
+        #expect(abs((parentRollup.projectedDays ?? 0) - 1.0) < 0.05)
         #expect(parentRollup.checklistProgress.label == "1/2")
-        #expect(parentRollup.confidence == .medium)
-        #expect(parentRollup.forecastState == .ready)
+        #expect(parentRollup.confidence == .high)
+        #expect(parentRollup.forecastState == .aggregate)
     }
 
     @Test @MainActor
@@ -209,14 +289,15 @@ struct ChecklistForecastTests {
         #expect(rollups[empty.id]?.confidence == ForecastConfidence.none)
         #expect(rollups[empty.id]?.forecastState == .needsChecklist)
         #expect(rollups[planned.id]?.checklistProgress.totalCount == 0)
-        #expect(rollups[planned.id]?.estimatedTotalSeconds == nil)
-        #expect(rollups[planned.id]?.forecastState == .needsChecklist)
+        #expect(rollups[planned.id]?.estimatedTotalSeconds == 900)
+        #expect(rollups[planned.id]?.remainingSeconds == 900)
+        #expect(rollups[planned.id]?.forecastState == .ready)
         #expect(rollups[completed.id]?.remainingSeconds == 0)
         #expect(rollups[completed.id]?.forecastState == .completed)
     }
 
     @Test @MainActor
-    func onlyChecklistBackedForecastsAreDisplayable() throws {
+    func explicitOrChecklistBackedForecastsAreDisplayable() throws {
         let historyOnly = TaskNode(title: "History Only", parentID: nil, deviceID: "test")
         let manual = TaskNode(title: "Manual", parentID: nil, deviceID: "test")
         manual.estimatedSeconds = 1_800
@@ -240,9 +321,54 @@ struct ChecklistForecastTests {
 
         #expect(rollups[historyOnly.id]?.forecastState == .needsChecklist)
         #expect(rollups[historyOnly.id]?.isDisplayableForecast == false)
-        #expect(rollups[manual.id]?.forecastState == .needsChecklist)
-        #expect(rollups[manual.id]?.isDisplayableForecast == false)
+        #expect(rollups[manual.id]?.estimatedTotalSeconds == 1_800)
+        #expect(rollups[manual.id]?.remainingSeconds == 1_800)
+        #expect(rollups[manual.id]?.forecastState == .ready)
+        #expect(rollups[manual.id]?.isDisplayableForecast == true)
+        #expect(rollups[manual.id]?.forecastSourceLabel == AppStrings.localized("forecast.source.currentTask"))
         #expect(rollups[checklistTask.id]?.isDisplayableForecast == true)
+    }
+
+    @Test @MainActor
+    func explicitEstimateSubtractsOwnWorkAndRollsUpChildWorkSeparately() throws {
+        let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
+        parent.estimatedSeconds = 1_800
+        let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
+        child.estimatedSeconds = 1_200
+        let start = Date(timeIntervalSince1970: 10_000)
+        let segments = [
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: parent.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(600)
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: child.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(300)
+            )
+        ]
+
+        let rollups = TaskRollupService().rollups(
+            tasks: [parent, child],
+            segments: segments,
+            checklistItems: [],
+            now: start.addingTimeInterval(2_000)
+        )
+        let parentRollup = try #require(rollups[parent.id])
+
+        #expect(parentRollup.workedSeconds == 900)
+        #expect(parentRollup.estimatedTotalSeconds == 3_000)
+        #expect(parentRollup.remainingSeconds == 2_100)
+        #expect(parentRollup.forecastState == .aggregate)
+        #expect(parentRollup.forecastSourceTaskCount == 2)
+        #expect(Set(parentRollup.forecastSourceTaskIDs) == Set([parent.id, child.id]))
     }
 
     @Test @MainActor
@@ -316,6 +442,24 @@ struct ChecklistForecastTests {
         #expect(parentRollup.forecastSourceLabel == String(format: AppStrings.localized("forecast.source.aggregate"), 1))
         #expect(ForecastDisplayService().displayItem(for: parent.id, tasks: [parent, child], rollups: rollups)?.taskID == parent.id)
         #expect(ForecastDisplayService().displayItems(tasks: [parent, child], rollups: rollups).map(\.taskID) == [parent.id])
+    }
+
+    @Test @MainActor
+    func forecastDetailCannotSurfaceAChildHiddenByAnArchivedAncestor() throws {
+        let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
+        parent.status = .archived
+        let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
+        child.estimatedSeconds = 1_800
+        let rollups = TaskRollupService().rollups(
+            tasks: [parent, child],
+            segments: [],
+            checklistItems: []
+        )
+        let service = ForecastDisplayService()
+
+        #expect(rollups[child.id]?.isDisplayableForecast == true)
+        #expect(service.displayItems(tasks: [parent, child], rollups: rollups).isEmpty)
+        #expect(service.displayItem(for: child.id, tasks: [parent, child], rollups: rollups) == nil)
     }
 }
 

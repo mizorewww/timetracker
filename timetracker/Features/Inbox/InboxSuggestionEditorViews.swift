@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct InboxSuggestionEditorSheet: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     let initialDraft: InboxSuggestionEditorDraft
     @State private var draft: InboxSuggestionEditorDraft
+    @State private var isDiscardConfirmationPresented = false
 
     init(store: TimeTrackerStore, initialDraft: InboxSuggestionEditorDraft) {
         self.store = store
@@ -38,10 +39,7 @@ struct InboxSuggestionEditorSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel) {
-                        store.inboxSuggestionEditorDraft = nil
-                        dismiss()
-                    }
+                    Button(AppStrings.cancel, action: requestCancel)
                     .keyboardShortcut(.cancelAction)
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -57,6 +55,24 @@ struct InboxSuggestionEditorSheet: View {
         }
         .platformSheetFrame(width: 500, height: 440)
         .presentationDetents([.medium, .large])
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: draft != initialDraft,
+            discard: discard
+        )
+    }
+
+    private func requestCancel() {
+        if draft == initialDraft {
+            discard()
+        } else {
+            isDiscardConfirmationPresented = true
+        }
+    }
+
+    private func discard() {
+        store.inboxSuggestionEditorDraft = nil
+        dismiss()
     }
 
     private var taskPicker: some View {
@@ -75,8 +91,6 @@ struct InboxSuggestionEditorSheet: View {
     }
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter { task in
-            task.deletedAt == nil && task.archivedAt == nil
-        }
+        store.tasks.filter(store.isTaskAvailableForTracking)
     }
 }

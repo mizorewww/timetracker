@@ -3,25 +3,64 @@ import Foundation
 struct LedgerStore {
     private(set) var activeSegments: [TimeSegment] = []
     private(set) var todaySegments: [TimeSegment] = []
-    private(set) var allSegments: [TimeSegment] = []
-    private(set) var sessions: [TimeSession] = []
+    var allSegments: [TimeSegment] = []
+    var rollupChanges: [LedgerSegmentChange] = []
+
+    var sessions: [TimeSession] { sessionIndex.sessions }
+
+    var segmentByID: [UUID: TimeSegment] = [:]
+    var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
+    var segmentArrayIndexByID: [UUID: Int] = [:]
+    var segmentIDsByDay: [Date: Set<UUID>] = [:]
+    var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
+    var segmentIDsBySessionID: [UUID: Set<UUID>] = [:]
+    var activeSegmentIDs: Set<UUID> = []
+    var pendingRollupChangeByID: [UUID: LedgerSegmentChange] = [:]
+    var segmentIndexEvaluationDate = Date.distantPast
+    var segmentIndexCalendar = Calendar.current
+    private(set) var hasLoadedHistory = false
+    private var sessionIndex = LedgerSessionIndex()
 
     mutating func refresh(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
-        try refreshVisible(repository: repository, now: now, calendar: calendar)
-        try refreshHistory(repository: repository)
+        activeSegments = try repository.activeSegments().deduplicatedByID()
+        let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
+        todaySegments = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
+        try refreshHistory(repository: repository, now: now, calendar: calendar)
     }
 
     mutating func refreshVisible(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
-        activeSegments = try repository.activeSegments().deduplicatedByID()
-
+        let refreshedActive = try repository.activeSegments().deduplicatedByID()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
-        todaySegments = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
-        mergeVisibleSegments(todayInterval: today, now: now)
+        let refreshedToday = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
+        if segmentIndexEvaluationDate != .distantPast, segmentIndexCalendar != calendar {
+            rebuildSegmentDayIndex(now: now, calendar: calendar)
+        }
+        let fetched = uniqueSegments(refreshedActive + refreshedToday)
+        let impactedIDs = segmentIDs(overlapping: [today], now: segmentIndexEvaluationDate == .distantPast ? now : segmentIndexEvaluationDate)
+            .union(activeSegmentIDs)
+            .union(fetched.map(\.id))
+
+        replaceSegments(
+            ids: impactedIDs,
+            with: fetched,
+            now: now,
+            calendar: calendar,
+            refreshUnchangedActiveSegments: true
+        )
+        activeSegments = refreshedActive
+        todaySegments = refreshedToday
     }
 
-    mutating func refreshHistory(repository: TimeTrackingRepository) throws {
-        allSegments = try repository.allSegments().deduplicatedByID()
-        sessions = try repository.sessions().deduplicatedByID()
+    mutating func refreshHistory(
+        repository: TimeTrackingRepository,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) throws {
+        let fetchedSegments = try repository.allSegments().deduplicatedByID()
+        rebuildSegmentIndexes(segments: fetchedSegments, now: now, calendar: calendar)
+        sessionIndex.rebuild(try repository.sessions())
+        hasLoadedHistory = true
+        resetRollupChanges()
     }
 
     mutating func refreshHistoryRanges(
@@ -34,18 +73,22 @@ struct LedgerStore {
             return DateInterval(start: range.start, end: range.end)
         }
         guard intervals.isEmpty == false else {
-            try refreshHistory(repository: repository)
+            try refreshHistory(repository: repository, now: now)
             return
         }
 
-        guard allSegments.isEmpty == false || sessions.isEmpty == false else {
-            try refreshHistory(repository: repository)
+        guard hasLoadedHistory else {
+            try refreshHistory(repository: repository, now: now)
             return
         }
 
-        let existingImpactedSegments = allSegments.filter { segment in
-            intervals.contains { overlaps(segment, with: $0, now: now) }
+        let newlyOverlappingActiveIDs = activeSegmentIDs.filter { id in
+            guard let snapshot = segmentSnapshotByID[id] else { return false }
+            return intervals.contains { snapshot.overlaps($0, at: now) }
         }
+        let existingImpactedIDs = segmentIDs(overlapping: intervals, now: now)
+            .union(newlyOverlappingActiveIDs)
+        let existingImpactedSnapshots = existingImpactedIDs.compactMap { segmentSnapshotByID[$0] }
 
         var fetchedSegments: [TimeSegment] = []
         for interval in intervals {
@@ -53,52 +96,37 @@ struct LedgerStore {
         }
         fetchedSegments = uniqueSegments(fetchedSegments).deduplicatedByID()
 
-        let impactedSessionIDs = Set(existingImpactedSegments.map(\.sessionID))
+        let impactedSessionIDs = Set(existingImpactedSnapshots.map(\.sessionID))
             .union(fetchedSegments.map(\.sessionID))
-        let fetchedSegmentIDs = Set(fetchedSegments.map(\.id))
-
-        allSegments = allSegments.filter { segment in
-            let wasFetched = fetchedSegmentIDs.contains(segment.id)
-            let isInAffectedRange = intervals.contains { overlaps(segment, with: $0, now: now) }
-            return wasFetched == false && isInAffectedRange == false
-        } + fetchedSegments
-        allSegments.sort { $0.startedAt < $1.startedAt }
+        replaceSegments(
+            ids: existingImpactedIDs.union(fetchedSegments.map(\.id)),
+            with: fetchedSegments,
+            now: now,
+            calendar: segmentIndexCalendar,
+            refreshUnchangedActiveSegments: true
+        )
 
         if impactedSessionIDs.isEmpty == false {
             let refreshedSessions = try repository.sessions(ids: impactedSessionIDs).deduplicatedByID()
-            sessions = (sessions.filter { impactedSessionIDs.contains($0.id) == false } + refreshedSessions).deduplicatedByID()
-            sessions.sort { $0.startedAt > $1.startedAt }
+            sessionIndex.replace(ids: impactedSessionIDs, with: refreshedSessions)
         }
     }
 
-    private mutating func mergeVisibleSegments(todayInterval: DateInterval, now: Date) {
-        guard !allSegments.isEmpty else {
-            allSegments = todaySegments
-            return
-        }
-
-        let visibleIDs = Set(todaySegments.map(\.id))
-        allSegments = allSegments
-            .filter { segment in
-                if visibleIDs.contains(segment.id) {
-                    return false
-                }
-                let end = segment.endedAt ?? now
-                return !(segment.startedAt < todayInterval.end && end > todayInterval.start)
-            } + todaySegments
-        allSegments = allSegments.deduplicatedByID()
-        allSegments.sort { $0.startedAt < $1.startedAt }
+    mutating func resetRollupChanges() {
+        pendingRollupChangeByID.removeAll(keepingCapacity: true)
+        rollupChanges.removeAll(keepingCapacity: true)
     }
 
-    private func overlaps(_ segment: TimeSegment, with interval: DateInterval, now: Date) -> Bool {
-        let end = min(segment.endedAt ?? now, interval.end)
-        return segment.startedAt < interval.end && end > interval.start
+    func segment(for id: UUID) -> TimeSegment? {
+        segmentByID[id]
     }
 
-    private func uniqueSegments(_ segments: [TimeSegment]) -> [TimeSegment] {
-        var seen = Set<UUID>()
-        return segments.deduplicatedByID().filter { segment in
-            seen.insert(segment.id).inserted
-        }
+    func session(for id: UUID) -> TimeSession? {
+        sessionIndex.session(for: id)
     }
+
+    func sessions(for ids: Set<UUID>) -> [TimeSession] {
+        sessionIndex.sessions(for: ids)
+    }
+
 }

@@ -1,5 +1,7 @@
 # Performance Optimization Report - 2026-05-17
 
+> Historical snapshot: file paths and UI surfaces below describe the 2026-05-17 branch. Use [CodeGuide](CodeGuide.md), [ProjectMap](ProjectMap.md), and [Audit-2026-07-14](Audit-2026-07-14.md) for the current implementation and remaining verification gates.
+
 Branch: `codex/performance-optimization-20260517`
 
 ## Summary

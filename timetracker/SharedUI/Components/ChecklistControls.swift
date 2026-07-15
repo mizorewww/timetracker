@@ -21,7 +21,25 @@ struct ChecklistCompletionButton: View {
             ChecklistCompletionMark(isCompleted: isCompleted, colorHex: colorHex)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(AppStrings.localized("editor.checklist.completed"))
+        .frame(
+            minWidth: AppLayout.minimumInteractiveTarget,
+            minHeight: AppLayout.minimumInteractiveTarget
+        )
+        .accessibilityLabel(AppStrings.localized("editor.checklist.completionControl"))
+        .accessibilityValue(
+            AppStrings.localized(
+                isCompleted
+                    ? "editor.checklist.state.completed"
+                    : "editor.checklist.state.incomplete"
+            )
+        )
+        .accessibilityHint(
+            AppStrings.localized(
+                isCompleted
+                    ? "editor.checklist.action.markIncomplete"
+                    : "editor.checklist.action.markComplete"
+            )
+        )
     }
 }
 
@@ -43,6 +61,7 @@ struct ChecklistCompletionMark: View {
         }
         .frame(width: 30, height: 30)
         .contentShape(Circle())
+        .accessibilityHidden(true)
     }
 }
 
@@ -57,6 +76,7 @@ struct ChecklistItemIcon: View {
             .foregroundStyle(color)
             .frame(width: 30, height: 30)
             .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
 
@@ -87,6 +107,22 @@ struct ChecklistDisplayRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(
+            AppStrings.localized(
+                isCompleted
+                    ? "editor.checklist.state.completed"
+                    : "editor.checklist.state.incomplete"
+            )
+        )
+        .accessibilityHint(
+            AppStrings.localized(
+                isCompleted
+                    ? "editor.checklist.action.markIncomplete"
+                    : "editor.checklist.action.markComplete"
+            )
+        )
     }
 }
 
@@ -103,18 +139,16 @@ struct InlineChecklistAddRow: View {
                 .font(.title3)
                 .foregroundStyle(.blue)
                 .frame(width: 30, height: 30)
+                .accessibilityHidden(true)
             TextField(placeholder, text: $title)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
                 .onSubmit(submitIfNeeded)
                 .submitLabel(.done)
                 .labelsHidden()
+                .accessibilityLabel(placeholder)
         }
         .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            isFocused = true
-        }
         .onChange(of: focusToken) { _, _ in
             isFocused = true
         }
@@ -163,6 +197,7 @@ struct EditableChecklistTextRow: View {
                 .submitLabel(.done)
                 .onSubmit(commit)
                 .labelsHidden()
+                .accessibilityLabel(placeholder)
                 .onChange(of: title) { _, newValue in
                     guard newValue.contains(where: \.isNewline) else { return }
                     title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)

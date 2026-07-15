@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PomodoroLedgerCard: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -16,7 +16,7 @@ struct PomodoroLedgerCard: View {
 }
 
 struct PomodoroLedgerContent: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
 
     private var recentRuns: [PomodoroRun] {
         Array(store.pomodoroRuns.prefix(5))
@@ -32,7 +32,7 @@ struct PomodoroLedgerContent: View {
 }
 
 private struct PomodoroRecentRunsList: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let runs: [PomodoroRun]
 
     var body: some View {
@@ -49,7 +49,7 @@ private struct PomodoroRecentRunsList: View {
 }
 
 private struct PomodoroRunRow: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let run: PomodoroRun
 
     var body: some View {

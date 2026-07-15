@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct TaskCategoryEditorSheet: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     let initialDraft: TaskCategoryEditorDraft
     @State private var draft: TaskCategoryEditorDraft
+    @State private var isDiscardConfirmationPresented = false
+    @State private var isDeleteConfirmationPresented = false
+    @FocusState private var isTitleFocused: Bool
 
     init(store: TimeTrackerStore, initialDraft: TaskCategoryEditorDraft) {
         self.store = store
@@ -17,6 +20,7 @@ struct TaskCategoryEditorSheet: View {
             Form {
                 Section(AppStrings.localized("taskCategory.editor.info")) {
                     TextField(AppStrings.localized("taskCategory.name"), text: $draft.title)
+                        .focused($isTitleFocused)
                     SymbolColorPickerRow(
                         colors: TaskColorPalette.hexValues,
                         symbolName: $draft.iconName,
@@ -35,7 +39,7 @@ struct TaskCategoryEditorSheet: View {
                 if draft.categoryID != nil {
                     Section {
                         Button(role: .destructive) {
-                            deleteCategory()
+                            isDeleteConfirmationPresented = true
                         } label: {
                             Label(AppStrings.localized("taskCategory.delete"), systemImage: "trash")
                         }
@@ -50,8 +54,7 @@ struct TaskCategoryEditorSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {
-                        store.taskCategoryEditorDraft = nil
-                        dismiss()
+                        requestCancel()
                     }
                     .keyboardShortcut(.cancelAction)
                 }
@@ -68,6 +71,38 @@ struct TaskCategoryEditorSheet: View {
             }
         }
         .platformSheetFrame(width: 460, height: 440)
+        .task {
+            guard initialDraft.categoryID == nil else { return }
+            isTitleFocused = true
+        }
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: draft != initialDraft,
+            discard: cancel
+        )
+        .confirmationDialog(
+            AppStrings.localized("taskCategory.delete.confirm.title"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("taskCategory.delete"), role: .destructive, action: deleteCategory)
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(.app("taskCategory.delete.confirm.message"))
+        }
+    }
+
+    private func requestCancel() {
+        if draft == initialDraft {
+            cancel()
+        } else {
+            isDiscardConfirmationPresented = true
+        }
+    }
+
+    private func cancel() {
+        store.taskCategoryEditorDraft = nil
+        dismiss()
     }
 
     private func deleteCategory() {
@@ -75,8 +110,9 @@ struct TaskCategoryEditorSheet: View {
               let category = store.taskCategory(for: categoryID) else {
             return
         }
-        store.deleteTaskCategory(category)
-        store.taskCategoryEditorDraft = nil
-        dismiss()
+        if store.deleteTaskCategory(category) {
+            store.taskCategoryEditorDraft = nil
+            dismiss()
+        }
     }
 }

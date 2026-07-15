@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ManualTimeSheet: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     let initialDraft: ManualTimeDraft
 
@@ -14,8 +14,9 @@ struct ManualTimeSheet: View {
                 dismiss()
             },
             onSave: { draft in
-                store.saveManualTimeDraft(draft)
-                dismiss()
+                if store.saveManualTimeDraft(draft) {
+                    dismiss()
+                }
             }
         )
         .platformSheetFrame(width: 620, height: 560)
@@ -24,13 +25,16 @@ struct ManualTimeSheet: View {
 }
 
 struct ManualTimePanel: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
     @State private var draft: ManualTimeDraft
+    @State private var isDiscardConfirmationPresented = false
+    let initialDraft: ManualTimeDraft
     let onCancel: () -> Void
     let onSave: (ManualTimeDraft) -> Void
 
     init(store: TimeTrackerStore, initialDraft: ManualTimeDraft, onCancel: @escaping () -> Void, onSave: @escaping (ManualTimeDraft) -> Void) {
         self.store = store
+        self.initialDraft = initialDraft
         self.onCancel = onCancel
         self.onSave = onSave
         _draft = State(initialValue: initialDraft)
@@ -42,7 +46,7 @@ struct ManualTimePanel: View {
                 Section(AppStrings.localized("segment.assignment")) {
                     Picker(AppStrings.localized("segment.task"), selection: taskBinding) {
                         Text(.app("segment.choose")).tag(Optional<UUID>.none)
-                        ForEach(store.tasks, id: \.id) { task in
+                        ForEach(availableTasks, id: \.id) { task in
                             Text(store.path(for: task)).tag(Optional(task.id))
                         }
                     }
@@ -55,6 +59,12 @@ struct ManualTimePanel: View {
                         Text(DurationFormatter.compact(Int(draft.endedAt.timeIntervalSince(draft.startedAt))))
                             .font(.headline.monospacedDigit())
                             .foregroundStyle(draft.endedAt > draft.startedAt ? Color.primary : Color.red)
+                    }
+                    if draft.endedAt <= draft.startedAt {
+                        Label(AppStrings.localized("segment.error.endAfterStart"), systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .accessibilityAddTraits(.isStaticText)
                     }
                 }
 
@@ -70,7 +80,7 @@ struct ManualTimePanel: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {
-                        onCancel()
+                        requestCancel()
                     }
                     .keyboardShortcut(.cancelAction)
                 }
@@ -84,6 +94,19 @@ struct ManualTimePanel: View {
                 }
             }
         }
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: draft != initialDraft,
+            discard: onCancel
+        )
+    }
+
+    private func requestCancel() {
+        if draft == initialDraft {
+            onCancel()
+        } else {
+            isDiscardConfirmationPresented = true
+        }
     }
 
     private var taskBinding: Binding<UUID?> {
@@ -92,5 +115,9 @@ struct ManualTimePanel: View {
         } set: { value in
             draft.taskID = value
         }
+    }
+
+    private var availableTasks: [TaskNode] {
+        store.tasks.filter(store.isTaskAvailableForTracking)
     }
 }

@@ -2,24 +2,52 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT_DIR/timetracker.xcodeproj"
+PROJECT="${PROJECT:-$ROOT_DIR/timetracker.xcodeproj}"
 SCHEME="${SCHEME:-timetracker}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 TEAM_ID="${DEVELOPMENT_TEAM:-LT98S43NKA}"
 PRODUCT_NAME="${PRODUCT_NAME:-timetracker}"
 
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-BUILD_ROOT="$ROOT_DIR/build"
+BUILD_ROOT="${BUILD_ROOT:-$ROOT_DIR/build}"
 DERIVED_DATA="$BUILD_ROOT/DerivedData"
 ARCHIVE_ROOT="$BUILD_ROOT/Archives/$TIMESTAMP"
 EXPORT_ROOT="$BUILD_ROOT/Exports/$TIMESTAMP"
 LATEST_LINK="$BUILD_ROOT/Exports/latest"
 
+IOS_EXPORT_OPTIONS="${IOS_EXPORT_OPTIONS:-$ROOT_DIR/BuildSupport/ExportOptions-iOS-development.plist}"
+
+if [[ ! -d "$PROJECT" ]]; then
+  echo "Xcode project not found: $PROJECT" >&2
+  exit 1
+fi
+
+if [[ ! -f "$IOS_EXPORT_OPTIONS" ]]; then
+  echo "iOS export options plist not found: $IOS_EXPORT_OPTIONS" >&2
+  exit 1
+fi
+
+if [[ -z "$PRODUCT_NAME" || "$PRODUCT_NAME" == *"/"* || "$PRODUCT_NAME" == "." || "$PRODUCT_NAME" == ".." ]]; then
+  echo "PRODUCT_NAME must be a single app-bundle name: $PRODUCT_NAME" >&2
+  exit 1
+fi
+
+if [[ -e "$LATEST_LINK" && ! -L "$LATEST_LINK" ]]; then
+  echo "Refusing to replace non-symlink latest export path: $LATEST_LINK" >&2
+  exit 1
+fi
+
+suffix=0
+while [[ -e "$ARCHIVE_ROOT" || -e "$EXPORT_ROOT" ]]; do
+  suffix=$((suffix + 1))
+  ARCHIVE_ROOT="$BUILD_ROOT/Archives/$TIMESTAMP-$suffix"
+  EXPORT_ROOT="$BUILD_ROOT/Exports/$TIMESTAMP-$suffix"
+done
+
 IOS_ARCHIVE="$ARCHIVE_ROOT/${PRODUCT_NAME}-iOS.xcarchive"
 MAC_ARCHIVE="$ARCHIVE_ROOT/${PRODUCT_NAME}-macOS.xcarchive"
 IOS_EXPORT="$EXPORT_ROOT/iOS"
 MAC_EXPORT="$EXPORT_ROOT/macOS"
-IOS_EXPORT_OPTIONS="$ROOT_DIR/BuildSupport/ExportOptions-iOS-development.plist"
 
 mkdir -p "$ARCHIVE_ROOT" "$IOS_EXPORT" "$MAC_EXPORT" "$DERIVED_DATA"
 

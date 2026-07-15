@@ -88,7 +88,7 @@ struct ChecklistDraftService {
                 visual.clientMutationID = UUID()
             }
         }
-        try context.save()
+        try context.saveAfterMutationStep()
     }
 
     private func upsertVisual(

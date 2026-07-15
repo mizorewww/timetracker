@@ -2,12 +2,14 @@ import SwiftUI
 
 struct TaskStatusPicker: View {
     @Binding var selection: TaskStatus
+    var disabledStatuses: Set<TaskStatus> = []
 
     var body: some View {
         Picker(AppStrings.localized("editor.task.status"), selection: $selection) {
             ForEach(TaskStatus.editableCases, id: \.self) { status in
                 TaskStatusPickerOption(status: status)
                     .tag(status)
+                    .disabled(disabledStatuses.contains(status))
             }
         }
         .pickerStyle(.inline)

@@ -1,25 +1,58 @@
 import Foundation
 
 extension TimeTrackerStore {
+    private static let maximumInboxSuggestionConcurrency = 3
+
     func autoSuggestInboxItemsIfNeeded() {
         guard canAutoSuggestInboxItems else { return }
         let candidates = llmTaskCandidates()
         guard !candidates.isEmpty else { return }
+        let availableSlots = max(
+            0,
+            Self.maximumInboxSuggestionConcurrency - inboxSuggestionInFlightIDs.count
+        )
+        guard availableSlots > 0 else { return }
 
-        for item in openInboxItems where shouldAutoSuggestInboxItem(item) {
-            suggestInboxItem(item, candidates: candidates, showsErrors: false)
+        for item in openInboxItems
+        where shouldAutoSuggestInboxItem(item) && inboxSuggestionFailureByItemID[item.id] == nil {
+            guard inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else { break }
+            startInboxSuggestion(item, candidates: candidates, showsErrors: false)
         }
     }
 
     func suggestInboxItem(_ item: InboxItem, showsErrors: Bool = true) {
-        suggestInboxItem(item, candidates: llmTaskCandidates(), showsErrors: showsErrors)
+        guard showsErrors || preferences.llmAutomaticSuggestionsEnabled else { return }
+        requestInboxSuggestion(item, showsErrors: showsErrors)
     }
 
-    private func suggestInboxItem(_ item: InboxItem, candidates: [LLMTaskCandidate], showsErrors: Bool) {
-        guard !inboxSuggestionInFlightIDs.contains(item.id) else { return }
+    private func requestInboxSuggestion(_ item: InboxItem, showsErrors: Bool) {
         guard item.deletedAt == nil,
               item.isCompleted == false,
               item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            return
+        }
+
+        guard !inboxSuggestionInFlightIDs.contains(item.id) else {
+            enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
+            return
+        }
+
+        guard inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else {
+            enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
+            return
+        }
+
+        startInboxSuggestion(item, candidates: llmTaskCandidates(), showsErrors: showsErrors)
+    }
+
+    private func startInboxSuggestion(
+        _ item: InboxItem,
+        candidates: [LLMTaskCandidate],
+        showsErrors: Bool
+    ) {
+        guard !inboxSuggestionInFlightIDs.contains(item.id),
+              inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else {
+            enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
             return
         }
         let endpoint = preferences.llmEndpoint
@@ -31,7 +64,7 @@ extension TimeTrackerStore {
 
         Task {
             do {
-                let result = try await LLMInboxSuggestionService().suggest(
+                let result = try await inboxSuggestionService.suggest(
                     inboxTitle: requestedTitle,
                     candidates: candidates,
                     endpoint: endpoint,
@@ -39,15 +72,31 @@ extension TimeTrackerStore {
                     modelID: modelID
                 )
                 await MainActor.run {
+                    guard matchesCurrentLLMConfiguration(
+                        endpoint: endpoint,
+                        apiKey: apiKey,
+                        modelID: modelID
+                    ) else {
+                        finishInboxSuggestionRequest(itemID: item.id)
+                        return
+                    }
+                    guard showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+                        finishInboxSuggestionRequest(itemID: item.id)
+                        return
+                    }
                     guard inboxSuggestionStateService.canStoreGeneratedSuggestion(
                         item: item,
                         requestedTitle: requestedTitle,
                         currentSuggestion: inboxSuggestionByItemID[item.id]
                     ) else {
-                        inboxSuggestionInFlightIDs.remove(item.id)
+                        finishInboxSuggestionRequest(itemID: item.id)
                         return
                     }
-                    _ = perform(event: .inboxChanged(itemIDs: [item.id])) {
+                    guard trackableTaskIDs.contains(result.taskID) else {
+                        finishInboxSuggestionRequest(itemID: item.id)
+                        return
+                    }
+                    let didSave = perform(event: .inboxChanged(itemIDs: [item.id])) {
                         guard let modelContext else { throw StoreError.notConfigured }
                         try inboxCommandHandler.upsertSuggestion(
                             item: item,
@@ -55,24 +104,57 @@ extension TimeTrackerStore {
                             context: modelContext
                         )
                     }
-                    inboxSuggestionFailureByItemID[item.id] = nil
-                    inboxSuggestionInFlightIDs.remove(item.id)
+                    inboxSuggestionFailureByItemID[item.id] = didSave ? nil : errorMessage
+                    finishInboxSuggestionRequest(itemID: item.id)
                 }
             } catch {
                 await MainActor.run {
+                    guard matchesCurrentLLMConfiguration(
+                        endpoint: endpoint,
+                        apiKey: apiKey,
+                        modelID: modelID
+                    ), showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+                        finishInboxSuggestionRequest(itemID: item.id)
+                        return
+                    }
                     inboxSuggestionFailureByItemID[item.id] = error.localizedDescription
                     if showsErrors {
                         errorMessage = error.localizedDescription
                     }
-                    inboxSuggestionInFlightIDs.remove(item.id)
+                    finishInboxSuggestionRequest(itemID: item.id)
                 }
             }
         }
     }
 
+    private func enqueueInboxSuggestion(itemID: UUID, showsErrors: Bool) {
+        if inboxSuggestionPendingIDs.contains(itemID) == false {
+            inboxSuggestionPendingIDs.append(itemID)
+        }
+        if showsErrors {
+            inboxSuggestionPendingShowsErrors.insert(itemID)
+        }
+    }
+
+    private func finishInboxSuggestionRequest(itemID: UUID) {
+        inboxSuggestionInFlightIDs.remove(itemID)
+        startPendingInboxSuggestionsIfNeeded()
+        autoSuggestInboxItemsIfNeeded()
+    }
+
+    private func startPendingInboxSuggestionsIfNeeded() {
+        while inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency,
+              inboxSuggestionPendingIDs.isEmpty == false {
+            let itemID = inboxSuggestionPendingIDs.removeFirst()
+            let showsErrors = inboxSuggestionPendingShowsErrors.remove(itemID) != nil
+            guard let item = inboxItems.first(where: { $0.id == itemID }) else { continue }
+            requestInboxSuggestion(item, showsErrors: showsErrors)
+        }
+    }
+
     private func llmTaskCandidates() -> [LLMTaskCandidate] {
         tasks
-            .filter { $0.deletedAt == nil && $0.archivedAt == nil }
+            .filter(isTaskAvailableForTracking)
             .sorted { lhs, rhs in
                 if lhs.path == rhs.path {
                     return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
@@ -91,7 +173,8 @@ extension TimeTrackerStore {
     }
 
     private var canAutoSuggestInboxItems: Bool {
-        preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
+        preferences.llmAutomaticSuggestionsEnabled &&
+            preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
             preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
             preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
@@ -107,5 +190,18 @@ extension TimeTrackerStore {
     func retryInboxSuggestion(_ item: InboxItem) {
         inboxSuggestionFailureByItemID[item.id] = nil
         suggestInboxItem(item, showsErrors: true)
+    }
+
+    func matchesCurrentLLMConfiguration(
+        endpoint: String,
+        apiKey: String,
+        modelID: String
+    ) -> Bool {
+        preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) ==
+            endpoint.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines) ==
+            apiKey.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines) ==
+            modelID.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

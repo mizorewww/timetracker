@@ -6,16 +6,21 @@ enum SidebarSelection: Hashable {
 }
 
 struct SidebarView: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
+    let onNavigate: () -> Void
     @State private var selection: SidebarSelection?
     @State private var expansionState = TaskExpansionState()
-    @State private var isSyncingSelection = false
+
+    init(store: TimeTrackerStore, onNavigate: @escaping () -> Void = {}) {
+        self.store = store
+        self.onNavigate = onNavigate
+    }
 
     private var destinations: [TimeTrackerStore.DesktopDestination] {
         #if os(macOS)
-        return TimeTrackerStore.DesktopDestination.allCases.filter { $0 != .settings }
+        TimeTrackerStore.DesktopDestination.allCases.filter { $0 != .settings }
         #else
-        return TimeTrackerStore.DesktopDestination.allCases
+        TimeTrackerStore.DesktopDestination.allCases
         #endif
     }
 
@@ -32,24 +37,26 @@ struct SidebarView: View {
             ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
                 Section {
                     ForEach(section.rows) { row in
-                        if let task = store.task(for: row.taskID) {
-                            SidebarTaskTreeRow(store: store, task: task, row: row, expansionState: $expansionState)
-                                .tag(SidebarSelection.task(task.id))
-                        }
+                        SidebarTaskTreeRowContainer(
+                            store: store,
+                            row: row,
+                            expansionState: $expansionState
+                        )
+                        .tag(SidebarSelection.task(row.taskID))
                     }
                 } header: {
-                    TaskCategorySectionHeader(section: section, compact: true, showsBottomDivider: true)
+                    TaskCategorySectionHeader(
+                        section: section,
+                        compact: true,
+                        showsBottomDivider: true
+                    )
                 }
             }
-
         }
         .navigationTitle(AppStrings.localized("app.name"))
-        .onAppear {
-            syncSelectionFromStore()
-        }
+        .onAppear(perform: syncSelectionFromStore)
         .onChange(of: selection) { _, newValue in
-            guard !isSyncingSelection else { return }
-            guard let newValue else { return }
+            guard let newValue, newValue != selectionFromStore else { return }
             switch newValue {
             case let .destination(destination):
                 store.closeTaskDetailNavigation()
@@ -57,147 +64,41 @@ struct SidebarView: View {
             case let .task(taskID):
                 store.openTaskDetail(taskID)
             }
+            onNavigate()
         }
-        .onChange(of: store.selectedTaskID) { _, _ in
-            syncSelectionFromStore()
-        }
-        .onChange(of: store.desktopTaskDetailID) { _, _ in
-            syncSelectionFromStore()
-        }
-        #if os(macOS)
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                SettingsLink {
-                    Image(systemName: "gearshape")
-                }
-                .accessibilityIdentifier("settings.open")
-                .help(AppStrings.settings)
-            }
-        }
-        #endif
+        .onChange(of: store.desktopDestination) { _, _ in syncSelectionFromStore() }
+        .onChange(of: store.selectedTaskID) { _, _ in syncSelectionFromStore() }
+        .onChange(of: store.desktopTaskDetailID) { _, _ in syncSelectionFromStore() }
+        .onChange(of: store.tasks.map(\.id)) { _, _ in syncSelectionFromStore() }
     }
 
     private func syncSelectionFromStore() {
-        isSyncingSelection = true
-        defer {
-            DispatchQueue.main.async {
-                isSyncingSelection = false
-            }
-        }
-        if let desktopTaskDetailID = store.desktopTaskDetailID {
+        if let desktopTaskDetailID = store.desktopTaskDetailID,
+           store.task(for: desktopTaskDetailID) != nil {
             for ancestorID in store.ancestorTaskIDs(for: desktopTaskDetailID) {
                 expansionState.expand(ancestorID)
             }
-            selection = .task(desktopTaskDetailID)
-        } else {
-            selection = .destination(store.desktopDestination)
         }
+        let updatedSelection = selectionFromStore
+        guard selection != updatedSelection else { return }
+        selection = updatedSelection
+    }
+
+    private var selectionFromStore: SidebarSelection {
+        if let desktopTaskDetailID = store.desktopTaskDetailID,
+           store.task(for: desktopTaskDetailID) != nil {
+            return .task(desktopTaskDetailID)
+        }
+        return .destination(store.desktopDestination)
     }
 
     private func count(for destination: TimeTrackerStore.DesktopDestination) -> Int? {
         switch destination {
-        case .today:
-            return store.activeSegments.count
-        case .inbox:
-            return store.openInboxItems.count
-        case .tasks:
-            return store.tasks.count
-        case .pomodoro:
-            return store.pomodoroRuns.filter { $0.state == .completed }.count
-        case .analytics:
-            return nil
-        case .settings:
-            return nil
-        }
-    }
-}
-
-struct SidebarTaskTreeRow: View {
-    @ObservedObject var store: TimeTrackerStore
-    let task: TaskNode
-    let row: TaskTreeRowModel
-    @Binding var expansionState: TaskExpansionState
-
-    var body: some View {
-        taskLabel
-    }
-
-    private var taskLabel: some View {
-        HStack(spacing: 8) {
-            Color.clear
-                .frame(width: CGFloat(row.depth) * 14)
-
-            if row.hasChildren {
-                Button {
-                    expansionState.toggle(task.id)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .rotationEffect(.degrees(row.isExpanded ? 90 : 0))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 14, height: 18)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(row.isExpanded ? AppStrings.localized("task.tree.collapse") : AppStrings.localized("task.tree.expand"))
-            } else {
-                Color.clear
-                    .frame(width: 14, height: 18)
-            }
-
-            Image(systemName: task.iconName ?? "checkmark.circle")
-                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-            Text(task.title)
-                .strikethrough(task.status == .completed)
-                .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                .lineLimit(1)
-            Spacer()
-            let progress = store.checklistProgress(for: task.id)
-            if progress.totalCount > 0 {
-                Text(progress.label)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            let childCount = row.hasChildren ? store.children(of: task).count : 0
-            if childCount > 0 {
-                Text("\(childCount)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Image(systemName: task.status.symbolName)
-                .font(.caption)
-                .foregroundStyle(Color(hex: task.status.colorHex) ?? .secondary)
-                .frame(width: 14)
-                .help(task.status.displayName)
-        }
-        .contentShape(Rectangle())
-        .taskSelectionPulse(
-            selectedID: store.selectedTaskPulseID,
-            itemID: task.id,
-            pulseToken: store.selectedTaskPulseToken
-        )
-        .contextMenu {
-            TaskContextMenu(store: store, task: task)
-        }
-        .accessibilityIdentifier("sidebar.task.\(task.title)")
-        .taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)
-    }
-}
-
-struct SidebarDestinationLabel: View {
-    let destination: TimeTrackerStore.DesktopDestination
-    let count: Int?
-
-    var body: some View {
-        HStack {
-            Label(destination.title, systemImage: destination.symbolName)
-            Spacer()
-            if let count {
-                Text("\(count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 6)
-                    .background(.thinMaterial, in: Capsule())
-            }
+        case .today: store.activeSegments.count
+        case .inbox: store.openInboxItems.count
+        case .tasks: store.tasks.lazy.filter(store.isTaskVisible).count
+        case .pomodoro: store.completedPomodoroCount
+        case .analytics, .settings: nil
         }
     }
 }

@@ -41,7 +41,8 @@ extension TimeTrackerStore {
         return didSave
     }
 
-    func deleteTaskCategory(_ category: TaskCategory) {
+    @discardableResult
+    func deleteTaskCategory(_ category: TaskCategory) -> Bool {
         perform(event: .taskChanged(taskID: nil, affectedAncestorIDs: [])) {
             try requiredTaskRepository().softDeleteCategory(categoryID: category.id)
         }

@@ -2,7 +2,8 @@ import Foundation
 
 struct LedgerBucketCache {
     private struct CacheKey: Hashable {
-        let dayStart: Date
+        let intervalStart: Date
+        let intervalEnd: Date
         let taskID: UUID?
         let version: Int
     }
@@ -52,7 +53,7 @@ struct LedgerBucketCache {
     mutating func invalidate(intervals: [DateInterval]) {
         guard !intervals.isEmpty else { return }
         entries = entries.filter { key, _ in
-            let day = DateInterval(start: key.dayStart, duration: 24 * 60 * 60)
+            let day = DateInterval(start: key.intervalStart, end: key.intervalEnd)
             return !intervals.contains { interval in
                 interval.start < day.end && interval.end > day.start
             }
@@ -71,7 +72,12 @@ struct LedgerBucketCache {
         calendar: Calendar,
         version: Int
     ) -> DailySummarySnapshot? {
-        let key = CacheKey(dayStart: calendar.startOfDay(for: day.start), taskID: taskID, version: version)
+        let key = CacheKey(
+            intervalStart: day.start,
+            intervalEnd: day.end,
+            taskID: taskID,
+            version: version
+        )
         let signature = signature(for: daySegments, now: now)
 
         if let cached = entries[key], cached.signature == signature {

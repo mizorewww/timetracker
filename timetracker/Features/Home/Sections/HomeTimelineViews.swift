@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ActiveTimersSection: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -28,7 +28,7 @@ struct ActiveTimersSection: View {
 }
 
 struct TimelineSection: View {
-    @ObservedObject var store: TimeTrackerStore
+    let store: TimeTrackerStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

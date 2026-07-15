@@ -3,8 +3,8 @@ import Foundation
 #if os(iOS) && canImport(ActivityKit)
 import ActivityKit
 
-struct TimeTrackingActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
+nonisolated struct TimeTrackingActivityAttributes: ActivityAttributes, Sendable {
+    public nonisolated struct ContentState: Codable, Hashable, Sendable {
         var taskTitle: String
         var taskPath: String
         var iconName: String

@@ -171,6 +171,42 @@ struct PreferenceCommandValidationTests {
         }
     }
 
+    @Test
+    func opaqueModelIdentifiersUseAByteLimitAndAreNeverTruncatedIntoAnotherIdentity() {
+        #expect(
+            AppPreferenceValueSanitizer.maximumLLMModelIDByteCount ==
+                LLMSuggestionInputPolicy.maximumModelIDByteCount
+        )
+        #expect(
+            AppPreferenceValueSanitizer.maximumLLMModelIDByteCount ==
+                SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
+        )
+
+        let exactBoundary = String(
+            repeating: "m",
+            count: AppPreferenceValueSanitizer.maximumLLMModelIDByteCount
+        )
+        let oversizedUnicode = String(repeating: "🧭", count: 65)
+        let controlCharacter = "model\u{0000}suffix"
+
+        #expect(AppPreferenceValueSanitizer.llmModelID("  \(exactBoundary)  ") == exactBoundary)
+        #expect(AppPreferenceValueSanitizer.llmModelID(oversizedUnicode).isEmpty)
+        #expect(AppPreferenceValueSanitizer.llmModelID(controlCharacter).isEmpty)
+        #expect(
+            AppPreferenceValueSanitizer.llmModelIDs([
+                exactBoundary,
+                oversizedUnicode,
+                controlCharacter
+            ]) == [exactBoundary]
+        )
+        #expect(!AppPreferenceValueSanitizer.llmModelIDs([oversizedUnicode]).contains {
+            $0 == LLMSuggestionInputPolicy.boundedTrimmedUTF8(
+                oversizedUnicode,
+                maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
+            )
+        })
+    }
+
     @MainActor
     private func initializeWritableStore(
         at url: URL,

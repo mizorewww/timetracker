@@ -5,7 +5,7 @@ enum AppPreferenceValueSanitizer {
     static let maximumPomodoroPlanNameLength = 80
     static let maximumQuickStartTaskCount = 24
     static let maximumLLMModelCount = 256
-    static let maximumLLMModelIDLength = 256
+    static let maximumLLMModelIDByteCount = 256
     static let maximumLLMEndpointLength = 2_048
 
     static func preferredColorScheme(_ value: String) -> String {
@@ -55,7 +55,12 @@ enum AppPreferenceValueSanitizer {
     }
 
     static func llmModelID(_ value: String) -> String {
-        boundedTrimmed(value, maximumLength: maximumLLMModelIDLength)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.utf8.count <= maximumLLMModelIDByteCount,
+              !trimmed.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+            return ""
+        }
+        return trimmed
     }
 
     static func llmModelIDs(_ values: [String]) -> [String] {

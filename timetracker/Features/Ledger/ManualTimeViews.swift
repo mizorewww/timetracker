@@ -43,6 +43,7 @@ struct ManualTimePanel: View {
     var body: some View {
         let now = Date()
         let validation = trackedTimeValidation(at: now)
+        let noteError = noteValidationMessage
 
         NavigationStack {
             Form {
@@ -81,7 +82,16 @@ struct ManualTimePanel: View {
                 }
 
                 Section(AppStrings.localized("segment.notes")) {
-                    TextField(AppStrings.localized("manual.note.placeholder"), text: $draft.note)
+                    TextField(
+                        AppStrings.localized("manual.note.placeholder"),
+                        text: $draft.note,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...8)
+                    .accessibilityIdentifier("manualTime.note")
+                    if let noteError {
+                        noteValidationLabel(noteError)
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -102,7 +112,7 @@ struct ManualTimePanel: View {
                         onSave(draft)
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(draft.taskID == nil || validation != .valid)
+                    .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
                 }
             }
         }
@@ -143,6 +153,22 @@ struct ManualTimePanel: View {
 
     private func timeValidationLabel(key: String) -> some View {
         Label(AppStrings.localized(key), systemImage: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(.red)
+            .accessibilityAddTraits(.isStaticText)
+    }
+
+    private var noteValidationMessage: String? {
+        do {
+            _ = try LedgerPersistencePolicy.prepareNote(draft.note)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private func noteValidationLabel(_ message: String) -> some View {
+        Label(message, systemImage: "exclamationmark.triangle.fill")
             .font(.caption)
             .foregroundStyle(.red)
             .accessibilityAddTraits(.isStaticText)

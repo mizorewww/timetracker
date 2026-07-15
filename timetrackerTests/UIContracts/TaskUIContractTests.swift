@@ -173,6 +173,22 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func trackedTimeNotesAreMultilineAndValidateBeforeSave() throws {
+        let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
+        let segmentSource = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
+
+        for source in [manualSource, segmentSource] {
+            #expect(source.contains("axis: .vertical"))
+            #expect(source.contains(".lineLimit(3...8)"))
+            #expect(source.contains("LedgerPersistencePolicy.prepareNote(draft.note)"))
+            #expect(source.contains("noteError != nil"))
+            #expect(source.contains("noteValidationLabel(noteError)"))
+        }
+        #expect(manualSource.contains("manualTime.note"))
+        #expect(segmentSource.contains("segmentEditor.note"))
+    }
+
+    @Test
     func accessibilityTaskLayoutsStackCriticalContentWithoutChangingStableTargets() throws {
         let rowSource = try taskManagementFeatureSource()
         let categorySource = try sourceText("timetracker/SharedUI/Components/TaskCategoryViews.swift")

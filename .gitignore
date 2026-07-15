@@ -6,3 +6,5 @@ DerivedData/
 **/xcdebugger/
 **/xcuserdata/
 *.xcuserstate
+**/__pycache__/
+*.py[cod]

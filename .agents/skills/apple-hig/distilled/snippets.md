@@ -56,4 +56,3 @@ Custom view maximum height: **400 pt**.
 - App Intents
 - Displaying static and interactive snippets
 - `ConfirmationActionName`
-

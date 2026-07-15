@@ -20,4 +20,3 @@ Verifier: sub-agent `019eadf8-2770-7321-be9a-5a3410ecba59`
 ## Status
 
 Accepted after revisions.
-

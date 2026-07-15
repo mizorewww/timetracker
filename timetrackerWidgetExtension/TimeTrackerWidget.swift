@@ -34,22 +34,29 @@ struct ActiveTimerProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<ActiveTimerEntry>) -> Void) {
         let now = Date()
-        let current = entry(at: now)
+        let result = SharedWidgetSnapshotStore().loadResult(at: now)
+        let current = entry(at: now, result: result)
 
-        switch current.state {
-        case let .snapshot(snapshot) where snapshot.freshness(at: now) == .current:
-            let staleDate = snapshot.generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)
-            completion(Timeline(entries: [current], policy: .after(max(staleDate, now.addingTimeInterval(60)))))
-        default:
-            // The host app reloads this timeline whenever it writes a new snapshot.
+        switch WidgetSnapshotTimelinePolicy().reloadDecision(for: result, at: now) {
+        case .after(let date):
+            completion(Timeline(entries: [current], policy: .after(date)))
+        case .never:
+            // Missing or structurally corrupted data requires a new host snapshot.
             completion(Timeline(entries: [current], policy: .never))
         }
     }
 
     private func entry(at date: Date) -> ActiveTimerEntry {
+        entry(at: date, result: SharedWidgetSnapshotStore().loadResult(at: date))
+    }
+
+    private func entry(
+        at date: Date,
+        result: WidgetSnapshotLoadResult
+    ) -> ActiveTimerEntry {
         let state: WidgetEntryState
-        switch SharedWidgetSnapshotStore().loadResult() {
-        case let .snapshot(snapshot):
+        switch result {
+        case let .snapshot(snapshot, _):
             state = .snapshot(snapshot)
         case .sharedContainerUnavailable:
             state = .unavailable(.sharedContainerUnavailable)

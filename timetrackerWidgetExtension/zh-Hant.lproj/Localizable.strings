@@ -10,6 +10,7 @@
 "widget.preview.path" = "工作";
 "widget.elapsed.label" = "已用時間";
 "widget.stale.label" = "上次更新";
+"widget.clockAdjusted.label" = "系統時間已更改，正在重新整理";
 "widget.unavailable.title" = "打開 Time Tracker";
 "widget.unavailable.message" = "打開 App 以載入計時資料。";
 "widget.corrupted.title" = "需要重新整理";

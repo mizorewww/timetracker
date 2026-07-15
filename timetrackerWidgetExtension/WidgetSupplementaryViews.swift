@@ -86,8 +86,12 @@ struct SnapshotFreshnessLabel: View {
     let freshness: WidgetSnapshotFreshness
     let generatedAt: Date
 
+    @ViewBuilder
     var body: some View {
-        if freshness == .stale {
+        switch freshness {
+        case .current:
+            EmptyView()
+        case .stale:
             HStack(spacing: 4) {
                 Image(systemName: "exclamationmark.clock")
                     .accessibilityHidden(true)
@@ -99,6 +103,11 @@ struct SnapshotFreshnessLabel: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text(localized("widget.stale.label")))
             .accessibilityValue(Text(generatedAt, style: .relative))
+        case .clockAdjusted:
+            Label(localized("widget.clockAdjusted.label"), systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 }

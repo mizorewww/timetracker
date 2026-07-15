@@ -89,10 +89,17 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
         at now: Date,
         staleAfter threshold: TimeInterval = WidgetSnapshot.staleAfter
     ) -> WidgetSnapshotFreshness {
-        now.timeIntervalSince(generatedAt) > threshold ? .stale : .current
+        guard WidgetSnapshotLimits.isFinite(now),
+              WidgetSnapshotLimits.isFinite(generatedAt) else {
+            return .clockAdjusted
+        }
+        if generatedAt.timeIntervalSince(now) > WidgetSnapshotLimits.maximumFutureClockSkew {
+            return .clockAdjusted
+        }
+        return now.timeIntervalSince(generatedAt) > threshold ? .stale : .current
     }
 
-    nonisolated func isValid(at now: Date) -> Bool {
+    nonisolated var isStructurallyValid: Bool {
         let textByteCount = activeTimers.reduce(into: 0) { total, timer in
             total += WidgetSnapshotLimits.textByteCount(
                 title: timer.title,
@@ -108,9 +115,7 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
                 iconName: task.iconName
             )
         }
-        guard WidgetSnapshotLimits.isFinite(now),
-              WidgetSnapshotLimits.isFinite(generatedAt),
-              generatedAt.timeIntervalSince(now) <= WidgetSnapshotLimits.maximumFutureClockSkew,
+        guard WidgetSnapshotLimits.isFinite(generatedAt),
               (0...WidgetSnapshotLimits.maximumSummarySeconds).contains(todayGrossSeconds),
               (0...WidgetSnapshotLimits.maximumSummarySeconds).contains(todayWallSeconds),
               activeTimers.count <= WidgetSnapshotLimits.maximumActiveTimers,
@@ -129,6 +134,7 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
 nonisolated enum WidgetSnapshotFreshness: Equatable, Sendable {
     case current
     case stale
+    case clockAdjusted
 }
 
 nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendable {

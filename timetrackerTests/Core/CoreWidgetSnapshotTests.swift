@@ -130,6 +130,26 @@ struct CoreWidgetSnapshotTests {
     }
 
     @Test
+    func widgetSnapshotStoreKeepsClockAdjustedDataRecoverable() throws {
+        let suiteName = "WidgetSnapshotClockAdjustmentTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let now = Date(timeIntervalSinceReferenceDate: 20_000)
+        var snapshot = WidgetSnapshot.empty
+        snapshot.generatedAt = now.addingTimeInterval(
+            WidgetSnapshotLimits.maximumFutureClockSkew + 3_600
+        )
+        let cache = SharedWidgetSnapshotStore(defaults: defaults)
+
+        try cache.save(snapshot)
+
+        #expect(snapshot.isStructurallyValid)
+        #expect(snapshot.freshness(at: now) == .clockAdjusted)
+        #expect(cache.load(at: now) == snapshot)
+        #expect(cache.loadResult(at: now) == .snapshot(snapshot, freshness: .clockAdjusted))
+    }
+
+    @Test
     func widgetSnapshotFreshnessUsesTheSharedFifteenMinuteBoundary() {
         let generatedAt = Date(timeIntervalSinceReferenceDate: 10_000)
         var snapshot = WidgetSnapshot.empty
@@ -137,12 +157,39 @@ struct CoreWidgetSnapshotTests {
 
         #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)) == .current)
         #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter + 1)) == .stale)
-        #expect(snapshot.isValid(at: generatedAt))
+        #expect(snapshot.isStructurallyValid)
 
         snapshot.generatedAt = generatedAt.addingTimeInterval(
             WidgetSnapshotLimits.maximumFutureClockSkew + 1
         )
-        #expect(snapshot.isValid(at: generatedAt) == false)
+        #expect(snapshot.isStructurallyValid)
+        #expect(snapshot.freshness(at: generatedAt) == .clockAdjusted)
+    }
+
+    @Test
+    func widgetTimelinePolicySchedulesBoundedRecoveryRetries() {
+        let policy = WidgetSnapshotTimelinePolicy()
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 25_000)
+        var snapshot = WidgetSnapshot.empty
+        snapshot.generatedAt = generatedAt
+
+        let currentResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .current)
+        #expect(policy.reloadDecision(for: currentResult, at: generatedAt) == .after(
+            generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)
+        ))
+
+        let staleNow = generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter + 1)
+        let staleResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .stale)
+        #expect(policy.reloadDecision(for: staleResult, at: staleNow) == .after(
+            staleNow.addingTimeInterval(WidgetSnapshotTimelinePolicy.maximumRecoveryRetryDelay)
+        ))
+
+        snapshot.generatedAt = generatedAt.addingTimeInterval(3_600)
+        let adjustedResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .clockAdjusted)
+        #expect(policy.reloadDecision(for: adjustedResult, at: generatedAt) == .after(
+            generatedAt.addingTimeInterval(WidgetSnapshotTimelinePolicy.maximumRecoveryRetryDelay)
+        ))
+        #expect(policy.reloadDecision(for: .corrupted, at: generatedAt) == .never)
     }
 
     @Test
@@ -167,23 +214,23 @@ struct CoreWidgetSnapshotTests {
             recentTasks: []
         )
 
-        #expect(snapshot.isValid(at: generatedAt))
+        #expect(snapshot.isStructurallyValid)
 
         snapshot.activeTimers.append(timer)
-        #expect(snapshot.isValid(at: generatedAt) == false)
+        #expect(snapshot.isStructurallyValid == false)
 
         snapshot.activeTimers = [timer]
         snapshot.activeTimers[0].title = String(
             repeating: "x",
             count: WidgetSnapshotLimits.maximumTitleBytes + 1
         )
-        #expect(snapshot.isValid(at: generatedAt) == false)
+        #expect(snapshot.isStructurallyValid == false)
 
         snapshot.activeTimers[0] = timer
         snapshot.activeTimers[0].startedAt = generatedAt.addingTimeInterval(
             WidgetSnapshotLimits.maximumFutureClockSkew + 1
         )
-        #expect(snapshot.isValid(at: generatedAt) == false)
+        #expect(snapshot.isStructurallyValid == false)
     }
 
     @Test
@@ -196,6 +243,8 @@ struct CoreWidgetSnapshotTests {
         let cache = try sourceText("timetracker/Services/SystemIntegration/WidgetSnapshotCache.swift")
 
         #expect(widget.contains("context.isPreview"))
+        #expect(widget.contains("WidgetSnapshotTimelinePolicy"))
+        #expect(widget.contains("clockAdjusted"))
         #expect(widget.contains("policy: .never"))
         #expect(widget.contains(".privacySensitive()"))
         #expect(widget.contains("minHeight: 44"))
@@ -339,7 +388,7 @@ struct CoreWidgetSnapshotTests {
         #expect(pathsAreBounded)
         #expect(stylesAreBounded)
         #expect(unicodePrefixesAreIntact)
-        #expect(snapshot.isValid(at: generatedAt))
+        #expect(snapshot.isStructurallyValid)
         let encodedSnapshot = try JSONEncoder().encode(snapshot)
         #expect(encodedSnapshot.count <= WidgetSnapshotLimits.maximumEncodedBytes)
 
@@ -354,7 +403,7 @@ struct CoreWidgetSnapshotTests {
             )
         }
         #expect(textHeavySnapshot.recentTasks.allSatisfy { $0.isStructurallyValid })
-        #expect(textHeavySnapshot.isValid(at: generatedAt) == false)
+        #expect(textHeavySnapshot.isStructurallyValid == false)
     }
 }
 

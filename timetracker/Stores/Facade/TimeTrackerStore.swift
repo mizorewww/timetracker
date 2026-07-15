@@ -3,6 +3,12 @@ import Foundation
 import Observation
 import SwiftData
 
+struct StoreLLMSuggestionTask {
+    let requestID: UUID
+    let isAutomatic: Bool
+    let task: Task<Void, Never>
+}
+
 @MainActor
 @Observable
 final class TimeTrackerStore {
@@ -44,6 +50,12 @@ final class TimeTrackerStore {
     deinit {
         pomodoroReconciliationTask?.cancel()
         scheduledSyncRefreshTask?.cancel()
+        for request in inboxSuggestionTasksByItemID.values {
+            request.task.cancel()
+        }
+        for request in checklistVisualSuggestionTasksByItemID.values {
+            request.task.cancel()
+        }
     }
 
     var tasks: [TaskNode] = [] {
@@ -106,9 +118,11 @@ final class TimeTrackerStore {
     var inboxSuggestionFailureByItemID: [UUID: String] = [:]
     @ObservationIgnored var inboxSuggestionPendingIDs: [UUID] = []
     @ObservationIgnored var inboxSuggestionPendingShowsErrors: Set<UUID> = []
+    @ObservationIgnored var inboxSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
     var checklistVisualSuggestionInFlightIDs: Set<UUID> = []
     @ObservationIgnored var checklistVisualSuggestionFailureFingerprintByItemID: [UUID: String] = [:]
     @ObservationIgnored var checklistVisualSuggestionRetryAfterByItemID: [UUID: Date] = [:]
+    @ObservationIgnored var checklistVisualSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
     var preferences = AppPreferences.defaults
     var rollupDomainStore = RollupStore()
     var analyticsDomainStore = AnalyticsStore()

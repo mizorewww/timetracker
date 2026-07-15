@@ -20,10 +20,12 @@ extension TimeTrackerStore {
         checklistVisualSuggestionFailureFingerprintByItemID[item.id] = nil
         checklistVisualSuggestionRetryAfterByItemID[item.id] = nil
         checklistVisualSuggestionInFlightIDs.insert(item.id)
+        let requestID = UUID()
+        let service = checklistVisualSuggestionService
 
-        Task {
+        let task = Task { @MainActor [weak self] in
             do {
-                let result = try await checklistVisualSuggestionService.suggest(
+                let result = try await service.suggest(
                     checklistTitle: request.title,
                     taskTitle: request.taskTitle,
                     taskPath: request.taskPath,
@@ -31,20 +33,27 @@ extension TimeTrackerStore {
                     apiKey: request.apiKey,
                     modelID: request.modelID
                 )
-                await MainActor.run {
-                    applyChecklistVisualSuggestion(result, to: item, request: request)
-                }
+                try Task.checkCancellation()
+                self?.completeChecklistVisualSuggestion(
+                    result,
+                    request: request,
+                    requestID: requestID
+                )
             } catch {
-                await MainActor.run {
-                    finishChecklistVisualSuggestion(
-                        for: item.id,
-                        request: request,
-                        showsErrors: showsErrors,
-                        error: error
-                    )
-                }
+                self?.completeChecklistVisualSuggestionFailure(
+                    error,
+                    request: request,
+                    requestID: requestID,
+                    showsErrors: showsErrors,
+                    wasCancelled: Task.isCancelled || error is CancellationError
+                )
             }
         }
+        checklistVisualSuggestionTasksByItemID[item.id] = StoreLLMSuggestionTask(
+            requestID: requestID,
+            isAutomatic: !showsErrors,
+            task: task
+        )
     }
 
     private func checklistVisualSuggestionRequest(for item: ChecklistItem) -> ChecklistVisualSuggestionRequest? {
@@ -57,6 +66,8 @@ extension TimeTrackerStore {
         guard policy.shouldSuggest(item: item, visual: checklistVisual(for: item)) else { return nil }
 
         return ChecklistVisualSuggestionRequest(
+            itemID: item.id,
+            taskID: item.taskID,
             title: policy.normalizedTitle(item.title),
             taskTitle: task.title,
             taskPath: taskPath(for: task),
@@ -66,11 +77,22 @@ extension TimeTrackerStore {
         )
     }
 
-    private func applyChecklistVisualSuggestion(
+    private func completeChecklistVisualSuggestion(
         _ result: LLMChecklistVisualSuggestionResult,
-        to item: ChecklistItem,
-        request: ChecklistVisualSuggestionRequest
+        request: ChecklistVisualSuggestionRequest,
+        requestID: UUID
     ) {
+        guard isCurrentChecklistVisualSuggestionRequest(
+            itemID: request.itemID,
+            requestID: requestID
+        ) else { return }
+        defer {
+            finishChecklistVisualSuggestionRequest(
+                itemID: request.itemID,
+                requestID: requestID
+            )
+        }
+
         let policy = ChecklistVisualSuggestionPolicy()
         guard matchesCurrentLLMConfiguration(
                   endpoint: request.endpoint,
@@ -78,13 +100,13 @@ extension TimeTrackerStore {
                   modelID: request.modelID
               ),
               preferences.llmAutomaticSuggestionsEnabled,
+              let item = checklistItems.first(where: { $0.id == request.itemID }),
+              item.taskID == request.taskID,
               item.deletedAt == nil,
               let task = taskByID[item.taskID],
               isTaskAvailableForTracking(task),
               policy.normalizedTitle(item.title) == request.title,
               policy.shouldSuggest(item: item, visual: checklistVisual(for: item)) else {
-            checklistVisualSuggestionInFlightIDs.remove(item.id)
-            autoSuggestChecklistVisualsIfNeeded()
             return
         }
 
@@ -97,32 +119,111 @@ extension TimeTrackerStore {
                 context: modelContext
             )
         }
-        checklistVisualSuggestionInFlightIDs.remove(item.id)
-        autoSuggestChecklistVisualsIfNeeded()
     }
 
-    private func finishChecklistVisualSuggestion(
-        for itemID: UUID,
+    private func completeChecklistVisualSuggestionFailure(
+        _ error: Error,
         request: ChecklistVisualSuggestionRequest,
+        requestID: UUID,
         showsErrors: Bool,
-        error: Error
+        wasCancelled: Bool
     ) {
+        guard isCurrentChecklistVisualSuggestionRequest(
+            itemID: request.itemID,
+            requestID: requestID
+        ) else { return }
+        if wasCancelled {
+            finishChecklistVisualSuggestionRequest(
+                itemID: request.itemID,
+                requestID: requestID,
+                shouldAutoSuggest: false
+            )
+            return
+        }
+        defer {
+            finishChecklistVisualSuggestionRequest(
+                itemID: request.itemID,
+                requestID: requestID
+            )
+        }
+
         guard matchesCurrentLLMConfiguration(
             endpoint: request.endpoint,
             apiKey: request.apiKey,
             modelID: request.modelID
         ), showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
-            checklistVisualSuggestionInFlightIDs.remove(itemID)
-            autoSuggestChecklistVisualsIfNeeded()
             return
         }
         if showsErrors {
             errorMessage = error.localizedDescription
         }
-        checklistVisualSuggestionFailureFingerprintByItemID[itemID] = request.fingerprint
-        checklistVisualSuggestionRetryAfterByItemID[itemID] = Date().addingTimeInterval(60)
+        checklistVisualSuggestionFailureFingerprintByItemID[request.itemID] = request.fingerprint
+        checklistVisualSuggestionRetryAfterByItemID[request.itemID] = Date().addingTimeInterval(60)
+    }
+
+    private func finishChecklistVisualSuggestionRequest(
+        itemID: UUID,
+        requestID: UUID,
+        shouldAutoSuggest: Bool = true
+    ) {
+        guard isCurrentChecklistVisualSuggestionRequest(
+            itemID: itemID,
+            requestID: requestID
+        ) else { return }
+        checklistVisualSuggestionTasksByItemID.removeValue(forKey: itemID)
         checklistVisualSuggestionInFlightIDs.remove(itemID)
-        autoSuggestChecklistVisualsIfNeeded()
+        if shouldAutoSuggest {
+            autoSuggestChecklistVisualsIfNeeded()
+        }
+    }
+
+    func cancelAllChecklistVisualSuggestionRequests() {
+        cancelChecklistVisualSuggestionRequests(for: checklistVisualSuggestionInFlightIDs)
+    }
+
+    func cancelChecklistVisualSuggestionRequests(matching requestIDsByItemID: [UUID: UUID]) {
+        guard !requestIDsByItemID.isEmpty else { return }
+        let matchingItemIDs = Set(
+            checklistVisualSuggestionTasksByItemID.compactMap { itemID, request in
+                requestIDsByItemID[itemID] == request.requestID ? itemID : nil
+            }
+        )
+        cancelChecklistVisualSuggestionRequests(for: matchingItemIDs)
+    }
+
+    func cancelChecklistVisualSuggestionRequests(for itemIDs: Set<UUID>) {
+        guard !itemIDs.isEmpty else { return }
+        for itemID in itemIDs {
+            guard let request = checklistVisualSuggestionTasksByItemID[itemID] else { continue }
+            checklistVisualSuggestionTasksByItemID.removeValue(forKey: itemID)
+            checklistVisualSuggestionInFlightIDs.remove(itemID)
+            request.task.cancel()
+        }
+    }
+
+    func cancelInvalidChecklistVisualSuggestionRequests() {
+        let validItemIDs = Set(
+            checklistItems.lazy
+                .filter { item in
+                    guard item.deletedAt == nil,
+                          item.isCompleted == false,
+                          let task = self.taskByID[item.taskID] else {
+                        return false
+                    }
+                    return self.isTaskAvailableForTracking(task)
+                }
+                .map(\.id)
+        )
+        cancelChecklistVisualSuggestionRequests(
+            for: checklistVisualSuggestionInFlightIDs.subtracting(validItemIDs)
+        )
+    }
+
+    private func isCurrentChecklistVisualSuggestionRequest(
+        itemID: UUID,
+        requestID: UUID
+    ) -> Bool {
+        checklistVisualSuggestionTasksByItemID[itemID]?.requestID == requestID
     }
 
     private var canAutoSuggestChecklistVisuals: Bool {
@@ -150,6 +251,8 @@ extension TimeTrackerStore {
 }
 
 private struct ChecklistVisualSuggestionRequest {
+    let itemID: UUID
+    let taskID: UUID
     let title: String
     let taskTitle: String
     let taskPath: String

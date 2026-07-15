@@ -91,10 +91,19 @@ extension TimeTrackerStore {
     }
 
     func setLLMEndpoint(_ value: String) {
-        setPreference(.llmEndpoint, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(value)))
+        let normalized = AppPreferenceValueSanitizer.llmEndpoint(value)
+        let changed = normalized != AppPreferenceValueSanitizer.llmEndpoint(preferences.llmEndpoint)
+        let taskSnapshot = llmSuggestionTaskSnapshot()
+        let didSet = setPreference(.llmEndpoint, valueJSON: PreferenceJSON.encode(normalized))
+        if didSet, changed {
+            cancelLLMSuggestionTasks(matching: taskSnapshot)
+        }
     }
 
     func setLLMAPIKey(_ value: String) {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let changed = normalized != preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let taskSnapshot = llmSuggestionTaskSnapshot()
         do {
             try AppCloudSync.requireUserWritesAllowed()
             try llmCredentialStore.writeAPIKey(value)
@@ -112,10 +121,19 @@ extension TimeTrackerStore {
                 error.localizedDescription
             )
         }
+        if changed {
+            cancelLLMSuggestionTasks(matching: taskSnapshot)
+        }
     }
 
     func setLLMSelectedModel(_ value: String) {
-        setPreference(.llmSelectedModel, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(value)))
+        let normalized = AppPreferenceValueSanitizer.llmModelID(value)
+        let changed = normalized != AppPreferenceValueSanitizer.llmModelID(preferences.llmSelectedModel)
+        let taskSnapshot = llmSuggestionTaskSnapshot()
+        let didSet = setPreference(.llmSelectedModel, valueJSON: PreferenceJSON.encode(normalized))
+        if didSet, changed {
+            cancelLLMSuggestionTasks(matching: taskSnapshot)
+        }
     }
 
     func setLLMAutomaticSuggestionsEnabled(_ value: Bool) {
@@ -125,9 +143,8 @@ extension TimeTrackerStore {
             autoSuggestInboxItemsIfNeeded()
             autoSuggestChecklistVisualsIfNeeded()
         } else {
-            inboxSuggestionPendingIDs.removeAll {
-                inboxSuggestionPendingShowsErrors.contains($0) == false
-            }
+            cancelAutomaticInboxSuggestionRequests()
+            cancelAllChecklistVisualSuggestionRequests()
         }
     }
 
@@ -153,6 +170,12 @@ extension TimeTrackerStore {
             errorMessage = AppStrings.localized("settings.llm.needsSetup")
             return false
         }
+        let configurationChanged = !matchesCurrentLLMConfiguration(
+            endpoint: normalizedEndpoint,
+            apiKey: normalizedAPIKey,
+            modelID: normalizedSelectedModel
+        )
+        let taskSnapshot = llmSuggestionTaskSnapshot()
 
         let previousAPIKey: String?
         do {
@@ -185,11 +208,32 @@ extension TimeTrackerStore {
             }
         }
         if didCommit {
+            if configurationChanged {
+                cancelLLMSuggestionTasks(matching: taskSnapshot)
+            }
             inboxSuggestionFailureByItemID.removeAll(keepingCapacity: true)
-            autoSuggestInboxItemsIfNeeded()
-            autoSuggestChecklistVisualsIfNeeded()
+            if matchesCurrentLLMConfiguration(
+                endpoint: normalizedEndpoint,
+                apiKey: normalizedAPIKey,
+                modelID: normalizedSelectedModel
+            ) {
+                autoSuggestInboxItemsIfNeeded()
+                autoSuggestChecklistVisualsIfNeeded()
+            }
         }
         return didCommit
+    }
+
+    private func llmSuggestionTaskSnapshot() -> LLMSuggestionTaskSnapshot {
+        LLMSuggestionTaskSnapshot(
+            inboxRequestIDsByItemID: inboxSuggestionTasksByItemID.mapValues(\.requestID),
+            checklistRequestIDsByItemID: checklistVisualSuggestionTasksByItemID.mapValues(\.requestID)
+        )
+    }
+
+    private func cancelLLMSuggestionTasks(matching snapshot: LLMSuggestionTaskSnapshot) {
+        cancelInboxSuggestionRequests(matching: snapshot.inboxRequestIDsByItemID)
+        cancelChecklistVisualSuggestionRequests(matching: snapshot.checklistRequestIDsByItemID)
     }
 
     @discardableResult
@@ -199,4 +243,9 @@ extension TimeTrackerStore {
             try preferenceCommandHandler.set(key: key, valueJSON: valueJSON, context: modelContext)
         }
     }
+}
+
+private struct LLMSuggestionTaskSnapshot {
+    let inboxRequestIDsByItemID: [UUID: UUID]
+    let checklistRequestIDsByItemID: [UUID: UUID]
 }

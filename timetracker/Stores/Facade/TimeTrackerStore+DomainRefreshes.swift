@@ -11,6 +11,7 @@ extension TimeTrackerStore {
         tasks = taskDomainStore.tasks
         taskCategories = taskDomainStore.categories
         taskCategoryAssignments = taskDomainStore.categoryAssignments
+        cancelInvalidChecklistVisualSuggestionRequests()
     }
 
     func refreshLedgerDomain(plan: StoreRefreshPlan) throws {
@@ -39,6 +40,10 @@ extension TimeTrackerStore {
     }
 
     func refreshPreferenceDomain() throws {
+        let previousEndpoint = preferences.llmEndpoint
+        let previousAPIKey = preferences.llmAPIKey
+        let previousModelID = preferences.llmSelectedModel
+        let automaticSuggestionsWereEnabled = preferences.llmAutomaticSuggestionsEnabled
         preferenceDomainStore.refresh(
             syncedPreferences: try fetchSyncedPreferences(),
             localLLMAPIKey: try llmCredentialStore.readAPIKey() ?? "",
@@ -48,6 +53,17 @@ extension TimeTrackerStore {
         )
         syncedPreferences = preferenceDomainStore.syncedPreferences
         preferences = preferenceDomainStore.preferences
+        if !matchesCurrentLLMConfiguration(
+            endpoint: previousEndpoint,
+            apiKey: previousAPIKey,
+            modelID: previousModelID
+        ) {
+            cancelAllInboxSuggestionRequests()
+            cancelAllChecklistVisualSuggestionRequests()
+        } else if automaticSuggestionsWereEnabled && !preferences.llmAutomaticSuggestionsEnabled {
+            cancelAutomaticInboxSuggestionRequests()
+            cancelAllChecklistVisualSuggestionRequests()
+        }
     }
 
     func refreshChecklistDomain(plan: StoreRefreshPlan) throws {
@@ -99,6 +115,7 @@ extension TimeTrackerStore {
                 }
             }
         }
+        cancelInvalidChecklistVisualSuggestionRequests()
     }
 
     func refreshInboxDomain(plan: StoreRefreshPlan) throws {
@@ -116,6 +133,7 @@ extension TimeTrackerStore {
         }
         inboxItems = inboxDomainStore.items
         inboxSuggestions = inboxDomainStore.suggestions
+        cancelInvalidInboxSuggestionRequests()
     }
 
     func refreshRollupDomain(plan: StoreRefreshPlan) {

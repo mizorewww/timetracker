@@ -26,7 +26,7 @@ struct PomodoroFocusSetupControls: View {
                 spokenLabel: taskPath,
                 spokenValue: String(
                     format: AppStrings.localized("pomodoro.focusDuration.accessibility"),
-                    DurationFormatter.clock(plan.focusSeconds)
+                    DurationFormatter.spoken(plan.focusSeconds)
                 )
             )
 

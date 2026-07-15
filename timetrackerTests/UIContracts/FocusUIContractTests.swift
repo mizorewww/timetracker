@@ -22,6 +22,7 @@ struct FocusUIContractTests {
         #expect(layout.contains("frame(minWidth: 440, maxWidth: 580)"))
         #expect(controls.contains("pomodoro.startFocus"))
         #expect(controls.contains("pomodoro.longBreak"))
+        #expect(controls.contains("DurationFormatter.spoken(plan.focusSeconds)"))
         #expect(controls.components(separatedBy: ".buttonStyle(.borderedProminent)").count - 1 == 1)
     }
 

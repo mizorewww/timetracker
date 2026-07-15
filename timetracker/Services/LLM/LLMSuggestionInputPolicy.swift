@@ -24,7 +24,10 @@ nonisolated enum LLMSuggestionInputPolicy {
     static let maximumCandidatePathByteCount = 512
     static let maximumIconNameByteCount = 128
     static let maximumColorByteCount = 32
-    static let maximumModelIDByteCount = 512
+    // AI provenance is persisted in sync snapshot compact fields. Keep this
+    // producer limit aligned with the restore contract so locally-created
+    // suggestions always remain restorable.
+    static let maximumModelIDByteCount = 256
     static let maximumReasonByteCount = 512
     static let maximumPromptByteCount = 24 * 1_024
     static let maximumRequestBodyByteCount = 32 * 1_024

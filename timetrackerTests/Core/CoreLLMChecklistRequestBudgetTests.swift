@@ -56,6 +56,47 @@ struct CoreLLMChecklistRequestBudgetTests {
     }
 
     @Test
+    func persistedModelIDBudgetMatchesSnapshotRestoreContract() throws {
+        #expect(
+            LLMSuggestionInputPolicy.maximumModelIDByteCount ==
+                SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
+        )
+        let exactModelID = String(
+            repeating: "m",
+            count: LLMSuggestionInputPolicy.maximumModelIDByteCount
+        )
+        let payload = ChecklistVisualSuggestionPayload(
+            iconName: "checkmark.circle",
+            colorHex: "1677FF",
+            reason: "Matches the task"
+        )
+
+        let exactResult = LLMChecklistVisualSuggestionService.sanitize(
+            payload: payload,
+            modelID: exactModelID
+        )
+        #expect(exactResult.modelID == exactModelID)
+
+        let boundedResult = LLMChecklistVisualSuggestionService.sanitize(
+            payload: payload,
+            modelID: exactModelID + "🧪"
+        )
+        #expect(boundedResult.modelID == exactModelID)
+        #expect(
+            boundedResult.modelID.utf8.count ==
+                SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
+        )
+
+        let visual = ChecklistItemVisual(
+            checklistItemID: UUID(),
+            suggestionModelID: boundedResult.modelID,
+            deviceID: "test"
+        )
+        try SyncDataSnapshot(checklistItemVisuals: [ChecklistItemVisualRecord(visual)])
+            .validateForRestore()
+    }
+
+    @Test
     func checklistRequestRejectsCredentialTextBeyondTheHeaderBudget() {
         #expect(throws: LLMInboxSuggestionServiceError.requestTooLarge) {
             try LLMChecklistVisualSuggestionService().suggestionRequest(

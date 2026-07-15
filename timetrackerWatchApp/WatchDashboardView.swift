@@ -16,7 +16,7 @@ struct WatchDashboardView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let status {
+                if !hasReceivedSnapshot, let status {
                     Section {
                         WatchStatusRow(status: status, snapshotDate: snapshot.generatedAt)
                     }
@@ -93,6 +93,12 @@ struct WatchDashboardView: View {
                             )
                         }
                     }
+
+                    if let status {
+                        Section {
+                            WatchStatusRow(status: status, snapshotDate: snapshot.generatedAt)
+                        }
+                    }
                 }
             }
             .navigationTitle("watch.title")
@@ -106,10 +112,13 @@ struct WatchDashboardView: View {
     }
 
     private var status: WatchSyncStatus? {
+        if !hasReceivedSnapshot {
+            return hasConnectivityError ? .connectionError : .waitingForFirstSnapshot
+        }
+        if !pendingCommands.isEmpty {
+            return isReachable && !hasConnectivityError ? .sending : .queued
+        }
         if hasConnectivityError { return .connectionError }
-        if !hasReceivedSnapshot { return .waitingForFirstSnapshot }
-        if !pendingCommands.isEmpty { return isReachable ? .sending : .queued }
-        if !isReachable { return .offline }
         if isSnapshotStale { return .stale }
         return nil
     }

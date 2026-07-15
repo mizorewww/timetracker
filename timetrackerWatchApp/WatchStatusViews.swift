@@ -92,7 +92,6 @@ enum WatchSyncStatus: Equatable {
     case waitingForFirstSnapshot
     case sending
     case queued
-    case offline
     case stale
     case connectionError
 
@@ -101,7 +100,6 @@ enum WatchSyncStatus: Equatable {
         case .waitingForFirstSnapshot: "watch.status.waiting"
         case .sending: "watch.status.sending"
         case .queued: "watch.status.queued"
-        case .offline: "watch.status.offline"
         case .stale: "watch.status.stale"
         case .connectionError: "watch.status.error"
         }
@@ -112,7 +110,6 @@ enum WatchSyncStatus: Equatable {
         case .waitingForFirstSnapshot: "watch.status.waiting.message"
         case .sending: "watch.status.sending.message"
         case .queued: "watch.status.queued.message"
-        case .offline: "watch.status.offline.message"
         case .stale: "watch.status.stale.message"
         case .connectionError: "watch.status.error.message"
         }
@@ -123,7 +120,6 @@ enum WatchSyncStatus: Equatable {
         case .waitingForFirstSnapshot: "iphone.and.arrow.forward"
         case .sending: "arrow.up.circle"
         case .queued: "tray.and.arrow.up"
-        case .offline: "iphone.slash"
         case .stale: "exclamationmark.clock"
         case .connectionError: "wifi.exclamationmark"
         }
@@ -134,12 +130,11 @@ enum WatchSyncStatus: Equatable {
         case .waitingForFirstSnapshot, .sending: .blue
         case .queued, .stale: .yellow
         case .connectionError: .red
-        case .offline: .secondary
         }
     }
 
     var showsLastUpdated: Bool {
-        self == .offline || self == .stale || self == .connectionError
+        self == .stale || self == .connectionError
     }
 }
 

@@ -28,16 +28,13 @@ struct TasksView: View {
             #if os(iOS)
             if usesInlineSearchField {
                 Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label(AppStrings.localized("tasks.searchPrompt"), systemImage: "magnifyingglass")
-                            .font(.headline)
-
-                        TextField(AppStrings.localized("tasks.searchPrompt"), text: $searchText)
-                            .textFieldStyle(.roundedBorder)
-                            .submitLabel(.search)
-                            .accessibilityIdentifier("tasks.search.field")
-                    }
-                    .padding(.vertical, 4)
+                    TextField(AppStrings.localized("tasks.searchTitle"), text: $searchText)
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.search)
+                        .accessibilityLabel(AppStrings.localized("tasks.searchTitle"))
+                        .accessibilityHint(AppStrings.localized("tasks.searchHint"))
+                        .accessibilityIdentifier("tasks.search.field")
+                        .padding(.vertical, 2)
                 }
             }
             #endif

@@ -1,9 +1,18 @@
 import SwiftUI
 
-struct TaskManagementRowContent: View {
-    let store: TimeTrackerStore
-    let task: TaskNode
+struct TaskManagementRowPresentation {
+    let path: String
+    let progress: ChecklistProgress
+    let rollup: TaskRollup?
+    let workedSeconds: Int
+    let childCount: Int
+    let isAvailableForTracking: Bool
     let isRunning: Bool
+}
+
+struct TaskManagementRowContent: View {
+    let task: TaskNode
+    let presentation: TaskManagementRowPresentation
     let showsNavigationChevron: Bool
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -26,14 +35,8 @@ struct TaskManagementRowContent: View {
 
     @ViewBuilder
     private var accessibilityBody: some View {
-        let progress = store.checklistProgress(for: task.id)
-        let rollup = store.rollup(for: task.id)
-        let childCount = store.children(of: task).count
-
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
-                TaskIcon(task: task, size: 30)
-
                 Text(task.title)
                     .font(.headline)
                     .foregroundStyle(task.status == .completed ? .secondary : .primary)
@@ -50,41 +53,25 @@ struct TaskManagementRowContent: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                statusMetadataBadge
-                if isRunning {
-                    RunningStatusBadge()
-                }
-            }
+            if showsExceptionalStatus || presentation.isRunning {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        if showsExceptionalStatus {
+                            statusMetadataBadge
+                        }
+                        if presentation.isRunning {
+                            RunningStatusBadge()
+                        }
+                    }
 
-            if progress.totalCount > 0 {
-                VStack(alignment: .leading, spacing: 5) {
-                    ProgressView(value: progress.fraction)
-                        .tint(Color(hex: task.colorHex) ?? .blue)
-                    Text(String(format: AppStrings.localized("checklist.progressFormat"), progress.completedCount, progress.totalCount))
-                        .font(.caption2.weight(.medium).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if rollup?.isDisplayableForecast == true {
-                TaskProgressLine(progress: progress, rollup: rollup, showsChecklist: false)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(.app("forecast.worked"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
-                    .font(.subheadline.monospacedDigit())
-
-                if childCount > 0 {
-                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if showsExceptionalStatus {
+                            statusMetadataBadge
+                        }
+                        if presentation.isRunning {
+                            RunningStatusBadge()
+                        }
+                    }
                 }
             }
         }
@@ -93,8 +80,6 @@ struct TaskManagementRowContent: View {
 
     @ViewBuilder
     private var regularBody: some View {
-        let progress = store.checklistProgress(for: task.id)
-        let rollup = store.rollup(for: task.id)
         HStack(spacing: 12) {
             TaskIcon(task: task, size: 30)
 
@@ -106,31 +91,39 @@ struct TaskManagementRowContent: View {
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
-                    Text(store.path(for: task))
+                    Text(presentation.path)
                         .lineLimit(1)
                     statusMetadataBadge
-                    if isRunning {
+                    if presentation.isRunning {
                         RunningStatusBadge()
                     }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-                if progress.totalCount > 0 || rollup?.isDisplayableForecast == true {
-                    TaskProgressLine(progress: progress, rollup: rollup)
+                if presentation.progress.totalCount > 0
+                    || presentation.rollup?.isDisplayableForecast == true {
+                    TaskProgressLine(
+                        progress: presentation.progress,
+                        rollup: presentation.rollup
+                    )
                 }
             }
 
             Spacer(minLength: 10)
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
+                Text(DurationFormatter.compact(presentation.workedSeconds))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
 
-                let childCount = store.children(of: task).count
-                if childCount > 0 {
-                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
+                if presentation.childCount > 0 {
+                    Text(
+                        String(
+                            format: AppStrings.localized("tasks.childCount"),
+                            presentation.childCount
+                        )
+                    )
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -147,8 +140,6 @@ struct TaskManagementRowContent: View {
 
     @ViewBuilder
     private var compactBody: some View {
-        let progress = store.checklistProgress(for: task.id)
-        let rollup = store.rollup(for: task.id)
         HStack(alignment: .center, spacing: 10) {
             TaskIcon(task: task, size: 30)
 
@@ -161,20 +152,24 @@ struct TaskManagementRowContent: View {
 
                 HStack(spacing: 6) {
                     statusMetadataBadge
-                    if isRunning {
+                    if presentation.isRunning {
                         RunningStatusBadge()
                     }
                 }
 
-                if progress.totalCount > 0 {
+                if presentation.progress.totalCount > 0 {
                     CompactChecklistProgressLine(
-                        progress: progress,
+                        progress: presentation.progress,
                         tint: Color(hex: task.colorHex) ?? .blue
                     )
                 }
 
-                if rollup?.isDisplayableForecast == true {
-                    TaskProgressLine(progress: progress, rollup: rollup, showsChecklist: false)
+                if presentation.rollup?.isDisplayableForecast == true {
+                    TaskProgressLine(
+                        progress: presentation.progress,
+                        rollup: presentation.rollup,
+                        showsChecklist: false
+                    )
                         .lineLimit(2)
                 }
             }
@@ -182,13 +177,17 @@ struct TaskManagementRowContent: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(DurationFormatter.compact(rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task)))
+                Text(DurationFormatter.compact(presentation.workedSeconds))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
 
-                let childCount = store.children(of: task).count
-                if childCount > 0 {
-                    Text(String(format: AppStrings.localized("tasks.childCount"), childCount))
+                if presentation.childCount > 0 {
+                    Text(
+                        String(
+                            format: AppStrings.localized("tasks.childCount"),
+                            presentation.childCount
+                        )
+                    )
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -205,10 +204,15 @@ struct TaskManagementRowContent: View {
 
     @ViewBuilder
     private var statusMetadataBadge: some View {
-        if task.status != .completed && !store.isTaskAvailableForTracking(task) {
+        if task.status != .completed && !presentation.isAvailableForTracking {
             TaskWorkBlockedStatusBadge()
-        } else {
+        } else if task.status != .active {
             TaskStatusBadge(status: task.status)
         }
     }
+
+    private var showsExceptionalStatus: Bool {
+        task.status != .active || !presentation.isAvailableForTracking
+    }
+
 }

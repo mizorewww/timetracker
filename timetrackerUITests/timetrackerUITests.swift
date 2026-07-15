@@ -56,6 +56,28 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskListKeepsSearchAndFirstTaskReachableAtLargeTextSizes() throws {
+        let app = launchApp()
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+
+        let searchField = app.descendants(matching: .any)["tasks.search.field"].firstMatch
+        let firstTask = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
+            .firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 8) && searchField.isHittable)
+        XCTAssertTrue(firstTask.waitForExistence(timeout: 8) && firstTask.isHittable)
+        try capture("iphone-tasks-accessibility-list", app: app)
+
+        activate(firstTask)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+    }
+
+    @MainActor
     func testInboxCaptureAffordanceFocusesThenAddsAValidDraft() throws {
         let app = launchApp()
         openSection(

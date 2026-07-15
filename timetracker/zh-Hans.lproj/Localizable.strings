@@ -318,7 +318,10 @@
 "tasks.add" = "添加";
 "tasks.openDetail" = "打开任务详情";
 "tasks.searchPrompt" = "搜索任务、路径或备注";
+"tasks.searchTitle" = "搜索任务";
+"tasks.searchHint" = "搜索任务标题、路径和备注。";
 "tasks.childCount" = "%d 子任务";
+"tasks.workedFormat" = "已投入 %@";
 "task.swipe.start" = "开始";
 "task.swipe.subtask" = "子任务";
 "pomodoro.header.subtitle" = "专注时间会写入同一套 TimeSession / TimeSegment 账本。";

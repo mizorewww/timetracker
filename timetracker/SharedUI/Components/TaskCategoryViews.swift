@@ -60,10 +60,15 @@ struct TaskCategorySectionHeader: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 categorySymbol
                 categoryTitle
+                Spacer(minLength: 8)
+
+                if section.includesInForecast {
+                    categoryActionsMenu
+                }
             }
 
-            HStack(alignment: .center, spacing: 8) {
-                if !section.includesInForecast {
+            if !section.includesInForecast {
+                HStack(alignment: .center, spacing: 8) {
                     Label(
                         AppStrings.localized("taskCategory.forecastDisabled"),
                         systemImage: "chart.line.downtrend.xyaxis"
@@ -72,10 +77,10 @@ struct TaskCategorySectionHeader: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                }
 
-                Spacer(minLength: 8)
-                categoryActionsMenu
+                    Spacer(minLength: 8)
+                    categoryActionsMenu
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

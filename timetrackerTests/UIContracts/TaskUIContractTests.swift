@@ -30,8 +30,10 @@ struct TaskUIContractTests {
 
         #expect(source.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(source.contains("TasksSearchPresentation("))
-        #expect(source.contains("TextField(AppStrings.localized(\"tasks.searchPrompt\"), text: $searchText)"))
+        #expect(source.contains("TextField(AppStrings.localized(\"tasks.searchTitle\"), text: $searchText)"))
+        #expect(source.contains(".accessibilityHint(AppStrings.localized(\"tasks.searchHint\"))"))
         #expect(source.contains(".accessibilityIdentifier(\"tasks.search.field\")"))
+        #expect(source.contains("Label(AppStrings.localized(\"tasks.searchPrompt\")") == false)
         #expect(source.contains("content.searchable("))
     }
 
@@ -105,7 +107,8 @@ struct TaskUIContractTests {
         #expect(sharedSource.contains("ProgressView(value: progress.fraction)"))
         #expect(sharedSource.contains("checklist.progressFormat"))
         #expect(sharedSource.contains("struct TaskProgressLine"))
-        #expect(source.contains("if progress.totalCount > 0 {\n                    CompactChecklistProgressLine"))
+        #expect(source.contains("if presentation.progress.totalCount > 0 {"))
+        #expect(source.contains("progress: presentation.progress"))
     }
 
     @Test
@@ -208,7 +211,11 @@ struct TaskUIContractTests {
         #expect(rowSource.contains("@Environment(\\.dynamicTypeSize) private var dynamicTypeSize"))
         #expect(rowSource.contains("if dynamicTypeSize.isAccessibilitySize"))
         #expect(rowSource.contains("private var accessibilityBody"))
-        #expect(rowSource.contains("Text(.app(\"forecast.worked\"))"))
+        #expect(rowSource.contains("AppStrings.localized(\"tasks.workedFormat\")"))
+        #expect(rowSource.contains(".accessibilityValue(accessibilitySummary(for: presentation))"))
+        #expect(rowSource.contains("struct TaskManagementRowPresentation"))
+        #expect(rowSource.contains("ListFormatter.localizedString(byJoining: components)"))
+        #expect(rowSource.contains("else if task.status != .active"))
         #expect(rowSource.contains(".lineLimit(nil)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.disclosure.\\(task.id.uuidString)\")"))

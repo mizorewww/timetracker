@@ -14,6 +14,9 @@ enum PomodoroState: String, Codable, CaseIterable {
 struct PomodoroPlan: Identifiable, Codable, Equatable {
     static let minuteOptions = Array(stride(from: 5, through: 60, by: 5))
     static let roundRange = 1...24
+    private static let classicPlanID = UUID(uuidString: "E5CEB875-7D85-45B5-91E9-CA263F08BBF6")!
+    private static let deepWorkPlanID = UUID(uuidString: "6272DC5F-D683-486F-BF36-29C439746C98")!
+    private static let quickStartPlanID = UUID(uuidString: "7D2C2A71-FA5C-474A-8D5D-4CD4D5C7668B")!
 
     var id: UUID
     var name: String
@@ -87,6 +90,7 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
     static var defaultPlans: [PomodoroPlan] {
         [
             PomodoroPlan(
+                id: classicPlanID,
                 name: AppStrings.localized("pomodoro.preset.classic"),
                 iconName: "timer",
                 colorHex: "FF2D55",
@@ -96,6 +100,7 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
                 rounds: 4
             ),
             PomodoroPlan(
+                id: deepWorkPlanID,
                 name: AppStrings.localized("pomodoro.preset.deep"),
                 iconName: "target",
                 colorHex: "5E5CE6",
@@ -105,6 +110,7 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
                 rounds: 3
             ),
             PomodoroPlan(
+                id: quickStartPlanID,
                 name: AppStrings.localized("pomodoro.preset.quick"),
                 iconName: "clock",
                 colorHex: "FF9F0A",

@@ -6,6 +6,9 @@ struct TasksView: View {
     @State private var expansionState = TaskExpansionState()
     @State private var detailTaskID: UUID?
     @State private var categoryPendingDeletionID: UUID?
+    #if os(iOS)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    #endif
 
     private func searchResults(matching query: String) -> [TaskNode] {
         return store.tasks.filter { task in
@@ -22,6 +25,23 @@ struct TasksView: View {
         let matchingTasks = query.isEmpty ? [] : searchResults(matching: query)
 
         List {
+            #if os(iOS)
+            if usesInlineSearchField {
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label(AppStrings.localized("tasks.searchPrompt"), systemImage: "magnifyingglass")
+                            .font(.headline)
+
+                        TextField(AppStrings.localized("tasks.searchPrompt"), text: $searchText)
+                            .textFieldStyle(.roundedBorder)
+                            .submitLabel(.search)
+                            .accessibilityIdentifier("tasks.search.field")
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            #endif
+
             if query.isEmpty {
                 if !store.tasks.contains(where: store.isTaskVisible) {
                     ContentUnavailableView {
@@ -80,11 +100,16 @@ struct TasksView: View {
             }
 
         }
+        .modifier(
+            TasksSearchPresentation(
+                text: $searchText,
+                usesInlineField: usesInlineSearchField
+            )
+        )
         .navigationTitle(AppStrings.tasks)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
         .accessibilityIdentifier("tasks.view")
         #if os(iOS)
         .listStyle(.insetGrouped)
@@ -167,6 +192,14 @@ struct TasksView: View {
         }
     }
 
+    private var usesInlineSearchField: Bool {
+        #if os(iOS)
+        dynamicTypeSize.isAccessibilitySize
+        #else
+        false
+        #endif
+    }
+
     private func newRootTaskAction(for section: TaskTreeVisibleSectionModel) -> () -> Void {
         {
             store.presentNewTask(
@@ -193,6 +226,23 @@ struct TasksView: View {
         }
         return {
             categoryPendingDeletionID = category.id
+        }
+    }
+}
+
+private struct TasksSearchPresentation: ViewModifier {
+    @Binding var text: String
+    let usesInlineField: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if usesInlineField {
+            content
+        } else {
+            content.searchable(
+                text: $text,
+                prompt: AppStrings.localized("tasks.searchPrompt")
+            )
         }
     }
 }

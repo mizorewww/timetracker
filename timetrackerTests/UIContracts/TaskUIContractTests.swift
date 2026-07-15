@@ -25,6 +25,17 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskSearchKeepsAVisibleFieldAtAccessibilitySizes() throws {
+        let source = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+
+        #expect(source.contains("dynamicTypeSize.isAccessibilitySize"))
+        #expect(source.contains("TasksSearchPresentation("))
+        #expect(source.contains("TextField(AppStrings.localized(\"tasks.searchPrompt\"), text: $searchText)"))
+        #expect(source.contains(".accessibilityIdentifier(\"tasks.search.field\")"))
+        #expect(source.contains("content.searchable("))
+    }
+
+    @Test
     func longTaskAndAnalyticsPagesUseInlineTitlesToAvoidScrollJitter() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")

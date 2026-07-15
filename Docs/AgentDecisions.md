@@ -338,11 +338,11 @@
 
 背景：View-owned countdown 在后台挂起、重启或跨入口编辑后会漂移；删除活动 segment/task 可能留下仍在运行的 `PomodoroRun`。
 
-决策：当前 phase 起点持久化在 `PomodoroRun.startedAt`，deadline 由状态和计划时长派生。启动、前台、页面出现与 scheduled task 幂等 reconcile 过期 focus，并把 segment/session 截在 deadline；break 不在后台擅自创建下一段 focus。通用 segment edit/delete、timer stop 和 task-tree delete 必须在同一原子动作中同步完成/取消/tombstone 对应 run，并保留有效历史。
+决策：当前 phase 起点持久化在 `PomodoroRun.startedAt`，deadline 由状态和计划时长派生。启动、前台、页面出现与 scheduled task 幂等 reconcile 过期 focus，并把 segment/session 截在 deadline；break 不在后台擅自创建下一段 focus。用户继续 break 时，在同一原子 mutation 内从 canonical 任务树重做 trackable admission；任务或祖先已完成、归档、删除或缺失时，必须在任何 ledger stop/start 前作为零副作用 no-op 拒绝。通用 segment edit/delete、timer stop 和 task-tree delete 必须在同一原子动作中同步完成/取消/tombstone 对应 run，并保留有效历史。
 
 后果：UI 只显示 deadline 派生的剩余时间。不能用 `Date()` 结束一个早已到期的 focus，也不能让 run 脱离 ledger 独自存在。
 
-验证：后台/启动 reconciliation、deadline clipping、重复 reconcile、active segment edit/delete、过期删除、任务树含 timer/Pomodoro 与 break-state 删除测试。
+验证：后台/启动 reconciliation、deadline clipping、重复 reconcile、active segment edit/delete、过期删除、任务树含 timer/Pomodoro 与 break-state 删除测试；另覆盖 facade cache 过期时完成、归档和缺失任务的 break resume 均不推进 run、不新建 segment、不停止其他 timer 且不发布刷新/同步副作用。
 
 ## AD-025：增量 ledger/checklist/rollup 与 90 日 pace
 

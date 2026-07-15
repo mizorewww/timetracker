@@ -154,6 +154,8 @@ Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是�
 
 PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更。`startedAt` 表示当前 focus/break phase 的起点，`phaseDeadline` 由持久状态与计划时长派生；它不是 View 本地倒计时。启动、前台、Pomodoro 页面出现和 deadline task 都会调用幂等 reconcile：过期 focus 在业务 deadline 截断 segment/session，避免后台挂起时间被算作专注；过期 break 不会自动新建 focus，下一轮仍需用户动作。
 
+从 break 继续下一轮 focus 是一次新的计时准入。`PomodoroCommandHandler` 必须在同一个原子 mutation 内重新读取 LWW 后的 canonical 任务树，并用 `TaskTrackingAvailabilityService` 验证 run 的任务及全部祖先仍可接收工作；完成、归档、删除或缺失任务都返回 canonical no-op。该拒绝发生在 ledger admission 之前，不停止其他 timer、不创建 segment、不推进 run，也不发布刷新或同步事件；不能只信任 facade/UI 可能过期的 `trackableTaskIDs`。
+
 通用 ledger 编辑必须保持 Pomodoro 不变量。编辑活动 Pomodoro segment 会重绑 run 的 task/start；把 segment 关闭会按 deadline 完成或取消 run；删除活动 segment 会 tombstone run/session；删除任务树会结束所有活动 timer，并保留已产生的 Pomodoro 历史。相关写入必须在同一个 `performAtomicMutation` 中提交。
 
 ### 增量读模型与缓存

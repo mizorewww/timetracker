@@ -425,8 +425,9 @@ struct TaskUIContractTests {
 
         #expect(analyticsSource.contains("case decisions"))
         #expect(analyticsSource.contains(".accessibilityIdentifier(\"analytics.decisionSummary\")"))
-        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: context.date)"))
-        #expect(analyticsSource.contains("effectiveSnapshotDate(referenceDate: referenceDate, liveNow: context.date)"))
+        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)"))
+        #expect(analyticsSource.contains("effectiveSnapshotDate(referenceDate: referenceDate, liveNow: liveNow)"))
+        #expect(analyticsSource.contains("TimelineView") == false)
         #expect(analyticsSource.contains("AnalyticsInsightList(insights: snapshot.insights)"))
         #expect(analyticsSource.contains("AnalyticsQualityContent(quality: snapshot.quality)"))
         #expect(analyticsSource.contains("snapshot.categoryBreakdown"))
@@ -452,7 +453,7 @@ struct TaskUIContractTests {
         .joined(separator: "\n")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: context.date)"))
+        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)"))
         #expect(analyticsSource.contains("AnalyticsGlossaryList()"))
         #expect(englishStrings.contains("\"analytics.glossary.gross\""))
         #expect(englishStrings.contains("\"analytics.glossary.wall\""))

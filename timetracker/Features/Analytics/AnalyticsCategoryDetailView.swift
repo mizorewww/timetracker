@@ -7,32 +7,32 @@ struct AnalyticsCategoryDetailView: View {
     let category: AnalyticsCategory
     @Binding var range: AnalyticsRange
     @Binding var referenceDate: Date
+    let liveNow: Date
     @State private var snapshot: AnalyticsSnapshot?
     @State private var loadedRequest: AnalyticsSnapshotRequest?
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let snapshotDate = range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: context.date)
-            let request = AnalyticsSnapshotRequest(
-                range: range,
-                referenceDate: referenceDate,
-                revision: store.analyticsRevision,
-                liveRefreshBucket: store.analyticsLiveRefreshBucket(for: range, now: snapshotDate)
-            )
-            List {
-                AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: context.date)
-                if let snapshot, loadedRequest == request {
-                    categoryContent(snapshot: snapshot)
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, minHeight: 160)
-                        .accessibilityLabel(AppStrings.localized("analytics.loading"))
-                }
+        let snapshotDate = range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: liveNow)
+        let request = AnalyticsSnapshotRequest(
+            range: range,
+            referenceDate: referenceDate,
+            revision: store.analyticsRevision,
+            liveRefreshBucket: store.analyticsLiveRefreshBucket(for: range, now: snapshotDate)
+        )
+
+        List {
+            AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)
+            if let snapshot, loadedRequest == request {
+                categoryContent(snapshot: snapshot)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, minHeight: 160)
+                    .accessibilityLabel(AppStrings.localized("analytics.loading"))
             }
-            .task(id: request) {
-                snapshot = store.analyticsSnapshot(for: range, now: snapshotDate)
-                loadedRequest = request
-            }
+        }
+        .task(id: request) {
+            snapshot = store.analyticsSnapshot(for: range, now: snapshotDate)
+            loadedRequest = request
         }
         #if os(iOS)
         .listStyle(.insetGrouped)

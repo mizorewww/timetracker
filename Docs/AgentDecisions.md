@@ -548,6 +548,18 @@
 
 验证：单元测试固定两组顺序与完整性；source contract 固定分组、三语键与稳定 accessibility identifier；iPhone UI 测试滚动到最后的 Metrics 入口，并按真实 Tab Bar frame 验证整行无遮挡。后续仍需覆盖最大 Dynamic Type、深色、iPad 和 macOS 宽屏截图。
 
+## AD-042：Analytics 刷新由数据截止时间驱动
+
+状态：Accepted
+
+背景：Analytics landing 与 category detail 原先各自用 30 秒 `TimelineView` 包裹整页。即使没有活动计时或用户正在查看历史，两棵视图树仍持续失效；两个周期还可能错开，不能保证在 cache 使用的真实分钟边界更新。长时间打开历史周/月时，单纯停止周期刷新又会让本地日期和时区变化长期冻结。
+
+决策：`AnalyticsRefreshPlan` 根据同一 `liveRefreshBucket` 计算下一个绝对分钟边界；只有所选当前 period 与活动 segment 相交时走分钟刷新。静态当前范围通过 `Calendar.dateInterval(of: .day).end` 等待下一本地日边界，禁止用固定 86,400 秒推算；历史范围不保留 clock task。plan identity 包含生成它的 wall-clock sample，确保同一分钟内的系统时钟回拨也会重启等待。根 `AnalyticsView` 只在 active scene 以 `.task(id: refreshPlan)` 持有结构化、可取消 sleep，进入后台即取消，并在 scene 回到 active、日历日、系统时钟或时区变化时立即重采样 `Date()`。category detail 复用根页面的 `liveNow`，snapshot 仍只由 versioned `.task(id: request)` 计算。日期选择和 period 切换以用户动作发生时的当前时间重判是否跟随当前 period。
+
+后果：静态与历史 Analytics 不再每 30 秒让整页失效；活动数据仍最多延迟到下一个真实分钟边界。导航进入详情不会叠加 timer。未来增加新的 Analytics destination 必须复用共享时间语义，不能自行创建根级周期时钟；系统时间向后或时区改变必须重新安排 deadline。
+
+验证：行为测试覆盖 59.9 秒到整分钟、过期 bucket 回退、历史范围不调度、同 bucket 新 wall-clock sample 改变 plan identity，以及 DST 跳时日从 00:30 到下一本地午夜为 22.5 小时。源码契约确认 landing/detail 都没有全页 `TimelineView`，并保留 active-scene request/refresh 两个有 ID 的 task。签名构建和 UI 回归使用付费开发者配置；模拟器批次结束后必须关停设备和 runner。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -30,11 +30,18 @@ struct CoreArchitectureBehaviorTests {
     @Test
     func analyticsLoadsVersionedSnapshotsOutsideTheViewBody() throws {
         let viewSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let detailSource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
         let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
         let facadeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift")
 
-        #expect(viewSource.contains("TimelineView(.periodic"))
+        #expect(viewSource.contains("TimelineView") == false)
+        #expect(detailSource.contains("TimelineView") == false)
+        #expect(viewSource.contains("AnalyticsRefreshPlan.next("))
+        #expect(viewSource.contains("scenePhase == .active"))
+        #expect(viewSource.contains(".task(id: refreshPlan)"))
         #expect(viewSource.contains(".task(id: request)"))
+        #expect(viewSource.contains(".NSSystemClockDidChange"))
+        #expect(viewSource.contains(".NSSystemTimeZoneDidChange"))
         #expect(facadeSource.contains("liveRefreshBucket: liveRefreshBucket"))
         #expect(facadeSource.contains("cachedSnapshot("))
         #expect(taskDetailSource.contains(".task(id: request)"))

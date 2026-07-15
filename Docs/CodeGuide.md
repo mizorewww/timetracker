@@ -169,6 +169,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 - `TaskEstimatePolicy` 统一预计时长输入与旧数据规范化：`0...600` 分钟、`0` 表示未设置、正数最多 36,000 秒。明确预计时长只属于当前任务自身，预计总时长至少等于已经记录的时间；没有明确值时才使用 checklist 证据模型，子任务始终单独递归汇总。
 - Forecast pace 使用包含今天在内的最近 90 个本地日，只对有记录的活跃日求日均；它只把已有 remaining seconds 换算为预计活跃日，不生成 remaining seconds。Calendar/时区变化会重建这组有界 bucket。
 - `AnalyticsStore` 的 overview 与 task snapshot cache key 包含 range、真实 period start 和可选 live-minute bucket。仅当前范围与活动 segment 相交时按分钟换 key；历史/静态范围稳定复用。ledger 事件按相交区间失效 day bucket，跨 period 会自然 miss。
+- `AnalyticsRefreshPlan` 是 Analytics 页面时钟的唯一调度 owner：活动当前范围使用与 cache bucket 完全一致的绝对分钟边界，静态当前范围等待 `Calendar` 给出的下一个本地日边界，历史范围不调度。plan identity 保留生成它的 wall-clock sample，所以同一分钟内的系统时钟回拨也会取消旧 sleep 并重新安排。`AnalyticsView` 只在 active scene 用 `.task(id:)` 持有可取消 sleep，并在 scene 激活、日历日、系统时钟或时区变化时重采样；category detail 复用根页面的 `liveNow`，不得再用全页 `TimelineView` 建立第二套刷新树。用户切换日期时必须以动作发生时的 `Date()` 判断是否重新跟随当前 period。
 - `CorePerformanceBudgetTests.fiftyThousandSegmentMutationUsesConstantSizedRollupDelta` 以 50,000 个 segment 约束单 segment 增量更新和 cached recent ranking；最终是否通过仍以冻结工作树的 xcresult 为准。
 
 ## 5. 持久化、CloudKit 与迁移

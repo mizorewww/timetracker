@@ -13,6 +13,9 @@
 "watch.commandState.pending" = "待確認";
 "watch.commandState.failed" = "需要處理";
 "watch.commandFailures.title" = "操作需要處理";
+"watch.commandFailures.listTitle" = "待處理操作";
+"watch.commandFailures.all" = "所有待處理操作";
+"watch.commandFailures.allHint" = "顯示所有需要處理的操作。";
 "watch.commandFailures.footer" = "重試不會重複執行已完成的操作；捨棄只會隱藏此提示。";
 "watch.command.retry" = "重試";
 "watch.command.discard" = "捨棄";

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WatchDashboardView: View {
     private static let quickStartTaskLimit = 4
+    private static let failurePreviewLimit = 1
 
     let snapshot: WatchStateSnapshot
     let isReachable: Bool
@@ -22,6 +23,10 @@ struct WatchDashboardView: View {
             pendingCommands: pendingCommands,
             failedCommands: failedCommands
         )
+        let failureItems = failedCommands.map {
+            WatchCommandFailurePresentation(failure: $0, title: failureTitle(for: $0))
+        }
+        let failurePreview = Array(failureItems.prefix(Self.failurePreviewLimit))
 
         NavigationStack {
             List {
@@ -31,15 +36,36 @@ struct WatchDashboardView: View {
                     }
                 }
 
-                if !failedCommands.isEmpty {
+                if !failureItems.isEmpty {
                     Section {
-                        ForEach(failedCommands) { failure in
-                            WatchCommandFailureRow(
-                                title: failureTitle(for: failure),
-                                result: failure.result,
-                                onRetry: { onRetryCommand(failure.id) },
-                                onDiscard: { onDiscardCommand(failure.id) }
+                        ForEach(failurePreview) { failure in
+                            WatchCommandFailureActionRow(
+                                failure: failure,
+                                onRetryCommand: onRetryCommand,
+                                onDiscardCommand: onDiscardCommand
                             )
+                        }
+
+                        if failureItems.count > failurePreview.count {
+                            NavigationLink {
+                                WatchCommandFailuresView(
+                                    failures: failureItems,
+                                    onRetryCommand: onRetryCommand,
+                                    onDiscardCommand: onDiscardCommand
+                                )
+                            } label: {
+                                HStack {
+                                    Label(
+                                        "watch.commandFailures.all",
+                                        systemImage: "exclamationmark.bubble"
+                                    )
+                                    Spacer(minLength: 4)
+                                    Text(failureItems.count, format: .number)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            .accessibilityHint(Text("watch.commandFailures.allHint"))
                         }
                     } header: {
                         Text("watch.commandFailures.title")

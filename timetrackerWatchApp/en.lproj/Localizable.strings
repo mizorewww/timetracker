@@ -13,6 +13,9 @@
 "watch.commandState.pending" = "Pending";
 "watch.commandState.failed" = "Needs attention";
 "watch.commandFailures.title" = "Action Needs Attention";
+"watch.commandFailures.listTitle" = "Issues";
+"watch.commandFailures.all" = "All Issues";
+"watch.commandFailures.allHint" = "Shows every action that needs attention.";
 "watch.commandFailures.footer" = "Retrying won't run an action twice. Discard only hides this notice.";
 "watch.command.retry" = "Retry";
 "watch.command.discard" = "Discard";

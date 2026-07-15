@@ -506,11 +506,11 @@
 
 背景：旧实现用物理 `InboxItem.id` 关联建议，并把“生成过但当前无建议”当作驳回。iCloud 合并、快照恢复或去重若以另一物理 UUID 重建同一逻辑条目，旧驳回会丢失并再次触发 AI；按标题或标题哈希关联又会泄露可推测标识并错误合并同名独立条目。
 
-决策：V10（`1.9.0`）为每个 Inbox item 保存不透明 `suggestionContextID` 与 `suggestionRevisionID`，suggestion 同步保存二者，item 只保存当前 `dismissedSuggestionRevisionID`。context 在物理 row 重建时保持，真实标题修改轮换 revision 并允许重新建议；同一 revision 的 dismissal 在逻辑合并中单调胜出。删除/显式恢复按 `updatedAt` last-write-wins、同时间 tombstone 优先。所有 item mutation 同时 tombstone 同 context 的物理 sibling，建议 mutation 同时处理同 context/revision 的记录。identity 只能是随机 UUID 或迁移时的 legacy record UUID，禁止从用户文本、规范化文本或哈希派生。
+决策：V10（`1.9.0`）为每个 Inbox item 保存不透明 `suggestionContextID` 与 `suggestionRevisionID`，suggestion 同步保存二者，item 只保存当前 `dismissedSuggestionRevisionID`。context 在物理 row 重建时保持，真实标题修改轮换 revision 并允许重新建议。逻辑合并分成两层：title、notes、completion、completedAt、sortOrder 等内容先按 `updatedAt` last-write-wins 选择整行（同时间 tombstone 优先），dismissal marker 再只对完全相同的 `(context, revision)` 做字段级 OR；marker 不参与内容 winner 选择，也绝不跨 revision。快照 capture/restore 必须保留同一规则。所有 item mutation（包括 reorder）同时 tombstone 同 context 的物理 sibling，且不能先按 UUID 去重而漏掉同 ID 的不同 SwiftData 对象；建议 mutation 同时处理同 context/revision 的记录。异步建议的成功与失败都绑定请求时的完整 identity 和规范化标题；apply 边界重新抓取并只消费当前 canonical、active、title-match、ready suggestion。identity 只能是随机 UUID 或迁移时的 legacy record UUID，禁止从用户文本、规范化文本或哈希派生。
 
-后果：同名独立 Inbox 条目不合并，旧副本不能复活已驳回建议，标题真正改变后仍可获得新建议。每个 item/suggestion 只增加固定数量 optional UUID，不新增无界 dismissal log。字段会随业务记录进入 CloudKit/JSON，但不增加用户文本或内容指纹。V9 model shape 必须冻结，旧 snapshot 缺少字段时以物理 UUID 兼容恢复并推断旧 dismissal；以 snapshot 为本地赢家时，缺席的逻辑 sibling 墓碑必须早于恢复 row。
+后果：同名独立 Inbox 条目不合并，旧副本不能复活已驳回建议，标题真正改变后仍可获得新建议；较旧的 dismissal 也不能把较新的 notes、完成状态或顺序整行回滚。每个 item/suggestion 只增加固定数量 optional UUID，不新增无界 dismissal log。字段会随业务记录进入 CloudKit/JSON，但不增加用户文本或内容指纹。V9 model shape 必须冻结，旧 snapshot 缺少字段时以物理 UUID 兼容恢复并推断旧 dismissal；以 snapshot 为本地赢家时，缺席的逻辑 sibling 墓碑必须早于恢复 row。
 
-验证：不同物理 UUID 的 dismissal winner、相同标题独立 context、revision 轮换、suggestion index、discard/delete sibling 清理、V9 真实磁盘迁移、缺字段旧 JSON 恢复、opaque 字段导出和 tombstone sibling restore 测试通过；所有签名构建保留团队 `LT98S43NKA`。
+验证：同 ID 与不同 ID sibling 都覆盖“newer 内容字段 + exact-revision dismissal”，另测跨 revision 不传播；覆盖相同标题独立 context、revision 轮换、suggestion index、discard/delete/reorder sibling 清理、A→B→A 的 stale success/failure、canonical apply 的墓碑/旧 sibling/旧刷新 ID/标题不匹配、V9 磁盘迁移、缺字段旧 JSON 恢复、opaque 字段导出和 tombstone sibling restore。所有签名构建保留团队 `LT98S43NKA`。
 
 ## 2. Agent 工作清单
 

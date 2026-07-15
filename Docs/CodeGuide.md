@@ -139,7 +139,7 @@ Task、TaskCategory、ChecklistItem 和 InboxItem 形成用户组织层。树形
 
 Inbox capture 以 `TimeTrackerStore.addInboxItem` 的 `Bool` 返回值作为 durable commit 契约。`InboxCaptureDraft` 只在返回 true 后清空；空输入、recovery write guard、未配置 context 或保存错误都保留原始草稿。`InboxCaptureRow` 不再自行假定 callback 成功并重复清空 binding。任何新增 quick-capture 表面都必须复用相同语义。
 
-Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是逻辑条目的不透明 UUID，`suggestionRevisionID` 在真实标题修改时轮换，`dismissedSuggestionRevisionID` 只标记当前修订。`InboxSuggestionIdentityService` 负责跨物理 row 的 winner、索引和兼容回退；command 在驳回、删除、应用或标题修改时同时处理同一 context 的 sibling 与 suggestion。禁止用标题、规范化标题或其哈希生成 identity；相同标题的独立条目必须保持独立。每条 item/suggestion 只增加固定数量 UUID 字段，不维护无界驳回历史。
+Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是逻辑条目的不透明 UUID，`suggestionRevisionID` 在真实标题修改时轮换，`dismissedSuggestionRevisionID` 只标记当前修订。`InboxSuggestionIdentityService` 用纯 resolution 分开计算内容 LWW winner 与 dismissal identities：只有 exact `(context, revision)` 的 marker 会字段级合并，不能让旧 dismissal 整行覆盖较新的 notes、completion、completedAt 或 sortOrder，也不能跨标题 revision。读取层显式 materialize marker；command 通过身份/文本预检后才在原子 mutation 内 materialize，保证无效 reorder 等路径零写入。command 在驳回、删除、应用、重排或标题修改时同时处理同一 context 的 sibling（包括同 UUID 的不同 SwiftData 对象）与 suggestion。异步建议成功和失败都校验请求时标题与完整 identity；apply 必须从 context 重选 canonical active/ready suggestion，不能信任 UI 缓存对象。禁止用标题、规范化标题或其哈希生成 identity；相同标题的独立条目必须保持独立。每条 item/suggestion 只增加固定数量 UUID 字段，不维护无界驳回历史。
 
 任务状态与可见性是两个维度。`completed` 表示“保留在任务树和历史中、暂停接收新工作”，`archived` 表示“隐藏整个分支”。完成祖先会阻塞所有后代的新 timer、manual entry、Pomodoro、Quick Start、Inbox conversion、App Intent 以及新建/移动目标；既有活动 timer 仍必须可见并可停止。重新开始工作时应恢复从所选任务到根路径上的全部完成阻塞项，而不是偷偷改变后代自身的状态。
 
@@ -177,7 +177,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 5. 明确失败后的回退边界；不要用空库或内存库静默伪装成功。
 6. 更新 [Versioning](Versioning.md) 与 [AgentDecisions](AgentDecisions.md)。
 
-当前真实 store fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除迁移与 V9 Inbox suggestion identity/dismissal 迁移；仍需按风险补齐其余重要历史版本。迁移测试必须打开磁盘 store 并核对事实记录，不能只比较 schema 常量。
+当前运行时生成的磁盘兼容 fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除迁移与 V9 Inbox suggestion identity/dismissal 迁移；它们会真实关闭旧容器、打开磁盘 store 并核对事实记录，但不是由已发布版本生成且带固定 hash 的不可变历史 artifact。后者仍是明确缺口：应从发布 tag/当时工具链一次性生成无敏感数据的 SQLite bundle，附 schema/app/build、seed、工具链和 SHA-256 manifest，每次复制到唯一临时目录后迁移；不得从当前分支临时生成后冒充历史发布 fixture。
 
 legacy `CountdownEventsJSON` 是一次性 `UserDefaults`→SwiftData 迁移，不是可信的当前数据源。`LegacyCountdownMigrationPolicy` 限制 JSON 为 256 KiB UTF-8、源数组最多 256 条、标题最多 4 KiB UTF-8，日期必须有限且处于 `[1900-01-01, 2201-01-01)`。合法 legacy UUID 原样保留；同一 UUID 只接受源顺序中第一条通过所有校验的记录，无 ID 的不同记录不按内容合并。实际导入时只有 `context.save()` 成功后才设置完成 flag 并删除旧 payload；保存失败必须保留两者以便重试。若 SwiftData 已有 Countdown 事实，则不重复导入并直接退役旧 payload。
 

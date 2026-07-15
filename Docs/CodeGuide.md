@@ -176,6 +176,8 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 legacy `CountdownEventsJSON` 是一次性 `UserDefaults`→SwiftData 迁移，不是可信的当前数据源。`LegacyCountdownMigrationPolicy` 限制 JSON 为 256 KiB UTF-8、源数组最多 256 条、标题最多 4 KiB UTF-8，日期必须有限且处于 `[1900-01-01, 2201-01-01)`。合法 legacy UUID 原样保留；同一 UUID 只接受源顺序中第一条通过所有校验的记录，无 ID 的不同记录不按内容合并。实际导入时只有 `context.save()` 成功后才设置完成 flag 并删除旧 payload；保存失败必须保留两者以便重试。若 SwiftData 已有 Countdown 事实，则不重复导入并直接退役旧 payload。
 
+偏好迁移实现集中在 `Models/SyncedPreferenceMigrations.swift`。普通 legacy `UserDefaults` 导入通过 `performAtomicMutation` 一次保存，保存成功后才设置 migration flag；失败会 rollback 所有待插入记录并保留源值与未完成标记。敏感偏好迁移先确保 device-only Keychain 有安全副本，再删除本机旧 secret，并把所有 SwiftData redaction 放在一个原子 mutation；保存失败时 redaction 回滚，已建立的 Keychain 副本作为可重试的安全落点保留。不得把这个跨 Keychain/SwiftData 流程描述为 ACID transaction。
+
 CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态不同。紧急内存 fallback 只能用于保持应用可诊断，绝不能被描述为持久存储。
 
 同步刷新是事件驱动的：`NSPersistentStoreRemoteChange` 和 `NSPersistentCloudKitContainer.eventChangedNotification` 进入 `TimeTrackerStore+SyncObservers`，350 ms 合并窗口保留最高优先级原因，再由 refresh planner 执行一次一致性刷新。启动与 scene 回到 active 时仍会刷新；不要重新引入常驻 5 秒轮询。`SyncedPreferenceService.latestByKey` 必须先完成 LWW/tombstone 选择，再过滤已删除结果，否则旧 active preference 会复活。legacy `UserDefaults` 迁移也必须从 logical-key LWW winner 判断 key 是否已迁移；winning tombstone 仍表示“已迁移”，必须阻止旧本机值重新导入。
@@ -275,7 +277,7 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 仅 `localhost`/`.localhost` 保留域名以及经 `inet_pton` 数值解析确认的 `127.0.0.0/8` 或 `::1` 可使用 HTTP；`127.evil.com` 一类主机名不能靠字符串前缀伪装成本机。
 - API key 只在请求 Authorization header 中使用。
 - 带 Authorization 的 redirect 只允许保持相同 scheme、host 和有效端口；跨源、HTTPS 降级或模糊主机跳转必须拒绝，防止 credential 泄漏。
-- 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/16 KiB JSON，prompt 最多 24 KiB，request body 最多 32 KiB，字段按 UTF-8 bytes 以完整 `Character` 裁剪。这些裁剪仅用于网络 DTO，不回写 canonical facts。
+- 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/16 KiB JSON，prompt 最多 24 KiB，request body 最多 32 KiB，持久化 model ID 最多 256 bytes，字段按 UTF-8 bytes 以完整 `Character` 裁剪。model ID 上限必须与同步快照 compact-field restore 上限保持一致；这些裁剪仅用于网络 DTO，不回写 canonical facts。
 - Inbox 候选集先取 Quick Start 固定任务，再取高频/近期任务，最后稳定补足。候选归一化去重后再按实际 JSON 字节预算取舍；不能回退成对全库纯字母截断。
 - `SymbolCatalog.symbolNames` 保留完整本机 picker 目录，`aiSuggestionSymbolNames` 是请求中的 78 项精选语义集。普通 icon sanitizer 用 `symbolNameSet` O(1) 查找；AI 返回 icon 只接受已公告精选集，Inbox task UUID 只接受实际发送候选。
 - 日志和错误信息不得打印密钥或完整敏感请求。

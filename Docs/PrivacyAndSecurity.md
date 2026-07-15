@@ -32,7 +32,7 @@ LLM API 密钥使用 Keychain generic password：
 - 不跟随 iCloud 到其他设备。
 - 不写入 SwiftData、UserDefaults、JSON 导出或普通诊断日志。
 
-升级时若发现旧版本遗留的明文 API key，只允许读取一次并迁移到 Keychain，之后清空 UserDefaults 值并软删除敏感 SyncedPreference。迁移失败应报告错误，不应继续把明文当作正常存储。
+升级时若发现旧版本遗留的明文 API key，只允许读取一次并迁移到 Keychain，之后清空 UserDefaults 值并软删除敏感 SyncedPreference。Keychain 与 SwiftData 不是同一个事务：安全副本写入后，SwiftData redaction 在原子 mutation 中提交；若保存失败，redaction 会回滚而 Keychain 副本保留，后续启动可安全重试。迁移失败应报告错误，不应继续把明文当作正常存储。
 
 新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名或用户可读设备名称。
 
@@ -80,7 +80,7 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 
 Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路径最多 1,024 bytes。Inbox 与 checklist 共用 78 个常见语义 SF Symbols 的精选发送列表，不会把完整的 8,000+ 图标目录附在每个请求中；这不会缩减用户本机图标选择器。
 
-两类建议的 user prompt 最多 24 KiB，最终 JSON request body 最多 32 KiB，model ID 512 bytes，endpoint/API key 分别最多 4/8 KiB。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
+两类建议的 user prompt 最多 24 KiB，最终 JSON request body 最多 32 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
 
 ### 凭证与传输
 

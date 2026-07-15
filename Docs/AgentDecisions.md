@@ -69,11 +69,11 @@
 
 背景：LLM API key 曾属于普通偏好路径，存在被 SwiftData、UserDefaults、iCloud 或 JSON 快照带出的风险。
 
-决策：API key 存入 LLMCredentialStore，使用 AfterFirstUnlockThisDeviceOnly 且关闭 Keychain 同步。同步和导出过滤敏感键；遗留明文只用于一次迁移，随后清除或软删除。
+决策：API key 存入 LLMCredentialStore，使用 AfterFirstUnlockThisDeviceOnly 且关闭 Keychain 同步。同步和导出过滤敏感键；遗留明文只用于一次迁移，随后清除或软删除。迁移先确保 Keychain 有安全副本，再以原子 SwiftData mutation redaction；保存失败必须 rollback SwiftData 变更，但可保留已建立的 Keychain 副本供重试。普通 legacy preference 导入也只在原子保存成功后设置完成 flag。
 
 后果：密钥不会跨设备同步，每台设备需单独配置。不得把秘密写入日志、测试 fixture 或诊断导出。“清空全部数据”同时清除本机密钥和设备本地的自动建议同意；若 SwiftData 清理失败，外部存储值需尽力补偿恢复并报告补偿失败。
 
-验证：测试 Keychain round-trip、遗留值迁移、敏感键过滤、导出不含 secret，以及清空全部数据在成功/SwiftData 失败时的清除与补偿恢复。
+验证：测试 Keychain round-trip、遗留值迁移、敏感键过滤、导出不含 secret，以及清空全部数据在成功/SwiftData 失败时的清除与补偿恢复。真实只读磁盘 store 还需证明普通迁移保存失败不留 pending row/完成 flag，敏感 redaction 保存失败时 SwiftData 原值不被半改写而安全副本仍可用。
 
 ## AD-006：JSON 导出不是备份
 
@@ -374,7 +374,7 @@
 
 背景：endpoint/API key 在每次键入时持久化会产生半配置状态、Keychain 噪声和意外请求；“已配置”不等于同意自动发送工作内容。
 
-决策：配置 sheet 使用独立 draft；Test 只校验 credential fingerprint 并加载模型，不保存；选择有效模型后用户明确 Save 才写 endpoint/model 与 device-only Keychain。endpoint、模型列表和已选模型由一个批量 preference command 做一次 SwiftData 提交；Keychain 不是该 transaction 的一部分，提交失败时尽力恢复旧密钥并准确报告补偿失败。修改凭证会取消旧请求和旧测试结果。自动建议是默认关闭、设备本地的第二个明确开关，不参与 CloudKit/JSON。Inbox/checklist 发送前共用 `LLMSuggestionInputPolicy`：候选最多 48 项/16 KiB JSON，prompt 24 KiB，request body 32 KiB，文本按 UTF-8/完整 `Character` 有界投影且不回写持久事实。Inbox 候选按固定→高频/近期→稳定补足取舍；模型只看 78 个精选语义图标，返回 UUID/icon 必须属于实际已公告集。
+决策：配置 sheet 使用独立 draft；Test 只校验 credential fingerprint 并加载模型，不保存；选择有效模型后用户明确 Save 才写 endpoint/model 与 device-only Keychain。endpoint、模型列表和已选模型由一个批量 preference command 做一次 SwiftData 提交；Keychain 不是该 transaction 的一部分，提交失败时尽力恢复旧密钥并准确报告补偿失败。修改凭证会取消旧请求和旧测试结果。自动建议是默认关闭、设备本地的第二个明确开关，不参与 CloudKit/JSON。Inbox/checklist 发送前共用 `LLMSuggestionInputPolicy`：候选最多 48 项/16 KiB JSON，prompt 24 KiB，request body 32 KiB，持久化 model ID 256 bytes，文本按 UTF-8/完整 `Character` 有界投影且不回写持久事实。model ID producer 上限必须与同步快照 compact-field restore 上限相同。Inbox 候选按固定→高频/近期→稳定补足取舍；模型只看 78 个精选语义图标，返回 UUID/icon 必须属于实际已公告集。
 
 后果：不得把补偿式一致性写成跨存储原子性；失败必须逐项报告。发行前必须确认实际 endpoint 服务方、发送字段、用途、保留期和删除渠道；兼容协议不代表零保留。
 

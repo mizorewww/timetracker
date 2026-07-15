@@ -159,8 +159,11 @@ final class timetrackerUITests: XCTestCase {
 
         let startFocus = app.buttons["pomodoro.startFocus"].firstMatch
         XCTAssertTrue(startFocus.waitForExistence(timeout: 5))
-        scrollUntilHittable(startFocus, direction: .up, in: app)
-        XCTAssertTrue(startFocus.isHittable)
+        scrollUntilFullyVisibleAboveSystemChrome(startFocus, in: app)
+        XCTAssertTrue(
+            isFullyVisibleAboveSystemChrome(startFocus, in: app),
+            "Start Focus must be completely visible above the floating tab bar."
+        )
         try capture("iphone-focus-primary-action", app: app)
         #endif
     }
@@ -525,6 +528,56 @@ final class timetrackerUITests: XCTestCase {
                 app.swipeDown()
             }
         }
+    }
+
+    @MainActor
+    private func scrollUntilFullyVisibleAboveSystemChrome(
+        _ element: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        for _ in 0..<12 where !isFullyVisibleAboveSystemChrome(element, in: app) {
+            let unobscuredBottom = systemChromeTop(in: app)
+            let frame = element.frame
+
+            if element.exists,
+               frame.minY < unobscuredBottom,
+               frame.maxY > unobscuredBottom - 8 {
+                dragContentUp(
+                    by: frame.maxY - unobscuredBottom + 20,
+                    in: app
+                )
+            } else {
+                app.swipeUp()
+            }
+        }
+    }
+
+    @MainActor
+    private func isFullyVisibleAboveSystemChrome(
+        _ element: XCUIElement,
+        in app: XCUIApplication
+    ) -> Bool {
+        guard element.exists, element.isHittable else { return false }
+
+        let unobscuredBottom = systemChromeTop(in: app)
+        return element.frame.minY >= app.frame.minY
+            && element.frame.maxY <= unobscuredBottom - 8
+    }
+
+    @MainActor
+    private func systemChromeTop(in app: XCUIApplication) -> CGFloat {
+        let tabBar = app.tabBars.firstMatch
+        return tabBar.exists ? tabBar.frame.minY : app.frame.maxY
+    }
+
+    @MainActor
+    private func dragContentUp(by distance: CGFloat, in app: XCUIApplication) {
+        let normalizedDistance = min(max(distance / app.frame.height, 0.06), 0.25)
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+        let end = app.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72 - normalizedDistance)
+        )
+        start.press(forDuration: 0.05, thenDragTo: end)
     }
 
     @MainActor

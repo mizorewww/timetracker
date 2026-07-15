@@ -534,7 +534,7 @@
 
 后果：不得恢复标题/计时器隐藏点击、卡片内嵌卡片选择器、只显示任务短标题、遗漏长休息的摘要、根页面 periodic timeline 或 break 归零后的无限刷新。UI 可以改变布局与提前继续的操作时机，但 deadline、reconcile、run/session/segment 写入及停止确认仍由既有领域命令负责。
 
-验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。最终发布前仍需保留付费开发者签名，完成 iPhone/iPad/macOS build，并以普通/最大辅助字号、VoiceOver、长同名任务、break 未到期/刚到期及宽窄窗口做实机或模拟器截图验收；每次使用后释放模拟器资源。
+验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。Focus UI test 必须按当前系统 TabBar 的真实 frame 把主操作完整滚到其上方，不能以部分可点的 `isHittable` 代替无遮挡。最终发布前仍需保留付费开发者签名，完成 iPhone/iPad/macOS build，并以普通/最大辅助字号、VoiceOver、长同名任务、break 未到期/刚到期及宽窄窗口做实机或模拟器截图验收；每次使用后释放模拟器资源。
 
 ## 2. Agent 工作清单
 

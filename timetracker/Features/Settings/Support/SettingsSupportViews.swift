@@ -95,10 +95,9 @@ struct CountdownEventSettingsRow: View {
         }
 
         Button(role: .destructive, action: onDelete) {
-            SettingsActionLabel(
+            SettingsDestructiveActionLabel(
                 title: AppStrings.delete,
-                systemImage: "trash",
-                tint: .red
+                systemImage: "trash"
             )
         }
         .buttonStyle(.plain)

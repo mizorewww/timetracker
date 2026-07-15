@@ -14,6 +14,10 @@ struct SharedComponentsContractTests {
             "timetracker/Features/Settings/SettingsViews.swift",
             "timetracker/Features/Settings/SettingsCategoryViews.swift",
             "timetracker/SharedUI/Components/SettingsRows.swift",
+            "timetracker/SharedUI/Components/SettingsPresentationModifiers.swift",
+            "timetracker/SharedUI/Components/SettingsInputRows.swift",
+            "timetracker/SharedUI/Components/SettingsActionRows.swift",
+            "timetracker/SharedUI/Components/SettingsSyncFeedbackRow.swift",
             "timetracker/Features/Settings/SettingsDataSectionsViews.swift",
             "timetracker/Features/Settings/DisplayTimingSettingsSection.swift",
             "timetracker/Features/Settings/PomodoroSettingsSection.swift",
@@ -86,7 +90,13 @@ struct SharedComponentsContractTests {
 
     @Test
     func settingsActionRowsUseSharedComponent() throws {
-        let sharedSource = try sourceText("timetracker/SharedUI/Components/SettingsRows.swift")
+        let sharedSource = try [
+            "timetracker/SharedUI/Components/SettingsRows.swift",
+            "timetracker/SharedUI/Components/SettingsPresentationModifiers.swift",
+            "timetracker/SharedUI/Components/SettingsInputRows.swift",
+            "timetracker/SharedUI/Components/SettingsActionRows.swift",
+            "timetracker/SharedUI/Components/SettingsSyncFeedbackRow.swift"
+        ].map(sourceText).joined(separator: "\n")
         let settingsSource = try [
             "timetracker/Features/Settings/DisplayTimingSettingsSection.swift",
             "timetracker/Features/Settings/PomodoroSettingsSection.swift",
@@ -101,11 +111,13 @@ struct SharedComponentsContractTests {
         let settingsActionsSource = try sourceText("timetracker/Features/Settings/SettingsViewActions.swift")
 
         #expect(sharedSource.contains("struct SettingsActionLabel"))
+        #expect(sharedSource.contains("struct SettingsDestructiveActionLabel"))
         #expect(sharedSource.contains("struct SettingsStatusRow"))
         #expect(sharedSource.contains("func settingsRowSeparatorAligned()"))
         #expect(sharedSource.contains("alignmentGuide(.listRowSeparatorLeading)"))
         #expect(sharedSource.contains(".font(.body)"))
         #expect(settingsSource.contains("SettingsActionLabel("))
+        #expect(settingsSource.contains("SettingsDestructiveActionLabel("))
         #expect(settingsSource.contains("SettingsStatusRow(feedback: feedback)"))
         #expect(settingsSource.contains(".settingsRowSeparatorAligned()"))
         #expect(settingsActionsSource.contains("store.syncStatus.feedback("))

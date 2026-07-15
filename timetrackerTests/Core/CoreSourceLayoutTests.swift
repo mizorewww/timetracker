@@ -120,6 +120,10 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/SectionHeaders.swift",
             "timetracker/SharedUI/Components/ActionControls.swift",
             "timetracker/SharedUI/Components/SettingsRows.swift",
+            "timetracker/SharedUI/Components/SettingsPresentationModifiers.swift",
+            "timetracker/SharedUI/Components/SettingsInputRows.swift",
+            "timetracker/SharedUI/Components/SettingsActionRows.swift",
+            "timetracker/SharedUI/Components/SettingsSyncFeedbackRow.swift",
             "timetracker/SharedUI/Components/SelectionPulse.swift",
             "timetracker/SharedUI/Components/InfoRows.swift",
             "timetracker/SharedUI/Components/SplitViewToolbarButtons.swift",
@@ -328,6 +332,27 @@ struct CoreSourceLayoutTests {
 
         for fileName in focusedFiles {
             let file = settingsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func settingsSharedComponentFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let componentsURL = root.appending(path: "timetracker/SharedUI/Components")
+        let focusedFiles = [
+            "SettingsRows.swift",
+            "SettingsPresentationModifiers.swift",
+            "SettingsInputRows.swift",
+            "SettingsActionRows.swift",
+            "SettingsSyncFeedbackRow.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = componentsURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8)
                 .split(separator: "\n", omittingEmptySubsequences: false)
                 .count

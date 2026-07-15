@@ -159,10 +159,9 @@ private struct PomodoroPlanSettingsRows: View {
         .settingsRowSeparatorAligned()
 
         Button(role: .destructive, action: onDelete) {
-            SettingsActionLabel(
+            SettingsDestructiveActionLabel(
                 title: AppStrings.localized("pomodoro.deletePlan"),
-                systemImage: "trash",
-                tint: .red
+                systemImage: "trash"
             )
         }
         .buttonStyle(.plain)

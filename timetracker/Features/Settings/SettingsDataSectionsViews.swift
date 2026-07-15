@@ -24,10 +24,9 @@ struct DataSettingsSection: View {
 
             if allowsPermanentCleanup {
                 Button(role: .destructive, action: onOptimize) {
-                    SettingsActionLabel(
+                    SettingsDestructiveActionLabel(
                         title: AppStrings.localized("settings.optimizeDatabase"),
-                        systemImage: "externaldrive.badge.checkmark",
-                        tint: .red
+                        systemImage: "externaldrive.badge.checkmark"
                     )
                 }
                 .buttonStyle(.plain)
@@ -66,18 +65,27 @@ struct MaintenanceSettingsSection: View {
             SettingsValueRow(title: AppStrings.localized("settings.icloudContainer"), value: cloudContainer, systemImage: "shippingbox", tint: .cyan)
             if allowsDemoDataCreation {
                 Button(role: .destructive, action: onRebuildDemoData) {
-                    SettingsActionLabel(title: AppStrings.localized("settings.rebuildDemoData"), systemImage: "arrow.clockwise", tint: .red)
+                    SettingsDestructiveActionLabel(
+                        title: AppStrings.localized("settings.rebuildDemoData"),
+                        systemImage: "arrow.clockwise"
+                    )
                 }
                 .buttonStyle(.plain)
             }
             if hasDemoData {
                 Button(role: .destructive, action: onClearDemoData) {
-                    SettingsActionLabel(title: AppStrings.localized("settings.clearDemoData"), systemImage: "trash", tint: .red)
+                    SettingsDestructiveActionLabel(
+                        title: AppStrings.localized("settings.clearDemoData"),
+                        systemImage: "trash"
+                    )
                 }
                 .buttonStyle(.plain)
             }
             Button(role: .destructive, action: onResetAllData) {
-                SettingsActionLabel(title: AppStrings.localized("settings.resetData"), systemImage: "trash.slash", tint: .red)
+                SettingsDestructiveActionLabel(
+                    title: AppStrings.localized("settings.resetData"),
+                    systemImage: "trash.slash"
+                )
             }
             .buttonStyle(.plain)
         } header: {

@@ -33,16 +33,47 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func completeActivePomodoro() -> Bool {
-        advanceActivePomodoroPhase()
+    func completeActivePomodoroFocus() -> Bool {
+        guard let run = activePomodoroRun,
+              run.state == .focusing || run.state == .interrupted else {
+            return false
+        }
+        let expectedState = run.state
+        var didComplete = false
+        let succeeded = perform(
+            event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)
+        ) {
+            didComplete = try pomodoroCommandHandler.completeFocus(
+                run: run,
+                expectedState: expectedState,
+                repository: requiredPomodoroRepository()
+            )
+        }
+        return succeeded && didComplete
     }
 
     @discardableResult
-    func advanceActivePomodoroPhase() -> Bool {
-        guard let run = activePomodoroRun else { return false }
-        return perform(event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)) {
-            try pomodoroCommandHandler.advance(run: run, repository: requiredPomodoroRepository())
+    func resumeActivePomodoroAfterBreak(
+        runID: UUID,
+        expectedState: PomodoroState
+    ) -> Bool {
+        guard let run = activePomodoroRun,
+              run.id == runID,
+              run.state == expectedState,
+              expectedState == .shortBreak || expectedState == .longBreak else {
+            return false
         }
+        var didResume = false
+        let succeeded = perform(
+            event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)
+        ) {
+            didResume = try pomodoroCommandHandler.resumeFocusAfterBreak(
+                run: run,
+                expectedState: expectedState,
+                repository: requiredPomodoroRepository()
+            )
+        }
+        return succeeded && didResume
     }
 
     func cancelActivePomodoro() {

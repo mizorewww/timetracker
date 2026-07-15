@@ -88,8 +88,13 @@ private struct ActivePomodoroContent: View {
     }
 
     private var startNextFocusButton: some View {
-        Button {
-            store.advanceActivePomodoroPhase()
+        let runID = run.id
+        let expectedState = run.state
+        return Button {
+            store.resumeActivePomodoroAfterBreak(
+                runID: runID,
+                expectedState: expectedState
+            )
         } label: {
             Label(AppStrings.localized("pomodoro.startNextFocus"), systemImage: "play.circle.fill")
                 .frame(maxWidth: 260, minHeight: 44)

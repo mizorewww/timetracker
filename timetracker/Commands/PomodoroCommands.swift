@@ -54,15 +54,36 @@ struct PomodoroCommandHandler {
         return try mutation()
     }
 
-    func advance(run: PomodoroRun, repository: PomodoroRepository) throws {
-        switch run.state {
-        case .focusing, .interrupted:
-            try CompletePomodoroFocusUseCase(repository: repository).execute(runID: run.id)
-        case .shortBreak, .longBreak:
-            try CompletePomodoroBreakUseCase(repository: repository).execute(runID: run.id)
-        case .planned, .completed, .cancelled:
-            return
+    @discardableResult
+    func completeFocus(
+        run: PomodoroRun,
+        expectedState: PomodoroState,
+        repository: PomodoroRepository
+    ) throws -> Bool {
+        guard run.state == expectedState,
+              expectedState == .focusing || expectedState == .interrupted,
+              run.deletedAt == nil,
+              run.endedAt == nil else {
+            return false
         }
+        try CompletePomodoroFocusUseCase(repository: repository).execute(runID: run.id)
+        return true
+    }
+
+    @discardableResult
+    func resumeFocusAfterBreak(
+        run: PomodoroRun,
+        expectedState: PomodoroState,
+        repository: PomodoroRepository
+    ) throws -> Bool {
+        guard run.state == expectedState,
+              expectedState == .shortBreak || expectedState == .longBreak,
+              run.deletedAt == nil,
+              run.endedAt == nil else {
+            return false
+        }
+        try CompletePomodoroBreakUseCase(repository: repository).execute(runID: run.id)
+        return true
     }
 
     @discardableResult

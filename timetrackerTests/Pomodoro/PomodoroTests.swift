@@ -101,6 +101,47 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func repeatedBreakActivationCannotCompleteTheNewFocusRound() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Double activation",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.selectedTaskID = task.id
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 2
+        )
+        #expect(store.completeActivePomodoroFocus())
+
+        let breakRun = try #require(store.activePomodoroRun)
+        let expectedState = breakRun.state
+        #expect(expectedState == .shortBreak)
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: breakRun.id,
+            expectedState: expectedState
+        ))
+        let resumedSegmentID = try #require(store.activeSegments.first?.id)
+
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: breakRun.id,
+            expectedState: expectedState
+        ) == false)
+        #expect(store.activePomodoroRun?.state == .focusing)
+        #expect(store.activePomodoroRun?.completedFocusRounds == 1)
+        #expect(store.activeSegments.map(\.id) == [resumedSegmentID])
+        #expect(try timeRepository.allSegments().count == 2)
+    }
+
+    @Test @MainActor
     func cancellingDuringBreakPreservesCompletedFocusHistory() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -113,7 +154,7 @@ struct PomodoroTests {
         store.startPomodoroForSelectedTask(focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 2)
         let run = try #require(store.activePomodoroRun)
         let focusSessionID = try #require(run.sessionID)
-        store.advanceActivePomodoroPhase()
+        store.completeActivePomodoroFocus()
         #expect(store.activePomodoroRun?.state == .shortBreak)
 
         store.cancelActivePomodoro()
@@ -736,7 +777,7 @@ struct PomodoroTests {
         store.selectedTaskID = task.id
         store.startPomodoroForSelectedTask(focusSeconds: 600, breakSeconds: 60, targetRounds: 2)
         let runID = try #require(store.activePomodoroRun?.id)
-        #expect(store.advanceActivePomodoroPhase())
+        #expect(store.completeActivePomodoroFocus())
         #expect(store.activePomodoroRun?.state == .shortBreak)
         #expect(store.activeSegments.isEmpty)
 

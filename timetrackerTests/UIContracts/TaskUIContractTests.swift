@@ -352,6 +352,7 @@ struct TaskUIContractTests {
     func analyticsPageSurfacesDecisionMetricsAndQualitySections() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
@@ -374,6 +375,9 @@ struct TaskUIContractTests {
         #expect(analyticsSource.contains("AnalyticsInsightList(insights: snapshot.insights)"))
         #expect(analyticsSource.contains("AnalyticsQualityContent(quality: snapshot.quality)"))
         #expect(analyticsSource.contains("snapshot.categoryBreakdown"))
+        #expect(analyticsSource.contains("NavigationLink(value: category)"))
+        #expect(analyticsSource.contains(".navigationDestination(for: AnalyticsCategory.self)"))
+        #expect(analyticsSource.contains(".navigationTitle(category.title)"))
         #expect(modelsSource.contains("struct AnalyticsInsight"))
         #expect(modelsSource.contains("struct TaskAnalyticsSnapshot"))
         #expect(englishStrings.contains("\"analytics.decisions.title\""))
@@ -384,6 +388,7 @@ struct TaskUIContractTests {
     func analyticsMakesSelectedPeriodAndMetricMeaningsExplicit() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift"
@@ -415,6 +420,7 @@ struct TaskUIContractTests {
     func analyticsUsesAccessibilitySpecificRowsAndPeriodControls() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSection.swift"

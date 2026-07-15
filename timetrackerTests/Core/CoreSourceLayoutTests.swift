@@ -196,6 +196,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift",
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
@@ -468,6 +469,7 @@ struct CoreSourceLayoutTests {
         let analyticsURL = root.appending(path: "timetracker/Features/Analytics")
         let focusedFiles = [
             "AnalyticsViews.swift",
+            "AnalyticsCategoryDetailView.swift",
             "AnalyticsCategory.swift",
             "AnalyticsOverviewRows.swift",
             "AnalyticsMetricListViews.swift",
@@ -488,8 +490,7 @@ struct CoreSourceLayoutTests {
             let lineCount = try String(contentsOf: file, encoding: .utf8)
                 .split(separator: "\n", omittingEmptySubsequences: false)
                 .count
-            let lineLimit = fileName == "AnalyticsViews.swift" ? 300 : 180
-            #expect(lineCount <= lineLimit, "\(fileName) has \(lineCount) lines")
+            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
         }
     }
 

@@ -422,7 +422,12 @@ struct AnalyticsTimelineTests {
 
     @Test
     func todayActivityDistributionUsesTaskColorBuckets() throws {
-        let entrySource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let entrySource = try [
+            "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
         let viewSource = try [
             "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",

@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum AnalyticsCategory: String, CaseIterable, Identifiable {
+enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
     case overview
     case time
     case tasks

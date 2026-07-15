@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct WatchDashboardView: View {
+    private static let quickStartTaskLimit = 4
+
     let snapshot: WatchStateSnapshot
     let isReachable: Bool
     let hasReceivedSnapshot: Bool
@@ -14,6 +16,9 @@ struct WatchDashboardView: View {
     let onDiscardCommand: (UUID) -> Void
 
     var body: some View {
+        let inactiveTasks = inactiveRecentTasks
+        let quickStartTasks = Array(inactiveTasks.prefix(Self.quickStartTaskLimit))
+
         NavigationStack {
             List {
                 if !hasReceivedSnapshot, let status {
@@ -62,29 +67,41 @@ struct WatchDashboardView: View {
                         }
                     }
 
-                    if !inactiveRecentTasks.isEmpty {
-                        Section("watch.recent.title") {
-                            ForEach(inactiveRecentTasks) { task in
-                                let failedCommand = failedStartCommand(for: task.taskID)
-                                WatchTaskShortcutRow(
+                    if !inactiveTasks.isEmpty {
+                        Section("watch.quickStart.title") {
+                            ForEach(quickStartTasks) { task in
+                                WatchTaskActionRow(
                                     task: task,
-                                    commandState: rowState(
-                                        isPending: isStartPending(for: task.taskID),
-                                        hasFailed: failedCommand != nil
-                                    ),
-                                    action: {
-                                        if let failedCommand {
-                                            onRetryCommand(failedCommand.id)
-                                        } else {
-                                            onStartTask(task.taskID)
-                                        }
-                                    }
+                                    pendingCommands: pendingCommands,
+                                    failedCommands: failedCommands,
+                                    onStartTask: onStartTask,
+                                    onRetryCommand: onRetryCommand
                                 )
+                            }
+
+                            if inactiveTasks.count > quickStartTasks.count {
+                                NavigationLink {
+                                    WatchTaskListView(
+                                        tasks: inactiveTasks,
+                                        pendingCommands: pendingCommands,
+                                        failedCommands: failedCommands,
+                                        onStartTask: onStartTask,
+                                        onRetryCommand: onRetryCommand
+                                    )
+                                } label: {
+                                    Label("watch.tasks.all", systemImage: "list.bullet")
+                                        .frame(
+                                            maxWidth: .infinity,
+                                            minHeight: 44,
+                                            alignment: .leading
+                                        )
+                                }
+                                .accessibilityHint(Text("watch.tasks.allHint"))
                             }
                         }
                     }
 
-                    if snapshot.activeTimers.isEmpty && inactiveRecentTasks.isEmpty {
+                    if snapshot.activeTimers.isEmpty && inactiveTasks.isEmpty {
                         Section {
                             WatchEmptyState(
                                 title: String(localized: "watch.empty.title"),
@@ -123,16 +140,8 @@ struct WatchDashboardView: View {
         return nil
     }
 
-    private func isStartPending(for taskID: UUID) -> Bool {
-        pendingCommands.contains { $0.type == .startTask && $0.taskID == taskID }
-    }
-
     private func isStopPending(for segmentID: UUID) -> Bool {
         pendingCommands.contains { $0.type == .stopSegment && $0.segmentID == segmentID }
-    }
-
-    private func failedStartCommand(for taskID: UUID) -> WatchFailedCommand? {
-        failedCommands.first { $0.command.type == .startTask && $0.command.taskID == taskID }
     }
 
     private func failedStopCommand(for segmentID: UUID) -> WatchFailedCommand? {

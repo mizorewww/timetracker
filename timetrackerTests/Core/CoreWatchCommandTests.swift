@@ -555,6 +555,7 @@ struct CoreWatchCommandTests {
     func watchDashboardUsesASingleGlanceableCrownScrollableLayout() throws {
         let source = try [
             "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchTaskListView.swift",
             "timetrackerWatchApp/WatchTimerRows.swift"
         ].map(sourceText).joined(separator: "\n")
 
@@ -562,6 +563,10 @@ struct CoreWatchCommandTests {
         #expect(source.contains("List {"))
         #expect(source.contains("WatchActiveTimerRow"))
         #expect(source.contains("WatchTaskShortcutRow"))
+        #expect(source.contains("quickStartTaskLimit = 4"))
+        #expect(source.contains("inactiveTasks.prefix(Self.quickStartTaskLimit)"))
+        #expect(source.contains("NavigationLink"))
+        #expect(source.contains("WatchTaskListView"))
         #expect(source.contains("minHeight: 44"))
         #expect(source.contains("if !hasReceivedSnapshot, let status"))
         #expect(source.contains("isReachable && !hasConnectivityError ? .sending : .queued"))

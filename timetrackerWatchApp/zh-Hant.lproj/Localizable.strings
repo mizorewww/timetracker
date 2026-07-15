@@ -2,7 +2,9 @@
 "watch.tasks.title" = "任務";
 "watch.running.title" = "現在";
 "watch.active.title" = "正在計時";
-"watch.recent.title" = "最近任務";
+"watch.quickStart.title" = "快速開始";
+"watch.tasks.all" = "所有任務";
+"watch.tasks.allHint" = "顯示所有可用任務。";
 "watch.empty.title" = "沒有正在計時";
 "watch.empty.message" = "在 iPhone 上記錄或固定任務後會顯示在這裡。";
 "watch.tasks.empty.title" = "沒有任務";

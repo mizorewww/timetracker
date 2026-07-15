@@ -2,7 +2,9 @@
 "watch.tasks.title" = "Tasks";
 "watch.running.title" = "Now";
 "watch.active.title" = "Active Timers";
-"watch.recent.title" = "Recent Tasks";
+"watch.quickStart.title" = "Quick Start";
+"watch.tasks.all" = "All Tasks";
+"watch.tasks.allHint" = "Shows every available task.";
 "watch.empty.title" = "No Active Timer";
 "watch.empty.message" = "Track or pin a task on iPhone to add it here.";
 "watch.tasks.empty.title" = "No Tasks";

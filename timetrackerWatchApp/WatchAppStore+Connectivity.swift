@@ -23,12 +23,14 @@ extension WatchAppStore {
 
 #if canImport(WatchConnectivity)
 extension WatchAppStore {
-    /// Every attempt is put on the durable user-info channel. A reachable
-    /// message is an acceleration path, not the only copy of the command.
-    func transmit(_ command: WatchTimerCommand) {
+    /// New and recovered attempts use durable delivery. Reachability changes
+    /// only accelerate an already-durable command with a direct message.
+    func transmit(_ command: WatchTimerCommand, includeDurableDelivery: Bool = true) {
         let payload = WatchConnectivityPayloadCodec.encode(command: command)
         let session = WCSession.default
-        session.transferUserInfo(payload)
+        if includeDurableDelivery {
+            session.transferUserInfo(payload)
+        }
         isReachable = session.isReachable
 
         guard session.activationState == .activated, session.isReachable else { return }
@@ -79,6 +81,7 @@ extension WatchAppStore {
 
     func scheduleSnapshotFreshness(for state: WatchStateSnapshot) {
         snapshotFreshnessTask?.cancel()
+        snapshotFreshnessTask = nil
         let delay = state.generatedAt
             .addingTimeInterval(WatchStateSnapshot.staleAfter)
             .timeIntervalSinceNow
@@ -95,13 +98,14 @@ extension WatchAppStore {
                 return
             }
             self?.isSnapshotStale = true
+            self?.snapshotFreshnessTask = nil
         }
     }
 
-    func resumePendingCommands() {
+    func resumePendingCommands(includeDurableDelivery: Bool = true) {
         for command in pendingCommands {
             scheduleConfirmationTimeout(for: command)
-            transmit(command)
+            transmit(command, includeDurableDelivery: includeDurableDelivery)
         }
     }
 
@@ -110,69 +114,6 @@ extension WatchAppStore {
         Self.logger.error(
             "Watch connectivity failed: \(error.localizedDescription, privacy: .private)"
         )
-    }
-}
-
-extension WatchAppStore: WCSessionDelegate {
-    nonisolated func session(
-        _ session: WCSession,
-        activationDidCompleteWith activationState: WCSessionActivationState,
-        error: Error?
-    ) {
-        Task { @MainActor in
-            if let error {
-                recordConnectivityError(error)
-            }
-            isReachable = session.isReachable
-            applyPayload(session.receivedApplicationContext)
-            if activationState == .activated {
-                resumePendingCommands()
-            }
-        }
-    }
-
-    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
-        Task { @MainActor in
-            isReachable = session.isReachable
-            if session.isReachable {
-                resumePendingCommands()
-            }
-        }
-    }
-
-    nonisolated func session(
-        _ session: WCSession,
-        didReceiveApplicationContext applicationContext: [String: Any]
-    ) {
-        Task { @MainActor in
-            applyPayload(applicationContext)
-        }
-    }
-
-    nonisolated func session(
-        _ session: WCSession,
-        didReceiveUserInfo userInfo: [String: Any] = [:]
-    ) {
-        Task { @MainActor in
-            applyPayload(userInfo)
-        }
-    }
-
-    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        Task { @MainActor in
-            applyPayload(message)
-        }
-    }
-
-    nonisolated func session(
-        _ session: WCSession,
-        didReceiveMessage message: [String: Any],
-        replyHandler: @escaping ([String: Any]) -> Void
-    ) {
-        Task { @MainActor in
-            applyPayload(message)
-            replyHandler(["received": true])
-        }
     }
 }
 #endif

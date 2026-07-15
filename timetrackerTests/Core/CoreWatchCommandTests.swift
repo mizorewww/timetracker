@@ -648,7 +648,8 @@ struct CoreWatchCommandTests {
         let storeFiles = [
             "timetrackerWatchApp/WatchAppStore.swift",
             "timetrackerWatchApp/WatchAppStore+Commands.swift",
-            "timetrackerWatchApp/WatchAppStore+Connectivity.swift"
+            "timetrackerWatchApp/WatchAppStore+Connectivity.swift",
+            "timetrackerWatchApp/WatchAppStore+SessionDelegate.swift"
         ]
         let source = try storeFiles.map(sourceText).joined(separator: "\n")
         let dashboard = try [
@@ -662,6 +663,8 @@ struct CoreWatchCommandTests {
         #expect(source.contains("func discardCommand(commandID:"))
         #expect(source.contains("decodeCommandResult"))
         #expect(source.contains("session.transferUserInfo(payload)"))
+        #expect(source.contains("if includeDurableDelivery"))
+        #expect(source.contains("resumePendingCommands(includeDurableDelivery: false)"))
         #expect(source.contains("scheduleConfirmationTimeout"))
         #expect(source.contains("confirmationTasks[commandID]?.cancel()"))
         #expect(source.contains("confirmationTasks[commandID] = nil"))

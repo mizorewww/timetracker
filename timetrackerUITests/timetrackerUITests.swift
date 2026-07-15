@@ -125,7 +125,14 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
-        activate(app.buttons["home.newTask"])
+        openSection("Tasks", tabIdentifier: "phone.tab.tasks", sidebarIdentifier: "sidebar.Tasks", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 5))
+        let addTaskMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addTaskMenu.waitForExistence(timeout: 3) && addTaskMenu.isHittable)
+        activate(addTaskMenu)
+        let addRootTask = app.descendants(matching: .any)["tasks.addRoot"].firstMatch
+        XCTAssertTrue(addRootTask.waitForExistence(timeout: 3) && addRootTask.isHittable)
+        activate(addRootTask)
         XCTAssertTrue(
             waitForElement(
                 app.descendants(matching: .any)["task.editor"],

@@ -121,6 +121,7 @@ struct TasksView: View {
                 } label: {
                     Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
                 }
+                .accessibilityIdentifier("tasks.addRoot")
 
                 Button {
                     store.presentNewTaskCategory()
@@ -130,6 +131,7 @@ struct TasksView: View {
             } label: {
                 Label(AppStrings.localized("tasks.add"), systemImage: "plus")
             }
+            .accessibilityIdentifier("tasks.add")
         }
         .confirmationDialog(
             AppStrings.localized("taskCategory.delete.confirm.title"),

@@ -384,7 +384,7 @@
 "pomodoro.startNextFocus.hint" = "為此任務開始新的專注時間段。";
 "pomodoro.skipBreak" = "略過休息";
 "pomodoro.skipBreak.hint" = "立即結束休息並開始下一輪專注。";
-"pomodoro.resume.unavailable" = "請先重新開啟此任務，再開始下一輪專注。";
+"pomodoro.resume.unavailable" = "請先讓此任務恢復為可工作狀態，再開始下一輪專注。";
 "pomodoro.roundProgress" = "第 %d / %d 輪";
 "pomodoro.roundsCompleted" = "已完成 %d / %d 輪";
 "pomodoro.phaseTask.accessibility" = "%@，%@";

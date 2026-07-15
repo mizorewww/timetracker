@@ -155,6 +155,8 @@ struct CoreSourceLayoutTests {
             "timetrackerWatchApp/WatchStatusViews.swift",
             "timetrackerWatchApp/WatchColorSupport.swift",
             "timetrackerWatchApp/WatchAppStore.swift",
+            "timetrackerWatchApp/WatchAppStore+Commands.swift",
+            "timetrackerWatchApp/WatchAppStore+Connectivity.swift",
             "timetracker/Features/Inbox/InboxViews.swift",
             "timetracker/Features/Inbox/InboxListView.swift",
             "timetracker/Features/Inbox/InboxCaptureRow.swift",

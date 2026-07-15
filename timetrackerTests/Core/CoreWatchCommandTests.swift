@@ -552,7 +552,12 @@ struct CoreWatchCommandTests {
 
     @Test
     func watchStoreReleasesTimedOutRowsAndOffersRetryAndDiscard() throws {
-        let source = try sourceText("timetrackerWatchApp/WatchAppStore.swift")
+        let storeFiles = [
+            "timetrackerWatchApp/WatchAppStore.swift",
+            "timetrackerWatchApp/WatchAppStore+Commands.swift",
+            "timetrackerWatchApp/WatchAppStore+Connectivity.swift"
+        ]
+        let source = try storeFiles.map(sourceText).joined(separator: "\n")
         let dashboard = try [
             "timetrackerWatchApp/WatchDashboardView.swift",
             "timetrackerWatchApp/WatchStatusViews.swift"
@@ -577,6 +582,12 @@ struct CoreWatchCommandTests {
         #expect(source.contains("restoredQueue.isSafeForRestoration"))
         #expect(source.contains("commandQueue.isSafeForRestoration"))
         #expect(!source.contains("unconfirmedCommandIDs"))
+        for fileName in storeFiles {
+            let lineCount = try sourceText(fileName)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
         #expect(dashboard.contains("WatchCommandFailureRow"))
         #expect(dashboard.contains("watch.command.retry"))
         #expect(dashboard.contains("watch.command.discard"))

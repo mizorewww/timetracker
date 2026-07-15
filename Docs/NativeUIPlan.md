@@ -173,13 +173,15 @@ Acceptance:
 
 ### Settings
 
-Current state: settings uses category navigation for General, Focus, Data & Sync, AI Assistant and Advanced. The app follows system appearance.
+Current state: settings uses category navigation for General, Focus, Data & Sync, AI Assistant and Advanced. The app follows system appearance. Shared foundation/value, action/destructive, input, platform-presentation, and sync-feedback rows have separate owners.
 
 Plan:
 
 - macOS settings should open as a settings window.
 - iOS settings can be a sheet or pushed page.
 - Use native `Form`, grouped sections, `Toggle`, `Picker`, `TextField`, and `Button`.
+- Reflow value and input rows vertically at accessibility Dynamic Type sizes; expose one clear VoiceOver label/value instead of reading decorative icons.
+- Pair destructive button roles with explicit text, red title/icon treatment, and confirmation copy; color alone is never the warning contract.
 - Keep debug/status-only information under About or Advanced.
 - User settings should explain the outcome, not implementation details.
 
@@ -188,6 +190,7 @@ Acceptance:
 - iCloud settings are understandable to non-developers.
 - API key/model settings are clearly marked and secure.
 - Destructive maintenance actions have confirmation text.
+- Long localized labels and values remain readable at Accessibility Extra Large, and sync feedback announces both state and explanation.
 
 ### Sidebar And Detail
 
@@ -212,7 +215,7 @@ Keep and refine:
 
 - `TaskVisuals`
 - `ChecklistControls`
-- `SettingsRows`
+- `SettingsRows`, `SettingsActionRows`, `SettingsInputRows`, `SettingsPresentationModifiers`, `SettingsSyncFeedbackRow`
 - `StatusBadges`
 - `MetricCards`
 - `SectionHeaders`

@@ -10,6 +10,7 @@ The current pass established semantic folders, split domain stores and repositor
 - Analytics landing-page composition and `AnalyticsCategoryDetailView` were split; category navigation is typed, while overview-row, metric-list, detail-list, period, group-breakdown, metrics, overlap, and task-snapshot responsibilities have focused owners.
 - Pomodoro setup composition was split from its empty state, focus controls, Plan/Task selection controls, and timer face.
 - The retired `SettingsSectionsViews.swift` was replaced by focused display/timing, Pomodoro, countdown, sync, data, action, binding, and support files.
+- Shared Settings rows were split into foundation/value, action/destructive, input, platform-presentation, and sync-feedback files; each owner stays within the current production source-layout budget.
 - Task Detail is now one focused orchestration view plus identity, checklist, overview, analytics, navigation, and record section files.
 - The retired `TimeTrackerServices.swift` was replaced by `AppCloudSync`, persistence-write safety, timer command, aggregation, formatting, device identity, and ledger-summary files.
 - Facade startup/configuration and post-commit system-surface attachment were split from refresh/mutation/recovery lifecycle; both files now stay under the facade source-layout budget.
@@ -53,6 +54,7 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 - Analytics landing-page routing stays in `AnalyticsViews.swift`; typed category-detail composition lives in `AnalyticsCategoryDetailView.swift`, while overview rows, metric/detail lists, period controls, and decision-support builders are split by responsibility.
 - Pomodoro setup is split into `PomodoroSetupViews.swift`, `PomodoroSetupEmptyState.swift`, `PomodoroFocusSetupControls.swift`, `PomodoroSetupSelectionViews.swift`, and `PomodoroTimerFace.swift`; the setup container remains the composition owner.
 - Settings timing, Pomodoro, countdown, sync, data, action, binding, and support responsibilities are split; `SettingsSectionsViews.swift` is retired.
+- Reusable Settings rows are split into `SettingsRows.swift`, `SettingsActionRows.swift`, `SettingsInputRows.swift`, `SettingsPresentationModifiers.swift`, and `SettingsSyncFeedbackRow.swift`; large Dynamic Type composition and VoiceOver title/value semantics remain part of those shared owners.
 - Task Detail identity, checklist, overview, analytics, navigation, and record sections are split from the canonical detail router.
 - Ledger cloud mode, transaction diagnostics, timer DTO, aggregation, formatting, device identity, and summary responsibilities are split; `TimeTrackerServices.swift` is retired.
 - Sync-conflict bootstrap/prompt, local mutation, Cloud import/export, recovery/resolution, state persistence, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and organization/ledger/planning/checklist/Inbox record DTOs are split by responsibility.

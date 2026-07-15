@@ -52,9 +52,13 @@ extension TimeTrackerStore {
     }
 
     func timerStopMutationEvents(segment: TimeSegment) -> Set<StoreDomainEvent> {
+        timerStopMutationEvents(taskID: segment.taskID, sessionID: segment.sessionID)
+    }
+
+    func timerStopMutationEvents(taskID: UUID, sessionID: UUID) -> Set<StoreDomainEvent> {
         [
-            .ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(runID: nil, sessionID: segment.sessionID, taskID: segment.taskID)
+            .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true),
+            .pomodoroChanged(runID: nil, sessionID: sessionID, taskID: taskID)
         ]
     }
 }

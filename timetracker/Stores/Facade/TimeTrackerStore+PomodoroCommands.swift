@@ -39,17 +39,19 @@ extension TimeTrackerStore {
             return false
         }
         let expectedState = run.state
-        var didComplete = false
-        let succeeded = perform(
-            event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)
+        let completion: Bool? = performMutation(
+            eventsForOutcome: { _ in
+                [.pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)]
+            }
         ) {
-            didComplete = try pomodoroCommandHandler.completeFocus(
+            let didComplete = try pomodoroCommandHandler.completeFocus(
                 runID: run.id,
                 expectedState: expectedState,
                 repository: requiredPomodoroRepository()
             )
+            return didComplete ? true : nil
         }
-        return succeeded && didComplete
+        return completion == true
     }
 
     @discardableResult
@@ -63,12 +65,13 @@ extension TimeTrackerStore {
               expectedState == .shortBreak || expectedState == .longBreak else {
             return false
         }
-        var didResume = false
-        let succeeded = perform(
-            events: pomodoroResumeMutationEvents(run: run)
+        let outcome = performMutation(
+            eventsForOutcome: { outcome in
+                pomodoroResumeMutationEvents(outcome: outcome)
+            }
         ) {
             guard let modelContext else { throw StoreError.notConfigured }
-            didResume = try pomodoroCommandHandler.resumeFocusAfterBreak(
+            return try pomodoroCommandHandler.resumeFocusAfterBreak(
                 runID: run.id,
                 expectedState: expectedState,
                 allowParallelTimers: preferences.allowParallelTimers,
@@ -77,13 +80,27 @@ extension TimeTrackerStore {
                 context: modelContext
             )
         }
-        return succeeded && didResume
+        return outcome != nil
     }
 
-    private func pomodoroResumeMutationEvents(run: PomodoroRun) -> Set<StoreDomainEvent> {
-        [
-            .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)
+    func pomodoroResumeMutationEvents(
+        outcome: PomodoroBreakResumeOutcome
+    ) -> Set<StoreDomainEvent> {
+        var events: Set<StoreDomainEvent> = [
+            .ledgerChanged(taskID: outcome.taskID, dateInterval: nil, isVisible: true),
+            .pomodoroChanged(
+                runID: outcome.runID,
+                sessionID: outcome.resumedSessionID,
+                taskID: outcome.taskID
+            )
         ]
+        for stoppedSegment in outcome.stoppedSegments {
+            events.formUnion(timerStopMutationEvents(
+                taskID: stoppedSegment.taskID,
+                sessionID: stoppedSegment.sessionID
+            ))
+        }
+        return events
     }
 
     func cancelActivePomodoro() {

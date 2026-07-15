@@ -96,19 +96,50 @@ extension TimeTrackerStore {
     @discardableResult
     func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
         do {
-            try writeAuthorization.requireUserWritesAllowed()
-            if let modelContext {
-                try modelContext.performAtomicMutation {
-                    try action()
-                }
-            } else {
-                try action()
-            }
+            try executeAuthorizedMutation(action)
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
 
+        finishCommittedMutation(events: events)
+        return true
+    }
+
+    /// Resolves mutation events from the committed command outcome so stale
+    /// facade caches cannot over- or under-report the domains that changed.
+    /// Returning `nil` is a canonical no-op and skips refresh and sync recording.
+    func performMutation<Outcome>(
+        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
+        _ action: () throws -> Outcome?
+    ) -> Outcome? {
+        let outcome: Outcome?
+        do {
+            outcome = try executeAuthorizedMutation(action)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+        guard let outcome else { return nil }
+
+        let events = eventsForOutcome(outcome)
+        if events.isEmpty == false {
+            finishCommittedMutation(events: events)
+        }
+        return outcome
+    }
+
+    private func executeAuthorizedMutation<Result>(
+        _ action: () throws -> Result
+    ) throws -> Result {
+        try writeAuthorization.requireUserWritesAllowed()
+        if let modelContext {
+            return try modelContext.performAtomicMutation(action)
+        }
+        return try action()
+    }
+
+    private func finishCommittedMutation(events: Set<StoreDomainEvent>) {
         var postCommitError: Error?
         let plan = PerformanceSignpost.interval("Store refresh planning") {
             refreshPlanner.plan(after: events)
@@ -130,7 +161,6 @@ extension TimeTrackerStore {
                 postCommitError.localizedDescription
             )
         }
-        return true
     }
 
     @discardableResult

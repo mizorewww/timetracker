@@ -237,6 +237,185 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func breakResumeOutcomeReportsEveryCanonicalTimerMutation() throws {
+        let context = try makeTestContext()
+        var now = Date(timeIntervalSinceReferenceDate: 700_000)
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test",
+            nowProvider: { now }
+        )
+        let pomodoroRepository = SwiftDataPomodoroRepository(
+            context: context,
+            timeRepository: timeRepository,
+            deviceID: "test",
+            nowProvider: { now }
+        )
+        let pomodoroTask = try taskRepository.createTask(
+            title: "Pomodoro",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let firstOtherTask = try taskRepository.createTask(
+            title: "First external timer",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let secondOtherTask = try taskRepository.createTask(
+            title: "Second external timer",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let run = try pomodoroRepository.startPomodoro(
+            taskID: pomodoroTask.id,
+            focusSeconds: 600,
+            breakSeconds: 60,
+            targetRounds: 2
+        )
+        now = now.addingTimeInterval(30)
+        #expect(try pomodoroRepository.completeFocus(
+            runID: run.id,
+            expectedState: .focusing,
+            endedAt: now
+        ))
+
+        now = now.addingTimeInterval(10)
+        let sameTaskSegment = try timeRepository.startTask(
+            taskID: pomodoroTask.id,
+            source: .timer
+        )
+        let firstOtherSegment = try timeRepository.startTask(
+            taskID: firstOtherTask.id,
+            source: .timer
+        )
+        let secondOtherSegment = try timeRepository.startTask(
+            taskID: secondOtherTask.id,
+            source: .timer
+        )
+        let outcome = try #require(
+            try PomodoroCommandHandler(
+                deviceID: "command",
+                nowProvider: { now }
+            ).resumeFocusAfterBreak(
+                runID: run.id,
+                expectedState: .shortBreak,
+                allowParallelTimers: false,
+                timeRepository: timeRepository,
+                repository: pomodoroRepository,
+                context: context
+            )
+        )
+        let expectedStops: Set<StoppedTimerMutationOutcome> = [
+            StoppedTimerMutationOutcome(
+                segmentID: sameTaskSegment.id,
+                sessionID: sameTaskSegment.sessionID,
+                taskID: sameTaskSegment.taskID
+            ),
+            StoppedTimerMutationOutcome(
+                segmentID: firstOtherSegment.id,
+                sessionID: firstOtherSegment.sessionID,
+                taskID: firstOtherSegment.taskID
+            ),
+            StoppedTimerMutationOutcome(
+                segmentID: secondOtherSegment.id,
+                sessionID: secondOtherSegment.sessionID,
+                taskID: secondOtherSegment.taskID
+            )
+        ]
+
+        #expect(Set(outcome.stoppedSegments) == expectedStops)
+        #expect(outcome.runID == run.id)
+        #expect(outcome.taskID == pomodoroTask.id)
+        #expect(try timeRepository.activeSegments().map(\.id) == [outcome.resumedSegmentID])
+
+        let eventStore = makeTestStore()
+        let events = eventStore.pomodoroResumeMutationEvents(outcome: outcome)
+        var expectedEvents: Set<StoreDomainEvent> = [
+            .ledgerChanged(taskID: pomodoroTask.id, dateInterval: nil, isVisible: true),
+            .pomodoroChanged(
+                runID: run.id,
+                sessionID: outcome.resumedSessionID,
+                taskID: pomodoroTask.id
+            )
+        ]
+        for stoppedSegment in expectedStops {
+            expectedEvents.formUnion(eventStore.timerStopMutationEvents(
+                taskID: stoppedSegment.taskID,
+                sessionID: stoppedSegment.sessionID
+            ))
+        }
+        #expect(events == expectedEvents)
+        let affectedTaskIDs = events.reduce(into: Set<UUID>()) { taskIDs, event in
+            taskIDs.formUnion(event.affectedTaskIDs)
+        }
+        #expect(affectedTaskIDs == [pomodoroTask.id, firstOtherTask.id, secondOtherTask.id])
+    }
+
+    @Test @MainActor
+    func outcomeResolvedMutationRecordsDurableSyncOnlyForCommittedOutcome() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "PomodoroOutcomeSyncTests-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        try withPomodoroCloudSyncMode {
+            let context = try makeTestContext()
+            let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+            let task = try taskRepository.createTask(
+                title: "Durable outcome",
+                parentID: nil,
+                colorHex: nil,
+                iconName: nil
+            )
+            let syncConflictService = SyncConflictService(
+                stateURL: directory.appending(path: "SyncConflictState.json")
+            )
+            let store = TimeTrackerStore(
+                writeAuthorization: .isolatedTestHarness,
+                syncConflictService: syncConflictService
+            )
+            defer { store.pomodoroReconciliationTask?.cancel() }
+            store.configureIfNeeded(context: context)
+            let generationBeforeNoOp = try syncConflictService.loadState().localGeneration
+
+            let noOp: UUID? = store.performMutation(
+                eventsForOutcome: { sessionID in
+                    store.timerStopMutationEvents(taskID: task.id, sessionID: sessionID)
+                }
+            ) {
+                nil
+            }
+
+            #expect(noOp == nil)
+            #expect(try syncConflictService.loadState().localGeneration == generationBeforeNoOp)
+
+            let committedSessionID: UUID? = store.performMutation(
+                eventsForOutcome: { sessionID in
+                    store.timerStopMutationEvents(taskID: task.id, sessionID: sessionID)
+                }
+            ) {
+                try store.requiredTimeRepository().startTask(
+                    taskID: task.id,
+                    source: .timer
+                ).sessionID
+            }
+            let sessionID = try #require(committedSessionID)
+            let state = try syncConflictService.loadState()
+
+            #expect((state.localGeneration ?? 0) > (generationBeforeNoOp ?? 0))
+            #expect(state.localSnapshot?.segments.contains {
+                $0.sessionID == sessionID && $0.taskID == task.id && $0.endedAt == nil
+            } == true)
+        }
+    }
+
+    @Test @MainActor
     func staleBreakCommandDoesNotStopTimersWhenCanonicalRunAlreadyAdvanced() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -289,11 +468,13 @@ struct PomodoroTests {
 
         #expect(store.activePomodoroRun?.state == .shortBreak)
         #expect(try store.requiredPomodoroRepository().run(id: staleBreakRun.id)?.state == .completed)
+        let analyticsRevision = store.analyticsRevision
         #expect(store.resumeActivePomodoroAfterBreak(
             runID: staleBreakRun.id,
             expectedState: expectedState
         ) == false)
 
+        #expect(store.analyticsRevision == analyticsRevision)
         #expect(otherSegment.endedAt == nil)
         #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
         #expect(try timeRepository.allSegments().filter { $0.source == .pomodoro }.count == 1)
@@ -342,7 +523,9 @@ struct PomodoroTests {
 
         #expect(store.activePomodoroRun?.state == .focusing)
         #expect(try store.requiredPomodoroRepository().run(id: staleFocusRun.id)?.state == .completed)
+        let analyticsRevision = store.analyticsRevision
         #expect(store.completeActivePomodoroFocus() == false)
+        #expect(store.analyticsRevision == analyticsRevision)
         #expect(focusSegment.endedAt == nil)
         #expect(try timeRepository.activeSegments().map(\.id) == [focusSegment.id])
     }
@@ -1058,4 +1241,33 @@ struct PomodoroTests {
         #expect(plan.displayName == "Legacy")
         #expect(encodedText.contains("allowsSystemClock") == false)
     }
+}
+
+@MainActor
+private func withPomodoroCloudSyncMode(_ body: () throws -> Void) throws {
+    let defaults = UserDefaults.standard
+    let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
+    let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
+    let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+    defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+    defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defer {
+        if let previousMode {
+            defaults.set(previousMode, forKey: AppCloudSync.modeKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.modeKey)
+        }
+        if let previousUploadReset {
+            defaults.set(previousUploadReset, forKey: AppCloudSync.pendingCloudUploadResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+        }
+        if let previousDownloadReset {
+            defaults.set(previousDownloadReset, forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        }
+    }
+    try body()
 }

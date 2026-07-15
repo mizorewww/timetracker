@@ -15,13 +15,15 @@ final class TimeTrackerStore {
         llmCredentialStore: (any LLMCredentialStoring)? = nil,
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
-        writeAuthorization: StoreWriteAuthorization = .applicationState
+        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        syncConflictService: SyncConflictService? = nil
     ) {
         self.llmCredentialStore = llmCredentialStore ?? KeychainLLMCredentialStore()
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
         self.checklistVisualSuggestionService =
             checklistVisualSuggestionService ?? LLMChecklistVisualSuggestionService()
         self.writeAuthorization = writeAuthorization
+        self.syncConflictService = syncConflictService ?? SyncConflictService()
     }
 
     deinit {
@@ -205,7 +207,7 @@ final class TimeTrackerStore {
     let inboxCommandHandler = InboxCommandHandler()
     let preferenceCommandHandler = PreferenceCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
-    let syncConflictService = SyncConflictService()
+    let syncConflictService: SyncConflictService
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var checklistDomainStore = ChecklistStore()

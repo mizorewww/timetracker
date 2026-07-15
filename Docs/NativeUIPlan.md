@@ -105,12 +105,14 @@ Plan:
 - Put checklist progress on the trailing side only when there is enough width; otherwise show it below the title line.
 - Category headers should be native section headers with subtle dividers, not custom drop targets.
 - Reordering and moving should use reliable native edit/menu flows before drag-and-drop is reintroduced.
+- Keep completed tasks as visible native rows with an explicit unavailable-work explanation and reopen action. Archived branches stay hidden; do not make both states look like deletion.
 
 Acceptance:
 
 - Every visible task is an independent row for tap, context menu, and swipe actions.
 - Indentation is stable across expand/collapse.
 - Deleting or creating a task preserves the Tasks destination.
+- A completed parent and its children remain navigable, cannot start new work, and expose a clear path-level reopen action without losing history.
 
 ### Task Editor
 
@@ -120,6 +122,7 @@ Plan:
 
 - Keep editor as `NavigationStack` + `Form`.
 - Use `LabeledContent`, native `Picker`, `TextField`, `Toggle`, and toolbar save/cancel.
+- Keep the task estimate control explicit: 15-minute steps, zero as “not set,” and a concise explanation that it estimates this task's own work while child forecasts remain separate.
 - Reuse `SymbolColorPickerRow` for tasks, categories, checklist items, and Inbox suggestion visuals.
 - Checklist rows should reuse one shared row component where possible.
 - macOS can use up/down controls for checklist ordering; iOS can use native move.
@@ -129,6 +132,7 @@ Acceptance:
 - Long checklist text wraps.
 - Return submits where the user expects submit, not newline, unless the field explicitly supports notes.
 - Adding checklist item creates a focused empty row.
+- Forecast source copy distinguishes an explicit task estimate from checklist evidence and remains readable at accessibility sizes.
 
 ### Analytics
 
@@ -234,6 +238,7 @@ For each future UI polish round, capture or manually inspect:
 - iPhone Inbox with no items, one suggestion, many items, and dismissed suggestion.
 - iPhone Today with no active timers, one timer, multiple timers.
 - iPhone Tasks with nested tasks and long titles.
+- iPhone Tasks and Task Detail with a completed parent, blocked child, and reopened path.
 - iPhone dark appearance at Accessibility Extra Large for Today, Tasks, Task Detail, Analytics, and Settings.
 - iPad landscape Today and Task Detail with the sidebar visible and collapsed.
 - macOS settings window and main split view.

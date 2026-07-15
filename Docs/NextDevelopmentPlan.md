@@ -13,7 +13,7 @@ The product goals are:
 - Capture loose items quickly in Inbox.
 - Organize work and life into user-defined categories and task trees.
 - Track real time through `TimeSegment` as the ledger fact.
-- Use checklist progress only when there is enough evidence.
+- Honor an explicit task estimate as the user's plan; otherwise use checklist progress only when there is enough evidence.
 - Explain forecasts instead of inventing numbers.
 - Keep iCloud, App Intents, Live Activity, Widget, Watch, and any future system entry points using the same command layer.
 - Prefer native Apple controls and predictable platform behavior over custom UI that is difficult to debug.

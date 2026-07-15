@@ -134,6 +134,24 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func trackedTimeRowsUseSharedBoundedDisplayPolicy() throws {
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/DurationLabels.swift")
+        let homeTimelineSource = try sourceText("timetracker/Features/Home/Rows/HomeTimelineRows.swift")
+        let taskRecordsSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailRecordViews.swift")
+
+        #expect(sharedSource.contains("struct TrackedTimeDisplaySnapshot"))
+        #expect(sharedSource.contains("TrackedTimePolicy.interval("))
+        #expect(sharedSource.contains("TrackedTimePolicy.boundedEnd("))
+        #expect(sharedSource.contains("TrackedTimePolicy.elapsedSeconds("))
+        #expect(sharedSource.contains("endedAt.map({ $0 <= now }) == true"))
+        #expect(homeTimelineSource.contains("TrackedTimeDisplaySnapshot("))
+        #expect(taskRecordsSource.contains("TrackedTimeDisplaySnapshot("))
+        #expect(homeTimelineSource.contains("timeIntervalSince(segment.startedAt)") == false)
+        #expect(homeTimelineSource.contains("segment.endedAt.map { TimeDisplayFormatter") == false)
+        #expect(taskRecordsSource.contains("record.endedAt.map { TimeDisplayFormatter") == false)
+    }
+
+    @Test
     func compactTaskPickerUsesTheSystemSheetMaterial() throws {
         let source = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
 

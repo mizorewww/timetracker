@@ -127,6 +127,47 @@ struct TimeTrackerUtilityTests {
         #expect(DurationFormatter.clock(84) == "01:24")
     }
 
+    @Test @MainActor
+    func trackedTimeDisplaySnapshotClipsFutureValuesAndZeroesFutureOnlyRows() {
+        let now = Date(timeIntervalSinceReferenceDate: 2_000_000)
+        let clipped = TrackedTimeDisplaySnapshot(
+            startedAt: now.addingTimeInterval(-3_600),
+            endedAt: now.addingTimeInterval(3_600),
+            now: now
+        )
+        let futureOnly = TrackedTimeDisplaySnapshot(
+            startedAt: now.addingTimeInterval(600),
+            endedAt: now.addingTimeInterval(7_200),
+            now: now
+        )
+        let futureActive = TrackedTimeDisplaySnapshot(
+            startedAt: now.addingTimeInterval(600),
+            endedAt: nil,
+            now: now
+        )
+        let completedEnd = now.addingTimeInterval(-900)
+        let completed = TrackedTimeDisplaySnapshot(
+            startedAt: now.addingTimeInterval(-1_800),
+            endedAt: completedEnd,
+            now: now
+        )
+
+        #expect(clipped.end == now)
+        #expect(clipped.elapsedSeconds == 3_600)
+        #expect(clipped.usesCurrentEndLabel)
+        #expect(futureOnly.start == now)
+        #expect(futureOnly.end == now)
+        #expect(futureOnly.elapsedSeconds == 0)
+        #expect(futureOnly.usesCurrentEndLabel)
+        #expect(futureActive.start == now)
+        #expect(futureActive.end == now)
+        #expect(futureActive.elapsedSeconds == 0)
+        #expect(futureActive.usesCurrentEndLabel)
+        #expect(completed.end == completedEnd)
+        #expect(completed.elapsedSeconds == 900)
+        #expect(completed.usesCurrentEndLabel == false)
+    }
+
     @Test
     func dateFormattingRespectsLocaleDateOrderAndHourCycle() throws {
         var calendar = Calendar(identifier: .gregorian)

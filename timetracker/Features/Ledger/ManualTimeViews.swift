@@ -41,6 +41,9 @@ struct ManualTimePanel: View {
     }
 
     var body: some View {
+        let now = Date()
+        let validation = trackedTimeValidation(at: now)
+
         NavigationStack {
             Form {
                 Section(AppStrings.localized("segment.assignment")) {
@@ -53,19 +56,28 @@ struct ManualTimePanel: View {
                 }
 
                 Section(AppStrings.localized("segment.time")) {
-                    DatePicker(AppStrings.localized("segment.start"), selection: $draft.startedAt, displayedComponents: [.date, .hourAndMinute])
-                    DatePicker(AppStrings.localized("segment.end"), selection: $draft.endedAt, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker(
+                        AppStrings.localized("segment.start"),
+                        selection: $draft.startedAt,
+                        in: ...now,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    DatePicker(
+                        AppStrings.localized("segment.end"),
+                        selection: $draft.endedAt,
+                        in: ...now,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
                     LabeledContent(AppStrings.localized("segment.duration")) {
-                        Text(DurationFormatter.compact(Int(draft.endedAt.timeIntervalSince(draft.startedAt))))
+                        Text(DurationFormatter.compact(TrackedTimePolicy.elapsedSeconds(
+                            startedAt: draft.startedAt,
+                            endedAt: draft.endedAt,
+                            now: now
+                        )))
                             .font(.headline.monospacedDigit())
-                            .foregroundStyle(draft.endedAt > draft.startedAt ? Color.primary : Color.red)
+                            .foregroundStyle(validation == .valid ? Color.primary : Color.red)
                     }
-                    if draft.endedAt <= draft.startedAt {
-                        Label(AppStrings.localized("segment.error.endAfterStart"), systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .accessibilityAddTraits(.isStaticText)
-                    }
+                    validationMessage(for: validation)
                 }
 
                 Section(AppStrings.localized("segment.notes")) {
@@ -90,7 +102,7 @@ struct ManualTimePanel: View {
                         onSave(draft)
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(draft.taskID == nil || draft.endedAt <= draft.startedAt)
+                    .disabled(draft.taskID == nil || validation != .valid)
                 }
             }
         }
@@ -107,6 +119,33 @@ struct ManualTimePanel: View {
         } else {
             isDiscardConfirmationPresented = true
         }
+    }
+
+    private func trackedTimeValidation(at now: Date) -> TrackedTimePolicy.WriteValidation {
+        TrackedTimePolicy.validateWrite(
+            startedAt: draft.startedAt,
+            endedAt: draft.endedAt,
+            now: now
+        )
+    }
+
+    @ViewBuilder
+    private func validationMessage(for validation: TrackedTimePolicy.WriteValidation) -> some View {
+        switch validation {
+        case .valid:
+            EmptyView()
+        case .invalidRange:
+            timeValidationLabel(key: "segment.error.endAfterStart")
+        case .futureTime:
+            timeValidationLabel(key: "segment.error.timeNotFuture")
+        }
+    }
+
+    private func timeValidationLabel(key: String) -> some View {
+        Label(AppStrings.localized(key), systemImage: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(.red)
+            .accessibilityAddTraits(.isStaticText)
     }
 
     private var taskBinding: Binding<UUID?> {

@@ -146,12 +146,13 @@ struct TimelineRow: View {
     }
 
     private var durationText: some View {
-        Group {
+        let display = trackedTimeDisplay
+        return Group {
             if segment.endedAt == nil {
                 Text(.app("common.now"))
                     .foregroundStyle(.blue)
             } else {
-                Text(DurationFormatter.compact(Int((segment.endedAt ?? Date()).timeIntervalSince(segment.startedAt))))
+                Text(DurationFormatter.compact(display.elapsedSeconds))
                     .foregroundStyle(.secondary)
             }
         }
@@ -169,9 +170,20 @@ struct TimelineRow: View {
     }
 
     private var timeRangeText: String {
-        let start = TimeDisplayFormatter.hourMinute(segment.startedAt)
-        let end = segment.endedAt.map { TimeDisplayFormatter.hourMinute($0) } ?? AppStrings.localized("common.now")
+        let display = trackedTimeDisplay
+        let start = TimeDisplayFormatter.hourMinute(display.start)
+        let end = display.usesCurrentEndLabel
+            ? AppStrings.localized("common.now")
+            : TimeDisplayFormatter.hourMinute(display.end)
         return "\(start) - \(end)"
+    }
+
+    private var trackedTimeDisplay: TrackedTimeDisplaySnapshot {
+        TrackedTimeDisplaySnapshot(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: Date()
+        )
     }
 
     private func openTask() {

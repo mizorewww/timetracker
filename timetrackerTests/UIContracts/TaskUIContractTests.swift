@@ -152,6 +152,25 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func trackedTimeEditorsBoundPickersAndDurationsToNow() throws {
+        let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
+        let segmentSource = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
+
+        #expect(manualSource.components(separatedBy: "in: ...now").count - 1 == 2)
+        #expect(segmentSource.components(separatedBy: "in: ...now").count - 1 == 2)
+        #expect(manualSource.contains("TrackedTimePolicy.validateWrite("))
+        #expect(segmentSource.contains("TrackedTimePolicy.validateWrite("))
+        #expect(manualSource.contains("TrackedTimePolicy.elapsedSeconds("))
+        #expect(segmentSource.contains("TrackedTimePolicy.elapsedSeconds("))
+        #expect(manualSource.contains("segment.error.timeNotFuture"))
+        #expect(segmentSource.contains("segment.error.timeNotFuture"))
+        #expect(manualSource.contains("validation != .valid"))
+        #expect(segmentSource.contains("validation != .valid"))
+        #expect(manualSource.contains("timeIntervalSince(draft.startedAt)") == false)
+        #expect(segmentSource.contains("timeIntervalSince(draft.startedAt)") == false)
+    }
+
+    @Test
     func accessibilityTaskLayoutsStackCriticalContentWithoutChangingStableTargets() throws {
         let rowSource = try taskManagementFeatureSource()
         let categorySource = try sourceText("timetracker/SharedUI/Components/TaskCategoryViews.swift")

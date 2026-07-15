@@ -63,10 +63,11 @@ private struct TaskDetailRecentRecordRow: View {
     }
 
     private var recordTiming: some View {
-        VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
-            Text(DurationFormatter.compact(record.durationSeconds))
+        let display = trackedTimeDisplay
+        return VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
+            Text(DurationFormatter.compact(display.elapsedSeconds))
                 .font(.subheadline.monospacedDigit())
-            Text(timeRangeText)
+            Text(timeRangeText(display: display))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
@@ -74,9 +75,18 @@ private struct TaskDetailRecentRecordRow: View {
         }
     }
 
-    private var timeRangeText: String {
-        let end = record.endedAt.map { TimeDisplayFormatter.hourMinute($0) }
-            ?? AppStrings.localized("common.now")
-        return "\(TimeDisplayFormatter.monthDayHourMinute(record.startedAt)) - \(end)"
+    private func timeRangeText(display: TrackedTimeDisplaySnapshot) -> String {
+        let end = display.usesCurrentEndLabel
+            ? AppStrings.localized("common.now")
+            : TimeDisplayFormatter.hourMinute(display.end)
+        return "\(TimeDisplayFormatter.monthDayHourMinute(display.start)) - \(end)"
+    }
+
+    private var trackedTimeDisplay: TrackedTimeDisplaySnapshot {
+        TrackedTimeDisplaySnapshot(
+            startedAt: record.startedAt,
+            endedAt: record.endedAt,
+            now: Date()
+        )
     }
 }

@@ -21,21 +21,15 @@ struct TimelineRow: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Button(action: openTask) {
-                Group {
-                    if isCompactPhone {
-                        compactContent
-                    } else {
-                        ViewThatFits(in: .horizontal) {
-                            regularContent
-                            compactContent
-                        }
+            Group {
+                if segment.endedAt == nil {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        taskButton(at: context.date)
                     }
+                } else {
+                    taskButton(at: Date())
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
 
             Menu {
                 segmentActions
@@ -65,6 +59,30 @@ struct TimelineRow: View {
         .padding(.vertical, isCompactPhone ? 11 : 10)
     }
 
+    private func taskButton(at now: Date) -> some View {
+        let display = TrackedTimeDisplaySnapshot(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now
+        )
+
+        return Button(action: openTask) {
+            Group {
+                if isCompactPhone {
+                    compactContent(display: display)
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        regularContent(display: display)
+                        compactContent(display: display)
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+    }
+
     @ViewBuilder
     private var segmentActions: some View {
         Button {
@@ -88,13 +106,13 @@ struct TimelineRow: View {
         }
     }
 
-    private var regularContent: some View {
+    private func regularContent(display: TrackedTimeDisplaySnapshot) -> some View {
         HStack(spacing: 12) {
             Circle()
                 .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
                 .frame(width: 9, height: 9)
 
-            Text(timeRangeText)
+            Text(timeRangeText(display: display))
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(width: isCompactPhone ? 82 : 120, alignment: .leading)
@@ -106,23 +124,23 @@ struct TimelineRow: View {
             tagBadge
                 .frame(width: 96, alignment: .center)
 
-            durationText
+            durationText(display: display)
                 .frame(width: 56, alignment: .trailing)
         }
     }
 
-    private var compactContent: some View {
+    private func compactContent(display: TrackedTimeDisplaySnapshot) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Circle()
                     .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
                     .frame(width: 8, height: 8)
-                Text(timeRangeText)
+                Text(timeRangeText(display: display))
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer()
-                durationText
+                durationText(display: display)
             }
 
             HStack(alignment: .center, spacing: 10) {
@@ -145,8 +163,7 @@ struct TimelineRow: View {
             .lineLimit(1)
     }
 
-    private var durationText: some View {
-        let display = trackedTimeDisplay
+    private func durationText(display: TrackedTimeDisplaySnapshot) -> some View {
         return Group {
             if segment.endedAt == nil {
                 Text(.app("common.now"))
@@ -169,21 +186,12 @@ struct TimelineRow: View {
         }
     }
 
-    private var timeRangeText: String {
-        let display = trackedTimeDisplay
+    private func timeRangeText(display: TrackedTimeDisplaySnapshot) -> String {
         let start = TimeDisplayFormatter.hourMinute(display.start)
         let end = display.usesCurrentEndLabel
             ? AppStrings.localized("common.now")
             : TimeDisplayFormatter.hourMinute(display.end)
         return "\(start) - \(end)"
-    }
-
-    private var trackedTimeDisplay: TrackedTimeDisplaySnapshot {
-        TrackedTimeDisplaySnapshot(
-            startedAt: segment.startedAt,
-            endedAt: segment.endedAt,
-            now: Date()
-        )
     }
 
     private func openTask() {

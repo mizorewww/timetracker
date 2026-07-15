@@ -145,8 +145,11 @@ struct HomeUIContractTests {
         #expect(sharedSource.contains("TrackedTimePolicy.elapsedSeconds("))
         #expect(sharedSource.contains("endedAt.map({ $0 <= now }) == true"))
         #expect(homeTimelineSource.contains("TrackedTimeDisplaySnapshot("))
+        #expect(homeTimelineSource.contains("TimelineView(.periodic(from: .now, by: 1))"))
+        #expect(homeTimelineSource.contains("taskButton(at: context.date)"))
         #expect(taskRecordsSource.contains("TrackedTimeDisplaySnapshot("))
         #expect(homeTimelineSource.contains("timeIntervalSince(segment.startedAt)") == false)
+        #expect(homeTimelineSource.contains("now: Date()\n        )") == false)
         #expect(homeTimelineSource.contains("segment.endedAt.map { TimeDisplayFormatter") == false)
         #expect(taskRecordsSource.contains("record.endedAt.map { TimeDisplayFormatter") == false)
     }

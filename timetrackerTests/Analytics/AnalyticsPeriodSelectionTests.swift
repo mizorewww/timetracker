@@ -91,12 +91,14 @@ struct AnalyticsPeriodSelectionTests {
 
         for (range, expectedComponents) in expectations {
             let expected = try #require(calendar.date(from: expectedComponents))
+            var monthAnchor: AnalyticsMonthNavigationAnchor?
             #expect(
                 AnalyticsPeriodNavigation.date(
                     byMoving: -1,
                     range: range,
                     referenceDate: liveNow,
                     liveNow: liveNow,
+                    monthAnchor: &monthAnchor,
                     calendar: calendar
                 ) == expected
             )
@@ -108,12 +110,14 @@ struct AnalyticsPeriodSelectionTests {
         let liveNow = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 16, hour: 12)))
 
         for range in AnalyticsRange.allCases {
+            var monthAnchor: AnalyticsMonthNavigationAnchor?
             #expect(
                 AnalyticsPeriodNavigation.date(
                     byMoving: 1,
                     range: range,
                     referenceDate: liveNow,
                     liveNow: liveNow,
+                    monthAnchor: &monthAnchor,
                     calendar: calendar
                 ) == liveNow
             )
@@ -146,16 +150,29 @@ struct AnalyticsPeriodSelectionTests {
         for (range, referenceComponents, expectedComponents) in expectations {
             let referenceDate = try #require(calendar.date(from: referenceComponents))
             let expected = try #require(calendar.date(from: expectedComponents))
+            var monthAnchor: AnalyticsMonthNavigationAnchor?
             #expect(
                 AnalyticsPeriodNavigation.date(
                     byMoving: 1,
                     range: range,
                     referenceDate: referenceDate,
                     liveNow: liveNow,
+                    monthAnchor: &monthAnchor,
                     calendar: calendar
                 ) == expected
             )
         }
+    }
+
+    @Test
+    func monthPeriodArithmeticMovesFromTheSelectedCalendarIntervalStart() throws {
+        let january = try makeDate(2025, 1, 31, hour: 14)
+        let destination = try #require(
+            AnalyticsRange.month.date(byAdding: 1, to: january, calendar: calendar)
+        )
+        let expected = try makeDate(2025, 2, 1)
+
+        #expect(destination == expected)
     }
 
     @Test
@@ -169,11 +186,13 @@ struct AnalyticsPeriodSelectionTests {
         let december = try #require(
             losAngeles.date(from: DateComponents(year: 2026, month: 12, day: 15, hour: 12))
         )
+        var monthAnchor: AnalyticsMonthNavigationAnchor?
         let january = AnalyticsPeriodNavigation.date(
             byMoving: 1,
             range: .month,
             referenceDate: december,
             liveNow: liveNow,
+            monthAnchor: &monthAnchor,
             calendar: losAngeles
         )
         #expect(
@@ -189,12 +208,167 @@ struct AnalyticsPeriodSelectionTests {
             range: .today,
             referenceDate: beforeDST,
             liveNow: liveNow,
+            monthAnchor: &monthAnchor,
             calendar: losAngeles
         )
         #expect(
             losAngeles.dateComponents([.year, .month, .day, .hour], from: afterDST) ==
                 DateComponents(year: 2026, month: 3, day: 8, hour: 12)
         )
+    }
+
+    @Test
+    func monthNavigationRetainsEndOfMonthAnchorAcrossShortMonths() throws {
+        let liveNow = try makeDate(2025, 12, 15, hour: 12)
+        let january = try makeDate(2025, 1, 31, hour: 14, minute: 37, second: 42)
+        var anchor: AnalyticsMonthNavigationAnchor?
+
+        let february = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: january,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let march = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: february,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let expectedFebruary = try makeDate(
+            2025, 2, 28, hour: 14, minute: 37, second: 42
+        )
+        let expectedMarch = try makeDate(
+            2025, 3, 31, hour: 14, minute: 37, second: 42
+        )
+
+        #expect(february == expectedFebruary)
+        #expect(march == expectedMarch)
+        #expect(anchor?.day == 31)
+    }
+
+    @Test
+    func monthNavigationUsesLeapDayWithoutLosingTheOriginalAnchor() throws {
+        let liveNow = try makeDate(2024, 12, 15, hour: 12)
+        let january = try makeDate(2024, 1, 31, hour: 9)
+        var anchor: AnalyticsMonthNavigationAnchor?
+
+        let february = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: january,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let march = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: february,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let expectedFebruary = try makeDate(2024, 2, 29, hour: 9)
+        let expectedMarch = try makeDate(2024, 3, 31, hour: 9)
+
+        #expect(february == expectedFebruary)
+        #expect(march == expectedMarch)
+    }
+
+    @Test
+    func monthNavigationRetainsEndOfMonthAnchorWhenMovingBackward() throws {
+        let liveNow = try makeDate(2025, 12, 15, hour: 12)
+        let march = try makeDate(2025, 3, 31, hour: 8, minute: 15)
+        var anchor: AnalyticsMonthNavigationAnchor?
+
+        let february = AnalyticsPeriodNavigation.date(
+            byMoving: -1,
+            range: .month,
+            referenceDate: march,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let january = AnalyticsPeriodNavigation.date(
+            byMoving: -1,
+            range: .month,
+            referenceDate: february,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let expectedFebruary = try makeDate(2025, 2, 28, hour: 8, minute: 15)
+        let expectedJanuary = try makeDate(2025, 1, 31, hour: 8, minute: 15)
+
+        #expect(february == expectedFebruary)
+        #expect(january == expectedJanuary)
+    }
+
+    @Test
+    func monthNavigationPreservesLocalTimeAcrossDSTOffsetChanges() throws {
+        var losAngeles = calendar
+        losAngeles.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let liveNow = try makeDate(2024, 12, 15, hour: 12, calendar: losAngeles)
+        let january = try makeDate(
+            2024, 1, 31, hour: 1, minute: 45, second: 27, calendar: losAngeles
+        )
+        var anchor: AnalyticsMonthNavigationAnchor?
+
+        let february = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: january,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: losAngeles
+        )
+        let march = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: february,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: losAngeles
+        )
+        let expectedMarch = try makeDate(
+            2024, 3, 31, hour: 1, minute: 45, second: 27, calendar: losAngeles
+        )
+
+        #expect(march == expectedMarch)
+        #expect(losAngeles.timeZone.secondsFromGMT(for: february) == -8 * 3_600)
+        #expect(losAngeles.timeZone.secondsFromGMT(for: march) == -7 * 3_600)
+    }
+
+    @Test
+    func monthNavigationReturnsLiveNowAndClearsAnchorOnEnteringCurrentMonth() throws {
+        let liveNow = try makeDate(2025, 3, 15, hour: 16, minute: 20, second: 30)
+        let january = try makeDate(2025, 1, 31, hour: 9)
+        var anchor: AnalyticsMonthNavigationAnchor?
+
+        let february = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: january,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+        let current = AnalyticsPeriodNavigation.date(
+            byMoving: 1,
+            range: .month,
+            referenceDate: february,
+            liveNow: liveNow,
+            monthAnchor: &anchor,
+            calendar: calendar
+        )
+
+        #expect(current == liveNow)
+        #expect(anchor == nil)
     }
 
     @Test
@@ -240,6 +414,30 @@ struct AnalyticsPeriodSelectionTests {
                 liveNow: liveNow,
                 calendar: calendar
             ) == AppStrings.localized("analytics.period.yesterday")
+        )
+    }
+
+    private func makeDate(
+        _ year: Int,
+        _ month: Int,
+        _ day: Int,
+        hour: Int = 0,
+        minute: Int = 0,
+        second: Int = 0,
+        calendar requestedCalendar: Calendar? = nil
+    ) throws -> Date {
+        let selectedCalendar = requestedCalendar ?? calendar
+        return try #require(
+            selectedCalendar.date(
+                from: DateComponents(
+                    year: year,
+                    month: month,
+                    day: day,
+                    hour: hour,
+                    minute: minute,
+                    second: second
+                )
+            )
         )
     }
 }

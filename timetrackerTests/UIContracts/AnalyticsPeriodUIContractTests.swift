@@ -7,6 +7,8 @@ struct AnalyticsPeriodUIContractTests {
     func analyticsUsesOneAdaptiveNativeFilterRowWithoutRedundantVisibleLabels() throws {
         let section = try sourceText("timetracker/Features/Analytics/AnalyticsPeriodSection.swift")
         let controls = try sourceText("timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift")
+        let root = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let detail = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
 
         #expect(section.contains("Section {\n            AnalyticsPeriodFilter("))
         #expect(section.contains("} header:") == false)
@@ -29,6 +31,12 @@ struct AnalyticsPeriodUIContractTests {
         )
         #expect(controls.components(separatedBy: ".frame(minHeight: 44)").count - 1 >= 2)
         #expect(controls.contains("AnalyticsPeriodNavigation.date("))
+        #expect(root.contains("@State private var monthNavigationAnchor"))
+        #expect(root.contains("monthNavigationAnchor: $monthNavigationAnchor"))
+        #expect(detail.contains("@Binding var monthNavigationAnchor"))
+        #expect(detail.contains("monthNavigationAnchor: $monthNavigationAnchor"))
+        #expect(section.contains("@Binding var monthNavigationAnchor"))
+        #expect(controls.contains("monthNavigationAnchor = nil"))
     }
 
     @Test
@@ -45,6 +53,7 @@ struct AnalyticsPeriodUIContractTests {
         ] {
             #expect(controls.contains("\"" + identifier + "\""))
         }
+        #expect(!controls.contains(".accessibilityIdentifier(\"analytics.periodControl\")"))
         #expect(controls.contains("analytics.period.returnToToday"))
         #expect(summary.contains(".accessibilityIdentifier(\"analytics.summary\")"))
         #expect(english.contains("\"analytics.period.returnToToday\" = \"Go to Today\";"))

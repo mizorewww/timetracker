@@ -80,7 +80,12 @@ nonisolated extension AnalyticsRange {
         case .week:
             return calendar.date(byAdding: .weekOfYear, value: value, to: date)
         case .month:
-            return calendar.date(byAdding: .month, value: value, to: date)
+            // Month identity moves from its canonical boundary. Navigation
+            // reapplies the user's independent day/time anchor afterward.
+            guard let monthStart = interval(containing: date, calendar: calendar)?.start else {
+                return nil
+            }
+            return calendar.date(byAdding: .month, value: value, to: monthStart)
         }
     }
 }

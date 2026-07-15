@@ -246,6 +246,42 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsMonthNavigationReturnsToTheCurrentPeriod() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics month navigation screenshots require an iOS simulator.")
+        #else
+        let app = launchApp(route: "analytics")
+
+        XCTAssertTrue(analyticsIsReady(in: app))
+        let month = app.segmentedControls.buttons["Month"].firstMatch
+        XCTAssertTrue(month.waitForExistence(timeout: 5) && month.isHittable)
+        activate(month)
+        XCTAssertTrue(analyticsIsReady(in: app))
+
+        let previous = app.buttons["analytics.period.previous"].firstMatch
+        let next = app.buttons["analytics.period.next"].firstMatch
+        XCTAssertTrue(previous.waitForExistence(timeout: 5) && previous.isHittable)
+        XCTAssertFalse(next.isEnabled)
+
+        activate(previous)
+        let enabledExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"),
+            object: next
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [enabledExpectation], timeout: 5), .completed)
+        try capture("iphone-analytics-previous-month", app: app)
+
+        activate(next)
+        let disabledExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == false"),
+            object: next
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [disabledExpectation], timeout: 5), .completed)
+        try capture("iphone-analytics-current-month-restored", app: app)
+        #endif
+    }
+
+    @MainActor
     func testUIRefactorBaselineScreenshots() throws {
         let app = launchApp()
 

@@ -4,6 +4,7 @@ struct AnalyticsPeriodNavigator: View {
     let range: AnalyticsRange
     @Binding var referenceDate: Date
     let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
     private var isCurrentPeriod: Bool {
         range.isCurrentPeriod(referenceDate, liveNow: liveNow)
@@ -28,7 +29,6 @@ struct AnalyticsPeriodNavigator: View {
             }
         }
         .buttonStyle(.borderless)
-        .accessibilityIdentifier("analytics.periodControl")
     }
 
     private var previousButton: some View {
@@ -45,7 +45,7 @@ struct AnalyticsPeriodNavigator: View {
     private var datePicker: some View {
         DatePicker(
             AppStrings.localized("analytics.period.select"),
-            selection: $referenceDate,
+            selection: dateSelection,
             in: ...liveNow,
             displayedComponents: .date
         )
@@ -67,6 +67,7 @@ struct AnalyticsPeriodNavigator: View {
 
     private var todayButton: some View {
         Button {
+            monthNavigationAnchor = nil
             referenceDate = liveNow
         } label: {
             ViewThatFits(in: .horizontal) {
@@ -102,13 +103,27 @@ struct AnalyticsPeriodNavigator: View {
         .help(label)
     }
 
+    private var dateSelection: Binding<Date> {
+        Binding(
+            get: { referenceDate },
+            set: { selectedDate in
+                monthNavigationAnchor = nil
+                referenceDate = selectedDate
+            }
+        )
+    }
+
     private func movePeriod(by value: Int) {
-        referenceDate = AnalyticsPeriodNavigation.date(
+        var anchor = monthNavigationAnchor
+        let destination = AnalyticsPeriodNavigation.date(
             byMoving: value,
             range: range,
             referenceDate: referenceDate,
-            liveNow: liveNow
+            liveNow: liveNow,
+            monthAnchor: &anchor
         )
+        monthNavigationAnchor = anchor
+        referenceDate = destination
     }
 }
 
@@ -166,10 +181,85 @@ enum AnalyticsPeriodNavigation {
         range: AnalyticsRange,
         referenceDate: Date,
         liveNow: Date,
+        monthAnchor: inout AnalyticsMonthNavigationAnchor?,
         calendar: Calendar = .current
     ) -> Date {
-        let next = range.date(byAdding: value, to: referenceDate, calendar: calendar) ?? referenceDate
+        guard range == .month else {
+            monthAnchor = nil
+            let next = range.date(byAdding: value, to: referenceDate, calendar: calendar)
+                ?? referenceDate
+            return min(next, liveNow)
+        }
+
+        let anchor = monthAnchor
+            ?? AnalyticsMonthNavigationAnchor(referenceDate: referenceDate, calendar: calendar)
+        monthAnchor = anchor
+
+        guard let targetMonthStart = range.date(
+            byAdding: value,
+            to: referenceDate,
+            calendar: calendar
+        ),
+              let targetMonth = range.interval(
+                  containing: targetMonthStart,
+                  calendar: calendar
+              ),
+              let currentMonth = range.interval(containing: liveNow, calendar: calendar) else {
+            return min(referenceDate, liveNow)
+        }
+
+        guard targetMonth.start < currentMonth.start else {
+            monthAnchor = nil
+            return liveNow
+        }
+
+        let next = anchor.date(in: targetMonth, calendar: calendar) ?? targetMonth.start
         return min(next, liveNow)
+    }
+}
+
+nonisolated struct AnalyticsMonthNavigationAnchor: Hashable, Sendable {
+    let day: Int
+    let hour: Int
+    let minute: Int
+    let second: Int
+
+    init(referenceDate: Date, calendar: Calendar) {
+        let components = calendar.dateComponents(
+            [.day, .hour, .minute, .second],
+            from: referenceDate
+        )
+        day = components.day ?? 1
+        hour = components.hour ?? 0
+        minute = components.minute ?? 0
+        second = components.second ?? 0
+    }
+
+    func date(in month: DateInterval, calendar: Calendar) -> Date? {
+        guard let validDays = calendar.range(of: .day, in: .month, for: month.start) else {
+            return nil
+        }
+        // Clamp only this destination; retaining `day` lets a later, longer
+        // month recover the original selection (Jan 31 → Feb 28 → Mar 31).
+        let clampedDay = min(max(day, validDays.lowerBound), validDays.upperBound - 1)
+        guard let targetDay = calendar.date(
+            byAdding: .day,
+            value: clampedDay - validDays.lowerBound,
+            to: month.start
+        ),
+              let anchoredDate = calendar.date(
+                  bySettingHour: hour,
+                  minute: minute,
+                  second: second,
+                  of: targetDay,
+                  matchingPolicy: .nextTimePreservingSmallerComponents,
+                  repeatedTimePolicy: .first,
+                  direction: .forward
+              ),
+              month.contains(anchoredDate) else {
+            return nil
+        }
+        return anchoredDate
     }
 }
 

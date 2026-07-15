@@ -4,13 +4,15 @@ struct AnalyticsPeriodSection: View {
     @Binding var range: AnalyticsRange
     @Binding var referenceDate: Date
     let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
     var body: some View {
         Section {
             AnalyticsPeriodFilter(
                 range: $range,
                 referenceDate: $referenceDate,
-                liveNow: liveNow
+                liveNow: liveNow,
+                monthNavigationAnchor: $monthNavigationAnchor
             )
         }
     }
@@ -22,6 +24,7 @@ private struct AnalyticsPeriodFilter: View {
     @Binding var range: AnalyticsRange
     @Binding var referenceDate: Date
     let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -31,7 +34,8 @@ private struct AnalyticsPeriodFilter: View {
                 AnalyticsPeriodNavigator(
                     range: range,
                     referenceDate: $referenceDate,
-                    liveNow: liveNow
+                    liveNow: liveNow,
+                    monthNavigationAnchor: $monthNavigationAnchor
                 )
                 .fixedSize(horizontal: true, vertical: false)
             }
@@ -41,7 +45,8 @@ private struct AnalyticsPeriodFilter: View {
                 AnalyticsPeriodNavigator(
                     range: range,
                     referenceDate: $referenceDate,
-                    liveNow: liveNow
+                    liveNow: liveNow,
+                    monthNavigationAnchor: $monthNavigationAnchor
                 )
             }
         }

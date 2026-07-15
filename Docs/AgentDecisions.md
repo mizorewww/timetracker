@@ -584,6 +584,18 @@
 
 验证：行为测试覆盖当前日排除昨日下午、当前周与月的同日序/同钟点、夏令时跳时日的本地 noon 对齐、3 月 31 日映射到 2 月末、完整历史月 full-to-full，以及未来月的双零长度窗口；三语本地化 parity 继续通过。
 
+## AD-045：Analytics 月导航保留原始日号锚点
+
+状态：Accepted
+
+背景：直接对当前参考日期执行 `Calendar.date(byAdding: .month, ...)` 会把不存在的日期夹到短月末，并把这个临时结果误当成下一步锚点。因此 Jan 31 → Feb 28 后继续前进会落在 Mar 28，而不是恢复到 Mar 31。单纯改用月份 interval start 又会丢失用户选择的日号与日内时间；把锚点放在 `ViewThatFits` 的某个分支或 landing 页面局部状态，还会在宽窄布局切换或进入详情时再次丢失。
+
+决策：月份身份只通过所选月份的 `Calendar.dateInterval(of: .month).start` 做月位移。`AnalyticsMonthNavigationAnchor` 独立保存连续导航开始时的本地 day/hour/minute/second；把锚点映射到目标月时，日号只对该月的有效 day range clamp，锚点自身不变，并使用 Calendar 的匹配策略处理本地时区与 DST。根 `AnalyticsView` 持有该状态，landing、category detail 和 `ViewThatFits` 的所有 period control 共享同一 binding。直接日期选择、range 变化和 Today 操作清除旧锚点；目标月份为当前或未来时返回 `liveNow` 并清除锚点。
+
+后果：Jan 31 可以稳定往返 Feb 28/29 与 Mar 31，反向导航和 DST 偏移变化也保留原本地时分秒。用户明确选择新日期后会以新日期建立下一段导航语义；进入当前月后重新跟随真实时间。任何新增 Analytics 月导航入口都必须复用根锚点，不能自行从短月结果推导下一步日号。
+
+验证：行为测试覆盖非闰年 Jan 31 → Feb 28 → Mar 31、闰年 Feb 29、Mar 31 → Feb 28 → Jan 31、跨 DST offset 的本地时分秒，以及进入当前月返回 `liveNow` 并清除锚点。源码契约确认锚点由根页面持有、由 landing/detail 共享，日期选择与 Today 会重置它；统一签名/build/UI 验证由主 Agent 在付费开发者配置下执行。
+
 ## AD-046：Analytics 日趋势只发布已开始日期并保留秒级精度
 
 状态：Accepted

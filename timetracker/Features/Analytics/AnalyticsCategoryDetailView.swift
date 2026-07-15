@@ -8,6 +8,7 @@ struct AnalyticsCategoryDetailView: View {
     @Binding var range: AnalyticsRange
     @Binding var referenceDate: Date
     let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
     @State private var snapshot: AnalyticsSnapshot?
     @State private var loadedRequest: AnalyticsSnapshotRequest?
 
@@ -21,7 +22,12 @@ struct AnalyticsCategoryDetailView: View {
         )
 
         List {
-            AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)
+            AnalyticsPeriodSection(
+                range: $range,
+                referenceDate: $referenceDate,
+                liveNow: liveNow,
+                monthNavigationAnchor: $monthNavigationAnchor
+            )
             if let snapshot, loadedRequest == request {
                 categoryContent(snapshot: snapshot)
             } else {

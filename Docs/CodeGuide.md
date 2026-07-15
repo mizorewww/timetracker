@@ -124,6 +124,8 @@ Analytics 不能把一个历史周期压缩成单个“结束前一秒”的伪 
 
 `AnalyticsComparisonWindow` 是环比统计的唯一窗口定义。当前或未来周期使用 `.matchedProgress`：current 从周期开始裁到 cutoff，previous 按相同日序与本地时分秒映射，不能用固定秒数位移；DST 保留本地钟点，长月映射到短月时在 previous period end 截止。cutoff 精确等于已完成周期 end 时使用 `.completePeriods`，比较两个完整周期。gross、wall、指标脚注和 insight 必须消费同一个 window/basis，禁止 UI 自行推断“上一范围”。
 
+Analytics 月导航先从所选月份的 `Calendar` interval start 位移到目标月，再把根页面持有的 `AnalyticsMonthNavigationAnchor` 映射回目标月。锚点保存原始本地日号和时分秒；目标月缺少该日时只对当月结果 clamp 到月末，不修改锚点，所以 Jan 31 → Feb 28/29 后仍会得到 Mar 31。该状态由 landing 与 category detail 共用，也必须跨 `ViewThatFits` 布局分支保持一致。直接选日期、切换 range、回到今天或进入当前月会清除旧锚点；目标为当前月或未来月时返回真实 `liveNow`，不得停在未来。
+
 本地 `addManualSegment` 和 `updateSegment` 在 repository 写入前拒绝未来结束时间或未来 active start，返回 typed `TimeTrackingRepositoryError.futureTime` 与三语 `segment.error.timeNotFuture`。CloudKit、导入和旧 store 可能已含时钟偏差值；不为“修复”而删除事实，而是在每条读/聚合路径安全裁剪。DST 中的持续时长使用绝对 elapsed seconds，本地日 bucket 边界仍交给 `Calendar`。
 
 SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditorPanel` 的开始/结束 `DatePicker` 上限为当前 `now`，时长与保存 enablement 调用 `TrackedTimePolicy`。`TrackedTimeDisplaySnapshot` 是 Today timeline、Task Detail recent records 和 `DurationLabel` 的共享显示适配层；future-ended 只显示到 `now`，future-only/future-active 在开始前显示 0，已结束的固定 label 不启动每秒刷新。
@@ -175,6 +177,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 - `AnalyticsStore` 的 overview 与 task snapshot cache key 包含 range、`AnalyticsPeriodEvaluation.interval.start` 和可选 live-minute bucket，不能从 cutoff 反推 period。当前范围与活动 segment 相交时才按 `clockReference` 分钟换 key；历史/未来范围没有 live bucket。snapshot、daily、timeline、group breakdown 与 comparison 统一消费显式 period 和 cutoff；ledger 事件按相交区间失效 day bucket，跨 period 会自然 miss。
 - `LedgerBucketCache` 继续为完整 calendar period 保留稳定 daily bucket；`DailySummaryService.visibleSummaries` 只在 bucket lookup 之后按 `summary.date < clamp(cutoff, period)` 生成可见 read model。当前周/月包含正在进行的本地日但不发布未来零日，完整历史周期发布全部日，未来周期发布空数组。`DailyAnalyticsPoint` 以 `Double(seconds) / 60` 向 Chart 提供分钟值，禁止在 View 中做整数除法；Wall/Gross 必须使用显式图例、不同 mark 类型和逐点 VoiceOver 值。
 - `AnalyticsRefreshPlan` 是 Analytics 页面时钟的唯一调度 owner：活动当前范围使用与 cache bucket 完全一致的绝对分钟边界，静态当前范围等待 `Calendar` 给出的下一个本地日边界，历史范围不调度。plan identity 保留生成它的 wall-clock sample，所以同一分钟内的系统时钟回拨也会取消旧 sleep 并重新安排。`AnalyticsView` 只在 active scene 用 `.task(id:)` 持有可取消 sleep，并在 scene 激活、日历日、系统时钟或时区变化时重采样；category detail 复用根页面的 `liveNow`，不得再用全页 `TimelineView` 建立第二套刷新树。用户切换日期时必须以动作发生时的 `Date()` 判断是否重新跟随当前 period。
+- 月范围的前后导航只用 interval start 确定目标月份，不能把上一步被月末 clamp 的日期当成新的 day-of-month 锚点。`AnalyticsMonthNavigationAnchor` 必须由 Analytics 根状态持有并传到所有 period controls；手动日期选择和 range/Today 操作负责重置它。
 - `CorePerformanceBudgetTests.fiftyThousandSegmentMutationUsesConstantSizedRollupDelta` 以 50,000 个 segment 约束单 segment 增量更新和 cached recent ranking；最终是否通过仍以冻结工作树的 xcresult 为准。
 
 ## 5. 持久化、CloudKit 与迁移

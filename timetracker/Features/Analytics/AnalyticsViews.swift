@@ -12,6 +12,7 @@ struct AnalyticsView: View {
     @State private var snapshot: AnalyticsSnapshot?
     @State private var loadedRequest: AnalyticsSnapshotRequest?
     @State private var followsCurrentPeriod = true
+    @State private var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
     var body: some View {
         let effectiveReferenceDate = followsCurrentPeriod ? liveNow : referenceDate
@@ -49,7 +50,8 @@ struct AnalyticsView: View {
                     snapshot: snapshot,
                     range: $range,
                     referenceDate: effectiveReferenceDateBinding,
-                    liveNow: liveNow
+                    liveNow: liveNow,
+                    monthNavigationAnchor: $monthNavigationAnchor
                 )
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -69,7 +71,8 @@ struct AnalyticsView: View {
                 category: category,
                 range: $range,
                 referenceDate: effectiveReferenceDateBinding,
-                liveNow: liveNow
+                liveNow: liveNow,
+                monthNavigationAnchor: $monthNavigationAnchor
             )
         }
         .navigationTitle(AppStrings.analytics)
@@ -79,6 +82,7 @@ struct AnalyticsView: View {
         .accessibilityIdentifier("analytics.view")
         .background(AppColors.background)
         .onChange(of: range) { _, range in
+            monthNavigationAnchor = nil
             guard followsCurrentPeriod == false else { return }
             let actionNow = Date()
             liveNow = actionNow
@@ -119,10 +123,16 @@ private struct AnalyticsContent: View {
     @Binding var range: AnalyticsRange
     @Binding var referenceDate: Date
     let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
     var body: some View {
         List {
-            AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)
+            AnalyticsPeriodSection(
+                range: $range,
+                referenceDate: $referenceDate,
+                liveNow: liveNow,
+                monthNavigationAnchor: $monthNavigationAnchor
+            )
 
             Section {
                 AnalyticsHomeSummaryRow(snapshot: snapshot)

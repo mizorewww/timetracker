@@ -425,7 +425,8 @@ struct TaskUIContractTests {
 
         #expect(analyticsSource.contains("case decisions"))
         #expect(analyticsSource.contains(".accessibilityIdentifier(\"analytics.decisionSummary\")"))
-        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)"))
+        #expect(analyticsSource.contains("AnalyticsPeriodSection("))
+        #expect(analyticsSource.contains("monthNavigationAnchor: $monthNavigationAnchor"))
         #expect(analyticsSource.contains("range.evaluation("))
         #expect(analyticsSource.contains("analyticsSnapshot(for: range, evaluation: evaluation)"))
         #expect(analyticsSource.contains("TimelineView") == false)
@@ -454,7 +455,8 @@ struct TaskUIContractTests {
         .joined(separator: "\n")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(analyticsSource.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)"))
+        #expect(analyticsSource.contains("AnalyticsPeriodSection("))
+        #expect(analyticsSource.contains("monthNavigationAnchor: $monthNavigationAnchor"))
         #expect(analyticsSource.contains("AnalyticsGlossaryList()"))
         #expect(englishStrings.contains("\"analytics.glossary.gross\""))
         #expect(englishStrings.contains("\"analytics.glossary.wall\""))
@@ -625,7 +627,8 @@ struct TaskUIContractTests {
         let trends = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift")
         let timeline = try sourceText("timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift")
 
-        #expect(analytics.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)"))
+        #expect(analytics.contains("AnalyticsPeriodSection("))
+        #expect(analytics.contains("monthNavigationAnchor: $monthNavigationAnchor"))
         #expect(distribution.contains("if displayedSlices.isEmpty"))
         #expect(distribution.contains(".accessibilityLabel(slice.accessibilityTitle)"))
         #expect(trends.contains("daily.allSatisfy"))

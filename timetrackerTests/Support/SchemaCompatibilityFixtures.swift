@@ -19,60 +19,67 @@ struct LegacyV4CategoryStoreFixture {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let storeURL = directory.appending(path: "store.sqlite")
-        let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV4.self)
-        let legacyConfiguration = ModelConfiguration(
-            "LegacyV4",
-            schema: legacySchema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let legacyContainer = try ModelContainer(
-            for: legacySchema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [legacyConfiguration]
-        )
-        let legacyContext = ModelContext(legacyContainer)
-        let category = TimeTrackerSchemaV4.TaskCategory(
-            title: categoryTitle,
-            deviceID: deviceID,
-            colorHex: "1677FF",
-            iconName: "briefcase",
-            includesInForecast: true
-        )
-        let root = TimeTrackerSchemaV4.TaskNode(
-            title: rootTitle,
-            parentID: nil,
-            deviceID: deviceID,
-            categoryID: category.id,
-            colorHex: nil,
-            iconName: nil
-        )
-        legacyContext.insert(category)
-        legacyContext.insert(root)
-        try legacyContext.save()
+        let ids = try autoreleasepool {
+            let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV4.self)
+            let legacyConfiguration = ModelConfiguration(
+                "LegacyV4",
+                schema: legacySchema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let legacyContainer = try ModelContainer(
+                for: legacySchema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [legacyConfiguration]
+            )
+            let legacyContext = ModelContext(legacyContainer)
+            let category = TimeTrackerSchemaV4.TaskCategory(
+                title: categoryTitle,
+                deviceID: deviceID,
+                colorHex: "1677FF",
+                iconName: "briefcase",
+                includesInForecast: true
+            )
+            let root = TimeTrackerSchemaV4.TaskNode(
+                title: rootTitle,
+                parentID: nil,
+                deviceID: deviceID,
+                categoryID: category.id,
+                colorHex: nil,
+                iconName: nil
+            )
+            legacyContext.insert(category)
+            legacyContext.insert(root)
+            try legacyContext.save()
+            return (root.id, category.id)
+        }
 
         return LegacyV4CategoryStoreFixture(
             directory: directory,
             storeURL: storeURL,
-            rootTaskID: root.id,
-            categoryID: category.id
+            rootTaskID: ids.0,
+            categoryID: ids.1
         )
     }
 
-    func makeCurrentContext() throws -> ModelContext {
-        let currentSchema = TimeTrackerModelRegistry.currentSchema
-        let currentConfiguration = ModelConfiguration(
-            "LegacyV4",
-            schema: currentSchema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let currentContainer = try ModelContainer(
-            for: currentSchema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [currentConfiguration]
-        )
-        return ModelContext(currentContainer)
+    func withCurrentContext<Result>(
+        _ body: (ModelContext) throws -> Result
+    ) throws -> Result {
+        try autoreleasepool {
+            let currentSchema = TimeTrackerModelRegistry.currentSchema
+            let currentConfiguration = ModelConfiguration(
+                "LegacyV4",
+                schema: currentSchema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let currentContainer = try ModelContainer(
+                for: currentSchema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [currentConfiguration]
+            )
+            return try body(ModelContext(currentContainer))
+        }
     }
 
     func remove() {
@@ -92,53 +99,60 @@ struct LegacyV8DailySummaryStoreFixture {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let storeURL = directory.appending(path: "store.sqlite")
-        let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV8.self)
-        let legacyConfiguration = ModelConfiguration(
-            "LegacyV8",
-            schema: legacySchema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let legacyContainer = try ModelContainer(
-            for: legacySchema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [legacyConfiguration]
-        )
-        let legacyContext = ModelContext(legacyContainer)
-        let task = TaskNode(title: "V8 task", parentID: nil, deviceID: "legacy")
-        let summary = DailySummary(
-            date: Date(timeIntervalSinceReferenceDate: 100_000),
-            taskID: task.id,
-            grossSeconds: 900,
-            wallClockSeconds: 900,
-            pomodoroCount: 1,
-            interruptionCount: 0
-        )
-        legacyContext.insert(task)
-        legacyContext.insert(summary)
-        try legacyContext.save()
+        let taskID = try autoreleasepool {
+            let legacySchema = Schema(versionedSchema: TimeTrackerSchemaV8.self)
+            let legacyConfiguration = ModelConfiguration(
+                "LegacyV8",
+                schema: legacySchema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let legacyContainer = try ModelContainer(
+                for: legacySchema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [legacyConfiguration]
+            )
+            let legacyContext = ModelContext(legacyContainer)
+            let task = TaskNode(title: "V8 task", parentID: nil, deviceID: "legacy")
+            let summary = DailySummary(
+                date: Date(timeIntervalSinceReferenceDate: 100_000),
+                taskID: task.id,
+                grossSeconds: 900,
+                wallClockSeconds: 900,
+                pomodoroCount: 1,
+                interruptionCount: 0
+            )
+            legacyContext.insert(task)
+            legacyContext.insert(summary)
+            try legacyContext.save()
+            return task.id
+        }
 
         return LegacyV8DailySummaryStoreFixture(
             directory: directory,
             storeURL: storeURL,
-            taskID: task.id
+            taskID: taskID
         )
     }
 
-    func makeCurrentContext() throws -> ModelContext {
-        let currentSchema = TimeTrackerModelRegistry.currentSchema
-        let currentConfiguration = ModelConfiguration(
-            "LegacyV8",
-            schema: currentSchema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let currentContainer = try ModelContainer(
-            for: currentSchema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [currentConfiguration]
-        )
-        return ModelContext(currentContainer)
+    func withCurrentContext<Result>(
+        _ body: (ModelContext) throws -> Result
+    ) throws -> Result {
+        try autoreleasepool {
+            let currentSchema = TimeTrackerModelRegistry.currentSchema
+            let currentConfiguration = ModelConfiguration(
+                "LegacyV8",
+                schema: currentSchema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let currentContainer = try ModelContainer(
+                for: currentSchema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [currentConfiguration]
+            )
+            return try body(ModelContext(currentContainer))
+        }
     }
 
     func remove() {

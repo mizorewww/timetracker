@@ -20,11 +20,16 @@ struct TaskCategoryTests {
     func legacyV4CategoryStoreMigratesToCurrentSchema() throws {
         let fixture = try LegacyV4CategoryStoreFixture.create()
         defer { fixture.remove() }
-        let currentContext = try fixture.makeCurrentContext()
-
-        #expect(try currentContext.fetch(FetchDescriptor<TaskNode>()).map(\.title) == ["Legacy Root"])
-        #expect(try currentContext.fetch(FetchDescriptor<TaskCategory>()).map(\.title) == ["Work"])
-        #expect(try currentContext.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [fixture.categoryID])
+        try fixture.withCurrentContext { currentContext in
+            let taskTitles = try currentContext.fetch(FetchDescriptor<TaskNode>()).map(\.title)
+            let categoryTitles = try currentContext.fetch(FetchDescriptor<TaskCategory>()).map(\.title)
+            let assignmentCategoryIDs = try currentContext
+                .fetch(FetchDescriptor<TaskCategoryAssignment>())
+                .map(\.categoryID)
+            #expect(taskTitles == ["Legacy Root"])
+            #expect(categoryTitles == ["Work"])
+            #expect(assignmentCategoryIDs == [fixture.categoryID])
+        }
     }
 
     @Test @MainActor

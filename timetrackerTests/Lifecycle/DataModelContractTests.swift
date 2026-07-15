@@ -302,11 +302,12 @@ struct DataModelContractTests {
         let fixture = try LegacyV8DailySummaryStoreFixture.create()
         defer { fixture.remove() }
 
-        let context = try fixture.makeCurrentContext()
-
-        #expect(try context.fetch(FetchDescriptor<TaskNode>()).map(\.id) == [fixture.taskID])
-        #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-        #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV10.versionIdentifier)
+        try fixture.withCurrentContext { context in
+            let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
+            #expect(taskIDs == [fixture.taskID])
+            #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
+            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV10.versionIdentifier)
+        }
     }
 
     @Test @MainActor

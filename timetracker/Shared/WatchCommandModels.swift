@@ -24,6 +24,10 @@ nonisolated struct WatchTimerCommand: Codable, Equatable, Identifiable, Sendable
 }
 
 nonisolated extension WatchTimerCommand {
+    func targetsSameAction(as other: WatchTimerCommand) -> Bool {
+        type == other.type && taskID == other.taskID && segmentID == other.segmentID
+    }
+
     var isStructurallyValid: Bool {
         guard WatchTransportLimits.isFinite(issuedAt),
               deviceID.isEmpty == false,
@@ -195,7 +199,16 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
     private(set) var pendingCommands: [WatchTimerCommand] = []
     private(set) var failedCommands: [WatchFailedCommand] = []
 
-    mutating func enqueue(_ command: WatchTimerCommand) {
+    @discardableResult
+    mutating func enqueue(_ command: WatchTimerCommand) -> Bool {
+        let queuedCommands = pendingCommands + failedCommands.map(\.command)
+        guard queuedCommands.allSatisfy({
+            $0.id != command.id || $0.targetsSameAction(as: command)
+        }), !queuedCommands.contains(where: {
+            $0.id != command.id && $0.targetsSameAction(as: command)
+        }) else {
+            return false
+        }
         pendingCommands.removeAll { $0.id == command.id }
         failedCommands.removeAll { $0.id == command.id }
         pendingCommands.append(command)
@@ -203,7 +216,7 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
             0,
             pendingCommands.count - WatchTransportLimits.maximumPersistedPendingCommands
         )
-        guard overflowCount > 0 else { return }
+        guard overflowCount > 0 else { return true }
         let overflowedCommands = pendingCommands.prefix(overflowCount)
         pendingCommands.removeFirst(overflowCount)
         for overflowedCommand in overflowedCommands {
@@ -217,6 +230,7 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
                 )
             )
         }
+        return true
     }
 
     @discardableResult
@@ -259,7 +273,7 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
             return nil
         }
         command.issuedAt = issuedAt
-        enqueue(command)
+        guard enqueue(command) else { return nil }
         return command
     }
 
@@ -294,8 +308,11 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
               }) else {
             return false
         }
-        let commandIDs = pendingCommands.map(\.id) + failedCommands.map(\.id)
-        return Set(commandIDs).count == commandIDs.count
+        let commands = pendingCommands + failedCommands.map(\.command)
+        guard Set(commands.map(\.id)).count == commands.count else { return false }
+        return commands.indices.allSatisfy { index in
+            !commands[..<index].contains { $0.targetsSameAction(as: commands[index]) }
+        }
     }
 
     private mutating func appendFailedCommand(_ failedCommand: WatchFailedCommand) {

@@ -185,6 +185,68 @@ struct CoreWatchCommandTests {
     }
 
     @Test
+    func watchCommandQueueRejectsEquivalentActionsWithDifferentIdempotencyKeys() throws {
+        let taskID = UUID()
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 250)
+        let original = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: taskID,
+            segmentID: nil,
+            issuedAt: issuedAt,
+            deviceID: "watch"
+        )
+        var duplicate = original
+        duplicate.id = UUID()
+        duplicate.issuedAt = issuedAt.addingTimeInterval(1)
+        var reusedKey = original
+        reusedKey.type = .stopSegment
+        reusedKey.taskID = nil
+        reusedKey.segmentID = UUID()
+        let distinct = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: UUID(),
+            segmentID: nil,
+            issuedAt: issuedAt,
+            deviceID: "watch"
+        )
+        var queue = WatchCommandQueueState()
+
+        let acceptedOriginal = queue.enqueue(original)
+        let acceptedDuplicate = queue.enqueue(duplicate)
+        let acceptedReusedKey = queue.enqueue(reusedKey)
+        let acceptedDistinct = queue.enqueue(distinct)
+        #expect(acceptedOriginal)
+        #expect(acceptedDuplicate == false)
+        #expect(acceptedReusedKey == false)
+        #expect(acceptedDistinct)
+        #expect(queue.pendingCommands == [original, distinct])
+
+        let unsafePayload = WatchCommandQueueFixture(
+            pendingCommands: [original, duplicate],
+            failedCommands: []
+        )
+        let restoredQueue = try JSONDecoder().decode(
+            WatchCommandQueueState.self,
+            from: JSONEncoder().encode(unsafePayload)
+        )
+        #expect(restoredQueue.isSafeForRestoration == false)
+
+        _ = queue.timeOut(commandID: original.id, completedAt: issuedAt.addingTimeInterval(20))
+        let acceptedAfterFailure = queue.enqueue(duplicate)
+        #expect(acceptedAfterFailure == false)
+        let retryCommand = queue.retry(
+            commandID: original.id,
+            issuedAt: issuedAt.addingTimeInterval(21)
+        )
+        let retry = try #require(retryCommand)
+        #expect(retry.id == original.id)
+        #expect(queue.failedCommands.isEmpty)
+        #expect(queue.pendingCommands == [distinct, retry])
+    }
+
+    @Test
     func failedWatchCommandCanBeDiscardedAndLateSnapshotSuccessClearsTimeout() throws {
         let taskID = UUID()
         let command = WatchTimerCommand(
@@ -978,4 +1040,9 @@ private func watchSnapshot(
         activeTimers: activeTimers,
         recentTasks: []
     )
+}
+
+private struct WatchCommandQueueFixture: Encodable {
+    let pendingCommands: [WatchTimerCommand]
+    let failedCommands: [WatchFailedCommand]
 }

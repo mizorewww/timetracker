@@ -41,7 +41,7 @@ extension WatchAppStore {
     }
 
     func submit(_ command: WatchTimerCommand) {
-        commandQueue.enqueue(command)
+        guard commandQueue.enqueue(command) else { return }
         scheduleConfirmationTimeout(for: command)
         transmit(command)
     }

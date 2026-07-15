@@ -584,6 +584,12 @@
 "checklist.moreFormat" = "還有 %d 項";
 "checklist.showLess" = "收起";
 "checklist.keepCompletedHint" = "盡量保留已完成項；刪除它們會移除用於估算的進度歷史。";
+"checklist.draft.field.title" = "標題";
+"checklist.draft.field.icon" = "符號";
+"checklist.draft.field.color" = "顏色";
+"checklist.draft.error.titleRequiredFormat" = "清單第 %d 項需要填寫標題。";
+"checklist.draft.error.controlCharacterFormat" = "清單第 %d 項的%@包含不支援的字元。";
+"checklist.draft.error.tooLongFormat" = "清單第 %d 項的%@內容過長，請縮短後再試。";
 "editor.task.info" = "基本資訊";
 "editor.task.name" = "任務名稱";
 "editor.task.status" = "狀態";

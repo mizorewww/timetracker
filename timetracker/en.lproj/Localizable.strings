@@ -584,6 +584,12 @@
 "checklist.moreFormat" = "%d more";
 "checklist.showLess" = "Show less";
 "checklist.keepCompletedHint" = "Keep completed items when possible; deleting them removes progress history used for estimates.";
+"checklist.draft.field.title" = "title";
+"checklist.draft.field.icon" = "symbol";
+"checklist.draft.field.color" = "color";
+"checklist.draft.error.titleRequiredFormat" = "Checklist item %d needs a title.";
+"checklist.draft.error.controlCharacterFormat" = "Checklist item %d contains unsupported characters in its %@.";
+"checklist.draft.error.tooLongFormat" = "Checklist item %d has too much text in its %@. Shorten it and try again.";
 "editor.task.info" = "Info";
 "editor.task.name" = "Task Name";
 "editor.task.status" = "Status";

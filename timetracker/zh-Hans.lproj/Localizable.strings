@@ -584,6 +584,12 @@
 "checklist.moreFormat" = "还有 %d 项";
 "checklist.showLess" = "收起";
 "checklist.keepCompletedHint" = "尽量保留已完成项；删除它们会移除用于估算的进度历史。";
+"checklist.draft.field.title" = "标题";
+"checklist.draft.field.icon" = "符号";
+"checklist.draft.field.color" = "颜色";
+"checklist.draft.error.titleRequiredFormat" = "清单第 %d 项需要填写标题。";
+"checklist.draft.error.controlCharacterFormat" = "清单第 %d 项的%@包含不支持的字符。";
+"checklist.draft.error.tooLongFormat" = "清单第 %d 项的%@内容过长，请缩短后重试。";
 "editor.task.info" = "基本信息";
 "editor.task.name" = "任务名称";
 "editor.task.status" = "状态";

@@ -46,9 +46,7 @@ struct InboxCaptureRow: View {
 
     private func submitIfNeeded() {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        if submit() {
-            title = ""
-        }
+        _ = submit()
         isFocused = true
     }
 
@@ -56,9 +54,7 @@ struct InboxCaptureRow: View {
         if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             isFocused = true
         } else {
-            if submit() {
-                title = ""
-            }
+            _ = submit()
             isFocused = true
         }
     }

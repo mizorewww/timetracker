@@ -1,7 +1,8 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func addInboxItem(title: String) {
+    @discardableResult
+    func addInboxItem(title: String) -> Bool {
         perform(event: .inboxChanged(itemIDs: [])) {
             guard let modelContext else { throw StoreError.notConfigured }
             try inboxCommandHandler.add(

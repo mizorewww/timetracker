@@ -6,6 +6,35 @@ import Testing
 @Suite(.serialized)
 struct CoreInboxStoreTests {
     @Test @MainActor
+    func captureDraftClearsOnlyAfterTheStoreCommits() {
+        var draft = InboxCaptureDraft(title: "  Keep this thought  ")
+        var attemptedTitles: [String] = []
+
+        let failed = draft.submit { title in
+            attemptedTitles.append(title)
+            return false
+        }
+
+        #expect(!failed)
+        #expect(draft.title == "  Keep this thought  ")
+        #expect(attemptedTitles == ["Keep this thought"])
+
+        let store = TimeTrackerStore()
+        let storeFailed = draft.submit(using: store.addInboxItem(title:))
+        #expect(!storeFailed)
+        #expect(draft.title == "  Keep this thought  ")
+        #expect(store.inboxItems.isEmpty)
+
+        let committed = draft.submit { title in
+            attemptedTitles.append(title)
+            return true
+        }
+        #expect(committed)
+        #expect(draft.title.isEmpty)
+        #expect(attemptedTitles == ["Keep this thought", "Keep this thought"])
+    }
+
+    @Test @MainActor
     func automaticChecklistVisualSuggestionsKeepAThreeRequestPeak() async throws {
         let probe = LLMSuggestionConcurrencyProbe()
         let service = LLMChecklistVisualSuggestionService { request in

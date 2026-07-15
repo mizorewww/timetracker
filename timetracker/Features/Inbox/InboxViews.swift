@@ -2,7 +2,7 @@ import SwiftUI
 
 struct InboxView: View {
     let store: TimeTrackerStore
-    @State private var draftTitle = ""
+    @State private var draft = InboxCaptureDraft()
     @State private var addFocusToken = 0
     @State private var isSorting = false
     #if os(iOS)
@@ -68,7 +68,7 @@ struct InboxView: View {
         List {
             Section {
                 InboxCaptureRow(
-                    title: $draftTitle,
+                    title: $draft.title,
                     placeholder: AppStrings.localized("inbox.addPlaceholder"),
                     focusToken: addFocusToken,
                     submit: submitDraft
@@ -153,14 +153,21 @@ struct InboxView: View {
 
     @discardableResult
     private func submitDraft() -> Bool {
-        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else {
-            focusCaptureField()
+        let didAdd = draft.submit(using: store.addInboxItem(title:))
+        focusCaptureField()
+        return didAdd
+    }
+}
+
+struct InboxCaptureDraft: Equatable {
+    var title = ""
+
+    mutating func submit(using addItem: (String) -> Bool) -> Bool {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty, addItem(normalizedTitle) else {
             return false
         }
-        store.addInboxItem(title: title)
-        draftTitle = ""
-        focusCaptureField()
+        title = ""
         return true
     }
 }

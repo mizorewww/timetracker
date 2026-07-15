@@ -170,6 +170,60 @@ struct CoreLegacyCountdownMigrationTests {
         #expect(defaults.object(forKey: LegacyCountdownMigrationPolicy.payloadKey) == nil)
     }
 
+    @Test @MainActor
+    func failedSaveKeepsLegacyPayloadAndMigrationFlagRetryable() throws {
+        let defaults = try makeDefaults()
+        defer { clear(defaults) }
+        let payload = "[{\"title\":\"Retry me\",\"date\":\"2030-01-01T00:00:00Z\"}]"
+        defaults.set(payload, forKey: LegacyCountdownMigrationPolicy.payloadKey)
+
+        let storeDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "ReadOnlyCountdownMigrationTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: storeDirectory) }
+        let storeURL = storeDirectory.appending(path: "countdown.store")
+        let schema = TimeTrackerModelRegistry.currentSchema
+        try initializeWritableStore(at: storeURL, schema: schema)
+        let configuration = ModelConfiguration(
+            "ReadOnlyCountdownMigrationTests-\(UUID().uuidString)",
+            schema: schema,
+            url: storeURL,
+            allowsSave: false,
+            cloudKitDatabase: .none
+        )
+        let container = try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
+        let context = ModelContext(container)
+
+        #expect(throws: (any Error).self) {
+            try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+                context: context,
+                defaults: defaults,
+                deviceID: "test"
+            )
+        }
+        #expect(!defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey))
+        #expect(defaults.string(forKey: LegacyCountdownMigrationPolicy.payloadKey) == payload)
+    }
+
+    @MainActor
+    private func initializeWritableStore(at url: URL, schema: Schema) throws {
+        let configuration = ModelConfiguration(
+            "WritableCountdownMigrationTests-\(UUID().uuidString)",
+            schema: schema,
+            url: url,
+            cloudKitDatabase: .none
+        )
+        _ = try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
+    }
+
     private func makeDefaults() throws -> UserDefaults {
         let suiteName = "CoreLegacyCountdownMigrationTests-\(UUID().uuidString)"
         return try #require(UserDefaults(suiteName: suiteName))

@@ -187,6 +187,15 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Sidebar/SidebarViews.swift",
             "timetracker/Features/Sidebar/SidebarDestinationViews.swift",
             "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift",
+            "timetracker/Features/Pomodoro/PomodoroViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroActiveViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroFocusSetupControls.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroLedgerViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupEmptyState.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift",
+            "timetracker/Features/Analytics/AnalyticsViews.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
@@ -318,6 +327,30 @@ struct CoreSourceLayoutTests {
 
         for fileName in focusedFiles {
             let file = settingsURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func pomodoroFeatureFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let pomodoroURL = root.appending(path: "timetracker/Features/Pomodoro")
+        let focusedFiles = [
+            "PomodoroViews.swift",
+            "Sections/PomodoroActiveViews.swift",
+            "Sections/PomodoroFocusSetupControls.swift",
+            "Sections/PomodoroLedgerViews.swift",
+            "Sections/PomodoroSetupEmptyState.swift",
+            "Sections/PomodoroSetupSelectionViews.swift",
+            "Sections/PomodoroSetupViews.swift",
+            "Sections/PomodoroTimerFace.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = pomodoroURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8)
                 .split(separator: "\n", omittingEmptySubsequences: false)
                 .count

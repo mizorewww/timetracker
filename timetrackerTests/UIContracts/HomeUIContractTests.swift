@@ -150,7 +150,11 @@ struct HomeUIContractTests {
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift",
-            "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift"
+            "timetracker/Features/Pomodoro/Sections/PomodoroFocusSetupControls.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupEmptyState.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

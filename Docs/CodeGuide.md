@@ -101,7 +101,7 @@
 
 ### 当前平台 UI 合同
 
-- iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Pomodoro、Analytics）；Settings 是 Today 导航栈中的目的地。
+- iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Focus、Analytics）；Settings 是 Today 导航栈中的目的地。`nav.focus` 是 iPhone tab、iPad sidebar、macOS sidebar 与 Focus 页面标题的统一导航文案；`nav.pomodoro` 仍只描述账本来源、设置和分析中的 Pomodoro 领域，不得拿它恢复平台间不一致的导航标题。
 - iPad：regular width 使用 `NavigationSplitView` 侧边栏与详情；compact width 使用五标签根导航。从侧边栏或任务列表选择任务会打开同一个 `TaskDetailView`。
 - macOS：单实例主 `Window` 承载 `NavigationSplitView` 工作区；独立系统 Settings scene、主窗口和 Settings 共享一个应用级 `TimeTrackerStore`，避免复制 CloudKit observers、自动 AI 建议与系统表面同步。
 - Today：iPhone 使用 `List`，顺序为 Now、Overview、Quick Start、Timeline、Forecast、Countdown。iPad/macOS 共享 `TodayHomeContent`；详情 viewport 扣除两侧 page padding、再受 1180 pt 上限约束后才得到实际内容宽度。该宽度达到 1000 pt 且存在辅助内容时，Quick Start/Timeline 进入主栏，Forecast/Countdown 进入 360 pt 辅助栏，否则保持单栏。Today 只有一个当前计时入口：无活动计时时为 Start Timer；有活动计时时根据并行偏好显示 Start Another Timer 或 Switch Timer。通用新建任务只存在于任务域和任务选择器，不与计时主操作竞争。

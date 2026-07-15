@@ -164,7 +164,7 @@ final class TimeTrackerStore {
             case .today: return AppStrings.today
             case .inbox: return AppStrings.inbox
             case .tasks: return AppStrings.tasks
-            case .pomodoro: return AppStrings.pomodoro
+            case .pomodoro: return AppStrings.focus
             case .analytics: return AppStrings.analytics
             case .settings: return AppStrings.settings
             }

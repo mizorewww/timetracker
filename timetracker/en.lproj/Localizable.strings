@@ -2,6 +2,7 @@
 "nav.today" = "Today";
 "nav.inbox" = "Inbox";
 "nav.tasks" = "Tasks";
+"nav.focus" = "Focus";
 "nav.pomodoro" = "Pomodoro";
 "nav.analytics" = "Analytics";
 "nav.settings" = "Settings";

@@ -7,6 +7,7 @@ enum AppStrings {
     static let today = localized("nav.today")
     static let inbox = localized("nav.inbox")
     static let tasks = localized("nav.tasks")
+    static let focus = localized("nav.focus")
     static let pomodoro = localized("nav.pomodoro")
     static let analytics = localized("nav.analytics")
     static let settings = localized("nav.settings")

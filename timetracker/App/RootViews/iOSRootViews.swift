@@ -63,7 +63,7 @@ struct PhoneRootView: View {
                     PomodoroView(store: store)
                 }
             } label: {
-                Label(AppStrings.localized("pomodoro.focus"), systemImage: "timer")
+                Label(AppStrings.focus, systemImage: "timer")
                     .accessibilityIdentifier("phone.tab.focus")
             }
 

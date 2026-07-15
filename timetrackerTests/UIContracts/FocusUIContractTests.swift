@@ -98,4 +98,18 @@ struct FocusUIContractTests {
             }
         }
     }
+
+    @Test
+    func focusNavigationUsesOneCrossPlatformTitleWithoutRenamingLedgerSources() throws {
+        let strings = try sourceText("timetracker/Shared/AppStrings.swift")
+        let destinations = try sourceText("timetracker/Stores/Facade/TimeTrackerStore.swift")
+        let phoneRoot = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let focusPage = try sourceText("timetracker/Features/Pomodoro/PomodoroViews.swift")
+
+        #expect(strings.contains("static let focus = localized(\"nav.focus\")"))
+        #expect(strings.contains("static let pomodoro = localized(\"nav.pomodoro\")"))
+        #expect(destinations.contains("case .pomodoro: return AppStrings.focus"))
+        #expect(phoneRoot.contains("Label(AppStrings.focus, systemImage: \"timer\")"))
+        #expect(focusPage.contains(".navigationTitle(AppStrings.focus)"))
+    }
 }

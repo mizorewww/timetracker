@@ -2,6 +2,7 @@
 "nav.today" = "今日";
 "nav.inbox" = "收件箱";
 "nav.tasks" = "任务";
+"nav.focus" = "专注";
 "nav.pomodoro" = "番茄钟";
 "nav.analytics" = "分析";
 "nav.settings" = "设置";

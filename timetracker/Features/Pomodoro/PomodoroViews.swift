@@ -32,7 +32,7 @@ struct PomodoroView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle(AppStrings.localized("pomodoro.focus"))
+        .navigationTitle(AppStrings.focus)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

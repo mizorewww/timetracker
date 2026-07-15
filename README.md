@@ -164,6 +164,8 @@ Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 - Apple Watch 通过 WatchConnectivity 接收主应用快照，并持久排队用户命令；命令与 terminal result 使用 durable `transferUserInfo`，可达消息仅用于加速。
 - Watch 上的操作以手机 typed terminal result 为主要确认；20 秒超时后可用同一 command ID 安全重试或丢弃，重试会刷新命令时间。手机拒绝超过 30 秒的旧命令，避免离线队列在很久以后意外开始或停止计时；旧手机的快照反射保留为兼容路径。
 - 这些入口复用领域命令，不单独维护第二套账本逻辑。
+- Widget、Live Activity 和系统链接使用同一个严格 deep-link router。App 在 SwiftData 尚未准备好时只保留经验证、按动作去重且有上限的待处理链接，初始化完成后再执行；无效或超长 URL 不进入队列。
+- iOS 的 Watch command handler 由进程级弱引用 router 选择最近活跃 scene；scene 消失时注销，避免单例 bridge 永久强持有旧 `TimeTrackerStore` 或把命令发给错误窗口。
 
 ### Widget
 

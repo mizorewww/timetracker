@@ -107,6 +107,8 @@ Keychain is intentionally outside SwiftData's ACID boundary. Saving LLM configur
 
 App Intents use the application model container and the same commands. After an intent commits, a narrow post-commit synchronizer refreshes only task/ledger/preference state needed by Widget, Watch, and Live Activity; it does not start the full app lifecycle or automatic LLM jobs. A projection failure never turns a committed, potentially non-idempotent action into an intent failure.
 
+System input routing is lifecycle-safe and bounded. `AppDeepLinkRouter` validates a small URL grammar before immediate execution or enqueue; each scene owns a semantic-deduplicating `PendingDeepLinkQueue` capped at 16 entries and drains it only after repositories are ready. `WatchCommandRouter` owns the process-wide Watch bridge callback but retains scene stores weakly, prefers the most recently active scene, removes released registrations, and uninstalls the callback when no scene remains. This prevents startup URLs from bypassing validation and prevents a singleton connectivity closure from leaking or targeting a stale scene.
+
 Persistent deduplication and synced preferences use deterministic last-write-wins ordering. A newer `updatedAt` wins; at an equal timestamp a tombstone wins; `createdAt`, `deviceID`, `clientMutationID`, or a stable TimeSegment content key resolve the remaining tie. Select the winner before filtering tombstones so stale active rows cannot resurrect deleted data.
 
 ## UI Structure

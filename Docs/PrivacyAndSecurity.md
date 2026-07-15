@@ -107,6 +107,10 @@ WatchConnectivity 在配对设备之间传输任务/计时快照和用户命令�
 
 App Intents 把系统提供的用户参数传入共享领域命令。Intent 结果不得回显密钥或内部诊断详情。持久 mutation 提交后才生成同步/Widget/Watch/Live Activity 投影；投影刷新失败不会撤销事实，也不能把已提交动作伪装为失败并诱导系统重复执行。
 
+### Deep links
+
+Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应用只接受最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query，并校验 UUID；无效 URL 在执行或排队前即被拒绝。数据库尚未准备好时，每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过 completed/archived task 的可工作性检查。
+
 ## 6. JSON 导出
 
 JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。当前不存在 importer、校验和、签名、加密或事务恢复，所以它：

@@ -104,6 +104,7 @@
 - Today：iPhone 使用 `List`；Active Timer、摘要、Quick Start、Forecast、Timeline、Countdown 按优先级排列，没有通用日/周/月/年进度卡。iPad/macOS 的宽屏 Today 通过 `HomeCountdownSection` 读取同一 `countdownEvents` 状态并展示 Countdown。
 - Task Detail：只读优先的 `List`，铅笔按钮再打开编辑 sheet；清单完成状态可直接切换。
 - Task availability：`TaskTrackingAvailabilityService` 一次线性扫描分别产出 `visibleTaskIDs` 与 `trackableTaskIDs`。归档/删除分支不可见；完成分支仍可浏览详情与历史，但自身和后代不能接收新工作，直到 `reopenTaskForWork` 把路径上的完成阻塞项一起恢复为 active。Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent、任务创建/移动与任务动作共用该判定；归档或完成活动子树前先停止计时，历史 segment 编辑可保留原任务。
+- System routing：`AppDeepLinkRouter` 严格解析 URL；`PendingDeepLinkQueue` 只缓存初始化前已经通过相同验证的语义动作，按动作去重、先进先出且最多 16 项。`WatchCommandRouter` 用弱 store 引用选择最近活跃 iOS scene，并在最后一个 scene 注销后移除进程级 bridge handler。
 - Settings：五类导航 IA，不提供应用级 appearance override。
 - Pomodoro：Plan 和 Task 是两个可见 `Menu`，没有点击标题/计时器的隐藏选择逻辑。
 - iOS 不设置 `CADisableMinimumFrameDurationOnPhone`；刷新率与帧调度交给系统，流畅度用 Release 截图/trace 和真实设备观察验证，不靠 Info.plist 强制覆盖。
@@ -235,6 +236,12 @@ Live Activity 是状态投影。Activity attributes 应保持小而稳定，不�
 ### Watch
 
 Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；Watch 把队列编码到本地 UserDefaults，并同时走 durable `transferUserInfo` 与可达 `sendMessage`。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID、刷新 `issuedAt`，用户也可 discard。`WatchCommandProcessor` 在 receipt lookup 后、任何 mutation 前校验 DTO 和时间边界：命令最多保留 30 秒，允许最多 5 分钟的未来设备时钟偏差；过期/非法命令返回 invalid 且不写 receipt 或 ledger，因此用户仍可用同 ID 明确重试。快照反射只为旧手机兼容确认。Watch UI 以 Active Timer 为第一优先级，并区分首次等待、发送、排队、失败、离线和 stale。主 target 的 codec/state/processor 测试不能替代真机往返验证。
+
+### Deep link 与 scene 生命周期
+
+`AppDeepLinkRouter` 只接受 `timetracker` scheme、最长 2,048 bytes、无 user/password/port/fragment 的白名单路由；每个 host/path 还限制 query 名称、数量和 UUID 格式。`ContentView` 在 repository 尚未配置时把合法 URL 放入 scene-local `PendingDeepLinkQueue`：容量 16，按解析后的 `AppDeepLinkAction` 去重，满时丢弃最旧项，配置成功后按顺序 drain，scene 消失时清空。不要把未验证 URL、closure 或可无限增长的数组放入启动队列。
+
+iOS `WindowGroup` 可以产生多个 scene，而 `WatchConnectivityBridge` 只有一个进程级 command handler。`WatchCommandRouter` 因此保存 scene registration 与弱 `TimeTrackerStore` 引用，优先最近 active scene，没有 active scene 时才回退到最近仍存活的注册；注销/释放会清理 route，最后一个 route 消失时移除 bridge closure。不得让 singleton closure 强持有 scene store，或由每个 `ContentView` 无条件覆盖全局 handler。
 
 ### Widget
 

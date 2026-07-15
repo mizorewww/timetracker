@@ -415,6 +415,18 @@
 
 验证：真实 V8 磁盘 store fixture 包含任务与 legacy summary；打开 V9 后任务仍存在、当前 schema/CloudKit model registry 不含 `DailySummary`，分析结果可从 ledger 重建。V4→当前分类迁移 fixture 继续通过。
 
+## AD-031：系统输入路由必须有界并服从 scene 生命周期
+
+状态：Accepted
+
+背景：Widget/Live Activity URL 可能在 SwiftData 初始化前到达；未经验证的无限队列会积累恶意或陈旧输入。WatchConnectivity 又只有一个进程级 callback，而 iOS `WindowGroup` 可以创建多个 scene；让 `ContentView` closure 强持有 store 会泄漏旧 scene，也可能把手表命令交给错误窗口。
+
+决策：deep link 在立即执行或排队前都经过同一个 `AppDeepLinkRouter` 白名单验证：`timetracker` scheme、URL 最长 2,048 bytes、禁止 credential/port/fragment，并按 host/path/query/UUID 语法解析。初始化前每个 scene 使用容量 16 的 `PendingDeepLinkQueue`，按语义 action 去重、满时移除最旧项，repository ready 后顺序 drain，scene 消失时清空。`WatchCommandRouter` 单独拥有进程级 bridge handler，以弱引用注册 scene store，优先最近 active scene，清理释放/注销项，并在没有 route 时卸载 handler；bridge 自身继续负责无 handler 时的 durable 排队。
+
+后果：新增系统 URL 必须扩展白名单 parser 和行为测试，不能直接执行任意 URLComponents。新的进程级系统 callback 也不得由 scene view 强持有业务 store；路由所有权、选择规则和 teardown 必须显式。
+
+验证：覆盖超长/credential/port/fragment/重复 query/非法 UUID 拒绝，pending queue 语义去重、FIFO 上限、drain/clear，以及 Watch router 弱引用、active scene 优先、fallback、unregister 和最后 route 清除 bridge handler。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

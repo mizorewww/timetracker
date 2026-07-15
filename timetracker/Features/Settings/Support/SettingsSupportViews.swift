@@ -48,19 +48,11 @@ struct AboutAppSummary: View {
 
 struct CountdownEventSettingsRow: View {
     let event: CountdownEvent
-    let onChangeTitle: (String) -> Void
+    let onChangeTitle: (String) -> Bool
     let onChangeDate: (Date) -> Void
     let onDelete: () -> Void
     @State private var isDatePickerPresented = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    private var titleBinding: Binding<String> {
-        Binding {
-            event.title
-        } set: { value in
-            onChangeTitle(value)
-        }
-    }
 
     private var dateBinding: Binding<Date> {
         Binding {
@@ -71,14 +63,9 @@ struct CountdownEventSettingsRow: View {
     }
 
     var body: some View {
-        SettingsTextFieldRow(
-            title: AppStrings.localized("settings.countdown.eventName"),
-            text: titleBinding,
-            systemImage: "textformat",
-            tint: .blue,
-            fieldAlignment: .trailing,
-            textAlignment: .trailing,
-            usesSentenceCapitalization: true
+        CountdownTitleEditor(
+            persistedTitle: event.title,
+            onSave: onChangeTitle
         )
 
         Button {

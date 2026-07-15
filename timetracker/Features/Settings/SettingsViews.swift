@@ -134,9 +134,12 @@ struct SettingsView: View {
         List {
             Section {
                 ForEach(SettingsCategory.allCases) { category in
-                    NavigationLink(value: category) {
+                    NavigationLink {
+                        settingsForm(for: category)
+                    } label: {
                         SettingsCategoryRow(category: category)
                     }
+                    .accessibilityIdentifier("settings.category.\(category.rawValue)")
                 }
             } footer: {
                 Text(.app("settings.categories.footer"))
@@ -144,9 +147,6 @@ struct SettingsView: View {
         }
         .listStyle(.insetGrouped)
         .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
-        .navigationDestination(for: SettingsCategory.self) { category in
-            settingsForm(for: category)
-        }
         #endif
     }
 

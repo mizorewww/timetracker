@@ -1,6 +1,11 @@
 import XCTest
 
 final class timetrackerUITests: XCTestCase {
+    private enum ScrollDirection {
+        case up
+        case down
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -93,6 +98,64 @@ final class timetrackerUITests: XCTestCase {
         openSettings(in: app)
         XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
         try capture("iphone-settings-baseline", app: app)
+    }
+
+    @MainActor
+    func testCountdownTitleDraftShowsInlineValidation() throws {
+        #if os(macOS)
+        throw XCTSkip("The countdown draft interaction screenshot is iPhone-specific.")
+        #else
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+        openSettings(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
+
+        let generalCategory = app.buttons["settings.category.general"].firstMatch
+        XCTAssertTrue(waitForElement(generalCategory, timeout: 3, diagnosticName: "settings-general", in: app))
+        activate(generalCategory)
+
+        let addEvent = app.buttons["Add Event"].firstMatch
+        scrollUntilHittable(addEvent, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(addEvent, timeout: 5, diagnosticName: "countdown-add", in: app) && addEvent.isHittable
+        )
+        activate(addEvent)
+
+        let titleField = app.descendants(matching: .any)["settings.countdown.title.field"].firstMatch
+        scrollUntilHittable(titleField, direction: .down, in: app)
+        XCTAssertTrue(
+            waitForElement(titleField, timeout: 5, diagnosticName: "countdown-title", in: app) && titleField.isHittable
+        )
+        titleField.tap()
+        titleField.typeText(" Draft")
+
+        let saveTitle = app.buttons["settings.countdown.title.save"].firstMatch
+        XCTAssertTrue(waitForElement(saveTitle, timeout: 3, diagnosticName: "countdown-save", in: app))
+        try capture("iphone-countdown-title-draft", app: app)
+
+        let currentTitle = (titleField.value as? String) ?? "New Event Draft"
+        titleField.typeText(
+            String(
+                repeating: XCUIKeyboardKey.delete.rawValue,
+                count: max(currentTitle.count + 16, 32)
+            )
+        )
+        activate(saveTitle)
+
+        let inlineError = app.descendants(matching: .any)["settings.countdown.title.error"].firstMatch
+        XCTAssertTrue(waitForElement(inlineError, timeout: 3, diagnosticName: "countdown-title-error", in: app))
+        XCTAssertTrue(titleField.exists)
+        let scrollStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.55))
+        let scrollEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.48))
+        scrollStart.press(forDuration: 0.1, thenDragTo: scrollEnd)
+        try capture("iphone-countdown-title-validation", app: app)
+
+        titleField.tap()
+        titleField.typeText("Release")
+        activate(saveTitle)
+        XCTAssertFalse(inlineError.waitForExistence(timeout: 1))
+        try capture("iphone-countdown-title-saved", app: app)
+        #endif
     }
 
     @MainActor
@@ -237,12 +300,18 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func capture(_ name: String, app: XCUIApplication) throws {
+        let screenshot = app.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
         guard let directory = ProcessInfo.processInfo.environment["UI_SCREENSHOT_DIR"], !directory.isEmpty else {
             return
         }
         let url = URL(fileURLWithPath: directory, isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        try app.screenshot().pngRepresentation.write(to: url.appendingPathComponent("\(name).png"))
+        try screenshot.pngRepresentation.write(to: url.appendingPathComponent("\(name).png"))
     }
 
     @MainActor
@@ -269,6 +338,22 @@ final class timetrackerUITests: XCTestCase {
         #else
         element.tap()
         #endif
+    }
+
+    @MainActor
+    private func scrollUntilHittable(
+        _ element: XCUIElement,
+        direction: ScrollDirection,
+        in app: XCUIApplication
+    ) {
+        for _ in 0..<6 where !element.isHittable {
+            switch direction {
+            case .up:
+                app.swipeUp()
+            case .down:
+                app.swipeDown()
+            }
+        }
     }
 
     @MainActor

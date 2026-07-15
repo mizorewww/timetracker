@@ -88,6 +88,13 @@
 "settings.countdown.footer" = "倒數事件可以為空，也可以加入任意多個日期。";
 "settings.countdown.delete.confirm.title" = "刪除倒數事件？";
 "settings.countdown.delete.confirm.message" = "此事件將從所有同步裝置的「今天」頁面移除。";
+"settings.countdown.title.hint" = "編輯名稱後，按下 Return 鍵或選擇「儲存」。";
+"settings.countdown.title.save" = "儲存事件名稱";
+"settings.countdown.title.saveHint" = "整理名稱並將它儲存到同步的倒數事件。";
+"settings.countdown.title.error.empty" = "請輸入事件名稱。";
+"settings.countdown.title.error.tooLong" = "事件名稱不可超過 4 KB。";
+"settings.countdown.title.error.controlCharacters" = "請移除換行符號和控制字元。";
+"settings.countdown.title.error.saveFailed" = "無法儲存事件名稱。你的編輯內容仍保留在這裡。";
 "settings.exportJSON" = "匯出 JSON";
 "settings.optimizeDatabase" = "清理已刪除記錄";
 "settings.data" = "資料";

@@ -88,6 +88,13 @@
 "settings.countdown.footer" = "Countdown events are optional. Add any date you want to see on Today.";
 "settings.countdown.delete.confirm.title" = "Delete Countdown Event?";
 "settings.countdown.delete.confirm.message" = "This event will be removed from Today on every synced device.";
+"settings.countdown.title.hint" = "Edit the name, then press Return or choose Save.";
+"settings.countdown.title.save" = "Save Event Name";
+"settings.countdown.title.saveHint" = "Trims the name and saves it to your synced countdown events.";
+"settings.countdown.title.error.empty" = "Enter an event name.";
+"settings.countdown.title.error.tooLong" = "Use an event name no larger than 4 KB.";
+"settings.countdown.title.error.controlCharacters" = "Remove line breaks and control characters.";
+"settings.countdown.title.error.saveFailed" = "The event name couldn’t be saved. Your edit is still here.";
 "settings.exportJSON" = "Export JSON";
 "settings.optimizeDatabase" = "Clean Deleted Records";
 "settings.data" = "Data";

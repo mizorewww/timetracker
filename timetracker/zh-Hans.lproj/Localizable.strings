@@ -88,6 +88,13 @@
 "settings.countdown.footer" = "倒计时事件可以为空，也可以添加任意多个日期。";
 "settings.countdown.delete.confirm.title" = "删除倒计时事件？";
 "settings.countdown.delete.confirm.message" = "此事件将从所有同步设备的“今天”页面移除。";
+"settings.countdown.title.hint" = "编辑名称后，按下回车键或选择“保存”。";
+"settings.countdown.title.save" = "保存事件名称";
+"settings.countdown.title.saveHint" = "整理名称并将其保存到同步的倒计时事件。";
+"settings.countdown.title.error.empty" = "请输入事件名称。";
+"settings.countdown.title.error.tooLong" = "事件名称不能超过 4 KB。";
+"settings.countdown.title.error.controlCharacters" = "请移除换行符和控制字符。";
+"settings.countdown.title.error.saveFailed" = "无法保存事件名称。你的编辑内容仍保留在此处。";
 "settings.exportJSON" = "导出 JSON";
 "settings.optimizeDatabase" = "清理已删除记录";
 "settings.data" = "数据";

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CountdownSettingsSection: View {
     let events: [CountdownEvent]
-    let onChangeTitle: (CountdownEvent, String) -> Void
+    let onChangeTitle: (CountdownEvent, String) -> Bool
     let onChangeDate: (CountdownEvent, Date) -> Void
     let onDelete: (CountdownEvent) -> Void
     let onAdd: () -> Void

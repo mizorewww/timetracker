@@ -3,14 +3,25 @@ import SwiftUI
 struct TaskInfoEditorSection: View {
     let store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
+    let validation: TaskEditorValidation
     let colors: [String]
     let parentCandidates: [TaskNode]
     @FocusState private var isTitleFocused: Bool
+    @State private var hasEditedTitle = false
 
     var body: some View {
         Section {
-            TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
-                .focused($isTitleFocused)
+            VStack(alignment: .leading, spacing: 6) {
+                TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
+                    .focused($isTitleFocused)
+                    .accessibilityHint(visibleTitleError?.localizedDescription ?? "")
+                if let visibleTitleError {
+                    TaskEditorInlineValidationMessage(
+                        error: visibleTitleError,
+                        accessibilityIdentifier: "task.editor.title.error"
+                    )
+                }
+            }
             TaskStatusPicker(
                 selection: $draft.status,
                 disabledStatuses: hasActiveTimerInSubtree && originalTask?.status != .completed
@@ -22,11 +33,27 @@ struct TaskInfoEditorSection: View {
             if draft.parentID == nil {
                 categoryPicker
             }
-            SymbolColorPickerRow(
-                colors: colors,
-                symbolName: $draft.iconName,
-                colorHex: $draft.colorHex
-            )
+            VStack(alignment: .leading, spacing: 6) {
+                SymbolColorPickerRow(
+                    colors: colors,
+                    symbolName: $draft.iconName,
+                    colorHex: $draft.colorHex
+                )
+                if let iconNameError = validation.iconNameError {
+                    TaskEditorInlineValidationMessage(
+                        error: iconNameError,
+                        accessibilityIdentifier: "task.editor.symbol.error"
+                    )
+                }
+                if let colorHexError = validation.colorHexError {
+                    TaskEditorInlineValidationMessage(
+                        error: colorHexError,
+                        accessibilityIdentifier: "task.editor.color.error"
+                    )
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(AppStrings.localized("editor.task.symbolColor"))
         } header: {
             Text(AppStrings.localized("editor.task.info"))
         } footer: {
@@ -52,6 +79,19 @@ struct TaskInfoEditorSection: View {
             guard draft.taskID == nil else { return }
             isTitleFocused = true
         }
+        .onChange(of: draft.title) {
+            hasEditedTitle = true
+        }
+    }
+
+    private var visibleTitleError: TaskPersistenceValidationError? {
+        guard let error = validation.titleError else { return nil }
+        if case .required = error,
+           draft.taskID == nil,
+           hasEditedTitle == false {
+            return nil
+        }
+        return error
     }
 
     private var categoryPicker: some View {

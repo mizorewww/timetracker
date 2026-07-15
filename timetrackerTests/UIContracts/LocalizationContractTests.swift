@@ -105,4 +105,22 @@ struct LocalizationContractTests {
         #expect(english["task.action.archive.stopFirst"] != nil)
         #expect(english["task.archived.trackingUnavailable"] != nil)
     }
+
+    @Test
+    func taskPersistenceLengthErrorsExposeExactByteCountsInEveryLocale() throws {
+        let root = try projectRootURL()
+        for locale in ["en", "zh-Hans", "zh-Hant"] {
+            let path = root.appending(path: "timetracker/\(locale).lproj/Localizable.strings").path
+            let strings = try #require(NSDictionary(contentsOfFile: path) as? [String: String])
+            let format = try #require(strings["persistence.error.tooLongFormat"])
+
+            #expect(format.contains("%@"), "Missing field placeholder for \(locale)")
+            #expect(
+                format.components(separatedBy: "%lld").count == 3,
+                "Expected current and maximum byte placeholders for \(locale)"
+            )
+            #expect(try #require(strings["persistence.error.requiredFormat"]).isEmpty == false)
+            #expect(try #require(strings["persistence.error.controlCharacterFormat"]).isEmpty == false)
+        }
+    }
 }

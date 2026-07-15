@@ -598,7 +598,7 @@
 "persistence.field.color" = "颜色";
 "persistence.error.requiredFormat" = "请填写%@。";
 "persistence.error.controlCharacterFormat" = "%@包含不支持的字符。";
-"persistence.error.tooLongFormat" = "%@内容过长，请缩短后重试。";
+"persistence.error.tooLongFormat" = "%@内容过长（%lld / %lld 字节），请缩短后重试。";
 "inbox.persistence.field.title" = "收件箱项目标题";
 "inbox.persistence.field.notes" = "收件箱备注";
 "inbox.persistence.field.reason" = "推荐理由";

@@ -29,23 +29,25 @@ enum TaskPersistenceValidationError: LocalizedError, Equatable {
     case byteLimitExceeded(field: TaskPersistenceField, actual: Int, maximum: Int)
 
     var errorDescription: String? {
-        let field: TaskPersistenceField
-        let formatKey: String
         switch self {
-        case let .required(value):
-            field = value
-            formatKey = "persistence.error.requiredFormat"
-        case let .controlCharacter(value):
-            field = value
-            formatKey = "persistence.error.controlCharacterFormat"
-        case let .byteLimitExceeded(value, _, _):
-            field = value
-            formatKey = "persistence.error.tooLongFormat"
+        case let .required(field):
+            return String.localizedStringWithFormat(
+                AppStrings.localized("persistence.error.requiredFormat"),
+                AppStrings.localized(field.localizationKey)
+            )
+        case let .controlCharacter(field):
+            return String.localizedStringWithFormat(
+                AppStrings.localized("persistence.error.controlCharacterFormat"),
+                AppStrings.localized(field.localizationKey)
+            )
+        case let .byteLimitExceeded(field, actual, maximum):
+            return String.localizedStringWithFormat(
+                AppStrings.localized("persistence.error.tooLongFormat"),
+                AppStrings.localized(field.localizationKey),
+                Int64(actual),
+                Int64(maximum)
+            )
         }
-        return String(
-            format: AppStrings.localized(formatKey),
-            AppStrings.localized(field.localizationKey)
-        )
     }
 }
 
@@ -57,6 +59,30 @@ struct PreparedTaskPersistenceValues {
 }
 
 enum TaskPersistencePolicy {
+    static func taskTitleValidationError(for title: String) -> TaskPersistenceValidationError? {
+        validationError {
+            _ = try requiredSingleLine(title, field: .taskTitle)
+        }
+    }
+
+    static func taskNotesValidationError(for notes: String?) -> TaskPersistenceValidationError? {
+        validationError {
+            _ = try optionalMultiline(notes, field: .notes)
+        }
+    }
+
+    static func taskIconNameValidationError(for iconName: String?) -> TaskPersistenceValidationError? {
+        validationError {
+            _ = try optionalSingleLine(iconName, field: .iconName)
+        }
+    }
+
+    static func taskColorHexValidationError(for colorHex: String?) -> TaskPersistenceValidationError? {
+        validationError {
+            _ = try optionalSingleLine(colorHex, field: .colorHex)
+        }
+    }
+
     static func prepareTask(
         title: String,
         colorHex: String?,
@@ -161,6 +187,20 @@ enum TaskPersistencePolicy {
                 actual: actual,
                 maximum: maximum
             )
+        }
+    }
+
+    private static func validationError(
+        _ validate: () throws -> Void
+    ) -> TaskPersistenceValidationError? {
+        do {
+            try validate()
+            return nil
+        } catch let error as TaskPersistenceValidationError {
+            return error
+        } catch {
+            assertionFailure("Task persistence validation threw an unexpected error: \(error)")
+            return nil
         }
     }
 }

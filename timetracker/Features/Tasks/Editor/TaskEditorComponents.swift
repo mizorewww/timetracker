@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskEditorForm: View {
     let store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
+    let validation: TaskEditorValidation
     let colors: [String]
     let parentCandidates: [TaskNode]
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
@@ -15,6 +16,7 @@ struct TaskEditorForm: View {
             TaskInfoEditorSection(
                 store: store,
                 draft: $draft,
+                validation: validation,
                 colors: colors,
                 parentCandidates: parentCandidates
             )
@@ -26,9 +28,51 @@ struct TaskEditorForm: View {
                 moveChecklistItems: moveChecklistItems,
                 addChecklistItem: addChecklistItem
             )
-            TaskNotesEditorSection(notes: $draft.notes)
+            TaskNotesEditorSection(
+                notes: $draft.notes,
+                validationError: validation.notesError
+            )
         }
         .formStyle(.grouped)
         .accessibilityIdentifier("task.editor")
+    }
+}
+
+struct TaskEditorValidation: Equatable {
+    let titleError: TaskPersistenceValidationError?
+    let notesError: TaskPersistenceValidationError?
+    let iconNameError: TaskPersistenceValidationError?
+    let colorHexError: TaskPersistenceValidationError?
+
+    init(title: String, notes: String, iconName: String, colorHex: String) {
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let persistedNotes = trimmedNotes.isEmpty ? nil : trimmedNotes
+        titleError = TaskPersistencePolicy.taskTitleValidationError(for: title)
+        notesError = TaskPersistencePolicy.taskNotesValidationError(for: persistedNotes)
+        iconNameError = TaskPersistencePolicy.taskIconNameValidationError(for: iconName)
+        colorHexError = TaskPersistencePolicy.taskColorHexValidationError(for: colorHex)
+    }
+
+    var isValid: Bool {
+        titleError == nil &&
+            notesError == nil &&
+            iconNameError == nil &&
+            colorHexError == nil
+    }
+}
+
+struct TaskEditorInlineValidationMessage: View {
+    let error: TaskPersistenceValidationError
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        Label(error.localizedDescription, systemImage: "exclamationmark.circle.fill")
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(error.localizedDescription)
+            .accessibilityAddTraits(.isStaticText)
+            .accessibilityIdentifier(accessibilityIdentifier)
     }
 }

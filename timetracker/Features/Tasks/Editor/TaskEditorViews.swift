@@ -54,10 +54,18 @@ struct TaskEditorPanel: View {
     }
 
     var body: some View {
+        let validation = TaskEditorValidation(
+            title: draft.title,
+            notes: draft.notes,
+            iconName: draft.iconName,
+            colorHex: draft.colorHex
+        )
+
         NavigationStack {
             TaskEditorForm(
                 store: store,
                 draft: $draft,
+                validation: validation,
                 colors: colors,
                 parentCandidates: parentCandidates,
                 focusedChecklistDraftID: $focusedChecklistDraftID,
@@ -87,7 +95,7 @@ struct TaskEditorPanel: View {
                         onSave(draft)
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!canSave)
+                    .disabled(!canSave(validation))
                     .accessibilityIdentifier("task.editor.save")
                 }
             }
@@ -99,9 +107,8 @@ struct TaskEditorPanel: View {
         )
     }
 
-    private var canSave: Bool {
-        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !isBlockedCompletionTransition
+    private func canSave(_ validation: TaskEditorValidation) -> Bool {
+        validation.isValid && !isBlockedCompletionTransition
     }
 
     private var isBlockedCompletionTransition: Bool {

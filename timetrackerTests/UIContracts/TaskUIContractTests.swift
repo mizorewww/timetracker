@@ -563,6 +563,33 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskEditorShowsAccessiblePersistenceErrorsBesideFieldsAndBlocksSave() throws {
+        let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let components = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
+        let info = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift")
+        let notes = try sourceText("timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift")
+        let policy = try sourceText("timetracker/Services/Tasks/TaskPersistencePolicy.swift")
+
+        #expect(editor.contains("let validation = TaskEditorValidation("))
+        #expect(editor.contains(".disabled(!canSave(validation))"))
+        #expect(components.contains("struct TaskEditorValidation: Equatable"))
+        #expect(components.contains("struct TaskEditorInlineValidationMessage: View"))
+        #expect(components.contains(".accessibilityLabel(error.localizedDescription)"))
+        #expect(components.contains(".accessibilityAddTraits(.isStaticText)"))
+        #expect(info.contains("task.editor.title.error"))
+        #expect(info.contains("task.editor.symbol.error"))
+        #expect(info.contains("task.editor.color.error"))
+        #expect(info.contains(".accessibilityHint(visibleTitleError?.localizedDescription ?? \"\")"))
+        #expect(info.contains(".onChange(of: draft.title)"))
+        #expect(notes.contains("task.editor.notes.error"))
+        #expect(notes.contains(".accessibilityHint(validationError?.localizedDescription ?? \"\")"))
+        #expect(policy.contains("static func taskTitleValidationError(for title: String)"))
+        #expect(policy.contains("static func taskNotesValidationError(for notes: String?)"))
+        #expect(policy.contains("Int64(actual)"))
+        #expect(policy.contains("Int64(maximum)"))
+    }
+
+    @Test
     func analyticsHomeExposesPeriodNavigationAndChartsExposeReadableFallbacks() throws {
         let analytics = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
         let distribution = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")

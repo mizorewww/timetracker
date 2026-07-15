@@ -203,4 +203,102 @@ struct TaskPersistencePolicyTests {
         #expect(category.deviceID == "remote-device")
         #expect(category.clientMutationID == originalMutationID)
     }
+
+    @Test @MainActor
+    func taskEditorValidationAcceptsExactUtf8LimitsAndMultilineNotes() {
+        let title = String(repeating: "界", count: 1_365) + "a"
+        let compactValue = String(repeating: "界", count: 85) + "a"
+        let notes = String(repeating: "界", count: 21_845) + "a"
+        let validation = TaskEditorValidation(
+            title: title,
+            notes: notes,
+            iconName: compactValue,
+            colorHex: compactValue
+        )
+
+        #expect(title.utf8.count == SyncDataSnapshotRestoreLimits.maximumTitleByteCount)
+        #expect(compactValue.utf8.count == SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount)
+        #expect(notes.utf8.count == SyncDataSnapshotRestoreLimits.maximumNoteByteCount)
+        #expect(validation.isValid)
+
+        let multilineValidation = TaskEditorValidation(
+            title: title,
+            notes: "Line one\tcontinued\nLine two\r\nLine three",
+            iconName: compactValue,
+            colorHex: compactValue
+        )
+        #expect(multilineValidation.isValid)
+    }
+
+    @Test @MainActor
+    func taskEditorValidationReportsEveryFieldWithoutMutatingDraftInput() {
+        let title = " \n "
+        let notes = "Line one\u{0000}Line two"
+        let iconName = "circle\nfill"
+        let colorHex = "AA\u{001F}BB"
+        let validation = TaskEditorValidation(
+            title: title,
+            notes: notes,
+            iconName: iconName,
+            colorHex: colorHex
+        )
+
+        #expect(validation.titleError == .required(field: .taskTitle))
+        #expect(validation.notesError == .controlCharacter(field: .notes))
+        #expect(validation.iconNameError == .controlCharacter(field: .iconName))
+        #expect(validation.colorHexError == .controlCharacter(field: .colorHex))
+        #expect(validation.isValid == false)
+        #expect(title == " \n ")
+        #expect(notes == "Line one\u{0000}Line two")
+        #expect(iconName == "circle\nfill")
+        #expect(colorHex == "AA\u{001F}BB")
+    }
+
+    @Test @MainActor
+    func taskEditorValidationReportsUtf8CountsBeyondEachLimit() throws {
+        let titleMaximum = SyncDataSnapshotRestoreLimits.maximumTitleByteCount
+        let compactMaximum = SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
+        let notesMaximum = SyncDataSnapshotRestoreLimits.maximumNoteByteCount
+        let validation = TaskEditorValidation(
+            title: String(repeating: "a", count: titleMaximum + 1),
+            notes: String(repeating: "n", count: notesMaximum + 1),
+            iconName: String(repeating: "i", count: compactMaximum + 1),
+            colorHex: String(repeating: "c", count: compactMaximum + 1)
+        )
+
+        #expect(
+            validation.titleError == .byteLimitExceeded(
+                field: .taskTitle,
+                actual: titleMaximum + 1,
+                maximum: titleMaximum
+            )
+        )
+        #expect(
+            validation.notesError == .byteLimitExceeded(
+                field: .notes,
+                actual: notesMaximum + 1,
+                maximum: notesMaximum
+            )
+        )
+        #expect(
+            validation.iconNameError == .byteLimitExceeded(
+                field: .iconName,
+                actual: compactMaximum + 1,
+                maximum: compactMaximum
+            )
+        )
+        #expect(
+            validation.colorHexError == .byteLimitExceeded(
+                field: .colorHex,
+                actual: compactMaximum + 1,
+                maximum: compactMaximum
+            )
+        )
+
+        let message = try #require(validation.titleError?.errorDescription)
+        let localizedActual = String.localizedStringWithFormat("%lld", Int64(titleMaximum + 1))
+        let localizedMaximum = String.localizedStringWithFormat("%lld", Int64(titleMaximum))
+        #expect(message.contains(localizedActual))
+        #expect(message.contains(localizedMaximum))
+    }
 }

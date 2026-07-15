@@ -598,7 +598,7 @@
 "persistence.field.color" = "color";
 "persistence.error.requiredFormat" = "Enter a %@.";
 "persistence.error.controlCharacterFormat" = "The %@ contains unsupported characters.";
-"persistence.error.tooLongFormat" = "The %@ is too long. Shorten it and try again.";
+"persistence.error.tooLongFormat" = "The %@ is too long (%lld of %lld bytes). Shorten it and try again.";
 "inbox.persistence.field.title" = "inbox item title";
 "inbox.persistence.field.notes" = "inbox notes";
 "inbox.persistence.field.reason" = "suggestion reason";

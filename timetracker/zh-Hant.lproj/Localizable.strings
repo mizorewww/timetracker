@@ -598,7 +598,7 @@
 "persistence.field.color" = "顏色";
 "persistence.error.requiredFormat" = "請填寫%@。";
 "persistence.error.controlCharacterFormat" = "%@包含不支援的字元。";
-"persistence.error.tooLongFormat" = "%@內容過長，請縮短後再試。";
+"persistence.error.tooLongFormat" = "%@內容過長（%lld / %lld 位元組），請縮短後再試。";
 "inbox.persistence.field.title" = "收件匣項目標題";
 "inbox.persistence.field.notes" = "收件匣備註";
 "inbox.persistence.field.reason" = "推薦理由";

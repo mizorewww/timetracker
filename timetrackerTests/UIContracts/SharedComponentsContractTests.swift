@@ -33,7 +33,10 @@ struct SharedComponentsContractTests {
         #expect(homeSource.contains("private var accessibilityContent"))
         #expect(homeSource.contains(".contentMargins(.bottom"))
         #expect(settingsSource.contains("dynamicTypeSize.isAccessibilitySize"))
-        #expect(settingsSource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(settingsSource.contains("private var accessibilityCategoryRow"))
+        #expect(settingsSource.contains("private var descriptiveCategoryRow"))
+        #expect(settingsSource.contains(".lineLimit(2)"))
+        #expect(settingsSource.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(settingsSource.contains(".font(.system(size: 18, weight: .semibold))"))
         #expect(designSystemSource.contains(".font(.system(size: 17, weight: .semibold))"))
     }

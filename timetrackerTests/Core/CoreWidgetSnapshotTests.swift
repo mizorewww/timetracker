@@ -61,6 +61,12 @@ struct CoreWidgetSnapshotTests {
         try cache.save(snapshot)
 
         #expect(cache.load() == snapshot)
+
+        var invalidSnapshot = snapshot
+        invalidSnapshot.todayGrossSeconds = -1
+        #expect(throws: WidgetSnapshotStoreError.invalidSnapshot) {
+            try cache.save(invalidSnapshot)
+        }
     }
 
     @Test @MainActor
@@ -107,6 +113,20 @@ struct CoreWidgetSnapshotTests {
 
         defaults.set(Data("not-json".utf8), forKey: SharedWidgetSnapshotStore.snapshotKey)
         #expect(cache.loadResult() == .corrupted)
+
+        defaults.set(
+            Data(count: WidgetSnapshotLimits.maximumEncodedBytes + 1),
+            forKey: SharedWidgetSnapshotStore.snapshotKey
+        )
+        #expect(cache.loadResult() == .corrupted)
+
+        var invalidSnapshot = WidgetSnapshot.empty
+        invalidSnapshot.todayWallSeconds = -1
+        defaults.set(
+            try JSONEncoder().encode(invalidSnapshot),
+            forKey: SharedWidgetSnapshotStore.snapshotKey
+        )
+        #expect(cache.loadResult() == .corrupted)
     }
 
     @Test
@@ -117,6 +137,53 @@ struct CoreWidgetSnapshotTests {
 
         #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)) == .current)
         #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter + 1)) == .stale)
+        #expect(snapshot.isValid(at: generatedAt))
+
+        snapshot.generatedAt = generatedAt.addingTimeInterval(
+            WidgetSnapshotLimits.maximumFutureClockSkew + 1
+        )
+        #expect(snapshot.isValid(at: generatedAt) == false)
+    }
+
+    @Test
+    func widgetSnapshotValidationRejectsUnboundedAndDuplicateProjectionData() {
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 30_000)
+        let timerID = UUID()
+        let taskID = UUID()
+        let timer = WidgetTimerSnapshot(
+            id: timerID,
+            taskID: taskID,
+            title: "Timer",
+            path: "Work",
+            startedAt: generatedAt.addingTimeInterval(-60),
+            colorHex: "#0A84FF",
+            iconName: "timer"
+        )
+        var snapshot = WidgetSnapshot(
+            generatedAt: generatedAt,
+            todayGrossSeconds: 60,
+            todayWallSeconds: 60,
+            activeTimers: [timer],
+            recentTasks: []
+        )
+
+        #expect(snapshot.isValid(at: generatedAt))
+
+        snapshot.activeTimers.append(timer)
+        #expect(snapshot.isValid(at: generatedAt) == false)
+
+        snapshot.activeTimers = [timer]
+        snapshot.activeTimers[0].title = String(
+            repeating: "x",
+            count: WidgetSnapshotLimits.maximumTitleBytes + 1
+        )
+        #expect(snapshot.isValid(at: generatedAt) == false)
+
+        snapshot.activeTimers[0] = timer
+        snapshot.activeTimers[0].startedAt = generatedAt.addingTimeInterval(
+            WidgetSnapshotLimits.maximumFutureClockSkew + 1
+        )
+        #expect(snapshot.isValid(at: generatedAt) == false)
     }
 
     @Test

@@ -51,18 +51,38 @@ extension TimeTrackingRepository {
 }
 
 protocol PomodoroRepository {
+    func run(id: UUID) throws -> PomodoroRun?
     func runs() throws -> [PomodoroRun]
     func activeRuns() throws -> [PomodoroRun]
     @discardableResult func startPomodoro(taskID: UUID, focusSeconds: Int, breakSeconds: Int, longBreakSeconds: Int?, targetRounds: Int) throws -> PomodoroRun
-    func completeFocus(runID: UUID, endedAt: Date) throws
-    func completeBreak(runID: UUID) throws
+    @discardableResult func completeFocus(
+        runID: UUID,
+        expectedState: PomodoroState,
+        endedAt: Date
+    ) throws -> Bool
+    @discardableResult func completeBreak(
+        runID: UUID,
+        expectedState: PomodoroState
+    ) throws -> Bool
     func cancel(runID: UUID, discardRecord: Bool) throws
     @discardableResult func reconcileExpiredPhase(runID: UUID, now: Date) throws -> Bool
 }
 
 extension PomodoroRepository {
-    func completeFocus(runID: UUID) throws {
-        try completeFocus(runID: runID, endedAt: Date())
+    @discardableResult
+    func completeFocus(runID: UUID, endedAt: Date = Date()) throws -> Bool {
+        guard let run = try run(id: runID) else { return false }
+        return try completeFocus(
+            runID: runID,
+            expectedState: run.state,
+            endedAt: endedAt
+        )
+    }
+
+    @discardableResult
+    func completeBreak(runID: UUID) throws -> Bool {
+        guard let run = try run(id: runID) else { return false }
+        return try completeBreak(runID: runID, expectedState: run.state)
     }
 
     func cancel(runID: UUID) throws {

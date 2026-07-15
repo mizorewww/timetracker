@@ -44,7 +44,7 @@ extension TimeTrackerStore {
             event: .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)
         ) {
             didComplete = try pomodoroCommandHandler.completeFocus(
-                run: run,
+                runID: run.id,
                 expectedState: expectedState,
                 repository: requiredPomodoroRepository()
             )
@@ -67,12 +67,11 @@ extension TimeTrackerStore {
         let succeeded = perform(
             events: pomodoroResumeMutationEvents(run: run)
         ) {
+            guard let modelContext else { throw StoreError.notConfigured }
             didResume = try pomodoroCommandHandler.resumeFocusAfterBreak(
-                run: run,
+                runID: run.id,
                 expectedState: expectedState,
                 allowParallelTimers: preferences.allowParallelTimers,
-                activeSegments: activeSegments,
-                pomodoroRuns: pomodoroRuns,
                 timeRepository: requiredTimeRepository(),
                 repository: requiredPomodoroRepository(),
                 context: modelContext
@@ -82,19 +81,9 @@ extension TimeTrackerStore {
     }
 
     private func pomodoroResumeMutationEvents(run: PomodoroRun) -> Set<StoreDomainEvent> {
-        var events: Set<StoreDomainEvent> = [
+        [
             .pomodoroChanged(runID: run.id, sessionID: run.sessionID, taskID: run.taskID)
         ]
-        let admission = TimerStartAdmissionPolicy().evaluate(
-            taskID: run.taskID,
-            allowParallelTimers: preferences.allowParallelTimers,
-            activeSegments: activeSegments,
-            existingTaskAdmission: .replaceExisting
-        )
-        for segment in admission.segmentsToStop {
-            events.formUnion(timerStopMutationEvents(segment: segment))
-        }
-        return events
     }
 
     func cancelActivePomodoro() {

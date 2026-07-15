@@ -149,16 +149,26 @@ struct StartPomodoroUseCase {
 struct CompletePomodoroFocusUseCase {
     let repository: PomodoroRepository
 
-    func execute(runID: UUID) throws {
-        try repository.completeFocus(runID: runID)
+    @discardableResult
+    func execute(
+        runID: UUID,
+        expectedState: PomodoroState,
+        endedAt: Date = Date()
+    ) throws -> Bool {
+        try repository.completeFocus(
+            runID: runID,
+            expectedState: expectedState,
+            endedAt: endedAt
+        )
     }
 }
 
 struct CompletePomodoroBreakUseCase {
     let repository: PomodoroRepository
 
-    func execute(runID: UUID) throws {
-        try repository.completeBreak(runID: runID)
+    @discardableResult
+    func execute(runID: UUID, expectedState: PomodoroState) throws -> Bool {
+        try repository.completeBreak(runID: runID, expectedState: expectedState)
     }
 }
 

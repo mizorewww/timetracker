@@ -56,60 +56,68 @@ struct PomodoroCommandHandler {
 
     @discardableResult
     func completeFocus(
-        run: PomodoroRun,
+        runID: UUID,
         expectedState: PomodoroState,
         repository: PomodoroRepository
     ) throws -> Bool {
-        guard run.state == expectedState,
-              expectedState == .focusing || expectedState == .interrupted,
-              run.deletedAt == nil,
-              run.endedAt == nil else {
+        guard expectedState == .focusing || expectedState == .interrupted else {
             return false
         }
-        try CompletePomodoroFocusUseCase(repository: repository).execute(runID: run.id)
-        return true
+        return try CompletePomodoroFocusUseCase(repository: repository).execute(
+            runID: runID,
+            expectedState: expectedState,
+            endedAt: nowProvider()
+        )
     }
 
     @discardableResult
     func resumeFocusAfterBreak(
-        run: PomodoroRun,
+        runID: UUID,
         expectedState: PomodoroState,
         allowParallelTimers: Bool,
-        activeSegments: [TimeSegment],
-        pomodoroRuns: [PomodoroRun],
         timeRepository: TimeTrackingRepository,
         repository: PomodoroRepository,
-        context: ModelContext?
+        context: ModelContext
     ) throws -> Bool {
         let mutation = { () throws -> Bool in
-            guard run.state == expectedState,
-                  expectedState == .shortBreak || expectedState == .longBreak,
+            guard expectedState == .shortBreak || expectedState == .longBreak,
+                  let run = try repository.run(id: runID),
+                  run.state == expectedState,
                   run.deletedAt == nil,
                   run.endedAt == nil else {
                 return false
             }
+            let activeSegments = try timeRepository.activeSegments()
+            let pomodoroRuns = try repository.runs()
+            let admission = TimerStartAdmissionPolicy().evaluate(
+                taskID: run.taskID,
+                allowParallelTimers: allowParallelTimers,
+                activeSegments: activeSegments,
+                existingTaskAdmission: .replaceExisting
+            )
+            guard admission.shouldStartNewSegment else { return false }
+
+            let didResume = try CompletePomodoroBreakUseCase(repository: repository).execute(
+                runID: run.id,
+                expectedState: expectedState
+            )
+            guard didResume else { return false }
+
             let timerHandler = TimerCommandHandler(
                 deviceID: deviceID,
                 nowProvider: nowProvider
             )
-            guard try timerHandler.prepareTaskStart(
-                taskID: run.taskID,
-                allowParallelTimers: allowParallelTimers,
-                activeSegments: activeSegments,
-                existingTaskAdmission: .replaceExisting,
-                pomodoroRuns: pomodoroRuns,
-                timeRepository: timeRepository,
-                context: context
-            ) else {
-                return false
+            for segment in admission.segmentsToStop {
+                try timerHandler.stop(
+                    segment: segment,
+                    pomodoroRuns: pomodoroRuns,
+                    timeRepository: timeRepository,
+                    context: context
+                )
             }
-            try CompletePomodoroBreakUseCase(repository: repository).execute(runID: run.id)
             return true
         }
-        if let context {
-            return try context.performAtomicMutation(mutation)
-        }
-        return try mutation()
+        return try context.performAtomicMutation(mutation)
     }
 
     @discardableResult

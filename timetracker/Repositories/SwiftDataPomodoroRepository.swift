@@ -20,6 +20,10 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         self.nowProvider = nowProvider
     }
 
+    func run(id: UUID) throws -> PomodoroRun? {
+        try canonicalRuns(ids: [id]).first
+    }
+
     func runs() throws -> [PomodoroRun] {
         try context.fetch(FetchDescriptor<PomodoroRun>())
             .visibleDeduplicatedByID()
@@ -93,23 +97,46 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         }
     }
 
-    func completeFocus(runID: UUID, endedAt requestedEndDate: Date) throws {
-        guard let run = try run(id: runID) else { return }
-        guard run.state == .focusing || run.state == .interrupted else { return }
-        try context.performAtomicMutation {
+    @discardableResult
+    func completeFocus(
+        runID: UUID,
+        expectedState: PomodoroState,
+        endedAt requestedEndDate: Date
+    ) throws -> Bool {
+        guard expectedState == .focusing || expectedState == .interrupted else {
+            return false
+        }
+        return try context.performAtomicMutation {
+            guard let run = try run(id: runID),
+                  run.state == expectedState,
+                  run.deletedAt == nil,
+                  run.endedAt == nil else {
+                return false
+            }
             try completeFocusMutation(
                 run,
                 endedAt: requestedEndDate,
                 mutationDate: nowProvider()
             )
+            return true
         }
     }
 
-    func completeBreak(runID: UUID) throws {
-        guard let run = try run(id: runID) else { return }
-        guard run.state == .shortBreak || run.state == .longBreak else { return }
-
-        try context.performAtomicMutation {
+    @discardableResult
+    func completeBreak(
+        runID: UUID,
+        expectedState: PomodoroState
+    ) throws -> Bool {
+        guard expectedState == .shortBreak || expectedState == .longBreak else {
+            return false
+        }
+        return try context.performAtomicMutation {
+            guard let run = try run(id: runID),
+                  run.state == expectedState,
+                  run.deletedAt == nil,
+                  run.endedAt == nil else {
+                return false
+            }
             let now = nowProvider()
             let segment = try timeRepository.startTask(taskID: run.taskID, source: .pomodoro)
             run.sessionID = segment.sessionID
@@ -117,6 +144,7 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             run.state = .focusing
             run.endedAt = nil
             run.markMutated(at: now, deviceID: deviceID)
+            return true
         }
     }
 
@@ -128,8 +156,11 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
               deadline <= now else {
             return false
         }
-        try completeFocus(runID: run.id, endedAt: deadline)
-        return true
+        return try completeFocus(
+            runID: run.id,
+            expectedState: run.state,
+            endedAt: deadline
+        )
     }
 
     func cancel(runID: UUID, discardRecord: Bool = false) throws {
@@ -263,10 +294,6 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             predicate: #Predicate { $0.id == sessionID }
         )
         return try context.fetch(descriptor).visibleDeduplicatedByID().first
-    }
-
-    private func run(id: UUID) throws -> PomodoroRun? {
-        try canonicalRuns(ids: [id]).first
     }
 
     private func canonicalRuns(ids: Set<UUID>) throws -> [PomodoroRun] {

@@ -186,6 +186,168 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func resumingBreakUsesCanonicalSegmentsWhenStoreCacheIsStale() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "external")
+        let pomodoroTask = try taskRepository.createTask(
+            title: "Pomodoro",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let externalTask = try taskRepository.createTask(
+            title: "External timer",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.preferences.allowParallelTimers = false
+        store.selectedTaskID = pomodoroTask.id
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 2
+        )
+        #expect(store.completeActivePomodoroFocus())
+        let breakRun = try #require(store.activePomodoroRun)
+        let expectedState = breakRun.state
+
+        let externalSegment = try timeRepository.startTask(
+            taskID: externalTask.id,
+            source: .timer
+        )
+        #expect(store.activeSegments.contains { $0.id == externalSegment.id } == false)
+        #expect(try timeRepository.activeSegments().contains { $0.id == externalSegment.id })
+
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: breakRun.id,
+            expectedState: expectedState
+        ))
+
+        #expect(externalSegment.endedAt != nil)
+        let canonicalActiveSegments = try timeRepository.activeSegments()
+        #expect(canonicalActiveSegments.count == 1)
+        #expect(canonicalActiveSegments.first?.taskID == pomodoroTask.id)
+        #expect(canonicalActiveSegments.first?.source == .pomodoro)
+        #expect(store.activeSegments.map(\.id) == canonicalActiveSegments.map(\.id))
+    }
+
+    @Test @MainActor
+    func staleBreakCommandDoesNotStopTimersWhenCanonicalRunAlreadyAdvanced() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let pomodoroTask = try taskRepository.createTask(
+            title: "Pomodoro",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let otherTask = try taskRepository.createTask(
+            title: "Keep running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.preferences.allowParallelTimers = false
+        store.selectedTaskID = pomodoroTask.id
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 2
+        )
+        #expect(store.completeActivePomodoroFocus())
+        let staleBreakRun = try #require(store.activePomodoroRun)
+        let expectedState = staleBreakRun.state
+        store.startTask(otherTask)
+        let otherSegment = try #require(store.activeSegment(for: otherTask.id))
+
+        let canonicalRun = PomodoroRun(
+            taskID: staleBreakRun.taskID,
+            focus: staleBreakRun.focusSecondsPlanned,
+            breakSeconds: staleBreakRun.breakSecondsPlanned,
+            longBreakSeconds: staleBreakRun.longBreakSecondsPlanned,
+            targetRounds: staleBreakRun.targetRounds,
+            deviceID: "remote"
+        )
+        canonicalRun.id = staleBreakRun.id
+        canonicalRun.state = .completed
+        canonicalRun.completedFocusRounds = canonicalRun.targetRounds
+        canonicalRun.startedAt = staleBreakRun.startedAt
+        canonicalRun.endedAt = staleBreakRun.updatedAt.addingTimeInterval(30)
+        canonicalRun.createdAt = staleBreakRun.createdAt
+        canonicalRun.updatedAt = staleBreakRun.updatedAt.addingTimeInterval(60)
+        context.insert(canonicalRun)
+        try context.save()
+
+        #expect(store.activePomodoroRun?.state == .shortBreak)
+        #expect(try store.requiredPomodoroRepository().run(id: staleBreakRun.id)?.state == .completed)
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: staleBreakRun.id,
+            expectedState: expectedState
+        ) == false)
+
+        #expect(otherSegment.endedAt == nil)
+        #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
+        #expect(try timeRepository.allSegments().filter { $0.source == .pomodoro }.count == 1)
+    }
+
+    @Test @MainActor
+    func staleFocusCommandReportsCanonicalNoOpWithoutStoppingLedger() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Already advanced",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.selectedTaskID = task.id
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 1
+        )
+        let staleFocusRun = try #require(store.activePomodoroRun)
+        let focusSegment = try #require(store.activeSegment(for: task.id))
+
+        let canonicalRun = PomodoroRun(
+            taskID: staleFocusRun.taskID,
+            focus: staleFocusRun.focusSecondsPlanned,
+            breakSeconds: staleFocusRun.breakSecondsPlanned,
+            longBreakSeconds: staleFocusRun.longBreakSecondsPlanned,
+            targetRounds: staleFocusRun.targetRounds,
+            deviceID: "remote"
+        )
+        canonicalRun.id = staleFocusRun.id
+        canonicalRun.state = .completed
+        canonicalRun.completedFocusRounds = canonicalRun.targetRounds
+        canonicalRun.startedAt = staleFocusRun.startedAt
+        canonicalRun.endedAt = staleFocusRun.updatedAt.addingTimeInterval(30)
+        canonicalRun.createdAt = staleFocusRun.createdAt
+        canonicalRun.updatedAt = staleFocusRun.updatedAt.addingTimeInterval(60)
+        context.insert(canonicalRun)
+        try context.save()
+
+        #expect(store.activePomodoroRun?.state == .focusing)
+        #expect(try store.requiredPomodoroRepository().run(id: staleFocusRun.id)?.state == .completed)
+        #expect(store.completeActivePomodoroFocus() == false)
+        #expect(focusSegment.endedAt == nil)
+        #expect(try timeRepository.activeSegments().map(\.id) == [focusSegment.id])
+    }
+
+    @Test @MainActor
     func resumingBreakReplacesAnExistingTimerForTheSameTask() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

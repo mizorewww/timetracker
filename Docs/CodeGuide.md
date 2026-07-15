@@ -186,13 +186,13 @@ CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态�
 
 - `SyncConflictService.swift`：bootstrap 与 prompt 组装。
 - `SyncConflictService+LocalMutation.swift`、`+CloudImport.swift`、`+CloudExport.swift`、`+Recovery.swift`、`+Resolution.swift`：本地变更、云事件与显式恢复流程。
-- `SyncConflictService+State.swift`、`+StateLock.swift`、`+StateLocations.swift` 与 `SyncConflictState.swift`：本机状态持久化、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state。
+- `SyncConflictService+State.swift`、`+StateWriting.swift`、`+StateLock.swift`、`+StateLocations.swift` 与 `SyncConflictState.swift`：有界本机状态读写、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state。
 - `SyncConflictService+Export.swift`：过滤后的 JSON export encoding。
 - `SyncDataSnapshot.swift`：版本化全域快照、摘要和 fingerprint。
 - `SyncDataSnapshot+Capture.swift`、`SyncDataSnapshot+Restore.swift`、`SyncDataSnapshot+RestoreTasks.swift`、`SyncDataSnapshot+RestoreLedger.swift`、`SyncDataSnapshot+RestorePlanning.swift`、`SyncDataSnapshot+RestoreChecklist.swift` 与 `SyncDataSnapshot+RestoreInbox.swift`：按域捕获与一个原子事务中的分域恢复。
 - `SyncSnapshotRecords.swift`、`SyncSnapshotLedgerRecords.swift`、`SyncSnapshotPlanningRecords.swift`、`SyncSnapshotChecklistRecords.swift` 与 `SyncSnapshotInboxRecords.swift`：组织/任务基础和分域跨版本 Codable record DTO；它们不是第二套业务模型。
 
-`SyncConflictState.json` 的每次 read-modify-write 都在 `SyncConflictService.withExclusiveStateAccess` 内完成。进程内使用递归锁，跨主应用/Shortcuts 进程使用 POSIX advisory `lockf` 文件锁；两个进程不会用各自的旧状态副本互相覆盖。状态 JSON 原子替换，forced-upload mirror 只在权威 state 缺失/损坏隔离时恢复，并在下一次 locked load 校正。权威 state 读取上限为 128 MiB，recovery mirror 为 64 MiB：先用 file metadata 预检，再通过 `FileHandle.read(upToCount: limit + 1)` 抵御预检后文件增长的 TOCTOU，不做无界 `Data(contentsOf:)`。损坏或超限的权威 state 会隔离并进入显式恢复；损坏或超限的 pending mirror 会隔离并安全忽略，不能阻塞主库。超限隔离直接移动文件，不把整份 JSON 载入内存。
+`SyncConflictState.json` 的每次 read-modify-write 都在 `SyncConflictService.withExclusiveStateAccess` 内完成。进程内使用递归锁，跨主应用/Shortcuts 进程使用 POSIX advisory `lockf` 文件锁；两个进程不会用各自的旧状态副本互相覆盖。状态 JSON 原子替换，forced-upload mirror 只在权威 state 缺失/损坏隔离时恢复，并在下一次 locked load 校正。权威 state 读写上限为 128 MiB，recovery mirror 为 64 MiB。读取先用 file metadata 预检，再通过 `FileHandle.read(upToCount: limit + 1)` 抵御预检后文件增长的 TOCTOU，不做无界 `Data(contentsOf:)`。写入先编码并同时验证权威 state 与所需 mirror，只有两者都在上限内才解析目标路径、建目录或原子替换；独立 mirror rewrite 在最终写边界再次验长。大小拒绝不能改写旧的有效 state 或 mirror。损坏或超限的权威 state 会隔离并进入显式恢复；损坏或超限的 pending mirror 会隔离并安全忽略，不能阻塞主库。超限隔离直接移动文件，不把整份 JSON 载入内存。
 
 在 iOS 上，权威状态文件、pending forced-upload 恢复镜像和腐损状态隔离文件写入后都设置 `FileProtectionType.completeUntilFirstUserAuthentication`。这些文件在设备本次启动首次解锁前不可读，首次解锁后可供后台 Shortcuts/CloudKit 流程继续使用；lock 文件不是用户快照，也不能被描述为同样的受保护数据文件。macOS 不套用 iOS Data Protection 属性。
 

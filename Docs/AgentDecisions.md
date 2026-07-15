@@ -326,11 +326,11 @@
 
 背景：主应用与 App Intents/Shortcuts 可并发读写 `SyncConflictState.json`；单纯 atomic file replace 不能防止两个进程基于旧状态各自覆盖。CloudKit export 回调还可能乱序或属于已失效的恢复 epoch。
 
-决策：所有 state read-modify-write 在一个递归进程锁和 POSIX `lockf` advisory file lock 内完成，形成跨进程 compare-and-swap 等价边界；JSON 使用原子替换，forced-upload mirror 服从权威 state。权威 state 限 128 MiB，recovery mirror 限 64 MiB；读取先做 metadata 大小预检，再用 `FileHandle` 最多读 `limit + 1`，以识别预检后文件增长的 TOCTOU。损坏或超限的权威 state 进入显式隔离恢复；损坏或超限的 pending mirror 被隔离并忽略，不能阻塞主库；超限文件通过 move 隔离，不整份载入内存。iOS 权威状态、pending forced-upload 恢复镜像和腐损隔离文件设置 `FileProtectionType.completeUntilFirstUserAuthentication`：本次启动首次解锁前不可读，解锁后允许后台 Shortcuts/CloudKit 使用。local mutation 推进 generation，import/恢复推进 epoch；export start 按 event ID 记录 epoch/generation/fingerprint，finish 只能确认同 epoch 且不早于已确认 generation 的 checkpoint。旧 state 清理被排除偏好时必须重算 fingerprint 并作废旧 payload checkpoints。checkpoint 限 16 个、24 小时。Snapshot restore 在建 three-way dictionary 前确定性去重重复 UUID，并规范化 Pomodoro duration/round 范围，不能让历史或损坏 transport 触发运行时 trap 或非法领域状态。
+决策：所有 state read-modify-write 在一个递归进程锁和 POSIX `lockf` advisory file lock 内完成，形成跨进程 compare-and-swap 等价边界；JSON 使用原子替换，forced-upload mirror 服从权威 state。权威 state 限 128 MiB，recovery mirror 限 64 MiB。读取先做 metadata 大小预检，再用 `FileHandle` 最多读 `limit + 1`，以识别预检后文件增长的 TOCTOU。写入先编码并同时验证权威 state 与所需 mirror，只有两者均在上限内才解析路径或修改文件；独立 mirror rewrite 在最终写边界再次校验。大小拒绝必须保留现有有效 state/mirror。损坏或超限的权威 state 进入显式隔离恢复；损坏或超限的 pending mirror 被隔离并忽略，不能阻塞主库；超限文件通过 move 隔离，不整份载入内存。iOS 权威状态、pending forced-upload 恢复镜像和腐损隔离文件设置 `FileProtectionType.completeUntilFirstUserAuthentication`：本次启动首次解锁前不可读，解锁后允许后台 Shortcuts/CloudKit 使用。local mutation 推进 generation，import/恢复推进 epoch；export start 按 event ID 记录 epoch/generation/fingerprint，finish 只能确认同 epoch 且不早于已确认 generation 的 checkpoint。旧 state 清理被排除偏好时必须重算 fingerprint 并作废旧 payload checkpoints。checkpoint 限 16 个、24 小时。Snapshot restore 在建 three-way dictionary 前确定性去重重复 UUID，并规范化 Pomodoro duration/round 范围，不能让历史或损坏 transport 触发运行时 trap 或非法领域状态。
 
 后果：禁止在锁外 load→mutate→save，禁止用任意成功 export 清除最新 pending winner，也禁止为每个 event 复制完整用户 snapshot。
 
-验证：同进程并发互斥、外部进程 `lockf`、两个 service 实例无 lost update、乱序完成、失败完成、过期/上限 pruning、旧 preference scrub checkpoint invalidation、损坏 mirror 隔离、forced-upload ack、重复 UUID restore、Pomodoro 范围规范化、128 MiB/64 MiB 稀疏超限文件的拒绝/隔离，以及 iOS 三类敏感文件的最终 protection attribute 测试。
+验证：同进程并发互斥、外部进程 `lockf`、两个 service 实例无 lost update、乱序完成、失败完成、过期/上限 pruning、旧 preference scrub checkpoint invalidation、损坏 mirror 隔离、forced-upload ack、重复 UUID restore、Pomodoro 范围规范化、128 MiB/64 MiB 稀疏超限文件的拒绝/隔离、写端 state/mirror 分别超限时旧文件不变、精确边界接受、独立 mirror rewrite 复检，以及 iOS 三类敏感文件的最终 protection attribute 测试。
 
 ## AD-024：Pomodoro 由持久 phase 状态派生 deadline，并与账本生命周期一致
 

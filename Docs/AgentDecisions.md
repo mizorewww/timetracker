@@ -440,6 +440,42 @@
 
 验证：覆盖 future write rejection、`startedAt == now`、future-only、future-ended 随时间增长/停止、半开区间、DST、gross/wall/timeline/forecast/cache/repository 裁剪、时钟前进、clock rewind、incremental/full rebuild 等价，以及 editor DatePicker/validation/duration 与 timeline/recent/shared label 显示契约。
 
+## AD-033：持久偏好先做整批类型化预检
+
+状态：Accepted
+
+背景：非 throwing JSON 编码曾在超限/编码失败时返回 `null`，raw preference command 又可逐项直接写入。错误类型或批次后项失败可能留下不可恢复的偏好或前项 pending mutation。
+
+决策：`PreferenceJSON` 对持久路径提供 throwing checked encode/decode，并按 `AppPreferenceKey` 将值解码为声明类型、规范化、重新编码。单项上限 256 KiB；`null`、畸形 JSON、错误类型和超限必须拒绝。`PreferenceCommandHandler` 在任何 fetch/insert/update 前准备完整批次，再用 `performAtomicMutation` 一次提交；独立调用的 save 失败同样 rollback。Legacy 无法 checked-encode 的值跳过，不得保存为 `null`。
+
+后果：新增 preference key 必须同时加入 canonical switch、读取 sanitizer、迁移与错误测试。不得在 apply 循环里边验证边修改，也不得把 fallback decode 当持久化校验。
+
+验证：覆盖 malformed/`null`/wrong-type/oversized、后项失败前项不变、canonical clamp、真实只读 store rollback、legacy 超限跳过与三语错误键。
+
+## AD-034：LLM 响应必须流式、有界且可取消
+
+状态：Accepted
+
+背景：`URLSession.data` 会在解码前完整缓冲响应；第三方 endpoint 可省略或伪造 Content-Length、返回巨大错误页或长期悬挂，造成内存和任务生命周期风险。
+
+决策：生产 LLM transport 使用专用 ephemeral session，禁用 cache/cookie，资源 timeout 为 60 秒。响应使用 `AsyncBytes`；headers 阶段先处理 HTTP 状态和 2 MiB Content-Length，非 2xx/声明超限立即取消且不读取 body，实际读取也在第一个超限字节取消。父 Task 取消传到底层 task；timeout 转 typed error。注入 transport 的三个 service 对成功 body 重做 2 MiB 校验，但保留响应类型与 HTTP 状态优先级。
+
+后果：不得恢复 `URLSession.shared.data` 或只信 Content-Length。未来提高上限必须同时评估 decoder 复杂度、内存峰值和隐私披露。
+
+验证：ephemeral 配置、精确上限、首个越界字节、headers preflight、非成功优先、等待 headers 取消、timeout、注入 transport 与三语错误测试。
+
+## AD-035：设备身份是随机不透明 ID，不是设备指纹
+
+状态：Accepted
+
+背景：`deviceID` 只用于同步 tie-break/mutation metadata；无界复用 UserDefaults 字符串会传播畸形、跨平台或可能含可识别信息的旧值。
+
+决策：只复用当前平台 `mac|ios|watch` 前缀加大写连字符规范 UUID，完整值最多 42 UTF-8 bytes 且不得含控制字符。其余值随机重建并回写。不得加入主机名、账户名、序列号或硬件标识。
+
+后果：平台迁移会得到新的本地 identity，这是预期行为；它不是用户设备列表或认证凭据。
+
+验证：跨平台、超限、控制字符、畸形/非规范 UUID 拒绝，合法值稳定复用，生成值不含 host/account，并执行 iOS/macOS 签名构建。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

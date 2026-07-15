@@ -88,6 +88,7 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 - 远程服务地址必须使用 HTTPS。
 - HTTP 仅允许 localhost、以 .localhost 结尾的保留主机，以及经数值解析确认的 ::1 和 127.0.0.0/8 回环地址；不能用字符串前缀接受 `127.evil.com` 等伪装主机。
 - 携带 Authorization 的重定向只允许 scheme、host 和有效端口全部相同；跨源、端口变化和 HTTPS 降级会被拒绝。
+- 响应通过禁用缓存与 cookie 的 ephemeral 会话流式读取；资源超时 60 秒，Content-Length 与实际读取正文都限制为 2 MiB。非 2xx 在 headers 后立即取消，不为错误页继续读取正文；用户取消会传递给底层网络 task。
 - 选择第三方 endpoint 等同于授权该服务按其条款处理上述字段。
 - 请求、响应和错误日志不得输出密钥；生产诊断应避免记录完整用户文本。
 
@@ -166,6 +167,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 4. 新依赖必须评估许可证、维护、安全、隐私清单和可删除性。
 5. destructive migration 必须有 fixture、验证和明确回滚边界。
 6. 安全失败应 fail closed；不能以便利为由退回明文或任意 HTTP。
+7. 本机 `DeviceIdentity` 只能是当前平台前缀与随机规范 UUID；不采集主机名、账户名或硬件标识，持久值异常时重新生成。
 
 ## 10. 发行前检查
 

@@ -107,7 +107,7 @@ Inbox 用于快速收集还没有整理归属的事项。
 - 用户可以接受建议，把 Inbox 项转换为目标任务下的 checklist。
 - 用户也可以丢弃建议；编辑标题后可重新触发建议。
 - 新增输入只在数据库提交成功后清空；只读恢复状态或保存错误会保留原草稿，允许直接重试。
-- LLM 请求最多发送 48 个任务候选，优先保留 Quick Start 固定项、高频/近期任务，再稳定补足；模型只看到 78 个精选语义 SF Symbols，用户的完整图标选择器不受影响。网络投影按 UTF-8 字节与总请求预算缩短，不回写任务/Inbox/checklist 原文；LLM 结果仍经任务 ID、已公告 SF Symbol、颜色和文本上限校验。
+- LLM 请求最多发送 48 个任务候选，优先保留 Quick Start 固定项、高频/近期任务，再稳定补足；模型只看到 78 个精选语义 SF Symbols，用户的完整图标选择器不受影响。网络投影按 UTF-8 字节与总请求预算缩短，不回写任务/Inbox/checklist 原文；响应使用禁用缓存/cookie 的临时会话流式读取，60 秒资源超时且最多 2 MiB，非成功状态不读取正文。LLM 结果仍经任务 ID、已公告 SF Symbol、颜色和文本上限校验。
 
 ### 计时账本
 
@@ -183,6 +183,7 @@ Widget extension 与快照代码已经存在，主应用和扩展已启用 `grou
 - Pomodoro 专注计划。
 - iCloud 同步开关和同步状态反馈。开关仅保存在当前设备，并在下次启动时决定是否创建 CloudKit 容器；它不会跨设备同步。
 - OpenAI-compatible endpoint、API key 和模型选择使用 Test→Save 草稿：键入不持久化，测试只加载模型，用户明确保存后才写入偏好/Keychain。API key 仅存于本机不同步的 Keychain，每台设备需单独设置。
+- 可同步偏好在写入前按 key 完成整批类型检查、规范化与 256 KiB JSON 上限验证；任一值为 `null`、畸形、类型错误或超限时整批不变，保存失败会回滚。
 - 自动 AI 建议是默认关闭、设备本地的第二个明确开关；配置成功不会自动开启内容发送。
 - JSON 数据导出。当前没有 importer、校验和或事务恢复，因此导出不是可恢复备份。
 - “清空全部数据”会逻辑删除业务数据，并同时清除本机 Keychain 中的 LLM API key 和设备本地的自动建议同意；当前设备的 iCloud 启动开关不会被这个动作悄悄改写。
@@ -207,7 +208,7 @@ Widget extension 与快照代码已经存在，主应用和扩展已启用 `grou
 | `CountdownEvent` | 用户自定义倒计时事件。 |
 | `SyncedPreference` | 非敏感用户设置，以 JSON 存入 SwiftData 并可通过 iCloud 同步；API key 等秘密明确排除。 |
 
-核心数据普遍包含 `id`、`createdAt`、`updatedAt`、`deletedAt`、`deviceID` 和 `clientMutationID`，用于软删除、同步、冲突处理和幂等操作。
+核心数据普遍包含 `id`、`createdAt`、`updatedAt`、`deletedAt`、`deviceID` 和 `clientMutationID`，用于软删除、同步、冲突处理和幂等操作。`deviceID` 仅接受当前平台前缀加规范 UUID；旧的畸形、跨平台、含控制字符或超限值会被随机身份替换，不包含主机名或账户名。
 
 ## 架构概览
 

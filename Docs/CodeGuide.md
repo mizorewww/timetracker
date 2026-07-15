@@ -180,6 +180,8 @@ legacy `CountdownEventsJSON` 是一次性 `UserDefaults`→SwiftData 迁移，�
 
 偏好迁移实现集中在 `Models/SyncedPreferenceMigrations.swift`。普通 legacy `UserDefaults` 导入通过 `performAtomicMutation` 一次保存，保存成功后才设置 migration flag；失败会 rollback 所有待插入记录并保留源值与未完成标记。敏感偏好迁移先确保 device-only Keychain 有安全副本，再删除本机旧 secret，并把所有 SwiftData redaction 放在一个原子 mutation；保存失败时 redaction 回滚，已建立的 Keychain 副本作为可重试的安全落点保留。不得把这个跨 Keychain/SwiftData 流程描述为 ACID transaction。
 
+普通偏好的当前写边界由 `Models/PreferenceJSON.swift` 与 `PreferenceCommandHandler` 共同定义。每个 raw JSON 最多 256 KiB；command 在抓取或改写任何模型前，先把整批 `(AppPreferenceKey, JSON)` 按 key 解码为声明类型、应用现有 sanitizer/clamp，再编码为 canonical JSON。JSON `null`、畸形文法、错误类型和超限 payload 会抛出可本地化错误，整批保持不变。预检通过后，写入本身再进入 `performAtomicMutation`；独立 command 的最终 `save()` 失败会 rollback，嵌套在 store mutation 中则只由最外层统一提交。Legacy 值使用 throwing checked encoding，超限旧值被跳过，绝不能静默保存成字符串 `"null"`。
+
 CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态不同。紧急内存 fallback 只能用于保持应用可诊断，绝不能被描述为持久存储。
 
 同步刷新是事件驱动的：`NSPersistentStoreRemoteChange` 和 `NSPersistentCloudKitContainer.eventChangedNotification` 进入 `TimeTrackerStore+SyncObservers`，350 ms 合并窗口保留最高优先级原因，再由 refresh planner 执行一次一致性刷新。启动与 scene 回到 active 时仍会刷新；不要重新引入常驻 5 秒轮询。`SyncedPreferenceService.latestByKey` 必须先完成 LWW/tombstone 选择，再过滤已删除结果，否则旧 active preference 会复活。legacy `UserDefaults` 迁移也必须从 logical-key LWW winner 判断 key 是否已迁移；winning tombstone 仍表示“已迁移”，必须阻止旧本机值重新导入。
@@ -228,7 +230,7 @@ Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子
 
 任何新增 token、密码或私钥都默认遵守同样规则，除非有独立安全设计和用户授权。
 
-`DeviceIdentity` 是本机 `UserDefaults` 中的随机平台前缀 UUID，仅用于同步 tie-break 和 mutation metadata。新 identity 不包含 Mac 主机名、账户名或其他可读设备名称。
+`DeviceIdentity` 是本机 `UserDefaults` 中的随机平台前缀 UUID，仅用于同步 tie-break 和 mutation metadata。读取时只复用“当前平台 `mac|ios|watch` 前缀 + 大写连字符规范 UUID”的完整值；错误平台、非规范 UUID、后缀、控制字符或超过 42 UTF-8 bytes 的值会被重新生成并回写。新 identity 不包含 Mac 主机名、账户名或其他可读设备名称。
 
 Required Reason API 声明按 target 的真实 UserDefaults 边界维护：主 App 为 `1C8F.1` 与 `CA92.1`，Widget 为 App Group 场景的 `1C8F.1`，Watch 为自身偏好/队列场景的 `CA92.1`。Live Activity 当前没有独立 manifest；每次 Archive 必须检查合并结果和实际 API，不能用主 App 的声明替未覆盖 target 背书。
 
@@ -279,6 +281,8 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 仅 `localhost`/`.localhost` 保留域名以及经 `inet_pton` 数值解析确认的 `127.0.0.0/8` 或 `::1` 可使用 HTTP；`127.evil.com` 一类主机名不能靠字符串前缀伪装成本机。
 - API key 只在请求 Authorization header 中使用。
 - 带 Authorization 的 redirect 只允许保持相同 scheme、host 和有效端口；跨源、HTTPS 降级或模糊主机跳转必须拒绝，防止 credential 泄漏。
+- 生产 transport 使用专用 `URLSessionConfiguration.ephemeral`：禁用 URL cache、cookie 与 cookie store，资源超时 60 秒。响应通过 `URLSession.AsyncBytes` 流式读取；HTTP 非 2xx 与声明超过 2 MiB 的 Content-Length 在 headers 阶段取消，未声明/不可信长度仍以实际读取字节硬限制 2 MiB。父 Task 取消必须取消底层 URLSession task，`URLError.timedOut` 转为可操作超时错误。
+- 注入 transport 仍须在 Model/Inbox/Checklist service 层对成功响应执行 2 MiB 二次防御；响应类型和 HTTP 状态优先于 buffered-body 上限，保持真实与替代 transport 的错误语义一致。
 - 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/16 KiB JSON，prompt 最多 24 KiB，request body 最多 32 KiB，持久化 model ID 最多 256 bytes，字段按 UTF-8 bytes 以完整 `Character` 裁剪。model ID 上限必须与同步快照 compact-field restore 上限保持一致；这些裁剪仅用于网络 DTO，不回写 canonical facts。
 - Inbox 候选集先取 Quick Start 固定任务，再取高频/近期任务，最后稳定补足。候选归一化去重后再按实际 JSON 字节预算取舍；不能回退成对全库纯字母截断。
 - `SymbolCatalog.symbolNames` 保留完整本机 picker 目录，`aiSuggestionSymbolNames` 是请求中的 78 项精选语义集。普通 icon sanitizer 用 `symbolNameSet` O(1) 查找；AI 返回 icon 只接受已公告精选集，Inbox task UUID 只接受实际发送候选。

@@ -9,12 +9,7 @@ extension AnalyticsStore {
         calendar: Calendar
     ) -> AnalyticsComparison {
         guard let currentInterval = analyticsInterval(for: range, now: now, calendar: calendar) else {
-            return AnalyticsComparison(
-                currentGrossSeconds: 0,
-                previousGrossSeconds: 0,
-                currentWallSeconds: 0,
-                previousWallSeconds: 0
-            )
+            return emptyComparison(at: now)
         }
 
         return comparison(
@@ -35,49 +30,61 @@ extension AnalyticsStore {
         evaluatedAt cutoff: Date,
         calendar: Calendar
     ) -> AnalyticsComparison {
-        guard let previousInterval = previousDecisionInterval(
+        guard let window = comparisonWindow(
             for: range,
             currentInterval: currentInterval,
+            evaluatedAt: cutoff,
             calendar: calendar
         ) else {
-            return AnalyticsComparison(
-                currentGrossSeconds: 0,
-                previousGrossSeconds: 0,
-                currentWallSeconds: 0,
-                previousWallSeconds: 0
-            )
+            return emptyComparison(at: cutoff)
         }
 
         let canonicalSegments = segments.deduplicatedByID()
         return AnalyticsComparison(
+            window: window,
             currentGrossSeconds: seconds(
-                in: currentInterval,
+                in: window.current,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .gross,
-                now: cutoff
+                now: window.current.end
             ),
             previousGrossSeconds: seconds(
-                in: previousInterval,
+                in: window.previous,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .gross,
-                now: cutoff
+                now: window.previous.end
             ),
             currentWallSeconds: seconds(
-                in: currentInterval,
+                in: window.current,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .wallClock,
-                now: cutoff
+                now: window.current.end
             ),
             previousWallSeconds: seconds(
-                in: previousInterval,
+                in: window.previous,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .wallClock,
-                now: cutoff
+                now: window.previous.end
             )
+        )
+    }
+
+    private func emptyComparison(at date: Date) -> AnalyticsComparison {
+        let emptyWindow = DateInterval(start: date, duration: 0)
+        return AnalyticsComparison(
+            window: AnalyticsComparisonWindow(
+                current: emptyWindow,
+                previous: emptyWindow,
+                basis: .matchedProgress
+            ),
+            currentGrossSeconds: 0,
+            previousGrossSeconds: 0,
+            currentWallSeconds: 0,
+            previousWallSeconds: 0
         )
     }
 

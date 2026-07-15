@@ -30,22 +30,24 @@ struct AnalyticsMetricList: View {
                 title: AppStrings.wallTime,
                 value: DurationFormatter.compact(overview.wallSeconds),
                 footnote: String(
-                    format: AppStrings.localized("analytics.metric.deltaFootnoteFormat"),
+                    format: AppStrings.localized(deltaFootnoteFormatKey),
                     deltaText(comparison.wallDeltaSeconds)
                 ),
                 systemImage: "clock",
-                tint: .blue
+                tint: .blue,
+                identifier: "analytics.metric.wall"
             )
             Divider()
             AnalyticsMetricListRow(
                 title: AppStrings.grossTime,
                 value: DurationFormatter.compact(overview.grossSeconds),
                 footnote: String(
-                    format: AppStrings.localized("analytics.metric.deltaFootnoteFormat"),
+                    format: AppStrings.localized(deltaFootnoteFormatKey),
                     deltaText(comparison.grossDeltaSeconds)
                 ),
                 systemImage: "sum",
-                tint: .green
+                tint: .green,
+                identifier: "analytics.metric.gross"
             )
             Divider()
             AnalyticsMetricListRow(
@@ -53,7 +55,8 @@ struct AnalyticsMetricList: View {
                 value: DurationFormatter.compact(overview.overlapSeconds),
                 footnote: AppStrings.localized("analytics.overlap.footnote"),
                 systemImage: "rectangle.2.swap",
-                tint: .orange
+                tint: .orange,
+                identifier: "analytics.metric.overlap"
             )
             Divider()
             AnalyticsMetricListRow(
@@ -61,7 +64,8 @@ struct AnalyticsMetricList: View {
                 value: "\(overview.pomodoroCount)",
                 footnote: AppStrings.localized("analytics.pomodoros.footnote"),
                 systemImage: "timer",
-                tint: .red
+                tint: .red,
+                identifier: "analytics.metric.pomodoros"
             )
             Divider()
             AnalyticsMetricListRow(
@@ -72,8 +76,18 @@ struct AnalyticsMetricList: View {
                     rhythm.activeDayCount
                 ),
                 systemImage: "calendar",
-                tint: .purple
+                tint: .purple,
+                identifier: "analytics.metric.dailyPace"
             )
+        }
+    }
+
+    private var deltaFootnoteFormatKey: String {
+        switch comparison.window.basis {
+        case .matchedProgress:
+            return "analytics.metric.deltaMatchedFootnoteFormat"
+        case .completePeriods:
+            return "analytics.metric.deltaCompleteFootnoteFormat"
         }
     }
 
@@ -94,6 +108,7 @@ private struct AnalyticsMetricListRow: View {
     let footnote: String
     let systemImage: String
     let tint: Color
+    let identifier: String
 
     var body: some View {
         Group {
@@ -112,6 +127,7 @@ private struct AnalyticsMetricListRow: View {
         }
         .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier)
     }
 
     private var metricIdentity: some View {

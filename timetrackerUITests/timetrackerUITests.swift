@@ -196,6 +196,31 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsMetricsExplainTheMatchedComparisonWindow() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics metric layout screenshots require an iOS simulator.")
+        #else
+        let app = launchApp(route: "analytics")
+
+        XCTAssertTrue(analyticsIsReady(in: app))
+        let metrics = app.descendants(matching: .any)["analytics.category.overview"].firstMatch
+        scrollUntilHittable(metrics, direction: .up, in: app)
+        XCTAssertTrue(metrics.waitForExistence(timeout: 5) && metrics.isHittable)
+        activate(metrics)
+
+        let detail = app.descendants(matching: .any)["analytics.categoryDetail.overview"].firstMatch
+        let wallMetric = app.descendants(matching: .any)["analytics.metric.wall"].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        XCTAssertTrue(wallMetric.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            wallMetric.label.contains("same point in the previous period"),
+            "The live comparison must disclose that it uses matched period progress."
+        )
+        try capture("iphone-analytics-matched-comparison", app: app)
+        #endif
+    }
+
+    @MainActor
     func testUIRefactorBaselineScreenshots() throws {
         let app = launchApp()
 

@@ -1002,4 +1002,217 @@ struct CoreAnalyticsStoreTests {
         #expect(snapshot.daily.contains { $0.date == calendar.startOfDay(for: start) && $0.grossSeconds == 900 })
         #expect(store.ledgerBucketCount >= 1)
     }
+
+    @Test @MainActor
+    func liveComparisonExcludesLaterActivityFromThePreviousDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let cutoff = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12
+        )))
+        let currentStart = calendar.startOfDay(for: cutoff)
+        let previousStart = try #require(calendar.date(byAdding: .day, value: -1, to: currentStart))
+        let taskID = UUID()
+        let segments = [
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: currentStart.addingTimeInterval(9 * 3_600),
+                endedAt: currentStart.addingTimeInterval(10 * 3_600)
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: previousStart.addingTimeInterval(9 * 3_600),
+                endedAt: previousStart.addingTimeInterval(10 * 3_600)
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: previousStart.addingTimeInterval(15 * 3_600),
+                endedAt: previousStart.addingTimeInterval(16 * 3_600)
+            )
+        ]
+
+        let comparison = AnalyticsStore().comparison(
+            segments: segments,
+            range: .today,
+            now: cutoff,
+            calendar: calendar
+        )
+
+        #expect(comparison.window.basis == .matchedProgress)
+        #expect(comparison.window.current.end == cutoff)
+        #expect(comparison.window.previous.end == previousStart.addingTimeInterval(12 * 3_600))
+        #expect(comparison.currentGrossSeconds == 3_600)
+        #expect(comparison.previousGrossSeconds == 3_600)
+        #expect(comparison.grossDeltaSeconds == 0)
+    }
+
+    @Test @MainActor
+    func liveWeekAndMonthComparisonsUseTheSameCalendarProgress() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let weekCutoff = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 14,
+            minute: 30
+        )))
+        let monthCutoff = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 15,
+            hour: 14,
+            minute: 30
+        )))
+        let expectedWeekEnd = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 2,
+            hour: 14,
+            minute: 30
+        )))
+        let expectedMonthEnd = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 15,
+            hour: 14,
+            minute: 30
+        )))
+        let store = AnalyticsStore()
+        let weekInterval = try #require(AnalyticsRange.week.interval(
+            containing: weekCutoff,
+            calendar: calendar
+        ))
+        let monthInterval = try #require(AnalyticsRange.month.interval(
+            containing: monthCutoff,
+            calendar: calendar
+        ))
+
+        let weekWindow = try #require(store.comparisonWindow(
+            for: .week,
+            currentInterval: weekInterval,
+            evaluatedAt: weekCutoff,
+            calendar: calendar
+        ))
+        let monthWindow = try #require(store.comparisonWindow(
+            for: .month,
+            currentInterval: monthInterval,
+            evaluatedAt: monthCutoff,
+            calendar: calendar
+        ))
+
+        #expect(weekWindow.basis == .matchedProgress)
+        #expect(weekWindow.previous.end == expectedWeekEnd)
+        #expect(monthWindow.basis == .matchedProgress)
+        #expect(monthWindow.previous.end == expectedMonthEnd)
+    }
+
+    @Test @MainActor
+    func matchedComparisonPreservesLocalNoonAcrossDSTAndClampsShortMonths() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let springNoon = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 12
+        )))
+        let marchThirtyFirstNoon = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 31,
+            hour: 12
+        )))
+        let expectedShortMonthEnd = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 1
+        )))
+        let store = AnalyticsStore()
+        let dstInterval = try #require(AnalyticsRange.today.interval(
+            containing: springNoon,
+            calendar: calendar
+        ))
+        let shortMonthInterval = try #require(AnalyticsRange.month.interval(
+            containing: marchThirtyFirstNoon,
+            calendar: calendar
+        ))
+
+        let dstWindow = try #require(store.comparisonWindow(
+            for: .today,
+            currentInterval: dstInterval,
+            evaluatedAt: springNoon,
+            calendar: calendar
+        ))
+        let shortMonthWindow = try #require(store.comparisonWindow(
+            for: .month,
+            currentInterval: shortMonthInterval,
+            evaluatedAt: marchThirtyFirstNoon,
+            calendar: calendar
+        ))
+
+        #expect(calendar.component(.hour, from: dstWindow.current.end) == 12)
+        #expect(calendar.component(.hour, from: dstWindow.previous.end) == 12)
+        #expect(dstWindow.current.duration == 11 * 3_600)
+        #expect(dstWindow.previous.duration == 12 * 3_600)
+        #expect(shortMonthWindow.basis == .matchedProgress)
+        #expect(shortMonthWindow.previous.end == expectedShortMonthEnd)
+    }
+
+    @Test @MainActor
+    func completedAndFuturePeriodsExposeTheirComparisonBasis() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let historicalReference = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 15
+        )))
+        let futureReference = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 5,
+            day: 15
+        )))
+        let historical = try #require(AnalyticsRange.month.interval(
+            containing: historicalReference,
+            calendar: calendar
+        ))
+        let future = try #require(AnalyticsRange.month.interval(
+            containing: futureReference,
+            calendar: calendar
+        ))
+        let store = AnalyticsStore()
+
+        let completedWindow = try #require(store.comparisonWindow(
+            for: .month,
+            currentInterval: historical,
+            evaluatedAt: historical.end,
+            calendar: calendar
+        ))
+        let futureWindow = try #require(store.comparisonWindow(
+            for: .month,
+            currentInterval: future,
+            evaluatedAt: future.start,
+            calendar: calendar
+        ))
+
+        #expect(completedWindow.basis == .completePeriods)
+        #expect(completedWindow.current == historical)
+        #expect(completedWindow.previous.end == historical.start)
+        #expect(futureWindow.basis == .matchedProgress)
+        #expect(futureWindow.current.duration == 0)
+        #expect(futureWindow.previous.duration == 0)
+    }
 }

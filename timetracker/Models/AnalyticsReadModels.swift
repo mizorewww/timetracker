@@ -93,7 +93,22 @@ struct AnalyticsOverview {
     let averageFocusSeconds: Int
 }
 
+nonisolated enum AnalyticsComparisonBasis: Equatable, Sendable {
+    case matchedProgress
+    case completePeriods
+}
+
+/// The exact calendar windows used by a comparison. A live or future period
+/// compares only matching progress; a completed historical period compares the
+/// two complete periods.
+nonisolated struct AnalyticsComparisonWindow: Equatable, Sendable {
+    let current: DateInterval
+    let previous: DateInterval
+    let basis: AnalyticsComparisonBasis
+}
+
 struct AnalyticsComparison {
+    let window: AnalyticsComparisonWindow
     let currentGrossSeconds: Int
     let previousGrossSeconds: Int
     let currentWallSeconds: Int

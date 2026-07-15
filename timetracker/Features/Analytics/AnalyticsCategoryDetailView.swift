@@ -47,6 +47,7 @@ struct AnalyticsCategoryDetailView: View {
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .navigationTitle(category.title)
+        .accessibilityIdentifier("analytics.categoryDetail.\(category.rawValue)")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

@@ -572,6 +572,18 @@
 
 验证：覆盖当前/历史/未来 evaluation、23/25 小时 DST 日、today/week/month 最后一秒、零长度、历史开放 segment 精确裁剪、cache 以选中 period start 命中，以及 40 条跨日 ledger 中历史 query 只选中目标日、真实 rewind 才扩大到全量。签名测试必须显示团队 `LT98S43NKA`、付费 Apple Development identity 和既有 CloudKit/App Group entitlement。
 
+## AD-044：Analytics 环比使用相同日历进度
+
+状态：Accepted
+
+背景：当前日、周或月只走到 cutoff，但旧 comparison 会把它与上一个完整日、周或月比较。上午数据因此几乎必然被判定为“下降”；当前月越靠近月初，偏差越大。直接按 elapsed seconds 截断上一周期又会让 23/25 小时 DST 日的本地钟点错位，按月减一也不能可靠表达 3 月 31 日对 2 月的边界。
+
+决策：`AnalyticsComparisonWindow` 显式携带 current、previous 与 basis。cutoff 位于周期内部或周期开始时，basis 为 `.matchedProgress`：current 从 period start 到 cutoff；previous 使用相同的日历日序与本地时分秒，DST 跳时仍对齐用户看到的钟点，长月不存在的 previous 日期在 previous interval end 截止。cutoff 精确等于已完成 period end 时，basis 为 `.completePeriods`，两个窗口都保持完整。gross 与 wall 使用相同窗口；指标脚注和 comparison insight 依据 basis 显示“上一周期同期”或“上一个完整周期”，不得再使用含糊的“上一范围”。
+
+后果：实时 Today/Week/Month 的变化值可直接用于决策，不再混入上一周期尚未走到的时间；历史周期仍保留完整对完整语义。未来周期的 cutoff 位于 start，因此 current 与 previous 都是零长度 matched window。任何新环比指标必须复用 comparison window，不能另外按固定 86,400 秒、7 天或 30 天切片。
+
+验证：行为测试覆盖当前日排除昨日下午、当前周与月的同日序/同钟点、夏令时跳时日的本地 noon 对齐、3 月 31 日映射到 2 月末、完整历史月 full-to-full，以及未来月的双零长度窗口；三语本地化 parity 继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

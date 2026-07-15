@@ -122,6 +122,8 @@ TimeSegment 是计时事实来源。它不是“写入后永不可改”的 even
 
 Analytics 不能把一个历史周期压缩成单个“结束前一秒”的伪 `now`。`AnalyticsPeriodEvaluation` 显式携带三项：选中的 Calendar `interval`、用于 `TrackedTimePolicy` 裁剪的 `cutoff`、用于识别真实系统时钟回拨的 `clockReference`。当前周期的 cutoff 是真实墙钟；已完成历史周期的 cutoff 必须精确等于半开区间的 `end`，未来周期的 cutoff 是 `start`。Ledger 的 range query 分别接收 `evaluatedAt` 和 `clockReference`；只有后者早于 index evaluation date 才能触发全库回拨候选，禁止把历史 cutoff 当作时钟回拨。
 
+`AnalyticsComparisonWindow` 是环比统计的唯一窗口定义。当前或未来周期使用 `.matchedProgress`：current 从周期开始裁到 cutoff，previous 按相同日序与本地时分秒映射，不能用固定秒数位移；DST 保留本地钟点，长月映射到短月时在 previous period end 截止。cutoff 精确等于已完成周期 end 时使用 `.completePeriods`，比较两个完整周期。gross、wall、指标脚注和 insight 必须消费同一个 window/basis，禁止 UI 自行推断“上一范围”。
+
 本地 `addManualSegment` 和 `updateSegment` 在 repository 写入前拒绝未来结束时间或未来 active start，返回 typed `TimeTrackingRepositoryError.futureTime` 与三语 `segment.error.timeNotFuture`。CloudKit、导入和旧 store 可能已含时钟偏差值；不为“修复”而删除事实，而是在每条读/聚合路径安全裁剪。DST 中的持续时长使用绝对 elapsed seconds，本地日 bucket 边界仍交给 `Calendar`。
 
 SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditorPanel` 的开始/结束 `DatePicker` 上限为当前 `now`，时长与保存 enablement 调用 `TrackedTimePolicy`。`TrackedTimeDisplaySnapshot` 是 Today timeline、Task Detail recent records 和 `DurationLabel` 的共享显示适配层；future-ended 只显示到 `now`，future-only/future-active 在开始前显示 0，已结束的固定 label 不启动每秒刷新。

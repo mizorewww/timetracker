@@ -532,6 +532,26 @@ struct CoreWatchCommandTests {
     }
 
     @Test
+    func watchSnapshotRecencyPreventsOutOfOrderStateRegression() {
+        let current = watchSnapshot(
+            generatedAt: Date(timeIntervalSinceReferenceDate: 200),
+            activeTimers: []
+        )
+        let older = watchSnapshot(
+            generatedAt: Date(timeIntervalSinceReferenceDate: 100),
+            activeTimers: []
+        )
+        let sameGeneration = watchSnapshot(
+            generatedAt: current.generatedAt,
+            activeTimers: []
+        )
+
+        #expect(older.isAtLeastAsRecent(as: current) == false)
+        #expect(current.isAtLeastAsRecent(as: older))
+        #expect(sameGeneration.isAtLeastAsRecent(as: current))
+    }
+
+    @Test
     func watchDashboardUsesASingleGlanceableCrownScrollableLayout() throws {
         let source = try [
             "timetrackerWatchApp/WatchDashboardView.swift",
@@ -573,6 +593,7 @@ struct CoreWatchCommandTests {
         #expect(source.contains("confirmationTasks[commandID]?.cancel()"))
         #expect(source.contains("confirmationTasks[commandID] = nil"))
         #expect(source.contains("scheduleSnapshotFreshness"))
+        #expect(source.contains("state.isAtLeastAsRecent(as: snapshot)"))
         #expect(source.contains("hasReceivedSnapshot = true"))
         #expect(source.contains("recordConnectivityError"))
         #expect(source.contains("deinit {"))

@@ -64,6 +64,7 @@ extension WatchAppStore {
     }
 
     func applyState(_ state: WatchStateSnapshot) {
+        guard !hasReceivedSnapshot || state.isAtLeastAsRecent(as: snapshot) else { return }
         snapshot = state
         hasReceivedSnapshot = true
         hasConnectivityError = false

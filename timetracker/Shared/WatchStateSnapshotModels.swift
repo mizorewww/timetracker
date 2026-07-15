@@ -132,6 +132,10 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
         now.timeIntervalSince(generatedAt) > threshold ? .stale : .current
     }
 
+    func isAtLeastAsRecent(as other: WatchStateSnapshot) -> Bool {
+        generatedAt >= other.generatedAt
+    }
+
     func isValid(at now: Date) -> Bool {
         let textByteCount = activeTimers.reduce(into: 0) { total, timer in
             total += WatchTransportLimits.textByteCount(

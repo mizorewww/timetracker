@@ -74,6 +74,7 @@ struct SharedComponentsContractTests {
     func primaryActionLabelsWrapLegiblyAndExposeStableActions() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let homeTimelineSource = try sourceText("timetracker/Features/Home/Sections/HomeTimelineViews.swift")
         let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
 
         #expect(sharedSource.contains("struct AppActionLabel"))
@@ -85,6 +86,8 @@ struct SharedComponentsContractTests {
         #expect(sharedSource.contains(".padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 4 : 0)"))
         #expect(homeSource.contains("AppActionLabel(title: actionTitle"))
         #expect(homeSource.contains(".accessibilityIdentifier(\"home.startTimer\")"))
+        #expect(homeTimelineSource.contains("SectionTitle(title: AppStrings.localized(\"home.now.title\"))\n                .accessibilityIdentifier(\"home.activeTimers\")"))
+        #expect(homeTimelineSource.contains("        .accessibilityIdentifier(\"home.activeTimers\")\n    }\n}\n\nstruct TimelineSection") == false)
         #expect(homeSource.contains("home.switchTimer"))
         #expect(homeSource.contains("home.newTask") == false)
         #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.startTimer"))

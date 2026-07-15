@@ -7,6 +7,7 @@ struct ActiveTimersSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(title: AppStrings.localized("home.now.title"))
+                .accessibilityIdentifier("home.activeTimers")
 
             VStack(spacing: 0) {
                 if segments.isEmpty {
@@ -36,7 +37,6 @@ struct ActiveTimersSection: View {
             }
             .appCard(padding: 0)
         }
-        .accessibilityIdentifier("home.activeTimers")
     }
 }
 

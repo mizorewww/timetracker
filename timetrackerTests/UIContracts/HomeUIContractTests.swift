@@ -15,6 +15,75 @@ struct HomeUIContractTests {
     }
 
     @Test @MainActor
+    func todayMetricsClipBothDaysAndSeparateGrossFromWallTime() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12
+        )))
+        let todayStart = calendar.startOfDay(for: now)
+        let previousStart = try #require(calendar.date(byAdding: .day, value: -1, to: todayStart))
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Metrics",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        func addSegment(start: Date, end: Date) throws {
+            _ = try timeRepository.addManualSegment(
+                taskID: task.id,
+                startedAt: start,
+                endedAt: end,
+                note: nil
+            )
+        }
+
+        try addSegment(
+            start: previousStart.addingTimeInterval(23.5 * 3_600),
+            end: todayStart.addingTimeInterval(30 * 60)
+        )
+        try addSegment(
+            start: previousStart.addingTimeInterval(23.75 * 3_600),
+            end: todayStart.addingTimeInterval(15 * 60)
+        )
+        try addSegment(
+            start: todayStart.addingTimeInterval(9 * 3_600),
+            end: todayStart.addingTimeInterval(10 * 3_600)
+        )
+        try addSegment(
+            start: todayStart.addingTimeInterval(9.5 * 3_600),
+            end: todayStart.addingTimeInterval(10.5 * 3_600)
+        )
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        let snapshot = store.todayMetricsSnapshot(now: now, calendar: calendar)
+
+        #expect(snapshot.grossSeconds == 9_900)
+        #expect(snapshot.wallSeconds == 7_200)
+        #expect(snapshot.previousGrossSeconds == 2_700)
+        #expect(snapshot.previousWallSeconds == 1_800)
+    }
+
+    @Test
+    func todayMetricsNormalizeAndTraverseSegmentsOnlyOnce() throws {
+        let source = try sourceText("timetracker/Features/Home/HomeReadModels.swift")
+
+        #expect(source.components(separatedBy: ".visibleDeduplicatedByID()").count - 1 == 1)
+        #expect(source.components(separatedBy: "for segment in segments").count - 1 == 1)
+        #expect(source.components(separatedBy: "visibleSegments(overlapping:").count - 1 == 1)
+        #expect(source.contains("ledgerSummaryService.secondsInInterval") == false)
+    }
+
+    @Test @MainActor
     func todayCountdownOrderingIsStableForMatchingDatesAndTitles() {
         let date = Date(timeIntervalSince1970: 10_000)
         let later = CountdownEvent(title: "Later", date: date.addingTimeInterval(1), deviceID: "test")

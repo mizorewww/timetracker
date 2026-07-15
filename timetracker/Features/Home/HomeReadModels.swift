@@ -112,23 +112,46 @@ extension TimeTrackerStore {
 
         let combinedInterval = DateInterval(start: previousInterval.start, end: todayInterval.end)
         let segments = visibleSegments(overlapping: combinedInterval, now: now)
-        let taskIDs = Set(segments.map(\.taskID))
+            .visibleDeduplicatedByID()
+        var todayGrossSeconds = 0
+        var previousGrossSeconds = 0
+        var todayIntervals: [DateInterval] = []
+        var previousIntervals: [DateInterval] = []
 
-        func seconds(in interval: DateInterval, mode: AggregationMode) -> Int {
-            ledgerSummaryService.secondsInInterval(
-                taskIDs: taskIDs,
-                segments: segments,
-                interval: interval,
-                mode: mode,
-                now: now
-            )
+        for segment in segments {
+            if let interval = TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now,
+                clippedTo: todayInterval
+            ) {
+                todayGrossSeconds += Int(interval.duration)
+                todayIntervals.append(interval)
+            }
+
+            if let interval = TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now,
+                clippedTo: previousInterval
+            ) {
+                previousGrossSeconds += Int(interval.duration)
+                previousIntervals.append(interval)
+            }
+        }
+
+        let aggregationService = TimeAggregationService()
+        func wallSeconds(for intervals: [DateInterval]) -> Int {
+            aggregationService.mergeOverlappingIntervals(intervals).reduce(0) {
+                $0 + Int($1.duration)
+            }
         }
 
         return TodayMetricsSnapshot(
-            grossSeconds: seconds(in: todayInterval, mode: .gross),
-            wallSeconds: seconds(in: todayInterval, mode: .wallClock),
-            previousGrossSeconds: seconds(in: previousInterval, mode: .gross),
-            previousWallSeconds: seconds(in: previousInterval, mode: .wallClock)
+            grossSeconds: todayGrossSeconds,
+            wallSeconds: wallSeconds(for: todayIntervals),
+            previousGrossSeconds: previousGrossSeconds,
+            previousWallSeconds: wallSeconds(for: previousIntervals)
         )
     }
 }

@@ -105,9 +105,9 @@ private struct MetricsPanelContent: View {
         case .noComparison:
             return (AppStrings.localized("home.metric.noComparison"), .secondary)
         case let .increased(percent):
-            return (String(format: AppStrings.localized("home.metric.upFromYesterday"), percent), .green)
+            return (String(format: AppStrings.localized("home.metric.upFromYesterday"), percent), .secondary)
         case let .decreased(percent):
-            return (String(format: AppStrings.localized("home.metric.downFromYesterday"), percent), .red)
+            return (String(format: AppStrings.localized("home.metric.downFromYesterday"), percent), .secondary)
         case .unchanged:
             return (AppStrings.localized("home.metric.sameAsYesterday"), .secondary)
         }

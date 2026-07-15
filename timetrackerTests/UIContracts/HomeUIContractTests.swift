@@ -334,7 +334,7 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func todayMetricsUseSemanticTrendColorsAndSingleTodayAction() throws {
+    func todayMetricsUseNeutralComparisonColorsAndSingleTodayAction() throws {
         let source = try [
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
@@ -347,8 +347,9 @@ struct HomeUIContractTests {
 
         #expect(source.contains("trendColor: grossTrend.color"))
         #expect(source.contains(".foregroundStyle(metric.trendColor)"))
-        #expect(source.contains(".green"))
-        #expect(source.contains(".red"))
+        #expect(homeMetricsSource.contains("home.metric.upFromYesterday\"), percent), .secondary"))
+        #expect(homeMetricsSource.contains("home.metric.downFromYesterday\"), percent), .secondary"))
+        #expect(homeMetricsSource.contains("), .red)") == false)
         #expect(sharedMetricsSource.contains("struct MetricCell"))
         #expect(sharedMetricsSource.contains("struct MetricSummaryItem"))
         #expect(homeMetricsSource.contains("struct MetricCell") == false)

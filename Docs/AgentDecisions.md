@@ -217,11 +217,11 @@
 
 背景：重复 UUID、同步偏好和软删除在相同时间戳或清理流程中可能因输入顺序而复活旧值、覆盖新值或跨设备不一致。
 
-决策：持久实体与 `SyncedPreference` 先按 last-write-wins 选 winner，再过滤 tombstone。比较顺序为 `updatedAt`、同时间 tombstone 优先、`createdAt`，最后以 `deviceID`、`clientMutationID` 或 TimeSegment 稳定内容键打破平局。duplicate cleanup 的 tombstone 必须早于被保留 canonical row，且不得改写已有较新 tombstone。任何可见查询不得在 LWW 之前过滤删除值。普通 Local、iCloud、fallback 与 emergency 生产 store 永不物理 purge tombstone；只有隔离的 Demo/UI Test store 可清理过期 tombstone graph。
+决策：持久实体与 `SyncedPreference` 先按 last-write-wins 选 winner，再过滤 tombstone。比较顺序为 `updatedAt`、同时间 tombstone 优先、`createdAt`，最后以 `deviceID`、`clientMutationID` 或 TimeSegment 稳定内容键打破平局。duplicate cleanup 的 tombstone 必须早于被保留 canonical row，且不得改写已有较新 tombstone。任何可见查询不得在 LWW 之前过滤删除值。legacy `UserDefaults` 偏好迁移必须从 logical-key LWW winner 判断已迁移 key；winning tombstone 仍占用该 key，禁止旧本机值将其复活。普通 Local、iCloud、fallback 与 emergency 生产 store 永不物理 purge tombstone；只有隔离的 Demo/UI Test store 可清理过期 tombstone graph。
 
 后果：任何新同步模型都必须定义相同时间戳和删除/恢复冲突；数组顺序不是冲突策略。
 
-验证：正反输入顺序、active/tombstone 同时戳、更新后恢复、重复清理和多设备稳定 tie-break 测试。
+验证：正反输入顺序、active/tombstone 同时戳、更新后恢复、重复清理、多设备稳定 tie-break，以及 tombstone 阻止 legacy `UserDefaults` 重新导入的迁移测试。
 
 ## AD-015：LLM endpoint 与 Authorization redirect 边界
 

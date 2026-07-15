@@ -22,15 +22,7 @@ struct TimelineRow: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Group {
-                if segment.endedAt == nil {
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        taskButton(at: context.date)
-                    }
-                } else {
-                    taskButton(at: Date())
-                }
-            }
+            taskButton(at: Date())
 
             Menu {
                 segmentActions
@@ -102,11 +94,11 @@ struct TimelineRow: View {
                 HStack(spacing: 10) {
                     tagBadge
                     Spacer(minLength: 8)
-                    durationText(display: display)
+                    durationText
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     tagBadge
-                    durationText(display: display)
+                    durationText
                 }
             }
         }
@@ -154,7 +146,7 @@ struct TimelineRow: View {
             tagBadge
                 .frame(width: 96, alignment: .center)
 
-            durationText(display: display)
+            durationText
                 .frame(width: 56, alignment: .trailing)
         }
     }
@@ -170,7 +162,7 @@ struct TimelineRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer()
-                durationText(display: display)
+                durationText
             }
 
             HStack(alignment: .center, spacing: 10) {
@@ -193,17 +185,10 @@ struct TimelineRow: View {
             .lineLimit(1)
     }
 
-    private func durationText(display: TrackedTimeDisplaySnapshot) -> some View {
-        return Group {
-            if segment.endedAt == nil {
-                Text(.app("common.now"))
-                    .foregroundStyle(.blue)
-            } else {
-                Text(DurationFormatter.compact(display.elapsedSeconds))
-                    .foregroundStyle(.secondary)
-            }
-        }
+    private var durationText: some View {
+        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
         .font(.subheadline.monospacedDigit())
+        .foregroundStyle(segment.endedAt == nil ? Color.blue : Color.secondary)
         .lineLimit(1)
         .minimumScaleFactor(0.82)
     }

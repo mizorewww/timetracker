@@ -193,8 +193,12 @@ enum SyncedPreferenceService {
     }
 
     @MainActor
-    static func migrateLegacyPreferencesIfNeeded(context: ModelContext, deviceID: String = DeviceIdentity.current) throws {
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+    static func migrateLegacyPreferencesIfNeeded(
+        context: ModelContext,
+        defaults: UserDefaults = .standard,
+        deviceID: String = DeviceIdentity.current
+    ) throws {
+        guard !defaults.bool(forKey: migrationKey) else { return }
         let existing = try context.fetch(FetchDescriptor<SyncedPreference>())
         // A logical-key tombstone is still an existing migrated value. Ignoring it
         // would let stale UserDefaults recreate a preference that another device
@@ -203,13 +207,13 @@ enum SyncedPreferenceService {
 
         for key in AppPreferenceKey.allCases
         where shouldSyncKey(key.rawValue) && !existingKeys.contains(key.rawValue) {
-            if let valueJSON = legacyValueJSON(for: key) {
+            if let valueJSON = legacyValueJSON(for: key, defaults: defaults) {
                 context.insert(SyncedPreference(key: key.rawValue, valueJSON: valueJSON, deviceID: deviceID))
             }
         }
 
         try context.save()
-        UserDefaults.standard.set(true, forKey: migrationKey)
+        defaults.set(true, forKey: migrationKey)
     }
 
     @MainActor
@@ -270,8 +274,7 @@ enum SyncedPreferenceService {
         }
     }
 
-    private static func legacyValueJSON(for key: AppPreferenceKey) -> String? {
-        let defaults = UserDefaults.standard
+    private static func legacyValueJSON(for key: AppPreferenceKey, defaults: UserDefaults) -> String? {
         guard defaults.object(forKey: key.rawValue) != nil else { return nil }
         switch key {
         case .preferredColorScheme:
@@ -291,8 +294,9 @@ enum SyncedPreferenceService {
             return PreferenceJSON.encode(value)
         case .pomodoroPlans:
             guard let json = defaults.string(forKey: key.rawValue),
+                  json.utf8.count <= PreferenceJSON.maximumPayloadByteCount,
                   let data = json.data(using: .utf8),
-                  let plans = try? JSONDecoder().decode([PomodoroPlan].self, from: data) else {
+                  let plans = try? JSONDecoder().decode(LegacyPomodoroPlans.self, from: data).values else {
                 return nil
             }
             return PreferenceJSON.encode(plans)
@@ -319,6 +323,38 @@ enum SyncedPreferenceService {
                 .map(String.init) ?? []
             return PreferenceJSON.encode(models)
         }
+    }
+}
+
+private struct LegacyPomodoroPlans: Decodable {
+    let values: [PomodoroPlan]
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        let maximumCount = AppPreferenceValueSanitizer.maximumPomodoroPlanCount
+        if let count = container.count, count > maximumCount {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: container.codingPath,
+                    debugDescription: "Legacy Pomodoro plan count exceeds the supported maximum."
+                )
+            )
+        }
+
+        var values: [PomodoroPlan] = []
+        values.reserveCapacity(min(container.count ?? maximumCount, maximumCount))
+        while !container.isAtEnd {
+            guard values.count < maximumCount else {
+                throw DecodingError.dataCorrupted(
+                    .init(
+                        codingPath: container.codingPath,
+                        debugDescription: "Legacy Pomodoro plan count exceeds the supported maximum."
+                    )
+                )
+            }
+            values.append(try container.decode(PomodoroPlan.self))
+        }
+        self.values = values
     }
 }
 

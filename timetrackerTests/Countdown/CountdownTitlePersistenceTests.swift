@@ -73,7 +73,7 @@ struct CountdownTitlePersistenceTests {
         context.insert(event)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.modelContext = context
         store.countdownEvents = [event]
         let originalUpdatedAt = event.updatedAt

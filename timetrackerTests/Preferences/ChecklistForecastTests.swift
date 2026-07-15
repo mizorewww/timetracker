@@ -240,6 +240,58 @@ struct ChecklistForecastTests {
     }
 
     @Test @MainActor
+    func standaloneRollupPaceUsesBoundedProductionWindowAndIgnoresFutureWork() throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: fixedMidday())
+        let now = try #require(calendar.date(byAdding: .hour, value: 12, to: today))
+        let staleStart = try #require(calendar.date(
+            byAdding: .day,
+            value: -TaskRollupHistoricalPolicy.paceDayCount,
+            to: today
+        ))
+        let futureStart = try #require(calendar.date(byAdding: .day, value: 1, to: now))
+        let task = TaskNode(title: "Bounded pace", parentID: nil, deviceID: "test")
+        let segments = [
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: staleStart,
+                endedAt: staleStart.addingTimeInterval(7_200)
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: now.addingTimeInterval(-3_600),
+                endedAt: now
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: futureStart,
+                endedAt: futureStart.addingTimeInterval(18_000)
+            )
+        ]
+
+        let rollup = try #require(TaskRollupService().rollups(
+            tasks: [task],
+            segments: segments,
+            checklistItems: [],
+            now: now
+        )[task.id])
+
+        #expect(TaskRollupHistoricalPolicy.paceDayCount == 90)
+        #expect(TaskRollupHistoricalPolicy.paceDayCount == RollupIncrementalIndex.historicalPaceDayCount)
+        #expect(rollup.historicalActiveDayCount == 1)
+        #expect(rollup.historicalDailyAverageSeconds == 3_600)
+    }
+
+    @Test @MainActor
     func taskRollupRecursivelyCombinesChecklistAndChildEstimates() throws {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")

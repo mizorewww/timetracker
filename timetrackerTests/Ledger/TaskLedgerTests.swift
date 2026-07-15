@@ -490,6 +490,58 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
+    func taskRefreshPreservesParentIdentityAcrossStagedCloudImport() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
+        let parentID = UUID()
+        let child = TaskNode(
+            title: "Child arrived first",
+            parentID: parentID,
+            deviceID: "cloud-device"
+        )
+        child.depth = 1
+        child.path = TaskHierarchyMetadata.canonicalPath(for: child.id)
+        let originalUpdatedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        let originalMutationID = UUID()
+        child.updatedAt = originalUpdatedAt
+        child.clientMutationID = originalMutationID
+        context.insert(child)
+        try context.save()
+
+        let appStore = TimeTrackerStore()
+        appStore.configureIfNeeded(context: context)
+        var taskStore = TaskStore()
+        try taskStore.refresh(repository: repository)
+        try taskStore.refreshTaskScoped(taskIDs: [child.id], repository: repository)
+
+        #expect(context.hasChanges == false)
+        let stagedChild = try #require(try repository.task(id: child.id))
+        #expect(stagedChild.parentID == parentID)
+        #expect(stagedChild.updatedAt == originalUpdatedAt)
+        #expect(stagedChild.clientMutationID == originalMutationID)
+        #expect(stagedChild.deviceID == "cloud-device")
+        let stagedIndexes = TaskTreeService().indexes(tasks: taskStore.tasks)
+        #expect(stagedIndexes.childrenByParentID[nil]?.map(\.id) == [child.id])
+        #expect(appStore.tasks.first?.parentID == parentID)
+
+        let parent = TaskNode(title: "Parent arrived later", parentID: nil, deviceID: "cloud-device")
+        parent.id = parentID
+        context.insert(parent)
+        try context.save()
+
+        try taskStore.refreshTaskScoped(taskIDs: [parent.id, child.id], repository: repository)
+
+        #expect(context.hasChanges == false)
+        let completedIndexes = TaskTreeService().indexes(tasks: taskStore.tasks)
+        #expect(completedIndexes.childrenByParentID[nil]?.map(\.id) == [parent.id])
+        #expect(completedIndexes.childrenByParentID[parent.id]?.map(\.id) == [child.id])
+        let completedChild = try #require(try repository.task(id: child.id))
+        #expect(completedChild.parentID == parent.id)
+        #expect(completedChild.updatedAt == originalUpdatedAt)
+        #expect(completedChild.clientMutationID == originalMutationID)
+    }
+
+    @Test @MainActor
     func deeplyNestedTaskPathsAreIterativeAndDisplayBounded() throws {
         var tasks: [TaskNode] = []
         var parentID: UUID?

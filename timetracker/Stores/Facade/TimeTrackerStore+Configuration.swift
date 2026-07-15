@@ -5,7 +5,7 @@ extension TimeTrackerStore {
     func configureIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
         configureRepositoriesIfNeeded(context: context)
-        guard let taskRepository else { return }
+        guard taskRepository != nil else { return }
         installSyncObservers()
 
         var startupErrors: [Error] = []
@@ -29,11 +29,6 @@ extension TimeTrackerStore {
         }
         do {
             try SeedData.ensureSeeded(context: context)
-        } catch {
-            startupErrors.append(error)
-        }
-        do {
-            try taskRepository.repairInvalidHierarchy()
         } catch {
             startupErrors.append(error)
         }

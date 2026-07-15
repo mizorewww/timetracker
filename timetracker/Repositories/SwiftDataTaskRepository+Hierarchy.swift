@@ -1,6 +1,9 @@
 import Foundation
 
 extension SwiftDataTaskRepository {
+    /// Repairs a hierarchy only when the caller knows that the imported task
+    /// set is complete. Normal store refreshes must remain read-only because
+    /// CloudKit can deliver a child before its parent in a staged import.
     @discardableResult
     func repairInvalidHierarchy() throws -> Set<UUID> {
         let nodes = try allNodes().deduplicatedByID()

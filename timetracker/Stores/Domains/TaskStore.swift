@@ -6,7 +6,6 @@ struct TaskStore {
     private(set) var categoryAssignments: [TaskCategoryAssignment] = []
 
     mutating func refresh(repository: TaskRepository) throws {
-        try repository.repairInvalidHierarchy()
         tasks = try repository.allNodes().deduplicatedByID()
         categories = try repository.categories().deduplicatedByID()
         categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
@@ -14,10 +13,6 @@ struct TaskStore {
 
     mutating func refreshTaskScoped(taskIDs: Set<UUID>, repository: TaskRepository) throws {
         guard taskIDs.isEmpty == false else { return }
-        if try repository.repairInvalidHierarchy().isEmpty == false {
-            try refresh(repository: repository)
-            return
-        }
         let fetchedTasks = try repository.tasks(ids: taskIDs).deduplicatedByID()
         let fetchedTaskIDs = Set(fetchedTasks.map(\.id))
         let missingTaskIDs = taskIDs.subtracting(fetchedTaskIDs)

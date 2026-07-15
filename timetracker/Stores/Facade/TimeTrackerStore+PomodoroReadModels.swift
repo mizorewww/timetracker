@@ -85,11 +85,12 @@ extension TimeTrackerStore {
 
     func pomodoroElapsedFocusSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
         guard let sessionID = run.sessionID else { return 0 }
-        let candidates = ledgerDomainStore.hasIndexedSegmentHistory
+        let usesRelationshipIndex = ledgerDomainStore.hasIndexedSegmentHistory
+        let candidates = usesRelationshipIndex
             ? ledgerDomainStore.segments(forSessionID: sessionID)
             : allSegments.visibleDeduplicatedByID()
         let segments = candidates.filter { segment in
-            isReadableLedgerSegment(segment) &&
+            (!usesRelationshipIndex || isReadableLedgerSegment(segment)) &&
             segment.sessionID == sessionID &&
             segment.source == .pomodoro &&
             segment.deletedAt == nil

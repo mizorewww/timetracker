@@ -911,7 +911,9 @@ struct TaskLedgerTests {
         let child = try taskRepository.createTask(title: "Child", parentID: parent.id, colorHex: nil, iconName: nil)
         let grandchild = try taskRepository.createTask(title: "Grandchild", parentID: child.id, colorHex: nil, iconName: nil)
         let calendar = Calendar.current
-        let now = Date()
+        let currentDayStart = calendar.startOfDay(for: Date())
+        let testDayStart = try #require(calendar.date(byAdding: .day, value: -2, to: currentDayStart))
+        let now = testDayStart.addingTimeInterval(12 * 3_600)
         let startOfDay = calendar.startOfDay(for: now)
 
         _ = try timeRepository.addManualSegment(
@@ -943,7 +945,7 @@ struct TaskLedgerTests {
         let store = TimeTrackerStore()
         store.configureIfNeeded(context: context)
 
-        #expect(store.secondsForTaskToday(parent) == 600)
+        #expect(store.secondsForTaskToday(parent, now: now) == 600)
         #expect(store.secondsForTaskTodayRollup(parent, now: now) == 1_800)
         #expect(store.secondsForTaskTodayRollup(child, now: now) == 1_200)
         #expect(store.secondsForTaskTotal(parent) == 600)

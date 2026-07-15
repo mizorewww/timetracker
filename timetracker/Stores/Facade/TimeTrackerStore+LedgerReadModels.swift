@@ -98,8 +98,11 @@ extension TimeTrackerStore {
         return ledgerSummaryService.totalSeconds(taskIDs: ids, segments: allSegments, mode: mode, now: now)
     }
 
-    func secondsForTaskToday(_ task: TaskNode, mode: AggregationMode = .gross) -> Int {
-        let now = Date()
+    func secondsForTaskToday(
+        _ task: TaskNode,
+        mode: AggregationMode = .gross,
+        now: Date = Date()
+    ) -> Int {
         guard let interval = Calendar.current.dateInterval(of: .day, for: now) else { return 0 }
         let segments = visibleSegments(overlapping: interval, now: now)
         return ledgerSummaryService.secondsInInterval(taskIDs: [task.id], segments: segments, interval: interval, mode: mode, now: now)

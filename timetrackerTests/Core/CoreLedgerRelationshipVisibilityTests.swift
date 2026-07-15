@@ -8,7 +8,7 @@ struct CoreLedgerRelationshipVisibilityTests {
     @Test @MainActor
     func missingTaskRowsAreQuarantinedUntilTheTaskImports() throws {
         let context = try makeTestContext()
-        let now = Date()
+        let now = try stableReferenceDate()
         let missingTaskID = UUID()
         let session = TimeSession(
             taskID: missingTaskID,
@@ -49,7 +49,7 @@ struct CoreLedgerRelationshipVisibilityTests {
     @Test @MainActor
     func missingSessionRowsAreQuarantinedUntilTheSessionImports() throws {
         let context = try makeTestContext()
-        let now = Date()
+        let now = try stableReferenceDate()
         let task = TaskNode(title: "Existing task", parentID: nil, deviceID: "remote")
         let missingSessionID = UUID()
         let segment = TimeSegment(
@@ -86,7 +86,7 @@ struct CoreLedgerRelationshipVisibilityTests {
     @Test @MainActor
     func mismatchedSessionTaskNeverEntersAnalyticsOrSystemSurfaces() throws {
         let context = try makeTestContext()
-        let now = Date()
+        let now = try stableReferenceDate()
         let sessionTask = TaskNode(title: "Session task", parentID: nil, deviceID: "remote")
         let segmentTask = TaskNode(title: "Segment task", parentID: nil, deviceID: "remote")
         let session = TimeSession(
@@ -124,5 +124,13 @@ struct CoreLedgerRelationshipVisibilityTests {
         store.configureRepositoriesIfNeeded(context: context)
         try store.refresh()
         return store
+    }
+
+    private func stableReferenceDate(calendar: Calendar = .current) throws -> Date {
+        let currentDayStart = calendar.startOfDay(for: Date())
+        let previousDayStart = try #require(
+            calendar.date(byAdding: .day, value: -1, to: currentDayStart)
+        )
+        return previousDayStart.addingTimeInterval(12 * 3_600)
     }
 }

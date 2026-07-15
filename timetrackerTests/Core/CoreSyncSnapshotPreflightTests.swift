@@ -1,0 +1,265 @@
+import Foundation
+import SwiftData
+import Testing
+@testable import timetracker
+
+@Suite(.serialized)
+struct CoreSyncSnapshotPreflightTests {
+    @Test @MainActor
+    func oversizedTableIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let record = TaskRecord(TaskNode(title: "Repeated", parentID: nil, deviceID: "source"))
+        let recordCount = SyncDataSnapshotRestoreLimits.maximumRecordsPerTable + 1
+        let snapshot = SyncDataSnapshot(tasks: Array(repeating: record, count: recordCount))
+
+        #expect(throws: SyncDataSnapshotPreflightError.tableRecordLimitExceeded(
+            table: .tasks,
+            actual: recordCount,
+            maximum: SyncDataSnapshotRestoreLimits.maximumRecordsPerTable
+        )) {
+            try snapshot.restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
+    func duplicateIdentifierIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let record = TaskRecord(TaskNode(title: "Duplicate", parentID: nil, deviceID: "source"))
+        let snapshot = SyncDataSnapshot(tasks: [record, record])
+
+        #expect(throws: SyncDataSnapshotPreflightError.duplicateIdentifier(table: .tasks, id: record.id)) {
+            try snapshot.restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
+    func oversizedTextIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let task = TaskNode(
+            title: String(repeating: "a", count: SyncDataSnapshotRestoreLimits.maximumTitleByteCount + 1),
+            parentID: nil,
+            deviceID: "source"
+        )
+        let record = TaskRecord(task)
+        let snapshot = SyncDataSnapshot(tasks: [record])
+
+        #expect(throws: SyncDataSnapshotPreflightError.fieldByteLimitExceeded(
+            table: .tasks,
+            id: record.id,
+            field: "title",
+            actual: SyncDataSnapshotRestoreLimits.maximumTitleByteCount + 1,
+            maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount
+        )) {
+            try snapshot.restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
+    func invalidEnumAndNonFiniteSortOrderAreRejected() throws {
+        let invalidStatusContext = try makeSentinelContext()
+        let invalidStatusTask = TaskNode(title: "Invalid status", parentID: nil, deviceID: "source")
+        invalidStatusTask.statusRaw = "future-status"
+        let invalidStatusRecord = TaskRecord(invalidStatusTask)
+
+        #expect(throws: SyncDataSnapshotPreflightError.invalidRawValue(
+            table: .tasks,
+            id: invalidStatusRecord.id,
+            field: "statusRaw",
+            value: "future-status"
+        )) {
+            try SyncDataSnapshot(tasks: [invalidStatusRecord])
+                .restoreAsLocalWinner(context: invalidStatusContext.0)
+        }
+        try expectSentinelUnchanged(context: invalidStatusContext.0, id: invalidStatusContext.1)
+
+        let nonFiniteContext = try makeSentinelContext()
+        let nonFiniteTask = TaskNode(title: "Invalid order", parentID: nil, deviceID: "source")
+        nonFiniteTask.sortOrder = .infinity
+        let nonFiniteRecord = TaskRecord(nonFiniteTask)
+
+        #expect(throws: SyncDataSnapshotPreflightError.nonFiniteNumber(
+            table: .tasks,
+            id: nonFiniteRecord.id,
+            field: "sortOrder"
+        )) {
+            try SyncDataSnapshot(tasks: [nonFiniteRecord])
+                .restoreAsLocalWinner(context: nonFiniteContext.0)
+        }
+        try expectSentinelUnchanged(context: nonFiniteContext.0, id: nonFiniteContext.1)
+    }
+
+    @Test @MainActor
+    func invalidDateAndKnownPreferenceTypeAreRejected() throws {
+        let invalidDateContext = try makeSentinelContext()
+        let invalidDateTask = TaskNode(title: "Invalid date", parentID: nil, deviceID: "source")
+        invalidDateTask.createdAt = Date(timeIntervalSinceReferenceDate: .nan)
+        let invalidDateRecord = TaskRecord(invalidDateTask)
+
+        #expect(throws: SyncDataSnapshotPreflightError.invalidDate(
+            table: .tasks,
+            id: invalidDateRecord.id,
+            field: "createdAt"
+        )) {
+            try SyncDataSnapshot(tasks: [invalidDateRecord])
+                .restoreAsLocalWinner(context: invalidDateContext.0)
+        }
+        try expectSentinelUnchanged(context: invalidDateContext.0, id: invalidDateContext.1)
+
+        let preferenceContext = try makeSentinelContext()
+        let preference = SyncedPreference(
+            key: AppPreferenceKey.defaultFocusMinutes.rawValue,
+            valueJSON: PreferenceJSON.encode("not-an-integer"),
+            deviceID: "source"
+        )
+        let preferenceRecord = SyncedPreferenceRecord(preference)
+
+        #expect(throws: SyncDataSnapshotPreflightError.invalidPreferenceValue(
+            id: preferenceRecord.id,
+            key: AppPreferenceKey.defaultFocusMinutes.rawValue
+        )) {
+            try SyncDataSnapshot(syncedPreferences: [preferenceRecord])
+                .restoreAsLocalWinner(context: preferenceContext.0)
+        }
+        try expectSentinelUnchanged(context: preferenceContext.0, id: preferenceContext.1)
+    }
+
+    @Test @MainActor
+    func extremeSortOrderAndUnsafePreferenceKeysAreRejected() throws {
+        let sortOrderContext = try makeSentinelContext()
+        let task = TaskNode(title: "Unadvanceable order", parentID: nil, deviceID: "source")
+        task.sortOrder = .greatestFiniteMagnitude
+        let taskRecord = TaskRecord(task)
+
+        #expect(throws: SyncDataSnapshotPreflightError.sortOrderCannotAdvance(
+            table: .tasks,
+            id: taskRecord.id,
+            field: "sortOrder"
+        )) {
+            try SyncDataSnapshot(tasks: [taskRecord])
+                .restoreAsLocalWinner(context: sortOrderContext.0)
+        }
+        try expectSentinelUnchanged(context: sortOrderContext.0, id: sortOrderContext.1)
+
+        for unsafeKey in ["", "future\npreference"] {
+            let preferenceContext = try makeSentinelContext()
+            let preference = SyncedPreference(
+                key: unsafeKey,
+                valueJSON: PreferenceJSON.encode(true),
+                deviceID: "source"
+            )
+            let preferenceRecord = SyncedPreferenceRecord(preference)
+
+            #expect(throws: SyncDataSnapshotPreflightError.invalidPreferenceKey(
+                id: preferenceRecord.id,
+                key: unsafeKey
+            )) {
+                try SyncDataSnapshot(syncedPreferences: [preferenceRecord])
+                    .restoreAsLocalWinner(context: preferenceContext.0)
+            }
+            try expectSentinelUnchanged(context: preferenceContext.0, id: preferenceContext.1)
+        }
+    }
+
+    @Test @MainActor
+    func provableSessionTaskMismatchIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let expectedTaskID = UUID()
+        let actualTaskID = UUID()
+        let session = TimeSession(taskID: expectedTaskID, source: .timer, deviceID: "source")
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: actualTaskID,
+            source: .timer,
+            deviceID: "source"
+        )
+        let sessionRecord = TimeSessionRecord(session)
+        let segmentRecord = TimeSegmentRecord(segment)
+        let snapshot = SyncDataSnapshot(sessions: [sessionRecord], segments: [segmentRecord])
+
+        #expect(throws: SyncDataSnapshotPreflightError.inconsistentSessionTask(
+            table: .segments,
+            id: segmentRecord.id,
+            sessionID: sessionRecord.id,
+            expectedTaskID: expectedTaskID,
+            actualTaskID: actualTaskID
+        )) {
+            try snapshot.restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
+    func validSnapshotRestoresAndPreservesBoundedUnknownPreference() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let incomingTask = TaskNode(title: "Incoming task", parentID: nil, deviceID: "source")
+        let unknownPreference = SyncedPreference(
+            key: "FuturePreferenceV2",
+            valueJSON: PreferenceJSON.encode("opaque-but-bounded-future-value"),
+            deviceID: "source"
+        )
+        let snapshot = SyncDataSnapshot(
+            tasks: [TaskRecord(incomingTask)],
+            syncedPreferences: [SyncedPreferenceRecord(unknownPreference)]
+        )
+
+        try snapshot.restoreAsLocalWinner(context: context)
+
+        let tasks = try context.fetch(FetchDescriptor<TaskNode>())
+        #expect(tasks.first { $0.id == sentinelID }?.deletedAt != nil)
+        #expect(tasks.first { $0.id == incomingTask.id }?.title == "Incoming task")
+        #expect(tasks.first { $0.id == incomingTask.id }?.deletedAt == nil)
+        let restoredPreference = try #require(
+            try context.fetch(FetchDescriptor<SyncedPreference>())
+                .first { $0.id == unknownPreference.id }
+        )
+        #expect(restoredPreference.key == "FuturePreferenceV2")
+        #expect(restoredPreference.valueJSON == PreferenceJSON.encode("opaque-but-bounded-future-value"))
+        #expect(restoredPreference.deletedAt == nil)
+    }
+
+    @Test @MainActor
+    func missingRelationshipRowsRemainCompatibleWithStagedImports() throws {
+        let context = try makeTestContext()
+        let taskID = UUID()
+        let missingSessionID = UUID()
+        let segment = TimeSegment(
+            sessionID: missingSessionID,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "source"
+        )
+        let run = PomodoroRun(taskID: taskID, deviceID: "source")
+        run.sessionID = missingSessionID
+        let snapshot = SyncDataSnapshot(
+            segments: [TimeSegmentRecord(segment)],
+            pomodoroRuns: [PomodoroRunRecord(run)]
+        )
+
+        try snapshot.restoreAsLocalWinner(context: context)
+
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).count == 1)
+    }
+
+    @MainActor
+    private func makeSentinelContext() throws -> (ModelContext, UUID) {
+        let context = try makeTestContext()
+        let sentinel = TaskNode(title: "Sentinel", parentID: nil, deviceID: "existing")
+        context.insert(sentinel)
+        try context.save()
+        return (context, sentinel.id)
+    }
+
+    @MainActor
+    private func expectSentinelUnchanged(context: ModelContext, id: UUID) throws {
+        let tasks = try context.fetch(FetchDescriptor<TaskNode>())
+        let sentinelRows = tasks.filter { $0.id == id }
+        #expect(sentinelRows.count == 1)
+        #expect(sentinelRows.first?.title == "Sentinel")
+        #expect(sentinelRows.first?.deletedAt == nil)
+        #expect(tasks.allSatisfy { $0.deletedAt == nil })
+    }
+}

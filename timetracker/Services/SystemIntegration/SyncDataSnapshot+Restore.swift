@@ -3,6 +3,7 @@ import SwiftData
 
 extension SyncDataSnapshot {
     func restoreAsLocalWinner(context: ModelContext, now: Date = Date()) throws {
+        try validateForRestore()
         let deviceID = DeviceIdentity.current
         try context.performAtomicMutation {
             try restoreTasks(context: context, now: now, deviceID: deviceID)

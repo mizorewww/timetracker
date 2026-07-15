@@ -593,7 +593,7 @@ struct CoreSyncConflictTests {
     }
 
     @Test @MainActor
-    func invalidPomodoroSnapshotValuesAreClampedDuringRestore() throws {
+    func invalidPomodoroSnapshotValuesAreRejectedDuringRestorePreflight() throws {
         let sourceContext = try makeTestContext()
         let run = PomodoroRun(
             taskID: UUID(),
@@ -611,21 +611,19 @@ struct CoreSyncConflictTests {
         let snapshot = try SyncDataSnapshot.capture(context: sourceContext)
 
         let restoredContext = try makeTestContext()
-        try snapshot.restoreAsLocalWinner(
-            context: restoredContext,
-            now: Date(timeIntervalSinceReferenceDate: 600_000)
-        )
-        let restoredRun = try #require(
-            try restoredContext.fetch(FetchDescriptor<PomodoroRun>())
-                .visibleDeduplicatedByID()
-                .first
-        )
-        #expect(restoredRun.focusSecondsPlanned == 1)
-        #expect(restoredRun.breakSecondsPlanned == 1)
-        #expect(restoredRun.longBreakSecondsPlanned == 1)
-        #expect(restoredRun.targetRounds == 1)
-        #expect(restoredRun.completedFocusRounds == 0)
-        #expect(restoredRun.phaseDeadline == run.startedAt?.addingTimeInterval(1))
+        #expect(throws: SyncDataSnapshotPreflightError.invalidInteger(
+            table: .pomodoroRuns,
+            id: run.id,
+            field: "focusSecondsPlanned",
+            value: -120,
+            allowed: "1...28800"
+        )) {
+            try snapshot.restoreAsLocalWinner(
+                context: restoredContext,
+                now: Date(timeIntervalSinceReferenceDate: 600_000)
+            )
+        }
+        #expect(try restoredContext.fetch(FetchDescriptor<PomodoroRun>()).isEmpty)
     }
 
     @Test @MainActor

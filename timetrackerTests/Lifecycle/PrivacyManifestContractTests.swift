@@ -39,9 +39,10 @@ struct PrivacyManifestContractTests {
 
     @Test
     func sensitiveSyncRecoveryFilesKeepIOSDataProtection() throws {
-        let source = try sourceText(
-            "timetracker/Services/SystemIntegration/SyncConflictService+State.swift"
-        )
+        let source = try [
+            "timetracker/Services/SystemIntegration/SyncConflictService+State.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+StateWriting.swift"
+        ].map(sourceText).joined(separator: "\n")
 
         #expect(source.contains("#if os(iOS)"))
         #expect(source.contains(".protectionKey: FileProtectionType.completeUntilFirstUserAuthentication"))

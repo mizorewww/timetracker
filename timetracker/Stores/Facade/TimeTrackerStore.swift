@@ -9,36 +9,19 @@ final class TimeTrackerStore {
     let llmCredentialStore: any LLMCredentialStoring
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
-
-    init() {
-        llmCredentialStore = KeychainLLMCredentialStore()
-        inboxSuggestionService = LLMInboxSuggestionService()
-        checklistVisualSuggestionService = LLMChecklistVisualSuggestionService()
-    }
-
-    init(llmCredentialStore: any LLMCredentialStoring) {
-        self.llmCredentialStore = llmCredentialStore
-        inboxSuggestionService = LLMInboxSuggestionService()
-        checklistVisualSuggestionService = LLMChecklistVisualSuggestionService()
-    }
+    let writeAuthorization: StoreWriteAuthorization
 
     init(
-        llmCredentialStore: any LLMCredentialStoring,
-        inboxSuggestionService: LLMInboxSuggestionService
+        llmCredentialStore: (any LLMCredentialStoring)? = nil,
+        inboxSuggestionService: LLMInboxSuggestionService? = nil,
+        checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
+        writeAuthorization: StoreWriteAuthorization = .applicationState
     ) {
-        self.llmCredentialStore = llmCredentialStore
-        self.inboxSuggestionService = inboxSuggestionService
-        checklistVisualSuggestionService = LLMChecklistVisualSuggestionService()
-    }
-
-    init(
-        llmCredentialStore: any LLMCredentialStoring,
-        inboxSuggestionService: LLMInboxSuggestionService,
-        checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
-    ) {
-        self.llmCredentialStore = llmCredentialStore
-        self.inboxSuggestionService = inboxSuggestionService
-        self.checklistVisualSuggestionService = checklistVisualSuggestionService
+        self.llmCredentialStore = llmCredentialStore ?? KeychainLLMCredentialStore()
+        self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
+        self.checklistVisualSuggestionService =
+            checklistVisualSuggestionService ?? LLMChecklistVisualSuggestionService()
+        self.writeAuthorization = writeAuthorization
     }
 
     deinit {

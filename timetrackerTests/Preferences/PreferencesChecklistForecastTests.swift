@@ -169,7 +169,7 @@ struct PreferencesChecklistForecastTests {
         context.insert(newerTombstone)
         try context.save()
 
-        let store = TimeTrackerStore(llmCredentialStore: TestLLMCredentialStore())
+        let store = makeTestStore(llmCredentialStore: TestLLMCredentialStore())
         store.configureIfNeeded(context: context)
 
         #expect(store.preferences.defaultFocusMinutes == AppPreferences.defaults.defaultFocusMinutes)
@@ -401,7 +401,7 @@ struct PreferencesChecklistForecastTests {
         defaults.set(true, forKey: SyncedPreferenceService.migrationKey)
         let context = try makeTestContext()
         let credentialStore = TestLLMCredentialStore()
-        let store = TimeTrackerStore(llmCredentialStore: credentialStore)
+        let store = makeTestStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         let pinnedID = UUID()
 
@@ -491,7 +491,7 @@ struct PreferencesChecklistForecastTests {
         )
         try context.save()
 
-        let store = TimeTrackerStore(llmCredentialStore: TestLLMCredentialStore())
+        let store = makeTestStore(llmCredentialStore: TestLLMCredentialStore())
         store.configureIfNeeded(context: context)
 
         #expect(store.preferences.cloudSyncEnabled)
@@ -580,7 +580,7 @@ struct PreferencesChecklistForecastTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Launch", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         var firstDraft = TaskEditorDraft(task: task, checklistItems: [])
@@ -639,7 +639,7 @@ struct PreferencesChecklistForecastTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Checklist Order", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         store.addChecklistItem(taskID: task.id, title: "Open A")

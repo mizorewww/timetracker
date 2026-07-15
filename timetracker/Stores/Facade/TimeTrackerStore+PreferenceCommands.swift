@@ -66,7 +66,7 @@ extension TimeTrackerStore {
         }
 
         do {
-            try AppCloudSync.requireUserWritesAllowed()
+            try writeAuthorization.requireUserWritesAllowed()
             guard let modelContext else { throw StoreError.notConfigured }
             UserDefaults.standard.set(true, forKey: AppCloudSync.enabledKey)
             preferences.cloudSyncEnabled = true
@@ -105,7 +105,7 @@ extension TimeTrackerStore {
         let changed = normalized != preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let taskSnapshot = llmSuggestionTaskSnapshot()
         do {
-            try AppCloudSync.requireUserWritesAllowed()
+            try writeAuthorization.requireUserWritesAllowed()
             try llmCredentialStore.writeAPIKey(value)
         } catch {
             errorMessage = error.localizedDescription

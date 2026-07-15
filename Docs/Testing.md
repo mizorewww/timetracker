@@ -27,6 +27,17 @@ xcodebuild build -project timetracker.xcodeproj -scheme timetracker -configurati
 
 Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`. Do not add `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO`, or an empty team to make these commands pass. Simulator `Sign to Run Locally` is expected and is not device entitlement evidence.
 
+Unit tests must construct the facade with `makeTestStore(...)`. That factory
+uses an explicit in-process write authorization for in-memory fixtures; it does
+not read, overwrite, or clear the developer's real `TimeTrackerPersistenceMode`
+or recovery flags. Production and system-action stores keep the default
+`applicationState` authorization and still enforce recovery read-only mode.
+Tests that exercise external commands use `makeTestSystemActionCommandHandler()`
+and `makeTestWatchCommandProcessor(...)` for the same reason; safety tests that
+verify recovery blocking deliberately retain the production defaults.
+The hosted unit-test app also selects `TimeTrackerUnitTestHost`, an isolated
+in-memory container, before any production persistence or recovery path runs.
+
 Scheme visibility check:
 
 ```sh

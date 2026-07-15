@@ -6,7 +6,7 @@ import Testing
 struct CoreActiveSegmentIndexTests {
     @Test @MainActor
     func activeSegmentIndexTracksReplacementAndPreservesCanonicalFirstMatch() {
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         let taskID = UUID()
         let first = TimeSegment(
             sessionID: UUID(),

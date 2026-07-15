@@ -84,7 +84,7 @@ struct CoreWidgetSnapshotTests {
 
     @Test @MainActor
     func widgetSnapshotSaveFailureIsSurfacedByTheMainStore() {
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         let unavailableCache = WidgetSnapshotCache(
             store: SharedWidgetSnapshotStore(defaults: nil)
         )

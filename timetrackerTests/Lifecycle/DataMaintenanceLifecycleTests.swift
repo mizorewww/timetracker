@@ -56,7 +56,7 @@ struct DataMaintenanceLifecycleTests {
         let credentialStore = ResetTestCredentialStore()
         try credentialStore.writeAPIKey("private-test-key")
         defaults.set(true, forKey: automaticSuggestionsKey)
-        let store = TimeTrackerStore(llmCredentialStore: credentialStore)
+        let store = makeTestStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
         store.desktopTaskDetailID = task.id
@@ -111,7 +111,7 @@ struct DataMaintenanceLifecycleTests {
         try context.save()
         try taskRepository.softDeleteTask(taskID: task.id)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         #expect(store.allSegments.count == 1)
 
@@ -142,7 +142,7 @@ struct DataMaintenanceLifecycleTests {
         context.insert(segment)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         let removedCount = store.optimizeDatabase()

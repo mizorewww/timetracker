@@ -122,6 +122,12 @@ struct TimerActiveSetMutationService {
 
 @MainActor
 struct SystemActionCommandHandler {
+    let writeAuthorization: StoreWriteAuthorization
+
+    init(writeAuthorization: StoreWriteAuthorization = .applicationState) {
+        self.writeAuthorization = writeAuthorization
+    }
+
     @discardableResult
     func addInboxItem(
         title: String,
@@ -129,7 +135,7 @@ struct SystemActionCommandHandler {
         deviceID: String = DeviceIdentity.current
     ) throws -> UUID? {
         try context.performAtomicMutation {
-            try AppCloudSync.requireUserWritesAllowed()
+            try writeAuthorization.requireUserWritesAllowed()
             let existingItems = try context.fetch(FetchDescriptor<InboxItem>())
                 .visibleDeduplicatedByID()
                 .sorted { lhs, rhs in
@@ -151,7 +157,7 @@ struct SystemActionCommandHandler {
         context: ModelContext
     ) throws -> UUID? {
         try context.performAtomicMutation {
-            try AppCloudSync.requireUserWritesAllowed()
+            try writeAuthorization.requireUserWritesAllowed()
             let taskRepository = SwiftDataTaskRepository(context: context)
             let availableTaskIDs = TaskTrackingAvailabilityService().availableTaskIDs(
                 tasks: try taskRepository.allNodes()
@@ -188,7 +194,7 @@ struct SystemActionCommandHandler {
         context: ModelContext
     ) throws -> UUID? {
         try context.performAtomicMutation {
-            try AppCloudSync.requireUserWritesAllowed()
+            try writeAuthorization.requireUserWritesAllowed()
             let timeRepository = SwiftDataTimeTrackingRepository(context: context)
             let activeSegments = try timeRepository.activeSegments()
             guard let segment = taskID.flatMap({ taskID in

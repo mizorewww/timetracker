@@ -27,7 +27,7 @@ struct CoreSystemActionCommandTests {
     @Test @MainActor
     func systemActionAddInboxItemUsesSharedCommandHandler() throws {
         let context = try makeTestContext()
-        let handler = SystemActionCommandHandler()
+        let handler = makeTestSystemActionCommandHandler()
 
         let itemID = try #require(try handler.addInboxItem(title: "Capture from shortcut", context: context, deviceID: "test"))
 
@@ -42,7 +42,7 @@ struct CoreSystemActionCommandTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Shortcut task", parentID: nil, colorHex: nil, iconName: nil)
-        let handler = SystemActionCommandHandler()
+        let handler = makeTestSystemActionCommandHandler()
 
         let segmentID = try #require(try handler.startTimer(
             taskID: task.id,
@@ -77,7 +77,7 @@ struct CoreSystemActionCommandTests {
         let selectedSegment = try timeRepository.startTask(taskID: selectedTask.id, source: .timer)
         let otherSegment = try timeRepository.startTask(taskID: otherTask.id, source: .timer)
 
-        let returnedID = try SystemActionCommandHandler().startTimer(
+        let returnedID = try makeTestSystemActionCommandHandler().startTimer(
             taskID: selectedTask.id,
             allowParallelTimers: false,
             context: context
@@ -145,7 +145,7 @@ struct CoreSystemActionCommandTests {
         try taskRepository.archiveTask(taskID: task.id)
 
         #expect(throws: SystemActionCommandError.taskNotFound) {
-            try SystemActionCommandHandler().startTimer(
+            try makeTestSystemActionCommandHandler().startTimer(
                 taskID: task.id,
                 allowParallelTimers: true,
                 context: context
@@ -173,7 +173,7 @@ struct CoreSystemActionCommandTests {
         try taskRepository.archiveTask(taskID: parent.id)
 
         #expect(throws: SystemActionCommandError.taskNotFound) {
-            try SystemActionCommandHandler().startTimer(
+            try makeTestSystemActionCommandHandler().startTimer(
                 taskID: child.id,
                 allowParallelTimers: true,
                 context: context
@@ -190,7 +190,7 @@ struct CoreSystemActionCommandTests {
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Running task", parentID: nil, colorHex: nil, iconName: nil)
         let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
-        let handler = SystemActionCommandHandler()
+        let handler = makeTestSystemActionCommandHandler()
 
         let stoppedID = try #require(try handler.stopTimer(taskID: task.id, context: context))
 
@@ -222,7 +222,7 @@ struct CoreSystemActionCommandTests {
         newer.startedAt = Date(timeIntervalSinceReferenceDate: 200)
         try context.save()
 
-        let stoppedID = try SystemActionCommandHandler().stopTimer(taskID: nil, context: context)
+        let stoppedID = try makeTestSystemActionCommandHandler().stopTimer(taskID: nil, context: context)
 
         #expect(stoppedID == newer.id)
         #expect(older.endedAt == nil)
@@ -263,7 +263,7 @@ struct CoreSystemActionCommandTests {
         try context.save()
 
         let stoppedID = try #require(
-            try SystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
+            try makeTestSystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
         )
 
         let persistedRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
@@ -285,7 +285,7 @@ struct CoreSystemActionCommandTests {
             context: context
         )
 
-        #expect(try SystemActionCommandHandler().allowParallelTimersPreference(context: context) == false)
+        #expect(try makeTestSystemActionCommandHandler().allowParallelTimersPreference(context: context) == false)
     }
 
     @Test @MainActor
@@ -293,7 +293,7 @@ struct CoreSystemActionCommandTests {
         try withSystemActionCloudSyncMode {
             let context = try makeTestContext()
             let itemID = try #require(
-                try SystemActionCommandHandler().addInboxItem(
+                try makeTestSystemActionCommandHandler().addInboxItem(
                     title: "Committed before snapshot",
                     context: context,
                     deviceID: "test"
@@ -337,7 +337,7 @@ struct CoreSystemActionCommandTests {
         ]
 
         let segmentID = try #require(
-            try SystemActionCommandHandler().startTimer(
+            try makeTestSystemActionCommandHandler().startTimer(
                 taskID: task.id,
                 allowParallelTimers: true,
                 context: context
@@ -348,7 +348,7 @@ struct CoreSystemActionCommandTests {
         #expect(runningSnapshot.activeTimers.map(\.id) == [segmentID])
         #expect(runningSnapshot.activeTimers.map(\.title) == ["External timer"])
 
-        _ = try SystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
+        _ = try makeTestSystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
         #expect(synchronizer.synchronize(context: context, events: events) == nil)
         let stoppedSnapshot = try #require(sharedStore.load())
         #expect(stoppedSnapshot.activeTimers.isEmpty)

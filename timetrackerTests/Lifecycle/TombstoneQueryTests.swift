@@ -112,7 +112,7 @@ struct TombstoneQueryTests {
         #expect(try pomodoroRepository.runs().isEmpty)
         #expect(try pomodoroRepository.activeRuns().isEmpty)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.modelContext = context
         #expect(try store.fetchChecklistItems().isEmpty)
         #expect(try store.fetchInboxItems().isEmpty)

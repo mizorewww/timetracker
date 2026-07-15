@@ -21,7 +21,7 @@ struct DemoDataLifecycleTests {
         #expect(try timeRepository.activeSegments().count == 2)
         #expect(try pomodoroRepository.runs().contains { $0.state == .completed })
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let overview = store.analyticsOverview(for: .week)
         #expect(overview.grossSeconds > overview.wallSeconds)
@@ -86,11 +86,11 @@ struct DemoDataLifecycleTests {
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty == false)
 
         try SeedData.clearDemoData(context: context)
-        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).visibleDeduplicatedByID().isEmpty)
         #expect(SeedData.isAutomaticDemoSeedingDisabled)
 
         try SeedData.ensureSeeded(context: context)
-        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).visibleDeduplicatedByID().isEmpty)
     }
 
     @Test @MainActor
@@ -151,9 +151,11 @@ struct DemoDataLifecycleTests {
 
         try SeedData.ensureSeeded(context: context)
 
-        let titles = try context.fetch(FetchDescriptor<TaskNode>()).map(\.title)
+        let rows = try context.fetch(FetchDescriptor<TaskNode>())
+        let titles = rows.visibleDeduplicatedByID().map(\.title)
         #expect(titles.contains("Should Be Replaced") == false)
         #expect(titles.contains("Time Tracker App"))
+        #expect(rows.contains { $0.title == "Should Be Replaced" && $0.deletedAt != nil })
         #expect(SeedData.isAutomaticDemoSeedingDisabled == false)
     }
 

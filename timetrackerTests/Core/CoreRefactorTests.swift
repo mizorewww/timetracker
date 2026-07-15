@@ -10,7 +10,7 @@ struct CoreRefactorTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Delete in Tasks", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.desktopDestination = .tasks
         store.openTaskDetail(task.id)
@@ -28,7 +28,7 @@ struct CoreRefactorTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let detailTask = try taskRepository.createTask(title: "Open detail", parentID: nil, colorHex: nil, iconName: nil)
         let selectedTask = try taskRepository.createTask(title: "Plain selection", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.desktopDestination = .analytics
 
@@ -58,7 +58,7 @@ struct CoreRefactorTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Delete from row", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.desktopDestination = .today
         store.selectTask(task.id)
@@ -72,7 +72,7 @@ struct CoreRefactorTests {
     @Test @MainActor
     func taskPageCreatePreservesTasksDestinationAfterSelectingNewTask() throws {
         let context = try makeTestContext()
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.desktopDestination = .tasks
         store.presentNewTask(preservingDestination: .tasks)
@@ -95,7 +95,7 @@ struct CoreRefactorTests {
         let parent = try taskRepository.createTask(title: "Parent", parentID: nil, colorHex: nil, iconName: nil)
         let child = try taskRepository.createTask(title: "Child", parentID: parent.id, colorHex: nil, iconName: nil)
         _ = try timeRepository.startTask(taskID: child.id, source: .timer)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         store.archiveSelectedTask(taskID: parent.id)
@@ -116,7 +116,7 @@ struct CoreRefactorTests {
         run.startedAt = Date()
         context.insert(run)
         try context.save()
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         store.setTaskStatus(.archived, taskID: parent.id)
@@ -130,7 +130,7 @@ struct CoreRefactorTests {
         let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
         parent.status = .archived
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.tasks = [parent, child]
         var draft = ManualTimeDraft(taskID: child.id, tasks: [child])
         draft.startedAt = Date().addingTimeInterval(-600)
@@ -142,7 +142,7 @@ struct CoreRefactorTests {
 
     @Test @MainActor
     func facadeCommandsExposeTypedUserVisibleErrors() {
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         let now = Date(timeIntervalSince1970: 1_000)
 
         var missingTaskDraft = ManualTimeDraft(taskID: nil, tasks: [])
@@ -166,7 +166,7 @@ struct CoreRefactorTests {
     func committedMutationIsNotReportedAsFailedWhenPostCommitRefreshFails() throws {
         let context = try makeTestContext()
         let credentialStore = RefreshFailingCredentialStore()
-        let store = TimeTrackerStore(llmCredentialStore: credentialStore)
+        let store = makeTestStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         credentialStore.shouldFailReads = true
         var didRunMutation = false
@@ -184,7 +184,7 @@ struct CoreRefactorTests {
     func keychainMutationRemainsCommittedWhenItsPostCommitRefreshFails() throws {
         let context = try makeTestContext()
         let credentialStore = RefreshFailingCredentialStore()
-        let store = TimeTrackerStore(llmCredentialStore: credentialStore)
+        let store = makeTestStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         credentialStore.shouldFailReads = true
 
@@ -197,7 +197,7 @@ struct CoreRefactorTests {
     @Test @MainActor
     func failedMultiStepMutationRollsBackEarlierNestedSaves() throws {
         let context = try makeTestContext()
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         let didCommit = store.perform(event: .inboxChanged(itemIDs: [])) {

@@ -99,7 +99,7 @@ struct ChecklistForecastTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         var firstDraft = TaskEditorDraft(task: task, checklistItems: [])
@@ -145,7 +145,7 @@ struct ChecklistForecastTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         var draft = TaskEditorDraft(task: task, checklistItems: [])

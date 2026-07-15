@@ -226,7 +226,7 @@ struct LLMSuggestionCancellationTests {
         let task = TaskNode(title: "Personal", parentID: nil, deviceID: "test")
         let inboxItem = InboxItem(title: "Plan the weekend", deviceID: "test")
         let gate = ControlledLLMTransport(payload: .inbox(taskID: task.id))
-        var store: TimeTrackerStore? = TimeTrackerStore(
+        var store: TimeTrackerStore? = makeTestStore(
             llmCredentialStore: InMemoryLLMCredentialStore(apiKey: "test-key"),
             inboxSuggestionService: LLMInboxSuggestionService { request in
                 try await gate.send(request)
@@ -270,7 +270,7 @@ struct LLMSuggestionCancellationTests {
                 try await gate.send(request)
             }
         } ?? LLMChecklistVisualSuggestionService()
-        let store = TimeTrackerStore(
+        let store = makeTestStore(
             llmCredentialStore: credentialStore ?? InMemoryLLMCredentialStore(apiKey: "test-key"),
             inboxSuggestionService: inboxService,
             checklistVisualSuggestionService: checklistService

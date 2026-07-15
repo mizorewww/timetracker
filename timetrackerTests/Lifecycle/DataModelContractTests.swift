@@ -377,7 +377,7 @@ struct DataModelContractTests {
             note: "Export note"
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let json = try #require(store.jsonExport())
 
@@ -390,7 +390,7 @@ struct DataModelContractTests {
 
     @Test @MainActor
     func jsonExportFailureDoesNotReturnAPlaceholderDocument() {
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
 
         #expect(store.jsonExport() == nil)
         #expect(store.errorMessage != nil)

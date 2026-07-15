@@ -20,6 +20,62 @@ func makeTestContext() throws -> ModelContext {
     return ModelContext(container)
 }
 
+@MainActor
+func makeTestStore() -> TimeTrackerStore {
+    TimeTrackerStore(writeAuthorization: .isolatedTestHarness)
+}
+
+@MainActor
+func makeTestStore(
+    llmCredentialStore: any LLMCredentialStoring
+) -> TimeTrackerStore {
+    TimeTrackerStore(
+        llmCredentialStore: llmCredentialStore,
+        writeAuthorization: .isolatedTestHarness
+    )
+}
+
+@MainActor
+func makeTestSystemActionCommandHandler() -> SystemActionCommandHandler {
+    SystemActionCommandHandler(writeAuthorization: .isolatedTestHarness)
+}
+
+@MainActor
+func makeTestWatchCommandProcessor(
+    receiptStore: WatchCommandReceiptStore
+) -> WatchCommandProcessor {
+    WatchCommandProcessor(
+        receiptStore: receiptStore,
+        writeAuthorization: .isolatedTestHarness
+    )
+}
+
+@MainActor
+func makeTestStore(
+    llmCredentialStore: any LLMCredentialStoring,
+    inboxSuggestionService: LLMInboxSuggestionService
+) -> TimeTrackerStore {
+    TimeTrackerStore(
+        llmCredentialStore: llmCredentialStore,
+        inboxSuggestionService: inboxSuggestionService,
+        writeAuthorization: .isolatedTestHarness
+    )
+}
+
+@MainActor
+func makeTestStore(
+    llmCredentialStore: any LLMCredentialStoring,
+    inboxSuggestionService: LLMInboxSuggestionService,
+    checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
+) -> TimeTrackerStore {
+    TimeTrackerStore(
+        llmCredentialStore: llmCredentialStore,
+        inboxSuggestionService: inboxSuggestionService,
+        checklistVisualSuggestionService: checklistVisualSuggestionService,
+        writeAuthorization: .isolatedTestHarness
+    )
+}
+
 func projectRootURL() throws -> URL {
     var current = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
     while current.path != "/" {

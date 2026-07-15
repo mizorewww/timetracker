@@ -218,7 +218,7 @@ struct TimeTrackerUtilityTests {
     @Test @MainActor
     func countdownEventsAreSwiftDataBackedAndAllowEmptyList() throws {
         let context = try makeTestContext()
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         #expect(store.countdownEvents.isEmpty)

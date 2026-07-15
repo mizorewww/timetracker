@@ -55,13 +55,19 @@ final class InMemoryWatchCommandReceiptStore: WatchCommandReceiptStore {
 @MainActor
 struct WatchCommandProcessor {
     var receiptStore: WatchCommandReceiptStore
+    let writeAuthorization: StoreWriteAuthorization
 
-    init(receiptStore: WatchCommandReceiptStore) {
+    init(
+        receiptStore: WatchCommandReceiptStore,
+        writeAuthorization: StoreWriteAuthorization = .applicationState
+    ) {
         self.receiptStore = receiptStore
+        self.writeAuthorization = writeAuthorization
     }
 
-    init() {
+    init(writeAuthorization: StoreWriteAuthorization = .applicationState) {
         self.receiptStore = UserDefaultsWatchCommandReceiptStore()
+        self.writeAuthorization = writeAuthorization
     }
 
     func process(
@@ -76,7 +82,7 @@ struct WatchCommandProcessor {
         guard command.isValid(at: now) else {
             return .invalid
         }
-        try AppCloudSync.requireUserWritesAllowed()
+        try writeAuthorization.requireUserWritesAllowed()
 
         switch command.type {
         case .startTask:
@@ -97,7 +103,9 @@ struct WatchCommandProcessor {
             return .missingTask(taskID)
         }
 
-        let segmentID = try SystemActionCommandHandler().startTimer(
+        let segmentID = try SystemActionCommandHandler(
+            writeAuthorization: writeAuthorization
+        ).startTimer(
             taskID: taskID,
             allowParallelTimers: allowParallelTimers,
             source: .watch,

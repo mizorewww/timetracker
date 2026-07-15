@@ -200,7 +200,7 @@ struct TaskLedgerTests {
             startedAt: dayStart.addingTimeInterval(-3_600),
             endedAt: dayStart.addingTimeInterval(3_600)
         )
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.allSegments = [segment]
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
         run.sessionID = session.id
@@ -240,7 +240,7 @@ struct TaskLedgerTests {
         context.insert(segment)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
@@ -544,7 +544,7 @@ struct TaskLedgerTests {
         context.insert(child)
         try context.save()
 
-        let appStore = TimeTrackerStore()
+        let appStore = makeTestStore()
         appStore.configureIfNeeded(context: context)
         var taskStore = TaskStore()
         try taskStore.refresh(repository: repository)
@@ -695,7 +695,7 @@ struct TaskLedgerTests {
         #expect(session.updatedAt == originalSessionUpdatedAt)
         #expect(session.clientMutationID == originalMutationID)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         var draft = SegmentEditorDraft(segment: segment, note: session.note ?? "")
         #expect(draft.wasActive == false)
@@ -818,7 +818,7 @@ struct TaskLedgerTests {
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Active", parentID: nil, colorHex: nil, iconName: nil)
         let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         var draft = SegmentEditorDraft(segment: segment, note: "")
         draft.startedAt = Date().addingTimeInterval(3_600)
@@ -942,7 +942,7 @@ struct TaskLedgerTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         #expect(store.secondsForTaskToday(parent, now: now) == 600)

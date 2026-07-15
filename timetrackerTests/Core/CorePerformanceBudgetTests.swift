@@ -339,7 +339,7 @@ struct CorePerformanceBudgetTests {
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - start
 
-        let facade = TimeTrackerStore()
+        let facade = makeTestStore()
         facade.tasks = [task]
         facade.allSegments = segments
         facade.rollupDomainStore = incremental

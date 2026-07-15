@@ -27,7 +27,9 @@ extension TimeTrackerStore {
 
         do {
             guard let modelContext else { throw StoreError.notConfigured }
-            let result = try WatchCommandProcessor().process(
+            let result = try WatchCommandProcessor(
+                writeAuthorization: writeAuthorization
+            ).process(
                 command,
                 allowParallelTimers: preferences.allowParallelTimers,
                 context: modelContext

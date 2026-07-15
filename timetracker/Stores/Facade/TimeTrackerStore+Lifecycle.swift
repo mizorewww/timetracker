@@ -96,7 +96,7 @@ extension TimeTrackerStore {
     @discardableResult
     func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
         do {
-            try AppCloudSync.requireUserWritesAllowed()
+            try writeAuthorization.requireUserWritesAllowed()
             if let modelContext {
                 try modelContext.performAtomicMutation {
                     try action()

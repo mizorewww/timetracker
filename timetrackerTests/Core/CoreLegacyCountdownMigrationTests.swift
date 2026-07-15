@@ -23,7 +23,7 @@ struct CoreLegacyCountdownMigrationTests {
         )
 
         let context = try makeTestContext()
-        try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
             context: context,
             defaults: defaults,
             deviceID: "legacy-device"
@@ -52,7 +52,7 @@ struct CoreLegacyCountdownMigrationTests {
         )
 
         let context = try makeTestContext()
-        try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
             context: context,
             defaults: defaults,
             deviceID: "test"
@@ -73,7 +73,7 @@ struct CoreLegacyCountdownMigrationTests {
         defaults.set("[\(records.joined(separator: ","))]", forKey: LegacyCountdownMigrationPolicy.payloadKey)
 
         let context = try makeTestContext()
-        try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
             context: context,
             defaults: defaults,
             deviceID: "test"
@@ -134,7 +134,7 @@ struct CoreLegacyCountdownMigrationTests {
         )
 
         let context = try makeTestContext()
-        try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
             context: context,
             defaults: defaults,
             deviceID: "test"
@@ -158,7 +158,7 @@ struct CoreLegacyCountdownMigrationTests {
         context.insert(CountdownEvent(title: "Existing", date: Date(), deviceID: "test"))
         try context.save()
 
-        try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
             context: context,
             defaults: defaults,
             deviceID: "test"
@@ -199,7 +199,7 @@ struct CoreLegacyCountdownMigrationTests {
         let context = ModelContext(container)
 
         #expect(throws: (any Error).self) {
-            try TimeTrackerStore().migrateLegacyCountdownEventsIfNeeded(
+            try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
                 context: context,
                 defaults: defaults,
                 deviceID: "test"

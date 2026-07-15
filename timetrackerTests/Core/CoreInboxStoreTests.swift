@@ -30,7 +30,7 @@ struct CoreInboxStoreTests {
         #expect(draft.title == "  Keep this thought  ")
         #expect(attemptedTitles == ["Keep this thought"])
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         let storeFailed = draft.submit(using: store.addInboxItem(title:))
         #expect(!storeFailed)
         #expect(draft.title == "  Keep this thought  ")
@@ -69,7 +69,7 @@ struct CoreInboxStoreTests {
             }
             return (Data("{\"choices\":[]}".utf8), response)
         }
-        let store = TimeTrackerStore(
+        let store = makeTestStore(
             llmCredentialStore: InboxTestCredentialStore(),
             inboxSuggestionService: LLMInboxSuggestionService(),
             checklistVisualSuggestionService: service
@@ -124,7 +124,7 @@ struct CoreInboxStoreTests {
             }
             return (Data("{\"choices\":[]}".utf8), response)
         }
-        let store = TimeTrackerStore(
+        let store = makeTestStore(
             llmCredentialStore: InboxTestCredentialStore(),
             inboxSuggestionService: service
         )
@@ -176,7 +176,7 @@ struct CoreInboxStoreTests {
             }
             return (Data("{\"choices\":[]}".utf8), response)
         }
-        let store = TimeTrackerStore(
+        let store = makeTestStore(
             llmCredentialStore: InboxTestCredentialStore(),
             inboxSuggestionService: service
         )
@@ -206,7 +206,7 @@ struct CoreInboxStoreTests {
             try await Task.sleep(for: .milliseconds(60))
             throw InboxSuggestionTestError.invalidResponse
         }
-        let store = TimeTrackerStore(
+        let store = makeTestStore(
             llmCredentialStore: InboxTestCredentialStore(),
             inboxSuggestionService: inboxService,
             checklistVisualSuggestionService: checklistService
@@ -275,7 +275,7 @@ struct CoreInboxStoreTests {
         context.insert(item)
         try context.save()
 
-        let store = TimeTrackerStore(
+        let store = makeTestStore(
             llmCredentialStore: InboxTestCredentialStore(),
             inboxSuggestionService: LLMInboxSuggestionService(),
             checklistVisualSuggestionService: service
@@ -351,7 +351,7 @@ struct CoreInboxStoreTests {
             deviceID: "test"
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.tasks = [task]
         store.inboxItems = [item]
         store.inboxSuggestions = [staleSuggestion]
@@ -372,7 +372,7 @@ struct CoreInboxStoreTests {
             titleSnapshot: item.title,
             deviceID: "test"
         )
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.tasks = [task]
         store.inboxItems = [item]
         store.inboxSuggestionFailureByItemID[item.id] = "Could not suggest"
@@ -390,7 +390,7 @@ struct CoreInboxStoreTests {
     @Test @MainActor
     func storeCanClearItemScopedInboxSuggestionFailure() {
         let item = InboxItem(title: "Read HIG", deviceID: "test")
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.inboxSuggestionFailureByItemID[item.id] = "Could not suggest"
 
         store.clearInboxSuggestionFailure(item)
@@ -413,7 +413,7 @@ struct CoreInboxStoreTests {
             titleSnapshot: item.title,
             deviceID: "test"
         )
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.tasks = [parent, child]
         store.inboxItems = [item]
         store.inboxSuggestions = [suggestion]

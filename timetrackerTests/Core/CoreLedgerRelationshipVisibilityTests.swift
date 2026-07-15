@@ -120,7 +120,7 @@ struct CoreLedgerRelationshipVisibilityTests {
 
     @MainActor
     private func refreshedStore(context: ModelContext) throws -> TimeTrackerStore {
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureRepositoriesIfNeeded(context: context)
         try store.refresh()
         return store

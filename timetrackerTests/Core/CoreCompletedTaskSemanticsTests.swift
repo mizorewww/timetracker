@@ -29,7 +29,7 @@ struct CoreCompletedTaskSemanticsTests {
         )
         try repository.setTaskStatus(taskID: parent.id, status: .completed)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         #expect(store.visibleTaskIDs.isSuperset(of: [parent.id, child.id, activeRoot.id]))
@@ -67,7 +67,7 @@ struct CoreCompletedTaskSemanticsTests {
         context.insert(inboxItem)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         store.startTask(child)
@@ -107,7 +107,7 @@ struct CoreCompletedTaskSemanticsTests {
         try repository.setTaskStatus(taskID: task.id, status: .completed)
 
         #expect(throws: SystemActionCommandError.taskNotFound) {
-            try SystemActionCommandHandler().startTimer(
+            try makeTestSystemActionCommandHandler().startTimer(
                 taskID: task.id,
                 allowParallelTimers: true,
                 context: context
@@ -123,7 +123,7 @@ struct CoreCompletedTaskSemanticsTests {
             deviceID: "watch"
         )
         #expect(throws: SystemActionCommandError.taskNotFound) {
-            try WatchCommandProcessor(receiptStore: InMemoryWatchCommandReceiptStore()).process(
+            try makeTestWatchCommandProcessor(receiptStore: InMemoryWatchCommandReceiptStore()).process(
                 watchCommand,
                 allowParallelTimers: true,
                 context: context
@@ -151,7 +151,7 @@ struct CoreCompletedTaskSemanticsTests {
             iconName: nil
         )
         let segment = try timeRepository.startTask(taskID: child.id, source: .timer)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         store.setTaskStatus(.completed, taskID: parent.id)
@@ -195,7 +195,7 @@ struct CoreCompletedTaskSemanticsTests {
         // already running locally.
         try taskRepository.setTaskStatus(taskID: parent.id, status: .completed)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         #expect(store.isTaskVisible(child))
@@ -232,7 +232,7 @@ struct CoreCompletedTaskSemanticsTests {
         try repository.setTaskStatus(taskID: parent.id, status: .completed)
         try repository.setTaskStatus(taskID: child.id, status: .completed)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         #expect(store.completedWorkBlockers(for: grandchild).map(\.id) == [parent.id, child.id])
 

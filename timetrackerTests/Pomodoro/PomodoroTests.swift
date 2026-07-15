@@ -106,7 +106,7 @@ struct PomodoroTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Focus", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
 
@@ -150,7 +150,7 @@ struct PomodoroTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Synced Focus", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
 
@@ -182,7 +182,7 @@ struct PomodoroTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Expired Focus", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
@@ -226,7 +226,7 @@ struct PomodoroTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Tiny Focus", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
 
@@ -431,7 +431,7 @@ struct PomodoroTests {
         context.insert(run)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
 
@@ -453,7 +453,7 @@ struct PomodoroTests {
             colorHex: nil,
             iconName: nil
         )
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
@@ -527,7 +527,7 @@ struct PomodoroTests {
         }
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
 
@@ -554,7 +554,7 @@ struct PomodoroTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let firstTask = try taskRepository.createTask(title: "First", parentID: nil, colorHex: nil, iconName: nil)
         let secondTask = try taskRepository.createTask(title: "Second", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = firstTask.id
@@ -590,7 +590,7 @@ struct PomodoroTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let firstTask = try taskRepository.createTask(title: "Original", parentID: nil, colorHex: nil, iconName: nil)
         let secondTask = try taskRepository.createTask(title: "Rebound", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = firstTask.id
@@ -628,7 +628,7 @@ struct PomodoroTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Delete Focus", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
@@ -656,7 +656,7 @@ struct PomodoroTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Delete Expired", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
@@ -689,7 +689,7 @@ struct PomodoroTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let parent = try taskRepository.createTask(title: "Parent", parentID: nil, colorHex: nil, iconName: nil)
         let child = try taskRepository.createTask(title: "Child", parentID: parent.id, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.preferences.allowParallelTimers = true
@@ -730,7 +730,7 @@ struct PomodoroTests {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Break Task", parentID: nil, colorHex: nil, iconName: nil)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id

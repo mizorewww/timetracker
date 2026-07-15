@@ -46,7 +46,7 @@ struct TaskCategoryTests {
         )
         let child = try repository.createTask(title: "Research", parentID: root.id, colorHex: nil, iconName: nil)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         #expect(try repository.categoryID(forRootTaskID: root.id) == category.id)
@@ -106,7 +106,7 @@ struct TaskCategoryTests {
         context.insert(ChecklistItem(taskID: child.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test"))
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         #expect(store.forecastEligibleTaskIDs().isEmpty)
@@ -153,7 +153,7 @@ struct TaskCategoryTests {
         try context.save()
 
         try repository.softDeleteCategory(categoryID: category.id)
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         let deletedCategory = try repository.category(id: category.id)
@@ -197,7 +197,7 @@ struct TaskCategoryTests {
             iconName: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         var draft = TaskEditorDraft(task: root, categoryID: work.id, checklistItems: [])
@@ -314,7 +314,7 @@ struct TaskCategoryTests {
         )
         #expect(try repository.categoryID(forRootTaskID: root.id) == winningCategory.id)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         #expect(store.effectiveCategory(for: root)?.id == winningCategory.id)
 

@@ -21,7 +21,7 @@ struct CoreLLMInboxRequestBudgetTests {
         let pinnedTask = TaskNode(title: "ZZZ Pinned", parentID: nil, deviceID: "test")
         pinnedTask.updatedAt = oldDate.addingTimeInterval(20_000)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.tasks = regularTasks + [recentTask, pinnedTask]
         store.preferences.quickStartTaskIDs = [pinnedTask.id]
 

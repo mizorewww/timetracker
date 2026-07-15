@@ -14,7 +14,7 @@ struct AnalyticsTimelineTests {
         let secondTask = try taskRepository.createTask(title: "Meeting", parentID: nil, colorHex: "EF4444", iconName: nil)
         secondTask.status = .planned
         let calendar = Calendar.current
-        let now = Date()
+        let now = fixedAnalyticsMidday()
         let startOfDay = calendar.startOfDay(for: now)
 
         _ = try timeRepository.addManualSegment(
@@ -30,7 +30,7 @@ struct AnalyticsTimelineTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         let overview = store.analyticsOverview(for: .week, now: now)
@@ -55,7 +55,7 @@ struct AnalyticsTimelineTests {
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: nil, iconName: nil)
         let calendar = Calendar.current
-        let now = Date()
+        let now = fixedAnalyticsMidday()
         let startOfDay = calendar.startOfDay(for: now)
 
         _ = try timeRepository.addManualSegment(
@@ -65,7 +65,7 @@ struct AnalyticsTimelineTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let hourly = store.hourlyBreakdown(for: now, now: now)
 
@@ -83,7 +83,7 @@ struct AnalyticsTimelineTests {
         let firstTask = try taskRepository.createTask(title: "Coding", parentID: nil, colorHex: nil, iconName: nil)
         let secondTask = try taskRepository.createTask(title: "Meeting", parentID: nil, colorHex: nil, iconName: nil)
         let calendar = Calendar.current
-        let now = Date()
+        let now = fixedAnalyticsMidday()
         let startOfDay = calendar.startOfDay(for: now)
 
         _ = try timeRepository.addManualSegment(
@@ -99,7 +99,7 @@ struct AnalyticsTimelineTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let nine = store.hourlyBreakdown(for: now, now: now)[9]
 
@@ -123,7 +123,7 @@ struct AnalyticsTimelineTests {
         )
         try taskRepository.softDeleteTask(taskID: task.id)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let breakdown = store.taskBreakdown(range: .today, now: now)
 

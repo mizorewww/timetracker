@@ -624,7 +624,7 @@ struct CoreCommandHandlerTests {
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let firstSegment = try timeRepository.startTask(taskID: firstTask.id, source: .pomodoro)
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.preferences.allowParallelTimers = false
         let events = store.timerStartMutationEvents(taskID: secondTask.id)

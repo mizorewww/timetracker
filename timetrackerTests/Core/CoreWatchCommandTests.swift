@@ -547,7 +547,7 @@ struct CoreWatchCommandTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.setQuickStartTaskIDs([pinned.id])
 
@@ -581,7 +581,7 @@ struct CoreWatchCommandTests {
         deletedTask.deletedAt = Date(timeIntervalSinceReferenceDate: 10)
         try context.save()
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.setQuickStartTaskIDs([createdTasks[7].id, createdTasks[2].id])
 
@@ -752,7 +752,7 @@ struct CoreWatchCommandTests {
         #expect(router.contains("[weak self] command"))
         #expect(router.contains("WatchConnectivityBridge.shared.commandHandler = nil"))
         #expect(facade.contains("handleWatchCommand"))
-        #expect(facade.contains("WatchCommandProcessor().process"))
+        #expect(facade.contains("writeAuthorization: writeAuthorization"))
     }
 
     @Test @MainActor
@@ -761,7 +761,7 @@ struct CoreWatchCommandTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Watch task", parentID: nil, colorHex: nil, iconName: nil)
         let receiptStore = InMemoryWatchCommandReceiptStore()
-        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
         let command = WatchTimerCommand(
             id: UUID(),
@@ -778,7 +778,7 @@ struct CoreWatchCommandTests {
             context: context,
             now: issuedAt
         )
-        try SystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
+        try makeTestSystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
         let duplicateResult = try processor.process(
             command,
             allowParallelTimers: true,
@@ -797,7 +797,7 @@ struct CoreWatchCommandTests {
     func missingWatchStartCommandCanBeRetriedAfterTaskArrives() throws {
         let context = try makeTestContext()
         let receiptStore = InMemoryWatchCommandReceiptStore()
-        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let taskID = UUID()
         let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
         let command = WatchTimerCommand(
@@ -839,7 +839,7 @@ struct CoreWatchCommandTests {
         let task = try taskRepository.createTask(title: "Stop from watch", parentID: nil, colorHex: nil, iconName: nil)
         let segment = try timeRepository.startTask(taskID: task.id, source: .watch)
         let receiptStore = InMemoryWatchCommandReceiptStore()
-        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let issuedAt = Date(timeIntervalSinceReferenceDate: 1_100)
         let command = WatchTimerCommand(
             id: UUID(),
@@ -881,7 +881,7 @@ struct CoreWatchCommandTests {
             iconName: nil
         )
         let receiptStore = InMemoryWatchCommandReceiptStore()
-        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let commandID = UUID()
         let issuedAt = Date(timeIntervalSinceReferenceDate: 1_200)
         let staleCommand = WatchTimerCommand(
@@ -951,7 +951,7 @@ struct CoreWatchCommandTests {
         session.startedAt = phaseStartedAt
         try context.save()
         let receiptStore = InMemoryWatchCommandReceiptStore()
-        let processor = WatchCommandProcessor(receiptStore: receiptStore)
+        let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .stopSegment,
@@ -983,7 +983,7 @@ struct CoreWatchCommandTests {
             colorHex: nil,
             iconName: nil
         )
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         try withWatchCloudSyncMode {

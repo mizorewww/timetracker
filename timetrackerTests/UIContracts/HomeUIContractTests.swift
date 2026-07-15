@@ -40,7 +40,7 @@ struct HomeUIContractTests {
             note: nil
         )
 
-        let store = TimeTrackerStore()
+        let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
         let quickStartTasks = store.frequentRecentTasks(excluding: [pinnedTask.id], limit: 2)

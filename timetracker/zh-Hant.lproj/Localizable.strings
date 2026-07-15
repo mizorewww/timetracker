@@ -444,6 +444,8 @@
 "analytics.decisions.title" = "決策摘要";
 "analytics.decisions.subtitle" = "先看這裡：什麼變了、什麼占最多、哪裡值得處理。";
 "analytics.group.category" = "分類";
+"analytics.group.other.title" = "其他";
+"analytics.group.other.subtitle" = "合併其餘較小分組";
 "analytics.metric.deltaFootnoteFormat" = "相比上一範圍：%@";
 "analytics.metric.dailyPace" = "日均節奏";
 "analytics.metric.activeDaysFormat" = "%d 個記錄日";

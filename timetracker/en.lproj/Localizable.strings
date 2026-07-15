@@ -444,6 +444,8 @@
 "analytics.decisions.title" = "Decision Summary";
 "analytics.decisions.subtitle" = "Start here: what changed, what dominated, and what deserves attention.";
 "analytics.group.category" = "Category";
+"analytics.group.other.title" = "Other";
+"analytics.group.other.subtitle" = "Combined smaller groups";
 "analytics.metric.deltaFootnoteFormat" = "vs previous range: %@";
 "analytics.metric.dailyPace" = "Daily Pace";
 "analytics.metric.activeDaysFormat" = "%d active days";

@@ -536,6 +536,18 @@
 
 验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。Focus UI test 必须按当前系统 TabBar 的真实 frame 把主操作完整滚到其上方，不能以部分可点的 `isHittable` 代替无遮挡。最终发布前仍需保留付费开发者签名，完成 iPhone/iPad/macOS build，并以普通/最大辅助字号、VoiceOver、长同名任务、break 未到期/刚到期及宽窄窗口做实机或模拟器截图验收；每次使用后释放模拟器资源。
 
+## AD-041：Analytics 首页先复盘，再渐进披露图表与指标
+
+状态：Accepted
+
+背景：旧首页在摘要后继续以一个“分类”列表平铺概览、时间、任务、番茄钟、决策和质量。首两行重复摘要的 gross/wall 值，真正帮助用户判断下一步的决策与质量信号被埋在下方。
+
+决策：保留系统 `List`、typed `NavigationLink(value:)` 和六个既有详情目的地，但首页分成两个显式顺序：`reviewCategories` 先展示 Decisions/Quality，`exploreCategories` 再展示 Time/Tasks/Pomodoro/Metrics。原 Overview 用户文案改为 Metrics，避免与首页摘要同名。两组必须不重不漏地覆盖 `AnalyticsCategory.allCases`，不引入新的自绘导航或第三方 dashboard 容器。
+
+后果：首屏优先呈现可行动的复盘入口，详细趋势、分布、专注记录和术语继续渐进披露；路由值、快照数据和详情内容不变。任何新 category 都必须显式归入一组，不能因 `allCases` 自动追加到意外位置。
+
+验证：单元测试固定两组顺序与完整性；source contract 固定分组、三语键与稳定 accessibility identifier；iPhone UI 测试滚动到最后的 Metrics 入口，并按真实 Tab Bar frame 验证整行无遮挡。后续仍需覆盖最大 Dynamic Type、深色、iPad 和 macOS 宽屏截图。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

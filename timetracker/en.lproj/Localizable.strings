@@ -490,12 +490,13 @@
 "analytics.summary.focusRuns" = "Focus Runs";
 "analytics.summary.dailyAverage" = "Daily Average";
 "analytics.summary.periodFootnote" = "Showing %@.";
-"analytics.categories.title" = "Categories";
-"analytics.categories.footer" = "Open a category to adjust the date range and inspect the underlying data.";
+"analytics.review.title" = "Review";
+"analytics.categories.title" = "Explore";
+"analytics.categories.footer" = "Open a section for charts, definitions, and source records.";
 "analytics.controls.title" = "Date Range";
 "analytics.glossary.title" = "Terms";
-"analytics.category.overview.title" = "Overview";
-"analytics.category.overview.subtitle" = "Totals, comparisons, and metric definitions.";
+"analytics.category.overview.title" = "Metrics";
+"analytics.category.overview.subtitle" = "Detailed totals, comparisons, and definitions.";
 "analytics.category.time.title" = "Time";
 "analytics.category.time.subtitle" = "Daily trend, today distribution, and timeline.";
 "analytics.category.tasks.title" = "Tasks";

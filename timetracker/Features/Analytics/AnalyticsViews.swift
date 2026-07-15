@@ -89,12 +89,13 @@ private struct AnalyticsContent: View {
             }
 
             Section {
-                ForEach(AnalyticsCategory.allCases) { category in
-                    NavigationLink(value: category) {
-                        AnalyticsCategoryRow(category: category, snapshot: snapshot)
-                    }
-                    .accessibilityIdentifier("analytics.category.\(category.rawValue)")
-                }
+                categoryLinks(AnalyticsCategory.reviewCategories)
+            } header: {
+                Text(AppStrings.localized("analytics.review.title"))
+            }
+
+            Section {
+                categoryLinks(AnalyticsCategory.exploreCategories)
             } header: {
                 Text(AppStrings.localized("analytics.categories.title"))
             } footer: {
@@ -116,6 +117,16 @@ private struct AnalyticsContent: View {
         .accessibilityIdentifier("analytics.view")
         .transaction { transaction in
             transaction.animation = nil
+        }
+    }
+
+    @ViewBuilder
+    private func categoryLinks(_ categories: [AnalyticsCategory]) -> some View {
+        ForEach(categories) { category in
+            NavigationLink(value: category) {
+                AnalyticsCategoryRow(category: category, snapshot: snapshot)
+            }
+            .accessibilityIdentifier("analytics.category.\(category.rawValue)")
         }
     }
 }

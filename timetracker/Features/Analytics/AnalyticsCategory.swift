@@ -8,6 +8,9 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
     case decisions
     case quality
 
+    static let reviewCategories: [AnalyticsCategory] = [.decisions, .quality]
+    static let exploreCategories: [AnalyticsCategory] = [.time, .tasks, .pomodoro, .overview]
+
     var id: String { rawValue }
 
     var title: String {

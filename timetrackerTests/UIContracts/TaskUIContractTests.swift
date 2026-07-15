@@ -470,8 +470,11 @@ struct TaskUIContractTests {
         #expect(uiTestSource.contains("analyticsIsReady(in app: XCUIApplication)"))
         #expect(uiTestSource.contains("analytics.view"))
         #expect(uiTestSource.contains("testAnalyticsFinalCategoryScrollsAboveSystemChrome"))
-        #expect(uiTestSource.contains("analytics.category.quality"))
+        #expect(uiTestSource.contains("analytics.category.overview"))
         #expect(analyticsSource.contains("analytics.category.\\(category.rawValue)"))
+        #expect(analyticsSource.contains("AnalyticsCategory.reviewCategories"))
+        #expect(analyticsSource.contains("AnalyticsCategory.exploreCategories"))
+        #expect(englishStrings.contains("\"analytics.review.title\""))
     }
 
     @Test

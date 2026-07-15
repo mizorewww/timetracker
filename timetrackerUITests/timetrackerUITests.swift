@@ -176,7 +176,7 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp(route: "analytics")
 
         XCTAssertTrue(analyticsIsReady(in: app))
-        let finalCategory = app.descendants(matching: .any)["analytics.category.quality"].firstMatch
+        let finalCategory = app.descendants(matching: .any)["analytics.category.overview"].firstMatch
         scrollUntilHittable(finalCategory, direction: .up, in: app)
         XCTAssertTrue(
             waitForElement(

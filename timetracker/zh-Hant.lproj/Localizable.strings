@@ -490,12 +490,13 @@
 "analytics.summary.focusRuns" = "專注次數";
 "analytics.summary.dailyAverage" = "日均時長";
 "analytics.summary.periodFootnote" = "正在顯示 %@。";
-"analytics.categories.title" = "分類";
-"analytics.categories.footer" = "進入分類後可以調整日期範圍，並查看對應的底層資料。";
+"analytics.review.title" = "複盤";
+"analytics.categories.title" = "深入查看";
+"analytics.categories.footer" = "進入各部分查看圖表、指標定義和原始記錄。";
 "analytics.controls.title" = "日期範圍";
 "analytics.glossary.title" = "術語";
-"analytics.category.overview.title" = "總覽";
-"analytics.category.overview.subtitle" = "總量、對比和指標含義。";
+"analytics.category.overview.title" = "指標";
+"analytics.category.overview.subtitle" = "詳細總量、週期對比和指標定義。";
 "analytics.category.time.title" = "時間";
 "analytics.category.time.subtitle" = "每日趨勢、今天分布和時間軸。";
 "analytics.category.tasks.title" = "任務";

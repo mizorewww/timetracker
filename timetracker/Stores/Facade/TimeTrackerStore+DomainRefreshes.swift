@@ -129,8 +129,11 @@ extension TimeTrackerStore {
                 suggestions: try fetchInboxSuggestions(inboxItemIDs: plan.affectedInboxItemIDs)
             )
         }
+        suppressInboxSuggestionIndexRebuild = true
         inboxItems = inboxDomainStore.items
         inboxSuggestions = inboxDomainStore.suggestions
+        suppressInboxSuggestionIndexRebuild = false
+        rebuildInboxSuggestionIndexes()
         cancelInvalidInboxSuggestionRequests()
     }
 

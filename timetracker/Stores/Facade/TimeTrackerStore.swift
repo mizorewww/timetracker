@@ -86,12 +86,16 @@ final class TimeTrackerStore {
     }
     var inboxItems: [InboxItem] = [] {
         didSet {
-            rebuildInboxSuggestionIndexes()
+            if !suppressInboxSuggestionIndexRebuild {
+                rebuildInboxSuggestionIndexes()
+            }
         }
     }
     var inboxSuggestions: [InboxSuggestion] = [] {
         didSet {
-            rebuildInboxSuggestionIndexes()
+            if !suppressInboxSuggestionIndexRebuild {
+                rebuildInboxSuggestionIndexes()
+            }
         }
     }
     var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
@@ -207,6 +211,7 @@ final class TimeTrackerStore {
     var checklistDomainStore = ChecklistStore()
     @ObservationIgnored var suppressChecklistIndexRebuild = false
     @ObservationIgnored var suppressChecklistVisualIndexRebuild = false
+    @ObservationIgnored var suppressInboxSuggestionIndexRebuild = false
     var inboxDomainStore = InboxStore()
     var preferenceDomainStore = PreferenceStore()
     var syncObservers: [SyncNotificationObserverToken] = []

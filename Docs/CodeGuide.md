@@ -64,7 +64,7 @@
 
 - Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
 - Analytics：root landing page 与 `AnalyticsCategoryDetailView` 分文件；category 使用 typed `NavigationLink(value:)` / `navigationDestination` 路由，overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 各有所有者。
-- Pomodoro setup：组合容器、空状态、focus 参数控件、Plan/Task 选择和 timer face 分文件；容器不再同时承担全部展示与交互细节。
+- Pomodoro presentation：`PomodoroPageLayout` 负责宽屏双栏/窄屏单栏；setup composition、空状态、参数控件、Plan/Task 选择、timer face、active composition、active countdown、有限 timeline schedule 和 ledger 各有所有者。页面容器不承担 deadline 或账本写入。
 - Settings：display/timing、Pomodoro、countdown、sync、data、actions、bindings 与 support 分文件；`SharedUI/Components` 中的 foundation/value row、action/destructive label、text/number input、presentation modifier 和 sync feedback 也各有所有者。
 - Task Detail：canonical router 与 identity/checklist/overview/analytics/navigation/record sections 分文件。
 - Ledger infrastructure：Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 与 summary 分文件。
@@ -109,7 +109,7 @@
 - Task availability：`TaskTrackingAvailabilityService` 一次线性扫描分别产出 `visibleTaskIDs` 与 `trackableTaskIDs`。归档/删除分支不可见；完成分支仍可浏览详情与历史，但自身和后代不能接收新工作，直到 `reopenTaskForWork` 把路径上的完成阻塞项一起恢复为 active。Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent、任务创建/移动与任务动作共用该判定；归档或完成活动子树前先停止计时，历史 segment 编辑可保留原任务。
 - System routing：`AppDeepLinkRouter` 严格解析 URL；`PendingDeepLinkQueue` 只缓存初始化前已经通过相同验证的语义动作，按动作去重、先进先出且最多 16 项。`WatchCommandRouter` 用弱 store 引用选择最近活跃 iOS scene，并在最后一个 scene 注销后移除进程级 bridge handler。
 - Settings：五类导航 IA，不提供应用级 appearance override。`CountdownTitleEditor` 持有仅属于界面的标题草稿，`CountdownTitleDraft` 负责脏状态、外部刷新合并和错误呈现；只有保存按钮、Return 或失焦会调用 `CountdownCommandHandler`。命令先规范化并验证标题，再执行 SwiftData 变更，因此逐字符输入不会产生数据库写入或半成品同步事实。日期仍通过独立动作即时保存。
-- Pomodoro：Plan 和 Task 是两个可见 `Menu`，没有点击标题/计时器的隐藏选择逻辑。
+- Pomodoro：下一次专注是唯一主流程，旁边或下方展示最近记录。Plan 和 Task 是两个可见的原生 `Menu`，Task 使用派生标题路径区分同名项，计划摘要同时公开 focus/short break/long break/rounds；没有点击标题/计时器的隐藏选择逻辑。活动 break 在到期前提供“跳过休息”，到期后显示“开始下一轮专注”，两者都调用同一个显式 resume 命令。
 - iOS 不设置 `CADisableMinimumFrameDurationOnPhone`；刷新率与帧调度交给系统，流畅度用 Release 截图/trace 和真实设备观察验证，不靠 Info.plist 强制覆盖。
 
 ## 4. 核心领域
@@ -155,6 +155,8 @@ Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是�
 PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更。`startedAt` 表示当前 focus/break phase 的起点，`phaseDeadline` 由持久状态与计划时长派生；它不是 View 本地倒计时。启动、前台、Pomodoro 页面出现和 deadline task 都会调用幂等 reconcile：过期 focus 在业务 deadline 截断 segment/session，避免后台挂起时间被算作专注；过期 break 不会自动新建 focus，下一轮仍需用户动作。
 
 从 break 继续下一轮 focus 是一次新的计时准入。`PomodoroCommandHandler` 必须在同一个原子 mutation 内重新读取 LWW 后的 canonical 任务树，并用 `TaskTrackingAvailabilityService` 验证 run 的任务及全部祖先仍可接收工作；完成、归档、删除或缺失任务都返回 canonical no-op。该拒绝发生在 ledger admission 之前，不停止其他 timer、不创建 segment、不推进 run，也不发布刷新或同步事件；不能只信任 facade/UI 可能过期的 `trackableTaskIDs`。
+
+`PomodoroCountdownSchedule` 只从当前时间产生到 `phaseDeadline` 为止的有限序列；低频模式使用 60 秒步进，deadline 已过或不存在时只产生当前 entry。`TimelineView` 只包围 `PomodoroActiveCountdownView`，不能重新包住整个页面、最近记录或停止操作。视觉 `ProgressView` 从辅助功能树隐藏，由 timer face 统一朗读阶段、完整任务路径与本地化剩余时长，避免重复语义。
 
 通用 ledger 编辑必须保持 Pomodoro 不变量。编辑活动 Pomodoro segment 会重绑 run 的 task/start；把 segment 关闭会按 deadline 完成或取消 run；删除活动 segment 会 tombstone run/session；删除任务树会结束所有活动 timer，并保留已产生的 Pomodoro 历史。相关写入必须在同一个 `performAtomicMutation` 中提交。
 

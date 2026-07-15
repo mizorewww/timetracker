@@ -524,6 +524,18 @@
 
 验收要求：Home read-model/布局/UI contract 覆盖稳定去重、单次 segment 遍历、动作语义、扣除 page padding 后的 1000 pt 双栏边界、1180/360 pt 上限和辅助字号重排；iPhone Large 与 Accessibility、iPad 横竖屏和 macOS 窗口截图检查真实层级。UI 测试先等待 `home.view`，再滚动并操作 `home.startTimer`，只有任务选择器真实打开才算通过；模拟器结束后恢复字号/方向并关闭设备。contract 与 regression 的提交本身不代表运行通过，必须另外保留成功的 signed test/result bundle。构建保留 Automatic signing、团队 `LT98S43NKA` 和付费开发者能力。
 
+## AD-040：Focus 展示采用显式会话层级与有限倒计时刷新
+
+状态：Accepted
+
+背景：旧 Focus 设置页没有“下一次会话”层级或最近记录上下文，Plan/Task 被包装成卡片式自绘选择，长任务只显示标题，计划摘要还遗漏长休息。活动页把整个滚动页面放进每秒 `TimelineView`，导致任务查询、操作和布局一起失效；break 过期后仍无限轮询，而且命令虽允许明确提前继续，界面却强制等待归零。
+
+决策：Focus 设置以一个“下一次专注”主面板和一个最近记录面板组成；空间足够时双栏，窄屏单栏。Plan/Task 保持两个带标签的原生 `Menu`，Task 展示派生标题路径，方案公开 focus、short break、long break 与 rounds，只保留一个 prominent“开始专注”。活动页仅让 `PomodoroActiveCountdownView` 进入 timeline；`PomodoroCountdownSchedule` 从当前 entry 有限推进到 deadline，低频模式按 60 秒推进，deadline 不存在或已过时不继续轮询。break 未归零时显式操作为“跳过休息”，归零后改为“开始下一轮专注”，两者调用同一带 run ID/expected state 的 resume 命令，后台仍不得自动创建 focus segment。Timer face 合并阶段、完整任务路径和本地化剩余时长的 VoiceOver 语义，重复的视觉进度条从辅助功能树隐藏。
+
+后果：不得恢复标题/计时器隐藏点击、卡片内嵌卡片选择器、只显示任务短标题、遗漏长休息的摘要、根页面 periodic timeline 或 break 归零后的无限刷新。UI 可以改变布局与提前继续的操作时机，但 deadline、reconcile、run/session/segment 写入及停止确认仍由既有领域命令负责。
+
+验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。最终发布前仍需保留付费开发者签名，完成 iPhone/iPad/macOS build，并以普通/最大辅助字号、VoiceOver、长同名任务、break 未到期/刚到期及宽窄窗口做实机或模拟器截图验收；每次使用后释放模拟器资源。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

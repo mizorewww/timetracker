@@ -25,18 +25,30 @@ struct InboxCommandHandler {
         return item
     }
 
-    func toggle(_ item: InboxItem, context: ModelContext, now: Date = Date()) throws {
+    func toggle(
+        _ item: InboxItem,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         item.isCompleted.toggle()
         item.completedAt = item.isCompleted ? now : nil
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
 
-    func updateTitle(_ item: InboxItem, title: String, context: ModelContext, now: Date = Date()) throws {
+    func updateTitle(
+        _ item: InboxItem,
+        title: String,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else {
-            try softDelete(item, context: context, now: now)
+            try softDelete(item, context: context, now: now, deviceID: deviceID)
             return
         }
         guard item.title != trimmedTitle else { return }
@@ -46,16 +58,23 @@ struct InboxCommandHandler {
         item.suggestionReason = nil
         item.suggestionGeneratedAt = nil
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
-        try clearSuggestions(for: item.id, context: context, now: now)
+        try clearSuggestions(for: item.id, context: context, now: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
-    func softDelete(_ item: InboxItem, context: ModelContext, now: Date = Date()) throws {
+    func softDelete(
+        _ item: InboxItem,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         item.deletedAt = now
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
-        try clearSuggestions(for: item.id, context: context, now: now)
+        try clearSuggestions(for: item.id, context: context, now: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
@@ -83,19 +102,23 @@ struct InboxCommandHandler {
     func reorderOpenItems(
         orderedItemIDs: [UUID],
         context: ModelContext,
-        now: Date = Date()
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
     ) throws {
         guard !orderedItemIDs.isEmpty else { return }
         let items = try context.fetch(FetchDescriptor<InboxItem>())
             .visibleDeduplicatedByID()
             .filter { $0.isCompleted == false }
         let itemByID = items.latestByID()
-        guard orderedItemIDs.count == items.count else { return }
+        guard orderedItemIDs.count == items.count,
+              Set(orderedItemIDs) == Set(itemByID.keys) else { return }
+        let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }
+        guard orderedItems.count == items.count else { return }
 
-        for (index, itemID) in orderedItemIDs.enumerated() {
-            guard let item = itemByID[itemID] else { return }
+        for (index, item) in orderedItems.enumerated() {
             item.sortOrder = Double(index + 1) * 10
             item.updatedAt = now
+            item.deviceID = deviceID
             item.clientMutationID = UUID()
         }
         try context.saveAfterMutationStep()

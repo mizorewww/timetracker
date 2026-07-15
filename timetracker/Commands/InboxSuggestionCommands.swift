@@ -2,13 +2,19 @@ import Foundation
 import SwiftData
 
 extension InboxCommandHandler {
-    func discardSuggestion(_ item: InboxItem, context: ModelContext, now: Date = Date()) throws {
+    func discardSuggestion(
+        _ item: InboxItem,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         item.suggestedTaskID = nil
         item.suggestionReason = nil
         item.suggestionGeneratedAt = now
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
-        try clearSuggestions(for: item.id, context: context, now: now)
+        try clearSuggestions(for: item.id, context: context, now: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
@@ -32,7 +38,7 @@ extension InboxCommandHandler {
             }
         let active = existing.first { $0.deletedAt == nil }
         if let active {
-            update(active, with: result, item: item, now: now)
+            update(active, with: result, item: item, now: now, deviceID: deviceID)
         } else {
             context.insert(
                 InboxSuggestion(
@@ -50,13 +56,14 @@ extension InboxCommandHandler {
         }
 
         for suggestion in existing where suggestion.deletedAt == nil && suggestion.id != active?.id {
-            softDelete(suggestion, now: now)
+            softDelete(suggestion, now: now, deviceID: deviceID)
         }
 
         item.suggestedTaskID = result.taskID
         item.suggestionReason = result.reason
         item.suggestionGeneratedAt = now
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
@@ -111,20 +118,26 @@ extension InboxCommandHandler {
 
         item.deletedAt = now
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
-        softDelete(suggestion, now: now)
+        softDelete(suggestion, now: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
         return checklistItem
     }
 
-    func clearSuggestions(for inboxItemID: UUID, context: ModelContext, now: Date) throws {
+    func clearSuggestions(
+        for inboxItemID: UUID,
+        context: ModelContext,
+        now: Date,
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         let suggestions = try context.fetch(
             FetchDescriptor<InboxSuggestion>(
                 predicate: #Predicate { $0.inboxItemID == inboxItemID }
             )
         ).visibleDeduplicatedByID()
         for suggestion in suggestions {
-            softDelete(suggestion, now: now)
+            softDelete(suggestion, now: now, deviceID: deviceID)
         }
     }
 
@@ -132,7 +145,8 @@ extension InboxCommandHandler {
         _ suggestion: InboxSuggestion,
         with result: LLMInboxSuggestionResult,
         item: InboxItem,
-        now: Date
+        now: Date,
+        deviceID: String
     ) {
         suggestion.taskID = result.taskID
         suggestion.reason = result.reason
@@ -142,12 +156,14 @@ extension InboxCommandHandler {
         suggestion.titleSnapshot = item.title
         suggestion.generatedAt = now
         suggestion.updatedAt = now
+        suggestion.deviceID = deviceID
         suggestion.clientMutationID = UUID()
     }
 
-    private func softDelete(_ suggestion: InboxSuggestion, now: Date) {
+    private func softDelete(_ suggestion: InboxSuggestion, now: Date, deviceID: String) {
         suggestion.deletedAt = now
         suggestion.updatedAt = now
+        suggestion.deviceID = deviceID
         suggestion.clientMutationID = UUID()
     }
 }

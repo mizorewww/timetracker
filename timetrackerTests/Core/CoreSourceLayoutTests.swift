@@ -33,6 +33,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Domains/ChecklistStore.swift",
             "timetracker/Stores/Domains/ChecklistStore+ArrayIndexes.swift",
             "timetracker/Stores/Domains/LedgerStore.swift",
+            "timetracker/Stores/Domains/LedgerStore+FlatSegmentIndex.swift",
             "timetracker/Stores/Domains/LedgerStore+SegmentIndex.swift",
             "timetracker/Stores/Domains/LedgerStore+Queries.swift",
             "timetracker/Stores/Domains/LedgerStore+RecordIndexes.swift",
@@ -464,18 +465,35 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
-    func mutationIndexesStaySplitByResponsibility() throws {
+    func checklistAndLedgerMutationIndexesStaySplitByResponsibility() throws {
         let root = try projectRootURL()
         let domainURL = root.appending(path: "timetracker/Stores/Domains")
         let focusedFiles = [
             "ChecklistStore.swift",
             "ChecklistStore+ArrayIndexes.swift",
             "LedgerStore.swift",
+            "LedgerStore+FlatSegmentIndex.swift",
             "LedgerStore+SegmentIndex.swift",
             "LedgerStore+Queries.swift",
             "LedgerStore+RecordIndexes.swift",
             "LedgerRollupIndex.swift",
-            "LedgerSessionIndex.swift",
+            "LedgerSessionIndex.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = domainURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func rollupMutationIndexesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let domainURL = root.appending(path: "timetracker/Stores/Domains")
+        let focusedFiles = [
             "RollupIncrementalIndex.swift",
             "RollupIncrementalIndex+Pace.swift",
             "RollupIncrementalIndex+Topology.swift"

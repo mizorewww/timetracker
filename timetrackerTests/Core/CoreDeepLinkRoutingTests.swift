@@ -5,6 +5,40 @@ import Testing
 @Suite(.serialized)
 struct CoreDeepLinkRoutingTests {
     @Test @MainActor
+    func latestDesiredStateReconcilerSerializesAndCoalescesStopStartTransitions() async {
+        let probe = LiveActivityReconciliationProbe()
+        let reconciler = LatestDesiredStateReconciler<String> { state in
+            await probe.reconcile(state)
+        }
+
+        reconciler.submit("stopped")
+        while probe.isStopBlocked == false {
+            await Task.yield()
+        }
+
+        reconciler.submit("stopped")
+        reconciler.submit("started-a")
+        reconciler.submit("started-b")
+
+        #expect(probe.events == ["begin:stopped"])
+        #expect(probe.maximumConcurrentOperations == 1)
+        probe.releaseStop()
+        await reconciler.waitUntilIdle()
+
+        #expect(
+            probe.events == [
+                "begin:stopped",
+                "end:stopped",
+                "begin:started-b",
+                "end:started-b"
+            ]
+        )
+        #expect(probe.maximumConcurrentOperations == 1)
+        #expect(reconciler.desiredState == "started-b")
+        #expect(reconciler.isReconciling == false)
+    }
+
+    @Test @MainActor
     func deepLinkRouterMapsKnownWidgetRoutesToAppActions() throws {
         let router = AppDeepLinkRouter()
 
@@ -105,5 +139,36 @@ struct CoreDeepLinkRoutingTests {
         #expect(activity.contains(".privacySensitive()"))
         #expect(activity.contains("width: 44, height: 44"))
         #expect(activity.contains(".widgetURL(LiveActivityDeepLinks.today)"))
+    }
+}
+
+@MainActor
+private final class LiveActivityReconciliationProbe {
+    private var stopContinuation: CheckedContinuation<Void, Never>?
+    private var activeOperationCount = 0
+    private(set) var maximumConcurrentOperations = 0
+    private(set) var events: [String] = []
+
+    var isStopBlocked: Bool {
+        stopContinuation != nil
+    }
+
+    func reconcile(_ state: String) async {
+        activeOperationCount += 1
+        maximumConcurrentOperations = max(maximumConcurrentOperations, activeOperationCount)
+        events.append("begin:\(state)")
+        if state == "stopped" {
+            await withCheckedContinuation { continuation in
+                stopContinuation = continuation
+            }
+        }
+        events.append("end:\(state)")
+        activeOperationCount -= 1
+    }
+
+    func releaseStop() {
+        let continuation = stopContinuation
+        stopContinuation = nil
+        continuation?.resume()
     }
 }

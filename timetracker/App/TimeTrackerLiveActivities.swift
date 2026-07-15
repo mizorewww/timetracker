@@ -1,5 +1,55 @@
 import Foundation
 
+/// Serializes destructive asynchronous system-surface updates while retaining
+/// only the newest desired state. An operation that has already crossed an
+/// `await` cannot be undone, so newer work runs after it and restores the final
+/// state instead of racing it.
+@MainActor
+final class LatestDesiredStateReconciler<State: Equatable> {
+    typealias Operation = @MainActor (State) async -> Void
+
+    private let operation: Operation
+    private(set) var desiredState: State?
+    private var desiredRevision: UInt = 0
+    private var reconciliationTask: Task<Void, Never>?
+
+    init(operation: @escaping Operation) {
+        self.operation = operation
+    }
+
+    var isReconciling: Bool {
+        reconciliationTask != nil
+    }
+
+    func submit(_ state: State) {
+        if desiredState == state, reconciliationTask != nil {
+            return
+        }
+        desiredState = state
+        desiredRevision &+= 1
+        guard reconciliationTask == nil else { return }
+        reconciliationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await drain()
+        }
+    }
+
+    func waitUntilIdle() async {
+        while let reconciliationTask {
+            await reconciliationTask.value
+        }
+    }
+
+    private func drain() async {
+        defer { reconciliationTask = nil }
+        while Task.isCancelled == false, let desiredState {
+            let revision = desiredRevision
+            await operation(desiredState)
+            guard desiredRevision != revision else { return }
+        }
+    }
+}
+
 #if os(iOS) && canImport(ActivityKit)
 import ActivityKit
 
@@ -12,9 +62,16 @@ final class LiveActivityCoordinator {
         let state: TimeTrackingActivityAttributes.ContentState
     }
 
+    private enum DesiredState: Equatable {
+        case inactive
+        case active(Request)
+    }
+
     private var lastRequest: Request?
-    private var pendingRequest: Request?
-    private var generation = 0
+    private lazy var reconciler = LatestDesiredStateReconciler<DesiredState> { [weak self] state in
+        guard let self else { return }
+        await reconcile(state)
+    }
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
         let usableSegments = activeSegments
@@ -23,17 +80,12 @@ final class LiveActivityCoordinator {
 
         guard let primary = usableSegments.first else {
             let hasWork = lastRequest != nil
-                || pendingRequest != nil
+                || reconciler.isReconciling
                 || !Activity<TimeTrackingActivityAttributes>.activities.isEmpty
             guard hasWork else { return }
 
-            generation &+= 1
-            let expectedGeneration = generation
             lastRequest = nil
-            pendingRequest = nil
-            Task { [weak self] in
-                await self?.endAllActivities(expectedGeneration: expectedGeneration)
-            }
+            reconciler.submit(.inactive)
             return
         }
 
@@ -51,25 +103,27 @@ final class LiveActivityCoordinator {
             $0.attributes.taskID == request.taskID
         }
 
-        guard request != pendingRequest else { return }
-        guard request != lastRequest || !hasMatchingActivity else { return }
+        guard request != lastRequest || !hasMatchingActivity || reconciler.isReconciling else {
+            return
+        }
+        reconciler.submit(.active(request))
+    }
 
-        generation &+= 1
-        let expectedGeneration = generation
-        pendingRequest = request
-        Task { [weak self] in
-            await self?.updateOrStart(request, expectedGeneration: expectedGeneration)
+    private func reconcile(_ desiredState: DesiredState) async {
+        switch desiredState {
+        case .inactive:
+            await endAllActivities()
+            lastRequest = nil
+        case .active(let request):
+            if await updateOrStart(request) {
+                lastRequest = request
+            }
         }
     }
 
-    private func updateOrStart(
-        _ request: Request,
-        expectedGeneration: Int
-    ) async {
-        guard expectedGeneration == generation else { return }
+    private func updateOrStart(_ request: Request) async -> Bool {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            finish(request, expectedGeneration: expectedGeneration, succeeded: false)
-            return
+            return false
         }
 
         let attributes = TimeTrackingActivityAttributes(taskID: request.taskID)
@@ -81,40 +135,26 @@ final class LiveActivityCoordinator {
 
         if let existing = activities.first(where: { $0.attributes.taskID == request.taskID }) {
             await existing.update(content)
-            guard expectedGeneration == generation else { return }
 
             for stale in activities where stale.id != existing.id {
                 await stale.end(content, dismissalPolicy: .immediate)
-                guard expectedGeneration == generation else { return }
             }
-            finish(request, expectedGeneration: expectedGeneration, succeeded: true)
+            return true
         } else {
             for stale in activities {
                 await stale.end(content, dismissalPolicy: .immediate)
-                guard expectedGeneration == generation else { return }
             }
 
             do {
                 _ = try Activity.request(attributes: attributes, content: content, pushType: nil)
-                finish(request, expectedGeneration: expectedGeneration, succeeded: true)
+                return true
             } catch {
-                finish(request, expectedGeneration: expectedGeneration, succeeded: false)
+                return false
             }
         }
     }
 
-    private func finish(_ request: Request, expectedGeneration: Int, succeeded: Bool) {
-        guard expectedGeneration == generation else { return }
-        if succeeded {
-            lastRequest = request
-        }
-        if pendingRequest == request {
-            pendingRequest = nil
-        }
-    }
-
-    private func endAllActivities(expectedGeneration: Int) async {
-        guard expectedGeneration == generation else { return }
+    private func endAllActivities() async {
         let content = ActivityContent(
             state: TimeTrackingActivityAttributes.ContentState(
                 taskTitle: AppStrings.localized("live.timer.endedTitle"),
@@ -128,7 +168,6 @@ final class LiveActivityCoordinator {
         )
         for activity in Activity<TimeTrackingActivityAttributes>.activities {
             await activity.end(content, dismissalPolicy: .immediate)
-            guard expectedGeneration == generation else { return }
         }
     }
 

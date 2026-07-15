@@ -58,6 +58,13 @@ final class WatchAppStore: NSObject {
         super.init()
     }
 
+    deinit {
+        for task in confirmationTasks.values {
+            task.cancel()
+        }
+        snapshotFreshnessTask?.cancel()
+    }
+
     func activate() {
         #if canImport(WatchConnectivity)
         guard WCSession.isSupported() else { return }

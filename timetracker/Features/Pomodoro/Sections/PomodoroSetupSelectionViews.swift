@@ -116,7 +116,6 @@ private struct PomodoroSelectionLabel: View {
                         Text(value)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(.primary)
-                            .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 8)

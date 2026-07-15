@@ -33,11 +33,17 @@ struct FocusUIContractTests {
         let timer = try sourceText(
             "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift"
         )
+        let selection = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
+        )
 
         #expect(timer.contains(".minimumScaleFactor(") == false)
         #expect(timer.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(timer.contains("spokenLabel"))
         #expect(timer.contains("spokenValue"))
+        #expect(selection.contains("Text(value)"))
+        #expect(selection.contains(".lineLimit(2)") == false)
+        #expect(selection.contains(".fixedSize(horizontal: false, vertical: true)"))
     }
 
     @Test

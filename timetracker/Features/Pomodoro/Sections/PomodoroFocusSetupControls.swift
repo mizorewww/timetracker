@@ -38,8 +38,6 @@ struct PomodoroFocusSetupControls: View {
                 selectedPlanID: $selectedPlanID
             )
 
-            PomodoroPlanDetails(plan: plan)
-
             Button(action: startPomodoro) {
                 Label(AppStrings.localized("pomodoro.startFocus"), systemImage: "play.fill")
                     .font(.headline)
@@ -51,6 +49,8 @@ struct PomodoroFocusSetupControls: View {
             .frame(maxWidth: 320)
             .disabled(selectedTask == nil)
             .accessibilityIdentifier("pomodoro.startFocus")
+
+            PomodoroPlanDetails(plan: plan)
         }
     }
 

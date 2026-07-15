@@ -36,7 +36,6 @@ struct PomodoroSetupCard: View {
                 }
             }
             .appCard(padding: 24)
-            .accessibilityIdentifier("pomodoro.setup")
         } secondary: {
             PomodoroLedgerCard(store: store)
         }
@@ -52,5 +51,7 @@ struct PomodoroSetupCard: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("pomodoro.setup")
     }
 }

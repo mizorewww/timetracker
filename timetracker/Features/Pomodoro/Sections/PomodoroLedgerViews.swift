@@ -7,12 +7,12 @@ struct PomodoroLedgerCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Label(AppStrings.localized("pomodoro.recent"), systemImage: "clock.arrow.circlepath")
                 .font(.headline)
+                .accessibilityIdentifier("pomodoro.recent")
 
             PomodoroLedgerContent(store: store)
         }
         .padding(18)
         .appCard(padding: 0)
-        .accessibilityIdentifier("pomodoro.recent")
     }
 }
 

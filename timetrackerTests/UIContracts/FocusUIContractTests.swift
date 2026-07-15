@@ -22,10 +22,30 @@ struct FocusUIContractTests {
         #expect(layout.contains("if layout.usesTwoColumnContent"))
         #expect(layout.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(layout.contains("frame(width: layout.contentWidth)"))
+        #expect(layout.contains(".contentMargins("))
+        #expect(layout.contains("for: .scrollContent"))
         #expect(controls.contains("pomodoro.startFocus"))
         #expect(controls.contains("pomodoro.longBreak"))
         #expect(controls.contains("DurationFormatter.spoken(plan.focusSeconds)"))
         #expect(controls.components(separatedBy: ".buttonStyle(.borderedProminent)").count - 1 == 1)
+
+        let primaryAction = try #require(controls.range(of: "Button(action: startPomodoro)"))
+        let planDetails = try #require(controls.range(of: "PomodoroPlanDetails(plan: plan)"))
+        #expect(primaryAction.lowerBound < planDetails.lowerBound)
+    }
+
+    @Test
+    func sectionIdentifiersDoNotOverrideInteractiveDescendants() throws {
+        let setup = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift"
+        )
+        let ledger = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroLedgerViews.swift"
+        )
+
+        #expect(setup.contains(".accessibilityElement(children: .combine)"))
+        #expect(setup.contains(".appCard(padding: 24)\n            .accessibilityIdentifier") == false)
+        #expect(ledger.contains(".appCard(padding: 0)\n        .accessibilityIdentifier") == false)
     }
 
     @Test

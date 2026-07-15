@@ -81,9 +81,11 @@ struct LedgerCommandHandler {
         }) else {
             return
         }
+        let mutationDate = Date()
         run.taskID = taskID
         run.startedAt = startedAt
-        run.updatedAt = Date()
+        run.updatedAt = mutationDate
+        run.deviceID = DeviceIdentity.current
         run.clientMutationID = UUID()
         try context?.saveAfterMutationStep()
     }

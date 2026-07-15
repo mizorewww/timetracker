@@ -73,6 +73,7 @@ enum TaskRepositoryError: LocalizedError, Equatable {
 enum TimeTrackingRepositoryError: LocalizedError, Equatable {
     case invalidTimeRange
     case futureTime
+    case taskUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -80,6 +81,8 @@ enum TimeTrackingRepositoryError: LocalizedError, Equatable {
             AppStrings.localized("time.endAfterStart")
         case .futureTime:
             AppStrings.localized("segment.error.timeNotFuture")
+        case .taskUnavailable:
+            AppStrings.localized("task.archived.trackingUnavailable")
         }
     }
 }

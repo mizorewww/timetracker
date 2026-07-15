@@ -560,7 +560,10 @@ struct PomodoroTests {
         store.selectedTaskID = firstTask.id
         store.startPomodoroForSelectedTask(focusSeconds: 600, breakSeconds: 60, targetRounds: 1)
         let segment = try #require(store.activeSegment(for: firstTask.id))
-        let runID = try #require(store.activePomodoroRun?.id)
+        let activeRun = try #require(store.activePomodoroRun)
+        let runID = activeRun.id
+        activeRun.deviceID = "stale-device"
+        try context.save()
         let revisedStart = Date().addingTimeInterval(-30)
         var draft = SegmentEditorDraft(segment: segment, note: "")
         draft.taskID = secondTask.id
@@ -573,9 +576,11 @@ struct PomodoroTests {
         let session = try #require(store.sessions.first { $0.id == segment.sessionID })
         #expect(run.taskID == secondTask.id)
         #expect(run.startedAt == revisedStart)
+        #expect(run.deviceID == DeviceIdentity.current)
         #expect(editedSegment.taskID == secondTask.id)
         #expect(editedSegment.startedAt == revisedStart)
         #expect(session.taskID == secondTask.id)
+        #expect(session.titleSnapshot == secondTask.title)
         #expect(session.startedAt == revisedStart)
     }
 
@@ -613,6 +618,7 @@ struct PomodoroTests {
         #expect(editedSegment.startedAt == revisedStart)
         #expect(editedSegment.endedAt == revisedEnd)
         #expect(session.taskID == secondTask.id)
+        #expect(session.titleSnapshot == secondTask.title)
         #expect(session.startedAt == revisedStart)
         #expect(session.endedAt == revisedEnd)
     }

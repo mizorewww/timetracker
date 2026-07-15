@@ -44,21 +44,36 @@ extension SwiftDataTimeTrackingRepository {
             throw TimeTrackingRepositoryError.futureTime
         }
         guard let segment = try segment(id: segmentID) else { return }
-        segment.taskID = taskID
-        segment.startedAt = startedAt
-        segment.endedAt = endedAt
-        segment.updatedAt = now
-        segment.deviceID = deviceID
-
-        if let session = try session(id: segment.sessionID) {
-            session.taskID = taskID
-            session.startedAt = try earliestStartedAt(for: session.id) ?? startedAt
-            session.endedAt = endedAt == nil ? nil : try latestEndedAt(for: session.id)
-            session.note = note
-            session.markMutated(at: now, deviceID: deviceID)
+        let linkedSession = try session(id: segment.sessionID)
+        let isRebindingTask = segment.taskID != taskID || linkedSession.map { $0.taskID != taskID } == true
+        let reboundTitleSnapshot: String?
+        if isRebindingTask {
+            guard let targetTitle = try titleSnapshot(for: taskID) else {
+                throw TimeTrackingRepositoryError.taskUnavailable
+            }
+            reboundTitleSnapshot = targetTitle
+        } else {
+            reboundTitleSnapshot = nil
         }
 
-        try context.saveAfterMutationStep()
+        try context.performAtomicMutation {
+            segment.taskID = taskID
+            segment.startedAt = startedAt
+            segment.endedAt = endedAt
+            segment.updatedAt = now
+            segment.deviceID = deviceID
+
+            if let linkedSession {
+                linkedSession.taskID = taskID
+                if let reboundTitleSnapshot {
+                    linkedSession.titleSnapshot = reboundTitleSnapshot
+                }
+                linkedSession.startedAt = try earliestStartedAt(for: linkedSession.id) ?? startedAt
+                linkedSession.endedAt = endedAt == nil ? nil : try latestEndedAt(for: linkedSession.id)
+                linkedSession.note = note
+                linkedSession.markMutated(at: now, deviceID: deviceID)
+            }
+        }
     }
 
     func softDeleteSegment(segmentID: UUID) throws {

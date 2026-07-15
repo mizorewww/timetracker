@@ -15,27 +15,34 @@ struct InboxSuggestionIdentityTests {
         dismissed.suggestionContextID = contextID
         dismissed.suggestionRevisionID = revisionID
         dismissed.dismissedSuggestionRevisionID = revisionID
+        dismissed.notes = "Old notes"
+        dismissed.sortOrder = 10
         dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
 
         let activeDuplicate = InboxItem(title: dismissed.title, deviceID: "newer-device")
         activeDuplicate.id = sharedID
         activeDuplicate.suggestionContextID = contextID
         activeDuplicate.suggestionRevisionID = revisionID
+        activeDuplicate.notes = "New notes"
+        activeDuplicate.isCompleted = true
+        activeDuplicate.completedAt = Date(timeIntervalSinceReferenceDate: 190)
+        activeDuplicate.sortOrder = 40
         activeDuplicate.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
 
-        let winner = try #require(
-            InboxSuggestionIdentityService()
-                .logicalWinners(from: [dismissed, activeDuplicate])
-                .first
-        )
+        var store = InboxStore()
+        store.refresh(items: [dismissed, activeDuplicate], suggestions: [])
+        let winner = try #require(store.items.first)
 
-        #expect(winner === dismissed)
+        #expect(winner === activeDuplicate)
         #expect(winner.isCurrentSuggestionRevisionDismissed)
+        #expect(winner.notes == "New notes")
+        #expect(winner.isCompleted)
+        #expect(winner.completedAt == Date(timeIntervalSinceReferenceDate: 190))
+        #expect(winner.sortOrder == 40)
     }
 
     @Test @MainActor
     func dismissedRevisionWinsAcrossPhysicalRowsWithoutConflatingEqualTitles() throws {
-        let service = InboxSuggestionIdentityService()
         let original = InboxItem(title: "Plan review", deviceID: "device-a")
         let revisionID = original.effectiveSuggestionRevisionID
         original.dismissedSuggestionRevisionID = revisionID
@@ -45,18 +52,23 @@ struct InboxSuggestionIdentityTests {
         let rebuilt = InboxItem(title: original.title, deviceID: "device-b")
         rebuilt.suggestionContextID = original.effectiveSuggestionContextID
         rebuilt.suggestionRevisionID = revisionID
+        rebuilt.notes = "New notes"
+        rebuilt.sortOrder = 40
         rebuilt.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
 
         let unrelated = InboxItem(title: original.title, deviceID: "device-c")
         unrelated.updatedAt = Date(timeIntervalSinceReferenceDate: 300)
 
-        let winners = service.visibleLogicalItems(from: [original, rebuilt, unrelated])
-        #expect(winners.count == 2)
+        var store = InboxStore()
+        store.refresh(items: [original, rebuilt, unrelated], suggestions: [])
+        #expect(store.items.count == 2)
         let merged = try #require(
-            winners.first { $0.effectiveSuggestionContextID == original.effectiveSuggestionContextID }
+            store.items.first { $0.effectiveSuggestionContextID == original.effectiveSuggestionContextID }
         )
-        #expect(merged.id == original.id)
+        #expect(merged.id == rebuilt.id)
         #expect(merged.isCurrentSuggestionRevisionDismissed)
+        #expect(merged.notes == "New notes")
+        #expect(merged.sortOrder == 40)
         #expect(
             InboxSuggestionStateService().state(
                 for: merged,
@@ -65,6 +77,29 @@ struct InboxSuggestionIdentityTests {
             ) == .dismissed
         )
         #expect(original.effectiveSuggestionContextID != unrelated.effectiveSuggestionContextID)
+    }
+
+    @Test @MainActor
+    func dismissalDoesNotCrossSuggestionRevisions() throws {
+        let contextID = UUID()
+        let dismissedRevisionID = UUID()
+        let dismissed = InboxItem(title: "Old title", deviceID: "old")
+        dismissed.suggestionContextID = contextID
+        dismissed.suggestionRevisionID = dismissedRevisionID
+        dismissed.dismissedSuggestionRevisionID = dismissedRevisionID
+        dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let edited = InboxItem(title: "New title", deviceID: "new")
+        edited.suggestionContextID = contextID
+        edited.suggestionRevisionID = UUID()
+        edited.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+
+        var store = InboxStore()
+        store.refresh(items: [dismissed, edited], suggestions: [])
+        let winner = try #require(store.items.first)
+
+        #expect(winner === edited)
+        #expect(winner.dismissedSuggestionRevisionID == nil)
+        #expect(winner.isCurrentSuggestionRevisionDismissed == false)
     }
 
     @Test @MainActor

@@ -52,16 +52,43 @@ extension InboxSuggestion {
     }
 }
 
+struct InboxItemMergeResolution {
+    let winner: InboxItem
+    let dismissedIdentities: Set<InboxSuggestionIdentity>
+
+    var mergedDismissedSuggestionRevisionID: UUID? {
+        dismissedIdentities.contains(winner.suggestionIdentity)
+            ? winner.effectiveSuggestionRevisionID
+            : nil
+    }
+
+    func materializeDismissal() {
+        winner.dismissedSuggestionRevisionID = mergedDismissedSuggestionRevisionID
+    }
+}
+
 struct InboxSuggestionIdentityService {
     func visibleLogicalItems<S: Sequence>(from items: S) -> [InboxItem]
     where S.Element == InboxItem {
-        logicalWinners(from: items).filter { $0.deletedAt == nil }
+        visibleLogicalResolutions(from: items).map(\.winner)
     }
 
     func logicalWinners<S: Sequence>(from items: S) -> [InboxItem]
     where S.Element == InboxItem {
+        logicalResolutions(from: items).map(\.winner)
+    }
+
+    func visibleLogicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
+    where S.Element == InboxItem {
+        logicalResolutions(from: items).filter { $0.winner.deletedAt == nil }
+    }
+
+    func logicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
+    where S.Element == InboxItem {
+        let physicalResolutions = physicalResolutions(from: items)
         var winners: [UUID: InboxItem] = [:]
-        for item in physicalWinners(from: items) {
+        for resolution in physicalResolutions {
+            let item = resolution.winner
             let contextID = item.effectiveSuggestionContextID
             if let existing = winners[contextID] {
                 if isPreferred(item, over: existing) {
@@ -71,17 +98,30 @@ struct InboxSuggestionIdentityService {
                 winners[contextID] = item
             }
         }
-        return Array(winners.values)
+        let dismissedIdentities = physicalResolutions.reduce(into: Set<InboxSuggestionIdentity>()) {
+            $0.formUnion($1.dismissedIdentities)
+        }
+        return winners.values.map {
+            InboxItemMergeResolution(
+                winner: $0,
+                dismissedIdentities: dismissedIdentities
+            )
+        }
     }
 
-    /// Resolves only duplicate physical identifiers. Unlike `logicalWinners`, this
-    /// preserves historical siblings that have different UUIDs but share a context.
-    func physicalWinners<S: Sequence>(from items: S) -> [InboxItem]
+    /// Resolves only duplicate physical identifiers while preserving dismissal
+    /// facts for historical siblings that share a logical context.
+    func physicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
     where S.Element == InboxItem {
+        let source = Array(items)
+        let dismissedIdentities = Set(source.compactMap { item in
+            item.isCurrentSuggestionRevisionDismissed ? item.suggestionIdentity : nil
+        })
         // CloudKit can temporarily materialize the same UUID more than once.
-        // Resolve those copies with Inbox-specific dismissal semantics.
+        // Content remains last-write-wins; dismissal is merged separately by
+        // exact logical revision instead of selecting an older whole row.
         var physicalWinners: [UUID: InboxItem] = [:]
-        for item in items {
+        for item in source {
             if let existing = physicalWinners[item.id] {
                 if isPreferred(item, over: existing) {
                     physicalWinners[item.id] = item
@@ -90,7 +130,12 @@ struct InboxSuggestionIdentityService {
                 physicalWinners[item.id] = item
             }
         }
-        return Array(physicalWinners.values)
+        return physicalWinners.values.map {
+            InboxItemMergeResolution(
+                winner: $0,
+                dismissedIdentities: dismissedIdentities
+            )
+        }
     }
 
     func index(
@@ -126,12 +171,6 @@ struct InboxSuggestionIdentityService {
                 return candidate.updatedAt > existing.updatedAt
             }
             return candidate.deletedAt != nil
-        }
-        // Dismissal is monotonic within a title revision. Editing rotates the revision.
-        if candidate.effectiveSuggestionContextID == existing.effectiveSuggestionContextID,
-           candidate.effectiveSuggestionRevisionID == existing.effectiveSuggestionRevisionID,
-           candidate.isCurrentSuggestionRevisionDismissed != existing.isCurrentSuggestionRevisionDismissed {
-            return candidate.isCurrentSuggestionRevisionDismissed
         }
         if candidate.updatedAt != existing.updatedAt {
             return candidate.updatedAt > existing.updatedAt

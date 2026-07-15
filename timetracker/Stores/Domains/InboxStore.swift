@@ -5,7 +5,11 @@ struct InboxStore {
     private(set) var suggestions: [InboxSuggestion] = []
 
     mutating func refresh(items: [InboxItem], suggestions: [InboxSuggestion]) {
-        self.items = sortedItems(InboxSuggestionIdentityService().visibleLogicalItems(from: items))
+        let resolutions = InboxSuggestionIdentityService().visibleLogicalResolutions(from: items)
+        for resolution in resolutions {
+            resolution.materializeDismissal()
+        }
+        self.items = sortedItems(resolutions.map(\.winner))
         self.suggestions = sortedSuggestions(suggestions.deduplicatedByID())
     }
 

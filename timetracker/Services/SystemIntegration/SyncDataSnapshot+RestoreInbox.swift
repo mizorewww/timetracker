@@ -25,6 +25,17 @@ extension SyncDataSnapshot {
                 )
             }
         )
+        let dismissedIdentities = Set(inboxItems.compactMap { record -> InboxSuggestionIdentity? in
+            let identity = record.effectiveSuggestionIdentity
+            let hasActiveSuggestion = activeSuggestionItemIDs.contains(record.id) ||
+                activeSuggestionIdentities.contains(identity)
+            let dismissedRevisionID = record.dismissedSuggestionRevisionID ?? (
+                record.suggestionGeneratedAt != nil && hasActiveSuggestion == false
+                    ? identity.revisionID
+                    : nil
+            )
+            return dismissedRevisionID == identity.revisionID ? identity : nil
+        })
         // Keep rows absent from the snapshot older than restored rows. This matters
         // when two physical UUIDs represent the same logical Inbox item.
         let supersededAt = now.addingTimeInterval(-1)
@@ -40,11 +51,14 @@ extension SyncDataSnapshot {
             let identity = InboxSuggestionIdentity(contextID: contextID, revisionID: revisionID)
             let hasActiveSuggestion = activeSuggestionItemIDs.contains(record.id) ||
                 activeSuggestionIdentities.contains(identity)
-            let dismissedRevisionID = record.dismissedSuggestionRevisionID ?? (
+            let recordDismissedRevisionID = record.dismissedSuggestionRevisionID ?? (
                 record.suggestionGeneratedAt != nil && hasActiveSuggestion == false
                     ? revisionID
                     : nil
             )
+            let dismissedRevisionID = dismissedIdentities.contains(identity)
+                ? revisionID
+                : recordDismissedRevisionID
             let model = existing[record.id] ?? InboxItem(
                 title: record.title,
                 isCompleted: record.isCompleted,

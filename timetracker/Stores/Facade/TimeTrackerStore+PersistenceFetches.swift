@@ -67,9 +67,13 @@ extension TimeTrackerStore {
 
     func fetchInboxItems() throws -> [InboxItem] {
         guard let modelContext else { return [] }
-        return InboxSuggestionIdentityService().visibleLogicalItems(
+        let resolutions = InboxSuggestionIdentityService().visibleLogicalResolutions(
             from: try modelContext.fetch(FetchDescriptor<InboxItem>())
         )
+        for resolution in resolutions {
+            resolution.materializeDismissal()
+        }
+        return resolutions.map(\.winner)
     }
 
     func fetchInboxSuggestions() throws -> [InboxSuggestion] {

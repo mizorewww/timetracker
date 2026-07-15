@@ -17,6 +17,11 @@ struct PreparedInboxItemMutation {
 struct PreparedInboxLogicalMutation {
     let winner: PreparedInboxItemMutation
     let activeSiblings: [PreparedInboxItemMutation]
+    let mergedDismissedSuggestionRevisionID: UUID?
+
+    func materializeDismissal() {
+        winner.item.dismissedSuggestionRevisionID = mergedDismissedSuggestionRevisionID
+    }
 }
 
 extension InboxCommandHandler {
@@ -37,9 +42,16 @@ extension InboxCommandHandler {
         if candidates.contains(where: { $0 === item }) == false {
             candidates.append(item)
         }
-        let winner = InboxSuggestionIdentityService()
-            .logicalWinners(from: candidates)
-            .first { $0.effectiveSuggestionContextID == contextID } ?? item
+        let identityService = InboxSuggestionIdentityService()
+        let resolution = identityService
+            .logicalResolutions(from: candidates)
+            .first { $0.winner.effectiveSuggestionContextID == contextID } ?? InboxItemMergeResolution(
+                winner: item,
+                dismissedIdentities: item.isCurrentSuggestionRevisionDismissed
+                    ? [item.suggestionIdentity]
+                    : []
+            )
+        let winner = resolution.winner
         let preparedWinner = PreparedInboxItemMutation(
             item: winner,
             text: try InboxPersistencePolicy.prepareItem(
@@ -66,7 +78,8 @@ extension InboxCommandHandler {
             }
         return PreparedInboxLogicalMutation(
             winner: preparedWinner,
-            activeSiblings: activeSiblings
+            activeSiblings: activeSiblings,
+            mergedDismissedSuggestionRevisionID: resolution.mergedDismissedSuggestionRevisionID
         )
     }
 

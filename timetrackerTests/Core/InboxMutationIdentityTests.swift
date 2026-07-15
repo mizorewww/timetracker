@@ -201,6 +201,44 @@ struct InboxMutationIdentityTests {
     }
 
     @Test @MainActor
+    func invalidReorderDoesNotMaterializeMergedDismissal() throws {
+        let context = try makeTestContext()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let dismissed = InboxItem(title: "First", sortOrder: 10, deviceID: remoteDeviceID)
+        dismissed.suggestionContextID = contextID
+        dismissed.suggestionRevisionID = revisionID
+        dismissed.dismissedSuggestionRevisionID = revisionID
+        dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let newer = InboxItem(title: dismissed.title, sortOrder: 20, deviceID: remoteDeviceID)
+        newer.suggestionContextID = contextID
+        newer.suggestionRevisionID = revisionID
+        newer.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let second = InboxItem(title: "Second", sortOrder: 30, deviceID: remoteDeviceID)
+        second.updatedAt = Date(timeIntervalSinceReferenceDate: 300)
+        context.insert(dismissed)
+        context.insert(newer)
+        context.insert(second)
+        try context.save()
+        let newerUpdatedAt = newer.updatedAt
+        let newerMutationID = newer.clientMutationID
+
+        try InboxCommandHandler().reorderOpenItems(
+            orderedItemIDs: [newer.id, UUID()],
+            context: context,
+            now: Date(timeIntervalSinceReferenceDate: 9_500),
+            deviceID: localDeviceID
+        )
+
+        #expect(newer.dismissedSuggestionRevisionID == nil)
+        #expect(newer.updatedAt == newerUpdatedAt)
+        #expect(newer.clientMutationID == newerMutationID)
+        #expect(newer.deviceID == remoteDeviceID)
+        #expect(dismissed.deletedAt == nil)
+        #expect(second.deletedAt == nil)
+    }
+
+    @Test @MainActor
     func suggestionUpsertAndDraftPathsRecordTheCallingDevice() throws {
         let context = try makeTestContext()
         let handler = InboxCommandHandler()

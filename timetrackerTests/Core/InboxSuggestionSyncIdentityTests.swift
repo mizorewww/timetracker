@@ -21,6 +21,10 @@ struct InboxSuggestionSyncIdentityTests {
         newerActive.id = sharedID
         newerActive.suggestionContextID = contextID
         newerActive.suggestionRevisionID = revisionID
+        newerActive.notes = "New notes"
+        newerActive.isCompleted = true
+        newerActive.completedAt = Date(timeIntervalSinceReferenceDate: 190)
+        newerActive.sortOrder = 40
         newerActive.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
         sourceContext.insert(dismissed)
         sourceContext.insert(newerActive)
@@ -37,6 +41,10 @@ struct InboxSuggestionSyncIdentityTests {
             #expect(snapshot.inboxItems.count == 1)
             #expect(captured.id == sharedID)
             #expect(captured.dismissedSuggestionRevisionID == revisionID)
+            #expect(captured.notes == "New notes")
+            #expect(captured.isCompleted)
+            #expect(captured.completedAt == Date(timeIntervalSinceReferenceDate: 190))
+            #expect(captured.sortOrder == 40)
         }
 
         let exported = try JSONEncoder().encode(fullSnapshot)
@@ -45,6 +53,10 @@ struct InboxSuggestionSyncIdentityTests {
         #expect(imported.inboxItems.count == 1)
         #expect(captured.id == sharedID)
         #expect(captured.dismissedSuggestionRevisionID == revisionID)
+        #expect(captured.notes == "New notes")
+        #expect(captured.isCompleted)
+        #expect(captured.completedAt == Date(timeIntervalSinceReferenceDate: 190))
+        #expect(captured.sortOrder == 40)
 
         let restoredContext = try makeTestContext()
         try imported.restoreAsLocalWinner(
@@ -56,13 +68,63 @@ struct InboxSuggestionSyncIdentityTests {
         )
         #expect(restored.id == sharedID)
         #expect(restored.dismissedSuggestionRevisionID == revisionID)
+        #expect(restored.notes == "New notes")
+        #expect(restored.isCompleted)
+        #expect(restored.completedAt == Date(timeIntervalSinceReferenceDate: 190))
+        #expect(restored.sortOrder == 40)
         #expect(
             InboxSuggestionStateService().state(
                 for: restored,
                 suggestion: nil,
                 isInFlight: false
-            ) == .dismissed
+            ) == .unavailable
         )
+    }
+
+    @Test @MainActor
+    func snapshotRoundTripMergesDismissalIntoNewerLogicalSiblingFields() throws {
+        let sourceContext = try makeTestContext()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let dismissed = InboxItem(title: "Shared capture", deviceID: "old")
+        dismissed.suggestionContextID = contextID
+        dismissed.suggestionRevisionID = revisionID
+        dismissed.dismissedSuggestionRevisionID = revisionID
+        dismissed.notes = "Old notes"
+        dismissed.sortOrder = 10
+        dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let newer = InboxItem(title: dismissed.title, deviceID: "new")
+        newer.suggestionContextID = contextID
+        newer.suggestionRevisionID = revisionID
+        newer.notes = "New notes"
+        newer.sortOrder = 40
+        newer.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        sourceContext.insert(dismissed)
+        sourceContext.insert(newer)
+        try sourceContext.save()
+
+        let encoded = try JSONEncoder().encode(
+            SyncDataSnapshot.capture(context: sourceContext)
+        )
+        let snapshot = try JSONDecoder().decode(SyncDataSnapshot.self, from: encoded)
+        #expect(snapshot.inboxItems.count == 2)
+        let restoredContext = try makeTestContext()
+        try snapshot.restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 300)
+        )
+
+        var store = InboxStore()
+        store.refresh(
+            items: try restoredContext.fetch(FetchDescriptor<InboxItem>()),
+            suggestions: []
+        )
+        let winner = try #require(store.items.first)
+        #expect(winner.id == newer.id)
+        #expect(winner.notes == "New notes")
+        #expect(winner.sortOrder == 40)
+        #expect(winner.dismissedSuggestionRevisionID == revisionID)
+        #expect(winner.isCurrentSuggestionRevisionDismissed)
     }
 
     @Test @MainActor

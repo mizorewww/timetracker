@@ -72,6 +72,33 @@ struct InboxSuggestionApplyBoundaryTests {
         #expect(suggestion.deletedAt == nil)
     }
 
+    @Test @MainActor
+    func dismissalOnAnOlderLogicalSiblingPreventsApply() throws {
+        let context = try makeTestContext()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let dismissedSibling = InboxItem(title: "Keep this capture", deviceID: "old")
+        dismissedSibling.suggestionContextID = contextID
+        dismissedSibling.suggestionRevisionID = revisionID
+        dismissedSibling.dismissedSuggestionRevisionID = revisionID
+        dismissedSibling.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let item = InboxItem(title: dismissedSibling.title, deviceID: "new")
+        item.suggestionContextID = contextID
+        item.suggestionRevisionID = revisionID
+        item.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let suggestion = makeSuggestion(for: item)
+        context.insert(dismissedSibling)
+        context.insert(item)
+        context.insert(suggestion)
+        try context.save()
+
+        try expectStaleApply(item: item, suggestion: suggestion, context: context)
+
+        #expect(item.dismissedSuggestionRevisionID == nil)
+        #expect(dismissedSibling.deletedAt == nil)
+        #expect(suggestion.deletedAt == nil)
+    }
+
     @MainActor
     private func expectStaleApply(
         item: InboxItem,

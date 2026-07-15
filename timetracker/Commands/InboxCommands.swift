@@ -45,6 +45,7 @@ struct InboxCommandHandler {
         guard winner.deletedAt == nil else { return }
         try context.performAtomicMutation {
             winner.materializeSuggestionIdentity()
+            logicalMutation.materializeDismissal()
             logicalMutation.winner.text.apply(to: winner)
             winner.isCompleted.toggle()
             winner.completedAt = winner.isCompleted ? now : nil
@@ -114,6 +115,7 @@ struct InboxCommandHandler {
 
         try context.performAtomicMutation {
             winner.materializeSuggestionIdentity()
+            logicalMutation.materializeDismissal()
             logicalMutation.winner.text.apply(to: winner)
             winner.deletedAt = now
             winner.updatedAt = now
@@ -171,6 +173,7 @@ struct InboxCommandHandler {
             for (index, logicalMutation) in logicalMutations.enumerated() {
                 let item = logicalMutation.winner.item
                 item.materializeSuggestionIdentity()
+                logicalMutation.materializeDismissal()
                 logicalMutation.winner.text.apply(to: item)
                 item.sortOrder = Double(index + 1) * 10
                 item.updatedAt = now

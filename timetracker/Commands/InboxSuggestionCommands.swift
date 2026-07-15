@@ -152,6 +152,7 @@ extension InboxCommandHandler {
         let winner = logicalMutation.winner.item
         guard winner.deletedAt == nil,
               winner.suggestionIdentity == item.suggestionIdentity,
+              logicalMutation.mergedDismissedSuggestionRevisionID == nil,
               InboxSuggestionStateService().displaySuggestion(
                   for: winner,
                   suggestion: suggestion
@@ -189,6 +190,7 @@ extension InboxCommandHandler {
         let nextSortOrder = ((existingChecklistItems.map(\.sortOrder).max() ?? 0) + 10)
         return try context.performAtomicMutation {
             winner.materializeSuggestionIdentity()
+            logicalMutation.materializeDismissal()
             preparedItem.apply(to: winner)
             preparedSuggestion.apply(to: canonicalSuggestion)
             canonicalSuggestion.inboxItemContextID = winner.effectiveSuggestionContextID

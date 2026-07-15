@@ -18,10 +18,20 @@ struct InboxItemRecord: Codable, Equatable, SyncSnapshotRecord {
     let deletedAt: Date?
 
     init(_ model: InboxItem) {
+        self.init(
+            model,
+            mergedDismissedSuggestionRevisionID: model.dismissedSuggestionRevisionID
+        )
+    }
+
+    init(
+        _ model: InboxItem,
+        mergedDismissedSuggestionRevisionID: UUID?
+    ) {
         id = model.id
         suggestionContextID = model.effectiveSuggestionContextID
         suggestionRevisionID = model.effectiveSuggestionRevisionID
-        dismissedSuggestionRevisionID = model.dismissedSuggestionRevisionID
+        dismissedSuggestionRevisionID = mergedDismissedSuggestionRevisionID
         title = model.title
         notes = model.notes
         isCompleted = model.isCompleted
@@ -44,20 +54,12 @@ extension InboxItemRecord {
         )
     }
 
-    var isCurrentSuggestionRevisionDismissed: Bool {
-        dismissedSuggestionRevisionID == effectiveSuggestionIdentity.revisionID
-    }
-
     func isPreferredLogicalWinner(over other: Self) -> Bool {
         if (deletedAt == nil) != (other.deletedAt == nil) {
             if updatedAt != other.updatedAt {
                 return updatedAt > other.updatedAt
             }
             return deletedAt != nil
-        }
-        if effectiveSuggestionIdentity.revisionID == other.effectiveSuggestionIdentity.revisionID,
-           isCurrentSuggestionRevisionDismissed != other.isCurrentSuggestionRevisionDismissed {
-            return isCurrentSuggestionRevisionDismissed
         }
         if updatedAt != other.updatedAt {
             return updatedAt > other.updatedAt

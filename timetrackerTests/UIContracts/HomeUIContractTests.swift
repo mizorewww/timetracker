@@ -5,6 +5,30 @@ import Testing
 
 @Suite(.serialized)
 struct HomeUIContractTests {
+    @Test
+    func todayMetricTrendHandlesEveryComparisonState() {
+        #expect(TodayMetricTrend(current: 100, previous: 0) == .noComparison)
+        #expect(TodayMetricTrend(current: 150, previous: 100) == .increased(percent: 50))
+        #expect(TodayMetricTrend(current: 50, previous: 100) == .decreased(percent: 50))
+        #expect(TodayMetricTrend(current: 100, previous: 100) == .unchanged)
+        #expect(TodayMetricTrend(current: 1004, previous: 1000) == .unchanged)
+    }
+
+    @Test @MainActor
+    func todayCountdownOrderingIsStableForMatchingDatesAndTitles() {
+        let date = Date(timeIntervalSince1970: 10_000)
+        let later = CountdownEvent(title: "Later", date: date.addingTimeInterval(1), deviceID: "test")
+        let beta = CountdownEvent(title: "Beta", date: date, deviceID: "test")
+        let alphaB = CountdownEvent(title: "Alpha", date: date, deviceID: "test")
+        let alphaA = CountdownEvent(title: "Alpha", date: date, deviceID: "test")
+        alphaA.id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        alphaB.id = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+
+        let sorted = TodayHomeContent.sortedCountdownEvents([later, beta, alphaB, alphaA])
+
+        #expect(sorted.map(\.id) == [alphaA.id, alphaB.id, beta.id, later.id])
+    }
+
     @Test @MainActor
     func quickStartRecentTasksRankByFrequencyAndSkipPinnedTasks() throws {
         let context = try makeTestContext()

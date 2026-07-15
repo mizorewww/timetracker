@@ -112,19 +112,18 @@ private struct MetricsPanelContent: View {
     }
 
     private func metricItems(now: Date) -> [MetricSummaryItem] {
-        let calendar = Calendar.current
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-        let todayGross = store.todayGrossSeconds(now: now)
-        let todayWall = store.todayWallSeconds(now: now)
-        let yesterdayGross = store.daySeconds(for: yesterday, mode: .gross, now: now)
-        let yesterdayWall = store.daySeconds(for: yesterday, mode: .wallClock, now: now)
-        let grossTrend = trend(current: todayGross, previous: yesterdayGross)
-        let wallTrend = trend(current: todayWall, previous: yesterdayWall)
+        let snapshot = store.todayMetricsSnapshot(now: now)
+        let grossTrend = trendDisplay(
+            TodayMetricTrend(current: snapshot.grossSeconds, previous: snapshot.previousGrossSeconds)
+        )
+        let wallTrend = trendDisplay(
+            TodayMetricTrend(current: snapshot.wallSeconds, previous: snapshot.previousWallSeconds)
+        )
 
         let grossMetric = MetricSummaryItem(
             id: "gross",
             title: AppStrings.grossTime,
-            value: DurationFormatter.compact(todayGross),
+            value: DurationFormatter.compact(snapshot.grossSeconds),
             iconName: "square.stack.3d.up",
             tint: .blue,
             trendText: grossTrend.text,
@@ -139,7 +138,7 @@ private struct MetricsPanelContent: View {
             MetricSummaryItem(
                 id: "wall",
                 title: AppStrings.wallTime,
-                value: DurationFormatter.compact(todayWall),
+                value: DurationFormatter.compact(snapshot.wallSeconds),
                 iconName: "timeline.selection",
                 tint: .green,
                 trendText: wallTrend.text,
@@ -149,18 +148,17 @@ private struct MetricsPanelContent: View {
         ]
     }
 
-    private func trend(current: Int, previous: Int) -> (text: String, color: Color) {
-        guard previous > 0 else {
+    private func trendDisplay(_ trend: TodayMetricTrend) -> (text: String, color: Color) {
+        switch trend {
+        case .noComparison:
             return (AppStrings.localized("home.metric.noComparison"), .secondary)
-        }
-        let percent = Int(round((Double(current - previous) / Double(previous)) * 100))
-        if percent > 0 {
+        case let .increased(percent):
             return (String(format: AppStrings.localized("home.metric.upFromYesterday"), percent), .green)
+        case let .decreased(percent):
+            return (String(format: AppStrings.localized("home.metric.downFromYesterday"), percent), .red)
+        case .unchanged:
+            return (AppStrings.localized("home.metric.sameAsYesterday"), .secondary)
         }
-        if percent < 0 {
-            return (String(format: AppStrings.localized("home.metric.downFromYesterday"), abs(percent)), .red)
-        }
-        return (AppStrings.localized("home.metric.sameAsYesterday"), .secondary)
     }
 }
 

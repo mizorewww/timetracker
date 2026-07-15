@@ -4,12 +4,7 @@ struct HomeCountdownSection: View {
     let store: TimeTrackerStore
 
     private var events: [CountdownEvent] {
-        store.countdownEvents.sorted { lhs, rhs in
-            if lhs.date != rhs.date {
-                return lhs.date < rhs.date
-            }
-            return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
-        }
+        TodayHomeContent.sortedCountdownEvents(store.countdownEvents)
     }
 
     var body: some View {

@@ -676,6 +676,10 @@
 "segment.duration" = "时长";
 "segment.notes" = "备注";
 "segment.note.placeholder" = "这段时间的说明";
+"ledger.persistence.field.note" = "备注";
+"ledger.persistence.field.titleSnapshot" = "保存的任务名称";
+"ledger.persistence.error.controlCharacterFormat" = "%@包含不支持的字符。";
+"ledger.persistence.error.tooLongFormat" = "%@内容过长，请缩短后重试。";
 "segment.softDelete" = "软删除时间片段";
 "manual.title" = "手动补录";
 "manual.subtitle" = "修正遗忘的工作时间，仍然写入统一时间账本。";

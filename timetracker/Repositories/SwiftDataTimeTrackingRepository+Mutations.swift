@@ -5,32 +5,48 @@ extension SwiftDataTimeTrackingRepository {
     @discardableResult
     func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
         let now = nowProvider()
-        let session = TimeSession(taskID: taskID, source: source, deviceID: deviceID, startedAt: now, titleSnapshot: try titleSnapshot(for: taskID))
-        let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: source, deviceID: deviceID, startedAt: now)
-        context.insert(session)
-        context.insert(segment)
-        try context.saveAfterMutationStep()
-        return segment
+        let titleSnapshot = try LedgerPersistencePolicy.prepareTitleSnapshot(
+            try titleSnapshot(for: taskID)
+        )
+        return try context.performAtomicMutation {
+            let session = TimeSession(
+                taskID: taskID,
+                source: source,
+                deviceID: deviceID,
+                startedAt: now,
+                titleSnapshot: titleSnapshot
+            )
+            let segment = TimeSegment(
+                sessionID: session.id,
+                taskID: taskID,
+                source: source,
+                deviceID: deviceID,
+                startedAt: now
+            )
+            context.insert(session)
+            context.insert(segment)
+            return segment
+        }
     }
 
     func stopSegment(segmentID: UUID) throws {
         guard let segment = try segment(id: segmentID), segment.endedAt == nil else { return }
         let now = nowProvider()
         let endedAt = max(now, segment.startedAt)
-        segment.endedAt = endedAt
-        segment.updatedAt = now
-        segment.deviceID = deviceID
+        try context.performAtomicMutation {
+            segment.endedAt = endedAt
+            segment.updatedAt = now
+            segment.deviceID = deviceID
 
-        if let session = try session(id: segment.sessionID),
-           try activeSegments(in: session.id).isEmpty {
-            session.endedAt = max(
-                session.startedAt,
-                try latestEndedAt(for: session.id) ?? endedAt
-            )
-            session.markMutated(at: now, deviceID: deviceID)
+            if let session = try session(id: segment.sessionID),
+               try activeSegments(in: session.id).isEmpty {
+                session.endedAt = max(
+                    session.startedAt,
+                    try latestEndedAt(for: session.id) ?? endedAt
+                )
+                session.markMutated(at: now, deviceID: deviceID)
+            }
         }
-
-        try context.saveAfterMutationStep()
     }
 
     func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws {
@@ -43,6 +59,7 @@ extension SwiftDataTimeTrackingRepository {
         case .futureTime:
             throw TimeTrackingRepositoryError.futureTime
         }
+        let preparedNote = try LedgerPersistencePolicy.prepareNote(note)
         guard let segment = try segment(id: segmentID) else { return }
         let linkedSession = try session(id: segment.sessionID)
         let isRebindingTask = segment.taskID != taskID || linkedSession.map { $0.taskID != taskID } == true
@@ -51,7 +68,7 @@ extension SwiftDataTimeTrackingRepository {
             guard let targetTitle = try titleSnapshot(for: taskID) else {
                 throw TimeTrackingRepositoryError.taskUnavailable
             }
-            reboundTitleSnapshot = targetTitle
+            reboundTitleSnapshot = try LedgerPersistencePolicy.prepareTitleSnapshot(targetTitle)
         } else {
             reboundTitleSnapshot = nil
         }
@@ -70,7 +87,7 @@ extension SwiftDataTimeTrackingRepository {
                 }
                 linkedSession.startedAt = try earliestStartedAt(for: linkedSession.id) ?? startedAt
                 linkedSession.endedAt = endedAt == nil ? nil : try latestEndedAt(for: linkedSession.id)
-                linkedSession.note = note
+                linkedSession.note = preparedNote
                 linkedSession.markMutated(at: now, deviceID: deviceID)
             }
         }
@@ -79,41 +96,42 @@ extension SwiftDataTimeTrackingRepository {
     func softDeleteSegment(segmentID: UUID) throws {
         guard let segment = try segment(id: segmentID) else { return }
         let now = nowProvider()
-        segment.deletedAt = now
-        segment.updatedAt = now
-        segment.deviceID = deviceID
+        try context.performAtomicMutation {
+            segment.deletedAt = now
+            segment.updatedAt = now
+            segment.deviceID = deviceID
 
-        if let session = try session(id: segment.sessionID) {
-            let remaining = try segments(in: session.id).filter { $0.id != segment.id && $0.deletedAt == nil }
-            if remaining.isEmpty {
-                session.deletedAt = now
-            } else {
-                session.taskID = remaining[0].taskID
-                session.startedAt = remaining.map(\.startedAt).min() ?? session.startedAt
-                session.endedAt = remaining.contains { $0.endedAt == nil }
-                    ? nil
-                    : max(session.startedAt, remaining.compactMap(\.endedAt).max() ?? session.startedAt)
+            if let session = try session(id: segment.sessionID) {
+                let remaining = try segments(in: session.id).filter { $0.id != segment.id && $0.deletedAt == nil }
+                if remaining.isEmpty {
+                    session.deletedAt = now
+                } else {
+                    session.taskID = remaining[0].taskID
+                    session.startedAt = remaining.map(\.startedAt).min() ?? session.startedAt
+                    session.endedAt = remaining.contains { $0.endedAt == nil }
+                        ? nil
+                        : max(session.startedAt, remaining.compactMap(\.endedAt).max() ?? session.startedAt)
+                }
+                session.markMutated(at: now, deviceID: deviceID)
             }
-            session.markMutated(at: now, deviceID: deviceID)
         }
-
-        try context.saveAfterMutationStep()
     }
 
     func stopSession(sessionID: UUID) throws {
         guard let session = try session(id: sessionID), session.deletedAt == nil else { return }
         let now = nowProvider()
-        for segment in try activeSegments(in: sessionID) {
-            segment.endedAt = max(now, segment.startedAt)
-            segment.updatedAt = now
-            segment.deviceID = deviceID
+        try context.performAtomicMutation {
+            for segment in try activeSegments(in: sessionID) {
+                segment.endedAt = max(now, segment.startedAt)
+                segment.updatedAt = now
+                segment.deviceID = deviceID
+            }
+            session.endedAt = max(
+                session.startedAt,
+                try latestEndedAt(for: sessionID) ?? now
+            )
+            session.markMutated(at: now, deviceID: deviceID)
         }
-        session.endedAt = max(
-            session.startedAt,
-            try latestEndedAt(for: sessionID) ?? now
-        )
-        session.markMutated(at: now, deviceID: deviceID)
-        try context.saveAfterMutationStep()
     }
 
     @discardableResult
@@ -127,14 +145,32 @@ extension SwiftDataTimeTrackingRepository {
         case .futureTime:
             throw TimeTrackingRepositoryError.futureTime
         }
-        let session = TimeSession(taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt, titleSnapshot: try titleSnapshot(for: taskID))
-        session.endedAt = endedAt
-        session.note = note
-        let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt, endedAt: endedAt)
-        context.insert(session)
-        context.insert(segment)
-        try context.saveAfterMutationStep()
-        return segment
+        let preparedNote = try LedgerPersistencePolicy.prepareNote(note)
+        let titleSnapshot = try LedgerPersistencePolicy.prepareTitleSnapshot(
+            try titleSnapshot(for: taskID)
+        )
+        return try context.performAtomicMutation {
+            let session = TimeSession(
+                taskID: taskID,
+                source: .manual,
+                deviceID: deviceID,
+                startedAt: startedAt,
+                titleSnapshot: titleSnapshot
+            )
+            session.endedAt = endedAt
+            session.note = preparedNote
+            let segment = TimeSegment(
+                sessionID: session.id,
+                taskID: taskID,
+                source: .manual,
+                deviceID: deviceID,
+                startedAt: startedAt,
+                endedAt: endedAt
+            )
+            context.insert(session)
+            context.insert(segment)
+            return segment
+        }
     }
 
     private func segment(id: UUID) throws -> TimeSegment? {

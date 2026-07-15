@@ -281,6 +281,55 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
+    func taskMutationsRecordTheCurrentDeviceAsTheLatestWriter() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
+        let destination = try repository.createTask(
+            title: "Destination",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let task = try repository.createTask(
+            title: "Original",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        task.deviceID = "remote-device"
+        try context.save()
+        try repository.updateTask(
+            taskID: task.id,
+            title: "Updated",
+            status: .active,
+            parentID: nil,
+            categoryID: nil,
+            colorHex: nil,
+            iconName: nil,
+            notes: nil,
+            estimatedSeconds: nil,
+            dueAt: nil
+        )
+        #expect(task.deviceID == "local-device")
+
+        task.deviceID = "remote-device"
+        try context.save()
+        try repository.moveTask(taskID: task.id, newParentID: destination.id, sortOrder: 10)
+        #expect(task.deviceID == "local-device")
+
+        task.deviceID = "remote-device"
+        try context.save()
+        try repository.setTaskStatus(taskID: task.id, status: .completed)
+        #expect(task.deviceID == "local-device")
+
+        task.deviceID = "remote-device"
+        try context.save()
+        try repository.archiveTask(taskID: task.id)
+        #expect(task.deviceID == "local-device")
+    }
+
+    @Test @MainActor
     func taskMoveKeepsPathsBoundedAndAvoidsUnchangedDescendantMutations() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -353,6 +402,10 @@ struct TaskLedgerTests {
             endedAt: Date(),
             note: nil
         )
+        for task in [parent, child, grandchild] {
+            task.deviceID = "remote-device"
+        }
+        try context.save()
 
         try taskRepository.softDeleteTask(taskID: parent.id)
 
@@ -360,6 +413,7 @@ struct TaskLedgerTests {
         let rawNodes = try context.fetch(FetchDescriptor<TaskNode>())
         #expect(rawNodes.count == 3)
         #expect(rawNodes.allSatisfy { $0.deletedAt != nil })
+        #expect(rawNodes.allSatisfy { $0.deviceID == "test" })
         #expect(try timeRepository.allSegments().contains { $0.id == segment.id })
     }
 
@@ -419,8 +473,10 @@ struct TaskLedgerTests {
         let repaired = try repository.allNodes().latestByID()
         #expect(repaired[firstID]?.parentID == nil)
         #expect(repaired[firstID]?.depth == 0)
+        #expect(repaired[firstID]?.deviceID == "repair-device")
         #expect(repaired[secondID]?.parentID == firstID)
         #expect(repaired[secondID]?.depth == 1)
+        #expect(repaired[secondID]?.deviceID == "repair-device")
     }
 
     @Test @MainActor

@@ -65,6 +65,7 @@ extension SwiftDataTaskRepository {
         category.iconName = iconName
         category.includesInForecast = includesInForecast
         category.updatedAt = Date()
+        category.deviceID = deviceID
         category.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
@@ -74,11 +75,13 @@ extension SwiftDataTaskRepository {
         let now = Date()
         category.deletedAt = now
         category.updatedAt = now
+        category.deviceID = deviceID
         category.clientMutationID = UUID()
 
         for assignment in try categoryAssignments() where assignment.categoryID == categoryID {
             assignment.deletedAt = now
             assignment.updatedAt = now
+            assignment.deviceID = deviceID
             assignment.clientMutationID = UUID()
         }
         try context.saveAfterMutationStep()

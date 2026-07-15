@@ -16,6 +16,7 @@ extension SwiftDataTaskRepository {
             node.depth = metadata.depth
             node.path = metadata.path
             node.updatedAt = now
+            node.deviceID = deviceID
             node.clientMutationID = UUID()
             affectedIDs.insert(node.id)
         }
@@ -94,6 +95,7 @@ extension SwiftDataTaskRepository {
                 next.node.depth = next.depth
                 next.node.path = expectedPath
                 next.node.updatedAt = now
+                next.node.deviceID = deviceID
                 next.node.clientMutationID = UUID()
             }
 

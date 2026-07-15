@@ -118,7 +118,7 @@ struct TaskCategoryTests {
     @Test @MainActor
     func deletingCategoryKeepsTasksButReturnsThemToUncategorized() throws {
         let context = try makeTestContext()
-        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
         let category = try repository.createCategory(
             title: "Life",
             colorHex: "FF9F0A",
@@ -132,6 +132,25 @@ struct TaskCategoryTests {
             colorHex: nil,
             iconName: nil
         )
+        let assignment = try #require(
+            try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
+                .first { $0.taskID == root.id }
+        )
+
+        category.deviceID = "remote-device"
+        try context.save()
+        try repository.updateCategory(
+            categoryID: category.id,
+            title: "Personal life",
+            colorHex: "FF9F0A",
+            iconName: "house",
+            includesInForecast: false
+        )
+        #expect(category.deviceID == "local-device")
+
+        category.deviceID = "remote-device"
+        assignment.deviceID = "remote-device"
+        try context.save()
 
         try repository.softDeleteCategory(categoryID: category.id)
         let store = TimeTrackerStore()
@@ -141,6 +160,8 @@ struct TaskCategoryTests {
         let keptRootOptional = try repository.task(id: root.id)
         let keptRoot = try #require(keptRootOptional)
         #expect(deletedCategory == nil)
+        #expect(category.deviceID == "local-device")
+        #expect(assignment.deviceID == "local-device")
         #expect(try repository.categoryID(forRootTaskID: keptRoot.id) == nil)
         #expect(store.taskTreeSections(expandedTaskIDs: []).map(\.title) == [AppStrings.localized("taskCategory.uncategorized")])
     }

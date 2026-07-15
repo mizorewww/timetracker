@@ -56,6 +56,7 @@ extension SwiftDataTaskRepository {
         node.dueAt = dueAt
         let now = Date()
         node.updatedAt = now
+        node.deviceID = deviceID
         node.clientMutationID = UUID()
         try applyHierarchy(
             to: node,
@@ -78,6 +79,7 @@ extension SwiftDataTaskRepository {
         node.sortOrder = sortOrder
         let now = Date()
         node.updatedAt = now
+        node.deviceID = deviceID
         node.clientMutationID = UUID()
         try applyHierarchy(to: node, parentID: newParentID)
         updateDescendantHierarchy(of: node, nodes: nodes, now: now)
@@ -92,6 +94,7 @@ extension SwiftDataTaskRepository {
         node.status = status
         node.archivedAt = status == .archived ? Date() : nil
         node.updatedAt = Date()
+        node.deviceID = deviceID
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
@@ -101,6 +104,7 @@ extension SwiftDataTaskRepository {
         node.status = .archived
         node.archivedAt = Date()
         node.updatedAt = Date()
+        node.deviceID = deviceID
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
@@ -113,11 +117,13 @@ extension SwiftDataTaskRepository {
         for node in nodes where idsToDelete.contains(node.id) {
             node.deletedAt = now
             node.updatedAt = now
+            node.deviceID = deviceID
             node.clientMutationID = UUID()
         }
         for assignment in try categoryAssignments() where idsToDelete.contains(assignment.taskID) {
             assignment.deletedAt = now
             assignment.updatedAt = now
+            assignment.deviceID = deviceID
             assignment.clientMutationID = UUID()
         }
         try context.saveAfterMutationStep()

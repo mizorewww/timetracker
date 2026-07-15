@@ -2,23 +2,36 @@ import SwiftUI
 
 struct ActiveTimersSection: View {
     let store: TimeTrackerStore
+    let segments: [TimeSegment]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(title: AppStrings.activeTimers)
+            SectionTitle(title: AppStrings.localized("home.now.title"))
 
             VStack(spacing: 0) {
-                let activeSegments = store.activeSegments
-                let lastActiveSegmentID = activeSegments.last?.id
-                if activeSegments.isEmpty {
-                    EmptyStateRow(title: AppStrings.noActiveTimers, icon: "timer")
+                if segments.isEmpty {
+                    ContentUnavailableView {
+                        Label(AppStrings.noActiveTimers, systemImage: "timer")
+                    } description: {
+                        Text(.app("timer.chooseTaskFooter"))
+                    } actions: {
+                        TodayTimerAction(store: store)
+                            .frame(minWidth: 220, maxWidth: 320)
+                    }
+                    .padding(18)
                 } else {
-                    ForEach(activeSegments, id: \.id) { segment in
+                    let lastActiveSegmentID = segments.last?.id
+                    ForEach(segments, id: \.id) { segment in
                         ActiveTimerRow(store: store, segment: segment)
                         if segment.id != lastActiveSegmentID {
                             Divider()
                         }
                     }
+                    Divider()
+                    TodayTimerAction(store: store)
+                        .frame(maxWidth: 320)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(14)
                 }
             }
             .appCard(padding: 0)
@@ -29,18 +42,23 @@ struct ActiveTimersSection: View {
 
 struct TimelineSection: View {
     let store: TimeTrackerStore
+    let segments: [TimeSegment]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(title: AppStrings.todayTimeline)
 
             VStack(spacing: 0) {
-                let timelineSegments = store.timelineSegments
-                let lastTimelineSegmentID = timelineSegments.last?.id
-                if timelineSegments.isEmpty {
-                    EmptyStateRow(title: AppStrings.noTodaySegments, icon: "clock")
+                if segments.isEmpty {
+                    ContentUnavailableView {
+                        Label(AppStrings.noTodaySegments, systemImage: "clock")
+                    } description: {
+                        Text(.app("empty.noTodaySegments.description"))
+                    }
+                    .padding(18)
                 } else {
-                    ForEach(timelineSegments, id: \.id) { segment in
+                    let lastTimelineSegmentID = segments.last?.id
+                    ForEach(segments, id: \.id) { segment in
                         TimelineRow(store: store, segment: segment)
                         if segment.id != lastTimelineSegmentID {
                             Divider().padding(.leading, 18)

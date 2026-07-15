@@ -9,6 +9,7 @@
 "home.todayTimeline" = "Today Timeline";
 "home.quickStart" = "Quick Start";
 "home.startAnotherTimer" = "Start Another Timer";
+"home.switchTimer" = "Switch Timer";
 "home.now.title" = "Now";
 "home.overview.title" = "Overview";
 "action.startTimer" = "Start Timer";

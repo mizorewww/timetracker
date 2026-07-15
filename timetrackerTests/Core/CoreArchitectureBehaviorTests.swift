@@ -81,7 +81,10 @@ struct CoreArchitectureBehaviorTests {
     @Test @MainActor
     func layoutPoliciesCentralizeResponsiveChoices() {
         #expect(HomeLayoutPolicy(width: 600).isCompact)
-        #expect(HomeLayoutPolicy(width: 900).usesHorizontalMetrics)
+        #expect(HomeLayoutPolicy(width: 900).usesTwoColumnContent == false)
+        #expect(HomeLayoutPolicy(width: 1_100).usesTwoColumnContent)
+        #expect(HomeLayoutPolicy(width: 1_100).contentMaxWidth == 1_180)
+        #expect(HomeLayoutPolicy(width: 1_100).supportingColumnWidth == 360)
         #expect(AnalyticsLayoutPolicy(horizontalSizeClass: nil).showsPageTitleInContent)
         #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).isCompact)
         #expect(InboxLayoutPolicy(horizontalSizeClass: .compact).cardCornerRadius == 28)

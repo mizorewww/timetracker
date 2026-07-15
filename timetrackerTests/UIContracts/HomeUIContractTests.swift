@@ -132,6 +132,7 @@ struct HomeUIContractTests {
     @Test
     func quickStartComposesPinnedAndFrequentRecentTasks() throws {
         let homeSource = try [
+            "timetracker/Features/Home/HomeReadModels.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift"
@@ -140,9 +141,11 @@ struct HomeUIContractTests {
             .joined(separator: "\n")
         let storeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift")
 
-        #expect(homeSource.contains("private var pinnedTasks"))
-        #expect(homeSource.contains("private var recentFillTasks"))
-        #expect(homeSource.contains("limit: 3"))
+        #expect(homeSource.contains("let pinnedTasks = store.preferences.quickStartTaskIDs"))
+        #expect(homeSource.contains("let recentTasks = store.frequentRecentTasks("))
+        #expect(homeSource.contains("quickStartLimit - pinnedTasks.count"))
+        #expect(homeSource.contains(".deduplicatedByID()"))
+        #expect(homeSource.contains("QuickStartTaskGroup(tasks: tasks"))
         #expect(homeSource.contains("QuickStartTaskButton"))
         #expect(homeSource.contains("private let maxPinnedTasks = 3") == false)
         #expect(homeSource.contains("QuickStartSelectableTaskRow"))
@@ -247,8 +250,9 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("TodayHomeContent(store: store)"))
         #expect(homeSource.contains("home.toolbar.newTask") == false)
         let sectionSource = try sourceText("timetracker/Features/Home/PhoneHomeSections.swift")
-        #expect(sectionSource.contains("allowsParallelTimers && !dynamicTypeSize.isAccessibilitySize"))
-        #expect(sectionSource.contains("allowsParallelTimers && dynamicTypeSize.isAccessibilitySize"))
+        #expect(sectionSource.contains("if !dynamicTypeSize.isAccessibilitySize"))
+        #expect(sectionSource.contains("!segments.isEmpty && dynamicTypeSize.isAccessibilitySize"))
+        #expect(sectionSource.contains("home.switchTimer"))
         #expect(sectionSource.contains(".frame(width: 44, height: 44)"))
         #expect(timerSource.contains("if dynamicTypeSize.isAccessibilitySize"))
         #expect(timelineSource.contains("if dynamicTypeSize.isAccessibilitySize"))
@@ -256,7 +260,7 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func todayMetricsUseSemanticTrendColorsAndEqualCompactActions() throws {
+    func todayMetricsUseSemanticTrendColorsAndSingleTodayAction() throws {
         let source = try [
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
@@ -274,8 +278,31 @@ struct HomeUIContractTests {
         #expect(sharedMetricsSource.contains("struct MetricCell"))
         #expect(sharedMetricsSource.contains("struct MetricSummaryItem"))
         #expect(homeMetricsSource.contains("struct MetricCell") == false)
-        #expect(source.contains("startButton\n                    .frame(maxWidth: .infinity)"))
-        #expect(source.contains("newTaskButton\n                    .frame(maxWidth: .infinity)"))
+        #expect(homeMetricsSource.contains("if dynamicTypeSize.isAccessibilitySize"))
+        #expect(homeMetricsSource.contains("verticalMetrics(metrics)"))
+        #expect(source.contains("AppActionLabel(title: actionTitle"))
+        #expect(source.contains("home.switchTimer"))
+        #expect(source.contains("home.newTask") == false)
         #expect(source.contains(".layoutPriority(1.1)") == false)
+    }
+
+    @Test
+    func desktopTodayUsesSharedPriorityAndBoundedWideLayout() throws {
+        let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
+
+        let nowIndex = try #require(source.range(of: "ActiveTimersSection(")?.lowerBound)
+        let overviewIndex = try #require(source.range(of: "TodayOverviewSection(")?.lowerBound)
+        let quickStartIndex = try #require(source.range(of: "QuickStartSection(")?.lowerBound)
+        let timelineIndex = try #require(source.range(of: "TimelineSection(")?.lowerBound)
+        let forecastIndex = try #require(source.range(of: "TaskForecastSummarySection(")?.lowerBound)
+
+        #expect(nowIndex < overviewIndex)
+        #expect(overviewIndex < quickStartIndex)
+        #expect(quickStartIndex < timelineIndex)
+        #expect(timelineIndex < forecastIndex)
+        #expect(source.contains("TodayHomeContent(store: store, quickStartLimit: 6)"))
+        #expect(source.contains("layout.usesTwoColumnContent && content.hasSupportingContent"))
+        #expect(source.contains(".frame(maxWidth: layout.contentMaxWidth"))
+        #expect(source.contains("supportingColumnWidth"))
     }
 }

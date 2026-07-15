@@ -9,9 +9,11 @@ struct WidthLayoutPolicy {
 }
 
 struct HomeLayoutPolicy {
+    private let width: CGFloat
     private let widthPolicy: WidthLayoutPolicy
 
     init(width: CGFloat) {
+        self.width = width
         widthPolicy = WidthLayoutPolicy(width: width)
     }
 
@@ -27,12 +29,16 @@ struct HomeLayoutPolicy {
         isCompact ? 18 : 28
     }
 
-    var usesHorizontalMetrics: Bool {
-        !isCompact
+    var usesTwoColumnContent: Bool {
+        width >= 1_000
     }
 
-    var showsQuickStartInDesktopFlow: Bool {
-        !isCompact
+    var contentMaxWidth: CGFloat {
+        1_180
+    }
+
+    var supportingColumnWidth: CGFloat {
+        360
     }
 }
 

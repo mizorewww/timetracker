@@ -1,23 +1,11 @@
 import SwiftUI
-#if os(iOS)
-import UIKit
-#endif
 
-struct ActionStack: View {
+struct TodayTimerAction: View {
     let store: TimeTrackerStore
-    var buttonHeight: CGFloat?
-    var spacing: CGFloat = 12
     @State private var isTaskPickerPresented = false
-#if os(iOS)
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    private var isCompactPhone: Bool {
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
-    }
-#endif
 
     var body: some View {
-        actionLayout
+        startButton
         .sheet(isPresented: $isTaskPickerPresented) {
             TaskStartPickerSheet(store: store) {
                 isTaskPickerPresented = false
@@ -26,49 +14,36 @@ struct ActionStack: View {
     }
 
     @ViewBuilder
-    private var actionLayout: some View {
-#if os(iOS)
-        if isCompactPhone {
-            HStack(spacing: spacing) {
-                startButton
-                    .frame(maxWidth: .infinity)
-                newTaskButton
-                    .frame(maxWidth: .infinity)
-            }
+    private var startButton: some View {
+        if store.activeSegments.isEmpty {
+            startButtonContent
+                .buttonStyle(.borderedProminent)
         } else {
-            VStack(spacing: spacing) {
-                startButton
-                newTaskButton
-            }
+            startButtonContent
+                .buttonStyle(.bordered)
         }
-#else
-        VStack(spacing: spacing) {
-            startButton
-            newTaskButton
-        }
-#endif
     }
 
-    private var startButton: some View {
+    private var startButtonContent: some View {
         Button {
             isTaskPickerPresented = true
         } label: {
-            AppActionLabel(title: AppStrings.startTimer, systemImage: "play.fill", fixedHeight: buttonHeight)
+            AppActionLabel(title: actionTitle, systemImage: actionSystemImage)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.regular)
+        .controlSize(.large)
         .accessibilityIdentifier("home.startTimer")
     }
 
-    private var newTaskButton: some View {
-        Button {
-            store.presentNewTask()
-        } label: {
-            AppActionLabel(title: AppStrings.newTask, systemImage: "plus", fixedHeight: buttonHeight)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
-        .accessibilityIdentifier("home.newTask")
+    private var actionTitle: String {
+        guard !store.activeSegments.isEmpty else { return AppStrings.startTimer }
+        return store.preferences.allowParallelTimers
+            ? AppStrings.localized("home.startAnotherTimer")
+            : AppStrings.localized("home.switchTimer")
+    }
+
+    private var actionSystemImage: String {
+        guard !store.activeSegments.isEmpty else { return "play.fill" }
+        return store.preferences.allowParallelTimers ? "plus" : "arrow.left.arrow.right"
     }
 }
 

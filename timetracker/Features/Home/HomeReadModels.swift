@@ -7,6 +7,10 @@ struct TodayHomeContent {
     let timelineSegments: [TimeSegment]
     let countdownEvents: [CountdownEvent]
 
+    var hasSupportingContent: Bool {
+        !forecasts.isEmpty || !countdownEvents.isEmpty
+    }
+
     @MainActor
     init(
         store: TimeTrackerStore,

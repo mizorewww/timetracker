@@ -33,11 +33,11 @@ struct PhoneNowSection: View {
                     .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
                 }
 
-                if allowsParallelTimers && !dynamicTypeSize.isAccessibilitySize {
+                if !dynamicTypeSize.isAccessibilitySize {
                     Button(action: startTimer) {
                         Label(
-                            AppStrings.localized("home.startAnotherTimer"),
-                            systemImage: "plus.circle"
+                            activeTimerActionTitle,
+                            systemImage: activeTimerActionSystemImage
                         )
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
@@ -49,15 +49,15 @@ struct PhoneNowSection: View {
                 Text(.app("home.now.title"))
                     .accessibilityIdentifier("home.activeTimers")
                 Spacer()
-                if !segments.isEmpty && allowsParallelTimers && dynamicTypeSize.isAccessibilitySize {
+                if !segments.isEmpty && dynamicTypeSize.isAccessibilitySize {
                     Button(action: startTimer) {
-                        Image(systemName: "plus.circle")
+                        Image(systemName: activeTimerActionSystemImage)
                             .font(.system(size: 20, weight: .semibold))
                             .frame(width: 44, height: 44)
                             .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(Text(.app("home.startAnotherTimer")))
+                    .accessibilityLabel(activeTimerActionTitle)
                     .accessibilityIdentifier("home.startTimer")
                 }
             }
@@ -66,6 +66,16 @@ struct PhoneNowSection: View {
                 Text(.app("timer.chooseTaskFooter"))
             }
         }
+    }
+
+    private var activeTimerActionTitle: String {
+        allowsParallelTimers
+            ? AppStrings.localized("home.startAnotherTimer")
+            : AppStrings.localized("home.switchTimer")
+    }
+
+    private var activeTimerActionSystemImage: String {
+        allowsParallelTimers ? "plus.circle" : "arrow.left.arrow.right.circle"
     }
 }
 

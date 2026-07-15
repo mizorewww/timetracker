@@ -1,11 +1,7 @@
 import SwiftUI
 
 struct HomeCountdownSection: View {
-    let store: TimeTrackerStore
-
-    private var events: [CountdownEvent] {
-        TodayHomeContent.sortedCountdownEvents(store.countdownEvents)
-    }
+    let events: [CountdownEvent]
 
     var body: some View {
         if !events.isEmpty {

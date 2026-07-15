@@ -2,22 +2,11 @@ import SwiftUI
 
 struct QuickStartSection: View {
     let store: TimeTrackerStore
+    let tasks: [TaskNode]
     @State private var isEditorPresented = false
 
     private var selectedIDs: [UUID] {
         store.preferences.quickStartTaskIDs
-    }
-
-    private var pinnedTasks: [TaskNode] {
-        selectedIDs.compactMap { store.task(for: $0) }
-            .filter(store.isTaskAvailableForTracking)
-    }
-
-    private var recentFillTasks: [TaskNode] {
-        store.frequentRecentTasks(
-            excluding: Set(pinnedTasks.map(\.id)),
-            limit: 3
-        )
     }
 
     var body: some View {
@@ -37,10 +26,12 @@ struct QuickStartSection: View {
                     Image(systemName: "slider.horizontal.3")
                 }
                 .buttonStyle(.bordered)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel(AppStrings.localized("quickStart.edit"))
                 .help(AppStrings.localized("quickStart.edit"))
             }
 
-            if pinnedTasks.isEmpty && recentFillTasks.isEmpty {
+            if tasks.isEmpty {
                 ContentUnavailableView(
                     AppStrings.localized("quickStart.empty.title"),
                     systemImage: "clock.arrow.circlepath",
@@ -48,21 +39,7 @@ struct QuickStartSection: View {
                 )
                 .frame(maxWidth: .infinity, minHeight: 104)
             } else {
-                if !pinnedTasks.isEmpty {
-                    QuickStartTaskGroup(
-                        title: AppStrings.localized("quickStart.pinnedTasks"),
-                        tasks: pinnedTasks,
-                        store: store
-                    )
-                }
-
-                if !recentFillTasks.isEmpty {
-                    QuickStartTaskGroup(
-                        title: AppStrings.localized("quickStart.recentTasks"),
-                        tasks: recentFillTasks,
-                        store: store
-                    )
-                }
+                QuickStartTaskGroup(tasks: tasks, store: store)
             }
         }
         .accessibilityIdentifier("home.quickStart")

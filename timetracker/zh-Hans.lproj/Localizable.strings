@@ -9,6 +9,7 @@
 "home.todayTimeline" = "今日时间线";
 "home.quickStart" = "快速开始";
 "home.startAnotherTimer" = "再开始一个计时";
+"home.switchTimer" = "切换计时";
 "home.now.title" = "现在";
 "home.overview.title" = "概览";
 "action.startTimer" = "开始计时";

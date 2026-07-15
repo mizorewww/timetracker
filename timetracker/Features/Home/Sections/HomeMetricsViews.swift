@@ -1,69 +1,23 @@
 import SwiftUI
 
-struct MetricsAndActions: View {
+struct TodayOverviewSection: View {
     let store: TimeTrackerStore
-    let horizontal: Bool
 
     var body: some View {
-        Group {
-            if horizontal {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .center, spacing: 14) {
-                        MetricsPanelContent(store: store)
-                            .frame(maxWidth: .infinity)
-
-                        Divider()
-                            .frame(height: 64)
-
-                        ActionStack(store: store, buttonHeight: 36, spacing: 8)
-                            .frame(width: 190)
-                    }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 14)
-                    .appCard(padding: 0)
-
-                    VStack(spacing: 16) {
-                        MetricsPanel(store: store)
-                        ActionStack(store: store, buttonHeight: 40)
-                    }
-                }
-            } else {
-                VStack(spacing: 10) {
-                    MetricsPanel(store: store)
-                    ActionStack(store: store, buttonHeight: 44, spacing: 10)
-                }
-            }
+        VStack(alignment: .leading, spacing: 10) {
+            SectionTitle(title: AppStrings.localized("home.overview.title"))
+            MetricsPanel(store: store)
         }
+        .accessibilityIdentifier("home.overview")
     }
-}
-
-var phoneToolbarPlacement: ToolbarItemPlacement {
-    #if os(iOS)
-    return .topBarTrailing
-    #else
-    return .automatic
-    #endif
-}
-
-var phoneLeadingToolbarPlacement: ToolbarItemPlacement {
-    #if os(iOS)
-    return .topBarLeading
-    #else
-    return .automatic
-    #endif
 }
 
 struct MetricsPanel: View {
     let store: TimeTrackerStore
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    private var isCompactPhone: Bool {
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
-    }
 
     var body: some View {
         MetricsPanelContent(store: store)
-            .padding(isCompactPhone ? 12 : 14)
+            .padding(14)
             .frame(maxWidth: .infinity)
             .appCard(padding: 0)
     }
@@ -71,41 +25,39 @@ struct MetricsPanel: View {
 
 private struct MetricsPanelContent: View {
     let store: TimeTrackerStore
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    private var isCompactPhone: Bool {
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
-    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let metrics = metricItems(now: context.date)
-            if isCompactPhone && !dynamicTypeSize.isAccessibilitySize {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(metrics) { metric in
-                        MetricCell(metric: metric, compact: true)
-                    }
-                }
+            if dynamicTypeSize.isAccessibilitySize {
+                verticalMetrics(metrics)
             } else {
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 0) {
-                        ForEach(metrics) { metric in
-                            MetricCell(metric: metric, compact: false)
-                            if metric.id != metrics.last?.id {
-                                Divider()
-                            }
-                        }
-                    }
+                    horizontalMetrics(metrics)
+                    verticalMetrics(metrics)
+                }
+            }
+        }
+    }
 
-                    VStack(spacing: 12) {
-                        ForEach(metrics) { metric in
-                            MetricCell(metric: metric, compact: false)
-                            if metric.id != metrics.last?.id {
-                                Divider()
-                            }
-                        }
-                    }
+    private func horizontalMetrics(_ metrics: [MetricSummaryItem]) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(metrics) { metric in
+                MetricCell(metric: metric, compact: false)
+                if metric.id != metrics.last?.id {
+                    Divider()
+                }
+            }
+        }
+    }
+
+    private func verticalMetrics(_ metrics: [MetricSummaryItem]) -> some View {
+        VStack(spacing: 12) {
+            ForEach(metrics) { metric in
+                MetricCell(metric: metric, compact: false)
+                if metric.id != metrics.last?.id {
+                    Divider()
                 }
             }
         }
@@ -143,7 +95,7 @@ private struct MetricsPanelContent: View {
                 tint: .green,
                 trendText: wallTrend.text,
                 trendColor: wallTrend.color,
-                alignment: .trailing
+                alignment: .leading
             )
         ]
     }

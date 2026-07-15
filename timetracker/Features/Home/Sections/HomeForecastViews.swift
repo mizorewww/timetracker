@@ -2,17 +2,7 @@ import SwiftUI
 
 struct TaskForecastSummarySection: View {
     let store: TimeTrackerStore
-
-    private var forecasts: [ForecastDisplayItem] {
-        let candidates = store.forecastDisplayItems()
-        guard let selectedTaskID = store.selectedTaskID,
-              let selectedItem = store.forecastDisplayItem(for: selectedTaskID) else {
-            return Array(candidates.prefix(3))
-        }
-
-        let withoutSelected = candidates.filter { $0.taskID != selectedItem.taskID }
-        return Array(([selectedItem] + withoutSelected).prefix(3))
-    }
+    let forecasts: [ForecastDisplayItem]
 
     var body: some View {
         if !forecasts.isEmpty {

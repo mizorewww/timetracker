@@ -184,9 +184,6 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testTodayPrimaryTimerActionOpensTaskPicker() throws {
-        #if os(macOS)
-        throw XCTSkip("The Today compact interaction screenshots are iOS-specific.")
-        #else
         let app = launchApp()
         XCTAssertTrue(homeIsReady(in: app))
 
@@ -202,7 +199,6 @@ final class timetrackerUITests: XCTestCase {
         let picker = app.descendants(matching: .any)["timer.taskPicker"].firstMatch
         XCTAssertTrue(waitForElement(picker, timeout: 5, diagnosticName: "today-task-picker", in: app))
         try capture("today-task-picker", app: app)
-        #endif
     }
 
     @MainActor

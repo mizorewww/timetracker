@@ -81,6 +81,16 @@ extension SwiftDataTimeTrackingRepository {
         return try context.fetch(descriptor).visibleDeduplicatedByID()
     }
 
+    func preparedTrackableTitleSnapshot(for taskID: UUID) throws -> String? {
+        let tasks = try context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID()
+        let trackableTaskIDs = TaskTrackingAvailabilityService().trackableTaskIDs(tasks: tasks)
+        guard trackableTaskIDs.contains(taskID),
+              let task = tasks.first(where: { $0.id == taskID }) else {
+            throw TimeTrackingRepositoryError.taskUnavailable
+        }
+        return try LedgerPersistencePolicy.prepareTitleSnapshot(task.title)
+    }
+
     private func segmentStartOrder(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
         if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
         return lhs.id.uuidString < rhs.id.uuidString

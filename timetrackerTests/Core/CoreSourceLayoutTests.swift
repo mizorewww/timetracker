@@ -623,6 +623,7 @@ struct CoreSourceLayoutTests {
         let focusedFiles = [
             "SwiftDataTimeTrackingRepository.swift",
             "SwiftDataTimeTrackingRepository+Queries.swift",
+            "SwiftDataTimeTrackingRepository+Creation.swift",
             "SwiftDataTimeTrackingRepository+Mutations.swift"
         ]
 

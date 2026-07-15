@@ -64,6 +64,17 @@ struct InboxUIContractTests {
     }
 
     @Test
+    func inboxCaptureValidatesBeforeSubmittingAndKeepsErrorsAdjacent() throws {
+        let captureSource = try sourceText("timetracker/Features/Inbox/InboxCaptureRow.swift")
+
+        #expect(captureSource.contains("InboxPersistencePolicy.prepareItem("))
+        #expect(captureSource.contains("guard canSubmit else { return }"))
+        #expect(captureSource.contains(".disabled(canSubmit == false)"))
+        #expect(captureSource.contains("inbox.capture.validation"))
+        #expect(captureSource.contains(".accessibilityAddTraits(.isStaticText)"))
+    }
+
+    @Test
     func inboxSuggestionsAreAutomaticAndExposeOnlyApplyOrDiscardActions() throws {
         let inboxSource = try inboxFeatureSource()
         let storeSource = try [

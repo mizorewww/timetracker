@@ -97,13 +97,13 @@ Live Activity 接收当前计时的最小展示状态。它不是事实存储，
 
 ### Widget
 
-通过 `group.me.mezorewww.timetracker` App Group 共享版本化快照，主应用与 Widget 的自动签名 profile 已包含该能力。仍需真机验证共享读写与刷新；不得通过临时公共文件、UserDefaults suite fallback 或关闭 sandbox 来绕过。
+通过 `group.me.mezorewww.timetracker` App Group 共享版本化快照，主应用与 Widget 的自动签名 profile 已包含该能力。Producer 使用 Unicode-safe prefix、summary/start clamp、count cap 和 128 KiB 文本预算把投影整形到传输范围，不修改 canonical facts。快照在写入和读取都按不可信输入验证：256 KiB 编码上限、active/recent 各 64 项、有界 UTF-8 字段、有限日期/统计与唯一 ID；非法读取显示为 corrupted，不回退到 standard UserDefaults 或空数据。仍需真机验证共享读写与刷新；不得通过临时公共文件、UserDefaults suite fallback 或关闭 sandbox 来绕过。
 
 ### Watch
 
 WatchConnectivity 在配对设备之间传输任务/计时快照和用户命令。命令队列持久保存在 Watch 本机，每个 command ID 是幂等键；命令和手机 terminal result 都走 durable `transferUserInfo`，可达消息只用于加速。20 秒超时后由用户重试或丢弃，重试保留原 ID 并刷新发送时间。手机在写账本前拒绝超过 30 秒的旧命令，避免长期离线消息迟到后改变当前计时；兼容快照反射也可确认旧手机已执行。DTO 应最小化，不包含 API key。
 
-Watch payload 与 UserDefaults 恢复队列是不可信边界。Codec 验证有限时间、UTF-8 byte 长度、数组数量、唯一 ID、非负 summary 和 active timer 年龄；incoming/pending/failed 各有 64 项容量，持久编码最大 512 KiB。非法、重复或过大的恢复状态会被清除，pending overflow 进入可见 failure，不会把任意大小的数据继续留在内存或迟后执行。
+Watch payload 与 UserDefaults 恢复队列是不可信边界。Producer 对 state snapshot 使用 Unicode-safe 字段上限和 128 KiB 总文本预算。Codec 再验证有限时间、UTF-8 byte 长度、唯一 ID、非负 summary 和 active timer 年龄；state snapshot 最多 64 active/256 recent，incoming/pending/failed 各有 64 项容量，持久队列编码最大 512 KiB。非法、重复或过大的恢复状态会被清除，pending overflow 进入可见 failure，不会把任意大小的数据继续留在内存或迟后执行。
 
 ### App Intents
 

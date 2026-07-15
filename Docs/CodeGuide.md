@@ -242,7 +242,7 @@ Live Activity 是状态投影。Activity attributes 应保持小而稳定，不�
 
 Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；Watch 把队列编码到本地 UserDefaults，并同时走 durable `transferUserInfo` 与可达 `sendMessage`。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID、刷新 `issuedAt`，用户也可 discard。`WatchCommandProcessor` 在 receipt lookup 后、任何 mutation 前校验 DTO 和时间边界：命令最多保留 30 秒，允许最多 5 分钟的未来设备时钟偏差；过期/非法命令返回 invalid 且不写 receipt 或 ledger，因此用户仍可用同 ID 明确重试。快照反射只为旧手机兼容确认。Watch UI 以 Active Timer 为第一优先级，并区分首次等待、发送、排队、失败、离线和 stale。主 target 的 codec/state/processor 测试不能替代真机往返验证。
 
-所有 WatchConnectivity payload 和本机恢复数据都按不可信输入处理。Codec 在构造领域 DTO 前后验证有限日期、UTF-8 byte 长度、数组数量、唯一 command/timer/task ID、summary 非负上限、active timer 年龄和未来时钟偏差。iPhone durable incoming queue 最多 64 个命令；Watch persisted pending/failed 各最多 64 项；编码队列最多 512 KiB。`WatchCommandQueueState.isSafeForRestoration` 拒绝结构非法、command/result ID 不一致或跨列表重复的状态。pending overflow 把最旧项转成 `queueOverflow` failure，failed overflow 丢弃最旧 failure；无法安全恢复的本机数据会清除，而不是解码后继续执行。字段上限的唯一常量表是 `WatchTransportLimits`，不得在 codec、store 和 UI 各写不同数值。
+所有 WatchConnectivity payload 和本机恢复数据都按不可信输入处理。Codec 在构造领域 DTO 前后验证有限日期、UTF-8 byte 长度、数组数量、唯一 command/timer/task ID、summary 非负上限、active timer 年龄和未来时钟偏差。Watch state snapshot 最多包含 64 个 active timer 和 256 个 recent task。iPhone durable incoming queue 最多 64 个命令；Watch persisted pending/failed 各最多 64 项；编码队列最多 512 KiB。`WatchCommandQueueState.isSafeForRestoration` 拒绝结构非法、command/result ID 不一致或跨列表重复的状态。pending overflow 把最旧项转成 `queueOverflow` failure，failed overflow 丢弃最旧 failure；无法安全恢复的本机数据会清除，而不是解码后继续执行。字段上限的唯一常量表是 `WatchTransportLimits`，不得在 codec、store 和 UI 各写不同数值。
 
 ### Deep link 与 scene 生命周期
 
@@ -252,7 +252,9 @@ iOS `WindowGroup` 可以产生多个 scene，而 `WatchConnectivityBridge` 只�
 
 ### Widget
 
-Widget 从版本化共享快照读取数据，区分共享容器不可用、缺失与损坏，不把所有失败都显示成“没有计时”。时间线根据 snapshot freshness 和 active timer 安排刷新。主应用和扩展已启用 `group.me.mezorewww.timetracker`，Xcode 自动签名构建已生成带该 entitlement 的 profile；发行门禁仍要求真机验证共享容器 URL、读写、刷新策略、锁屏与离线状态。
+Widget 从版本化共享快照读取数据，区分共享容器不可用、缺失与损坏，不把所有失败都显示成“没有计时”。`WidgetSnapshotCache.snapshot` 在 producer 边界限制 64 active/64 recent（当前 Widget recent UI 只投影前 3 项），将 summary 裁到非负上限、timer start 裁到 `generatedAt - maximumActiveTimerAge ... generatedAt`，并用 Unicode-safe prefix 将投影 title/path/style 限制为 512/1,024/128 UTF-8 bytes。所有文本共用 128 KiB 预算，从而保持 Widget JSON 不超过 256 KiB。
+
+`WidgetSnapshotLimits` 同时是 consumer/store 验证的唯一上限表：解码字段的 title/path/style 硬上限为 4 KiB/16 KiB/256 UTF-8 bytes，并验证有限日期、最多 5 分钟未来偏差、summary/active-age 上限和唯一 ID。`SharedWidgetSnapshotStore.save` 在写 App Group UserDefaults 前拒绝非法/超限快照；`loadResult` 在 decode 前检查字节，decode 后重新验证，失败返回 `.corrupted`。Watch producer 复用裁剪后的 active timers，并对最多 256 recent task 应用同样的 Unicode-safe 512/1,024/128-byte 投影上限和共享 128 KiB 文本预算。这些裁剪不写回任务或账本。时间线根据 snapshot freshness 和 active timer 安排刷新。主应用和扩展已启用 `group.me.mezorewww.timetracker`，Xcode 自动签名构建已生成带该 entitlement 的 profile；发行门禁仍要求真机验证共享容器 URL、读写、刷新策略、锁屏与离线状态。
 
 ## 8. AI 服务
 

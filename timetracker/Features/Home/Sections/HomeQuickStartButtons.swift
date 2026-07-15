@@ -68,7 +68,8 @@ private struct QuickStartTaskButton: View {
 
     private var taskTitle: some View {
         Text(task.title)
-            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-            .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

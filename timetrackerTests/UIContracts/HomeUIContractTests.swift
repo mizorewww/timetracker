@@ -142,10 +142,12 @@ struct HomeUIContractTests {
     }
 
     @Test @MainActor
-    func regularWidthIOSUsesVisibleSystemSplitView() throws {
+    func ipadIdiomUsesSystemSplitViewAcrossWindowWidths() throws {
         let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
         #expect(SplitColumnLayoutPolicy.iPad.sidebar == ColumnWidth(min: 240, ideal: 260, max: 300))
         #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
+        #expect(source.contains("UIDevice.current.userInterfaceIdiom"))
+        #expect(source.contains("switch layoutPolicy.shell"))
         #expect(source.contains("iPadRootView(store: store)"))
         #expect(source.contains("struct iPadRootView"))
         #expect(source.contains("ipad.splitNavigation"))

@@ -1,5 +1,44 @@
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#endif
+
+struct RootLayoutPolicy: Equatable, Sendable {
+    enum InterfaceIdiom: Equatable, Sendable {
+        case phone
+        case pad
+        case unsupported
+    }
+
+    enum Shell: Equatable, Sendable {
+        case phone
+        case pad
+    }
+
+    let interfaceIdiom: InterfaceIdiom
+
+    var shell: Shell {
+        interfaceIdiom == .pad ? .pad : .phone
+    }
+}
+
+#if os(iOS)
+extension RootLayoutPolicy {
+    init(userInterfaceIdiom: UIUserInterfaceIdiom) {
+        let interfaceIdiom: InterfaceIdiom = switch userInterfaceIdiom {
+        case .phone:
+            .phone
+        case .pad:
+            .pad
+        default:
+            .unsupported
+        }
+        self.init(interfaceIdiom: interfaceIdiom)
+    }
+}
+#endif
+
 struct WidthLayoutPolicy {
     let width: CGFloat
 

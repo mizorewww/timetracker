@@ -6,6 +6,19 @@ import Testing
 @Suite(.serialized)
 struct CoreArchitectureBehaviorTests {
     @Test
+    func rootLayoutPolicyUsesStableInterfaceIdiom() {
+        #expect(RootLayoutPolicy(interfaceIdiom: .phone).shell == .phone)
+        #expect(RootLayoutPolicy(interfaceIdiom: .pad).shell == .pad)
+        #expect(RootLayoutPolicy(interfaceIdiom: .unsupported).shell == .phone)
+
+        #if os(iOS)
+        #expect(RootLayoutPolicy(userInterfaceIdiom: .phone).shell == .phone)
+        #expect(RootLayoutPolicy(userInterfaceIdiom: .pad).shell == .pad)
+        #expect(RootLayoutPolicy(userInterfaceIdiom: .unspecified).shell == .phone)
+        #endif
+    }
+
+    @Test
     func sidebarUsesSharedFlatTaskTreeContract() throws {
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
 

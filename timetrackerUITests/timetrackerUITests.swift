@@ -460,26 +460,47 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testSidebarTaskOpensTaskDetailWhenSidebarIsVisible() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
-        let revealSidebar = app.descendants(matching: .any)["sidebar.show"].firstMatch
-        if revealSidebar.waitForExistence(timeout: 1), revealSidebar.isHittable {
-            activate(revealSidebar)
-        }
+        XCTAssertTrue(app.descendants(matching: .any)["ipad.splitNavigation"].waitForExistence(timeout: 3))
 
-        let sidebarTask = app.staticTexts
+        let sidebarTask = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "sidebar.task."))
             .firstMatch
-        guard sidebarTask.waitForExistence(timeout: 3) else {
-            throw XCTSkip("Sidebar is not visible in this size class.")
+        if !sidebarTask.waitForExistence(timeout: 1) {
+            let identifiedToggle = app.descendants(matching: .any)["sidebar.show"].firstMatch
+            let systemToggle = app.buttons["Show Sidebar"].firstMatch
+            if identifiedToggle.waitForExistence(timeout: 1), identifiedToggle.isHittable {
+                activate(identifiedToggle)
+            } else if systemToggle.waitForExistence(timeout: 1), systemToggle.isHittable {
+                activate(systemToggle)
+            }
         }
+        XCTAssertTrue(sidebarTask.waitForExistence(timeout: 3), "The iPad sidebar must expose seeded tasks")
 
         activate(sidebarTask)
 
         XCTAssertTrue(taskDetailIsReady(in: app))
         XCTAssertFalse(app.descendants(matching: .any)["task.editor"].waitForExistence(timeout: 1))
-        try capture("ipad-sidebar-task-detail-fix", app: app)
+        try capture("ipad-sidebar-task-detail-portrait", app: app)
+
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.descendants(matching: .any)["ipad.splitNavigation"].waitForExistence(timeout: 3))
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        try capture("ipad-sidebar-task-detail-landscape", app: app)
+
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.descendants(matching: .any)["ipad.splitNavigation"].waitForExistence(timeout: 3))
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        try capture("ipad-sidebar-task-detail-restored", app: app)
+        #endif
     }
 
     @MainActor
@@ -679,7 +700,11 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func capture(_ name: String, app: XCUIApplication) throws {
+        #if os(iOS)
+        let screenshot = XCUIScreen.main.screenshot()
+        #else
         let screenshot = app.screenshot()
+        #endif
         let attachment = XCTAttachment(screenshot: screenshot)
         attachment.name = name
         attachment.lifetime = .keepAlways

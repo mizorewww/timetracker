@@ -4,6 +4,18 @@ import Testing
 @Suite(.serialized)
 struct PlatformShellContractTests {
     @Test
+    func iosRootSelectsItsShellFromStableInterfaceIdiom() throws {
+        let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let iosRoot = try #require(source.slice(from: "struct iOSRootView", to: "struct PhoneRootView"))
+
+        #expect(iosRoot.contains("RootLayoutPolicy"))
+        #expect(iosRoot.contains("UIDevice.current.userInterfaceIdiom"))
+        #expect(iosRoot.contains("switch layoutPolicy.shell"))
+        #expect(iosRoot.contains("@Environment(\\.horizontalSizeClass)") == false)
+        #expect(iosRoot.contains("horizontalSizeClass") == false)
+    }
+
+    @Test
     func ipadSplitViewPreservesSelectionAndLetsTheSystemAdaptColumns() throws {
         let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
         let ipadRoot = try #require(source.slice(from: "struct iPadRootView", to: "#endif"))
@@ -24,6 +36,22 @@ struct PlatformShellContractTests {
         #expect(source.contains("app.descendants(matching: .any)[\"sidebar.show\"]"))
         #expect(source.contains("app.buttons[\"Show Sidebar\"]"))
         #expect(source.contains("destination.waitForExistence(timeout: 3)"))
+        #expect(source.contains("app.descendants(matching: .any)[\"ipad.splitNavigation\"]"))
+        #expect(source.contains("The iPad sidebar must expose seeded tasks"))
+        #expect(source.contains("Sidebar is not visible in this size class.") == false)
+        #expect(source.contains("XCUIDevice.shared.orientation = .landscapeLeft"))
+        #expect(source.contains("ipad-sidebar-task-detail-restored"))
+        #expect(source.contains("XCUIScreen.main.screenshot()"))
+    }
+
+    @Test
+    func sidebarTaskIdentifierLivesOnTheMergedAccessibilityElement() throws {
+        let source = try sourceText("timetracker/Features/Sidebar/SidebarTaskTreeViews.swift")
+        let content = try #require(source.slice(from: "private var taskContent", to: "private func accessibilityValue"))
+
+        let merge = try #require(content.range(of: ".accessibilityElement(children: .ignore)"))
+        let identifier = try #require(content.range(of: ".accessibilityIdentifier(\"sidebar.task."))
+        #expect(identifier.lowerBound > merge.lowerBound)
     }
 
     @Test

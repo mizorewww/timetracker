@@ -632,6 +632,18 @@
 
 验证：单元测试覆盖 3,600 秒下限、7,200 秒并发上限、30 秒的 1.25pt fractional height、空值/非有限几何输入，以及 task slice 高度严格回收到目标柱高；UI source contract 固定共享尺度、`@ScaledMetric`、零 spacing、overlay separator、底部 target frame、辅助字号单列图例与既有 VoiceOver 语义。付费开发者签名的最终 macOS 定向套件 40/40 通过；默认字号和 Accessibility XXXL iPhone 截图此前均通过。AX 截图揭示双列图例换行过窄后，最终源代码改成单列并通过签名编译与契约测试；随后的两次新模拟器复验均被 iOS 27 XCTest runtime 在测试入口前以 `Timed out waiting for AX loaded notification` 拦截，不属于 App crash 或断言失败。所有成功与失败批次的专用模拟器都已关闭并删除，最终进程审计无 runner、`xcodebuild` 或诊断残留。
 
+## AD-049：iOS 根导航由稳定设备 idiom 选择
+
+状态：Accepted
+
+背景：旧 `iOSRootView` 把 `horizontalSizeClass == .regular` 当成 iPad，其他宽度当成 iPhone。iPad 进入分屏、Stage Manager 窄窗口或中间宽度时会变为 compact，于是整个 `NavigationSplitView` 被替换成五标签 `TabView`；sidebar selection、detail navigation 和各根容器内部状态都可能被重建。大屏 iPhone 横屏也可以出现 regular width，size class 并不是设备类型。
+
+决策：`RootLayoutPolicy` 只将稳定 interface idiom 映射为 `.phone` 或 `.pad` shell。iOS 根视图在初始化时从 `UIDevice.current.userInterfaceIdiom` 构造策略，iPhone 始终使用五标签根导航，iPad 始终使用同一个 `NavigationSplitView`。宽度变化仍可以驱动页面内容重排和 split view 的系统列折叠，但不得改变根 shell 身份。未支持 idiom 在 iOS target 安全回落到 phone shell，不假设其具有 iPad 导航语义。
+
+后果：iPad 在全屏、Split View 和 Stage Manager 间调整尺寸时保留 sidebar/detail 上下文；`NavigationSplitView` 依旧使用 `preferredCompactColumn` 和系统 Show Sidebar 操作适配窄宽。功能内局部布局可继续使用 size class，但新的设备级根分支必须使用 idiom 或显式平台信号。
+
+验证：纯策略测试覆盖 phone、pad 和 unsupported 映射；源码契约确认 `iOSRootView` 使用 `UIDevice.current.userInterfaceIdiom`、不再读取 `horizontalSizeClass`。付费开发者签名的 macOS 策略/契约套件 31/31 通过，截图基础设施调整后的最终契约套件 8/8 通过。iPad Pro 11-inch 的串行 UI 用例使用系统 Show Sidebar，选择合并语义后的 task row，再在同一 scene 中竖屏→横屏→竖屏；三次都保留 `ipad.splitNavigation`、同一 task detail 和只读状态，三张屏幕级截图目视通过。Stage Manager 紧凑窗口仍保留在最终人工矩阵，不以旋转测试替代。所有专用模拟器都已终止、关闭并删除，最终进程与 Booted 设备审计为空。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

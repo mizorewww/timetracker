@@ -1,15 +1,28 @@
 import SwiftUI
 
 #if os(iOS)
+import UIKit
+
 struct iOSRootView: View {
     let store: TimeTrackerStore
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private let layoutPolicy: RootLayoutPolicy
+
+    init(
+        store: TimeTrackerStore,
+        layoutPolicy: RootLayoutPolicy = RootLayoutPolicy(
+            userInterfaceIdiom: UIDevice.current.userInterfaceIdiom
+        )
+    ) {
+        self.store = store
+        self.layoutPolicy = layoutPolicy
+    }
 
     var body: some View {
-        if horizontalSizeClass == .regular {
-            iPadRootView(store: store)
-        } else {
+        switch layoutPolicy.shell {
+        case .phone:
             PhoneRootView(store: store)
+        case .pad:
+            iPadRootView(store: store)
         }
     }
 }

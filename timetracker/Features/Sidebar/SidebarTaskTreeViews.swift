@@ -100,7 +100,6 @@ struct SidebarTaskTreeRow: View {
                 .strikethrough(task.status == .completed)
                 .foregroundStyle(task.status == .completed ? .secondary : .primary)
                 .lineLimit(1)
-                .accessibilityIdentifier("sidebar.task.\(task.id.uuidString)")
 
             Spacer(minLength: 4)
 
@@ -128,6 +127,7 @@ struct SidebarTaskTreeRow: View {
                 )
         }
         .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier("sidebar.task.\(task.id.uuidString)")
         .accessibilityLabel(task.title)
         .accessibilityValue(
             accessibilityValue(progress: progress, childCount: childCount, blocked: blocked)

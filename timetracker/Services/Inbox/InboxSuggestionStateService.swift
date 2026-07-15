@@ -60,9 +60,11 @@ struct InboxSuggestionStateService {
     func canStoreGeneratedSuggestion(
         item: InboxItem,
         requestedTitle: String,
+        requestedIdentity: InboxSuggestionIdentity,
         currentSuggestion: InboxSuggestion?
     ) -> Bool {
-        guard normalizedTitle(item.title) == normalizedTitle(requestedTitle) else {
+        guard item.suggestionIdentity == requestedIdentity,
+              normalizedTitle(item.title) == normalizedTitle(requestedTitle) else {
             return false
         }
 

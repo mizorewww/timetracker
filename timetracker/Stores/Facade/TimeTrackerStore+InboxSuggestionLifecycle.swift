@@ -6,6 +6,7 @@ extension TimeTrackerStore {
         itemID: UUID,
         requestID: UUID,
         requestedTitle: String,
+        requestedIdentity: InboxSuggestionIdentity,
         endpoint: String,
         apiKey: String,
         modelID: String,
@@ -23,6 +24,7 @@ extension TimeTrackerStore {
               inboxSuggestionStateService.canStoreGeneratedSuggestion(
                   item: item,
                   requestedTitle: requestedTitle,
+                  requestedIdentity: requestedIdentity,
                   currentSuggestion: inboxSuggestionByItemID[itemID]
               ),
               trackableTaskIDs.contains(result.taskID) else {

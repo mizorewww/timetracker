@@ -222,6 +222,41 @@ struct LLMSuggestionCancellationTests {
     }
 
     @Test @MainActor
+    func titleRoundTripRejectsResultFromPreviousSuggestionRevision() async throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Planning", parentID: nil, deviceID: "test")
+        let inboxItem = InboxItem(title: "Draft launch plan", deviceID: "test")
+        context.insert(task)
+        context.insert(inboxItem)
+        try context.save()
+
+        let gate = ControlledLLMTransport(payload: .inbox(taskID: task.id))
+        let store = Self.configuredStore(
+            context: context,
+            task: task,
+            inboxItems: [inboxItem],
+            checklistItems: [],
+            inboxGate: gate
+        )
+        store.preferences.llmAutomaticSuggestionsEnabled = false
+        let requestedRevisionID = inboxItem.effectiveSuggestionRevisionID
+
+        store.suggestInboxItem(inboxItem, showsErrors: true)
+        #expect(await Self.eventually { await gate.requestCount == 1 })
+
+        store.updateInboxItemTitle(inboxItem, title: "Draft launch checklist")
+        store.updateInboxItemTitle(inboxItem, title: "Draft launch plan")
+        #expect(inboxItem.effectiveSuggestionRevisionID != requestedRevisionID)
+
+        await gate.resumeRequest(at: 0)
+        #expect(await Self.eventually { store.inboxSuggestionInFlightIDs.isEmpty })
+
+        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).isEmpty)
+        #expect(store.inboxSuggestion(for: inboxItem) == nil)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
     func inFlightRequestDoesNotRetainStoreAndIsCancelledOnDeinit() async throws {
         let task = TaskNode(title: "Personal", parentID: nil, deviceID: "test")
         let inboxItem = InboxItem(title: "Plan the weekend", deviceID: "test")

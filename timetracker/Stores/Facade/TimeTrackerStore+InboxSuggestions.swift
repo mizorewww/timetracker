@@ -60,6 +60,7 @@ extension TimeTrackerStore {
         let modelID = preferences.llmSelectedModel
         let itemID = item.id
         let requestedTitle = item.title
+        let requestedIdentity = item.suggestionIdentity
         let requestID = UUID()
         let service = inboxSuggestionService
         inboxSuggestionFailureByItemID[item.id] = nil
@@ -80,6 +81,7 @@ extension TimeTrackerStore {
                     itemID: itemID,
                     requestID: requestID,
                     requestedTitle: requestedTitle,
+                    requestedIdentity: requestedIdentity,
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID,

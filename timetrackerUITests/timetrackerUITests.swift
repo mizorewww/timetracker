@@ -206,7 +206,14 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func analyticsIsReady(in app: XCUIApplication) -> Bool {
-        app.descendants(matching: .any)["analytics.view"].waitForExistence(timeout: 8)
+        guard app.descendants(matching: .any)["analytics.view"].waitForExistence(timeout: 8),
+              app.descendants(matching: .any)["analytics.periodFilter"]
+                .waitForExistence(timeout: 8) else {
+            return false
+        }
+        return app.descendants(matching: .any)["analytics.summary"]
+            .firstMatch
+            .waitForExistence(timeout: 8)
     }
 
     @MainActor

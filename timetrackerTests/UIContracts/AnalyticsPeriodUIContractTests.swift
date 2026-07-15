@@ -22,7 +22,11 @@ struct AnalyticsPeriodUIContractTests {
         #expect(controls.contains("analytics.period.previous"))
         #expect(controls.contains("analytics.period.next"))
         #expect(controls.contains("analytics.period.today"))
-        #expect(controls.components(separatedBy: ".frame(width: 44, height: 44)").count - 1 >= 2)
+        #expect(
+            controls.components(
+                separatedBy: ".frame(minWidth: 44, minHeight: 44)"
+            ).count - 1 >= 2
+        )
         #expect(controls.components(separatedBy: ".frame(minHeight: 44)").count - 1 >= 2)
         #expect(controls.contains("AnalyticsPeriodNavigation.date("))
     }

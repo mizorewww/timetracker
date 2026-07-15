@@ -478,7 +478,7 @@ struct TaskUIContractTests {
         #expect(analyticsSource.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(analyticsSource.contains(".pickerStyle(.menu)"))
         #expect(analyticsSource.contains("VStack(alignment: .leading, spacing: 10)"))
-        #expect(analyticsSource.contains(".frame(width: 44, height: 44)"))
+        #expect(analyticsSource.contains(".frame(minWidth: 44, minHeight: 44)"))
         #expect(analyticsSource.contains(".contentMargins("))
     }
 

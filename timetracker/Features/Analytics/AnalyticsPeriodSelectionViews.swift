@@ -74,7 +74,7 @@ struct AnalyticsPeriodNavigator: View {
                     .frame(minHeight: 44)
                 Label(AppStrings.localized("analytics.period.today"), systemImage: "calendar")
                     .labelStyle(.iconOnly)
-                    .frame(width: 44, height: 44)
+                    .frame(minWidth: 44, minHeight: 44)
             }
         }
         .disabled(isCurrentPeriod)
@@ -93,7 +93,7 @@ struct AnalyticsPeriodNavigator: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.body.weight(.semibold))
-                .frame(width: 44, height: 44)
+                .frame(minWidth: 44, minHeight: 44)
                 .contentShape(.rect)
         }
         .disabled(disabled)
@@ -128,14 +128,35 @@ enum AnalyticsPeriodText {
                calendar.isDate(date, inSameDayAs: yesterday) {
                 return AppStrings.localized("analytics.period.yesterday")
             }
-            return DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none)
+            return formattedDate(date, dateStyle: .medium, calendar: calendar)
         case .week:
             let start = range.interval(containing: date, calendar: calendar)?.start ?? date
-            let label = DateFormatter.localizedString(from: start, dateStyle: .medium, timeStyle: .none)
+            let label = formattedDate(start, dateStyle: .medium, calendar: calendar)
             return String(format: AppStrings.localized("analytics.period.weekOfFormat"), label)
         case .month:
-            return date.formatted(.dateTime.month(.wide).year())
+            let formatter = formatter(calendar: calendar)
+            formatter.setLocalizedDateFormatFromTemplate("MMMM y")
+            return formatter.string(from: date)
         }
+    }
+
+    private static func formattedDate(
+        _ date: Date,
+        dateStyle: DateFormatter.Style,
+        calendar: Calendar
+    ) -> String {
+        let formatter = formatter(calendar: calendar)
+        formatter.dateStyle = dateStyle
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private static func formatter(calendar: Calendar) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = calendar.locale ?? .current
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        return formatter
     }
 }
 

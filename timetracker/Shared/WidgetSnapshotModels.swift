@@ -137,6 +137,11 @@ nonisolated enum WidgetSnapshotFreshness: Equatable, Sendable {
     case clockAdjusted
 }
 
+nonisolated enum WidgetTimerElapsedPresentation: Equatable, Sendable {
+    case live(startedAt: Date)
+    case frozen(seconds: Int)
+}
+
 nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var taskID: UUID
@@ -145,6 +150,22 @@ nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendab
     var startedAt: Date
     var colorHex: String?
     var iconName: String?
+
+    nonisolated func elapsedPresentation(
+        for freshness: WidgetSnapshotFreshness,
+        generatedAt: Date
+    ) -> WidgetTimerElapsedPresentation {
+        guard freshness == .clockAdjusted else {
+            return .live(startedAt: startedAt)
+        }
+        let elapsed = generatedAt.timeIntervalSince(startedAt)
+        guard elapsed.isFinite else { return .frozen(seconds: 0) }
+        let boundedElapsed = min(
+            max(0, elapsed),
+            WidgetSnapshotLimits.maximumActiveTimerAge
+        )
+        return .frozen(seconds: Int(boundedElapsed.rounded(.down)))
+    }
 
     nonisolated func isStructurallyValid(relativeTo generatedAt: Date) -> Bool {
         guard WidgetSnapshotLimits.isFinite(startedAt),

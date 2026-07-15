@@ -114,13 +114,13 @@ struct ActiveTimerContent: View {
                 Spacer(minLength: 0)
             }
 
-            Text(timer.startedAt, style: .timer)
+            elapsedText
                 .font(.system(.title2, design: .rounded).monospacedDigit())
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .accessibilityLabel(Text(localized("widget.elapsed.label")))
-                .accessibilityValue(Text(timer.startedAt, style: .timer))
+                .accessibilityValue(elapsedAccessibilityValue)
 
             if !dynamicTypeSize.isAccessibilitySize, !timer.path.isEmpty {
                 Text(timer.path)
@@ -139,5 +139,28 @@ struct ActiveTimerContent: View {
 
             SnapshotFreshnessLabel(freshness: freshness, generatedAt: generatedAt)
         }
+    }
+
+    @ViewBuilder
+    private var elapsedText: some View {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(WidgetElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedAccessibilityValue: Text {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(WidgetElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedPresentation: WidgetTimerElapsedPresentation {
+        timer.elapsedPresentation(for: freshness, generatedAt: generatedAt)
     }
 }

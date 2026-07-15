@@ -167,7 +167,7 @@ struct CoreWidgetSnapshotTests {
     }
 
     @Test
-    func widgetTimelinePolicySchedulesBoundedRecoveryRetries() {
+    func widgetTimelinePolicyAvoidsUnproductivePolling() {
         let policy = WidgetSnapshotTimelinePolicy()
         let generatedAt = Date(timeIntervalSinceReferenceDate: 25_000)
         var snapshot = WidgetSnapshot.empty
@@ -180,16 +180,48 @@ struct CoreWidgetSnapshotTests {
 
         let staleNow = generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter + 1)
         let staleResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .stale)
-        #expect(policy.reloadDecision(for: staleResult, at: staleNow) == .after(
-            staleNow.addingTimeInterval(WidgetSnapshotTimelinePolicy.maximumRecoveryRetryDelay)
-        ))
+        #expect(policy.reloadDecision(for: staleResult, at: staleNow) == .never)
 
         snapshot.generatedAt = generatedAt.addingTimeInterval(3_600)
         let adjustedResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .clockAdjusted)
         #expect(policy.reloadDecision(for: adjustedResult, at: generatedAt) == .after(
-            generatedAt.addingTimeInterval(WidgetSnapshotTimelinePolicy.maximumRecoveryRetryDelay)
+            snapshot.generatedAt.addingTimeInterval(-WidgetSnapshotLimits.maximumFutureClockSkew)
+        ))
+
+        snapshot.generatedAt = generatedAt.addingTimeInterval(
+            WidgetSnapshotLimits.maximumFutureClockSkew + 1
+        )
+        let nearlyRecoveredResult = WidgetSnapshotLoadResult.snapshot(
+            snapshot,
+            freshness: .clockAdjusted
+        )
+        #expect(policy.reloadDecision(for: nearlyRecoveredResult, at: generatedAt) == .after(
+            generatedAt.addingTimeInterval(WidgetSnapshotTimelinePolicy.minimumRetryDelay)
         ))
         #expect(policy.reloadDecision(for: .corrupted, at: generatedAt) == .never)
+    }
+
+    @Test
+    func clockAdjustedWidgetFreezesElapsedTimeAtTheSnapshotBoundary() {
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 40_000)
+        let timer = WidgetTimerSnapshot(
+            id: UUID(),
+            taskID: UUID(),
+            title: "Clock rollback",
+            path: "Work",
+            startedAt: generatedAt.addingTimeInterval(-30 * 60),
+            colorHex: nil,
+            iconName: nil
+        )
+
+        #expect(timer.elapsedPresentation(
+            for: .clockAdjusted,
+            generatedAt: generatedAt
+        ) == .frozen(seconds: 30 * 60))
+        #expect(timer.elapsedPresentation(
+            for: .current,
+            generatedAt: generatedAt
+        ) == .live(startedAt: timer.startedAt))
     }
 
     @Test
@@ -245,6 +277,7 @@ struct CoreWidgetSnapshotTests {
         #expect(widget.contains("context.isPreview"))
         #expect(widget.contains("WidgetSnapshotTimelinePolicy"))
         #expect(widget.contains("clockAdjusted"))
+        #expect(widget.contains("WidgetElapsedFormatter.clock"))
         #expect(widget.contains("policy: .never"))
         #expect(widget.contains(".privacySensitive()"))
         #expect(widget.contains("minHeight: 44"))

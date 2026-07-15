@@ -13,6 +13,18 @@ enum WidgetDeepLinks {
     }
 }
 
+enum WidgetElapsedFormatter {
+    nonisolated static func clock(_ seconds: Int) -> String {
+        let safeSeconds = max(0, seconds)
+        let pattern: Duration.TimeFormatStyle.Pattern = safeSeconds >= 3_600
+            ? .hourMinuteSecond
+            : .minuteSecond
+        return Duration.seconds(safeSeconds).formatted(
+            .time(pattern: pattern).locale(.autoupdatingCurrent)
+        )
+    }
+}
+
 extension Color {
     init?(hex: String?) {
         guard let hex else { return nil }

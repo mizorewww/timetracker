@@ -19,7 +19,6 @@ nonisolated enum WidgetTimelineReloadDecision: Equatable, Sendable {
 
 nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
     static let minimumRetryDelay: TimeInterval = 60
-    static let maximumRecoveryRetryDelay: TimeInterval = WidgetSnapshot.staleAfter
 
     func reloadDecision(
         for result: WidgetSnapshotLoadResult,
@@ -29,16 +28,28 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
         switch result {
         case let .snapshot(snapshot, .current):
             let staleDate = snapshot.generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)
-            return .after(max(staleDate, now.addingTimeInterval(Self.minimumRetryDelay)))
+            let minimumReloadDate = now.addingTimeInterval(Self.minimumRetryDelay)
+            guard WidgetSnapshotLimits.isFinite(staleDate),
+                  WidgetSnapshotLimits.isFinite(minimumReloadDate) else {
+                return .never
+            }
+            return .after(max(staleDate, minimumReloadDate))
         case .snapshot(_, .stale):
-            return .after(now.addingTimeInterval(Self.maximumRecoveryRetryDelay))
+            // The host explicitly reloads timelines after every snapshot write.
+            // A stale snapshot cannot become fresh by polling it again.
+            return .never
         case let .snapshot(snapshot, .clockAdjusted):
             let earliestRetry = now.addingTimeInterval(Self.minimumRetryDelay)
-            let latestRetry = now.addingTimeInterval(Self.maximumRecoveryRetryDelay)
             let clockRecoveryDate = snapshot.generatedAt.addingTimeInterval(
                 -WidgetSnapshotLimits.maximumFutureClockSkew
             )
-            return .after(max(earliestRetry, min(clockRecoveryDate, latestRetry)))
+            guard WidgetSnapshotLimits.isFinite(earliestRetry),
+                  WidgetSnapshotLimits.isFinite(clockRecoveryDate) else {
+                return .never
+            }
+            // Schedule once at the earliest time the snapshot can be current.
+            // This avoids spending WidgetKit's refresh budget on fixed polling.
+            return .after(max(earliestRetry, clockRecoveryDate))
         case .sharedContainerUnavailable, .missing, .corrupted:
             return .never
         }

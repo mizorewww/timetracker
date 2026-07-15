@@ -67,13 +67,15 @@ struct SharedComponentsContractTests {
     func primaryActionLabelsWrapLegiblyAndExposeStableActions() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
-        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
 
         #expect(sharedSource.contains("struct AppActionLabel"))
         #expect(sharedSource.contains(".lineLimit(2)"))
         #expect(sharedSource.contains(".multilineTextAlignment(.center)"))
         #expect(sharedSource.contains(".fixedSize(horizontal: false, vertical: true)"))
-        #expect(sharedSource.contains(".frame(minHeight: fixedHeight == nil ? minHeight : 0)"))
+        #expect(sharedSource.contains(".frame(height: dynamicTypeSize.isAccessibilitySize ? nil : fixedHeight)"))
+        #expect(sharedSource.contains("dynamicTypeSize.isAccessibilitySize || fixedHeight == nil"))
+        #expect(sharedSource.contains(".padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 4 : 0)"))
         #expect(homeSource.contains("AppActionLabel(title: AppStrings.startTimer"))
         #expect(homeSource.contains(".accessibilityIdentifier(\"home.startTimer\")"))
         #expect(homeSource.contains(".accessibilityIdentifier(\"home.newTask\")"))
@@ -193,7 +195,8 @@ struct SharedComponentsContractTests {
 
         #expect(actionSource.contains(".lineLimit(2)"))
         #expect(actionSource.contains(".fixedSize(horizontal: false, vertical: true)"))
-        #expect(actionSource.contains(".frame(minHeight: fixedHeight == nil ? minHeight : 0)"))
+        #expect(actionSource.contains(".frame(height: dynamicTypeSize.isAccessibilitySize ? nil : fixedHeight)"))
+        #expect(actionSource.contains("dynamicTypeSize.isAccessibilitySize || fixedHeight == nil"))
         #expect(homeActionSource.contains("startButton\n                    .frame(maxWidth: .infinity)"))
         #expect(homeActionSource.contains("newTaskButton\n                    .frame(maxWidth: .infinity)"))
         #expect(inboxSuggestionSource.contains("ViewThatFits(in: .horizontal)"))
@@ -203,5 +206,25 @@ struct SharedComponentsContractTests {
         #expect(inboxSuggestionSource.components(separatedBy: ".frame(width: 44, height: 44)").count >= 3)
         #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.apply\"))"))
         #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.discard\"))"))
+    }
+
+    @Test
+    func sharedInformationComponentsAdaptAndExposeConciseSemantics() throws {
+        let sectionHeader = try sourceText("timetracker/SharedUI/Components/SectionHeaders.swift")
+        let emptyState = try sourceText("timetracker/SharedUI/Components/EmptyStates.swift")
+        let infoRow = try sourceText("timetracker/SharedUI/Components/InfoRows.swift")
+        let forecast = try sourceText("timetracker/SharedUI/Components/ForecastInfoViews.swift")
+        let metrics = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
+
+        #expect(sectionHeader.contains(".accessibilityAddTraits(.isHeader)"))
+        #expect(sectionHeader.contains(".accessibilityHidden(true)"))
+        #expect(emptyState.contains(".accessibilityElement(children: .ignore)"))
+        #expect(emptyState.contains(".accessibilityLabel(title)"))
+        #expect(infoRow.contains("ViewThatFits(in: .horizontal)"))
+        #expect(infoRow.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(forecast.contains("minWidth: AppLayout.minimumInteractiveTarget"))
+        #expect(forecast.components(separatedBy: ".accessibilityHidden(true)").count - 1 >= 2)
+        #expect(metrics.contains("dynamicTypeSize.isAccessibilitySize ? nil : 1"))
+        #expect(metrics.contains(".accessibilityValue(\"\\(metric.value), \\(metric.trendText)\")"))
     }
 }

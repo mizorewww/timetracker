@@ -184,6 +184,9 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Settings/PomodoroPickerViews.swift",
             "timetracker/Features/Settings/CountdownSettingsSection.swift",
             "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Sidebar/SidebarViews.swift",
+            "timetracker/Features/Sidebar/SidebarDestinationViews.swift",
+            "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
@@ -199,7 +202,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift",
-            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift"
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
+            "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
+            "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+            "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ]
 
         for relativePath in expectedFiles {
@@ -219,6 +225,9 @@ struct CoreSourceLayoutTests {
 
         let retiredViews = [
             "timetracker/Features/Home/Sections/HomeSelectedTaskSummaryViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsDecisionViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverviewViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsRowsViews.swift",
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
             "timetracker/Services/Ledger/TimeTrackerServices.swift"
@@ -327,7 +336,10 @@ struct CoreSourceLayoutTests {
             "timetrackerWatchApp/WatchDashboardView.swift",
             "timetrackerWatchApp/WatchTimerRows.swift",
             "timetrackerWatchApp/WatchStatusViews.swift",
-            "timetrackerWatchApp/WatchColorSupport.swift"
+            "timetrackerWatchApp/WatchColorSupport.swift",
+            "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
+            "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+            "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ]
 
         for relativePath in focusedFiles {
@@ -352,7 +364,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Settings/SettingsCategorySections.swift",
             "timetracker/Features/Settings/SettingsCategoryViews.swift",
             "timetracker/Features/Settings/LLMSettingsViews.swift",
-            "timetracker/Features/Settings/LLMSettingsSection.swift"
+            "timetracker/Features/Settings/LLMSettingsSection.swift",
+            "timetracker/Features/Sidebar/SidebarViews.swift",
+            "timetracker/Features/Sidebar/SidebarDestinationViews.swift",
+            "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift"
         ]
 
         for relativePath in focusedFiles {
@@ -424,7 +439,15 @@ struct CoreSourceLayoutTests {
             "AnalyticsOverviewRows.swift",
             "AnalyticsMetricListViews.swift",
             "AnalyticsDetailListViews.swift",
-            "AnalyticsPeriodSection.swift"
+            "AnalyticsPeriodSection.swift",
+            "Sections/AnalyticsActivityBarViews.swift",
+            "Sections/AnalyticsActivityViews.swift",
+            "Sections/AnalyticsDistributionViews.swift",
+            "Sections/AnalyticsForecastViews.swift",
+            "Sections/AnalyticsGroupBreakdownViews.swift",
+            "Sections/AnalyticsOverlapViews.swift",
+            "Sections/AnalyticsQualityViews.swift",
+            "Sections/AnalyticsTrendViews.swift"
         ]
 
         for fileName in focusedFiles {
@@ -434,6 +457,38 @@ struct CoreSourceLayoutTests {
                 .count
             let lineLimit = fileName == "AnalyticsViews.swift" ? 300 : 180
             #expect(lineCount <= lineLimit, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func swiftUIEnumeratedCollectionsAreMaterializedBeforeForEach() throws {
+        let root = try projectRootURL()
+        let sourceRoots = [
+            "timetracker",
+            "timetrackerWidgetExtension",
+            "timetrackerWatchApp",
+            "timetrackerLiveActivityExtension"
+        ]
+        let directEnumeratedForEach = try NSRegularExpression(
+            pattern: #"ForEach\s*\(\s*(?!Array\s*\()[^\n]*\.enumerated\(\)"#
+        )
+
+        for sourceRoot in sourceRoots {
+            let sourceURL = root.appending(path: sourceRoot)
+            guard let enumerator = FileManager.default.enumerator(
+                at: sourceURL,
+                includingPropertiesForKeys: nil
+            ) else {
+                Issue.record("Could not enumerate \(sourceRoot)")
+                continue
+            }
+
+            for case let file as URL in enumerator where file.pathExtension == "swift" {
+                let source = try String(contentsOf: file, encoding: .utf8)
+                let fullRange = NSRange(source.startIndex..<source.endIndex, in: source)
+                let matches = directEnumeratedForEach.matches(in: source, range: fullRange)
+                #expect(matches.isEmpty, "\(file.lastPathComponent) passes an enumerated sequence directly to ForEach")
+            }
         }
     }
 

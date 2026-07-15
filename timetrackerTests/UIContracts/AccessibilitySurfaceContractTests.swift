@@ -65,4 +65,22 @@ struct AccessibilitySurfaceContractTests {
         #expect(colors.contains("color.name.charcoal"))
         #expect(colors.contains("color.name.custom"))
     }
+
+    @Test
+    func analyticsAndSidebarVisualsKeepEquivalentVoiceOverSemantics() throws {
+        let metrics = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
+        let groups = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownViews.swift")
+        let trend = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift")
+        let sidebar = try sourceText("timetracker/Features/Sidebar/SidebarTaskTreeViews.swift")
+
+        #expect(metrics.contains(".accessibilityElement(children: .ignore)"))
+        #expect(metrics.contains(".accessibilityLabel(metric.title)"))
+        #expect(groups.contains(".accessibilityHidden(true)"))
+        #expect(trend.components(separatedBy: ".accessibilityLabel(point.label)").count - 1 == 2)
+        #expect(trend.contains("DurationFormatter.compact(point.wallSeconds)"))
+        #expect(trend.contains("DurationFormatter.compact(point.grossSeconds)"))
+        #expect(sidebar.contains(".accessibilityLabel(task.title)"))
+        #expect(sidebar.contains("accessibilityValue(progress: progress, childCount: childCount, blocked: blocked)"))
+        #expect(sidebar.contains("private var disclosureTargetSize: CGFloat"))
+    }
 }

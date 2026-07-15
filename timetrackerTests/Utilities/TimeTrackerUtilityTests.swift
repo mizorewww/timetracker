@@ -84,14 +84,14 @@ struct TimeTrackerUtilityTests {
     }
 
     @Test
-    func customTaskColorsMeetNonTextContrastTargetsInBothAppearances() {
+    func customTaskColorsMeetSmallTextContrastTargetsInBothAppearances() {
         let bright = AccessibleSRGB(red: 1, green: 0.84, blue: 0.04)
             .adapted(forDarkBackground: false)
         let dark = AccessibleSRGB(red: 0.02, green: 0.04, blue: 0.08)
             .adapted(forDarkBackground: true)
 
-        #expect(bright.relativeLuminance <= 0.301)
-        #expect(dark.relativeLuminance >= 0.099)
+        #expect(bright.relativeLuminance <= 0.184)
+        #expect(dark.relativeLuminance >= 0.174)
     }
 
     @Test @MainActor

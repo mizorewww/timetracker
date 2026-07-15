@@ -15,7 +15,9 @@ The current pass established semantic folders, split domain stores and repositor
 - The retired `TimeTrackerServices.swift` was replaced by `AppCloudSync`, persistence-write safety, timer command, aggregation, formatting, device identity, and ledger-summary files.
 - Facade startup/configuration and post-commit system-surface attachment were split from refresh/mutation/recovery lifecycle; both files now stay under the facade source-layout budget.
 - Widget entry/provider/configuration, active-timer layouts, supplementary/error states, and deep-link/localization/color support are separate files.
-- Watch dashboard orchestration, timer rows, status/error/empty states, and color support are separate files; durable queue/transport state remains in `WatchAppStore`.
+- Watch dashboard orchestration, timer rows, status/error/empty states, and color support are separate files. `WatchAppStore.swift` now owns observable state and safe restoration, `WatchAppStore+Commands.swift` owns command queue/timeout/persistence, and `WatchAppStore+Connectivity.swift` owns WCSession transport, payload application, freshness, and delegate callbacks.
+- Ledger's ordered flat-array mutation/index maintenance is isolated in `LedgerStore+FlatSegmentIndex.swift`; day/change indexing remains in `LedgerStore+SegmentIndex.swift`.
+- Incremental rollup state/full rebuild remains in `RollupIncrementalIndex.swift`, while scoped segment/checklist mutation and replacement-delta application lives in `RollupIncrementalIndex+Mutation.swift`.
 
 This structural work is real, but it does not make every production file small or single-purpose. The remaining concentrations below must not be hidden behind a blanket “refactor complete” claim.
 
@@ -33,13 +35,12 @@ These are the highest-priority mixed-responsibility owners, not an exhaustive li
 
 | Area | Current concentration | Preferred boundary |
 | --- | --- | --- |
-| `timetrackerWatchApp/WatchAppStore.swift` | Observable snapshot state, durable queue/timeout lifecycle, transport, payload application, freshness, error recording, and `WCSessionDelegate` callbacks share one owner | Separate queue lifecycle from the WCSession adapter only when tests can preserve same-ID retry, durable ack, timeout, stale-state, and reconnect semantics |
 | `Features/Home/HomeViews.swift` | Desktop wrapper, phone root, priority-ordered Today list, accessibility-size alternatives, and header support remain together | Keep Today section ordering in one composition owner, but move platform wrappers/header support when the next Home change requires it |
 | `Features/Tasks/Management/TaskManagementRowViews.swift` | Flat-row presentation and its complete action/menu/accessibility surface remain together | Extract action/menu support from the canonical row without splitting one logical row into unstable identities |
 | `Features/Analytics/Sections/AnalyticsDecisionViews.swift` | Insight, forecast, rhythm, quality, and overlap presentation remain in one section family | Split by decision, forecast, and quality/overlap section families if those screens evolve independently |
 | `Features/Settings/SettingsViews.swift` | Category navigation, export/confirmation presentation, AI configuration presentation, and category-to-section routing remain together | Keep the category router authoritative; move modal/export orchestration into focused support only when it improves reviewability |
 
-Sync is no longer a line-size concentration, but it remains the highest semantic-risk subsystem because it combines security-, migration-, export-, and synchronization-sensitive behavior. Mechanical file movement alone is not completion: deterministic LWW/tombstone behavior, sensitive-key filtering, atomic restore behavior, force-upload recovery, legacy-state checkpoint invalidation, and per-domain snapshot tests must remain green after every change. The largest remaining production concentrations are now the Watch connectivity store plus a few feature composition/row files listed above.
+Sync is no longer a line-size concentration, but it remains the highest semantic-risk subsystem because it combines security-, migration-, export-, and synchronization-sensitive behavior. Mechanical file movement alone is not completion: deterministic LWW/tombstone behavior, sensitive-key filtering, atomic restore behavior, force-upload recovery, legacy-state checkpoint invalidation, and per-domain snapshot tests must remain green after every change. The largest remaining production concentrations are the feature composition/row files listed above.
 
 ## Completed Structural Work
 
@@ -60,8 +61,10 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 - Sync-conflict bootstrap/prompt, local mutation, Cloud import/export, recovery/resolution, state persistence, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and organization/ledger/planning/checklist/Inbox record DTOs are split by responsibility.
 - `TimeTrackerStore+Configuration.swift` owns first configuration, repository-only attachment, and committed-mutation surface refresh; `TimeTrackerStore+Lifecycle.swift` owns generic refresh, mutation, recovery, and error boundaries.
 - Widget entry/provider/configuration, active-timer views, supplementary states, and support helpers are split into `TimeTrackerWidget.swift`, `ActiveTimerWidgetView.swift`, `WidgetSupplementaryViews.swift`, and `WidgetSupport.swift`.
-- Watch UI composition is split into `WatchDashboardView.swift`, `WatchTimerRows.swift`, `WatchStatusViews.swift`, and `WatchColorSupport.swift`; `WatchAppStore.swift` remains the single queue/connectivity state owner.
-- Source-layout tests guard the important boundaries so new work does not rebuild the earlier large-file problem.
+- Watch UI composition is split into `WatchDashboardView.swift`, `WatchTimerRows.swift`, `WatchStatusViews.swift`, and `WatchColorSupport.swift`; the store family is split into observable state/restore (`WatchAppStore.swift`), commands/queue timeout/persistence (`WatchAppStore+Commands.swift`), and WCSession connectivity/payload/freshness (`WatchAppStore+Connectivity.swift`).
+- Ledger ordered-array mutation/index maintenance is split into `LedgerStore+FlatSegmentIndex.swift`; `LedgerStore+SegmentIndex.swift` retains day/change indexing and scoped replacement coordination.
+- Rollup scoped mutation/replacement logic is split into `RollupIncrementalIndex+Mutation.swift`; the base type retains state and full rebuild, with pace, topology, and activity in their existing focused extensions.
+- Source-layout tests guard the important boundaries so new work does not rebuild the earlier large-file problem; the current focused suite includes file-existence and per-family size contracts for all three splits.
 
 ## Refactor Principles
 

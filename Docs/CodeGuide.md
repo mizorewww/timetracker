@@ -60,7 +60,7 @@
 
 `Features/Inspector`、`PhoneChromeViews`、Home 通用年月日进度卡、Pomodoro 自绘高刷新转场、`SettingsSectionsViews.swift` 和 `TimeTrackerServices.swift` 已不存在；不要继续把它们当作当前模块或扩展点。
 
-本轮已完成九组关键职责拆分：
+本轮已完成以下关键职责拆分：
 
 - Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
 - Analytics：root landing page 与 `AnalyticsCategoryDetailView` 分文件；category 使用 typed `NavigationLink(value:)` / `navigationDestination` 路由，overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 各有所有者。
@@ -70,9 +70,10 @@
 - Ledger infrastructure：Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 与 summary 分文件。
 - Facade lifecycle：`TimeTrackerStore+Configuration.swift` 只负责首次配置、repository-only 系统表面组装和 post-commit surface refresh；`TimeTrackerStore+Lifecycle.swift` 负责 refresh、mutation 边界、恢复动作和通用错误，不再把启动迁移/seed/observer 安装混在同一大扩展。
 - Widget：entry/provider/config、active-timer family layouts、supplementary/error states 与 deep-link/localization/color support 分文件。
-- Watch：dashboard orchestration、timer rows、status/error/empty states 与 color support 分文件；`WatchAppStore` 保持 queue/connectivity state 单一所有者。
+- Watch：dashboard orchestration、timer rows、status/error/empty states 与 color support 分文件；`WatchAppStore.swift` 保留 observable state/安全恢复，`WatchAppStore+Commands.swift` 负责 queue/timeout/persistence，`WatchAppStore+Connectivity.swift` 负责 WCSession transport/payload/freshness/delegate。
+- Ledger/Rollup index：ordered flat segment array mutation 独立到 `LedgerStore+FlatSegmentIndex.swift`；增量 rollup 的 scoped mutation/replacement 独立到 `RollupIncrementalIndex+Mutation.swift`。
 
-分层不等于所有文件都已完成单一职责拆分。当前仍集中的 Watch connectivity store、Home 根组合与部分大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的九组拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
+分层不等于所有文件都已完成单一职责拆分。当前仍集中的 Home 根组合与部分大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
 
 ## 3. 运行时数据流
 
@@ -152,9 +153,9 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ### 增量读模型与缓存
 
-- `LedgerStore` 初次加载建立 segment ID、day、active、time-sensitive、array-index 和 session index；带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。active 和 future-ended closed row 在时钟向前时局部重评；检测到 clock rewind 时全量重评，因为任何历史结束时间都可能重新跨过 `now`。
+- `LedgerStore` 初次加载建立 segment ID、day、active、time-sensitive、array-index 和 session index；`LedgerStore+SegmentIndex.swift` 协调 day/change index 与 scoped replacement，`LedgerStore+FlatSegmentIndex.swift` 用稳定 start/UUID 顺序维护 UI 所需 flat array。带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。active 和 future-ended closed row 在时钟向前时局部重评；检测到 clock rewind 时全量重评，因为任何历史结束时间都可能重新跨过 `now`。
 - `ChecklistStore.refreshTaskScoped` 只替换受影响 task 的 items/visuals，并同步维护 facade bucket，不在每次 toggle 后重新按全库分组。
-- `RollupIncrementalIndex` 保存任务拓扑、segment delta、活动摘要、checklist 进度和近期日 bucket。普通 mutation 的工作量由变更记录、任务自身与祖先深度决定；完整历史 worked seconds 始终精确。
+- `RollupIncrementalIndex` 保存任务拓扑、segment delta、活动摘要、checklist 进度和近期日 bucket；base 文件负责状态与 full rebuild，`RollupIncrementalIndex+Mutation.swift` 负责 scoped delta/replacement 应用。普通 mutation 的工作量由变更记录、任务自身与祖先深度决定；完整历史 worked seconds 始终精确。
 - `TaskEstimatePolicy` 统一预计时长输入与旧数据规范化：`0...600` 分钟、`0` 表示未设置、正数最多 36,000 秒。明确预计时长只属于当前任务自身，预计总时长至少等于已经记录的时间；没有明确值时才使用 checklist 证据模型，子任务始终单独递归汇总。
 - Forecast pace 使用包含今天在内的最近 90 个本地日，只对有记录的活跃日求日均；它只把已有 remaining seconds 换算为预计活跃日，不生成 remaining seconds。Calendar/时区变化会重建这组有界 bucket。
 - `AnalyticsStore` 的 overview 与 task snapshot cache key 包含 range、真实 period start 和可选 live-minute bucket。仅当前范围与活动 segment 相交时按分钟换 key；历史/静态范围稳定复用。ledger 事件按相交区间失效 day bucket，跨 period 会自然 miss。
@@ -243,6 +244,8 @@ Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新�
 Live Activity 是状态投影。Activity attributes 应保持小而稳定，不保存唯一业务事实。Activity 的 task identity、停止 deep link 和主应用命令必须一致；更新失败应重试或降级显示，但不应阻断主应用写入。扩展对任务文本使用隐私处理，并明确显示 stale 状态。
 
 ### Watch
+
+Watch target 的状态 owner 是同一个 `WatchAppStore` 类型，但职责按 extension 文件拆开：base 文件只持有 observable state、依赖和恢复；Commands 文件处理 submit/retry/discard、20 秒确认 timeout 与本机 queue persistence；Connectivity 文件处理 WCSession activation/transmit、payload/result/snapshot application、freshness/error 和 delegate callbacks。新增逻辑应进入对应 owner，不能重新把 transport 与 queue lifecycle 混回 base 文件。
 
 Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；Watch 把队列编码到本地 UserDefaults，并同时走 durable `transferUserInfo` 与可达 `sendMessage`。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID、刷新 `issuedAt`，用户也可 discard。`WatchCommandProcessor` 在 receipt lookup 后、任何 mutation 前校验 DTO 和时间边界：命令最多保留 30 秒，允许最多 5 分钟的未来设备时钟偏差；过期/非法命令返回 invalid 且不写 receipt 或 ledger，因此用户仍可用同 ID 明确重试。快照反射只为旧手机兼容确认。Watch UI 以 Active Timer 为第一优先级，并区分首次等待、发送、排队、失败、离线和 stale。主 target 的 codec/state/processor 测试不能替代真机往返验证。
 

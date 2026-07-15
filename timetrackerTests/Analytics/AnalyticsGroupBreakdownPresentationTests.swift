@@ -4,6 +4,19 @@ import Testing
 
 struct AnalyticsGroupBreakdownPresentationTests {
     @Test @MainActor
+    func zeroDataKeepsTheBreakdownEmpty() {
+        let presentation = AnalyticsGroupBreakdownPresentation.make(
+            items: [],
+            reportedTotalSeconds: 0,
+            otherTitle: "Other",
+            otherSubtitle: "Combined smaller groups"
+        )
+
+        #expect(presentation.items.isEmpty)
+        #expect(presentation.totalSeconds == 0)
+    }
+
+    @Test @MainActor
     func presentationAggregatesHiddenGroupsIntoNamedOtherItem() {
         let points = (1...8).map { index in
             AnalyticsGroupBreakdownPoint(

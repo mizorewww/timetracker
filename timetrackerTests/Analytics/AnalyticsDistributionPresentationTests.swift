@@ -4,6 +4,18 @@ import Testing
 
 struct AnalyticsDistributionPresentationTests {
     @Test @MainActor
+    func zeroDataKeepsTheDistributionEmpty() {
+        let presentation = TaskDistributionPresentation.make(
+            tasks: [],
+            reportedTotalSeconds: 0,
+            otherTitle: "Other"
+        )
+
+        #expect(presentation.slices.isEmpty)
+        #expect(presentation.totalSeconds == 0)
+    }
+
+    @Test @MainActor
     func distributionAggregatesHiddenAndUnattributedTimeIntoOther() {
         let tasks = (0..<5).map { index in
             TaskAnalyticsPoint(

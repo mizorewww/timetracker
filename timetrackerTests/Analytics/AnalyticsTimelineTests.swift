@@ -411,11 +411,16 @@ struct AnalyticsTimelineTests {
     @Test
     func analyticsTaskDistributionUsesTaskBucketsAndTaskColors() throws {
         let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
+        let categorySource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("id: task.taskID.uuidString"))
         #expect(analyticsSource.contains("colorHex: task.colorHex"))
         #expect(analyticsSource.contains("point.status?.rawValue") == false)
+        #expect(categorySource.contains("totalSeconds: snapshot.overview.grossSeconds"))
+        #expect(categorySource.contains("totalSeconds: max(snapshot.overview.grossSeconds, 1)") == false)
+        #expect(categorySource.contains("max(snapshot.rootBreakdown.reduce") == false)
+        #expect(categorySource.contains("max(snapshot.categoryBreakdown.reduce") == false)
         #expect(englishStrings.contains("Task Status Distribution") == false)
         #expect(englishStrings.contains("\"analytics.taskUsage.title\" = \"Task Distribution\";"))
     }

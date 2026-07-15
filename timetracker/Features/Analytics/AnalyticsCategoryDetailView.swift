@@ -104,7 +104,7 @@ struct AnalyticsCategoryDetailView: View {
             ) {
                 TaskDonutContent(
                     tasks: snapshot.taskBreakdown,
-                    totalSeconds: max(snapshot.overview.grossSeconds, 1)
+                    totalSeconds: snapshot.overview.grossSeconds
                 )
             }
             AnalyticsDetailSection(
@@ -113,7 +113,7 @@ struct AnalyticsCategoryDetailView: View {
             ) {
                 AnalyticsGroupBreakdownContent(
                     items: snapshot.rootBreakdown,
-                    totalSeconds: max(snapshot.rootBreakdown.reduce(0) { $0 + $1.grossSeconds }, 1)
+                    totalSeconds: snapshot.rootBreakdown.reduce(0) { $0 + $1.grossSeconds }
                 )
             }
             AnalyticsDetailSection(
@@ -122,7 +122,7 @@ struct AnalyticsCategoryDetailView: View {
             ) {
                 AnalyticsGroupBreakdownContent(
                     items: snapshot.categoryBreakdown,
-                    totalSeconds: max(snapshot.categoryBreakdown.reduce(0) { $0 + $1.grossSeconds }, 1)
+                    totalSeconds: snapshot.categoryBreakdown.reduce(0) { $0 + $1.grossSeconds }
                 )
             }
         case .pomodoro:

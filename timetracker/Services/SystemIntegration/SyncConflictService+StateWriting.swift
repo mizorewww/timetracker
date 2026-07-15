@@ -1,6 +1,6 @@
 import Foundation
 
-struct SyncConflictLocalStateByteLimits: Equatable, Sendable {
+nonisolated struct SyncConflictLocalStateByteLimits: Equatable, Sendable {
     let maximumStateFileByteCount: Int
     let maximumRecoverySnapshotFileByteCount: Int
 

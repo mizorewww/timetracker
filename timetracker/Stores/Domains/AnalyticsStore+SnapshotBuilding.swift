@@ -13,18 +13,48 @@ extension AnalyticsStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
+        let period = analyticsInterval(for: range, now: now, calendar: calendar)
+            ?? DateInterval(start: now, duration: 0)
+        return snapshot(
+            range: range,
+            period: period,
+            tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            evaluatedAt: now,
+            calendar: calendar
+        )
+    }
+
+    func snapshot(
+        range: AnalyticsRange,
+        period: DateInterval,
+        tasks: [TaskNode],
+        taskCategories: [TaskCategory] = [],
+        taskCategoryAssignments: [TaskCategoryAssignment] = [],
+        segments: [TimeSegment],
+        sessions: [TimeSession],
+        taskPathByID: [UUID: String],
+        taskParentPathByID: [UUID: String],
+        evaluatedAt cutoff: Date,
+        calendar: Calendar = .current
+    ) -> AnalyticsSnapshot {
         PerformanceSignpost.interval("Analytics snapshot generation") {
             let canonicalSegments = segments.deduplicatedByID()
             let rangeSegments = segmentsForAnalytics(
                 canonicalSegments,
-                range: range,
-                now: now,
-                calendar: calendar
+                interval: period,
+                evaluatedAt: cutoff
             )
             let daily = dailyBreakdown(
                 segments: rangeSegments,
                 range: range,
-                now: now,
+                interval: period,
+                evaluatedAt: cutoff,
                 calendar: calendar
             )
             return analyticsSnapshot(
@@ -38,7 +68,8 @@ extension AnalyticsStore {
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
                 daily: daily,
-                now: now,
+                period: period,
+                evaluatedAt: cutoff,
                 calendar: calendar
             )
         }
@@ -54,10 +85,17 @@ extension AnalyticsStore {
         sessions: [TimeSession],
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
-        now: Date,
+        period: DateInterval,
+        evaluatedAt cutoff: Date,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
-        let daily = cachedDailyBreakdown(segments: rangeSegments, range: range, now: now, calendar: calendar)
+        let daily = cachedDailyBreakdown(
+            segments: rangeSegments,
+            range: range,
+            interval: period,
+            evaluatedAt: cutoff,
+            calendar: calendar
+        )
         return analyticsSnapshot(
             range: range,
             tasks: tasks,
@@ -69,7 +107,8 @@ extension AnalyticsStore {
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
             daily: daily,
-            now: now,
+            period: period,
+            evaluatedAt: cutoff,
             calendar: calendar
         )
     }
@@ -85,12 +124,15 @@ extension AnalyticsStore {
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         daily: [DailyAnalyticsPoint],
-        now: Date,
+        period: DateInterval,
+        evaluatedAt cutoff: Date,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
-        let boundedRangeSegments = analyticsInterval(for: range, now: now, calendar: calendar).map {
-            boundedSegments(rangeSegments.deduplicatedByID(), in: $0, now: now)
-        } ?? []
+        let boundedRangeSegments = boundedSegments(
+            rangeSegments.deduplicatedByID(),
+            in: period,
+            now: cutoff
+        )
         let overview = overview(items: boundedRangeSegments)
         let taskBreakdown = taskBreakdown(
             items: boundedRangeSegments,
@@ -98,26 +140,41 @@ extension AnalyticsStore {
             sessions: sessions,
             taskPathByID: taskPathByID
         )
-        let comparison = comparison(segments: allSegments, range: range, now: now, calendar: calendar)
-        let rhythm = rhythm(segments: rangeSegments, range: range, now: now, calendar: calendar)
-        let quality = quality(segments: rangeSegments, range: range, now: now, calendar: calendar)
+        let comparison = comparison(
+            segments: allSegments,
+            range: range,
+            currentInterval: period,
+            evaluatedAt: cutoff,
+            calendar: calendar
+        )
+        let rhythm = rhythm(
+            segments: rangeSegments,
+            interval: period,
+            taskIDs: nil,
+            now: cutoff,
+            calendar: calendar
+        )
+        let quality = quality(
+            segments: rangeSegments,
+            interval: period,
+            taskIDs: nil,
+            now: cutoff
+        )
         let rootBreakdown = rootBreakdown(
             segments: rangeSegments,
             tasks: tasks,
             sessions: sessions,
             taskPathByID: taskPathByID,
-            range: range,
-            now: now,
-            calendar: calendar
+            interval: period,
+            evaluatedAt: cutoff
         )
         let categoryBreakdown = categoryBreakdown(
             segments: rangeSegments,
             tasks: tasks,
             taskCategories: taskCategories,
             taskCategoryAssignments: taskCategoryAssignments,
-            range: range,
-            now: now,
-            calendar: calendar
+            interval: period,
+            evaluatedAt: cutoff
         )
         return AnalyticsSnapshot(
             range: range,
@@ -138,8 +195,8 @@ extension AnalyticsStore {
                     segments: rangeSegments,
                     tasks: tasks,
                     sessions: sessions,
-                    date: now,
-                    now: now,
+                    date: period.start,
+                    now: cutoff,
                     calendar: calendar
                 )
                 : [],
@@ -149,8 +206,8 @@ extension AnalyticsStore {
                     tasks: tasks,
                     sessions: sessions,
                     taskParentPathByID: taskParentPathByID,
-                    date: now,
-                    now: now,
+                    date: period.start,
+                    now: cutoff,
                     calendar: calendar
                 )
                 : .empty,

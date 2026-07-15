@@ -55,7 +55,28 @@ extension AnalyticsStore {
         calendar: Calendar
     ) -> [DailyAnalyticsPoint] {
         guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
-        return DailySummaryService().summaries(segments: segments, interval: interval, now: now, calendar: calendar).map { summary in
+        return dailyBreakdown(
+            segments: segments,
+            range: range,
+            interval: interval,
+            evaluatedAt: now,
+            calendar: calendar
+        )
+    }
+
+    func dailyBreakdown(
+        segments: [TimeSegment],
+        range: AnalyticsRange,
+        interval: DateInterval,
+        evaluatedAt cutoff: Date,
+        calendar: Calendar
+    ) -> [DailyAnalyticsPoint] {
+        DailySummaryService().summaries(
+            segments: segments,
+            interval: interval,
+            now: cutoff,
+            calendar: calendar
+        ).map { summary in
             DailyAnalyticsPoint(
                 date: summary.date,
                 grossSeconds: summary.grossSeconds,
@@ -72,7 +93,28 @@ extension AnalyticsStore {
         calendar: Calendar
     ) -> [DailyAnalyticsPoint] {
         guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
-        return ledgerBucketCache.summaries(segments: segments, interval: interval, now: now, calendar: calendar).map { summary in
+        return cachedDailyBreakdown(
+            segments: segments,
+            range: range,
+            interval: interval,
+            evaluatedAt: now,
+            calendar: calendar
+        )
+    }
+
+    mutating func cachedDailyBreakdown(
+        segments: [TimeSegment],
+        range: AnalyticsRange,
+        interval: DateInterval,
+        evaluatedAt cutoff: Date,
+        calendar: Calendar
+    ) -> [DailyAnalyticsPoint] {
+        ledgerBucketCache.summaries(
+            segments: segments,
+            interval: interval,
+            now: cutoff,
+            calendar: calendar
+        ).map { summary in
             DailyAnalyticsPoint(
                 date: summary.date,
                 grossSeconds: summary.grossSeconds,
@@ -84,7 +126,15 @@ extension AnalyticsStore {
 
     func segmentsForAnalytics(_ segments: [TimeSegment], range: AnalyticsRange, now: Date, calendar: Calendar) -> [TimeSegment] {
         guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return segments }
-        return segments.filter { overlaps($0, interval: interval, now: now) }
+        return segmentsForAnalytics(segments, interval: interval, evaluatedAt: now)
+    }
+
+    func segmentsForAnalytics(
+        _ segments: [TimeSegment],
+        interval: DateInterval,
+        evaluatedAt cutoff: Date
+    ) -> [TimeSegment] {
+        segments.filter { overlaps($0, interval: interval, now: cutoff) }
     }
 
     func taskBreakdown(

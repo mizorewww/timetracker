@@ -356,6 +356,130 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func explicitHistoricalPeriodsPreserveTheirFinalSecondAndOpenSegmentBoundary() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let liveNow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 16, hour: 12))
+        )
+        let reference = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 14, hour: 12))
+        )
+        let task = TaskNode(title: "Historical", parentID: nil, deviceID: "test")
+
+        for range in AnalyticsRange.allCases {
+            let evaluation = range.evaluation(
+                referenceDate: reference,
+                liveNow: liveNow,
+                calendar: calendar
+            )
+            let finalSecondSession = TimeSession(
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: evaluation.interval.end.addingTimeInterval(-1),
+                titleSnapshot: task.title
+            )
+            let finalSecond = TimeSegment(
+                sessionID: finalSecondSession.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: finalSecondSession.startedAt,
+                endedAt: evaluation.interval.end
+            )
+            let zeroLength = TimeSegment(
+                sessionID: finalSecondSession.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: evaluation.interval.end,
+                endedAt: evaluation.interval.end
+            )
+
+            let snapshot = AnalyticsStore().snapshot(
+                range: range,
+                period: evaluation.interval,
+                tasks: [task],
+                segments: [finalSecond, zeroLength],
+                sessions: [finalSecondSession],
+                taskPathByID: [task.id: task.title],
+                taskParentPathByID: [:],
+                evaluatedAt: evaluation.cutoff,
+                calendar: calendar
+            )
+
+            #expect(snapshot.overview.grossSeconds == 1)
+            #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 1)
+        }
+
+        let day = try #require(AnalyticsRange.today.interval(containing: reference, calendar: calendar))
+        let openSession = TimeSession(
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: day.end.addingTimeInterval(-3_600),
+            titleSnapshot: task.title
+        )
+        let openSegment = TimeSegment(
+            sessionID: openSession.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: openSession.startedAt
+        )
+        let openSnapshot = AnalyticsStore().snapshot(
+            range: .today,
+            period: day,
+            tasks: [task],
+            segments: [openSegment],
+            sessions: [openSession],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            evaluatedAt: day.end,
+            calendar: calendar
+        )
+
+        #expect(openSnapshot.overview.grossSeconds == 3_600)
+    }
+
+    @Test @MainActor
+    func explicitSnapshotCacheUsesTheSelectedPeriodStartInsteadOfItsCutoff() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let reference = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let liveNow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 16, hour: 12))
+        )
+        let evaluation = AnalyticsRange.today.evaluation(
+            referenceDate: reference,
+            liveNow: liveNow,
+            calendar: calendar
+        )
+        var store = AnalyticsStore()
+
+        store.refreshSnapshot(
+            range: .today,
+            period: evaluation.interval,
+            tasks: [],
+            segments: [],
+            sessions: [],
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            evaluatedAt: evaluation.cutoff,
+            calendar: calendar
+        )
+
+        #expect(store.cachedSnapshot(for: .today, period: evaluation.interval) != nil)
+        let nextPeriod = try #require(
+            AnalyticsRange.today.interval(containing: liveNow, calendar: calendar)
+        )
+        #expect(store.cachedSnapshot(for: .today, period: nextPeriod) == nil)
+    }
+
+    @Test @MainActor
     func taskSnapshotCacheReplacesLiveBucketsAndStaysGloballyBounded() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))

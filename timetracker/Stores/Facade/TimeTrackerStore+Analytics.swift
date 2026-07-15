@@ -2,20 +2,36 @@ import Foundation
 
 extension TimeTrackerStore {
     func analyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsSnapshot {
-        let liveRefreshBucket = analyticsLiveRefreshBucket(for: range, now: now)
+        analyticsSnapshot(
+            for: range,
+            evaluation: range.evaluation(referenceDate: now, liveNow: now)
+        )
+    }
+
+    func analyticsSnapshot(
+        for range: AnalyticsRange,
+        evaluation: AnalyticsPeriodEvaluation,
+        calendar: Calendar = .current
+    ) -> AnalyticsSnapshot {
+        let liveRefreshBucket = analyticsLiveRefreshBucket(for: evaluation)
         if let snapshot = analyticsDomainStore.cachedSnapshot(
             for: range,
-            now: now,
+            period: evaluation.interval,
             liveRefreshBucket: liveRefreshBucket
         ) {
             return snapshot
         }
 
-        let segments = analyticsSegments(for: range, now: now)
+        let segments = analyticsSegments(
+            for: range,
+            evaluation: evaluation,
+            calendar: calendar
+        )
         let sessions = visibleSessions(for: segments)
         var store = analyticsDomainStore
         let snapshot = store.refreshSnapshot(
             range: range,
+            period: evaluation.interval,
             tasks: tasks,
             taskCategories: taskCategories,
             taskCategoryAssignments: taskCategoryAssignments,
@@ -23,8 +39,9 @@ extension TimeTrackerStore {
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
-            now: now,
-            liveRefreshBucket: liveRefreshBucket
+            evaluatedAt: evaluation.cutoff,
+            liveRefreshBucket: liveRefreshBucket,
+            calendar: calendar
         )
         analyticsDomainStore = store
         return snapshot
@@ -35,11 +52,17 @@ extension TimeTrackerStore {
     }
 
     func refreshAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) {
-        let segments = analyticsSegments(for: range, now: now)
+        let evaluation = range.evaluation(referenceDate: now, liveNow: now)
+        let segments = analyticsSegments(
+            for: range,
+            evaluation: evaluation,
+            calendar: .current
+        )
         let sessions = visibleSessions(for: segments)
         var store = analyticsDomainStore
         store.refreshSnapshot(
             range: range,
+            period: evaluation.interval,
             tasks: tasks,
             taskCategories: taskCategories,
             taskCategoryAssignments: taskCategoryAssignments,
@@ -47,7 +70,7 @@ extension TimeTrackerStore {
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
-            now: now
+            evaluatedAt: evaluation.cutoff
         )
         analyticsDomainStore = store
     }
@@ -98,19 +121,33 @@ extension TimeTrackerStore {
         taskIDs: Set<UUID>? = nil,
         calendar: Calendar = .current
     ) -> Int? {
-        guard let interval = range.interval(containing: now, calendar: calendar) else { return nil }
+        analyticsLiveRefreshBucket(
+            for: range.evaluation(
+                referenceDate: now,
+                liveNow: now,
+                calendar: calendar
+            ),
+            taskIDs: taskIDs
+        )
+    }
+
+    func analyticsLiveRefreshBucket(
+        for evaluation: AnalyticsPeriodEvaluation,
+        taskIDs: Set<UUID>? = nil
+    ) -> Int? {
+        guard evaluation.interval.contains(evaluation.clockReference) else { return nil }
         let hasOverlappingActiveSegment = activeSegments.contains { segment in
             guard segment.deletedAt == nil,
                   taskIDs?.contains(segment.taskID) ?? true else { return false }
             return TrackedTimePolicy.overlaps(
                 startedAt: segment.startedAt,
                 endedAt: segment.endedAt,
-                interval: interval,
-                now: now
+                interval: evaluation.interval,
+                now: evaluation.cutoff
             )
         }
         guard hasOverlappingActiveSegment else { return nil }
-        return Int(now.timeIntervalSinceReferenceDate / 60)
+        return Int(evaluation.clockReference.timeIntervalSinceReferenceDate / 60)
     }
 
     func analyticsOverview(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsOverview {
@@ -138,14 +175,22 @@ extension TimeTrackerStore {
         analyticsSnapshot(for: range, now: now).overlaps
     }
 
-    private func analyticsSegments(for range: AnalyticsRange, now: Date) -> [TimeSegment] {
-        guard let current = range.interval(containing: now, calendar: .current) else { return [] }
+    private func analyticsSegments(
+        for range: AnalyticsRange,
+        evaluation: AnalyticsPeriodEvaluation,
+        calendar: Calendar
+    ) -> [TimeSegment] {
+        let current = evaluation.interval
         let previous = analyticsDomainStore.previousDecisionInterval(
             for: range,
             currentInterval: current,
-            calendar: .current
+            calendar: calendar
         )
         let interval = DateInterval(start: previous?.start ?? current.start, end: current.end)
-        return visibleSegments(overlapping: interval, now: now)
+        return visibleSegments(
+            overlapping: interval,
+            evaluatedAt: evaluation.cutoff,
+            clockReference: evaluation.clockReference
+        )
     }
 }

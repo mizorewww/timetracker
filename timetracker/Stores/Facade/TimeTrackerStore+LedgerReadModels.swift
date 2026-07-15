@@ -137,8 +137,24 @@ extension TimeTrackerStore {
     }
 
     func visibleSegments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {
+        visibleSegments(
+            overlapping: interval,
+            evaluatedAt: now,
+            clockReference: now
+        )
+    }
+
+    func visibleSegments(
+        overlapping interval: DateInterval,
+        evaluatedAt cutoff: Date,
+        clockReference: Date
+    ) -> [TimeSegment] {
         if ledgerDomainStore.hasIndexedSegmentHistory {
-            return ledgerDomainStore.segments(overlapping: interval, now: now)
+            return ledgerDomainStore.segments(
+                overlapping: interval,
+                evaluatedAt: cutoff,
+                clockReference: clockReference
+            )
                 .filter(isReadableLedgerSegment)
         }
         return allSegments.filter { segment in
@@ -147,7 +163,7 @@ extension TimeTrackerStore {
                 startedAt: segment.startedAt,
                 endedAt: segment.endedAt,
                 interval: interval,
-                now: now
+                now: cutoff
             )
         }
     }

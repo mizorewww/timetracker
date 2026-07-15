@@ -13,6 +13,73 @@ struct AnalyticsPeriodSelectionTests {
     }
 
     @Test
+    func evaluationSeparatesSelectedPeriodCutoffAndWallClock() throws {
+        let liveNow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 16, hour: 12))
+        )
+        let historicalReference = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 9))
+        )
+        let futureReference = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 18, hour: 9))
+        )
+
+        let current = AnalyticsRange.today.evaluation(
+            referenceDate: liveNow,
+            liveNow: liveNow,
+            calendar: calendar
+        )
+        let historical = AnalyticsRange.today.evaluation(
+            referenceDate: historicalReference,
+            liveNow: liveNow,
+            calendar: calendar
+        )
+        let future = AnalyticsRange.today.evaluation(
+            referenceDate: futureReference,
+            liveNow: liveNow,
+            calendar: calendar
+        )
+
+        #expect(current.cutoff == liveNow)
+        #expect(current.clockReference == liveNow)
+        #expect(historical.cutoff == historical.interval.end)
+        #expect(historical.clockReference == liveNow)
+        #expect(future.cutoff == future.interval.start)
+        #expect(future.clockReference == liveNow)
+    }
+
+    @Test
+    func historicalEvaluationUsesExactCalendarBoundariesAcrossDST() throws {
+        var losAngeles = calendar
+        losAngeles.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let liveNow = try #require(
+            losAngeles.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 12))
+        )
+        let springReference = try #require(
+            losAngeles.date(from: DateComponents(year: 2026, month: 3, day: 8, hour: 12))
+        )
+        let fallReference = try #require(
+            losAngeles.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 12))
+        )
+
+        let spring = AnalyticsRange.today.evaluation(
+            referenceDate: springReference,
+            liveNow: liveNow,
+            calendar: losAngeles
+        )
+        let fall = AnalyticsRange.today.evaluation(
+            referenceDate: fallReference,
+            liveNow: liveNow,
+            calendar: losAngeles
+        )
+
+        #expect(spring.interval.duration == 23 * 3_600)
+        #expect(fall.interval.duration == 25 * 3_600)
+        #expect(spring.cutoff == spring.interval.end)
+        #expect(fall.cutoff == fall.interval.end)
+    }
+
+    @Test
     func previousNavigationMovesByTheSelectedCalendarPeriod() throws {
         let liveNow = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 16, hour: 12)))
 

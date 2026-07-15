@@ -173,49 +173,7 @@ enum AnalyticsPeriodNavigation {
     }
 }
 
-extension AnalyticsRange {
-    func interval(containing date: Date, calendar: Calendar = .current) -> DateInterval? {
-        switch self {
-        case .today:
-            return calendar.dateInterval(of: .day, for: date)
-        case .week:
-            return calendar.dateInterval(of: .weekOfYear, for: date)
-        case .month:
-            return calendar.dateInterval(of: .month, for: date)
-        }
-    }
-
-    func effectiveSnapshotDate(referenceDate: Date, liveNow: Date, calendar: Calendar = .current) -> Date {
-        guard let selectedInterval = interval(containing: referenceDate, calendar: calendar) else {
-            return liveNow
-        }
-        if selectedInterval.contains(liveNow) {
-            return liveNow
-        }
-        return selectedInterval.end.addingTimeInterval(-1)
-    }
-
-    func isCurrentPeriod(_ date: Date, liveNow: Date, calendar: Calendar = .current) -> Bool {
-        guard let selected = interval(containing: date, calendar: calendar),
-              let current = interval(containing: liveNow, calendar: calendar) else {
-            return false
-        }
-        return selected.start == current.start
-    }
-
-    func date(byAdding value: Int, to date: Date, calendar: Calendar = .current) -> Date? {
-        switch self {
-        case .today:
-            return calendar.date(byAdding: .day, value: value, to: date)
-        case .week:
-            return calendar.date(byAdding: .weekOfYear, value: value, to: date)
-        case .month:
-            return calendar.date(byAdding: .month, value: value, to: date)
-        }
-    }
-}
-
-struct AnalyticsSnapshotRequest: Hashable {
+nonisolated struct AnalyticsSnapshotRequest: Hashable, Sendable {
     let range: AnalyticsRange
     let periodStart: Date
     let revision: UInt
@@ -223,13 +181,12 @@ struct AnalyticsSnapshotRequest: Hashable {
 
     init(
         range: AnalyticsRange,
-        referenceDate: Date,
+        evaluation: AnalyticsPeriodEvaluation,
         revision: UInt,
-        liveRefreshBucket: Int?,
-        calendar: Calendar = .current
+        liveRefreshBucket: Int?
     ) {
         self.range = range
-        periodStart = range.interval(containing: referenceDate, calendar: calendar)?.start ?? referenceDate
+        periodStart = evaluation.interval.start
         self.revision = revision
         self.liveRefreshBucket = liveRefreshBucket
     }

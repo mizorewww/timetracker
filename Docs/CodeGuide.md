@@ -120,6 +120,8 @@ TimeSegment 是计时事实来源。它不是“写入后永不可改”的 even
 
 `TrackedTimePolicy` 是所有已记录时长的唯一读侧边界。对明确的 reference `now`：effective end 为 `min(endedAt ?? now, now)`，再与查询的半开 `DateInterval` 取交集；`startedAt >= now` 或无正区间的记录贡献零。统计、gross/wall/overlap、Analytics、Forecast、Pomodoro elapsed、timeline layout、repository range query、cache signature 和 rollup 都必须调用该 policy，不得在 view/formatter 中直接使用 `endedAt ?? Date()`。
 
+Analytics 不能把一个历史周期压缩成单个“结束前一秒”的伪 `now`。`AnalyticsPeriodEvaluation` 显式携带三项：选中的 Calendar `interval`、用于 `TrackedTimePolicy` 裁剪的 `cutoff`、用于识别真实系统时钟回拨的 `clockReference`。当前周期的 cutoff 是真实墙钟；已完成历史周期的 cutoff 必须精确等于半开区间的 `end`，未来周期的 cutoff 是 `start`。Ledger 的 range query 分别接收 `evaluatedAt` 和 `clockReference`；只有后者早于 index evaluation date 才能触发全库回拨候选，禁止把历史 cutoff 当作时钟回拨。
+
 本地 `addManualSegment` 和 `updateSegment` 在 repository 写入前拒绝未来结束时间或未来 active start，返回 typed `TimeTrackingRepositoryError.futureTime` 与三语 `segment.error.timeNotFuture`。CloudKit、导入和旧 store 可能已含时钟偏差值；不为“修复”而删除事实，而是在每条读/聚合路径安全裁剪。DST 中的持续时长使用绝对 elapsed seconds，本地日 bucket 边界仍交给 `Calendar`。
 
 SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditorPanel` 的开始/结束 `DatePicker` 上限为当前 `now`，时长与保存 enablement 调用 `TrackedTimePolicy`。`TrackedTimeDisplaySnapshot` 是 Today timeline、Task Detail recent records 和 `DurationLabel` 的共享显示适配层；future-ended 只显示到 `now`，future-only/future-active 在开始前显示 0，已结束的固定 label 不启动每秒刷新。
@@ -162,13 +164,13 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ### 增量读模型与缓存
 
-- `LedgerStore` 初次加载建立 segment ID、day、active、time-sensitive、array-index 和 session index；`LedgerStore+SegmentIndex.swift` 协调 day/change index 与 scoped replacement，`LedgerStore+FlatSegmentIndex.swift` 用稳定 start/UUID 顺序维护 UI 所需 flat array。带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。active 和 future-ended closed row 在时钟向前时局部重评；检测到 clock rewind 时全量重评，因为任何历史结束时间都可能重新跨过 `now`。
+- `LedgerStore` 初次加载建立 segment ID、day、active、time-sensitive、array-index 和 session index；`LedgerStore+SegmentIndex.swift` 协调 day/change index 与 scoped replacement，`LedgerStore+FlatSegmentIndex.swift` 用稳定 start/UUID 顺序维护 UI 所需 flat array。带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。range read 把统计 cutoff 与真实 wall-clock reference 分开：历史读取继续命中日期索引；active 和 future-ended closed row 在时钟向前时局部重评；只有真实 clock rewind 才全量重评，因为届时任何历史结束时间都可能重新跨过墙钟。
 - CloudKit 可能分批 materialize task、session 与 segment。`TimeTrackerStore+LedgerRelationshipVisibility.swift` 因此保留原始 SwiftData 行，但只发布 task 存在、session 存在且两者 task ID 一致的 segment；不完整/错配行不得进入 Home、Rollup、Analytics、Widget、Watch 或 Pomodoro elapsed。任务或会话稍后到达时，下一次一致性刷新会自动解除隔离，不做破坏性清理。
 - `ChecklistStore.refreshTaskScoped` 只替换受影响 task 的 items/visuals，并同步维护 facade bucket，不在每次 toggle 后重新按全库分组。
 - `RollupIncrementalIndex` 保存任务拓扑、segment delta、活动摘要、checklist 进度和近期日 bucket；base 文件负责状态与 full rebuild，`RollupIncrementalIndex+Mutation.swift` 负责 scoped delta/replacement 应用。普通 mutation 的工作量由变更记录、任务自身与祖先深度决定；完整历史 worked seconds 始终精确。
 - `TaskEstimatePolicy` 统一预计时长输入与旧数据规范化：`0...600` 分钟、`0` 表示未设置、正数最多 36,000 秒。明确预计时长只属于当前任务自身，预计总时长至少等于已经记录的时间；没有明确值时才使用 checklist 证据模型，子任务始终单独递归汇总。
 - Forecast pace 使用包含今天在内的最近 90 个本地日，只对有记录的活跃日求日均；它只把已有 remaining seconds 换算为预计活跃日，不生成 remaining seconds。Calendar/时区变化会重建这组有界 bucket。
-- `AnalyticsStore` 的 overview 与 task snapshot cache key 包含 range、真实 period start 和可选 live-minute bucket。仅当前范围与活动 segment 相交时按分钟换 key；历史/静态范围稳定复用。ledger 事件按相交区间失效 day bucket，跨 period 会自然 miss。
+- `AnalyticsStore` 的 overview 与 task snapshot cache key 包含 range、`AnalyticsPeriodEvaluation.interval.start` 和可选 live-minute bucket，不能从 cutoff 反推 period。当前范围与活动 segment 相交时才按 `clockReference` 分钟换 key；历史/未来范围没有 live bucket。snapshot、daily、timeline、group breakdown 与 comparison 统一消费显式 period 和 cutoff；ledger 事件按相交区间失效 day bucket，跨 period 会自然 miss。
 - `AnalyticsRefreshPlan` 是 Analytics 页面时钟的唯一调度 owner：活动当前范围使用与 cache bucket 完全一致的绝对分钟边界，静态当前范围等待 `Calendar` 给出的下一个本地日边界，历史范围不调度。plan identity 保留生成它的 wall-clock sample，所以同一分钟内的系统时钟回拨也会取消旧 sleep 并重新安排。`AnalyticsView` 只在 active scene 用 `.task(id:)` 持有可取消 sleep，并在 scene 激活、日历日、系统时钟或时区变化时重采样；category detail 复用根页面的 `liveNow`，不得再用全页 `TimelineView` 建立第二套刷新树。用户切换日期时必须以动作发生时的 `Date()` 判断是否重新跟随当前 period。
 - `CorePerformanceBudgetTests.fiftyThousandSegmentMutationUsesConstantSizedRollupDelta` 以 50,000 个 segment 约束单 segment 增量更新和 cached recent ranking；最终是否通过仍以冻结工作树的 xcresult 为准。
 

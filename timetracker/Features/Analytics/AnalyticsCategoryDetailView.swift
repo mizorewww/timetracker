@@ -12,12 +12,12 @@ struct AnalyticsCategoryDetailView: View {
     @State private var loadedRequest: AnalyticsSnapshotRequest?
 
     var body: some View {
-        let snapshotDate = range.effectiveSnapshotDate(referenceDate: referenceDate, liveNow: liveNow)
+        let evaluation = range.evaluation(referenceDate: referenceDate, liveNow: liveNow)
         let request = AnalyticsSnapshotRequest(
             range: range,
-            referenceDate: referenceDate,
+            evaluation: evaluation,
             revision: store.analyticsRevision,
-            liveRefreshBucket: store.analyticsLiveRefreshBucket(for: range, now: snapshotDate)
+            liveRefreshBucket: store.analyticsLiveRefreshBucket(for: evaluation)
         )
 
         List {
@@ -31,7 +31,7 @@ struct AnalyticsCategoryDetailView: View {
             }
         }
         .task(id: request) {
-            snapshot = store.analyticsSnapshot(for: range, now: snapshotDate)
+            snapshot = store.analyticsSnapshot(for: range, evaluation: evaluation)
             loadedRequest = request
         }
         #if os(iOS)

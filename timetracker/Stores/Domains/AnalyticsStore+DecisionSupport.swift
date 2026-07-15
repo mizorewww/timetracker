@@ -8,12 +8,38 @@ extension AnalyticsStore {
         now: Date,
         calendar: Calendar
     ) -> AnalyticsComparison {
-        guard let currentInterval = analyticsInterval(for: range, now: now, calendar: calendar),
-              let previousInterval = previousDecisionInterval(
-                for: range,
-                currentInterval: currentInterval,
-                calendar: calendar
-              ) else {
+        guard let currentInterval = analyticsInterval(for: range, now: now, calendar: calendar) else {
+            return AnalyticsComparison(
+                currentGrossSeconds: 0,
+                previousGrossSeconds: 0,
+                currentWallSeconds: 0,
+                previousWallSeconds: 0
+            )
+        }
+
+        return comparison(
+            segments: segments,
+            range: range,
+            currentInterval: currentInterval,
+            taskIDs: taskIDs,
+            evaluatedAt: now,
+            calendar: calendar
+        )
+    }
+
+    func comparison(
+        segments: [TimeSegment],
+        range: AnalyticsRange,
+        currentInterval: DateInterval,
+        taskIDs: Set<UUID>? = nil,
+        evaluatedAt cutoff: Date,
+        calendar: Calendar
+    ) -> AnalyticsComparison {
+        guard let previousInterval = previousDecisionInterval(
+            for: range,
+            currentInterval: currentInterval,
+            calendar: calendar
+        ) else {
             return AnalyticsComparison(
                 currentGrossSeconds: 0,
                 previousGrossSeconds: 0,
@@ -29,28 +55,28 @@ extension AnalyticsStore {
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .gross,
-                now: now
+                now: cutoff
             ),
             previousGrossSeconds: seconds(
                 in: previousInterval,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .gross,
-                now: now
+                now: cutoff
             ),
             currentWallSeconds: seconds(
                 in: currentInterval,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .wallClock,
-                now: now
+                now: cutoff
             ),
             previousWallSeconds: seconds(
                 in: previousInterval,
                 segments: canonicalSegments,
                 taskIDs: taskIDs,
                 mode: .wallClock,
-                now: now
+                now: cutoff
             )
         )
     }

@@ -15,14 +15,14 @@ struct AnalyticsView: View {
 
     var body: some View {
         let effectiveReferenceDate = followsCurrentPeriod ? liveNow : referenceDate
-        let snapshotDate = range.effectiveSnapshotDate(
+        let evaluation = range.evaluation(
             referenceDate: effectiveReferenceDate,
             liveNow: liveNow
         )
-        let liveRefreshBucket = store.analyticsLiveRefreshBucket(for: range, now: snapshotDate)
+        let liveRefreshBucket = store.analyticsLiveRefreshBucket(for: evaluation)
         let request = AnalyticsSnapshotRequest(
             range: range,
-            referenceDate: effectiveReferenceDate,
+            evaluation: evaluation,
             revision: store.analyticsRevision,
             liveRefreshBucket: liveRefreshBucket
         )
@@ -57,7 +57,7 @@ struct AnalyticsView: View {
             }
         }
         .task(id: request) {
-            snapshot = store.analyticsSnapshot(for: range, now: snapshotDate)
+            snapshot = store.analyticsSnapshot(for: range, evaluation: evaluation)
             loadedRequest = request
         }
         .task(id: refreshPlan) {

@@ -26,11 +26,22 @@ struct AnalyticsStore {
         liveRefreshBucket: Int? = nil,
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot? {
-        guard let cachedIntervalStart = snapshotIntervalStarts[range],
-              let requestedIntervalStart = range.interval(containing: now, calendar: calendar)?.start,
-              cachedIntervalStart == requestedIntervalStart else {
+        guard let period = range.interval(containing: now, calendar: calendar) else {
             return nil
         }
+        return cachedSnapshot(
+            for: range,
+            period: period,
+            liveRefreshBucket: liveRefreshBucket
+        )
+    }
+
+    func cachedSnapshot(
+        for range: AnalyticsRange,
+        period: DateInterval,
+        liveRefreshBucket: Int? = nil
+    ) -> AnalyticsSnapshot? {
+        guard snapshotIntervalStarts[range] == period.start else { return nil }
         guard snapshotLiveRefreshBuckets[range] == liveRefreshBucket else { return nil }
         return snapshots[range]
     }
@@ -49,13 +60,45 @@ struct AnalyticsStore {
         liveRefreshBucket: Int? = nil,
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
+        let period = range.interval(containing: now, calendar: calendar)
+            ?? DateInterval(start: now, duration: 0)
+        return refreshSnapshot(
+            range: range,
+            period: period,
+            tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            evaluatedAt: now,
+            liveRefreshBucket: liveRefreshBucket,
+            calendar: calendar
+        )
+    }
+
+    @discardableResult
+    mutating func refreshSnapshot(
+        range: AnalyticsRange,
+        period: DateInterval,
+        tasks: [TaskNode],
+        taskCategories: [TaskCategory] = [],
+        taskCategoryAssignments: [TaskCategoryAssignment] = [],
+        segments: [TimeSegment],
+        sessions: [TimeSession],
+        taskPathByID: [UUID: String],
+        taskParentPathByID: [UUID: String],
+        evaluatedAt cutoff: Date,
+        liveRefreshBucket: Int? = nil,
+        calendar: Calendar = .current
+    ) -> AnalyticsSnapshot {
         PerformanceSignpost.interval("Analytics snapshot generation") {
             let canonicalSegments = segments.deduplicatedByID()
             let rangeSegments = segmentsForAnalytics(
                 canonicalSegments,
-                range: range,
-                now: now,
-                calendar: calendar
+                interval: period,
+                evaluatedAt: cutoff
             )
             let snapshot = cachedDailySnapshot(
                 range: range,
@@ -67,11 +110,12 @@ struct AnalyticsStore {
                 sessions: sessions,
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
-                now: now,
+                period: period,
+                evaluatedAt: cutoff,
                 calendar: calendar
             )
             snapshots[range] = snapshot
-            snapshotIntervalStarts[range] = range.interval(containing: now, calendar: calendar)?.start
+            snapshotIntervalStarts[range] = period.start
             if let liveRefreshBucket {
                 snapshotLiveRefreshBuckets[range] = liveRefreshBucket
             } else {

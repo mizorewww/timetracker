@@ -188,6 +188,65 @@ struct CoreLedgerStoreTests {
     }
 
     @Test @MainActor
+    func historicalCutoffDoesNotExpandIndexedQueryToTheWholeLedger() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))
+        )
+        let liveNow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 12))
+        )
+        let taskID = UUID()
+        let sessions = (0..<40).map { offset in
+            TimeSession(
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: calendar.date(byAdding: .day, value: offset, to: firstDay)!
+                    .addingTimeInterval(3_600)
+            )
+        }
+        let segments = sessions.map { session in
+            TimeSegment(
+                sessionID: session.id,
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: session.startedAt,
+                endedAt: session.startedAt.addingTimeInterval(60)
+            )
+        }
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSegments = segments
+        repository.fullSessions = sessions
+        var store = LedgerStore()
+        try store.refreshHistory(repository: repository, now: liveNow, calendar: calendar)
+
+        let selectedDay = try #require(
+            calendar.dateInterval(of: .day, for: sessions[10].startedAt)
+        )
+        let selectedIDs = store.segmentCandidateIDs(
+            overlapping: selectedDay,
+            evaluatedAt: selectedDay.end,
+            clockReference: liveNow
+        )
+        let rewindIDs = store.segmentCandidateIDs(
+            overlapping: selectedDay,
+            evaluatedAt: selectedDay.end,
+            clockReference: liveNow.addingTimeInterval(-1)
+        )
+
+        #expect(selectedIDs == [segments[10].id])
+        #expect(rewindIDs.count == segments.count)
+        #expect(store.segments(
+            overlapping: selectedDay,
+            evaluatedAt: selectedDay.end,
+            clockReference: liveNow
+        ).map(\.id) == [segments[10].id])
+    }
+
+    @Test @MainActor
     func indexedQueriesHandleFutureEndedRowsAndBackwardClockCorrections() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))

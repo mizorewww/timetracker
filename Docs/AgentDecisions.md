@@ -560,6 +560,18 @@
 
 验证：行为测试覆盖 59.9 秒到整分钟、过期 bucket 回退、历史范围不调度、同 bucket 新 wall-clock sample 改变 plan identity，以及 DST 跳时日从 00:30 到下一本地午夜为 22.5 小时。源码契约确认 landing/detail 都没有全页 `TimelineView`，并保留 active-scene request/refresh 两个有 ID 的 task。签名构建和 UI 回归使用付费开发者配置；模拟器批次结束后必须关停设备和 runner。
 
+## AD-043：Analytics 历史求值分离周期、截止点与墙钟
+
+状态：Accepted
+
+背景：历史 Analytics 曾把选中周期替换为 `period.end - 1 second` 并把该值同时当作 period anchor、统计 `now` 和系统墙钟。由于所有时间事实使用半开区间且秒数在读模型边界转为整数，这会让午夜前最后一秒消失，让 23:00 到 00:00 只得到 3,599 秒；同时 Ledger 看到“now 早于 index evaluation date”后会把候选集扩张为全部历史，导致每次历史查询退化成全库过滤。若直接改成 `period.end` 而仍从该日期反推 period，又会错误落入下一日、周或月。
+
+决策：`AnalyticsPeriodEvaluation` 是 landing/detail 的共享求值上下文，分别保存选中的 Calendar `DateInterval`、聚合 cutoff 和真实 `clockReference`。当前周期 cutoff 为 live wall clock；已完成历史周期 cutoff 精确为 `interval.end`；未来周期 cutoff 为 `interval.start`，因此开始前贡献零。Analytics facade、domain snapshot、daily cache、timeline、group breakdown 和 comparison 显式传递 period/cutoff；cache request 只使用 period start，不从 cutoff 反推周期。Live-minute bucket 只在 `interval` 包含真实 `clockReference` 且活动 segment 相交时生成，因此历史范围稳定为 nil。Ledger range query 新增 `evaluatedAt`/`clockReference` 双时间边界：前者用于 day index overlap 与 `TrackedTimePolicy` 裁剪，只有后者早于 index evaluation date 才启用全库 clock-rewind fallback；旧 `now` API 继续把两者设为同一值，保持当前读模型兼容。
+
+后果：完整历史日/周/月保留所有 `< period.end` 的事实，最后一秒和跨午夜整小时不再丢失；历史开放 segment 在周期末裁剪，未来或零长度行不计入。历史读取继续使用 range-scoped day index，不因选择旧日期而扫描全部 ledger；真实系统时钟回拨仍保持安全的全量候选。任何新增历史统计都必须携带显式 period/cutoff/clock reference，禁止重新引入 `end - epsilon` 或用 cutoff 反推 calendar period。
+
+验证：覆盖当前/历史/未来 evaluation、23/25 小时 DST 日、today/week/month 最后一秒、零长度、历史开放 segment 精确裁剪、cache 以选中 period start 命中，以及 40 条跨日 ledger 中历史 query 只选中目标日、真实 rewind 才扩大到全量。签名测试必须显示团队 `LT98S43NKA`、付费 Apple Development identity 和既有 CloudKit/App Group entitlement。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

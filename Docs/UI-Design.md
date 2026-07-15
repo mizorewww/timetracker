@@ -1,5 +1,11 @@
 # UI Design Notes
 
+Status: current UI guardrails
+
+Reviewed: 2026-07-15
+
+Current user behavior is documented in [User Guide](UserGuide.md); visual/device verification rules are maintained in [Native UI Plan](NativeUIPlan.md) and [Testing](Testing.md).
+
 The app should feel like a focused Apple productivity tool: clear hierarchy, native controls, restrained colors, and predictable alignment.
 
 ## Principles

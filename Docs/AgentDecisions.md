@@ -126,13 +126,14 @@
 
 决策：
 
-- README、UserGuide、CodeGuide 描述当前事实。
-- NextDevelopmentPlan 等 Plan 文档描述未来，并明确前置条件。
-- Audit 与已完成的 refactor plan 保留历史，顶部标明快照日期和非当前规范。
+- README、UserGuide、CodeGuide、Architecture 和 ProjectMap 描述当前事实与所有权。
+- NextDevelopmentPlan、NativeUIPlan 等明确标为 future 的文档描述未来，并写清前置条件和验收门禁。
+- 带日期的 Audit 记录该次审核的 baseline、实现结果与证据；它可以承载最终冻结工作树证据，但不替代当前用户/代码规范。
+- 已归档或被替代的计划必须在顶部标明 superseded/historical，旧命令、绝对路径、未勾选项和临时 hard rule 均不得继续充当 Agent 指令或当前 backlog。CodeRefactorPlan 等标为 current status/guardrails 的文档则按当前工作树维护，不能因为名称含 Plan 就自动视为历史。
 
 后果：代码变更若影响用户行为、隐私、target 或迁移，必须在同一提交更新当前文档。
 
-验证：相对链接检查、target/目录对照以及发行前文档走查。
+验证：相对链接检查、target/目录对照、状态标签核对以及发行前文档走查；搜索旧 schema、旧 UI 流程、绝对路径和未兑现 hard rule，确保只出现在明确的历史说明中。
 
 ## AD-010：Widget 的发行门禁
 

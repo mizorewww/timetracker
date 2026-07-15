@@ -16,4 +16,5 @@ The primary agent must commit its completed work after every small, coherent tas
 - Keep each commit focused, reviewable, and safe to revert.
 - Run the tests or checks appropriate to that task before committing.
 - Stage only completed work; do not capture another active agent's half-finished edit.
+- Keep repository agent resources, including `AGENTS.md` and `.agents/`, under version control. Do not add them to `.gitignore`; commit new or updated agent instructions and supporting files with the small task that uses them.
 - Preserve paid Apple Developer signing and entitlements in build and test commands. Never disable code signing merely to make a checkpoint pass.

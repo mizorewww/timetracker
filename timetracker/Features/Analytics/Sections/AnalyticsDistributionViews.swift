@@ -5,8 +5,58 @@ struct TaskDonutContent: View {
     let tasks: [TaskAnalyticsPoint]
     let totalSeconds: Int
 
-    private var slices: [TaskDistributionSlice] {
-        tasks.compactMap { task -> TaskDistributionSlice? in
+    private var distribution: TaskDistributionPresentation {
+        TaskDistributionPresentation.make(
+            tasks: tasks,
+            reportedTotalSeconds: totalSeconds,
+            otherTitle: AppStrings.localized("analytics.taskUsage.other")
+        )
+    }
+
+    var body: some View {
+        let presentation = distribution
+        let displayedSlices = presentation.slices
+
+        if displayedSlices.isEmpty {
+            EmptyStateRow(title: AppStrings.localized("analytics.empty.rangeTaskTime"), icon: "chart.pie")
+        } else {
+            VStack(alignment: .leading, spacing: 16) {
+                StableDonutChart(
+                    slices: displayedSlices,
+                    totalSeconds: presentation.totalSeconds
+                )
+                .frame(maxWidth: .infinity)
+                distributionLegend(
+                    displayedSlices,
+                    totalSeconds: presentation.totalSeconds
+                )
+            }
+        }
+    }
+
+    private func distributionLegend(
+        _ displayedSlices: [TaskDistributionSlice],
+        totalSeconds: Int
+    ) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 10) {
+            ForEach(displayedSlices) { slice in
+                TaskDistributionLegendItem(slice: slice, totalSeconds: totalSeconds)
+            }
+        }
+    }
+}
+
+struct TaskDistributionPresentation {
+    let slices: [TaskDistributionSlice]
+    let totalSeconds: Int
+
+    static func make(
+        tasks: [TaskAnalyticsPoint],
+        reportedTotalSeconds: Int,
+        maximumSliceCount: Int = 8,
+        otherTitle: String
+    ) -> TaskDistributionPresentation {
+        let candidates = tasks.compactMap { task -> TaskDistributionSlice? in
             guard task.grossSeconds > 0 else { return nil }
             return TaskDistributionSlice(
                 id: task.taskID.uuidString,
@@ -17,35 +67,47 @@ struct TaskDonutContent: View {
                 grossSeconds: task.grossSeconds
             )
         }
-        .sorted { $0.grossSeconds > $1.grossSeconds }
-        .prefix(8)
-        .map { $0 }
-    }
+        .sorted {
+            if $0.grossSeconds != $1.grossSeconds {
+                return $0.grossSeconds > $1.grossSeconds
+            }
+            return $0.id < $1.id
+        }
 
-    var body: some View {
-        let displayedSlices = slices
+        let accountedSeconds = candidates.reduce(0) { $0 + $1.grossSeconds }
+        let effectiveTotal = max(max(0, reportedTotalSeconds), accountedSeconds)
+        var otherSeconds = effectiveTotal - accountedSeconds
+        let sliceLimit = max(1, maximumSliceCount)
+        let needsOverflowSlice = candidates.count + (otherSeconds > 0 ? 1 : 0) > sliceLimit
+        let visibleTaskCount = needsOverflowSlice ? max(0, sliceLimit - 1) : candidates.count
+        var displayed = Array(candidates.prefix(visibleTaskCount))
 
-        if displayedSlices.isEmpty {
-            EmptyStateRow(title: AppStrings.localized("analytics.empty.rangeTaskTime"), icon: "chart.pie")
-        } else {
-            VStack(alignment: .leading, spacing: 16) {
-                StableDonutChart(slices: displayedSlices, totalSeconds: max(totalSeconds, 1))
-                    .frame(maxWidth: .infinity)
-                distributionLegend(displayedSlices)
+        if needsOverflowSlice {
+            otherSeconds += candidates.dropFirst(visibleTaskCount).reduce(0) {
+                $0 + $1.grossSeconds
             }
         }
-    }
-
-    private func distributionLegend(_ displayedSlices: [TaskDistributionSlice]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 10) {
-            ForEach(displayedSlices) { slice in
-                TaskDistributionLegendItem(slice: slice, totalSeconds: max(totalSeconds, 1))
-            }
+        if otherSeconds > 0 {
+            displayed.append(
+                TaskDistributionSlice(
+                    id: "analytics-task-distribution-other",
+                    title: otherTitle,
+                    subtitle: "",
+                    symbolName: "ellipsis.circle",
+                    colorHex: "8E8E93",
+                    grossSeconds: otherSeconds
+                )
+            )
         }
+
+        return TaskDistributionPresentation(
+            slices: displayed,
+            totalSeconds: effectiveTotal
+        )
     }
 }
 
-private struct TaskDistributionSlice: Identifiable {
+struct TaskDistributionSlice: Identifiable {
     let id: String
     let title: String
     let subtitle: String
@@ -55,6 +117,10 @@ private struct TaskDistributionSlice: Identifiable {
 
     var color: Color {
         Color(hex: colorHex) ?? .blue
+    }
+
+    var accessibilityTitle: String {
+        subtitle.isEmpty ? title : "\(title), \(subtitle)"
     }
 }
 
@@ -71,7 +137,7 @@ private struct StableDonutChart: View {
             )
             .cornerRadius(4)
             .foregroundStyle(slice.color)
-            .accessibilityLabel(slice.title)
+            .accessibilityLabel(slice.accessibilityTitle)
             .accessibilityValue(DurationFormatter.compact(slice.grossSeconds))
         }
         .chartLegend(.hidden)
@@ -107,7 +173,7 @@ private struct TaskDistributionLegendItem: View {
                 Text(slice.title)
                     .font(.caption.weight(.semibold))
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                Text("\(DurationFormatter.compact(slice.grossSeconds)) · \(percentage)%")
+                Text(detailText)
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
@@ -117,6 +183,14 @@ private struct TaskDistributionLegendItem: View {
     }
 
     private var percentage: Int {
-        Int((Double(slice.grossSeconds) / Double(max(totalSeconds, 1))) * 100)
+        Int(
+            ((Double(slice.grossSeconds) / Double(max(totalSeconds, 1))) * 100)
+                .rounded()
+        )
+    }
+
+    private var detailText: String {
+        let measurement = "\(DurationFormatter.compact(slice.grossSeconds)) · \(percentage)%"
+        return slice.subtitle.isEmpty ? measurement : "\(slice.subtitle) · \(measurement)"
     }
 }

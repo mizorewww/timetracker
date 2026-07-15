@@ -424,6 +424,7 @@
 "analytics.timeline.gap.omitted" = "省略 %@";
 "analytics.taskUsage.title" = "任务分布";
 "analytics.taskUsage.subtitle" = "按任务汇总用时，并使用应用里同一套任务颜色。";
+"analytics.taskUsage.other" = "其他";
 "analytics.total" = "总计";
 "analytics.hourDistribution.title" = "今天时间分布";
 "analytics.hourDistribution.subtitle" = "类似屏幕使用时间的日内视图；每根柱子使用对应任务的颜色。";

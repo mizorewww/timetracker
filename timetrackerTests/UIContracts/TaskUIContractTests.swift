@@ -617,7 +617,7 @@ struct TaskUIContractTests {
 
         #expect(analytics.contains("AnalyticsPeriodSection(range: $range, referenceDate: $referenceDate, liveNow: liveNow)"))
         #expect(distribution.contains("if displayedSlices.isEmpty"))
-        #expect(distribution.contains(".accessibilityLabel(slice.title)"))
+        #expect(distribution.contains(".accessibilityLabel(slice.accessibilityTitle)"))
         #expect(trends.contains("daily.allSatisfy"))
         #expect(trends.contains("analytics.chart.day"))
         #expect(timeline.contains("horizontalSizeClass == .compact"))

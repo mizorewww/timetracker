@@ -424,6 +424,7 @@
 "analytics.timeline.gap.omitted" = "%@ skipped";
 "analytics.taskUsage.title" = "Task Distribution";
 "analytics.taskUsage.subtitle" = "Time is grouped by task, using the same task colors shown across the app.";
+"analytics.taskUsage.other" = "Other";
 "analytics.total" = "Total";
 "analytics.hourDistribution.title" = "Today Distribution";
 "analytics.hourDistribution.subtitle" = "A Screen Time-style view of today. Each bar uses the colors of the tasks recorded in that hour.";

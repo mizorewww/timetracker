@@ -6,6 +6,32 @@ import Testing
 @Suite(.serialized)
 struct CoreInboxStoreTests {
     @Test @MainActor
+    func tiedInboxOrderingUsesUUIDAcrossDomainAndDisplayStores() throws {
+        let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        let timestamp = Date(timeIntervalSinceReferenceDate: 100)
+        let first = InboxItem(title: "First", sortOrder: 10, deviceID: "test")
+        first.id = firstID
+        first.createdAt = timestamp
+        let second = InboxItem(title: "Second", sortOrder: 10, deviceID: "test")
+        second.id = secondID
+        second.createdAt = timestamp
+
+        var domainStore = InboxStore()
+        domainStore.refresh(items: [second, first], suggestions: [])
+        #expect(domainStore.items.map(\.id) == [firstID, secondID])
+
+        let store = makeTestStore()
+        store.inboxItems = [second, first]
+        #expect(store.openInboxItems.map(\.id) == [firstID, secondID])
+
+        domainStore.refresh(items: [first, second], suggestions: [])
+        store.inboxItems = [first, second]
+        #expect(domainStore.items.map(\.id) == [firstID, secondID])
+        #expect(store.openInboxItems.map(\.id) == [firstID, secondID])
+    }
+
+    @Test @MainActor
     func captureDraftClearsOnlyAfterTheStoreCommits() {
         var blankDraft = InboxCaptureDraft(title: " \n ")
         var blankWriteAttempts = 0

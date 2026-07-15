@@ -49,6 +49,9 @@ extension TimeTrackerStore {
         if lhs.sortOrder != rhs.sortOrder {
             return lhs.sortOrder < rhs.sortOrder
         }
-        return lhs.createdAt < rhs.createdAt
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }

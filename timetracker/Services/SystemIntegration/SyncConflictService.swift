@@ -19,9 +19,14 @@ struct SyncConflictService {
     nonisolated static let corruptStateFilePrefix = "SyncConflictState.corrupt-"
     nonisolated static let corruptPendingSnapshotFilePrefix = "PendingForcedUploadSnapshot.corrupt-"
     nonisolated let stateURLOverride: URL?
+    nonisolated let localStateByteLimits: SyncConflictLocalStateByteLimits
 
-    init(stateURL: URL? = nil) {
+    init(
+        stateURL: URL? = nil,
+        localStateByteLimits: SyncConflictLocalStateByteLimits = .production
+    ) {
         self.stateURLOverride = stateURL
+        self.localStateByteLimits = localStateByteLimits
     }
 
     func bootstrap(context: ModelContext) throws -> SyncConflictPrompt? {

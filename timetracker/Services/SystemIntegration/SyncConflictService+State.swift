@@ -76,60 +76,9 @@ extension SyncConflictService {
         return state
     }
 
-    func saveState(_ state: SyncConflictState) throws {
-        try withExclusiveStateAccess {
-            try saveStateWithoutLock(state)
-        }
-    }
-
-    private func saveStateWithoutLock(_ state: SyncConflictState) throws {
-        let url = try stateURL()
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        try encoder.encode(state).write(to: url, options: [.atomic])
-        try protectSensitiveFileIfSupported(at: url)
-        try synchronizePendingForcedUploadMirrorWithoutLock(with: state)
-    }
-
     func loadPendingForcedUploadSnapshot() throws -> SyncDataSnapshot? {
         try withExclusiveStateAccess {
             try loadStateWithoutLock().pendingForcedUploadSnapshot
-        }
-    }
-
-    private func synchronizePendingForcedUploadMirrorWithoutLock(
-        with state: SyncConflictState
-    ) throws {
-        if let snapshot = state.pendingForcedUploadSnapshot,
-           snapshot.hasProtectableUserContent {
-            try savePendingForcedUploadSnapshotWithoutLock(snapshot)
-        } else {
-            try removePendingForcedUploadSnapshotWithoutLock()
-        }
-    }
-
-    private func savePendingForcedUploadSnapshotWithoutLock(
-        _ snapshot: SyncDataSnapshot
-    ) throws {
-        let url = try pendingForcedUploadSnapshotURL()
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        try encoder.encode(snapshot).write(to: url, options: [.atomic])
-        try protectSensitiveFileIfSupported(at: url)
-    }
-
-    private func removePendingForcedUploadSnapshotWithoutLock() throws {
-        let url = try pendingForcedUploadSnapshotURL()
-        if FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.removeItem(at: url)
         }
     }
 
@@ -216,7 +165,7 @@ extension SyncConflictService {
         return quarantineURL
     }
 
-    private func protectSensitiveFileIfSupported(at url: URL) throws {
+    func protectSensitiveFileIfSupported(at url: URL) throws {
         #if os(iOS)
         try FileManager.default.setAttributes(
             [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],

@@ -668,6 +668,7 @@ struct CoreSourceLayoutTests {
             "SyncConflictService+State.swift",
             "SyncConflictService+StateLock.swift",
             "SyncConflictService+StateLocations.swift",
+            "SyncConflictService+StateWriting.swift",
             "SyncConflictState.swift",
             "SyncDataSnapshot.swift",
             "SyncDataSnapshot+Capture.swift",

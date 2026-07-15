@@ -82,8 +82,491 @@ struct CoreAnalyticsStoreTests {
 
         #expect(snapshot.overview.grossSeconds == 18_000)
         #expect(snapshot.overview.wallSeconds == 3_600)
+        #expect(snapshot.overview.overlapSeconds == 14_400)
         #expect(snapshot.overlaps.count == 1)
-        #expect(snapshot.overlaps.first?.durationSeconds == 3_600)
+        #expect(snapshot.overlaps.first?.wallDurationSeconds == 3_600)
+        #expect(snapshot.overlaps.first?.excessDurationSeconds == 14_400)
+        #expect(snapshot.overlaps.first?.concurrentSegmentCount == 5)
+        #expect(snapshot.overlaps.first?.participantCount == 5)
+        #expect(snapshot.overlaps.first?.visibleParticipants.count == 3)
+        #expect(snapshot.overlaps.first?.hiddenParticipantCount == 2)
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == snapshot.overview.overlapSeconds)
+    }
+
+    @Test @MainActor
+    func analyticsOverlapWindowsConserveStaggeredTripleConcurrency() {
+        let start = Date(timeIntervalSince1970: 20_000)
+        let tasks = ["Alpha", "Beta", "Gamma"].map {
+            TaskNode(title: $0, parentID: nil, deviceID: "test")
+        }
+        let sessions = tasks.map { task in
+            TimeSession(
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                titleSnapshot: task.title
+            )
+        }
+        let segments = [
+            TimeSegment(
+                sessionID: sessions[0].id,
+                taskID: tasks[0].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(40 * 60)
+            ),
+            TimeSegment(
+                sessionID: sessions[1].id,
+                taskID: tasks[1].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(10 * 60),
+                endedAt: start.addingTimeInterval(50 * 60)
+            ),
+            TimeSegment(
+                sessionID: sessions[2].id,
+                taskID: tasks[2].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(20 * 60),
+                endedAt: start.addingTimeInterval(30 * 60)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: tasks,
+            segments: Array(segments.reversed()),
+            sessions: Array(sessions.reversed()),
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: start.addingTimeInterval(60 * 60)
+        )
+
+        #expect(snapshot.overview.grossSeconds == 90 * 60)
+        #expect(snapshot.overview.wallSeconds == 50 * 60)
+        #expect(snapshot.overview.overlapSeconds == 40 * 60)
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == 40 * 60)
+        #expect(snapshot.overlaps.count == 3)
+
+        let triple = snapshot.overlaps.first { $0.concurrentSegmentCount == 3 }
+        #expect(triple?.wallDurationSeconds == 10 * 60)
+        #expect(triple?.excessDurationSeconds == 20 * 60)
+        #expect(triple?.participantCount == 3)
+        #expect(triple?.visibleParticipants.map(\.id) == tasks.map(\.id))
+        #expect(triple?.visibleParticipants.map(\.title) == ["Alpha", "Beta", "Gamma"])
+
+        let pairWindows = snapshot.overlaps.filter { $0.concurrentSegmentCount == 2 }
+        #expect(pairWindows.map(\.start) == [
+            start.addingTimeInterval(10 * 60),
+            start.addingTimeInterval(30 * 60)
+        ])
+        #expect(pairWindows.allSatisfy { $0.excessDurationSeconds == 10 * 60 })
+    }
+
+    @Test @MainActor
+    func analyticsOverlapMergesAdjacentReplacementSegmentsWithoutCrossingBoundaryOnlyRecords() {
+        let start = Date(timeIntervalSince1970: 30_000)
+        let firstTask = TaskNode(title: "Alpha", parentID: nil, deviceID: "test")
+        let secondTask = TaskNode(title: "Beta", parentID: nil, deviceID: "test")
+        let boundaryTask = TaskNode(title: "Boundary", parentID: nil, deviceID: "test")
+        let firstSession = TimeSession(taskID: firstTask.id, source: .timer, deviceID: "test", startedAt: start)
+        let secondSession = TimeSession(taskID: secondTask.id, source: .timer, deviceID: "test", startedAt: start)
+        let boundarySession = TimeSession(taskID: boundaryTask.id, source: .manual, deviceID: "test", startedAt: start)
+        let segments = [
+            TimeSegment(
+                sessionID: firstSession.id,
+                taskID: firstTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(20 * 60)
+            ),
+            TimeSegment(
+                sessionID: secondSession.id,
+                taskID: secondTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(10 * 60)
+            ),
+            TimeSegment(
+                sessionID: secondSession.id,
+                taskID: secondTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(10 * 60),
+                endedAt: start.addingTimeInterval(20 * 60)
+            ),
+            TimeSegment(
+                sessionID: boundarySession.id,
+                taskID: boundaryTask.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(20 * 60),
+                endedAt: start.addingTimeInterval(30 * 60)
+            ),
+            TimeSegment(
+                sessionID: boundarySession.id,
+                taskID: boundaryTask.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(5 * 60),
+                endedAt: start.addingTimeInterval(5 * 60)
+            ),
+            TimeSegment(
+                sessionID: boundarySession.id,
+                taskID: boundaryTask.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(6 * 60),
+                endedAt: start.addingTimeInterval(5 * 60)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [firstTask, secondTask, boundaryTask],
+            segments: segments,
+            sessions: [firstSession, secondSession, boundarySession],
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: start.addingTimeInterval(40 * 60)
+        )
+
+        #expect(snapshot.overview.grossSeconds == 50 * 60)
+        #expect(snapshot.overview.wallSeconds == 30 * 60)
+        #expect(snapshot.overview.overlapSeconds == 20 * 60)
+        #expect(snapshot.overlaps.count == 1)
+        #expect(snapshot.overlaps.first?.start == start)
+        #expect(snapshot.overlaps.first?.end == start.addingTimeInterval(20 * 60))
+        #expect(snapshot.overlaps.first?.wallDurationSeconds == 20 * 60)
+        #expect(snapshot.overlaps.first?.excessDurationSeconds == 20 * 60)
+        #expect(
+            Set(snapshot.overlaps.first?.visibleParticipants.map(\.id) ?? [])
+                == Set([firstTask.id, secondTask.id])
+        )
+    }
+
+    @Test @MainActor
+    func analyticsOverlapDoesNotMergeHiddenParticipantReplacement() {
+        let start = Date(timeIntervalSince1970: 32_000)
+        let tasks = ["Alpha", "Beta", "Gamma", "Zulu Before", "Zulu After"].map {
+            TaskNode(title: $0, parentID: nil, deviceID: "test")
+        }
+        let sessions = tasks.map { task in
+            TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: start)
+        }
+        let steadySegments = (0..<3).map { index in
+            TimeSegment(
+                sessionID: sessions[index].id,
+                taskID: tasks[index].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(20 * 60)
+            )
+        }
+        let replacingSegments = [
+            TimeSegment(
+                sessionID: sessions[3].id,
+                taskID: tasks[3].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(10 * 60)
+            ),
+            TimeSegment(
+                sessionID: sessions[4].id,
+                taskID: tasks[4].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(10 * 60),
+                endedAt: start.addingTimeInterval(20 * 60)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: tasks,
+            segments: steadySegments + replacingSegments,
+            sessions: sessions,
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: start.addingTimeInterval(30 * 60)
+        )
+
+        #expect(snapshot.overview.overlapSeconds == 60 * 60)
+        #expect(snapshot.overlaps.count == 2)
+        #expect(snapshot.overlaps.map(\.start) == [start, start.addingTimeInterval(10 * 60)])
+        #expect(snapshot.overlaps.allSatisfy { $0.concurrentSegmentCount == 4 })
+        #expect(snapshot.overlaps.allSatisfy { $0.participantCount == 4 })
+        #expect(snapshot.overlaps.allSatisfy {
+            $0.visibleParticipants.map(\.title) == ["Alpha", "Beta", "Gamma"]
+        })
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == 60 * 60)
+    }
+
+    @Test @MainActor
+    func analyticsOverlapCountsSegmentsAndUsesTaskIDsForParticipants() {
+        let start = Date(timeIntervalSince1970: 35_000)
+        let repeatedTask = TaskNode(title: "Repeated", parentID: nil, deviceID: "test")
+        let otherTask = TaskNode(title: "Repeated", parentID: nil, deviceID: "test")
+        let repeatedSession = TimeSession(taskID: repeatedTask.id, source: .timer, deviceID: "test", startedAt: start)
+        let otherSession = TimeSession(taskID: otherTask.id, source: .timer, deviceID: "test", startedAt: start)
+        let segments = [
+            TimeSegment(
+                sessionID: repeatedSession.id,
+                taskID: repeatedTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(10 * 60)
+            ),
+            TimeSegment(
+                sessionID: repeatedSession.id,
+                taskID: repeatedTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(10 * 60)
+            ),
+            TimeSegment(
+                sessionID: otherSession.id,
+                taskID: otherTask.id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(10 * 60)
+            )
+        ]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [repeatedTask, otherTask],
+            segments: segments,
+            sessions: [repeatedSession, otherSession],
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: start.addingTimeInterval(20 * 60)
+        )
+
+        #expect(snapshot.overview.overlapSeconds == 20 * 60)
+        #expect(snapshot.overlaps.first?.concurrentSegmentCount == 3)
+        #expect(snapshot.overlaps.first?.participantCount == 2)
+        #expect(
+            Set(snapshot.overlaps.first?.visibleParticipants.map(\.id) ?? [])
+                == Set([repeatedTask.id, otherTask.id])
+        )
+        #expect(snapshot.overlaps.first?.excessDurationSeconds == 20 * 60)
+    }
+
+    @Test @MainActor
+    func analyticsOverlapConservesCrossMidnightSpringForwardIntervals() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        func date(day: Int, hour: Int, minute: Int = 0) throws -> Date {
+            try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 3,
+                day: day,
+                hour: hour,
+                minute: minute
+            )))
+        }
+
+        let tasks = ["Alpha", "Beta", "Gamma"].map {
+            TaskNode(title: $0, parentID: nil, deviceID: "test")
+        }
+        let sessionStart = try date(day: 7, hour: 23, minute: 30)
+        let sessions = tasks.map { task in
+            TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: sessionStart)
+        }
+        let segments = [
+            TimeSegment(
+                sessionID: sessions[0].id,
+                taskID: tasks[0].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: try date(day: 7, hour: 23, minute: 30),
+                endedAt: try date(day: 8, hour: 4)
+            ),
+            TimeSegment(
+                sessionID: sessions[1].id,
+                taskID: tasks[1].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: try date(day: 8, hour: 0, minute: 30),
+                endedAt: try date(day: 8, hour: 3, minute: 30)
+            ),
+            TimeSegment(
+                sessionID: sessions[2].id,
+                taskID: tasks[2].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: try date(day: 8, hour: 1, minute: 30),
+                endedAt: try date(day: 8, hour: 4, minute: 30)
+            )
+        ]
+        let now = try date(day: 8, hour: 12)
+        let startOfDay = try date(day: 8, hour: 0)
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: tasks,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 7 * 3_600)
+        #expect(snapshot.overview.wallSeconds == 3 * 3_600 + 30 * 60)
+        #expect(snapshot.overview.overlapSeconds == 3 * 3_600 + 30 * 60)
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == snapshot.overview.overlapSeconds)
+        #expect(snapshot.overlaps.contains { $0.start == startOfDay.addingTimeInterval(30 * 60) })
+
+        let triple = try #require(snapshot.overlaps.first { $0.concurrentSegmentCount == 3 })
+        #expect(triple.wallDurationSeconds == 3_600)
+        #expect(triple.excessDurationSeconds == 2 * 3_600)
+    }
+
+    @Test @MainActor
+    func analyticsOverlapConservesCrossMidnightFallBackIntervals() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let formatter = ISO8601DateFormatter()
+        func date(_ value: String) throws -> Date {
+            try #require(formatter.date(from: value))
+        }
+
+        let tasks = ["Alpha", "Beta", "Gamma"].map {
+            TaskNode(title: $0, parentID: nil, deviceID: "test")
+        }
+        let sessionStart = try date("2026-10-31T23:30:00-07:00")
+        let sessions = tasks.map { task in
+            TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: sessionStart)
+        }
+        let segments = [
+            TimeSegment(
+                sessionID: sessions[0].id,
+                taskID: tasks[0].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: sessionStart,
+                endedAt: try date("2026-11-01T04:00:00-08:00")
+            ),
+            TimeSegment(
+                sessionID: sessions[1].id,
+                taskID: tasks[1].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: try date("2026-11-01T00:30:00-07:00"),
+                endedAt: try date("2026-11-01T02:30:00-08:00")
+            ),
+            TimeSegment(
+                sessionID: sessions[2].id,
+                taskID: tasks[2].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: try date("2026-11-01T01:30:00-07:00"),
+                endedAt: try date("2026-11-01T03:30:00-08:00")
+            )
+        ]
+        let now = try date("2026-11-01T12:00:00-08:00")
+        let startOfDay = try date("2026-11-01T00:00:00-07:00")
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: tasks,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 11 * 3_600)
+        #expect(snapshot.overview.wallSeconds == 5 * 3_600)
+        #expect(snapshot.overview.overlapSeconds == 6 * 3_600)
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == 6 * 3_600)
+        #expect(snapshot.overlaps.contains { $0.start == startOfDay.addingTimeInterval(30 * 60) })
+
+        let triple = try #require(snapshot.overlaps.first { $0.concurrentSegmentCount == 3 })
+        #expect(triple.wallDurationSeconds == 2 * 3_600)
+        #expect(triple.excessDurationSeconds == 4 * 3_600)
+    }
+
+    @Test @MainActor
+    func analyticsOverlapAllocatesSubsecondRemaindersToMatchGrossMinusWall() {
+        let start = Date(timeIntervalSince1970: 40_000)
+        let tasks = ["Alpha", "Beta", "Gamma"].map {
+            TaskNode(title: $0, parentID: nil, deviceID: "test")
+        }
+        let sessions = tasks.map { task in
+            TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: start)
+        }
+        let segments = tasks.indices.map { index in
+            TimeSegment(
+                sessionID: sessions[index].id,
+                taskID: tasks[index].id,
+                source: .timer,
+                deviceID: "test",
+                startedAt: start.addingTimeInterval(Double(index) * 0.25),
+                endedAt: start.addingTimeInterval(2.25 + Double(index) * 0.25)
+            )
+        }
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: tasks,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: start.addingTimeInterval(3)
+        )
+
+        #expect(snapshot.overview.grossSeconds == 6)
+        #expect(snapshot.overview.wallSeconds == 2)
+        #expect(snapshot.overview.overlapSeconds == 4)
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == 4)
+    }
+
+    @Test
+    func analyticsOverlapPresentationReportsEveryHiddenExcessSecond() {
+        let start = Date(timeIntervalSince1970: 50_000)
+        let participant = OverlapAnalyticsParticipant(id: UUID(), title: "Task")
+        let windows = (0..<8).map { index in
+            OverlapAnalyticsPoint(
+                start: start.addingTimeInterval(Double(index) * 60),
+                end: start.addingTimeInterval(Double(index + 1) * 60),
+                concurrentSegmentCount: 2,
+                participantCount: 1,
+                visibleParticipants: [participant],
+                wallDurationSeconds: 60,
+                excessDurationSeconds: (index + 1) * 10
+            )
+        }
+
+        let presentation = AnalyticsOverlapPresentation(
+            overlaps: windows,
+            maximumVisibleWindows: 6
+        )
+
+        #expect(presentation.visibleWindows.count == 6)
+        #expect(presentation.hiddenWindowCount == 2)
+        #expect(presentation.hiddenExcessSeconds == 150)
+        #expect(
+            presentation.visibleWindows.reduce(0) { $0 + $1.excessDurationSeconds }
+                + presentation.hiddenExcessSeconds
+                == windows.reduce(0) { $0 + $1.excessDurationSeconds }
+        )
     }
 
     @Test @MainActor
@@ -142,6 +625,8 @@ struct CoreAnalyticsStoreTests {
         #expect(snapshot.overlaps.count == 1)
         #expect(snapshot.overlaps.first?.start == startOfDay)
         #expect(snapshot.overlaps.first?.end == startOfDay.addingTimeInterval(900))
+        #expect(snapshot.overlaps.first?.wallDurationSeconds == 900)
+        #expect(snapshot.overlaps.first?.excessDurationSeconds == 900)
         #expect(engineOverview.grossSeconds == snapshot.overview.grossSeconds)
         #expect(engineOverview.wallSeconds == snapshot.overview.wallSeconds)
         #expect(engineOverview.overlapSeconds == snapshot.overview.overlapSeconds)

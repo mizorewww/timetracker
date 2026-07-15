@@ -302,17 +302,25 @@ struct TaskAnalyticsSnapshot {
     let rangeSegments: [TimeSegment]
 }
 
+struct OverlapAnalyticsParticipant: Identifiable, Equatable {
+    let id: UUID
+    let title: String
+}
+
 struct OverlapAnalyticsPoint: Identifiable {
     let start: Date
     let end: Date
-    let firstTitle: String
-    let secondTitle: String
+    let concurrentSegmentCount: Int
+    let participantCount: Int
+    let visibleParticipants: [OverlapAnalyticsParticipant]
+    let wallDurationSeconds: Int
+    let excessDurationSeconds: Int
 
-    var id: String {
-        "\(Int(start.timeIntervalSince1970))-\(Int(end.timeIntervalSince1970))-\(firstTitle)-\(secondTitle)"
+    var id: Date {
+        start
     }
 
-    var durationSeconds: Int {
-        max(0, Int(end.timeIntervalSince(start)))
+    var hiddenParticipantCount: Int {
+        max(0, participantCount - visibleParticipants.count)
     }
 }

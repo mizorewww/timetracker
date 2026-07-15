@@ -135,7 +135,9 @@ SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditor
 
 - gross duration 是所有片段时长之和。
 - wall-clock duration 是片段区间并集的长度。
-- overlap 是由并行区间产生的差异。
+- overlap/excess 只能表示 `gross - wall-clock`，不是“发生过并发的墙钟时段长度”。固定 sweep 窗口内有 N 条记录并发时，该窗口贡献 `(N - 1) × wall duration`；所有窗口的 `excessDurationSeconds` 必须严格加总为 overview 的 `overlapSeconds`。
+
+`AnalyticsStore+Overlap` 先消费已经按选中周期与 cutoff 裁剪的 `AnalyticsBoundedSegment`，再以 end-before-start 的同边界 sweep 计算并发度。参与任务使用持久 task UUID 去重，标题只用于展示；同一 task 的片段在同一边界替换且并发度不变时可以合并相邻窗口，参与集合或并发度变化时不得合并。`OverlapAnalyticsPoint` 明确分开墙钟窗口、并发 segment 数、唯一 participant 数和 excess；列表只展示 excess 最大的前几个窗口时，必须同时公开隐藏窗口数与隐藏 excess 总量，不得把墙钟跨度标成 overlap。整数秒展示使用确定性的余数分配与 overview 对齐，避免亚秒边界破坏守恒。
 
 改变统计算法时，必须覆盖边界相接、完全包含、跨日、时区与夏令时、多任务重叠等案例。
 

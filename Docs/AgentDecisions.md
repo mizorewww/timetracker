@@ -702,6 +702,17 @@
 后果：无关 timer、ledger、selection 或重复等价 task refresh 不再重建任务树/搜索 projection；task/category/assignment 的真实语义变化会在同一 store refresh 边界使所有 UI surface 看到新 revision。展开或新 query 的首次读取仍按可见行或可搜索 task 数线性计算，但同 key 重绘为有界 cache hit。新增 task-tree surface 必须消费该 read index/projection，不得在 `body` 重新 `filter/sorted/grouping` 全树；新增搜索字段必须同时进入 read-index equality/失效语义。容量不得改成无界历史。
 
 验证：等价性测试把新 projection 与旧 category+flattener 语义逐项比较，覆盖归档分支、分类/未分类、深度、child count、标题路径和 notes 搜索；identity 测试确认输入顺序改变不改变 hierarchy row/section IDs。cache 测试覆盖重复命中、LRU 容量、revision 失效和 store 对无关刷新/等价 refresh 不推进 revision。5,000 节点测试固定 fully-expanded projection 为每个可见 task 一次 child bucket lookup，并固定重复 projection/search 不增加 build count。主 Agent 使用付费开发者身份执行签名的 task-tree 与 task UI 定向套件，37/37 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
+## AD-055：Analytics 重叠明细以 excess 守恒而非墙钟跨度计量
+
+状态：Accepted
+
+背景：overview 已把 overlap 定义为 `gross - wall-clock`，但旧 sweep 明细只选前两个活动 segment，并把每个并发窗口的墙钟长度显示为 overlap。两条记录并发时两者数值刚好相等，三条以上并发时则不再成立：五条记录同时运行一小时，overview 为四小时，而旧明细只有一小时；按可变标题构造行身份还会在同名或改名后失稳。直接列出全部活动记录又会让密集 overlap 回退到逐事件扫描活动集合。
+
+决策：overlap 的唯一产品语义是 excess。固定 sweep 窗口内有 N 条 segment 时，精确贡献为 `(N - 1) × elapsed window`；全窗口整数秒经过确定性的余数分配后必须严格等于同一批 bounded items 的 `gross - wall-clock`。`OverlapAnalyticsPoint` 分开 start/end、墙钟秒数、excess 秒数、并发 segment 数和唯一 participant task 数。参与者以持久 task UUID 为身份，标题仅展示；每个窗口最多物化三个稳定排序的参与者，其余只公开数量。sweep 在相同时间先处理 end 再处理 start；只有边界前后并发度与 task membership 都不变时才合并相邻窗口。同一任务的连续 segment 可以因此合并，真正的参与者或并发度变化不能被抹平。参与者使用带 resident ID 的 lazy min-heap，保持 `O(n log n)`；界面显示 excess 最大的六个窗口，并汇总未显示窗口数与隐藏 excess。
+
+后果：明细与总览在任意并发度下守恒，不再把“发生并发的 1 小时”误报为“五路计时多出的 1 小时”。同一 task 的重复 segment 会增加并发度和 excess，但参与任务只出现一次。跨日与 DST 先在 bounded read boundary 裁剪，再按绝对 elapsed seconds 计算；UI 的时间范围只描述墙钟窗口，数值明确标为 excess。不得重新引入 title-based identity、只取前两个 segment 的 pair 模型，或隐藏剩余窗口却不公开其 excess。
+
+验证：覆盖五路同窗、三路交错、同 task 重复 segment、同名 task 仍按 UUID 分离、同边界替换并合并、隐藏 participant 替换不合并、仅边界相接不重叠、零/负时长排除、春秋 DST 跨午夜裁剪、稳定 tie 顺序、输入倒序和亚秒余数守恒；presentation 测试确认可见 excess 与隐藏 excess 合计不丢秒。source contract 固定 wall/excess 分离、UUID participant、明确 excess 文案与隐藏汇总。主 Agent 使用付费开发者身份执行 Analytics store、timeline 与 UI contract 签名定向套件，86/86 通过；正常字号的 Analytics 实机目视验收并入后续单设备 UI 批次，不另开辅助功能专项批次。
 
 ## 2. Agent 工作清单
 

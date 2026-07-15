@@ -44,7 +44,8 @@ struct AnalyticsTimelineTests {
         #expect(tasks.first { $0.taskID == secondTask.id }?.status == .planned)
 
         let overlaps = store.overlapSegments(range: .week, now: now)
-        #expect(overlaps.first?.durationSeconds == 1_800)
+        #expect(overlaps.first?.wallDurationSeconds == 1_800)
+        #expect(overlaps.first?.excessDurationSeconds == 1_800)
     }
 
 

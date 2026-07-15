@@ -491,6 +491,33 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func analyticsOverlapSeparatesWallWindowsFromConservedExcess() throws {
+        let modelSource = try sourceText("timetracker/Models/AnalyticsReadModels.swift")
+        let storeSource = try sourceText("timetracker/Stores/Domains/AnalyticsStore+Overlap.swift")
+        let viewSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverlapViews.swift")
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(modelSource.contains("struct OverlapAnalyticsParticipant: Identifiable"))
+        #expect(modelSource.contains("let concurrentSegmentCount: Int"))
+        #expect(modelSource.contains("let wallDurationSeconds: Int"))
+        #expect(modelSource.contains("let excessDurationSeconds: Int"))
+        #expect(storeSource.contains("window.concurrentSegmentCount - 1"))
+        #expect(storeSource.contains("expectedExcessSeconds: overview(items: canonicalItems).overlapSeconds"))
+        #expect(storeSource.contains("taskIDs: Set<UUID>"))
+        #expect(viewSource.contains("AnalyticsOverlapFormatting.duration(overlap.excessDurationSeconds"))
+        #expect(viewSource.contains("seconds > 0, seconds < 60"))
+        #expect(viewSource.contains("DurationFormatter.spoken(seconds"))
+        #expect(viewSource.contains("analytics.overlap.hiddenSummary"))
+        #expect(viewSource.contains("analytics.overlap.excess.label"))
+        #expect(viewSource.contains("firstTitle") == false)
+        #expect(englishStrings.contains("\"analytics.overlap.oneMoreParticipantFormat\""))
+        #expect(englishStrings.contains("\"analytics.overlap.concurrencyFormat\""))
+        #expect(englishStrings.contains("\"analytics.overlap.concurrencyOneTaskFormat\""))
+        #expect(englishStrings.contains("\"analytics.overlap.hiddenSummaryFormat\""))
+        #expect(englishStrings.contains("\"analytics.overlap.hiddenSummaryOneWindowFormat\""))
+    }
+
+    @Test
     func analyticsUsesAccessibilitySpecificRowsAndPeriodControls() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",

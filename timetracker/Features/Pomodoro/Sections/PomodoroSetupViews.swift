@@ -19,10 +19,9 @@ struct PomodoroSetupCard: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 16)
-
+        PomodoroPageLayout {
+            VStack(alignment: .leading, spacing: 24) {
+                setupHeader
                 if availableTasks.isEmpty {
                     PomodoroSetupEmptyState(store: store)
                 } else {
@@ -35,13 +34,23 @@ struct PomodoroSetupCard: View {
                         selectedPlanID: $selectedPlanID
                     )
                 }
-
-                Spacer(minLength: 16)
             }
-            .frame(maxWidth: 560)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .appCard(padding: 24)
+            .accessibilityIdentifier("pomodoro.setup")
+        } secondary: {
+            PomodoroLedgerCard(store: store)
+        }
+    }
+
+    private var setupHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(AppStrings.localized("pomodoro.setup.title"), systemImage: "scope")
+                .font(.title2.bold())
+
+            Text(.app("pomodoro.setup.subtitle"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -12,12 +12,22 @@ struct PomodoroFocusSetupControls: View {
         Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
     }
 
+    private var taskPath: String {
+        selectedTask.map(store.path(for:)) ?? AppStrings.localized("pomodoro.chooseTask")
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             PomodoroTimerFace(
                 timeText: DurationFormatter.clock(plan.focusSeconds),
                 title: selectedTask?.title ?? AppStrings.localized("pomodoro.chooseTask"),
-                titleColor: taskColor
+                subtitle: selectedTask.flatMap(store.parentPath(for:)),
+                titleColor: taskColor,
+                spokenLabel: taskPath,
+                spokenValue: String(
+                    format: AppStrings.localized("pomodoro.focusDuration.accessibility"),
+                    DurationFormatter.clock(plan.focusSeconds)
+                )
             )
 
             PomodoroSetupSelectionControls(
@@ -28,14 +38,10 @@ struct PomodoroFocusSetupControls: View {
                 selectedPlanID: $selectedPlanID
             )
 
-            Text(planSummary)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            PomodoroPlanDetails(plan: plan)
 
             Button(action: startPomodoro) {
-                Label(AppStrings.localized("segment.start"), systemImage: "play.fill")
+                Label(AppStrings.localized("pomodoro.startFocus"), systemImage: "play.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
@@ -48,17 +54,6 @@ struct PomodoroFocusSetupControls: View {
         }
     }
 
-    private var planSummary: String {
-        let focus = String(format: AppStrings.localized("common.minutes"), plan.focusMinutes)
-        let shortBreak = String(format: AppStrings.localized("common.minutes"), plan.shortBreakMinutes)
-        return String(
-            format: AppStrings.localized("pomodoro.planSummary"),
-            focus,
-            shortBreak,
-            plan.rounds
-        )
-    }
-
     private func startPomodoro() {
         store.startPomodoroForSelectedTask(
             focusSeconds: plan.focusSeconds,
@@ -66,5 +61,45 @@ struct PomodoroFocusSetupControls: View {
             longBreakSeconds: plan.longBreakSeconds,
             targetRounds: plan.rounds
         )
+    }
+}
+
+private struct PomodoroPlanDetails: View {
+    let plan: PomodoroPlan
+
+    var body: some View {
+        Grid(horizontalSpacing: 24, verticalSpacing: 16) {
+            GridRow {
+                metric("pomodoro.focus", value: minutes(plan.focusMinutes))
+                metric("pomodoro.shortBreak", value: minutes(plan.shortBreakMinutes))
+            }
+            GridRow {
+                metric("pomodoro.longBreak", value: minutes(plan.longBreakMinutes))
+                metric("pomodoro.rounds", value: String(plan.rounds))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .accessibilityIdentifier("pomodoro.planDetails")
+    }
+
+    private func metric(_ key: String, value: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text(.app(key))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(AppStrings.localized(key))
+        .accessibilityValue(value)
+    }
+
+    private func minutes(_ value: Int) -> String {
+        String(format: AppStrings.localized("common.minutes"), value)
     }
 }

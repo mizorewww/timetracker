@@ -339,6 +339,9 @@
 "pomodoro.chooseTask" = "Choose Task";
 "pomodoro.noTasks.title" = "Create a Task First";
 "pomodoro.noTasks.description" = "A focus session needs a task so its time can be recorded correctly.";
+"pomodoro.setup.title" = "Next Focus";
+"pomodoro.setup.subtitle" = "Choose a plan and task. Your focus time will be saved to that task.";
+"pomodoro.focusDuration.accessibility" = "%@ focus duration";
 "pomodoro.planSummary" = "%@ focus · %@ break · %d rounds";
 "pomodoro.choosePlan" = "Choose Plan";
 "pomodoro.applyPreset" = "Apply Preset";

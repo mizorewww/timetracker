@@ -3,27 +3,53 @@ import SwiftUI
 struct PomodoroTimerFace: View {
     let timeText: String
     let title: String
+    let subtitle: String?
     let titleColor: Color
+    let spokenLabel: String?
+    let spokenValue: String?
+
+    init(
+        timeText: String,
+        title: String,
+        subtitle: String? = nil,
+        titleColor: Color,
+        spokenLabel: String? = nil,
+        spokenValue: String? = nil
+    ) {
+        self.timeText = timeText
+        self.title = title
+        self.subtitle = subtitle
+        self.titleColor = titleColor
+        self.spokenLabel = spokenLabel
+        self.spokenValue = spokenValue
+    }
 
     var body: some View {
         VStack(spacing: 10) {
             Text(timeText)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
                 .foregroundStyle(PomodoroStyle.timerText)
 
             Text(title)
                 .font(.title2.bold())
-                .lineLimit(2)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(titleColor)
+
+            if let subtitle {
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 132)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
-        .accessibilityValue(timeText)
+        .accessibilityLabel(spokenLabel ?? title)
+        .accessibilityValue(spokenValue ?? timeText)
         .accessibilityIdentifier("pomodoro.timerFace")
     }
 }

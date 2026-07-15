@@ -339,6 +339,9 @@
 "pomodoro.chooseTask" = "选择任务";
 "pomodoro.noTasks.title" = "请先创建任务";
 "pomodoro.noTasks.description" = "专注时段需要关联任务，才能正确记录时间。";
+"pomodoro.setup.title" = "下一次专注";
+"pomodoro.setup.subtitle" = "选择计划和任务；专注时间会记录到该任务。";
+"pomodoro.focusDuration.accessibility" = "专注时长 %@";
 "pomodoro.planSummary" = "专注 %@ · 休息 %@ · %d 轮";
 "pomodoro.choosePlan" = "选择计划";
 "pomodoro.applyPreset" = "套用模式";

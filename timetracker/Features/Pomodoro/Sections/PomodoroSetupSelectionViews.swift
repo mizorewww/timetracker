@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PomodoroSetupSelectionControls: View {
-    let store: TimeTrackerStore
+    @Bindable var store: TimeTrackerStore
     let selectedTask: TaskNode?
     let availableTasks: [TaskNode]
     let plans: [PomodoroPlan]
@@ -11,18 +11,11 @@ struct PomodoroSetupSelectionControls: View {
         plans.first { $0.id == selectedPlanID }
     }
 
-    private var selectedTaskID: Binding<UUID?> {
-        Binding(
-            get: { store.selectedTaskID },
-            set: { store.selectedTaskID = $0 }
-        )
-    }
-
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 12) {
-                planMenu
-                taskMenu
+                planMenu.frame(minWidth: 220)
+                taskMenu.frame(minWidth: 260)
             }
             VStack(spacing: 12) {
                 planMenu
@@ -48,17 +41,17 @@ struct PomodoroSetupSelectionControls: View {
                 systemImage: selectedPlan?.iconName ?? "slider.horizontal.3",
                 tint: Color(hex: selectedPlan?.colorHex) ?? PomodoroStyle.accent
             )
-            .appCard(padding: 14)
         }
         .menuIndicator(.hidden)
-        .buttonStyle(.plain)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
         .frame(maxWidth: .infinity)
         .accessibilityIdentifier("pomodoro.planPicker")
     }
 
     private var taskMenu: some View {
         Menu {
-            Picker(selection: selectedTaskID) {
+            Picker(selection: $store.selectedTaskID) {
                 ForEach(availableTasks, id: \.id) { task in
                     Label(store.path(for: task), systemImage: task.iconName ?? "checklist")
                         .tag(Optional(task.id))
@@ -69,14 +62,14 @@ struct PomodoroSetupSelectionControls: View {
         } label: {
             PomodoroSelectionLabel(
                 title: AppStrings.localized("pomodoro.chooseTask"),
-                value: selectedTask?.title ?? AppStrings.localized("common.choose"),
+                value: selectedTask.map(store.path(for:)) ?? AppStrings.localized("common.choose"),
                 systemImage: selectedTask?.iconName ?? "checklist",
                 tint: Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
             )
-            .appCard(padding: 14)
         }
         .menuIndicator(.hidden)
-        .buttonStyle(.plain)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
         .frame(maxWidth: .infinity)
         .accessibilityIdentifier("pomodoro.taskPicker")
     }
@@ -123,7 +116,8 @@ private struct PomodoroSelectionLabel: View {
                         Text(value)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 8)
                     chevron

@@ -5,13 +5,14 @@ struct PomodoroLedgerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(.app("pomodoro.recent"))
+            Label(AppStrings.localized("pomodoro.recent"), systemImage: "clock.arrow.circlepath")
                 .font(.headline)
 
             PomodoroLedgerContent(store: store)
         }
         .padding(18)
         .appCard(padding: 0)
+        .accessibilityIdentifier("pomodoro.recent")
     }
 }
 
@@ -57,18 +58,30 @@ private struct PomodoroRunRow: View {
             Image(systemName: iconName(for: run.state))
                 .foregroundStyle(color(for: run.state))
             VStack(alignment: .leading, spacing: 3) {
-                Text(store.taskTitle(for: run))
+                Text(taskIdentity)
                     .font(.subheadline.weight(.medium))
-                Text("\(store.pomodoroStateLabel(for: run)) · \(run.completedFocusRounds)/\(run.targetRounds) \(AppStrings.localized("pomodoro.roundUnit"))")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text(DurationFormatter.compact(run.focusSecondsPlanned))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(taskIdentity)
+        .accessibilityValue(detail)
+    }
+
+    private var taskIdentity: String {
+        guard let task = store.task(for: run.taskID) else {
+            return store.taskTitle(for: run)
+        }
+        return store.path(for: task)
+    }
+
+    private var detail: String {
+        "\(store.pomodoroStateLabel(for: run)) · \(run.completedFocusRounds)/\(run.targetRounds) \(AppStrings.localized("pomodoro.roundUnit"))"
     }
 
     private func iconName(for state: PomodoroState) -> String {

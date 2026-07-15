@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WatchCommandFailureRow: View {
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     let title: String
     let result: WatchCommandResult
     let onRetry: () -> Void
@@ -17,8 +18,9 @@ struct WatchCommandFailureRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.headline)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .privacySensitive()
+                        .redacted(reason: isLuminanceReduced ? .placeholder : [])
                     Text(result.status.failureMessageKey)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -95,7 +97,7 @@ enum WatchSyncStatus: Equatable {
     case stale
     case connectionError
 
-    var titleKey: String {
+    var titleKey: LocalizedStringKey {
         switch self {
         case .waitingForFirstSnapshot: "watch.status.waiting"
         case .sending: "watch.status.sending"
@@ -105,7 +107,7 @@ enum WatchSyncStatus: Equatable {
         }
     }
 
-    var messageKey: String {
+    var messageKey: LocalizedStringKey {
         switch self {
         case .waitingForFirstSnapshot: "watch.status.waiting.message"
         case .sending: "watch.status.sending.message"
@@ -150,9 +152,9 @@ struct WatchStatusRow: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(.init(status.titleKey))
+                Text(status.titleKey)
                     .font(.caption.weight(.semibold))
-                Text(.init(status.messageKey))
+                Text(status.messageKey)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

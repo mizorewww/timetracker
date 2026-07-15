@@ -104,9 +104,9 @@ struct WatchDashboardView: View {
                     if snapshot.activeTimers.isEmpty && inactiveTasks.isEmpty {
                         Section {
                             WatchEmptyState(
-                                title: String(localized: "watch.empty.title"),
-                                message: String(localized: "watch.empty.message"),
-                                systemImage: "timer"
+                                title: String(localized: "watch.tasks.empty.title"),
+                                message: String(localized: "watch.tasks.empty.message"),
+                                systemImage: "list.bullet"
                             )
                         }
                     }

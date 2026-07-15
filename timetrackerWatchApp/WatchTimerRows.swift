@@ -25,13 +25,13 @@ struct WatchTaskShortcutRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(task.title)
                         .font(.headline)
-                        .lineLimit(2)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
                         .multilineTextAlignment(.leading)
                         .privacySensitive()
                         .redacted(reason: isLuminanceReduced ? .placeholder : [])
 
-                    if !dynamicTypeSize.isAccessibilitySize {
-                        Text(task.path.isEmpty ? String(localized: "watch.tasks.noParent") : task.path)
+                    if !dynamicTypeSize.isAccessibilitySize, !task.path.isEmpty {
+                        Text(task.path)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -58,7 +58,9 @@ struct WatchTaskShortcutRow: View {
     }
 
     private var accessibilityLabel: String {
-        task.path.isEmpty ? task.title : "\(task.title), \(task.path)"
+        commandState.accessibilityLabel(
+            task.path.isEmpty ? task.title : "\(task.title), \(task.path)"
+        )
     }
 }
 
@@ -82,7 +84,7 @@ struct WatchActiveTimerRow: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(timer.title)
                             .font(.headline)
-                            .lineLimit(2)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
                             .multilineTextAlignment(.leading)
                             .privacySensitive()
                             .redacted(reason: isLuminanceReduced ? .placeholder : [])
@@ -105,9 +107,15 @@ struct WatchActiveTimerRow: View {
                         .accessibilityHidden(true)
                 }
 
-                Text(timer.startedAt, style: .timer)
-                    .font(.title2.monospacedDigit())
-                    .lineLimit(1)
+                ViewThatFits(in: .horizontal) {
+                    Text(timer.startedAt, style: .timer)
+                        .font(.title2.monospacedDigit())
+                        .lineLimit(1)
+                    Text(timer.startedAt, style: .timer)
+                        .font(.headline.monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .contentShape(Rectangle())
@@ -121,11 +129,26 @@ struct WatchActiveTimerRow: View {
     }
 
     private var accessibilityLabel: String {
-        timer.path.isEmpty ? timer.title : "\(timer.title), \(timer.path)"
+        commandState.accessibilityLabel(
+            timer.path.isEmpty ? timer.title : "\(timer.title), \(timer.path)"
+        )
     }
 }
 
 private extension WatchRowCommandState {
+    func accessibilityLabel(_ baseLabel: String) -> String {
+        guard let accessibilityStatus else { return baseLabel }
+        return "\(baseLabel), \(String(localized: accessibilityStatus))"
+    }
+
+    var accessibilityStatus: LocalizedStringResource? {
+        switch self {
+        case .idle: nil
+        case .pending: "watch.commandState.pending"
+        case .failed: "watch.commandState.failed"
+        }
+    }
+
     var taskSystemImage: String {
         switch self {
         case .idle: "play.fill"

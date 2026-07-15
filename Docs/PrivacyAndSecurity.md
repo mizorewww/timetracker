@@ -36,7 +36,7 @@ LLM API 密钥使用 Keychain generic password：
 
 新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名或用户可读设备名称。
 
-iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损状态隔离文件可能包含任务、偏好或账本快照。写入后都使用 `FileProtectionType.completeUntilFirstUserAuthentication`：设备本次启动首次解锁前不可读，首次解锁后即使再次锁屏也可供后台 Shortcuts/CloudKit 协调使用。macOS 不使用这项 iOS Data Protection 属性；普通 file lock 本身不被当成用户快照。损坏的权威 state 会隔离并要求显式恢复；损坏的 pending mirror 会单独隔离并忽略，既不覆盖权威 state，也不阻塞仍可使用的主库。
+iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损状态隔离文件可能包含任务、偏好或账本快照。写入后都使用 `FileProtectionType.completeUntilFirstUserAuthentication`：设备本次启动首次解锁前不可读，首次解锁后即使再次锁屏也可供后台 Shortcuts/CloudKit 协调使用。macOS 不使用这项 iOS Data Protection 属性；普通 file lock 本身不被当成用户快照。权威 state 读取限 128 MiB，recovery mirror 限 64 MiB；metadata 预检后仍只通过 `FileHandle` 读取 `limit + 1`，防止文件增长 TOCTOU 造成无界内存占用。损坏或超限的权威 state 会隔离并要求显式恢复；损坏或超限的 pending mirror 会单独隔离并忽略，既不覆盖权威 state，也不阻塞仍可使用的主库。超限文件隔离不会整份载入内存。
 
 ## 3. iCloud 与多设备
 

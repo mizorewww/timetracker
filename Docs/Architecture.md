@@ -35,14 +35,23 @@ Views may format and present state, but durable business actions should go throu
 
 `ChecklistItem` belongs to a `TaskNode`, but it is not a task. Checklist items are for progress and estimation only; timers, manual entries, pomodoros, widgets, and Live Activities still attach time to the task itself.
 
+Task visibility and work eligibility are intentionally separate. Archived or deleted branches are hidden. Completed tasks and descendants stay visible so detail and history remain reachable, but a completed task anywhere on the ancestor path blocks new timers, manual entries, Pomodoro runs, Quick Start, Inbox conversion, App Intents, and create/move destinations. Reopening for work restores every completed blocker on that path to active. An already-running segment remains visible and stoppable if completion arrives from another device or historical state.
+
+The current SwiftData schema is V9 (`1.8.0`). V9 removes the persisted `DailySummary` derived cache through a lightweight V8→V9 migration while preserving ledger and other user facts. The legacy model remains declared only inside V1...V8 schema history; current analytics creates disposable `DailySummarySnapshot` values from ledger facts.
+
 ## Forecasting and Analytics
 
-Forecasting is local and explainable. `TaskRollupService` recursively combines direct task time, checklist progress, and direct child-task rollups. It does not create forecasts from manual estimates or history alone. `ForecastDisplayService` decides whether Home, Analytics, and Task Detail should show the selected task, drill into one forecastable child task, or show a parent summary. `AnalyticsEngine` owns pure date/range aggregation for overview metrics, hourly activity, and daily/monthly chart points.
+Forecasting is local and explainable. `TaskRollupService` recursively combines direct task time, an explicit task estimate or checklist evidence, and direct child-task rollups. `ForecastDisplayService` decides whether Home, Analytics, and Task Detail should show the selected task, drill into one forecastable child task, or show a parent summary. `AnalyticsEngine` owns pure date/range aggregation for overview metrics, hourly activity, and daily/monthly chart points.
 
-Checklist estimates are equal-weight:
+The current task's explicit estimate takes precedence over checklist inference. `TaskEstimatePolicy` accepts `0...600` minutes, treats zero as absent, and clamps positive legacy values to 36,000 seconds. Checklist items use an equal-weight fallback only when there is no explicit estimate:
 
 ```text
-if checklistTotal == 0:
+if task is completed or every checklist item is completed:
+  ownRemaining = 0
+else if explicitEstimate exists:
+  estimatedTotal = max(explicitEstimate, ownWorkedSeconds)
+  ownRemaining = max(0, explicitEstimate - ownWorkedSeconds)
+else if checklistTotal == 0:
   forecastState = needsChecklist
 else if completedChecklistCount == 0:
   forecastState = needsCompletedItem
@@ -56,21 +65,21 @@ rollupWorked = direct task time + recursive child rollupWorked
 rollupRemaining = ownRemaining + recursive child forecast remaining
 ```
 
-If a task is completed, or all of its checklist items are completed, its own remaining time is always zero. Historical pace is the active-day average within the most recent 90 local calendar days, including today; it is only used to convert already-derived remaining seconds into projected active days for the same task branch. It never invents remaining hours. If there is not enough checklist progress or tracked time, the forecast reports the missing requirement.
+An explicit estimate applies only to the current task; forecastable children are added independently. Historical pace is the active-day average within the most recent 90 local calendar days, including today; it is only used to convert already-derived remaining seconds into projected active days for the same task branch. It never invents remaining hours. Without an explicit estimate, insufficient checklist progress or tracked time produces a missing-requirement state instead of a number.
 
 Parent display rules:
 
 ```text
-Parent has its own checklist:
+Parent has its own forecast source (explicit estimate or checklist evidence):
   show the parent forecast and include forecastable children recursively
 
-Parent has no checklist and exactly one forecastable child branch:
+Parent has no own forecast source and exactly one forecastable child branch:
   show that child task directly
 
-Parent has no checklist and multiple forecastable child branches:
+Parent has no own forecast source and multiple forecastable child branches:
   show a parent summary labeled as an aggregate
 
-No checklist-backed branch exists:
+No forecastable source exists:
   do not show a forecast card; show guidance in task detail
 ```
 

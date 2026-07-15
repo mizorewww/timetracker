@@ -118,7 +118,7 @@ Views should render existing snapshots. They should not calculate analytics, tre
 | --- | --- | --- | --- | --- | --- |
 | Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
-| Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService` | `Features/Tasks`, `Features/Sidebar` |
+| Task edit, move, complete/reopen, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
 | Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
 | Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `ChecklistStore`, `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks/Editor`, `Features/Tasks/Detail` |
 | Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Tasks/Detail` |
@@ -132,20 +132,21 @@ Views should render existing snapshots. They should not calculate analytics, tre
 
 ## Forecast Rules
 
-Forecast is checklist-driven. Do not invent remaining hours from unrelated history.
+Forecast is explicit-plan-first and otherwise evidence-driven. Do not invent remaining hours from unrelated history.
 
 ```text
-Eligible = task has checklist + at least one completed item + tracked time on that task
-Completed checklist = own remaining time is zero
-Manual estimate = planning metadata only
+Completed task or completed checklist = own remaining time is zero
+Explicit estimate = max(estimate - own worked time, 0), with total never below worked time
+Checklist fallback = task has checklist + at least one completed item + tracked time on that task
+Estimate policy = 0...600 minutes; zero means absent; positive legacy values clamp to 36,000 seconds
 Recent pace = active-day average over the latest 90 local days, used only to turn existing remaining seconds into projected active days
 ```
 
 Parent tasks follow one display rule across Home, Analytics, and Task Detail:
 
-- If the parent has its own checklist, show the parent and include child forecast recursively.
-- If the parent has no checklist and exactly one forecastable child branch, drill into that child so the user sees the task that owns the checklist.
-- If the parent has no checklist and multiple forecastable child branches, show an aggregate parent forecast and label it as a summary.
+- If the parent has its own explicit estimate or checklist-backed source, show the parent and include child forecasts recursively. Its estimate covers only its own direct work.
+- If the parent has no own source and exactly one forecastable child branch, drill into that child so the user sees the task that owns the evidence.
+- If the parent has no own source and multiple forecastable child branches, show an aggregate parent forecast and label it as a summary.
 
 ## Ledger Query Strategy
 
@@ -171,6 +172,8 @@ Rules:
 4. Never reuse a schema version identifier for a different model shape. If a bad schema reached a build or branch that may have been installed, the next compatible schema must use a new version number.
 5. CloudKit-backed models should keep `id`, timestamps, `deletedAt`, `deviceID`, and `clientMutationID` semantics stable. Soft delete remains the default for user data that can sync.
 6. Every schema change must update `TimeTrackerModelRegistry.cloudSyncedUserModelNames` expectations and add a test proving old stores can still open or that the change is isolated in a new extension model.
+
+Current example: V9 (`1.8.0`) removes the derived `DailySummary` cache from the active schema with a lightweight V8→V9 migration. The legacy type remains in V1...V8 declarations so old stores open, while current analytics rebuilds `DailySummarySnapshot` from the ledger. Removing a reconstructable cache must never remove its source facts.
 
 The guiding principle is forward migration, not feature rollback: existing user data opens first, then new feature data is added in a compatible layer.
 

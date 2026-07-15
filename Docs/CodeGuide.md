@@ -103,7 +103,7 @@
 - macOS：单实例主 `Window` 承载 `NavigationSplitView` 工作区；独立系统 Settings scene、主窗口和 Settings 共享一个应用级 `TimeTrackerStore`，避免复制 CloudKit observers、自动 AI 建议与系统表面同步。
 - Today：iPhone 使用 `List`；Active Timer、摘要、Quick Start、Forecast、Timeline、Countdown 按优先级排列，没有通用日/周/月/年进度卡。iPad/macOS 的宽屏 Today 通过 `HomeCountdownSection` 读取同一 `countdownEvents` 状态并展示 Countdown。
 - Task Detail：只读优先的 `List`，铅笔按钮再打开编辑 sheet；清单完成状态可直接切换。
-- Task availability：Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent 与任务动作共用祖先感知的可计时判定；归档活动子树前先停止计时，历史 segment 编辑可保留原任务。
+- Task availability：`TaskTrackingAvailabilityService` 一次线性扫描分别产出 `visibleTaskIDs` 与 `trackableTaskIDs`。归档/删除分支不可见；完成分支仍可浏览详情与历史，但自身和后代不能接收新工作，直到 `reopenTaskForWork` 把路径上的完成阻塞项一起恢复为 active。Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent、任务创建/移动与任务动作共用该判定；归档或完成活动子树前先停止计时，历史 segment 编辑可保留原任务。
 - Settings：五类导航 IA，不提供应用级 appearance override。
 - Pomodoro：Plan 和 Task 是两个可见 `Menu`，没有点击标题/计时器的隐藏选择逻辑。
 - iOS 不设置 `CADisableMinimumFrameDurationOnPhone`；刷新率与帧调度交给系统，流畅度用 Release 截图/trace 和真实设备观察验证，不靠 Info.plist 强制覆盖。
@@ -128,6 +128,8 @@ TimeSegment 是计时事实来源。它不是“写入后永不可改”的 even
 
 Task、TaskCategory、ChecklistItem 和 InboxItem 形成用户组织层。树形视图需要稳定身份，ForEach 应使用持久标识符，不得依赖数组索引或可变标题。
 
+任务状态与可见性是两个维度。`completed` 表示“保留在任务树和历史中、暂停接收新工作”，`archived` 表示“隐藏整个分支”。完成祖先会阻塞所有后代的新 timer、manual entry、Pomodoro、Quick Start、Inbox conversion、App Intent 以及新建/移动目标；既有活动 timer 仍必须可见并可停止。重新开始工作时应恢复从所选任务到根路径上的全部完成阻塞项，而不是偷偷改变后代自身的状态。
+
 归档与删除语义不同。删除任务树会在一个原子动作中先结束该树的活动 Pomodoro 和 timer，再软删除任务；历史 segment/session/run 继续保留。普通 Local、iCloud、local-fallback 和 emergency 生产模式没有跨设备删除确认，因此 `AppCloudSync.allowsPermanentTombstonePurge` 为 false，`DatabaseMaintenanceService` 直接返回 0。只有隔离的 Demo/UI Test store 可物理清理过期 tombstone graph。
 
 `TaskNode.parentID` 是层级权威；`depth` 是可修复元数据；`path` 现在是稳定 canonical record locator `/<task UUID>`，不是祖先 UUID 链，也不是用户可见标题路径。显示路径由 `TaskTreeService` 根据当前标题迭代生成，并限制为最近六级。启动、任务域刷新和同步恢复都会运行 `TaskHierarchyMetadataService`：缺失父节点和循环会确定性地提升为根，随后重算 depth/canonical path。任务移动只更新真正变化的 depth/path，避免同深度跨根移动重写整棵后代。
@@ -145,13 +147,14 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 - `LedgerStore` 初次加载建立 segment ID、day、active、array-index 和 session index；带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。
 - `ChecklistStore.refreshTaskScoped` 只替换受影响 task 的 items/visuals，并同步维护 facade bucket，不在每次 toggle 后重新按全库分组。
 - `RollupIncrementalIndex` 保存任务拓扑、segment delta、活动摘要、checklist 进度和近期日 bucket。普通 mutation 的工作量由变更记录、任务自身与祖先深度决定；完整历史 worked seconds 始终精确。
+- `TaskEstimatePolicy` 统一预计时长输入与旧数据规范化：`0...600` 分钟、`0` 表示未设置、正数最多 36,000 秒。明确预计时长只属于当前任务自身，预计总时长至少等于已经记录的时间；没有明确值时才使用 checklist 证据模型，子任务始终单独递归汇总。
 - Forecast pace 使用包含今天在内的最近 90 个本地日，只对有记录的活跃日求日均；它只把已有 remaining seconds 换算为预计活跃日，不生成 remaining seconds。Calendar/时区变化会重建这组有界 bucket。
 - `AnalyticsStore` 的 overview 与 task snapshot cache key 包含 range、真实 period start 和可选 live-minute bucket。仅当前范围与活动 segment 相交时按分钟换 key；历史/静态范围稳定复用。ledger 事件按相交区间失效 day bucket，跨 period 会自然 miss。
 - `CorePerformanceBudgetTests.fiftyThousandSegmentMutationUsesConstantSizedRollupDelta` 以 50,000 个 segment 约束单 segment 增量更新和 cached recent ranking；最终是否通过仍以冻结工作树的 xcresult 为准。
 
 ## 5. 持久化、CloudKit 与迁移
 
-当前 schema 为 V8，迁移计划覆盖 V1 至 V8。版本升级时：
+当前 schema 为 V9（版本标识 `1.8.0`），迁移计划覆盖 V1 至 V9。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，当前 registry 不包含它；分析使用可从 ledger 重建的内存 `DailySummarySnapshot`。版本升级时：
 
 1. 先声明哪些用户数据必须保留。
 2. 为旧 schema 准备真实 store fixture。
@@ -160,7 +163,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 5. 明确失败后的回退边界；不要用空库或内存库静默伪装成功。
 6. 更新 [Versioning](Versioning.md) 与 [AgentDecisions](AgentDecisions.md)。
 
-当前兼容 fixture 主要覆盖 V4 到最新版本，仍需补齐其余重要版本。
+当前真实 store fixture 覆盖 V4 分类迁移与 V8 `DailySummary` 移除迁移；仍需按风险补齐其余重要历史版本。迁移测试必须打开磁盘 store 并核对事实记录，不能只比较 schema 常量。
 
 CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态不同。紧急内存 fallback 只能用于保持应用可诊断，绝不能被描述为持久存储。
 

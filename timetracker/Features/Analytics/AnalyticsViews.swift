@@ -79,7 +79,11 @@ private struct AnalyticsContent: View {
                 Text(
                     String(
                         format: AppStrings.localized("analytics.summary.periodFootnote"),
-                        AnalyticsPeriodText.title(for: range, date: referenceDate)
+                        AnalyticsPeriodText.title(
+                            for: range,
+                            date: referenceDate,
+                            liveNow: liveNow
+                        )
                     )
                 )
             }

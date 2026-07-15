@@ -390,6 +390,7 @@
 "analytics.period.next" = "Next Period";
 "analytics.period.select" = "Select Analysis Date";
 "analytics.period.current" = "Current";
+"analytics.period.returnToToday" = "Go to Today";
 "analytics.period.today" = "Today";
 "analytics.period.yesterday" = "Yesterday";
 "analytics.period.weekOfFormat" = "Week of %@";

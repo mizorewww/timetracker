@@ -390,6 +390,7 @@
 "analytics.period.next" = "下一個週期";
 "analytics.period.select" = "選擇分析日期";
 "analytics.period.current" = "目前";
+"analytics.period.returnToToday" = "回到今天";
 "analytics.period.today" = "今天";
 "analytics.period.yesterday" = "昨天";
 "analytics.period.weekOfFormat" = "%@ 起始週";

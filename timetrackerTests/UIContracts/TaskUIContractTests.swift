@@ -469,7 +469,8 @@ struct TaskUIContractTests {
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
-            "timetracker/Features/Analytics/AnalyticsPeriodSection.swift"
+            "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
+            "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift"
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")

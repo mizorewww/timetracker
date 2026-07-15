@@ -183,7 +183,10 @@ extension SyncDataSnapshot {
                 contextID: suggestion.inboxItemContextID ?? itemIdentity.contextID,
                 revisionID: suggestion.inboxItemRevisionID ?? itemIdentity.revisionID
             )
-            guard suggestionIdentity == itemIdentity else {
+            // A title edit intentionally rotates the item's revision and keeps the
+            // previous revision's suggestion as a tombstone. The physical item ID
+            // still proves the shared logical context, but revisions may differ.
+            guard suggestionIdentity.contextID == itemIdentity.contextID else {
                 throw SyncDataSnapshotPreflightError.inconsistentInboxSuggestionIdentity(
                     id: suggestion.id,
                     inboxItemID: suggestion.inboxItemID

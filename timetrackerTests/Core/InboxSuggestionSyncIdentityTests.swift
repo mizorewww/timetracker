@@ -6,6 +6,136 @@ import Testing
 @Suite(.serialized)
 struct InboxSuggestionSyncIdentityTests {
     @Test @MainActor
+    func titleEditSnapshotAcceptsHistoricalSuggestionTombstone() throws {
+        let sourceContext = try makeTestContext()
+        let task = TaskNode(title: "Target", parentID: nil, deviceID: "test")
+        let item = InboxItem(title: "Original title", deviceID: "test")
+        let originalRevisionID = item.effectiveSuggestionRevisionID
+        let suggestion = makeSuggestion(item: item, taskID: task.id)
+        sourceContext.insert(task)
+        sourceContext.insert(item)
+        sourceContext.insert(suggestion)
+        try sourceContext.save()
+
+        let editDate = Date(timeIntervalSinceReferenceDate: 200)
+        try InboxCommandHandler().updateTitle(
+            item,
+            title: "Edited title",
+            context: sourceContext,
+            now: editDate,
+            deviceID: "test"
+        )
+
+        let snapshot = try SyncDataSnapshot.capture(context: sourceContext)
+        let historicalSuggestion = try #require(
+            snapshot.inboxSuggestions.first { $0.id == suggestion.id }
+        )
+        #expect(historicalSuggestion.inboxItemRevisionID == originalRevisionID)
+        #expect(historicalSuggestion.deletedAt == editDate)
+        try snapshot.validateForRestore()
+
+        let restoredContext = try makeTestContext()
+        try snapshot.restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let restoredItem = try #require(
+            try restoredContext.fetch(FetchDescriptor<InboxItem>()).first { $0.id == item.id }
+        )
+        let restoredSuggestion = try #require(
+            try restoredContext.fetch(FetchDescriptor<InboxSuggestion>()).first { $0.id == suggestion.id }
+        )
+        #expect(restoredItem.title == "Edited title")
+        #expect(restoredItem.effectiveSuggestionRevisionID != originalRevisionID)
+        #expect(restoredSuggestion.inboxItemRevisionID == originalRevisionID)
+        #expect(restoredSuggestion.deletedAt != nil)
+    }
+
+    @Test @MainActor
+    func snapshotRestorePreservesNewerLogicalRevisionWinner() throws {
+        let sourceContext = try makeTestContext()
+        let contextID = UUID()
+        let current = makeLogicalItem(
+            title: "Current revision",
+            contextID: contextID,
+            revisionID: UUID(),
+            createdAt: Date(timeIntervalSinceReferenceDate: 100),
+            updatedAt: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let stale = makeLogicalItem(
+            title: "Stale revision",
+            contextID: contextID,
+            revisionID: UUID(),
+            createdAt: Date(timeIntervalSinceReferenceDate: 200),
+            updatedAt: Date(timeIntervalSinceReferenceDate: 200)
+        )
+        sourceContext.insert(current)
+        sourceContext.insert(stale)
+        try sourceContext.save()
+
+        let sourceWinner = try #require(
+            InboxSuggestionIdentityService().visibleLogicalItems(from: [stale, current]).first
+        )
+        #expect(sourceWinner.id == current.id)
+
+        let restoredContext = try makeTestContext()
+        try SyncDataSnapshot.capture(context: sourceContext).restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 1_000)
+        )
+        let restoredItems = try restoredContext.fetch(FetchDescriptor<InboxItem>())
+        let restoredWinner = try #require(
+            InboxSuggestionIdentityService().visibleLogicalItems(from: restoredItems).first
+        )
+
+        #expect(restoredWinner.id == current.id)
+        #expect(restoredWinner.title == "Current revision")
+    }
+
+    @Test @MainActor
+    func snapshotRestorePreservesNewerActiveRestoreOverOlderTombstone() throws {
+        let sourceContext = try makeTestContext()
+        let contextID = UUID()
+        let restored = makeLogicalItem(
+            title: "Restored",
+            contextID: contextID,
+            revisionID: UUID(),
+            createdAt: Date(timeIntervalSinceReferenceDate: 100),
+            updatedAt: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let tombstone = makeLogicalItem(
+            title: "Deleted before restore",
+            contextID: contextID,
+            revisionID: UUID(),
+            createdAt: Date(timeIntervalSinceReferenceDate: 200),
+            updatedAt: Date(timeIntervalSinceReferenceDate: 200)
+        )
+        tombstone.deletedAt = tombstone.updatedAt
+        sourceContext.insert(restored)
+        sourceContext.insert(tombstone)
+        try sourceContext.save()
+
+        let sourceWinner = try #require(
+            InboxSuggestionIdentityService().logicalWinners(from: [tombstone, restored]).first
+        )
+        #expect(sourceWinner.id == restored.id)
+        #expect(sourceWinner.deletedAt == nil)
+
+        let restoredContext = try makeTestContext()
+        try SyncDataSnapshot.capture(context: sourceContext).restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 1_000)
+        )
+        let restoredItems = try restoredContext.fetch(FetchDescriptor<InboxItem>())
+        let restoredWinner = try #require(
+            InboxSuggestionIdentityService().logicalWinners(from: restoredItems).first
+        )
+
+        #expect(restoredWinner.id == restored.id)
+        #expect(restoredWinner.deletedAt == nil)
+    }
+
+    @Test @MainActor
     func legacySnapshotRestoresDismissalAndExportsOpaqueIdentity() throws {
         let sourceContext = try makeTestContext()
         let legacyItem = InboxItem(title: "Private title must not become identity", deviceID: "legacy")
@@ -183,5 +313,21 @@ struct InboxSuggestionSyncIdentityTests {
             titleSnapshot: item.title,
             deviceID: item.deviceID
         )
+    }
+
+    @MainActor
+    private func makeLogicalItem(
+        title: String,
+        contextID: UUID,
+        revisionID: UUID,
+        createdAt: Date,
+        updatedAt: Date
+    ) -> InboxItem {
+        let item = InboxItem(title: title, deviceID: "test")
+        item.suggestionContextID = contextID
+        item.suggestionRevisionID = revisionID
+        item.createdAt = createdAt
+        item.updatedAt = updatedAt
+        return item
     }
 }

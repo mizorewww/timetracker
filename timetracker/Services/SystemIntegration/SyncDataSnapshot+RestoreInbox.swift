@@ -6,6 +6,7 @@ extension SyncDataSnapshot {
         var existing = try context.fetch(FetchDescriptor<InboxItem>())
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(inboxItems.map(\.id))
+        let logicalWinnerIDs = logicalInboxItemWinnerIDs()
         let itemIdentityByID = inboxItems.reduce(into: [UUID: InboxSuggestionIdentity]()) { result, item in
             result[item.id] = InboxSuggestionIdentity(
                 contextID: item.suggestionContextID ?? item.id,
@@ -67,11 +68,34 @@ extension SyncDataSnapshot {
             model.suggestionReason = record.suggestionReason
             model.suggestionGeneratedAt = record.suggestionGeneratedAt
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            // Restore the snapshot as the local winner without flattening every
+            // physical sibling to the same timestamp. Only the source snapshot's
+            // logical winner is advanced; older revisions retain their ordering.
+            model.updatedAt = logicalWinnerIDs.contains(record.id)
+                ? max(record.updatedAt, now)
+                : record.updatedAt
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            // Snapshot records do not carry mutation metadata. Reusing the opaque
+            // record UUID makes exact timestamp/creation ties deterministic.
+            model.clientMutationID = record.id
         }
+    }
+
+    private func logicalInboxItemWinnerIDs() -> Set<UUID> {
+        var winnersByContextID: [UUID: InboxItemRecord] = [:]
+        winnersByContextID.reserveCapacity(inboxItems.count)
+        for record in inboxItems {
+            let contextID = record.effectiveSuggestionIdentity.contextID
+            if let current = winnersByContextID[contextID] {
+                if record.isPreferredLogicalWinner(over: current) {
+                    winnersByContextID[contextID] = record
+                }
+            } else {
+                winnersByContextID[contextID] = record
+            }
+        }
+        return Set(winnersByContextID.values.map(\.id))
     }
 
     func restoreInboxSuggestions(context: ModelContext, now: Date, deviceID: String) throws {

@@ -36,6 +36,39 @@ struct InboxItemRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
+extension InboxItemRecord {
+    var effectiveSuggestionIdentity: InboxSuggestionIdentity {
+        InboxSuggestionIdentity(
+            contextID: suggestionContextID ?? id,
+            revisionID: suggestionRevisionID ?? id
+        )
+    }
+
+    var isCurrentSuggestionRevisionDismissed: Bool {
+        dismissedSuggestionRevisionID == effectiveSuggestionIdentity.revisionID
+    }
+
+    func isPreferredLogicalWinner(over other: Self) -> Bool {
+        if (deletedAt == nil) != (other.deletedAt == nil) {
+            if updatedAt != other.updatedAt {
+                return updatedAt > other.updatedAt
+            }
+            return deletedAt != nil
+        }
+        if effectiveSuggestionIdentity.revisionID == other.effectiveSuggestionIdentity.revisionID,
+           isCurrentSuggestionRevisionDismissed != other.isCurrentSuggestionRevisionDismissed {
+            return isCurrentSuggestionRevisionDismissed
+        }
+        if updatedAt != other.updatedAt {
+            return updatedAt > other.updatedAt
+        }
+        if createdAt != other.createdAt {
+            return createdAt > other.createdAt
+        }
+        return id.uuidString > other.id.uuidString
+    }
+}
+
 struct InboxSuggestionRecord: Codable, Equatable, SyncSnapshotRecord {
     let id: UUID
     let inboxItemID: UUID

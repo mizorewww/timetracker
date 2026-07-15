@@ -40,6 +40,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Domains/LedgerRollupIndex.swift",
             "timetracker/Stores/Domains/LedgerSessionIndex.swift",
             "timetracker/Stores/Domains/RollupIncrementalIndex.swift",
+            "timetracker/Stores/Domains/RollupIncrementalIndex+Mutation.swift",
             "timetracker/Stores/Domains/RollupIncrementalIndex+Pace.swift",
             "timetracker/Stores/Domains/RollupIncrementalIndex+Topology.swift",
             "timetracker/Stores/Navigation/StoreSelectionCoordinator.swift",
@@ -495,6 +496,7 @@ struct CoreSourceLayoutTests {
         let domainURL = root.appending(path: "timetracker/Stores/Domains")
         let focusedFiles = [
             "RollupIncrementalIndex.swift",
+            "RollupIncrementalIndex+Mutation.swift",
             "RollupIncrementalIndex+Pace.swift",
             "RollupIncrementalIndex+Topology.swift"
         ]

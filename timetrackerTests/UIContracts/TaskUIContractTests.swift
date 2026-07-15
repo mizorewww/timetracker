@@ -250,6 +250,9 @@ struct TaskUIContractTests {
         let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
 
         #expect(categoryEditor.contains("SymbolColorPickerRow("))
+        #expect(categoryEditor.contains("TaskPersistencePolicy.prepareCategory("))
+        #expect(categoryEditor.contains("taskCategory.validation"))
+        #expect(categoryEditor.contains("validationError != nil"))
         #expect(categoryEditor.contains("Picker(AppStrings.localized(\"taskCategory.symbol\")") == false)
         #expect(categoryEditor.contains("private let symbols") == false)
         #expect(categoryEditor.contains("private var colorGrid") == false)

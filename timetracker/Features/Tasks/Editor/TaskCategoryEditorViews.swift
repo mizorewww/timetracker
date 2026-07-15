@@ -16,11 +16,20 @@ struct TaskCategoryEditorSheet: View {
     }
 
     var body: some View {
+        let validationError = categoryValidationMessage
+
         NavigationStack {
             Form {
                 Section(AppStrings.localized("taskCategory.editor.info")) {
                     TextField(AppStrings.localized("taskCategory.name"), text: $draft.title)
                         .focused($isTitleFocused)
+                    if let validationError {
+                        Label(validationError, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .accessibilityAddTraits(.isStaticText)
+                            .accessibilityIdentifier("taskCategory.validation")
+                    }
                     SymbolColorPickerRow(
                         colors: TaskColorPalette.hexValues,
                         symbolName: $draft.iconName,
@@ -66,7 +75,10 @@ struct TaskCategoryEditorSheet: View {
                         }
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(
+                        draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                            validationError != nil
+                    )
                 }
             }
         }
@@ -97,6 +109,20 @@ struct TaskCategoryEditorSheet: View {
             cancel()
         } else {
             isDiscardConfirmationPresented = true
+        }
+    }
+
+    private var categoryValidationMessage: String? {
+        guard draft.title.isEmpty == false else { return nil }
+        do {
+            _ = try TaskPersistencePolicy.prepareCategory(
+                title: draft.title,
+                colorHex: draft.colorHex,
+                iconName: draft.iconName
+            )
+            return nil
+        } catch {
+            return error.localizedDescription
         }
     }
 

@@ -147,6 +147,45 @@ struct InboxMutationIdentityTests {
     }
 
     @Test @MainActor
+    func reorderTombstonesActiveLogicalSiblings() throws {
+        let context = try makeTestContext()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let staleSibling = InboxItem(title: "First", sortOrder: 30, deviceID: remoteDeviceID)
+        staleSibling.suggestionContextID = contextID
+        staleSibling.suggestionRevisionID = revisionID
+        staleSibling.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let first = InboxItem(title: "First", sortOrder: 10, deviceID: remoteDeviceID)
+        first.suggestionContextID = contextID
+        first.suggestionRevisionID = revisionID
+        first.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let second = InboxItem(title: "Second", sortOrder: 20, deviceID: remoteDeviceID)
+        second.updatedAt = Date(timeIntervalSinceReferenceDate: 300)
+        context.insert(staleSibling)
+        context.insert(first)
+        context.insert(second)
+        try context.save()
+
+        let reorderedAt = Date(timeIntervalSinceReferenceDate: 9_000)
+        try InboxCommandHandler().reorderOpenItems(
+            orderedItemIDs: [second.id, first.id],
+            context: context,
+            now: reorderedAt,
+            deviceID: localDeviceID
+        )
+
+        #expect(second.sortOrder == 10)
+        #expect(first.sortOrder == 20)
+        #expect(staleSibling.deletedAt == reorderedAt.addingTimeInterval(-1))
+        #expect(staleSibling.updatedAt == reorderedAt.addingTimeInterval(-1))
+        #expect(staleSibling.deviceID == localDeviceID)
+        let visible = InboxSuggestionIdentityService().visibleLogicalItems(
+            from: try context.fetch(FetchDescriptor<InboxItem>())
+        )
+        #expect(Set(visible.map(\.id)) == [first.id, second.id])
+    }
+
+    @Test @MainActor
     func suggestionUpsertAndDraftPathsRecordTheCallingDevice() throws {
         let context = try makeTestContext()
         let handler = InboxCommandHandler()

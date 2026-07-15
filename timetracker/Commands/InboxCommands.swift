@@ -162,26 +162,25 @@ struct InboxCommandHandler {
         let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }
         guard orderedItems.count == items.count else { return }
 
-        let preparedItems = try orderedItems.map { item in
-            (
-                item,
-                try InboxPersistencePolicy.prepareItem(
-                    title: item.title,
-                    notes: item.notes,
-                    suggestionReason: item.suggestionReason
-                )
-            )
+        let logicalMutations = try orderedItems.map {
+            try preparedLogicalMutation(for: $0, context: context)
         }
+        guard logicalMutations.map({ $0.winner.item.id }) == orderedItemIDs else { return }
 
         try context.performAtomicMutation {
-            for (index, preparedItem) in preparedItems.enumerated() {
-                let item = preparedItem.0
+            for (index, logicalMutation) in logicalMutations.enumerated() {
+                let item = logicalMutation.winner.item
                 item.materializeSuggestionIdentity()
-                preparedItem.1.apply(to: item)
+                logicalMutation.winner.text.apply(to: item)
                 item.sortOrder = Double(index + 1) * 10
                 item.updatedAt = now
                 item.deviceID = deviceID
                 item.clientMutationID = UUID()
+                tombstoneSuperseded(
+                    logicalMutation.activeSiblings,
+                    winnerUpdatedAt: now,
+                    deviceID: deviceID
+                )
             }
         }
     }

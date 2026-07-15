@@ -23,6 +23,8 @@
 
 业务实体存放在 SwiftData store。启用 iCloud 后，同一业务模型可由 CloudKit 同步。应用可能在持久容器无法建立时进入诊断或临时内存模式；内存模式的数据在进程结束后消失。
 
+当前 V9 schema 不再持久化或同步 `DailySummary` 派生缓存。V8→V9 lightweight migration 会删除这份可重建 cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。Legacy 类型只用于读取 V1...V8 store，不应重新进入当前导出或 CloudKit registry。
+
 LLM API 密钥使用 Keychain generic password：
 
 - 可访问级别为 AfterFirstUnlockThisDeviceOnly。
@@ -166,7 +168,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
 - [ ] Watch DTO 不包含 secret，持久离线队列、typed terminal result、20 秒 timeout、retry/discard 和同 ID 幂等通过真机验证。
-- [ ] Breaking migration 在真实旧 store 上通过。
+- [ ] V8→V9 `DailySummary` cache 移除在真实磁盘 fixture 上保留用户事实；其他 breaking migration 也在对应真实旧 store 上通过。
 - [ ] 导出文案明确“不是备份”。
 
 ## 11. 用户建议

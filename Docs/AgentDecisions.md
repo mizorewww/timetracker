@@ -378,6 +378,42 @@
 
 验证：draft normalization、stale test cancellation、save enablement、一次 preference batch save、Keychain 补偿恢复、discard confirmation、Keychain migration/filtering、automatic-consent default 和网络边界测试。
 
+## AD-028：完成任务保持可见，可工作性与可见性分离
+
+状态：Accepted
+
+背景：把 `completed` 与 `archived` 都从任务树和选择器隐藏，会让用户无法回看详情和历史，也无法理解为何子任务不能继续工作；反过来，允许完成分支继续接收计时和新内容，又会让完成状态失去含义。
+
+决策：`TaskTrackingAvailabilityService` 分别计算 `visibleTaskIDs` 与 `trackableTaskIDs`。归档或删除的任务会连同后代隐藏；完成任务与后代仍显示在任务树、详情和历史中，但任何祖先处于完成状态时，都不得接收新 timer、manual entry、Pomodoro、Quick Start、Inbox checklist、App Intent 或新建/移动目标。已存在的活动 timer 必须仍可见并可停止。用户选择“重新打开”时，把从目标到根路径上的所有完成阻塞项一起设为 active，不改写无关后代状态。
+
+后果：完成、归档和删除是三个不同概念。所有系统入口、仓储层级写入和 UI picker 必须共用 trackable 判定；只读导航使用 visible 判定。完成或归档活动子树前必须先停止活动计时。
+
+验证：覆盖完成父/子分支的可见性、全部写入口拒绝、历史 segment 保留原归属、既有 active timer 可停止、create/move 目标拒绝、App Intent 过滤，以及一次 reopen 原子恢复多个完成祖先。
+
+## AD-029：预计时长优先，Checklist 是证据回退
+
+状态：Accepted
+
+背景：旧文档把任务预计时长称为纯展示 metadata，导致用户填写计划后仍看不到预测；仅靠 checklist 又会排除不适合拆成等权步骤的任务。另一方面，父任务预算若隐式覆盖子任务，会造成重复或模糊计数。
+
+决策：`TaskEstimatePolicy` 接受 `0...600` 分钟，零表示未设置，正的历史值最多规范化为 36,000 秒。任务已完成或 checklist 全完成时，自身剩余为零；否则明确预计时长优先，`estimatedTotal = max(explicitEstimate, ownWorked)`、`remaining = max(0, explicitEstimate - ownWorked)`。没有明确预计时长时，才要求 checklist 至少完成一项且当前任务已有真实计时，再按等权完成项推导。明确预计时长只属于当前任务直接工作，子任务预测独立递归相加。最近 90 个本地日 pace 只能把已有 remaining seconds 换算为活跃日，不能生成 remaining seconds。
+
+后果：Home、Analytics 和 Task Detail 必须展示相同来源与父子汇总；编辑器、迁移输入和 forecast service 共用一个规范化范围。预测理由必须说明是用户预计还是 checklist 证据。
+
+验证：覆盖零/负值/超上限规范化、明确预计无 checklist、worked 超过 estimate、完成状态优先、checklist fallback、父自身 estimate 与子 forecast 分开累加、单子分支 drill-down、多子分支汇总和 90 日 pace 不造工时。
+
+## AD-030：V9 移除持久 DailySummary 派生缓存
+
+状态：Accepted
+
+背景：`DailySummary` 可由 canonical `TimeSegment` 与聚合规则完全重建。把它留在当前 SwiftData/CloudKit schema 会形成第二份可漂移事实，也扩大同步、迁移和维护面。
+
+决策：当前 schema 为 V9，版本标识 `1.8.0`。V8→V9 使用 lightweight migration 从当前 registry 移除 `DailySummary`，保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时与偏好等用户事实。Legacy `DailySummary` 类型只保留在 V1...V8 schema 历史中，使旧 store 可被迁移计划读取；当前 Analytics 只创建可丢弃、可重建的 `DailySummarySnapshot`。
+
+后果：生产查询、同步 registry、导出与维护路径不得重新持久化 `DailySummary`。以后移除任何派生缓存都必须先证明其事实来源完整、迁移不删除事实，并保留旧 schema 声明直到支持窗口结束。
+
+验证：真实 V8 磁盘 store fixture 包含任务与 legacy summary；打开 V9 后任务仍存在、当前 schema/CloudKit model registry 不含 `DailySummary`，分析结果可从 ledger 重建。V4→当前分类迁移 fixture 继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：
@@ -387,6 +423,7 @@
 3. 检查工作树，保留用户和其他 Agent 的现有改动。
 4. 明确当前事实、计划目标和历史记录，不混写。
 5. 优先读取领域模型、命令和测试，再改 UI。
+6. 把可独立复验的小批变更及时提交；只 stage 自己已核对的文件，不把其他 Agent 或用户的并行改动夹带进 commit。
 
 完成前：
 

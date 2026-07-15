@@ -49,8 +49,9 @@ final class WatchConnectivityBridge: NSObject {
     init(
         session: WCSession? = WCSession.isSupported() ? .default : nil,
         diagnosticHandler: ((WatchConnectivityDiagnostic) -> Void)? = nil,
-        pendingCommandStore: WatchIncomingCommandStore = WatchIncomingCommandStore()
+        pendingCommandStore: WatchIncomingCommandStore? = nil
     ) {
+        let pendingCommandStore = pendingCommandStore ?? WatchIncomingCommandStore()
         self.session = session
         self.diagnosticHandler = diagnosticHandler
         self.pendingCommandStore = pendingCommandStore

@@ -234,7 +234,7 @@ Live Activity 是状态投影。Activity attributes 应保持小而稳定，不�
 
 ### Watch
 
-Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；Watch 把队列编码到本地 UserDefaults，并同时走 durable `transferUserInfo` 与可达 `sendMessage`。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID，用户也可 discard。快照反射只为旧手机兼容确认。Watch UI 以 Active Timer 为第一优先级，并区分首次等待、发送、排队、失败、离线和 stale。主 target 的 codec/state/processor 测试不能替代真机往返验证。
+Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；Watch 把队列编码到本地 UserDefaults，并同时走 durable `transferUserInfo` 与可达 `sendMessage`。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID、刷新 `issuedAt`，用户也可 discard。`WatchCommandProcessor` 在 receipt lookup 后、任何 mutation 前校验 DTO 和时间边界：命令最多保留 30 秒，允许最多 5 分钟的未来设备时钟偏差；过期/非法命令返回 invalid 且不写 receipt 或 ledger，因此用户仍可用同 ID 明确重试。快照反射只为旧手机兼容确认。Watch UI 以 Active Timer 为第一优先级，并区分首次等待、发送、排队、失败、离线和 stale。主 target 的 codec/state/processor 测试不能替代真机往返验证。
 
 ### Widget
 

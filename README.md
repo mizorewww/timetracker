@@ -162,7 +162,7 @@ Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 
 - App Intents 支持添加收件箱项目、开始计时和停止计时，并由系统快捷指令发现。
 - Apple Watch 通过 WatchConnectivity 接收主应用快照，并持久排队用户命令；命令与 terminal result 使用 durable `transferUserInfo`，可达消息仅用于加速。
-- Watch 上的操作以手机 typed terminal result 为主要确认；20 秒超时后可用同一 command ID 安全重试或丢弃，旧手机的快照反射保留为兼容路径。
+- Watch 上的操作以手机 typed terminal result 为主要确认；20 秒超时后可用同一 command ID 安全重试或丢弃，重试会刷新命令时间。手机拒绝超过 30 秒的旧命令，避免离线队列在很久以后意外开始或停止计时；旧手机的快照反射保留为兼容路径。
 - 这些入口复用领域命令，不单独维护第二套账本逻辑。
 
 ### Widget

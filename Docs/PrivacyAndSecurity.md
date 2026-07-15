@@ -101,7 +101,7 @@ Live Activity 接收当前计时的最小展示状态。它不是事实存储，
 
 ### Watch
 
-WatchConnectivity 在配对设备之间传输任务/计时快照和用户命令。命令队列持久保存在 Watch 本机，每个 command ID 是幂等键；命令和手机 terminal result 都走 durable `transferUserInfo`，可达消息只用于加速。20 秒超时后由用户重试或丢弃，重试保留原 ID；兼容快照反射也可确认旧手机已执行。DTO 应最小化，不包含 API key。
+WatchConnectivity 在配对设备之间传输任务/计时快照和用户命令。命令队列持久保存在 Watch 本机，每个 command ID 是幂等键；命令和手机 terminal result 都走 durable `transferUserInfo`，可达消息只用于加速。20 秒超时后由用户重试或丢弃，重试保留原 ID 并刷新发送时间。手机在写账本前拒绝超过 30 秒的旧命令，避免长期离线消息迟到后改变当前计时；兼容快照反射也可确认旧手机已执行。DTO 应最小化，不包含 API key。
 
 ### App Intents
 
@@ -167,7 +167,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
-- [ ] Watch DTO 不包含 secret，持久离线队列、typed terminal result、20 秒 timeout、retry/discard 和同 ID 幂等通过真机验证。
+- [ ] Watch DTO 不包含 secret，持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过真机验证。
 - [ ] V8→V9 `DailySummary` cache 移除在真实磁盘 fixture 上保留用户事实；其他 breaking migration 也在对应真实旧 store 上通过。
 - [ ] 导出文案明确“不是备份”。
 

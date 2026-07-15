@@ -137,6 +137,8 @@ SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditor
 
 Task、TaskCategory、ChecklistItem 和 InboxItem 形成用户组织层。树形视图需要稳定身份，ForEach 应使用持久标识符，不得依赖数组索引或可变标题。
 
+Inbox capture 以 `TimeTrackerStore.addInboxItem` 的 `Bool` 返回值作为 durable commit 契约。`InboxCaptureDraft` 只在返回 true 后清空；空输入、recovery write guard、未配置 context 或保存错误都保留原始草稿。`InboxCaptureRow` 不再自行假定 callback 成功并重复清空 binding。任何新增 quick-capture 表面都必须复用相同语义。
+
 任务状态与可见性是两个维度。`completed` 表示“保留在任务树和历史中、暂停接收新工作”，`archived` 表示“隐藏整个分支”。完成祖先会阻塞所有后代的新 timer、manual entry、Pomodoro、Quick Start、Inbox conversion、App Intent 以及新建/移动目标；既有活动 timer 仍必须可见并可停止。重新开始工作时应恢复从所选任务到根路径上的全部完成阻塞项，而不是偷偷改变后代自身的状态。
 
 归档与删除语义不同。删除任务树会在一个原子动作中先结束该树的活动 Pomodoro 和 timer，再软删除任务；历史 segment/session/run 继续保留。普通 Local、iCloud、local-fallback 和 emergency 生产模式没有跨设备删除确认，因此 `AppCloudSync.allowsPermanentTombstonePurge` 为 false，`DatabaseMaintenanceService` 直接返回 0。只有隔离的 Demo/UI Test store 可物理清理过期 tombstone graph。

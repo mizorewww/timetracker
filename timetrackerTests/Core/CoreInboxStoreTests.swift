@@ -7,6 +7,17 @@ import Testing
 struct CoreInboxStoreTests {
     @Test @MainActor
     func captureDraftClearsOnlyAfterTheStoreCommits() {
+        var blankDraft = InboxCaptureDraft(title: " \n ")
+        var blankWriteAttempts = 0
+        #expect(
+            !blankDraft.submit { _ in
+                blankWriteAttempts += 1
+                return true
+            }
+        )
+        #expect(blankDraft.title == " \n ")
+        #expect(blankWriteAttempts == 0)
+
         var draft = InboxCaptureDraft(title: "  Keep this thought  ")
         var attemptedTitles: [String] = []
 

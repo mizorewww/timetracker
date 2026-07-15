@@ -272,7 +272,7 @@ struct InboxPersistencePolicyTests {
             iconName: "  book  ",
             colorHex: " #16a34a ",
             modelID: " \(exactModelID) ",
-            titleSnapshot: " Previous title ",
+            titleSnapshot: " \(exactTitle) ",
             deviceID: remoteDeviceID
         )
         context.insert(item)
@@ -306,7 +306,7 @@ struct InboxPersistencePolicyTests {
         #expect(suggestion.iconName == "book")
         #expect(suggestion.colorHex == "16A34A")
         #expect(suggestion.modelID == exactModelID)
-        #expect(suggestion.titleSnapshot == "Previous title")
+        #expect(suggestion.titleSnapshot == exactTitle)
         #expect(suggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 7_000))
     }
 

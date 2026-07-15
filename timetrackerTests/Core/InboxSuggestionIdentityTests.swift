@@ -288,6 +288,7 @@ struct InboxSuggestionIdentityTests {
             .filter { $0.deletedAt == nil }
         let generated = try #require(generatedSuggestions.first)
         let duplicate = makeSuggestion(item: original, taskID: task.id)
+        duplicate.updatedAt = Date(timeIntervalSinceReferenceDate: 50)
         context.insert(duplicate)
         try context.save()
 

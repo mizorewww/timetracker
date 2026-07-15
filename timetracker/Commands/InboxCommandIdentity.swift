@@ -49,9 +49,8 @@ extension InboxCommandHandler {
             )
         )
         let activeSiblings = try candidates
-            .deduplicatedByID()
             .filter {
-                $0.id != winner.id &&
+                $0 !== winner &&
                     $0.deletedAt == nil &&
                     $0.effectiveSuggestionContextID == contextID
             }

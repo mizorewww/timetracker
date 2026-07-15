@@ -159,10 +159,20 @@ struct InboxMutationIdentityTests {
         first.suggestionContextID = contextID
         first.suggestionRevisionID = revisionID
         first.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let sameIdentifierSibling = InboxItem(
+            title: first.title,
+            sortOrder: 40,
+            deviceID: remoteDeviceID
+        )
+        sameIdentifierSibling.id = first.id
+        sameIdentifierSibling.suggestionContextID = contextID
+        sameIdentifierSibling.suggestionRevisionID = revisionID
+        sameIdentifierSibling.updatedAt = Date(timeIntervalSinceReferenceDate: 150)
         let second = InboxItem(title: "Second", sortOrder: 20, deviceID: remoteDeviceID)
         second.updatedAt = Date(timeIntervalSinceReferenceDate: 300)
         context.insert(staleSibling)
         context.insert(first)
+        context.insert(sameIdentifierSibling)
         context.insert(second)
         try context.save()
 
@@ -179,10 +189,15 @@ struct InboxMutationIdentityTests {
         #expect(staleSibling.deletedAt == reorderedAt.addingTimeInterval(-1))
         #expect(staleSibling.updatedAt == reorderedAt.addingTimeInterval(-1))
         #expect(staleSibling.deviceID == localDeviceID)
-        let visible = InboxSuggestionIdentityService().visibleLogicalItems(
-            from: try context.fetch(FetchDescriptor<InboxItem>())
+        #expect(sameIdentifierSibling.deletedAt == reorderedAt.addingTimeInterval(-1))
+        #expect(sameIdentifierSibling.updatedAt == reorderedAt.addingTimeInterval(-1))
+        #expect(sameIdentifierSibling.deviceID == localDeviceID)
+        var store = InboxStore()
+        store.refresh(
+            items: try context.fetch(FetchDescriptor<InboxItem>()),
+            suggestions: []
         )
-        #expect(Set(visible.map(\.id)) == [first.id, second.id])
+        #expect(store.items.map(\.id) == [second.id, first.id])
     }
 
     @Test @MainActor

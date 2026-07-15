@@ -72,8 +72,9 @@
 - Widget：entry/provider/config、active-timer family layouts、supplementary/error states 与 deep-link/localization/color support 分文件。
 - Watch：dashboard orchestration、完整任务列表、失败问题页、timer rows、status/error/empty states、command presentation index 与 color support 分文件；`WatchAppStore.swift` 保留 observable state/安全恢复，`WatchAppStore+Commands.swift` 负责 queue/timeout/persistence，`WatchAppStore+Connectivity.swift` 负责 transport/payload/freshness，`WatchAppStore+SessionDelegate.swift` 独立承接 WCSession callbacks。
 - Ledger/Rollup index：ordered flat segment array mutation 独立到 `LedgerStore+FlatSegmentIndex.swift`；增量 rollup 的 scoped mutation/replacement 独立到 `RollupIncrementalIndex+Mutation.swift`。
+- Today：`HomeViews.swift` 只组合宽屏优先级，`PhoneHomeSections.swift` 组合紧凑屏顺序，各 section 文件拥有具体内容；`TodayHomeContent` 在一次组合中集中生成 active/timeline、Quick Start、forecast 和 countdown 读模型，避免各 section 重复查询与分组。
 
-分层不等于所有文件都已完成单一职责拆分。当前仍集中的 Home 根组合与部分大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
+分层不等于所有文件都已完成单一职责拆分。仍较集中的大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的 Home 组合拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
 
 ## 3. 运行时数据流
 
@@ -94,7 +95,7 @@
 - Repository：模型查询与持久化细节。
 - Service：跨实体计算、同步、导入导出或系统集成。
 
-视图不应直接复制领域判断，也不应绕过命令与仓储执行长期写入。计时文本用 `TimelineView` 做局部刷新；不得为了时钟显示让整个 facade 每秒发布一次状态。
+视图不应直接复制领域判断，也不应绕过命令与仓储执行长期写入。计时文本用 `TimelineView` 做局部刷新；不得为了时钟显示让整个 facade 每秒发布一次状态。Today 的活动计时行只让正在运行的行按秒刷新，已结束时间线保持静态；摘要每 30 秒刷新。`TodayHomeContent` 的数组在根组合处构造一次，Quick Start 去重并保留稳定任务 ID。Today 指标先规范化一次候选 segment，再以单个循环同时裁剪今日和前一日、累加 Gross；两组区间各自合并后得到 Wall。需要重叠时间时由 Gross 与 Wall 的差得到，不再扫描 segment。不得让每张卡重新遍历完整账本。
 
 `TimeTrackerStore.perform` 和 `SystemActionCommandHandler` 使用 `ModelContext.performAtomicMutation` 包住一个用户动作。命令/仓储内部的 `saveAfterMutationStep` 在独立调用时立即保存，在外层 transaction 中延迟到最后一次统一 `save()`；动作或最终保存抛错会 rollback 整个 unit of work。提交之后的 read-model refresh 或 sync snapshot 失败不可能撤销已保存事实，因此 `perform` 仍返回成功并展示“已保存但重新载入失败”。Feature 只能在 `perform == true` 后清理 transient success/failure 状态。Keychain 不能加入 SwiftData 的 ACID transaction：LLM 配置先记住旧密钥，将三项普通偏好批量成一次 SwiftData 保存，并在提交失败时尽力恢复旧密钥；恢复本身失败必须单独报告。任务、账本等 UI selection 也只在 `didSave` 后更新，因为它不会由 `ModelContext.rollback()` 自动恢复。
 
@@ -103,7 +104,7 @@
 - iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Pomodoro、Analytics）；Settings 是 Today 导航栈中的目的地。
 - iPad：regular width 使用 `NavigationSplitView` 侧边栏与详情；compact width 使用五标签根导航。从侧边栏或任务列表选择任务会打开同一个 `TaskDetailView`。
 - macOS：单实例主 `Window` 承载 `NavigationSplitView` 工作区；独立系统 Settings scene、主窗口和 Settings 共享一个应用级 `TimeTrackerStore`，避免复制 CloudKit observers、自动 AI 建议与系统表面同步。
-- Today：iPhone 使用 `List`；Active Timer、摘要、Quick Start、Forecast、Timeline、Countdown 按优先级排列，没有通用日/周/月/年进度卡。iPad/macOS 的宽屏 Today 通过 `HomeCountdownSection` 读取同一 `countdownEvents` 状态并展示 Countdown。
+- Today：iPhone 使用 `List`，顺序为 Now、Overview、Quick Start、Timeline、Forecast、Countdown。iPad/macOS 共享 `TodayHomeContent`；详情 viewport 扣除两侧 page padding、再受 1180 pt 上限约束后才得到实际内容宽度。该宽度达到 1000 pt 且存在辅助内容时，Quick Start/Timeline 进入主栏，Forecast/Countdown 进入 360 pt 辅助栏，否则保持单栏。Today 只有一个当前计时入口：无活动计时时为 Start Timer；有活动计时时根据并行偏好显示 Start Another Timer 或 Switch Timer。通用新建任务只存在于任务域和任务选择器，不与计时主操作竞争。
 - Task Detail：只读优先的 `List`，铅笔按钮再打开编辑 sheet；清单完成状态可直接切换。
 - Task availability：`TaskTrackingAvailabilityService` 一次线性扫描分别产出 `visibleTaskIDs` 与 `trackableTaskIDs`。归档/删除分支不可见；完成分支仍可浏览详情与历史，但自身和后代不能接收新工作，直到 `reopenTaskForWork` 把路径上的完成阻塞项一起恢复为 active。Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent、任务创建/移动与任务动作共用该判定；归档或完成活动子树前先停止计时，历史 segment 编辑可保留原任务。
 - System routing：`AppDeepLinkRouter` 严格解析 URL；`PendingDeepLinkQueue` 只缓存初始化前已经通过相同验证的语义动作，按动作去重、先进先出且最多 16 项。`WatchCommandRouter` 用弱 store 引用选择最近活跃 iOS scene，并在最后一个 scene 注销后移除进程级 bridge handler。
@@ -347,6 +348,8 @@ Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一
 仍有部分测试通过读取 Swift 源文件并匹配字符串来约束 UI，这类测试会在等价重构后误报。逐步把它们替换为行为、accessibility identifier 和结构化 API 测试。
 
 测试必须隔离 UserDefaults、Keychain、临时目录、时区与 locale。本轮已移除类别空分区测试对演示种子全局状态的依赖；新增测试仍应显式清理共享状态。
+
+Today UI 测试以 `home.view` 判断根页面就绪，再滚动查找具体操作；不能把某个可能尚未进入 iPad Split View 可访问性快照的子按钮当作页面启动信号。测试启动环境把审计路由固定为 Today，横屏用例由 Runner 显式设置 `XCUIDevice` orientation，并必须实际打开任务选择器。截图后恢复默认字号和方向、终止 App，并关闭本轮启动的 Simulator。新增 contract 或 UI regression 只表示验收门槛已经落库，不能在对应 signed test/result bundle 成功前宣称回归通过；Xcode beta 的 testmanager/Runner 卡死属于基础设施失败，必须保留结果或诊断并报告。
 
 ## 11. 代码注释与文档规则
 

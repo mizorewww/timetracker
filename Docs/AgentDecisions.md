@@ -512,6 +512,18 @@
 
 验证：同 ID 与不同 ID sibling 都覆盖“newer 内容字段 + exact-revision dismissal”，另测跨 revision 不传播；覆盖相同标题独立 context、revision 轮换、suggestion index、discard/delete/reorder sibling 清理、A→B→A 的 stale success/failure、canonical apply 的墓碑/旧 sibling/旧刷新 ID/标题不匹配、V9 磁盘迁移、缺字段旧 JSON 恢复、opaque 字段导出和 tombstone sibling restore。所有签名构建保留团队 `LT98S43NKA`。
 
+## AD-039：Today 采用单一计时主动作与有界自适应层级
+
+状态：Accepted
+
+背景：旧 Today 把摘要、通用新建任务、计时入口、预测和时间线放在相近视觉层级，手机上首屏目的不明确，宽屏又把卡片无限拉长。各 section 独立查询和分组同一批数据，还会让一次 view composition 重复扫描账本。辅助功能字号下保留横向密集行则会截断任务名、趋势和操作。
+
+决策：Today 的信息优先级固定为 Now、Overview、Quick Start、Timeline，再到 Forecast 和 Countdown。无活动计时时只有一个突出的 Start Timer；已有活动计时时根据 `allowParallelTimers` 显示次级 Start Another Timer 或 Switch Timer。通用新建任务不与 Today 计时操作并列，只保留在任务域和任务选择器。iPhone 使用单栏顺序；iPad/macOS 先从详情 viewport 扣除两侧 page padding，再以 1180 pt 为内容宽度上限。实际内容宽度达到 1000 pt 且存在辅助内容时，Quick Start/Timeline 为主栏，Forecast/Countdown 为 360 pt 辅助栏，否则回到单栏。根组合每次只构造一个 `TodayHomeContent`，向各 section 传入稳定、去重的预计算数组。摘要先规范化一次候选 segment，再用单个循环同时聚合今日与前一日；Wall 只在各自区间列表上做合并。每秒 `TimelineView` 只包住活动时长，结束记录保持静态，摘要每 30 秒刷新。辅助功能字号使用纵向指标、可换行任务操作和更高的任务选择器 presentation。
+
+后果：可以打破旧 Today 顺序、按钮名称和宽屏排版，但所有平台共享同一计时命令、任务可用性、读模型事实与可访问性标识。新增 Today 卡片必须说明它属于主工作流还是辅助信息，不得重新引入第二个竞争主动作、无界宽度或 section 内重复全量查询。第三方列表/布局库不能仅为这个原生层级引入；FlowDown 继续只作模式参考。
+
+验收要求：Home read-model/布局/UI contract 覆盖稳定去重、单次 segment 遍历、动作语义、扣除 page padding 后的 1000 pt 双栏边界、1180/360 pt 上限和辅助字号重排；iPhone Large 与 Accessibility、iPad 横竖屏和 macOS 窗口截图检查真实层级。UI 测试先等待 `home.view`，再滚动并操作 `home.startTimer`，只有任务选择器真实打开才算通过；模拟器结束后恢复字号/方向并关闭设备。contract 与 regression 的提交本身不代表运行通过，必须另外保留成功的 signed test/result bundle。构建保留 Automatic signing、团队 `LT98S43NKA` 和付费开发者能力。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

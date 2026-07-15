@@ -1,6 +1,6 @@
 # Code Refactor Status And Guardrails
 
-Status: current source-structure record after the 2026-07-14 repository-wide split. This document records what was split, what is still concentrated, and the engineering rules that keep the project maintainable. It is not a product feature backlog and it does not substitute for the final build, test, simulator, and Instruments evidence in [Audit-2026-07-14](Audit-2026-07-14.md).
+Status: current source-structure record after the 2026-07-14 repository-wide split and the 2026-07-16 Today composition refactor. This document records what was split, what is still concentrated, and the engineering rules that keep the project maintainable. It is not a product feature backlog and it does not substitute for the final build, test, simulator, and Instruments evidence in [Audit-2026-07-14](Audit-2026-07-14.md).
 
 ## Review Summary
 
@@ -18,6 +18,7 @@ The current pass established semantic folders, split domain stores and repositor
 - Watch dashboard orchestration, timer rows, status/error/empty states, and color support are separate files. `WatchAppStore.swift` now owns observable state and safe restoration, `WatchAppStore+Commands.swift` owns command queue/timeout/persistence, and `WatchAppStore+Connectivity.swift` owns WCSession transport, payload application, freshness, and delegate callbacks.
 - Ledger's ordered flat-array mutation/index maintenance is isolated in `LedgerStore+FlatSegmentIndex.swift`; day/change indexing remains in `LedgerStore+SegmentIndex.swift`.
 - Incremental rollup state/full rebuild remains in `RollupIncrementalIndex.swift`, while scoped segment/checklist mutation and replacement-delta application lives in `RollupIncrementalIndex+Mutation.swift`.
+- Today compact composition, wide composition, section content, row presentation, and centralized read models have separate owners; `HomeViews.swift` now contains only the wide wrapper/composition and header.
 
 This structural work is real, but it does not make every production file small or single-purpose. The remaining concentrations below must not be hidden behind a blanket “refactor complete” claim.
 
@@ -35,7 +36,6 @@ These are the highest-priority mixed-responsibility owners, not an exhaustive li
 
 | Area | Current concentration | Preferred boundary |
 | --- | --- | --- |
-| `Features/Home/HomeViews.swift` | Desktop wrapper, phone root, priority-ordered Today list, accessibility-size alternatives, and header support remain together | Keep Today section ordering in one composition owner, but move platform wrappers/header support when the next Home change requires it |
 | `Features/Tasks/Management/TaskManagementRowViews.swift` | Flat-row presentation and its complete action/menu/accessibility surface remain together | Extract action/menu support from the canonical row without splitting one logical row into unstable identities |
 | `Features/Analytics/Sections/AnalyticsDecisionViews.swift` | Insight, forecast, rhythm, quality, and overlap presentation remain in one section family | Split by decision, forecast, and quality/overlap section families if those screens evolve independently |
 | `Features/Settings/SettingsViews.swift` | Category navigation, export/confirmation presentation, AI configuration presentation, and category-to-section routing remain together | Keep the category router authoritative; move modal/export orchestration into focused support only when it improves reviewability |
@@ -51,7 +51,7 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 - Ledger repository code is split into base, query, and mutation files.
 - Forecast rollup recursion is isolated in `TaskRollupCalculationContext`.
 - Timeline layout models and axis compression are split from the lane-placement engine.
-- Home Quick Start and Analytics activity sections are split into smaller reusable files.
+- Today compact composition is in `PhoneHomeView.swift` and `PhoneHomeSections.swift`; wide priority composition remains in `HomeViews.swift`, while rows, actions, metrics, Quick Start, timeline, forecast, countdown, and shared read models have focused files.
 - Analytics landing-page routing stays in `AnalyticsViews.swift`; typed category-detail composition lives in `AnalyticsCategoryDetailView.swift`, while overview rows, metric/detail lists, period controls, and decision-support builders are split by responsibility.
 - Pomodoro setup is split into `PomodoroSetupViews.swift`, `PomodoroSetupEmptyState.swift`, `PomodoroFocusSetupControls.swift`, `PomodoroSetupSelectionViews.swift`, and `PomodoroTimerFace.swift`; the setup container remains the composition owner.
 - Settings timing, Pomodoro, countdown, sync, data, action, binding, and support responsibilities are split; `SettingsSectionsViews.swift` is retired.

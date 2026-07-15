@@ -381,7 +381,13 @@
 "pomodoro.stop.confirm.title" = "Stop This Pomodoro?";
 "pomodoro.stop.confirm.message" = "The current phase will end. Very short focus records may be discarded.";
 "pomodoro.startNextFocus" = "Start Next Focus";
+"pomodoro.startNextFocus.hint" = "Starts a new focus segment for this task.";
+"pomodoro.skipBreak" = "Skip Break";
+"pomodoro.skipBreak.hint" = "Ends the break now and starts the next focus round.";
 "pomodoro.roundProgress" = "Round %d of %d";
+"pomodoro.roundsCompleted" = "%d of %d rounds complete";
+"pomodoro.phaseTask.accessibility" = "%@, %@";
+"pomodoro.remaining.accessibility" = "%@ remaining";
 "pomodoro.recent" = "Recent Pomodoros";
 "pomodoro.empty" = "No pomodoro records yet";
 "analytics.wall.footnote" = "Real elapsed time";

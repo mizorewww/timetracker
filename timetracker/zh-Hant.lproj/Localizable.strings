@@ -381,7 +381,13 @@
 "pomodoro.stop.confirm.title" = "停止目前番茄鐘？";
 "pomodoro.stop.confirm.message" = "目前階段將結束；過短的專注記錄可能不會保留。";
 "pomodoro.startNextFocus" = "開始下一輪專注";
+"pomodoro.startNextFocus.hint" = "為此任務開始新的專注時間段。";
+"pomodoro.skipBreak" = "略過休息";
+"pomodoro.skipBreak.hint" = "立即結束休息並開始下一輪專注。";
 "pomodoro.roundProgress" = "第 %d / %d 輪";
+"pomodoro.roundsCompleted" = "已完成 %d / %d 輪";
+"pomodoro.phaseTask.accessibility" = "%@，%@";
+"pomodoro.remaining.accessibility" = "剩餘 %@";
 "pomodoro.recent" = "最近番茄";
 "pomodoro.empty" = "還沒有番茄鐘記錄";
 "analytics.wall.footnote" = "真實經過的時間";

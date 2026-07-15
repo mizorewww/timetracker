@@ -381,7 +381,13 @@
 "pomodoro.stop.confirm.title" = "停止当前番茄钟？";
 "pomodoro.stop.confirm.message" = "当前阶段将结束；过短的专注记录可能不会保留。";
 "pomodoro.startNextFocus" = "开始下一轮专注";
+"pomodoro.startNextFocus.hint" = "为此任务开始新的专注时间段。";
+"pomodoro.skipBreak" = "跳过休息";
+"pomodoro.skipBreak.hint" = "立即结束休息并开始下一轮专注。";
 "pomodoro.roundProgress" = "第 %d / %d 轮";
+"pomodoro.roundsCompleted" = "已完成 %d / %d 轮";
+"pomodoro.phaseTask.accessibility" = "%@，%@";
+"pomodoro.remaining.accessibility" = "剩余 %@";
 "pomodoro.recent" = "最近番茄";
 "pomodoro.empty" = "还没有番茄钟记录";
 "analytics.wall.footnote" = "真实经过的时间";

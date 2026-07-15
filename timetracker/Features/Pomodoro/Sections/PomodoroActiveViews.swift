@@ -5,108 +5,64 @@ struct ActivePomodoroCard: View {
     let run: PomodoroRun
     let requestCancel: () -> Void
 
-    var body: some View {
-        timeline
-            .sensoryFeedback(.success, trigger: run.completedFocusRounds)
+    private var task: TaskNode? {
+        store.task(for: run.taskID)
     }
 
-    private var timeline: TimelineView<PeriodicTimelineSchedule, ActivePomodoroContent> {
-        TimelineView(.periodic(from: Date.now, by: 1)) { context in
-            ActivePomodoroContent(
-                store: store,
-                run: run,
-                now: context.date,
-                requestCancel: requestCancel
-            )
-        }
+    private var taskTitle: String {
+        task?.title ?? store.taskTitle(for: run)
     }
-}
 
-private struct ActivePomodoroContent: View {
-    let store: TimeTrackerStore
-    let run: PomodoroRun
-    let now: Date
-    let requestCancel: () -> Void
-
-    private var remaining: Int {
-        store.pomodoroRemainingSeconds(for: run, now: now)
+    private var taskIdentity: String {
+        task.map(store.path(for:)) ?? taskTitle
     }
 
     private var taskColor: Color {
-        Color(hex: store.task(for: run.taskID)?.colorHex) ?? PomodoroStyle.accent
-    }
-
-    private var isBreakReady: Bool {
-        remaining == 0 && (run.state == .shortBreak || run.state == .longBreak)
+        Color(hex: task?.colorHex) ?? PomodoroStyle.accent
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                Spacer(minLength: 24)
-                phaseSummary
-                progress
+        PomodoroPageLayout {
+            VStack(alignment: .leading, spacing: 24) {
+                phaseHeader
 
-                if isBreakReady {
-                    startNextFocusButton
-                }
+                PomodoroActiveCountdownView(
+                    store: store,
+                    run: run,
+                    taskTitle: taskTitle,
+                    taskParentPath: task.flatMap(store.parentPath(for:)),
+                    taskIdentity: taskIdentity,
+                    taskColor: taskColor
+                )
 
+                Divider()
                 stopButton
-                Spacer(minLength: 24)
             }
-            .frame(maxWidth: 560)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .appCard(padding: 24)
+            .accessibilityIdentifier("pomodoro.active")
+        } secondary: {
+            PomodoroLedgerCard(store: store)
         }
-        .accessibilityIdentifier("pomodoro.active")
+        .sensoryFeedback(.success, trigger: run.completedFocusRounds)
     }
 
-    private var phaseSummary: some View {
-        VStack(spacing: 8) {
-            Text(store.pomodoroStateLabel(for: run))
+    private var phaseHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(store.pomodoroStateLabel(for: run), systemImage: phaseIcon)
                 .font(.headline)
-                .foregroundStyle(.secondary)
-
-            PomodoroTimerFace(
-                timeText: DurationFormatter.clock(remaining),
-                title: store.taskTitle(for: run),
-                titleColor: taskColor
-            )
+                .foregroundStyle(taskColor)
 
             Text(roundDescription)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private var progress: some View {
-        ProgressView(value: store.pomodoroProgress(for: run, now: now))
-            .tint(taskColor)
-            .accessibilityLabel(store.pomodoroStateLabel(for: run))
-            .accessibilityValue(DurationFormatter.clock(remaining))
-    }
-
-    private var startNextFocusButton: some View {
-        let runID = run.id
-        let expectedState = run.state
-        return Button {
-            store.resumeActivePomodoroAfterBreak(
-                runID: runID,
-                expectedState: expectedState
-            )
-        } label: {
-            Label(AppStrings.localized("pomodoro.startNextFocus"), systemImage: "play.circle.fill")
-                .frame(maxWidth: 260, minHeight: 44)
-        }
-        .buttonStyle(.borderedProminent)
-        .accessibilityIdentifier("pomodoro.startNextFocus")
+        .accessibilityElement(children: .combine)
     }
 
     private var stopButton: some View {
         Button(role: .destructive, action: requestCancel) {
             Label(AppStrings.localized("pomodoro.stop"), systemImage: "stop.fill")
-                .frame(maxWidth: 260)
+                .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
@@ -114,10 +70,32 @@ private struct ActivePomodoroContent: View {
     }
 
     private var roundDescription: String {
-        String(
+        if run.state == .shortBreak || run.state == .longBreak {
+            return String(
+                format: AppStrings.localized("pomodoro.roundsCompleted"),
+                run.completedFocusRounds,
+                run.targetRounds
+            )
+        }
+        return String(
             format: AppStrings.localized("pomodoro.roundProgress"),
             min(run.completedFocusRounds + 1, run.targetRounds),
             run.targetRounds
         )
+    }
+
+    private var phaseIcon: String {
+        switch run.state {
+        case .shortBreak, .longBreak:
+            return "cup.and.saucer.fill"
+        case .focusing, .interrupted:
+            return "flame.fill"
+        case .planned:
+            return "timer"
+        case .completed:
+            return "checkmark.circle.fill"
+        case .cancelled:
+            return "xmark.circle.fill"
+        }
     }
 }

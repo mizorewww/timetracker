@@ -125,6 +125,10 @@ struct TimeTrackerUtilityTests {
         #expect(DurationFormatter.compact(seconds, locale: Locale(identifier: "zh_Hant")) == "4小時35分鐘")
         #expect(DurationFormatter.compact(40, locale: Locale(identifier: "en_US")) == "0 min")
         #expect(DurationFormatter.clock(84) == "01:24")
+        #expect(
+            DurationFormatter.spoken(65, locale: Locale(identifier: "en_US")) ==
+                "1 minute, 5 seconds"
+        )
     }
 
     @Test @MainActor

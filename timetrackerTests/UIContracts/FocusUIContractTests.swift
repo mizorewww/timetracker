@@ -38,12 +38,39 @@ struct FocusUIContractTests {
     }
 
     @Test
+    func activePageLimitsPerSecondInvalidationToTheCountdown() throws {
+        let page = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroActiveViews.swift"
+        )
+        let countdown = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroActiveCountdownView.swift"
+        )
+        let schedule = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroCountdownSchedule.swift"
+        )
+
+        #expect(page.contains("TimelineView") == false)
+        #expect(page.contains("PomodoroPageLayout"))
+        #expect(countdown.contains("TimelineView(PomodoroCountdownSchedule"))
+        #expect(countdown.contains("pomodoro.skipBreak"))
+        #expect(countdown.contains(".accessibilityHidden(true)"))
+        #expect(schedule.contains("guard currentDate < endDate else { return nil }"))
+        #expect(schedule.contains("mode == .lowFrequency ? 60 : 1"))
+    }
+
+    @Test
     func focusLocalizationKeysExistInEveryMainAppLocale() throws {
         let root = try projectRootURL()
         let requiredKeys = [
             "pomodoro.setup.title",
             "pomodoro.setup.subtitle",
-            "pomodoro.focusDuration.accessibility"
+            "pomodoro.focusDuration.accessibility",
+            "pomodoro.skipBreak",
+            "pomodoro.skipBreak.hint",
+            "pomodoro.startNextFocus.hint",
+            "pomodoro.roundsCompleted",
+            "pomodoro.phaseTask.accessibility",
+            "pomodoro.remaining.accessibility"
         ]
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {

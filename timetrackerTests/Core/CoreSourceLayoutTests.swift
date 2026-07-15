@@ -202,7 +202,9 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Sidebar/SidebarDestinationViews.swift",
             "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift",
             "timetracker/Features/Pomodoro/PomodoroViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroActiveCountdownView.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroActiveViews.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroCountdownSchedule.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroFocusSetupControls.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroLedgerViews.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroPageLayout.swift",
@@ -382,7 +384,9 @@ struct CoreSourceLayoutTests {
         let pomodoroURL = root.appending(path: "timetracker/Features/Pomodoro")
         let focusedFiles = [
             "PomodoroViews.swift",
+            "Sections/PomodoroActiveCountdownView.swift",
             "Sections/PomodoroActiveViews.swift",
+            "Sections/PomodoroCountdownSchedule.swift",
             "Sections/PomodoroFocusSetupControls.swift",
             "Sections/PomodoroLedgerViews.swift",
             "Sections/PomodoroPageLayout.swift",

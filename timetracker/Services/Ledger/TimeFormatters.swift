@@ -28,6 +28,20 @@ enum DurationFormatter {
         }
         return String(format: "%02d:%02d", minutes, second)
     }
+
+    nonisolated static func spoken(
+        _ seconds: Int,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        Duration.seconds(max(0, seconds)).formatted(
+            .units(
+                allowed: [.hours, .minutes, .seconds],
+                width: .wide,
+                maximumUnitCount: 3
+            )
+            .locale(locale)
+        )
+    }
 }
 
 enum TimeDisplayFormatter {

@@ -148,6 +148,24 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testFocusAdaptiveScreenshots() throws {
+        #if os(macOS)
+        throw XCTSkip("Focus adaptive screenshots require an iOS simulator.")
+        #else
+        let app = launchApp(route: "focus")
+
+        XCTAssertTrue(app.descendants(matching: .any)["pomodoro.view"].waitForExistence(timeout: 8))
+        try capture("iphone-focus-initial", app: app)
+
+        let startFocus = app.buttons["pomodoro.startFocus"].firstMatch
+        XCTAssertTrue(startFocus.waitForExistence(timeout: 5))
+        scrollUntilHittable(startFocus, direction: .up, in: app)
+        XCTAssertTrue(startFocus.isHittable)
+        try capture("iphone-focus-primary-action", app: app)
+        #endif
+    }
+
+    @MainActor
     func testUIRefactorBaselineScreenshots() throws {
         let app = launchApp()
 
@@ -325,7 +343,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(route: String = "today") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
@@ -336,7 +354,7 @@ final class timetrackerUITests: XCTestCase {
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
         ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
-        app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = "today"
+        app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = route
         app.launch()
         app.activate()
         return app

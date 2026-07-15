@@ -160,7 +160,7 @@ struct TaskTreeService {
         return wasTruncated ? "… / \(path)" : path
     }
 
-    private static func siblingDisplayOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
+    nonisolated private static func siblingDisplayOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
         if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
         let titleOrder = lhs.title.localizedStandardCompare(rhs.title)
         if titleOrder != .orderedSame { return titleOrder == .orderedAscending }

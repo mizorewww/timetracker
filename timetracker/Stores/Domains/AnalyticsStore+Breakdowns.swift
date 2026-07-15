@@ -71,11 +71,17 @@ extension AnalyticsStore {
         evaluatedAt cutoff: Date,
         calendar: Calendar
     ) -> [DailyAnalyticsPoint] {
-        DailySummaryService().summaries(
+        let summaryService = DailySummaryService()
+        let summaries = summaryService.summaries(
             segments: segments,
             interval: interval,
             now: cutoff,
             calendar: calendar
+        )
+        return summaryService.visibleSummaries(
+            summaries,
+            interval: interval,
+            evaluatedAt: cutoff
         ).map { summary in
             DailyAnalyticsPoint(
                 date: summary.date,
@@ -109,11 +115,16 @@ extension AnalyticsStore {
         evaluatedAt cutoff: Date,
         calendar: Calendar
     ) -> [DailyAnalyticsPoint] {
-        ledgerBucketCache.summaries(
+        let summaries = ledgerBucketCache.summaries(
             segments: segments,
             interval: interval,
             now: cutoff,
             calendar: calendar
+        )
+        return DailySummaryService().visibleSummaries(
+            summaries,
+            interval: interval,
+            evaluatedAt: cutoff
         ).map { summary in
             DailyAnalyticsPoint(
                 date: summary.date,

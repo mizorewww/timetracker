@@ -221,6 +221,31 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsDailyTrendShowsWallAndGrossLegend() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics trend layout screenshots require an iOS simulator.")
+        #else
+        let app = launchApp(route: "analytics")
+
+        XCTAssertTrue(analyticsIsReady(in: app))
+        let week = app.segmentedControls.buttons["Week"].firstMatch
+        XCTAssertTrue(week.waitForExistence(timeout: 5) && week.isHittable)
+        activate(week)
+
+        let time = app.descendants(matching: .any)["analytics.category.time"].firstMatch
+        scrollUntilHittable(time, direction: .up, in: app)
+        XCTAssertTrue(time.waitForExistence(timeout: 5) && time.isHittable)
+        activate(time)
+
+        let detail = app.descendants(matching: .any)["analytics.categoryDetail.time"].firstMatch
+        let chart = app.descendants(matching: .any)["analytics.dailyTrend.chart"].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        XCTAssertTrue(chart.waitForExistence(timeout: 8))
+        try capture("iphone-analytics-daily-trend-legend", app: app)
+        #endif
+    }
+
+    @MainActor
     func testUIRefactorBaselineScreenshots() throws {
         let app = launchApp()
 

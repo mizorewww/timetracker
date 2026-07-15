@@ -630,6 +630,10 @@ struct TaskUIContractTests {
         #expect(distribution.contains(".accessibilityLabel(slice.accessibilityTitle)"))
         #expect(trends.contains("daily.allSatisfy"))
         #expect(trends.contains("analytics.chart.day"))
+        #expect(trends.contains("point.wallMinutes"))
+        #expect(trends.contains("point.grossMinutes"))
+        #expect(trends.contains(".chartForegroundStyleScale"))
+        #expect(trends.contains(".chartLegend(position: .bottom"))
         #expect(timeline.contains("horizontalSizeClass == .compact"))
         #expect(timeline.contains("UIDevice.current.userInterfaceIdiom") == false)
     }

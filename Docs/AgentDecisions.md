@@ -584,6 +584,18 @@
 
 验证：行为测试覆盖当前日排除昨日下午、当前周与月的同日序/同钟点、夏令时跳时日的本地 noon 对齐、3 月 31 日映射到 2 月末、完整历史月 full-to-full，以及未来月的双零长度窗口；三语本地化 parity 继续通过。
 
+## AD-046：Analytics 日趋势只发布已开始日期并保留秒级精度
+
+状态：Accepted
+
+背景：DailySummary 会为完整周/月生成 bucket。旧趋势把当前月尚未到来的日期也映射成零值，折线因此在“今天”之后人为跌到零；同时 View 直接用 `Int seconds / 60`，不足一分钟的真实记录也会画成零。Wall 柱与 Gross 线只靠蓝绿颜色区分，没有可见图例。
+
+决策：完整 calendar period 的 daily buckets 继续留在 `LedgerBucketCache`，确保 key 与局部失效稳定；只有向 read model 映射时才用 `DailySummaryService.visibleSummaries` 过滤 `date < clamp(cutoff, period.start...end)`。当前周/月包含正在进行的本地日、排除未来日；完整历史周期包含全部日；未来周期为空。`DailyAnalyticsPoint` 在模型层以 `Double(seconds) / 60` 提供分钟值，Chart 不得做整数除法。Swift Charts 使用 blue Wall bar、green Gross line、可见原生图例，并保留每个 mark 的日期与完整 duration VoiceOver 值。
+
+后果：趋势线不会把未来误表示为低产出，也不会把 1...59 秒误表示为零；缓存仍可跨 cutoff 复用完整周期的固定日 bucket。颜色不是唯一解释渠道，mark 类型、文字图例和辅助语义共同区分 Wall/Gross。任何新增趋势筛选都必须发生在 cache lookup 之后，不能让展示 cutoff 改变 bucket identity。
+
+验证：当前 4 月 28 日只生成 1...28，完整历史 4 月生成 1...30，未来月生成空数组；相同缓存仍保留 30 个 bucket；30 秒与 15 秒分别得到 0.5 与 0.25 分钟。source contract 固定 fractional properties、foreground scale、底部图例与逐点 VoiceOver；三语键和 iPhone 周/月趋势截图必须通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -35,7 +35,17 @@ struct AnalyticsEngine {
 
     func dailyBreakdown(segments: [TimeSegment], range: AnalyticsRange, now: Date = Date(), calendar: Calendar = .current) -> [DailyAnalyticsPoint] {
         guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
-        return dailySummaryService.summaries(segments: segments, interval: interval, now: now, calendar: calendar).map { summary in
+        let summaries = dailySummaryService.summaries(
+            segments: segments,
+            interval: interval,
+            now: now,
+            calendar: calendar
+        )
+        return dailySummaryService.visibleSummaries(
+            summaries,
+            interval: interval,
+            evaluatedAt: now
+        ).map { summary in
             return DailyAnalyticsPoint(
                 date: summary.date,
                 grossSeconds: summary.grossSeconds,

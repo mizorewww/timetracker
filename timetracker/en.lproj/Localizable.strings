@@ -404,8 +404,9 @@
 "task.tree.expand" = "Expand task";
 "task.tree.collapse" = "Collapse task";
 "analytics.dailyTrend.title" = "Daily Trend";
-"analytics.dailyTrend.subtitle" = "Week and Month use daily totals. Today uses an hourly distribution.";
+"analytics.dailyTrend.subtitle" = "Wall Time bars and a Gross Time line show each elapsed day. Today uses hourly activity.";
 "analytics.chart.day" = "Day";
+"analytics.chart.metric" = "Metric";
 "analytics.taskRank.title" = "Task Ranking";
 "analytics.taskRank.subtitle" = "Sorted by Gross Time to show parallel timer ownership.";
 "analytics.empty.rangeTaskTime" = "No task time in this range";

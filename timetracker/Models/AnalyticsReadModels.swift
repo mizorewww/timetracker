@@ -179,6 +179,8 @@ struct DailyAnalyticsPoint: Identifiable {
     let label: String
 
     var id: Date { date }
+    var grossMinutes: Double { Double(grossSeconds) / 60 }
+    var wallMinutes: Double { Double(wallSeconds) / 60 }
 }
 
 struct HourlyAnalyticsPoint: Identifiable {

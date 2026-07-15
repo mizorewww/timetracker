@@ -17,6 +17,18 @@ struct DailySummarySnapshot: Equatable, Identifiable {
 struct DailySummaryService {
     private let aggregationService = TimeAggregationService()
 
+    /// Keeps the current partial day while omitting days that have not begun
+    /// at the selected evaluation cutoff. Call this after cache lookup so the
+    /// cache can retain stable buckets for the complete calendar period.
+    func visibleSummaries(
+        _ summaries: [DailySummarySnapshot],
+        interval: DateInterval,
+        evaluatedAt cutoff: Date
+    ) -> [DailySummarySnapshot] {
+        let visibleEnd = min(max(cutoff, interval.start), interval.end)
+        return summaries.filter { $0.date < visibleEnd }
+    }
+
     func summaries(
         segments: [TimeSegment],
         interval: DateInterval,

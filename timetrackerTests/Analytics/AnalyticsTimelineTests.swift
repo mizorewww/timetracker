@@ -522,17 +522,84 @@ struct AnalyticsTimelineTests {
         #expect(abs(layout.reduce(0) { $0 + $1.height } - 50) < 0.001)
     }
 
-    @Test
+    @Test @MainActor
     func monthAnalyticsUsesUniqueDayNumberLabels() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 28, hour: 12)))
         let points = AnalyticsEngine().dailyBreakdown(segments: [], range: .month, now: now, calendar: calendar)
 
-        #expect(points.count == 30)
+        #expect(points.count == 28)
         #expect(Set(points.map(\.label)).count == points.count)
         #expect(points.first?.label == "1")
-        #expect(points.last?.label == "30")
+        #expect(points.last?.label == "28")
+    }
+
+    @Test @MainActor
+    func monthAnalyticsOmitsFutureDaysButPreservesCompleteHistoricalPeriods() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let currentCutoff = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 28,
+            hour: 12
+        )))
+        let period = try #require(AnalyticsRange.month.interval(
+            containing: currentCutoff,
+            calendar: calendar
+        ))
+        let futureReference = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 5,
+            day: 15
+        )))
+        let futurePeriod = try #require(AnalyticsRange.month.interval(
+            containing: futureReference,
+            calendar: calendar
+        ))
+        var store = AnalyticsStore()
+
+        let current = store.cachedDailyBreakdown(
+            segments: [],
+            range: .month,
+            interval: period,
+            evaluatedAt: currentCutoff,
+            calendar: calendar
+        )
+        let completed = store.cachedDailyBreakdown(
+            segments: [],
+            range: .month,
+            interval: period,
+            evaluatedAt: period.end,
+            calendar: calendar
+        )
+        let future = store.dailyBreakdown(
+            segments: [],
+            range: .month,
+            interval: futurePeriod,
+            evaluatedAt: futurePeriod.start,
+            calendar: calendar
+        )
+
+        #expect(current.count == 28)
+        #expect(completed.count == 30)
+        #expect(completed.last?.label == "30")
+        #expect(future.isEmpty)
+        #expect(store.ledgerBucketCount == 30)
+    }
+
+    @Test
+    func dailyAnalyticsMinutesRetainSubminutePrecision() {
+        let point = DailyAnalyticsPoint(
+            date: Date(timeIntervalSince1970: 0),
+            grossSeconds: 30,
+            wallSeconds: 15,
+            label: "1"
+        )
+
+        #expect(point.grossMinutes == 0.5)
+        #expect(point.wallMinutes == 0.25)
     }
 }
 

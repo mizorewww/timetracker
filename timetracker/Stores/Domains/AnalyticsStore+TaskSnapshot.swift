@@ -40,11 +40,17 @@ extension AnalyticsStore {
             taskIDs: taskIDs,
             now: now
         )
-        let daily = DailySummaryService().summaries(
+        let dailySummaryService = DailySummaryService()
+        let summaries = dailySummaryService.summaries(
             segments: filtered,
             interval: interval,
             now: now,
             calendar: calendar
+        )
+        let daily = dailySummaryService.visibleSummaries(
+            summaries,
+            interval: interval,
+            evaluatedAt: now
         ).map { summary in
             DailyAnalyticsPoint(
                 date: summary.date,

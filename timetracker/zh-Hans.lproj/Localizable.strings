@@ -404,8 +404,9 @@
 "task.tree.expand" = "展开任务";
 "task.tree.collapse" = "收起任务";
 "analytics.dailyTrend.title" = "每日趋势";
-"analytics.dailyTrend.subtitle" = "本周和本月使用每日聚合；今天使用小时分布。";
+"analytics.dailyTrend.subtitle" = "蓝色柱显示每天的墙钟时间，绿色线显示累计时间；今天使用小时活动。";
 "analytics.chart.day" = "日期";
+"analytics.chart.metric" = "指标";
 "analytics.taskRank.title" = "任务排行";
 "analytics.taskRank.subtitle" = "按累计时间排序，方便看清并行计时归属。";
 "analytics.empty.rangeTaskTime" = "这个范围内还没有任务时间";

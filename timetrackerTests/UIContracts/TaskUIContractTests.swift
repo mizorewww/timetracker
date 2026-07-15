@@ -360,7 +360,8 @@ struct TaskUIContractTests {
         let dataSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
 
         #expect(settingsSource.contains(".fileExporter("))
-        #expect(settingsSource.contains("JSONExportDocument(text: store.jsonExport())"))
+        #expect(settingsSource.contains("guard let json = store.jsonExport() else { return }"))
+        #expect(settingsSource.contains("JSONExportDocument(text: json)"))
         #expect(settingsSource.contains("defaultFilename: \"time-tracker-export.json\""))
         #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.exportJSON\")") == false)
         #expect(dataSource.contains("title: AppStrings.localized(\"settings.exportJSON\")"))

@@ -163,7 +163,8 @@ struct SettingsView: View {
     }
 
     func prepareJSONExport() {
-        exportDocument = JSONExportDocument(text: store.jsonExport())
+        guard let json = store.jsonExport() else { return }
+        exportDocument = JSONExportDocument(text: json)
         isExportPresented = true
     }
 

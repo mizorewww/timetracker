@@ -72,13 +72,13 @@ extension TimeTrackerStore {
         return didOptimize ? removedCount : 0
     }
 
-    func jsonExport() -> String {
+    func jsonExport() -> String? {
         do {
             guard let modelContext else { throw StoreError.notConfigured }
             return try syncConflictService.exportCloudSyncedData(context: modelContext)
         } catch {
             errorMessage = error.localizedDescription
-            return "{}"
+            return nil
         }
     }
 }

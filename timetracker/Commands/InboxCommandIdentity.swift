@@ -1,16 +1,29 @@
 import Foundation
 import SwiftData
 
+enum InboxCommandIdentityError: LocalizedError {
+    case staleSuggestion
+
+    var errorDescription: String? {
+        "The inbox suggestion changed before this action completed."
+    }
+}
+
 struct PreparedInboxItemMutation {
     let item: InboxItem
     let text: PreparedInboxItemText
 }
 
+struct PreparedInboxLogicalMutation {
+    let winner: PreparedInboxItemMutation
+    let activeSiblings: [PreparedInboxItemMutation]
+}
+
 extension InboxCommandHandler {
-    func preparedLogicalSiblingMutations(
+    func preparedLogicalMutation(
         for item: InboxItem,
         context: ModelContext
-    ) throws -> [PreparedInboxItemMutation] {
+    ) throws -> PreparedInboxLogicalMutation {
         let itemID = item.id
         let contextID = item.effectiveSuggestionContextID
         let descriptor = FetchDescriptor<InboxItem>(
@@ -18,10 +31,27 @@ extension InboxCommandHandler {
                 $0.id == itemID || $0.id == contextID || $0.suggestionContextID == contextID
             }
         )
-        return try context.fetch(descriptor)
+        var candidates = try context.fetch(descriptor).filter {
+            $0.effectiveSuggestionContextID == contextID
+        }
+        if candidates.contains(where: { $0 === item }) == false {
+            candidates.append(item)
+        }
+        let winner = InboxSuggestionIdentityService()
+            .logicalWinners(from: candidates)
+            .first { $0.effectiveSuggestionContextID == contextID } ?? item
+        let preparedWinner = PreparedInboxItemMutation(
+            item: winner,
+            text: try InboxPersistencePolicy.prepareItem(
+                title: winner.title,
+                notes: winner.notes,
+                suggestionReason: winner.suggestionReason
+            )
+        )
+        let activeSiblings = try candidates
             .deduplicatedByID()
             .filter {
-                $0.id != itemID &&
+                $0.id != winner.id &&
                     $0.deletedAt == nil &&
                     $0.effectiveSuggestionContextID == contextID
             }
@@ -35,6 +65,10 @@ extension InboxCommandHandler {
                     )
                 )
             }
+        return PreparedInboxLogicalMutation(
+            winner: preparedWinner,
+            activeSiblings: activeSiblings
+        )
     }
 
     func tombstone(

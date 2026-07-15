@@ -40,21 +40,22 @@ struct InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
-        let preparedText = try InboxPersistencePolicy.prepareItem(
-            title: item.title,
-            notes: item.notes,
-            suggestionReason: item.suggestionReason
-        )
-        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
+        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
+        let winner = logicalMutation.winner.item
+        guard winner.deletedAt == nil else { return }
         try context.performAtomicMutation {
-            item.materializeSuggestionIdentity()
-            preparedText.apply(to: item)
-            item.isCompleted.toggle()
-            item.completedAt = item.isCompleted ? now : nil
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
-            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
+            winner.materializeSuggestionIdentity()
+            logicalMutation.winner.text.apply(to: winner)
+            winner.isCompleted.toggle()
+            winner.completedAt = winner.isCompleted ? now : nil
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
+            tombstoneSuperseded(
+                logicalMutation.activeSiblings,
+                winnerUpdatedAt: now,
+                deviceID: deviceID
+            )
         }
     }
 
@@ -70,27 +71,33 @@ struct InboxCommandHandler {
             try softDelete(item, context: context, now: now, deviceID: deviceID)
             return
         }
+        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
+        let winner = logicalMutation.winner.item
+        guard winner.deletedAt == nil else { return }
         let preparedText = try InboxPersistencePolicy.prepareItem(
             title: title,
-            notes: item.notes,
+            notes: winner.notes,
             suggestionReason: nil
         )
-        guard item.title != preparedText.title else { return }
-        let preparedSuggestions = try preparedSuggestionMutations(for: item, context: context)
-        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
+        guard winner.title != preparedText.title else { return }
+        let preparedSuggestions = try preparedSuggestionMutations(for: winner, context: context)
 
         try context.performAtomicMutation {
-            item.materializeSuggestionIdentity()
-            preparedText.apply(to: item)
-            item.suggestedTaskID = nil
-            item.suggestionGeneratedAt = nil
-            item.suggestionRevisionID = UUID()
-            item.dismissedSuggestionRevisionID = nil
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            winner.materializeSuggestionIdentity()
+            preparedText.apply(to: winner)
+            winner.suggestedTaskID = nil
+            winner.suggestionGeneratedAt = nil
+            winner.suggestionRevisionID = UUID()
+            winner.dismissedSuggestionRevisionID = nil
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
+            tombstoneSuperseded(
+                logicalMutation.activeSiblings,
+                winnerUpdatedAt: now,
+                deviceID: deviceID
+            )
         }
     }
 
@@ -100,23 +107,20 @@ struct InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
-        let preparedText = try InboxPersistencePolicy.prepareItem(
-            title: item.title,
-            notes: item.notes,
-            suggestionReason: item.suggestionReason
-        )
-        let preparedSuggestions = try preparedSuggestionMutations(for: item, context: context)
-        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
+        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
+        let winner = logicalMutation.winner.item
+        guard winner.deletedAt == nil else { return }
+        let preparedSuggestions = try preparedSuggestionMutations(for: winner, context: context)
 
         try context.performAtomicMutation {
-            item.materializeSuggestionIdentity()
-            preparedText.apply(to: item)
-            item.deletedAt = now
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            winner.materializeSuggestionIdentity()
+            logicalMutation.winner.text.apply(to: winner)
+            winner.deletedAt = now
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-            tombstone(preparedSiblings, now: now, deviceID: deviceID)
+            tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)
         }
     }
 

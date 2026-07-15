@@ -166,6 +166,71 @@ struct InboxSuggestionIdentityTests {
     }
 
     @Test @MainActor
+    func staleRowToggleMutatesCurrentLogicalWinnerWithoutRestoringOldTitle() throws {
+        let context = try makeTestContext()
+        let handler = InboxCommandHandler()
+        let contextID = UUID()
+        let stale = InboxItem(title: "Old title", deviceID: "old-device")
+        stale.suggestionContextID = contextID
+        stale.suggestionRevisionID = UUID()
+        stale.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let current = InboxItem(title: "Current title", deviceID: "new-device")
+        current.suggestionContextID = contextID
+        current.suggestionRevisionID = UUID()
+        current.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        context.insert(stale)
+        context.insert(current)
+        try context.save()
+
+        let toggledAt = Date(timeIntervalSinceReferenceDate: 300)
+        try handler.toggle(stale, context: context, now: toggledAt, deviceID: "local")
+
+        let winner = try #require(
+            InboxSuggestionIdentityService().visibleLogicalItems(
+                from: try context.fetch(FetchDescriptor<InboxItem>())
+            ).first
+        )
+        #expect(winner === current)
+        #expect(winner.title == "Current title")
+        #expect(winner.isCompleted)
+        #expect(stale.deletedAt == toggledAt.addingTimeInterval(-1))
+    }
+
+    @Test @MainActor
+    func staleRevisionDiscardDoesNotDismissOrReplaceCurrentRevision() throws {
+        let context = try makeTestContext()
+        let handler = InboxCommandHandler()
+        let contextID = UUID()
+        let stale = InboxItem(title: "Old title", deviceID: "old-device")
+        stale.suggestionContextID = contextID
+        stale.suggestionRevisionID = UUID()
+        stale.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let current = InboxItem(title: "Current title", deviceID: "new-device")
+        current.suggestionContextID = contextID
+        current.suggestionRevisionID = UUID()
+        current.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        context.insert(stale)
+        context.insert(current)
+        try context.save()
+
+        try handler.discardSuggestion(
+            stale,
+            context: context,
+            now: Date(timeIntervalSinceReferenceDate: 300),
+            deviceID: "local"
+        )
+
+        let winner = try #require(
+            InboxSuggestionIdentityService().visibleLogicalItems(
+                from: try context.fetch(FetchDescriptor<InboxItem>())
+            ).first
+        )
+        #expect(winner === current)
+        #expect(winner.dismissedSuggestionRevisionID == nil)
+        #expect(stale.dismissedSuggestionRevisionID == nil)
+    }
+
+    @Test @MainActor
     func newerLogicalTombstoneSuppressesOlderActivePhysicalSibling() {
         let contextID = UUID()
         let revisionID = UUID()

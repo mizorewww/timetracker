@@ -8,25 +8,32 @@ extension InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
+        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
+        let winner = logicalMutation.winner.item
+        guard winner.deletedAt == nil,
+              winner.suggestionIdentity == item.suggestionIdentity else { return }
         let preparedItem = try InboxPersistencePolicy.prepareItem(
-            title: item.title,
-            notes: item.notes,
+            title: winner.title,
+            notes: winner.notes,
             suggestionReason: nil
         )
-        let preparedSuggestions = try preparedSuggestionMutations(for: item, context: context)
-        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
+        let preparedSuggestions = try preparedSuggestionMutations(for: winner, context: context)
 
         try context.performAtomicMutation {
-            item.materializeSuggestionIdentity()
-            preparedItem.apply(to: item)
-            item.suggestedTaskID = nil
-            item.suggestionGeneratedAt = now
-            item.dismissedSuggestionRevisionID = item.effectiveSuggestionRevisionID
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            winner.materializeSuggestionIdentity()
+            preparedItem.apply(to: winner)
+            winner.suggestedTaskID = nil
+            winner.suggestionGeneratedAt = now
+            winner.dismissedSuggestionRevisionID = winner.effectiveSuggestionRevisionID
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
+            tombstoneSuperseded(
+                logicalMutation.activeSiblings,
+                winnerUpdatedAt: now,
+                deviceID: deviceID
+            )
         }
     }
 
@@ -37,9 +44,13 @@ extension InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
+        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
+        let winner = logicalMutation.winner.item
+        guard winner.deletedAt == nil,
+              winner.suggestionIdentity == item.suggestionIdentity else { return }
         let preparedItem = try InboxPersistencePolicy.prepareItem(
-            title: item.title,
-            notes: item.notes,
+            title: winner.title,
+            notes: winner.notes,
             suggestionReason: result.reason
         )
         let preparedResult = try InboxPersistencePolicy.prepareSuggestion(
@@ -49,30 +60,28 @@ extension InboxCommandHandler {
             modelID: result.modelID,
             titleSnapshot: preparedItem.title
         )
-        let existing = try suggestions(for: item, context: context)
+        let existing = try suggestions(for: winner, context: context)
             .deduplicatedByID()
             .sorted { lhs, rhs in
                 if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
                 return lhs.id.uuidString > rhs.id.uuidString
             }
-        let identity = item.suggestionIdentity
+        let identity = winner.suggestionIdentity
         let active = existing.first {
             $0.deletedAt == nil &&
                 ($0.explicitInboxItemIdentity == identity ||
-                    ($0.explicitInboxItemIdentity == nil && $0.inboxItemID == item.id))
+                    ($0.explicitInboxItemIdentity == nil && $0.inboxItemID == winner.id))
         }
         let duplicateMutations = try existing
             .filter { $0.deletedAt == nil && $0.id != active?.id }
             .map(prepareSuggestionMutation)
-        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
-
         try context.performAtomicMutation {
-            item.materializeSuggestionIdentity()
-            preparedItem.apply(to: item)
+            winner.materializeSuggestionIdentity()
+            preparedItem.apply(to: winner)
             if let active {
                 update(
                     active,
-                    item: item,
+                    item: winner,
                     taskID: result.taskID,
                     text: preparedResult,
                     now: now,
@@ -81,9 +90,9 @@ extension InboxCommandHandler {
             } else {
                 context.insert(
                     InboxSuggestion(
-                        inboxItemID: item.id,
-                        inboxItemContextID: item.effectiveSuggestionContextID,
-                        inboxItemRevisionID: item.effectiveSuggestionRevisionID,
+                        inboxItemID: winner.id,
+                        inboxItemContextID: winner.effectiveSuggestionContextID,
+                        inboxItemRevisionID: winner.effectiveSuggestionRevisionID,
                         taskID: result.taskID,
                         reason: preparedResult.reason,
                         iconName: preparedResult.iconName,
@@ -98,13 +107,17 @@ extension InboxCommandHandler {
 
             tombstone(duplicateMutations, now: now, deviceID: deviceID)
 
-            item.suggestedTaskID = result.taskID
-            item.suggestionGeneratedAt = now
-            item.dismissedSuggestionRevisionID = nil
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
-            tombstoneSuperseded(preparedSiblings, winnerUpdatedAt: now, deviceID: deviceID)
+            winner.suggestedTaskID = result.taskID
+            winner.suggestionGeneratedAt = now
+            winner.dismissedSuggestionRevisionID = nil
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
+            tombstoneSuperseded(
+                logicalMutation.activeSiblings,
+                winnerUpdatedAt: now,
+                deviceID: deviceID
+            )
         }
     }
 
@@ -135,10 +148,17 @@ extension InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws -> ChecklistItem {
+        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
+        let winner = logicalMutation.winner.item
+        guard winner.deletedAt == nil,
+              winner.suggestionIdentity == item.suggestionIdentity,
+              suggestion.belongs(to: winner) else {
+            throw InboxCommandIdentityError.staleSuggestion
+        }
         let preparedItem = try InboxPersistencePolicy.prepareItem(
-            title: item.title,
-            notes: item.notes,
-            suggestionReason: item.suggestionReason
+            title: winner.title,
+            notes: winner.notes,
+            suggestionReason: winner.suggestionReason
         )
         let preparedSuggestion = try InboxPersistencePolicy.prepareSuggestion(
             reason: suggestion.reason,
@@ -147,16 +167,15 @@ extension InboxCommandHandler {
             modelID: suggestion.modelID,
             titleSnapshot: suggestion.titleSnapshot
         )
-        let otherSuggestionMutations = try preparedSuggestionMutations(for: item, context: context)
+        let otherSuggestionMutations = try preparedSuggestionMutations(for: winner, context: context)
             .filter { $0.suggestion.id != suggestion.id }
-        let preparedSiblings = try preparedLogicalSiblingMutations(for: item, context: context)
         let nextSortOrder = ((existingChecklistItems.map(\.sortOrder).max() ?? 0) + 10)
         return try context.performAtomicMutation {
-            item.materializeSuggestionIdentity()
-            preparedItem.apply(to: item)
+            winner.materializeSuggestionIdentity()
+            preparedItem.apply(to: winner)
             preparedSuggestion.apply(to: suggestion)
-            suggestion.inboxItemContextID = item.effectiveSuggestionContextID
-            suggestion.inboxItemRevisionID = item.effectiveSuggestionRevisionID
+            suggestion.inboxItemContextID = winner.effectiveSuggestionContextID
+            suggestion.inboxItemRevisionID = winner.effectiveSuggestionRevisionID
 
             let checklistItem = ChecklistItem(
                 taskID: suggestion.taskID,
@@ -178,13 +197,13 @@ extension InboxCommandHandler {
                 )
             )
 
-            item.deletedAt = now
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            winner.deletedAt = now
+            winner.updatedAt = now
+            winner.deviceID = deviceID
+            winner.clientMutationID = UUID()
             softDelete(suggestion, now: now, deviceID: deviceID)
             tombstone(otherSuggestionMutations, now: now, deviceID: deviceID)
-            tombstone(preparedSiblings, now: now, deviceID: deviceID)
+            tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)
             return checklistItem
         }
     }

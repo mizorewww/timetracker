@@ -184,21 +184,55 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testTodayPrimaryTimerActionOpensTaskPicker() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today interaction screenshots require an iOS simulator.")
+        #else
         let app = launchApp()
         XCTAssertTrue(homeIsReady(in: app))
+        try exerciseTodayTimerPicker(
+            in: app,
+            overviewCaptureName: "today-overview",
+            pickerCaptureName: "today-task-picker"
+        )
+        #endif
+    }
 
+    @MainActor
+    func testTodayLandscapeLayoutOpensTaskPicker() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today landscape interaction screenshot requires an iOS simulator.")
+        #else
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+        try exerciseTodayTimerPicker(
+            in: app,
+            overviewCaptureName: "ipad-today-landscape-overview",
+            pickerCaptureName: "ipad-today-landscape-task-picker"
+        )
+        #endif
+    }
+
+    @MainActor
+    private func exerciseTodayTimerPicker(
+        in app: XCUIApplication,
+        overviewCaptureName: String,
+        pickerCaptureName: String
+    ) throws {
         let startTimer = app.buttons["home.startTimer"].firstMatch
         scrollUntilHittable(startTimer, direction: .up, in: app)
         XCTAssertTrue(
             waitForElement(startTimer, timeout: 5, diagnosticName: "today-start-timer", in: app)
                 && startTimer.isHittable
         )
-        try capture("today-overview", app: app)
+        try capture(overviewCaptureName, app: app)
 
         activate(startTimer)
         let picker = app.descendants(matching: .any)["timer.taskPicker"].firstMatch
         XCTAssertTrue(waitForElement(picker, timeout: 5, diagnosticName: "today-task-picker", in: app))
-        try capture("today-task-picker", app: app)
+        try capture(pickerCaptureName, app: app)
     }
 
     @MainActor
@@ -295,6 +329,7 @@ final class timetrackerUITests: XCTestCase {
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
         ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
+        app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = "today"
         app.launch()
         app.activate()
         return app
@@ -302,7 +337,10 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     private func homeIsReady(in app: XCUIApplication) -> Bool {
-        app.buttons["home.startTimer"].waitForExistence(timeout: 8)
+        if app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 8) {
+            return true
+        }
+        return app.buttons["home.startTimer"].waitForExistence(timeout: 2)
     }
 
     @MainActor

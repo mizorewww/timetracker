@@ -30,11 +30,15 @@ struct HomeLayoutPolicy {
     }
 
     var usesTwoColumnContent: Bool {
-        width >= 1_000
+        contentWidth >= 1_000
     }
 
     var contentMaxWidth: CGFloat {
         1_180
+    }
+
+    var contentWidth: CGFloat {
+        min(max(0, width - (pagePadding * 2)), contentMaxWidth)
     }
 
     var supportingColumnWidth: CGFloat {

@@ -302,7 +302,9 @@ struct HomeUIContractTests {
         #expect(timelineIndex < forecastIndex)
         #expect(source.contains("TodayHomeContent(store: store, quickStartLimit: 6)"))
         #expect(source.contains("layout.usesTwoColumnContent && content.hasSupportingContent"))
-        #expect(source.contains(".frame(maxWidth: layout.contentMaxWidth"))
+        #expect(source.contains(".frame(width: layout.contentWidth"))
+        #expect(source.contains(".padding(.vertical, layout.pagePadding)"))
+        #expect(source.contains(".padding(layout.pagePadding)") == false)
         #expect(source.contains("supportingColumnWidth"))
     }
 }

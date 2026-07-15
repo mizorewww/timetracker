@@ -9,8 +9,8 @@ struct DesktopMainView: View {
             let content = TodayHomeContent(store: store, quickStartLimit: 6)
             ScrollView {
                 DesktopTodayContent(store: store, content: content, layout: layout)
-                    .padding(layout.pagePadding)
-                    .frame(maxWidth: layout.contentMaxWidth, alignment: .leading)
+                    .frame(width: layout.contentWidth, alignment: .leading)
+                    .padding(.vertical, layout.pagePadding)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
             .background(AppColors.background)

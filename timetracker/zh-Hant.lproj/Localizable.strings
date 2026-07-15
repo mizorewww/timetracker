@@ -428,7 +428,7 @@
 "analytics.taskUsage.other" = "其他";
 "analytics.total" = "總計";
 "analytics.hourDistribution.title" = "今天時間分布";
-"analytics.hourDistribution.subtitle" = "類似螢幕使用時間的日內視圖；每根柱子使用對應任務的顏色。";
+"analytics.hourDistribution.subtitle" = "柱高比較每小時的追蹤時長，顏色區分對應任務。";
 "analytics.hourDistribution.taskColorHint" = "按任務顏色";
 "analytics.hourDistribution.accessibility.chart" = "每小時任務活動";
 "analytics.hourDistribution.accessibility.hour" = "%@時段";

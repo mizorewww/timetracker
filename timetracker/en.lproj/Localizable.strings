@@ -428,7 +428,7 @@
 "analytics.taskUsage.other" = "Other";
 "analytics.total" = "Total";
 "analytics.hourDistribution.title" = "Today Distribution";
-"analytics.hourDistribution.subtitle" = "A Screen Time-style view of today. Each bar uses the colors of the tasks recorded in that hour.";
+"analytics.hourDistribution.subtitle" = "Bar height compares tracked time by hour; colors show the tasks recorded.";
 "analytics.hourDistribution.taskColorHint" = "Colored by task";
 "analytics.hourDistribution.accessibility.chart" = "Hourly task activity";
 "analytics.hourDistribution.accessibility.hour" = "Hour %@";

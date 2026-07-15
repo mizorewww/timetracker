@@ -620,6 +620,18 @@
 
 验证：源码契约固定 unit target 为 `parallelizable=YES`、UI target 为 `parallelizable=NO`。iPhone 17 Pro 月导航用例在禁用并行克隆后只创建一个 runner，完整 xcresult 通过并输出两张截图；清理后 CoreSimulator 与进程审计为空。
 
+## AD-048：Analytics 小时活动采用全日共享 gross 尺度
+
+状态：Accepted
+
+背景：Today 的小时活动图曾把完整 plot 高度交给每个非空小时的 task stack。于是 30 秒与 60 分钟都会画成同样满高，用户无法比较小时强弱；若直接把单小时固定夹到 3,600 秒，并发计时产生的 gross 又可能超过一小时。旧 stack 还把层间 spacing 算在切片之外，导致“task 高度之和”和最终柱高使用不同口径。
+
+决策：`HourActivityScale` 在同一日的 24 个 `HourTaskActivity.totalSeconds` 上建立共享尺度，上限为 `max(3_600, maxHourlyGrossSeconds)`。每小时以秒级比例映射到有限 plot 高度，零值保持零高，30 秒等亚分钟值保留 fractional height；并发 gross 超过 3,600 秒时，整日所有柱使用同一个扩展上限。`HourStackLayoutEngine` 只接收该小时的目标高度，按每个正时长 task 的秒数分配全部 slice，并校正浮点残差，使所有 slice 高度守恒。层间视觉分隔使用不参与布局的单像素 overlay，极薄 slice 不叠加 separator；图高随 Dynamic Type 缩放，辅助字号横轴只保留 0/12/24 三个刻度并把图例收敛成单列。三语 subtitle 明说“柱高比较时长、颜色区分任务”，每小时仍以本地化 VoiceOver value 报告真实总时长和完整 task 明细。
+
+后果：非空小时不再自动满高，同一天的柱高可直接比较；并发不会被错误截断为一小时，亚分钟记录也不会消失。背景槽仍提供 24 小时位置参照，颜色、分隔和 VoiceOver 共同表达 task 分层。任何新增小时图都必须复用共享尺度，禁止在单个 bar 内按自身最大值重新归一化，或用分钟整数除法计算高度。
+
+验证：单元测试覆盖 3,600 秒下限、7,200 秒并发上限、30 秒的 1.25pt fractional height、空值/非有限几何输入，以及 task slice 高度严格回收到目标柱高；UI source contract 固定共享尺度、`@ScaledMetric`、零 spacing、overlay separator、底部 target frame、辅助字号单列图例与既有 VoiceOver 语义。付费开发者签名的最终 macOS 定向套件 40/40 通过；默认字号和 Accessibility XXXL iPhone 截图此前均通过。AX 截图揭示双列图例换行过窄后，最终源代码改成单列并通过签名编译与契约测试；随后的两次新模拟器复验均被 iOS 27 XCTest runtime 在测试入口前以 `Timed out waiting for AX loaded notification` 拦截，不属于 App crash 或断言失败。所有成功与失败批次的专用模拟器都已关闭并删除，最终进程审计无 runner、`xcodebuild` 或诊断残留。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

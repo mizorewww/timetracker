@@ -3,37 +3,32 @@ import SwiftUI
 
 struct HourTaskActivityBar: View {
     @Environment(\.calendar) private var calendar
+    @Environment(\.displayScale) private var displayScale
     @Environment(\.locale) private var locale
     let point: HourTaskActivity
+    let scale: HourActivityScale
     let availableHeight: CGFloat
-    private let sliceSpacing: CGFloat = 1
     private let cornerRadius: CGFloat = 4
 
-    private var minSliceHeight: CGFloat {
-        max(5, min(8, availableHeight * 0.05))
-    }
-
-    private var visibleSliceCount: Int {
-        let activeSliceCount = point.slices.filter { $0.seconds > 0 }.count
-        let capacity = HourStackLayoutEngine.maxVisibleSliceCount(
-            availableHeight: Double(max(0, availableHeight)),
-            minSliceHeight: Double(minSliceHeight)
+    private var targetHeight: CGFloat {
+        CGFloat(
+            scale.height(
+                totalSeconds: point.totalSeconds,
+                availableHeight: Double(max(0, availableHeight))
+            )
         )
-        return min(activeSliceCount, capacity)
     }
 
-    private var contentHeight: CGFloat {
-        let sliceCount = CGFloat(max(visibleSliceCount - 1, 0))
-        return max(0, availableHeight - sliceCount * sliceSpacing)
+    private var separatorHeight: CGFloat {
+        1 / max(displayScale, 1)
     }
 
     private var renderedSlices: [RenderedHourTaskSlice] {
         let inputs = point.slices.map { HourStackLayoutInput(id: $0.id, seconds: $0.seconds) }
         let layouts = HourStackLayoutEngine.layout(
             inputs: inputs,
-            availableHeight: Double(max(0, contentHeight)),
-            minSliceHeight: Double(minSliceHeight),
-            maxItems: visibleSliceCount
+            availableHeight: Double(max(0, targetHeight)),
+            minSliceHeight: 0
         )
         let slicesByID = point.slices.reduce(into: [UUID: HourTaskSlice]()) { result, slice in
             result[slice.id] = slice
@@ -75,20 +70,31 @@ struct HourTaskActivityBar: View {
     }
 
     var body: some View {
+        let slices = renderedSlices
+
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(Color.secondary.opacity(0.10))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if point.totalSeconds > 0, renderedSlices.isEmpty == false {
-                VStack(spacing: sliceSpacing) {
-                    ForEach(renderedSlices.reversed()) { rendered in
+            if point.totalSeconds > 0, slices.isEmpty == false {
+                VStack(spacing: 0) {
+                    ForEach(Array(slices.reversed())) { rendered in
                         Rectangle()
                             .fill(rendered.slice.color)
                             .frame(height: rendered.height)
+                            .overlay(alignment: .top) {
+                                if rendered.id != slices.last?.id,
+                                   rendered.height > separatorHeight * 2 {
+                                    Color.primary.opacity(0.15)
+                                        .frame(height: separatorHeight)
+                                }
+                            }
                     }
                 }
-                .frame(height: availableHeight)
+                .frame(maxWidth: .infinity)
+                .frame(height: targetHeight, alignment: .bottom)
+                .compositingGroup()
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
         }

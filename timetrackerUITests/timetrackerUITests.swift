@@ -246,6 +246,30 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsTodayDistributionUsesSharedScale() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")
+        #else
+        try verifyAnalyticsTodayDistribution(
+            screenshotName: "iphone-analytics-hour-distribution",
+            contentSizeCategory: nil
+        )
+        #endif
+    }
+
+    @MainActor
+    func testAnalyticsTodayDistributionAtAccessibilitySize() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")
+        #else
+        try verifyAnalyticsTodayDistribution(
+            screenshotName: "iphone-analytics-hour-distribution-accessibility",
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
+        )
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsMonthNavigationReturnsToTheCurrentPeriod() throws {
         #if os(macOS)
         throw XCTSkip("Analytics month navigation screenshots require an iOS simulator.")
@@ -459,7 +483,10 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchApp(route: String = "today") -> XCUIApplication {
+    private func launchApp(
+        route: String = "today",
+        contentSizeCategory: String? = nil
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
@@ -469,11 +496,45 @@ final class timetrackerUITests: XCTestCase {
             "-TimeTrackerAutomaticDemoDataModeOverride", "seedIfEmpty",
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
         ]
+        if let contentSizeCategory {
+            app.launchArguments += [
+                "-UIPreferredContentSizeCategoryName",
+                contentSizeCategory
+            ]
+        }
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = route
         app.launch()
         app.activate()
         return app
+    }
+
+    @MainActor
+    private func verifyAnalyticsTodayDistribution(
+        screenshotName: String,
+        contentSizeCategory: String?
+    ) throws {
+        let app = launchApp(
+            route: "analytics",
+            contentSizeCategory: contentSizeCategory
+        )
+
+        XCTAssertTrue(analyticsIsReady(in: app))
+        let time = app.descendants(matching: .any)["analytics.category.time"].firstMatch
+        scrollUntilHittable(time, direction: .up, in: app)
+        XCTAssertTrue(time.waitForExistence(timeout: 5) && time.isHittable)
+        activate(time)
+
+        let detail = app.descendants(matching: .any)["analytics.categoryDetail.time"].firstMatch
+        let distribution = app.descendants(matching: .any)[
+            "analytics.hourDistribution.content"
+        ].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        XCTAssertTrue(distribution.waitForExistence(timeout: 8))
+        if contentSizeCategory != nil {
+            app.swipeUp()
+        }
+        try capture(screenshotName, app: app)
     }
 
     @MainActor

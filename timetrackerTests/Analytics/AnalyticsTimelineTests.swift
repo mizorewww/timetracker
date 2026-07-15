@@ -497,7 +497,7 @@ struct AnalyticsTimelineTests {
     }
 
     @Test
-    func hourStackLayoutDropsShortestTasksWhenMinimumHeightsWouldOverflow() {
+    func hourStackLayoutDropsOnlyTasksBeyondTheVisibleHeightCapacity() {
         let ids = [
             UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
             UUID(uuidString: "00000000-0000-0000-0000-000000000012")!,
@@ -515,9 +515,8 @@ struct AnalyticsTimelineTests {
             minSliceHeight: 10
         )
 
-        #expect(layout.count == 4)
-        #expect(layout.map(\.id) == Array(ids.prefix(4)))
-        #expect(layout.contains { $0.id == ids[4] } == false)
+        #expect(layout.count == 5)
+        #expect(layout.map(\.id) == Array(ids.prefix(5)))
         #expect(layout.contains { $0.id == ids[5] } == false)
         #expect(abs(layout.reduce(0) { $0 + $1.height } - 50) < 0.001)
     }

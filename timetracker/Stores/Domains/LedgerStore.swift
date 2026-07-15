@@ -36,10 +36,17 @@ struct LedgerStore {
         if segmentIndexEvaluationDate != .distantPast, segmentIndexCalendar != calendar {
             rebuildSegmentDayIndex(now: now, calendar: calendar)
         }
-        let fetched = uniqueSegments(refreshedActive + refreshedToday)
+        let visibleFetched = uniqueSegments(refreshedActive + refreshedToday)
         let impactedIDs = segmentIDs(overlapping: [today], now: now)
             .union(activeSegmentIDs)
-            .union(fetched.map(\.id))
+            .union(visibleFetched.map(\.id))
+        // A previously active segment can close outside today's interval (for
+        // example, startup reconciliation just after midnight). Re-fetch every
+        // impacted identity so the full-history index receives that terminal
+        // version instead of retaining the old active object or deleting it.
+        let fetched = uniqueSegments(
+            visibleFetched + (try repository.segments(ids: impactedIDs))
+        )
         let impactedSessionIDs = Set(
             impactedIDs.compactMap { segmentSnapshotByID[$0]?.sessionID }
         ).union(fetched.map(\.sessionID))

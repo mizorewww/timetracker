@@ -31,6 +31,7 @@ protocol TimeTrackingRepository {
     func activeSegments() throws -> [TimeSegment]
     func sessions() throws -> [TimeSession]
     func sessions(ids: Set<UUID>) throws -> [TimeSession]
+    func segments(ids: Set<UUID>) throws -> [TimeSegment]
     func segments(from: Date, to: Date) throws -> [TimeSegment]
     func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment]
     func allSegments() throws -> [TimeSegment]
@@ -40,6 +41,13 @@ protocol TimeTrackingRepository {
     func softDeleteSegment(segmentID: UUID) throws
     func stopSession(sessionID: UUID) throws
     @discardableResult func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment
+}
+
+extension TimeTrackingRepository {
+    func segments(ids: Set<UUID>) throws -> [TimeSegment] {
+        guard ids.isEmpty == false else { return [] }
+        return try allSegments().filter { ids.contains($0.id) }
+    }
 }
 
 protocol PomodoroRepository {

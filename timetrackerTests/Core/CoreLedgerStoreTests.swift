@@ -240,6 +240,63 @@ struct CoreLedgerStoreTests {
             now: reference.addingTimeInterval(600)
         ).map(\.id) == [futureSegment.id])
     }
+
+    @Test @MainActor
+    func visibleRefreshClosesAPreviouslyActiveSegmentOutsideToday() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = Date(timeIntervalSince1970: 172_800)
+        let secondDay = firstDay.addingTimeInterval(86_400)
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: firstDay.addingTimeInterval(23 * 3_600)
+        )
+        let active = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: session.startedAt
+        )
+        let closed = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: session.startedAt,
+            endedAt: session.startedAt.addingTimeInterval(60)
+        )
+        closed.id = active.id
+        session.endedAt = closed.endedAt
+
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSegments = [active]
+        repository.fullSessions = [session]
+        var store = LedgerStore()
+        try store.refreshHistory(
+            repository: repository,
+            now: secondDay.addingTimeInterval(5 * 60),
+            calendar: calendar
+        )
+
+        repository.resetCounters()
+        repository.segmentsByID = [closed.id: closed]
+        repository.sessionsByID = [session.id: session]
+        try store.refreshVisible(
+            repository: repository,
+            now: secondDay.addingTimeInterval(10 * 60),
+            calendar: calendar
+        )
+
+        #expect(store.activeSegments.isEmpty)
+        #expect(store.segment(for: active.id)?.endedAt == closed.endedAt)
+        #expect(store.allSegments.map(\.id) == [active.id])
+        #expect(repository.segmentsByIDsCallCount == 1)
+        #expect(repository.allSegmentsCallCount == 0)
+    }
 }
 
 private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
@@ -248,11 +305,13 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
     var allSegmentsCallCount = 0
     var sessionsCallCount = 0
     var sessionsByIDsCallCount = 0
+    var segmentsByIDsCallCount = 0
 
     var fullSegments: [TimeSegment] = []
     var fullSessions: [TimeSession] = []
     var rangeSegments: [TimeSegment] = []
     var sessionsByID: [UUID: TimeSession] = [:]
+    var segmentsByID: [UUID: TimeSegment] = [:]
 
     func resetCounters() {
         activeSegmentsCallCount = 0
@@ -260,6 +319,7 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
         allSegmentsCallCount = 0
         sessionsCallCount = 0
         sessionsByIDsCallCount = 0
+        segmentsByIDsCallCount = 0
     }
 
     func activeSegments() throws -> [TimeSegment] {
@@ -275,6 +335,11 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
     func sessions(ids: Set<UUID>) throws -> [TimeSession] {
         sessionsByIDsCallCount += 1
         return ids.compactMap { sessionsByID[$0] }
+    }
+
+    func segments(ids: Set<UUID>) throws -> [TimeSegment] {
+        segmentsByIDsCallCount += 1
+        return ids.compactMap { segmentsByID[$0] }
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {

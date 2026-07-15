@@ -29,6 +29,10 @@ extension SwiftDataTimeTrackingRepository {
             .sorted(by: sessionStartOrder)
     }
 
+    func segments(ids: Set<UUID>) throws -> [TimeSegment] {
+        try canonicalSegments(ids: ids).sorted(by: segmentStartOrder)
+    }
+
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
         try segments(from: from, to: to, now: nowProvider())
     }

@@ -17,6 +17,16 @@ struct PlatformShellContractTests {
     }
 
     @Test
+    func uiAuditCanNavigateWhenTheSystemStartsWithACollapsedIPadSidebar() throws {
+        let source = try sourceText("timetrackerUITests/timetrackerUITests.swift")
+
+        #expect(source.contains("openCollapsedSidebarDestination(sidebarIdentifier, in: app)"))
+        #expect(source.contains("app.descendants(matching: .any)[\"sidebar.show\"]"))
+        #expect(source.contains("app.buttons[\"Show Sidebar\"]"))
+        #expect(source.contains("destination.waitForExistence(timeout: 3)"))
+    }
+
+    @Test
     func sidebarUsesStableRowsAndTracksProgrammaticNavigation() throws {
         let source = try [
             "timetracker/Features/Sidebar/SidebarViews.swift",

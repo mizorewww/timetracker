@@ -525,6 +525,10 @@ final class timetrackerUITests: XCTestCase {
             return
         }
 
+        if openCollapsedSidebarDestination(sidebarIdentifier, in: app) {
+            return
+        }
+
         let identifiedTab = app.descendants(matching: .any)[tabIdentifier]
         if identifiedTab.waitForExistence(timeout: 2) {
             activate(identifiedTab.firstMatch)
@@ -547,6 +551,33 @@ final class timetrackerUITests: XCTestCase {
         }
 
         XCTFail("Could not open section \(tabTitle)")
+    }
+
+    @MainActor
+    private func openCollapsedSidebarDestination(
+        _ sidebarIdentifier: String,
+        in app: XCUIApplication
+    ) -> Bool {
+        let identifiedToggle = app.descendants(matching: .any)["sidebar.show"].firstMatch
+        if identifiedToggle.waitForExistence(timeout: 1), identifiedToggle.isHittable {
+            activate(identifiedToggle)
+        } else {
+            // NavigationSplitView owns the platform-standard toggle, so SwiftUI
+            // does not currently expose an application accessibility identifier.
+            // UI audit launches are pinned to English to keep this fallback stable.
+            let systemToggle = app.buttons["Show Sidebar"].firstMatch
+            guard systemToggle.waitForExistence(timeout: 1), systemToggle.isHittable else {
+                return false
+            }
+            activate(systemToggle)
+        }
+
+        let destination = app.descendants(matching: .any)[sidebarIdentifier].firstMatch
+        guard destination.waitForExistence(timeout: 3), destination.isHittable else {
+            return false
+        }
+        activate(destination)
+        return true
     }
 
     @MainActor

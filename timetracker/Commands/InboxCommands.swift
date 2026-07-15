@@ -6,6 +6,7 @@ struct InboxCommandHandler {
     @discardableResult
     func add(
         title: String,
+        notes: String? = nil,
         existingItems: [InboxItem],
         context: ModelContext,
         deviceID: String = DeviceIdentity.current
@@ -13,16 +14,24 @@ struct InboxCommandHandler {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return nil }
 
-        let nextSortOrder = (existingItems.filter { !$0.isCompleted }.map(\.sortOrder).max() ?? 0) + 10
-        let item = InboxItem(
-            title: trimmedTitle,
-            isCompleted: false,
-            sortOrder: nextSortOrder,
-            deviceID: deviceID
+        let preparedText = try InboxPersistencePolicy.prepareItem(
+            title: title,
+            notes: notes,
+            suggestionReason: nil
         )
-        context.insert(item)
-        try context.saveAfterMutationStep()
-        return item
+
+        let nextSortOrder = (existingItems.filter { !$0.isCompleted }.map(\.sortOrder).max() ?? 0) + 10
+        return try context.performAtomicMutation {
+            let item = InboxItem(
+                title: preparedText.title,
+                isCompleted: false,
+                sortOrder: nextSortOrder,
+                deviceID: deviceID
+            )
+            preparedText.apply(to: item)
+            context.insert(item)
+            return item
+        }
     }
 
     func toggle(
@@ -31,12 +40,19 @@ struct InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
-        item.isCompleted.toggle()
-        item.completedAt = item.isCompleted ? now : nil
-        item.updatedAt = now
-        item.deviceID = deviceID
-        item.clientMutationID = UUID()
-        try context.saveAfterMutationStep()
+        let preparedText = try InboxPersistencePolicy.prepareItem(
+            title: item.title,
+            notes: item.notes,
+            suggestionReason: item.suggestionReason
+        )
+        try context.performAtomicMutation {
+            preparedText.apply(to: item)
+            item.isCompleted.toggle()
+            item.completedAt = item.isCompleted ? now : nil
+            item.updatedAt = now
+            item.deviceID = deviceID
+            item.clientMutationID = UUID()
+        }
     }
 
     func updateTitle(
@@ -51,17 +67,26 @@ struct InboxCommandHandler {
             try softDelete(item, context: context, now: now, deviceID: deviceID)
             return
         }
-        guard item.title != trimmedTitle else { return }
+        let preparedText = try InboxPersistencePolicy.prepareItem(
+            title: title,
+            notes: item.notes,
+            suggestionReason: nil
+        )
+        guard item.title != preparedText.title else { return }
+        let preparedSuggestions = try preparedSuggestionMutations(
+            for: item.id,
+            context: context
+        )
 
-        item.title = trimmedTitle
-        item.suggestedTaskID = nil
-        item.suggestionReason = nil
-        item.suggestionGeneratedAt = nil
-        item.updatedAt = now
-        item.deviceID = deviceID
-        item.clientMutationID = UUID()
-        try clearSuggestions(for: item.id, context: context, now: now, deviceID: deviceID)
-        try context.saveAfterMutationStep()
+        try context.performAtomicMutation {
+            preparedText.apply(to: item)
+            item.suggestedTaskID = nil
+            item.suggestionGeneratedAt = nil
+            item.updatedAt = now
+            item.deviceID = deviceID
+            item.clientMutationID = UUID()
+            tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+        }
     }
 
     func softDelete(
@@ -70,12 +95,24 @@ struct InboxCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
-        item.deletedAt = now
-        item.updatedAt = now
-        item.deviceID = deviceID
-        item.clientMutationID = UUID()
-        try clearSuggestions(for: item.id, context: context, now: now, deviceID: deviceID)
-        try context.saveAfterMutationStep()
+        let preparedText = try InboxPersistencePolicy.prepareItem(
+            title: item.title,
+            notes: item.notes,
+            suggestionReason: item.suggestionReason
+        )
+        let preparedSuggestions = try preparedSuggestionMutations(
+            for: item.id,
+            context: context
+        )
+
+        try context.performAtomicMutation {
+            preparedText.apply(to: item)
+            item.deletedAt = now
+            item.updatedAt = now
+            item.deviceID = deviceID
+            item.clientMutationID = UUID()
+            tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+        }
     }
 
     func reorderedOpenItemIDs(
@@ -115,12 +152,26 @@ struct InboxCommandHandler {
         let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }
         guard orderedItems.count == items.count else { return }
 
-        for (index, item) in orderedItems.enumerated() {
-            item.sortOrder = Double(index + 1) * 10
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+        let preparedItems = try orderedItems.map { item in
+            (
+                item,
+                try InboxPersistencePolicy.prepareItem(
+                    title: item.title,
+                    notes: item.notes,
+                    suggestionReason: item.suggestionReason
+                )
+            )
         }
-        try context.saveAfterMutationStep()
+
+        try context.performAtomicMutation {
+            for (index, preparedItem) in preparedItems.enumerated() {
+                let item = preparedItem.0
+                preparedItem.1.apply(to: item)
+                item.sortOrder = Double(index + 1) * 10
+                item.updatedAt = now
+                item.deviceID = deviceID
+                item.clientMutationID = UUID()
+            }
+        }
     }
 }

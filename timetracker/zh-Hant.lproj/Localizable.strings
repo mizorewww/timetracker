@@ -598,6 +598,16 @@
 "persistence.error.requiredFormat" = "請填寫%@。";
 "persistence.error.controlCharacterFormat" = "%@包含不支援的字元。";
 "persistence.error.tooLongFormat" = "%@內容過長，請縮短後再試。";
+"inbox.persistence.field.title" = "收件匣項目標題";
+"inbox.persistence.field.notes" = "收件匣備註";
+"inbox.persistence.field.reason" = "推薦理由";
+"inbox.persistence.field.symbol" = "推薦符號";
+"inbox.persistence.field.color" = "推薦顏色";
+"inbox.persistence.field.model" = "推薦模型";
+"inbox.persistence.field.titleSnapshot" = "推薦標題";
+"inbox.persistence.error.requiredFormat" = "請填寫%@。";
+"inbox.persistence.error.controlCharacterFormat" = "%@包含不支援的字元。";
+"inbox.persistence.error.tooLongFormat" = "%@內容過長，請縮短後再試。";
 "editor.task.info" = "基本資訊";
 "editor.task.name" = "任務名稱";
 "editor.task.status" = "狀態";

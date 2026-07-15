@@ -598,6 +598,16 @@
 "persistence.error.requiredFormat" = "请填写%@。";
 "persistence.error.controlCharacterFormat" = "%@包含不支持的字符。";
 "persistence.error.tooLongFormat" = "%@内容过长，请缩短后重试。";
+"inbox.persistence.field.title" = "收件箱项目标题";
+"inbox.persistence.field.notes" = "收件箱备注";
+"inbox.persistence.field.reason" = "推荐理由";
+"inbox.persistence.field.symbol" = "推荐符号";
+"inbox.persistence.field.color" = "推荐颜色";
+"inbox.persistence.field.model" = "推荐模型";
+"inbox.persistence.field.titleSnapshot" = "推荐标题";
+"inbox.persistence.error.requiredFormat" = "请填写%@。";
+"inbox.persistence.error.controlCharacterFormat" = "%@包含不支持的字符。";
+"inbox.persistence.error.tooLongFormat" = "%@内容过长，请缩短后重试。";
 "editor.task.info" = "基本信息";
 "editor.task.name" = "任务名称";
 "editor.task.status" = "状态";

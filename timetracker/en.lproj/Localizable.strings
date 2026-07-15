@@ -598,6 +598,16 @@
 "persistence.error.requiredFormat" = "Enter a %@.";
 "persistence.error.controlCharacterFormat" = "The %@ contains unsupported characters.";
 "persistence.error.tooLongFormat" = "The %@ is too long. Shorten it and try again.";
+"inbox.persistence.field.title" = "inbox item title";
+"inbox.persistence.field.notes" = "inbox notes";
+"inbox.persistence.field.reason" = "suggestion reason";
+"inbox.persistence.field.symbol" = "suggestion symbol";
+"inbox.persistence.field.color" = "suggestion color";
+"inbox.persistence.field.model" = "suggestion model";
+"inbox.persistence.field.titleSnapshot" = "suggestion title";
+"inbox.persistence.error.requiredFormat" = "The %@ is required.";
+"inbox.persistence.error.controlCharacterFormat" = "The %@ contains unsupported characters.";
+"inbox.persistence.error.tooLongFormat" = "The %@ is too long. Shorten it and try again.";
 "editor.task.info" = "Info";
 "editor.task.name" = "Task Name";
 "editor.task.status" = "Status";

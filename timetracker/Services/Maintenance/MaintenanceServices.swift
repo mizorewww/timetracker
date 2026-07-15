@@ -4,13 +4,15 @@ import SwiftData
 @MainActor
 struct DatabaseMaintenanceService {
     nonisolated static let defaultTombstoneRetention: TimeInterval = 90 * 24 * 60 * 60
+    nonisolated static let defaultFetchBatchSize = 512
 
     @discardableResult
     func optimizeDatabase(
         context: ModelContext,
         now: Date = Date(),
         tombstoneRetention: TimeInterval = Self.defaultTombstoneRetention,
-        allowsPermanentTombstonePurge override: Bool? = nil
+        allowsPermanentTombstonePurge override: Bool? = nil,
+        fetchBatchSize: Int = Self.defaultFetchBatchSize
     ) throws -> Int {
         // CloudKit has no per-device deletion acknowledgement. Purging a tombstone
         // while an old device is offline can let that device resurrect its visible
@@ -18,87 +20,154 @@ struct DatabaseMaintenanceService {
         let allowsPermanentTombstonePurge = override ?? AppCloudSync.allowsPermanentTombstonePurge
         guard allowsPermanentTombstonePurge else { return 0 }
         let cutoff = now.addingTimeInterval(-max(0, tombstoneRetention))
-        let allTasks = try context.fetch(FetchDescriptor<TaskNode>())
-        let allCategories = try context.fetch(FetchDescriptor<TaskCategory>())
-        let allCategoryAssignments = try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
-        let allSegments = try context.fetch(FetchDescriptor<TimeSegment>())
-        let allSessions = try context.fetch(FetchDescriptor<TimeSession>())
-        let allRuns = try context.fetch(FetchDescriptor<PomodoroRun>())
-        let allCountdownEvents = try context.fetch(FetchDescriptor<CountdownEvent>())
-        let allPreferences = try context.fetch(FetchDescriptor<SyncedPreference>())
-        let allChecklistItems = try context.fetch(FetchDescriptor<ChecklistItem>())
-        let allChecklistVisuals = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
-        let allInboxItems = try context.fetch(FetchDescriptor<InboxItem>())
-        let allInboxSuggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
+        var removedCount = 0
 
-        let expiredTaskIDs = expiredCanonicalIDs(in: allTasks, cutoff: cutoff)
-        let expiredCategoryIDs = expiredCanonicalIDs(in: allCategories, cutoff: cutoff)
-        let expiredSessionIDs = expiredCanonicalIDs(in: allSessions, cutoff: cutoff)
-            .union(allSessions.filter { expiredTaskIDs.contains($0.taskID) }.map(\.id))
-        let expiredChecklistItemIDs = expiredCanonicalIDs(in: allChecklistItems, cutoff: cutoff)
-            .union(allChecklistItems.filter { expiredTaskIDs.contains($0.taskID) }.map(\.id))
-        let expiredInboxItemIDs = expiredCanonicalIDs(in: allInboxItems, cutoff: cutoff)
+        // Resolve canonical graph roots one table at a time. The previous
+        // implementation retained every row from all twelve tables until the
+        // final save, so a large ledger amplified the maintenance memory peak.
+        let taskPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TaskNode>(),
+            cutoff: cutoff
+        )
+        let expiredTaskIDs = taskPurge.ids
+        removedCount += taskPurge.count
 
-        let tasksToDelete = allTasks.filter { expiredTaskIDs.contains($0.id) }
-        let categoriesToDelete = allCategories.filter { expiredCategoryIDs.contains($0.id) }
-        let assignmentsToDelete = allCategoryAssignments.filter {
+        let categoryPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TaskCategory>(),
+            cutoff: cutoff
+        )
+        let expiredCategoryIDs = categoryPurge.ids
+        removedCount += categoryPurge.count
+
+        let sessionPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TimeSession>(),
+            cutoff: cutoff,
+            additionallyExpired: { expiredTaskIDs.contains($0.taskID) }
+        )
+        let expiredSessionIDs = sessionPurge.ids
+        removedCount += sessionPurge.count
+
+        let checklistPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<ChecklistItem>(),
+            cutoff: cutoff,
+            additionallyExpired: { expiredTaskIDs.contains($0.taskID) }
+        )
+        let expiredChecklistItemIDs = checklistPurge.ids
+        removedCount += checklistPurge.count
+
+        let inboxPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<InboxItem>(),
+            cutoff: cutoff
+        )
+        let expiredInboxItemIDs = inboxPurge.ids
+        removedCount += inboxPurge.count
+
+        // Relationship and leaf tables do not participate in root-ID winner
+        // discovery. Enumerate them in bounded fetch batches and keep the whole
+        // graph mutation in the caller's single atomic save.
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<TaskCategoryAssignment>(),
+            batchSize: fetchBatchSize
+        ) {
             isExpired($0.deletedAt, cutoff: cutoff) ||
                 expiredTaskIDs.contains($0.taskID) ||
                 expiredCategoryIDs.contains($0.categoryID)
         }
-        let sessionsToDelete = allSessions.filter { expiredSessionIDs.contains($0.id) }
-        let segmentsToDelete = allSegments.filter {
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<TimeSegment>(),
+            batchSize: fetchBatchSize
+        ) {
             isExpired($0.deletedAt, cutoff: cutoff) ||
                 expiredTaskIDs.contains($0.taskID) ||
                 expiredSessionIDs.contains($0.sessionID)
         }
-        let runsToDelete = allRuns.filter {
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<PomodoroRun>(),
+            batchSize: fetchBatchSize
+        ) {
             isExpired($0.deletedAt, cutoff: cutoff) || expiredTaskIDs.contains($0.taskID)
         }
-        let countdownsToDelete = allCountdownEvents.filter { isExpired($0.deletedAt, cutoff: cutoff) }
-        let preferencesToDelete = allPreferences.filter { isExpired($0.deletedAt, cutoff: cutoff) }
-        let checklistItemsToDelete = allChecklistItems.filter {
-            expiredChecklistItemIDs.contains($0.id) || expiredTaskIDs.contains($0.taskID)
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<CountdownEvent>(),
+            batchSize: fetchBatchSize
+        ) {
+            isExpired($0.deletedAt, cutoff: cutoff)
         }
-        let checklistVisualsToDelete = allChecklistVisuals.filter {
-            isExpired($0.deletedAt, cutoff: cutoff) || expiredChecklistItemIDs.contains($0.checklistItemID)
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<SyncedPreference>(),
+            batchSize: fetchBatchSize
+        ) {
+            isExpired($0.deletedAt, cutoff: cutoff)
         }
-        let inboxItemsToDelete = allInboxItems.filter { expiredInboxItemIDs.contains($0.id) }
-        let inboxSuggestionsToDelete = allInboxSuggestions.filter {
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<ChecklistItemVisual>(),
+            batchSize: fetchBatchSize
+        ) {
+            isExpired($0.deletedAt, cutoff: cutoff) ||
+                expiredChecklistItemIDs.contains($0.checklistItemID)
+        }
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<InboxSuggestion>(),
+            batchSize: fetchBatchSize
+        ) {
             isExpired($0.deletedAt, cutoff: cutoff) ||
                 expiredInboxItemIDs.contains($0.inboxItemID) ||
                 expiredTaskIDs.contains($0.taskID)
         }
 
-        tasksToDelete.forEach(context.delete)
-        categoriesToDelete.forEach(context.delete)
-        assignmentsToDelete.forEach(context.delete)
-        segmentsToDelete.forEach(context.delete)
-        sessionsToDelete.forEach(context.delete)
-        runsToDelete.forEach(context.delete)
-        countdownsToDelete.forEach(context.delete)
-        preferencesToDelete.forEach(context.delete)
-        checklistVisualsToDelete.forEach(context.delete)
-        checklistItemsToDelete.forEach(context.delete)
-        inboxSuggestionsToDelete.forEach(context.delete)
-        inboxItemsToDelete.forEach(context.delete)
-
-        let removedCount = tasksToDelete.count +
-            categoriesToDelete.count +
-            assignmentsToDelete.count +
-            segmentsToDelete.count +
-            sessionsToDelete.count +
-            runsToDelete.count +
-            countdownsToDelete.count +
-            preferencesToDelete.count +
-            checklistVisualsToDelete.count +
-            checklistItemsToDelete.count +
-            inboxSuggestionsToDelete.count +
-            inboxItemsToDelete.count
         if removedCount > 0 {
             try context.saveAfterMutationStep()
         }
         return removedCount
+    }
+
+    private func purgeCanonicalModels<Model>(
+        context: ModelContext,
+        descriptor: FetchDescriptor<Model>,
+        cutoff: Date,
+        additionallyExpired: (Model) -> Bool = { _ in false }
+    ) throws -> (ids: Set<UUID>, count: Int)
+    where Model: PersistentModel & PersistentUUIDModel {
+        let models = try context.fetch(descriptor)
+        let expiredIDs = expiredCanonicalIDs(in: models, cutoff: cutoff)
+            .union(models.lazy.filter(additionallyExpired).map(\.id))
+        var count = 0
+        for model in models where expiredIDs.contains(model.id) {
+            context.delete(model)
+            count += 1
+        }
+        return (expiredIDs, count)
+    }
+
+    private func deleteMatching<Model>(
+        context: ModelContext,
+        descriptor: FetchDescriptor<Model>,
+        batchSize: Int,
+        where shouldDelete: (Model) -> Bool
+    ) throws -> Int where Model: PersistentModel {
+        var count = 0
+        try context.enumerate(
+            descriptor,
+            batchSize: max(1, batchSize),
+            allowEscapingMutations: true
+        ) { model in
+            guard shouldDelete(model) else { return }
+            context.delete(model)
+            count += 1
+        }
+        return count
     }
 
     private func expiredCanonicalIDs<Model>(

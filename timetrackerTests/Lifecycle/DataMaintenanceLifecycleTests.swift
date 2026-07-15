@@ -244,6 +244,66 @@ struct DataMaintenanceLifecycleTests {
     }
 
     @Test @MainActor
+    func optimizeDatabaseStreamsLeafPurgesAcrossFetchBatches() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
+        let expiredAt = now.addingTimeInterval(-DatabaseMaintenanceService.defaultTombstoneRetention - 1)
+
+        for index in 0..<7 {
+            let event = CountdownEvent(title: "Expired \(index)", date: now, deviceID: "test")
+            event.deletedAt = expiredAt
+            event.updatedAt = expiredAt
+            context.insert(event)
+        }
+        let recentTombstone = CountdownEvent(title: "Recent tombstone", date: now, deviceID: "test")
+        recentTombstone.deletedAt = now.addingTimeInterval(-60)
+        recentTombstone.updatedAt = recentTombstone.deletedAt ?? recentTombstone.updatedAt
+        let visible = CountdownEvent(title: "Visible", date: now, deviceID: "test")
+        context.insert(recentTombstone)
+        context.insert(visible)
+        try context.save()
+
+        let removedCount = try DatabaseMaintenanceService().optimizeDatabase(
+            context: context,
+            now: now,
+            allowsPermanentTombstonePurge: true,
+            fetchBatchSize: 2
+        )
+
+        #expect(removedCount == 7)
+        let remaining = try context.fetch(FetchDescriptor<CountdownEvent>())
+        #expect(Set(remaining.map(\.id)) == [recentTombstone.id, visible.id])
+    }
+
+    @Test @MainActor
+    func optimizeDatabasePreservesNewerVisibleDuplicateOfExpiredTombstone() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
+        let expiredAt = now.addingTimeInterval(-DatabaseMaintenanceService.defaultTombstoneRetention - 1)
+        let expired = TaskNode(title: "Expired duplicate", parentID: nil, deviceID: "older")
+        expired.deletedAt = expiredAt
+        expired.updatedAt = expiredAt
+        let restored = TaskNode(title: "Restored winner", parentID: nil, deviceID: "newer")
+        restored.id = expired.id
+        restored.updatedAt = expiredAt.addingTimeInterval(1)
+        context.insert(expired)
+        context.insert(restored)
+        try context.save()
+
+        let removedCount = try DatabaseMaintenanceService().optimizeDatabase(
+            context: context,
+            now: now,
+            allowsPermanentTombstonePurge: true,
+            fetchBatchSize: 2
+        )
+
+        #expect(removedCount == 0)
+        let duplicates = try context.fetch(FetchDescriptor<TaskNode>())
+        #expect(duplicates.count == 2)
+        #expect(duplicates.visibleDeduplicatedByID().first?.title == "Restored winner")
+    }
+
+    @Test @MainActor
     func optimizeDatabasePreservesExpiredTombstonesWhenCloudCanResume() throws {
         let context = try makeTestContext()
         let now = Date(timeIntervalSinceReferenceDate: 10_000_000)

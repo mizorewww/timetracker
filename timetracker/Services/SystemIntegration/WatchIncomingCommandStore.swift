@@ -17,12 +17,15 @@ struct WatchIncomingCommandStore {
 
     func load() -> [WatchTimerCommand] {
         guard let data = defaults.data(forKey: key) else { return [] }
-        do {
-            return try JSONDecoder().decode([WatchTimerCommand].self, from: data)
-        } catch {
+        guard data.count <= WatchTransportLimits.maximumQueueEncodedBytes,
+              let commands = try? JSONDecoder().decode([WatchTimerCommand].self, from: data),
+              commands.count <= WatchTransportLimits.maximumIncomingCommands,
+              commands.allSatisfy(\.isStructurallyValid),
+              Set(commands.map(\.id)).count == commands.count else {
             defaults.removeObject(forKey: key)
             return []
         }
+        return commands
     }
 
     func save(_ commands: [WatchTimerCommand]) {
@@ -30,11 +33,15 @@ struct WatchIncomingCommandStore {
             defaults.removeObject(forKey: key)
             return
         }
-        do {
-            defaults.set(try JSONEncoder().encode(commands), forKey: key)
-        } catch {
-            // WatchTimerCommand is fully Codable. Keep any previous durable
-            // value if an unexpected encoder failure occurs.
+        guard commands.count <= WatchTransportLimits.maximumIncomingCommands,
+              commands.allSatisfy(\.isStructurallyValid),
+              Set(commands.map(\.id)).count == commands.count,
+              let data = try? JSONEncoder().encode(commands),
+              data.count <= WatchTransportLimits.maximumQueueEncodedBytes else {
+            // Preserve the previous durable value if a caller hands this store
+            // a queue that cannot be restored safely.
+            return
         }
+        defaults.set(data, forKey: key)
     }
 }

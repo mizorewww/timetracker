@@ -54,7 +54,7 @@ enum WatchConnectivityPayloadCodec {
             return nil
         }
 
-        return WatchTimerCommand(
+        let command = WatchTimerCommand(
             id: id,
             type: type,
             taskID: uuid(from: payload[taskIDKey]),
@@ -62,6 +62,7 @@ enum WatchConnectivityPayloadCodec {
             issuedAt: Date(timeIntervalSinceReferenceDate: issuedAtInterval),
             deviceID: deviceID
         )
+        return command.isStructurallyValid ? command : nil
     }
 
     nonisolated static func encode(result: WatchCommandResult) -> [String: Any] {
@@ -88,13 +89,14 @@ enum WatchConnectivityPayloadCodec {
             return nil
         }
 
-        return WatchCommandResult(
+        let result = WatchCommandResult(
             commandID: commandID,
             status: status,
             completedAt: Date(timeIntervalSinceReferenceDate: completedAtInterval),
             relatedID: uuid(from: payload[relatedIDKey]),
             failureCode: payload[failureCodeKey] as? String
         )
+        return result.isValid(at: Date()) ? result : nil
     }
 
     nonisolated static func encode(state: WatchStateSnapshot) -> [String: Any] {
@@ -114,7 +116,9 @@ enum WatchConnectivityPayloadCodec {
               let todayGrossSeconds = payload[todayGrossSecondsKey] as? Int,
               let todayWallSeconds = payload[todayWallSecondsKey] as? Int,
               let activePayloads = payload[activeTimersKey] as? [[String: Any]],
-              let recentPayloads = payload[recentTasksKey] as? [[String: Any]] else {
+              let recentPayloads = payload[recentTasksKey] as? [[String: Any]],
+              activePayloads.count <= WatchTransportLimits.maximumActiveTimers,
+              recentPayloads.count <= WatchTransportLimits.maximumRecentTasks else {
             return nil
         }
 
@@ -124,13 +128,14 @@ enum WatchConnectivityPayloadCodec {
             return nil
         }
 
-        return WatchStateSnapshot(
+        let snapshot = WatchStateSnapshot(
             generatedAt: Date(timeIntervalSinceReferenceDate: generatedAtInterval),
             todayGrossSeconds: todayGrossSeconds,
             todayWallSeconds: todayWallSeconds,
             activeTimers: activeTimers,
             recentTasks: recentTasks
         )
+        return snapshot.isValid(at: Date()) ? snapshot : nil
     }
 
     nonisolated private static func encode(activeTimer: WatchActiveTimerSnapshot) -> [String: Any] {

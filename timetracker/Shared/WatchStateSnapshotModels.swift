@@ -26,6 +26,11 @@ nonisolated enum WatchTransportLimits {
     static func isFinite(_ date: Date) -> Bool {
         date.timeIntervalSinceReferenceDate.isFinite
     }
+
+    static func isValidStyleValue(_ value: String?) -> Bool {
+        guard let value else { return true }
+        return isBounded(value, maximumUTF8Bytes: maximumStyleValueBytes)
+    }
 }
 
 nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
@@ -93,6 +98,23 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     ) -> WatchSnapshotFreshness {
         now.timeIntervalSince(generatedAt) > threshold ? .stale : .current
     }
+
+    func isValid(at now: Date) -> Bool {
+        guard WatchTransportLimits.isFinite(now),
+              WatchTransportLimits.isFinite(generatedAt),
+              generatedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew,
+              (0...WatchTransportLimits.maximumSummarySeconds).contains(todayGrossSeconds),
+              (0...WatchTransportLimits.maximumSummarySeconds).contains(todayWallSeconds),
+              activeTimers.count <= WatchTransportLimits.maximumActiveTimers,
+              recentTasks.count <= WatchTransportLimits.maximumRecentTasks,
+              activeTimers.allSatisfy({ $0.isStructurallyValid(relativeTo: generatedAt) }),
+              recentTasks.allSatisfy(\.isStructurallyValid),
+              Set(activeTimers.map(\.id)).count == activeTimers.count,
+              Set(recentTasks.map(\.taskID)).count == recentTasks.count else {
+            return false
+        }
+        return true
+    }
 }
 
 nonisolated enum WatchSnapshotFreshness: Equatable, Sendable {
@@ -108,6 +130,27 @@ nonisolated struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, S
     var startedAt: Date
     var colorHex: String?
     var iconName: String?
+
+    func isStructurallyValid(relativeTo generatedAt: Date) -> Bool {
+        guard WatchTransportLimits.isFinite(startedAt),
+              WatchTransportLimits.isFinite(generatedAt),
+              WatchTransportLimits.isBounded(
+                title,
+                maximumUTF8Bytes: WatchTransportLimits.maximumTitleBytes
+              ),
+              WatchTransportLimits.isBounded(
+                path,
+                maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
+              ),
+              WatchTransportLimits.isValidStyleValue(colorHex),
+              WatchTransportLimits.isValidStyleValue(iconName) else {
+            return false
+        }
+        let age = generatedAt.timeIntervalSince(startedAt)
+        return age.isFinite &&
+            age >= -WatchTransportLimits.maximumFutureClockSkew &&
+            age <= WatchTransportLimits.maximumActiveTimerAge
+    }
 }
 
 nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Sendable {
@@ -118,4 +161,17 @@ nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Se
     var iconName: String?
 
     nonisolated var id: UUID { taskID }
+
+    var isStructurallyValid: Bool {
+        WatchTransportLimits.isBounded(
+            title,
+            maximumUTF8Bytes: WatchTransportLimits.maximumTitleBytes
+        ) &&
+            WatchTransportLimits.isBounded(
+                path,
+                maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
+            ) &&
+            WatchTransportLimits.isValidStyleValue(colorHex) &&
+            WatchTransportLimits.isValidStyleValue(iconName)
+    }
 }

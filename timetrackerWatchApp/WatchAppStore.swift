@@ -43,13 +43,15 @@ final class WatchAppStore: NSObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let data = defaults.data(forKey: Self.commandQueueKey) {
-            do {
-                commandQueue = try JSONDecoder().decode(WatchCommandQueueState.self, from: data)
-            } catch {
+            if data.count <= WatchTransportLimits.maximumQueueEncodedBytes,
+               let restoredQueue = try? JSONDecoder().decode(WatchCommandQueueState.self, from: data),
+               restoredQueue.isSafeForRestoration {
+                commandQueue = restoredQueue
+            } else {
                 commandQueue = WatchCommandQueueState()
                 defaults.removeObject(forKey: Self.commandQueueKey)
                 Self.logger.error(
-                    "Discarded an unreadable watch command queue: \(error.localizedDescription, privacy: .private)"
+                    "Discarded an unreadable or unsafe watch command queue"
                 )
             }
         } else {
@@ -149,13 +151,16 @@ final class WatchAppStore: NSObject {
             defaults.removeObject(forKey: Self.commandQueueKey)
             return
         }
-        do {
-            defaults.set(try JSONEncoder().encode(commandQueue), forKey: Self.commandQueueKey)
-        } catch {
+        guard commandQueue.isSafeForRestoration,
+              let data = try? JSONEncoder().encode(commandQueue),
+              data.count <= WatchTransportLimits.maximumQueueEncodedBytes else {
+            defaults.removeObject(forKey: Self.commandQueueKey)
             Self.logger.error(
-                "Could not persist the watch command queue: \(error.localizedDescription, privacy: .private)"
+                "Could not persist an unsafe watch command queue"
             )
+            return
         }
+        defaults.set(data, forKey: Self.commandQueueKey)
     }
 
     #if canImport(WatchConnectivity)

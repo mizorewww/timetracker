@@ -114,6 +114,11 @@ nonisolated extension WatchCommandResult {
             maximumUTF8Bytes: WatchTransportLimits.maximumFailureCodeBytes
         )
     }
+
+    func isValid(at now: Date) -> Bool {
+        guard isStructurallyValid, WatchTransportLimits.isFinite(now) else { return false }
+        return completedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew
+    }
 }
 
 nonisolated enum WatchCommandResultStatus: String, Codable, Equatable, Sendable {
@@ -194,6 +199,24 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
         pendingCommands.removeAll { $0.id == command.id }
         failedCommands.removeAll { $0.id == command.id }
         pendingCommands.append(command)
+        let overflowCount = max(
+            0,
+            pendingCommands.count - WatchTransportLimits.maximumPersistedPendingCommands
+        )
+        guard overflowCount > 0 else { return }
+        let overflowedCommands = pendingCommands.prefix(overflowCount)
+        pendingCommands.removeFirst(overflowCount)
+        for overflowedCommand in overflowedCommands {
+            appendFailedCommand(
+                WatchFailedCommand(
+                    command: overflowedCommand,
+                    result: .failed(
+                        commandID: overflowedCommand.id,
+                        failureCode: "queueOverflow"
+                    )
+                )
+            )
+        }
     }
 
     @discardableResult
@@ -205,7 +228,7 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
         pendingCommands.removeAll { $0.id == result.commandID }
         failedCommands.removeAll { $0.id == result.commandID }
         if !result.completesWithoutUserAction {
-            failedCommands.append(WatchFailedCommand(command: command, result: result))
+            appendFailedCommand(WatchFailedCommand(command: command, result: result))
         }
         return command
     }
@@ -273,5 +296,17 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
         }
         let commandIDs = pendingCommands.map(\.id) + failedCommands.map(\.id)
         return Set(commandIDs).count == commandIDs.count
+    }
+
+    private mutating func appendFailedCommand(_ failedCommand: WatchFailedCommand) {
+        failedCommands.removeAll { $0.id == failedCommand.id }
+        failedCommands.append(failedCommand)
+        let overflowCount = max(
+            0,
+            failedCommands.count - WatchTransportLimits.maximumPersistedFailedCommands
+        )
+        if overflowCount > 0 {
+            failedCommands.removeFirst(overflowCount)
+        }
     }
 }

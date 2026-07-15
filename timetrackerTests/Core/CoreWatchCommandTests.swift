@@ -30,6 +30,26 @@ struct CoreWatchCommandTests {
         defaults.set(Data("not-json".utf8), forKey: key)
         #expect(store.load().isEmpty)
         #expect(defaults.object(forKey: key) == nil)
+
+        let excessiveCommands = (0...WatchTransportLimits.maximumIncomingCommands).map { offset in
+            WatchTimerCommand(
+                id: UUID(),
+                type: .startTask,
+                taskID: UUID(),
+                segmentID: nil,
+                issuedAt: command.issuedAt.addingTimeInterval(TimeInterval(offset)),
+                deviceID: "watch"
+            )
+        }
+        defaults.set(try JSONEncoder().encode(excessiveCommands), forKey: key)
+        #expect(store.load().isEmpty)
+        #expect(defaults.object(forKey: key) == nil)
+
+        var structurallyInvalid = command
+        structurallyInvalid.deviceID = ""
+        defaults.set(try JSONEncoder().encode([structurallyInvalid]), forKey: key)
+        #expect(store.load().isEmpty)
+        #expect(defaults.object(forKey: key) == nil)
     }
 
     @Test
@@ -47,6 +67,14 @@ struct CoreWatchCommandTests {
         let decoded = try #require(WatchConnectivityPayloadCodec.decodeCommand(from: payload))
 
         #expect(decoded == command)
+
+        var invalidCommand = command
+        invalidCommand.deviceID = ""
+        #expect(
+            WatchConnectivityPayloadCodec.decodeCommand(
+                from: WatchConnectivityPayloadCodec.encode(command: invalidCommand)
+            ) == nil
+        )
     }
 
     @Test
@@ -65,6 +93,19 @@ struct CoreWatchCommandTests {
         #expect(decoded == result)
         #expect(payload["received"] as? Bool == true)
         #expect(WatchConnectivityPayloadCodec.decodeCommand(from: payload) == nil)
+
+        let oversizedFailure = WatchCommandResult.failed(
+            commandID: UUID(),
+            failureCode: String(
+                repeating: "x",
+                count: WatchTransportLimits.maximumFailureCodeBytes + 1
+            )
+        )
+        #expect(
+            WatchConnectivityPayloadCodec.decodeCommandResult(
+                from: WatchConnectivityPayloadCodec.encode(result: oversizedFailure)
+            ) == nil
+        )
     }
 
     @Test
@@ -215,6 +256,45 @@ struct CoreWatchCommandTests {
     }
 
     @Test
+    func watchCommandQueueBoundsPendingAndFailedRestorationState() {
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 600)
+        var queue = WatchCommandQueueState()
+        for offset in 0...WatchTransportLimits.maximumPersistedPendingCommands {
+            queue.enqueue(
+                WatchTimerCommand(
+                    id: UUID(),
+                    type: .startTask,
+                    taskID: UUID(),
+                    segmentID: nil,
+                    issuedAt: issuedAt.addingTimeInterval(TimeInterval(offset)),
+                    deviceID: "watch"
+                )
+            )
+        }
+
+        #expect(queue.pendingCommands.count == WatchTransportLimits.maximumPersistedPendingCommands)
+        #expect(queue.failedCommands.count == 1)
+        #expect(queue.failedCommands.first?.result.failureCode == "queueOverflow")
+        #expect(queue.isSafeForRestoration)
+
+        for command in queue.pendingCommands {
+            _ = queue.resolve(
+                WatchCommandResult(
+                    commandID: command.id,
+                    status: .invalid,
+                    completedAt: issuedAt,
+                    relatedID: nil,
+                    failureCode: nil
+                )
+            )
+        }
+
+        #expect(queue.pendingCommands.isEmpty)
+        #expect(queue.failedCommands.count == WatchTransportLimits.maximumPersistedFailedCommands)
+        #expect(queue.isSafeForRestoration)
+    }
+
+    @Test
     func watchConnectivityPayloadCodecRoundTripsStateSnapshots() throws {
         let timerID = UUID()
         let taskID = UUID()
@@ -248,6 +328,29 @@ struct CoreWatchCommandTests {
         let decoded = try #require(WatchConnectivityPayloadCodec.decodeState(from: payload))
 
         #expect(decoded == snapshot)
+        #expect(snapshot.isValid(at: snapshot.generatedAt))
+
+        var invalidSummary = snapshot
+        invalidSummary.todayGrossSeconds = -1
+        #expect(invalidSummary.isValid(at: invalidSummary.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(state: invalidSummary)
+            ) == nil
+        )
+
+        var oversizedTitle = snapshot
+        oversizedTitle.activeTimers[0].title = String(
+            repeating: "x",
+            count: WatchTransportLimits.maximumTitleBytes + 1
+        )
+        #expect(oversizedTitle.isValid(at: oversizedTitle.generatedAt) == false)
+
+        var futureSnapshot = snapshot
+        futureSnapshot.generatedAt = snapshot.generatedAt.addingTimeInterval(
+            WatchTransportLimits.maximumFutureClockSkew + 1
+        )
+        #expect(futureSnapshot.isValid(at: snapshot.generatedAt) == false)
     }
 
     @Test
@@ -430,6 +533,9 @@ struct CoreWatchCommandTests {
         #expect(source.contains("deinit {"))
         #expect(source.contains("for task in confirmationTasks.values"))
         #expect(source.contains("snapshotFreshnessTask?.cancel()"))
+        #expect(source.contains("WatchTransportLimits.maximumQueueEncodedBytes"))
+        #expect(source.contains("restoredQueue.isSafeForRestoration"))
+        #expect(source.contains("commandQueue.isSafeForRestoration"))
         #expect(!source.contains("unconfirmedCommandIDs"))
         #expect(dashboard.contains("WatchCommandFailureRow"))
         #expect(dashboard.contains("watch.command.retry"))

@@ -125,6 +125,8 @@
 "settings.llm.error.invalidEndpoint" = "endpoint 不是有效的 HTTP URL。";
 "settings.llm.error.missingAPIKey" = "请先填写 API key。";
 "settings.llm.error.responseStatus" = "服务器返回 HTTP %d。";
+"settings.llm.error.responseTooLarge" = "服务器返回的内容过大。";
+"settings.llm.error.timeout" = "服务器响应超时。";
 "settings.llm.error.invalidResponse" = "无法读取服务器返回内容。";
 "settings.timeRecords" = "时间记录";
 "settings.cloudAccount" = "CloudKit 账号";

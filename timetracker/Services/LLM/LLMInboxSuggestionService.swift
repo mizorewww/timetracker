@@ -71,6 +71,7 @@ struct LLMInboxSuggestionService {
             apiKey: apiKey
         )
         let (data, response) = try await transport(request)
+        try LLMSecureHTTPTransport.validateBufferedResponse(data)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }

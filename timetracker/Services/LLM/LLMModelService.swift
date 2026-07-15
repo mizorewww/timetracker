@@ -6,6 +6,8 @@ enum LLMModelServiceError: LocalizedError, Equatable {
     case invalidEndpoint
     case missingAPIKey
     case responseStatus(Int)
+    case responseTooLarge
+    case timeout
     case invalidResponse
 
     var errorDescription: String? {
@@ -18,6 +20,10 @@ enum LLMModelServiceError: LocalizedError, Equatable {
             return AppStrings.localized("settings.llm.error.missingAPIKey")
         case let .responseStatus(status):
             return String(format: AppStrings.localized("settings.llm.error.responseStatus"), status)
+        case .responseTooLarge:
+            return AppStrings.localized("settings.llm.error.responseTooLarge")
+        case .timeout:
+            return AppStrings.localized("settings.llm.error.timeout")
         case .invalidResponse:
             return AppStrings.localized("settings.llm.error.invalidResponse")
         }
@@ -34,6 +40,7 @@ struct LLMModelService {
     func fetchModels(endpoint: String, apiKey: String) async throws -> [String] {
         let request = try modelListRequest(endpoint: endpoint, apiKey: apiKey)
         let (data, response) = try await transport(request)
+        try LLMSecureHTTPTransport.validateBufferedResponse(data)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMModelServiceError.invalidResponse
         }
@@ -154,40 +161,6 @@ struct LLMModelService {
         }
 
         return false
-    }
-}
-
-enum LLMSecureHTTPTransport {
-    static func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-        try await URLSession.shared.data(
-            for: request,
-            delegate: LLMRedirectPolicyDelegate()
-        )
-    }
-}
-
-private final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
-    nonisolated func urlSession(
-        _ session: URLSession,
-        task: URLSessionTask,
-        willPerformHTTPRedirection response: HTTPURLResponse,
-        newRequest request: URLRequest,
-        completionHandler: @escaping (URLRequest?) -> Void
-    ) {
-        guard let sourceURL = response.url,
-              let destinationURL = request.url,
-              LLMModelService.isSafeRedirect(from: sourceURL, to: destinationURL) else {
-            completionHandler(nil)
-            return
-        }
-
-        var redirectedRequest = request
-        if redirectedRequest.value(forHTTPHeaderField: "Authorization") == nil,
-           let authorization = task.currentRequest?.value(forHTTPHeaderField: "Authorization") ??
-            task.originalRequest?.value(forHTTPHeaderField: "Authorization") {
-            redirectedRequest.setValue(authorization, forHTTPHeaderField: "Authorization")
-        }
-        completionHandler(redirectedRequest)
     }
 }
 

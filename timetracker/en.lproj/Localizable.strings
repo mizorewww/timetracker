@@ -125,6 +125,8 @@
 "settings.llm.error.invalidEndpoint" = "The endpoint is not a valid HTTP URL.";
 "settings.llm.error.missingAPIKey" = "Enter an API key first.";
 "settings.llm.error.responseStatus" = "The server returned HTTP %d.";
+"settings.llm.error.responseTooLarge" = "The server response was too large.";
+"settings.llm.error.timeout" = "The server took too long to respond.";
 "settings.llm.error.invalidResponse" = "The server response could not be read.";
 "settings.timeRecords" = "Time Records";
 "settings.cloudAccount" = "CloudKit Account";

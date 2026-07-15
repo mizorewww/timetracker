@@ -6,6 +6,34 @@ import Testing
 @Suite(.serialized)
 struct InboxSuggestionIdentityTests {
     @Test @MainActor
+    func dismissalSurvivesSameIdentifierCloudDuplicate() throws {
+        let sharedID = UUID()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let dismissed = InboxItem(title: "Dismiss once", deviceID: "older-device")
+        dismissed.id = sharedID
+        dismissed.suggestionContextID = contextID
+        dismissed.suggestionRevisionID = revisionID
+        dismissed.dismissedSuggestionRevisionID = revisionID
+        dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+
+        let activeDuplicate = InboxItem(title: dismissed.title, deviceID: "newer-device")
+        activeDuplicate.id = sharedID
+        activeDuplicate.suggestionContextID = contextID
+        activeDuplicate.suggestionRevisionID = revisionID
+        activeDuplicate.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+
+        let winner = try #require(
+            InboxSuggestionIdentityService()
+                .logicalWinners(from: [dismissed, activeDuplicate])
+                .first
+        )
+
+        #expect(winner === dismissed)
+        #expect(winner.isCurrentSuggestionRevisionDismissed)
+    }
+
+    @Test @MainActor
     func dismissedRevisionWinsAcrossPhysicalRowsWithoutConflatingEqualTitles() throws {
         let service = InboxSuggestionIdentityService()
         let original = InboxItem(title: "Plan review", deviceID: "device-a")

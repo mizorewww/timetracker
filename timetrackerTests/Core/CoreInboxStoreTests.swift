@@ -6,6 +6,37 @@ import Testing
 @Suite(.serialized)
 struct CoreInboxStoreTests {
     @Test @MainActor
+    func tiedSuggestionOrderingUsesCanonicalUUIDTieBreak() throws {
+        let item = InboxItem(title: "Route this", deviceID: "test")
+        let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        let timestamp = Date(timeIntervalSinceReferenceDate: 100)
+        let first = InboxSuggestion(
+            inboxItemID: item.id,
+            taskID: UUID(),
+            titleSnapshot: item.title,
+            deviceID: "test"
+        )
+        first.id = firstID
+        first.updatedAt = timestamp
+        let second = InboxSuggestion(
+            inboxItemID: item.id,
+            taskID: UUID(),
+            titleSnapshot: item.title,
+            deviceID: "test"
+        )
+        second.id = secondID
+        second.updatedAt = timestamp
+
+        var store = InboxStore()
+        store.refresh(items: [item], suggestions: [first, second])
+        #expect(store.suggestions.map(\.id) == [secondID, firstID])
+
+        store.refresh(items: [item], suggestions: [second, first])
+        #expect(store.suggestions.map(\.id) == [secondID, firstID])
+    }
+
+    @Test @MainActor
     func tiedInboxOrderingUsesUUIDAcrossDomainAndDisplayStores() throws {
         let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
         let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))

@@ -36,7 +36,10 @@ struct InboxStore {
             if lhs.inboxItemID != rhs.inboxItemID {
                 return lhs.inboxItemID.uuidString < rhs.inboxItemID.uuidString
             }
-            return lhs.updatedAt > rhs.updatedAt
+            if lhs.updatedAt != rhs.updatedAt {
+                return lhs.updatedAt > rhs.updatedAt
+            }
+            return lhs.id.uuidString > rhs.id.uuidString
         }
     }
 }

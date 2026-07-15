@@ -179,7 +179,6 @@ extension AnalyticsStore {
             .prefix(8)
             .map { segment in
                 let task = taskByID[segment.taskID]
-                let end = segment.endedAt ?? now
                 return TaskRecentRecordPoint(
                     id: segment.id,
                     taskID: segment.taskID,
@@ -190,7 +189,11 @@ extension AnalyticsStore {
                         ?? AppStrings.localized("task.deleted.path"),
                     startedAt: segment.startedAt,
                     endedAt: segment.endedAt,
-                    durationSeconds: max(0, Int(end.timeIntervalSince(segment.startedAt)))
+                    durationSeconds: TrackedTimePolicy.elapsedSeconds(
+                        startedAt: segment.startedAt,
+                        endedAt: segment.endedAt,
+                        now: now
+                    )
                 )
             }
     }

@@ -24,12 +24,12 @@ struct LedgerSummaryService {
     ) -> Int {
         let intervals = segments.visibleDeduplicatedByID().compactMap { segment -> DateInterval? in
             guard taskIDs.contains(segment.taskID) else { return nil }
-            let end = segment.endedAt ?? now
-            guard segment.startedAt < interval.end, end > interval.start else { return nil }
-            let start = max(segment.startedAt, interval.start)
-            let clippedEnd = min(end, interval.end)
-            guard clippedEnd > start else { return nil }
-            return DateInterval(start: start, end: clippedEnd)
+            return TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now,
+                clippedTo: interval
+            )
         }
 
         switch mode {

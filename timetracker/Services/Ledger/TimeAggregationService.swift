@@ -13,17 +13,22 @@ struct TimeAggregationService {
     func grossSeconds(_ segments: [TimeSegment], now: Date = Date()) -> Int {
         segments.reduce(0) { result, segment in
             guard segment.deletedAt == nil else { return result }
-            let end = segment.endedAt ?? now
-            return result + max(0, Int(end.timeIntervalSince(segment.startedAt)))
+            return result + TrackedTimePolicy.elapsedSeconds(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now
+            )
         }
     }
 
     func wallClockSeconds(_ segments: [TimeSegment], now: Date = Date()) -> Int {
         let intervals = segments.compactMap { segment -> DateInterval? in
             guard segment.deletedAt == nil else { return nil }
-            let end = segment.endedAt ?? now
-            guard end > segment.startedAt else { return nil }
-            return DateInterval(start: segment.startedAt, end: end)
+            return TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now
+            )
         }
 
         return mergeOverlappingIntervals(intervals).reduce(0) { result, interval in

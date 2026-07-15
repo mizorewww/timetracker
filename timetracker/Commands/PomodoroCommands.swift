@@ -152,7 +152,11 @@ struct PomodoroCommandHandler {
         let segments = try segments(in: sessionID, context: context)
         return segments.reduce(0) { total, segment in
             guard segment.deletedAt == nil else { return total }
-            return total + max(0, Int((segment.endedAt ?? now).timeIntervalSince(segment.startedAt)))
+            return total + TrackedTimePolicy.elapsedSeconds(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now
+            )
         }
     }
 

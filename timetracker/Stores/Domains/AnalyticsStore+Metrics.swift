@@ -134,8 +134,12 @@ extension AnalyticsStore {
     }
 
     func segmentOverlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
-        let end = segment.endedAt ?? now
-        return segment.deletedAt == nil && segment.startedAt < interval.end && end > interval.start
+        segment.deletedAt == nil && TrackedTimePolicy.overlaps(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            interval: interval,
+            now: now
+        )
     }
 
     func hourlySeconds(items: [AnalyticsBoundedSegment], calendar: Calendar) -> [Int: Int] {

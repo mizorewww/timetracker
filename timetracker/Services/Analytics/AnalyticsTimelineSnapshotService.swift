@@ -13,16 +13,26 @@ struct AnalyticsTimelineSnapshotService {
     ) -> AnalyticsTimelineSnapshot {
         let dayInterval = calendar.dateInterval(of: .day, for: date)
             ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86_400)
-        let visibleSegments = segments
-            .filter { isVisible($0, in: dayInterval, now: now) }
-            .sorted { $0.startedAt < $1.startedAt }
+        let visibleSegments = segments.visibleDeduplicatedByID().compactMap { segment -> (TimeSegment, DateInterval)? in
+            guard segment.deletedAt == nil,
+                  let interval = TrackedTimePolicy.interval(
+                      startedAt: segment.startedAt,
+                      endedAt: segment.endedAt,
+                      now: now,
+                      clippedTo: dayInterval
+                  ) else {
+                return nil
+            }
+            return (segment, interval)
+        }
+        .sorted { $0.1.start < $1.1.start }
         guard visibleSegments.isEmpty == false else { return .empty }
 
-        let layoutItems = visibleSegments.map { segment in
+        let layoutItems = visibleSegments.map { segment, interval in
             TimelineLayoutItem(
                 id: segment.id,
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt ?? now
+                startedAt: interval.start,
+                endedAt: interval.end
             )
         }
         let layout = TimelineLayoutEngine.layout(
@@ -30,7 +40,7 @@ struct AnalyticsTimelineSnapshotService {
             dayInterval: dayInterval,
             minimumLaneGap: minimumLaneGap
         )
-        let segmentByID = visibleSegments.latestByID()
+        let segmentByID = Dictionary(uniqueKeysWithValues: visibleSegments.map { ($0.0.id, $0.0) })
         let taskByID = tasks.latestByID()
         let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
         let entries = layout.entries.enumerated().compactMap { index, layoutEntry -> AnalyticsTimelineEntry? in
@@ -61,10 +71,5 @@ struct AnalyticsTimelineSnapshotService {
             displayInterval: layout.displayInterval,
             axisCompression: compression
         )
-    }
-
-    private func isVisible(_ segment: TimeSegment, in interval: DateInterval, now: Date) -> Bool {
-        let end = segment.endedAt ?? now
-        return segment.deletedAt == nil && end > interval.start && segment.startedAt < interval.end
     }
 }

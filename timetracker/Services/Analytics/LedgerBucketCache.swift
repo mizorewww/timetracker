@@ -109,13 +109,18 @@ struct LedgerBucketCache {
         var result: [Date: [TimeSegment]] = [:]
 
         for segment in segments where overlaps(segment, interval: interval, taskID: taskID, now: now) {
-            let boundedStart = max(segment.startedAt, interval.start)
-            let boundedEnd = min(segment.endedAt ?? now, interval.end)
-            guard boundedEnd > boundedStart else { continue }
+            guard let bounded = TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now,
+                clippedTo: interval
+            ) else {
+                continue
+            }
 
-            var cursor = calendar.startOfDay(for: boundedStart)
-            while cursor < boundedEnd {
-                let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? interval.end
+            var cursor = calendar.startOfDay(for: bounded.start)
+            while cursor < bounded.end {
+                let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? bounded.end
                 let day = DateInterval(start: max(cursor, interval.start), end: min(next, interval.end))
                 if day.end > day.start, overlaps(segment, interval: day, taskID: taskID, now: now) {
                     result[calendar.startOfDay(for: day.start), default: []].append(segment)
@@ -134,7 +139,10 @@ struct LedgerBucketCache {
             hasher.combine(segment.taskID)
             hasher.combine(segment.sessionID)
             hasher.combine(segment.startedAt.timeIntervalSinceReferenceDate)
-            hasher.combine((segment.endedAt ?? now).timeIntervalSinceReferenceDate)
+            hasher.combine(
+                TrackedTimePolicy.boundedEnd(endedAt: segment.endedAt, now: now)
+                    .timeIntervalSinceReferenceDate
+            )
             hasher.combine(segment.updatedAt.timeIntervalSinceReferenceDate)
             hasher.combine(segment.deletedAt?.timeIntervalSinceReferenceDate)
             hasher.combine(segment.sourceRaw)
@@ -147,8 +155,12 @@ struct LedgerBucketCache {
         if let taskID, segment.taskID != taskID {
             return false
         }
-        let end = segment.endedAt ?? now
-        return segment.startedAt < interval.end && end > interval.start
+        return TrackedTimePolicy.overlaps(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            interval: interval,
+            now: now
+        )
     }
 
     private func dayIntervals(in interval: DateInterval, calendar: Calendar) -> [DateInterval] {

@@ -25,7 +25,9 @@ struct AnalyticsEngine {
             overlapSeconds: max(0, gross - wall),
             pomodoroCount: focusSegments.filter { item in
                 guard let endedAt = item.segment.endedAt else { return false }
-                return endedAt > item.interval.start && endedAt <= item.interval.end
+                return endedAt <= now &&
+                    endedAt > item.interval.start &&
+                    endedAt <= item.interval.end
             }.count,
             averageFocusSeconds: focusSegments.isEmpty ? 0 : focusSeconds / focusSegments.count
         )
@@ -83,11 +85,12 @@ struct AnalyticsEngine {
 
     private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {
         guard segment.deletedAt == nil else { return nil }
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return DateInterval(start: start, end: clippedEnd)
+        return TrackedTimePolicy.interval(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now,
+            clippedTo: interval
+        )
     }
 
     private func hourlyBuckets(

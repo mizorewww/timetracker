@@ -53,7 +53,7 @@ struct DailySummaryService {
         let pomodoroCount = clipped.filter { item in
             item.segment.source == .pomodoro &&
                 item.segment.endedAt != nil &&
-                item.segment.endedAt.map { day.contains($0) } == true
+                item.segment.endedAt.map { $0 <= now && day.contains($0) } == true
         }.count
 
         return DailySummarySnapshot(
@@ -78,11 +78,15 @@ struct DailySummaryService {
             return nil
         }
 
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return (segment, DateInterval(start: start, end: clippedEnd))
+        guard let clipped = TrackedTimePolicy.interval(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now,
+            clippedTo: interval
+        ) else {
+            return nil
+        }
+        return (segment, clipped)
     }
 
     private func dayIntervals(in interval: DateInterval, calendar: Calendar) -> [DateInterval] {

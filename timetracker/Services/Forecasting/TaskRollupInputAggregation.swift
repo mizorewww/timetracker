@@ -165,10 +165,12 @@ struct TaskRollupInputAggregation {
             -Double(TaskRollupHistoricalPolicy.paceDayCount - 1) * 86_400
         )
         let intervals = segments.compactMap { segment -> DateInterval? in
-            let end = min(segment.endedAt ?? now, now)
-            let start = max(segment.startedAt, windowStart)
-            guard end > start else { return nil }
-            return DateInterval(start: start, end: end)
+            TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now,
+                clippedTo: DateInterval(start: windowStart, end: now)
+            )
         }
         return TimeAggregationService().secondsByDay(intervals: intervals, calendar: calendar)
     }

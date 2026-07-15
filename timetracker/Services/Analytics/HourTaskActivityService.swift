@@ -85,10 +85,11 @@ struct HourTaskActivityService {
         now: Date
     ) -> DateInterval? {
         guard segment.deletedAt == nil else { return nil }
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return DateInterval(start: start, end: clippedEnd)
+        return TrackedTimePolicy.interval(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now,
+            clippedTo: interval
+        )
     }
 }

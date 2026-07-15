@@ -423,4 +423,90 @@ struct CoreRollupStoreTests {
         #expect(incremental.rollup(for: paceTask.id)?.historicalActiveDayCount == 1)
         #expect(incremental.rollup(for: paceTask.id)?.historicalDailyAverageSeconds == 3_600)
     }
+
+    @Test @MainActor
+    func futureEndedRowsKeepIncrementalRollupsEqualToFullRebuildAcrossClockChanges() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 14,
+            hour: 12
+        )))
+        let trackedTask = TaskNode(title: "Clock skew", parentID: nil, deviceID: "test")
+        let editedTask = TaskNode(title: "Refresh trigger", parentID: nil, deviceID: "test")
+        let spanningNow = TimeSegment(
+            sessionID: UUID(),
+            taskID: trackedTask.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-600),
+            endedAt: now.addingTimeInterval(600)
+        )
+        let futureOnly = TimeSegment(
+            sessionID: UUID(),
+            taskID: trackedTask.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(300),
+            endedAt: now.addingTimeInterval(900)
+        )
+        let tasks = [trackedTask, editedTask]
+        let segments = [spanningNow, futureOnly]
+        var incremental = RollupStore()
+        incremental.refresh(
+            tasks: tasks,
+            segments: segments,
+            checklistItems: [],
+            now: now,
+            calendar: calendar
+        )
+        #expect(incremental.rollup(for: trackedTask.id)?.workedSeconds == 600)
+
+        let later = now.addingTimeInterval(600)
+        let editedChecklist = [
+            ChecklistItem(taskID: editedTask.id, title: "Trigger", sortOrder: 0, deviceID: "test")
+        ]
+        incremental.refreshAffected(
+            directTaskIDs: [editedTask.id],
+            explicitAncestorTaskIDs: [],
+            segmentChanges: [],
+            checklistItemsByTaskID: [editedTask.id: editedChecklist],
+            now: later,
+            calendar: calendar
+        )
+        var laterRebuild = RollupStore()
+        laterRebuild.refresh(
+            tasks: tasks,
+            segments: segments,
+            checklistItems: editedChecklist,
+            now: later,
+            calendar: calendar
+        )
+
+        #expect(incremental.rollup(for: trackedTask.id) == laterRebuild.rollup(for: trackedTask.id))
+        #expect(incremental.rollup(for: trackedTask.id)?.workedSeconds == 1_500)
+
+        let rewound = now.addingTimeInterval(-300)
+        incremental.refreshAffected(
+            directTaskIDs: [editedTask.id],
+            explicitAncestorTaskIDs: [],
+            segmentChanges: [],
+            checklistItemsByTaskID: [:],
+            now: rewound,
+            calendar: calendar
+        )
+        var rewindRebuild = RollupStore()
+        rewindRebuild.refresh(
+            tasks: tasks,
+            segments: segments,
+            checklistItems: editedChecklist,
+            now: rewound,
+            calendar: calendar
+        )
+
+        #expect(incremental.rollup(for: trackedTask.id) == rewindRebuild.rollup(for: trackedTask.id))
+        #expect(incremental.rollup(for: trackedTask.id)?.workedSeconds == 300)
+    }
 }

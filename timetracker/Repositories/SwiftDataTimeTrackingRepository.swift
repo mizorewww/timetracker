@@ -5,9 +5,15 @@ import SwiftData
 final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
     let context: ModelContext
     let deviceID: String
+    let nowProvider: () -> Date
 
-    init(context: ModelContext, deviceID: String? = nil) {
+    init(
+        context: ModelContext,
+        deviceID: String? = nil,
+        nowProvider: @escaping () -> Date = Date.init
+    ) {
         self.context = context
         self.deviceID = deviceID ?? DeviceIdentity.current
+        self.nowProvider = nowProvider
     }
 }

@@ -19,6 +19,63 @@ enum AggregationMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+/// The single boundary policy for persisted tracked time.
+///
+/// Local write paths reject future records, but CloudKit, imports, and legacy
+/// stores can still contain clock-skewed values. Every read path therefore
+/// clips an interval to its reference date instead of trusting `endedAt`.
+enum TrackedTimePolicy {
+    enum WriteValidation: Equatable {
+        case valid
+        case invalidRange
+        case futureTime
+    }
+
+    static func boundedEnd(endedAt: Date?, now: Date) -> Date {
+        min(endedAt ?? now, now)
+    }
+
+    static func interval(
+        startedAt: Date,
+        endedAt: Date?,
+        now: Date,
+        clippedTo bounds: DateInterval? = nil
+    ) -> DateInterval? {
+        let start = max(startedAt, bounds?.start ?? startedAt)
+        let end = min(boundedEnd(endedAt: endedAt, now: now), bounds?.end ?? now)
+        guard start < now, end > start else { return nil }
+        return DateInterval(start: start, end: end)
+    }
+
+    static func elapsedSeconds(startedAt: Date, endedAt: Date?, now: Date) -> Int {
+        interval(startedAt: startedAt, endedAt: endedAt, now: now)
+            .map { max(0, Int($0.duration)) } ?? 0
+    }
+
+    static func overlaps(
+        startedAt: Date,
+        endedAt: Date?,
+        interval: DateInterval,
+        now: Date
+    ) -> Bool {
+        self.interval(
+            startedAt: startedAt,
+            endedAt: endedAt,
+            now: now,
+            clippedTo: interval
+        ) != nil
+    }
+
+    static func validateWrite(startedAt: Date, endedAt: Date?, now: Date) -> WriteValidation {
+        if let endedAt {
+            guard endedAt > startedAt else { return .invalidRange }
+            guard endedAt <= now else { return .futureTime }
+            return .valid
+        }
+        return startedAt > now ? .futureTime : .valid
+    }
+}
+
 extension TimeSessionSource {
     var displayName: String {
         switch self {

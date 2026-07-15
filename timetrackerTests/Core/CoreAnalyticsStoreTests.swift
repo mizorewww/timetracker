@@ -148,6 +148,130 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func everyAnalyticsProjectionClipsClockSkewedRowsToNow() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 14,
+            hour: 12
+        )))
+        let task = TaskNode(title: "Future-safe", parentID: nil, deviceID: "test")
+        let session = TimeSession(
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-3_600),
+            titleSnapshot: task.title
+        )
+        let spanningNow = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-3_600),
+            endedAt: now.addingTimeInterval(3_600)
+        )
+        let futureOnly = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(60),
+            endedAt: now.addingTimeInterval(3_600)
+        )
+        let segments = [spanningNow, futureOnly]
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: segments,
+            sessions: [session],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+        let engine = AnalyticsEngine().overview(
+            segments: segments,
+            range: .today,
+            now: now,
+            calendar: calendar
+        )
+        let forecastPace = ForecastingService().recentDailyAvailableSeconds(
+            segments: segments,
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 3_600)
+        #expect(snapshot.overview.wallSeconds == 3_600)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 3_600)
+        #expect(snapshot.taskBreakdown.first?.grossSeconds == 3_600)
+        #expect(snapshot.rhythm.averageSegmentSeconds == 3_600)
+        #expect(snapshot.quality.averageSegmentSeconds == 3_600)
+        #expect(snapshot.todayActivity.reduce(0) { total, hour in
+            total + hour.slices.reduce(0) { $0 + $1.seconds }
+        } == 3_600)
+        #expect(snapshot.timeline.entries.count == 1)
+        #expect(snapshot.timeline.entries.first?.endedAt == now)
+        #expect(snapshot.timeline.displayInterval?.end == now)
+        #expect(engine.grossSeconds == 3_600)
+        #expect(engine.wallSeconds == 3_600)
+        #expect(forecastPace == 3_600)
+
+        let records = AnalyticsStore().recentRecords(
+            segments: segments,
+            sessions: [session],
+            tasks: [task],
+            taskIDs: [task.id],
+            taskPathByID: [task.id: task.title],
+            now: now
+        )
+        #expect(records.first { $0.id == spanningNow.id }?.durationSeconds == 3_600)
+        #expect(records.first { $0.id == futureOnly.id }?.durationSeconds == 0)
+    }
+
+    @Test @MainActor
+    func dailyCacheAdvancesForAClosedSegmentWhoseEndIsStillInTheFuture() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 14,
+            hour: 10
+        )))
+        let segment = TimeSegment(
+            sessionID: UUID(),
+            taskID: UUID(),
+            source: .timer,
+            deviceID: "test",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(1_800)
+        )
+        let day = try #require(calendar.dateInterval(of: .day, for: start))
+        var cache = LedgerBucketCache()
+
+        let first = cache.summaries(
+            segments: [segment],
+            interval: day,
+            now: start.addingTimeInterval(600),
+            calendar: calendar
+        )
+        let second = cache.summaries(
+            segments: [segment],
+            interval: day,
+            now: start.addingTimeInterval(1_200),
+            calendar: calendar
+        )
+
+        #expect(first.first?.grossSeconds == 600)
+        #expect(second.first?.grossSeconds == 1_200)
+        #expect(cache.bucketCount == 1)
+    }
+
+    @Test @MainActor
     func analyticsSnapshotResolvesDuplicateCloudRowsBeforeEveryAggregation() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
@@ -747,7 +871,7 @@ struct CoreAnalyticsStoreTests {
             sessions: [session],
             taskPathByID: [task.id: task.title],
             taskParentPathByID: [:],
-            now: start,
+            now: start.addingTimeInterval(900),
             calendar: calendar
         )
 

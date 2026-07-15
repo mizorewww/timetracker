@@ -186,6 +186,60 @@ struct CoreLedgerStoreTests {
         #expect(store.segments(forSessionID: session.id).map(\.id) == [segment.id])
         #expect(store.sessions(for: [session.id]).map(\.id) == [session.id])
     }
+
+    @Test @MainActor
+    func indexedQueriesHandleFutureEndedRowsAndBackwardClockCorrections() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let reference = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: reference.addingTimeInterval(300)
+        )
+        let futureSegment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: reference.addingTimeInterval(300),
+            endedAt: reference.addingTimeInterval(900)
+        )
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSegments = [futureSegment]
+        repository.fullSessions = [session]
+        let queryInterval = DateInterval(
+            start: reference,
+            end: reference.addingTimeInterval(1_200)
+        )
+        var store = LedgerStore()
+
+        try store.refreshHistory(
+            repository: repository,
+            now: reference,
+            calendar: calendar
+        )
+        #expect(store.segments(overlapping: queryInterval, now: reference).isEmpty)
+        #expect(store.segments(
+            overlapping: queryInterval,
+            now: reference.addingTimeInterval(600)
+        ).map(\.id) == [futureSegment.id])
+
+        try store.refreshHistory(
+            repository: repository,
+            now: reference.addingTimeInterval(1_200),
+            calendar: calendar
+        )
+        repository.rangeSegments = []
+        try store.refreshVisible(repository: repository, now: reference, calendar: calendar)
+        #expect(store.segment(for: futureSegment.id) != nil)
+        #expect(store.segments(
+            overlapping: queryInterval,
+            now: reference.addingTimeInterval(600)
+        ).map(\.id) == [futureSegment.id])
+    }
 }
 
 private final class LedgerRefreshSpyRepository: TimeTrackingRepository {

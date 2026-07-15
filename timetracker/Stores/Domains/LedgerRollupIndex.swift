@@ -19,12 +19,20 @@ struct LedgerSegmentSnapshot: Equatable {
     }
 
     func elapsedSeconds(at now: Date) -> Int {
-        max(0, Int((endedAt ?? now).timeIntervalSince(startedAt)))
+        TrackedTimePolicy.elapsedSeconds(startedAt: startedAt, endedAt: endedAt, now: now)
     }
 
     func overlaps(_ interval: DateInterval, at now: Date) -> Bool {
-        let end = endedAt ?? now
-        return startedAt < interval.end && end > interval.start
+        TrackedTimePolicy.overlaps(
+            startedAt: startedAt,
+            endedAt: endedAt,
+            interval: interval,
+            now: now
+        )
+    }
+
+    func isTimeSensitive(at now: Date) -> Bool {
+        endedAt == nil || endedAt.map { $0 > now } == true
     }
 }
 

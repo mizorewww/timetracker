@@ -348,6 +348,7 @@
 "segment.delete.confirm.message" = "This record will be removed from totals and analytics.";
 "segment.error.endAfterStart" = "End time must be later than start time.";
 "segment.error.startNotFuture" = "An active timer cannot start in the future.";
+"segment.error.timeNotFuture" = "Time records cannot extend into the future.";
 "pomodoro.minuteField" = "Minutes";
 "pomodoro.roundField" = "Count";
 "pomodoro.roundUnit" = "rounds";

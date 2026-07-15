@@ -102,7 +102,12 @@ extension TimeTrackerStore {
         let hasOverlappingActiveSegment = activeSegments.contains { segment in
             guard segment.deletedAt == nil,
                   taskIDs?.contains(segment.taskID) ?? true else { return false }
-            return segment.startedAt < interval.end && now > interval.start
+            return TrackedTimePolicy.overlaps(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                interval: interval,
+                now: now
+            )
         }
         guard hasOverlappingActiveSegment else { return nil }
         return Int(now.timeIntervalSinceReferenceDate / 60)

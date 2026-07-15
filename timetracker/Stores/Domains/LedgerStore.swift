@@ -15,6 +15,7 @@ struct LedgerStore {
     var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
     var segmentIDsBySessionID: [UUID: Set<UUID>] = [:]
     var activeSegmentIDs: Set<UUID> = []
+    var timeSensitiveSegmentIDs: Set<UUID> = []
     var pendingRollupChangeByID: [UUID: LedgerSegmentChange] = [:]
     var segmentIndexEvaluationDate = Date.distantPast
     var segmentIndexCalendar = Calendar.current
@@ -36,7 +37,7 @@ struct LedgerStore {
             rebuildSegmentDayIndex(now: now, calendar: calendar)
         }
         let fetched = uniqueSegments(refreshedActive + refreshedToday)
-        let impactedIDs = segmentIDs(overlapping: [today], now: segmentIndexEvaluationDate == .distantPast ? now : segmentIndexEvaluationDate)
+        let impactedIDs = segmentIDs(overlapping: [today], now: now)
             .union(activeSegmentIDs)
             .union(fetched.map(\.id))
 
@@ -45,7 +46,7 @@ struct LedgerStore {
             with: fetched,
             now: now,
             calendar: calendar,
-            refreshUnchangedActiveSegments: true
+            refreshUnchangedTimeSensitiveSegments: true
         )
         activeSegments = refreshedActive
         todaySegments = refreshedToday
@@ -82,12 +83,12 @@ struct LedgerStore {
             return
         }
 
-        let newlyOverlappingActiveIDs = activeSegmentIDs.filter { id in
+        let newlyOverlappingTimeSensitiveIDs = timeSensitiveSegmentIDs.filter { id in
             guard let snapshot = segmentSnapshotByID[id] else { return false }
             return intervals.contains { snapshot.overlaps($0, at: now) }
         }
         let existingImpactedIDs = segmentIDs(overlapping: intervals, now: now)
-            .union(newlyOverlappingActiveIDs)
+            .union(newlyOverlappingTimeSensitiveIDs)
         let existingImpactedSnapshots = existingImpactedIDs.compactMap { segmentSnapshotByID[$0] }
 
         var fetchedSegments: [TimeSegment] = []
@@ -103,7 +104,7 @@ struct LedgerStore {
             with: fetchedSegments,
             now: now,
             calendar: segmentIndexCalendar,
-            refreshUnchangedActiveSegments: true
+            refreshUnchangedTimeSensitiveSegments: true
         )
 
         if impactedSessionIDs.isEmpty == false {

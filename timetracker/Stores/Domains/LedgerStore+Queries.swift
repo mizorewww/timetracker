@@ -10,12 +10,22 @@ extension LedgerStore {
     /// new day after the day index was last rebuilt.
     func segments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {
         guard hasLoadedHistory else { return [] }
+        let clockRewindIDs = now < segmentIndexEvaluationDate
+            ? Set(segmentSnapshotByID.keys)
+            : []
         let candidateIDs = segmentIDs(overlapping: [interval], now: now)
-            .union(activeSegmentIDs)
+            .union(timeSensitiveSegmentIDs)
+            .union(clockRewindIDs)
         return candidateIDs.compactMap { id in
             guard let segment = segmentByID[id], segment.deletedAt == nil else { return nil }
-            let end = segment.endedAt ?? now
-            guard segment.startedAt < interval.end, end > interval.start else { return nil }
+            guard TrackedTimePolicy.overlaps(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                interval: interval,
+                now: now
+            ) else {
+                return nil
+            }
             return segment
         }
     }

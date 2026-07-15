@@ -37,6 +37,86 @@ struct TimeTrackerUtilityTests {
         #expect(service.totalSeconds(segments: [first, second], mode: .wallClock) == 5_400)
     }
 
+    @Test @MainActor
+    func trackedTimeAggregationClipsFutureEndsAndIgnoresFutureStarts() {
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let taskID = UUID()
+        let spanningNow = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-3_600),
+            endedAt: now.addingTimeInterval(3_600)
+        )
+        let activeOverlap = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-1_800)
+        )
+        let futureOnly = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now,
+            endedAt: now.addingTimeInterval(7_200)
+        )
+        let service = TimeAggregationService()
+
+        #expect(service.grossSeconds([spanningNow, activeOverlap, futureOnly], now: now) == 5_400)
+        #expect(service.wallClockSeconds([spanningNow, activeOverlap, futureOnly], now: now) == 3_600)
+        #expect(TrackedTimePolicy.elapsedSeconds(
+            startedAt: now,
+            endedAt: nil,
+            now: now
+        ) == 0)
+    }
+
+    @Test @MainActor
+    func trackedTimeClippingUsesElapsedSecondsAcrossDSTSpringForward() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 0
+        )))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 4
+        )))
+        let dirtyFutureEnd = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 5
+        )))
+        let segment = TimeSegment(
+            sessionID: UUID(),
+            taskID: UUID(),
+            source: .timer,
+            deviceID: "test",
+            startedAt: start,
+            endedAt: dirtyFutureEnd
+        )
+        let service = TimeAggregationService()
+        let interval = try #require(TrackedTimePolicy.interval(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now
+        ))
+
+        #expect(interval.end == now)
+        #expect(service.grossSeconds([segment], now: now) == 3 * 3_600)
+        #expect(service.secondsByDay(intervals: [interval], calendar: calendar) == [start: 3 * 3_600])
+    }
+
     @Test
     func durationFormattingUsesLocalizedCompactTextAndStableTimerClock() {
         let seconds = 4 * 3600 + 35 * 60

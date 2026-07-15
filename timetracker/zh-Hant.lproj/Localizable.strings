@@ -348,6 +348,7 @@
 "segment.delete.confirm.message" = "此記錄將從總計與分析中移除。";
 "segment.error.endAfterStart" = "結束時間必須晚於開始時間。";
 "segment.error.startNotFuture" = "活動計時的開始時間不能晚於現在。";
+"segment.error.timeNotFuture" = "時間記錄不能延伸到未來。";
 "pomodoro.minuteField" = "分鐘";
 "pomodoro.roundField" = "次數";
 "pomodoro.roundUnit" = "輪";

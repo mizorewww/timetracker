@@ -65,7 +65,10 @@ extension TimeTrackerStore {
             return false
         }
 
-        let effectiveEnd = endedAt ?? max(now, draft.startedAt)
+        let effectiveEnd = max(
+            draft.startedAt,
+            TrackedTimePolicy.boundedEnd(endedAt: endedAt, now: now)
+        )
         let newRange = StoreInvalidationRange(start: draft.startedAt, end: effectiveEnd)
         var events: Set<StoreDomainEvent> = [
             .ledgerChanged(taskID: taskID, dateInterval: newRange, isVisible: false)
@@ -74,7 +77,10 @@ extension TimeTrackerStore {
         if let existingSegment {
             let oldRange = StoreInvalidationRange(
                 start: existingSegment.startedAt,
-                end: existingSegment.endedAt ?? max(now, existingSegment.startedAt)
+                end: max(
+                    existingSegment.startedAt,
+                    TrackedTimePolicy.boundedEnd(endedAt: existingSegment.endedAt, now: now)
+                )
             )
             events.insert(.ledgerChanged(taskID: existingSegment.taskID, dateInterval: oldRange, isVisible: false))
         }
@@ -108,7 +114,10 @@ extension TimeTrackerStore {
         let range = existingSegment.map {
             StoreInvalidationRange(
                 start: $0.startedAt,
-                end: $0.endedAt ?? max(now, $0.startedAt)
+                end: max(
+                    $0.startedAt,
+                    TrackedTimePolicy.boundedEnd(endedAt: $0.endedAt, now: now)
+                )
             )
         }
         var events: Set<StoreDomainEvent> = [

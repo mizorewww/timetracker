@@ -33,14 +33,17 @@ extension AnalyticsStore {
             if let taskIDs, !taskIDs.contains(segment.taskID) {
                 return nil
             }
-            let end = segment.endedAt ?? now
-            guard segment.startedAt < interval.end, end > interval.start else { return nil }
-            let start = max(segment.startedAt, interval.start)
-            let clippedEnd = min(end, interval.end)
-            guard clippedEnd > start else { return nil }
+            guard let clipped = TrackedTimePolicy.interval(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                now: now,
+                clippedTo: interval
+            ) else {
+                return nil
+            }
             return AnalyticsBoundedSegment(
                 segment: segment,
-                interval: DateInterval(start: start, end: clippedEnd)
+                interval: clipped
             )
         }
     }
@@ -140,8 +143,12 @@ extension AnalyticsStore {
     }
 
     private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
-        let end = segment.endedAt ?? now
-        return segment.deletedAt == nil && segment.startedAt < interval.end && end > interval.start
+        segment.deletedAt == nil && TrackedTimePolicy.overlaps(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            interval: interval,
+            now: now
+        )
     }
 }
 

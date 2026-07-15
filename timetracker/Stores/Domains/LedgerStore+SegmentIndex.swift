@@ -19,6 +19,9 @@ extension LedgerStore {
         segmentIndexEvaluationDate = now
         segmentIndexCalendar = calendar
         activeSegmentIDs = Set(segmentSnapshotByID.values.filter { $0.endedAt == nil }.map(\.id))
+        timeSensitiveSegmentIDs = Set(
+            segmentSnapshotByID.values.filter { $0.isTimeSensitive(at: now) }.map(\.id)
+        )
         rebuildRecordIndexes()
         segmentIDsByDay.removeAll(keepingCapacity: true)
         for snapshot in segmentSnapshotByID.values {
@@ -40,8 +43,9 @@ extension LedgerStore {
         with fetchedSegments: [TimeSegment],
         now: Date,
         calendar: Calendar,
-        refreshUnchangedActiveSegments: Bool
+        refreshUnchangedTimeSensitiveSegments: Bool
     ) {
+        let isClockRewind = now < segmentIndexEvaluationDate
         let fetchedByID = fetchedSegments
             .deduplicatedByID()
             .filter { $0.deletedAt == nil }
@@ -57,7 +61,7 @@ extension LedgerStore {
                 after = nil
             }
             let shouldRefresh = before != after ||
-                (refreshUnchangedActiveSegments && after?.endedAt == nil)
+                (refreshUnchangedTimeSensitiveSegments && after?.isTimeSensitive(at: now) == true)
             if shouldRefresh {
                 recordRollupChange(id: id, before: before, after: after)
             }
@@ -76,16 +80,27 @@ extension LedgerStore {
                 } else {
                     activeSegmentIDs.remove(id)
                 }
+                if after.isTimeSensitive(at: now) {
+                    timeSensitiveSegmentIDs.insert(id)
+                } else {
+                    timeSensitiveSegmentIDs.remove(id)
+                }
                 index(after, now: now, calendar: calendar)
             } else {
                 segmentByID.removeValue(forKey: id)
                 segmentSnapshotByID.removeValue(forKey: id)
                 activeSegmentIDs.remove(id)
+                timeSensitiveSegmentIDs.remove(id)
             }
         }
 
         segmentIndexEvaluationDate = now
         segmentIndexCalendar = calendar
+        if isClockRewind {
+            timeSensitiveSegmentIDs = Set(
+                segmentSnapshotByID.values.filter { $0.isTimeSensitive(at: now) }.map(\.id)
+            )
+        }
         rollupChanges = pendingRollupChangeByID.values.sorted {
             $0.id.uuidString < $1.id.uuidString
         }
@@ -181,12 +196,14 @@ extension LedgerStore {
     }
 
     func dayKeys(for snapshot: LedgerSegmentSnapshot, now: Date, calendar: Calendar) -> [Date] {
-        let end = snapshot.endedAt ?? now
-        guard end > snapshot.startedAt else { return [] }
-        return dayKeys(
-            overlapping: DateInterval(start: snapshot.startedAt, end: end),
-            calendar: calendar
-        )
+        guard let interval = TrackedTimePolicy.interval(
+            startedAt: snapshot.startedAt,
+            endedAt: snapshot.endedAt,
+            now: now
+        ) else {
+            return []
+        }
+        return dayKeys(overlapping: interval, calendar: calendar)
     }
 
     func dayKeys(overlapping interval: DateInterval, calendar: Calendar) -> [Date] {

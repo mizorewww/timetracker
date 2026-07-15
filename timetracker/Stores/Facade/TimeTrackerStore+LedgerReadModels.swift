@@ -139,8 +139,12 @@ extension TimeTrackerStore {
         }
         return allSegments.filter { segment in
             guard segment.deletedAt == nil else { return false }
-            let end = segment.endedAt ?? now
-            return segment.startedAt < interval.end && end > interval.start
+            return TrackedTimePolicy.overlaps(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                interval: interval,
+                now: now
+            )
         }
     }
 

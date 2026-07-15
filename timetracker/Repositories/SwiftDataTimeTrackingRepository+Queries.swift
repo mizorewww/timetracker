@@ -30,10 +30,11 @@ extension SwiftDataTimeTrackingRepository {
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
-        try segments(from: from, to: to, now: Date())
+        try segments(from: from, to: to, now: nowProvider())
     }
 
     func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment] {
+        guard to > from else { return [] }
         let upperBound = to
         let lowerBound = from
         let activeSegmentEnd = min(now, upperBound)
@@ -46,8 +47,12 @@ extension SwiftDataTimeTrackingRepository {
         let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { segment in
-                let end = segment.endedAt ?? activeSegmentEnd
-                return segment.startedAt < upperBound && end > lowerBound
+                TrackedTimePolicy.overlaps(
+                    startedAt: segment.startedAt,
+                    endedAt: segment.endedAt,
+                    interval: DateInterval(start: lowerBound, end: upperBound),
+                    now: now
+                )
             }
             .sorted(by: segmentStartOrder)
     }

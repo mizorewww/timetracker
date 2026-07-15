@@ -4,8 +4,9 @@ import SwiftData
 extension SwiftDataTimeTrackingRepository {
     @discardableResult
     func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
-        let session = TimeSession(taskID: taskID, source: source, deviceID: deviceID, titleSnapshot: try titleSnapshot(for: taskID))
-        let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: source, deviceID: deviceID)
+        let now = nowProvider()
+        let session = TimeSession(taskID: taskID, source: source, deviceID: deviceID, startedAt: now, titleSnapshot: try titleSnapshot(for: taskID))
+        let segment = TimeSegment(sessionID: session.id, taskID: taskID, source: source, deviceID: deviceID, startedAt: now)
         context.insert(session)
         context.insert(segment)
         try context.saveAfterMutationStep()
@@ -14,7 +15,7 @@ extension SwiftDataTimeTrackingRepository {
 
     func stopSegment(segmentID: UUID) throws {
         guard let segment = try segment(id: segmentID), segment.endedAt == nil else { return }
-        let now = Date()
+        let now = nowProvider()
         let endedAt = max(now, segment.startedAt)
         segment.endedAt = endedAt
         segment.updatedAt = now
@@ -33,11 +34,16 @@ extension SwiftDataTimeTrackingRepository {
     }
 
     func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws {
-        if let endedAt, endedAt <= startedAt {
+        let now = nowProvider()
+        switch TrackedTimePolicy.validateWrite(startedAt: startedAt, endedAt: endedAt, now: now) {
+        case .valid:
+            break
+        case .invalidRange:
             throw TimeTrackingRepositoryError.invalidTimeRange
+        case .futureTime:
+            throw TimeTrackingRepositoryError.futureTime
         }
         guard let segment = try segment(id: segmentID) else { return }
-        let now = Date()
         segment.taskID = taskID
         segment.startedAt = startedAt
         segment.endedAt = endedAt
@@ -57,7 +63,7 @@ extension SwiftDataTimeTrackingRepository {
 
     func softDeleteSegment(segmentID: UUID) throws {
         guard let segment = try segment(id: segmentID) else { return }
-        let now = Date()
+        let now = nowProvider()
         segment.deletedAt = now
         segment.updatedAt = now
         segment.deviceID = deviceID
@@ -81,7 +87,7 @@ extension SwiftDataTimeTrackingRepository {
 
     func stopSession(sessionID: UUID) throws {
         guard let session = try session(id: sessionID), session.deletedAt == nil else { return }
-        let now = Date()
+        let now = nowProvider()
         for segment in try activeSegments(in: sessionID) {
             segment.endedAt = max(now, segment.startedAt)
             segment.updatedAt = now
@@ -97,8 +103,14 @@ extension SwiftDataTimeTrackingRepository {
 
     @discardableResult
     func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
-        guard endedAt > startedAt else {
+        let now = nowProvider()
+        switch TrackedTimePolicy.validateWrite(startedAt: startedAt, endedAt: endedAt, now: now) {
+        case .valid:
+            break
+        case .invalidRange:
             throw TimeTrackingRepositoryError.invalidTimeRange
+        case .futureTime:
+            throw TimeTrackingRepositoryError.futureTime
         }
         let session = TimeSession(taskID: taskID, source: .manual, deviceID: deviceID, startedAt: startedAt, titleSnapshot: try titleSnapshot(for: taskID))
         session.endedAt = endedAt

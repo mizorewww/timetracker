@@ -121,11 +121,16 @@ extension RollupIncrementalIndex {
         for segment: LedgerSegmentSnapshot,
         evaluatedAt now: Date
     ) -> [Date: Int] {
-        let end = min(segment.endedAt ?? now, now)
-        let start = max(segment.startedAt, recentWindowStart)
-        guard end > start else { return [:] }
+        guard let interval = TrackedTimePolicy.interval(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now,
+            clippedTo: DateInterval(start: recentWindowStart, end: now)
+        ) else {
+            return [:]
+        }
         return TimeAggregationService().secondsByDay(
-            intervals: [DateInterval(start: start, end: end)],
+            intervals: [interval],
             calendar: calendar
         )
     }

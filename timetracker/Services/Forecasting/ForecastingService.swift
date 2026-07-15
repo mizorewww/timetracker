@@ -18,8 +18,12 @@ struct ForecastingService {
         let interval = DateInterval(start: start, end: end)
         let recent = segments.filter { segment in
             segment.deletedAt == nil &&
-            segment.startedAt < interval.end &&
-            (segment.endedAt ?? now) > interval.start
+            TrackedTimePolicy.overlaps(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                interval: interval,
+                now: now
+            )
         }
         guard !recent.isEmpty else { return 0 }
 
@@ -42,10 +46,11 @@ struct ForecastingService {
     }
 
     private func clippedInterval(for segment: TimeSegment, in interval: DateInterval, now: Date) -> DateInterval? {
-        let end = segment.endedAt ?? now
-        let start = max(segment.startedAt, interval.start)
-        let clippedEnd = min(end, interval.end)
-        guard clippedEnd > start else { return nil }
-        return DateInterval(start: start, end: clippedEnd)
+        TrackedTimePolicy.interval(
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            now: now,
+            clippedTo: interval
+        )
     }
 }

@@ -18,7 +18,7 @@ struct RollupIncrementalIndex {
     var depthByTaskID: [UUID: Int] = [:]
     var segmentByID: [UUID: LedgerSegmentSnapshot] = [:]
     var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
-    var activeSegmentIDs: Set<UUID> = []
+    var timeSensitiveSegmentIDs: Set<UUID> = []
     var ownRecentDaySecondsByTaskID: [UUID: [Date: Int]] = [:]
     var subtreeRecentDaySecondsByTaskID: [UUID: [Date: Int]] = [:]
     var taskIDsByRecentDay: [Date: Set<UUID>] = [:]
@@ -56,7 +56,7 @@ struct RollupIncrementalIndex {
         segmentByID = Dictionary(uniqueKeysWithValues: canonicalSegments.map { ($0.id, $0) })
         segmentIDsByTaskID = Dictionary(grouping: canonicalSegments, by: \.taskID)
             .mapValues { Set($0.map(\.id)) }
-        activeSegmentIDs = Set(canonicalSegments.lazy.filter { $0.endedAt == nil }.map(\.id))
+        timeSensitiveSegmentIDs = Set(canonicalSegments.lazy.filter { $0.isTimeSensitive(at: now) }.map(\.id))
         rebuildActivitySummaries()
         ownWorkedSecondsByTaskID.removeAll(keepingCapacity: true)
         for segment in canonicalSegments {
@@ -127,7 +127,14 @@ struct RollupIncrementalIndex {
                 result[change.id] = change
             }
         }
-        let timeSensitiveIDs = activeSegmentIDs.union(suppliedChanges.keys)
+        // A backward wall-clock correction can move any previously completed
+        // record back across the reference boundary. Re-evaluate all records in
+        // that rare case; forward refreshes remain proportional to active or
+        // future-ended records plus explicit mutations.
+        let advancingTimeSensitiveIDs = now < lastEvaluationDate
+            ? Set(segmentByID.keys)
+            : timeSensitiveSegmentIDs
+        let timeSensitiveIDs = advancingTimeSensitiveIDs.union(suppliedChanges.keys)
         var timeAffectedTaskIDs = Set<UUID>()
 
         for segmentID in timeSensitiveIDs {
@@ -157,14 +164,14 @@ struct RollupIncrementalIndex {
                 )
                 segmentByID[segmentID] = after
                 segmentIDsByTaskID[after.taskID, default: []].insert(segmentID)
-                if after.endedAt == nil {
-                    activeSegmentIDs.insert(segmentID)
+                if after.isTimeSensitive(at: now) {
+                    timeSensitiveSegmentIDs.insert(segmentID)
                 } else {
-                    activeSegmentIDs.remove(segmentID)
+                    timeSensitiveSegmentIDs.remove(segmentID)
                 }
             } else {
                 segmentByID.removeValue(forKey: segmentID)
-                activeSegmentIDs.remove(segmentID)
+                timeSensitiveSegmentIDs.remove(segmentID)
             }
         }
 

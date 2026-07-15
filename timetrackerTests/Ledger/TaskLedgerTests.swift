@@ -35,14 +35,19 @@ struct TaskLedgerTests {
     func repositoryRejectsInvalidManualAndEditedTimeRanges() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test",
+            nowProvider: { now }
+        )
         let task = try taskRepository.createTask(
             title: "Validated range",
             parentID: nil,
             colorHex: nil,
             iconName: nil
         )
-        let start = Date()
+        let start = now.addingTimeInterval(-120)
 
         #expect(throws: TimeTrackingRepositoryError.invalidTimeRange) {
             try timeRepository.addManualSegment(
@@ -56,7 +61,7 @@ struct TaskLedgerTests {
         let segment = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
-            endedAt: start.addingTimeInterval(60),
+            endedAt: now.addingTimeInterval(-60),
             note: nil
         )
         #expect(throws: TimeTrackingRepositoryError.invalidTimeRange) {
@@ -68,7 +73,116 @@ struct TaskLedgerTests {
                 note: nil
             )
         }
-        #expect(try timeRepository.allSegments().first?.endedAt == start.addingTimeInterval(60))
+        #expect(try timeRepository.allSegments().first?.endedAt == now.addingTimeInterval(-60))
+    }
+
+    @Test @MainActor
+    func repositoryRejectsFutureCompletedRecordsAndFutureActiveStarts() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 2_000_000)
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test",
+            nowProvider: { now }
+        )
+        let task = try taskRepository.createTask(
+            title: "No future time",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        #expect(
+            TimeTrackingRepositoryError.futureTime.errorDescription ==
+                AppStrings.localized("segment.error.timeNotFuture")
+        )
+
+        #expect(throws: TimeTrackingRepositoryError.futureTime) {
+            try timeRepository.addManualSegment(
+                taskID: task.id,
+                startedAt: now.addingTimeInterval(-60),
+                endedAt: now.addingTimeInterval(1),
+                note: nil
+            )
+        }
+
+        let segment = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: now.addingTimeInterval(-120),
+            endedAt: now.addingTimeInterval(-60),
+            note: nil
+        )
+        #expect(throws: TimeTrackingRepositoryError.futureTime) {
+            try timeRepository.updateSegment(
+                segmentID: segment.id,
+                taskID: task.id,
+                startedAt: now.addingTimeInterval(1),
+                endedAt: nil,
+                note: nil
+            )
+        }
+        #expect(throws: TimeTrackingRepositoryError.futureTime) {
+            try timeRepository.updateSegment(
+                segmentID: segment.id,
+                taskID: task.id,
+                startedAt: now.addingTimeInterval(-60),
+                endedAt: now.addingTimeInterval(1),
+                note: nil
+            )
+        }
+
+        let stored = try #require(try timeRepository.allSegments().first)
+        #expect(stored.startedAt == now.addingTimeInterval(-120))
+        #expect(stored.endedAt == now.addingTimeInterval(-60))
+    }
+
+    @Test @MainActor
+    func repositoryQueriesClipLegacyFutureRowsAtTheirReferenceDate() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 3_000_000)
+        let task = TaskNode(title: "Clock skew", parentID: nil, deviceID: "test")
+        let session = TimeSession(
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-600)
+        )
+        let spanning = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-600),
+            endedAt: now.addingTimeInterval(600)
+        )
+        let futureOnly = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(60),
+            endedAt: now.addingTimeInterval(600)
+        )
+        context.insert(task)
+        context.insert(session)
+        context.insert(spanning)
+        context.insert(futureOnly)
+        try context.save()
+
+        let repository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test",
+            nowProvider: { now }
+        )
+        let queried = try repository.segments(
+            from: now.addingTimeInterval(-1_200),
+            to: now.addingTimeInterval(1_200),
+            now: now
+        )
+
+        #expect(queried.map(\.id) == [spanning.id])
+        #expect(try repository.segments(from: now, to: now, now: now).isEmpty)
     }
 
     @Test @MainActor

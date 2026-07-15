@@ -13,7 +13,12 @@ extension ModelContext {
         guard ModelContextMutationState.depthByContext[ObjectIdentifier(self), default: 0] == 0 else {
             return
         }
-        try save()
+        do {
+            try save()
+        } catch {
+            rollback()
+            throw error
+        }
     }
 
     /// Commits all nested repository and command changes with one final save.

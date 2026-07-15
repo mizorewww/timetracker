@@ -1,0 +1,91 @@
+import Foundation
+import Testing
+@testable import timetracker
+
+@Suite(.serialized)
+struct CoreLLMChecklistRequestBudgetTests {
+    @Test
+    func checklistPromptUsesCuratedSymbolsAndBoundedUTF8Fields() throws {
+        let request = try LLMChecklistVisualSuggestionService().suggestionRequest(
+            checklistTitle: String(repeating: "  \"检查细节🧩\\  ", count: 400),
+            taskTitle: String(repeating: "  \"产品设计🎨\\  ", count: 400),
+            taskPath: String(repeating: "  Root/项目/\"设计🚀\\  ", count: 500),
+            endpoint: "https://example.com/v1",
+            apiKey: "secret",
+            modelID: String(repeating: "模型🧪", count: 300)
+        )
+        let body = try #require(request.httpBody)
+        let envelope = try JSONDecoder().decode(ChecklistRequestEnvelope.self, from: body)
+        let userMessage = try #require(envelope.messages.last { $0.role == "user" })
+        let prompt = try JSONDecoder().decode(
+            ChecklistPromptEnvelope.self,
+            from: Data(userMessage.content.utf8)
+        )
+        let excludedSymbol = try #require(
+            SymbolCatalog.symbolNames.first {
+                !SymbolCatalog.aiSuggestionSymbolNameSet.contains($0)
+            }
+        )
+
+        #expect(body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount)
+        #expect(userMessage.content.utf8.count <= LLMSuggestionInputPolicy.maximumPromptByteCount)
+        #expect(envelope.model.utf8.count <= LLMSuggestionInputPolicy.maximumModelIDByteCount)
+        #expect(prompt.checklistTitle.utf8.count <= LLMSuggestionInputPolicy.maximumChecklistTitleByteCount)
+        #expect(prompt.taskTitle.utf8.count <= LLMSuggestionInputPolicy.maximumTaskTitleByteCount)
+        #expect(prompt.taskPath.utf8.count <= LLMSuggestionInputPolicy.maximumTaskPathByteCount)
+        #expect(prompt.allowedSymbols == SymbolCatalog.aiSuggestionSymbolNames)
+        #expect(!prompt.allowedSymbols.contains(excludedSymbol))
+    }
+
+    @Test
+    func checklistResponseFieldsAreBoundedToAdvertisedValues() {
+        let result = LLMChecklistVisualSuggestionService.sanitize(
+            payload: ChecklistVisualSuggestionPayload(
+                iconName: String(repeating: "trash", count: 100),
+                colorHex: String(repeating: "#007AFF", count: 100),
+                reason: String(repeating: "理由🧩", count: 400)
+            ),
+            modelID: String(repeating: "模型🧪", count: 300)
+        )
+
+        #expect(result.iconName == ChecklistVisualSanitizer.defaultIcon)
+        #expect(result.colorHex == ChecklistVisualSanitizer.defaultColor)
+        #expect(result.reason.utf8.count <= LLMSuggestionInputPolicy.maximumReasonByteCount)
+        #expect(String(data: Data(result.reason.utf8), encoding: .utf8) == result.reason)
+        #expect(result.modelID.utf8.count <= LLMSuggestionInputPolicy.maximumModelIDByteCount)
+    }
+
+    @Test
+    func checklistRequestRejectsCredentialTextBeyondTheHeaderBudget() {
+        #expect(throws: LLMInboxSuggestionServiceError.requestTooLarge) {
+            try LLMChecklistVisualSuggestionService().suggestionRequest(
+                checklistTitle: "Polish spacing",
+                taskTitle: "Design",
+                taskPath: "Work / Design",
+                endpoint: "https://example.com/v1",
+                apiKey: String(
+                    repeating: "k",
+                    count: LLMSuggestionInputPolicy.maximumAPIKeyByteCount + 1
+                ),
+                modelID: "test-model"
+            )
+        }
+    }
+}
+
+private struct ChecklistRequestEnvelope: Decodable {
+    let model: String
+    let messages: [Message]
+
+    struct Message: Decodable {
+        let role: String
+        let content: String
+    }
+}
+
+private struct ChecklistPromptEnvelope: Decodable {
+    let checklistTitle: String
+    let taskTitle: String
+    let taskPath: String
+    let allowedSymbols: [String]
+}

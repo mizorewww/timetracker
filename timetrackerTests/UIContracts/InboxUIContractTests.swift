@@ -97,7 +97,8 @@ struct InboxUIContractTests {
         #expect(storeSource.contains("func retryInboxSuggestion"))
         #expect(storeSource.contains("inboxSuggestionFailureByItemID"))
         #expect(refreshSource.contains("store.autoSuggestInboxItemsIfNeeded()"))
-        #expect(llmSource.contains("allowedSymbols: SymbolCatalog.symbolNames"))
+        #expect(llmSource.contains("allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames"))
+        #expect(llmSource.contains("maximumRequestBodyByteCount"))
         #expect(llmSource.contains("prefix(400)") == false)
     }
 

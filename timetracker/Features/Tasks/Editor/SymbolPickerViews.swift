@@ -233,6 +233,16 @@ enum SymbolCatalog {
         return fallbackSymbols
     }()
 
+    nonisolated static let symbolNameSet = Set(symbolNames)
+
+    /// A compact, semantic vocabulary for server-backed AI suggestions.
+    /// The full catalogue remains available to the on-device symbol picker.
+    nonisolated static let aiSuggestionSymbolNames: [String] = curatedAISuggestionSymbols.filter {
+        symbolNameSet.contains($0)
+    }
+
+    nonisolated static let aiSuggestionSymbolNameSet = Set(aiSuggestionSymbolNames)
+
     nonisolated static let searchKeywords: [String: [String]] = loadSearchKeywords()
 
     nonisolated private static func loadSymbolOrder() -> [String] {
@@ -285,5 +295,30 @@ enum SymbolCatalog {
         "graduationcap", "heart", "house", "cart", "creditcard",
         "briefcase.fill", "star", "tag", "tray", "archivebox", "trash",
         "play.fill", "stop.fill", "plus", "magnifyingglass"
+    ]
+
+    nonisolated private static let curatedAISuggestionSymbols = [
+        // Planning and focus
+        "checkmark.circle", "target", "calendar", "clock", "timer",
+        "alarm", "flag", "bookmark", "tag", "tray", "archivebox",
+        "list.bullet.clipboard", "pencil.and.list.clipboard", "repeat",
+        // Work and creation
+        "briefcase", "folder", "doc.text", "chart.bar", "macwindow",
+        "square.grid.2x2", "chevron.left.forwardslash.chevron.right",
+        "terminal", "keyboard", "hammer", "wrench.and.screwdriver",
+        "gearshape", "paintbrush", "lightbulb", "paperplane",
+        // Learning and communication
+        "book", "graduationcap", "person", "person.2", "person.3",
+        "phone", "envelope", "message", "globe", "map", "location",
+        // Home, health, and daily life
+        "house", "heart", "cross.case", "pills", "stethoscope",
+        "figure.walk", "dumbbell", "fork.knife", "cup.and.saucer",
+        "bed.double", "cart", "bag", "creditcard", "banknote",
+        "gift", "birthday.cake", "car", "bicycle", "airplane",
+        "tram", "shippingbox", "pawprint", "leaf",
+        // Hobbies and environment
+        "music.note", "film", "photo", "camera", "gamecontroller",
+        "star", "sparkles", "bolt", "flame", "drop", "sun.max",
+        "moon", "cloud", "snowflake", "umbrella"
     ]
 }

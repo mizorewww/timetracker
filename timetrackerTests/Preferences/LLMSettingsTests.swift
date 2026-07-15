@@ -405,7 +405,7 @@ struct LLMSettingsTests {
     }
 
     @Test
-    func checklistVisualSuggestionRequestUsesAllAvailableSymbols() throws {
+    func checklistVisualSuggestionRequestUsesCuratedSymbols() throws {
         let service = LLMChecklistVisualSuggestionService()
         let request = try service.suggestionRequest(
             checklistTitle: "Polish spacing",
@@ -419,8 +419,13 @@ struct LLMSettingsTests {
 
         #expect(request.url?.absoluteString == "https://example.test/v1/chat/completions")
         #expect(body.contains("allowedSymbols"))
-        if let lastSymbol = SymbolCatalog.symbolNames.last {
+        if let lastSymbol = SymbolCatalog.aiSuggestionSymbolNames.last {
             #expect(body.contains(lastSymbol))
+        }
+        if let excludedSymbol = SymbolCatalog.symbolNames.first(where: {
+            !SymbolCatalog.aiSuggestionSymbolNameSet.contains($0)
+        }) {
+            #expect(!body.contains(excludedSymbol))
         }
         #expect(body.contains("prefix(400)") == false)
     }

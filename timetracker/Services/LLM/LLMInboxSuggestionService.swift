@@ -3,6 +3,7 @@ import Foundation
 enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
     case missingModel
     case noTaskCandidates
+    case requestTooLarge
     case invalidResponse
     case noValidTask
 
@@ -12,6 +13,8 @@ enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
             return AppStrings.localized("inbox.suggestion.error.missingModel")
         case .noTaskCandidates:
             return AppStrings.localized("inbox.suggestion.error.noTaskCandidates")
+        case .requestTooLarge:
+            return AppStrings.localized("inbox.suggestion.error.requestTooLarge")
         case .invalidResponse:
             return AppStrings.localized("settings.llm.error.invalidResponse")
         case .noValidTask:
@@ -20,7 +23,7 @@ enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
     }
 }
 
-nonisolated struct LLMTaskCandidate: Encodable, Equatable, Sendable {
+nonisolated struct LLMTaskCandidate: Codable, Equatable, Sendable {
     let id: UUID
     let title: String
     let path: String
@@ -50,19 +53,22 @@ struct LLMInboxSuggestionService {
         apiKey: String,
         modelID: String
     ) async throws -> LLMInboxSuggestionResult {
-        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let input = LLMSuggestionInputPolicy.prepare(
+            inboxTitle: inboxTitle,
+            candidates: candidates,
+            modelID: modelID
+        )
+        guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
         }
-        guard !candidates.isEmpty else {
+        guard !input.candidates.isEmpty else {
             throw LLMInboxSuggestionServiceError.noTaskCandidates
         }
 
         let request = try suggestionRequest(
-            inboxTitle: inboxTitle,
-            candidates: candidates,
+            input: input,
             endpoint: endpoint,
-            apiKey: apiKey,
-            modelID: modelID
+            apiKey: apiKey
         )
         let (data, response) = try await transport(request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -80,7 +86,11 @@ struct LLMInboxSuggestionService {
 
         do {
             let payload = try JSONDecoder().decode(InboxSuggestionPayload.self, from: contentData)
-            return try Self.sanitize(payload: payload, candidates: candidates, modelID: modelID)
+            return try Self.sanitize(
+                payload: payload,
+                candidates: input.candidates,
+                modelID: input.modelID
+            )
         } catch let error as LLMInboxSuggestionServiceError {
             throw error
         } catch {
@@ -95,10 +105,33 @@ struct LLMInboxSuggestionService {
         apiKey: String,
         modelID: String
     ) throws -> URLRequest {
+        let input = LLMSuggestionInputPolicy.prepare(
+            inboxTitle: inboxTitle,
+            candidates: candidates,
+            modelID: modelID
+        )
+        guard !input.modelID.isEmpty else {
+            throw LLMInboxSuggestionServiceError.missingModel
+        }
+        guard !input.candidates.isEmpty else {
+            throw LLMInboxSuggestionServiceError.noTaskCandidates
+        }
+        return try suggestionRequest(input: input, endpoint: endpoint, apiKey: apiKey)
+    }
+
+    private func suggestionRequest(
+        input: LLMInboxSuggestionPreparedInput,
+        endpoint: String,
+        apiKey: String
+    ) throws -> URLRequest {
         let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedEndpoint.isEmpty else { throw LLMModelServiceError.missingEndpoint }
         guard !trimmedAPIKey.isEmpty else { throw LLMModelServiceError.missingAPIKey }
+        guard trimmedEndpoint.utf8.count <= LLMSuggestionInputPolicy.maximumEndpointByteCount,
+              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount else {
+            throw LLMInboxSuggestionServiceError.requestTooLarge
+        }
         guard let url = Self.chatCompletionsURL(endpoint: trimmedEndpoint) else {
             throw LLMModelServiceError.invalidEndpoint
         }
@@ -109,9 +142,9 @@ struct LLMInboxSuggestionService {
         request.setValue("Bearer \(trimmedAPIKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try JSONEncoder().encode(
+        let body = try JSONEncoder().encode(
             OpenAIChatCompletionRequest(
-                model: modelID.trimmingCharacters(in: .whitespacesAndNewlines),
+                model: input.modelID,
                 messages: [
                     .init(
                         role: "system",
@@ -121,16 +154,17 @@ struct LLMInboxSuggestionService {
                     ),
                     .init(
                         role: "user",
-                        content: prompt(
-                            inboxTitle: inboxTitle,
-                            candidates: candidates
-                        )
+                        content: try prompt(input: input)
                     )
                 ],
                 temperature: 0.2,
                 responseFormat: .init(type: "json_object")
             )
         )
+        guard body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount else {
+            throw LLMInboxSuggestionServiceError.requestTooLarge
+        }
+        request.httpBody = body
         return request
     }
 
@@ -158,36 +192,44 @@ struct LLMInboxSuggestionService {
         candidates: [LLMTaskCandidate],
         modelID: String
     ) throws -> LLMInboxSuggestionResult {
-        let candidateByID = candidates.reduce(into: [UUID: LLMTaskCandidate]()) { result, candidate in
+        let boundedCandidates = LLMSuggestionInputPolicy.boundedCandidates(candidates)
+        let candidateByID = boundedCandidates.reduce(into: [UUID: LLMTaskCandidate]()) { result, candidate in
             result[candidate.id] = candidate
         }
-        guard let taskID = UUID(uuidString: payload.taskID),
+        guard let taskID = LLMSuggestionInputPolicy.sanitizedTaskID(payload.taskID),
               let candidate = candidateByID[taskID] else {
             throw LLMInboxSuggestionServiceError.noValidTask
         }
 
-        let iconName = ChecklistVisualSanitizer.sanitizedIcon(payload.iconName)
-        let colorHex = ChecklistVisualSanitizer.sanitizedColor(payload.colorHex, fallback: candidate.colorHex)
-        let reason = payload.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        let iconName = LLMSuggestionInputPolicy.sanitizedSuggestedIcon(payload.iconName)
+        let colorHex = LLMSuggestionInputPolicy.sanitizedSuggestedColor(
+            payload.colorHex,
+            fallback: candidate.colorHex
+        )
+        let reason = LLMSuggestionInputPolicy.sanitizedReason(payload.reason)
         return LLMInboxSuggestionResult(
             taskID: taskID,
             reason: reason,
             iconName: iconName,
             colorHex: colorHex,
-            modelID: modelID
+            modelID: LLMSuggestionInputPolicy.boundedTrimmedUTF8(
+                modelID,
+                maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
+            )
         )
     }
 
-    private func prompt(inboxTitle: String, candidates: [LLMTaskCandidate]) -> String {
+    private func prompt(input: LLMInboxSuggestionPreparedInput) throws -> String {
         let payload = PromptPayload(
-            inboxTitle: inboxTitle,
-            allowedSymbols: SymbolCatalog.symbolNames,
+            inboxTitle: input.inboxTitle,
+            allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
             allowedColors: TaskColorPalette.hexValues,
-            tasks: candidates
+            tasks: input.candidates
         )
-        guard let data = try? JSONEncoder().encode(payload),
+        let data = try JSONEncoder().encode(payload)
+        guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
               let json = String(data: data, encoding: .utf8) else {
-            return inboxTitle
+            throw LLMInboxSuggestionServiceError.requestTooLarge
         }
         return json
     }

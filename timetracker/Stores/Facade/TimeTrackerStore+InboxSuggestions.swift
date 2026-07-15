@@ -152,24 +152,48 @@ extension TimeTrackerStore {
         }
     }
 
-    private func llmTaskCandidates() -> [LLMTaskCandidate] {
-        tasks
-            .filter(isTaskAvailableForTracking)
+    func llmTaskCandidates() -> [LLMTaskCandidate] {
+        let availableTasks = tasks.filter(isTaskAvailableForTracking)
+        var pinnedIDs = Set<UUID>()
+        let pinnedTasks: [TaskNode] = preferences.quickStartTaskIDs.compactMap { taskID -> TaskNode? in
+            guard pinnedIDs.insert(taskID).inserted,
+                  let task = taskByID[taskID],
+                  isTaskAvailableForTracking(task) else {
+                return nil
+            }
+            return task
+        }
+        let frequentTasks = frequentRecentTasks(
+            excluding: pinnedIDs,
+            limit: LLMSuggestionInputPolicy.maximumCandidateCount
+        )
+        let priorityIDs = Set((pinnedTasks + frequentTasks).map(\.id))
+        let remainingTasks = availableTasks
+            .filter { !priorityIDs.contains($0.id) }
             .sorted { lhs, rhs in
-                if lhs.path == rhs.path {
-                    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+                let lhsPath = taskPath(for: lhs)
+                let rhsPath = taskPath(for: rhs)
+                let lhsKey = lhsPath.lowercased()
+                let rhsKey = rhsPath.lowercased()
+                if lhsKey != rhsKey { return lhsKey < rhsKey }
+                if lhsPath != rhsPath { return lhsPath < rhsPath }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+        let candidateWindow = (pinnedTasks + frequentTasks + remainingTasks)
+            .prefix(LLMSuggestionInputPolicy.maximumCandidateCount)
+
+        return LLMSuggestionInputPolicy.boundedCandidates(
+            candidateWindow
+                .map { task in
+                    LLMTaskCandidate(
+                        id: task.id,
+                        title: task.title,
+                        path: taskPath(for: task),
+                        iconName: ChecklistVisualSanitizer.sanitizedIcon(task.iconName),
+                        colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex)
+                    )
                 }
-                return lhs.path < rhs.path
-            }
-            .map { task in
-                LLMTaskCandidate(
-                    id: task.id,
-                    title: task.title,
-                    path: taskPath(for: task),
-                    iconName: ChecklistVisualSanitizer.sanitizedIcon(task.iconName),
-                    colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex)
-                )
-            }
+        )
     }
 
     private var canAutoSuggestInboxItems: Bool {

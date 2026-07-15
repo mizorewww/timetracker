@@ -22,17 +22,20 @@ struct LLMChecklistVisualSuggestionService {
         apiKey: String,
         modelID: String
     ) async throws -> LLMChecklistVisualSuggestionResult {
-        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let input = LLMSuggestionInputPolicy.prepareChecklistVisual(
+            checklistTitle: checklistTitle,
+            taskTitle: taskTitle,
+            taskPath: taskPath,
+            modelID: modelID
+        )
+        guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
         }
 
         let request = try suggestionRequest(
-            checklistTitle: checklistTitle,
-            taskTitle: taskTitle,
-            taskPath: taskPath,
+            input: input,
             endpoint: endpoint,
-            apiKey: apiKey,
-            modelID: modelID
+            apiKey: apiKey
         )
         let (data, response) = try await transport(request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -48,7 +51,7 @@ struct LLMChecklistVisualSuggestionService {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
         let payload = try JSONDecoder().decode(ChecklistVisualSuggestionPayload.self, from: contentData)
-        return Self.sanitize(payload: payload, modelID: modelID)
+        return Self.sanitize(payload: payload, modelID: input.modelID)
     }
 
     func suggestionRequest(
@@ -59,10 +62,31 @@ struct LLMChecklistVisualSuggestionService {
         apiKey: String,
         modelID: String
     ) throws -> URLRequest {
+        let input = LLMSuggestionInputPolicy.prepareChecklistVisual(
+            checklistTitle: checklistTitle,
+            taskTitle: taskTitle,
+            taskPath: taskPath,
+            modelID: modelID
+        )
+        guard !input.modelID.isEmpty else {
+            throw LLMInboxSuggestionServiceError.missingModel
+        }
+        return try suggestionRequest(input: input, endpoint: endpoint, apiKey: apiKey)
+    }
+
+    private func suggestionRequest(
+        input: LLMChecklistVisualSuggestionPreparedInput,
+        endpoint: String,
+        apiKey: String
+    ) throws -> URLRequest {
         let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedEndpoint.isEmpty else { throw LLMModelServiceError.missingEndpoint }
         guard !trimmedAPIKey.isEmpty else { throw LLMModelServiceError.missingAPIKey }
+        guard trimmedEndpoint.utf8.count <= LLMSuggestionInputPolicy.maximumEndpointByteCount,
+              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount else {
+            throw LLMInboxSuggestionServiceError.requestTooLarge
+        }
         guard let url = LLMInboxSuggestionService.chatCompletionsURL(endpoint: trimmedEndpoint) else {
             throw LLMModelServiceError.invalidEndpoint
         }
@@ -73,9 +97,9 @@ struct LLMChecklistVisualSuggestionService {
         request.setValue("Bearer \(trimmedAPIKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try JSONEncoder().encode(
+        let body = try JSONEncoder().encode(
             OpenAIChatCompletionRequest(
-                model: modelID.trimmingCharacters(in: .whitespacesAndNewlines),
+                model: input.modelID,
                 messages: [
                     .init(
                         role: "system",
@@ -85,17 +109,17 @@ struct LLMChecklistVisualSuggestionService {
                     ),
                     .init(
                         role: "user",
-                        content: prompt(
-                            checklistTitle: checklistTitle,
-                            taskTitle: taskTitle,
-                            taskPath: taskPath
-                        )
+                        content: try prompt(input: input)
                     )
                 ],
                 temperature: 0.2,
                 responseFormat: .init(type: "json_object")
             )
         )
+        guard body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount else {
+            throw LLMInboxSuggestionServiceError.requestTooLarge
+        }
+        request.httpBody = body
         return request
     }
 
@@ -104,28 +128,31 @@ struct LLMChecklistVisualSuggestionService {
         modelID: String
     ) -> LLMChecklistVisualSuggestionResult {
         LLMChecklistVisualSuggestionResult(
-            iconName: ChecklistVisualSanitizer.sanitizedIcon(payload.iconName),
-            colorHex: ChecklistVisualSanitizer.sanitizedColor(payload.colorHex),
-            reason: payload.reason.trimmingCharacters(in: .whitespacesAndNewlines),
-            modelID: modelID
+            iconName: LLMSuggestionInputPolicy.sanitizedSuggestedIcon(payload.iconName),
+            colorHex: LLMSuggestionInputPolicy.sanitizedSuggestedColor(
+                payload.colorHex,
+                fallback: ChecklistVisualSanitizer.defaultColor
+            ),
+            reason: LLMSuggestionInputPolicy.sanitizedReason(payload.reason),
+            modelID: LLMSuggestionInputPolicy.boundedTrimmedUTF8(
+                modelID,
+                maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
+            )
         )
     }
 
-    private func prompt(
-        checklistTitle: String,
-        taskTitle: String,
-        taskPath: String
-    ) -> String {
+    private func prompt(input: LLMChecklistVisualSuggestionPreparedInput) throws -> String {
         let payload = ChecklistVisualPromptPayload(
-            checklistTitle: checklistTitle,
-            taskTitle: taskTitle,
-            taskPath: taskPath,
-            allowedSymbols: SymbolCatalog.symbolNames,
+            checklistTitle: input.checklistTitle,
+            taskTitle: input.taskTitle,
+            taskPath: input.taskPath,
+            allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
             allowedColors: TaskColorPalette.hexValues
         )
-        guard let data = try? JSONEncoder().encode(payload),
+        let data = try JSONEncoder().encode(payload)
+        guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
               let json = String(data: data, encoding: .utf8) else {
-            return checklistTitle
+            throw LLMInboxSuggestionServiceError.requestTooLarge
         }
         return json
     }

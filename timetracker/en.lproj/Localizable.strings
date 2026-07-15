@@ -686,6 +686,7 @@
 "inbox.suggestion.reason" = "Reason";
 "inbox.suggestion.error.missingModel" = "Choose an LLM model in Settings before asking for a suggestion.";
 "inbox.suggestion.error.noTaskCandidates" = "Create at least one task before asking for a suggestion.";
+"inbox.suggestion.error.requestTooLarge" = "The suggestion request contains too much information. Shorten the text and try again.";
 "inbox.suggestion.error.noValidTask" = "The suggestion did not match an existing task.";
 "error.savedRefreshFailed" = "Your change was saved, but the latest data could not be reloaded. %@";
 "error.widgetSnapshotSaveFailed" = "The widget could not be updated. %@";

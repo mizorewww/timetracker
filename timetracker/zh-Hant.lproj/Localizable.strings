@@ -686,6 +686,7 @@
 "inbox.suggestion.reason" = "推薦理由";
 "inbox.suggestion.error.missingModel" = "請先在設定裡選擇 LLM 模型，再取得推薦。";
 "inbox.suggestion.error.noTaskCandidates" = "請先建立至少一個任務，再取得推薦。";
+"inbox.suggestion.error.requestTooLarge" = "推薦請求包含的資訊過多。請縮短文字後再試。";
 "inbox.suggestion.error.noValidTask" = "推薦結果沒有匹配到既有任務。";
 "error.savedRefreshFailed" = "變更已儲存，但無法重新載入最新資料。%@";
 "error.widgetSnapshotSaveFailed" = "無法更新小工具。%@";

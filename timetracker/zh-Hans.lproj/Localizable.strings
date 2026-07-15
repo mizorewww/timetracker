@@ -686,6 +686,7 @@
 "inbox.suggestion.reason" = "推荐理由";
 "inbox.suggestion.error.missingModel" = "请先在设置里选择 LLM 模型，再获取推荐。";
 "inbox.suggestion.error.noTaskCandidates" = "请先创建至少一个任务，再获取推荐。";
+"inbox.suggestion.error.requestTooLarge" = "推荐请求包含的信息过多。请缩短文本后重试。";
 "inbox.suggestion.error.noValidTask" = "推荐结果没有匹配到已有任务。";
 "error.savedRefreshFailed" = "更改已保存，但无法重新载入最新数据。%@";
 "error.widgetSnapshotSaveFailed" = "无法更新小组件。%@";

@@ -7,7 +7,7 @@ enum ChecklistVisualSanitizer {
     nonisolated static func sanitizedIcon(_ iconName: String?) -> String {
         let trimmed = iconName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmed.isEmpty,
-              SymbolCatalog.symbolNames.contains(trimmed) else {
+              SymbolCatalog.symbolNameSet.contains(trimmed) else {
             return defaultIcon
         }
         return trimmed

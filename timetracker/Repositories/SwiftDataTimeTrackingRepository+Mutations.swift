@@ -59,6 +59,9 @@ extension SwiftDataTimeTrackingRepository {
         }
         let preparedNote = try LedgerPersistencePolicy.prepareNote(note)
         guard let segment = try segment(id: segmentID) else { return }
+        guard segment.endedAt == nil || endedAt != nil else {
+            throw TimeTrackingRepositoryError.closedSegmentCannotReopen
+        }
         let linkedSession = try session(id: segment.sessionID)
         let isRebindingTask = segment.taskID != taskID || linkedSession.map { $0.taskID != taskID } == true
         let reboundTitleSnapshot: String?

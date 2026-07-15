@@ -46,6 +46,10 @@ extension TimeTrackerStore {
             return false
         }
         let existingSegment = ledgerDomainStore.segment(for: draft.segmentID)
+        guard existingSegment?.endedAt == nil || draft.isActive == false else {
+            fail(.closedSegmentCannotReopen)
+            return false
+        }
         let isRetainingUnavailableHistoricalAssignment =
             existingSegment?.taskID == taskID && draft.isActive == false
         guard trackableTaskIDs.contains(taskID) || isRetainingUnavailableHistoricalAssignment else {

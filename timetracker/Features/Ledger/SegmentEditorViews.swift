@@ -78,7 +78,14 @@ struct SegmentEditorPanel: View {
                         in: ...now,
                         displayedComponents: [.date, .hourAndMinute]
                     )
-                    Toggle(AppStrings.localized("segment.active"), isOn: $draft.isActive)
+                    if draft.wasActive {
+                        Toggle(AppStrings.localized("segment.active"), isOn: $draft.isActive)
+                    } else {
+                        LabeledContent(
+                            AppStrings.localized("segment.status"),
+                            value: AppStrings.localized("segment.finished")
+                        )
+                    }
                     if !draft.isActive {
                         DatePicker(
                             AppStrings.localized("segment.end"),

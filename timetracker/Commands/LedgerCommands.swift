@@ -57,6 +57,9 @@ struct LedgerCommandHandler {
         repository: TimeTrackingRepository,
         context: ModelContext?
     ) throws {
+        guard draft.wasActive || draft.isActive == false else {
+            throw TimeTrackingRepositoryError.closedSegmentCannotReopen
+        }
         let endedAt = draft.isActive ? nil : draft.endedAt
         try UpdateSegmentUseCase(repository: repository).execute(
             segmentID: draft.segmentID,

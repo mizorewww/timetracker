@@ -160,6 +160,7 @@ extension TimeTrackerStore {
         case pomodoroTaskSelectionRequired
         case invalidTimeRange
         case activeTimerStartInFuture
+        case closedSegmentCannotReopen
         case taskCategoryNameRequired
         case invalidInboxSuggestion
         case taskTrackingUnavailable
@@ -176,6 +177,8 @@ extension TimeTrackerStore {
                 Self.localized("time.endAfterStart")
             case .activeTimerStartInFuture:
                 Self.localized("segment.error.startNotFuture")
+            case .closedSegmentCannotReopen:
+                Self.localized("segment.error.cannotReopen")
             case .taskCategoryNameRequired:
                 Self.localized("taskCategory.nameRequired")
             case .invalidInboxSuggestion:

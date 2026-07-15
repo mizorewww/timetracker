@@ -149,6 +149,7 @@ struct SegmentEditorDraft: Identifiable, Equatable {
     var taskID: UUID?
     var startedAt: Date
     var endedAt: Date
+    let wasActive: Bool
     var isActive: Bool
     var note: String
     var source: TimeSessionSource
@@ -158,7 +159,9 @@ struct SegmentEditorDraft: Identifiable, Equatable {
         self.taskID = segment.taskID
         self.startedAt = segment.startedAt
         self.endedAt = segment.endedAt ?? Date()
-        self.isActive = segment.endedAt == nil
+        let isActive = segment.endedAt == nil
+        self.wasActive = isActive
+        self.isActive = isActive
         self.note = note
         self.source = segment.source
     }

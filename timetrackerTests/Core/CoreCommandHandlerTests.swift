@@ -660,10 +660,21 @@ struct CoreCommandHandlerTests {
         #expect(segment.taskID == task.id)
         #expect(session.note == "Manual")
 
-        var editDraft = SegmentEditorDraft(segment: segment, note: " Updated ")
-        editDraft.isActive = true
+        var reopenDraft = SegmentEditorDraft(segment: segment, note: " Updated ")
+        reopenDraft.isActive = true
+        #expect(throws: TimeTrackingRepositoryError.closedSegmentCannotReopen) {
+            try LedgerCommandHandler().updateSegment(
+                draft: reopenDraft,
+                taskID: task.id,
+                repository: repository
+            )
+        }
+        #expect(segment.endedAt != nil)
+        #expect(session.note == "Manual")
+
+        let editDraft = SegmentEditorDraft(segment: segment, note: " Updated ")
         try LedgerCommandHandler().updateSegment(draft: editDraft, taskID: task.id, repository: repository)
-        #expect(segment.endedAt == nil)
+        #expect(segment.endedAt != nil)
         #expect(session.note == "Updated")
 
         try LedgerCommandHandler().softDeleteSegment(segment.id, repository: repository)

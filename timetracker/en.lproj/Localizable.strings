@@ -351,6 +351,7 @@
 "segment.error.endAfterStart" = "End time must be later than start time.";
 "segment.error.startNotFuture" = "An active timer cannot start in the future.";
 "segment.error.timeNotFuture" = "Time records cannot extend into the future.";
+"segment.error.cannotReopen" = "Finished records can’t be restarted. Start a new timer instead.";
 "pomodoro.minuteField" = "Minutes";
 "pomodoro.roundField" = "Count";
 "pomodoro.roundUnit" = "rounds";
@@ -682,6 +683,8 @@
 "segment.time" = "Time";
 "segment.start" = "Start";
 "segment.active" = "In Progress";
+"segment.status" = "Status";
+"segment.finished" = "Finished";
 "segment.end" = "End";
 "segment.duration" = "Duration";
 "segment.notes" = "Notes";

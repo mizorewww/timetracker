@@ -166,6 +166,8 @@ struct TaskUIContractTests {
         #expect(segmentSource.contains("segment.error.timeNotFuture"))
         #expect(manualSource.contains("validation != .valid"))
         #expect(segmentSource.contains("validation != .valid"))
+        #expect(segmentSource.contains("if draft.wasActive"))
+        #expect(segmentSource.contains("segment.finished"))
         #expect(manualSource.contains("timeIntervalSince(draft.startedAt)") == false)
         #expect(segmentSource.contains("timeIntervalSince(draft.startedAt)") == false)
     }

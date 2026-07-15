@@ -351,6 +351,7 @@
 "segment.error.endAfterStart" = "结束时间必须晚于开始时间。";
 "segment.error.startNotFuture" = "活动计时的开始时间不能晚于现在。";
 "segment.error.timeNotFuture" = "时间记录不能延伸到未来。";
+"segment.error.cannotReopen" = "已结束的记录不能重新开始，请新建计时。";
 "pomodoro.minuteField" = "分钟";
 "pomodoro.roundField" = "次数";
 "pomodoro.roundUnit" = "轮";
@@ -682,6 +683,8 @@
 "segment.time" = "时间";
 "segment.start" = "开始";
 "segment.active" = "正在进行";
+"segment.status" = "状态";
+"segment.finished" = "已结束";
 "segment.end" = "结束";
 "segment.duration" = "时长";
 "segment.notes" = "备注";

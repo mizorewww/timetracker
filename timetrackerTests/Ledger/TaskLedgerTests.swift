@@ -561,6 +561,65 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
+    func finishedSegmentCannotBeReopenedThroughRepositoryOrStore() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 4_000_000)
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "task-device").createTask(
+            title: "Historical record",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let repository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "ledger-device",
+            nowProvider: { now }
+        )
+        let start = now.addingTimeInterval(-600)
+        let end = now.addingTimeInterval(-300)
+        let segment = try repository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: end,
+            note: "Original note"
+        )
+        let session = try #require(try repository.sessions().first { $0.id == segment.sessionID })
+        let originalSegmentUpdatedAt = segment.updatedAt
+        let originalSessionUpdatedAt = session.updatedAt
+        let originalMutationID = session.clientMutationID
+
+        #expect(
+            TimeTrackingRepositoryError.closedSegmentCannotReopen.errorDescription ==
+                AppStrings.localized("segment.error.cannotReopen")
+        )
+        #expect(throws: TimeTrackingRepositoryError.closedSegmentCannotReopen) {
+            try repository.updateSegment(
+                segmentID: segment.id,
+                taskID: task.id,
+                startedAt: start,
+                endedAt: nil,
+                note: "Must not persist"
+            )
+        }
+        #expect(segment.endedAt == end)
+        #expect(segment.updatedAt == originalSegmentUpdatedAt)
+        #expect(session.note == "Original note")
+        #expect(session.updatedAt == originalSessionUpdatedAt)
+        #expect(session.clientMutationID == originalMutationID)
+
+        let store = TimeTrackerStore()
+        store.configureIfNeeded(context: context)
+        var draft = SegmentEditorDraft(segment: segment, note: session.note ?? "")
+        #expect(draft.wasActive == false)
+        draft.isActive = true
+
+        #expect(store.saveSegmentDraft(draft) == false)
+        #expect(store.errorMessage == AppStrings.localized("segment.error.cannotReopen"))
+        #expect(segment.endedAt == end)
+        #expect(session.note == "Original note")
+    }
+
+    @Test @MainActor
     func deletingTheEarliestSegmentRebuildsTheRemainingSessionBounds() throws {
         let context = try makeTestContext()
         let taskID = UUID()

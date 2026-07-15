@@ -212,11 +212,19 @@ struct TaskUIContractTests {
 
         #expect(rowSource.contains("@Environment(\\.dynamicTypeSize) private var dynamicTypeSize"))
         #expect(rowSource.contains("if dynamicTypeSize.isAccessibilitySize"))
-        #expect(rowSource.contains("private var accessibilityBody"))
+        #expect(rowSource.contains("TaskManagementAccessibilityBody("))
+        #expect(rowSource.contains("Text(presentation.path)"))
         #expect(rowSource.contains("AppStrings.localized(\"tasks.workedFormat\")"))
-        #expect(rowSource.contains(".accessibilityValue(accessibilitySummary(for: presentation))"))
+        #expect(rowSource.contains("TaskProgressLine(progress: presentation.progress, rollup: presentation.rollup)"))
+        #expect(rowSource.contains("projectedDaysDisplayText"))
+        #expect(rowSource.contains("AppStrings.localized(\"tasks.childCount\")"))
+        #expect(rowSource.contains("TaskManagementRowAccessibilitySnapshot("))
+        #expect(rowSource.contains(".accessibilityLabel(accessibility.label)"))
+        #expect(rowSource.contains(".accessibilityValue(accessibility.value)"))
+        #expect(rowSource.contains(".accessibilityRepresentation") == false)
+        #expect(rowSource.contains(".accessibilityElement(children: .ignore)") == false)
         #expect(rowSource.contains("struct TaskManagementRowPresentation"))
-        #expect(rowSource.contains("ListFormatter.localizedString(byJoining: components)"))
+        #expect(rowSource.contains("ListFormatter.localizedString(byJoining: valueComponents)"))
         #expect(rowSource.contains("else if task.status != .active"))
         #expect(rowSource.contains(".lineLimit(nil)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
@@ -659,7 +667,8 @@ struct TaskUIContractTests {
     private func taskManagementFeatureSource() throws -> String {
         try [
             "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
-            "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift"
+            "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift",
+            "timetracker/Features/Tasks/Management/TaskManagementAccessibility.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

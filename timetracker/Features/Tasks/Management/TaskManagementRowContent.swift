@@ -22,7 +22,11 @@ struct TaskManagementRowContent: View {
     var body: some View {
         #if os(iOS)
         if dynamicTypeSize.isAccessibilitySize {
-            accessibilityBody
+            TaskManagementAccessibilityBody(
+                task: task,
+                presentation: presentation,
+                showsNavigationChevron: showsNavigationChevron
+            )
         } else if TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass).usesCompactRows {
             compactBody
         } else {
@@ -31,51 +35,6 @@ struct TaskManagementRowContent: View {
         #else
         regularBody
         #endif
-    }
-
-    @ViewBuilder
-    private var accessibilityBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
-                Text(task.title)
-                    .font(.headline)
-                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                    .strikethrough(task.status == .completed)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if showsNavigationChevron {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .padding(.top, 4)
-                }
-            }
-
-            if showsExceptionalStatus || presentation.isRunning {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 6) {
-                        if showsExceptionalStatus {
-                            statusMetadataBadge
-                        }
-                        if presentation.isRunning {
-                            RunningStatusBadge()
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        if showsExceptionalStatus {
-                            statusMetadataBadge
-                        }
-                        if presentation.isRunning {
-                            RunningStatusBadge()
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 8)
     }
 
     @ViewBuilder
@@ -209,10 +168,6 @@ struct TaskManagementRowContent: View {
         } else if task.status != .active {
             TaskStatusBadge(status: task.status)
         }
-    }
-
-    private var showsExceptionalStatus: Bool {
-        task.status != .active || !presentation.isAvailableForTracking
     }
 
 }

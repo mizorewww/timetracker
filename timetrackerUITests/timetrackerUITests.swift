@@ -40,7 +40,9 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testSettingsCategoryNavigationRemainsReachableAtLargeTextSizes() throws {
-        let app = launchApp()
+        let app = launchApp(
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
+        )
         XCTAssertTrue(homeIsReady(in: app))
         openSettings(in: app)
         XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
@@ -57,7 +59,9 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testTaskListKeepsSearchAndFirstTaskReachableAtLargeTextSizes() throws {
-        let app = launchApp()
+        let app = launchApp(
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
+        )
         openSection(
             "Tasks",
             tabIdentifier: "phone.tab.tasks",
@@ -71,6 +75,11 @@ final class timetrackerUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(searchField.waitForExistence(timeout: 8) && searchField.isHittable)
         XCTAssertTrue(firstTask.waitForExistence(timeout: 8) && firstTask.isHittable)
+        let firstTaskValue = firstTask.value as? String ?? ""
+        XCTAssertTrue(
+            firstTaskValue.localizedCaseInsensitiveContains("worked"),
+            "The task row must preserve worked-time context at Accessibility XXXL."
+        )
         try capture("iphone-tasks-accessibility-list", app: app)
 
         activate(firstTask)
@@ -359,6 +368,34 @@ final class timetrackerUITests: XCTestCase {
             overviewCaptureName: "today-overview",
             pickerCaptureName: "today-task-picker"
         )
+        #endif
+    }
+
+    @MainActor
+    func testTodayPrimaryTimerActionKeepsVisibleTextAtLargestAccessibilitySize() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today Accessibility XXXL screenshot requires an iOS simulator.")
+        #else
+        let app = launchApp(
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        XCTAssertTrue(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier BEGINSWITH %@", "home.activeTimer."))
+                .firstMatch
+                .waitForExistence(timeout: 5),
+            "Demo data must expose an active timer so this test covers the active-state action."
+        )
+
+        let startTimer = app.buttons["home.startTimer"].firstMatch
+        scrollUntilHittable(startTimer, direction: .up, in: app)
+        XCTAssertTrue(startTimer.waitForExistence(timeout: 5) && startTimer.isHittable)
+        XCTAssertTrue(
+            ["Start Another Timer", "Switch Timer"].contains(startTimer.label),
+            "The active-state timer action must keep its visible verb label at Accessibility XXXL."
+        )
+        try capture("iphone-today-primary-action-accessibility", app: app)
         #endif
     }
 

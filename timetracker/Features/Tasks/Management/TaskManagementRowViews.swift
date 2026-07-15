@@ -29,7 +29,12 @@ struct TaskManagementFlatRow: View {
     }
 
     private func rowContent(presentation: TaskManagementRowPresentation) -> some View {
-        HStack(alignment: rowAlignment, spacing: 4) {
+        let accessibility = TaskManagementRowAccessibilitySnapshot(
+            task: task,
+            presentation: presentation
+        )
+
+        return HStack(alignment: rowAlignment, spacing: 4) {
             disclosureButton
             Button(action: openTask) {
                 TaskManagementRowContent(
@@ -42,8 +47,8 @@ struct TaskManagementFlatRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("tasks.row.\(task.id.uuidString)")
-            .accessibilityLabel(task.title)
-            .accessibilityValue(accessibilitySummary(for: presentation))
+            .accessibilityLabel(accessibility.label)
+            .accessibilityValue(accessibility.value)
             .accessibilityHint(AppStrings.localized("tasks.openDetail"))
         }
         .padding(.leading, CGFloat(min(treeDepth, 6)) * 12)
@@ -88,54 +93,6 @@ struct TaskManagementFlatRow: View {
         #else
         false
         #endif
-    }
-
-    private func accessibilitySummary(for presentation: TaskManagementRowPresentation) -> String {
-        var components = [task.status.displayName]
-
-        if !presentation.isAvailableForTracking, task.status != .completed {
-            components[0] = AppStrings.localized("task.status.blockedByCompletion")
-        }
-        if presentation.path.isEmpty == false,
-           presentation.path.localizedCaseInsensitiveCompare(task.title) != .orderedSame {
-            components.append(presentation.path)
-        }
-        if presentation.isRunning {
-            components.append(AppStrings.running)
-        }
-        components.append(
-            String(
-                format: AppStrings.localized("tasks.workedFormat"),
-                DurationFormatter.compact(presentation.workedSeconds)
-            )
-        )
-        if presentation.progress.totalCount > 0 {
-            components.append(
-                String(
-                    format: AppStrings.localized("checklist.progressFormat"),
-                    presentation.progress.completedCount,
-                    presentation.progress.totalCount
-                )
-            )
-        }
-        if presentation.rollup?.isDisplayableForecast == true,
-           let remainingSeconds = presentation.rollup?.remainingSeconds {
-            components.append(
-                String(
-                    format: AppStrings.localized("forecast.remainingFormat"),
-                    DurationFormatter.compact(remainingSeconds)
-                )
-            )
-        }
-        if presentation.childCount > 0 {
-            components.append(
-                String(
-                    format: AppStrings.localized("tasks.childCount"),
-                    presentation.childCount
-                )
-            )
-        }
-        return ListFormatter.localizedString(byJoining: components)
     }
 
     @ViewBuilder

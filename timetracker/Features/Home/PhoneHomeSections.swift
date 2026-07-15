@@ -7,7 +7,6 @@ struct PhoneNowSection: View {
     let allowsParallelTimers: Bool
     let openTask: (UUID) -> Void
     let startTimer: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Section {
@@ -33,34 +32,22 @@ struct PhoneNowSection: View {
                     .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
                 }
 
-                if !dynamicTypeSize.isAccessibilitySize {
-                    Button(action: startTimer) {
-                        Label(
-                            activeTimerActionTitle,
-                            systemImage: activeTimerActionSystemImage
-                        )
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                Button(action: startTimer) {
+                    Label {
+                        Text(activeTimerActionTitle)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: activeTimerActionSystemImage)
                     }
-                    .accessibilityIdentifier("home.startTimer")
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
+                .accessibilityIdentifier("home.startTimer")
             }
         } header: {
-            HStack(spacing: 8) {
-                Text(.app("home.now.title"))
-                    .accessibilityIdentifier("home.activeTimers")
-                Spacer()
-                if !segments.isEmpty && dynamicTypeSize.isAccessibilitySize {
-                    Button(action: startTimer) {
-                        Image(systemName: activeTimerActionSystemImage)
-                            .font(.system(size: 20, weight: .semibold))
-                            .frame(width: 44, height: 44)
-                            .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(activeTimerActionTitle)
-                    .accessibilityIdentifier("home.startTimer")
-                }
-            }
+            Text(.app("home.now.title"))
+                .accessibilityIdentifier("home.activeTimers")
         } footer: {
             if segments.isEmpty {
                 Text(.app("timer.chooseTaskFooter"))

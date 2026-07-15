@@ -643,6 +643,17 @@
 后果：iPad 在全屏、Split View 和 Stage Manager 间调整尺寸时保留 sidebar/detail 上下文；`NavigationSplitView` 依旧使用 `preferredCompactColumn` 和系统 Show Sidebar 操作适配窄宽。功能内局部布局可继续使用 size class，但新的设备级根分支必须使用 idiom 或显式平台信号。
 
 验证：纯策略测试覆盖 phone、pad 和 unsupported 映射；源码契约确认 `iOSRootView` 使用 `UIDevice.current.userInterfaceIdiom`、不再读取 `horizontalSizeClass`。付费开发者签名的 macOS 策略/契约套件 31/31 通过，截图基础设施调整后的最终契约套件 8/8 通过。iPad Pro 11-inch 的串行 UI 用例使用系统 Show Sidebar，选择合并语义后的 task row，再在同一 scene 中竖屏→横屏→竖屏；三次都保留 `ipad.splitNavigation`、同一 task detail 和只读状态，三张屏幕级截图目视通过。Stage Manager 紧凑窗口仍保留在最终人工矩阵，不以旋转测试替代。所有专用模拟器都已终止、关闭并删除，最终进程与 Booted 设备审计为空。
+## AD-050：辅助字号保留主动作文字与任务行完整事实
+
+状态：Accepted
+
+背景：iPhone Today 在已有活动计时且进入 Accessibility Dynamic Type 后，把 Start Another Timer / Switch Timer 从 Now 内容流移到 section header，并只留下图标。视觉用户需要猜测这个唯一计时入口的含义；VoiceOver 虽有补充 label，仍不能弥补可见操作文字消失。Tasks 的专用辅助字号行则只保留标题、异常状态和运行状态，删除了普通/紧凑行已有的完整路径、已工作时长、清单进度、预测和子任务数，导致放大文字反而降低信息完整性。
+
+决策：Today 的已有计时主动作始终是 Now section 内的带文字原生 `Button`；文字允许纵向生长，section header 只承担标题，不承载仅图标主操作。Tasks 的辅助字号布局按标题、去重后的完整路径、状态/运行中、已工作时长、清单/预测和子任务数纵向展示，与普通布局共享同一个 `TaskManagementRowPresentation`。任务详情按钮继续保持一个原生 Button、稳定 identifier 和 hint；`TaskManagementRowAccessibilitySnapshot` 以有序组件生成完整 label/value，禁止通过 `accessibilityRepresentation` 或 `.accessibilityElement(children: .ignore)` 覆盖后只手工补回部分字段。
+
+后果：Accessibility 字号会使用更多垂直空间，但不会把关键动作变成谜语，也不会以“简化”为名删除任务事实。视觉布局和 VoiceOver 投影可以分别优化呈现方式，字段集合必须保持同步；新增任务行元数据时必须同时更新普通/紧凑/辅助布局、语义快照和测试。
+
+验证：源码契约固定 Today 无字号分支的完整文字操作、Tasks 辅助布局的路径/时长/进度/预测/子任务字段以及不使用语义替换或忽略 children；单元测试固定语义快照的字段顺序、阻塞状态替换和重复路径消除。Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)` 签名的 macOS 定向套件 50/50 通过，xcresult 为 `/tmp/timetracker-accessibility-context-final-20260716.xcresult`。显式拥有的 iPhone 17 Pro（iOS 27）以 Accessibility XXXL 串行执行 Today、Tasks、Settings 三条 UI 用例，3/3 通过；xcresult 为 `/tmp/timetracker-accessibility-context-ui-20260716.xcresult`，导出的三张截图位于 `/tmp/timetracker-accessibility-context-ui-images-20260716` 并已目视检查文字换行、字段完整性与主动作可见性。UI 测试检查了 VoiceOver 使用的 accessibility label/value 投影，但未把它冒充真人 VoiceOver 遍历；该项仍属于最终人工矩阵。专用设备 `9CEA8CAE-F2B6-4AE7-B092-DEFB389653F4` 已终止、关闭并删除，最终无 Booted 设备、runner、`xcodebuild`、`xctest`、Simulator 或 Problem Reporter 残留。
 
 ## 2. Agent 工作清单
 

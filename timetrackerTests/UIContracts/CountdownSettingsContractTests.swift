@@ -51,4 +51,18 @@ struct CountdownSettingsContractTests {
             }
         }
     }
+
+    @Test
+    func settingsCategoriesStayNavigableAtAccessibilityTextSizes() throws {
+        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
+        let categorySource = try sourceText("timetracker/Features/Settings/SettingsCategoryViews.swift")
+        let english = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(categorySource.contains("if dynamicTypeSize.isAccessibilitySize"))
+        #expect(categorySource.contains("accessibilityCategoryRow"))
+        #expect(categorySource.contains(".accessibilityHint(Text(category.subtitle))"))
+        #expect(categorySource.contains(".accessibilityElement(children: .ignore)"))
+        #expect(settingsSource.contains("settings.categories.footer") == false)
+        #expect(english.contains("\"settings.categories.footer\"") == false)
+    }
 }

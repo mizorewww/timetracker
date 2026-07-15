@@ -141,8 +141,6 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("settings.category.\(category.rawValue)")
                 }
-            } footer: {
-                Text(.app("settings.categories.footer"))
             }
         }
         .listStyle(.insetGrouped)

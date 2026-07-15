@@ -65,7 +65,6 @@
 "settings.displayTiming" = "顯示與計時";
 "settings.displayTiming.footer" = "多個任務同時執行時，實際時間只計算真實經過的時間；累計時間會把每個任務分別相加。";
 "settings.displayTiming.systemAppearanceFooter" = "時間追蹤器會跟隨系統外觀。多個任務同時計時時，實際時間只計算一次，累計時間會把每個任務分別相加。";
-"settings.categories.footer" = "設定依用途分組，讓日常選項與同步及破壞性維護工具分開。";
 "settings.category.general.title" = "一般";
 "settings.category.general.subtitle" = "計時行為與倒數事件";
 "settings.category.focus.title" = "專注";

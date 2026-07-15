@@ -65,7 +65,6 @@
 "settings.displayTiming" = "显示与计时";
 "settings.displayTiming.footer" = "多个任务同时运行时，实际时间只计算真实经过的时间；累计时间会把每个任务分别相加。";
 "settings.displayTiming.systemAppearanceFooter" = "时间追踪器跟随系统外观。多个任务同时计时时，实际时间只计算一次，累计时间会把每个任务分别相加。";
-"settings.categories.footer" = "设置按用途分组，让日常选项与同步和破坏性维护工具保持分离。";
 "settings.category.general.title" = "通用";
 "settings.category.general.subtitle" = "计时行为与倒计时事件";
 "settings.category.focus.title" = "专注";

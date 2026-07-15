@@ -65,7 +65,6 @@
 "settings.displayTiming" = "Display and Timing";
 "settings.displayTiming.footer" = "When several tasks run at once, actual time counts clock time once. Total task time adds each task separately.";
 "settings.displayTiming.systemAppearanceFooter" = "Time Tracker follows the system appearance. When several tasks run at once, actual time counts clock time once while total time adds every task.";
-"settings.categories.footer" = "Settings are grouped by purpose so everyday choices stay separate from sync and destructive maintenance tools.";
 "settings.category.general.title" = "General";
 "settings.category.general.subtitle" = "Timing behavior and countdown events";
 "settings.category.focus.title" = "Focus";

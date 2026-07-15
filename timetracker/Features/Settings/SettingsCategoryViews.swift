@@ -43,6 +43,26 @@ struct SettingsCategoryRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            accessibilityCategoryRow
+        } else {
+            descriptiveCategoryRow
+        }
+    }
+
+    private var accessibilityCategoryRow: some View {
+        HStack(spacing: 12) {
+            SettingsRowIcon(systemImage: category.systemImage, tint: category.tint)
+            Text(category.title)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(category.title))
+        .accessibilityHint(Text(category.subtitle))
+    }
+
+    private var descriptiveCategoryRow: some View {
         HStack(alignment: .top, spacing: 12) {
             SettingsRowIcon(systemImage: category.systemImage, tint: category.tint)
             VStack(alignment: .leading, spacing: 3) {
@@ -51,7 +71,7 @@ struct SettingsCategoryRow: View {
                 Text(category.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

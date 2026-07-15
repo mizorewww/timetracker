@@ -39,6 +39,23 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsCategoryNavigationRemainsReachableAtLargeTextSizes() throws {
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+        openSettings(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
+
+        let general = app.buttons["settings.category.general"].firstMatch
+        let focus = app.buttons["settings.category.focus"].firstMatch
+        XCTAssertTrue(general.waitForExistence(timeout: 3) && general.isHittable)
+        XCTAssertTrue(focus.waitForExistence(timeout: 3) && focus.isHittable)
+        try capture("iphone-settings-category-navigation", app: app)
+
+        activate(general)
+        XCTAssertTrue(app.navigationBars["General"].waitForExistence(timeout: 3))
+    }
+
+    @MainActor
     func testInboxCaptureAffordanceFocusesThenAddsAValidDraft() throws {
         let app = launchApp()
         openSection(

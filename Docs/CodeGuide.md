@@ -107,7 +107,7 @@
 - Task Detail：只读优先的 `List`，铅笔按钮再打开编辑 sheet；清单完成状态可直接切换。
 - Task availability：`TaskTrackingAvailabilityService` 一次线性扫描分别产出 `visibleTaskIDs` 与 `trackableTaskIDs`。归档/删除分支不可见；完成分支仍可浏览详情与历史，但自身和后代不能接收新工作，直到 `reopenTaskForWork` 把路径上的完成阻塞项一起恢复为 active。Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent、任务创建/移动与任务动作共用该判定；归档或完成活动子树前先停止计时，历史 segment 编辑可保留原任务。
 - System routing：`AppDeepLinkRouter` 严格解析 URL；`PendingDeepLinkQueue` 只缓存初始化前已经通过相同验证的语义动作，按动作去重、先进先出且最多 16 项。`WatchCommandRouter` 用弱 store 引用选择最近活跃 iOS scene，并在最后一个 scene 注销后移除进程级 bridge handler。
-- Settings：五类导航 IA，不提供应用级 appearance override。
+- Settings：五类导航 IA，不提供应用级 appearance override。`CountdownTitleEditor` 持有仅属于界面的标题草稿，`CountdownTitleDraft` 负责脏状态、外部刷新合并和错误呈现；只有保存按钮、Return 或失焦会调用 `CountdownCommandHandler`。命令先规范化并验证标题，再执行 SwiftData 变更，因此逐字符输入不会产生数据库写入或半成品同步事实。日期仍通过独立动作即时保存。
 - Pomodoro：Plan 和 Task 是两个可见 `Menu`，没有点击标题/计时器的隐藏选择逻辑。
 - iOS 不设置 `CADisableMinimumFrameDurationOnPhone`；刷新率与帧调度交给系统，流畅度用 Release 截图/trace 和真实设备观察验证，不靠 Info.plist 强制覆盖。
 

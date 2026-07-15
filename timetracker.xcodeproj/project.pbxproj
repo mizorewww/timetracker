@@ -217,6 +217,7 @@
 				D41D8E902F9CC4B50024913B /* timetracker */,
 				E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */,
 				E6000000000000000000000E /* timetracker/Shared/WidgetSnapshotModels.swift */,
+				E60000000000000000000010 /* timetracker/Shared/WidgetSnapshotStore.swift */,
 				E70000000000000000000005 /* timetracker/Shared/WatchCommandModels.swift */,
 				E70000000000000000000006 /* timetracker/Shared/WatchStateSnapshotModels.swift */,
 				E70000000000000000000007 /* timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift */,

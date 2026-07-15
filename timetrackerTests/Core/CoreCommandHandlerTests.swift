@@ -33,6 +33,93 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
+    func checklistMutationsRecordTheCurrentDeviceAsTheLatestWriter() throws {
+        let context = try makeTestContext()
+        let taskID = UUID()
+        let handler = ChecklistCommandHandler()
+        let first = try #require(
+            try handler.add(
+                taskID: taskID,
+                title: "First",
+                existingItems: [],
+                context: context,
+                deviceID: "local-device"
+            )
+        )
+        let second = try #require(
+            try handler.add(
+                taskID: taskID,
+                title: "Second",
+                existingItems: [first],
+                context: context,
+                deviceID: "local-device"
+            )
+        )
+        let visuals = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
+        let firstVisual = try #require(visuals.first { $0.checklistItemID == first.id })
+        let secondVisual = try #require(visuals.first { $0.checklistItemID == second.id })
+
+        first.deviceID = "remote-device"
+        try context.save()
+        try handler.toggle(
+            first,
+            context: context,
+            now: Date(timeIntervalSinceReferenceDate: 1_000),
+            deviceID: "local-device"
+        )
+        #expect(first.deviceID == "local-device")
+
+        first.deviceID = "remote-device"
+        second.deviceID = "remote-device"
+        try context.save()
+        try handler.reorder(
+            taskID: taskID,
+            orderedItemIDs: [second.id, first.id],
+            context: context,
+            deviceID: "local-device"
+        )
+        #expect(first.deviceID == "local-device")
+        #expect(second.deviceID == "local-device")
+
+        firstVisual.deviceID = "remote-device"
+        try context.save()
+        try handler.applyVisualSuggestion(
+            item: first,
+            result: LLMChecklistVisualSuggestionResult(
+                iconName: "book",
+                colorHex: "16A34A",
+                reason: "Matches reading",
+                modelID: "test-model"
+            ),
+            existingVisual: firstVisual,
+            context: context,
+            deviceID: "local-device"
+        )
+        #expect(firstVisual.deviceID == "local-device")
+
+        for item in [first, second] {
+            item.deviceID = "remote-device"
+        }
+        for visual in [firstVisual, secondVisual] {
+            visual.deviceID = "remote-device"
+        }
+        try context.save()
+        try ChecklistDraftService().save(
+            drafts: [ChecklistEditorDraft(item: first, visual: firstVisual)],
+            taskID: taskID,
+            context: context,
+            deviceID: "local-device"
+        )
+
+        #expect(first.deviceID == "local-device")
+        #expect(firstVisual.deviceID == "local-device")
+        #expect(second.deletedAt != nil)
+        #expect(second.deviceID == "local-device")
+        #expect(secondVisual.deletedAt != nil)
+        #expect(secondVisual.deviceID == "local-device")
+    }
+
+    @Test @MainActor
     func checklistDraftServicePreservesUnrelatedVisualsWhenSavingOneTask() throws {
         let context = try makeTestContext()
         let targetTaskID = UUID()

@@ -39,10 +39,16 @@ struct ChecklistCommandHandler {
         return item
     }
 
-    func toggle(_ item: ChecklistItem, context: ModelContext, now: Date = Date()) throws {
+    func toggle(
+        _ item: ChecklistItem,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         item.isCompleted.toggle()
         item.completedAt = item.isCompleted ? now : nil
         item.updatedAt = now
+        item.deviceID = deviceID
         item.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
@@ -51,7 +57,8 @@ struct ChecklistCommandHandler {
         taskID: UUID,
         orderedItemIDs: [UUID],
         context: ModelContext,
-        now: Date = Date()
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
     ) throws {
         let items = try context.fetch(FetchDescriptor<ChecklistItem>())
             .visibleDeduplicatedByID()
@@ -68,6 +75,7 @@ struct ChecklistCommandHandler {
         for (index, item) in orderedItems.enumerated() {
             item.sortOrder = Double(index + 1) * 10
             item.updatedAt = now
+            item.deviceID = deviceID
             item.clientMutationID = UUID()
         }
         try context.saveAfterMutationStep()
@@ -107,6 +115,7 @@ struct ChecklistCommandHandler {
             existingVisual.userEditedAt = nil
             existingVisual.deletedAt = nil
             existingVisual.updatedAt = now
+            existingVisual.deviceID = deviceID
             existingVisual.clientMutationID = UUID()
         } else {
             context.insert(

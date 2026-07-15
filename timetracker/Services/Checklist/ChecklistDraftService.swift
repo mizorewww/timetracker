@@ -173,6 +173,7 @@ struct ChecklistDraftService {
                     item.sortOrder = sortOrder
                     item.deletedAt = nil
                     item.updatedAt = now
+                    item.deviceID = deviceID
                     item.clientMutationID = UUID()
                     upsertVisual(
                         for: item.id,
@@ -211,10 +212,12 @@ struct ChecklistDraftService {
             for item in existing where item.deletedAt == nil && !keptIDs.contains(item.id) {
                 item.deletedAt = now
                 item.updatedAt = now
+                item.deviceID = deviceID
                 item.clientMutationID = UUID()
                 if let visual = visualByItemID[item.id] {
                     visual.deletedAt = now
                     visual.updatedAt = now
+                    visual.deviceID = deviceID
                     visual.clientMutationID = UUID()
                 }
             }
@@ -242,6 +245,7 @@ struct ChecklistDraftService {
             }
             existing.deletedAt = nil
             existing.updatedAt = now
+            existing.deviceID = deviceID
             existing.clientMutationID = UUID()
         } else {
             context.insert(

@@ -617,6 +617,7 @@ struct CoreWatchCommandTests {
     func watchDashboardUsesASingleGlanceableCrownScrollableLayout() throws {
         let source = try [
             "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchCommandPresentationIndex.swift",
             "timetrackerWatchApp/WatchTaskListView.swift",
             "timetrackerWatchApp/WatchTimerRows.swift"
         ].map(sourceText).joined(separator: "\n")
@@ -629,6 +630,9 @@ struct CoreWatchCommandTests {
         #expect(source.contains("inactiveTasks.prefix(Self.quickStartTaskLimit)"))
         #expect(source.contains("NavigationLink"))
         #expect(source.contains("WatchTaskListView"))
+        #expect(source.contains("WatchCommandPresentationIndex"))
+        #expect(source.contains("pendingStartTaskIDs: Set<UUID>"))
+        #expect(source.contains("failedStartCommandIDs: [UUID: UUID]"))
         #expect(source.contains("minHeight: 44"))
         #expect(source.contains("dynamicTypeSize.isAccessibilitySize ? 3 : 2"))
         #expect(source.contains("commandState.accessibilityLabel"))

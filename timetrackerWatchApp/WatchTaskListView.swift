@@ -2,18 +2,17 @@ import SwiftUI
 
 struct WatchTaskListView: View {
     let tasks: [WatchRecentTaskSnapshot]
-    let pendingCommands: [WatchTimerCommand]
-    let failedCommands: [WatchFailedCommand]
+    let commandIndex: WatchCommandPresentationIndex
     let onStartTask: (UUID) -> Void
     let onRetryCommand: (UUID) -> Void
 
     var body: some View {
         List {
             ForEach(tasks) { task in
+                let command = commandIndex.startTask(task.taskID)
                 WatchTaskActionRow(
                     task: task,
-                    pendingCommands: pendingCommands,
-                    failedCommands: failedCommands,
+                    command: command,
                     onStartTask: onStartTask,
                     onRetryCommand: onRetryCommand
                 )
@@ -26,42 +25,21 @@ struct WatchTaskListView: View {
 
 struct WatchTaskActionRow: View {
     let task: WatchRecentTaskSnapshot
-    let pendingCommands: [WatchTimerCommand]
-    let failedCommands: [WatchFailedCommand]
+    let command: WatchRowCommandPresentation
     let onStartTask: (UUID) -> Void
     let onRetryCommand: (UUID) -> Void
 
     var body: some View {
-        let failedCommand = failedStartCommand
         WatchTaskShortcutRow(
             task: task,
-            commandState: rowState(
-                isPending: isStartPending,
-                hasFailed: failedCommand != nil
-            ),
+            commandState: command.state,
             action: {
-                if let failedCommand {
-                    onRetryCommand(failedCommand.id)
+                if let retryCommandID = command.retryCommandID {
+                    onRetryCommand(retryCommandID)
                 } else {
                     onStartTask(task.taskID)
                 }
             }
         )
-    }
-
-    private var isStartPending: Bool {
-        pendingCommands.contains { $0.type == .startTask && $0.taskID == task.taskID }
-    }
-
-    private var failedStartCommand: WatchFailedCommand? {
-        failedCommands.first {
-            $0.command.type == .startTask && $0.command.taskID == task.taskID
-        }
-    }
-
-    private func rowState(isPending: Bool, hasFailed: Bool) -> WatchRowCommandState {
-        if isPending { return .pending }
-        if hasFailed { return .failed }
-        return .idle
     }
 }

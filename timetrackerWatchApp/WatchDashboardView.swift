@@ -18,6 +18,10 @@ struct WatchDashboardView: View {
     var body: some View {
         let inactiveTasks = inactiveRecentTasks
         let quickStartTasks = Array(inactiveTasks.prefix(Self.quickStartTaskLimit))
+        let commandIndex = WatchCommandPresentationIndex(
+            pendingCommands: pendingCommands,
+            failedCommands: failedCommands
+        )
 
         NavigationStack {
             List {
@@ -48,16 +52,13 @@ struct WatchDashboardView: View {
                     if !snapshot.activeTimers.isEmpty {
                         Section("watch.active.title") {
                             ForEach(snapshot.activeTimers) { timer in
-                                let failedCommand = failedStopCommand(for: timer.id)
+                                let command = commandIndex.stopTimer(timer.id)
                                 WatchActiveTimerRow(
                                     timer: timer,
-                                    commandState: rowState(
-                                        isPending: isStopPending(for: timer.id),
-                                        hasFailed: failedCommand != nil
-                                    ),
+                                    commandState: command.state,
                                     action: {
-                                        if let failedCommand {
-                                            onRetryCommand(failedCommand.id)
+                                        if let retryCommandID = command.retryCommandID {
+                                            onRetryCommand(retryCommandID)
                                         } else {
                                             onStopTimer(timer.id)
                                         }
@@ -70,10 +71,10 @@ struct WatchDashboardView: View {
                     if !inactiveTasks.isEmpty {
                         Section("watch.quickStart.title") {
                             ForEach(quickStartTasks) { task in
+                                let command = commandIndex.startTask(task.taskID)
                                 WatchTaskActionRow(
                                     task: task,
-                                    pendingCommands: pendingCommands,
-                                    failedCommands: failedCommands,
+                                    command: command,
                                     onStartTask: onStartTask,
                                     onRetryCommand: onRetryCommand
                                 )
@@ -83,8 +84,7 @@ struct WatchDashboardView: View {
                                 NavigationLink {
                                     WatchTaskListView(
                                         tasks: inactiveTasks,
-                                        pendingCommands: pendingCommands,
-                                        failedCommands: failedCommands,
+                                        commandIndex: commandIndex,
                                         onStartTask: onStartTask,
                                         onRetryCommand: onRetryCommand
                                     )
@@ -138,20 +138,6 @@ struct WatchDashboardView: View {
         if hasConnectivityError { return .connectionError }
         if isSnapshotStale { return .stale }
         return nil
-    }
-
-    private func isStopPending(for segmentID: UUID) -> Bool {
-        pendingCommands.contains { $0.type == .stopSegment && $0.segmentID == segmentID }
-    }
-
-    private func failedStopCommand(for segmentID: UUID) -> WatchFailedCommand? {
-        failedCommands.first { $0.command.type == .stopSegment && $0.command.segmentID == segmentID }
-    }
-
-    private func rowState(isPending: Bool, hasFailed: Bool) -> WatchRowCommandState {
-        if isPending { return .pending }
-        if hasFailed { return .failed }
-        return .idle
     }
 
     private func failureTitle(for failure: WatchFailedCommand) -> String {

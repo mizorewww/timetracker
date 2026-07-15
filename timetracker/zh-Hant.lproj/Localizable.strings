@@ -590,6 +590,14 @@
 "checklist.draft.error.titleRequiredFormat" = "清單第 %d 項需要填寫標題。";
 "checklist.draft.error.controlCharacterFormat" = "清單第 %d 項的%@包含不支援的字元。";
 "checklist.draft.error.tooLongFormat" = "清單第 %d 項的%@內容過長，請縮短後再試。";
+"persistence.field.taskName" = "任務名稱";
+"persistence.field.categoryName" = "分類名稱";
+"persistence.field.notes" = "備註";
+"persistence.field.symbol" = "符號";
+"persistence.field.color" = "顏色";
+"persistence.error.requiredFormat" = "請填寫%@。";
+"persistence.error.controlCharacterFormat" = "%@包含不支援的字元。";
+"persistence.error.tooLongFormat" = "%@內容過長，請縮短後再試。";
 "editor.task.info" = "基本資訊";
 "editor.task.name" = "任務名稱";
 "editor.task.status" = "狀態";

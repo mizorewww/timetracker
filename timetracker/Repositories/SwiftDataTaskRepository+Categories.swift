@@ -38,12 +38,17 @@ extension SwiftDataTaskRepository {
         iconName: String? = nil,
         includesInForecast: Bool = true
     ) throws -> TaskCategory {
+        let values = try TaskPersistencePolicy.prepareCategory(
+            title: title,
+            colorHex: colorHex,
+            iconName: iconName
+        )
         let existing = try categories()
         let category = TaskCategory(
-            title: title,
+            title: values.title,
             deviceID: deviceID,
-            colorHex: colorHex,
-            iconName: iconName,
+            colorHex: values.colorHex,
+            iconName: values.iconName,
             includesInForecast: includesInForecast,
             sortOrder: (existing.last?.sortOrder ?? 0) + 10
         )
@@ -59,10 +64,15 @@ extension SwiftDataTaskRepository {
         iconName: String?,
         includesInForecast: Bool
     ) throws {
+        let values = try TaskPersistencePolicy.prepareCategory(
+            title: title,
+            colorHex: colorHex,
+            iconName: iconName
+        )
         guard let category = try category(id: categoryID) else { return }
-        category.title = title
-        category.colorHex = colorHex
-        category.iconName = iconName
+        category.title = values.title
+        category.colorHex = values.colorHex
+        category.iconName = values.iconName
         category.includesInForecast = includesInForecast
         category.updatedAt = Date()
         category.deviceID = deviceID

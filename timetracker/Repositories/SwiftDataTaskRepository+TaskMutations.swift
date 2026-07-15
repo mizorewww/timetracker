@@ -10,13 +10,19 @@ extension SwiftDataTaskRepository {
         colorHex: String? = nil,
         iconName: String? = nil
     ) throws -> TaskNode {
-        let siblings = try children(of: parentID)
-        let node = TaskNode(
+        let values = try TaskPersistencePolicy.prepareTask(
             title: title,
-            parentID: parentID,
-            deviceID: deviceID,
             colorHex: colorHex,
             iconName: iconName,
+            notes: nil
+        )
+        let siblings = try children(of: parentID)
+        let node = TaskNode(
+            title: values.title,
+            parentID: parentID,
+            deviceID: deviceID,
+            colorHex: values.colorHex,
+            iconName: values.iconName,
             sortOrder: (siblings.last?.sortOrder ?? 0) + 10
         )
 
@@ -39,6 +45,12 @@ extension SwiftDataTaskRepository {
         estimatedSeconds: Int?,
         dueAt: Date?
     ) throws {
+        let values = try TaskPersistencePolicy.prepareTask(
+            title: title,
+            colorHex: colorHex,
+            iconName: iconName,
+            notes: notes
+        )
         let nodes = try allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
         let isChangingParent = node.parentID != parentID
@@ -46,12 +58,12 @@ extension SwiftDataTaskRepository {
             throw TaskRepositoryError.invalidMove
         }
 
-        node.title = title
+        node.title = values.title
         node.status = status
         node.parentID = parentID
-        node.colorHex = colorHex
-        node.iconName = iconName
-        node.notes = notes
+        node.colorHex = values.colorHex
+        node.iconName = values.iconName
+        node.notes = values.notes
         node.estimatedSeconds = TaskEstimatePolicy.normalized(seconds: estimatedSeconds)
         node.dueAt = dueAt
         let now = Date()

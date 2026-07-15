@@ -427,6 +427,18 @@
 
 验证：覆盖超长/credential/port/fragment/重复 query/非法 UUID 拒绝，pending queue 语义去重、FIFO 上限、drain/clear，以及 Watch router 弱引用、active scene 优先、fallback、unregister 和最后 route 清除 bridge handler。
 
+## AD-032：所有已记录时间以 reference now 为唯一未来边界
+
+状态：Accepted
+
+背景：本地 UI 可阻止新建未来记录，但 iCloud、导入、旧版本和设备时钟偏差仍可能带来 future-ended 或 future-started segment。若 Analytics、Forecast、timeline、cache 和 view 各自解释 `endedAt ?? Date()`，尚未发生的时间会被提前计入，增量结果也会与全量重建分叉。
+
+决策：`TrackedTimePolicy` 是唯一读侧边界：`boundedEnd = min(endedAt ?? now, now)`，再裁到查询的半开区间；`startedAt >= now` 或空交集贡献零。本地 manual add/segment update 在 repository 层拒绝 future end 或 future active start，返回 typed `futureTime` 与三语通用错误。已同步/导入/遗留的脏数据不被迁移删除，而在 gross/wall、ledger summary、Analytics、Forecast、Pomodoro elapsed、timeline、cache、repository query 和 rollup 统一裁剪。任何 UI/formatter 不得直接从 raw `endedAt` 派生时长。
+
+后果：future-ended 记录随 `now` 增长到其真实结束后停止，future-only 区间在开始前为零。active 与 future-ended row 进入 time-sensitive set，正常时钟前进保持增量；clock rewind 稀有发生时重评全库，保证 incremental 与 full rebuild 等价。DST 计算使用绝对 elapsed seconds，本地日边界仍使用 `Calendar`。
+
+验证：覆盖 future write rejection、`startedAt == now`、future-only、future-ended 随时间增长/停止、半开区间、DST、gross/wall/timeline/forecast/cache/repository 裁剪、时钟前进、clock rewind 以及 incremental/full rebuild 等价。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

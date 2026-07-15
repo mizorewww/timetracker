@@ -52,7 +52,7 @@ remoteImportCompleted
 fullSync
 ```
 
-`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable. When the task topology is stable, `LedgerStore` fetches only invalidated ranges, `ChecklistStore` replaces only affected task buckets, and `RollupStore` consumes segment before/after deltas plus direct/ancestor IDs. `AnalyticsStore` invalidates snapshot caches and only the day buckets intersecting ledger ranges. Full rebuild remains the explicit path for startup, topology/full-sync changes, remote import without a safe scope, and calendar/time-zone changes.
+`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable. When the task topology is stable, `LedgerStore` fetches only invalidated ranges, `ChecklistStore` replaces only affected task buckets, and `RollupStore` consumes segment before/after deltas plus direct/ancestor IDs. Active and future-ended segments form the time-sensitive set for forward clock movement; a backward clock correction stays in the same pipeline but reevaluates every segment because candidates cannot be narrowed safely. `AnalyticsStore` invalidates snapshot caches and only the day buckets intersecting ledger ranges. Full structural rebuild remains the explicit path for startup, topology/full-sync changes, remote import without a safe scope, and calendar/time-zone changes.
 
 External CloudKit changes enter the same pipeline through remote-store and completed import/export notifications. The observer coalesces bursts before emitting `remoteImportCompleted`; launch and foreground activation remain consistency boundaries. There is no permanent foreground polling timer.
 
@@ -155,10 +155,12 @@ Initial/full range queries use SwiftData predicates plus deterministic clipping.
 Rules:
 
 1. Keep raw `TimeSegment` as the source of truth and rebuild buckets when summary rules change.
-2. Keep active timer queries direct and fresh; active timers must never wait for a cache.
-3. Invalidate full overview/task snapshots after relevant facts change, and invalidate only intersecting day buckets from `ledgerChanged` ranges.
-4. Keep rollup full-history totals exact; only forecast pace is bounded to 90 local days.
-5. Preserve the 50,000-segment single-mutation budget and equality with a full rebuild.
+2. Route every persisted-time read through `TrackedTimePolicy` with an explicit reference `now`; never derive duration from raw `endedAt` in a view, formatter, cache, or store.
+3. Reject local future writes, but retain and safely clip clock-skewed CloudKit/import/legacy facts.
+4. Keep active timer queries direct and fresh; active timers must never wait for a cache.
+5. Invalidate full overview/task snapshots after relevant facts change, and invalidate only intersecting day buckets from `ledgerChanged` ranges.
+6. Keep rollup full-history totals exact; only forecast pace is bounded to 90 local days.
+7. Preserve the 50,000-segment single-mutation budget and equality with a full rebuild, including time advance and clock rewind.
 
 ## Schema Evolution Rules
 

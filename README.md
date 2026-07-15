@@ -118,6 +118,8 @@ Inbox 用于快速收集还没有整理归属的事项。
 - 多个 `endedAt == nil` 的 segment 表示多个任务同时运行。
 - 支持手动补录时间。
 - 支持编辑和软删除时间记录。
+- 本地补录/编辑不允许开始或结束落在未来；界面会返回明确错误，不会写入一条“未来工时”。
+- 对 iCloud、导入或旧版本中因设备时钟偏差已经存在的未来值，不静默删除事实；所有统计以当前参考时间为上界裁剪，不会提前计入尚未发生的时长。
 - 跨天和重叠时间会在分析中按明确规则处理。
 
 ### 番茄钟
@@ -235,7 +237,7 @@ SwiftUI Feature
 
 CloudKit 刷新由持久存储远程变更和 CloudKit import/export 事件驱动，并做短暂合并；前台激活仍会进行一次一致性刷新。没有常驻的 5 秒全量轮询。
 
-正常 mutation 使用增量 read model：Ledger 按相交日期范围更新 segment/session index，Checklist 按 task 更新，Rollup 消费 segment delta 并只重算任务与祖先；完整历史 worked seconds 保持精确，预测 pace 只使用最近 90 个本地日的活跃日平均。Analytics overview/task snapshot 按 range、真实 period start 和活动计时的分钟 bucket 缓存，不在 SwiftUI `body` 或历史视图时钟 tick 中重算。性能套件包含 50,000 segment 的单记录增量等价性与预算测试。
+正常 mutation 使用增量 read model：Ledger 按相交日期范围更新 segment/session index，Checklist 按 task 更新，Rollup 消费 segment delta 并只重算任务与祖先；活动和未来结束的时间片被标记为 time-sensitive，时间前进时局部重算，系统时钟回拨时才全量重评。完整历史 worked seconds 保持精确，预测 pace 只使用最近 90 个本地日的活跃日平均。Analytics overview/task snapshot 按 range、真实 period start 和活动计时的分钟 bucket 缓存，不在 SwiftUI `body` 或历史视图时钟 tick 中重算。性能套件包含 50,000 segment 的单记录增量等价性与预算测试。
 
 同步冲突状态的 read-modify-write 由进程内递归锁和跨进程 POSIX file lock 串行化。Cloud export 使用 epoch、generation、fingerprint 与 bounded event checkpoint，乱序旧回调不能把较新的本机变更误标为已同步。
 

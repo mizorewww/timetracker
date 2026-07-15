@@ -27,6 +27,8 @@ Views may format and present state, but durable business actions should go throu
 
 `TimeSession` represents one work intention. `TimeSegment` represents actual worked time and is the ledger fact used for analytics. Active work has an open segment; stopping closes the segment and its session.
 
+`TrackedTimePolicy` is the single read boundary for persisted tracked time. For a reference `now`, the effective end is `min(endedAt ?? now, now)`; the resulting interval is then intersected with the requested half-open range. A segment starting at or after `now`, or with no positive intersection, contributes zero. Local manual-entry and segment-update writes reject a future end or a future open start with typed `TimeTrackingRepositoryError.futureTime`. Clock-skewed CloudKit/import/legacy facts are retained rather than migrated away, but every aggregation, forecast, timeline, cache, rollup, and range query must clip them through this policy.
+
 `PomodoroRun` represents the pomodoro workflow. Its persisted phase start plus planned duration derives `phaseDeadline`; startup/foreground/scheduled reconciliation clips expired focus ledger records to that deadline. Break completion remains an explicit user action so background suspension never creates a new focus segment. Segment edit/delete, timer stop, and task-tree deletion must keep the run and ledger lifecycle consistent.
 
 `CountdownEvent` stores optional user-defined date milestones. iPhone, iPad, and macOS all derive their Today countdown presentation from the same store state.
@@ -83,7 +85,7 @@ No forecastable source exists:
   do not show a forecast card; show guidance in task detail
 ```
 
-Mutation refresh is incremental after initial/full load. `LedgerStore` replaces only segments overlapping invalidated ranges and related sessions; `ChecklistStore` replaces affected task buckets; `RollupIncrementalIndex` applies segment before/after deltas and recalculates direct tasks plus ancestors. Full-history worked seconds remain exact, while only the 90-day pace buckets are bounded. `CorePerformanceBudgetTests` includes a 50,000-segment single-record mutation and cached frequent-task ranking budget.
+Mutation refresh is incremental after initial/full load. `LedgerStore` replaces only segments overlapping invalidated ranges and related sessions; `ChecklistStore` replaces affected task buckets; `RollupIncrementalIndex` applies segment before/after deltas and recalculates direct tasks plus ancestors. Active and future-ended segments are time-sensitive: forward clock movement reevaluates that bounded set, while a backward wall-clock correction reevaluates all ledger rows because a previously completed row can cross the reference boundary again. Full-history worked seconds remain exact, while only the 90-day pace buckets are bounded. `CorePerformanceBudgetTests` includes a 50,000-segment single-record mutation and cached frequent-task ranking budget.
 
 `AnalyticsStore` caches overview and task snapshots by range, true calendar period start, and optional minute live bucket. A live bucket exists only when an active segment overlaps the selected range, so historical views do not recompute for clock ticks. Ledger events invalidate snapshots and only intersecting day buckets; every cache remains disposable and reconstructable from ledger facts.
 

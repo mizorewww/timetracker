@@ -116,6 +116,10 @@
 
 TimeSegment 是计时事实来源。它不是“写入后永不可改”的 event：用户可以更正或软删除错误记录；这里的“事实来源”指所有派生统计、当前运行状态和时间线必须从 canonical segment 与明确规则重算，缓存不能成为第二真相。
 
+`TrackedTimePolicy` 是所有已记录时长的唯一读侧边界。对明确的 reference `now`：effective end 为 `min(endedAt ?? now, now)`，再与查询的半开 `DateInterval` 取交集；`startedAt >= now` 或无正区间的记录贡献零。统计、gross/wall/overlap、Analytics、Forecast、Pomodoro elapsed、timeline layout、repository range query、cache signature 和 rollup 都必须调用该 policy，不得在 view/formatter 中直接使用 `endedAt ?? Date()`。
+
+本地 `addManualSegment` 和 `updateSegment` 在 repository 写入前拒绝未来结束时间或未来 active start，返回 typed `TimeTrackingRepositoryError.futureTime` 与三语 `segment.error.timeNotFuture`。CloudKit、导入和旧 store 可能已含时钟偏差值；不为“修复”而删除事实，而是在每条读/聚合路径安全裁剪。DST 中的持续时长使用绝对 elapsed seconds，本地日 bucket 边界仍交给 `Calendar`。
+
 并行计时是合法状态，因此：
 
 - gross duration 是所有片段时长之和。
@@ -146,7 +150,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ### 增量读模型与缓存
 
-- `LedgerStore` 初次加载建立 segment ID、day、active、array-index 和 session index；带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。
+- `LedgerStore` 初次加载建立 segment ID、day、active、time-sensitive、array-index 和 session index；带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。active 和 future-ended closed row 在时钟向前时局部重评；检测到 clock rewind 时全量重评，因为任何历史结束时间都可能重新跨过 `now`。
 - `ChecklistStore.refreshTaskScoped` 只替换受影响 task 的 items/visuals，并同步维护 facade bucket，不在每次 toggle 后重新按全库分组。
 - `RollupIncrementalIndex` 保存任务拓扑、segment delta、活动摘要、checklist 进度和近期日 bucket。普通 mutation 的工作量由变更记录、任务自身与祖先深度决定；完整历史 worked seconds 始终精确。
 - `TaskEstimatePolicy` 统一预计时长输入与旧数据规范化：`0...600` 分钟、`0` 表示未设置、正数最多 36,000 秒。明确预计时长只属于当前任务自身，预计总时长至少等于已经记录的时间；没有明确值时才使用 checklist 证据模型，子任务始终单独递归汇总。

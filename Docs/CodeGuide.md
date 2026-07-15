@@ -237,6 +237,8 @@ Live Activity 是状态投影。Activity attributes 应保持小而稳定，不�
 
 Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；Watch 把队列编码到本地 UserDefaults，并同时走 durable `transferUserInfo` 与可达 `sendMessage`。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID、刷新 `issuedAt`，用户也可 discard。`WatchCommandProcessor` 在 receipt lookup 后、任何 mutation 前校验 DTO 和时间边界：命令最多保留 30 秒，允许最多 5 分钟的未来设备时钟偏差；过期/非法命令返回 invalid 且不写 receipt 或 ledger，因此用户仍可用同 ID 明确重试。快照反射只为旧手机兼容确认。Watch UI 以 Active Timer 为第一优先级，并区分首次等待、发送、排队、失败、离线和 stale。主 target 的 codec/state/processor 测试不能替代真机往返验证。
 
+所有 WatchConnectivity payload 和本机恢复数据都按不可信输入处理。Codec 在构造领域 DTO 前后验证有限日期、UTF-8 byte 长度、数组数量、唯一 command/timer/task ID、summary 非负上限、active timer 年龄和未来时钟偏差。iPhone durable incoming queue 最多 64 个命令；Watch persisted pending/failed 各最多 64 项；编码队列最多 512 KiB。`WatchCommandQueueState.isSafeForRestoration` 拒绝结构非法、command/result ID 不一致或跨列表重复的状态。pending overflow 把最旧项转成 `queueOverflow` failure，failed overflow 丢弃最旧 failure；无法安全恢复的本机数据会清除，而不是解码后继续执行。字段上限的唯一常量表是 `WatchTransportLimits`，不得在 codec、store 和 UI 各写不同数值。
+
 ### Deep link 与 scene 生命周期
 
 `AppDeepLinkRouter` 只接受 `timetracker` scheme、最长 2,048 bytes、无 user/password/port/fragment 的白名单路由；每个 host/path 还限制 query 名称、数量和 UUID 格式。`ContentView` 在 repository 尚未配置时把合法 URL 放入 scene-local `PendingDeepLinkQueue`：容量 16，按解析后的 `AppDeepLinkAction` 去重，满时丢弃最旧项，配置成功后按顺序 drain，scene 消失时清空。不要把未验证 URL、closure 或可无限增长的数组放入启动队列。

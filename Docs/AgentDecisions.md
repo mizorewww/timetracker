@@ -57,11 +57,11 @@
 
 背景：App Intents、Live Activity、Widget 和 Watch 是主应用的投影或入口。
 
-决策：系统表面使用稳定 DTO、共享快照和领域命令。App Intents 与应用进程复用模型容器、遵守用户的并行计时偏好并使用原子 mutation；不得每次动作创建一套容器或硬编码不同规则。提交后只用窄依赖刷新 Widget、Watch、Live Activity 和同步 snapshot；投影失败不得把已提交动作报告为失败。Live Activity/Widget 不保存唯一事实。Watch 命令以稳定 command ID 排队，必须收到手机 typed terminal result 或兼容快照反射后才确认；手机在任何 mutation 前拒绝超过 30 秒的旧命令，明确 retry 保留 ID 但刷新 `issuedAt`。Required Reason API 按 target 实际用途声明：主 App `1C8F.1`/`CA92.1`、Widget `1C8F.1`、Watch `CA92.1`；不能假定主 App manifest 自动覆盖扩展。
+决策：系统表面使用稳定 DTO、共享快照和领域命令。App Intents 与应用进程复用模型容器、遵守用户的并行计时偏好并使用原子 mutation；不得每次动作创建一套容器或硬编码不同规则。提交后只用窄依赖刷新 Widget、Watch、Live Activity 和同步 snapshot；投影失败不得把已提交动作报告为失败。Live Activity/Widget 不保存唯一事实。Watch 命令以稳定 command ID 排队，必须收到手机 typed terminal result 或兼容快照反射后才确认；手机在任何 mutation 前拒绝超过 30 秒的旧命令，明确 retry 保留 ID 但刷新 `issuedAt`。Watch payload 与恢复队列统一经过 `WatchTransportLimits` 的日期、UTF-8、数量、唯一 ID、summary 和 encoded-size 边界；iPhone incoming、Watch pending/failed 均有固定容量，unsafe restore fail closed，overflow 成为明确失败而不是静默执行。Required Reason API 按 target 实际用途声明：主 App `1C8F.1`/`CA92.1`、Widget `1C8F.1`、Watch `CA92.1`；不能假定主 App manifest 自动覆盖扩展。
 
 后果：扩展失败不应破坏主应用事实。跨进程格式必须版本化并保持向后兼容。
 
-验证：Intent、Live Activity 和 Watch 增加集成测试；Start Timer Intent 与主应用的并行计时结果一致；过期 Watch 命令不写 receipt/ledger，同 ID 刷新时间后可重试且已完成命令仍保持幂等；Widget 在真实设备共享容器与时间线验证通过前不列为已完成发行验收的能力；Archive 核对每个产物的 Privacy manifest 合并结果与 UserDefaults 实际调用。
+验证：Intent、Live Activity 和 Watch 增加集成测试；Start Timer Intent 与主应用的并行计时结果一致；过期 Watch 命令不写 receipt/ledger，同 ID 刷新时间后可重试且已完成命令仍保持幂等；Watch codec/queue 覆盖超限字段、重复 ID、损坏/过大恢复、pending/failed overflow 和有效边界 round-trip；Widget 在真实设备共享容器与时间线验证通过前不列为已完成发行验收的能力；Archive 核对每个产物的 Privacy manifest 合并结果与 UserDefaults 实际调用。
 
 ## AD-005：API 密钥仅保存在本机 Keychain
 

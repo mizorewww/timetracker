@@ -50,8 +50,14 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("inbox.delete.confirm.message"))
         #expect(inboxSource.contains(".accessibilityHint(AppStrings.localized(\"inbox.capture.hint\"))"))
         #expect(inboxSource.contains("inbox.empty.description"))
+        #expect(inboxSource.contains("dynamicTypeSize.isAccessibilitySize"))
+        #expect(inboxSource.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(inboxSource.contains(".accessibilityHint(Text(.app(\"inbox.empty.description\")))"))
         #expect(inboxSource.contains(".accessibilityLabel(AppStrings.localized(\"common.more\"))"))
         #expect(inboxSource.contains(".navigationTitle(AppStrings.inbox)"))
+        #expect(inboxSource.contains(".navigationBarTitleDisplayMode(.inline)"))
+        #expect(inboxSource.contains("inbox.subtitle") == false)
+        #expect(inboxSource.contains("inbox.footer") == false)
         #expect(inboxSource.contains("let submit: () -> Bool"))
         #expect(inboxSource.contains("draft.submit(using: store.addInboxItem(title:))"))
         #expect(inboxSource.contains("if submit() {\n            title = \"\"\n        }") == false)
@@ -66,10 +72,14 @@ struct InboxUIContractTests {
     @Test
     func inboxCaptureValidatesBeforeSubmittingAndKeepsErrorsAdjacent() throws {
         let captureSource = try sourceText("timetracker/Features/Inbox/InboxCaptureRow.swift")
+        let english = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(captureSource.contains("InboxPersistencePolicy.prepareItem("))
         #expect(captureSource.contains("guard canSubmit else { return }"))
-        #expect(captureSource.contains(".disabled(canSubmit == false)"))
+        #expect(captureSource.contains(".disabled(canSubmit == false)") == false)
+        #expect(captureSource.contains("if canSubmit {"))
+        #expect(captureSource.contains("inbox.capture.start"))
+        #expect(english.contains("\"inbox.capture.start\" = \"Start a new capture\";"))
         #expect(captureSource.contains("inbox.capture.validation"))
         #expect(captureSource.contains(".accessibilityAddTraits(.isStaticText)"))
     }

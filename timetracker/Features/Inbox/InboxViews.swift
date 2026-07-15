@@ -5,6 +5,7 @@ struct InboxView: View {
     @State private var draft = InboxCaptureDraft()
     @State private var addFocusToken = 0
     @State private var isSorting = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -38,7 +39,7 @@ struct InboxView: View {
             .background(AppColors.background.ignoresSafeArea())
             .navigationTitle(AppStrings.inbox)
             #if os(iOS)
-            .navigationBarTitleDisplayMode(isCompact ? .large : .inline)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
             .accessibilityIdentifier("inbox.view")
             .toolbar {
@@ -73,20 +74,11 @@ struct InboxView: View {
                     focusToken: addFocusToken,
                     submit: submitDraft
                 )
-            } header: {
-                Text(.app("inbox.subtitle"))
-                    .textCase(nil)
-            } footer: {
-                captureFooter
             }
 
             if openItems.isEmpty && completedItems.isEmpty {
                 Section {
-                    ContentUnavailableView(
-                        AppStrings.localized("inbox.empty"),
-                        systemImage: "tray",
-                        description: Text(.app("inbox.empty.description"))
-                    )
+                    emptyState
                     .frame(maxWidth: .infinity)
                     .listRowBackground(Color.clear)
                 }
@@ -128,13 +120,27 @@ struct InboxView: View {
         }
     }
 
-    private var captureFooter: some View {
-        Label {
-            Text(.app("inbox.footer"))
-        } icon: {
-            Image(systemName: "lightbulb")
+    @ViewBuilder
+    private var emptyState: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            Label {
+                Text(.app("inbox.empty"))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "tray")
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 8)
+            .accessibilityHint(Text(.app("inbox.empty.description")))
+        } else {
+            ContentUnavailableView(
+                AppStrings.localized("inbox.empty"),
+                systemImage: "tray",
+                description: Text(.app("inbox.empty.description"))
+            )
         }
-        .accessibilityElement(children: .combine)
     }
 
     private func focusCaptureField() {

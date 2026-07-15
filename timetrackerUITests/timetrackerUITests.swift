@@ -39,6 +39,49 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testInboxCaptureAffordanceFocusesThenAddsAValidDraft() throws {
+        let app = launchApp()
+        openSection(
+            "Inbox",
+            tabIdentifier: "phone.tab.inbox",
+            sidebarIdentifier: "sidebar.Inbox",
+            in: app
+        )
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.view"].waitForExistence(timeout: 8))
+
+        let addButton = app.buttons["inbox.capture.add"].firstMatch
+        let field = app.descendants(matching: .any)["inbox.capture.field"].firstMatch
+        XCTAssertTrue(addButton.waitForExistence(timeout: 3) && addButton.isHittable)
+        XCTAssertTrue(field.waitForExistence(timeout: 3))
+        try capture("iphone-inbox-simplified-empty", app: app)
+
+        activate(addButton)
+        let draftTitle = "Review capture flow"
+        field.typeText(draftTitle)
+        let valueExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", draftTitle),
+            object: field
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [valueExpectation], timeout: 3),
+            .completed
+        )
+
+        activate(addButton)
+        let newItem = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "inbox.item."))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                newItem,
+                timeout: 5,
+                diagnosticName: "inbox-captured-item",
+                in: app
+            )
+        )
+    }
+
+    @MainActor
     func testTaskEditorAndPomodoroFlowOpen() throws {
         let app = launchApp()
 

@@ -41,12 +41,11 @@
 "timeline.deleteSegment" = "刪除時間片段";
 "quickStart.defaultHint" = "優先顯示固定任務，再按使用頻率補充最近任務。";
 "quickStart.pinnedHint" = "顯示你固定的快速開始任務。";
-"inbox.empty" = "收件箱裡還沒有內容。";
-"inbox.empty.description" = "請在上方先收集一項內容，準備好後再將它整理到任務中。";
-"inbox.subtitle" = "快速收集想法、待辦或任何需要處理的事項。";
-"inbox.footer" = "將零散事項先收集到這裡，稍後再整理並分配到任務中。";
+"inbox.empty" = "收件箱已清空";
+"inbox.empty.description" = "新收集的內容會顯示在這裡。";
 "inbox.add" = "新增收件箱項目";
 "inbox.addPlaceholder" = "新增收集項";
+"inbox.capture.start" = "開始收集新內容";
 "inbox.capture.hint" = "按下 Return 鍵，將此項目新增到收件箱。";
 "inbox.itemPlaceholder" = "收件箱項目";
 "inbox.markCompleted" = "標記完成";

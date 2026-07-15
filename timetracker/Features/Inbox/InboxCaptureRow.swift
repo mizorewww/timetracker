@@ -11,18 +11,20 @@ struct InboxCaptureRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 Button(action: addButtonTapped) {
-                    Image(systemName: "plus")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(.blue, in: Circle())
-                        .frame(width: 44, height: 44)
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.blue)
+                        .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .disabled(canSubmit == false)
-                .opacity(canSubmit ? 1 : 0.45)
-                .accessibilityLabel(AppStrings.localized("inbox.add"))
+                .accessibilityLabel(
+                    Text(
+                        AppStrings.localized(
+                            canSubmit ? "inbox.add" : "inbox.capture.start"
+                        )
+                    )
+                )
                 .accessibilityIdentifier("inbox.capture.add")
 
                 TextField(placeholder, text: $title)
@@ -62,8 +64,9 @@ struct InboxCaptureRow: View {
     }
 
     private func addButtonTapped() {
-        guard canSubmit else { return }
-        _ = submit()
+        if canSubmit {
+            _ = submit()
+        }
         isFocused = true
     }
 

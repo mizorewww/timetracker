@@ -41,12 +41,11 @@
 "timeline.deleteSegment" = "Delete Time Segment";
 "quickStart.defaultHint" = "Pinned tasks first, then frequently used recent tasks.";
 "quickStart.pinnedHint" = "Shows your pinned quick-start tasks.";
-"inbox.empty" = "Nothing in Inbox.";
-"inbox.empty.description" = "Capture something above. You can organize it into a task when you are ready.";
-"inbox.subtitle" = "Quickly capture thoughts, errands, and anything that needs attention.";
-"inbox.footer" = "Collect loose items here first, then organize them into tasks later.";
+"inbox.empty" = "Inbox is clear";
+"inbox.empty.description" = "Captured items will appear here.";
 "inbox.add" = "Add Inbox Item";
 "inbox.addPlaceholder" = "New capture item";
+"inbox.capture.start" = "Start a new capture";
 "inbox.capture.hint" = "Press Return to add this item to Inbox.";
 "inbox.itemPlaceholder" = "Inbox item";
 "inbox.markCompleted" = "Mark Completed";

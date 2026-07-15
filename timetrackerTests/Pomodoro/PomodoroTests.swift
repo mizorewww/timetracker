@@ -142,6 +142,90 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func resumingBreakStopsOtherTaskWhenParallelTimersAreDisabled() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let pomodoroTask = try taskRepository.createTask(
+            title: "Pomodoro",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let otherTask = try taskRepository.createTask(
+            title: "Interruption",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.preferences.allowParallelTimers = false
+        store.selectedTaskID = pomodoroTask.id
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 2
+        )
+        #expect(store.completeActivePomodoroFocus())
+        let breakRun = try #require(store.activePomodoroRun)
+        let expectedState = breakRun.state
+
+        store.startTask(otherTask)
+        let otherSegment = try #require(store.activeSegments.first { $0.taskID == otherTask.id })
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: breakRun.id,
+            expectedState: expectedState
+        ))
+
+        #expect(otherSegment.endedAt != nil)
+        #expect(store.activeSegments.count == 1)
+        #expect(store.activeSegments.first?.taskID == pomodoroTask.id)
+        #expect(store.activeSegments.first?.source == .pomodoro)
+        #expect(store.activePomodoroRun?.state == .focusing)
+    }
+
+    @Test @MainActor
+    func resumingBreakReplacesAnExistingTimerForTheSameTask() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Shared task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.preferences.allowParallelTimers = true
+        store.selectedTaskID = task.id
+        store.startPomodoroForSelectedTask(
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            targetRounds: 2
+        )
+        #expect(store.completeActivePomodoroFocus())
+        let breakRun = try #require(store.activePomodoroRun)
+        let expectedState = breakRun.state
+
+        store.startTask(task)
+        let regularSegment = try #require(store.activeSegments.first)
+        #expect(regularSegment.source == .timer)
+        #expect(store.resumeActivePomodoroAfterBreak(
+            runID: breakRun.id,
+            expectedState: expectedState
+        ))
+
+        #expect(regularSegment.endedAt != nil)
+        #expect(store.activeSegments.count == 1)
+        #expect(store.activeSegments.first?.id != regularSegment.id)
+        #expect(store.activeSegments.first?.taskID == task.id)
+        #expect(store.activeSegments.first?.source == .pomodoro)
+        #expect(store.activePomodoroRun?.state == .focusing)
+    }
+
+    @Test @MainActor
     func cancellingDuringBreakPreservesCompletedFocusHistory() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

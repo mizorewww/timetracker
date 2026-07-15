@@ -74,16 +74,42 @@ struct PomodoroCommandHandler {
     func resumeFocusAfterBreak(
         run: PomodoroRun,
         expectedState: PomodoroState,
-        repository: PomodoroRepository
+        allowParallelTimers: Bool,
+        activeSegments: [TimeSegment],
+        pomodoroRuns: [PomodoroRun],
+        timeRepository: TimeTrackingRepository,
+        repository: PomodoroRepository,
+        context: ModelContext?
     ) throws -> Bool {
-        guard run.state == expectedState,
-              expectedState == .shortBreak || expectedState == .longBreak,
-              run.deletedAt == nil,
-              run.endedAt == nil else {
-            return false
+        let mutation = { () throws -> Bool in
+            guard run.state == expectedState,
+                  expectedState == .shortBreak || expectedState == .longBreak,
+                  run.deletedAt == nil,
+                  run.endedAt == nil else {
+                return false
+            }
+            let timerHandler = TimerCommandHandler(
+                deviceID: deviceID,
+                nowProvider: nowProvider
+            )
+            guard try timerHandler.prepareTaskStart(
+                taskID: run.taskID,
+                allowParallelTimers: allowParallelTimers,
+                activeSegments: activeSegments,
+                existingTaskAdmission: .replaceExisting,
+                pomodoroRuns: pomodoroRuns,
+                timeRepository: timeRepository,
+                context: context
+            ) else {
+                return false
+            }
+            try CompletePomodoroBreakUseCase(repository: repository).execute(runID: run.id)
+            return true
         }
-        try CompletePomodoroBreakUseCase(repository: repository).execute(runID: run.id)
-        return true
+        if let context {
+            return try context.performAtomicMutation(mutation)
+        }
+        return try mutation()
     }
 
     @discardableResult

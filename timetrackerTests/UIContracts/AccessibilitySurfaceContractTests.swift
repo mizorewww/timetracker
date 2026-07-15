@@ -83,4 +83,18 @@ struct AccessibilitySurfaceContractTests {
         #expect(sidebar.contains("accessibilityValue(progress: progress, childCount: childCount, blocked: blocked)"))
         #expect(sidebar.contains("private var disclosureTargetSize: CGFloat"))
     }
+
+    @Test
+    func pomodoroMenusLetAccessibilityTextDetermineRowHeight() throws {
+        let source = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
+        )
+
+        #expect(source.components(separatedBy: "Menu {").count - 1 == 2)
+        #expect(source.contains("dynamicTypeSize.isAccessibilitySize"))
+        #expect(source.components(separatedBy: ".appCard(padding: 14)").count - 1 == 2)
+        #expect(source.contains(".buttonStyle(.bordered)") == false)
+        #expect(source.contains("pomodoro.planPicker"))
+        #expect(source.contains("pomodoro.taskPicker"))
+    }
 }

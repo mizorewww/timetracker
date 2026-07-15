@@ -21,21 +21,25 @@ struct PomodoroSetupSelectionControls: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 12) {
-                planPicker
-                taskPicker
+                planMenu
+                taskMenu
             }
             VStack(spacing: 12) {
-                planPicker
-                taskPicker
+                planMenu
+                taskMenu
             }
         }
     }
 
-    private var planPicker: some View {
-        Picker(selection: $selectedPlanID) {
-            ForEach(plans) { plan in
-                Label(plan.displayName, systemImage: plan.iconName)
-                    .tag(Optional(plan.id))
+    private var planMenu: some View {
+        Menu {
+            Picker(selection: $selectedPlanID) {
+                ForEach(plans) { plan in
+                    Label(plan.displayName, systemImage: plan.iconName)
+                        .tag(Optional(plan.id))
+                }
+            } label: {
+                EmptyView()
             }
         } label: {
             PomodoroSelectionLabel(
@@ -44,17 +48,23 @@ struct PomodoroSetupSelectionControls: View {
                 systemImage: selectedPlan?.iconName ?? "slider.horizontal.3",
                 tint: Color(hex: selectedPlan?.colorHex) ?? PomodoroStyle.accent
             )
+            .appCard(padding: 14)
         }
-        .pickerStyle(.menu)
-        .buttonStyle(.bordered)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("pomodoro.planPicker")
     }
 
-    private var taskPicker: some View {
-        Picker(selection: selectedTaskID) {
-            ForEach(availableTasks, id: \.id) { task in
-                Label(store.path(for: task), systemImage: task.iconName ?? "checklist")
-                    .tag(Optional(task.id))
+    private var taskMenu: some View {
+        Menu {
+            Picker(selection: selectedTaskID) {
+                ForEach(availableTasks, id: \.id) { task in
+                    Label(store.path(for: task), systemImage: task.iconName ?? "checklist")
+                        .tag(Optional(task.id))
+                }
+            } label: {
+                EmptyView()
             }
         } label: {
             PomodoroSelectionLabel(
@@ -63,10 +73,12 @@ struct PomodoroSetupSelectionControls: View {
                 systemImage: selectedTask?.iconName ?? "checklist",
                 tint: Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
             )
+            .appCard(padding: 14)
         }
-        .pickerStyle(.menu)
-        .buttonStyle(.bordered)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("pomodoro.taskPicker")
     }
 }
 
@@ -92,6 +104,7 @@ private struct PomodoroSelectionLabel: View {
 
                     HStack(alignment: .top, spacing: 8) {
                         Text(value)
+                            .font(.body.weight(.semibold))
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 4)
@@ -108,6 +121,7 @@ private struct PomodoroSelectionLabel: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(value)
+                            .font(.body.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     }

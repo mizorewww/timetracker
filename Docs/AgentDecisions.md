@@ -476,6 +476,18 @@
 
 验证：跨平台、超限、控制字符、畸形/非规范 UUID 拒绝，合法值稳定复用，生成值不含 host/account，并执行 iOS/macOS 签名构建。
 
+## AD-036：分批导入的不完整账本采用读模型隔离
+
+状态：Accepted
+
+背景：CloudKit 可以分批 materialize task、session 与 segment。若 snapshot restore 或维护任务直接拒绝/删除缺父记录的行，稍后到达的父记录无法恢复完整事实；若照常发布，孤儿或 task/session 错配的 segment 会污染 Today、Analytics、Rollup、Widget 与 Watch。
+
+决策：原始 SwiftData 行保留，显式 snapshot preflight 继续允许“当前 payload 缺少关联记录”的 staged import。Facade 每次 task/ledger 一致性刷新建立 relationship visibility：task ID 必须存在，session ID 必须存在，且 session.taskID 必须等于 segment.taskID；只有满足三项的 segment 才进入可观察数组、indexed query 结果、Pomodoro elapsed 和系统投影。`refreshVisible` 同步刷新受影响 session index。父记录后续到达时由完整刷新自动解除隔离，不修改 segment 身份或时间事实。
+
+后果：不得用数据库清理、snapshot 拒绝或 tombstone 代替隔离；也不得只在某一个图表临时过滤。新增依赖账本的系统表面必须消费 facade 的可读 segment，而不是直接抓取未经关系验证的 SwiftData 行。隔离不是永久数据修复：长期缺父记录仍应作为同步诊断呈现。
+
+验证：缺 task 与缺 session 的 segment 保持持久但不进入统计，父记录导入后原 ID 自动恢复；session/task 错配始终不进入 Home、Analytics 或系统表面；staged snapshot restore 兼容测试继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -325,6 +325,51 @@ struct PreferencesChecklistForecastTests {
     }
 
     @Test @MainActor
+    func legacyPreferenceMigrationDoesNotResurrectAKeyBehindATombstone() throws {
+        let defaults = UserDefaults.standard
+        let preferenceKey = AppPreferenceKey.defaultFocusMinutes.rawValue
+        let previousPreference = defaults.object(forKey: preferenceKey)
+        let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)
+        defer {
+            if let previousPreference {
+                defaults.set(previousPreference, forKey: preferenceKey)
+            } else {
+                defaults.removeObject(forKey: preferenceKey)
+            }
+            if let previousMigration {
+                defaults.set(previousMigration, forKey: SyncedPreferenceService.migrationKey)
+            } else {
+                defaults.removeObject(forKey: SyncedPreferenceService.migrationKey)
+            }
+        }
+
+        defaults.set(90, forKey: preferenceKey)
+        defaults.removeObject(forKey: SyncedPreferenceService.migrationKey)
+
+        let context = try makeTestContext()
+        let deletedAt = Date(timeIntervalSinceReferenceDate: 100_000)
+        let tombstone = SyncedPreference(
+            key: preferenceKey,
+            valueJSON: PreferenceJSON.encode(50),
+            deviceID: "remote"
+        )
+        tombstone.createdAt = deletedAt
+        tombstone.updatedAt = deletedAt
+        tombstone.deletedAt = deletedAt
+        context.insert(tombstone)
+        try context.save()
+
+        try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(
+            context: context,
+            deviceID: "migration"
+        )
+
+        let stored = try context.fetch(FetchDescriptor<SyncedPreference>())
+        #expect(stored.filter { $0.key == preferenceKey }.count == 1)
+        #expect(AppPreferences(syncedPreferences: stored).defaultFocusMinutes == 25)
+    }
+
+    @Test @MainActor
     func settingsWriteSyncedPreferencesAndDeviceLocalCloudSetting() throws {
         let defaults = UserDefaults.standard
         let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)

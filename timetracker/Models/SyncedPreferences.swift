@@ -196,7 +196,10 @@ enum SyncedPreferenceService {
     static func migrateLegacyPreferencesIfNeeded(context: ModelContext, deviceID: String = DeviceIdentity.current) throws {
         guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
         let existing = try context.fetch(FetchDescriptor<SyncedPreference>())
-        let existingKeys = Set(existing.visibleDeduplicatedByID().map(\.key))
+        // A logical-key tombstone is still an existing migrated value. Ignoring it
+        // would let stale UserDefaults recreate a preference that another device
+        // already deleted.
+        let existingKeys = Set(latestByKey(existing.deduplicatedByID()).keys)
 
         for key in AppPreferenceKey.allCases
         where shouldSyncKey(key.rawValue) && !existingKeys.contains(key.rawValue) {

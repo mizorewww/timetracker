@@ -56,8 +56,9 @@ extension SyncDataSnapshot {
                 .deduplicatedByID().map(ChecklistItemVisualRecord.init).sortedByID()
         }
         if domains.contains(.inbox) {
-            snapshot.inboxItems = try context.fetch(FetchDescriptor<InboxItem>())
-                .deduplicatedByID().map(InboxItemRecord.init).sortedByID()
+            snapshot.inboxItems = InboxSuggestionIdentityService().physicalWinners(
+                from: try context.fetch(FetchDescriptor<InboxItem>())
+            ).map(InboxItemRecord.init).sortedByID()
             snapshot.inboxSuggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
                 .deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID()
         }
@@ -81,7 +82,9 @@ extension SyncDataSnapshot {
                 .sortedByID(),
             checklistItems: try context.fetch(FetchDescriptor<ChecklistItem>()).deduplicatedByID().map(ChecklistItemRecord.init).sortedByID(),
             checklistItemVisuals: try context.fetch(FetchDescriptor<ChecklistItemVisual>()).deduplicatedByID().map(ChecklistItemVisualRecord.init).sortedByID(),
-            inboxItems: try context.fetch(FetchDescriptor<InboxItem>()).deduplicatedByID().map(InboxItemRecord.init).sortedByID(),
+            inboxItems: InboxSuggestionIdentityService().physicalWinners(
+                from: try context.fetch(FetchDescriptor<InboxItem>())
+            ).map(InboxItemRecord.init).sortedByID(),
             inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID()
         )
     }

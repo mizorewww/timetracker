@@ -6,6 +6,66 @@ import Testing
 @Suite(.serialized)
 struct InboxSuggestionSyncIdentityTests {
     @Test @MainActor
+    func snapshotRoundTripPreservesDismissalAcrossSameIdentifierDuplicates() throws {
+        let sourceContext = try makeTestContext()
+        let sharedID = UUID()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let dismissed = InboxItem(title: "Dismiss once", deviceID: "older-device")
+        dismissed.id = sharedID
+        dismissed.suggestionContextID = contextID
+        dismissed.suggestionRevisionID = revisionID
+        dismissed.dismissedSuggestionRevisionID = revisionID
+        dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let newerActive = InboxItem(title: dismissed.title, deviceID: "newer-device")
+        newerActive.id = sharedID
+        newerActive.suggestionContextID = contextID
+        newerActive.suggestionRevisionID = revisionID
+        newerActive.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        sourceContext.insert(dismissed)
+        sourceContext.insert(newerActive)
+        try sourceContext.save()
+
+        let fullSnapshot = try SyncDataSnapshot.capture(context: sourceContext)
+        let partialSnapshot = try SyncDataSnapshot.capture(
+            context: sourceContext,
+            updating: SyncDataSnapshot(),
+            domains: [.inbox]
+        )
+        for snapshot in [fullSnapshot, partialSnapshot] {
+            let captured = try #require(snapshot.inboxItems.first)
+            #expect(snapshot.inboxItems.count == 1)
+            #expect(captured.id == sharedID)
+            #expect(captured.dismissedSuggestionRevisionID == revisionID)
+        }
+
+        let exported = try JSONEncoder().encode(fullSnapshot)
+        let imported = try JSONDecoder().decode(SyncDataSnapshot.self, from: exported)
+        let captured = try #require(imported.inboxItems.first)
+        #expect(imported.inboxItems.count == 1)
+        #expect(captured.id == sharedID)
+        #expect(captured.dismissedSuggestionRevisionID == revisionID)
+
+        let restoredContext = try makeTestContext()
+        try imported.restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let restored = try #require(
+            try restoredContext.fetch(FetchDescriptor<InboxItem>()).first
+        )
+        #expect(restored.id == sharedID)
+        #expect(restored.dismissedSuggestionRevisionID == revisionID)
+        #expect(
+            InboxSuggestionStateService().state(
+                for: restored,
+                suggestion: nil,
+                isInFlight: false
+            ) == .dismissed
+        )
+    }
+
+    @Test @MainActor
     func titleEditSnapshotAcceptsHistoricalSuggestionTombstone() throws {
         let sourceContext = try makeTestContext()
         let task = TaskNode(title: "Target", parentID: nil, deviceID: "test")

@@ -60,22 +60,8 @@ struct InboxSuggestionIdentityService {
 
     func logicalWinners<S: Sequence>(from items: S) -> [InboxItem]
     where S.Element == InboxItem {
-        // CloudKit can temporarily materialize the same UUID more than once.
-        // Resolve those copies with Inbox-specific dismissal semantics before
-        // collapsing different physical UUIDs that share a logical context.
-        var physicalWinners: [UUID: InboxItem] = [:]
-        for item in items {
-            if let existing = physicalWinners[item.id] {
-                if isPreferred(item, over: existing) {
-                    physicalWinners[item.id] = item
-                }
-            } else {
-                physicalWinners[item.id] = item
-            }
-        }
-
         var winners: [UUID: InboxItem] = [:]
-        for item in physicalWinners.values {
+        for item in physicalWinners(from: items) {
             let contextID = item.effectiveSuggestionContextID
             if let existing = winners[contextID] {
                 if isPreferred(item, over: existing) {
@@ -86,6 +72,25 @@ struct InboxSuggestionIdentityService {
             }
         }
         return Array(winners.values)
+    }
+
+    /// Resolves only duplicate physical identifiers. Unlike `logicalWinners`, this
+    /// preserves historical siblings that have different UUIDs but share a context.
+    func physicalWinners<S: Sequence>(from items: S) -> [InboxItem]
+    where S.Element == InboxItem {
+        // CloudKit can temporarily materialize the same UUID more than once.
+        // Resolve those copies with Inbox-specific dismissal semantics.
+        var physicalWinners: [UUID: InboxItem] = [:]
+        for item in items {
+            if let existing = physicalWinners[item.id] {
+                if isPreferred(item, over: existing) {
+                    physicalWinners[item.id] = item
+                }
+            } else {
+                physicalWinners[item.id] = item
+            }
+        }
+        return Array(physicalWinners.values)
     }
 
     func index(

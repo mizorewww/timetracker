@@ -5,7 +5,13 @@ struct TaskForecastSummarySection: View {
     let forecasts: [ForecastDisplayItem]
 
     var body: some View {
-        if !forecasts.isEmpty {
+        let rows = forecasts.compactMap { item in
+            store.task(for: item.taskID).map {
+                ForecastPresentationRow(item: item, task: $0)
+            }
+        }
+
+        if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     SectionTitle(title: AppStrings.localized("forecast.today.title"))
@@ -13,12 +19,14 @@ struct TaskForecastSummarySection: View {
                 }
 
                 VStack(spacing: 0) {
-                    ForEach(forecasts) { item in
-                        if let task = store.task(for: item.taskID) {
-                            ForecastSummaryRow(store: store, task: task, rollup: item.rollup)
-                            if item.taskID != forecasts.last?.taskID {
-                                Divider().padding(.leading, 54)
-                            }
+                    ForEach(rows) { row in
+                        ForecastSummaryRow(
+                            store: store,
+                            task: row.task,
+                            rollup: row.item.rollup
+                        )
+                        if row.id != rows.last?.id {
+                            Divider().padding(.leading, 54)
                         }
                     }
                 }
@@ -27,6 +35,13 @@ struct TaskForecastSummarySection: View {
             .accessibilityIdentifier("home.forecasts")
         }
     }
+}
+
+private struct ForecastPresentationRow: Identifiable {
+    let item: ForecastDisplayItem
+    let task: TaskNode
+
+    var id: UUID { item.taskID }
 }
 
 struct ForecastSummaryRow: View {

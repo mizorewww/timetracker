@@ -328,6 +328,9 @@ struct HomeUIContractTests {
         #expect(timerSource.contains("if dynamicTypeSize.isAccessibilitySize"))
         #expect(timelineSource.contains("if dynamicTypeSize.isAccessibilitySize"))
         #expect(forecastSource.contains("if dynamicTypeSize.isAccessibilitySize"))
+        #expect(forecastSource.contains("ForecastPresentationRow(item: item, task: $0)"))
+        #expect(forecastSource.contains("if !rows.isEmpty"))
+        #expect(forecastSource.contains("item.taskID != forecasts.last?.taskID") == false)
     }
 
     @Test

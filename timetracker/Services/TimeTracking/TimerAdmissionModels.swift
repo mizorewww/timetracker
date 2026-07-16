@@ -30,7 +30,6 @@ nonisolated struct TimerStartPlan: Hashable, Sendable {
 nonisolated enum TimerStopTarget: Hashable, Sendable {
     case segment(UUID)
     case task(UUID)
-    case current
 }
 
 nonisolated struct TimerStopPlan: Hashable, Sendable {

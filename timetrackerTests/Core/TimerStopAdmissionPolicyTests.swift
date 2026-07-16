@@ -59,33 +59,7 @@ struct TimerStopAdmissionPolicyTests {
     }
 
     @Test
-    func currentStopChoosesLatestStartAndHigherSegmentIDForATie() {
-        let older = TimerAdmissionPolicyFixtures.snapshot(
-            segmentID: 9,
-            taskID: 100,
-            startedAt: 100
-        )
-        let lowerID = TimerAdmissionPolicyFixtures.snapshot(
-            segmentID: 1,
-            taskID: 200,
-            startedAt: 200
-        )
-        let higherID = TimerAdmissionPolicyFixtures.snapshot(
-            segmentID: 2,
-            taskID: 300,
-            startedAt: 200
-        )
-
-        let plan = policy.stopPlan(
-            target: .current,
-            activeSegments: [higherID, older, lowerID]
-        )
-
-        #expect(plan.segmentsToStop == [higherID])
-    }
-
-    @Test
-    func everyStopTargetIsIndependentOfInputOrder() {
+    func everyExplicitStopTargetIsIndependentOfInputOrder() {
         let first = TimerAdmissionPolicyFixtures.snapshot(
             segmentID: 1,
             taskID: 100,
@@ -96,21 +70,20 @@ struct TimerStopAdmissionPolicyTests {
             taskID: 100,
             startedAt: 200
         )
-        let current = TimerAdmissionPolicyFixtures.snapshot(
+        let other = TimerAdmissionPolicyFixtures.snapshot(
             segmentID: 3,
             taskID: 200,
             startedAt: 300
         )
         let inputs = [
-            [first, second, current],
-            [current, second, first],
-            [second, first, current],
-            [current, first, second]
+            [first, second, other],
+            [other, second, first],
+            [second, first, other],
+            [other, first, second]
         ]
         let targets: [TimerStopTarget] = [
             .segment(second.segmentID),
-            .task(first.taskID),
-            .current
+            .task(first.taskID)
         ]
 
         for target in targets {

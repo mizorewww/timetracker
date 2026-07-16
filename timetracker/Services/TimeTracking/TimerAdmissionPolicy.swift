@@ -39,17 +39,14 @@ nonisolated struct TimerAdmissionPolicy {
             matches = activeSegments.filter { $0.segmentID == segmentID }
         case .task(let taskID):
             matches = activeSegments.filter { $0.taskID == taskID }
-        case .current:
-            matches = activeSegments.last.map { [$0] } ?? []
         }
 
         return TimerStopPlan(segmentsToStop: matches)
     }
 
     /// Keeps one logical row per segment ID and orders it oldest first. This
-    /// makes the oldest matching task segment the reusable survivor and makes
-    /// the newest segment (`last`) the untargeted stop candidate. UUID ordering
-    /// is the stable tie-break when start timestamps match.
+    /// makes the oldest matching task segment the reusable survivor. UUID
+    /// ordering is the stable tie-break when start timestamps match.
     private func canonicalSegments(
         _ segments: [TimerActiveSegmentSnapshot]
     ) -> [TimerActiveSegmentSnapshot] {

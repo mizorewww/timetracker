@@ -5,7 +5,10 @@ extension SettingsView {
         Binding {
             store.preferences.pomodoroDefaultMode
         } set: { value in
-            store.setPomodoroDefaultMode(value)
+            handleSettingsStoreMutation(
+                store.setPomodoroDefaultMode(value),
+                title: SettingsCategory.focus.title
+            )
         }
     }
 
@@ -13,8 +16,12 @@ extension SettingsView {
         Binding {
             store.preferences.defaultFocusMinutes
         } set: { value in
-            store.setDefaultFocusMinutes(value)
-            store.setPomodoroDefaultMode(PomodoroPreset.custom.rawValue)
+            let minutesSaved = store.setDefaultFocusMinutes(value)
+            let modeSaved = store.setPomodoroDefaultMode(PomodoroPreset.custom.rawValue)
+            handleSettingsStoreMutation(
+                minutesSaved && modeSaved,
+                title: SettingsCategory.focus.title
+            )
         }
     }
 
@@ -22,8 +29,12 @@ extension SettingsView {
         Binding {
             store.preferences.defaultBreakMinutes
         } set: { value in
-            store.setDefaultBreakMinutes(value)
-            store.setPomodoroDefaultMode(PomodoroPreset.custom.rawValue)
+            let minutesSaved = store.setDefaultBreakMinutes(value)
+            let modeSaved = store.setPomodoroDefaultMode(PomodoroPreset.custom.rawValue)
+            handleSettingsStoreMutation(
+                minutesSaved && modeSaved,
+                title: SettingsCategory.focus.title
+            )
         }
     }
 
@@ -31,7 +42,10 @@ extension SettingsView {
         Binding {
             store.preferences.defaultPomodoroRounds
         } set: { value in
-            store.setDefaultPomodoroRounds(value)
+            handleSettingsStoreMutation(
+                store.setDefaultPomodoroRounds(value),
+                title: SettingsCategory.focus.title
+            )
         }
     }
 
@@ -39,7 +53,10 @@ extension SettingsView {
         Binding {
             store.preferences.pomodoroPlans
         } set: { value in
-            store.setPomodoroPlans(value)
+            handleSettingsStoreMutation(
+                store.setPomodoroPlans(value),
+                title: SettingsCategory.focus.title
+            )
         }
     }
 
@@ -47,7 +64,10 @@ extension SettingsView {
         Binding {
             store.preferences.allowParallelTimers
         } set: { value in
-            store.setAllowParallelTimers(value)
+            handleSettingsStoreMutation(
+                store.setAllowParallelTimers(value),
+                title: SettingsCategory.general.title
+            )
         }
     }
 
@@ -55,7 +75,10 @@ extension SettingsView {
         Binding {
             store.preferences.showGrossAndWallTogether
         } set: { value in
-            store.setShowGrossAndWallTogether(value)
+            handleSettingsStoreMutation(
+                store.setShowGrossAndWallTogether(value),
+                title: SettingsCategory.general.title
+            )
         }
     }
 
@@ -63,7 +86,10 @@ extension SettingsView {
         Binding {
             store.preferences.cloudSyncEnabled
         } set: { value in
-            store.setCloudSyncEnabled(value)
+            handleSettingsStoreMutation(
+                store.setCloudSyncEnabled(value),
+                title: SettingsCategory.dataAndSync.title
+            )
         }
     }
 

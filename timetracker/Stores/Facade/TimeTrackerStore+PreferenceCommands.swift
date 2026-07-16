@@ -1,58 +1,69 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func setPreferredColorScheme(_ value: String) {
+    @discardableResult
+    func setPreferredColorScheme(_ value: String) -> Bool {
         setPreference(
             .preferredColorScheme,
             valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(value))
         )
     }
 
-    func setPomodoroDefaultMode(_ value: String) {
+    @discardableResult
+    func setPomodoroDefaultMode(_ value: String) -> Bool {
         setPreference(.pomodoroDefaultMode, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroMode(value)))
     }
 
-    func setDefaultFocusMinutes(_ value: Int) {
+    @discardableResult
+    func setDefaultFocusMinutes(_ value: Int) -> Bool {
         setPreference(.defaultFocusMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...480)))
     }
 
-    func setDefaultBreakMinutes(_ value: Int) {
+    @discardableResult
+    func setDefaultBreakMinutes(_ value: Int) -> Bool {
         setPreference(.defaultBreakMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...480)))
     }
 
-    func setDefaultPomodoroRounds(_ value: Int) {
+    @discardableResult
+    func setDefaultPomodoroRounds(_ value: Int) -> Bool {
         setPreference(.defaultPomodoroRounds, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...24)))
     }
 
-    func setPomodoroPlans(_ plans: [PomodoroPlan]) {
+    @discardableResult
+    func setPomodoroPlans(_ plans: [PomodoroPlan]) -> Bool {
         setPreference(.pomodoroPlans, valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(plans)))
     }
 
-    func addPomodoroPlan() {
+    @discardableResult
+    func addPomodoroPlan() -> Bool {
         var plans = preferences.pomodoroPlans
         plans.append(.newPlan)
-        setPomodoroPlans(plans)
+        return setPomodoroPlans(plans)
     }
 
-    func updatePomodoroPlan(_ plan: PomodoroPlan) {
+    @discardableResult
+    func updatePomodoroPlan(_ plan: PomodoroPlan) -> Bool {
         var plans = preferences.pomodoroPlans
         if let index = plans.firstIndex(where: { $0.id == plan.id }) {
             plans[index] = plan.normalized()
         } else {
             plans.append(plan.normalized())
         }
-        setPomodoroPlans(plans)
+        return setPomodoroPlans(plans)
     }
 
-    func deletePomodoroPlan(id: UUID) {
+    @discardableResult
+    func deletePomodoroPlan(id: UUID) -> Bool {
         setPomodoroPlans(preferences.pomodoroPlans.filter { $0.id != id })
     }
 
-    func setAllowParallelTimers(_ value: Bool) {
+    @discardableResult
+    func setAllowParallelTimers(_ value: Bool) -> Bool {
         setPreference(.allowParallelTimers, valueJSON: PreferenceJSON.encode(value))
     }
 
-    func setShowGrossAndWallTogether(_ value: Bool) {
+    @discardableResult
+    func setShowGrossAndWallTogether(_ value: Bool) -> Bool {
         setPreference(.showGrossAndWallTogether, valueJSON: PreferenceJSON.encode(value))
     }
 

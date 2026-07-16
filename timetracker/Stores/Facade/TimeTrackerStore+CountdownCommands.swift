@@ -2,7 +2,8 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func addCountdownEvent() {
+    @discardableResult
+    func addCountdownEvent() -> Bool {
         perform(event: .countdownChanged) {
             guard let modelContext else { throw StoreError.notConfigured }
             try countdownCommandHandler.add(context: modelContext)
@@ -17,7 +18,8 @@ extension TimeTrackerStore {
         }
     }
 
-    func deleteCountdownEvent(_ event: CountdownEvent) {
+    @discardableResult
+    func deleteCountdownEvent(_ event: CountdownEvent) -> Bool {
         perform(event: .countdownChanged) {
             guard let modelContext else { throw StoreError.notConfigured }
             try countdownCommandHandler.softDelete(event, context: modelContext)

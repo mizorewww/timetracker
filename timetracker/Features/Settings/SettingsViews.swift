@@ -119,6 +119,17 @@ struct SettingsView: View {
         )
     }
 
+    func handleSettingsStoreMutation(_ didSucceed: Bool, title: String) {
+        guard !didSucceed, let message = store.errorMessage, !message.isEmpty else { return }
+        feedbackRouter.present(
+            title: title,
+            message: message
+        )
+        if store.errorMessage == message {
+            store.errorMessage = nil
+        }
+    }
+
     func presentLLMConfiguration() {
         presentationRouter.presentLLMConfiguration(using: store)
     }

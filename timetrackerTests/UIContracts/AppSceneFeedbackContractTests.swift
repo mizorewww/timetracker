@@ -46,12 +46,34 @@ struct AppSceneFeedbackContractTests {
         #expect(settings.contains("@Environment(AppSceneFeedbackRouter.self)"))
         #expect(settings.contains("presentSettingsError(context: .dataExport"))
         #expect(settings.contains("(error as? CocoaError)?.code != .userCancelled"))
-        #expect(settings.contains("store.errorMessage") == false)
         #expect(confirmation.contains("feedbackRouter.present("))
         #expect(confirmation.contains("context: .databaseMaintenance"))
         #expect(dataSection.contains("settings.data.operationMessage"))
         #expect(maintenance.contains("func jsonExport() throws -> String"))
         #expect(maintenance.contains("func jsonExport() -> String?") == false)
+    }
+
+    @Test
+    func ordinarySettingsMutationsConsumeFailuresInTheirOriginatingScene() throws {
+        let settings = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
+        let bindings = try sourceText("timetracker/Features/Settings/SettingsViewBindings.swift")
+        let sections = try sourceText("timetracker/Features/Settings/SettingsCategorySections.swift")
+        let preferences = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+PreferenceCommands.swift"
+        )
+        let countdowns = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+CountdownCommands.swift"
+        )
+
+        #expect(settings.contains("func handleSettingsStoreMutation(_ didSucceed: Bool"))
+        #expect(settings.components(separatedBy: "store.errorMessage").count - 1 == 3)
+        #expect(settings.contains("if store.errorMessage == message"))
+        #expect(bindings.components(separatedBy: "handleSettingsStoreMutation(").count >= 8)
+        #expect(sections.components(separatedBy: "handleSettingsStoreMutation(").count >= 3)
+        #expect(preferences.contains("func setPomodoroPlans(_ plans: [PomodoroPlan]) -> Bool"))
+        #expect(preferences.contains("func setAllowParallelTimers(_ value: Bool) -> Bool"))
+        #expect(countdowns.contains("func addCountdownEvent() -> Bool"))
+        #expect(countdowns.contains("func deleteCountdownEvent(_ event: CountdownEvent) -> Bool"))
     }
 
     @Test

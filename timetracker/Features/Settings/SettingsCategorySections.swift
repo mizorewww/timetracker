@@ -16,10 +16,23 @@ extension SettingsView {
                     store.updateCountdownEvent(event, title: title)
                 },
                 onChangeDate: { event, date in
-                    store.updateCountdownEvent(event, date: date)
+                    handleSettingsStoreMutation(
+                        store.updateCountdownEvent(event, date: date),
+                        title: AppStrings.localized("settings.countdown")
+                    )
                 },
-                onDelete: store.deleteCountdownEvent,
-                onAdd: store.addCountdownEvent
+                onDelete: { event in
+                    handleSettingsStoreMutation(
+                        store.deleteCountdownEvent(event),
+                        title: AppStrings.localized("settings.countdown")
+                    )
+                },
+                onAdd: {
+                    handleSettingsStoreMutation(
+                        store.addCountdownEvent(),
+                        title: AppStrings.localized("settings.countdown")
+                    )
+                }
             )
 
         case .focus:

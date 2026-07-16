@@ -43,55 +43,21 @@ extension TimeTrackerStore {
     func resolveSyncConflict(
         expectedConflictID: UUID?,
         resolution: SyncConflictResolution
-    ) -> SyncConflictResolutionResult {
-        do {
-            guard let modelContext else { throw StoreError.notConfigured }
-            let result = try syncConflictService.resolveSyncConflict(
-                expectedConflictID: expectedConflictID,
-                resolution: resolution,
-                context: modelContext
-            )
-            guard result != .conflictChanged else {
-                pendingSyncConflict = try syncConflictService.prompt()
-                errorMessage = AppStrings.localized("sync.conflict.error.changed")
-                return result
-            }
-            try refresh()
-            pendingSyncConflict = nil
-            lastSyncRefreshAt = Date()
+    ) throws -> SyncConflictResolutionResult {
+        guard let modelContext else { throw StoreError.notConfigured }
+        let result = try syncConflictService.resolveSyncConflict(
+            expectedConflictID: expectedConflictID,
+            resolution: resolution,
+            context: modelContext
+        )
+        guard result != .conflictChanged else {
+            pendingSyncConflict = try syncConflictService.prompt()
             return result
-        } catch {
-            errorMessage = error.localizedDescription
-            return .failed
         }
-    }
-
-    func forceUploadLocalDataToCloud() -> SyncRecoveryResult? {
-        do {
-            guard let modelContext else { throw StoreError.notConfigured }
-            let result = try syncConflictService.forceUploadLocalData(context: modelContext)
-            try refresh()
-            pendingSyncConflict = nil
-            lastSyncRefreshAt = Date()
-            return result
-        } catch {
-            errorMessage = error.localizedDescription
-            return nil
-        }
-    }
-
-    func acceptCurrentCloudData() -> SyncRecoveryResult? {
-        do {
-            guard let modelContext else { throw StoreError.notConfigured }
-            let result = try syncConflictService.acceptCurrentCloudData(context: modelContext)
-            try refresh()
-            pendingSyncConflict = nil
-            lastSyncRefreshAt = Date()
-            return result
-        } catch {
-            errorMessage = error.localizedDescription
-            return nil
-        }
+        try refresh()
+        pendingSyncConflict = nil
+        lastSyncRefreshAt = Date()
+        return result
     }
 
     func refresh() throws {

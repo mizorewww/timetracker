@@ -117,7 +117,7 @@ struct CoreSyncConflictResolutionIdentityTests {
                 .capture(context: fixture.context)
                 .fingerprint()
 
-            let result = store.resolveSyncConflict(
+            let result = try store.resolveSyncConflict(
                 expectedConflictID: fixture.prompt.id,
                 resolution: .downloadCloud
             )
@@ -132,6 +132,19 @@ struct CoreSyncConflictResolutionIdentityTests {
             )
             #expect(try currentTaskTitle(in: fixture.context) == "Cloud plan")
         }
+    }
+
+    @Test @MainActor
+    func unconfiguredStoreResolutionThrowsWithoutMutatingGlobalFeedback() {
+        let store = makeTestStore()
+
+        #expect(throws: TimeTrackerStore.StoreError.self) {
+            try store.resolveSyncConflict(
+                expectedConflictID: nil,
+                resolution: .downloadCloud
+            )
+        }
+        #expect(store.errorMessage == nil)
     }
 
     @MainActor

@@ -53,4 +53,21 @@ struct AppSceneFeedbackContractTests {
         #expect(maintenance.contains("func jsonExport() throws -> String"))
         #expect(maintenance.contains("func jsonExport() -> String?") == false)
     }
+
+    @Test
+    func settingsSyncRecoveryFailuresStayInTheSettingsScene() throws {
+        let actions = try sourceText(
+            "timetracker/Features/Settings/SettingsViewActions.swift"
+        )
+        let lifecycle = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift"
+        )
+
+        #expect(actions.contains("try store.resolveSyncConflict("))
+        #expect(actions.contains("presentSyncRecoveryError(error)"))
+        #expect(actions.contains("context: .syncRecovery"))
+        #expect(lifecycle.contains(") throws -> SyncConflictResolutionResult"))
+        #expect(lifecycle.contains("errorMessage = AppStrings.localized(\"sync.conflict.error.changed\")") == false)
+        #expect(lifecycle.contains("return .failed") == false)
+    }
 }

@@ -41,45 +41,65 @@ extension SettingsView {
     }
 
     func forceUploadLocalData(expectedConflictID: UUID?) {
-        let result = store.resolveSyncConflict(
-            expectedConflictID: expectedConflictID,
-            resolution: .uploadLocal
-        )
-        switch result {
-        case .appliedImmediately:
-            if expectedConflictID != nil {
-                syncOperationMessage = AppStrings.localized("sync.forceUpload.conflictResolved")
-            } else {
-                syncOperationMessage = AppStrings.localized("sync.forceUpload.started")
+        isCheckingSync = true
+        syncOperationMessage = nil
+        defer { isCheckingSync = false }
+        do {
+            let result = try store.resolveSyncConflict(
+                expectedConflictID: expectedConflictID,
+                resolution: .uploadLocal
+            )
+            switch result {
+            case .appliedImmediately:
+                if expectedConflictID != nil {
+                    syncOperationMessage = AppStrings.localized("sync.forceUpload.conflictResolved")
+                } else {
+                    syncOperationMessage = AppStrings.localized("sync.forceUpload.started")
+                }
+            case .queuedForNextLaunch:
+                syncOperationMessage = AppStrings.localized("sync.forceUpload.queued")
+            case .conflictChanged:
+                syncOperationMessage = AppStrings.localized("sync.conflict.error.changed")
             }
-        case .queuedForNextLaunch:
-            syncOperationMessage = AppStrings.localized("sync.forceUpload.queued")
-        case .conflictChanged, .failed:
-            break
+        } catch {
+            presentSyncRecoveryError(error)
         }
     }
 
     func forceDownloadCloudData(expectedConflictID: UUID?) {
         isCheckingSync = true
+        syncOperationMessage = nil
         Task {
-            let result = store.resolveSyncConflict(
-                expectedConflictID: expectedConflictID,
-                resolution: .downloadCloud
-            )
-            switch result {
-            case .appliedImmediately:
-                if expectedConflictID != nil {
-                    syncOperationMessage = AppStrings.localized("sync.forceDownload.conflictResolved")
-                } else {
+            do {
+                let result = try store.resolveSyncConflict(
+                    expectedConflictID: expectedConflictID,
+                    resolution: .downloadCloud
+                )
+                switch result {
+                case .appliedImmediately:
+                    if expectedConflictID != nil {
+                        syncOperationMessage = AppStrings.localized("sync.forceDownload.conflictResolved")
+                    } else {
+                        syncOperationMessage = AppStrings.localized("sync.forceDownload.queued")
+                    }
+                case .queuedForNextLaunch:
                     syncOperationMessage = AppStrings.localized("sync.forceDownload.queued")
+                case .conflictChanged:
+                    syncOperationMessage = AppStrings.localized("sync.conflict.error.changed")
                 }
-            case .queuedForNextLaunch:
-                syncOperationMessage = AppStrings.localized("sync.forceDownload.queued")
-            case .conflictChanged, .failed:
-                break
+            } catch {
+                presentSyncRecoveryError(error)
             }
             isCheckingSync = false
         }
+    }
+
+    private func presentSyncRecoveryError(_ error: Error) {
+        feedbackRouter.present(
+            context: .syncRecovery,
+            title: AppStrings.localized("settings.syncRecovery.title"),
+            message: error.localizedDescription
+        )
     }
 
 }

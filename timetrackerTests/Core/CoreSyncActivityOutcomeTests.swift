@@ -259,7 +259,6 @@ struct CoreSyncActivityOutcomeTests {
 
         #expect(batch.requiresCloudImportHandling)
         #expect(batch.hasSuccessfulCloudImport)
-        #expect(batch.reasons.count == 2)
         #expect(batch.activityReason?.priority == failure.priority)
 
         batch.insert(conflict)
@@ -271,6 +270,29 @@ struct CoreSyncActivityOutcomeTests {
         failedImportOnly.insert(conflict)
         #expect(failedImportOnly.requiresCloudImportHandling)
         #expect(failedImportOnly.hasSuccessfulCloudImport == false)
+    }
+
+    @Test @MainActor
+    func coalescingStateStaysBoundedUnderAContinuousNotificationBurst() throws {
+        var batch = TimeTrackerStore.SyncRefreshBatch()
+        for _ in 0..<10_000 {
+            batch.insert(.remoteStoreChanged)
+        }
+        batch.insert(
+            .cloudImportFinished(
+                succeeded: true,
+                reportsConflict: false,
+                failureMessage: nil
+            )
+        )
+
+        #expect(batch.activityReason?.activityKind == .importData)
+        #expect(batch.requiresCloudImportHandling)
+        #expect(batch.hasSuccessfulCloudImport)
+
+        let source = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift")
+        #expect(source.contains("guard scheduledSyncRefreshTask == nil else { return }"))
+        #expect(source.contains("scheduledSyncRefreshTask?.cancel()") == false)
     }
 
     private func cloudStatus() -> SyncStatus {

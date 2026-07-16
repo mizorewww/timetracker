@@ -92,36 +92,29 @@ extension TimeTrackerStore {
     }
 
     struct SyncRefreshBatch: Sendable {
-        private(set) var reasons: [SyncRefreshReason] = []
+        private(set) var activityReason: SyncRefreshReason?
+        private(set) var requiresCloudImportHandling = false
+        private var latestCloudImportSucceeded: Bool?
 
         mutating func insert(_ reason: SyncRefreshReason) {
-            reasons.append(reason)
-        }
-
-        var activityReason: SyncRefreshReason? {
-            reasons.max { lhs, rhs in lhs.priority < rhs.priority }
-        }
-
-        var requiresCloudImportHandling: Bool {
-            reasons.contains { reason in
-                switch reason {
-                case let .cloudImportFinished(succeeded, reportsConflict, _):
-                    return succeeded || reportsConflict
-                case let .cloudExportFinished(_, _, reportsConflict, _):
-                    return reportsConflict
-                case .remoteStoreChanged, .cloudSetupFinished:
-                    return false
-                }
+            if activityReason.map({ reason.priority >= $0.priority }) ?? true {
+                activityReason = reason
+            }
+            switch reason {
+            case let .cloudImportFinished(succeeded, reportsConflict, _):
+                latestCloudImportSucceeded = succeeded
+                requiresCloudImportHandling = requiresCloudImportHandling
+                    || succeeded
+                    || reportsConflict
+            case let .cloudExportFinished(_, _, reportsConflict, _):
+                requiresCloudImportHandling = requiresCloudImportHandling || reportsConflict
+            case .remoteStoreChanged, .cloudSetupFinished:
+                break
             }
         }
 
         var hasSuccessfulCloudImport: Bool {
-            for reason in reasons.reversed() {
-                if case let .cloudImportFinished(succeeded, _, _) = reason {
-                    return succeeded
-                }
-            }
-            return false
+            latestCloudImportSucceeded == true
         }
     }
 }

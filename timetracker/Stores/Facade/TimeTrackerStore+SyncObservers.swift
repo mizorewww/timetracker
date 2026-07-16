@@ -160,11 +160,12 @@ extension TimeTrackerStore {
         var batch = scheduledSyncRefreshBatch ?? SyncRefreshBatch()
         batch.insert(reason)
         scheduledSyncRefreshBatch = batch
-        scheduledSyncRefreshTask?.cancel()
+        guard scheduledSyncRefreshTask == nil else { return }
         scheduledSyncRefreshTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
             guard let self else { return }
+            scheduledSyncRefreshTask = nil
             let batch = scheduledSyncRefreshBatch ?? {
                 var fallback = SyncRefreshBatch()
                 fallback.insert(reason)

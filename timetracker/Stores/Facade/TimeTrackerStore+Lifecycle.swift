@@ -179,6 +179,28 @@ extension TimeTrackerStore {
         return outcome.subjectSegmentID != nil
     }
 
+    /// Refreshes and records a mutation that committed in a sibling context
+    /// under the store-scoped lock. Empty events represent a canonical no-op
+    /// and intentionally do not advance the sync generation.
+    func finishStoreScopedMutation(events: Set<StoreDomainEvent>) {
+        guard events.isEmpty == false else { return }
+        finishCommittedMutation(events: events)
+    }
+
+    /// Converges scene read models after another context may have changed the
+    /// timer set before this locked command entered. This is refresh-only work:
+    /// it must not advance the durable sync generation or change command success.
+    func refreshStoreScopedTimerReadModels() {
+        do {
+            try refresh(plan: StoreRefreshPlan(scopes: [.ledgerVisible, .pomodoro]))
+        } catch {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                error.localizedDescription
+            )
+        }
+    }
+
     private func executeAuthorizedMutation<Result>(
         _ action: () throws -> Result
     ) throws -> Result {

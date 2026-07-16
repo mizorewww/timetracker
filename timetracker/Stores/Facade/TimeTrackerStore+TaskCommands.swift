@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     func editorDraft(for task: TaskNode) -> TaskEditorDraft {
@@ -74,39 +75,26 @@ extension TimeTrackerStore {
         return didSave
     }
 
-    func archiveSelectedTask(taskID: UUID? = nil) {
+    @discardableResult
+    func archiveSelectedTask(taskID: UUID? = nil) -> Bool {
         let targetID = taskID ?? selectedTaskID
-        guard let targetID else { return }
-        guard hasActiveTimer(inTaskSubtree: targetID) == false else {
-            errorMessage = AppStrings.localized("task.action.archive.stopFirst")
-            return
-        }
+        guard let targetID else { return false }
         let wasSelected = selectedTaskID == targetID
-        let didArchive = perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
-            try taskDraftCommandHandler.archive(taskID: targetID, repository: requiredTaskRepository())
-        }
+        let didArchive = performStoreScopedTaskStatusTransition(
+            .archived,
+            taskID: targetID
+        )
         if didArchive, wasSelected {
             selectedTaskID = tasks.first(where: { $0.id != targetID && isTaskAvailableForTracking($0) })?.id
         }
+        return didArchive
     }
 
-    func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) {
+    @discardableResult
+    func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) -> Bool {
         let targetID = taskID ?? selectedTaskID
-        guard let targetID else { return }
-        if let currentTask = task(for: targetID),
-           currentTask.status != status,
-           status == .archived || status == .completed,
-           hasActiveTimer(inTaskSubtree: targetID) {
-            errorMessage = AppStrings.localized(
-                status == .completed
-                    ? "task.action.complete.stopFirst"
-                    : "task.action.archive.stopFirst"
-            )
-            return
-        }
-        perform(event: .taskChanged(taskID: targetID, affectedAncestorIDs: affectedAncestorIDs(for: targetID))) {
-            try taskDraftCommandHandler.setStatus(status, taskID: targetID, repository: requiredTaskRepository())
-        }
+        guard let targetID else { return false }
+        return performStoreScopedTaskStatusTransition(status, taskID: targetID)
     }
 
     func reopenTaskForWork(_ taskID: UUID) {
@@ -217,5 +205,31 @@ extension TimeTrackerStore {
     private func saveChecklistDrafts(_ drafts: [ChecklistEditorDraft], taskID: UUID) throws {
         guard let modelContext else { throw StoreError.notConfigured }
         try checklistDraftService.save(drafts: drafts, taskID: taskID, context: modelContext)
+    }
+
+    private func performStoreScopedTaskStatusTransition(
+        _ status: TaskStatus,
+        taskID: UUID
+    ) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).setStatus(status, taskID: taskID)
+            if outcome.didMutate {
+                finishStoreScopedMutation(events: outcome.events)
+            } else {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+            }
+            refreshStoreScopedTimerReadModels()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
     }
 }

@@ -60,7 +60,9 @@ struct AppSceneFeedbackContractTests {
         let sections = try sourceText("timetracker/Features/Settings/SettingsCategorySections.swift")
         let preferences = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+PreferenceCommands.swift"
-        )
+        ) + (try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+PomodoroPreferenceCommands.swift"
+        ))
         let countdowns = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+CountdownCommands.swift"
         )

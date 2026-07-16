@@ -1,7 +1,5 @@
 import Foundation
 extension LedgerStore {
-    static let maximumIndexedDayCount = 366
-
     mutating func rebuildSegmentIndexes(
         segments: [TimeSegment],
         now: Date,
@@ -130,32 +128,6 @@ extension LedgerStore {
         }
     }
 
-    func segmentIDs(overlapping intervals: [DateInterval], now: Date) -> Set<UUID> {
-        intervals.reduce(into: Set<UUID>()) { result, interval in
-            if exceedsDayIndexLimit(interval, calendar: segmentIndexCalendar) {
-                for (id, snapshot) in segmentSnapshotByID
-                    where snapshot.overlaps(interval, at: now) {
-                    result.insert(id)
-                }
-                return
-            }
-            for id in longSpanSegmentIDs {
-                guard segmentSnapshotByID[id]?.overlaps(interval, at: now) == true else {
-                    continue
-                }
-                result.insert(id)
-            }
-            for day in dayKeys(overlapping: interval, calendar: segmentIndexCalendar) {
-                for id in segmentIDsByDay[day] ?? [] {
-                    guard segmentSnapshotByID[id]?.overlaps(interval, at: now) == true else {
-                        continue
-                    }
-                    result.insert(id)
-                }
-            }
-        }
-    }
-
     mutating func index(_ snapshot: LedgerSegmentSnapshot, now: Date, calendar: Calendar) {
         guard let interval = indexedInterval(for: snapshot, now: now) else { return }
         if exceedsDayIndexLimit(interval, calendar: calendar) {
@@ -196,21 +168,6 @@ extension LedgerStore {
             endedAt: snapshot.endedAt,
             now: now
         )
-    }
-
-    private func exceedsDayIndexLimit(
-        _ interval: DateInterval,
-        calendar: Calendar
-    ) -> Bool {
-        let firstDay = calendar.startOfDay(for: interval.start)
-        guard let exclusiveLimit = calendar.date(
-            byAdding: .day,
-            value: Self.maximumIndexedDayCount,
-            to: firstDay
-        ) else {
-            return true
-        }
-        return interval.end > exclusiveLimit
     }
 
     func dayKeys(overlapping interval: DateInterval, calendar: Calendar) -> [Date] {

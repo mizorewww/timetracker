@@ -161,6 +161,27 @@ struct CoreTaskStoreTests {
         #expect(store.tasks.first { $0.id == root.id }?.title == "Updated")
         #expect(store.tasks.first { $0.id == sibling.id }?.title == "Keep")
     }
+
+    @Test @MainActor
+    func taskScopedRefreshUsesUUIDAsTheFinalStableOrder() throws {
+        let earlierID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let laterID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        let sharedCreatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let earlier = TaskNode(title: "Same", parentID: nil, deviceID: "test", sortOrder: 10)
+        earlier.id = earlierID
+        earlier.createdAt = sharedCreatedAt
+        let later = TaskNode(title: "Same", parentID: nil, deviceID: "test", sortOrder: 10)
+        later.id = laterID
+        later.createdAt = sharedCreatedAt
+
+        let repository = TaskStoreTestRepository(tasks: [later, earlier])
+        var store = TaskStore()
+        try store.refresh(repository: repository)
+
+        try store.refreshTaskScoped(taskIDs: [earlierID, laterID], repository: repository)
+
+        #expect(store.tasks.map(\.id) == [earlierID, laterID])
+    }
 }
 
 @MainActor

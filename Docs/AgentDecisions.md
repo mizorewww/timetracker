@@ -827,6 +827,18 @@
 
 验证：真实内存 SwiftData context 构造“旧 sibling 有 dismissal、新 winner 有更新内容”的逻辑条目，确认刷新后 winner 字段保持未改、建议不可见、state 为 dismissed 且 `context.hasChanges == false`。付费签名的 Inbox identity/apply/persistence/cancellation/store/write-safety 六套定向回归 46/46、0 error/0 warning；当前合并工作树 generic iOS 自动签名构建同样 0 error/0 warning并保留全部付费签名与主 App 能力。一次性 xcresult 与资源审计见 dated Audit。
 
+## AD-065：任务域排序必须有持久 UUID 终局比较
+
+状态：Accepted
+
+背景：生产 repository 已用 depth、sortOrder、createdAt、UUID 排序，但 `TaskStore.refreshTaskScoped` 在合并未受影响行与局部 fetch 后只比较前三项。CloudKit 同时创建、导入或测试夹具可以产生前三项完全相同的任务；此时 comparator 对两种方向都返回 false，最终顺序受字典/fetch 输入影响，造成任务树重绘和选择上下文抖动。
+
+决策：TaskStore 的 scoped 合并顺序与 repository 层保持相同的严格全序：depth、sortOrder、createdAt，最后比较持久 `TaskNode.id.uuidString`。标题、数组位置、对象地址和当前输入顺序都不能成为 tie-break。
+
+后果：相同事实集合在全量与局部刷新后得到相同任务顺序和稳定 SwiftUI identity。UUID 只解决真正相等的展示顺序事实，不改变用户显式 sortOrder，也不替代任务树 projection cache。
+
+验证：固定 UUID、相同 depth/sortOrder/createdAt 且反向输入的回归确认 scoped refresh 恒按 UUID 排列；付费签名 macOS `CoreTaskStoreTests` 6/6、0 error/0 warning。一次性 xcresult 见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

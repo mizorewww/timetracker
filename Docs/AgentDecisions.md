@@ -182,14 +182,16 @@
 
 ## AD-012：平台原生导航与只读优先任务详情
 
-状态：Accepted
+状态：Accepted（iPad 根导航条款由 AD-049 部分替代）
+
+替代关系：AD-049 取代本决策中“iPad compact width 切换为五标签根导航”的条款；其余平台导航、Today、任务详情、Settings 和 Pomodoro 条款继续有效。
 
 背景：旧 iPhone 自绘六目的地 chrome、卡片式 Today、任务详情内联大编辑器和 Pomodoro 隐藏点击选择造成层级混乱、可发现性弱和不必要的维护成本。
 
 决策：
 
 - iPhone 使用五个系统 `Tab`；Settings 从 Today 工具栏进入。
-- iPad regular width 和 macOS 使用 `NavigationSplitView`；iPad compact width 使用与 iPhone一致的五标签根导航。macOS 使用单实例主 `Window`；独立 Settings 场景与主窗口共享一个应用级 store。
+- iPad 在所有窗口宽度都保持同一个 `NavigationSplitView`，窄窗口只由系统折叠或显示列；macOS 使用 `NavigationSplitView` 和单实例主 `Window`，独立 Settings 场景与主窗口共享一个应用级 store。
 - Today 只保留当前计时、今日摘要、Quick Start、可解释预测、时间线和用户倒计时。
 - Task Detail 是阅读、执行和证据页面；编辑通过明确铅笔入口进入 sheet。
 - Settings 按通用、专注、数据与同步、AI 助手、高级分类；外观跟随系统，不提供应用级亮/暗覆盖。
@@ -274,7 +276,9 @@
 
 ## AD-019：辅助功能字号触发结构重排，不以截断换紧凑
 
-状态：Accepted
+状态：Accepted（持续验证资源优先级由 AD-057 部分替代）
+
+替代关系：本决策定义的信息完整性和布局行为继续有效；是否把极端 Dynamic Type 作为每轮全库专项，由 AD-057 的风险分级验证策略决定。
 
 背景：Today、Task、Settings 和 Analytics 的旧横向行同时承载图标、标题、路径、数值与操作。在 Accessibility Extra Large 等字号下，单纯放大字体会造成标题截断、计时按钮碰撞和底部内容被 tab bar 遮挡。
 
@@ -290,7 +294,7 @@
 
 背景：Analytics、Settings、Task Detail、ledger infrastructure 和 SyncConflict 曾由少数大文件混合路由、展示、算法、同步状态与 DTO。大文件让 UI 修改触及同步/安全代码，也让代码审核难以界定行为边界。
 
-决策：保持以下当前所有权：Analytics 的 landing page 与 typed category-detail destination 分文件，period/detail-list 与 store metrics/breakdown/overlap/task-snapshot 文件继续聚焦；Pomodoro setup 由 composition、empty state、focus controls、Plan/Task selection 和 timer face 文件分担；Settings 使用 display/timing、Pomodoro、countdown、sync、data、actions、bindings 和 support 文件，共享 rows 另按 foundation/value、action/destructive、input、presentation 和 sync-feedback 分文件；Task Detail 使用 canonical router 加 identity/checklist/overview/analytics/navigation/record sections；ledger infrastructure 使用 Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 和 summary 文件，ledger domain index 又把 ordered flat-array mutation 与 day/change index 分开；rollup base 负责 state/full rebuild，Mutation extension 负责 scoped delta/replacement，pace/topology/activity 保持各自 owner；SyncConflict 使用 bootstrap/prompt、local mutation、Cloud import/export、recovery/resolution、state persistence/lock/locations、snapshot capture/分域 restore 和分域 record DTO 文件；Widget 使用 entry/provider/config、active layout、supplementary state 与 support 文件；Watch 使用 dashboard/timer/status/color UI 文件，`WatchAppStore` base 负责 observable state/restore，Commands extension 负责 queue/timeout/persistence，Connectivity extension 负责 WCSession transport/payload/freshness/delegate；facade 的 `Configuration` 负责首次配置/repository-only 系统表面装配，`Lifecycle` 负责 refresh/mutation/recovery/error。不得重新创建 `SettingsSectionsViews.swift` 或 `TimeTrackerServices.swift` 作为杂项聚合点，也不得让 closed-app post-commit 路径启动 migration、demo seed、observer 或自动 LLM 工作。
+决策：保持以下当前所有权：Analytics 的 landing page 与 typed category-detail destination 分文件，period/detail-list 与 store metrics/breakdown/overlap/task-snapshot 文件继续聚焦；Pomodoro setup 由 composition、empty state、focus controls、Plan/Task selection 和 timer face 文件分担；Settings 使用 display/timing、Pomodoro、countdown、sync、data、actions、bindings 和 support 文件，共享 rows 另按 foundation/value、action/destructive、input、presentation 和 sync-feedback 分文件；Task Detail 使用 canonical router 加 identity/checklist/overview/analytics/navigation/record sections；ledger infrastructure 使用 Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 和 summary 文件，ledger domain index 又把 ordered flat-array mutation 与 day/change index 分开；rollup base 负责 state/full rebuild，Mutation extension 负责 scoped delta/replacement，pace/topology/activity 保持各自 owner；SyncConflict 使用 bootstrap/prompt、local mutation、Cloud import/export、recovery/resolution、state persistence/lock/locations、snapshot capture/分域 restore 和分域 record DTO 文件；Widget 使用 entry/provider/config、active layout、supplementary state 与 support 文件；Watch 使用 dashboard/timer/status/color UI 文件，`WatchAppStore` base 负责 observable state/restore，Commands extension 负责 queue/timeout/persistence，Connectivity extension 负责 WCSession transport/payload/freshness，SessionDelegate extension 独立承接 callbacks；facade 的 `Configuration` 负责首次配置/repository-only 系统表面装配，`Lifecycle` 负责 refresh/mutation/recovery/error。不得重新创建 `SettingsSectionsViews.swift` 或 `TimeTrackerServices.swift` 作为杂项聚合点，也不得让 closed-app post-commit 路径启动 migration、demo seed、observer 或自动 LLM 工作。
 
 后果：文件移动必须保持一个权威领域规则，不能因“拆分”复制 LWW、时间聚合、恢复或 UI action。拆分后的 sync 继续作为语义高风险域接受完整行为测试；仍较集中的 Home 和 row 文件按 [CodeRefactorPlan](CodeRefactorPlan.md) 的真实现状继续治理。
 
@@ -702,6 +706,7 @@
 后果：无关 timer、ledger、selection 或重复等价 task refresh 不再重建任务树/搜索 projection；task/category/assignment 的真实语义变化会在同一 store refresh 边界使所有 UI surface 看到新 revision。展开或新 query 的首次读取仍按可见行或可搜索 task 数线性计算，但同 key 重绘为有界 cache hit。新增 task-tree surface 必须消费该 read index/projection，不得在 `body` 重新 `filter/sorted/grouping` 全树；新增搜索字段必须同时进入 read-index equality/失效语义。容量不得改成无界历史。
 
 验证：等价性测试把新 projection 与旧 category+flattener 语义逐项比较，覆盖归档分支、分类/未分类、深度、child count、标题路径和 notes 搜索；identity 测试确认输入顺序改变不改变 hierarchy row/section IDs。cache 测试覆盖重复命中、LRU 容量、revision 失效和 store 对无关刷新/等价 refresh 不推进 revision。5,000 节点测试固定 fully-expanded projection 为每个可见 task 一次 child bucket lookup，并固定重复 projection/search 不增加 build count。主 Agent 使用付费开发者身份执行签名的 task-tree 与 task UI 定向套件，37/37 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
+
 ## AD-055：Analytics 重叠明细以 excess 守恒而非墙钟跨度计量
 
 状态：Accepted
@@ -713,6 +718,7 @@
 后果：明细与总览在任意并发度下守恒，不再把“发生并发的 1 小时”误报为“五路计时多出的 1 小时”。同一 task 的重复 segment 会增加并发度和 excess，但参与任务只出现一次。跨日与 DST 先在 bounded read boundary 裁剪，再按绝对 elapsed seconds 计算；UI 的时间范围只描述墙钟窗口，数值明确标为 excess。不得重新引入 title-based identity、只取前两个 segment 的 pair 模型，或隐藏剩余窗口却不公开其 excess。
 
 验证：覆盖五路同窗、三路交错、同 task 重复 segment、同名 task 仍按 UUID 分离、同边界替换并合并、隐藏 participant 替换不合并、仅边界相接不重叠、零/负时长排除、春秋 DST 跨午夜裁剪、稳定 tie 顺序、输入倒序和亚秒余数守恒；presentation 测试确认可见 excess 与隐藏 excess 合计不丢秒。source contract 固定 wall/excess 分离、UUID participant、明确 excess 文案与隐藏汇总。主 Agent 使用付费开发者身份执行 Analytics store、timeline 与 UI contract 签名定向套件，86/86 通过；正常字号的 Analytics 实机目视验收并入后续单设备 UI 批次，不另开辅助功能专项批次。
+
 ## AD-056：定向停止链接不得回退到其他计时
 
 状态：Accepted
@@ -724,6 +730,18 @@
 后果：陈旧 Live Activity、Widget 或外部定向链接不会修改无关任务；通用“停止计时”链接仍能停止当前最近计时。新增系统入口必须明确选择定向或通用语义，不能在定向目标失效时扩大 mutation 范围。
 
 验证：Store 与共享 system-action command 的行为测试都构造“目标任务已停止、另一任务仍运行”，固定定向停止后无关 segment 在内存 read model 与 repository 中保持活动；既有无目标测试继续约束通用动作停止最近计时。主 Agent 使用付费开发者身份执行 deep-link 与 system-action 签名定向套件，23/23 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
+
+## AD-057：正常字号、核心操作路径与 HIG 是默认审核主线
+
+状态：Accepted
+
+背景：极端 Dynamic Type 专项已经帮助修复 Today、Tasks、Settings、Analytics、Widget 和 Live Activity 的信息丢失与布局问题，但持续把全库审查资源集中在最大辅助字号，会挤占正常字号、核心操作路径、平台原生行为、性能和系统能力验证。用户明确要求后续不再以极端 Dynamic Type 专项作为审核主线。
+
+决策：产品继续保留基本且不可退化的辅助功能语义，包括有名称的原生操作、正确的 role/state/value、非纯颜色信息、合理触控目标和 VoiceOver 可理解性；已经实现的大字号自适应不得因资源优先级变化而主动移除。默认静态审查、截图、模拟器和实机矩阵优先覆盖正常字号、正常操作路径及当前平台 Apple HIG，包括信息层级、导航、反馈、键盘/指针、窗口适配、深浅外观和系统集成。极端 Dynamic Type 不再是每个小批次或全库收口的重复主线；只有变更直接涉及文本重排/截断、出现明确辅助功能回归、用户报告问题或发布风险要求时，才增加定向极端字号验证。
+
+后果：主 Agent 应先完成常规体验与发行能力的高价值验证，再按风险投入辅助功能专项资源。不得把“不是默认专项”解释为允许删除 accessibility label、隐藏状态、仅靠颜色表达或回退已经通过的布局；也不得为了形式化矩阵反复启动高成本模拟器批次而延误核心路径审核。
+
+验证：默认验收记录正常字号核心路径、平台 HIG 和基本辅助语义；任何极端 Dynamic Type 批次都说明触发风险、受影响页面和资源所有者，并遵守统一的模拟器清理合同。一次性截图、UDID 和 xcresult 证据继续记录在 Audit，而不是写入本决策。
 
 ## 2. Agent 工作清单
 

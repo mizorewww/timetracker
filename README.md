@@ -39,7 +39,7 @@ Today 是日常使用的核心入口，回答三个问题：现在正在追踪�
 - 显示由任务预计时长或 checklist 证据驱动的剩余时间预测。
 - iPhone、iPad 与 macOS Today 都显示用户自定义倒计时事件；日、周、月、年这类低价值通用进度不再占据 Today。
 - Active Timer、Forecast 和 Timeline 行可以直接打开只读优先的任务详情。
-- iPhone 使用系统原生五标签 `TabView`，Settings 从 Today 工具栏进入；iPad regular width 和 macOS 使用 `NavigationSplitView`，iPad compact width 自适应为五标签根导航，macOS 设置使用独立 Settings 场景。
+- iPhone 使用系统原生五标签 `TabView`，Settings 从 Today 工具栏进入；iPad 在所有窗口宽度都保持同一个 `NavigationSplitView`，由系统折叠或显示侧边栏而不切换根导航；macOS 使用 `NavigationSplitView` 和独立 Settings 场景。
 
 ### 任务与任务树
 
@@ -141,7 +141,7 @@ Inbox 用于快速收集还没有整理归属的事项。
 Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 
 - Today、Week、Month 多范围统计。
-- 首页只展示当前范围摘要和六个用途分类；概览、时间、任务、番茄钟、决策和质量分别进入原生列表详情，不再把所有图表堆在一个滚动页面。
+- 首页先展示当前范围摘要；“复盘”优先提供决策与质量，“深入查看”再提供时间、任务、番茄钟和指标详情，不再把所有图表堆在一个滚动页面。
 - Gross Time 和 Wall Time 双口径：
   - Gross Time：所有任务时间直接相加。
   - Wall Time：去重后的真实时钟时间。

@@ -38,7 +38,7 @@ Debug 和 Release 的自动演示数据模式都默认为关闭。Debug/内部�
 
 ### iPad
 
-Regular width 使用系统侧边栏和详情栏；可选择功能入口或直接选择任务。Compact width 使用与 iPhone 相同的五标签根导航。尺寸变化时以当前可见系统导航为准。
+iPad 在所有窗口宽度都保持同一个系统侧边栏和详情栏。窗口变窄、分屏、旋转或进入 Stage Manager 时，`NavigationSplitView` 只折叠或显示列，不会切换成 iPhone 的五标签根导航；侧边栏折叠时使用系统“显示侧边栏”操作恢复，当前目的地和任务详情会保留。
 
 ### Mac
 

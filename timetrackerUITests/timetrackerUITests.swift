@@ -39,6 +39,68 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testSyncRecoveryUsesExplicitDestructiveConfirmations() throws {
+        #if os(macOS)
+        throw XCTSkip("The compact Settings recovery flow requires an iOS simulator.")
+        #else
+        let app = launchApp()
+        openSettings(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
+
+        let dataAndSync = app.buttons["settings.category.dataAndSync"].firstMatch
+        XCTAssertTrue(
+            waitForElement(dataAndSync, timeout: 3, diagnosticName: "settings-data-and-sync", in: app)
+                && dataAndSync.isHittable
+        )
+        activate(dataAndSync)
+
+        let replaceCloud = app.buttons["settings.syncRecovery.replaceCloud"].firstMatch
+        scrollUntilHittable(replaceCloud, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(replaceCloud, timeout: 5, diagnosticName: "settings-replace-cloud", in: app)
+                && replaceCloud.isHittable
+        )
+        try capture("iphone-settings-sync-recovery", app: app)
+
+        activate(replaceCloud)
+        let replaceCloudConfirmation = app.buttons["Replace iCloud"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                replaceCloudConfirmation,
+                timeout: 3,
+                diagnosticName: "settings-replace-cloud-confirmation",
+                in: app
+            )
+        )
+        try capture("iphone-settings-replace-cloud-confirmation", app: app)
+        let dismissUpload = app.descendants(matching: .any)["PopoverDismissRegion"].firstMatch
+        XCTAssertTrue(dismissUpload.waitForExistence(timeout: 2))
+        activate(dismissUpload)
+
+        let replaceDevice = app.buttons["settings.syncRecovery.replaceDevice"].firstMatch
+        scrollUntilHittable(replaceDevice, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(replaceDevice, timeout: 3, diagnosticName: "settings-replace-device", in: app)
+                && replaceDevice.isHittable
+        )
+        activate(replaceDevice)
+        let replaceDeviceConfirmation = app.buttons["Replace This Device"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                replaceDeviceConfirmation,
+                timeout: 3,
+                diagnosticName: "settings-replace-device-confirmation",
+                in: app
+            )
+        )
+        try capture("iphone-settings-replace-device-confirmation", app: app)
+        let dismissDownload = app.descendants(matching: .any)["PopoverDismissRegion"].firstMatch
+        XCTAssertTrue(dismissDownload.waitForExistence(timeout: 2))
+        activate(dismissDownload)
+        #endif
+    }
+
+    @MainActor
     func testSettingsCategoryNavigationRemainsReachableAtLargeTextSizes() throws {
         let app = launchApp(
             contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"

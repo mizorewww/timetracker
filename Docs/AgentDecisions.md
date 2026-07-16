@@ -755,6 +755,18 @@
 
 验证：源码合同固定两个 Section 的职责分离、两项 destructive role、冲突双摘要、明确确认动词和三语键。主 Agent 使用付费开发者身份执行同步冲突行为、Settings 安全合同与共享组件签名定向套件，55/55 通过；正常字号的 iPhone/iPad/Mac“数据与同步”页面及确认对话目视检查进入后续 UI 批次，任何模拟器都按批次明确拥有并在当批删除。
 
+## AD-059：Settings 破坏性确认只有一个 Form-owned presentation owner
+
+状态：Accepted
+
+背景：`SettingsView` 曾在根列表连续附加重建 Demo、清除 Demo、清空全部、清理记录、替换 iCloud 和替换本机六个 `confirmationDialog`。正常字号 iPhone UI 测试发现点击“用本设备替换 iCloud”后没有任何确认；合并为一个可选枚举后仍不出现，证明 compact `NavigationLink` destination 还位于根列表 presentation modifier 的有效层级之外。这会让危险按钮表面看似有二次确认，实际却无反馈。
+
+决策：Settings 所有破坏性动作以 `SettingsDestructiveConfirmation?` 表达唯一 pending intent。一个 `confirmationDialog` 根据该枚举生成标题、说明、红色确认动作和取消语义，并附着在实际包含 category sections 的 `Form`。动作 closure 捕获明确枚举 case 后再进入对应 Store/同步命令；不得恢复并列多个同类 presentation modifier，也不得把确认 owner 放在 compact navigation destination 之外。
+
+后果：重建、清理、清空与两个同步覆盖方向共享相同且可达的系统 presentation 边界，不会因 modifier 顺序让只有最后一个动作能显示。新增 Settings 危险操作必须扩展枚举并复用该入口；普通刷新、检查和导航不进入这个状态机。iOS 27 可能把确认呈现为 popover，并通过弹窗外区域取消，测试不能为了关闭面板点击真实破坏性动作。
+
+验证：首轮 UI 失败保留为缺陷发现证据，不计通过。修复后 iPhone 17 Pro / iOS 27 正常字号 UI 回归分别打开“替换 iCloud”和“替换本机”确认，核对方向性按钮和说明，随后只点击系统 `PopoverDismissRegion`；1/1 通过，xcresult 为 `/tmp/timetracker-sync-confirmation-rerun3-20260716.xcresult`。Settings 安全合同与同步冲突签名回归 43/43，xcresult 为 `/tmp/timetracker-settings-confirmation-macos-20260716.xcresult`，Team `LT98S43NKA`，identity `Apple Development: ZEXUAN GAO (PX46M259V3)`。专用模拟器已删除，设备、runner 与测试进程审计为空。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

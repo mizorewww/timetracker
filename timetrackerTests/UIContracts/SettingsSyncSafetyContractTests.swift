@@ -41,8 +41,8 @@ struct SettingsSyncSafetyContractTests {
         let recoverySource = try sourceText(
             "timetracker/Features/Settings/SyncRecoverySettingsSection.swift"
         )
-        let settingsSource = try sourceText(
-            "timetracker/Features/Settings/SettingsViews.swift"
+        let confirmationSource = try sourceText(
+            "timetracker/Features/Settings/SettingsDestructiveConfirmation.swift"
         )
         let actionsSource = try sourceText(
             "timetracker/Features/Settings/SettingsViewActions.swift"
@@ -54,13 +54,13 @@ struct SettingsSyncSafetyContractTests {
         #expect(recoverySource.contains("settings.syncRecovery.replaceDevice"))
         #expect(recoverySource.contains("tint: .green") == false)
         #expect(recoverySource.contains("tint: .cyan") == false)
-        #expect(settingsSource.contains("dialog.forceUpload.confirm"))
-        #expect(settingsSource.contains("dialog.forceDownload.confirm"))
-        #expect(settingsSource.contains("forceUploadLocalData()"))
+        #expect(confirmationSource.contains("dialog.forceUpload.confirm"))
+        #expect(confirmationSource.contains("dialog.forceDownload.confirm"))
+        #expect(confirmationSource.contains("forceUploadLocalData()"))
         #expect(actionsSource.contains("store.resolveSyncConflict(.uploadLocal)"))
         #expect(actionsSource.contains("sync.forceUpload.conflictResolved"))
-        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceUploadICloud\")") == false)
-        #expect(settingsSource.contains("Label(AppStrings.localized(\"settings.forceDownloadICloud\")") == false)
+        #expect(confirmationSource.contains("Label(AppStrings.localized(\"settings.forceUploadICloud\")") == false)
+        #expect(confirmationSource.contains("Label(AppStrings.localized(\"settings.forceDownloadICloud\")") == false)
     }
 
     @Test

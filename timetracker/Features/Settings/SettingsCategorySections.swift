@@ -30,7 +30,7 @@ extension SettingsView {
                 allowsPermanentCleanup: AppCloudSync.allowsPermanentTombstonePurge,
                 onExport: prepareJSONExport,
                 onAddTime: { store.presentManualTime() },
-                onOptimize: { isOptimizeConfirmationPresented = true }
+                onOptimize: { pendingDestructiveConfirmation = .optimizeDatabase }
             )
 
             SyncSettingsSection(
@@ -45,8 +45,8 @@ extension SettingsView {
             SyncRecoverySettingsSection(
                 pendingConflict: store.pendingSyncConflict,
                 isWorking: isCheckingSync,
-                onReplaceCloud: { isForceUploadConfirmationPresented = true },
-                onReplaceDevice: { isForceDownloadConfirmationPresented = true }
+                onReplaceCloud: { pendingDestructiveConfirmation = .replaceCloud },
+                onReplaceDevice: { pendingDestructiveConfirmation = .replaceDevice }
             )
 
         case .intelligence:
@@ -68,9 +68,9 @@ extension SettingsView {
                 cloudContainer: store.syncStatus.containerIdentifier,
                 allowsDemoDataCreation: AppDemoDataConfiguration.allowsDemoDataCreation,
                 hasDemoData: hasDemoData,
-                onRebuildDemoData: { isResetConfirmationPresented = true },
-                onClearDemoData: { isClearConfirmationPresented = true },
-                onResetAllData: { isResetAllDataConfirmationPresented = true }
+                onRebuildDemoData: { pendingDestructiveConfirmation = .rebuildDemo },
+                onClearDemoData: { pendingDestructiveConfirmation = .clearDemo },
+                onResetAllData: { pendingDestructiveConfirmation = .resetAllData }
             )
             AboutSettingsSection()
         }

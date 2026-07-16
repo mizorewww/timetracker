@@ -4,15 +4,10 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     let store: TimeTrackerStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State var isResetConfirmationPresented = false
-    @State var isClearConfirmationPresented = false
-    @State var isResetAllDataConfirmationPresented = false
-    @State var isOptimizeConfirmationPresented = false
+    @State var pendingDestructiveConfirmation: SettingsDestructiveConfirmation?
     @State var isExportPresented = false
     @State private var exportDocument = JSONExportDocument(text: "")
     @State var isCheckingSync = false
-    @State var isForceUploadConfirmationPresented = false
-    @State var isForceDownloadConfirmationPresented = false
     @State var isLLMConfigurationPresented = false
     @State var syncCheckMessage: String?
     @State var databaseOptimizationMessage: String?
@@ -34,55 +29,6 @@ struct SettingsView: View {
             if case let .failure(error) = result {
                 store.errorMessage = error.localizedDescription
             }
-        }
-        .confirmationDialog(AppStrings.localized("dialog.rebuildDemo.title"), isPresented: $isResetConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("dialog.rebuildDemo.confirm"), role: .destructive) {
-                store.replaceWithDemoData()
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("dialog.rebuildDemo.message"))
-        }
-        .confirmationDialog(AppStrings.localized("dialog.clearDemo.title"), isPresented: $isClearConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("dialog.clearDemo.confirm"), role: .destructive) {
-                store.clearDemoData()
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("dialog.clearDemo.message"))
-        }
-        .confirmationDialog(AppStrings.localized("dialog.resetData.title"), isPresented: $isResetAllDataConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("dialog.resetData.confirm"), role: .destructive) {
-                store.clearAllData()
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("dialog.resetData.message"))
-        }
-        .confirmationDialog(AppStrings.localized("dialog.optimize.title"), isPresented: $isOptimizeConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("dialog.optimize.confirm"), role: .destructive) {
-                let removedCount = store.optimizeDatabase()
-                databaseOptimizationMessage = removedCount == 0 ? AppStrings.localized("dialog.optimize.none") : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("dialog.optimize.message"))
-        }
-        .confirmationDialog(AppStrings.localized("dialog.forceUpload.title"), isPresented: $isForceUploadConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("dialog.forceUpload.confirm"), role: .destructive) {
-                forceUploadLocalData()
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("dialog.forceUpload.message"))
-        }
-        .confirmationDialog(AppStrings.localized("dialog.forceDownload.title"), isPresented: $isForceDownloadConfirmationPresented, titleVisibility: .visible) {
-            Button(AppStrings.localized("dialog.forceDownload.confirm"), role: .destructive) {
-                forceDownloadCloudData()
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("dialog.forceDownload.message"))
         }
         .alert(AppStrings.localized("alert.sync.title"), isPresented: syncCheckPresented) {
             Button(AppStrings.localized("common.ok")) {
@@ -147,6 +93,19 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .accessibilityIdentifier("settings.view")
         .navigationTitle(category.title)
+        .confirmationDialog(
+            pendingDestructiveConfirmation.map { AppStrings.localized($0.titleKey) } ?? "",
+            isPresented: destructiveConfirmationPresented,
+            titleVisibility: .visible,
+            presenting: pendingDestructiveConfirmation
+        ) { confirmation in
+            Button(AppStrings.localized(confirmation.confirmKey), role: .destructive) {
+                performDestructiveConfirmation(confirmation)
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: { confirmation in
+            Text(.app(confirmation.messageKey))
+        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

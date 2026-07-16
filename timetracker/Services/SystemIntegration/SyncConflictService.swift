@@ -79,15 +79,29 @@ struct SyncConflictService {
         return prompt(from: state)
     }
 
-    static func hasDefaultPendingForcedUploadBackup() -> Bool {
-        let service = SyncConflictService()
-        if let snapshot = try? service.loadPendingForcedUploadSnapshot() {
-            return snapshot.hasProtectableUserContent
+    static func hasDefaultPendingForcedUploadBackup(
+        loadAuthoritativeSnapshot: (() throws -> SyncDataSnapshot?)? = nil,
+        loadRecoveryMirror: (() throws -> SyncDataSnapshot?)? = nil
+    ) -> Bool {
+        let authoritativeLoader = loadAuthoritativeSnapshot ?? {
+            try SyncConflictService().loadPendingForcedUploadSnapshot()
         }
+        do {
+            if let snapshot = try authoritativeLoader() {
+                return snapshot.hasProtectableUserContent
+            }
+        } catch {
+            // Fall through to the independent recovery mirror. The
+            // authoritative loader may already have quarantined corrupt state.
+        }
+
         // A corrupt authoritative state is quarantined by the failed load.
         // Keep the independent recovery mirror usable for this launch.
-        guard let url = try? defaultPendingForcedUploadSnapshotURL(),
-              let fallbackSnapshot = try? loadPendingForcedUploadSnapshot(at: url) else {
+        let mirrorLoader = loadRecoveryMirror ?? {
+            let url = try defaultPendingForcedUploadSnapshotURL()
+            return try loadPendingForcedUploadSnapshot(at: url)
+        }
+        guard let fallbackSnapshot = try? mirrorLoader() else {
             return false
         }
         return fallbackSnapshot.hasProtectableUserContent

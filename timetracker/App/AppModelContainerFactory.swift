@@ -48,17 +48,6 @@ extension timetrackerApp {
             }
         }
 
-        do {
-            let recoveryReset = try AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
-                canResetUpload: SyncConflictService.hasDefaultPendingForcedUploadBackup()
-            )
-            if recoveryReset == .download {
-                try SyncConflictService.removeDefaultState()
-            }
-        } catch {
-            AppCloudSync.recordLocalFallback(error: error)
-        }
-
         let storeURL = AppCloudSync.persistentStoreURL
         let cloudConfiguration = ModelConfiguration(
             "TimeTracker",
@@ -119,13 +108,37 @@ extension timetrackerApp {
             }
         }
 
+        let recoveryGate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
+            canResetUpload: SyncConflictService.hasDefaultPendingForcedUploadBackup()
+        )
+
+        let completedRecovery: AppCloudSync.CompletedCloudRecovery
+        switch recoveryGate {
+        case .completed(let recovery):
+            completedRecovery = recovery
+        case .deferred(let reason):
+            return makeLocalFallbackModelContainer(
+                schema: schema,
+                localConfiguration: localConfiguration,
+                emergencyConfiguration: emergencyConfiguration,
+                error: reason
+            )
+        case .failed(let failure):
+            return makeLocalFallbackModelContainer(
+                schema: schema,
+                localConfiguration: localConfiguration,
+                emergencyConfiguration: emergencyConfiguration,
+                error: failure
+            )
+        }
+
         do {
             let container = try ModelContainer(
                 for: schema,
                 migrationPlan: TimeTrackerMigrationPlan.self,
                 configurations: [cloudConfiguration]
             )
-            AppCloudSync.recordCloudKitEnabled()
+            AppCloudSync.recordCloudKitEnabled(after: completedRecovery)
             return container
         } catch {
             AppCloudSync.recordLocalFallback(error: error)
@@ -170,6 +183,28 @@ extension timetrackerApp {
             )
         } catch {
             preconditionFailure("Could not create emergency in-memory ModelContainer: \(error)")
+        }
+    }
+
+    private static func makeLocalFallbackModelContainer(
+        schema: Schema,
+        localConfiguration: ModelConfiguration,
+        emergencyConfiguration: ModelConfiguration,
+        error: Error
+    ) -> ModelContainer {
+        AppCloudSync.recordLocalFallback(error: error)
+        do {
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [localConfiguration]
+            )
+        } catch {
+            return makeEmergencyModelContainer(
+                schema: schema,
+                configuration: emergencyConfiguration,
+                error: error
+            )
         }
     }
 }

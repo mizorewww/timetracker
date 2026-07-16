@@ -31,25 +31,62 @@ extension AppCloudSync {
         logger.warning("Queued CloudKit download recovery reset")
     }
 
-    @discardableResult
+    /// Executes a queued CloudKit reset without acknowledging it.
+    ///
+    /// The pending defaults remain set until a CloudKit container has been
+    /// created successfully and `recordCloudKitEnabled(after:)` receives the
+    /// completion token returned here. A deferred or failed recovery therefore
+    /// cannot be mistaken for a reset that is safe to acknowledge.
     static func performPendingCloudRecoveryResetIfNeeded(
-        canResetUpload: Bool = true
-    ) throws -> CloudRecoveryReset {
+        canResetUpload: Bool = true,
+        storeURL: URL? = nil,
+        removeStoreFiles: ((URL) throws -> Void)? = nil,
+        removeSyncConflictState: (() throws -> Void)? = nil
+    ) -> CloudRecoveryGate {
         let defaults = UserDefaults.standard
         let shouldResetForDownload = defaults.bool(forKey: pendingCloudDownloadResetKey)
         let shouldResetForUpload = defaults.bool(forKey: pendingCloudUploadResetKey)
         guard shouldResetForDownload || shouldResetForUpload else {
-            return .none
+            return .completed(CompletedCloudRecovery(reset: .none))
         }
         guard shouldResetForDownload || canResetUpload else {
             logger.error("Skipped CloudKit upload recovery reset because no protected upload snapshot was found")
-            return .none
+            return .deferred(.protectedUploadSnapshotUnavailable)
         }
-        try removePersistentStoreFiles(at: persistentStoreURL)
+
+        let resolvedStoreURL = storeURL ?? persistentStoreURL
+        let storeFileRemover = removeStoreFiles ?? removePersistentStoreFiles
+        do {
+            try storeFileRemover(resolvedStoreURL)
+        } catch {
+            logger.error(
+                "CloudKit recovery could not remove persistent store files: \(error.localizedDescription, privacy: .public)"
+            )
+            return .failed(
+                CloudRecoveryFailure(stage: .persistentStoreRemoval, underlyingError: error)
+            )
+        }
+
+        let reset: CloudRecoveryReset = shouldResetForDownload ? .download : .upload
         logger.warning(
             "Removed persistent store files for CloudKit recovery reset: \(shouldResetForDownload ? "download" : "upload", privacy: .public)"
         )
-        return shouldResetForDownload ? .download : .upload
+
+        if reset == .download {
+            let stateRemover = removeSyncConflictState ?? SyncConflictService.removeDefaultState
+            do {
+                try stateRemover()
+            } catch {
+                logger.error(
+                    "CloudKit download recovery could not remove sync conflict state: \(error.localizedDescription, privacy: .public)"
+                )
+                return .failed(
+                    CloudRecoveryFailure(stage: .syncConflictStateRemoval, underlyingError: error)
+                )
+            }
+        }
+
+        return .completed(CompletedCloudRecovery(reset: reset))
     }
 
     static func refreshAccountStatus() async {
@@ -95,9 +132,59 @@ extension AppCloudSync {
         }
     }
 
-    enum CloudRecoveryReset {
+    enum CloudRecoveryReset: Equatable {
         case none
         case upload
         case download
+    }
+
+    struct CompletedCloudRecovery {
+        let reset: CloudRecoveryReset
+
+        fileprivate init(reset: CloudRecoveryReset) {
+            self.reset = reset
+        }
+    }
+
+    enum CloudRecoveryGate {
+        case completed(CompletedCloudRecovery)
+        case deferred(CloudRecoveryDeferral)
+        case failed(CloudRecoveryFailure)
+    }
+
+    enum CloudRecoveryDeferral: LocalizedError, Equatable {
+        case protectedUploadSnapshotUnavailable
+
+        var errorDescription: String? {
+            switch self {
+            case .protectedUploadSnapshotUnavailable:
+                AppStrings.localized("sync.recovery.deferred.uploadSnapshotUnavailable")
+            }
+        }
+    }
+
+    struct CloudRecoveryFailure: LocalizedError {
+        enum Stage: Equatable {
+            case persistentStoreRemoval
+            case syncConflictStateRemoval
+        }
+
+        let stage: Stage
+        let underlyingError: Error
+
+        var errorDescription: String? {
+            switch stage {
+            case .persistentStoreRemoval:
+                String(
+                    format: AppStrings.localized("sync.recovery.error.storeRemoval"),
+                    underlyingError.localizedDescription
+                )
+            case .syncConflictStateRemoval:
+                String(
+                    format: AppStrings.localized("sync.recovery.error.stateRemoval"),
+                    underlyingError.localizedDescription
+                )
+            }
+        }
     }
 }

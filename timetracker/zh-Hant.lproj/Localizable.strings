@@ -284,6 +284,9 @@
 "sync.conflict.error.cloudSnapshotMissing" = "找不到已儲存的 iCloud 快照，無法安全地取代本裝置資料。";
 "sync.conflict.error.uploadSnapshotMissing" = "沒有找到本裝置的可見資料，已取消排程覆蓋 iCloud。";
 "sync.conflict.error.changed" = "同步衝突在你確認前已經變更。請重新核對最新的本機與 iCloud 摘要，再次選擇。";
+"sync.recovery.deferred.uploadSnapshotUnavailable" = "雲端復原正在等待可讀取的受保護上傳快照。";
+"sync.recovery.error.storeRemoval" = "雲端復原無法移除持久化儲存：%@";
+"sync.recovery.error.stateRemoval" = "雲端復原無法移除同步衝突狀態：%@";
 "tab.home" = "首頁";
 "sidebar.show" = "顯示側邊欄";
 "sidebar.hide" = "隱藏側邊欄";

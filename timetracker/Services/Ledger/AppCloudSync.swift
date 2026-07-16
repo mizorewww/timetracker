@@ -99,13 +99,15 @@ enum AppCloudSync {
         UserDefaults.standard.string(forKey: accountStatusKey) ?? AppStrings.localized("sync.unchecked")
     }
 
-    static func recordCloudKitEnabled() {
+    static func recordCloudKitEnabled(after recovery: CompletedCloudRecovery) {
         AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
         UserDefaults.standard.set(modeICloud, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
         UserDefaults.standard.removeObject(forKey: pendingCloudUploadResetKey)
         UserDefaults.standard.removeObject(forKey: pendingCloudDownloadResetKey)
-        logger.info("CloudKit storage is active")
+        logger.info(
+            "CloudKit storage is active after completed recovery: \(String(describing: recovery.reset), privacy: .public)"
+        )
     }
 
     static func recordCloudKitDisabledByUser() {

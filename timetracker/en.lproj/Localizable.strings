@@ -284,6 +284,9 @@
 "sync.conflict.error.cloudSnapshotMissing" = "The saved iCloud snapshot is missing, so the app cannot safely replace this device's data.";
 "sync.conflict.error.uploadSnapshotMissing" = "No visible data was found on this device, so the app did not queue an iCloud overwrite.";
 "sync.conflict.error.changed" = "The sync conflict changed before you confirmed. Review the latest local and iCloud summaries, then choose again.";
+"sync.recovery.deferred.uploadSnapshotUnavailable" = "Cloud recovery is waiting for a readable protected upload snapshot.";
+"sync.recovery.error.storeRemoval" = "Cloud recovery could not remove the persistent store: %@";
+"sync.recovery.error.stateRemoval" = "Cloud recovery could not remove sync conflict state: %@";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";

@@ -175,8 +175,9 @@ timetracker/Features/Inbox
                   Capture, list rows, suggestion feedback, and apply/discard actions
 timetracker/Features/Tasks
   Detail/         Canonical detail router plus identity, checklist, overview,
-                   analytics, navigation, and record sections
-  Editor/         Task editor, symbol picker, checklist editing, and editor-specific controls
+                  analytics, navigation, and record sections
+  Editor/         Task editor composition, hierarchy rows, symbol/color controls,
+                  checklist editing, and editor-specific validation
   Management/     Task browsing screen and reusable task rows
 timetracker/Features/Pomodoro
   Sections/       Setup composition, empty state, focus controls, Plan/Task selection,

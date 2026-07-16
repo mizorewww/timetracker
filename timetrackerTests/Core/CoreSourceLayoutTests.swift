@@ -193,12 +193,14 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Inbox/InboxSuggestionRow.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",
             "timetracker/Features/Tasks/Editor/TaskStatusPicker.swift",
             "timetracker/Features/Tasks/Editor/TaskPlanEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift",
             "timetracker/Features/Tasks/Editor/SymbolPickerViews.swift",
+            "timetracker/Features/Tasks/Editor/SymbolColorPickerRow.swift",
             "timetracker/Features/Tasks/Editor/SymbolCatalog.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift",
@@ -325,12 +327,14 @@ struct CoreSourceLayoutTests {
         let focusedFiles = [
             "TaskEditorComponents.swift",
             "TaskEditorInfoSection.swift",
+            "TaskEditorHierarchyRows.swift",
             "TaskStatusPicker.swift",
             "TaskPlanEditorSection.swift",
             "TaskNotesEditorSection.swift",
             "TaskChecklistEditorSection.swift",
             "ChecklistEditorRow.swift",
             "SymbolPickerViews.swift",
+            "SymbolColorPickerRow.swift",
             "SymbolCatalog.swift"
         ]
 

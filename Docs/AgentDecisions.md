@@ -1073,6 +1073,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：跨 scene 套件覆盖 stale edit/delete、删除后 edit、assignment 两种提交顺序、并发 create 排序和 repository missing 错误；原 Category、Task Draft、presentation、本地化与 model source-layout 套件必须继续通过。
 
+## AD-085：Task Editor 层级控件使用轻量投影和完整路径，不用空格模拟树
+
+状态：Accepted
+
+背景：`TaskEditorInfoSection` 同时拥有标题/状态/符号校验、分类、继承提示、父级锁定、父级 picker 和层级文案，超过 section 文件预算；父选项又以 ASCII 空格缩进，无法可靠区分同名深层任务或表达 RTL/菜单层级。继承分类提示还把整段小字号文字染成任意用户颜色，正常浅色/深色界面可能失去可读性。
+
+决策：信息 section 只负责组合；`TaskParentPickerRow`、`TaskCategoryPickerRow` 和 `TaskHierarchyEditorHints` 位于独立文件并只接收轻量 option/hint 值和 Binding。父选项显示 `TaskIdentityPresentation.fullPath`；当前不可用或缺失父项继续保留用于恢复，非当前不可用项禁用，parent-change blocker 继续锁定选择。继承分类文字固定 secondary，仅 icon 使用分类色。同一 body 只计算一次 active-subtree completion blocker。
+
+后果：层级规则与字段校验可独立修改，Store 观察面缩小；同名任务可辨识，不再把字符串缩进当成数据结构。`SymbolColorPickerRow` 同时从 231 行 picker 聚合文件拆出，使 editor 全部职责文件回到既定预算内。后续共享 TaskChooser 应复用相同 identity projection，不退回裸标题或空格缩进。
+
+验证：完整 Task UI 源码契约覆盖 unavailable/current-missing/lock/full-path 与字段校验；Task editor source-layout 契约要求普通文件不超过 180 行、picker 聚合不超过 230 行。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

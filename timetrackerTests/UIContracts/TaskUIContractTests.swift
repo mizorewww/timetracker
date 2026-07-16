@@ -287,7 +287,12 @@ struct TaskUIContractTests {
     @Test
     func taskCategoryEditorReusesSharedSymbolColorPicker() throws {
         let categoryEditor = try sourceText("timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift")
-        let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
+        let symbolPicker = try [
+            "timetracker/Features/Tasks/Editor/SymbolPickerViews.swift",
+            "timetracker/Features/Tasks/Editor/SymbolColorPickerRow.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
 
         #expect(categoryEditor.contains("SymbolColorPickerRow("))
         #expect(categoryEditor.contains("TaskPersistencePolicy.prepareCategory("))
@@ -690,14 +695,19 @@ struct TaskUIContractTests {
     func taskEditorKeepsUnavailableCurrentParentsVisibleWhileAllowingRecoveryMoves() throws {
         let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
         let info = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift")
+        let hierarchy = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift"
+        )
         let readModels = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift")
 
         #expect(editor.contains("candidates.append(currentParent)"))
         #expect(editor.contains("store.isTaskVisible(currentParent)") == false)
-        #expect(info.contains("store.parentChangeBlocker(for: originalTask)"))
-        #expect(info.contains("task.parent.currentUnavailableFormat"))
-        #expect(info.contains("task.parent.unavailableFormat"))
-        #expect(info.contains("task.parent.currentMissing"))
+        #expect(info.contains("store.parentChangeBlocker(for: $0)"))
+        #expect(info.contains("store.taskIdentityPresentation(for: task).fullPath"))
+        #expect(hierarchy.contains("task.parent.currentUnavailableFormat"))
+        #expect(hierarchy.contains("task.parent.unavailableFormat"))
+        #expect(hierarchy.contains("task.parent.currentMissing"))
+        #expect(hierarchy.contains("String(repeating: \"  \"") == false)
         #expect(info.contains("!store.isTaskAvailableForTracking(originalTask)") == false)
         #expect(readModels.contains("func parentChangeBlocker(for task: TaskNode)"))
     }
@@ -760,6 +770,7 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",
             "timetracker/Features/Tasks/Editor/TaskStatusPicker.swift",
             "timetracker/Features/Tasks/Editor/TaskPlanEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",

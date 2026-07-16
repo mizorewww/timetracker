@@ -55,7 +55,11 @@ struct CoreSourceLayoutTests {
             "timetracker/Models/TimeTrackerModelRegistry.swift",
             "timetracker/Models/TaskEstimatePolicy.swift",
             "timetracker/Models/EditorDraftModels.swift",
-            "timetracker/Models/AnalyticsReadModels.swift",
+            "timetracker/Models/AnalyticsPeriodModels.swift",
+            "timetracker/Models/AnalyticsSummaryReadModels.swift",
+            "timetracker/Models/AnalyticsTimelineReadModels.swift",
+            "timetracker/Models/TaskAnalyticsReadModels.swift",
+            "timetracker/Models/AnalyticsOverlapReadModels.swift",
             "timetracker/Models/PomodoroPreferenceModels.swift",
             "timetracker/Models/SyncFeedbackModels.swift",
             "timetracker/Services/Analytics/AnalyticsEngine.swift",
@@ -835,7 +839,11 @@ struct CoreSourceLayoutTests {
             "SchemaMigrationPlan.swift",
             "TimeTrackerModelRegistry.swift",
             "EditorDraftModels.swift",
-            "AnalyticsReadModels.swift",
+            "AnalyticsPeriodModels.swift",
+            "AnalyticsSummaryReadModels.swift",
+            "AnalyticsTimelineReadModels.swift",
+            "TaskAnalyticsReadModels.swift",
+            "AnalyticsOverlapReadModels.swift",
             "SyncFeedbackModels.swift"
         ]
 

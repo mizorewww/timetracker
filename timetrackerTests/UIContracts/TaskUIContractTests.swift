@@ -463,7 +463,7 @@ struct TaskUIContractTests {
         ]
         .map { try sourceText($0) }
         .joined(separator: "\n")
-        let modelsSource = try sourceText("timetracker/Models/AnalyticsReadModels.swift")
+        let modelsSource = try analyticsReadModelSource()
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("case decisions"))
@@ -526,7 +526,7 @@ struct TaskUIContractTests {
 
     @Test
     func analyticsOverlapSeparatesWallWindowsFromConservedExcess() throws {
-        let modelSource = try sourceText("timetracker/Models/AnalyticsReadModels.swift")
+        let modelSource = try analyticsReadModelSource()
         let storeSource = try [
             "timetracker/Stores/Domains/AnalyticsStore+Overlap.swift",
             "timetracker/Stores/Domains/AnalyticsStore+OverlapMaterialization.swift",
@@ -762,6 +762,18 @@ struct TaskUIContractTests {
             "timetracker/Features/Ledger/SegmentEditorSheet.swift",
             "timetracker/Features/Ledger/SegmentEditorViews.swift",
             "timetracker/Features/Ledger/SegmentEditorPanel+Validation.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+    }
+
+    private func analyticsReadModelSource() throws -> String {
+        try [
+            "timetracker/Models/AnalyticsPeriodModels.swift",
+            "timetracker/Models/AnalyticsSummaryReadModels.swift",
+            "timetracker/Models/AnalyticsTimelineReadModels.swift",
+            "timetracker/Models/TaskAnalyticsReadModels.swift",
+            "timetracker/Models/AnalyticsOverlapReadModels.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

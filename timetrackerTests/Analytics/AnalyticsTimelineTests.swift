@@ -549,7 +549,8 @@ struct AnalyticsTimelineTests {
             .map(sourceText)
             .joined(separator: "\n")
         let analyticsSource = try [
-            "timetracker/Models/AnalyticsReadModels.swift",
+            "timetracker/Models/AnalyticsSummaryReadModels.swift",
+            "timetracker/Models/AnalyticsTimelineReadModels.swift",
             "timetracker/Services/Analytics/HourTaskActivityService.swift",
             "timetracker/Services/Analytics/AnalyticsTimelineSnapshotService.swift",
             "timetracker/Services/Analytics/HourStackLayoutEngine.swift"

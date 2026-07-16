@@ -688,13 +688,27 @@ struct CoreCommandHandlerTests {
         let event = try handler.add(context: context, deviceID: "test")
         let date = Date(timeIntervalSince1970: 50_000)
 
-        try handler.update(event, title: "Ship", date: date, context: context, now: Date(timeIntervalSince1970: 40_000))
+        try handler.update(
+            event,
+            title: "Ship",
+            date: date,
+            context: context,
+            now: Date(timeIntervalSince1970: 40_000),
+            deviceID: "updated-device"
+        )
         #expect(event.title == "Ship")
         #expect(event.date == date)
         #expect(event.updatedAt == Date(timeIntervalSince1970: 40_000))
+        #expect(event.deviceID == "updated-device")
 
-        try handler.softDelete(event, context: context, now: Date(timeIntervalSince1970: 60_000))
+        try handler.softDelete(
+            event,
+            context: context,
+            now: Date(timeIntervalSince1970: 60_000),
+            deviceID: "deleted-device"
+        )
         #expect(event.deletedAt == Date(timeIntervalSince1970: 60_000))
+        #expect(event.deviceID == "deleted-device")
     }
 
     @MainActor

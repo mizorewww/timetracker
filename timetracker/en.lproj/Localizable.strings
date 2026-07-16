@@ -293,6 +293,8 @@
 "migration.countdown.error.payloadTooLarge" = "The legacy countdown archive is too large to migrate safely. The original archive was kept for recovery.";
 "migration.countdown.error.tooManyEvents" = "The legacy countdown archive contains too many events to migrate safely. The original archive was kept for recovery.";
 "migration.countdown.error.invalidPayload" = "The legacy countdown archive is damaged or unreadable. The original archive was kept for recovery.";
+"settings.countdown.error.unavailable" = "This countdown is no longer available. The latest countdowns have been reloaded.";
+"settings.countdown.error.changed" = "This countdown changed in another window or device. Review the latest value and try again.";
 "sync.state.conflict.title" = "Sync conflict needs a choice";
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";
 "sync.conflict.summary" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items";

@@ -12,17 +12,60 @@ extension TimeTrackerStore {
 
     @discardableResult
     func updateCountdownEvent(_ event: CountdownEvent, title: String? = nil, date: Date? = nil) -> Bool {
-        perform(event: .countdownChanged) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try countdownCommandHandler.update(event, title: title, date: date, context: modelContext)
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            try StoreScopedCountdownCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).update(
+                baseline: CountdownMutationBaseline(event: event),
+                title: title,
+                date: date
+            )
+            finishStoreScopedMutation(events: [.countdownChanged])
+            return true
+        } catch {
+            if error is StoreScopedCountdownMutationError {
+                refreshStoreScopedCountdownReadModels()
+            }
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 
     @discardableResult
     func deleteCountdownEvent(_ event: CountdownEvent) -> Bool {
-        perform(event: .countdownChanged) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try countdownCommandHandler.softDelete(event, context: modelContext)
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            try StoreScopedCountdownCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).delete(baseline: CountdownMutationBaseline(event: event))
+            finishStoreScopedMutation(events: [.countdownChanged])
+            return true
+        } catch {
+            if error is StoreScopedCountdownMutationError {
+                refreshStoreScopedCountdownReadModels()
+            }
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    private func refreshStoreScopedCountdownReadModels() {
+        do {
+            try refresh(plan: StoreRefreshPlan(scopes: [.countdown]))
+        } catch {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                error.localizedDescription
+            )
         }
     }
 }

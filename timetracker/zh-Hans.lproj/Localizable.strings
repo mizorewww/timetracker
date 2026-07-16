@@ -293,6 +293,8 @@
 "migration.countdown.error.payloadTooLarge" = "旧版倒计时归档过大，无法安全迁移。原始归档已保留以便恢复。";
 "migration.countdown.error.tooManyEvents" = "旧版倒计时归档中的事件过多，无法安全迁移。原始归档已保留以便恢复。";
 "migration.countdown.error.invalidPayload" = "旧版倒计时归档已损坏或无法读取。原始归档已保留以便恢复。";
+"settings.countdown.error.unavailable" = "此倒计时已不存在。已重新载入最新的倒计时列表。";
+"settings.countdown.error.changed" = "此倒计时已在其他窗口或设备上发生变化。请检查最新内容后重试。";
 "sync.state.conflict.title" = "同步冲突需要选择";
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";
 "sync.conflict.summary" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项";

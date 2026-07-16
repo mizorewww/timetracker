@@ -53,7 +53,14 @@ struct CountdownCommandHandler {
         return event
     }
 
-    func update(_ event: CountdownEvent, title: String? = nil, date: Date? = nil, context: ModelContext, now: Date = Date()) throws {
+    func update(
+        _ event: CountdownEvent,
+        title: String? = nil,
+        date: Date? = nil,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         let normalizedTitle = try title.map(CountdownTitlePolicy.normalized)
 
         if let normalizedTitle {
@@ -63,13 +70,20 @@ struct CountdownCommandHandler {
             event.date = date
         }
         event.updatedAt = now
+        event.deviceID = deviceID
         event.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
 
-    func softDelete(_ event: CountdownEvent, context: ModelContext, now: Date = Date()) throws {
+    func softDelete(
+        _ event: CountdownEvent,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
         event.deletedAt = now
         event.updatedAt = now
+        event.deviceID = deviceID
         event.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }

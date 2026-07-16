@@ -931,7 +931,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 背景：同步恢复确认曾只保存上传/下载方向。用户看到冲突 A 的本机/云摘要后，CloudKit observer 或本机 mutation 可能在最终确认前把 pending state 改成 B；按钮随后重新读取“当前冲突”并直接覆盖，等于按 A 的信息解决 B。即使逻辑冲突 ID 没换，pending 期间的新本机或云端改动也会改变实际 resolution snapshot，而旧实现仍保留原 ID并可能返回变化前 prompt。“最初无冲突”的手动恢复也可能在 confirmation 打开期间迎来新冲突，再错误清掉它。
 
-决策：`pendingConflictID` 是用户看过的两侧摘要版本 token。pending 状态下，local branch 或 cloud branch 的 resolution-relevant snapshot fingerprint 变化时，在 `SyncConflictService` 的跨进程 state lock 内旋转 token，并从更新后的 state 重建 prompt。ContentView 的 `confirmationDialog(presenting:)` 与 `SettingsDestructiveConfirmation` 都捕获当次展示的 optional ID。`resolveSyncConflict(expectedConflictID:resolution:)` 在同一个 `withExclusiveStateAccess` 内先 locked-load，再精确比较实际 optional ID；比较早于 `advanceSyncEpoch`、snapshot restore、reset flag、`clearPendingConflict` 和 `saveState`。不匹配返回 `conflictChanged` 且零副作用；匹配后返回 `appliedImmediately` 或 `queuedForNextLaunch`，IO/restore/save 错误由 Store 映射为 `failed` 与错误反馈。
+决策：`pendingConflictID` 是用户看过的两侧摘要版本 token。pending 状态下，local branch 或 cloud branch 的 resolution-relevant snapshot fingerprint 变化时，在 `SyncConflictService` 的跨进程 state lock 内旋转 token，并从更新后的 state 重建 prompt。ContentView 的 `confirmationDialog(presenting:)` 与 `SettingsDestructiveConfirmation` 都捕获当次展示的 optional ID。`resolveSyncConflict(expectedConflictID:resolution:)` 在同一个 `withExclusiveStateAccess` 内先 locked-load，再精确比较实际 optional ID；比较早于 `advanceSyncEpoch`、snapshot restore、reset flag、`clearPendingConflict` 和 `saveState`。不匹配返回 `conflictChanged` 且零副作用；匹配后返回 `appliedImmediately` 或 `queuedForNextLaunch`。IO/restore/save 错误的新边界由 AD-077 取代：Store 直接抛出，由发起 Settings scene 呈现。
 
 后果：旧确认不能覆盖后来到达或后来变化的同步版本；用户必须重新阅读最新摘要并再次选择方向。expected nil 表示“确认时仍应没有 pending conflict”，不是跳过校验。Store 不得在锁外先比较 cached prompt，也不得从当前 persistence mode 推测 queued/immediate。token 只在实际 branch fingerprint 变化时旋转，重复无变化通知不会制造确认风暴；检测时间保留首次冲突发生时间。
 
@@ -972,6 +972,18 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 后果：失败或无法证明安全的恢复不会进入云容器、不会清 pending、不会宣称成功；用户修复文件保护/存储错误后可以在下次启动继续。无 pending 请求是唯一无需删除仍返回 completed 的情形。后续不得重新增加无 token 的 CloudKit-enabled 状态转换，或用 `try?`/Bool 把 deferred 与 failed 合并为可继续。
 
 验证：恢复门控与相关同步回归 49/49（`/tmp/timetracker-cloud-recovery-gate-tests-20260716.xcresult`），覆盖备份缺失/不可读、不可 reset、无请求、两类删除失败和成功后才清标记；MainActor 边界最终定向测试 6/6（`/tmp/timetracker-cloud-recovery-isolation-tests-rerun-20260716.xcresult`）。generic iOS 最终自动签名构建 0 error/0 warning（`/tmp/timetracker-sync-conflict-notice-ios-build-final-rerun2-20260716.xcresult`），严格签名与 entitlement 保持不变；本门控测试未创建模拟器。
+
+## AD-077：瞬时反馈归属发起 scene，共享 Store 不拥有 alert
+
+状态：Accepted
+
+背景：macOS 主窗口和 Settings 共享一个 `TimeTrackerStore`，但原来只有 `ContentView` 监听单个 `errorMessage`。Settings 导出、数据库清理或同步恢复失败时，错误会跑到主窗口，并可被后续后台/系统表面错误覆盖；任一 dismiss 又可能清掉不是它呈现的新消息。常规成功也使用 alert，额外打断 Settings 工作流。
+
+决策：每个可见 scene 以 `@State` 持有独立 `AppSceneFeedbackRouter`，并通过唯一 `AppSceneFeedbackHost` 呈现。router 按 FIFO 保留消息；按钮、系统 dismiss binding 都必须回传当前 feedback UUID，旧 callback 不能清除后来消息。JSON export 和 sync resolution facade 改为 throwing，不写共享 `errorMessage`；数据清理继续使用已有 throwing mutation。Settings 成功、排队恢复与 conflict-changed 在对应 section 就地显示，真正失败进入 Settings scene router；取消 `fileExporter` 不是错误。`ContentView` 把尚未迁移的 Store 错误立即转入它自己的队列作为过渡桥，不代表共享槽位已可继续扩展。
+
+后果：macOS Settings 的三类数据/同步操作不再在主窗口弹错，连续错误也不相互覆盖。`SyncConflictResolutionResult.failed` 和两个返回 optional 的旧 Store 恢复 facade 被删除，IO/restore/save 错误不再伪装成业务枚举或 `nil`。其他 Settings mutation、编辑器和后台健康错误仍需分批迁移；新代码不得使用过渡桥作为默认反馈 API。
+
+验证：队列核心与 presentation 回归 11/11（`/tmp/timetracker-scene-feedback-core-tests-20260717.xcresult`）；scene 接线、JSON/清理边界与相关源码合同最终两组各 34/34（`/tmp/timetracker-settings-scene-feedback-tests-20260717-final.xcresult`、`/tmp/timetracker-settings-scene-feedback-taskui-tests-20260717.xcresult`）；完整 sync conflict、stale token 与 scene recovery 回归 55/55（`/tmp/timetracker-sync-recovery-scene-feedback-tests-20260717.xcresult`）。全部使用 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，0 skip/runtime warning。本批未创建模拟器，每轮后均确认无 owned build/test/runner 或 Booted device；没有安排 Accessibility 专项。
 
 ## 2. Agent 工作清单
 

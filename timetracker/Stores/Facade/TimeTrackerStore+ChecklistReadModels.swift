@@ -55,10 +55,7 @@ extension TimeTrackerStore {
 
     func rebuildChecklistVisualIndexes() {
         checklistVisualByItemID = checklistItemVisuals
-            .filter { $0.deletedAt == nil }
-            .sorted { lhs, rhs in lhs.updatedAt < rhs.updatedAt }
-            .reduce(into: [:]) { result, visual in
-                result[visual.checklistItemID] = visual
-            }
+            .logicalWinnersByChecklistItemID()
+            .filter { $0.value.deletedAt == nil }
     }
 }

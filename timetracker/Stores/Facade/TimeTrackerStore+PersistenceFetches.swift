@@ -39,13 +39,10 @@ extension TimeTrackerStore {
     func fetchChecklistItemVisuals() throws -> [ChecklistItemVisual] {
         guard let modelContext else { return [] }
         let all = try modelContext.fetch(FetchDescriptor<ChecklistItemVisual>())
-            .visibleDeduplicatedByID()
-        return Dictionary(grouping: all, by: \.checklistItemID)
-            .values
-            .compactMap { visuals in
-                visuals.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-            }
-            .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
+            .deduplicatedByID()
+        return all.logicalWinnersByChecklistItemID().values
+            .filter { $0.deletedAt == nil }
+            .sorted(by: checklistVisualOrder)
     }
 
     func fetchChecklistItemVisuals(checklistItemIDs: Set<UUID>) throws -> [ChecklistItemVisual] {
@@ -55,14 +52,11 @@ extension TimeTrackerStore {
             predicate: #Predicate { requestedItemIDs.contains($0.checklistItemID) }
         )
         let all = try modelContext.fetch(descriptor)
-            .visibleDeduplicatedByID()
+            .deduplicatedByID()
             .filter { checklistItemIDs.contains($0.checklistItemID) }
-        return Dictionary(grouping: all, by: \.checklistItemID)
-            .values
-            .compactMap { visuals in
-                visuals.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-            }
-            .sorted { lhs, rhs in lhs.createdAt < rhs.createdAt }
+        return all.logicalWinnersByChecklistItemID().values
+            .filter { $0.deletedAt == nil }
+            .sorted(by: checklistVisualOrder)
     }
 
     func fetchInboxItems() throws -> [InboxItem] {
@@ -109,6 +103,14 @@ extension TimeTrackerStore {
     private func checklistItemOrder(_ lhs: ChecklistItem, _ rhs: ChecklistItem) -> Bool {
         if lhs.taskID != rhs.taskID { return lhs.taskID.uuidString < rhs.taskID.uuidString }
         if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private func checklistVisualOrder(
+        _ lhs: ChecklistItemVisual,
+        _ rhs: ChecklistItemVisual
+    ) -> Bool {
         if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
         return lhs.id.uuidString < rhs.id.uuidString
     }

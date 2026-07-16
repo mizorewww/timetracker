@@ -50,4 +50,11 @@ struct ChecklistItemVisualRecord: Codable, Equatable, SyncSnapshotRecord {
         updatedAt = model.updatedAt
         deletedAt = model.deletedAt
     }
+
+    func isPreferredLogicalWinner(over other: ChecklistItemVisualRecord) -> Bool {
+        if updatedAt != other.updatedAt { return updatedAt > other.updatedAt }
+        if (deletedAt == nil) != (other.deletedAt == nil) { return deletedAt != nil }
+        if createdAt != other.createdAt { return createdAt > other.createdAt }
+        return id.uuidString > other.id.uuidString
+    }
 }

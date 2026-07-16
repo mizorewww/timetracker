@@ -46,9 +46,11 @@ extension SyncDataSnapshot {
         var existing = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(checklistItemVisuals.map(\.id))
+        let logicalWinnerIDs = logicalChecklistItemVisualWinnerIDs()
+        let supersededAt = now.addingTimeInterval(-1)
         for visual in existing.values where !snapshotIDs.contains(visual.id) {
-            visual.deletedAt = now
-            visual.updatedAt = now
+            visual.deletedAt = supersededAt
+            visual.updatedAt = supersededAt
             visual.deviceID = deviceID
             visual.clientMutationID = UUID()
         }
@@ -72,10 +74,27 @@ extension SyncDataSnapshot {
             model.suggestionGeneratedAt = record.suggestionGeneratedAt
             model.userEditedAt = record.userEditedAt
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = logicalWinnerIDs.contains(record.id)
+                ? max(record.updatedAt, now)
+                : record.updatedAt
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.clientMutationID = record.id
         }
+    }
+
+    private func logicalChecklistItemVisualWinnerIDs() -> Set<UUID> {
+        var winnersByItemID: [UUID: ChecklistItemVisualRecord] = [:]
+        winnersByItemID.reserveCapacity(checklistItemVisuals.count)
+        for record in checklistItemVisuals {
+            guard let current = winnersByItemID[record.checklistItemID] else {
+                winnersByItemID[record.checklistItemID] = record
+                continue
+            }
+            if record.isPreferredLogicalWinner(over: current) {
+                winnersByItemID[record.checklistItemID] = record
+            }
+        }
+        return Set(winnersByItemID.values.map(\.id))
     }
 }

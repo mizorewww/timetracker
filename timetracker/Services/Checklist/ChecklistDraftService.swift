@@ -155,10 +155,8 @@ struct ChecklistDraftService {
                     predicate: #Predicate { requestedItemIDs.contains($0.checklistItemID) }
                 )
             )
-            let visualByItemID = Dictionary(grouping: visuals, by: \.checklistItemID)
-                .compactMapValues { values in
-                    values.sorted { lhs, rhs in lhs.updatedAt > rhs.updatedAt }.first
-                }
+            let visualByItemID = visuals.deduplicatedByID()
+                .logicalWinnersByChecklistItemID()
             var keptIDs = Set<UUID>()
             let now = Date()
 

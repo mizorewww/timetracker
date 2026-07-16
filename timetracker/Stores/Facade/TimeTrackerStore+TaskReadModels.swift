@@ -48,7 +48,7 @@ extension TimeTrackerStore {
     }
 
     func rootTasks() -> [TaskNode] {
-        (childrenByParentID[nil] ?? []).filter(isTaskVisible)
+        taskTreeReadIndex.rootTaskIDs.compactMap { taskByID[$0] }
     }
 
     func taskCategory(for id: UUID?) -> TaskCategory? {
@@ -74,7 +74,15 @@ extension TimeTrackerStore {
     }
 
     func children(of task: TaskNode) -> [TaskNode] {
-        (childrenByParentID[task.id] ?? []).filter(isTaskVisible)
+        (taskTreeReadIndex.visibleChildIDsByParentID[task.id] ?? []).compactMap { taskByID[$0] }
+    }
+
+    var visibleTaskCount: Int {
+        taskTreeReadIndex.visibleTaskCount
+    }
+
+    func visibleChildCount(for taskID: UUID) -> Int {
+        taskTreeReadIndex.visibleChildCount(for: taskID)
     }
 
     func validParentTasks(for taskID: UUID?) -> [TaskNode] {
@@ -120,37 +128,31 @@ extension TimeTrackerStore {
     }
 
     func taskTreeRows(expandedTaskIDs: Set<UUID>) -> [TaskTreeRowModel] {
-        TaskTreeFlattener.visibleRows(
-            rootTasks: rootTasks(),
-            children: { [weak self] task in
-                self?.children(of: task) ?? []
-            },
+        TaskTreeFlattener.rowProjection(
+            rootTaskIDs: taskTreeReadIndex.rootTaskIDs,
+            childTaskIDsByParentID: taskTreeReadIndex.visibleChildIDsByParentID,
             expandedTaskIDs: expandedTaskIDs
-        )
+        ).rows
     }
 
     func taskTreeSections(expandedTaskIDs: Set<UUID>) -> [TaskTreeVisibleSectionModel] {
-        taskTreeService.categorySections(
-            rootTasks: rootTasks(),
-            categories: taskCategories,
-            categoryIDByRootTaskID: taskCategoryIDByRootTaskID
-        ).map { section in
-            TaskTreeVisibleSectionModel(
-                id: section.id,
-                categoryID: section.categoryID,
-                title: section.title,
-                iconName: section.iconName,
-                colorHex: section.colorHex,
-                includesInForecast: section.includesInForecast,
-                rows: TaskTreeFlattener.visibleRows(
-                    rootTasks: section.rootTasks,
-                    children: { [weak self] task in
-                        self?.children(of: task) ?? []
-                    },
-                    expandedTaskIDs: expandedTaskIDs
-                )
-            )
-        }
+        let readIndex = taskTreeReadIndex
+        let revision = taskTreeReadIndexRevision
+        return taskTreeProjectionCache.projection(
+            readIndex: readIndex,
+            revision: revision,
+            expandedTaskIDs: expandedTaskIDs
+        ).sections
+    }
+
+    func taskSearchResults(matching query: String) -> [TaskNode] {
+        let readIndex = taskTreeReadIndex
+        let revision = taskTreeReadIndexRevision
+        return taskTreeProjectionCache.searchProjection(
+            readIndex: readIndex,
+            revision: revision,
+            query: query
+        ).taskIDs.compactMap { taskByID[$0] }
     }
 
     func path(for task: TaskNode) -> String {
@@ -168,6 +170,7 @@ extension TimeTrackerStore {
 
     func rebuildTaskIndexes() {
         let indexes = taskTreeService.indexes(tasks: tasks)
+        taskTreeIndexes = indexes
         taskByID = indexes.taskByID
         childrenByParentID = indexes.childrenByParentID
         taskPathByID = indexes.taskPathByID
@@ -175,6 +178,7 @@ extension TimeTrackerStore {
         let eligibility = taskTrackingAvailabilityService.eligibility(tasks: tasks)
         visibleTaskIDs = eligibility.visibleTaskIDs
         trackableTaskIDs = eligibility.trackableTaskIDs
+        rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
     }
 
@@ -188,6 +192,7 @@ extension TimeTrackerStore {
             return assignment.categoryID
         }
         taskCategoryIDByRootTaskID = categoryIDs
+        rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
     }
 
@@ -205,5 +210,17 @@ extension TimeTrackerStore {
             guard includesInForecast else { return }
             result.formUnion(taskAndDescendantIDs(for: root.id).intersection(trackableTaskIDs))
         }
+    }
+
+    private func rebuildTaskTreeReadIndex() {
+        let nextIndex = taskTreeService.readIndex(
+            indexes: taskTreeIndexes,
+            visibleTaskIDs: visibleTaskIDs,
+            categories: taskCategories,
+            categoryIDByRootTaskID: taskCategoryIDByRootTaskID
+        )
+        guard nextIndex != taskTreeReadIndex else { return }
+        taskTreeReadIndex = nextIndex
+        taskTreeReadIndexRevision &+= 1
     }
 }

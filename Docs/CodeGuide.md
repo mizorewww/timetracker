@@ -155,6 +155,8 @@ Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是�
 
 `TaskNode.parentID` 是层级权威；`depth` 是可修复元数据；`path` 现在是稳定 canonical record locator `/<task UUID>`，不是祖先 UUID 链，也不是用户可见标题路径。显示路径由 `TaskTreeService` 根据当前标题迭代生成，并限制为最近六级。启动、任务域刷新和同步恢复都会运行 `TaskHierarchyMetadataService`：缺失父节点和循环会确定性地提升为根，随后重算 depth/canonical path。任务移动只更新真正变化的 depth/path，避免同深度跨根移动重写整棵后代。
 
+任务树 UI 不直接从 `body` 重建层级。`TimeTrackerStore.rebuildTaskIndexes` 在 task mutation/refresh 后建立排序后的 `TaskTreeIndexes`、可见性和显示路径；task category 或 assignment mutation 也进入同一个 `rebuildTaskTreeReadIndex` 失效边界。不可变 `TaskTreeReadIndex` 只保存稳定 task/category ID、已过滤的 child buckets、section root IDs、child count 和搜索值，不保存第二份持久事实。只有新 index 与旧 index 在语义上不同才推进 `taskTreeReadIndexRevision`。`TaskTreeProjectionCache` 以该 revision 为失效 token，为展开状态和搜索 query 各保留最多四个 ID/value projection；命中时不得再排序 category、过滤每行 children、遍历祖先标题路径或扫描全部搜索文档。timer、ledger、selection 等无关刷新不拥有这个 revision。row identity 始终是持久 `TaskNode.id`，category section identity 始终来自 category UUID（未分类使用固定 `uncategorized`）；不得把标题、数组位置或展开状态变成 identity。任何直接改变会影响层级、可见性、标题路径或搜索文本的模型写入，都必须完成既有 task/category domain refresh，使上述唯一失效 owner 能发布新 index。
+
 持久实体去重遵循确定性 last-write-wins：先比较 `updatedAt`，同一时间 tombstone 胜过 active row，再以 `createdAt`、`deviceID`、`clientMutationID` 稳定打破平局；没有 mutation ID 的 `TimeSegment` 使用稳定内容键。清理产生的 duplicate tombstone 不得反过来覆盖真正的新 canonical row。所有“只取可见记录”的查询必须先 deduplicate/LWW、再过滤 tombstone，禁止把过滤顺序颠倒。
 
 ### 番茄会话
@@ -169,6 +171,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ### 增量读模型与缓存
 
+- `TaskTreeReadIndex` 在 task/category/assignment refresh 边界预先保存可见 child ID buckets、分类 section roots、child count、显示路径搜索值与稳定顺序。`TaskTreeProjectionCache` 用 store-owned semantic revision 失效，并把展开树与搜索结果分别限制为四个 LRU entry；SwiftUI `body` 只消费 projection。5,000 节点 operation-count 测试要求一次 fully-expanded miss 对每个可见 task 只做一次 child bucket lookup，同一 revision/key 的重复读取 build count 不增加。缓存只持有 ID/value read model，不能持有 SwiftData 对象或无界 query/expansion 历史。
 - `LedgerStore` 初次加载建立 segment ID、day、active、time-sensitive、array-index 和 session index；`LedgerStore+SegmentIndex.swift` 协调 day/change index 与 scoped replacement，`LedgerStore+FlatSegmentIndex.swift` 用稳定 start/UUID 顺序维护 UI 所需 flat array。带日期范围的 mutation 只查询/替换相交 segment 与相关 session，并输出 `LedgerSegmentChange`。range read 把统计 cutoff 与真实 wall-clock reference 分开：历史读取继续命中日期索引；active 和 future-ended closed row 在时钟向前时局部重评；只有真实 clock rewind 才全量重评，因为届时任何历史结束时间都可能重新跨过墙钟。
 - CloudKit 可能分批 materialize task、session 与 segment。`TimeTrackerStore+LedgerRelationshipVisibility.swift` 因此保留原始 SwiftData 行，但只发布 task 存在、session 存在且两者 task ID 一致的 segment；不完整/错配行不得进入 Home、Rollup、Analytics、Widget、Watch 或 Pomodoro elapsed。任务或会话稍后到达时，下一次一致性刷新会自动解除隔离，不做破坏性清理。
 - `ChecklistStore.refreshTaskScoped` 只替换受影响 task 的 items/visuals，并同步维护 facade bucket，不在每次 toggle 后重新按全库分组。

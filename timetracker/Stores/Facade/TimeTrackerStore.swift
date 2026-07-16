@@ -221,7 +221,11 @@ final class TimeTrackerStore {
     var taskCategoryByID: [UUID: TaskCategory] = [:]
     var taskCategoryIDByRootTaskID: [UUID: UUID] = [:]
     var forecastEligibleTaskIDCache: Set<UUID> = []
+    @ObservationIgnored var taskTreeIndexes = TaskTreeIndexes.empty
     var childrenByParentID: [UUID?: [TaskNode]] = [:]
+    var taskTreeReadIndex = TaskTreeReadIndex.empty
+    @ObservationIgnored var taskTreeReadIndexRevision: UInt64 = 0
+    @ObservationIgnored var taskTreeProjectionCache = TaskTreeProjectionCache()
     var checklistByTaskID: [UUID: [ChecklistItem]] = [:]
     var taskPathByID: [UUID: String] = [:]
     var taskParentPathByID: [UUID: String] = [:]

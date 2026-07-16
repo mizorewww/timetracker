@@ -140,9 +140,10 @@ struct TaskUIContractTests {
 
         #expect(readModels.contains("visibleTaskIDs = eligibility.visibleTaskIDs"))
         #expect(readModels.contains("trackableTaskIDs = eligibility.trackableTaskIDs"))
-        #expect(readModels.contains("filter(isTaskVisible)"))
-        #expect(tasksSource.contains("store.isTaskVisible(task)"))
-        #expect(tasksSource.contains("store.tasks.contains(where: store.isTaskVisible)"))
+        #expect(readModels.contains("taskTreeReadIndex.visibleChildIDsByParentID"))
+        #expect(tasksSource.contains("store.visibleTaskCount == 0"))
+        #expect(tasksSource.contains("store.taskSearchResults(matching: query)"))
+        #expect(tasksSource.contains("store.tasks.contains(where: store.isTaskVisible)") == false)
         #expect(actionSource.contains("store.reopenTaskForWork(task.id)"))
         #expect(actionSource.contains("task.action.reopenAncestorFormat"))
         #expect(actionSource.contains("task.action.complete.stopFirst"))

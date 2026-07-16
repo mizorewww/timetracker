@@ -10,19 +10,9 @@ struct TasksView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #endif
 
-    private func searchResults(matching query: String) -> [TaskNode] {
-        return store.tasks.filter { task in
-            store.isTaskVisible(task) && (
-                task.title.localizedCaseInsensitiveContains(query) ||
-                store.path(for: task).localizedCaseInsensitiveContains(query) ||
-                (task.notes?.localizedCaseInsensitiveContains(query) ?? false)
-            )
-        }
-    }
-
     var body: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let matchingTasks = query.isEmpty ? [] : searchResults(matching: query)
+        let matchingTasks = query.isEmpty ? [] : store.taskSearchResults(matching: query)
 
         List {
             #if os(iOS)
@@ -40,7 +30,7 @@ struct TasksView: View {
             #endif
 
             if query.isEmpty {
-                if !store.tasks.contains(where: store.isTaskVisible) {
+                if store.visibleTaskCount == 0 {
                     ContentUnavailableView {
                         Label(AppStrings.localized("tasks.empty.title"), systemImage: "checklist")
                     } description: {
@@ -87,6 +77,7 @@ struct TasksView: View {
                         TaskManagementFlatRow(
                             store: store,
                             task: task,
+                            childCount: store.visibleChildCount(for: task.id),
                             openTaskDetail: { task in
                                 store.openTaskDetail(task.id)
                                 detailTaskID = task.id
@@ -259,7 +250,7 @@ private struct TaskManagementTreeRow: View {
                     store: store,
                     task: task,
                     treeDepth: row.depth,
-                    hasChildren: row.hasChildren,
+                    childCount: row.childCount,
                     isExpanded: row.isExpanded,
                     toggleExpansion: toggleExpansion,
                     openTaskDetail: openTaskDetail

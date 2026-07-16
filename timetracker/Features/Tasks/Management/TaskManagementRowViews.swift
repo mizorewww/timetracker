@@ -4,7 +4,7 @@ struct TaskManagementFlatRow: View {
     let store: TimeTrackerStore
     let task: TaskNode
     var treeDepth: Int = 0
-    var hasChildren = false
+    var childCount = 0
     var isExpanded = false
     var toggleExpansion: (() -> Void)?
     var openTaskDetail: ((TaskNode) -> Void)?
@@ -21,7 +21,7 @@ struct TaskManagementFlatRow: View {
             progress: store.checklistProgress(for: task.id),
             rollup: rollup,
             workedSeconds: rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task),
-            childCount: store.children(of: task).count,
+            childCount: childCount,
             isAvailableForTracking: store.isTaskAvailableForTracking(task),
             isRunning: store.activeSegment(for: task.id) != nil
         )
@@ -89,7 +89,7 @@ struct TaskManagementFlatRow: View {
     private var showsNavigationChevron: Bool {
         #if os(iOS)
         TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
-            .showsNavigationChevron(hasChildren: hasChildren)
+            .showsNavigationChevron(hasChildren: childCount > 0)
         #else
         false
         #endif
@@ -97,7 +97,7 @@ struct TaskManagementFlatRow: View {
 
     @ViewBuilder
     private var disclosureButton: some View {
-        if hasChildren {
+        if childCount > 0 {
             Button {
                 toggleExpansion?()
             } label: {

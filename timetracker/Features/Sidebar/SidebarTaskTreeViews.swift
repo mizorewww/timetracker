@@ -88,7 +88,7 @@ struct SidebarTaskTreeRow: View {
 
     private var taskContent: some View {
         let progress = store.checklistProgress(for: task.id)
-        let childCount = row.hasChildren ? store.children(of: task).count : 0
+        let childCount = row.childCount
         let blocked = task.status != .completed && !store.isTaskAvailableForTracking(task)
 
         return HStack(spacing: 8) {

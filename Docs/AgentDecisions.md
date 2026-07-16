@@ -691,6 +691,18 @@
 
 验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop 才结束该 segment、独占切换停止旧计时以及并行开始保留旧计时。UI source contract 固定运行/可选分区、独立 Stop 标识、成功后才 dismiss、Start/Switch 基本语义和三语键。主 Agent 在合并后统一执行付费开发者签名的定向测试与正常字号操作路径验收；辅助语义只保留低成本源码合同，不为极端字号单独消耗模拟器批次。
 
+## AD-054：任务树 projection 由 mutation-owned read index 与有界缓存发布
+
+状态：Accepted
+
+背景：`TasksView` 与 `SidebarView` 已使用持久 UUID 作为 `ForEach` identity，也已有 task/path/children 基础索引，但每次 SwiftUI `body` 求值仍会重新去重 category、按 category 分组 root、遍历展开树，并在每个可见 row 再过滤一次 children。搜索状态还会因 timer、selection 等无关失效而重扫全部 task。层级越大，稳定的既有索引反而没有成为 UI 的真正读取边界。
+
+决策：`TaskTreeService` 在 task mutation/refresh 时建立排序、循环/孤儿修复和显示路径基础索引；`TimeTrackerStore.rebuildTaskTreeReadIndex` 是 task、category 与 assignment 对 UI 层级 projection 的唯一失效 owner。不可变 `TaskTreeReadIndex` 保存 canonical source order、可见 child ID buckets、稳定 section/root IDs、每行 child count 和标题/显示路径/notes 搜索值。只有这些值语义变化时才推进 `taskTreeReadIndexRevision`。`TaskTreeProjectionCache` 以 revision 自动清空旧 projection，并分别用容量四的 LRU 缓存 expansion set 与 search query；缓存只保存 ID/value model，不保留 SwiftData object。展开 projection 对每个可见 task 只查一次 child bucket，不在 row/body 排序、过滤或走祖先链。`TaskTreeRowModel.id` 继续等于持久 task UUID，category section ID 继续等于 category UUID 派生值，未分类 section 使用固定 ID。
+
+后果：无关 timer、ledger、selection 或重复等价 task refresh 不再重建任务树/搜索 projection；task/category/assignment 的真实语义变化会在同一 store refresh 边界使所有 UI surface 看到新 revision。展开或新 query 的首次读取仍按可见行或可搜索 task 数线性计算，但同 key 重绘为有界 cache hit。新增 task-tree surface 必须消费该 read index/projection，不得在 `body` 重新 `filter/sorted/grouping` 全树；新增搜索字段必须同时进入 read-index equality/失效语义。容量不得改成无界历史。
+
+验证：等价性测试把新 projection 与旧 category+flattener 语义逐项比较，覆盖归档分支、分类/未分类、深度、child count、标题路径和 notes 搜索；identity 测试确认输入顺序改变不改变 hierarchy row/section IDs。cache 测试覆盖重复命中、LRU 容量、revision 失效和 store 对无关刷新/等价 refresh 不推进 revision。5,000 节点测试固定 fully-expanded projection 为每个可见 task 一次 child bucket lookup，并固定重复 projection/search 不增加 build count。主 Agent 使用付费开发者身份执行签名的 task-tree 与 task UI 定向套件，37/37 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

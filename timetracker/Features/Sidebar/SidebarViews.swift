@@ -96,7 +96,7 @@ struct SidebarView: View {
         switch destination {
         case .today: store.activeSegments.count
         case .inbox: store.openInboxItems.count
-        case .tasks: store.tasks.lazy.filter(store.isTaskVisible).count
+        case .tasks: store.visibleTaskCount
         case .pomodoro: store.completedPomodoroCount
         case .analytics, .settings: nil
         }

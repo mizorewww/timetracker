@@ -4,7 +4,6 @@ struct TasksView: View {
     let store: TimeTrackerStore
     @State private var searchText = ""
     @State private var expansionState = TaskExpansionState()
-    @State private var detailTaskID: UUID?
     @State private var categoryPendingDeletionID: UUID?
     #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -55,7 +54,6 @@ struct TasksView: View {
                                 },
                                 openTaskDetail: { task in
                                     store.openTaskDetail(task.id)
-                                    detailTaskID = task.id
                                 }
                             )
                         }
@@ -80,7 +78,6 @@ struct TasksView: View {
                             childCount: store.visibleChildCount(for: task.id),
                             openTaskDetail: { task in
                                 store.openTaskDetail(task.id)
-                                detailTaskID = task.id
                             }
                         )
                     }
@@ -141,34 +138,6 @@ struct TasksView: View {
             }
         } message: {
             Text(.app("taskCategory.delete.confirm.message"))
-        }
-        .navigationDestination(isPresented: detailBinding) {
-            if let detailTaskID, let task = store.task(for: detailTaskID) {
-                TaskDetailView(store: store, taskID: task.id)
-            } else {
-                EmptyStateRow(title: AppStrings.localized("task.empty.selectTask"), icon: "cursorarrow.click")
-            }
-        }
-        .onAppear {
-            if let requestedTaskID = store.desktopTaskDetailID,
-               store.task(for: requestedTaskID) != nil {
-                detailTaskID = requestedTaskID
-            }
-        }
-        .onChange(of: store.desktopTaskDetailID) { _, requestedTaskID in
-            guard let requestedTaskID, store.task(for: requestedTaskID) != nil else { return }
-            detailTaskID = requestedTaskID
-        }
-    }
-
-    private var detailBinding: Binding<Bool> {
-        Binding {
-            detailTaskID != nil
-        } set: { isPresented in
-            if !isPresented {
-                detailTaskID = nil
-                store.closeTaskDetailNavigation()
-            }
         }
     }
 

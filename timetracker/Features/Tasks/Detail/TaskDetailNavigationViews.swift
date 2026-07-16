@@ -3,10 +3,6 @@ import SwiftUI
 private struct TaskDetailNavigationModifier: ViewModifier {
     let store: TimeTrackerStore
     let taskID: UUID
-    @Environment(\.dismiss) private var dismiss
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
     @State private var isDeleteConfirmationPresented = false
 
     func body(content: Content) -> some View {
@@ -16,18 +12,6 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                #if os(macOS)
-                ToolbarItem(placement: .navigation) {
-                    backToTasksButton
-                }
-                #else
-                if horizontalSizeClass == .regular {
-                    ToolbarItem(placement: .topBarLeading) {
-                        backToTasksButton
-                    }
-                }
-                #endif
-
                 if let task = store.task(for: taskID) {
                     ToolbarItemGroup(placement: .primaryAction) {
                         editButton(task)
@@ -42,21 +26,11 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             ) {
                 Button(AppStrings.delete, role: .destructive) {
                     store.deleteSelectedTask(taskID: taskID, preservingDestination: .tasks)
-                    dismiss()
                 }
                 Button(AppStrings.cancel, role: .cancel) {}
             } message: {
                 Text(.app("task.delete.confirm.message"))
             }
-    }
-
-    private var backToTasksButton: some View {
-        Button {
-            store.closeTaskDetailNavigation()
-        } label: {
-            Label(AppStrings.tasks, systemImage: "chevron.left")
-        }
-        .accessibilityIdentifier("task.detail.back")
     }
 
     private func editButton(_ task: TaskNode) -> some View {

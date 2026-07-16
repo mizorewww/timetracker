@@ -79,12 +79,12 @@ extension TimeTrackerStore {
     func validateSelectedTask() {
         if selectedTaskID == nil {
             selectedTaskID = preferredTaskIDForSelection()
-        } else if let selectedTaskID, taskByID[selectedTaskID] == nil {
+        } else if let selectedTaskID, isTaskDetailRouteValid(selectedTaskID) == false {
             self.selectedTaskID = preferredTaskIDForSelection()
         }
 
-        if let desktopTaskDetailID, taskByID[desktopTaskDetailID] == nil {
-            self.desktopTaskDetailID = nil
+        if let detailTaskID = tasksRoute?.taskID, isTaskDetailRouteValid(detailTaskID) == false {
+            tasksRoute = nil
         }
     }
 

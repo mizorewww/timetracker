@@ -887,6 +887,18 @@
 
 验证：6 项付费签名 macOS 测试覆盖持久路径别名、内存 lifetime identity、同 store 串行、不同 store 并行、抛错释放、锁内 fresh context、不同 context 实例，以及一次提交与抛错回滚；结果 6/6、0 error/0 warning。合并工作树 generic iOS 设备构建继续通过严格签名与 entitlement 审计；本批未创建模拟器。一次性 xcresult 见 dated Audit。
 
+## AD-070：任务列表与详情共享一个系统导航栈，route 不冒充业务选择
+
+状态：Accepted
+
+背景：任务详情曾同时由 `TasksView` 的本地 `detailTaskID`、facade 的 `desktopTaskDetailID` 和桌面根视图条件分支控制。iPhone 需要相互同步两份状态；iPad/macOS 打开详情则直接把整个任务列表根替换掉。自绘 Back 再分别调用 store 和 `dismiss()`，容易产生双重 pop、失败删除仍退出、返回后搜索/展开状态丢失，以及侧边栏选中项与真实页面脱节。
+
+决策：`TasksNavigationView` 在三平台持有唯一 `NavigationStack` 和唯一 `TasksView` 根，使用 `navigationDestination(item:)` 直接绑定 store-owned `TasksRoute?`。当前 route 只表达页面导航；`selectedTaskID` 继续表达计时和业务选择。打开任务由 facade 先验证存在且未删除，再更新 route、selection 和 Tasks 目的地；系统 Back 只把 route 设为 nil。详情不再提供自绘 Back 或手动 `dismiss()`。删除成功、维护成功或 refresh 发现任务失效时清 route；写入失败不改变 route/selection。sidebar selection 从 route/destination 派生，并随任务树 revision 重算当前任务祖先展开，不保存镜像 selection。
+
+后果：返回任务列表时，原 `TasksView` 实例及其搜索、展开状态都保留；iPhone、iPad、macOS 和 deep link 复用同一条路由路径。删除父任务会关闭后代详情，外部删除会在下一次一致性 refresh 后 pop；普通 Back 不会改变计时器的已选任务。后续若任务域需要更多详情子页面，应扩展 typed `TasksRoute`，不得重新引入 root 条件替换、本地 task ID 镜像或伪系统返回按钮。
+
+验证：付费签名 macOS route/deep-link/lifecycle/UI-contract 定向套件 75/75、0 error/0 warning；正常字号 iPhone 17 Pro / iOS 27 系统 Back UI 1/1，截图确认详情返回后 `Study` 分支仍展开。generic iOS 自动签名设备构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 严格签名验证通过并保留 Team `LT98S43NKA`、付费 Apple Development、development APS、CloudKit 与 App Group。iPad Pro 首次自动化启动在进入 App 前 timeout，Xcode 收尾又挂起，因此终止该 owned build/diagnose 并记为基础设施阻塞，不计 UI 通过；两个专用 UDID 均已删除，最终无 Booted 设备或 owned runner/process。一次性证据见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

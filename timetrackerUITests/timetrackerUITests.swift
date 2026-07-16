@@ -149,6 +149,61 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskDetailSystemBackPreservesExpandedTaskTree() throws {
+        #if os(macOS)
+        throw XCTSkip("This route-preservation screenshot runs on iPhone and iPad simulators.")
+        #else
+        let app = launchApp(route: "tasks")
+        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 8))
+
+        let studyDisclosure = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
+            .matching(NSPredicate(format: "value == %@", "Study"))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                studyDisclosure,
+                timeout: 5,
+                diagnosticName: "tasks-study-disclosure",
+                in: app
+            ) && studyDisclosure.isHittable
+        )
+        activate(studyDisclosure)
+
+        let child = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
+            .matching(NSPredicate(format: "label == %@", "Read Apple HIG"))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                child,
+                timeout: 5,
+                diagnosticName: "tasks-expanded-child",
+                in: app
+            ) && child.isHittable
+        )
+        activate(child)
+
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let systemBack = app.navigationBars.buttons["Tasks"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                systemBack,
+                timeout: 5,
+                diagnosticName: "task-detail-system-back",
+                in: app
+            ) && systemBack.isHittable
+        )
+        try capture("tasks-route-detail-system-back", app: app)
+        activate(systemBack)
+
+        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 5))
+        XCTAssertTrue(child.waitForExistence(timeout: 5) && child.isHittable)
+        try capture("tasks-route-expanded-tree-restored", app: app)
+        #endif
+    }
+
+    @MainActor
     func testInboxCaptureAffordanceFocusesThenAddsAValidDraft() throws {
         let app = launchApp()
         openSection(

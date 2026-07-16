@@ -120,6 +120,36 @@ struct CoreDeepLinkRoutingTests {
     }
 
     @Test @MainActor
+    func destinationDeepLinksCloseTaskDetailWithoutChangingTimerSelection() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Deep-link selection",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let todayURL = try #require(URL(string: "timetracker://open/today"))
+        let tasksURL = try #require(URL(string: "timetracker://open/tasks"))
+
+        store.openTaskDetail(task.id)
+        store.handleDeepLink(todayURL)
+
+        #expect(store.tasksRoute == nil)
+        #expect(store.selectedTaskID == task.id)
+        #expect(store.desktopDestination == .today)
+
+        store.openTaskDetail(task.id)
+        store.handleDeepLink(tasksURL)
+
+        #expect(store.tasksRoute == nil)
+        #expect(store.selectedTaskID == task.id)
+        #expect(store.desktopDestination == .tasks)
+    }
+
+    @Test @MainActor
     func pendingDeepLinksAreValidatedDeduplicatedBoundedAndDrained() throws {
         var queue = PendingDeepLinkQueue(capacity: 2)
         let inbox = try #require(URL(string: "timetracker://open/inbox"))

@@ -122,7 +122,7 @@ final class TimeTrackerStore {
     var manualTimeDraft: ManualTimeDraft?
     var segmentEditorDraft: SegmentEditorDraft?
     var desktopDestination: DesktopDestination = .today
-    var desktopTaskDetailID: UUID?
+    var tasksRoute: TasksRoute?
     var selectedTaskPulseID: UUID?
     var selectedTaskPulseToken = UUID()
     var isStartTaskPickerPresented = false

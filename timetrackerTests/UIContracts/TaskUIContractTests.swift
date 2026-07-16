@@ -70,20 +70,20 @@ struct TaskUIContractTests {
         let selectionSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Selection.swift")
         let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
 
-        #expect(sidebarSource.contains("List(selection: $selection)"))
+        #expect(sidebarSource.contains("List(selection: selectionBinding)"))
         #expect(sidebarSource.contains(".accessibilityIdentifier(\"sidebar.\\(destination.rawValue)\")"))
         #expect(sidebarSource.contains(".accessibilityIdentifier(\"sidebar.task.\\(task.id.uuidString)\")"))
         #expect(sidebarSource.contains("guard let newValue, newValue != selectionFromStore else { return }"))
+        #expect(sidebarSource.contains("private var selectionBinding: Binding<SidebarSelection?>"))
         #expect(sidebarSource.contains("private var selectionFromStore: SidebarSelection"))
         #expect(sidebarSource.contains("store.openTaskDetail(taskID)"))
         #expect(sidebarSource.contains("store.closeTaskDetailNavigation()"))
-        #expect(sidebarSource.contains(".onChange(of: store.desktopDestination)"))
-        #expect(sidebarSource.contains(".onChange(of: store.desktopTaskDetailID)"))
-        #expect(sidebarSource.contains(".onChange(of: store.tasks.map(\\.id))"))
+        #expect(sidebarSource.contains(".onChange(of: store.tasksRoute)"))
+        #expect(sidebarSource.contains("@State private var selection") == false)
         #expect(selectionSource.contains("func openTaskDetail(_ taskID: UUID)"))
         #expect(selectionSource.contains("func closeTaskDetailNavigation()"))
-        #expect(rootSource.contains("if let taskID = store.desktopTaskDetailID, store.task(for: taskID) != nil"))
-        #expect(rootSource.contains("TaskDetailView(store: store, taskID: taskID)"))
+        #expect(rootSource.contains("TasksNavigationView(store: store)"))
+        #expect(rootSource.contains("desktopTaskDetailID") == false)
     }
 
     @Test
@@ -316,7 +316,7 @@ struct TaskUIContractTests {
         .joined(separator: "\n")
 
         #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
-        #expect(tasksSource.contains("store.selectTask(task.id, revealInToday: false)"))
+        #expect(tasksSource.contains("store.selectTask(task.id, revealInToday: false)") == false)
         #expect(tasksSource.contains("RunningStatusBadge()"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
@@ -327,21 +327,33 @@ struct TaskUIContractTests {
     @Test
     func taskRowsOpenReadOnlyDetailAndExposeSeparateEditAction() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
+        let navigationSource = try sourceText("timetracker/Features/Tasks/Management/TasksNavigationView.swift")
         let rowSource = try taskManagementFeatureSource()
         let detailSource = try taskDetailFeatureSource()
-        let rootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
+        let desktopRootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
+        let iosRootSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let desktopTasksCase = try #require(
+            desktopRootSource.slice(from: "case .tasks:", to: "case .pomodoro:")
+        )
 
         #expect(tasksSource.contains(".accessibilityIdentifier(\"tasks.view\")"))
-        #expect(tasksSource.contains(".navigationDestination(isPresented: detailBinding)"))
-        #expect(tasksSource.contains("TaskDetailView(store: store, taskID: task.id)"))
-        #expect(tasksSource.contains("@State private var detailTaskID"))
+        #expect(tasksSource.contains("@State private var detailTaskID") == false)
+        #expect(tasksSource.contains(".navigationDestination") == false)
+        #expect(navigationSource.components(separatedBy: "NavigationStack").count - 1 == 1)
+        #expect(navigationSource.contains("@Bindable var bindableStore = store"))
+        #expect(navigationSource.contains(".navigationDestination(item: $bindableStore.tasksRoute)"))
+        #expect(navigationSource.contains("private var tasksPath") == false)
+        #expect(navigationSource.contains("TaskDetailView(store: store, taskID: route.taskID)"))
         #expect(rowSource.contains("Button(action: openTask)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
-        #expect(rowSource.contains("store.selectTask(task.id, revealInToday: false)"))
-        #expect(rowSource.contains("openTaskDetail?(task)"))
+        #expect(rowSource.contains("store.selectTask(task.id, revealInToday: false)") == false)
+        #expect(rowSource.contains("openTaskDetail(task)"))
+        #expect(rowSource.contains("openTaskDetail?(task)") == false)
         #expect(rowSource.contains("presentEditTask") == false)
-        #expect(rootSource.contains("TaskDetailView(store: store, taskID: taskID)"))
-        #expect(rootSource.contains("TasksView(store: store)"))
+        #expect(desktopTasksCase.contains("TasksNavigationView(store: store)"))
+        #expect(desktopTasksCase.contains("NavigationStack") == false)
+        #expect(desktopTasksCase.contains("TaskDetailView") == false)
+        #expect(iosRootSource.contains("TasksNavigationView(store: store)"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
         #expect(detailSource.contains("store.presentEditTask(task)"))
@@ -621,15 +633,17 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskDetailExposesDiscoverableActionsAndAdaptiveBackNavigation() throws {
+    func taskDetailExposesDiscoverableActionsAndUsesSystemBackNavigation() throws {
         let detailSource = try taskDetailFeatureSource()
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.more\")"))
-        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.back\")"))
         #expect(detailSource.contains("TaskContextMenu("))
         #expect(detailSource.contains("task.delete.confirm.message"))
-        #expect(detailSource.contains("store.closeTaskDetailNavigation()"))
+        #expect(detailSource.contains("task.detail.back") == false)
+        #expect(detailSource.contains("store.closeTaskDetailNavigation()") == false)
+        #expect(detailSource.contains("@Environment(\\.dismiss)") == false)
+        #expect(detailSource.contains("dismiss()") == false)
         #expect(actionSource.contains("if let activeSegment"))
         #expect(actionSource.contains("store.stop(segment: activeSegment)"))
     }

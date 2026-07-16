@@ -191,8 +191,13 @@ extension TimeTrackerStore {
                 )
             )
         }
-        let wasSelected = selectedTaskID == targetID
-        let wasShowingDetail = desktopTaskDetailID == targetID
+        let wasSelected = selectedTaskID.map { deletedTaskIDs.contains($0) } ?? false
+        let wasShowingDeletedDetail = tasksRoute.map { deletedTaskIDs.contains($0.taskID) } ?? false
+        let replacementSelectionID = activeSegments.first(where: {
+            deletedTaskIDs.contains($0.taskID) == false && taskByID[$0.taskID] != nil
+        })?.taskID ?? tasks.first(where: {
+            deletedTaskIDs.contains($0.id) == false && isTaskAvailableForTracking($0)
+        })?.id
         let didDelete = perform(events: events) {
             try taskDraftCommandHandler.softDelete(
                 taskID: targetID,
@@ -206,10 +211,10 @@ extension TimeTrackerStore {
         }
         if didDelete {
             if wasSelected {
-                selectedTaskID = preferredTaskIDForSelection()
+                selectedTaskID = replacementSelectionID
             }
-            if wasShowingDetail {
-                desktopTaskDetailID = nil
+            if wasShowingDeletedDetail {
+                tasksRoute = nil
             }
             desktopDestination = destinationBeforeDelete
         }

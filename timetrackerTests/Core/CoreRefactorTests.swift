@@ -19,11 +19,11 @@ struct CoreRefactorTests {
 
         #expect(store.desktopDestination == .tasks)
         #expect(store.selectedTaskID == nil)
-        #expect(store.desktopTaskDetailID == nil)
+        #expect(store.tasksRoute == nil)
     }
 
     @Test @MainActor
-    func desktopTaskDetailNavigationIsSeparateFromPlainTaskSelection() throws {
+    func tasksRouteIsSeparateFromPlainTaskSelection() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let detailTask = try taskRepository.createTask(title: "Open detail", parentID: nil, colorHex: nil, iconName: nil)
@@ -36,21 +36,25 @@ struct CoreRefactorTests {
 
         #expect(store.desktopDestination == .tasks)
         #expect(store.selectedTaskID == detailTask.id)
-        #expect(store.desktopTaskDetailID == detailTask.id)
+        #expect(store.tasksRoute == .detail(taskID: detailTask.id))
 
         store.closeTaskDetailNavigation()
+
+        #expect(store.tasksRoute == nil)
+        #expect(store.selectedTaskID == detailTask.id)
+
         store.selectTask(selectedTask.id, revealInToday: false)
 
         #expect(store.desktopDestination == .tasks)
         #expect(store.selectedTaskID == selectedTask.id)
-        #expect(store.desktopTaskDetailID == nil)
+        #expect(store.tasksRoute == nil)
 
         store.openTaskDetail(detailTask.id)
         store.selectTask(selectedTask.id)
 
         #expect(store.desktopDestination == .today)
         #expect(store.selectedTaskID == selectedTask.id)
-        #expect(store.desktopTaskDetailID == nil)
+        #expect(store.tasksRoute == nil)
     }
 
     @Test @MainActor

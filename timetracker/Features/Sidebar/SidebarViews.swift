@@ -8,7 +8,6 @@ enum SidebarSelection: Hashable {
 struct SidebarView: View {
     let store: TimeTrackerStore
     let onNavigate: () -> Void
-    @State private var selection: SidebarSelection?
     @State private var expansionState = TaskExpansionState()
 
     init(store: TimeTrackerStore, onNavigate: @escaping () -> Void = {}) {
@@ -25,7 +24,7 @@ struct SidebarView: View {
     }
 
     var body: some View {
-        List(selection: $selection) {
+        List(selection: selectionBinding) {
             Section {
                 ForEach(destinations) { destination in
                     SidebarDestinationLabel(destination: destination, count: count(for: destination))
@@ -54,8 +53,17 @@ struct SidebarView: View {
             }
         }
         .navigationTitle(AppStrings.localized("app.name"))
-        .onAppear(perform: syncSelectionFromStore)
-        .onChange(of: selection) { _, newValue in
+        .onAppear(perform: expandAncestorsForCurrentTask)
+        .onChange(of: store.tasksRoute) { _, _ in expandAncestorsForCurrentTask() }
+        .onChange(of: store.taskTreeReadIndexRevision) { _, _ in
+            expandAncestorsForCurrentTask()
+        }
+    }
+
+    private var selectionBinding: Binding<SidebarSelection?> {
+        Binding {
+            selectionFromStore
+        } set: { newValue in
             guard let newValue, newValue != selectionFromStore else { return }
             switch newValue {
             case let .destination(destination):
@@ -66,30 +74,22 @@ struct SidebarView: View {
             }
             onNavigate()
         }
-        .onChange(of: store.desktopDestination) { _, _ in syncSelectionFromStore() }
-        .onChange(of: store.selectedTaskID) { _, _ in syncSelectionFromStore() }
-        .onChange(of: store.desktopTaskDetailID) { _, _ in syncSelectionFromStore() }
-        .onChange(of: store.tasks.map(\.id)) { _, _ in syncSelectionFromStore() }
-    }
-
-    private func syncSelectionFromStore() {
-        if let desktopTaskDetailID = store.desktopTaskDetailID,
-           store.task(for: desktopTaskDetailID) != nil {
-            for ancestorID in store.ancestorTaskIDs(for: desktopTaskDetailID) {
-                expansionState.expand(ancestorID)
-            }
-        }
-        let updatedSelection = selectionFromStore
-        guard selection != updatedSelection else { return }
-        selection = updatedSelection
     }
 
     private var selectionFromStore: SidebarSelection {
-        if let desktopTaskDetailID = store.desktopTaskDetailID,
-           store.task(for: desktopTaskDetailID) != nil {
-            return .task(desktopTaskDetailID)
+        if let taskID = store.tasksRoute?.taskID,
+           store.isTaskDetailRouteValid(taskID) {
+            return .task(taskID)
         }
         return .destination(store.desktopDestination)
+    }
+
+    private func expandAncestorsForCurrentTask() {
+        guard let taskID = store.tasksRoute?.taskID,
+              store.isTaskDetailRouteValid(taskID) else { return }
+        for ancestorID in store.ancestorTaskIDs(for: taskID) {
+            expansionState.expand(ancestorID)
+        }
     }
 
     private func count(for destination: TimeTrackerStore.DesktopDestination) -> Int? {

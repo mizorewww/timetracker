@@ -8,7 +8,7 @@ extension TimeTrackerStore {
     func selectTask(_ taskID: UUID, revealInToday: Bool = true) {
         selectedTaskID = taskID
         if revealInToday {
-            desktopTaskDetailID = nil
+            tasksRoute = nil
             desktopDestination = .today
         }
         selectedTaskPulseID = taskID
@@ -16,13 +16,19 @@ extension TimeTrackerStore {
     }
 
     func openTaskDetail(_ taskID: UUID) {
-        desktopTaskDetailID = taskID
+        guard isTaskDetailRouteValid(taskID) else { return }
+        tasksRoute = .detail(taskID: taskID)
         selectTask(taskID, revealInToday: false)
         desktopDestination = .tasks
     }
 
     func closeTaskDetailNavigation() {
-        desktopTaskDetailID = nil
+        tasksRoute = nil
+    }
+
+    func isTaskDetailRouteValid(_ taskID: UUID) -> Bool {
+        guard let task = task(for: taskID) else { return false }
+        return task.deletedAt == nil
     }
 
     func ancestorTaskIDs(for taskID: UUID) -> [UUID] {

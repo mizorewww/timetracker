@@ -59,7 +59,7 @@ struct DataMaintenanceLifecycleTests {
         let store = makeTestStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
-        store.desktopTaskDetailID = task.id
+        store.tasksRoute = .detail(taskID: task.id)
 
         store.clearAllData()
 
@@ -72,7 +72,7 @@ struct DataMaintenanceLifecycleTests {
         #expect(try credentialStore.readAPIKey() == nil)
         #expect(defaults.object(forKey: automaticSuggestionsKey) == nil)
         #expect(store.selectedTaskID == nil)
-        #expect(store.desktopTaskDetailID == nil)
+        #expect(store.tasksRoute == nil)
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<TaskCategory>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).allSatisfy { $0.deletedAt != nil })

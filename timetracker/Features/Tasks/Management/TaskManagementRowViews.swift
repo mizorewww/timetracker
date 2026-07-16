@@ -7,7 +7,7 @@ struct TaskManagementFlatRow: View {
     var childCount = 0
     var isExpanded = false
     var toggleExpansion: (() -> Void)?
-    var openTaskDetail: ((TaskNode) -> Void)?
+    let openTaskDetail: (TaskNode) -> Void
 #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -123,7 +123,6 @@ struct TaskManagementFlatRow: View {
     }
 
     private func openTask() {
-        store.selectTask(task.id, revealInToday: false)
-        openTaskDetail?(task)
+        openTaskDetail(task)
     }
 }

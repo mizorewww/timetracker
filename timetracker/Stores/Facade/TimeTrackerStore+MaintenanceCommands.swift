@@ -2,9 +2,12 @@ import Foundation
 
 extension TimeTrackerStore {
     func replaceWithDemoData() {
-        perform {
+        let didReplace = perform {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.replaceWithDemoData(context: modelContext)
+        }
+        if didReplace {
+            tasksRoute = nil
         }
     }
 
@@ -45,7 +48,7 @@ extension TimeTrackerStore {
         }
         if didClear {
             selectedTaskID = nil
-            desktopTaskDetailID = nil
+            tasksRoute = nil
         }
     }
 
@@ -53,12 +56,23 @@ extension TimeTrackerStore {
         let selectedDemoTaskID = selectedTaskID.flatMap { selectedID in
             tasks.first { $0.id == selectedID && $0.deviceID == "demo" }?.id
         }
+        let routedDemoTaskID = (tasksRoute?.taskID).flatMap { routedID in
+            tasks.first { $0.id == routedID && $0.deviceID == "demo" }?.id
+        }
+        let replacementSelectionID = activeSegments.first(where: {
+            taskByID[$0.taskID].map { $0.deviceID != "demo" } == true
+        })?.taskID ?? tasks.first(where: {
+            $0.deviceID != "demo" && isTaskAvailableForTracking($0)
+        })?.id
         let didClear = perform {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.clearDemoData(context: modelContext)
         }
         if didClear, selectedDemoTaskID != nil {
-            selectedTaskID = tasks.first?.id
+            selectedTaskID = replacementSelectionID
+        }
+        if didClear, routedDemoTaskID != nil {
+            tasksRoute = nil
         }
     }
 

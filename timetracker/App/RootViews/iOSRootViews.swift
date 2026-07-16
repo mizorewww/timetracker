@@ -63,9 +63,7 @@ struct PhoneRootView: View {
             }
 
             Tab(value: .tasks) {
-                NavigationStack {
-                    TasksView(store: store)
-                }
+                TasksNavigationView(store: store)
             } label: {
                 Label(AppStrings.tasks, systemImage: "checklist")
                     .accessibilityIdentifier("phone.tab.tasks")

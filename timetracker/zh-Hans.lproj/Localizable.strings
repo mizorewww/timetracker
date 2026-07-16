@@ -120,11 +120,10 @@
 "settings.currentStorage" = "当前存储";
 "settings.localWillRetryCloud" = "本地，重启后尝试 iCloud";
 "settings.local" = "本地";
-"settings.checking" = "正在检查...";
-"settings.checkSync" = "检查同步状态";
-"settings.forceSync" = "立即刷新同步";
+"settings.checking" = "正在检查 iCloud 账户...";
+"settings.checkSync" = "检查 iCloud 账户";
 "settings.sync" = "同步";
-"settings.sync.footer" = "打开 App、回到前台、收到 iCloud 导入和前台定时检查时都会刷新。这个开关会在下次启动时生效。";
+"settings.sync.footer" = "CloudKit 会自动导入和导出。账户检查只会确认本设备能否访问 iCloud。这个开关会在下次启动时生效。";
 "settings.syncRecovery.title" = "同步恢复";
 "settings.syncRecovery.conflictTitle" = "解决同步冲突";
 "settings.syncRecovery.thisDevice" = "本设备";
@@ -200,7 +199,6 @@
 "dialog.forceDownload.title" = "用 iCloud 替换本设备数据？";
 "dialog.forceDownload.confirm" = "替换本设备数据";
 "dialog.forceDownload.message" = "当前 iCloud 副本可能替换本设备上的数据。请确认本设备没有需要保留的新更改。若本次启动使用本地存储，下载会排到重启后执行。";
-"alert.sync.title" = "iCloud 同步状态";
 "alert.optimize.title" = "已删除记录";
 "common.save" = "保存";
 "editor.discard.title" = "放弃更改？";
@@ -237,7 +235,6 @@
 "sync.storage.localFallback" = "本地备用存储";
 "sync.storage.temporary" = "临时内存存储";
 "sync.storage.uiTest" = "UI 测试存储";
-"sync.refreshSummary" = "%@：%@。已刷新本机视图；若另一台设备刚写入，系统完成导入后这里会自动更新。";
 "sync.forceUpload.started" = "已将本设备数据标记为待上传；CloudKit 完成导出后会更新 iCloud。";
 "sync.forceUpload.conflictResolved" = "已选择用本设备副本替换 iCloud 数据。";
 "sync.forceUpload.queued" = "已保存本设备数据并安排下次启动上传；请重启 App，启动后会先清除冲突缓存，再重新尝试 iCloud 并覆盖云端。";
@@ -255,10 +252,10 @@
 "sync.account.couldNotDetermine" = "无法确定";
 "sync.account.temporarilyUnavailable" = "暂时不可用";
 "sync.account.unknown" = "未知状态";
-"sync.state.available.title" = "iCloud 已就绪";
+"sync.state.available.title" = "iCloud 账户可用";
 "sync.state.available.message" = "账户状态：%@。";
-"sync.state.syncing.title" = "正在检查同步";
-"sync.state.syncing.message" = "正在刷新这台设备上的账户和导入状态。";
+"sync.state.syncing.title" = "正在检查 iCloud 账户";
+"sync.state.syncing.message" = "正在确认本设备能否访问你的 iCloud 账户。";
 "sync.state.recent.title" = "刚刚刷新过";
 "sync.state.recent.message" = "这台设备上次检查同步是在 %@。";
 "sync.state.offline.title" = "正在使用本地存储";

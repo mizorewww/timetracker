@@ -120,11 +120,10 @@
 "settings.currentStorage" = "Current Storage";
 "settings.localWillRetryCloud" = "Local, retry iCloud after restart";
 "settings.local" = "Local";
-"settings.checking" = "Checking...";
-"settings.checkSync" = "Check Sync Status";
-"settings.forceSync" = "Refresh Sync Now";
+"settings.checking" = "Checking iCloud Account...";
+"settings.checkSync" = "Check iCloud Account";
 "settings.sync" = "Sync";
-"settings.sync.footer" = "The app refreshes on launch, foreground, iCloud imports, and periodic foreground checks. This switch takes effect after restart.";
+"settings.sync.footer" = "CloudKit imports and exports run automatically. The account check only verifies whether this device can access iCloud. This switch takes effect after restart.";
 "settings.syncRecovery.title" = "Sync Recovery";
 "settings.syncRecovery.conflictTitle" = "Resolve Sync Conflict";
 "settings.syncRecovery.thisDevice" = "This Device";
@@ -200,7 +199,6 @@
 "dialog.forceDownload.title" = "Replace this device with iCloud?";
 "dialog.forceDownload.confirm" = "Replace This Device";
 "dialog.forceDownload.message" = "The current iCloud copy can replace data on this device. Confirm that this device has no newer changes you need. If this launch uses local storage, the download is queued until restart.";
-"alert.sync.title" = "iCloud Sync Status";
 "alert.optimize.title" = "Deleted Records";
 "common.save" = "Save";
 "editor.discard.title" = "Discard Changes?";
@@ -237,7 +235,6 @@
 "sync.storage.localFallback" = "Local fallback storage";
 "sync.storage.temporary" = "Temporary in-memory storage";
 "sync.storage.uiTest" = "UI test storage";
-"sync.refreshSummary" = "%@：%@. This device view has refreshed. If another device just changed data, the system will update this view after import finishes.";
 "sync.forceUpload.started" = "This device data has been marked for upload. iCloud will update after CloudKit finishes exporting.";
 "sync.forceUpload.conflictResolved" = "This device’s copy is now selected to replace iCloud.";
 "sync.forceUpload.queued" = "This device data was saved and queued for upload on the next launch. Restart the app to clear the conflicted cache, retry iCloud, and overwrite the cloud copy.";
@@ -255,10 +252,10 @@
 "sync.account.couldNotDetermine" = "Could not determine";
 "sync.account.temporarilyUnavailable" = "Temporarily unavailable";
 "sync.account.unknown" = "Unknown status";
-"sync.state.available.title" = "iCloud is ready";
+"sync.state.available.title" = "iCloud account available";
 "sync.state.available.message" = "Account status: %@.";
-"sync.state.syncing.title" = "Checking sync";
-"sync.state.syncing.message" = "Refreshing account and import status on this device.";
+"sync.state.syncing.title" = "Checking iCloud account";
+"sync.state.syncing.message" = "Verifying whether this device can access your iCloud account.";
 "sync.state.recent.title" = "Recently refreshed";
 "sync.state.recent.message" = "This device last checked sync at %@.";
 "sync.state.offline.title" = "Local storage is active";

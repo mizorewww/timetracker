@@ -6,7 +6,6 @@ struct SyncSettingsSection: View {
     let feedback: SyncFeedback
     let isCheckingSync: Bool
     let onCheckSync: () -> Void
-    let onForceSync: () -> Void
 
     var body: some View {
         Section {
@@ -31,16 +30,6 @@ struct SyncSettingsSection: View {
                 SettingsActionLabel(
                     title: isCheckingSync ? AppStrings.localized("settings.checking") : AppStrings.localized("settings.checkSync"),
                     systemImage: "arrow.clockwise",
-                    tint: .blue
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isCheckingSync)
-
-            Button(action: onForceSync) {
-                SettingsActionLabel(
-                    title: AppStrings.localized("settings.forceSync"),
-                    systemImage: "arrow.clockwise.icloud",
                     tint: .blue
                 )
             }

@@ -37,13 +37,13 @@ extension SettingsView {
                 currentStorageValue: currentStorageValue,
                 feedback: syncFeedback,
                 isCheckingSync: isCheckingSync,
-                onCheckSync: checkSyncStatus,
-                onForceSync: forceSyncRefresh
+                onCheckSync: checkSyncStatus
             )
 
             SyncRecoverySettingsSection(
                 pendingConflict: store.pendingSyncConflict,
                 isWorking: isCheckingSync,
+                operationMessage: syncOperationMessage,
                 onReplaceCloud: {
                     pendingDestructiveConfirmation = .replaceCloud(
                         expectedConflictID: store.pendingSyncConflict?.id

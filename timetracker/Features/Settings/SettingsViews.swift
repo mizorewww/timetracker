@@ -9,7 +9,7 @@ struct SettingsView: View {
     @State var isExportPresented = false
     @State private var exportDocument = JSONExportDocument(text: "")
     @State var isCheckingSync = false
-    @State var syncCheckMessage: String?
+    @State var syncOperationMessage: String?
     @State var databaseOptimizationMessage: String?
     @State private var selectedCategory: SettingsCategory? = .general
 
@@ -29,13 +29,6 @@ struct SettingsView: View {
             if case let .failure(error) = result {
                 store.errorMessage = error.localizedDescription
             }
-        }
-        .alert(AppStrings.localized("alert.sync.title"), isPresented: syncCheckPresented) {
-            Button(AppStrings.localized("common.ok")) {
-                syncCheckMessage = nil
-            }
-        } message: {
-            Text(syncCheckMessage ?? "")
         }
         .alert(AppStrings.localized("alert.optimize.title"), isPresented: optimizationMessagePresented) {
             Button(AppStrings.localized("common.ok")) {

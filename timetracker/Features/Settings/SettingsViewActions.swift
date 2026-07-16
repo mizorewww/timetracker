@@ -33,17 +33,9 @@ extension SettingsView {
 
     func checkSyncStatus() {
         isCheckingSync = true
+        syncOperationMessage = nil
         Task {
-            await store.refreshCloudAccountStatus()
-            syncCheckMessage = store.syncStatus.accountStatus
-            isCheckingSync = false
-        }
-    }
-
-    func forceSyncRefresh() {
-        isCheckingSync = true
-        Task {
-            syncCheckMessage = await store.forceCloudSyncRefresh()
+            _ = await store.refreshCloudAccountStatus()
             isCheckingSync = false
         }
     }
@@ -56,12 +48,12 @@ extension SettingsView {
         switch result {
         case .appliedImmediately:
             if expectedConflictID != nil {
-                syncCheckMessage = AppStrings.localized("sync.forceUpload.conflictResolved")
+                syncOperationMessage = AppStrings.localized("sync.forceUpload.conflictResolved")
             } else {
-                syncCheckMessage = AppStrings.localized("sync.forceUpload.started")
+                syncOperationMessage = AppStrings.localized("sync.forceUpload.started")
             }
         case .queuedForNextLaunch:
-            syncCheckMessage = AppStrings.localized("sync.forceUpload.queued")
+            syncOperationMessage = AppStrings.localized("sync.forceUpload.queued")
         case .conflictChanged, .failed:
             break
         }
@@ -77,26 +69,16 @@ extension SettingsView {
             switch result {
             case .appliedImmediately:
                 if expectedConflictID != nil {
-                    syncCheckMessage = AppStrings.localized("sync.forceDownload.conflictResolved")
+                    syncOperationMessage = AppStrings.localized("sync.forceDownload.conflictResolved")
                 } else {
-                    syncCheckMessage = AppStrings.localized("sync.forceDownload.queued")
+                    syncOperationMessage = AppStrings.localized("sync.forceDownload.queued")
                 }
             case .queuedForNextLaunch:
-                syncCheckMessage = AppStrings.localized("sync.forceDownload.queued")
+                syncOperationMessage = AppStrings.localized("sync.forceDownload.queued")
             case .conflictChanged, .failed:
                 break
             }
             isCheckingSync = false
-        }
-    }
-
-    var syncCheckPresented: Binding<Bool> {
-        Binding {
-            syncCheckMessage != nil
-        } set: { isPresented in
-            if !isPresented {
-                syncCheckMessage = nil
-            }
         }
     }
 

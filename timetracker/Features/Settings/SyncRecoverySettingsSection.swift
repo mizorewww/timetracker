@@ -3,6 +3,7 @@ import SwiftUI
 struct SyncRecoverySettingsSection: View {
     let pendingConflict: SyncConflictPrompt?
     let isWorking: Bool
+    let operationMessage: String?
     let onReplaceCloud: () -> Void
     let onReplaceDevice: () -> Void
 
@@ -24,6 +25,19 @@ struct SyncRecoverySettingsSection: View {
                     tint: .blue
                 )
                 .accessibilityIdentifier("settings.syncRecovery.cloudSummary")
+            }
+
+            if let operationMessage {
+                Label {
+                    Text(operationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(.blue)
+                }
+                .accessibilityIdentifier("settings.syncRecovery.operationMessage")
             }
 
             Button(role: .destructive, action: onReplaceCloud) {

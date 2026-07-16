@@ -16,13 +16,6 @@ extension TimeTrackerStore {
         await refreshCloudAccountStatus()
     }
 
-    func forceCloudSyncRefresh() async -> String {
-        _ = await refreshCloudAccountStatus()
-        refreshQuietly()
-        let storage = syncStatus.isCloudBacked ? AppStrings.localized("sync.storage.iCloud") : AppStrings.localized("sync.storage.local")
-        return String(format: AppStrings.localized("sync.refreshSummary"), storage, syncStatus.accountStatus)
-    }
-
     @discardableResult
     func refreshCloudAccountStatus(
         client: CloudAccountStatusClient? = nil,

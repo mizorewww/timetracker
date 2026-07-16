@@ -120,11 +120,10 @@
 "settings.currentStorage" = "目前儲存";
 "settings.localWillRetryCloud" = "本機，重新啟動後嘗試 iCloud";
 "settings.local" = "本機";
-"settings.checking" = "正在檢查...";
-"settings.checkSync" = "檢查同步狀態";
-"settings.forceSync" = "立即重新整理同步";
+"settings.checking" = "正在檢查 iCloud 帳戶...";
+"settings.checkSync" = "檢查 iCloud 帳戶";
 "settings.sync" = "同步";
-"settings.sync.footer" = "打開 App、回到前台、收到 iCloud 匯入和前台定時檢查時都會重新整理。這個開關會在下次啟動時生效。";
+"settings.sync.footer" = "CloudKit 會自動匯入和匯出。帳戶檢查只會確認本裝置能否存取 iCloud。這個開關會在下次啟動時生效。";
 "settings.syncRecovery.title" = "同步復原";
 "settings.syncRecovery.conflictTitle" = "解決同步衝突";
 "settings.syncRecovery.thisDevice" = "本裝置";
@@ -200,7 +199,6 @@
 "dialog.forceDownload.title" = "用 iCloud 取代本裝置資料？";
 "dialog.forceDownload.confirm" = "取代本裝置資料";
 "dialog.forceDownload.message" = "目前的 iCloud 副本可能取代本裝置上的資料。請確認本裝置沒有需要保留的新變更。若本次啟動使用本機儲存，下載會排到重新啟動後執行。";
-"alert.sync.title" = "iCloud 同步狀態";
 "alert.optimize.title" = "已刪除記錄";
 "common.save" = "儲存";
 "editor.discard.title" = "放棄變更？";
@@ -237,7 +235,6 @@
 "sync.storage.localFallback" = "本機備用儲存";
 "sync.storage.temporary" = "暫時記憶體儲存";
 "sync.storage.uiTest" = "UI 測試儲存";
-"sync.refreshSummary" = "%@：%@。已重新整理本機視圖；若另一台裝置剛寫入，系統完成匯入後這裡會自動更新。";
 "sync.forceUpload.started" = "已將本裝置資料標記為待上傳；CloudKit 完成匯出後會更新 iCloud。";
 "sync.forceUpload.conflictResolved" = "已選擇用本裝置副本取代 iCloud 資料。";
 "sync.forceUpload.queued" = "已儲存本裝置資料並安排下次啟動上傳；請重新啟動 App，啟動後會先清除衝突快取，再重新嘗試 iCloud 並覆蓋雲端。";
@@ -255,10 +252,10 @@
 "sync.account.couldNotDetermine" = "無法判斷";
 "sync.account.temporarilyUnavailable" = "暫時不可用";
 "sync.account.unknown" = "未知狀態";
-"sync.state.available.title" = "iCloud 已就緒";
+"sync.state.available.title" = "iCloud 帳戶可用";
 "sync.state.available.message" = "帳戶狀態：%@。";
-"sync.state.syncing.title" = "正在檢查同步";
-"sync.state.syncing.message" = "正在重新整理這台裝置上的帳戶和匯入狀態。";
+"sync.state.syncing.title" = "正在檢查 iCloud 帳戶";
+"sync.state.syncing.message" = "正在確認本裝置能否存取你的 iCloud 帳戶。";
 "sync.state.recent.title" = "剛剛重新整理過";
 "sync.state.recent.message" = "這台裝置上次檢查同步是在 %@。";
 "sync.state.offline.title" = "正在使用本機儲存";

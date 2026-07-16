@@ -17,7 +17,11 @@ struct SettingsSyncSafetyContractTests {
 
         #expect(routineSource.contains("onForceUploadLocal") == false)
         #expect(routineSource.contains("onForceDownloadCloud") == false)
+        #expect(routineSource.contains("onForceSync") == false)
+        #expect(routineSource.contains("settings.forceSync") == false)
         #expect(routineSource.contains("SettingsDestructiveActionLabel") == false)
+        #expect(routineSource.contains("operationMessage") == false)
+        #expect(recoverySource.contains("settings.syncRecovery.operationMessage"))
         #expect(recoverySource.contains("struct SyncRecoverySettingsSection"))
         #expect(
             recoverySource.components(separatedBy: "Button(role: .destructive").count == 3
@@ -34,6 +38,44 @@ struct SettingsSyncSafetyContractTests {
                     "                pendingConflict: store.pendingSyncConflict"
             )
         )
+    }
+
+    @Test
+    func accountCheckDoesNotPretendToForceCloudKitSync() throws {
+        let routineSource = try sourceText(
+            "timetracker/Features/Settings/SyncSettingsSection.swift"
+        )
+        let actionsSource = try sourceText(
+            "timetracker/Features/Settings/SettingsViewActions.swift"
+        )
+        let viewSource = try sourceText(
+            "timetracker/Features/Settings/SettingsViews.swift"
+        )
+        let lifecycleSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift"
+        )
+
+        #expect(routineSource.contains("settings.checkSync"))
+        #expect(actionsSource.contains("await store.refreshCloudAccountStatus()"))
+        #expect(actionsSource.contains("syncOperationMessage = nil"))
+        #expect(lifecycleSource.contains("forceCloudSyncRefresh") == false)
+        #expect(lifecycleSource.contains("sync.refreshSummary") == false)
+        #expect(viewSource.contains("alert.sync.title") == false)
+        #expect(viewSource.contains("syncCheckPresented") == false)
+
+        let localeFiles = [
+            "timetracker/en.lproj/Localizable.strings",
+            "timetracker/zh-Hans.lproj/Localizable.strings",
+            "timetracker/zh-Hant.lproj/Localizable.strings"
+        ]
+        for file in localeFiles {
+            let source = try sourceText(file)
+            #expect(source.contains("\"settings.checkSync\""))
+            #expect(source.contains("CloudKit"))
+            #expect(source.contains("\"settings.forceSync\"") == false)
+            #expect(source.contains("\"sync.refreshSummary\"") == false)
+            #expect(source.contains("\"alert.sync.title\"") == false)
+        }
     }
 
     @Test

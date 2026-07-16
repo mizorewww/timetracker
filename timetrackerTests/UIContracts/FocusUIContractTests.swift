@@ -91,12 +91,14 @@ struct FocusUIContractTests {
     }
 
     @Test
-    func stopConfirmationCannotTargetAReplacementRun() throws {
+    func stopConfirmationCannotTargetAReplacementPhase() throws {
         let page = try sourceText("timetracker/Features/Pomodoro/PomodoroViews.swift")
 
-        #expect(page.contains("stopConfirmationRunID = run.id"))
-        #expect(page.contains("store.activePomodoroRun?.id == stopConfirmationRunID"))
-        #expect(page.contains(".onChange(of: store.activePomodoroRun?.id)"))
+        #expect(page.contains("stopConfirmationPhase = PomodoroPhaseToken(run: run)"))
+        #expect(page.contains("store.cancelActivePomodoro(phase: stopConfirmationPhase)"))
+        #expect(page.contains(".onChange(of: store.activePomodoroRun?.clientMutationID)"))
+        #expect(page.contains("mutationID != stopConfirmationPhase?.mutationID"))
+        #expect(page.contains("stopConfirmationRunID") == false)
     }
 
     @Test

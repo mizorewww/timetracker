@@ -120,7 +120,7 @@ struct PomodoroTests {
             breakSeconds: 5 * 60,
             targetRounds: 2
         )
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
 
         let breakRun = try #require(store.activePomodoroRun)
         let expectedState = breakRun.state
@@ -194,7 +194,7 @@ struct PomodoroTests {
             breakSeconds: 5 * 60,
             targetRounds: 2
         )
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
         let breakRun = try #require(store.activePomodoroRun)
         let phase = PomodoroPhaseToken(run: breakRun)
 
@@ -236,7 +236,7 @@ struct PomodoroTests {
             breakSeconds: 5 * 60,
             targetRounds: 2
         )
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
         let breakRun = try #require(store.activePomodoroRun)
         let phase = PomodoroPhaseToken(run: breakRun)
 
@@ -488,7 +488,7 @@ struct PomodoroTests {
             breakSeconds: 5 * 60,
             targetRounds: 2
         )
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
         let staleBreakRun = try #require(store.activePomodoroRun)
         let phase = PomodoroPhaseToken(run: staleBreakRun)
         store.startTask(otherTask)
@@ -569,7 +569,7 @@ struct PomodoroTests {
             breakSeconds: 5 * 60,
             targetRounds: 2
         )
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
         let breakRun = try #require(store.activePomodoroRun)
         let expectedState = breakRun.state
         let phase = PomodoroPhaseToken(run: breakRun)
@@ -654,8 +654,13 @@ struct PomodoroTests {
         #expect(store.activePomodoroRun?.state == .focusing)
         #expect(try store.requiredPomodoroRepository().run(id: staleFocusRun.id)?.state == .completed)
         let analyticsRevision = store.analyticsRevision
-        #expect(store.completeActivePomodoroFocus() == false)
-        #expect(store.analyticsRevision == analyticsRevision)
+        #expect(
+            store.completeActivePomodoroFocus(
+                phase: PomodoroPhaseToken(run: staleFocusRun)
+            ) == false
+        )
+        #expect(store.analyticsRevision > analyticsRevision)
+        #expect(store.activePomodoroRun == nil)
         #expect(focusSegment.endedAt == nil)
         #expect(try timeRepository.activeSegments().map(\.id) == [focusSegment.id])
     }
@@ -680,7 +685,7 @@ struct PomodoroTests {
             breakSeconds: 5 * 60,
             targetRounds: 2
         )
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
         let breakRun = try #require(store.activePomodoroRun)
         let phase = PomodoroPhaseToken(run: breakRun)
 
@@ -710,10 +715,19 @@ struct PomodoroTests {
         store.startPomodoroForSelectedTask(focusSeconds: 25 * 60, breakSeconds: 5 * 60, targetRounds: 2)
         let run = try #require(store.activePomodoroRun)
         let focusSessionID = try #require(run.sessionID)
-        store.completeActivePomodoroFocus()
+        #expect(
+            store.completeActivePomodoroFocus(
+                phase: PomodoroPhaseToken(run: run)
+            )
+        )
         #expect(store.activePomodoroRun?.state == .shortBreak)
 
-        store.cancelActivePomodoro()
+        let breakRun = try #require(store.activePomodoroRun)
+        #expect(
+            store.cancelActivePomodoro(
+                phase: PomodoroPhaseToken(run: breakRun)
+            )
+        )
 
         let cancelledRun = try #require(store.pomodoroRuns.first { $0.id == run.id })
         #expect(cancelledRun.state == .cancelled)
@@ -837,7 +851,12 @@ struct PomodoroTests {
         try context.save()
         store.refreshQuietly()
 
-        store.cancelActivePomodoro()
+        let cancellationRun = try #require(store.activePomodoroRun)
+        #expect(
+            store.cancelActivePomodoro(
+                phase: PomodoroPhaseToken(run: cancellationRun)
+            )
+        )
 
         #expect(store.pomodoroRuns.contains { $0.id == run.id } == false)
         #expect(store.allSegments.contains { $0.sessionID == sessionID } == false)
@@ -1333,7 +1352,7 @@ struct PomodoroTests {
         store.selectedTaskID = task.id
         store.startPomodoroForSelectedTask(focusSeconds: 600, breakSeconds: 60, targetRounds: 2)
         let runID = try #require(store.activePomodoroRun?.id)
-        #expect(store.completeActivePomodoroFocus())
+        #expect(try completeActivePomodoroFocus(in: store))
         #expect(store.activePomodoroRun?.state == .shortBreak)
         #expect(store.activeSegments.isEmpty)
 
@@ -1367,6 +1386,16 @@ struct PomodoroTests {
         let encodedText = try #require(String(data: encoded, encoding: .utf8))
         #expect(plan.displayName == "Legacy")
         #expect(encodedText.contains("allowsSystemClock") == false)
+    }
+
+    @MainActor
+    private func completeActivePomodoroFocus(
+        in store: TimeTrackerStore
+    ) throws -> Bool {
+        let run = try #require(store.activePomodoroRun)
+        return store.completeActivePomodoroFocus(
+            phase: PomodoroPhaseToken(run: run)
+        )
     }
 }
 

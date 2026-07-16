@@ -85,7 +85,12 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
                 targetRounds: 2
             )
         )
-        #expect(store.completeActivePomodoroFocus())
+        let focusRun = try #require(store.activePomodoroRun)
+        #expect(
+            store.completeActivePomodoroFocus(
+                phase: PomodoroPhaseToken(run: focusRun)
+            )
+        )
         #expect(store.activeSegments.isEmpty)
         #expect(store.activePomodoroRun?.state == .shortBreak)
 

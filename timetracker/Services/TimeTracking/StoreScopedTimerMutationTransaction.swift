@@ -21,9 +21,10 @@ struct TimerModelContextFactory {
 /// created only after the store lock is held, so it cannot carry a stale
 /// active-segment snapshot into the critical section.
 ///
-/// System actions and Watch commands use this boundary today. UI, deep-link,
-/// Pomodoro, ledger-edit, and task-lifecycle writers must join the same lock
-/// domain before timer admission is fully serialized across the application.
+/// Ordinary timer commands, task lifecycle writes, and Pomodoro phase commands
+/// use this boundary. Ledger record editing/deletion and snapshot restoration
+/// still require their own store-scoped coordination before every related
+/// writer shares this lock domain.
 @MainActor
 struct StoreScopedTimerMutationTransaction {
     let scope: TimerStoreScope

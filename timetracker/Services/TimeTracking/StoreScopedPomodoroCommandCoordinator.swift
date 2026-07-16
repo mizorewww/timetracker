@@ -7,8 +7,8 @@ private enum StoreScopedPomodoroCommandInvariantError: Error {
     case breakSessionStillOpen
 }
 
-/// Serializes Pomodoro start and break-resume admission with ordinary timer
-/// commands and task lifecycle writes for one concrete SwiftData store.
+/// Serializes Pomodoro admission and phase changes with ordinary timer commands
+/// and task lifecycle writes for one concrete SwiftData store.
 @MainActor
 struct StoreScopedPomodoroCommandCoordinator {
     let container: ModelContainer

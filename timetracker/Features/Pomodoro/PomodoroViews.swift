@@ -5,7 +5,7 @@ struct PomodoroView: View {
     @State private var selectedPlanID: UUID?
     @State private var focusTaskID: UUID?
     @State private var isStopConfirmationPresented = false
-    @State private var stopConfirmationRunID: UUID?
+    @State private var stopConfirmationPhase: PomodoroPhaseToken?
 
     private var availablePlans: [PomodoroPlan] {
         let plans = store.preferences.pomodoroPlans.map { $0.normalized() }
@@ -26,7 +26,7 @@ struct PomodoroView: View {
         Group {
             if let run = store.activePomodoroRun {
                 ActivePomodoroCard(store: store, run: run) {
-                    stopConfirmationRunID = run.id
+                    stopConfirmationPhase = PomodoroPhaseToken(run: run)
                     isStopConfirmationPresented = true
                 }
             } else {
@@ -57,17 +57,17 @@ struct PomodoroView: View {
         .onChange(of: availableFocusTaskIDs) { _, _ in
             normalizeFocusTaskSelection()
         }
-        .onChange(of: store.activePomodoroRun?.id) { _, activeRunID in
+        .onChange(of: store.activePomodoroRun?.clientMutationID) { _, mutationID in
             guard isStopConfirmationPresented,
-                  activeRunID != stopConfirmationRunID else {
+                  mutationID != stopConfirmationPhase?.mutationID else {
                 return
             }
             isStopConfirmationPresented = false
-            stopConfirmationRunID = nil
+            stopConfirmationPhase = nil
         }
         .onChange(of: isStopConfirmationPresented) { _, isPresented in
             if isPresented == false {
-                stopConfirmationRunID = nil
+                stopConfirmationPhase = nil
             }
         }
         .confirmationDialog(
@@ -76,15 +76,14 @@ struct PomodoroView: View {
             titleVisibility: .visible
         ) {
             Button(AppStrings.localized("pomodoro.stop"), role: .destructive) {
-                guard store.activePomodoroRun?.id == stopConfirmationRunID else {
-                    stopConfirmationRunID = nil
+                guard let stopConfirmationPhase else {
                     return
                 }
-                store.cancelActivePomodoro()
-                stopConfirmationRunID = nil
+                store.cancelActivePomodoro(phase: stopConfirmationPhase)
+                self.stopConfirmationPhase = nil
             }
             Button(AppStrings.cancel, role: .cancel) {
-                stopConfirmationRunID = nil
+                stopConfirmationPhase = nil
             }
         } message: {
             Text(.app("pomodoro.stop.confirm.message"))

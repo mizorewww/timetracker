@@ -164,7 +164,13 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
     }
 
     func cancel(runID: UUID, discardRecord: Bool = false) throws {
-        guard var run = try run(id: runID) else { return }
+        guard var run = try run(id: runID),
+              run.deletedAt == nil,
+              run.endedAt == nil,
+              run.state != .completed,
+              run.state != .cancelled else {
+            return
+        }
         try context.performAtomicMutation {
             let now = nowProvider()
             if (run.state == .focusing || run.state == .interrupted),

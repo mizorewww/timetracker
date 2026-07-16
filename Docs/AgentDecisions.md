@@ -839,6 +839,18 @@
 
 验证：固定 UUID、相同 depth/sortOrder/createdAt 且反向输入的回归确认 scoped refresh 恒按 UUID 排列；付费签名 macOS `CoreTaskStoreTests` 6/6、0 error/0 warning。一次性 xcresult 见 dated Audit。
 
+## AD-066：计时协调先冻结确定性纯值准入计划
+
+状态：Accepted
+
+背景：当前 UI facade、SystemAction、Watch、App Intent 和 Pomodoro 可以各自读取 active segments 后再写入。跨 context/进程的“检查后创建”尚未串行化，直接一次性替换所有 writer 风险过高；同时，旧代码对同任务重复活动段、通用 current、精确 segment 和 Pomodoro 必须替换现有段的语义分散，若先写锁再临场决定规则，会把不确定行为藏进临界区。
+
+决策：先以不依赖 SwiftData 的 `TimerAdmissionPolicy` 冻结协调器输入/输出。输入 `TimerActiveSegmentSnapshot` 必须来自 fresh context 中已完成 LWW 的 canonical active set，并按 startedAt、segment UUID 建严格全序。普通 start 可复用同任务最早稳定 survivor 并停止其余重复段；需要新 session 的 Pomodoro 路径显式选择 `replaceAll`。Exclusive start 停止所有其他任务，parallel start 保留其他任务。Stop target 分为精确 segment、task 全部活动段和 current；精确目标失效必须 no-op，current 选择 startedAt 最新、同刻 UUID 最大的段。策略只返回 `TimerStartPlan` / `TimerStopPlan`，不持有 model object、不保存、不刷新 UI。
+
+后果：生产竞态在本提交后仍然存在，不能宣称已修复；下一阶段必须让所有 active-segment writer 一次性切到同一个 store-specific 进程锁、fresh `ModelContext` 和统一提交边界，禁止只给某一个入口加锁。纯策略允许在接线前验证输入顺序无关、重复清理、显式替换和停止范围，协调器只负责授权、重取、应用、保存与 post-commit projection。
+
+验证：12 项纯策略测试覆盖 exclusive/parallel、reuse/replaceAll、同任务重复段、四种输入排列、同刻 UUID tie-break、精确 segment 不回退、task stop all、current latest、逻辑重复输入和应用后的幂等收敛。付费签名 macOS 定向运行 12/12、0 error/0 warning；本批未启动模拟器。一次性 xcresult 见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

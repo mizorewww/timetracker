@@ -121,6 +121,8 @@ TimeSegment 是计时事实来源。它不是“写入后永不可改”的 even
 
 `TrackedTimePolicy` 是所有已记录时长的唯一读侧边界。对明确的 reference `now`：effective end 为 `min(endedAt ?? now, now)`，再与查询的半开 `DateInterval` 取交集；`startedAt >= now` 或无正区间的记录贡献零。统计、gross/wall/overlap、Analytics、Forecast、Pomodoro elapsed、timeline layout、repository range query、cache signature 和 rollup 都必须调用该 policy，不得在 view/formatter 中直接使用 `endedAt ?? Date()`。
 
+`Services/TimeTracking/TimerAdmission*` 是未来统一计时协调器的纯值语义边界。它只消费已经 LWW/canonical 的 active snapshots，并输出稳定 start/stop plan：普通同任务 start 复用最早 survivor 并清理重复段，Pomodoro 等需要新 session 的路径显式 `replaceAll`；exclusive 停其他任务，parallel 保留；精确 segment stop 不回退，task stop 覆盖同任务全部活动段，current 取最新 startedAt 并以 UUID 决胜。该 policy 本身不解决跨 context/进程竞态；所有生产 writer 接入 store-specific lock + fresh context 前，不得把底座存在解释为竞态已修复，也不得只迁移一个入口。
+
 Analytics 不能把一个历史周期压缩成单个“结束前一秒”的伪 `now`。`AnalyticsPeriodEvaluation` 显式携带三项：选中的 Calendar `interval`、用于 `TrackedTimePolicy` 裁剪的 `cutoff`、用于识别真实系统时钟回拨的 `clockReference`。当前周期的 cutoff 是真实墙钟；已完成历史周期的 cutoff 必须精确等于半开区间的 `end`，未来周期的 cutoff 是 `start`。Ledger 的 range query 分别接收 `evaluatedAt` 和 `clockReference`；只有后者早于 index evaluation date 才能触发全库回拨候选，禁止把历史 cutoff 当作时钟回拨。
 
 `AnalyticsComparisonWindow` 是环比统计的唯一窗口定义。当前或未来周期使用 `.matchedProgress`：current 从周期开始裁到 cutoff，previous 按相同日序与本地时分秒映射，不能用固定秒数位移；DST 保留本地钟点，长月映射到短月时在 previous period end 截止。cutoff 精确等于已完成周期 end 时使用 `.completePeriods`，比较两个完整周期。gross、wall、指标脚注和 insight 必须消费同一个 window/basis，禁止 UI 自行推断“上一范围”。

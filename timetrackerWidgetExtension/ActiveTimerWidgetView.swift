@@ -9,7 +9,7 @@ struct ActiveTimerWidgetView: View {
     var body: some View {
         content
             .containerBackground(.fill.tertiary, for: .widget)
-            .widgetURL(widgetURL)
+            .widgetURL(WidgetDeepLinks.today)
     }
 
     @ViewBuilder
@@ -35,14 +35,6 @@ struct ActiveTimerWidgetView: View {
         }
     }
 
-    private var widgetURL: URL {
-        guard case let .snapshot(snapshot) = entry.state,
-              snapshot.activeTimers.isEmpty,
-              let task = snapshot.recentTasks.first else {
-            return WidgetDeepLinks.today
-        }
-        return WidgetDeepLinks.startTimer(taskID: task.taskID)
-    }
 }
 
 struct SmallWidgetContent: View {
@@ -77,10 +69,20 @@ struct SmallWidgetContent: View {
                 }
 
                 if let task = snapshot.recentTasks.first {
-                    Label(task.title, systemImage: "play.fill")
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(1)
-                        .privacySensitive()
+                    Link(destination: WidgetDeepLinks.startTimer(taskID: task.taskID)) {
+                        Label(task.title, systemImage: "play.fill")
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .privacySensitive()
+                    }
+                    .accessibilityLabel(
+                        Text(String.localizedStringWithFormat(
+                            localized("widget.action.startTaskFormat"),
+                            task.title
+                        ))
+                    )
                 } else {
                     Label(localized("widget.action.open"), systemImage: "arrow.up.forward.app")
                         .font(.caption.weight(.semibold))

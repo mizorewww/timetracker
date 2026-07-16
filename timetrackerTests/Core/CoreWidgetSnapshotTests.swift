@@ -281,6 +281,9 @@ struct CoreWidgetSnapshotTests {
         #expect(widget.contains("policy: .never"))
         #expect(widget.contains(".privacySensitive()"))
         #expect(widget.contains("minHeight: 44"))
+        #expect(widget.contains(".widgetURL(WidgetDeepLinks.today)"))
+        #expect(widget.contains("Link(destination: WidgetDeepLinks.startTimer(taskID: task.taskID))"))
+        #expect(widget.contains("private var widgetURL") == false)
         #expect(!widget.contains("byAdding: .minute"))
         #expect(cache.contains("reloadTimelines(ofKind: SharedWidgetSnapshotStore.widgetKind)"))
     }

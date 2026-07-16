@@ -4,6 +4,28 @@ import Testing
 
 @Suite(.serialized)
 struct CoreDeepLinkRoutingTests {
+    @Test
+    func liveActivityTimingPolicyFreezesElapsedTimeAtItsStaleBoundary() {
+        let startedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+
+        #expect(
+            LiveActivityTimingPolicy.staleDate(for: startedAt)
+                == startedAt.addingTimeInterval(8 * 60 * 60)
+        )
+        #expect(
+            LiveActivityTimingPolicy.elapsedPresentation(
+                startedAt: startedAt,
+                isStale: false
+            ) == .live(startedAt: startedAt)
+        )
+        #expect(
+            LiveActivityTimingPolicy.elapsedPresentation(
+                startedAt: startedAt,
+                isStale: true
+            ) == .frozen(seconds: 8 * 60 * 60)
+        )
+    }
+
     @Test @MainActor
     func latestDesiredStateReconcilerSerializesAndCoalescesStopStartTransitions() async {
         let probe = LiveActivityReconciliationProbe()
@@ -133,7 +155,7 @@ struct CoreDeepLinkRoutingTests {
         ].map(sourceText).joined(separator: "\n")
 
         #expect(coordinator.contains("$0.attributes.taskID == request.taskID"))
-        #expect(coordinator.contains("startedAt.addingTimeInterval(8 * 60 * 60)"))
+        #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
         #expect(!coordinator.contains("lastSignature"))
         #expect(activity.contains("context.isStale"))
         #expect(activity.contains(".privacySensitive()"))

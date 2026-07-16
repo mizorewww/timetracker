@@ -47,3 +47,11 @@ enum LiveActivityDeepLinks {
         URL(string: "timetracker://timer/stop?taskID=\(taskID)")!
     }
 }
+
+enum LiveActivityElapsedFormatter {
+    nonisolated static func clock(_ seconds: Int) -> String {
+        Duration.seconds(max(0, seconds)).formatted(
+            .time(pattern: .hourMinuteSecond).locale(.autoupdatingCurrent)
+        )
+    }
+}

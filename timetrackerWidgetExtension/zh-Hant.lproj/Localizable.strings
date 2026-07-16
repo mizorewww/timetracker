@@ -4,6 +4,7 @@
 "widget.empty.title" = "沒有正在計時";
 "widget.empty.message" = "在 Time Tracker 中開始記錄。";
 "widget.action.start" = "開始計時";
+"widget.action.startTaskFormat" = "開始「%@」計時";
 "widget.action.open" = "打開 Time Tracker";
 "widget.quickStart.title" = "快速開始";
 "widget.preview.task" = "製作週報";

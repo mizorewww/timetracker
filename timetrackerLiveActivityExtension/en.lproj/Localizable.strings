@@ -4,3 +4,4 @@
 "live.timer.stop" = "Stop";
 "live.timer.open" = "Open Time Tracker";
 "live.timer.stale" = "Update delayed";
+"live.timer.staleHint" = "Elapsed time is frozen at the last confirmed update.";

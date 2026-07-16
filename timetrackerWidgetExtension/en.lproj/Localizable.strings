@@ -4,6 +4,7 @@
 "widget.empty.title" = "No active timer";
 "widget.empty.message" = "Start tracking from Time Tracker.";
 "widget.action.start" = "Start Timer";
+"widget.action.startTaskFormat" = "Start %@";
 "widget.action.open" = "Open Time Tracker";
 "widget.quickStart.title" = "Quick Start";
 "widget.preview.task" = "Build weekly report";

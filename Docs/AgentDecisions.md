@@ -655,6 +655,20 @@
 
 验证：源码契约固定 Today 无字号分支的完整文字操作、Tasks 辅助布局的路径/时长/进度/预测/子任务字段以及不使用语义替换或忽略 children；单元测试固定语义快照的字段顺序、阻塞状态替换和重复路径消除。Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)` 签名的 macOS 定向套件 50/50 通过，xcresult 为 `/tmp/timetracker-accessibility-context-final-20260716.xcresult`。显式拥有的 iPhone 17 Pro（iOS 27）以 Accessibility XXXL 串行执行 Today、Tasks、Settings 三条 UI 用例，3/3 通过；xcresult 为 `/tmp/timetracker-accessibility-context-ui-20260716.xcresult`，导出的三张截图位于 `/tmp/timetracker-accessibility-context-ui-images-20260716` 并已目视检查文字换行、字段完整性与主动作可见性。UI 测试检查了 VoiceOver 使用的 accessibility label/value 投影，但未把它冒充真人 VoiceOver 遍历；该项仍属于最终人工矩阵。专用设备 `9CEA8CAE-F2B6-4AE7-B092-DEFB389653F4` 已终止、关闭并删除，最终无 Booted 设备、runner、`xcodebuild`、`xctest`、Simulator 或 Problem Reporter 残留。
 
+## AD-TEMP-WIDGET-LIVEACTIVITY：系统表面把“打开”与“修改”分离并冻结陈旧计时
+
+> 临时编号：合并到主分支时由主 Agent 按当时最新 AD 序号重编号。
+
+状态：Accepted
+
+背景：小组件空状态曾把整个背景 URL 改为第一项 recent task 的启动链接，点击非控件区域也会创建计时；Live Activity 虽然显示 stale 标签，计时文本和 VoiceOver value 仍持续增长。锁屏视图又把图标、任务、计时和停止按钮永久压在一个横行，长本地化标题、窄设备和辅助功能字号会互相挤压。
+
+决策：Widget 容器背景只深链到“今日”，任何开始任务 mutation 都必须由带任务名的显式 Link 发起。Live Activity 以共享 `LiveActivityTimingPolicy` 同时生成八小时 `staleDate` 和 elapsed presentation；stale 后可见值与辅助功能值都冻结在同一边界。锁屏和 expanded 布局使用 Dynamic Type 分支与 `ViewThatFits` 提供堆叠/换行回退，停止动作维持 44×44 pt 独立目标；compact/minimal 继续服从系统的极窄 presentation 约束。
+
+后果：背景点击不再产生意外账本事实；陈旧系统投影不会伪装成仍在实时同步；大字和窄宽度优先保留任务身份、冻结状态与停止能力。八小时后的主账本计时仍可继续，冻结只描述 Live Activity 投影可信度。
+
+验证：纯行为测试固定 stale date、live/frozen 两种 presentation 与八小时秒数；源码契约固定 Widget 背景 URL、显式 Quick Start、冻结 formatter/accessibility value、Dynamic Type 分支、`ViewThatFits` 和两行回退；三语本地化键集保持一致。主 Agent 合并后仍需用付费开发者签名完成 app/Widget/Live Activity 构建，并以小屏普通字号与最大辅助字号截图验证后释放专用模拟器资源。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

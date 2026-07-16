@@ -129,7 +129,7 @@ final class LiveActivityCoordinator {
         let attributes = TimeTrackingActivityAttributes(taskID: request.taskID)
         let content = ActivityContent(
             state: request.state,
-            staleDate: request.state.startedAt.addingTimeInterval(8 * 60 * 60)
+            staleDate: LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)
         )
         let activities = Activity<TimeTrackingActivityAttributes>.activities
 

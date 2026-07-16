@@ -4,3 +4,4 @@
 "live.timer.stop" = "停止";
 "live.timer.open" = "打开 Time Tracker";
 "live.timer.stale" = "更新延迟";
+"live.timer.staleHint" = "已用时间已停在最后确认的更新时间。";

@@ -272,6 +272,8 @@ Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新�
 
 Live Activity 是状态投影。Activity attributes 应保持小而稳定，不保存唯一业务事实。Activity 的 task identity、停止 deep link 和主应用命令必须一致；更新失败应重试或降级显示，但不应阻断主应用写入。扩展对任务文本使用隐私处理，并明确显示 stale 状态。
 
+`LiveActivityTimingPolicy` 是 ActivityKit `staleDate` 与 UI elapsed presentation 的共同边界：活动从 canonical `startedAt` 起最多实时增长八小时，进入 stale 后必须切换为固定的 `LiveActivityElapsedPresentation.frozen`，可见文本和 accessibility value 都使用同一个冻结秒数。不得只改状态标签而继续渲染 `Text(startedAt, style: .timer)`。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；展开 Dynamic Island 在辅助字号下保留两行任务标题和独立停止控件，普通字号也要为窄标题提供换行回退。系统强约束的 compact/minimal presentation 可以保持精简，但不能把其单行约束扩散到锁屏和 expanded surface。
+
 ### Watch
 
 Watch target 的状态 owner 是同一个 `WatchAppStore` 类型，但职责按 extension 文件拆开：base 文件只持有 observable state、依赖和恢复；Commands 文件处理 submit/retry/discard、20 秒确认 timeout 与本机 queue persistence；Connectivity 文件处理 activation/transmit、payload/result/snapshot application 与 freshness/error；SessionDelegate 文件只负责 WCSession callbacks。新增逻辑应进入对应 owner，不能重新把 transport、delegate 与 queue lifecycle 混回 base 文件。
@@ -291,6 +293,8 @@ iOS `WindowGroup` 可以产生多个 scene，而 `WatchConnectivityBridge` 只�
 ### Widget
 
 Widget 从版本化共享快照读取数据，区分共享容器不可用、缺失与损坏，不把所有失败都显示成“没有计时”。`WidgetSnapshotCache.snapshot` 在 producer 边界限制 64 active/64 recent（当前 Widget recent UI 只投影前 3 项），将 summary 裁到非负上限、timer start 裁到 `generatedAt - maximumActiveTimerAge ... generatedAt`，并用 Unicode-safe prefix 将投影 title/path/style 限制为 512/1,024/128 UTF-8 bytes。所有文本共用 128 KiB 预算，从而保持 Widget JSON 不超过 256 KiB。
+
+Widget 的容器级 `.widgetURL` 永远是 `WidgetDeepLinks.today`。启动任务是 mutation，必须由显示任务名的显式 `Link(destination: WidgetDeepLinks.startTimer(...))` 发起；不得根据 recent task 动态改写背景 URL，否则任意空白区域点击都会偷偷启动列表第一项。小型空状态只给首个 recent task 一个明确的 44 pt Quick Start 目标，中型布局的任务行各自持有链接，背景仍只负责打开应用。
 
 `WidgetSnapshotLimits` 同时是 consumer/store 验证的唯一上限表：解码字段的 title/path/style 硬上限为 4 KiB/16 KiB/256 UTF-8 bytes，并验证有限日期、最多 5 分钟未来偏差、summary/active-age 上限和唯一 ID。`SharedWidgetSnapshotStore.save` 在写 App Group UserDefaults 前拒绝非法/超限快照；`loadResult` 在 decode 前检查字节，decode 后重新验证，失败返回 `.corrupted`。Watch producer 复用裁剪后的 active timers，并对最多 256 recent task 应用同样的 Unicode-safe 512/1,024/128-byte 投影上限和共享 128 KiB 文本预算。这些裁剪不写回任务或账本。时间线根据 snapshot freshness 和 active timer 安排刷新。主应用和扩展已启用 `group.me.mezorewww.timetracker`，Xcode 自动签名构建已生成带该 entitlement 的 profile；发行门禁仍要求真机验证共享容器 URL、读写、刷新策略、锁屏与离线状态。
 

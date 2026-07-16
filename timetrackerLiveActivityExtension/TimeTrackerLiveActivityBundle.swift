@@ -30,36 +30,7 @@ struct TimeTrackerLiveActivityWidget: Widget {
                     )
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(context.state.taskTitle)
-                                .font(.headline.weight(.semibold))
-                                .lineLimit(1)
-                                .privacySensitive()
-                            if context.state.additionalTimerCount > 0 {
-                                Text("+\(context.state.additionalTimerCount)")
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(.white.opacity(0.16), in: Capsule())
-                            }
-                        }
-
-                        Text(path(for: context.state))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .privacySensitive()
-
-                        Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
-                            Label(String(localized: "live.timer.stop"), systemImage: "stop.fill")
-                                .font(.caption.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                                .contentShape(Rectangle())
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    ExpandedActivityDetails(context: context)
                 }
             } compactLeading: {
                 Link(destination: LiveActivityDeepLinks.today) {

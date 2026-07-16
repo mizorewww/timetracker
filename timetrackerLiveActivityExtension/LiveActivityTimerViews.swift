@@ -4,38 +4,29 @@ import SwiftUI
 import WidgetKit
 
 struct LockScreenTimerView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let context: ActivityViewContext<TimeTrackingActivityAttributes>
 
     var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                accessibilityContent
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    wideContent
+                    stackedContent
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private var wideContent: some View {
         HStack(spacing: 12) {
             ActivityIconView(state: context.state, size: 48)
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(context.state.taskTitle)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .privacySensitive()
-                    if context.state.additionalTimerCount > 0 {
-                        Text(String.localizedStringWithFormat(
-                            String(localized: "live.timer.additionalFormat"),
-                            context.state.additionalTimerCount
-                        ))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(.white.opacity(0.14), in: Capsule())
-                    }
-                }
-
-                Text(path(for: context.state))
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.66))
-                    .lineLimit(1)
-                    .privacySensitive()
-            }
+            ActivityTaskSummary(state: context.state, allowsWrapping: false)
+                .fixedSize(horizontal: true, vertical: false)
 
             Spacer(minLength: 4)
 
@@ -45,17 +36,109 @@ struct LockScreenTimerView: View {
                 style: .lockScreen
             )
 
-            Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
-                Image(systemName: "stop.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.16), in: Circle())
-            }
-            .accessibilityLabel(String(localized: "live.timer.stop"))
+            LiveActivityStopButton(taskID: context.attributes.taskID)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+    }
+
+    private var accessibilityContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                Text(context.state.taskTitle)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .privacySensitive()
+                LiveActivityStopButton(taskID: context.attributes.taskID)
+            }
+
+            TimerText(
+                startedAt: context.state.startedAt,
+                isStale: context.isStale,
+                style: .lockScreen
+            )
+        }
+    }
+
+    private var stackedContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                ActivityIconView(state: context.state, size: 40)
+                ActivityTaskSummary(state: context.state, allowsWrapping: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                LiveActivityStopButton(taskID: context.attributes.taskID)
+            }
+
+            TimerText(
+                startedAt: context.state.startedAt,
+                isStale: context.isStale,
+                style: .lockScreen
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+struct ActivityTaskSummary: View {
+    let state: TimeTrackingActivityAttributes.ContentState
+    let allowsWrapping: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if allowsWrapping {
+                Text(state.taskTitle)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .privacySensitive()
+                additionalTimerBadge
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(state.taskTitle)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .privacySensitive()
+                    additionalTimerBadge
+                }
+            }
+
+            Text(path(for: state))
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.66))
+                .lineLimit(allowsWrapping ? 2 : 1)
+                .privacySensitive()
+        }
+    }
+
+    @ViewBuilder
+    private var additionalTimerBadge: some View {
+        if state.additionalTimerCount > 0 {
+            Text(String.localizedStringWithFormat(
+                String(localized: "live.timer.additionalFormat"),
+                state.additionalTimerCount
+            ))
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.white.opacity(0.14), in: Capsule())
+        }
+    }
+}
+
+struct LiveActivityStopButton: View {
+    let taskID: String
+
+    var body: some View {
+        Link(destination: LiveActivityDeepLinks.stopTimer(taskID: taskID)) {
+            Image(systemName: "stop.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.white.opacity(0.16), in: Circle())
+        }
+        .accessibilityLabel(String(localized: "live.timer.stop"))
     }
 }
 
@@ -90,7 +173,7 @@ struct TimerText: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Text(startedAt, style: .timer)
+            elapsedText
                 .font(
                     style == .lockScreen
                         ? .title2.monospacedDigit().weight(.semibold)
@@ -110,6 +193,35 @@ struct TimerText: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: isStale ? "live.timer.stale" : "live.timer.elapsed"))
-        .accessibilityValue(Text(startedAt, style: .timer))
+        .accessibilityValue(elapsedAccessibilityValue)
+        .accessibilityHint(
+            isStale ? String(localized: "live.timer.staleHint") : ""
+        )
+    }
+
+    @ViewBuilder
+    private var elapsedText: some View {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(LiveActivityElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedAccessibilityValue: Text {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(LiveActivityElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedPresentation: LiveActivityElapsedPresentation {
+        LiveActivityTimingPolicy.elapsedPresentation(
+            startedAt: startedAt,
+            isStale: isStale
+        )
     }
 }

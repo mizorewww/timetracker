@@ -236,6 +236,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
             "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+            "timetrackerLiveActivityExtension/ExpandedActivityDetails.swift",
             "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ]
 
@@ -423,6 +424,7 @@ struct CoreSourceLayoutTests {
             "timetrackerWatchApp/WatchColorSupport.swift",
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
             "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+            "timetrackerLiveActivityExtension/ExpandedActivityDetails.swift",
             "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ]
 

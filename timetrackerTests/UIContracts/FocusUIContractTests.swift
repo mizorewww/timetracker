@@ -62,8 +62,9 @@ struct FocusUIContractTests {
         #expect(timer.contains("spokenLabel"))
         #expect(timer.contains("spokenValue"))
         #expect(selection.contains("Text(value)"))
-        #expect(selection.contains(".lineLimit(2)") == false)
-        #expect(selection.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(selection.contains(".lineLimit(2)"))
+        #expect(selection.contains(".minimumScaleFactor(") == false)
+        #expect(selection.contains(".multilineTextAlignment(.leading)"))
     }
 
     @Test
@@ -96,6 +97,22 @@ struct FocusUIContractTests {
         #expect(page.contains("stopConfirmationRunID = run.id"))
         #expect(page.contains("store.activePomodoroRun?.id == stopConfirmationRunID"))
         #expect(page.contains(".onChange(of: store.activePomodoroRun?.id)"))
+    }
+
+    @Test
+    func setupTaskChoiceIsLocalToTheFocusPage() throws {
+        let page = try sourceText("timetracker/Features/Pomodoro/PomodoroViews.swift")
+        let selection = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
+        )
+        let controls = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroFocusSetupControls.swift"
+        )
+
+        #expect(page.contains("@State private var focusTaskID"))
+        #expect(selection.contains("Picker(selection: $focusTaskID)"))
+        #expect(selection.contains("$store.selectedTaskID") == false)
+        #expect(controls.contains("store.startPomodoro(\n            taskID: focusTaskID"))
     }
 
     @Test

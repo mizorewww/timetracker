@@ -11,13 +11,30 @@ extension TimeTrackerStore {
             fail(.pomodoroTaskSelectionRequired)
             return
         }
-        guard let task = task(for: selectedTaskID), isTaskAvailableForTracking(task) else {
+        _ = startPomodoro(
+            taskID: selectedTaskID,
+            focusSeconds: focusSeconds,
+            breakSeconds: breakSeconds,
+            longBreakSeconds: longBreakSeconds,
+            targetRounds: targetRounds
+        )
+    }
+
+    @discardableResult
+    func startPomodoro(
+        taskID: UUID,
+        focusSeconds: Int = 25 * 60,
+        breakSeconds: Int = 5 * 60,
+        longBreakSeconds: Int? = nil,
+        targetRounds: Int = 1
+    ) -> Bool {
+        guard let task = task(for: taskID), isTaskAvailableForTracking(task) else {
             errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
-            return
+            return false
         }
-        perform(event: .pomodoroChanged(runID: nil, sessionID: nil, taskID: selectedTaskID)) {
+        return perform(event: .pomodoroChanged(runID: nil, sessionID: nil, taskID: taskID)) {
             _ = try pomodoroCommandHandler.start(
-                taskID: selectedTaskID,
+                taskID: taskID,
                 focusSeconds: focusSeconds,
                 breakSeconds: breakSeconds,
                 longBreakSeconds: longBreakSeconds,

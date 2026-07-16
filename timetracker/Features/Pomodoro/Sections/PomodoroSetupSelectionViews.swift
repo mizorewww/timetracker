@@ -1,11 +1,12 @@
 import SwiftUI
 
 struct PomodoroSetupSelectionControls: View {
-    @Bindable var store: TimeTrackerStore
+    let store: TimeTrackerStore
     let selectedTask: TaskNode?
     let availableTasks: [TaskNode]
     let plans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
+    @Binding var focusTaskID: UUID?
 
     private var selectedPlan: PomodoroPlan? {
         plans.first { $0.id == selectedPlanID }
@@ -52,7 +53,7 @@ struct PomodoroSetupSelectionControls: View {
 
     private var taskMenu: some View {
         Menu {
-            Picker(selection: $store.selectedTaskID) {
+            Picker(selection: $focusTaskID) {
                 ForEach(availableTasks, id: \.id) { task in
                     Label(store.path(for: task), systemImage: task.iconName ?? "checklist")
                         .tag(Optional(task.id))

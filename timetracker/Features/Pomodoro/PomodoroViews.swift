@@ -3,6 +3,7 @@ import SwiftUI
 struct PomodoroView: View {
     let store: TimeTrackerStore
     @State private var selectedPlanID: UUID?
+    @State private var focusTaskID: UUID?
     @State private var isStopConfirmationPresented = false
     @State private var stopConfirmationRunID: UUID?
 
@@ -13,6 +14,12 @@ struct PomodoroView: View {
 
     private var selectedPlan: PomodoroPlan {
         availablePlans.first { $0.id == selectedPlanID } ?? availablePlans[0]
+    }
+
+    private var availableFocusTaskIDs: [UUID] {
+        store.tasks
+            .filter(store.isTaskAvailableForTracking)
+            .map(\.id)
     }
 
     var body: some View {
@@ -27,7 +34,8 @@ struct PomodoroView: View {
                     store: store,
                     plan: selectedPlan,
                     availablePlans: availablePlans,
-                    selectedPlanID: $selectedPlanID
+                    selectedPlanID: $selectedPlanID,
+                    focusTaskID: $focusTaskID
                 )
             }
         }
@@ -40,10 +48,14 @@ struct PomodoroView: View {
         .background(PomodoroBackgroundColor().ignoresSafeArea())
         .onAppear {
             normalizeSelectedPlan()
+            normalizeFocusTaskSelection()
             store.reconcileActivePomodoro(now: Date())
         }
         .onChange(of: store.preferences.pomodoroPlans) { _, _ in
             normalizeSelectedPlan()
+        }
+        .onChange(of: availableFocusTaskIDs) { _, _ in
+            normalizeFocusTaskSelection()
         }
         .onChange(of: store.activePomodoroRun?.id) { _, activeRunID in
             guard isStopConfirmationPresented,
@@ -83,6 +95,18 @@ struct PomodoroView: View {
         guard !availablePlans.isEmpty else { return }
         if selectedPlanID == nil || !availablePlans.contains(where: { $0.id == selectedPlanID }) {
             selectedPlanID = availablePlans[0].id
+        }
+    }
+
+    private func normalizeFocusTaskSelection() {
+        let availableTaskIDs = Set(availableFocusTaskIDs)
+        guard focusTaskID.map(availableTaskIDs.contains) != true else { return }
+
+        if let selectedTaskID = store.selectedTaskID,
+           availableTaskIDs.contains(selectedTaskID) {
+            focusTaskID = selectedTaskID
+        } else {
+            focusTaskID = availableFocusTaskIDs.first
         }
     }
 

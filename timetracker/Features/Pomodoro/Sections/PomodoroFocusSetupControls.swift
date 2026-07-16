@@ -7,6 +7,7 @@ struct PomodoroFocusSetupControls: View {
     let availableTasks: [TaskNode]
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
+    @Binding var focusTaskID: UUID?
     let contentSpacing: CGFloat
 
     private var taskColor: Color {
@@ -36,7 +37,8 @@ struct PomodoroFocusSetupControls: View {
                 selectedTask: selectedTask,
                 availableTasks: availableTasks,
                 plans: availablePlans,
-                selectedPlanID: $selectedPlanID
+                selectedPlanID: $selectedPlanID,
+                focusTaskID: $focusTaskID
             )
 
             Button(action: startPomodoro) {
@@ -56,7 +58,9 @@ struct PomodoroFocusSetupControls: View {
     }
 
     private func startPomodoro() {
-        store.startPomodoroForSelectedTask(
+        guard let focusTaskID else { return }
+        store.startPomodoro(
+            taskID: focusTaskID,
             focusSeconds: plan.focusSeconds,
             breakSeconds: plan.shortBreakSeconds,
             longBreakSeconds: plan.longBreakSeconds,

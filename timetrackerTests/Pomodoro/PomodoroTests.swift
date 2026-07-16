@@ -142,6 +142,38 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
+    func explicitPomodoroTaskDoesNotReplaceTheGlobalTaskSelection() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let selectedTask = try taskRepository.createTask(
+            title: "Selected elsewhere",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let focusTask = try taskRepository.createTask(
+            title: "Focus here",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+        store.selectedTaskID = selectedTask.id
+
+        #expect(store.startPomodoro(
+            taskID: focusTask.id,
+            focusSeconds: 60,
+            breakSeconds: 30,
+            targetRounds: 1
+        ))
+
+        #expect(store.selectedTaskID == selectedTask.id)
+        #expect(store.activePomodoroRun?.taskID == focusTask.id)
+    }
+
+    @Test @MainActor
     func resumingBreakStopsOtherTaskWhenParallelTimersAreDisabled() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

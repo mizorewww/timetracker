@@ -5,12 +5,13 @@ struct PomodoroSetupCard: View {
     let plan: PomodoroPlan
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
+    @Binding var focusTaskID: UUID?
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
     private var selectedTask: TaskNode? {
-        guard let task = store.selectedTaskID.flatMap({ store.task(for: $0) }),
+        guard let task = focusTaskID.flatMap({ store.task(for: $0) }),
               store.isTaskAvailableForTracking(task) else {
             return nil
         }
@@ -36,6 +37,7 @@ struct PomodoroSetupCard: View {
                         availableTasks: availableTasks,
                         availablePlans: availablePlans,
                         selectedPlanID: $selectedPlanID,
+                        focusTaskID: $focusTaskID,
                         contentSpacing: layout.setupSectionSpacing
                     )
                 }

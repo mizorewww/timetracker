@@ -97,9 +97,10 @@ struct AccessibilitySurfaceContractTests {
 
         #expect(source.components(separatedBy: "Menu {").count - 1 == 2)
         #expect(source.contains("dynamicTypeSize.isAccessibilitySize"))
-        #expect(source.contains("@Bindable var store"))
-        #expect(source.contains("$store.selectedTaskID"))
-        #expect(source.contains("selectedTask.map(store.path(for:))"))
+        #expect(source.contains("@Binding var focusTaskID"))
+        #expect(source.contains("$focusTaskID"))
+        #expect(source.contains("$store.selectedTaskID") == false)
+        #expect(source.contains("selectedTask.flatMap(store.parentPath(for:))"))
         #expect(source.components(separatedBy: ".buttonStyle(.bordered)").count - 1 == 2)
         #expect(source.contains(".appCard(") == false)
         #expect(source.contains("pomodoro.planPicker"))

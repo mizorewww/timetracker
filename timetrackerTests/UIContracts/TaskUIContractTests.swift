@@ -535,7 +535,12 @@ struct TaskUIContractTests {
             "timetracker/Stores/Domains/AnalyticsStore+OverlapParticipants.swift",
             "timetracker/Stores/Domains/AnalyticsStore+OverlapSweep.swift"
         ].map(sourceText).joined(separator: "\n")
-        let viewSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverlapViews.swift")
+        let viewSource = try [
+            "timetracker/Features/Analytics/Sections/AnalyticsOverlapViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverlapRow.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(modelSource.contains("struct OverlapAnalyticsParticipant: Identifiable"))

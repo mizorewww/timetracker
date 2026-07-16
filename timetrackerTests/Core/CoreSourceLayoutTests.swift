@@ -248,6 +248,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownPresentation.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsOverlapViews.swift",
+            "timetracker/Features/Analytics/Sections/AnalyticsOverlapRow.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsQualityViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
@@ -581,6 +582,7 @@ struct CoreSourceLayoutTests {
             "Sections/AnalyticsGroupBreakdownPresentation.swift",
             "Sections/AnalyticsGroupBreakdownViews.swift",
             "Sections/AnalyticsOverlapViews.swift",
+            "Sections/AnalyticsOverlapRow.swift",
             "Sections/AnalyticsQualityViews.swift",
             "Sections/AnalyticsTrendViews.swift"
         ]

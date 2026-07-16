@@ -44,8 +44,16 @@ extension SettingsView {
             SyncRecoverySettingsSection(
                 pendingConflict: store.pendingSyncConflict,
                 isWorking: isCheckingSync,
-                onReplaceCloud: { pendingDestructiveConfirmation = .replaceCloud },
-                onReplaceDevice: { pendingDestructiveConfirmation = .replaceDevice }
+                onReplaceCloud: {
+                    pendingDestructiveConfirmation = .replaceCloud(
+                        expectedConflictID: store.pendingSyncConflict?.id
+                    )
+                },
+                onReplaceDevice: {
+                    pendingDestructiveConfirmation = .replaceDevice(
+                        expectedConflictID: store.pendingSyncConflict?.id
+                    )
+                }
             )
 
         case .intelligence:

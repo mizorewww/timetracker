@@ -24,7 +24,13 @@ struct CoreSyncConflictTests {
             #expect(prompt.localSummary.isEmpty == false)
             #expect(prompt.cloudSummary.isEmpty == false)
 
-            try service.resolve(.uploadLocal, context: context)
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: prompt.id,
+                    resolution: .uploadLocal,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Local plan"])
@@ -47,8 +53,14 @@ struct CoreSyncConflictTests {
             task.updatedAt = Date().addingTimeInterval(60)
             try context.save()
 
-            _ = try #require(try service.handleCloudImport(context: context))
-            try service.resolve(.downloadCloud, context: context)
+            let prompt = try #require(try service.handleCloudImport(context: context))
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: prompt.id,
+                    resolution: .downloadCloud,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Cloud plan"])
@@ -85,7 +97,13 @@ struct CoreSyncConflictTests {
             #expect(prompt.localSummary.isEmpty == false)
             #expect(prompt.cloudSummary.isEmpty == false)
 
-            try service.resolve(.uploadLocal, context: context)
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: prompt.id,
+                    resolution: .uploadLocal,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Mac local edit"])
@@ -172,9 +190,14 @@ struct CoreSyncConflictTests {
             task.clientMutationID = UUID()
             try context.save()
 
-            let prompt = try service.handleCloudImport(context: context)
-            #expect(prompt != nil)
-            try service.resolve(.uploadLocal, context: context)
+            let prompt = try #require(try service.handleCloudImport(context: context))
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: prompt.id,
+                    resolution: .uploadLocal,
+                    context: context
+                ) == .appliedImmediately
+            )
             #expect(try context.fetch(FetchDescriptor<TaskNode>()).visibleDeduplicatedByID().first?.title == "Local edit two")
         }
     }
@@ -416,14 +439,22 @@ struct CoreSyncConflictTests {
             task.title = "iPhone cloud edit"
             task.updatedAt = Date().addingTimeInterval(120)
             try context.save()
-            _ = try #require(try service.handleCloudImport(context: context))
+            let prompt = try #require(try service.handleCloudImport(context: context))
 
             let laterTask = TaskNode(title: "Post-conflict task", parentID: nil, deviceID: "device-a")
             context.insert(laterTask)
             try context.save()
             try service.recordLocalMutation(context: context)
+            let currentPrompt = try #require(service.prompt())
+            #expect(currentPrompt.id != prompt.id)
 
-            try service.resolve(.uploadLocal, context: context)
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: currentPrompt.id,
+                    resolution: .uploadLocal,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let visibleTitles = try context.fetch(FetchDescriptor<TaskNode>())
                 .filter { $0.deletedAt == nil }
@@ -471,9 +502,15 @@ struct CoreSyncConflictTests {
             inbox.updatedAt = base.addingTimeInterval(20)
             inbox.clientMutationID = UUID()
             try context.save()
-            _ = try #require(try service.handleCloudImport(context: context))
+            let prompt = try #require(try service.handleCloudImport(context: context))
 
-            try service.resolve(.uploadLocal, context: context)
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: prompt.id,
+                    resolution: .uploadLocal,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let restoredTask = try #require(
                 try context.fetch(FetchDescriptor<TaskNode>()).visibleDeduplicatedByID().first
@@ -513,9 +550,16 @@ struct CoreSyncConflictTests {
             try context.save()
             try service.recordLocalMutation(context: context)
             try acknowledgeCurrentCloudExport(service: service, context: context)
-            #expect(service.prompt()?.id == prompt.id)
+            let currentPrompt = try #require(service.prompt())
+            #expect(currentPrompt.id != prompt.id)
 
-            try service.resolve(.downloadCloud, context: context)
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: currentPrompt.id,
+                    resolution: .downloadCloud,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let visibleTitles = try context.fetch(FetchDescriptor<TaskNode>())
                 .filter { $0.deletedAt == nil }
@@ -550,9 +594,16 @@ struct CoreSyncConflictTests {
             laterRemoteTask.updatedAt = Date().addingTimeInterval(180)
             context.insert(laterRemoteTask)
             try context.save()
-            #expect(try service.handleCloudImport(context: context)?.id == prompt.id)
+            let currentPrompt = try #require(try service.handleCloudImport(context: context))
+            #expect(currentPrompt.id != prompt.id)
 
-            try service.resolve(.downloadCloud, context: context)
+            #expect(
+                try service.resolveSyncConflict(
+                    expectedConflictID: currentPrompt.id,
+                    resolution: .downloadCloud,
+                    context: context
+                ) == .appliedImmediately
+            )
 
             let visibleTitles = try context.fetch(FetchDescriptor<TaskNode>())
                 .filter { $0.deletedAt == nil }

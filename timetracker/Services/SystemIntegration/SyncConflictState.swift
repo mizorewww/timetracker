@@ -65,6 +65,11 @@ struct SyncConflictState: Codable {
         pendingConflictWorkingSnapshot = nil
     }
 
+    mutating func rotatePendingConflictIdentity() {
+        guard pendingConflictID != nil else { return }
+        pendingConflictID = UUID()
+    }
+
     mutating func acceptCloudSnapshot(
         _ snapshot: SyncDataSnapshot,
         fingerprint: String

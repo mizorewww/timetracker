@@ -82,17 +82,24 @@ struct ContentView: View {
         .confirmationDialog(
             AppStrings.localized("dialog.syncConflict.title"),
             isPresented: syncConflictDialogBinding,
-            titleVisibility: .visible
-        ) {
+            titleVisibility: .visible,
+            presenting: store.pendingSyncConflict
+        ) { conflict in
             Button(AppStrings.localized("dialog.syncConflict.uploadLocal"), role: .destructive) {
-                store.resolveSyncConflict(.uploadLocal)
+                store.resolveSyncConflict(
+                    expectedConflictID: conflict.id,
+                    resolution: .uploadLocal
+                )
             }
             Button(AppStrings.localized("dialog.syncConflict.downloadCloud"), role: .destructive) {
-                store.resolveSyncConflict(.downloadCloud)
+                store.resolveSyncConflict(
+                    expectedConflictID: conflict.id,
+                    resolution: .downloadCloud
+                )
             }
             Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(syncConflictMessage)
+        } message: { conflict in
+            Text(syncConflictMessage(for: conflict))
         }
         .onChange(of: store.pendingSyncConflict?.id) { _, _ in
             dismissedSyncConflictID = nil
@@ -169,8 +176,7 @@ struct ContentView: View {
         }
     }
 
-    private var syncConflictMessage: String {
-        guard let conflict = store.pendingSyncConflict else { return "" }
+    private func syncConflictMessage(for conflict: SyncConflictPrompt) -> String {
         return String(
             format: AppStrings.localized("dialog.syncConflict.message"),
             conflict.localSummary,

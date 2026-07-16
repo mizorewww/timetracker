@@ -47,6 +47,9 @@ struct SettingsSyncSafetyContractTests {
         let actionsSource = try sourceText(
             "timetracker/Features/Settings/SettingsViewActions.swift"
         )
+        let lifecycleSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift"
+        )
 
         #expect(recoverySource.contains("summary: pendingConflict.localSummary"))
         #expect(recoverySource.contains("summary: pendingConflict.cloudSummary"))
@@ -56,8 +59,11 @@ struct SettingsSyncSafetyContractTests {
         #expect(recoverySource.contains("tint: .cyan") == false)
         #expect(confirmationSource.contains("dialog.forceUpload.confirm"))
         #expect(confirmationSource.contains("dialog.forceDownload.confirm"))
-        #expect(confirmationSource.contains("forceUploadLocalData()"))
-        #expect(actionsSource.contains("store.resolveSyncConflict(.uploadLocal)"))
+        #expect(confirmationSource.contains("forceUploadLocalData(expectedConflictID: expectedConflictID)"))
+        #expect(confirmationSource.contains("case replaceCloud(expectedConflictID: UUID?)"))
+        #expect(actionsSource.contains("expectedConflictID: expectedConflictID"))
+        #expect(actionsSource.contains("resolution: .uploadLocal"))
+        #expect(lifecycleSource.contains("sync.conflict.error.changed"))
         #expect(actionsSource.contains("sync.forceUpload.conflictResolved"))
         #expect(confirmationSource.contains("Label(AppStrings.localized(\"settings.forceUploadICloud\")") == false)
         #expect(confirmationSource.contains("Label(AppStrings.localized(\"settings.forceDownloadICloud\")") == false)

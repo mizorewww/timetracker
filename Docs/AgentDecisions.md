@@ -925,6 +925,18 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：付费 Apple Development 签名的 `TaskUIContractTests` 最终 34/34、0 skip/runtime warning，source contract 固定 swipe modifier 无 `@State`/`confirmationDialog`、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不再引用 `task.action.softDelete`；xcresult 为 `/tmp/timetracker-delete-confirmation-tests-final-20260716.xcresult`。本批未创建模拟器，结束后无 owned build/test/runner 或 Booted device；只检查正常交互结构，没有启动 Accessibility 专项。
 
+## AD-073：同步覆盖确认绑定精确 conflict token，并在 state lock 内 CAS
+
+状态：Accepted
+
+背景：同步恢复确认曾只保存上传/下载方向。用户看到冲突 A 的本机/云摘要后，CloudKit observer 或本机 mutation 可能在最终确认前把 pending state 改成 B；按钮随后重新读取“当前冲突”并直接覆盖，等于按 A 的信息解决 B。即使逻辑冲突 ID 没换，pending 期间的新本机或云端改动也会改变实际 resolution snapshot，而旧实现仍保留原 ID并可能返回变化前 prompt。“最初无冲突”的手动恢复也可能在 confirmation 打开期间迎来新冲突，再错误清掉它。
+
+决策：`pendingConflictID` 是用户看过的两侧摘要版本 token。pending 状态下，local branch 或 cloud branch 的 resolution-relevant snapshot fingerprint 变化时，在 `SyncConflictService` 的跨进程 state lock 内旋转 token，并从更新后的 state 重建 prompt。ContentView 的 `confirmationDialog(presenting:)` 与 `SettingsDestructiveConfirmation` 都捕获当次展示的 optional ID。`resolveSyncConflict(expectedConflictID:resolution:)` 在同一个 `withExclusiveStateAccess` 内先 locked-load，再精确比较实际 optional ID；比较早于 `advanceSyncEpoch`、snapshot restore、reset flag、`clearPendingConflict` 和 `saveState`。不匹配返回 `conflictChanged` 且零副作用；匹配后返回 `appliedImmediately` 或 `queuedForNextLaunch`，IO/restore/save 错误由 Store 映射为 `failed` 与错误反馈。
+
+后果：旧确认不能覆盖后来到达或后来变化的同步版本；用户必须重新阅读最新摘要并再次选择方向。expected nil 表示“确认时仍应没有 pending conflict”，不是跳过校验。Store 不得在锁外先比较 cached prompt，也不得从当前 persistence mode 推测 queued/immediate。token 只在实际 branch fingerprint 变化时旋转，重复无变化通知不会制造确认风暴；检测时间保留首次冲突发生时间。
+
+验证：付费签名 macOS 的完整 `CoreSyncConflictTests`、新 resolution identity 套件与 Settings 安全合同最终 47/47、0 skip/runtime warning（`/tmp/timetracker-conflict-identity-tests-rerun4-20260716.xcresult`）。覆盖 matching/stale ID、expected-none、state bytes/epoch/local+cloud snapshot/模型 fingerprint/用户数据零副作用、Store prompt 保留，以及 pending local/cloud 变化后旧 token 失效。generic iOS 自动签名构建 0 error/0 warning（`/tmp/timetracker-conflict-identity-ios-signed-20260716.xcresult`）；主 App、Widget、Live Activity、Watch 均通过严格签名，保持 Team `LT98S43NKA`、付费 Apple Development，主 App 保留 development APS、CloudKit 与 App Group。本批未创建模拟器，最终无 owned build/test/runner 或 Booted device；没有安排 Accessibility 专项。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -24,6 +24,7 @@ extension SyncConflictService {
         guard isCloudActive || shouldStageForCloudRecovery || hasPendingUploadRecovery else { return }
 
         var state = try loadState()
+        let previousLocalFingerprint = state.localFingerprint
         let baseline: SyncDataSnapshot?
         if state.pendingConflictID != nil {
             baseline = state.pendingConflictWorkingSnapshot ??
@@ -46,6 +47,9 @@ extension SyncConflictService {
                 state.localSnapshot = localSnapshot
                 state.localFingerprint = try localSnapshot.fingerprint()
                 state.pendingConflictWorkingSnapshot = snapshot
+                if state.localFingerprint != previousLocalFingerprint {
+                    state.rotatePendingConflictIdentity()
+                }
             } else {
                 state.localSnapshot = snapshot
                 state.localFingerprint = try snapshot.fingerprint()

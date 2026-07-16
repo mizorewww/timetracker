@@ -29,14 +29,30 @@ extension TimeTrackerStore {
         lastSyncRefreshAt = Date()
     }
 
-    func resolveSyncConflict(_ resolution: SyncConflictResolution) {
+    @discardableResult
+    func resolveSyncConflict(
+        expectedConflictID: UUID?,
+        resolution: SyncConflictResolution
+    ) -> SyncConflictResolutionResult {
         do {
             guard let modelContext else { throw StoreError.notConfigured }
-            try syncConflictService.resolve(resolution, context: modelContext)
+            let result = try syncConflictService.resolveSyncConflict(
+                expectedConflictID: expectedConflictID,
+                resolution: resolution,
+                context: modelContext
+            )
+            guard result != .conflictChanged else {
+                pendingSyncConflict = syncConflictService.prompt()
+                errorMessage = AppStrings.localized("sync.conflict.error.changed")
+                return result
+            }
             try refresh()
             pendingSyncConflict = nil
+            lastSyncRefreshAt = Date()
+            return result
         } catch {
             errorMessage = error.localizedDescription
+            return .failed
         }
     }
 

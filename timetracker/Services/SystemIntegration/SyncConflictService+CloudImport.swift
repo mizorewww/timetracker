@@ -28,7 +28,8 @@ extension SyncConflictService {
             try saveState(state)
             return nil
         }
-        if let prompt = prompt(from: state) {
+        if prompt(from: state) != nil {
+            let previousCloudFingerprint = try state.pendingCloudSnapshot?.fingerprint()
             let importedSnapshot = try SyncDataSnapshot.capture(context: context)
             if var cloudSnapshot = state.pendingCloudSnapshot,
                let workingSnapshot = state.pendingConflictWorkingSnapshot ?? state.pendingCloudSnapshot {
@@ -36,8 +37,11 @@ extension SyncConflictService {
                 state.pendingCloudSnapshot = cloudSnapshot
             }
             state.pendingConflictWorkingSnapshot = importedSnapshot
+            if try state.pendingCloudSnapshot?.fingerprint() != previousCloudFingerprint {
+                state.rotatePendingConflictIdentity()
+            }
             try saveState(state)
-            return prompt
+            return prompt(from: state)
         }
 
         let cloudSnapshot = try SyncDataSnapshot.capture(context: context)

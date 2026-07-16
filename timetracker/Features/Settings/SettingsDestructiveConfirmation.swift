@@ -5,8 +5,8 @@ enum SettingsDestructiveConfirmation: Hashable {
     case clearDemo
     case resetAllData
     case optimizeDatabase
-    case replaceCloud
-    case replaceDevice
+    case replaceCloud(expectedConflictID: UUID?)
+    case replaceDevice(expectedConflictID: UUID?)
 
     var titleKey: String {
         switch self {
@@ -67,10 +67,10 @@ extension SettingsView {
             databaseOptimizationMessage = removedCount == 0
                 ? AppStrings.localized("dialog.optimize.none")
                 : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
-        case .replaceCloud:
-            forceUploadLocalData()
-        case .replaceDevice:
-            forceDownloadCloudData()
+        case let .replaceCloud(expectedConflictID):
+            forceUploadLocalData(expectedConflictID: expectedConflictID)
+        case let .replaceDevice(expectedConflictID):
+            forceDownloadCloudData(expectedConflictID: expectedConflictID)
         }
     }
 }

@@ -283,6 +283,7 @@
 "sync.conflict.error.localSnapshotMissing" = "找不到已保存的本机快照，无法用本设备覆盖 iCloud。";
 "sync.conflict.error.cloudSnapshotMissing" = "找不到已保存的 iCloud 快照，无法安全地替换本设备数据。";
 "sync.conflict.error.uploadSnapshotMissing" = "没有找到本设备的可见数据，已取消排队覆盖 iCloud。";
+"sync.conflict.error.changed" = "同步冲突在你确认前已经变化。请重新核对最新的本机与 iCloud 摘要，再次选择。";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";

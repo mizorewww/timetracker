@@ -12,6 +12,13 @@ enum SyncConflictResolution {
     case downloadCloud
 }
 
+enum SyncConflictResolutionResult: Equatable {
+    case appliedImmediately
+    case queuedForNextLaunch
+    case conflictChanged
+    case failed
+}
+
 enum SyncRecoveryResult: Equatable {
     case appliedImmediately
     case queuedForNextLaunch

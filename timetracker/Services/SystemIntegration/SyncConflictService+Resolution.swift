@@ -1,27 +1,53 @@
+import Foundation
 import SwiftData
 
 extension SyncConflictService {
-    func resolve(_ resolution: SyncConflictResolution, context: ModelContext) throws {
+    func resolveSyncConflict(
+        expectedConflictID: UUID?,
+        resolution: SyncConflictResolution,
+        context: ModelContext
+    ) throws -> SyncConflictResolutionResult {
         try withExclusiveStateAccess {
-            try resolveWithLockedState(resolution, context: context)
+            try resolveWithLockedState(
+                expectedConflictID: expectedConflictID,
+                resolution: resolution,
+                context: context
+            )
         }
     }
 
     private func resolveWithLockedState(
-        _ resolution: SyncConflictResolution,
+        expectedConflictID: UUID?,
+        resolution: SyncConflictResolution,
         context: ModelContext
-    ) throws {
-        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
-            switch resolution {
-            case .uploadLocal:
-                _ = try forceUploadLocalData(context: context)
-            case .downloadCloud:
-                _ = try acceptCurrentCloudData(context: context)
-            }
-            return
+    ) throws -> SyncConflictResolutionResult {
+        var state = try loadState()
+        guard state.pendingConflictID == expectedConflictID else {
+            return .conflictChanged
         }
 
-        var state = try loadState()
+        guard expectedConflictID != nil else {
+            let recoveryResult: SyncRecoveryResult
+            switch resolution {
+            case .uploadLocal:
+                recoveryResult = try forceUploadLocalData(context: context)
+            case .downloadCloud:
+                recoveryResult = try acceptCurrentCloudData(context: context)
+            }
+            return Self.resolutionResult(for: recoveryResult)
+        }
+
+        guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
+            let recoveryResult: SyncRecoveryResult
+            switch resolution {
+            case .uploadLocal:
+                recoveryResult = try forceUploadLocalData(context: context)
+            case .downloadCloud:
+                recoveryResult = try acceptCurrentCloudData(context: context)
+            }
+            return Self.resolutionResult(for: recoveryResult)
+        }
+
         state.advanceSyncEpoch()
         switch resolution {
         case .uploadLocal:
@@ -49,5 +75,17 @@ extension SyncConflictService {
         }
         state.clearPendingConflict()
         try saveState(state)
+        return .appliedImmediately
+    }
+
+    private static func resolutionResult(
+        for recoveryResult: SyncRecoveryResult
+    ) -> SyncConflictResolutionResult {
+        switch recoveryResult {
+        case .appliedImmediately:
+            .appliedImmediately
+        case .queuedForNextLaunch:
+            .queuedForNextLaunch
+        }
     }
 }

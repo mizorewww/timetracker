@@ -48,29 +48,43 @@ extension SettingsView {
         }
     }
 
-    func forceUploadLocalData() {
-        if store.pendingSyncConflict != nil {
-            store.resolveSyncConflict(.uploadLocal)
-            if store.pendingSyncConflict == nil {
+    func forceUploadLocalData(expectedConflictID: UUID?) {
+        let result = store.resolveSyncConflict(
+            expectedConflictID: expectedConflictID,
+            resolution: .uploadLocal
+        )
+        switch result {
+        case .appliedImmediately:
+            if expectedConflictID != nil {
                 syncCheckMessage = AppStrings.localized("sync.forceUpload.conflictResolved")
+            } else {
+                syncCheckMessage = AppStrings.localized("sync.forceUpload.started")
             }
-        } else if let result = store.forceUploadLocalDataToCloud() {
-            syncCheckMessage = result == .appliedImmediately
-                ? AppStrings.localized("sync.forceUpload.started")
-                : AppStrings.localized("sync.forceUpload.queued")
+        case .queuedForNextLaunch:
+            syncCheckMessage = AppStrings.localized("sync.forceUpload.queued")
+        case .conflictChanged, .failed:
+            break
         }
     }
 
-    func forceDownloadCloudData() {
+    func forceDownloadCloudData(expectedConflictID: UUID?) {
         isCheckingSync = true
         Task {
-            if store.pendingSyncConflict != nil {
-                store.resolveSyncConflict(.downloadCloud)
-                if store.pendingSyncConflict == nil {
+            let result = store.resolveSyncConflict(
+                expectedConflictID: expectedConflictID,
+                resolution: .downloadCloud
+            )
+            switch result {
+            case .appliedImmediately:
+                if expectedConflictID != nil {
                     syncCheckMessage = AppStrings.localized("sync.forceDownload.conflictResolved")
+                } else {
+                    syncCheckMessage = AppStrings.localized("sync.forceDownload.queued")
                 }
-            } else if store.acceptCurrentCloudData() != nil {
+            case .queuedForNextLaunch:
                 syncCheckMessage = AppStrings.localized("sync.forceDownload.queued")
+            case .conflictChanged, .failed:
+                break
             }
             isCheckingSync = false
         }

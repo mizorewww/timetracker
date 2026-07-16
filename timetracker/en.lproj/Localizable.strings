@@ -283,6 +283,7 @@
 "sync.conflict.error.localSnapshotMissing" = "The saved local snapshot is missing, so this device cannot overwrite iCloud.";
 "sync.conflict.error.cloudSnapshotMissing" = "The saved iCloud snapshot is missing, so the app cannot safely replace this device's data.";
 "sync.conflict.error.uploadSnapshotMissing" = "No visible data was found on this device, so the app did not queue an iCloud overwrite.";
+"sync.conflict.error.changed" = "The sync conflict changed before you confirmed. Review the latest local and iCloud summaries, then choose again.";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";

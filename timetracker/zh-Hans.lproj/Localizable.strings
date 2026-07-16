@@ -100,7 +100,7 @@
 "settings.defaultRounds" = "默认轮次";
 "settings.pomodoro.footer" = "番茄钟计划会和其他设置一起通过 iCloud 同步。";
 "settings.countdown" = "倒计时事件";
-"settings.countdown.empty" = "没有倒计时事件。今日页只显示今天、本周、本月和今年进度。";
+"settings.countdown.empty" = "还没有倒计时事件。添加事件后会显示在“今日”中。";
 "settings.countdown.add" = "添加事件";
 "settings.countdown.footer" = "倒计时事件可以为空，也可以添加任意多个日期。";
 "settings.countdown.delete.confirm.title" = "删除倒计时事件？";

@@ -53,6 +53,23 @@ struct CountdownSettingsContractTests {
     }
 
     @Test
+    func countdownEmptyStateDescribesTheCurrentTodayExperience() throws {
+        let expectedCopy = [
+            "en": "No countdown events yet. Add an event to see it on Today.",
+            "zh-Hans": "还没有倒计时事件。添加事件后会显示在“今日”中。",
+            "zh-Hant": "還沒有倒數事件。加入事件後會顯示在「今日」中。",
+        ]
+
+        for (locale, expected) in expectedCopy {
+            let stringsURL = try projectRootURL().appending(
+                path: "timetracker/\(locale).lproj/Localizable.strings"
+            )
+            let strings = try #require(NSDictionary(contentsOf: stringsURL) as? [String: String])
+            #expect(strings["settings.countdown.empty"] == expected)
+        }
+    }
+
+    @Test
     func settingsCategoriesStayNavigableAtAccessibilityTextSizes() throws {
         let settingsSource = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
         let categorySource = try sourceText("timetracker/Features/Settings/SettingsCategoryViews.swift")

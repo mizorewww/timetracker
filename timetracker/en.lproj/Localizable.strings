@@ -100,7 +100,7 @@
 "settings.defaultRounds" = "Default Rounds";
 "settings.pomodoro.footer" = "Pomodoro plans sync through iCloud with the rest of your settings.";
 "settings.countdown" = "Countdown Events";
-"settings.countdown.empty" = "No countdown events. Today will only show day, week, month, and year progress.";
+"settings.countdown.empty" = "No countdown events yet. Add an event to see it on Today.";
 "settings.countdown.add" = "Add Event";
 "settings.countdown.footer" = "Countdown events are optional. Add any date you want to see on Today.";
 "settings.countdown.delete.confirm.title" = "Delete Countdown Event?";

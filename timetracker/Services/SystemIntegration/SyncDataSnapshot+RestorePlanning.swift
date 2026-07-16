@@ -89,9 +89,14 @@ extension SyncDataSnapshot {
             SyncedPreferenceService.shouldSyncKey($0.key)
         }
         let snapshotIDs = Set(safeRecords.map(\.id))
+        let logicalWinnerIDs = logicalSyncedPreferenceWinnerIDs(in: safeRecords)
+        // Rows missing from the snapshot must remain older than the restored
+        // logical winner. A same-key tombstone at `now` would otherwise hide
+        // the snapshot's active value after both receive the same timestamp.
+        let supersededAt = now.addingTimeInterval(-1)
         for preference in existing.values where !snapshotIDs.contains(preference.id) {
-            preference.deletedAt = now
-            preference.updatedAt = now
+            preference.deletedAt = supersededAt
+            preference.updatedAt = supersededAt
             preference.deviceID = deviceID
             preference.clientMutationID = UUID()
         }
@@ -109,10 +114,38 @@ extension SyncDataSnapshot {
             model.key = record.key
             model.valueJSON = record.valueJSON
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            // Preserve ordering between physical siblings of the same logical
+            // key. Only the source winner becomes the new local write.
+            model.updatedAt = logicalWinnerIDs.contains(record.id)
+                ? max(record.updatedAt, now)
+                : record.updatedAt
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.clientMutationID = record.id
         }
+    }
+
+    private func logicalSyncedPreferenceWinnerIDs(
+        in records: [SyncedPreferenceRecord]
+    ) -> Set<UUID> {
+        var winnersByKey: [String: SyncedPreferenceRecord] = [:]
+        winnersByKey.reserveCapacity(records.count)
+        for record in records {
+            guard let current = winnersByKey[record.key] else {
+                winnersByKey[record.key] = record
+                continue
+            }
+            if record.updatedAt > current.updatedAt ||
+                (record.updatedAt == current.updatedAt &&
+                    record.deletedAt != nil && current.deletedAt == nil) ||
+                (record.updatedAt == current.updatedAt &&
+                    (record.deletedAt == nil) == (current.deletedAt == nil) &&
+                    (record.createdAt > current.createdAt ||
+                        (record.createdAt == current.createdAt &&
+                            record.id.uuidString > current.id.uuidString))) {
+                winnersByKey[record.key] = record
+            }
+        }
+        return Set(winnersByKey.values.map(\.id))
     }
 }

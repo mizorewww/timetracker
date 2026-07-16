@@ -94,9 +94,11 @@ extension SyncDataSnapshot {
         var existing = try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(taskCategoryAssignments.map(\.id))
+        let logicalWinnerIDs = logicalTaskCategoryAssignmentWinnerIDs()
+        let supersededAt = now.addingTimeInterval(-1)
         for assignment in existing.values where !snapshotIDs.contains(assignment.id) {
-            assignment.deletedAt = now
-            assignment.updatedAt = now
+            assignment.deletedAt = supersededAt
+            assignment.updatedAt = supersededAt
             assignment.deviceID = deviceID
             assignment.clientMutationID = UUID()
         }
@@ -114,10 +116,34 @@ extension SyncDataSnapshot {
             model.taskID = record.taskID
             model.categoryID = record.categoryID
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = logicalWinnerIDs.contains(record.id)
+                ? max(record.updatedAt, now)
+                : record.updatedAt
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.clientMutationID = record.id
         }
+    }
+
+    private func logicalTaskCategoryAssignmentWinnerIDs() -> Set<UUID> {
+        var winnersByTaskID: [UUID: TaskCategoryAssignmentRecord] = [:]
+        winnersByTaskID.reserveCapacity(taskCategoryAssignments.count)
+        for record in taskCategoryAssignments {
+            guard let current = winnersByTaskID[record.taskID] else {
+                winnersByTaskID[record.taskID] = record
+                continue
+            }
+            if record.updatedAt > current.updatedAt ||
+                (record.updatedAt == current.updatedAt &&
+                    record.deletedAt != nil && current.deletedAt == nil) ||
+                (record.updatedAt == current.updatedAt &&
+                    (record.deletedAt == nil) == (current.deletedAt == nil) &&
+                    (record.createdAt > current.createdAt ||
+                        (record.createdAt == current.createdAt &&
+                            record.id.uuidString > current.id.uuidString))) {
+                winnersByTaskID[record.taskID] = record
+            }
+        }
+        return Set(winnersByTaskID.values.map(\.id))
     }
 }

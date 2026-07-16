@@ -35,6 +35,66 @@ struct TaskStatusMutationOutcome: Equatable {
     }
 }
 
+struct TaskLifecyclePomodoroSnapshot: Equatable, Hashable {
+    let runID: UUID
+    let sessionID: UUID?
+    let taskID: UUID
+}
+
+struct TaskLifecycleSegmentSnapshot: Equatable, Hashable {
+    let segmentID: UUID
+    let sessionID: UUID
+    let taskID: UUID
+    let isPomodoro: Bool
+}
+
+struct TaskDeletionMutationOutcome: Equatable {
+    let taskID: UUID
+    let deletedTaskIDs: Set<UUID>
+    let relatedTaskIDs: Set<UUID>
+    let stoppedSegments: [TaskLifecycleSegmentSnapshot]
+    let terminatedPomodoros: [TaskLifecyclePomodoroSnapshot]
+
+    var events: Set<StoreDomainEvent> {
+        var events: Set<StoreDomainEvent> = [
+            .taskChanged(
+                taskID: taskID,
+                affectedAncestorIDs: relatedTaskIDs.subtracting([taskID])
+            ),
+        ]
+        let terminatedSessionIDs = Set(terminatedPomodoros.compactMap(\.sessionID))
+        for segment in stoppedSegments {
+            events.insert(
+                .ledgerChanged(
+                    taskID: segment.taskID,
+                    dateInterval: nil,
+                    isVisible: true
+                )
+            )
+            if segment.isPomodoro,
+               terminatedSessionIDs.contains(segment.sessionID) == false {
+                events.insert(
+                    .pomodoroChanged(
+                        runID: nil,
+                        sessionID: segment.sessionID,
+                        taskID: segment.taskID
+                    )
+                )
+            }
+        }
+        for run in terminatedPomodoros {
+            events.insert(
+                .pomodoroChanged(
+                    runID: run.runID,
+                    sessionID: run.sessionID,
+                    taskID: run.taskID
+                )
+            )
+        }
+        return events
+    }
+}
+
 /// Serializes local task availability changes with every timer admission for
 /// the same SwiftData store. The canonical subtree and active work set are
 /// fetched only after the shared timer lock is held.
@@ -114,6 +174,77 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
                 taskID: taskID,
                 didMutate: true,
                 relatedTaskIDs: relatedTaskIDs
+            )
+        }
+    }
+
+    func delete(taskID: UUID) throws -> TaskDeletionMutationOutcome {
+        try writeAuthorization.requireUserWritesAllowed()
+        let scope = try TimerStoreScope(container: container)
+        let transaction = StoreScopedTimerMutationTransaction(
+            scope: scope,
+            container: container
+        )
+
+        return try transaction.withFreshContext { context in
+            let taskRepository = SwiftDataTaskRepository(
+                context: context,
+                deviceID: deviceID
+            )
+            let tasks = try taskRepository.allNodes()
+            guard let task = tasks.first(where: { $0.id == taskID }) else {
+                throw TaskLifecycleMutationError.taskNotFound
+            }
+            let deletedTaskIDs = TaskTreeService()
+                .descendantIDs(of: taskID, tasks: tasks)
+                .union([taskID])
+            let relatedTaskIDs = Self.relatedTaskIDs(for: task, tasks: tasks)
+            let timeRepository = SwiftDataTimeTrackingRepository(
+                context: context,
+                deviceID: deviceID
+            )
+            let pomodoroRepository = SwiftDataPomodoroRepository(
+                context: context,
+                timeRepository: timeRepository,
+                deviceID: deviceID
+            )
+            let activeSegments = try timeRepository.activeSegments().filter {
+                deletedTaskIDs.contains($0.taskID)
+            }
+            let activeRuns = try pomodoroRepository.activeRuns().filter {
+                deletedTaskIDs.contains($0.taskID)
+            }
+            let stoppedSegments = activeSegments.map {
+                TaskLifecycleSegmentSnapshot(
+                    segmentID: $0.id,
+                    sessionID: $0.sessionID,
+                    taskID: $0.taskID,
+                    isPomodoro: $0.source == .pomodoro
+                )
+            }
+            let terminatedPomodoros = activeRuns.map {
+                TaskLifecyclePomodoroSnapshot(
+                    runID: $0.id,
+                    sessionID: $0.sessionID,
+                    taskID: $0.taskID
+                )
+            }
+
+            try TaskDraftCommandHandler().softDelete(
+                taskID: taskID,
+                affectedTaskIDs: deletedTaskIDs,
+                activeSegments: activeSegments,
+                pomodoroRuns: activeRuns,
+                taskRepository: taskRepository,
+                timeRepository: timeRepository,
+                pomodoroRepository: pomodoroRepository
+            )
+            return TaskDeletionMutationOutcome(
+                taskID: taskID,
+                deletedTaskIDs: deletedTaskIDs,
+                relatedTaskIDs: relatedTaskIDs,
+                stoppedSegments: stoppedSegments,
+                terminatedPomodoros: terminatedPomodoros
             )
         }
     }

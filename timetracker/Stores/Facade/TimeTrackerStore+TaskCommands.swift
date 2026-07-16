@@ -118,87 +118,51 @@ extension TimeTrackerStore {
         }
     }
 
+    @discardableResult
     func deleteSelectedTask(
         taskID: UUID? = nil,
         preservingDestination: DesktopDestination? = nil
-    ) {
+    ) -> Bool {
         let targetID = taskID ?? selectedTaskID
-        guard let targetID else { return }
+        guard let targetID else { return false }
         let destinationBeforeDelete = preservingDestination ?? desktopDestination
-        let affectedHierarchyIDs = affectedTaskIDsForHierarchyChange(taskID: targetID)
-        let deletedTaskIDs = taskTreeService.descendantIDs(of: targetID, tasks: tasks).union([targetID])
-        let segmentsToStop = activeSegments.filter { deletedTaskIDs.contains($0.taskID) }
-        let runsToCancel = pomodoroRuns.filter {
-            deletedTaskIDs.contains($0.taskID) &&
-                $0.deletedAt == nil &&
-                $0.endedAt == nil &&
-                $0.state != .completed &&
-                $0.state != .cancelled
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
-        let now = Date()
-        var events: Set<StoreDomainEvent> = [
-            .taskChanged(
-                taskID: targetID,
-                affectedAncestorIDs: affectedHierarchyIDs.subtracting([targetID])
-            )
-        ]
-        for segment in segmentsToStop {
-            events.insert(
-                .ledgerChanged(
-                    taskID: segment.taskID,
-                    dateInterval: StoreInvalidationRange(
-                        start: segment.startedAt,
-                        end: max(now, segment.startedAt)
-                    ),
-                    isVisible: true
-                )
-            )
-            if segment.source == .pomodoro,
-               runsToCancel.contains(where: { $0.sessionID == segment.sessionID }) == false {
-                events.insert(
-                    .pomodoroChanged(
-                        runID: nil,
-                        sessionID: segment.sessionID,
-                        taskID: segment.taskID
-                    )
-                )
+        do {
+            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).delete(taskID: targetID)
+            let wasSelected = selectedTaskID.map {
+                outcome.deletedTaskIDs.contains($0)
+            } ?? false
+            let wasShowingDeletedDetail = tasksRoute.map {
+                outcome.deletedTaskIDs.contains($0.taskID)
+            } ?? false
+            finishStoreScopedMutation(events: outcome.events)
+            if outcome.stoppedSegments.isEmpty,
+               outcome.terminatedPomodoros.isEmpty {
+                refreshStoreScopedTimerReadModels()
             }
-        }
-        for run in runsToCancel {
-            events.insert(
-                .pomodoroChanged(
-                    runID: run.id,
-                    sessionID: run.sessionID,
-                    taskID: run.taskID
-                )
-            )
-        }
-        let wasSelected = selectedTaskID.map { deletedTaskIDs.contains($0) } ?? false
-        let wasShowingDeletedDetail = tasksRoute.map { deletedTaskIDs.contains($0.taskID) } ?? false
-        let replacementSelectionID = activeSegments.first(where: {
-            deletedTaskIDs.contains($0.taskID) == false && taskByID[$0.taskID] != nil
-        })?.taskID ?? tasks.first(where: {
-            deletedTaskIDs.contains($0.id) == false && isTaskAvailableForTracking($0)
-        })?.id
-        let didDelete = perform(events: events) {
-            try taskDraftCommandHandler.softDelete(
-                taskID: targetID,
-                affectedTaskIDs: deletedTaskIDs,
-                activeSegments: segmentsToStop,
-                pomodoroRuns: runsToCancel,
-                taskRepository: requiredTaskRepository(),
-                timeRepository: requiredTimeRepository(),
-                pomodoroRepository: requiredPomodoroRepository()
-            )
-        }
-        if didDelete {
             if wasSelected {
-                selectedTaskID = replacementSelectionID
+                selectedTaskID = activeSegments.first(where: {
+                    outcome.deletedTaskIDs.contains($0.taskID) == false &&
+                        taskByID[$0.taskID] != nil
+                })?.taskID ?? tasks.first(where: {
+                    outcome.deletedTaskIDs.contains($0.id) == false &&
+                        isTaskAvailableForTracking($0)
+                })?.id
             }
             if wasShowingDeletedDetail {
                 tasksRoute = nil
             }
             desktopDestination = destinationBeforeDelete
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

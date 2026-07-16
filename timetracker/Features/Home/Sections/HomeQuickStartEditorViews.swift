@@ -1,6 +1,20 @@
 import Foundation
 import SwiftUI
 
+enum QuickStartSelectionMutation {
+    static func removingVisibleSelections(
+        at offsets: IndexSet,
+        visibleIDs: [UUID],
+        from selectedIDs: [UUID]
+    ) -> [UUID] {
+        let removedIDs = Set(offsets.compactMap { offset in
+            visibleIDs.indices.contains(offset) ? visibleIDs[offset] : nil
+        })
+        guard !removedIDs.isEmpty else { return selectedIDs }
+        return selectedIDs.filter { !removedIDs.contains($0) }
+    }
+}
+
 struct QuickStartEditorSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
@@ -59,7 +73,11 @@ struct QuickStartEditorSheet: View {
                             )
                         }
                         .onDelete { offsets in
-                            selectedIDs.remove(atOffsets: offsets)
+                            selectedIDs = QuickStartSelectionMutation.removingVisibleSelections(
+                                at: offsets,
+                                visibleIDs: pinnedTasks.map(\.id),
+                                from: selectedIDs
+                            )
                         }
                     }
 

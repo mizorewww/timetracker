@@ -225,7 +225,9 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("private let maxPinnedTasks = 3") == false)
         #expect(homeSource.contains("QuickStartSelectableTaskRow"))
         #expect(homeSource.contains("selectedIDs.append(task.id)"))
-        #expect(homeSource.contains("selectedIDs.remove(atOffsets: offsets)"))
+        #expect(homeSource.contains("QuickStartSelectionMutation.removingVisibleSelections("))
+        #expect(homeSource.contains("visibleIDs: pinnedTasks.map(\\.id)"))
+        #expect(homeSource.contains("selectedIDs.remove(atOffsets: offsets)") == false)
         #expect(storeSource.contains("func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3)"))
     }
 

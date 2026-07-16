@@ -716,6 +716,8 @@ struct CoreSourceLayoutTests {
         let ledgerURL = root.appending(path: "timetracker/Services/Ledger")
         let focusedFiles = [
             "AppCloudSync.swift",
+            "AppCloudSync+RecoveryState.swift",
+            "StoreWriteAuthorization.swift",
             "PersistenceWriteSafety.swift",
             "TimerCommand.swift",
             "TimeAggregationService.swift",

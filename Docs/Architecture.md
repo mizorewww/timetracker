@@ -141,6 +141,8 @@ Persistent deduplication and synced preferences use deterministic last-write-win
 
 Application data is app-scoped, while presentation and transient feedback are scene-scoped. Each visible scene owns one `AppPresentationRouter`/`AppPresentationHost` pair for typed sheets and one `AppSceneFeedbackRouter`/`AppSceneFeedbackHost` pair for alerts. The feedback router is FIFO and dismisses only the matching feedback UUID, so a stale callback cannot clear a later message. Settings export, database maintenance, and sync recovery use throwing boundaries: successes stay inline and failures enter only the initiating scene. `ContentView` bridges the remaining shared Store error slot into its own queue only for legacy callers; new work must not expand that bridge.
 
+Task-editor conflict recovery is typed and session-local. A stale draft never retries against its old mutation baseline. The editor may retain the user's current draft or, after explicit confirmation, replace it with a freshly projected task/checklist/category baseline and rebuilt parent candidates; that replacement also becomes the new discard baseline. Ordinary save failures continue through scene feedback and never silently mutate the editor draft.
+
 The app source is organized by ownership. New files should land next to the domain they affect:
 
 ```text

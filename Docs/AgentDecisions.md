@@ -1085,6 +1085,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：完整 Task UI 源码契约覆盖 unavailable/current-missing/lock/full-path 与字段校验；Task editor source-layout 契约要求普通文件不超过 180 行、picker 聚合不超过 230 行。
 
+## AD-086：Task 草稿冲突必须可在当前编辑会话显式重载
+
+状态：Accepted
+
+背景：Store-scoped task draft 正确拒绝 stale baseline 后，sheet 仍持有不可变旧 baseline；用户无论保存多少次都会重复失败，只能关闭并重新进入。自动把最新数据覆盖进 editor 又会无提示丢失用户尚未保存的标题、备注、计划和 checklist。
+
+决策：Store 暴露 `TaskDraftSaveResult.saved/stale/failed(message:)`。stale 分支先刷新 task/checklist/category read model但不写共享错误；editor 显示一次明确确认，Keep Draft 保留全部当前输入，Reload Latest 以刷新后的 task 建立新 draft，并同时替换 session discard baseline、parent candidates 和 checklist focus。Reload 使用破坏性角色和明确“未保存更改会被丢弃”文案。旧 Bool API 继续给非 UI 调用映射原有 errorMessage，不能让兼容层反向污染 typed editor 流程。
+
+后果：用户无需关闭 sheet 就能继续编辑最新版本，也不会被自动合并或静默覆盖。重载后的未修改草稿可直接 Cancel，不出现虚假的放弃确认；后续保存使用最新 mutation IDs。真实三方字段合并不在本决策中，不能把 Reload 描述为 merge。
+
+验证：领域测试先制造兄弟 context mutation，确认 typed save 返回 stale 且不写共享 error，再从刷新投影建立新 baseline 并成功保存；Task UI/presentation 契约固定显式 Reload/Keep、session baseline 和 parent candidate replacement。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

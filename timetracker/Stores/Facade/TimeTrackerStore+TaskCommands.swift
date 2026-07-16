@@ -17,14 +17,32 @@ extension TimeTrackerStore {
         _ draft: TaskEditorDraft,
         returnDestination: DesktopDestination? = nil
     ) -> Bool {
-        let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !sanitizedTitle.isEmpty else {
-            errorMessage = AppStrings.localized("task.nameRequired")
+        let result = saveTaskDraftResult(
+            draft,
+            returnDestination: returnDestination
+        )
+        switch result {
+        case .saved:
+            return true
+        case .stale:
+            errorMessage = TaskLifecycleMutationError.staleDraft.localizedDescription
+            return false
+        case .failed(let message):
+            errorMessage = message
             return false
         }
+    }
+
+    func saveTaskDraftResult(
+        _ draft: TaskEditorDraft,
+        returnDestination: DesktopDestination? = nil
+    ) -> TaskDraftSaveResult {
+        let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitizedTitle.isEmpty else {
+            return .failed(message: AppStrings.localized("task.nameRequired"))
+        }
         guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
+            return .failed(message: StoreError.notConfigured.localizedDescription)
         }
         do {
             let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
@@ -37,13 +55,19 @@ extension TimeTrackerStore {
             if let returnDestination {
                 desktopDestination = returnDestination
             }
-            return true
+            return .saved
         } catch {
+            var refreshFailureMessage: String?
             if error is TaskLifecycleMutationError {
-                refreshStoreScopedTaskLifecycleReadModels()
+                refreshFailureMessage = refreshStoreScopedTaskLifecycleReadModels()
             }
-            errorMessage = error.localizedDescription
-            return false
+            if let refreshFailureMessage {
+                return .failed(message: refreshFailureMessage)
+            }
+            if error as? TaskLifecycleMutationError == .staleDraft {
+                return .stale
+            }
+            return .failed(message: error.localizedDescription)
         }
     }
 
@@ -177,18 +201,22 @@ extension TimeTrackerStore {
 
     /// Converges every read model used by a task-lifecycle admission check
     /// after a fresh-context command rejects stale scene input.
-    private func refreshStoreScopedTaskLifecycleReadModels() {
+    @discardableResult
+    private func refreshStoreScopedTaskLifecycleReadModels() -> String? {
         do {
             try refresh(
                 plan: StoreRefreshPlan(
                     scopes: [.tasks, .ledgerVisible, .pomodoro, .checklist]
                 )
             )
+            return nil
         } catch {
-            errorMessage = String(
+            let message = String(
                 format: AppStrings.localized("error.savedRefreshFailed"),
                 error.localizedDescription
             )
+            errorMessage = message
+            return message
         }
     }
 }

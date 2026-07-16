@@ -681,14 +681,30 @@ struct TaskUIContractTests {
         let editor = try taskEditorFeatureSource()
         let symbols = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
 
-        #expect(editor.contains("var candidates = store.validParentTasks(for: initialDraft.taskID)"))
-        #expect(editor.contains("parentCandidates = candidates"))
+        #expect(editor.contains("@State private var parentCandidates: [TaskNode]"))
+        #expect(editor.contains("Self.parentCandidates(for: initialDraft, store: store)"))
+        #expect(editor.contains("parentCandidates = Self.parentCandidates(for: latestDraft, store: store)"))
         #expect(editor.contains("draft.checklistItems.indices.sorted") == false)
         #expect(editor.contains("rowPlacements.map") == false)
         #expect(symbols.contains("@State private var filteredSymbols: [String]"))
         #expect(symbols.contains(".onChange(of: searchText, initial: true)"))
         #expect(symbols.contains("ContentUnavailableView.search(text: searchText)"))
         #expect(symbols.contains("editor.symbol.symbolValue"))
+    }
+
+    @Test
+    func staleTaskEditorOffersExplicitReloadWithoutSilentlyDiscardingTheDraft() throws {
+        let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let store = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift")
+
+        #expect(store.contains("func saveTaskDraftResult("))
+        #expect(store.contains("return .stale"))
+        #expect(editor.contains("pendingReloadDraft = store.editorDraft(for: latestTask)"))
+        #expect(editor.contains("task.editor.stale.reloadMessage"))
+        #expect(editor.contains("role: .destructive"))
+        #expect(editor.contains("sessionBaseline = latestDraft"))
+        #expect(editor.contains("parentCandidates = Self.parentCandidates(for: latestDraft, store: store)"))
+        #expect(editor.contains("case .stale:"))
     }
 
     @Test

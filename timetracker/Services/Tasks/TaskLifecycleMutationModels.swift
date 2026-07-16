@@ -1,5 +1,11 @@
 import Foundation
 
+nonisolated enum TaskDraftSaveResult: Equatable, Sendable {
+    case saved
+    case stale
+    case failed(message: String)
+}
+
 enum TaskLifecycleMutationError: LocalizedError, Equatable {
     case taskNotFound
     case activeWorkMustStop(TaskStatus)

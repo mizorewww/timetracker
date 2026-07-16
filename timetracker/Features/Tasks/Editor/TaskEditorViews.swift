@@ -14,10 +14,12 @@ struct TaskEditorSheet: View {
                 dismiss()
             },
             onSave: { draft in
-                if store.saveTaskDraft(draft, returnDestination: returnDestination) {
-                    dismiss()
-                }
-            }
+                store.saveTaskDraftResult(
+                    draft,
+                    returnDestination: returnDestination
+                )
+            },
+            onSaved: { dismiss() }
         )
         .platformSheetFrame(width: 520, height: 620)
         .presentationDetents([.large])
@@ -27,28 +29,33 @@ struct TaskEditorSheet: View {
 struct TaskEditorPanel: View {
     let store: TimeTrackerStore
     @State private var draft: TaskEditorDraft
+    @State private var sessionBaseline: TaskEditorDraft
+    @State private var parentCandidates: [TaskNode]
+    @State private var pendingReloadDraft: TaskEditorDraft?
     @FocusState private var focusedChecklistDraftID: UUID?
     @State private var isDiscardConfirmationPresented = false
-    let initialDraft: TaskEditorDraft
     let onCancel: () -> Void
-    let onSave: (TaskEditorDraft) -> Void
-    let parentCandidates: [TaskNode]
+    let onSave: (TaskEditorDraft) -> TaskDraftSaveResult
+    let onSaved: () -> Void
 
     private let colors = TaskColorPalette.hexValues
 
-    init(store: TimeTrackerStore, initialDraft: TaskEditorDraft, onCancel: @escaping () -> Void, onSave: @escaping (TaskEditorDraft) -> Void) {
+    init(
+        store: TimeTrackerStore,
+        initialDraft: TaskEditorDraft,
+        onCancel: @escaping () -> Void,
+        onSave: @escaping (TaskEditorDraft) -> TaskDraftSaveResult,
+        onSaved: @escaping () -> Void
+    ) {
         self.store = store
-        self.initialDraft = initialDraft
         self.onCancel = onCancel
         self.onSave = onSave
-        var candidates = store.validParentTasks(for: initialDraft.taskID)
-        if let currentParentID = initialDraft.parentID,
-           let currentParent = store.task(for: currentParentID),
-           candidates.contains(where: { $0.id == currentParentID }) == false {
-            candidates.append(currentParent)
-        }
-        parentCandidates = candidates
+        self.onSaved = onSaved
         _draft = State(initialValue: initialDraft)
+        _sessionBaseline = State(initialValue: initialDraft)
+        _parentCandidates = State(
+            initialValue: Self.parentCandidates(for: initialDraft, store: store)
+        )
     }
 
     var body: some View {
@@ -90,7 +97,7 @@ struct TaskEditorPanel: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.localized("common.save")) {
-                        onSave(draft)
+                        save()
                     }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave(validation))
@@ -100,9 +107,24 @@ struct TaskEditorPanel: View {
         }
         .editorDiscardConfirmation(
             isPresented: $isDiscardConfirmationPresented,
-            hasUnsavedChanges: draft != initialDraft,
+            hasUnsavedChanges: draft != sessionBaseline,
             discard: onCancel
         )
+        .alert(
+            AppStrings.localized("task.editor.stale.title"),
+            isPresented: reloadAlertBinding
+        ) {
+            Button(
+                AppStrings.localized("task.editor.stale.reload"),
+                role: .destructive,
+                action: reloadLatestDraft
+            )
+            Button(AppStrings.localized("task.editor.stale.keepEditing"), role: .cancel) {
+                pendingReloadDraft = nil
+            }
+        } message: {
+            Text(.app("task.editor.stale.reloadMessage"))
+        }
     }
 
     private func canSave(_ validation: TaskEditorValidation) -> Bool {
@@ -112,18 +134,67 @@ struct TaskEditorPanel: View {
     private var isBlockedCompletionTransition: Bool {
         guard let taskID = draft.taskID,
               draft.status == .completed,
-              initialDraft.status != .completed else {
+              sessionBaseline.status != .completed else {
             return false
         }
         return store.hasActiveTimer(inTaskSubtree: taskID)
     }
 
     private func requestCancel() {
-        if draft == initialDraft {
+        if draft == sessionBaseline {
             onCancel()
         } else {
             isDiscardConfirmationPresented = true
         }
+    }
+
+    private func save() {
+        switch onSave(draft) {
+        case .saved:
+            onSaved()
+        case .stale:
+            guard let taskID = draft.taskID,
+                  let latestTask = store.task(for: taskID) else {
+                store.errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
+                return
+            }
+            pendingReloadDraft = store.editorDraft(for: latestTask)
+        case .failed(let message):
+            store.errorMessage = message
+        }
+    }
+
+    private var reloadAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingReloadDraft != nil },
+            set: { isPresented in
+                if isPresented == false {
+                    pendingReloadDraft = nil
+                }
+            }
+        )
+    }
+
+    private func reloadLatestDraft() {
+        guard let latestDraft = pendingReloadDraft else { return }
+        draft = latestDraft
+        sessionBaseline = latestDraft
+        parentCandidates = Self.parentCandidates(for: latestDraft, store: store)
+        focusedChecklistDraftID = nil
+        pendingReloadDraft = nil
+    }
+
+    private static func parentCandidates(
+        for draft: TaskEditorDraft,
+        store: TimeTrackerStore
+    ) -> [TaskNode] {
+        var candidates = store.validParentTasks(for: draft.taskID)
+        if let currentParentID = draft.parentID,
+           let currentParent = store.task(for: currentParentID),
+           candidates.contains(where: { $0.id == currentParentID }) == false {
+            candidates.append(currentParent)
+        }
+        return candidates
     }
 
     private var orderedChecklistIndices: [Int] {

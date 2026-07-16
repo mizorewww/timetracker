@@ -345,6 +345,10 @@
 "task.archived.trackingUnavailable" = "此任务或其上级任务已完成或归档，不能接收新工作。请先重新打开或恢复相应任务。";
 "task.parentUnavailable" = "所选父任务已完成、已归档或不再可用。";
 "task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";
+"task.editor.stale.title" = "任务已在其他位置更改";
+"task.editor.stale.reloadMessage" = "要重新载入最新版本吗？当前编辑器中尚未保存的更改将被丢弃。";
+"task.editor.stale.reload" = "重新载入最新版本";
+"task.editor.stale.keepEditing" = "保留我的草稿";
 "task.parent.completedLocked" = "此任务已完成，重新打开后才能移动。";
 "task.parent.archivedLocked" = "此任务已归档，恢复后才能移动。";
 "task.parent.deletedLocked" = "已删除的任务不能移动。";

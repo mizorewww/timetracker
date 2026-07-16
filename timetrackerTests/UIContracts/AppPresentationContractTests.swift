@@ -230,7 +230,9 @@ struct AppPresentationContractTests {
         )
         let llm = try sourceText("timetracker/Features/Settings/LLMSettingsViews.swift")
 
-        #expect(task.contains("if store.saveTaskDraft(draft"))
+        #expect(task.contains("store.saveTaskDraftResult("))
+        #expect(task.contains("case .saved:"))
+        #expect(task.contains("onSaved()"))
         #expect(category.contains("if store.saveTaskCategoryDraft(draft)"))
         #expect(manual.contains("if store.saveManualTimeDraft(draft)"))
         #expect(segment.contains("try store.commitSegmentDraft(draft)"))

@@ -345,6 +345,10 @@
 "task.archived.trackingUnavailable" = "This task cannot receive new work because it or a parent is complete or archived. Reopen or restore that task first.";
 "task.parentUnavailable" = "The selected parent is complete, archived, or no longer available.";
 "task.editor.staleDraft" = "This task changed elsewhere. Review the latest version, then try again.";
+"task.editor.stale.title" = "Task Changed Elsewhere";
+"task.editor.stale.reloadMessage" = "Reload the latest version? Your unsaved changes in this editor will be discarded.";
+"task.editor.stale.reload" = "Reload Latest";
+"task.editor.stale.keepEditing" = "Keep My Draft";
 "task.parent.completedLocked" = "Reopen this completed task before moving it.";
 "task.parent.archivedLocked" = "Restore this archived task before moving it.";
 "task.parent.deletedLocked" = "A deleted task cannot be moved.";

@@ -149,6 +149,7 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/InfoRows.swift",
             "timetracker/SharedUI/Components/SplitViewToolbarButtons.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/Features/Home/Controls/TaskStartPickerEmptyState.swift",
             "timetracker/Features/Home/HomeViews.swift",
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/PhoneHomeRows.swift",

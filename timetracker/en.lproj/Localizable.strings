@@ -377,6 +377,7 @@
 "tasks.searchPrompt" = "Search tasks, paths, or notes";
 "tasks.searchTitle" = "Search Tasks";
 "tasks.searchHint" = "Search task titles, paths, and notes.";
+"tasks.search.clear" = "Clear Search";
 "tasks.childCount" = "%d subtasks";
 "tasks.workedFormat" = "%@ worked";
 "task.swipe.start" = "Start";

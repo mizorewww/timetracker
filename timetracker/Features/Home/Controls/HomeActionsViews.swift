@@ -100,27 +100,11 @@ struct TaskStartPicker: View {
 
         Group {
             if items.isEmpty {
-                ContentUnavailableView {
-                    Label(
-                        availableTasks.isEmpty
-                            ? AppStrings.localized("tasks.empty.title")
-                            : AppStrings.localized("tasks.empty.search"),
-                        systemImage: availableTasks.isEmpty ? "checklist" : "magnifyingglass"
-                    )
-                } description: {
-                    Text(
-                        availableTasks.isEmpty
-                            ? AppStrings.localized("tasks.empty.description")
-                            : AppStrings.localized("timer.search.empty.description")
-                    )
-                } actions: {
-                    Button {
-                        createTask()
-                    } label: {
-                        Label(AppStrings.newTask, systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                TaskStartPickerEmptyState(
+                    isTaskLibraryEmpty: availableTasks.isEmpty,
+                    onClearSearch: { searchText = "" },
+                    onCreateTask: createTask
+                )
             } else {
                 List {
                     if runningItems.isEmpty == false {

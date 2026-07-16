@@ -59,6 +59,20 @@ struct TimerPickerUIContractTests {
     }
 
     @Test
+    func searchNoResultsPrioritizesClearingTheQueryOverCreatingData() throws {
+        let pickerSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let emptyStateSource = try sourceText(
+            "timetracker/Features/Home/Controls/TaskStartPickerEmptyState.swift"
+        )
+
+        #expect(pickerSource.contains("onClearSearch: { searchText = \"\" }"))
+        #expect(emptyStateSource.contains("if isTaskLibraryEmpty"))
+        #expect(emptyStateSource.contains("tasks.search.clear"))
+        #expect(emptyStateSource.contains(".buttonStyle(.borderedProminent)"))
+        #expect(emptyStateSource.contains("createTaskButton\n                    .buttonStyle(.bordered)"))
+    }
+
+    @Test
     func pickerCopyExplainsStartSwitchAndStopConsequencesInEveryLocale() throws {
         let localizationPaths = [
             "timetracker/en.lproj/Localizable.strings",

@@ -377,6 +377,7 @@
 "tasks.searchPrompt" = "搜索任务、路径或备注";
 "tasks.searchTitle" = "搜索任务";
 "tasks.searchHint" = "搜索任务标题、路径和备注。";
+"tasks.search.clear" = "清除搜索";
 "tasks.childCount" = "%d 子任务";
 "tasks.workedFormat" = "已投入 %@";
 "task.swipe.start" = "开始";

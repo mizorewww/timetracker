@@ -41,6 +41,7 @@
 "timer.search.empty.description" = "请尝试其他名称，或新建任务。";
 "timer.task.startHint" = "为此任务开始新的计时。";
 "timer.task.stopHint" = "停止此任务当前正在运行的计时。";
+"timer.task.openRunningHint" = "打开这个正在运行的任务。请在“活动计时”中停止。";
 "timer.task.switchHint" = "先停止其他正在运行的计时，再为此任务开始计时。";
 "timer.picker.runningHeader" = "正在计时";
 "timer.picker.availableHeader" = "可开始的任务";

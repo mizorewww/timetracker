@@ -41,6 +41,7 @@
 "timer.search.empty.description" = "Try another name or create a new task.";
 "timer.task.startHint" = "Starts a new timer for this task.";
 "timer.task.stopHint" = "Stops the timer currently running for this task.";
+"timer.task.openRunningHint" = "Opens this running task. Stop it from Active Timers.";
 "timer.task.switchHint" = "Stops other running timers, then starts this task.";
 "timer.picker.runningHeader" = "Running Timers";
 "timer.picker.availableHeader" = "Available Tasks";

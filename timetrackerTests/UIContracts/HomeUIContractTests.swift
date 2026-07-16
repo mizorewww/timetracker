@@ -255,7 +255,10 @@ struct HomeUIContractTests {
         #expect(identitySource.contains(".split(separator:") == false)
         #expect(quickStartSource.contains(".text(for: .standard)"))
         #expect(quickStartSource.contains("TaskIcon(visual: presentation.visual"))
-        #expect(quickStartSource.contains("isRunning ? \"stop.fill\" : \"play.fill\""))
+        #expect(quickStartSource.contains("RunningStatusBadge()"))
+        #expect(quickStartSource.contains("stop.fill") == false)
+        #expect(quickStartSource.contains("store.stop(segment:") == false)
+        #expect(quickStartSource.contains("store.openTaskDetail(task.id)"))
         #expect(quickStartSource.contains("store.path(for: task)") == false)
         #expect(quickStartSource.contains("Text(path)") == false)
     }
@@ -333,8 +336,7 @@ struct HomeUIContractTests {
         #expect(source.components(separatedBy: "isTaskAvailableForTracking").count >= 8)
         #expect(source.contains("let activeSegment = store.activeSegment(for: task.id)"))
         #expect(source.contains("store.stop(segment: activeSegment)"))
-        #expect(source.contains("isRunning ? \"stop.fill\" : \"play.fill\""))
-        #expect(source.contains("timer.task.stopHint"))
+        #expect(source.contains("timer.task.openRunningHint"))
         #expect(source.contains(".presentationBackground(") == false)
     }
 

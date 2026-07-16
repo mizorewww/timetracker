@@ -67,12 +67,12 @@ struct PhoneSummaryMetric: View {
 struct PhoneQuickStartRow: View {
     let presentation: TaskIdentityPresentation
     let isRunning: Bool
-    let start: () -> Void
+    let action: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         let text = presentation.text(for: .standard)
-        Button(action: start) {
+        Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
                 TaskIcon(visual: presentation.visual, size: 30)
                 VStack(alignment: .leading, spacing: 2) {
@@ -89,11 +89,13 @@ struct PhoneQuickStartRow: View {
                     }
                 }
                 Spacer(minLength: 8)
-                Image(systemName: isRunning ? "stop.fill" : "play.fill")
-                    .foregroundStyle(
-                        isRunning ? .red : (Color(hex: presentation.visual.colorHex) ?? .accentColor)
-                    )
-                    .accessibilityHidden(true)
+                if isRunning {
+                    RunningStatusBadge()
+                } else {
+                    Image(systemName: "play.fill")
+                        .foregroundStyle(Color(hex: presentation.visual.colorHex) ?? .accentColor)
+                        .accessibilityHidden(true)
+                }
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())
@@ -104,7 +106,7 @@ struct PhoneQuickStartRow: View {
             isRunning ? AppStrings.localized("status.running") : (text.secondary ?? "")
         )
         .accessibilityHint(
-            AppStrings.localized(isRunning ? "timer.task.stopHint" : "timer.task.startHint")
+            AppStrings.localized(isRunning ? "timer.task.openRunningHint" : "timer.task.startHint")
         )
     }
 }

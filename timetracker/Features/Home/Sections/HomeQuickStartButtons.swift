@@ -17,8 +17,8 @@ struct QuickStartTaskGroup: View {
                     presentation: store.taskIdentityPresentation(for: task),
                     isRunning: activeSegment != nil
                 ) {
-                    if let activeSegment {
-                        store.stop(segment: activeSegment)
+                    if activeSegment != nil {
+                        store.openTaskDetail(task.id)
                     } else {
                         store.startTask(task)
                     }
@@ -61,7 +61,7 @@ private struct QuickStartTaskButton: View {
                 : (presentation.parentPath ?? "")
         )
         .accessibilityHint(
-            AppStrings.localized(isRunning ? "timer.task.stopHint" : "timer.task.startHint")
+            AppStrings.localized(isRunning ? "timer.task.openRunningHint" : "timer.task.startHint")
         )
         .accessibilityIdentifier("home.quickStart.task.\(presentation.id.uuidString)")
     }
@@ -87,9 +87,7 @@ private struct QuickStartTaskButton: View {
             }
             Spacer(minLength: 4)
             if isRunning {
-                Image(systemName: "stop.fill")
-                    .foregroundStyle(.red)
-                    .accessibilityHidden(true)
+                RunningStatusBadge()
             } else {
                 Image(systemName: "play.fill")
                     .foregroundStyle(.secondary)

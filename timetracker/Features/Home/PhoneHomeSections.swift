@@ -71,6 +71,7 @@ struct PhoneQuickStartSection: View {
     let tasks: [TaskNode]
     let startTimer: () -> Void
     let editQuickStart: () -> Void
+    let openTask: (UUID) -> Void
 
     var body: some View {
         Section {
@@ -86,8 +87,8 @@ struct PhoneQuickStartSection: View {
                         presentation: store.taskIdentityPresentation(for: task),
                         isRunning: activeSegment != nil
                     ) {
-                        if let activeSegment {
-                            store.stop(segment: activeSegment)
+                        if activeSegment != nil {
+                            openTask(task.id)
                         } else {
                             store.startTask(task)
                         }

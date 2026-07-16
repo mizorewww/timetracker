@@ -634,6 +634,39 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testRunningQuickStartOpensTaskDetailInsteadOfStopping() throws {
+        #if os(macOS)
+        throw XCTSkip("The phone Quick Start interaction requires an iOS simulator.")
+        #else
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let child = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "home.quickStart.task."
+            )
+        ).matching(
+            NSPredicate(format: "label == %@", "Design System")
+        ).firstMatch
+        scrollUntilHittable(child, direction: .up, in: app)
+        XCTAssertTrue(child.waitForExistence(timeout: 5) && child.isHittable)
+
+        activate(child)
+        let running = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Running"),
+            object: child
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [running], timeout: 5), .completed)
+
+        activate(child)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        XCTAssertTrue(app.staticTexts["Design System"].waitForExistence(timeout: 3))
+        try capture("quick-start-running-opens-detail", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTodayPrimaryTimerActionOpensTaskPicker() throws {
         #if os(macOS)
         throw XCTSkip("The Today interaction screenshots require an iOS simulator.")

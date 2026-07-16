@@ -29,7 +29,8 @@ struct PhoneHomeView: View {
                 store: store,
                 tasks: content.quickStartTasks,
                 startTimer: { presentationRouter.presentStartTaskPicker() },
-                editQuickStart: { presentationRouter.presentQuickStartEditor(using: store) }
+                editQuickStart: { presentationRouter.presentQuickStartEditor(using: store) },
+                openTask: openTask
             )
 
             PhoneTimelineSection(

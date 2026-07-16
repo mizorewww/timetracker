@@ -12,8 +12,11 @@ extension TimeTrackerStore {
             errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
             return false
         }
-        selectTask(task.id, revealInToday: false)
-        return startTask(taskID: task.id)
+        let didStart = startTask(taskID: task.id)
+        if didStart {
+            selectTask(task.id, revealInToday: false)
+        }
+        return didStart
     }
 
     @discardableResult

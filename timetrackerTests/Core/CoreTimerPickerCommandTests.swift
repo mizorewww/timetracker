@@ -4,7 +4,7 @@ import Testing
 
 @Suite(.serialized)
 struct CoreTimerPickerCommandTests {
-    @Test
+    @Test @MainActor
     func policyNamesStartParallelStartAndSwitchModesExplicitly() {
         let policy = TimerPickerCommandPolicy()
 
@@ -109,5 +109,20 @@ struct CoreTimerPickerCommandTests {
         #expect(outcome == .started)
         #expect(firstSegment.endedAt == nil)
         #expect(Set(activeSegments.map(\.taskID)) == [firstTask.id, nextTask.id])
+    }
+
+    @Test @MainActor
+    func failedStartKeepsThePreviousSelection() {
+        let selectedTask = TaskNode(title: "Selected", parentID: nil, deviceID: "test")
+        let targetTask = TaskNode(title: "Target", parentID: nil, deviceID: "test")
+        let store = makeTestStore()
+        store.tasks = [selectedTask, targetTask]
+        store.selectedTaskID = selectedTask.id
+
+        let outcome = store.performTimerPickerSelection(targetTask)
+
+        #expect(outcome == .failed)
+        #expect(store.selectedTaskID == selectedTask.id)
+        #expect(store.activeSegments.isEmpty)
     }
 }

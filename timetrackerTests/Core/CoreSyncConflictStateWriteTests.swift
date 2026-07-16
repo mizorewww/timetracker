@@ -5,6 +5,32 @@ import Testing
 @Suite(.serialized)
 struct CoreSyncConflictStateWriteTests {
     @Test @MainActor
+    func pendingLocalIntentRoundTripsAndLegacyStateStillDecodes() throws {
+        let stateURL = temporaryStateURL()
+        defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
+        let service = SyncConflictService(stateURL: stateURL)
+        var state = SyncConflictState()
+        state.pendingForcedUploadSnapshot = snapshot(title: "Protected branch")
+        state.pendingLocalIntent = .reconcileWithCloud
+
+        try service.saveState(state)
+        #expect(try service.loadState().pendingLocalIntent == .reconcileWithCloud)
+
+        var legacyObject = try #require(
+            JSONSerialization.jsonObject(with: sortedJSON(state)) as? [String: Any]
+        )
+        legacyObject.removeValue(forKey: "pendingLocalIntent")
+        try JSONSerialization.data(withJSONObject: legacyObject).write(
+            to: stateURL,
+            options: [.atomic]
+        )
+        let legacyState = try service.loadState()
+        #expect(legacyState.pendingForcedUploadSnapshot != nil)
+        #expect(legacyState.pendingLocalIntent == nil)
+        #expect(service.pendingLocalIntent(from: legacyState) == .reconcileWithCloud)
+    }
+
+    @Test @MainActor
     func oversizedStateWriteKeepsExistingStateAndMirrorUnchanged() throws {
         let stateURL = temporaryStateURL()
         defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }

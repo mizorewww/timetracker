@@ -4,13 +4,22 @@ extension SyncConflictService {
     func stageCurrentLocalSnapshotForCloudEnablement(
         context: ModelContext
     ) throws -> SyncRecoveryResult {
-        try withLockedFreshStoreContext(context: context) { lockedContext in
+        try requireNoAttachedCloudRecovery()
+        return try withLockedFreshStoreContext(context: context) { lockedContext in
             try withExclusiveStateAccess {
                 let snapshot = try SyncDataSnapshot.capture(context: lockedContext)
                 if snapshot.hasProtectableUserContent {
-                    return try forceUploadLocalDataWithLockedState(
-                        context: lockedContext
-                    )
+                    var state = try loadState()
+                    state.advanceSyncEpoch()
+                    state.localSnapshot = snapshot
+                    state.localFingerprint = try snapshot.fingerprint()
+                    state.advanceLocalGeneration()
+                    state.pendingForcedUploadSnapshot = snapshot
+                    state.pendingLocalIntent = .reconcileWithCloud
+                    state.clearCloudRecoveryImportSession()
+                    try saveState(state)
+                    AppCloudSync.requestCloudReconciliationReset()
+                    return .queuedForNextLaunch
                 }
                 return try acceptCurrentCloudDataWithLockedState()
             }
@@ -18,7 +27,8 @@ extension SyncConflictService {
     }
 
     func forceUploadLocalData(context: ModelContext) throws -> SyncRecoveryResult {
-        try withLockedFreshStoreContext(context: context) { lockedContext in
+        try requireNoAttachedCloudRecovery()
+        return try withLockedFreshStoreContext(context: context) { lockedContext in
             try withExclusiveStateAccess {
                 try forceUploadLocalDataWithLockedState(context: lockedContext)
             }
@@ -50,11 +60,14 @@ extension SyncConflictService {
         }
 
         state.pendingForcedUploadSnapshot = exportedSnapshot
+        state.pendingLocalIntent = .explicitlyReplaceCloud
+        state.clearCloudRecoveryImportSession()
         state.localSnapshot = exportedSnapshot
         state.localFingerprint = try exportedSnapshot.fingerprint()
         state.advanceLocalGeneration()
         state.clearPendingConflict()
         try saveState(state)
+        AppCloudSync.completeCloudReconciliation()
         if !isCloudActive {
             AppCloudSync.requestCloudUploadReset()
         }
@@ -62,7 +75,8 @@ extension SyncConflictService {
     }
 
     func acceptCurrentCloudData(context: ModelContext) throws -> SyncRecoveryResult {
-        try withExclusiveStateAccess {
+        try requireNoAttachedCloudRecovery()
+        return try withExclusiveStateAccess {
             try acceptCurrentCloudDataWithLockedState()
         }
     }
@@ -70,15 +84,21 @@ extension SyncConflictService {
     /// Caller must already hold the sync-state lock. A surrounding store lock
     /// is required when this participates in a store-backed resolution flow.
     func acceptCurrentCloudDataWithLockedState() throws -> SyncRecoveryResult {
+        // Persist the destructive restart intent before clearing the only
+        // protected branch. A crash at any later instruction must still force
+        // the next launch to rebuild from CloudKit instead of exporting local.
+        AppCloudSync.requestCloudDownloadReset()
         var state = try loadState()
         state.advanceSyncEpoch()
         state.baseFingerprint = nil
         state.localSnapshot = nil
         state.localFingerprint = nil
-        state.pendingForcedUploadSnapshot = nil
+        state.cloudDownloadRecoveryCompleted = nil
+        state.clearCloudRecoveryImportSession()
+        state.clearPendingLocalRecovery()
         state.clearPendingConflict()
         try saveState(state)
-        AppCloudSync.requestCloudDownloadReset()
+        AppCloudSync.completeCloudReconciliation()
         return .queuedForNextLaunch
     }
 

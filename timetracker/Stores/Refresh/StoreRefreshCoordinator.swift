@@ -6,13 +6,33 @@ struct StoreRefreshCoordinator {
         guard store.taskRepository != nil, store.timeRepository != nil else { return }
 
         try PerformanceSignpost.interval("Store refresh") {
-            try refreshPrimaryDomains(on: store, plan: plan)
+            try refreshPrimaryDomains(
+                on: store,
+                plan: plan,
+                schedulesPomodoroReconciliation: true
+            )
             refreshDerivedDomains(on: store, plan: plan)
             applyPostRefreshEffects(on: store, plan: plan)
         }
     }
 
-    private func refreshPrimaryDomains(on store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
+    func refreshReadModels(_ store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
+        guard store.taskRepository != nil, store.timeRepository != nil else { return }
+        try PerformanceSignpost.interval("Store recovery read-model refresh") {
+            try refreshPrimaryDomains(
+                on: store,
+                plan: plan,
+                schedulesPomodoroReconciliation: false
+            )
+            refreshDerivedDomains(on: store, plan: plan)
+        }
+    }
+
+    private func refreshPrimaryDomains(
+        on store: TimeTrackerStore,
+        plan: StoreRefreshPlan,
+        schedulesPomodoroReconciliation: Bool
+    ) throws {
         if plan.refreshTasks {
             try PerformanceSignpost.interval("Task domain refresh") {
                 try store.refreshTaskDomain(plan: plan)
@@ -25,7 +45,9 @@ struct StoreRefreshCoordinator {
         }
         if plan.refreshPomodoro {
             try PerformanceSignpost.interval("Pomodoro domain refresh") {
-                try store.refreshPomodoroDomain()
+                try store.refreshPomodoroDomain(
+                    schedulesReconciliation: schedulesPomodoroReconciliation
+                )
             }
         }
         if plan.refreshPreferences {

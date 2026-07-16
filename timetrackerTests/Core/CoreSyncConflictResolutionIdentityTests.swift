@@ -206,6 +206,18 @@ struct CoreSyncConflictResolutionIdentityTests {
         let defaults = UserDefaults.standard
         let previousMode = defaults.string(forKey: AppCloudSync.modeKey)
         let previousEnabled = defaults.object(forKey: AppCloudSync.enabledKey)
+        let recoveryKeys = [
+            AppCloudSync.pendingCloudUploadResetKey,
+            AppCloudSync.pendingCloudDownloadResetKey,
+            AppCloudSync.queuedCloudReconciliationKey,
+            AppCloudSync.activeCloudReconciliationKey,
+            AppCloudSync.cloudRecoveryStoreResetKey,
+            AppCloudSync.activeCloudDownloadRecoveryKey,
+        ]
+        let previousRecoveryValues = Dictionary(
+            uniqueKeysWithValues: recoveryKeys.map { ($0, defaults.object(forKey: $0)) }
+        )
+        recoveryKeys.forEach { defaults.removeObject(forKey: $0) }
         defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
         defer {
             if let previousMode {
@@ -217,6 +229,13 @@ struct CoreSyncConflictResolutionIdentityTests {
                 defaults.set(previousEnabled, forKey: AppCloudSync.enabledKey)
             } else {
                 defaults.removeObject(forKey: AppCloudSync.enabledKey)
+            }
+            for key in recoveryKeys {
+                if let previousValue = previousRecoveryValues[key] {
+                    defaults.set(previousValue, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
             }
         }
         try body()

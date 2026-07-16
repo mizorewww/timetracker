@@ -54,8 +54,12 @@ extension TimeTrackerStore {
             pendingSyncConflict = try syncConflictService.prompt()
             return result
         }
-        try refresh()
         pendingSyncConflict = nil
+        if hasCompletedStartupConfiguration {
+            try refresh()
+        } else {
+            configureIfNeeded(context: modelContext)
+        }
         return result
     }
 

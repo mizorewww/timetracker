@@ -374,6 +374,18 @@ struct PreferencesChecklistForecastTests {
         let defaults = UserDefaults.standard
         let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)
         let previousCloud = defaults.object(forKey: AppCloudSync.enabledKey)
+        let cloudRecoveryKeys = [
+            AppCloudSync.pendingCloudUploadResetKey,
+            AppCloudSync.pendingCloudDownloadResetKey,
+            AppCloudSync.queuedCloudReconciliationKey,
+            AppCloudSync.activeCloudReconciliationKey,
+            AppCloudSync.cloudRecoveryStoreResetKey,
+            AppCloudSync.activeCloudDownloadRecoveryKey,
+        ]
+        let previousCloudRecoveryValues = Dictionary(
+            uniqueKeysWithValues: cloudRecoveryKeys.map { ($0, defaults.object(forKey: $0)) }
+        )
+        cloudRecoveryKeys.forEach { defaults.removeObject(forKey: $0) }
         let previousAutomaticSuggestions = defaults.object(
             forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         )
@@ -395,6 +407,13 @@ struct PreferencesChecklistForecastTests {
                 )
             } else {
                 defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+            }
+            for key in cloudRecoveryKeys {
+                if let previousValue = previousCloudRecoveryValues[key] {
+                    defaults.set(previousValue, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
             }
         }
 

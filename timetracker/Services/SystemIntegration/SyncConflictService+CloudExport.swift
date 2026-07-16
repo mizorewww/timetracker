@@ -10,6 +10,7 @@ extension SyncConflictService {
     private func markCloudExportStartedWithLockedState(eventID: UUID, now: Date) throws {
         guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return }
         var state = try loadState()
+        guard pendingLocalIntent(from: state) != .reconcileWithCloud else { return }
         guard let fingerprint = state.localFingerprint else { return }
         _ = state.pruneCloudExportCheckpoints(now: now)
         var checkpoints = state.pendingCloudExportCheckpoints ?? [:]
@@ -52,10 +53,19 @@ extension SyncConflictService {
         state.baseFingerprint = checkpoint.fingerprint
         state.baseAcknowledgedGeneration = checkpoint.generation
 
-        if let pendingSnapshot = state.pendingForcedUploadSnapshot,
-           try pendingSnapshot.fingerprint() == checkpoint.fingerprint {
-            state.pendingForcedUploadSnapshot = nil
+        let completedExplicitReplacement: Bool
+        if state.pendingLocalIntent == .explicitlyReplaceCloud,
+           let pendingSnapshot = state.pendingForcedUploadSnapshot {
+            completedExplicitReplacement = try pendingSnapshot.fingerprint() == checkpoint.fingerprint
+        } else {
+            completedExplicitReplacement = false
+        }
+        if completedExplicitReplacement {
+            state.clearPendingLocalRecovery()
         }
         try saveState(state)
+        if completedExplicitReplacement {
+            AppCloudSync.completeCloudReconciliation()
+        }
     }
 }

@@ -114,5 +114,14 @@ extension TimeTrackerStore {
                 }
             }
         }
+
+        var hasSuccessfulCloudImport: Bool {
+            for reason in reasons.reversed() {
+                if case let .cloudImportFinished(succeeded, _, _) = reason {
+                    return succeeded
+                }
+            }
+            return false
+        }
     }
 }

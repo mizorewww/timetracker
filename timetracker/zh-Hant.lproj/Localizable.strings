@@ -299,6 +299,9 @@
 "sync.recovery.deferred.uploadSnapshotUnavailable" = "雲端復原正在等待可讀取的受保護上傳快照。";
 "sync.recovery.error.storeRemoval" = "雲端復原無法移除持久化儲存：%@";
 "sync.recovery.error.stateRemoval" = "雲端復原無法移除同步衝突狀態：%@";
+"sync.recovery.error.statePreparation" = "雲端復原無法儲存初始同步檢查點：%@";
+"sync.recovery.deferred.conflictingRequests" = "雲端復原發現互相衝突的上傳與下載要求。請重新選擇一個復原方向後再重新啟動。";
+"sync.conflict.error.recoveryInProgress" = "雲端復原正在進行。請等待完成後再選擇其他資料副本。";
 "tab.home" = "首頁";
 "sidebar.show" = "顯示側邊欄";
 "sidebar.hide" = "隱藏側邊欄";

@@ -24,14 +24,14 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if AppCloudSync.allowsUserWrites {
+            if store.effectivePersistenceWriteSafety == .ready {
                 #if os(macOS)
                 DesktopRootView(store: store)
                 #else
                 iOSRootView(store: store)
                 #endif
             } else {
-                PersistenceRecoveryView(safety: AppCloudSync.persistenceWriteSafety)
+                PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
             }
         }
         .environment(presentationRouter)
@@ -55,8 +55,8 @@ struct ContentView: View {
         }
         #endif
         .task {
-            guard AppCloudSync.allowsUserWrites else { return }
             store.configureIfNeeded(context: modelContext)
+            guard store.persistenceWriteSafety == .ready else { return }
             hasFinishedInitialConfiguration = true
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
@@ -77,6 +77,16 @@ struct ContentView: View {
             Task { @MainActor in
                 await store.refreshForForeground()
             }
+        }
+        .onChange(of: store.persistenceWriteSafety) { _, safety in
+            guard safety == .ready else {
+                hasFinishedInitialConfiguration = false
+                unregisterFromWatchCommands()
+                return
+            }
+            hasFinishedInitialConfiguration = true
+            drainPendingDeepLinks()
+            registerForWatchCommandsIfNeeded()
         }
         .onOpenURL { url in
             guard AppDeepLinkRouter().action(for: url) != nil else { return }

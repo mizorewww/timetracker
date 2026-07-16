@@ -5,11 +5,16 @@ import SwiftData
 
 extension SyncConflictService {
     func handleCloudImport(context: ModelContext) throws -> SyncConflictPrompt? {
-        try withLockedFreshStoreContext(context: context) { lockedContext in
+        let prompt = try withLockedFreshStoreContext(context: context) { lockedContext in
             try withExclusiveStateAccess {
                 try handleCloudImportWithLockedState(context: lockedContext)
             }
         }
+        if AppCloudSync.isCloudDownloadRecoveryActive,
+           try loadState().cloudDownloadRecoveryCompleted == true {
+            AppCloudSync.completeCloudDownloadRecovery()
+        }
+        return prompt
     }
 
     private func handleCloudImportWithLockedState(
@@ -17,7 +22,24 @@ extension SyncConflictService {
     ) throws -> SyncConflictPrompt? {
         guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else { return nil }
         var state = try loadState()
+        if AppCloudSync.isCloudImportRecoveryActive {
+            guard cloudRecoveryImportIsReady(in: state) else {
+                return prompt(from: state)
+            }
+            state.clearCloudRecoveryImportSession()
+        }
+        if AppCloudSync.isCloudDownloadRecoveryActive {
+            state.cloudDownloadRecoveryCompleted = true
+        }
         state.advanceSyncEpoch()
+        if let pendingLocalSnapshot = state.pendingForcedUploadSnapshot,
+           pendingLocalIntent(from: state) == .reconcileWithCloud {
+            return try reconcilePendingLocalSnapshot(
+                pendingLocalSnapshot,
+                context: context,
+                state: &state
+            )
+        }
         if let forcedLocalSnapshot = pendingForcedUploadSnapshotForRestore(from: state) {
             // CloudKit may replay an older remote copy before the explicitly
             // selected local winner's corresponding export is acknowledged.
@@ -27,7 +49,9 @@ extension SyncConflictService {
             state.localFingerprint = try restoredSnapshot.fingerprint()
             state.advanceLocalGeneration()
             state.pendingForcedUploadSnapshot = restoredSnapshot
+            state.pendingLocalIntent = .explicitlyReplaceCloud
             try saveState(state)
+            AppCloudSync.completeCloudReconciliation()
             return nil
         }
         if prompt(from: state) != nil {
@@ -135,5 +159,34 @@ extension SyncConflictService {
             localSummary: localSnapshot.localizedSummary,
             cloudSummary: cloudSnapshot.localizedSummary
         )
+    }
+
+    private func reconcilePendingLocalSnapshot(
+        _ localSnapshot: SyncDataSnapshot,
+        context: ModelContext,
+        state: inout SyncConflictState
+    ) throws -> SyncConflictPrompt? {
+        let cloudSnapshot = try SyncDataSnapshot.capture(context: context)
+        let localFingerprint = try localSnapshot.fingerprint()
+        let cloudFingerprint = try cloudSnapshot.fingerprint()
+        state.clearPendingLocalRecovery()
+
+        if localFingerprint == cloudFingerprint {
+            state.acceptCloudSnapshot(cloudSnapshot, fingerprint: cloudFingerprint)
+            state.clearPendingConflict()
+            try saveState(state)
+            AppCloudSync.completeCloudReconciliation()
+            return nil
+        }
+
+        state.localSnapshot = localSnapshot
+        state.localFingerprint = localFingerprint
+        let conflict = try saveConflict(
+            localSnapshot: localSnapshot,
+            cloudSnapshot: cloudSnapshot,
+            state: &state
+        )
+        AppCloudSync.completeCloudReconciliation()
+        return conflict
     }
 }

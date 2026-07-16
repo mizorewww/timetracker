@@ -24,7 +24,11 @@ struct TestHostIsolationTests {
             AppCloudSync.errorKey,
             AppCloudSync.accountStatusKey,
             AppCloudSync.pendingCloudUploadResetKey,
-            AppCloudSync.pendingCloudDownloadResetKey
+            AppCloudSync.pendingCloudDownloadResetKey,
+            AppCloudSync.queuedCloudReconciliationKey,
+            AppCloudSync.activeCloudReconciliationKey,
+            AppCloudSync.cloudRecoveryStoreResetKey,
+            AppCloudSync.activeCloudDownloadRecoveryKey
         ]
         let defaults = UserDefaults.standard
         let before = defaults.dictionaryWithValues(forKeys: keys) as NSDictionary

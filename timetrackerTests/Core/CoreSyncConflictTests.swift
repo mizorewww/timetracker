@@ -744,6 +744,7 @@ struct CoreSyncConflictTests {
             let queuedSnapshot = try #require(try service.loadPendingForcedUploadSnapshot())
             #expect(queuedSnapshot.tasks.count == 1)
             #expect(queuedSnapshot.tasks.first?.deletedAt != nil)
+            #expect(try service.loadState().pendingLocalIntent == .explicitlyReplaceCloud)
         }
 
         try withCloudSyncMode {
@@ -823,6 +824,9 @@ struct CoreSyncConflictTests {
             #expect(try service.prompt() == nil)
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.enabledKey))
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(try service.loadState().pendingLocalIntent == .explicitlyReplaceCloud)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
         }
     }
 
@@ -977,6 +981,12 @@ struct CoreSyncConflictTests {
 
             #expect(AppCloudSync.allowsUserWrites)
             try AppCloudSync.requireUserWritesAllowed()
+
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudReconciliationKey)
+            #expect(AppCloudSync.allowsUserWrites == false)
+            #expect(throws: PersistenceWriteError.self) {
+                try AppCloudSync.requireUserWritesAllowed()
+            }
         }
     }
 
@@ -1002,8 +1012,11 @@ struct CoreSyncConflictTests {
             )
 
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
             let queuedSnapshot = try #require(try service.loadPendingForcedUploadSnapshot())
             #expect(queuedSnapshot.tasks.map(\.title) == ["Edited while CloudKit was unavailable"])
+            #expect(try service.loadState().pendingLocalIntent == .reconcileWithCloud)
         }
     }
 
@@ -1020,8 +1033,559 @@ struct CoreSyncConflictTests {
             let service = SyncConflictService(stateURL: temporaryStateURL())
             #expect(try service.stageCurrentLocalSnapshotForCloudEnablement(context: context) == .queuedForNextLaunch)
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
             let protectedSnapshot = try #require(try service.loadPendingForcedUploadSnapshot())
             #expect(protectedSnapshot.tasks.map(\.title) == ["Local work before enabling Cloud"])
+            #expect(try service.loadState().pendingLocalIntent == .reconcileWithCloud)
+        }
+    }
+
+    @Test @MainActor
+    func automaticCloudReenablePreservesRemoteDataUntilUserChooses() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            let localContext = try makeTestContext()
+            localContext.insert(TaskNode(title: "Protected local branch", parentID: nil, deviceID: "local"))
+            try localContext.save()
+            #expect(
+                try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext) ==
+                    .queuedForNextLaunch
+            )
+
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppCloudSync.activateCloudReconciliation()
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .reconcileWithCloud
+            )
+
+            let cloudContext = try makeTestContext()
+            cloudContext.insert(TaskNode(title: "Remote cloud branch", parentID: nil, deviceID: "remote"))
+            try cloudContext.save()
+
+            #expect(try service.bootstrap(context: cloudContext) == nil)
+            #expect(
+                try cloudContext.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .map(\.title) == ["Remote cloud branch"]
+            )
+            #expect(AppCloudSync.allowsUserWrites == false)
+
+            let prompt = try #require(try service.handleCloudImport(context: cloudContext))
+            let state = try service.loadState()
+            #expect(prompt.localSummary.isEmpty == false)
+            #expect(prompt.cloudSummary.isEmpty == false)
+            #expect(state.localSnapshot?.tasks.map(\.title) == ["Protected local branch"])
+            #expect(state.pendingCloudSnapshot?.tasks.map(\.title) == ["Remote cloud branch"])
+            #expect(state.pendingForcedUploadSnapshot == nil)
+            #expect(state.pendingLocalIntent == nil)
+            #expect(AppCloudSync.isCloudRecoveryPending == false)
+            #expect(AppCloudSync.allowsUserWrites)
+        }
+    }
+
+    @Test @MainActor
+    func matchingCloudCopyCompletesReconciliationWithoutPrompt() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            let localContext = try makeTestContext()
+            localContext.insert(TaskNode(title: "Already synchronized", parentID: nil, deviceID: "local"))
+            try localContext.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext)
+
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppCloudSync.activateCloudReconciliation()
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .reconcileWithCloud
+            )
+
+            #expect(try service.bootstrap(context: localContext) == nil)
+            #expect(try service.handleCloudImport(context: localContext) == nil)
+            let state = try service.loadState()
+            #expect(state.pendingForcedUploadSnapshot == nil)
+            #expect(state.pendingLocalIntent == nil)
+            #expect(state.pendingConflictID == nil)
+            #expect(state.baseFingerprint == state.localFingerprint)
+            #expect(AppCloudSync.isCloudRecoveryPending == false)
+        }
+    }
+
+    @Test @MainActor
+    func initialEmptyCloudImportPromptsBeforeProtectedLocalUpload() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            let localContext = try makeTestContext()
+            localContext.insert(TaskNode(title: "Device-only branch", parentID: nil, deviceID: "local"))
+            try localContext.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext)
+
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppCloudSync.activateCloudReconciliation()
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .reconcileWithCloud
+            )
+
+            let emptyCloudContext = try makeTestContext()
+            #expect(try service.bootstrap(context: emptyCloudContext) == nil)
+            let prompt = try #require(try service.handleCloudImport(context: emptyCloudContext))
+            let state = try service.loadState()
+
+            #expect(prompt.localSummary.isEmpty == false)
+            #expect(state.localSnapshot?.tasks.map(\.title) == ["Device-only branch"])
+            #expect(state.pendingCloudSnapshot?.hasProtectableUserContent == false)
+            #expect(state.pendingForcedUploadSnapshot == nil)
+            #expect(AppCloudSync.isCloudReconciliationActive == false)
+        }
+    }
+
+    @Test @MainActor
+    func legacyPendingSnapshotWithoutIntentReconcilesInsteadOfReplacingCloud() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            let localContext = try makeTestContext()
+            localContext.insert(TaskNode(title: "Legacy local branch", parentID: nil, deviceID: "local"))
+            try localContext.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext)
+            var legacyState = try service.loadState()
+            legacyState.pendingLocalIntent = nil
+            try service.saveState(legacyState)
+
+            let cloudContext = try makeTestContext()
+            cloudContext.insert(TaskNode(title: "Current remote branch", parentID: nil, deviceID: "remote"))
+            try cloudContext.save()
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppCloudSync.activateCloudReconciliation()
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .reconcileWithCloud
+            )
+
+            #expect(try service.bootstrap(context: cloudContext) == nil)
+            #expect(try service.loadState().pendingLocalIntent == .reconcileWithCloud)
+            #expect(
+                try cloudContext.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .map(\.title) == ["Current remote branch"]
+            )
+            #expect(try service.handleCloudImport(context: cloudContext) != nil)
+        }
+    }
+
+    @Test @MainActor
+    func explicitForceUploadSupersedesQueuedReconciliation() throws {
+        try withSyncMode(AppCloudSync.modeLocalFallback) {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Explicit local winner", parentID: nil, deviceID: "local"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(try service.forceUploadLocalData(context: context) == .queuedForNextLaunch)
+
+            let state = try service.loadState()
+            #expect(state.pendingLocalIntent == .explicitlyReplaceCloud)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false)
+        }
+    }
+
+    @Test @MainActor
+    func reconciliationIgnoresCloudExportAcknowledgements() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Unreviewed local branch", parentID: nil, deviceID: "local"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppCloudSync.activateCloudReconciliation()
+
+            let eventID = UUID()
+            try service.markCloudExportStarted(eventID: eventID)
+            try service.markCloudExportFinished(eventID: eventID, succeeded: true)
+
+            let state = try service.loadState()
+            #expect(state.pendingForcedUploadSnapshot != nil)
+            #expect(state.pendingLocalIntent == .reconcileWithCloud)
+            #expect(state.pendingCloudExportCheckpoints == nil)
+            #expect(AppCloudSync.isCloudReconciliationActive)
+        }
+    }
+
+    @Test @MainActor
+    func staleActiveMarkerIsClearedFromAuthoritativeCompletedState() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Cloud data", parentID: nil, deviceID: "remote"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            AppCloudSync.activateCloudReconciliation()
+
+            #expect(try service.bootstrap(context: context) == nil)
+            #expect(AppCloudSync.isCloudReconciliationActive == false)
+            #expect(AppCloudSync.allowsUserWrites)
+        }
+    }
+
+    @Test @MainActor
+    func successfulCloudImportCompletesDownloadRecovery() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Downloaded cloud branch", parentID: nil, deviceID: "remote"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .downloadCloud
+            )
+
+            #expect(try service.bootstrap(context: context) == nil)
+            #expect(AppCloudSync.allowsUserWrites == false)
+            #expect(try service.handleCloudImport(context: context) == nil)
+
+            let state = try service.loadState()
+            #expect(state.cloudDownloadRecoveryCompleted == true)
+            #expect(AppCloudSync.isCloudDownloadRecoveryActive == false)
+            #expect(AppCloudSync.allowsUserWrites)
+        }
+    }
+
+    @Test @MainActor
+    func successfulInitialImportCompletesAnEmptyCloudDownload() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .downloadCloud
+            )
+
+            #expect(try service.bootstrap(context: context) == nil)
+            #expect(try service.handleCloudImport(context: context) == nil)
+
+            let state = try service.loadState()
+            #expect(state.localSnapshot?.hasProtectableUserContent == false)
+            #expect(state.cloudDownloadRecoveryCompleted == true)
+            #expect(AppCloudSync.isCloudDownloadRecoveryActive == false)
+            #expect(AppCloudSync.allowsUserWrites)
+        }
+    }
+
+    @Test @MainActor
+    func unjournaledCloudImportCannotCompleteDownloadRecovery() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Unverified cloud cache", parentID: nil, deviceID: "remote"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+
+            #expect(try service.bootstrap(context: context) == nil)
+            #expect(try service.handleCloudImport(context: context) == nil)
+
+            #expect(AppCloudSync.isCloudDownloadRecoveryActive)
+            #expect(AppCloudSync.allowsUserWrites == false)
+            #expect(try service.loadState().cloudDownloadRecoveryCompleted != true)
+        }
+    }
+
+    @Test @MainActor
+    func attachedCloudRecoveryRejectsStaleDirectionalCommands() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Hydrating cloud cache", parentID: nil, deviceID: "remote"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+
+            #expect(throws: SyncConflictError.self) {
+                try service.forceUploadLocalData(context: context)
+            }
+            #expect(throws: SyncConflictError.self) {
+                try service.acceptCurrentCloudData(context: context)
+            }
+            #expect(throws: SyncConflictError.self) {
+                try service.resolveSyncConflict(
+                    expectedConflictID: nil,
+                    resolution: .uploadLocal,
+                    context: context
+                )
+            }
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey) == false)
+            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey) == false)
+            #expect(AppCloudSync.isCloudDownloadRecoveryActive)
+        }
+    }
+
+    @Test @MainActor
+    func wrongRecoverySessionKindCannotUnlockTheActiveGate() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .reconcileWithCloud
+            )
+
+            #expect(try service.handleCloudImport(context: context) == nil)
+            #expect(AppCloudSync.isCloudDownloadRecoveryActive)
+            #expect(try service.loadState().cloudDownloadRecoveryCompleted != true)
+            #expect(AppCloudSync.allowsUserWrites == false)
+        }
+
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            AppCloudSync.activateCloudReconciliation()
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .downloadCloud
+            )
+
+            #expect(try service.handleCloudImport(context: context) == nil)
+            #expect(AppCloudSync.isCloudReconciliationActive)
+            #expect(try service.loadState().cloudRecoveryImportSession?.kind == .downloadCloud)
+            #expect(AppCloudSync.allowsUserWrites == false)
+        }
+    }
+
+    @Test @MainActor
+    func completedDownloadRecoveryMarkerConvergesAfterCrash() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Imported before crash", parentID: nil, deviceID: "remote"))
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            var state = SyncConflictState()
+            state.cloudDownloadRecoveryCompleted = true
+            try service.saveState(state)
+            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+
+            #expect(try service.bootstrap(context: context) == nil)
+            #expect(AppCloudSync.isCloudDownloadRecoveryActive == false)
+            #expect(try service.loadState().cloudDownloadRecoveryCompleted == nil)
+            #expect(AppCloudSync.allowsUserWrites)
+        }
+    }
+
+    @Test @MainActor
+    func olderImportIsProcessedBeforeExplicitExportAcknowledgement() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let task = TaskNode(title: "Explicit local winner", parentID: nil, deviceID: "local")
+            context.insert(task)
+            try context.save()
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            #expect(try service.forceUploadLocalData(context: context) == .appliedImmediately)
+            let eventID = UUID()
+            try service.markCloudExportStarted(eventID: eventID)
+
+            task.title = "Older imported cloud copy"
+            task.updatedAt = Date().addingTimeInterval(-60)
+            task.clientMutationID = UUID()
+            try context.save()
+
+            #expect(try service.handleCloudImport(context: context) == nil)
+            try service.markCloudExportFinished(eventID: eventID, succeeded: true)
+
+            let restored = try #require(
+                try context.fetch(FetchDescriptor<TaskNode>()).visibleDeduplicatedByID().first
+            )
+            let state = try service.loadState()
+            #expect(restored.title == "Explicit local winner")
+            #expect(state.pendingLocalIntent == .explicitlyReplaceCloud)
+            #expect(state.pendingForcedUploadSnapshot != nil)
+        }
+    }
+
+    @Test @MainActor
+    func recoveryOnlyStoreConfigurationDefersStartupMigrations() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let defaults = UserDefaults.standard
+            let previousPayload = defaults.object(forKey: LegacyCountdownMigrationPolicy.payloadKey)
+            let previousMigration = defaults.object(forKey: LegacyCountdownMigrationPolicy.migrationKey)
+            defer {
+                if let previousPayload {
+                    defaults.set(previousPayload, forKey: LegacyCountdownMigrationPolicy.payloadKey)
+                } else {
+                    defaults.removeObject(forKey: LegacyCountdownMigrationPolicy.payloadKey)
+                }
+                if let previousMigration {
+                    defaults.set(previousMigration, forKey: LegacyCountdownMigrationPolicy.migrationKey)
+                } else {
+                    defaults.removeObject(forKey: LegacyCountdownMigrationPolicy.migrationKey)
+                }
+            }
+
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            let localContext = try makeTestContext()
+            localContext.insert(TaskNode(title: "Protected local branch", parentID: nil, deviceID: "local"))
+            try localContext.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext)
+
+            let cloudContext = try makeTestContext()
+            let remoteTask = TaskNode(title: "Remote branch", parentID: nil, deviceID: "remote")
+            cloudContext.insert(remoteTask)
+            let activeRun = PomodoroRun(
+                taskID: remoteTask.id,
+                focus: 1_500,
+                breakSeconds: 300,
+                longBreakSeconds: 900,
+                targetRounds: 4,
+                deviceID: "remote"
+            )
+            activeRun.state = .focusing
+            activeRun.startedAt = Date()
+            cloudContext.insert(activeRun)
+            try cloudContext.save()
+            defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            defaults.set("[]", forKey: LegacyCountdownMigrationPolicy.payloadKey)
+            defaults.removeObject(forKey: LegacyCountdownMigrationPolicy.migrationKey)
+            AppCloudSync.activateCloudReconciliation()
+
+            let store = TimeTrackerStore(syncConflictService: service)
+            store.configureIfNeeded(context: cloudContext)
+
+            #expect(store.taskRepository != nil)
+            #expect(store.syncObservers.isEmpty == false)
+            #expect(store.hasCompletedStartupConfiguration == false)
+            #expect(store.persistenceWriteSafety != .ready)
+            #expect(store.pomodoroReconciliationTask == nil)
+            #expect(store.cloudAccountCheckRequestID == nil)
+            #expect(defaults.string(forKey: LegacyCountdownMigrationPolicy.payloadKey) == "[]")
+            #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey) == false)
+            #expect(try cloudContext.fetch(FetchDescriptor<CountdownEvent>()).isEmpty)
+        }
+    }
+
+    @Test @MainActor
+    func recoveryBootstrapRetriesCorruptStateAndRestoresExplicitWinnerOnlyOnce() throws {
+        try withSyncMode(AppCloudSync.modeLocalFallback) {
+            let stateURL = temporaryStateURL()
+            let service = SyncConflictService(stateURL: stateURL)
+            let localContext = try makeTestContext()
+            localContext.insert(TaskNode(title: "Protected explicit winner", parentID: nil, deviceID: "local"))
+            try localContext.save()
+            #expect(try service.forceUploadLocalData(context: localContext) == .queuedForNextLaunch)
+
+            let before = try service.loadState()
+            try Data("corrupt primary state".utf8).write(to: stateURL, options: [.atomic])
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            UserDefaults.standard.set(true, forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+
+            let cloudContext = try makeTestContext()
+            let store = TimeTrackerStore(syncConflictService: service)
+            store.configureIfNeeded(context: cloudContext)
+
+            let restoredTitles = try cloudContext.fetch(FetchDescriptor<TaskNode>())
+                .visibleDeduplicatedByID()
+                .map(\.title)
+            let after = try service.loadState()
+            #expect(restoredTitles.contains("Protected explicit winner"))
+            #expect(store.hasCompletedStartupConfiguration)
+            #expect(store.hasBootstrappedSyncConflictState)
+            #expect(before.syncEpoch != nil)
+            #expect(before.localGeneration != nil)
+            #expect(after.syncEpoch == 1)
+            #expect(after.localGeneration == 1)
+            #expect(after.pendingLocalIntent == .explicitlyReplaceCloud)
+            #expect(AppCloudSync.allowsUserWrites)
+        }
+    }
+
+    @Test @MainActor
+    func recoveryMirrorKeepsQueuedReconciliationConservative() throws {
+        try withSyncMode(AppCloudSync.modeLocalFallback) {
+            let stateURL = temporaryStateURL()
+            let service = SyncConflictService(stateURL: stateURL)
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Fallback branch", parentID: nil, deviceID: "local"))
+            try context.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
+
+            try Data("corrupt primary state".utf8).write(to: stateURL, options: [.atomic])
+            #expect(throws: SyncConflictStateFileError.self) {
+                try service.loadState()
+            }
+            let recovered = try service.loadState()
+
+            #expect(recovered.pendingForcedUploadSnapshot?.tasks.map(\.title) == ["Fallback branch"])
+            #expect(recovered.pendingLocalIntent == .reconcileWithCloud)
+        }
+    }
+
+    @Test @MainActor
+    func recoveryMirrorWithoutIntentMarkersDefaultsToReconciliation() throws {
+        try withSyncMode(AppCloudSync.modeLocalFallback) {
+            let stateURL = temporaryStateURL()
+            let service = SyncConflictService(stateURL: stateURL)
+            let context = try makeTestContext()
+            context.insert(TaskNode(title: "Unmarked protected branch", parentID: nil, deviceID: "local"))
+            try context.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
+
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            UserDefaults.standard.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
+            try Data("corrupt primary state".utf8).write(to: stateURL, options: [.atomic])
+            #expect(throws: SyncConflictStateFileError.self) {
+                try service.loadState()
+            }
+            let recovered = try service.loadState()
+
+            #expect(recovered.pendingLocalIntent == .reconcileWithCloud)
+        }
+    }
+
+    @Test @MainActor
+    func recoveryCompletionBroadcastUpdatesEveryConfiguredSceneStore() throws {
+        try withSyncMode(AppCloudSync.modeLocal) {
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            let context = try makeTestContext()
+            let task = TaskNode(title: "Protected local branch", parentID: nil, deviceID: "local")
+            context.insert(task)
+            try context.save()
+            _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
+
+            task.title = "Imported remote branch"
+            task.updatedAt = Date().addingTimeInterval(60)
+            task.clientMutationID = UUID()
+            try context.save()
+            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppCloudSync.activateCloudReconciliation()
+            try recordCompletedInitialCloudImport(
+                service: service,
+                kind: .reconcileWithCloud
+            )
+
+            let firstStore = TimeTrackerStore(syncConflictService: service)
+            let secondStore = TimeTrackerStore(syncConflictService: service)
+            firstStore.configureIfNeeded(context: context)
+            secondStore.configureIfNeeded(context: context)
+            #expect(firstStore.persistenceWriteSafety != .ready)
+            #expect(secondStore.persistenceWriteSafety != .ready)
+
+            let prompt = try #require(try service.handleCloudImport(context: context))
+
+            #expect(firstStore.persistenceWriteSafety == .ready)
+            #expect(secondStore.persistenceWriteSafety == .ready)
+            #expect(firstStore.pendingSyncConflict?.id == prompt.id)
+            #expect(secondStore.pendingSyncConflict?.id == prompt.id)
+            #expect(firstStore.hasCompletedStartupConfiguration == false)
+            #expect(secondStore.hasCompletedStartupConfiguration == false)
         }
     }
 
@@ -1425,6 +1989,16 @@ struct CoreSyncConflictTests {
         let previousEnabled = defaults.object(forKey: AppCloudSync.enabledKey)
         let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
         let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        let previousQueuedReconciliation = defaults.object(forKey: AppCloudSync.queuedCloudReconciliationKey)
+        let previousActiveReconciliation = defaults.object(forKey: AppCloudSync.activeCloudReconciliationKey)
+        let previousCloudRecoveryStoreReset = defaults.object(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+        let previousActiveCloudDownloadRecovery = defaults.object(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+        defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+        defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        defaults.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
+        defaults.removeObject(forKey: AppCloudSync.activeCloudReconciliationKey)
+        defaults.removeObject(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+        defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
         defaults.set(mode, forKey: AppCloudSync.modeKey)
         defer {
             if let previousMode {
@@ -1447,8 +2021,59 @@ struct CoreSyncConflictTests {
             } else {
                 defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
             }
+            if let previousQueuedReconciliation {
+                defaults.set(previousQueuedReconciliation, forKey: AppCloudSync.queuedCloudReconciliationKey)
+            } else {
+                defaults.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
+            }
+            if let previousActiveReconciliation {
+                defaults.set(previousActiveReconciliation, forKey: AppCloudSync.activeCloudReconciliationKey)
+            } else {
+                defaults.removeObject(forKey: AppCloudSync.activeCloudReconciliationKey)
+            }
+            if let previousCloudRecoveryStoreReset {
+                defaults.set(previousCloudRecoveryStoreReset, forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+            } else {
+                defaults.removeObject(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+            }
+            if let previousActiveCloudDownloadRecovery {
+                defaults.set(previousActiveCloudDownloadRecovery, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            } else {
+                defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            }
         }
         try body()
+    }
+
+    @MainActor
+    private func recordCompletedInitialCloudImport(
+        service: SyncConflictService,
+        kind: CloudRecoveryImportKind,
+        storeIdentifier: String = "test-cloud-store"
+    ) throws {
+        let sessionStartedAt = Date(timeIntervalSince1970: 10_000)
+        try service.beginCloudRecoveryImportSession(
+            kind: kind,
+            startedAt: sessionStartedAt
+        )
+        try service.recordCloudRecoveryContainerEvent(
+            CloudRecoveryContainerEventReceipt(
+                storeIdentifier: storeIdentifier,
+                kind: .setup,
+                startedAt: sessionStartedAt.addingTimeInterval(1),
+                completedAt: sessionStartedAt.addingTimeInterval(2),
+                succeeded: true
+            )
+        )
+        try service.recordCloudRecoveryContainerEvent(
+            CloudRecoveryContainerEventReceipt(
+                storeIdentifier: storeIdentifier,
+                kind: .import,
+                startedAt: sessionStartedAt.addingTimeInterval(3),
+                completedAt: sessionStartedAt.addingTimeInterval(4),
+                succeeded: true
+            )
+        )
     }
 }
 

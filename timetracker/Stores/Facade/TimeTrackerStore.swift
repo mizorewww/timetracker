@@ -110,6 +110,12 @@ final class TimeTrackerStore {
     @ObservationIgnored var checklistVisualSuggestionRetryAfterByItemID: [UUID: Date] = [:]
     @ObservationIgnored var checklistVisualSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
     var preferences = AppPreferences.defaults
+    var persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
+    var effectivePersistenceWriteSafety: PersistenceWriteSafety {
+        guard writeAuthorization.usesApplicationState else { return .ready }
+        let applicationSafety = AppCloudSync.persistenceWriteSafety
+        return applicationSafety == .ready ? persistenceWriteSafety : applicationSafety
+    }
     var rollupDomainStore = RollupStore()
     var analyticsDomainStore = AnalyticsStore()
     var analyticsRevision: UInt = 0
@@ -124,6 +130,10 @@ final class TimeTrackerStore {
     @ObservationIgnored var cloudAccountCheckRequestID: UUID?
     var lastSyncActivity: SyncActivityOutcome?
     var pendingSyncConflict: SyncConflictPrompt?
+    @ObservationIgnored var hasCompletedStartupConfiguration = false
+    @ObservationIgnored var hasBootstrappedSyncConflictState = false
+    @ObservationIgnored var isConfiguringStartup = false
+    @ObservationIgnored var shouldRetryStartupConfiguration = false
 
     enum RangePreset: String, CaseIterable, Identifiable {
         case today = "Today"

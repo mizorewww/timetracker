@@ -5,6 +5,30 @@ import Testing
 
 @Suite(.serialized)
 struct PersistenceWriteSafetyTests {
+    @Test @MainActor
+    func isolatedStoreDoesNotInheritOrObserveApplicationRecoveryState() throws {
+        let defaults = UserDefaults.standard
+        let key = AppCloudSync.activeCloudReconciliationKey
+        let previousValue = defaults.object(forKey: key)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+        defaults.set(true, forKey: key)
+
+        let isolatedStore = makeTestStore()
+        isolatedStore.configureIfNeeded(context: try makeTestContext())
+        let applicationStore = TimeTrackerStore()
+
+        #expect(isolatedStore.effectivePersistenceWriteSafety == .ready)
+        #expect(isolatedStore.syncObservers.isEmpty)
+        #expect(isolatedStore.cloudAccountCheckRequestID == nil)
+        #expect(applicationStore.effectivePersistenceWriteSafety != .ready)
+    }
+
     @Test
     func recoveryDiagnosticsDescribeTheSelectedStoreWithoutChangingRecoveryState() {
         let safety = PersistenceWriteSafety.ephemeral("The database could not be opened.")

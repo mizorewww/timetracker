@@ -49,19 +49,61 @@ extension TimeTrackerStore {
         ]
         syncObservers = names.map { name in
             let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
-                guard let store = self else { return }
-                if let exportID = store.cloudExportStartIdentifier(for: name, notification: notification) {
-                    Task { @MainActor in
-                        store.recordCloudExportStart(eventID: exportID)
+                MainActor.assumeIsolated { [weak self] in
+                    guard let store = self else { return }
+                    if let event = notification.userInfo?[
+                        NSPersistentCloudKitContainer.eventNotificationUserInfoKey
+                    ] as? NSPersistentCloudKitContainer.Event,
+                        event.endDate != nil {
+                        do {
+                            try store.syncConflictService.recordCloudRecoveryContainerEvent(event)
+                        } catch {
+                            store.recordCloudExportStateFailure(error)
+                            return
+                        }
                     }
-                    return
-                }
-                guard let reason = store.syncRefreshReason(for: name, notification: notification) else { return }
-                Task { @MainActor in
+                    if let exportID = store.cloudExportStartIdentifier(
+                        for: name,
+                        notification: notification
+                    ) {
+                        store.recordCloudExportStart(eventID: exportID)
+                        return
+                    }
+                    guard let reason = store.syncRefreshReason(
+                        for: name,
+                        notification: notification
+                    ) else { return }
                     store.scheduleQuietRefresh(reason: reason)
                 }
             }
             return SyncNotificationObserverToken(token)
+        }
+        let recoveryToken = center.addObserver(
+            forName: .appCloudRecoveryStateChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { [weak self] in
+                self?.refreshCloudRecoveryPresentationState()
+            }
+        }
+        syncObservers.append(SyncNotificationObserverToken(recoveryToken))
+        for reason in CloudRecoveryImportBuffer.shared.stopAndDrain() {
+            scheduleQuietRefresh(reason: reason)
+        }
+        do {
+            if AppCloudSync.isCloudImportRecoveryActive,
+               try syncConflictService.hasCompletedCloudRecoveryImportReceipt() {
+                scheduleQuietRefresh(
+                    reason: .cloudImportFinished(
+                        succeeded: true,
+                        reportsConflict: false,
+                        failureMessage: nil
+                    )
+                )
+            }
+        } catch {
+            recordCloudExportStateFailure(error)
         }
     }
 
@@ -90,20 +132,20 @@ extension TimeTrackerStore {
         switch event.type {
         case .import:
             return .cloudImportFinished(
-                succeeded: event.error == nil,
+                succeeded: event.succeeded,
                 reportsConflict: SyncConflictService.isConflictLikeCloudError(event.error),
                 failureMessage: event.error?.localizedDescription
             )
         case .export:
             return .cloudExportFinished(
                 eventID: event.identifier,
-                succeeded: event.error == nil,
+                succeeded: event.succeeded,
                 reportsConflict: SyncConflictService.isConflictLikeCloudError(event.error),
                 failureMessage: event.error?.localizedDescription
             )
         case .setup:
             return .cloudSetupFinished(
-                succeeded: event.error == nil,
+                succeeded: event.succeeded,
                 failureMessage: event.error?.localizedDescription
             )
         @unknown default:
@@ -136,7 +178,12 @@ extension TimeTrackerStore {
                 processingFailure = error
             }
             do {
-                try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))
+                let plan = refreshPlanner.plan(after: [.remoteImportCompleted])
+                if hasCompletedStartupConfiguration {
+                    try refresh(plan: plan)
+                } else {
+                    try refreshCoordinator.refreshReadModels(self, plan: plan)
+                }
             } catch {
                 processingFailure = processingFailure ?? error
             }
@@ -162,17 +209,45 @@ extension TimeTrackerStore {
 
     private func updateConflictState(after batch: SyncRefreshBatch) throws {
         guard let modelContext else { return }
-        let completedExports = completedCloudExportResults
-        completedCloudExportResults.removeAll()
-        for (eventID, succeeded) in completedExports {
-            try syncConflictService.markCloudExportFinished(eventID: eventID, succeeded: succeeded)
-        }
-        if batch.requiresCloudImportHandling {
+        let shouldHandleCloudImport = AppCloudSync.isCloudImportRecoveryActive
+            ? batch.hasSuccessfulCloudImport
+            : batch.requiresCloudImportHandling
+        if shouldHandleCloudImport {
             pendingSyncConflict = try syncConflictService.handleCloudImport(
                 context: modelContext
             )
         } else {
             pendingSyncConflict = try syncConflictService.prompt()
         }
+        let completedExports = Array(completedCloudExportResults)
+        for (eventID, succeeded) in completedExports {
+            try syncConflictService.markCloudExportFinished(eventID: eventID, succeeded: succeeded)
+            completedCloudExportResults.removeValue(forKey: eventID)
+        }
+        persistenceWriteSafety = writeAuthorization.usesApplicationState
+            ? AppCloudSync.persistenceWriteSafety
+            : .ready
+        if persistenceWriteSafety == .ready,
+           pendingSyncConflict == nil,
+           hasCompletedStartupConfiguration == false {
+            configureIfNeeded(context: modelContext)
+        }
+    }
+
+    private func refreshCloudRecoveryPresentationState() {
+        persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
+        do {
+            pendingSyncConflict = try syncConflictService.prompt()
+        } catch {
+            recordCloudExportStateFailure(error)
+            return
+        }
+        guard persistenceWriteSafety == .ready,
+              pendingSyncConflict == nil,
+              hasCompletedStartupConfiguration == false,
+              let modelContext else {
+            return
+        }
+        configureIfNeeded(context: modelContext)
     }
 }

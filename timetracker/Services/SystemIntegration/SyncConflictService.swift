@@ -39,6 +39,13 @@ struct SyncConflictService {
 
     private func bootstrapWithLockedState(context: ModelContext) throws -> SyncConflictPrompt? {
         var state = try loadState()
+        if AppCloudSync.isCloudDownloadRecoveryActive,
+           state.cloudDownloadRecoveryCompleted == true {
+            AppCloudSync.completeCloudDownloadRecovery()
+            state.cloudDownloadRecoveryCompleted = nil
+            state.clearCloudRecoveryImportSession()
+            try saveState(state)
+        }
         if let pendingSnapshot = pendingForcedUploadSnapshotForRestore(from: state) {
             try pendingSnapshot.restoreAsLocalWinner(context: context)
             let uploadedSnapshot = try SyncDataSnapshot.capture(context: context)
@@ -55,7 +62,30 @@ struct SyncConflictService {
                 state.clearPendingConflict()
             }
             try saveState(state)
+            AppCloudSync.completeCloudReconciliation()
             return nil
+        }
+        if state.pendingForcedUploadSnapshot != nil,
+           pendingLocalIntent(from: state) == .reconcileWithCloud {
+            if state.pendingLocalIntent == nil {
+                state.pendingLocalIntent = .reconcileWithCloud
+                try saveState(state)
+            }
+            if AppCloudSync.persistenceMode == AppCloudSync.modeICloud {
+                AppCloudSync.activateCloudReconciliation()
+            }
+            return prompt(from: state)
+        }
+        if AppCloudSync.isCloudReconciliationActive {
+            // The authoritative state may have committed just before a crash
+            // that prevented the defaults marker from being cleared.
+            AppCloudSync.completeCloudReconciliation()
+        }
+
+        if AppCloudSync.isCloudImportRecoveryActive == false,
+           state.cloudRecoveryImportSession != nil {
+            state.clearCloudRecoveryImportSession()
+            try saveState(state)
         }
 
         if let prompt = prompt(from: state) {
@@ -112,11 +142,30 @@ struct SyncConflictService {
     func pendingForcedUploadSnapshotForRestore(
         from state: SyncConflictState
     ) -> SyncDataSnapshot? {
-        guard let snapshot = state.pendingForcedUploadSnapshot,
+        guard pendingLocalIntent(from: state) == .explicitlyReplaceCloud,
+              let snapshot = state.pendingForcedUploadSnapshot,
               snapshot.hasProtectableUserContent else {
             return nil
         }
         return snapshot
+    }
+
+    func pendingLocalIntent(from state: SyncConflictState) -> SyncPendingLocalIntent? {
+        guard state.pendingForcedUploadSnapshot != nil else { return nil }
+        return state.pendingLocalIntent ?? .reconcileWithCloud
+    }
+
+    func persistedPendingLocalIntent() throws -> SyncPendingLocalIntent? {
+        let state = try loadState()
+        return pendingLocalIntent(from: state)
+    }
+
+    func requireNoAttachedCloudRecovery() throws {
+        let defaults = UserDefaults.standard
+        guard AppCloudSync.isCloudImportRecoveryActive == false,
+              defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false else {
+            throw SyncConflictError.cloudRecoveryAlreadyInProgress
+        }
     }
 
     func prompt(from state: SyncConflictState) -> SyncConflictPrompt? {

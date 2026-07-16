@@ -5,6 +5,139 @@ import Testing
 @Suite(.serialized)
 struct CoreSyncActivityOutcomeTests {
     @Test @MainActor
+    func earlyCloudImportBufferIsIdempotentAndReleasesItsObserver() {
+        let buffer = CloudRecoveryImportBuffer(
+            center: NotificationCenter(),
+            recordReceipt: { _ in }
+        )
+        let reason = TimeTrackerStore.SyncRefreshReason.cloudImportFinished(
+            succeeded: true,
+            reportsConflict: false,
+            failureMessage: nil
+        )
+
+        buffer.startIfNeeded()
+        buffer.startIfNeeded()
+        #expect(buffer.isObserving)
+        buffer.record(reason)
+        #expect(buffer.stopAndDrain().count == 1)
+        #expect(buffer.isObserving == false)
+        #expect(buffer.stopAndDrain().isEmpty)
+
+        buffer.startIfNeeded()
+        buffer.record(reason)
+        buffer.stopAndDiscard()
+        #expect(buffer.isObserving == false)
+        #expect(buffer.stopAndDrain().isEmpty)
+    }
+
+    @Test
+    func initialCloudImportReceiptRequiresCurrentEpochSetupAndMatchingStore() {
+        let epoch = Date(timeIntervalSinceReferenceDate: 50_000)
+        var session = CloudRecoveryImportSession(
+            id: UUID(),
+            kind: .downloadCloud,
+            startedAt: epoch
+        )
+
+        session.record(receipt(
+            store: "store-a",
+            kind: .import,
+            startedAt: epoch.addingTimeInterval(2)
+        ))
+        #expect(session.hasCompletedInitialImport == false)
+
+        session.record(receipt(
+            store: "store-a",
+            kind: .setup,
+            startedAt: epoch.addingTimeInterval(-1)
+        ))
+        session.record(receipt(
+            store: "store-a",
+            kind: .setup,
+            startedAt: epoch.addingTimeInterval(1),
+            succeeded: false
+        ))
+        #expect(session.storeIdentifier == nil)
+
+        session.record(receipt(
+            store: "store-a",
+            kind: .setup,
+            startedAt: epoch.addingTimeInterval(1)
+        ))
+        session.record(receipt(
+            store: "store-a",
+            kind: .import,
+            startedAt: epoch.addingTimeInterval(1.25)
+        ))
+        #expect(session.hasCompletedInitialImport == false)
+        session.record(receipt(
+            store: "store-b",
+            kind: .import,
+            startedAt: epoch.addingTimeInterval(2)
+        ))
+        #expect(session.hasCompletedInitialImport == false)
+
+        session.record(receipt(
+            store: "store-a",
+            kind: .import,
+            startedAt: epoch.addingTimeInterval(3)
+        ))
+        #expect(session.hasCompletedInitialImport)
+    }
+
+    @Test @MainActor
+    func cloudRecoveryReceiptsPersistAcrossServiceRecreation() throws {
+        let stateURL = temporaryStateURL()
+        defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
+        let epoch = Date(timeIntervalSinceReferenceDate: 60_000)
+        let firstService = SyncConflictService(stateURL: stateURL)
+        try firstService.beginCloudRecoveryImportSession(
+            kind: .downloadCloud,
+            startedAt: epoch
+        )
+        let firstSessionID = try #require(
+            try firstService.loadState().cloudRecoveryImportSession?.id
+        )
+        try firstService.recordCloudRecoveryContainerEvent(receipt(
+            store: "persisted-store",
+            kind: .setup,
+            startedAt: epoch.addingTimeInterval(1)
+        ))
+
+        let secondService = SyncConflictService(stateURL: stateURL)
+        try secondService.recordCloudRecoveryContainerEvent(receipt(
+            store: "persisted-store",
+            kind: .import,
+            startedAt: epoch.addingTimeInterval(2)
+        ))
+
+        let thirdService = SyncConflictService(stateURL: stateURL)
+        let completed = try #require(
+            try thirdService.loadState().cloudRecoveryImportSession
+        )
+        #expect(completed.id == firstSessionID)
+        #expect(completed.kind == .downloadCloud)
+        #expect(completed.storeIdentifier == "persisted-store")
+        #expect(completed.setupCompletedAt != nil)
+        #expect(completed.initialImportCompletedAt != nil)
+        #expect(completed.hasCompletedInitialImport)
+
+        try thirdService.beginCloudRecoveryImportSession(
+            kind: .reconcileWithCloud,
+            startedAt: epoch.addingTimeInterval(10)
+        )
+        let replacement = try #require(
+            try thirdService.loadState().cloudRecoveryImportSession
+        )
+        #expect(replacement.id != firstSessionID)
+        #expect(replacement.kind == .reconcileWithCloud)
+        #expect(replacement.storeIdentifier == nil)
+        #expect(replacement.setupCompletedAt == nil)
+        #expect(replacement.initialImportCompletedAt == nil)
+    }
+
+    @Test @MainActor
     func failedCloudEventCannotBecomeRecentGreenActivity() throws {
         let completedAt = Date(timeIntervalSinceReferenceDate: 10_000)
         let reason = TimeTrackerStore.SyncRefreshReason.cloudExportFinished(
@@ -125,12 +258,19 @@ struct CoreSyncActivityOutcomeTests {
         batch.insert(failure)
 
         #expect(batch.requiresCloudImportHandling)
+        #expect(batch.hasSuccessfulCloudImport)
         #expect(batch.reasons.count == 2)
         #expect(batch.activityReason?.priority == failure.priority)
 
         batch.insert(conflict)
         #expect(batch.requiresCloudImportHandling)
+        #expect(batch.hasSuccessfulCloudImport == false)
         #expect(batch.activityReason?.priority == conflict.priority)
+
+        var failedImportOnly = TimeTrackerStore.SyncRefreshBatch()
+        failedImportOnly.insert(conflict)
+        #expect(failedImportOnly.requiresCloudImportHandling)
+        #expect(failedImportOnly.hasSuccessfulCloudImport == false)
     }
 
     private func cloudStatus() -> SyncStatus {
@@ -144,5 +284,26 @@ struct CoreSyncActivityOutcomeTests {
                 result: .available
             )
         )
+    }
+
+    private func receipt(
+        store: String,
+        kind: CloudRecoveryContainerEventReceipt.EventKind,
+        startedAt: Date,
+        succeeded: Bool = true
+    ) -> CloudRecoveryContainerEventReceipt {
+        CloudRecoveryContainerEventReceipt(
+            storeIdentifier: store,
+            kind: kind,
+            startedAt: startedAt,
+            completedAt: startedAt.addingTimeInterval(0.5),
+            succeeded: succeeded
+        )
+    }
+
+    private func temporaryStateURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("CloudRecoveryReceiptTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("SyncState.json")
     }
 }

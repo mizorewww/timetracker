@@ -7,7 +7,8 @@ extension SyncConflictService {
         resolution: SyncConflictResolution,
         context: ModelContext
     ) throws -> SyncConflictResolutionResult {
-        try withLockedFreshStoreContext(context: context) { lockedContext in
+        try requireNoAttachedCloudRecovery()
+        return try withLockedFreshStoreContext(context: context) { lockedContext in
             try withExclusiveStateAccess {
                 try resolveWithLockedState(
                     expectedConflictID: expectedConflictID,
@@ -55,6 +56,7 @@ extension SyncConflictService {
         }
 
         state.advanceSyncEpoch()
+        state.clearCloudRecoveryImportSession()
         switch resolution {
         case .uploadLocal:
             guard let localSnapshot = state.localSnapshot else {
@@ -66,6 +68,7 @@ extension SyncConflictService {
             state.localFingerprint = try resolvedSnapshot.fingerprint()
             state.advanceLocalGeneration()
             state.pendingForcedUploadSnapshot = resolvedSnapshot
+            state.pendingLocalIntent = .explicitlyReplaceCloud
         case .downloadCloud:
             guard let cloudSnapshot = state.pendingCloudSnapshot else {
                 throw SyncConflictError.cloudSnapshotMissing
@@ -77,10 +80,11 @@ extension SyncConflictService {
             state.localFingerprint = fingerprint
             state.baseFingerprint = fingerprint
             state.baseAcknowledgedGeneration = state.localGeneration
-            state.pendingForcedUploadSnapshot = nil
+            state.clearPendingLocalRecovery()
         }
         state.clearPendingConflict()
         try saveState(state)
+        AppCloudSync.completeCloudReconciliation()
         return .appliedImmediately
     }
 

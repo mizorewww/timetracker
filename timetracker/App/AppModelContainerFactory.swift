@@ -79,8 +79,10 @@ extension timetrackerApp {
             }
         }
 
+        AppCloudSync.prepareInterruptedCloudDownloadRecovery()
+        let hasProtectedRecoverySnapshot = AppCloudSync.preparePendingCloudRecoveryReset()
         let recoveryGate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
-            canResetUpload: SyncConflictService.hasDefaultPendingForcedUploadBackup()
+            canResetUpload: hasProtectedRecoverySnapshot
         )
 
         let completedRecovery: AppCloudSync.CompletedCloudRecovery
@@ -103,6 +105,11 @@ extension timetrackerApp {
             )
         }
 
+        if UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
+            AppCloudSync.isCloudImportRecoveryActive ||
+            completedRecovery.reset == .download {
+            CloudRecoveryImportBuffer.shared.startIfNeeded()
+        }
         do {
             let container = try ModelContainer(
                 for: schema,
@@ -112,6 +119,7 @@ extension timetrackerApp {
             AppCloudSync.recordCloudKitEnabled(after: completedRecovery)
             return container
         } catch {
+            CloudRecoveryImportBuffer.shared.stopAndDiscard()
             AppCloudSync.recordLocalFallback(error: error)
             do {
                 return try ModelContainer(

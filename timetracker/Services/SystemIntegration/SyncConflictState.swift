@@ -15,6 +15,7 @@ enum SyncConflictError: LocalizedError {
     case localSnapshotMissing
     case cloudSnapshotMissing
     case uploadSnapshotMissing
+    case cloudRecoveryAlreadyInProgress
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +25,8 @@ enum SyncConflictError: LocalizedError {
             return AppStrings.localized("sync.conflict.error.cloudSnapshotMissing")
         case .uploadSnapshotMissing:
             return AppStrings.localized("sync.conflict.error.uploadSnapshotMissing")
+        case .cloudRecoveryAlreadyInProgress:
+            return AppStrings.localized("sync.conflict.error.recoveryInProgress")
         }
     }
 }
@@ -35,15 +38,82 @@ struct SyncCloudExportCheckpoint: Codable, Equatable {
     let startedAt: Date
 }
 
+enum SyncPendingLocalIntent: String, Codable, Equatable {
+    case reconcileWithCloud
+    case explicitlyReplaceCloud
+}
+
+enum CloudRecoveryImportKind: String, Codable, Equatable {
+    case reconcileWithCloud
+    case downloadCloud
+}
+
+struct CloudRecoveryContainerEventReceipt: Equatable {
+    enum EventKind: Equatable {
+        case setup
+        case `import`
+        case export
+    }
+
+    let storeIdentifier: String
+    let kind: EventKind
+    let startedAt: Date
+    let completedAt: Date
+    let succeeded: Bool
+}
+
+struct CloudRecoveryImportSession: Codable, Equatable {
+    let id: UUID
+    let kind: CloudRecoveryImportKind
+    let startedAt: Date
+    var storeIdentifier: String? = nil
+    var setupCompletedAt: Date? = nil
+    var initialImportCompletedAt: Date? = nil
+
+    var hasCompletedInitialImport: Bool {
+        storeIdentifier != nil &&
+            setupCompletedAt != nil &&
+            initialImportCompletedAt != nil
+    }
+
+    mutating func record(_ receipt: CloudRecoveryContainerEventReceipt) {
+        guard receipt.succeeded,
+              receipt.startedAt >= startedAt else {
+            return
+        }
+
+        switch receipt.kind {
+        case .setup:
+            guard storeIdentifier == nil || storeIdentifier == receipt.storeIdentifier else {
+                return
+            }
+            storeIdentifier = receipt.storeIdentifier
+            setupCompletedAt = receipt.completedAt
+        case .import:
+            guard storeIdentifier == receipt.storeIdentifier,
+                  let setupCompletedAt,
+                  receipt.startedAt >= setupCompletedAt else {
+                return
+            }
+            initialImportCompletedAt = receipt.completedAt
+        case .export:
+            return
+        }
+    }
+}
+
 struct SyncConflictState: Codable {
     var baseFingerprint: String?
     var localSnapshot: SyncDataSnapshot?
     var localFingerprint: String?
     var pendingForcedUploadSnapshot: SyncDataSnapshot?
+    var pendingLocalIntent: SyncPendingLocalIntent?
     var pendingConflictID: UUID?
     var pendingDetectedAt: Date?
     var pendingCloudSnapshot: SyncDataSnapshot?
     var pendingConflictWorkingSnapshot: SyncDataSnapshot?
+    var cloudDownloadRecoveryCompleted: Bool?
+    var cloudRecoveryImportSession: CloudRecoveryImportSession?
     var syncEpoch: UInt64?
     var localGeneration: UInt64?
     var baseAcknowledgedGeneration: UInt64?
@@ -63,6 +133,15 @@ struct SyncConflictState: Codable {
         pendingDetectedAt = nil
         pendingCloudSnapshot = nil
         pendingConflictWorkingSnapshot = nil
+    }
+
+    mutating func clearPendingLocalRecovery() {
+        pendingForcedUploadSnapshot = nil
+        pendingLocalIntent = nil
+    }
+
+    mutating func clearCloudRecoveryImportSession() {
+        cloudRecoveryImportSession = nil
     }
 
     mutating func rotatePendingConflictIdentity() {

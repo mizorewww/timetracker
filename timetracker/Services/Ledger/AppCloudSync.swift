@@ -14,6 +14,10 @@ enum AppCloudSync {
     static let accountStatusKey = "TimeTrackerCloudAccountStatus"
     static let pendingCloudUploadResetKey = "TimeTrackerPendingCloudUploadReset"
     static let pendingCloudDownloadResetKey = "TimeTrackerPendingCloudDownloadReset"
+    static let queuedCloudReconciliationKey = "TimeTrackerQueuedCloudReconciliation"
+    static let activeCloudReconciliationKey = "TimeTrackerActiveCloudReconciliation"
+    static let cloudRecoveryStoreResetKey = "TimeTrackerCloudRecoveryStoreReset"
+    static let activeCloudDownloadRecoveryKey = "TimeTrackerActiveCloudDownloadRecovery"
     static let modeICloud = "iCloud"
     static let modeLocal = "Local"
     static let modeLocalFallback = "Local fallback"
@@ -40,7 +44,8 @@ enum AppCloudSync {
         if persistenceMode == modeInMemoryFallback {
             return .ephemeral(lastError)
         }
-        if UserDefaults.standard.bool(forKey: pendingCloudDownloadResetKey) {
+        if UserDefaults.standard.bool(forKey: pendingCloudDownloadResetKey) ||
+            isCloudRecoveryPending {
             return .cloudRecoveryPending(lastError)
         }
         return .ready
@@ -48,6 +53,24 @@ enum AppCloudSync {
 
     static var allowsUserWrites: Bool {
         persistenceWriteSafety == .ready
+    }
+
+    static var isCloudRecoveryPending: Bool {
+        isCloudReconciliationActive ||
+            UserDefaults.standard.bool(forKey: cloudRecoveryStoreResetKey) ||
+            isCloudDownloadRecoveryActive
+    }
+
+    static var isCloudReconciliationActive: Bool {
+        UserDefaults.standard.bool(forKey: activeCloudReconciliationKey)
+    }
+
+    static var isCloudDownloadRecoveryActive: Bool {
+        UserDefaults.standard.bool(forKey: activeCloudDownloadRecoveryKey)
+    }
+
+    static var isCloudImportRecoveryActive: Bool {
+        isCloudReconciliationActive || isCloudDownloadRecoveryActive
     }
 
     /// Permanent tombstone deletion is safe only for stores that cannot later
@@ -65,8 +88,8 @@ enum AppCloudSync {
 
     /// Local persistent stores can be temporary waypoints while CloudKit is
     /// unavailable or waiting for a restart. Preserve every committed mutation
-    /// so the next CloudKit launch can rebuild from the local winner instead of
-    /// silently accepting an older remote snapshot.
+    /// so the next CloudKit launch can compare both branches before asking the
+    /// user which one should win.
     static var shouldStageLocalMutationsForCloudRecovery: Bool {
         guard isEnabled else { return false }
         switch persistenceMode {
@@ -96,19 +119,35 @@ enum AppCloudSync {
     }
 
     static func recordCloudKitEnabled(after recovery: CompletedCloudRecovery) {
+        let defaults = UserDefaults.standard
         AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
-        UserDefaults.standard.set(modeICloud, forKey: modeKey)
-        UserDefaults.standard.removeObject(forKey: errorKey)
-        UserDefaults.standard.removeObject(forKey: pendingCloudUploadResetKey)
-        UserDefaults.standard.removeObject(forKey: pendingCloudDownloadResetKey)
+        defaults.set(modeICloud, forKey: modeKey)
+        defaults.removeObject(forKey: errorKey)
+        let activatesReconciliation = defaults.bool(forKey: queuedCloudReconciliationKey)
+        if activatesReconciliation {
+            defaults.set(true, forKey: activeCloudReconciliationKey)
+            defaults.removeObject(forKey: queuedCloudReconciliationKey)
+        }
+        if recovery.reset == .download {
+            defaults.set(true, forKey: activeCloudDownloadRecoveryKey)
+        }
+        if activatesReconciliation || recovery.reset != .upload {
+            defaults.removeObject(forKey: cloudRecoveryStoreResetKey)
+        }
+        defaults.removeObject(forKey: pendingCloudUploadResetKey)
+        defaults.removeObject(forKey: pendingCloudDownloadResetKey)
         logger.info(
             "CloudKit storage is active after completed recovery: \(String(describing: recovery.reset), privacy: .public)"
         )
     }
 
     static func recordCloudKitDisabledByUser() {
-        UserDefaults.standard.set(modeLocal, forKey: modeKey)
-        UserDefaults.standard.removeObject(forKey: errorKey)
+        cancelCloudReconciliation()
+        completeCloudDownloadRecovery()
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: pendingCloudDownloadResetKey)
+        defaults.set(modeLocal, forKey: modeKey)
+        defaults.removeObject(forKey: errorKey)
         logger.info("CloudKit storage is disabled by user preference")
     }
 
@@ -132,6 +171,10 @@ enum AppCloudSync {
         UserDefaults.standard.removeObject(forKey: errorKey)
         UserDefaults.standard.removeObject(forKey: pendingCloudUploadResetKey)
         UserDefaults.standard.removeObject(forKey: pendingCloudDownloadResetKey)
+        UserDefaults.standard.removeObject(forKey: queuedCloudReconciliationKey)
+        UserDefaults.standard.removeObject(forKey: activeCloudReconciliationKey)
+        UserDefaults.standard.removeObject(forKey: cloudRecoveryStoreResetKey)
+        UserDefaults.standard.removeObject(forKey: activeCloudDownloadRecoveryKey)
     }
 
     static func recordDemoDataMode() {
@@ -139,6 +182,51 @@ enum AppCloudSync {
         UserDefaults.standard.removeObject(forKey: errorKey)
     }
 
+    static func activateCloudReconciliation() {
+        let defaults = UserDefaults.standard
+        defaults.set(true, forKey: activeCloudReconciliationKey)
+        defaults.removeObject(forKey: queuedCloudReconciliationKey)
+    }
+
+    static func completeCloudReconciliation() {
+        let defaults = UserDefaults.standard
+        let hadPendingRecovery = defaults.bool(forKey: queuedCloudReconciliationKey) ||
+            defaults.bool(forKey: activeCloudReconciliationKey) ||
+            defaults.bool(forKey: cloudRecoveryStoreResetKey)
+        defaults.removeObject(forKey: queuedCloudReconciliationKey)
+        defaults.removeObject(forKey: activeCloudReconciliationKey)
+        defaults.removeObject(forKey: cloudRecoveryStoreResetKey)
+        if hadPendingRecovery {
+            NotificationCenter.default.post(name: .appCloudRecoveryStateChanged, object: nil)
+        }
+    }
+
+    static func completeCloudDownloadRecovery() {
+        let defaults = UserDefaults.standard
+        let wasActive = defaults.bool(forKey: activeCloudDownloadRecoveryKey)
+        defaults.removeObject(forKey: activeCloudDownloadRecoveryKey)
+        if wasActive {
+            NotificationCenter.default.post(name: .appCloudRecoveryStateChanged, object: nil)
+        }
+    }
+
+    static func cancelCloudReconciliation() {
+        let defaults = UserDefaults.standard
+        let hadReconciliation = defaults.bool(forKey: queuedCloudReconciliationKey) ||
+            defaults.bool(forKey: activeCloudReconciliationKey) ||
+            defaults.bool(forKey: cloudRecoveryStoreResetKey)
+        completeCloudReconciliation()
+        if hadReconciliation {
+            defaults.removeObject(forKey: pendingCloudUploadResetKey)
+        }
+    }
+
+}
+
+extension Notification.Name {
+    static let appCloudRecoveryStateChanged = Notification.Name(
+        "TimeTrackerAppCloudRecoveryStateChanged"
+    )
 }
 
 /// Selects the write-safety authority used by a store facade.
@@ -149,6 +237,11 @@ enum AppCloudSync {
 enum StoreWriteAuthorization {
     case applicationState
     case isolatedTestHarness
+
+    var usesApplicationState: Bool {
+        if case .applicationState = self { return true }
+        return false
+    }
 
     func requireUserWritesAllowed() throws {
         switch self {

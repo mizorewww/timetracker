@@ -28,6 +28,7 @@ extension SyncConflictService {
                 // The mirror is consulted only when authoritative state is
                 // absent; a valid state with nil pending data suppresses it.
                 recoveredState.pendingForcedUploadSnapshot = backup
+                recoveredState.pendingLocalIntent = inferredPendingLocalIntentForRecoveryMirror()
                 try saveStateWithoutLock(recoveredState)
             }
             return recoveredState
@@ -74,6 +75,24 @@ extension SyncConflictService {
             try synchronizePendingForcedUploadMirrorWithoutLock(with: state)
         }
         return state
+    }
+
+    /// The independent mirror predates intent persistence and intentionally
+    /// remains snapshot-only for backwards compatibility. Defaults written
+    /// before the destructive reset still distinguish explicit replacement
+    /// from reconciliation when the authoritative state had to be quarantined.
+    private func inferredPendingLocalIntentForRecoveryMirror() -> SyncPendingLocalIntent {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
+            defaults.bool(forKey: AppCloudSync.activeCloudReconciliationKey) {
+            return .reconcileWithCloud
+        }
+        if defaults.bool(forKey: AppCloudSync.pendingCloudUploadResetKey) ||
+            defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) {
+            return .explicitlyReplaceCloud
+        }
+        // Legacy or incomplete metadata must never silently replace CloudKit.
+        return .reconcileWithCloud
     }
 
     func loadPendingForcedUploadSnapshot() throws -> SyncDataSnapshot? {

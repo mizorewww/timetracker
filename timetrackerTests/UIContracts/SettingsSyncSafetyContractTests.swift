@@ -132,6 +132,8 @@ struct SettingsSyncSafetyContractTests {
             #expect(source.contains("\"dialog.forceUpload.confirm\""), "Missing upload confirmation in \(file)")
             #expect(source.contains("\"dialog.forceDownload.confirm\""), "Missing download confirmation in \(file)")
             #expect(source.contains("\"sync.forceUpload.conflictResolved\""), "Missing upload result in \(file)")
+            #expect(source.contains("\"sync.recovery.deferred.conflictingRequests\""), "Missing conflicting recovery copy in \(file)")
+            #expect(source.contains("\"sync.conflict.error.recoveryInProgress\""), "Missing active recovery copy in \(file)")
         }
     }
 
@@ -171,7 +173,7 @@ struct SettingsSyncSafetyContractTests {
             observerSource.range(of: "try updateConflictState(after: batch)")
         )
         let readModelRefresh = try #require(
-            observerSource.range(of: "try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))")
+            observerSource.range(of: "let plan = refreshPlanner.plan(after: [.remoteImportCompleted])")
         )
         let activityRecording = try #require(
             observerSource.range(of: "recordSyncActivity(for: activityReason)")
@@ -179,6 +181,13 @@ struct SettingsSyncSafetyContractTests {
         #expect(conflictUpdate.lowerBound < readModelRefresh.lowerBound)
         #expect(readModelRefresh.lowerBound < activityRecording.lowerBound)
         #expect(observerSource.contains("pendingSyncConflict = try syncConflictService.handleCloudImport("))
+        let importHandling = try #require(
+            observerSource.range(of: "pendingSyncConflict = try syncConflictService.handleCloudImport(")
+        )
+        let exportAcknowledgement = try #require(
+            observerSource.range(of: "try syncConflictService.markCloudExportFinished(")
+        )
+        #expect(importHandling.lowerBound < exportAcknowledgement.lowerBound)
         #expect(
             observerSource.contains(
                 "processingFailureMessage: processingFailure.localizedDescription"
@@ -189,5 +198,84 @@ struct SettingsSyncSafetyContractTests {
         #expect(observerSource.contains("lastSyncRefreshAt") == false)
         #expect(feedbackSource.contains("case let .failed(message)"))
         #expect(feedbackSource.contains("(0...120).contains(now.timeIntervalSince(activity.completedAt))"))
+    }
+
+    @Test
+    func cloudRecoveryWaitsForTheJournaledInitialImport() throws {
+        let factorySource = try sourceText("timetracker/App/AppModelContainerFactory.swift")
+        let bufferSource = try sourceText(
+            "timetracker/Services/SystemIntegration/CloudReconciliationImportBuffer.swift"
+        )
+        let configurationSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+Configuration.swift"
+        )
+        let observerSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift"
+        )
+        let refreshModelSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncRefreshModels.swift"
+        )
+        let contentSource = try sourceText("timetracker/App/ContentView.swift")
+        let settingsSceneSource = try sourceText("timetracker/App/SettingsSceneView.swift")
+        let recoveryServiceSource = try sourceText(
+            "timetracker/Services/SystemIntegration/SyncConflictService+Recovery.swift"
+        )
+        let cloudImportSource = try sourceText(
+            "timetracker/Services/SystemIntegration/SyncConflictService+CloudImport.swift"
+        )
+        let recoveryEventSource = try sourceText(
+            "timetracker/Services/SystemIntegration/SyncConflictService+CloudRecoveryEvents.swift"
+        )
+        let conflictStateSource = try sourceText(
+            "timetracker/Services/SystemIntegration/SyncConflictState.swift"
+        )
+
+        let bufferStart = try #require(factorySource.range(of: "startIfNeeded()"))
+        let cloudContainer = try #require(
+            factorySource.range(of: "configurations: [cloudConfiguration]", options: .backwards)
+        )
+        let recoveryBranch = try #require(
+            configurationSource.range(of: "if writeAuthorization.usesApplicationState && AppCloudSync.isCloudRecoveryPending")
+        )
+        let preferenceMigration = try #require(
+            configurationSource.range(of: "SyncedPreferenceService.migrateSensitivePreferences")
+        )
+
+        #expect(bufferStart.lowerBound < cloudContainer.lowerBound)
+        #expect(bufferSource.contains("event.type == .import"))
+        #expect(bufferSource.contains("event.endDate != nil"))
+        #expect(bufferSource.contains("event.succeeded"))
+        #expect(bufferSource.contains("try recordReceipt(receipt)"))
+        #expect(observerSource.contains("CloudRecoveryImportBuffer.shared.stopAndDrain()"))
+        #expect(observerSource.contains("recordCloudRecoveryContainerEvent(event)"))
+        #expect(observerSource.contains("batch.hasSuccessfulCloudImport"))
+        #expect(refreshModelSource.contains("var hasSuccessfulCloudImport: Bool"))
+        #expect(cloudImportSource.contains("cloudRecoveryImportIsReady(in: state)"))
+        #expect(recoveryEventSource.contains("event.storeIdentifier"))
+        #expect(recoveryEventSource.contains("event.succeeded"))
+        #expect(conflictStateSource.contains("receipt.startedAt >= startedAt"))
+        #expect(conflictStateSource.contains("storeIdentifier == receipt.storeIdentifier"))
+        #expect(conflictStateSource.contains("receipt.startedAt >= setupCompletedAt"))
+        #expect(recoveryBranch.lowerBound < preferenceMigration.lowerBound)
+        #expect(configurationSource.contains("configureCloudRecovery(context: context)"))
+        let recoveryConfiguration = try #require(
+            configurationSource.slice(
+                from: "private func configureCloudRecovery(context: ModelContext)",
+                to: "/// Attaches persistence repositories"
+            )
+        )
+        #expect(recoveryConfiguration.contains("refreshCoordinator.refreshReadModels("))
+        #expect(recoveryConfiguration.contains("refreshCloudAccountStatus") == false)
+        #expect(recoveryConfiguration.contains("try refresh()") == false)
+        #expect(contentSource.contains("store.effectivePersistenceWriteSafety"))
+        #expect(settingsSceneSource.contains("store.effectivePersistenceWriteSafety"))
+
+        let downloadIntent = try #require(
+            recoveryServiceSource.range(of: "AppCloudSync.requestCloudDownloadReset()")
+        )
+        let stateLoad = try #require(
+            recoveryServiceSource.range(of: "var state = try loadState()", range: downloadIntent.lowerBound..<recoveryServiceSource.endIndex)
+        )
+        #expect(downloadIntent.lowerBound < stateLoad.lowerBound)
     }
 }

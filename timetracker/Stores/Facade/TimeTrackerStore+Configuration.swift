@@ -3,10 +3,47 @@ import SwiftData
 
 extension TimeTrackerStore {
     func configureIfNeeded(context: ModelContext) {
-        guard taskRepository == nil else { return }
+        guard hasCompletedStartupConfiguration == false else { return }
+        guard isConfiguringStartup == false else {
+            shouldRetryStartupConfiguration = true
+            return
+        }
+        isConfiguringStartup = true
+        defer {
+            isConfiguringStartup = false
+            if shouldRetryStartupConfiguration {
+                shouldRetryStartupConfiguration = false
+                configureIfNeeded(context: context)
+            }
+        }
+        if writeAuthorization.usesApplicationState {
+            persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
+            guard AppCloudSync.allowsUserWrites || AppCloudSync.isCloudRecoveryPending else {
+                return
+            }
+        } else {
+            persistenceWriteSafety = .ready
+        }
         configureRepositoriesIfNeeded(context: context)
         guard taskRepository != nil else { return }
-        installSyncObservers()
+        if writeAuthorization.usesApplicationState {
+            installSyncObservers()
+        }
+
+        if writeAuthorization.usesApplicationState && AppCloudSync.isCloudRecoveryPending {
+            configureCloudRecovery(context: context)
+            return
+        }
+        let configuresSyncConflictState = writeAuthorization.usesApplicationState ||
+            syncConflictService.stateURLOverride != nil
+        if configuresSyncConflictState,
+           pendingSyncConflict == nil {
+            pendingSyncConflict = try? syncConflictService.prompt()
+        }
+        if pendingSyncConflict != nil {
+            configureCloudRecovery(context: context)
+            return
+        }
 
         var startupErrors: [Error] = []
         do {
@@ -32,15 +69,11 @@ extension TimeTrackerStore {
         } catch {
             startupErrors.append(error)
         }
-        do {
-            pendingSyncConflict = try syncConflictService.bootstrap(context: context)
-        } catch {
-            startupErrors.append(error)
-            do {
-                pendingSyncConflict = try syncConflictService.bootstrap(context: context)
-            } catch {
-                startupErrors.append(error)
-            }
+        if configuresSyncConflictState {
+            bootstrapSyncConflictStateIfNeeded(
+                context: context,
+                startupErrors: &startupErrors
+            )
         }
         do {
             try refresh()
@@ -51,8 +84,63 @@ extension TimeTrackerStore {
         if let firstError = startupErrors.first {
             errorMessage = firstError.localizedDescription
         }
-        Task {
-            await refreshCloudAccountStatus()
+        hasCompletedStartupConfiguration = true
+        persistenceWriteSafety = writeAuthorization.usesApplicationState
+            ? AppCloudSync.persistenceWriteSafety
+            : .ready
+        if writeAuthorization.usesApplicationState,
+           timetrackerApp.isUnitTestHost() == false {
+            Task {
+                await refreshCloudAccountStatus()
+            }
+        }
+    }
+
+    /// Installs only the read-side synchronization pipeline while a protected
+    /// local branch is being compared with the freshly imported CloudKit store.
+    /// Migrations, seeding, and other startup writes wait until reconciliation
+    /// has either matched the branches or produced a user-visible conflict.
+    private func configureCloudRecovery(context: ModelContext) {
+        var startupErrors: [Error] = []
+        bootstrapSyncConflictStateIfNeeded(
+            context: context,
+            startupErrors: &startupErrors
+        )
+        do {
+            try refreshCoordinator.refreshReadModels(
+                self,
+                plan: refreshPlanner.plan(after: [.fullSync])
+            )
+        } catch {
+            startupErrors.append(error)
+        }
+        persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
+        if let firstError = startupErrors.first {
+            errorMessage = firstError.localizedDescription
+        }
+        if persistenceWriteSafety == .ready,
+           pendingSyncConflict == nil {
+            configureIfNeeded(context: context)
+        }
+    }
+
+    /// A corrupt primary state file is quarantined by the first load. Retry
+    /// once so bootstrap can recover from the independent protected snapshot,
+    /// then remember the successful bootstrap across recovery-to-startup
+    /// recursion to avoid restoring an explicit local winner twice.
+    private func bootstrapSyncConflictStateIfNeeded(
+        context: ModelContext,
+        startupErrors: inout [Error]
+    ) {
+        guard hasBootstrappedSyncConflictState == false else { return }
+        for _ in 0..<2 {
+            do {
+                pendingSyncConflict = try syncConflictService.bootstrap(context: context)
+                hasBootstrappedSyncConflictState = true
+                return
+            } catch {
+                startupErrors.append(error)
+            }
         }
     }
 

@@ -299,6 +299,9 @@
 "sync.recovery.deferred.uploadSnapshotUnavailable" = "云端恢复正在等待可读取的受保护上传快照。";
 "sync.recovery.error.storeRemoval" = "云端恢复无法移除持久化存储：%@";
 "sync.recovery.error.stateRemoval" = "云端恢复无法移除同步冲突状态：%@";
+"sync.recovery.error.statePreparation" = "云端恢复无法保存初始同步检查点：%@";
+"sync.recovery.deferred.conflictingRequests" = "云端恢复发现相互冲突的上传和下载请求。请重新选择一个恢复方向后再重启。";
+"sync.conflict.error.recoveryInProgress" = "云端恢复正在进行。请等待完成后再选择其他数据副本。";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";

@@ -1019,9 +1019,17 @@ private func withWatchCloudSyncMode(_ body: () throws -> Void) throws {
     let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
     let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
     let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    let previousQueuedReconciliation = defaults.object(forKey: AppCloudSync.queuedCloudReconciliationKey)
+    let previousActiveReconciliation = defaults.object(forKey: AppCloudSync.activeCloudReconciliationKey)
+    let previousCloudRecoveryStoreReset = defaults.object(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+    let previousActiveCloudDownloadRecovery = defaults.object(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
     defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
     defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
     defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+    defaults.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
+    defaults.removeObject(forKey: AppCloudSync.activeCloudReconciliationKey)
+    defaults.removeObject(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+    defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
     defer {
         if let previousMode {
             defaults.set(previousMode, forKey: AppCloudSync.modeKey)
@@ -1037,6 +1045,26 @@ private func withWatchCloudSyncMode(_ body: () throws -> Void) throws {
             defaults.set(previousDownloadReset, forKey: AppCloudSync.pendingCloudDownloadResetKey)
         } else {
             defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+        }
+        if let previousQueuedReconciliation {
+            defaults.set(previousQueuedReconciliation, forKey: AppCloudSync.queuedCloudReconciliationKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
+        }
+        if let previousActiveReconciliation {
+            defaults.set(previousActiveReconciliation, forKey: AppCloudSync.activeCloudReconciliationKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.activeCloudReconciliationKey)
+        }
+        if let previousCloudRecoveryStoreReset {
+            defaults.set(previousCloudRecoveryStoreReset, forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+        }
+        if let previousActiveCloudDownloadRecovery {
+            defaults.set(previousActiveCloudDownloadRecovery, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+        } else {
+            defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
         }
     }
     try body()

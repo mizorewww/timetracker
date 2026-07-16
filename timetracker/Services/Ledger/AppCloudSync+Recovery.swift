@@ -13,24 +13,6 @@ extension AppCloudSync {
         ).url
     }
 
-    static func requestCloudRetryAfterRecovery() {
-        AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
-        UserDefaults.standard.set(true, forKey: enabledKey)
-        UserDefaults.standard.removeObject(forKey: errorKey)
-    }
-
-    static func requestCloudUploadReset() {
-        UserDefaults.standard.set(true, forKey: pendingCloudUploadResetKey)
-        requestCloudRetryAfterRecovery()
-        logger.warning("Queued CloudKit upload recovery reset")
-    }
-
-    static func requestCloudDownloadReset() {
-        UserDefaults.standard.set(true, forKey: pendingCloudDownloadResetKey)
-        requestCloudRetryAfterRecovery()
-        logger.warning("Queued CloudKit download recovery reset")
-    }
-
     /// Executes a queued CloudKit reset without acknowledging it.
     ///
     /// The pending defaults remain set until a CloudKit container has been
@@ -41,11 +23,17 @@ extension AppCloudSync {
         canResetUpload: Bool = true,
         storeURL: URL? = nil,
         removeStoreFiles: (@MainActor (URL) throws -> Void)? = nil,
-        removeSyncConflictState: (@MainActor () throws -> Void)? = nil
+        removeSyncConflictState: (@MainActor () throws -> Void)? = nil,
+        beginCloudImportSession: (@MainActor (CloudRecoveryImportKind) throws -> Void)? = nil
     ) -> CloudRecoveryGate {
         let defaults = UserDefaults.standard
         let shouldResetForDownload = defaults.bool(forKey: pendingCloudDownloadResetKey)
         let shouldResetForUpload = defaults.bool(forKey: pendingCloudUploadResetKey)
+        let shouldMarkRecoveryStoreReset = shouldResetForUpload
+        if shouldResetForDownload && shouldResetForUpload {
+            logger.error("Refused conflicting CloudKit upload and download recovery requests")
+            return .deferred(.conflictingRecoveryRequests)
+        }
         guard shouldResetForDownload || shouldResetForUpload else {
             return .completed(CompletedCloudRecovery(reset: .none))
         }
@@ -74,9 +62,11 @@ extension AppCloudSync {
             ) {
                 performPendingCloudRecoveryResetWithLockedStore(
                     shouldResetForDownload: shouldResetForDownload,
+                    shouldMarkRecoveryStoreReset: shouldMarkRecoveryStoreReset,
                     storeURL: resolvedStoreURL,
                     storeFileRemover: storeFileRemover,
-                    removeSyncConflictState: removeSyncConflictState
+                    removeSyncConflictState: removeSyncConflictState,
+                    beginCloudImportSession: beginCloudImportSession
                 )
             }
         } catch {
@@ -91,10 +81,15 @@ extension AppCloudSync {
 
     private static func performPendingCloudRecoveryResetWithLockedStore(
         shouldResetForDownload: Bool,
+        shouldMarkRecoveryStoreReset: Bool,
         storeURL: URL,
         storeFileRemover: @MainActor (URL) throws -> Void,
-        removeSyncConflictState: (@MainActor () throws -> Void)?
+        removeSyncConflictState: (@MainActor () throws -> Void)?,
+        beginCloudImportSession: (@MainActor (CloudRecoveryImportKind) throws -> Void)?
     ) -> CloudRecoveryGate {
+        if shouldMarkRecoveryStoreReset {
+            UserDefaults.standard.set(true, forKey: cloudRecoveryStoreResetKey)
+        }
         do {
             try storeFileRemover(storeURL)
         } catch {
@@ -128,6 +123,33 @@ extension AppCloudSync {
                 )
                 return .failed(
                     CloudRecoveryFailure(stage: .syncConflictStateRemoval, underlyingError: error)
+                )
+            }
+        }
+
+        let importKind: CloudRecoveryImportKind?
+        if reset == .download {
+            importKind = .downloadCloud
+        } else if UserDefaults.standard.bool(forKey: queuedCloudReconciliationKey) {
+            importKind = .reconcileWithCloud
+        } else {
+            importKind = nil
+        }
+        if let importKind {
+            let sessionStarter = beginCloudImportSession ?? { kind in
+                try SyncConflictService().beginCloudRecoveryImportSession(kind: kind)
+            }
+            do {
+                try sessionStarter(importKind)
+            } catch {
+                logger.error(
+                    "CloudKit recovery could not persist its initial import session: \(error.localizedDescription, privacy: .public)"
+                )
+                return .failed(
+                    CloudRecoveryFailure(
+                        stage: .syncConflictStatePreparation,
+                        underlyingError: error
+                    )
                 )
             }
         }
@@ -211,11 +233,14 @@ extension AppCloudSync {
 
     enum CloudRecoveryDeferral: LocalizedError, Equatable {
         case protectedUploadSnapshotUnavailable
+        case conflictingRecoveryRequests
 
         var errorDescription: String? {
             switch self {
             case .protectedUploadSnapshotUnavailable:
                 AppStrings.localized("sync.recovery.deferred.uploadSnapshotUnavailable")
+            case .conflictingRecoveryRequests:
+                AppStrings.localized("sync.recovery.deferred.conflictingRequests")
             }
         }
     }
@@ -224,6 +249,7 @@ extension AppCloudSync {
         enum Stage: Equatable {
             case persistentStoreRemoval
             case syncConflictStateRemoval
+            case syncConflictStatePreparation
         }
 
         let stage: Stage
@@ -239,6 +265,11 @@ extension AppCloudSync {
             case .syncConflictStateRemoval:
                 String(
                     format: AppStrings.localized("sync.recovery.error.stateRemoval"),
+                    underlyingError.localizedDescription
+                )
+            case .syncConflictStatePreparation:
+                String(
+                    format: AppStrings.localized("sync.recovery.error.statePreparation"),
                     underlyingError.localizedDescription
                 )
             }

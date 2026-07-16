@@ -9,7 +9,13 @@ struct SettingsSceneView: View {
     @State private var feedbackRouter = AppSceneFeedbackRouter()
 
     var body: some View {
-        SettingsView(store: store)
+        Group {
+            if store.effectivePersistenceWriteSafety == .ready {
+                SettingsView(store: store)
+            } else {
+                PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
+            }
+        }
             .environment(presentationRouter)
             .environment(feedbackRouter)
             .appPresentationHost(

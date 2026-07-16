@@ -299,6 +299,9 @@
 "sync.recovery.deferred.uploadSnapshotUnavailable" = "Cloud recovery is waiting for a readable protected upload snapshot.";
 "sync.recovery.error.storeRemoval" = "Cloud recovery could not remove the persistent store: %@";
 "sync.recovery.error.stateRemoval" = "Cloud recovery could not remove sync conflict state: %@";
+"sync.recovery.error.statePreparation" = "Cloud recovery could not save its initial sync checkpoint: %@";
+"sync.recovery.deferred.conflictingRequests" = "Cloud recovery found conflicting upload and download requests. Choose one recovery direction again before restarting.";
+"sync.conflict.error.recoveryInProgress" = "Cloud recovery is already in progress. Wait for it to finish before choosing another copy.";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";

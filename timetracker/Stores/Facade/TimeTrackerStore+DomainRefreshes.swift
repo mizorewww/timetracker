@@ -32,9 +32,11 @@ extension TimeTrackerStore {
         try refreshLedgerRelationshipVisibility()
     }
 
-    func refreshPomodoroDomain() throws {
+    func refreshPomodoroDomain(schedulesReconciliation: Bool = true) throws {
         pomodoroRuns = try pomodoroRepository?.runs().deduplicatedByID() ?? []
-        schedulePomodoroReconciliation()
+        if schedulesReconciliation {
+            schedulePomodoroReconciliation()
+        }
     }
 
     func refreshPreferenceDomain() throws {

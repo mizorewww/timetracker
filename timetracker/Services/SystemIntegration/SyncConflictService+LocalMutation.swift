@@ -60,7 +60,7 @@ extension SyncConflictService {
                 state.localSnapshot = snapshot
                 state.localFingerprint = try snapshot.fingerprint()
             }
-            if state.pendingForcedUploadSnapshot != nil {
+            if state.pendingLocalIntent == .explicitlyReplaceCloud {
                 state.pendingForcedUploadSnapshot = snapshot
             }
             state.advanceLocalGeneration()
@@ -76,9 +76,12 @@ extension SyncConflictService {
             state.localFingerprint = try snapshot.fingerprint()
             state.advanceLocalGeneration()
             state.pendingForcedUploadSnapshot = snapshot
+            if state.pendingLocalIntent != .explicitlyReplaceCloud {
+                state.pendingLocalIntent = .reconcileWithCloud
+            }
             try saveState(state)
             if shouldStageForCloudRecovery && !hasPendingUploadRecovery {
-                AppCloudSync.requestCloudUploadReset()
+                AppCloudSync.requestCloudReconciliationReset()
             }
         }
     }

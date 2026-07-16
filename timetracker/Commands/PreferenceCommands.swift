@@ -53,9 +53,14 @@ struct PreferenceCommandHandler {
         target.updatedAt = now
         target.deviceID = DeviceIdentity.current
         target.clientMutationID = UUID()
-        for duplicate in existing where duplicate !== target && duplicate.deletedAt == nil {
-            duplicate.deletedAt = now
-            duplicate.updatedAt = now
+        // A tombstone wins an exact timestamp tie for a logical key. Keep every
+        // superseded physical sibling strictly older than the canonical write,
+        // including tombstones that already existed before this mutation.
+        let supersededAt = now.addingTimeInterval(-1)
+        for duplicate in existing where duplicate !== target {
+            duplicate.deletedAt = supersededAt
+            duplicate.updatedAt = supersededAt
+            duplicate.deviceID = DeviceIdentity.current
             duplicate.clientMutationID = UUID()
         }
     }

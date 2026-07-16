@@ -98,6 +98,63 @@ struct PreferenceCommandValidationTests {
     }
 
     @Test @MainActor
+    func settingLogicalKeySupersedesActiveAndDeletedPhysicalSiblings() throws {
+        let base = Date(timeIntervalSinceReferenceDate: 250_000)
+        let mutationDate = base.addingTimeInterval(100)
+        let key = AppPreferenceKey.defaultFocusMinutes
+
+        for reverseInsertionOrder in [false, true] {
+            let context = try makeTestContext()
+            let activeWinner = SyncedPreference(
+                key: key.rawValue,
+                valueJSON: PreferenceJSON.encode(20),
+                deviceID: "cloud-a"
+            )
+            activeWinner.createdAt = base
+            activeWinner.updatedAt = base.addingTimeInterval(20)
+            let activeSibling = SyncedPreference(
+                key: key.rawValue,
+                valueJSON: PreferenceJSON.encode(10),
+                deviceID: "cloud-b"
+            )
+            activeSibling.createdAt = base.addingTimeInterval(10)
+            activeSibling.updatedAt = base.addingTimeInterval(10)
+            let deletedSibling = SyncedPreference(
+                key: key.rawValue,
+                valueJSON: PreferenceJSON.encode(5),
+                deviceID: "cloud-c"
+            )
+            deletedSibling.createdAt = base.addingTimeInterval(30)
+            deletedSibling.updatedAt = base.addingTimeInterval(30)
+            deletedSibling.deletedAt = base.addingTimeInterval(30)
+
+            let rows = [activeWinner, activeSibling, deletedSibling]
+            let insertionOrder = reverseInsertionOrder ? Array(rows.reversed()) : rows
+            for row in insertionOrder {
+                context.insert(row)
+            }
+            try context.save()
+
+            try PreferenceCommandHandler().set(
+                key: key,
+                valueJSON: PreferenceJSON.encode(55),
+                context: context,
+                now: mutationDate
+            )
+
+            let stored = try context.fetch(FetchDescriptor<SyncedPreference>())
+            let winner = try #require(SyncedPreferenceService.latestByKey(stored)[key.rawValue])
+            #expect(winner.deletedAt == nil)
+            #expect(winner.valueJSON == PreferenceJSON.encode(55))
+            #expect(winner.updatedAt == mutationDate)
+            #expect(stored.filter { $0 !== winner }.allSatisfy {
+                $0.deletedAt == mutationDate.addingTimeInterval(-1) &&
+                    $0.updatedAt == mutationDate.addingTimeInterval(-1)
+            })
+        }
+    }
+
+    @Test @MainActor
     func standaloneCommandRollsBackWhenReadOnlyStoreCannotSave() throws {
         let storeDirectory = try makeStoreDirectory()
         defer { try? FileManager.default.removeItem(at: storeDirectory) }

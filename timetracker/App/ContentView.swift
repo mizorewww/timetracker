@@ -36,7 +36,11 @@ struct ContentView: View {
         }
         .environment(presentationRouter)
         .environment(feedbackRouter)
-        .appPresentationHost(store: store, router: presentationRouter)
+        .appPresentationHost(
+            store: store,
+            router: presentationRouter,
+            feedbackRouter: feedbackRouter
+        )
         .appSceneFeedbackHost(router: feedbackRouter)
         #if os(iOS)
         .overlay(alignment: .bottom) {

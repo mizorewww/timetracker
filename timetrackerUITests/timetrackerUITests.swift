@@ -39,6 +39,27 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testPhoneSettingsSheetDismissesToAnUnmodifiedTodayStack() throws {
+        #if os(macOS)
+        throw XCTSkip("The phone Settings sheet requires an iOS simulator.")
+        #else
+        let app = launchApp(route: "settings")
+        let settings = app.descendants(matching: .any)["settings.view"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 8))
+        try capture("iphone-settings-scene-sheet", app: app)
+
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
+        activate(done)
+
+        XCTAssertTrue(settings.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(homeIsReady(in: app))
+        XCTAssertFalse(app.buttons["Back"].exists)
+        try capture("iphone-settings-dismissed-today", app: app)
+        #endif
+    }
+
+    @MainActor
     func testSyncRecoveryUsesExplicitDestructiveConfirmations() throws {
         #if os(macOS)
         throw XCTSkip("The compact Settings recovery flow requires an iOS simulator.")

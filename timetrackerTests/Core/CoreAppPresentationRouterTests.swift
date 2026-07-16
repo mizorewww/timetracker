@@ -81,6 +81,18 @@ struct CoreAppPresentationRouterTests {
     }
 
     @Test @MainActor
+    func settingsUsesTheTypedScenePresentationRoute() throws {
+        let router = AppPresentationRouter()
+
+        #expect(router.presentSettings())
+
+        guard case .settings = try #require(router.sheet).content else {
+            Issue.record("Settings did not use the scene presentation route.")
+            return
+        }
+    }
+
+    @Test @MainActor
     func separateSceneRoutersDoNotSharePresentationState() throws {
         let mainSceneRouter = AppPresentationRouter()
         let settingsSceneRouter = AppPresentationRouter()

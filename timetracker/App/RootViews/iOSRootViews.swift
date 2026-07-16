@@ -29,24 +29,18 @@ struct iOSRootView: View {
 
 struct PhoneRootView: View {
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
-    @State private var todayPath: [PhoneTodayRoute] = []
 
     var body: some View {
         TabView(selection: $selectedDestination) {
             Tab(value: .today) {
-                NavigationStack(path: $todayPath) {
+                NavigationStack {
                     PhoneHomeView(
                         store: store,
                         openSettings: openSettings,
                         openTask: openTask
                     )
-                        .navigationDestination(for: PhoneTodayRoute.self) { route in
-                            switch route {
-                            case .settings:
-                                SettingsView(store: store)
-                            }
-                        }
                 }
             } label: {
                 Label(AppStrings.today, systemImage: "house")
@@ -96,28 +90,20 @@ struct PhoneRootView: View {
             synchronize(with: destination)
         }
         .onChange(of: selectedDestination) { _, destination in
-            let storeDestination = destination == .today && todayPath.last == .settings
-                ? TimeTrackerStore.DesktopDestination.settings
-                : destination
-            guard store.desktopDestination != storeDestination else { return }
-            store.desktopDestination = storeDestination
-        }
-        .onChange(of: todayPath) { _, path in
-            guard selectedDestination == .today else { return }
-            let destination: TimeTrackerStore.DesktopDestination = path.last == .settings ? .settings : .today
-            guard store.desktopDestination != destination else { return }
+            guard destination != .settings,
+                  store.desktopDestination != destination else { return }
             store.desktopDestination = destination
+        }
+        .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
+            guard presentationID == nil,
+                  store.desktopDestination == .settings else { return }
+            synchronize(with: .settings)
         }
     }
 
     private func openSettings() {
-        selectedDestination = .today
-        if todayPath.last != .settings {
-            todayPath.append(.settings)
-        }
-        if store.desktopDestination != .settings {
-            store.desktopDestination = .settings
-        }
+        guard presentationRouter.presentSettings() else { return }
+        restoreContentDestinationAfterPresentingSettings()
     }
 
     private func openTask(_ taskID: UUID) {
@@ -128,29 +114,18 @@ struct PhoneRootView: View {
     private func synchronize(with destination: TimeTrackerStore.DesktopDestination) {
         switch destination {
         case .settings:
-            if selectedDestination != .today {
-                selectedDestination = .today
-            }
-            if todayPath.last != .settings {
-                todayPath.append(.settings)
-            }
-        case .today:
-            if selectedDestination != .today {
-                selectedDestination = .today
-            }
-            if !todayPath.isEmpty {
-                todayPath.removeAll()
-            }
-        case .inbox, .tasks, .pomodoro, .analytics:
+            openSettings()
+        case .today, .inbox, .tasks, .pomodoro, .analytics:
             if selectedDestination != destination {
                 selectedDestination = destination
             }
         }
     }
-}
 
-private enum PhoneTodayRoute: Hashable {
-    case settings
+    private func restoreContentDestinationAfterPresentingSettings() {
+        guard store.desktopDestination == .settings else { return }
+        store.desktopDestination = selectedDestination == .settings ? .today : selectedDestination
+    }
 }
 
 struct iPadRootView: View {

@@ -11,11 +11,13 @@ struct AppPresentationContractTests {
 
         #expect(content.contains("@State private var presentationRouter = AppPresentationRouter()"))
         #expect(content.contains(".environment(presentationRouter)"))
-        #expect(content.contains(".appPresentationHost(store: store, router: presentationRouter)"))
+        #expect(content.contains("router: presentationRouter,"))
+        #expect(content.contains("feedbackRouter: feedbackRouter"))
 
         #expect(settingsScene.contains("@State private var presentationRouter = AppPresentationRouter()"))
         #expect(settingsScene.contains(".environment(presentationRouter)"))
-        #expect(settingsScene.contains(".appPresentationHost(store: store, router: presentationRouter)"))
+        #expect(settingsScene.contains("router: presentationRouter,"))
+        #expect(settingsScene.contains("feedbackRouter: feedbackRouter"))
 
         #expect(app.contains("AppPresentationRouter") == false)
     }
@@ -33,6 +35,7 @@ struct AppPresentationContractTests {
             ".segmentEditor(",
             ".startTaskPicker",
             ".quickStartEditor(",
+            ".settings",
             ".llmConfiguration("
         ] {
             #expect(host.contains(route))
@@ -117,6 +120,7 @@ struct AppPresentationContractTests {
             "timetracker/Features/Settings/SettingsDataSectionsViews.swift"
         )
         let settingsView = try sourceText("timetracker/Features/Settings/SettingsViews.swift")
+        let presentationHost = try sourceText("timetracker/App/AppPresentationHost.swift")
 
         #expect(categorySections.contains("onAddTime") == false)
         #expect(categorySections.contains("presentManualTime") == false)
@@ -124,6 +128,28 @@ struct AppPresentationContractTests {
         #expect(dataSections.contains("AppStrings.addTime") == false)
         #expect(categorySections.contains("onConfigure: presentLLMConfiguration"))
         #expect(settingsView.contains("presentationRouter.presentLLMConfiguration(using: store)"))
+        #expect(presentationHost.contains("private struct AppSettingsSheet: View"))
+        #expect(presentationHost.contains("@State private var childRouter = AppPresentationRouter()"))
+        #expect(presentationHost.contains(".environment(childRouter)"))
+        #expect(presentationHost.contains("router: childRouter,"))
+        #expect(presentationHost.contains("feedbackRouter: feedbackRouter"))
+        #expect(presentationHost.contains(".environment(feedbackRouter)"))
+    }
+
+    @Test
+    func phoneSettingsUsesScenePresentationWithoutPollutingATabStack() throws {
+        let root = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let router = try sourceText("timetracker/App/AppPresentationRouter.swift")
+
+        #expect(root.contains("@Environment(AppPresentationRouter.self)"))
+        #expect(root.contains("presentationRouter.presentSettings()"))
+        #expect(root.contains("restoreContentDestinationAfterPresentingSettings()"))
+        #expect(root.contains("store.desktopDestination == .settings"))
+        #expect(root.contains("PhoneTodayRoute") == false)
+        #expect(root.contains("todayPath") == false)
+        #expect(root.contains("SettingsView(store: store)") == false)
+        #expect(router.contains("case settings"))
+        #expect(router.contains("func presentSettings() -> Bool"))
     }
 
     @Test

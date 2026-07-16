@@ -12,7 +12,11 @@ struct SettingsSceneView: View {
         SettingsView(store: store)
             .environment(presentationRouter)
             .environment(feedbackRouter)
-            .appPresentationHost(store: store, router: presentationRouter)
+            .appPresentationHost(
+                store: store,
+                router: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
             .appSceneFeedbackHost(router: feedbackRouter)
             .task {
                 store.configureIfNeeded(context: modelContext)

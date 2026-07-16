@@ -12,6 +12,7 @@ struct AppPresentation: Identifiable {
         case segmentEditor(SegmentEditorDraft)
         case startTaskPicker
         case quickStartEditor(selectedIDs: [UUID])
+        case settings
         case llmConfiguration(LLMConfigurationDraft)
     }
 
@@ -134,6 +135,11 @@ extension AppPresentationRouter {
     @discardableResult
     func presentQuickStartEditor(using store: TimeTrackerStore) -> Bool {
         present(.quickStartEditor(selectedIDs: store.preferences.quickStartTaskIDs))
+    }
+
+    @discardableResult
+    func presentSettings() -> Bool {
+        present(.settings)
     }
 
     @discardableResult

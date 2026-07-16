@@ -779,6 +779,18 @@
 
 验证：核心测试固定目录创建中断重放、发布前旧文件不变、崩溃临时文件回收、普通文件类型、保留锁路径、符号链接与 dangling symlink、跨 prefix 数量/字节/时间预算、超限删除、隔离回滚与回滚失败、硬链接别名互斥、写入/隔离共享 root 锁，以及每个生产文件不超过 160 行的职责合同。macOS 行为与结构套件、generic iOS 设备 SDK 自动签名构建都必须通过；iOS 构建还要保持主 App、Widget、Live Activity、Watch 的付费开发者签名及 APS、CloudKit、App Group 能力。一次性 xcresult 与路径记录在 dated Audit。
 
+## AD-061：iPhone 长页面使用系统 Tab Bar 下滚收起行为
+
+状态：Accepted
+
+背景：iOS 27 的 Liquid Glass Tab Bar 浮在滚动内容之上。正常字号截图证明 Focus 主动作和 Analytics 最后一组都可以滚到系统栏上方，但默认 `.automatic` 在 iOS 不会收起五项 Tab Bar，长页面浏览时持续占据较大的底部视觉层。给每个页面叠加固定 safe-area padding 会与动态系统 chrome 和既有 List/ScrollView inset 重复，且不能解决内容本身的信息层级问题。
+
+决策：仅 iPhone 的根 `TabView` 使用系统 `.tabBarMinimizeBehavior(.onScrollDown)`。首屏保留 Today、Inbox、Tasks、Focus、Analytics 五个顶级导航项；向下浏览长内容时由系统缩成当前标签，点按或回到顶部时按系统规则恢复。页面继续使用原生 List/ScrollView 安全区，不增加全局自制底栏或固定 bottom safe-area 补偿。Focus 首屏重排、任务身份去重等内容问题另行修复，不能用收起 Tab Bar 掩盖。
+
+后果：长页面获得更多可读空间，同时保持 Apple 平台原生导航、滚动与恢复动画。iPad 继续使用 Sidebar/Detail shell，不套用 iPhone 收起行为。以后若引入 `tabViewBottomAccessory`，必须重新验证 accessory placement 与收起后的内容边界，不能同时叠加固定底部空白。
+
+验证：正常字号 iPhone UI 测试必须让 Focus 主动作和 Analytics 最后一项完整位于当前系统 chrome 顶部至少 8 pt；截图同时确认首屏五项 Tab Bar 完整、下滚后缩为当前标签。generic iOS 设备 SDK 自动签名构建继续保留主 App、Widget、Live Activity、Watch 的付费签名与 APS、CloudKit、App Group。一次性设备与结果路径只记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

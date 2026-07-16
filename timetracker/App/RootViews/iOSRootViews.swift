@@ -89,6 +89,7 @@ struct PhoneRootView: View {
                     .accessibilityIdentifier("phone.tab.analytics")
             }
         }
+        .tabBarMinimizeBehavior(.onScrollDown)
         .accessibilityIdentifier("phone.tabView")
         .onAppear {
             synchronize(with: store.desktopDestination)

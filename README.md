@@ -39,7 +39,7 @@ Today 是日常使用的核心入口，回答三个问题：现在正在追踪�
 - 显示由任务预计时长或 checklist 证据驱动的剩余时间预测。
 - iPhone、iPad 与 macOS Today 都显示用户自定义倒计时事件；日、周、月、年这类低价值通用进度不再占据 Today。
 - Active Timer、Forecast 和 Timeline 行可以直接打开只读优先的任务详情。
-- iPhone 使用系统原生五标签 `TabView`，Settings 从 Today 工具栏进入；iPad 在所有窗口宽度都保持同一个 `NavigationSplitView`，由系统折叠或显示侧边栏而不切换根导航；macOS 使用 `NavigationSplitView` 和独立 Settings 场景。
+- iPhone 使用系统原生五标签 `TabView`，Settings 从 Today 工具栏以 scene-owned sheet 进入，关闭后保留原标签与导航；iPad 在所有窗口宽度都保持同一个 `NavigationSplitView`，由系统折叠或显示侧边栏而不切换根导航；macOS 使用 `NavigationSplitView` 和独立 Settings 场景。
 
 ### 任务与任务树
 
@@ -50,11 +50,13 @@ Today 是日常使用的核心入口，回答三个问题：现在正在追踪�
 - 任务支持状态，例如未完成、计划中、已完成。
 - 任务支持颜色、SF Symbol、备注、预计时间、截止时间等编辑信息。
 - 任务支持归档和软删除。
-- 移动任务时会防止循环。`parentID` 是层级权威；启动/同步恢复会修复 orphan/cycle，持久 `path` 是稳定 `/<UUID>` locator，用户可见标题路径即时派生，避免移动根节点时重写整棵子树。
+- 移动任务时会防止循环。`parentID` 是层级权威；普通启动/同步刷新只在投影中安全断开暂时 orphan/cycle，不改写 CloudKit 分阶段送达的事实，显式快照恢复才执行持久规范化。持久 `path` 是稳定 `/<UUID>` locator，用户可见标题路径即时派生，避免移动根节点时重写整棵子树。
 - 父任务的展示时间会递归包含自身和子任务时间。
 - 根任务可以归入用户自定义 Category，用于区分工作、学习、生活、健康等不同语境。
 - Category 可控制该分支是否参与预测，为后续不同预测模型和 HealthKit 等能力预留空间。
 - “已完成”是可恢复的工作状态：任务与历史仍留在任务树中，但自身和后代不能接收新计时、手动记录、番茄钟或 checklist 转入，直到用户重新打开完成路径上的阻塞任务。“归档”则隐藏整个分支。
+- 自身仍为进行中/计划中的子任务可以从已完成或归档父链移到根级或可用父任务，作为纠正错误归类的恢复出口；任务自身完成/归档时仍不能借移动绕过状态。
+- 任务编辑草稿记录任务、checklist 外观和分类 assignment 的 mutation baseline；并发窗口或同步结果改变相关内容后，旧草稿会拒绝保存，避免覆盖、复活或误删 sibling 变更。
 
 ### Checklist
 
@@ -103,7 +105,7 @@ Inbox 用于快速收集还没有整理归属的事项。
 
 - 快速新增收集项。
 - 收集项可以完成、删除、编辑。
-- 配置 OpenAI API 后，可自动建议应该归类到哪个任务。
+- 配置 OpenAI API 并明确开启设备本地的“自动建议”后，可自动建议应该归类到哪个任务；失败建议可重试，当前没有独立手动请求或建议编辑器。
 - 用户可以接受建议，把 Inbox 项转换为目标任务下的 checklist。
 - 用户也可以丢弃建议；编辑标题后可重新触发建议。
 - 新增输入只在数据库提交成功后清空；只读恢复状态或保存错误会保留原草稿，允许直接重试。
@@ -132,6 +134,7 @@ Inbox 用于快速收集还没有整理归属的事项。
 - 取消和完成都会同步更新 ledger。
 - 完成最终专注轮次会正确结束关联 session。
 - 开始前通过明确的“计划”和“任务”菜单完成选择，不再依赖点击计时器或标题的隐藏交互。
+- 专注页任务选择保持为页面本地状态，不改写任务页的全局选择；继续、完成和停止操作携带 `runID + state + clientMutationID` phase token，旧阶段操作不能命中下一轮同名状态。
 - 专注计划的时长、休息和轮次可在“设置 → 专注”中管理。
 - 当前阶段由持久 phase 状态和计划时长派生 deadline；后台挂起或重启后，过期专注会在同一 deadline 截断账本。休息结束后由用户明确开始下一轮，不在后台擅自创建 focus segment。
 - 编辑/删除活动番茄时间片和删除任务树会同步结束或 tombstone 对应 run，防止番茄状态与账本脱节。
@@ -191,6 +194,7 @@ Widget extension 与快照代码已经存在，主应用和扩展已启用 `grou
 - Debug 与 Release 的自动演示模式都默认为关闭；Debug/内部明确启用后使用独立、无 CloudKit 的 `TimeTracker-Demo.store`，不会把 demo 写入用户 store。
 - 普通生产 Local/iCloud/local-fallback/emergency store 永不物理 purge tombstone，避免离线设备复活旧数据；永久优化入口只在隔离 Demo/UI Test store 可用。
 - About 页面展示 app 图标、版本号、build number、branch、commit hash 和构建时间。
+- 只读恢复页可复制包含状态、错误、存储模式和 store 路径的诊断；Mac 还可打开数据目录并完整退出。诊断含本机路径，分享前必须检查和脱敏。
 - 共享设置行在辅助功能字号下会纵向换行，VoiceOver 直接读出标题/当前值/同步状态。破坏性动作同时使用系统 destructive 语义和红色文字/图标，不只依赖图标或颜色暗示风险。
 
 ## 数据模型

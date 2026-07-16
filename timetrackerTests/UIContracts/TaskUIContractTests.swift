@@ -493,7 +493,12 @@ struct TaskUIContractTests {
     @Test
     func analyticsOverlapSeparatesWallWindowsFromConservedExcess() throws {
         let modelSource = try sourceText("timetracker/Models/AnalyticsReadModels.swift")
-        let storeSource = try sourceText("timetracker/Stores/Domains/AnalyticsStore+Overlap.swift")
+        let storeSource = try [
+            "timetracker/Stores/Domains/AnalyticsStore+Overlap.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+OverlapMaterialization.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+OverlapParticipants.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+OverlapSweep.swift"
+        ].map(sourceText).joined(separator: "\n")
         let viewSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsOverlapViews.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 

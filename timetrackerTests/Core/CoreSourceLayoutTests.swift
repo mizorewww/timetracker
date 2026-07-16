@@ -28,6 +28,9 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Domains/AnalyticsStore+GroupBreakdowns.swift",
             "timetracker/Stores/Domains/AnalyticsStore+Metrics.swift",
             "timetracker/Stores/Domains/AnalyticsStore+Overlap.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+OverlapMaterialization.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+OverlapParticipants.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+OverlapSweep.swift",
             "timetracker/Stores/Domains/AnalyticsStore+TaskSnapshot.swift",
             "timetracker/Stores/Domains/AnalyticsSnapshotModels.swift",
             "timetracker/Stores/Domains/ChecklistStore.swift",
@@ -479,6 +482,9 @@ struct CoreSourceLayoutTests {
             "AnalyticsStore+GroupBreakdowns.swift",
             "AnalyticsStore+Metrics.swift",
             "AnalyticsStore+Overlap.swift",
+            "AnalyticsStore+OverlapMaterialization.swift",
+            "AnalyticsStore+OverlapParticipants.swift",
+            "AnalyticsStore+OverlapSweep.swift",
             "AnalyticsStore+TaskSnapshot.swift"
         ]
 

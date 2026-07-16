@@ -5,6 +5,34 @@ import Testing
 
 @Suite(.serialized)
 struct PersistenceWriteSafetyTests {
+    @Test
+    func recoveryDiagnosticsDescribeTheSelectedStoreWithoutChangingRecoveryState() {
+        let safety = PersistenceWriteSafety.ephemeral("The database could not be opened.")
+        let storeURL = URL(fileURLWithPath: "/tmp/TimeTracker/persistence.store")
+
+        let report = safety.diagnosticReport(
+            persistenceMode: AppCloudSync.modeInMemoryFallback,
+            storeURL: storeURL
+        )
+
+        #expect(report.contains(safety.title))
+        #expect(report.contains(safety.message))
+        #expect(report.contains(AppCloudSync.modeInMemoryFallback))
+        #expect(report.contains(storeURL.path))
+    }
+
+    @Test
+    func recoveryScreenOffersOnlySafeLifecycleActions() throws {
+        let source = try sourceText("timetracker/App/PersistenceRecoveryView.swift")
+
+        #expect(source.contains("didCopyDiagnostics = NSPasteboard.general.setString"))
+        #expect(source.contains("UIPasteboard.general.string = text"))
+        #expect(source.contains("NSWorkspace.shared.open(directory)"))
+        #expect(source.contains("NSApplication.shared.terminate(nil)"))
+        #expect(source.contains("requestCloudRetryAfterRecovery()") == false)
+        #expect(source.contains("removePersistentStoreFiles") == false)
+    }
+
     @Test @MainActor
     func standaloneRepositorySaveFailureRollsBackPendingChanges() throws {
         let directory = try makeStoreDirectory()

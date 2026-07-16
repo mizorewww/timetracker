@@ -281,7 +281,11 @@
 "persistence.ephemeral.message" = "时间追踪仅打开了临时内存存储以显示此恢复界面。编辑和计时已被禁用，因为临时更改会在退出后消失。请关闭 App、解决存储问题后重新打开。详情：%@";
 "persistence.error.noDetails" = "没有提供更多错误信息。";
 "persistence.readOnly.footer" = "此界面不会修改现有持久化数据。";
+"persistence.diagnostics.format" = "时间追踪持久化诊断\n状态：%@\n信息：%@\n存储模式：%@\n存储位置：%@";
 "persistence.copyDiagnostics" = "复制诊断信息";
+"persistence.diagnosticsCopied" = "已复制诊断信息";
+"persistence.openDataFolder" = "打开数据文件夹...";
+"persistence.openDataFolderFailed" = "无法在访达中打开数据文件夹。请复制诊断信息以查看存储位置。";
 "persistence.quit" = "退出时间追踪器";
 "sync.state.conflict.title" = "同步冲突需要选择";
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";

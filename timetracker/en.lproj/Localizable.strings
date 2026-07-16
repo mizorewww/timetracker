@@ -281,7 +281,11 @@
 "persistence.ephemeral.message" = "Time Tracker opened a temporary in-memory store only to show this recovery screen. Editing and timers are disabled because temporary changes would disappear. Close the app, resolve the storage problem, and reopen it. Details: %@";
 "persistence.error.noDetails" = "No additional error details were provided.";
 "persistence.readOnly.footer" = "Your existing persistent data is not modified from this screen.";
+"persistence.diagnostics.format" = "Time Tracker persistence diagnostics\nStatus: %@\nMessage: %@\nStorage mode: %@\nStore location: %@";
 "persistence.copyDiagnostics" = "Copy Diagnostics";
+"persistence.diagnosticsCopied" = "Diagnostics Copied";
+"persistence.openDataFolder" = "Open Data Folder...";
+"persistence.openDataFolderFailed" = "The data folder could not be opened in Finder. Copy the diagnostics for the store location.";
 "persistence.quit" = "Quit Time Tracker";
 "sync.state.conflict.title" = "Sync conflict needs a choice";
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";

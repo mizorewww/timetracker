@@ -6,6 +6,11 @@ import UIKit
 #endif
 
 struct PersistenceRecoveryView: View {
+    @State private var didCopyDiagnostics = false
+    #if os(macOS)
+    @State private var dataFolderError: String?
+    #endif
+
     let safety: PersistenceWriteSafety
 
     var body: some View {
@@ -30,11 +35,23 @@ struct PersistenceRecoveryView: View {
 
             HStack(spacing: 12) {
                 Button(action: copyDiagnostics) {
-                    Label(AppStrings.localized("persistence.copyDiagnostics"), systemImage: "doc.on.doc")
+                    Label(
+                        AppStrings.localized(
+                            didCopyDiagnostics
+                                ? "persistence.diagnosticsCopied"
+                                : "persistence.copyDiagnostics"
+                        ),
+                        systemImage: didCopyDiagnostics ? "checkmark" : "doc.on.doc"
+                    )
                 }
                 .buttonStyle(.bordered)
 
                 #if os(macOS)
+                Button(action: openDataFolder) {
+                    Label(AppStrings.localized("persistence.openDataFolder"), systemImage: "folder")
+                }
+                .buttonStyle(.bordered)
+
                 Button {
                     NSApplication.shared.terminate(nil)
                 } label: {
@@ -43,6 +60,15 @@ struct PersistenceRecoveryView: View {
                 .buttonStyle(.borderedProminent)
                 #endif
             }
+
+            #if os(macOS)
+            if let dataFolderError {
+                Text(dataFolderError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+            #endif
         }
         .frame(maxWidth: 560)
         .padding(32)
@@ -51,12 +77,27 @@ struct PersistenceRecoveryView: View {
     }
 
     private func copyDiagnostics() {
-        let text = "\(safety.title)\n\(safety.message)"
+        let text = safety.diagnosticReport(
+            persistenceMode: AppCloudSync.persistenceMode,
+            storeURL: AppCloudSync.persistentStoreURL
+        )
         #if os(macOS)
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        didCopyDiagnostics = NSPasteboard.general.setString(text, forType: .string)
         #else
         UIPasteboard.general.string = text
+        didCopyDiagnostics = true
         #endif
     }
+
+    #if os(macOS)
+    private func openDataFolder() {
+        let directory = AppCloudSync.persistentStoreURL.deletingLastPathComponent()
+        guard NSWorkspace.shared.open(directory) else {
+            dataFolderError = AppStrings.localized("persistence.openDataFolderFailed")
+            return
+        }
+        dataFolderError = nil
+    }
+    #endif
 }

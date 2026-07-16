@@ -44,6 +44,16 @@ enum PersistenceWriteSafety: Equatable {
         }
     }
 
+    func diagnosticReport(persistenceMode: String, storeURL: URL) -> String {
+        String(
+            format: AppStrings.localized("persistence.diagnostics.format"),
+            title,
+            message,
+            persistenceMode,
+            storeURL.path
+        )
+    }
+
     private static func message(key: String, detail: String?) -> String {
         let safeDetail = detail?.trimmingCharacters(in: .whitespacesAndNewlines)
         return String(

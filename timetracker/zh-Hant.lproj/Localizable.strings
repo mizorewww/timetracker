@@ -281,7 +281,11 @@
 "persistence.ephemeral.message" = "時間追蹤僅開啟暫時記憶體儲存空間以顯示此復原畫面。編輯與計時已停用，因為暫時變更會在結束後消失。請關閉 App、解決儲存問題後重新開啟。詳細資料：%@";
 "persistence.error.noDetails" = "沒有提供其他錯誤詳細資料。";
 "persistence.readOnly.footer" = "此畫面不會修改現有持久化資料。";
+"persistence.diagnostics.format" = "時間追蹤持久化診斷\n狀態：%@\n資訊：%@\n儲存模式：%@\n儲存位置：%@";
 "persistence.copyDiagnostics" = "複製診斷資訊";
+"persistence.diagnosticsCopied" = "已複製診斷資訊";
+"persistence.openDataFolder" = "開啟資料夾...";
+"persistence.openDataFolderFailed" = "無法在 Finder 中開啟資料夾。請複製診斷資訊以查看儲存位置。";
 "persistence.quit" = "結束時間追蹤器";
 "sync.state.conflict.title" = "同步衝突需要選擇";
 "sync.state.conflict.message" = "請選擇上傳本裝置資料覆蓋 iCloud，還是從 iCloud 下載覆蓋本裝置。";

@@ -679,6 +679,8 @@
 "taskCategory.symbol" = "符号";
 "taskCategory.includesForecast" = "子任务参与预测";
 "taskCategory.includesForecast.footer" = "适合工作类分类：清单进度会用于估算剩余时间。生活、习惯或健康类分类可以关闭，只保留记录。";
+"taskCategory.error.unavailable" = "此分类已不可用。";
+"taskCategory.error.changed" = "此分类已在其他位置发生变化。请查看最新版本后重试。";
 "taskCategory.forecastDisabled" = "这个分类已关闭预测";
 "checklist.title" = "清单";
 "checklist.progressFormat" = "已完成 %d/%d";

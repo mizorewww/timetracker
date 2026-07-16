@@ -679,6 +679,8 @@
 "taskCategory.symbol" = "Symbol";
 "taskCategory.includesForecast" = "Include tasks in forecasts";
 "taskCategory.includesForecast.footer" = "Use this for work-like categories where checklist progress should estimate remaining time. Turn it off for habit or life categories that should only be recorded.";
+"taskCategory.error.unavailable" = "This category is no longer available.";
+"taskCategory.error.changed" = "This category changed elsewhere. Review the latest version, then try again.";
 "taskCategory.forecastDisabled" = "Forecasting is off for this category";
 "checklist.title" = "Checklist";
 "checklist.progressFormat" = "%d/%d done";

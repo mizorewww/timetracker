@@ -1061,6 +1061,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：permutation 测试覆盖等 gross/wall 任务、等峰值小时和新旧 session 正反输入；完整 Analytics timeline/store 回归继续覆盖快照、DST、overlap、cache 与历史周期。
 
+## AD-084：Category 元数据与 task assignment 必须处于同一 store-scoped 事务域
+
+状态：Accepted
+
+背景：Category create/update/delete 直接使用 scene repository，而 task editor assignment 已使用 store lock。旧分类编辑器可以覆盖兄弟 scene 新值或在删除后静默保存；delete 与 assignment 交错时可能漏删新 assignment；两个 scene 创建又会从同一缓存 sortOrder 派生重复值。Repository 对 missing update/delete 的 silent return 还会让 sheet 关闭并谎称成功。
+
+决策：`TaskCategoryEditorDraft` 固化 `TaskCategoryMutationBaseline(categoryID, clientMutationID)`；`StoreScopedTaskCategoryCommandCoordinator` 取得 AD-069 的共享锁后创建 fresh context。创建锁内计算排序；编辑/删除要求 baseline 精确匹配 canonical category；删除与 assignment 在同一 atomic mutation domain 内处理 category 及全部当前 assignment。Sheet 删除直接提交初始 baseline，不先从刷新后的 Store 回查对象。Repository missing category 显式抛出 `TaskRepositoryError.categoryUnavailable`。
+
+后果：旧 scene 不能覆盖或删除后来版本，也不能复活墓碑；assignment-before-delete 被同次删除清理，delete-before-assignment 会被 task draft 的 category validation 拒绝。Stale 失败只刷新 task read model 并保留 sheet；用户必须查看最新版本后重试。分类 mutation baseline 独立放在 `TaskCategoryEditorDraftModels.swift`，不再膨胀通用草稿文件。
+
+验证：跨 scene 套件覆盖 stale edit/delete、删除后 edit、assignment 两种提交顺序、并发 create 排序和 repository missing 错误；原 Category、Task Draft、presentation、本地化与 model source-layout 套件必须继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

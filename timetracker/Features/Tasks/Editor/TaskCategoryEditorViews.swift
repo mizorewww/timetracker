@@ -131,11 +131,8 @@ struct TaskCategoryEditorSheet: View {
     }
 
     private func deleteCategory() {
-        guard let categoryID = draft.categoryID,
-              let category = store.taskCategory(for: categoryID) else {
-            return
-        }
-        if store.deleteTaskCategory(category) {
+        guard let baseline = draft.baseline else { return }
+        if store.deleteTaskCategory(baseline: baseline) {
             dismiss()
         }
     }

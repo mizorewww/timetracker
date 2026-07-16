@@ -75,31 +75,6 @@ struct TaskEditorDraft: Identifiable, Equatable {
     }
 }
 
-struct TaskCategoryEditorDraft: Identifiable, Equatable {
-    let id = UUID()
-    var categoryID: UUID?
-    var title: String
-    var colorHex: String
-    var iconName: String
-    var includesInForecast: Bool
-
-    init() {
-        self.categoryID = nil
-        self.title = ""
-        self.colorHex = "1677FF"
-        self.iconName = "square.grid.2x2"
-        self.includesInForecast = true
-    }
-
-    init(category: TaskCategory) {
-        self.categoryID = category.id
-        self.title = category.title
-        self.colorHex = category.colorHex ?? "1677FF"
-        self.iconName = category.iconName ?? "square.grid.2x2"
-        self.includesInForecast = category.includesInForecast
-    }
-}
-
 struct ChecklistEditorDraft: Identifiable, Equatable {
     let id: UUID
     var existingID: UUID?

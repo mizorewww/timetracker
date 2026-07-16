@@ -679,6 +679,8 @@
 "taskCategory.symbol" = "符號";
 "taskCategory.includesForecast" = "子任務參與預測";
 "taskCategory.includesForecast.footer" = "適合工作類分類：清單進度會用於估算剩餘時間。生活、習慣或健康類分類可以關閉，只保留記錄。";
+"taskCategory.error.unavailable" = "此分類已無法使用。";
+"taskCategory.error.changed" = "此分類已在其他位置發生變更。請查看最新版本後重試。";
 "taskCategory.forecastDisabled" = "這個分類已關閉預測";
 "checklist.title" = "清單";
 "checklist.progressFormat" = "已完成 %d/%d";

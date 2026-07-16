@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
@@ -8,32 +9,62 @@ extension TimeTrackerStore {
             return fail(.taskCategoryNameRequired)
         }
 
-        let didSave = perform(event: .taskChanged(taskID: nil, affectedAncestorIDs: [])) {
-            let repository = try requiredTaskRepository()
-            if let categoryID = draft.categoryID {
-                try repository.updateCategory(
-                    categoryID: categoryID,
-                    title: sanitizedTitle,
-                    colorHex: draft.colorHex,
-                    iconName: draft.iconName,
-                    includesInForecast: draft.includesInForecast
-                )
-            } else {
-                _ = try repository.createCategory(
-                    title: sanitizedTitle,
-                    colorHex: draft.colorHex,
-                    iconName: draft.iconName,
-                    includesInForecast: draft.includesInForecast
-                )
-            }
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
-        return didSave
+        var preparedDraft = draft
+        preparedDraft.title = sanitizedTitle
+        do {
+            let outcome = try StoreScopedTaskCategoryCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).save(draft: preparedDraft)
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            handleStoreScopedTaskCategoryError(error)
+            return false
+        }
     }
 
     @discardableResult
     func deleteTaskCategory(_ category: TaskCategory) -> Bool {
-        perform(event: .taskChanged(taskID: nil, affectedAncestorIDs: [])) {
-            try requiredTaskRepository().softDeleteCategory(categoryID: category.id)
+        deleteTaskCategory(baseline: TaskCategoryMutationBaseline(category: category))
+    }
+
+    @discardableResult
+    func deleteTaskCategory(baseline: TaskCategoryMutationBaseline) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
+        do {
+            let outcome = try StoreScopedTaskCategoryCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).delete(baseline: baseline)
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            handleStoreScopedTaskCategoryError(error)
+            return false
+        }
+    }
+
+    private func handleStoreScopedTaskCategoryError(_ error: Error) {
+        if error is StoreScopedTaskCategoryMutationError ||
+            (error as? TaskRepositoryError) == .categoryUnavailable {
+            do {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+            } catch {
+                errorMessage = String(
+                    format: AppStrings.localized("error.savedRefreshFailed"),
+                    error.localizedDescription
+                )
+                return
+            }
+        }
+        errorMessage = error.localizedDescription
     }
 }

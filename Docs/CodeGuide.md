@@ -134,6 +134,8 @@ TimeSegment 是计时事实来源。它不是“写入后永不可改”的 even
 
 Checklist 快捷新增、完成状态与重排由 `StoreScopedChecklistCommandCoordinator` 处理。新增命令在锁内验证 canonical task、执行与 task editor 相同的 UTF-8/控制字符校验，并从 fresh checklist 计算排序；完成状态携带 item `clientMutationID`，重排携带完整 item mutation map。目标已删除或任一 baseline 变化时必须拒绝旧操作、刷新 task/checklist read model，且不得推进同步 generation。成功事件中的 ancestor IDs 必须从锁内 fresh task hierarchy 计算，不能使用 scene facade 的旧父链。
 
+Task Category 创建、编辑和删除由 `StoreScopedTaskCategoryCommandCoordinator` 处理。`TaskCategoryEditorDraft` 在打开时固化 category ID 与 `clientMutationID`；编辑和删除必须提交这个 baseline，不能在按钮点按时从 Store 重新构造一个更新后的版本。创建在锁内从 fresh categories 计算 sortOrder；删除在同一事务内墓碑化 canonical category 与当时所有 assignment。Repository 对 missing category 必须抛出 `categoryUnavailable`，不能 silent return。由于 task draft assignment 共用同一锁，assignment-before-delete 会被删除清理，delete-before-assignment 会让 task draft 拒绝不可用分类。
+
 Analytics 不能把一个历史周期压缩成单个“结束前一秒”的伪 `now`。`AnalyticsPeriodEvaluation` 显式携带三项：选中的 Calendar `interval`、用于 `TrackedTimePolicy` 裁剪的 `cutoff`、用于识别真实系统时钟回拨的 `clockReference`。当前周期的 cutoff 是真实墙钟；已完成历史周期的 cutoff 必须精确等于半开区间的 `end`，未来周期的 cutoff 是 `start`。Ledger 的 range query 分别接收 `evaluatedAt` 和 `clockReference`；只有后者早于 index evaluation date 才能触发全库回拨候选，禁止把历史 cutoff 当作时钟回拨。
 
 `AnalyticsComparisonWindow` 是环比统计的唯一窗口定义。当前或未来周期使用 `.matchedProgress`：current 从周期开始裁到 cutoff，previous 按相同日序与本地时分秒映射，不能用固定秒数位移；DST 保留本地钟点，长月映射到短月时在 previous period end 截止。cutoff 精确等于已完成周期 end 时使用 `.completePeriods`，比较两个完整周期。gross、wall、指标脚注和 insight 必须消费同一个 window/basis，禁止 UI 自行推断“上一范围”。

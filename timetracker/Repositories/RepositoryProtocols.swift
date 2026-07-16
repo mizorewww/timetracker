@@ -92,9 +92,15 @@ extension PomodoroRepository {
 
 enum TaskRepositoryError: LocalizedError, Equatable {
     case invalidMove
+    case categoryUnavailable
 
     var errorDescription: String? {
-        AppStrings.localized("task.error.invalidMove")
+        switch self {
+        case .invalidMove:
+            AppStrings.localized("task.error.invalidMove")
+        case .categoryUnavailable:
+            AppStrings.localized("taskCategory.error.unavailable")
+        }
     }
 }
 

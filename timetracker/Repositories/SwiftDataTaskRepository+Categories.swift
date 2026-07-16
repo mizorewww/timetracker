@@ -69,7 +69,9 @@ extension SwiftDataTaskRepository {
             colorHex: colorHex,
             iconName: iconName
         )
-        guard let category = try category(id: categoryID) else { return }
+        guard let category = try category(id: categoryID) else {
+            throw TaskRepositoryError.categoryUnavailable
+        }
         category.title = values.title
         category.colorHex = values.colorHex
         category.iconName = values.iconName
@@ -81,7 +83,9 @@ extension SwiftDataTaskRepository {
     }
 
     func softDeleteCategory(categoryID: UUID) throws {
-        guard let category = try category(id: categoryID) else { return }
+        guard let category = try category(id: categoryID) else {
+            throw TaskRepositoryError.categoryUnavailable
+        }
         let now = Date()
         category.deletedAt = now
         category.updatedAt = now

@@ -38,7 +38,11 @@ extension SwiftDataTimeTrackingRepository {
             throw TimeTrackingRepositoryError.closedSegmentCannotReopen
         }
         let linkedSession = try session(id: segment.sessionID)
-        let isRebindingTask = segment.taskID != taskID || linkedSession.map { $0.taskID != taskID } == true
+        let liveSessionSegments = try segments(in: segment.sessionID).filter {
+            $0.deletedAt == nil
+        }
+        let isRebindingTask = liveSessionSegments.contains { $0.taskID != taskID } ||
+            linkedSession.map { $0.taskID != taskID } == true
         let reboundTitleSnapshot: String?
         if isRebindingTask {
             reboundTitleSnapshot = try preparedTrackableTitleSnapshot(for: taskID)
@@ -47,19 +51,27 @@ extension SwiftDataTimeTrackingRepository {
         }
 
         try context.performAtomicMutation {
-            segment.taskID = taskID
+            for sessionSegment in liveSessionSegments where
+                sessionSegment.id == segment.id || sessionSegment.taskID != taskID {
+                sessionSegment.taskID = taskID
+                sessionSegment.updatedAt = now
+                sessionSegment.deviceID = deviceID
+            }
             segment.startedAt = startedAt
             segment.endedAt = endedAt
-            segment.updatedAt = now
-            segment.deviceID = deviceID
 
             if let linkedSession {
                 linkedSession.taskID = taskID
                 if let reboundTitleSnapshot {
                     linkedSession.titleSnapshot = reboundTitleSnapshot
                 }
-                linkedSession.startedAt = try earliestStartedAt(for: linkedSession.id) ?? startedAt
-                linkedSession.endedAt = endedAt == nil ? nil : try latestEndedAt(for: linkedSession.id)
+                linkedSession.startedAt = liveSessionSegments.map(\.startedAt).min() ?? startedAt
+                linkedSession.endedAt = liveSessionSegments.contains { $0.endedAt == nil }
+                    ? nil
+                    : max(
+                        linkedSession.startedAt,
+                        liveSessionSegments.compactMap(\.endedAt).max() ?? linkedSession.startedAt
+                    )
                 linkedSession.note = preparedNote
                 linkedSession.markMutated(at: now, deviceID: deviceID)
             }

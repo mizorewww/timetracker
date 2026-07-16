@@ -697,7 +697,7 @@ struct TaskLedgerTests {
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = SegmentEditorDraft(segment: segment, note: session.note ?? "")
+        var draft = try #require(store.segmentEditorDraft(for: segment))
         #expect(draft.wasActive == false)
         draft.isActive = true
 
@@ -820,7 +820,7 @@ struct TaskLedgerTests {
         let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = SegmentEditorDraft(segment: segment, note: "")
+        var draft = try #require(store.segmentEditorDraft(for: segment))
         draft.startedAt = Date().addingTimeInterval(3_600)
         draft.isActive = true
 

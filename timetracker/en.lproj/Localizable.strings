@@ -398,6 +398,8 @@
 "task.delete.confirm.message" = "This task and its subtasks will be hidden on every synced device. Running timers and focus sessions in this task group will stop. Tracked history is kept.";
 "segment.delete.confirm.title" = "Delete Time Record?";
 "segment.delete.confirm.message" = "This record will be removed from totals and analytics.";
+"segment.editor.staleDraft" = "This time record changed elsewhere. Close and reopen the editor to review the latest version.";
+"segment.editor.inconsistentSession" = "This time record is linked to inconsistent focus data and cannot be edited safely.";
 "segment.error.endAfterStart" = "End time must be later than start time.";
 "segment.error.startNotFuture" = "An active timer cannot start in the future.";
 "segment.error.timeNotFuture" = "Time records cannot extend into the future.";

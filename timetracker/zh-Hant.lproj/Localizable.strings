@@ -398,6 +398,8 @@
 "task.delete.confirm.message" = "此任務及其子任務會在所有同步裝置上隱藏，其中正在執行的計時與專注會停止；已記錄的時間會保留。";
 "segment.delete.confirm.title" = "刪除時間記錄？";
 "segment.delete.confirm.message" = "此記錄將從總計與分析中移除。";
+"segment.editor.staleDraft" = "這筆時間記錄已在其他位置變更。請關閉並重新開啟編輯器以檢視最新內容。";
+"segment.editor.inconsistentSession" = "這筆時間記錄連結了不一致的專注資料，無法安全編輯。";
 "segment.error.endAfterStart" = "結束時間必須晚於開始時間。";
 "segment.error.startNotFuture" = "活動計時的開始時間不能晚於現在。";
 "segment.error.timeNotFuture" = "時間記錄不能延伸到未來。";

@@ -124,7 +124,11 @@ extension AppPresentationRouter {
 
     @discardableResult
     func presentEditSegment(_ segment: TimeSegment, using store: TimeTrackerStore) -> Bool {
-        present(.segmentEditor(SegmentEditorDraft(segment: segment, note: store.note(for: segment))))
+        guard let draft = store.segmentEditorDraft(for: segment) else {
+            store.errorMessage = SegmentMutationError.inconsistentSession.localizedDescription
+            return false
+        }
+        return present(.segmentEditor(draft))
     }
 
     @discardableResult

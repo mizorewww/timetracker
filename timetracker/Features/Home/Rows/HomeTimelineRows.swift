@@ -8,6 +8,7 @@ struct TimelineRow: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isDeleteConfirmationPresented = false
+    @State private var deleteBaseline: SegmentEditorDraftBaseline?
 
     private var isCompactPhone: Bool {
         SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
@@ -43,7 +44,11 @@ struct TimelineRow: View {
             titleVisibility: .visible
         ) {
             Button(AppStrings.localized("timeline.deleteSegment"), role: .destructive) {
-                store.deleteSegment(segment.id)
+                store.deleteSegment(
+                    segment.id,
+                    expectedBaseline: deleteBaseline
+                )
+                deleteBaseline = nil
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
@@ -123,6 +128,11 @@ struct TimelineRow: View {
         Divider()
 
         Button(role: .destructive) {
+            guard let draft = store.segmentEditorDraft(for: segment) else {
+                store.errorMessage = SegmentMutationError.inconsistentSession.localizedDescription
+                return
+            }
+            deleteBaseline = draft.baseline
             isDeleteConfirmationPresented = true
         } label: {
             Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")

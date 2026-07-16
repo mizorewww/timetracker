@@ -398,6 +398,8 @@
 "task.delete.confirm.message" = "此任务及其子任务会在所有同步设备上隐藏，其中正在运行的计时与专注会停止；已记录的时间会保留。";
 "segment.delete.confirm.title" = "删除时间记录？";
 "segment.delete.confirm.message" = "此记录将从汇总和分析中移除。";
+"segment.editor.staleDraft" = "这条时间记录已在其他位置更改。请关闭并重新打开编辑器以查看最新内容。";
+"segment.editor.inconsistentSession" = "这条时间记录关联了不一致的专注数据，无法安全编辑。";
 "segment.error.endAfterStart" = "结束时间必须晚于开始时间。";
 "segment.error.startNotFuture" = "活动计时的开始时间不能晚于现在。";
 "segment.error.timeNotFuture" = "时间记录不能延伸到未来。";

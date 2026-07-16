@@ -1181,7 +1181,7 @@ struct PomodoroTests {
         activeRun.deviceID = "stale-device"
         try context.save()
         let revisedStart = Date().addingTimeInterval(-30)
-        var draft = SegmentEditorDraft(segment: segment, note: "")
+        var draft = try #require(store.segmentEditorDraft(for: segment))
         draft.taskID = secondTask.id
         draft.startedAt = revisedStart
 
@@ -1215,7 +1215,7 @@ struct PomodoroTests {
         let runID = try #require(store.activePomodoroRun?.id)
         let revisedEnd = Date()
         let revisedStart = revisedEnd.addingTimeInterval(-180)
-        var draft = SegmentEditorDraft(segment: segment, note: "")
+        var draft = try #require(store.segmentEditorDraft(for: segment))
         draft.taskID = secondTask.id
         draft.startedAt = revisedStart
         draft.endedAt = revisedEnd

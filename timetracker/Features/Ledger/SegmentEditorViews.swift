@@ -18,7 +18,10 @@ struct SegmentEditorSheet: View {
                 }
             },
             onDelete: { draft in
-                if store.deleteSegment(draft.segmentID, fallbackTaskID: draft.taskID) {
+                if store.deleteSegment(
+                    draft.segmentID,
+                    expectedBaseline: draft.baseline
+                ) {
                     dismiss()
                 }
             }

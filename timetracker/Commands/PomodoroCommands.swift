@@ -185,7 +185,8 @@ struct PomodoroCommandHandler {
         sessionID: UUID,
         runs: [PomodoroRun],
         context: ModelContext?,
-        now: Date? = nil
+        now: Date? = nil,
+        discardShortAttempt: Bool = true
     ) throws {
         guard let run = runs.first(where: { $0.sessionID == sessionID && $0.deletedAt == nil && $0.endedAt == nil }) else {
             return
@@ -198,7 +199,8 @@ struct PomodoroCommandHandler {
                 sessionID: sessionID,
                 context: context,
                 effectiveEndDate: effectiveEndDate,
-                mutationDate: mutationDate
+                mutationDate: mutationDate,
+                discardShortAttempt: discardShortAttempt
             )
         }
         if let context {
@@ -213,7 +215,8 @@ struct PomodoroCommandHandler {
         sessionID: UUID,
         context: ModelContext?,
         effectiveEndDate: Date,
-        mutationDate: Date
+        mutationDate: Date,
+        discardShortAttempt: Bool
     ) throws {
         if try settleExpiredFocusIfNeeded(
             run,
@@ -224,12 +227,17 @@ struct PomodoroCommandHandler {
         ) {
             return
         }
-        let shouldDiscard = try shouldDiscardCancelledRun(
-            run,
-            sessionID: sessionID,
-            context: context,
-            now: effectiveEndDate
-        )
+        let shouldDiscard: Bool
+        if discardShortAttempt {
+            shouldDiscard = try shouldDiscardCancelledRun(
+                run,
+                sessionID: sessionID,
+                context: context,
+                now: effectiveEndDate
+            )
+        } else {
+            shouldDiscard = false
+        }
         if shouldDiscard {
             try discardRunAndSession(
                 run,

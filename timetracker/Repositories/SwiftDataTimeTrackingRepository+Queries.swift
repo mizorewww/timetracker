@@ -33,6 +33,18 @@ extension SwiftDataTimeTrackingRepository {
         try canonicalSegments(ids: ids).sorted(by: segmentStartOrder)
     }
 
+    func segments(sessionIDs: Set<UUID>) throws -> [TimeSegment] {
+        guard sessionIDs.isEmpty == false else { return [] }
+        let requestedSessionIDs = Array(sessionIDs)
+        let descriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { requestedSessionIDs.contains($0.sessionID) }
+        )
+        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        return try canonicalSegments(ids: candidateIDs)
+            .filter { sessionIDs.contains($0.sessionID) }
+            .sorted(by: segmentStartOrder)
+    }
+
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
         try segments(from: from, to: to, now: nowProvider())
     }

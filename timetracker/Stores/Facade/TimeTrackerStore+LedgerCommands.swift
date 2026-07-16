@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
@@ -28,124 +29,80 @@ extension TimeTrackerStore {
             fail(.taskSelectionRequired)
             return false
         }
-        let existingSegment = ledgerDomainStore.segment(for: draft.segmentID)
-        guard existingSegment?.endedAt == nil || draft.isActive == false else {
-            fail(.closedSegmentCannotReopen)
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
             return false
         }
-        let isRetainingUnavailableHistoricalAssignment =
-            existingSegment?.taskID == taskID && draft.isActive == false
-        guard trackableTaskIDs.contains(taskID) || isRetainingUnavailableHistoricalAssignment else {
-            fail(.taskTrackingUnavailable)
-            return false
-        }
-
-        let now = Date()
-        if draft.isActive, draft.startedAt > now {
-            fail(.activeTimerStartInFuture)
-            return false
-        }
-
-        let endedAt = draft.isActive ? nil : draft.endedAt
-        if let endedAt, endedAt <= draft.startedAt {
-            fail(.invalidTimeRange)
-            return false
-        }
-
-        let effectiveEnd = max(
-            draft.startedAt,
-            TrackedTimePolicy.boundedEnd(endedAt: endedAt, now: now)
-        )
-        let newRange = StoreInvalidationRange(start: draft.startedAt, end: effectiveEnd)
-        var events: Set<StoreDomainEvent> = [
-            .ledgerChanged(taskID: taskID, dateInterval: newRange, isVisible: false)
-        ]
-        let activePomodoroSessionID = activePomodoroSessionID(for: existingSegment)
-        if let existingSegment {
-            let oldRange = StoreInvalidationRange(
-                start: existingSegment.startedAt,
-                end: max(
-                    existingSegment.startedAt,
-                    TrackedTimePolicy.boundedEnd(endedAt: existingSegment.endedAt, now: now)
-                )
-            )
-            events.insert(.ledgerChanged(taskID: existingSegment.taskID, dateInterval: oldRange, isVisible: false))
-        }
-        if let activePomodoroSessionID,
-           let run = pomodoroRuns.first(where: { $0.sessionID == activePomodoroSessionID }) {
-            events.insert(.pomodoroChanged(runID: run.id, sessionID: activePomodoroSessionID, taskID: taskID))
-        }
-
-        let didSave = perform(events: events) {
-            try ledgerCommandHandler.updateSegment(
+        do {
+            let outcome = try StoreScopedSegmentCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).update(
                 draft: draft,
                 taskID: taskID,
-                activePomodoroSessionID: activePomodoroSessionID,
-                pomodoroRuns: pomodoroRuns,
-                repository: requiredTimeRepository(),
-                context: modelContext
+                allowParallelTimers: preferences.allowParallelTimers
             )
+            finishStoreScopedPomodoroMutation(
+                events: outcome.events,
+                referencedTaskIDs: outcome.referencedTaskIDs
+            )
+            return true
+        } catch {
+            handleSegmentMutationFailure(error)
+            return false
         }
-        if didSave {
-            selectedTaskID = taskID
-        }
-        return didSave
     }
 
     @discardableResult
-    func deleteSegment(_ segmentID: UUID, fallbackTaskID: UUID? = nil) -> Bool {
-        let existingSegment = ledgerDomainStore.segment(for: segmentID)
-        let activePomodoroSessionID = activePomodoroSessionID(for: existingSegment)
-        let now = Date()
-        let range = existingSegment.map {
-            StoreInvalidationRange(
-                start: $0.startedAt,
-                end: max(
-                    $0.startedAt,
-                    TrackedTimePolicy.boundedEnd(endedAt: $0.endedAt, now: now)
-                )
-            )
+    func deleteSegment(
+        _ segmentID: UUID,
+        expectedBaseline: SegmentEditorDraftBaseline? = nil
+    ) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
-        var events: Set<StoreDomainEvent> = [
-            .ledgerChanged(
-                taskID: existingSegment?.taskID ?? fallbackTaskID,
-                dateInterval: range,
-                isVisible: existingSegment?.isActive == true
+        do {
+            let outcome = try StoreScopedSegmentCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).delete(segmentID: segmentID, expectedBaseline: expectedBaseline)
+            finishStoreScopedPomodoroMutation(
+                events: outcome.events,
+                referencedTaskIDs: outcome.referencedTaskIDs
             )
-        ]
-        if let activePomodoroSessionID,
-           let run = pomodoroRuns.first(where: { $0.sessionID == activePomodoroSessionID }) {
-            events.insert(
-                .pomodoroChanged(
-                    runID: run.id,
-                    sessionID: activePomodoroSessionID,
-                    taskID: run.taskID
-                )
-            )
+            return true
+        } catch {
+            handleSegmentMutationFailure(error)
+            return false
         }
-        let didDelete = perform(events: events) {
-            try ledgerCommandHandler.softDeleteSegment(
-                segmentID,
-                activePomodoroSessionID: activePomodoroSessionID,
-                pomodoroRuns: pomodoroRuns,
-                repository: requiredTimeRepository(),
-                context: modelContext
-            )
-        }
-        return didDelete
     }
 
-    private func activePomodoroSessionID(for segment: TimeSegment?) -> UUID? {
-        guard let segment,
-              segment.source == .pomodoro,
-              segment.isActive,
-              pomodoroRuns.contains(where: {
-                  $0.sessionID == segment.sessionID &&
-                      $0.deletedAt == nil &&
-                      $0.endedAt == nil
-              }) else {
-            return nil
+    private func handleSegmentMutationFailure(_ error: Error) {
+        let needsRefresh: Bool
+        if let mutationError = error as? SegmentMutationError {
+            needsRefresh = mutationError == .staleDraft ||
+                mutationError == .inconsistentSession
+        } else {
+            needsRefresh = error as? TimeTrackingRepositoryError == .taskUnavailable
         }
-        return segment.sessionID
+        guard needsRefresh else {
+            errorMessage = error.localizedDescription
+            return
+        }
+
+        do {
+            try refresh(
+                plan: StoreRefreshPlan(
+                    scopes: [.tasks, .ledgerHistory, .pomodoro]
+                )
+            )
+            errorMessage = error.localizedDescription
+        } catch let refreshError {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                refreshError.localizedDescription
+            )
+        }
     }
 }

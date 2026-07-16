@@ -165,6 +165,58 @@ struct ManualTimeDraft: Identifiable, Equatable {
     }
 }
 
+nonisolated struct SegmentEditorDraftBaseline: Hashable, Sendable {
+    let segmentID: UUID
+    let sessionID: UUID
+    let taskID: UUID
+    let startedAt: Date
+    let endedAt: Date?
+    let sourceRaw: String
+    let updatedAt: Date
+    let deviceID: String
+    let deletedAt: Date?
+    let sessionMutationID: UUID?
+    let pomodoroPhase: PomodoroPhaseToken?
+
+    @MainActor
+    init(
+        segment: TimeSegment,
+        sessionMutationID: UUID? = nil,
+        pomodoroPhase: PomodoroPhaseToken? = nil
+    ) {
+        segmentID = segment.id
+        sessionID = segment.sessionID
+        taskID = segment.taskID
+        startedAt = segment.startedAt
+        endedAt = segment.endedAt
+        sourceRaw = segment.sourceRaw
+        updatedAt = segment.updatedAt
+        deviceID = segment.deviceID
+        deletedAt = segment.deletedAt
+        self.sessionMutationID = sessionMutationID
+        self.pomodoroPhase = pomodoroPhase
+    }
+
+    @MainActor
+    func matches(
+        segment: TimeSegment,
+        sessionMutationID: UUID?,
+        pomodoroPhase: PomodoroPhaseToken?
+    ) -> Bool {
+        segmentID == segment.id &&
+            sessionID == segment.sessionID &&
+            taskID == segment.taskID &&
+            startedAt == segment.startedAt &&
+            endedAt == segment.endedAt &&
+            sourceRaw == segment.sourceRaw &&
+            updatedAt == segment.updatedAt &&
+            deviceID == segment.deviceID &&
+            deletedAt == segment.deletedAt &&
+            self.sessionMutationID == sessionMutationID &&
+            pomodoroPhase == self.pomodoroPhase
+    }
+}
+
 struct SegmentEditorDraft: Identifiable, Equatable {
     let id = UUID()
     let segmentID: UUID
@@ -175,8 +227,14 @@ struct SegmentEditorDraft: Identifiable, Equatable {
     var isActive: Bool
     var note: String
     var source: TimeSessionSource
+    let baseline: SegmentEditorDraftBaseline
 
-    init(segment: TimeSegment, note: String) {
+    init(
+        segment: TimeSegment,
+        note: String,
+        sessionMutationID: UUID? = nil,
+        pomodoroPhase: PomodoroPhaseToken? = nil
+    ) {
         self.segmentID = segment.id
         self.taskID = segment.taskID
         self.startedAt = segment.startedAt
@@ -186,5 +244,10 @@ struct SegmentEditorDraft: Identifiable, Equatable {
         self.isActive = isActive
         self.note = note
         self.source = segment.source
+        self.baseline = SegmentEditorDraftBaseline(
+            segment: segment,
+            sessionMutationID: sessionMutationID,
+            pomodoroPhase: pomodoroPhase
+        )
     }
 }

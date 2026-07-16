@@ -30,6 +30,10 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             .sorted(by: runCreationOrder)
     }
 
+    func runs(ids: Set<UUID>) throws -> [PomodoroRun] {
+        try canonicalRuns(ids: ids).sorted(by: runCreationOrder)
+    }
+
     func activeRuns() throws -> [PomodoroRun] {
         let completed = PomodoroState.completed.rawValue
         let cancelled = PomodoroState.cancelled.rawValue

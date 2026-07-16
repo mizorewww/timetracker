@@ -89,6 +89,31 @@ extension TimeTrackerStore {
         return sessions.first { $0.id == segment.sessionID }?.note ?? ""
     }
 
+    func segmentEditorDraft(for segment: TimeSegment) -> SegmentEditorDraft? {
+        guard let session = ledgerDomainStore.session(for: segment.sessionID) ??
+            sessions.first(where: { $0.id == segment.sessionID }) else {
+            return nil
+        }
+        let linkedRuns = pomodoroRuns.filter { run in
+            run.sessionID == segment.sessionID &&
+                run.deletedAt == nil &&
+                run.endedAt == nil
+        }
+        guard linkedRuns.count <= 1,
+              linkedRuns.allSatisfy({
+                  $0.state == .focusing || $0.state == .interrupted
+              }) else {
+            return nil
+        }
+        let run = linkedRuns.first
+        return SegmentEditorDraft(
+            segment: segment,
+            note: session.note ?? "",
+            sessionMutationID: session.clientMutationID,
+            pomodoroPhase: run.map(PomodoroPhaseToken.init)
+        )
+    }
+
     func secondsForTaskTotal(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         ledgerSummaryService.totalSeconds(taskIDs: [task.id], segments: allSegments, mode: mode, now: now)
     }

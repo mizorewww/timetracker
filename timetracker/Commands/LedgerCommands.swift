@@ -72,13 +72,11 @@ struct LedgerCommandHandler {
         try rebindActivePomodoro(
             sessionID: activePomodoroSessionID,
             taskID: taskID,
-            startedAt: draft.startedAt,
+            fallbackStartedAt: draft.startedAt,
             runs: pomodoroRuns,
             context: context
         )
-        if draft.isActive {
-            return
-        } else {
+        if draft.wasActive && draft.isActive == false {
             try PomodoroCommandHandler(
                 deviceID: deviceID,
                 nowProvider: nowProvider
@@ -86,7 +84,8 @@ struct LedgerCommandHandler {
                 sessionID: activePomodoroSessionID,
                 runs: pomodoroRuns,
                 context: context,
-                now: draft.endedAt
+                now: draft.endedAt,
+                discardShortAttempt: false
             )
         }
     }
@@ -121,7 +120,7 @@ struct LedgerCommandHandler {
     private func rebindActivePomodoro(
         sessionID: UUID,
         taskID: UUID,
-        startedAt: Date,
+        fallbackStartedAt: Date,
         runs: [PomodoroRun],
         context: ModelContext?
     ) throws {
@@ -133,9 +132,22 @@ struct LedgerCommandHandler {
         }) else {
             return
         }
+        let canonicalStartedAt: Date
+        if let context {
+            let targetSessionID = sessionID
+            let descriptor = FetchDescriptor<TimeSession>(
+                predicate: #Predicate { $0.id == targetSessionID }
+            )
+            canonicalStartedAt = try context.fetch(descriptor)
+                .visibleDeduplicatedByID()
+                .first?
+                .startedAt ?? fallbackStartedAt
+        } else {
+            canonicalStartedAt = fallbackStartedAt
+        }
         let mutationDate = nowProvider()
         run.taskID = taskID
-        run.startedAt = startedAt
+        run.startedAt = canonicalStartedAt
         run.markMutated(at: mutationDate, deviceID: deviceID)
     }
 }

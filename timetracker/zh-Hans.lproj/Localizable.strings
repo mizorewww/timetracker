@@ -188,6 +188,7 @@
 "dialog.optimize.confirm" = "清理记录";
 "dialog.optimize.none" = "没有发现超过 90 天的已删除记录。";
 "dialog.optimize.removed" = "已清理 %d 条较早的已删除记录。";
+"dialog.optimize.failed" = "无法清理较早的已删除记录：%@";
 "dialog.optimize.message" = "这会永久移除超过 90 天的墓碑及其关联历史。若可见记录的父项尚未从 iCloud 到达，该记录不会被移除。";
 "dialog.syncConflict.title" = "选择 iCloud 同步来源";
 "dialog.syncConflict.message" = "这台设备和 iCloud 在上次确认同步后都发生了变化。\n\n本设备：%@\niCloud：%@\n\n请选择哪一侧覆盖另一侧。";

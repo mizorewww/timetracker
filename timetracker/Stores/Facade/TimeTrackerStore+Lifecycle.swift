@@ -129,8 +129,18 @@ extension TimeTrackerStore {
         events: Set<StoreDomainEvent> = [.fullSync],
         _ action: () throws -> Outcome
     ) throws -> Outcome {
+        try performThrowingMutation(eventsForOutcome: { _ in events }, action)
+    }
+
+    func performThrowingMutation<Outcome>(
+        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
+        _ action: () throws -> Outcome
+    ) throws -> Outcome {
         let outcome = try executeAuthorizedMutation(action)
-        finishCommittedMutation(events: events)
+        let events = eventsForOutcome(outcome)
+        if events.isEmpty == false {
+            finishCommittedMutation(events: events)
+        }
         return outcome
     }
 

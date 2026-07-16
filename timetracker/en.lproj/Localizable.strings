@@ -188,6 +188,7 @@
 "dialog.optimize.confirm" = "Clean Records";
 "dialog.optimize.none" = "No deleted records older than 90 days were found.";
 "dialog.optimize.removed" = "Removed %d old deleted records.";
+"dialog.optimize.failed" = "Couldn't clean old deleted records. %@";
 "dialog.optimize.message" = "This permanently removes tombstones older than 90 days and history belonging to those deleted records. Visible rows with a parent that has not arrived from iCloud yet are never removed.";
 "dialog.syncConflict.title" = "Choose iCloud Sync Source";
 "dialog.syncConflict.message" = "Both this device and iCloud changed data since the last accepted sync.\n\nThis device: %@\niCloud: %@\n\nChoose which side should overwrite the other.";

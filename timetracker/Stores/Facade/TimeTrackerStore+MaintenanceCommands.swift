@@ -78,7 +78,9 @@ extension TimeTrackerStore {
 
     @discardableResult
     func optimizeDatabase() throws -> Int {
-        try performThrowingMutation {
+        try performThrowingMutation(eventsForOutcome: { removedCount in
+            removedCount == 0 ? [] : [.fullSync]
+        }) {
             guard let modelContext else { throw StoreError.notConfigured }
             return try databaseMaintenanceService.optimizeDatabase(context: modelContext)
         }

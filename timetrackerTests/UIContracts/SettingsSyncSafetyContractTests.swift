@@ -99,7 +99,13 @@ struct SettingsSyncSafetyContractTests {
 
         #expect(maintenanceSource.contains("func optimizeDatabase() throws -> Int"))
         #expect(maintenanceSource.contains("try performThrowingMutation"))
+        #expect(maintenanceSource.contains("removedCount == 0 ? [] : [.fullSync]"))
         #expect(confirmationSource.contains("let removedCount = try store.optimizeDatabase()"))
-        #expect(confirmationSource.contains("databaseOptimizationMessage = error.localizedDescription"))
+        #expect(confirmationSource.contains("dialog.optimize.failed"))
+
+        for locale in ["en", "zh-Hans", "zh-Hant"] {
+            let strings = try sourceText("timetracker/\(locale).lproj/Localizable.strings")
+            #expect(strings.contains("\"dialog.optimize.failed\""))
+        }
     }
 }

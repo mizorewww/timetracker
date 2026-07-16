@@ -69,7 +69,10 @@ extension SettingsView {
                     ? AppStrings.localized("dialog.optimize.none")
                     : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
             } catch {
-                databaseOptimizationMessage = error.localizedDescription
+                databaseOptimizationMessage = String(
+                    format: AppStrings.localized("dialog.optimize.failed"),
+                    error.localizedDescription
+                )
             }
         case let .replaceCloud(expectedConflictID):
             forceUploadLocalData(expectedConflictID: expectedConflictID)

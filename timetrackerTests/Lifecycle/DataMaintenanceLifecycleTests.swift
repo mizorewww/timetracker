@@ -166,6 +166,79 @@ struct DataMaintenanceLifecycleTests {
     }
 
     @Test @MainActor
+    func optimizeDatabaseRollsBackWhenThePersistentStoreRejectsSaving() throws {
+        let defaults = UserDefaults.standard
+        let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
+        defaults.set(AppCloudSync.modeUITest, forKey: AppCloudSync.modeKey)
+        defer {
+            if let previousMode {
+                defaults.set(previousMode, forKey: AppCloudSync.modeKey)
+            } else {
+                defaults.removeObject(forKey: AppCloudSync.modeKey)
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "DatabaseMaintenanceSaveFailureTests-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appending(path: "TimeTracker.store")
+        let schema = TimeTrackerModelRegistry.currentSchema
+        let taskID = UUID()
+
+        do {
+            let writableConfiguration = ModelConfiguration(
+                "WritableDatabaseMaintenanceSaveFailure",
+                schema: schema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let writableContainer = try ModelContainer(
+                for: schema,
+                migrationPlan: TimeTrackerMigrationPlan.self,
+                configurations: [writableConfiguration]
+            )
+            let writableContext = ModelContext(writableContainer)
+            let task = TaskNode(title: "Keep after failed cleanup", parentID: nil, deviceID: "test")
+            task.id = taskID
+            task.deletedAt = Date().addingTimeInterval(
+                -DatabaseMaintenanceService.defaultTombstoneRetention - 1
+            )
+            task.updatedAt = task.deletedAt ?? task.updatedAt
+            writableContext.insert(task)
+            try writableContext.save()
+        }
+
+        let readOnlyConfiguration = ModelConfiguration(
+            "ReadOnlyDatabaseMaintenanceSaveFailure",
+            schema: schema,
+            url: storeURL,
+            allowsSave: false,
+            cloudKitDatabase: .none
+        )
+        let readOnlyContainer = try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [readOnlyConfiguration]
+        )
+        let store = makeTestStore()
+        store.configureRepositoriesIfNeeded(context: ModelContext(readOnlyContainer))
+
+        do {
+            _ = try store.optimizeDatabase()
+            Issue.record("A read-only store must reject cleanup instead of reporting success")
+        } catch {
+            #expect(store.errorMessage == nil)
+        }
+
+        let verificationContext = ModelContext(readOnlyContainer)
+        let remainingTasks = try verificationContext.fetch(FetchDescriptor<TaskNode>())
+        #expect(remainingTasks.contains { $0.id == taskID && $0.deletedAt != nil })
+    }
+
+    @Test @MainActor
     func optimizeDatabaseDoesNotDeleteVisibleRelationshipRowsBeforeTheirParentsImport() throws {
         let context = try makeTestContext()
         let task = TaskNode(title: "Existing", parentID: nil, deviceID: "test")

@@ -78,14 +78,16 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func persistentStoreDeletionFailureKeepsUploadPending() throws {
-        withRecoveryDefaults {
+        try withRecoveryDefaults {
             let defaults = UserDefaults.standard
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             var stateRemovalCount = 0
+            let storeURL = try makeTemporaryStoreURL()
+            defer { removeTemporaryStoreDirectory(for: storeURL) }
 
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
                 canResetUpload: true,
-                storeURL: temporaryStoreURL(),
+                storeURL: storeURL,
                 removeStoreFiles: { _ in throw ProbeError.deletionFailed },
                 removeSyncConflictState: { stateRemovalCount += 1 }
             )
@@ -102,14 +104,16 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func downloadStateDeletionFailureKeepsDownloadPending() throws {
-        withRecoveryDefaults {
+        try withRecoveryDefaults {
             let defaults = UserDefaults.standard
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
             var storeRemovalCount = 0
+            let storeURL = try makeTemporaryStoreURL()
+            defer { removeTemporaryStoreDirectory(for: storeURL) }
 
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
                 canResetUpload: false,
-                storeURL: temporaryStoreURL(),
+                storeURL: storeURL,
                 removeStoreFiles: { _ in storeRemovalCount += 1 },
                 removeSyncConflictState: { throw ProbeError.deletionFailed }
             )
@@ -126,14 +130,16 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func pendingMarkersClearOnlyAfterCompletedRecoveryIsAcknowledged() throws {
-        withRecoveryDefaults {
+        try withRecoveryDefaults {
             let defaults = UserDefaults.standard
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             defaults.set("previous recovery error", forKey: AppCloudSync.errorKey)
+            let storeURL = try makeTemporaryStoreURL()
+            defer { removeTemporaryStoreDirectory(for: storeURL) }
 
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
                 canResetUpload: true,
-                storeURL: temporaryStoreURL(),
+                storeURL: storeURL,
                 removeStoreFiles: { _ in }
             )
 
@@ -151,6 +157,94 @@ struct CoreCloudRecoveryGateTests {
             #expect(defaults.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey) == false)
             #expect(defaults.object(forKey: AppCloudSync.errorKey) == nil)
             #expect(AppCloudSync.persistenceMode == AppCloudSync.modeICloud)
+        }
+    }
+
+    @Test @MainActor
+    func recoveryDeletionKeepsTheStoreLockAndRunsStateCleanupInsideIt() throws {
+        try withRecoveryDefaults {
+            let storeURL = try makeTemporaryStoreURL()
+            defer { removeTemporaryStoreDirectory(for: storeURL) }
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
+            let scope = TimerStoreScope(persistentStoreURL: storeURL)
+            let lock = StoreScopedTimerMutationLock()
+            let competitorEntered = DispatchSemaphore(value: 0)
+            let competitorFinished = DispatchSemaphore(value: 0)
+            var competitorWasBlockedDuringStoreRemoval = false
+            var competitorWasBlockedDuringStateRemoval = false
+
+            let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
+                canResetUpload: false,
+                storeURL: storeURL,
+                removeStoreFiles: { _ in
+                    DispatchQueue.global().async {
+                        _ = try? lock.withExclusiveAccess(for: scope) {
+                            competitorEntered.signal()
+                        }
+                        competitorFinished.signal()
+                    }
+                    competitorWasBlockedDuringStoreRemoval =
+                        competitorEntered.wait(timeout: .now() + 0.05) == .timedOut
+                },
+                removeSyncConflictState: {
+                    competitorWasBlockedDuringStateRemoval =
+                        competitorEntered.wait(timeout: .now() + 0.05) == .timedOut
+                }
+            )
+
+            guard case .completed(let completion) = gate else {
+                Issue.record("Locked download recovery should complete")
+                return
+            }
+            #expect(completion.reset == .download)
+            #expect(competitorWasBlockedDuringStoreRemoval)
+            #expect(competitorWasBlockedDuringStateRemoval)
+            #expect(competitorEntered.wait(timeout: .now() + 2) == .success)
+            #expect(competitorFinished.wait(timeout: .now() + 2) == .success)
+        }
+    }
+
+    @Test @MainActor
+    func realStoreCleanupDeletesSQLiteFilesButPreservesTheMutationLock() throws {
+        try withRecoveryDefaults {
+            let storeURL = try makeTemporaryStoreURL()
+            defer { removeTemporaryStoreDirectory(for: storeURL) }
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
+            let suffixes = ["", "-wal", "-shm"]
+            for suffix in suffixes {
+                #expect(
+                    FileManager.default.createFile(
+                        atPath: storeURL.path + suffix,
+                        contents: Data("fixture".utf8)
+                    )
+                )
+            }
+            let lockURL = TimerStoreScope(
+                persistentStoreURL: storeURL
+            ).mutationLockURL
+            #expect(
+                FileManager.default.createFile(
+                    atPath: lockURL.path,
+                    contents: Data()
+                )
+            )
+
+            let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
+                canResetUpload: true,
+                storeURL: storeURL
+            )
+
+            guard case .completed(let completion) = gate else {
+                Issue.record("Real locked store cleanup should complete")
+                return
+            }
+            #expect(completion.reset == .upload)
+            for suffix in suffixes {
+                #expect(FileManager.default.fileExists(atPath: storeURL.path + suffix) == false)
+            }
+            #expect(FileManager.default.fileExists(atPath: lockURL.path))
         }
     }
 
@@ -184,6 +278,21 @@ struct CoreCloudRecoveryGateTests {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("TimeTrackerCloudRecoveryGateTests-\(UUID().uuidString)")
             .appendingPathComponent("TimeTracker.store")
+    }
+
+    private func makeTemporaryStoreURL() throws -> URL {
+        let storeURL = temporaryStoreURL()
+        try FileManager.default.createDirectory(
+            at: storeURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        return storeURL
+    }
+
+    private func removeTemporaryStoreDirectory(for storeURL: URL) {
+        try? FileManager.default.removeItem(
+            at: storeURL.deletingLastPathComponent()
+        )
     }
 
     private enum ProbeError: Error {

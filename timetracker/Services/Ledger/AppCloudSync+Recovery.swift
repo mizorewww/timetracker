@@ -63,8 +63,40 @@ extension AppCloudSync {
                 try removePersistentStoreFiles(at: url)
             }
         }
+        let scope = TimerStoreScope(persistentStoreURL: resolvedStoreURL)
         do {
-            try storeFileRemover(resolvedStoreURL)
+            try FileManager.default.createDirectory(
+                at: resolvedStoreURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            return try StoreScopedTimerMutationLock().withExclusiveAccess(
+                for: scope
+            ) {
+                performPendingCloudRecoveryResetWithLockedStore(
+                    shouldResetForDownload: shouldResetForDownload,
+                    storeURL: resolvedStoreURL,
+                    storeFileRemover: storeFileRemover,
+                    removeSyncConflictState: removeSyncConflictState
+                )
+            }
+        } catch {
+            logger.error(
+                "CloudKit recovery could not lock or remove persistent store files: \(error.localizedDescription, privacy: .public)"
+            )
+            return .failed(
+                CloudRecoveryFailure(stage: .persistentStoreRemoval, underlyingError: error)
+            )
+        }
+    }
+
+    private static func performPendingCloudRecoveryResetWithLockedStore(
+        shouldResetForDownload: Bool,
+        storeURL: URL,
+        storeFileRemover: @MainActor (URL) throws -> Void,
+        removeSyncConflictState: (@MainActor () throws -> Void)?
+    ) -> CloudRecoveryGate {
+        do {
+            try storeFileRemover(storeURL)
         } catch {
             logger.error(
                 "CloudKit recovery could not remove persistent store files: \(error.localizedDescription, privacy: .public)"
@@ -147,7 +179,10 @@ extension AppCloudSync {
             at: directory,
             includingPropertiesForKeys: nil
         )
-        .filter { $0.lastPathComponent.hasPrefix(storePrefix) }
+        .filter {
+            $0.lastPathComponent.hasPrefix(storePrefix) &&
+                $0.lastPathComponent != storePrefix + StoreScopedTimerMutationLock.fileSuffix
+        }
 
         for file in storeFiles {
             try fileManager.removeItem(at: file)

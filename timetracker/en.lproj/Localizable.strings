@@ -263,6 +263,7 @@
 "sync.state.recent.message" = "This device last checked sync at %@.";
 "sync.state.offline.title" = "Local storage is active";
 "sync.state.offline.message" = "Current status: %@. Changes stay on this device until iCloud is available.";
+"sync.state.accountUnavailable.title" = "iCloud account unavailable";
 "sync.state.needsRestart.title" = "Restart required";
 "sync.state.needsRestart.message" = "The storage mode changed. Quit and reopen the app to apply it.";
 "sync.state.failed.title" = "Sync needs attention";

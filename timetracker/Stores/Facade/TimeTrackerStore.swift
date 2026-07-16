@@ -120,7 +120,8 @@ final class TimeTrackerStore {
     var tasksRoute: TasksRoute?
     var selectedTaskPulseID: UUID?
     var selectedTaskPulseToken = UUID()
-    var cloudAccountStatus: String = AppCloudSync.accountStatus
+    var cloudAccountCheck: CloudAccountCheckOutcome?
+    @ObservationIgnored var cloudAccountCheckRequestID: UUID?
     var lastSyncRefreshAt: Date?
     var pendingSyncConflict: SyncConflictPrompt?
 

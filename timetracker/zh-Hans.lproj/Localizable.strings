@@ -263,6 +263,7 @@
 "sync.state.recent.message" = "这台设备上次检查同步是在 %@。";
 "sync.state.offline.title" = "正在使用本地存储";
 "sync.state.offline.message" = "当前状态：%@。在 iCloud 可用前，改动会保留在这台设备上。";
+"sync.state.accountUnavailable.title" = "iCloud 账户不可用";
 "sync.state.needsRestart.title" = "需要重启应用";
 "sync.state.needsRestart.message" = "存储模式已更改。退出并重新打开应用后生效。";
 "sync.state.failed.title" = "同步需要处理";

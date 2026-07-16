@@ -5,7 +5,11 @@ struct SyncStatus {
     let containerIdentifier: String
     let deviceID: String
     let lastError: String?
-    let accountStatus: String
+    let accountCheck: CloudAccountCheckOutcome?
+
+    var accountStatus: String {
+        accountCheck?.result.localizedDescription ?? AppStrings.localized("sync.unchecked")
+    }
 
     var isCloudBacked: Bool {
         mode == "iCloud"
@@ -76,6 +80,25 @@ struct SyncStatus {
                 title: AppStrings.localized("sync.state.localOnly.title"),
                 message: AppStrings.localized("sync.state.localOnly.message")
             )
+        }
+
+        if let accountCheck {
+            switch accountCheck.result {
+            case .available:
+                break
+            case let .unavailable(reason):
+                return SyncFeedback(
+                    state: .offline,
+                    title: AppStrings.localized("sync.state.accountUnavailable.title"),
+                    message: reason.localizedDescription
+                )
+            case let .failed(message):
+                return SyncFeedback(
+                    state: .failed,
+                    title: AppStrings.localized("sync.state.failed.title"),
+                    message: message
+                )
+            }
         }
 
         if let lastRefreshAt, now.timeIntervalSince(lastRefreshAt) <= 120 {

@@ -95,10 +95,6 @@ enum AppCloudSync {
         }
     }
 
-    static var accountStatus: String {
-        UserDefaults.standard.string(forKey: accountStatusKey) ?? AppStrings.localized("sync.unchecked")
-    }
-
     static func recordCloudKitEnabled(after recovery: CompletedCloudRecovery) {
         AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
         UserDefaults.standard.set(modeICloud, forKey: modeKey)
@@ -112,7 +108,6 @@ enum AppCloudSync {
 
     static func recordCloudKitDisabledByUser() {
         UserDefaults.standard.set(modeLocal, forKey: modeKey)
-        UserDefaults.standard.set(AppStrings.localized("sync.disabledMessage"), forKey: accountStatusKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
         logger.info("CloudKit storage is disabled by user preference")
     }
@@ -129,7 +124,6 @@ enum AppCloudSync {
             String(format: AppStrings.localized("sync.temporaryStoreError"), error.localizedDescription),
             forKey: errorKey
         )
-        UserDefaults.standard.set(AppStrings.localized("sync.temporaryStore"), forKey: accountStatusKey)
         logger.fault("Persistent storage fell back to in-memory store: \(error.localizedDescription, privacy: .public)")
     }
 
@@ -138,13 +132,11 @@ enum AppCloudSync {
         UserDefaults.standard.removeObject(forKey: errorKey)
         UserDefaults.standard.removeObject(forKey: pendingCloudUploadResetKey)
         UserDefaults.standard.removeObject(forKey: pendingCloudDownloadResetKey)
-        UserDefaults.standard.set(AppStrings.localized("sync.uiTestStore"), forKey: accountStatusKey)
     }
 
     static func recordDemoDataMode() {
         UserDefaults.standard.set(modeDemoData, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
-        UserDefaults.standard.set(modeDemoData, forKey: accountStatusKey)
     }
 
 }

@@ -512,7 +512,10 @@ struct PreferencesChecklistForecastTests {
             containerIdentifier: "iCloud.test",
             deviceID: "test",
             lastError: nil,
-            accountStatus: "Available"
+            accountCheck: CloudAccountCheckOutcome(
+                checkedAt: now,
+                result: .available
+            )
         )
         let recentFeedback = cloudStatus.feedback(
             preferences: preferences,
@@ -545,7 +548,10 @@ struct PreferencesChecklistForecastTests {
             containerIdentifier: "iCloud.test",
             deviceID: "test",
             lastError: "CloudKit failed",
-            accountStatus: "Available"
+            accountCheck: CloudAccountCheckOutcome(
+                checkedAt: now,
+                result: .available
+            )
         )
         preferences.cloudSyncEnabled = true
         let failedFeedback = failedStatus.feedback(
@@ -562,7 +568,10 @@ struct PreferencesChecklistForecastTests {
             containerIdentifier: "iCloud.test",
             deviceID: "test",
             lastError: "Store could not open",
-            accountStatus: "Available"
+            accountCheck: CloudAccountCheckOutcome(
+                checkedAt: now,
+                result: .available
+            )
         )
         let temporaryFeedback = temporaryStatus.feedback(
             preferences: preferences,

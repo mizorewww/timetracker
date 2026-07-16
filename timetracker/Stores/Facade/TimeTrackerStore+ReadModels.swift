@@ -7,7 +7,7 @@ extension TimeTrackerStore {
             containerIdentifier: AppCloudSync.containerIdentifier,
             deviceID: DeviceIdentity.current,
             lastError: AppCloudSync.lastError,
-            accountStatus: cloudAccountStatus
+            accountCheck: cloudAccountCheck
         )
     }
 }

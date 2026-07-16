@@ -17,16 +17,33 @@ extension TimeTrackerStore {
     }
 
     func forceCloudSyncRefresh() async -> String {
-        await refreshCloudAccountStatus()
+        _ = await refreshCloudAccountStatus()
         refreshQuietly()
         let storage = syncStatus.isCloudBacked ? AppStrings.localized("sync.storage.iCloud") : AppStrings.localized("sync.storage.local")
         return String(format: AppStrings.localized("sync.refreshSummary"), storage, syncStatus.accountStatus)
     }
 
-    func refreshCloudAccountStatus() async {
-        await AppCloudSync.refreshAccountStatus()
-        cloudAccountStatus = AppCloudSync.accountStatus
-        lastSyncRefreshAt = Date()
+    @discardableResult
+    func refreshCloudAccountStatus(
+        client: CloudAccountStatusClient? = nil,
+        checkedAt: Date = Date()
+    ) async -> CloudAccountCheckOutcome {
+        let resolvedClient: CloudAccountStatusClient
+        if let client {
+            resolvedClient = client
+        } else {
+            resolvedClient = .live(containerIdentifier: AppCloudSync.containerIdentifier)
+        }
+        let requestID = UUID()
+        cloudAccountCheckRequestID = requestID
+        let outcome = await AppCloudSync.checkAccountStatus(
+            client: resolvedClient,
+            checkedAt: checkedAt
+        )
+        if cloudAccountCheckRequestID == requestID {
+            cloudAccountCheck = outcome
+        }
+        return outcome
     }
 
     @discardableResult
@@ -123,15 +140,8 @@ extension TimeTrackerStore {
     }
 
     /// Runs a committed mutation while preserving its original failure for a
-    /// scene-local caller to present. Use this for workflows whose UI must not
-    /// translate failure into a successful zero/empty result.
-    func performThrowingMutation<Outcome>(
-        events: Set<StoreDomainEvent> = [.fullSync],
-        _ action: () throws -> Outcome
-    ) throws -> Outcome {
-        try performThrowingMutation(eventsForOutcome: { _ in events }, action)
-    }
-
+    /// scene-local caller to present. The outcome decides whether any domain
+    /// refresh is required, so a successful no-op can avoid full invalidation.
     func performThrowingMutation<Outcome>(
         eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
         _ action: () throws -> Outcome

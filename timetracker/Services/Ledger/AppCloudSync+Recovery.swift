@@ -103,30 +103,38 @@ extension AppCloudSync {
         return .completed(CompletedCloudRecovery(reset: reset))
     }
 
-    static func refreshAccountStatus() async {
-        let container = CKContainer(identifier: containerIdentifier)
-        let statusText: String
+    static func checkAccountStatus(
+        client: CloudAccountStatusClient? = nil,
+        checkedAt: Date = Date()
+    ) async -> CloudAccountCheckOutcome {
+        let resolvedClient: CloudAccountStatusClient
+        if let client {
+            resolvedClient = client
+        } else {
+            resolvedClient = .live(containerIdentifier: containerIdentifier)
+        }
+        let result: CloudAccountCheckResult
         do {
-            let status = try await container.accountStatus()
+            let status = try await resolvedClient.fetchStatus()
             switch status {
             case .available:
-                statusText = AppStrings.localized("sync.account.available")
+                result = .available
             case .noAccount:
-                statusText = AppStrings.localized("sync.account.noAccount")
+                result = .unavailable(.noAccount)
             case .restricted:
-                statusText = AppStrings.localized("sync.account.restricted")
+                result = .unavailable(.restricted)
             case .couldNotDetermine:
-                statusText = AppStrings.localized("sync.account.couldNotDetermine")
+                result = .unavailable(.couldNotDetermine)
             case .temporarilyUnavailable:
-                statusText = AppStrings.localized("sync.account.temporarilyUnavailable")
+                result = .unavailable(.temporarilyUnavailable)
             @unknown default:
-                statusText = AppStrings.localized("sync.account.unknown")
+                result = .unavailable(.unknown)
             }
         } catch {
-            statusText = error.localizedDescription
+            result = .failed(message: error.localizedDescription)
         }
-        UserDefaults.standard.set(statusText, forKey: accountStatusKey)
-        logger.info("CloudKit account status: \(statusText, privacy: .public)")
+        logger.info("CloudKit account check completed: \(String(describing: result), privacy: .public)")
+        return CloudAccountCheckOutcome(checkedAt: checkedAt, result: result)
     }
 
     private static func removePersistentStoreFiles(at storeURL: URL) throws {

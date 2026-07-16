@@ -48,8 +48,8 @@ enum CloudSyncSmokeTestRunner {
     private static func run(mode: Mode, context: ModelContext, store: TimeTrackerStore) async throws {
         log("mode=\(mode.rawValue)")
         log("persistenceMode(before)=\(AppCloudSync.persistenceMode)")
-        await AppCloudSync.refreshAccountStatus()
-        log("accountStatus=\(AppCloudSync.accountStatus)")
+        let accountCheck = await AppCloudSync.checkAccountStatus()
+        log("accountStatus=\(String(describing: accountCheck.result))")
         let observers = installCloudEventLogging()
         defer { removeCloudEventLogging(observers) }
 

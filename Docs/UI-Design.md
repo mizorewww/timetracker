@@ -41,12 +41,14 @@ Preferred terms:
 
 Before merging UI work, verify:
 
-- iPhone portrait Today, Tasks, Pomodoro, Analytics, Settings.
-- iPhone dark appearance at Accessibility Extra Large for Today, Tasks, Task Detail, Analytics, and Settings; dense rows must reflow instead of colliding or truncating primary text.
+- The affected iPhone portrait screens at the normal system text size, including their primary action, navigation, empty/error state, keyboard path, and localized copy.
+- Dark appearance when the change touches color, material, charts, elevation, or contrast. Extreme Dynamic Type and VoiceOver are risk-triggered checks, not a mandatory batch for every UI change.
 - iPad landscape Today and Task Detail with the sidebar both visible and collapsed.
 - macOS narrow minimum window and full-screen window.
 - Long task names, localized strings, and dynamic timer text do not overlap.
-- The bottom of every iPhone list can scroll above the system tab bar at ordinary and accessibility sizes.
+- The bottom of each affected iPhone list can scroll above the current system tab bar at the normal text size.
+
+Keep existing low-cost accessibility semantics and adaptive layouts intact. Add a dedicated accessibility batch only when a change directly alters text reflow, semantic labels/state, non-color cues, focus order, or an existing regression signal; do not repeatedly spend simulator/device resources on unrelated extreme-size coverage.
 
 ## Timeline Rules
 

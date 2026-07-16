@@ -243,7 +243,7 @@ SwiftUI Feature
 - `Models`：SwiftData 模型、schema、迁移计划、read models。
 - `SharedLiveActivity` / `timetrackerLiveActivityExtension`：Live Activity 共享模型和扩展 UI。
 
-本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics landing page/typed category detail/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections 与共享 row foundation/action/input/presentation/sync-feedback、Task Detail sections、ledger infrastructure、facade configuration/lifecycle、Widget provider/view/support、Watch dashboard/timer/status/color 与 base/commands/connectivity/session-delegate store family，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、snapshot restore 预检/分域写入和 record DTO 都已分离。当前仍较集中的任务行、Analytics decision sections 和 Settings category router 如实记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不以“所有文件都已单一职责”作泛化承诺。
+本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics landing page/typed category detail/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections 与共享 row foundation/action/input/presentation/sync-feedback、Task Detail sections、ledger infrastructure、facade configuration、Widget provider/view/support、Watch dashboard/timer/status/color 与 base/commands/connectivity/session-delegate store family，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、snapshot restore 预检/分域写入和 record DTO 都已分离。当前仍超出或接近结构预算的 facade lifecycle/preference/sync observer、任务行动作和 Analytics period selection 等真实文件记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不再引用已经删除的旧聚合文件，也不以“所有文件都已单一职责”作泛化承诺。
 
 CloudKit 刷新由持久存储远程变更和 CloudKit import/export 事件驱动，并做短暂合并；前台激活仍会进行一次一致性刷新。没有常驻的 5 秒全量轮询。
 

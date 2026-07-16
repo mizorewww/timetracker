@@ -103,7 +103,7 @@
 
 ### 当前平台 UI 合同
 
-- iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Focus、Analytics）；Settings 是 Today 导航栈中的目的地。`nav.focus` 是 iPhone tab、iPad sidebar、macOS sidebar 与 Focus 页面标题的统一导航文案；`nav.pomodoro` 仍只描述账本来源、设置和分析中的 Pomodoro 领域，不得拿它恢复平台间不一致的导航标题。
+- iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Focus、Analytics）；Settings 从 Today 工具栏通过当前 scene 的 `AppPresentationRouter` 以 sheet 打开，关闭后保留原 tab、任务路由与滚动上下文，不进入 Today 的 `NavigationStack`。`nav.focus` 是 iPhone tab、iPad sidebar、macOS sidebar 与 Focus 页面标题的统一导航文案；`nav.pomodoro` 仍只描述账本来源、设置和分析中的 Pomodoro 领域，不得拿它恢复平台间不一致的导航标题。
 - iPad：设备 idiom 稳定选择 `NavigationSplitView` 侧边栏与详情；分屏、Stage Manager 或旋转造成的 compact width 只由该 split view 折叠列，不切换成 iPhone 根导航，因此当前目的地、sidebar selection 和详情状态不会随窗口宽度丢失。从侧边栏或任务列表选择任务会打开同一个 `TaskDetailView`。
 - macOS：单实例主 `Window` 承载 `NavigationSplitView` 工作区；独立系统 Settings scene、主窗口和 Settings 共享一个应用级 `TimeTrackerStore`，避免复制 CloudKit observers、自动 AI 建议与系统表面同步。
 - Scene presentation：主窗口与 macOS Settings 各自持有 `AppPresentationRouter`，共享 Store 但不共享 sheet。每个 scene 只有一个 `AppPresentationHost.sheet(item:)`，因此同一 scene 的编辑器不会重叠或覆盖脏草稿，另一个 scene 也不会错误弹出当前动作。router 忙时不替换现有内容；matching-ID callback 才能 replace/dismiss，防止旧 sheet 回调关闭新 sheet。macOS New Task / Add Time 命令只作用于 focused 主 scene，router 忙时禁用。
@@ -372,7 +372,7 @@ Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一
 
 1. 保持 View 的 body 可读，把可测试规则移入 command/service。
 2. 使用稳定身份和精确 observation，避免整个根视图因计时 tick 重算。
-3. 使用系统导航、控件、Dynamic Type、VoiceOver、键盘和窗口尺寸行为。
+3. 默认先验证正常字号下的系统导航、控件、键盘、窗口尺寸与平台 HIG；保留 Dynamic Type/VoiceOver 基础语义，只在文本重排、语义或既有回归风险触发时增加对应专项。
 4. 添加行为测试；源码字符串扫描只能作为轻量架构护栏。
 5. 在 iPhone、iPad、Mac 对应尺寸上验证，并检查深色模式与 Reduce Motion。
 

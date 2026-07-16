@@ -6,6 +6,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var store: TimeTrackerStore
     @State private var presentationRouter = AppPresentationRouter()
+    @State private var feedbackRouter = AppSceneFeedbackRouter()
     @State private var dismissedSyncConflictID: UUID?
     @State private var pendingDeepLinks = PendingDeepLinkQueue()
     @State private var hasFinishedInitialConfiguration = false
@@ -34,7 +35,9 @@ struct ContentView: View {
             }
         }
         .environment(presentationRouter)
+        .environment(feedbackRouter)
         .appPresentationHost(store: store, router: presentationRouter)
+        .appSceneFeedbackHost(router: feedbackRouter)
         #if os(iOS)
         .overlay(alignment: .bottom) {
             syncConflictNotice
@@ -84,12 +87,8 @@ struct ContentView: View {
             hasFinishedInitialConfiguration = false
             unregisterFromWatchCommands()
         }
-        .alert(Text(.app("error.title")), isPresented: errorBinding) {
-            Button(AppStrings.localized("common.ok")) {
-                store.errorMessage = nil
-            }
-        } message: {
-            Text(store.errorMessage ?? "")
+        .onChange(of: store.errorMessage) { _, message in
+            relayStoreError(message)
         }
         .onChange(of: store.pendingSyncConflict?.id) { _, _ in
             dismissedSyncConflictID = nil
@@ -145,13 +144,14 @@ struct ContentView: View {
         #endif
     }
 
-    private var errorBinding: Binding<Bool> {
-        Binding {
-            store.errorMessage != nil
-        } set: { newValue in
-            if !newValue {
-                store.errorMessage = nil
-            }
+    private func relayStoreError(_ message: String?) {
+        guard let message, !message.isEmpty else { return }
+        feedbackRouter.present(
+            title: AppStrings.localized("error.title"),
+            message: message
+        )
+        if store.errorMessage == message {
+            store.errorMessage = nil
         }
     }
 

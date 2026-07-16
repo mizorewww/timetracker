@@ -82,13 +82,4 @@ extension SettingsView {
         }
     }
 
-    var optimizationMessagePresented: Binding<Bool> {
-        Binding {
-            databaseOptimizationMessage != nil
-        } set: { isPresented in
-            if !isPresented {
-                databaseOptimizationMessage = nil
-            }
-        }
-    }
 }

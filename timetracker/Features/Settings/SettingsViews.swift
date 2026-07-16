@@ -4,13 +4,14 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
+    @Environment(AppSceneFeedbackRouter.self) var feedbackRouter
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State var pendingDestructiveConfirmation: SettingsDestructiveConfirmation?
     @State var isExportPresented = false
     @State private var exportDocument = JSONExportDocument(text: "")
     @State var isCheckingSync = false
     @State var syncOperationMessage: String?
-    @State var databaseOptimizationMessage: String?
+    @State var dataOperationMessage: String?
     @State private var selectedCategory: SettingsCategory? = .general
 
     var body: some View {
@@ -26,16 +27,7 @@ struct SettingsView: View {
             contentType: .json,
             defaultFilename: "time-tracker-export.json"
         ) { result in
-            if case let .failure(error) = result {
-                store.errorMessage = error.localizedDescription
-            }
-        }
-        .alert(AppStrings.localized("alert.optimize.title"), isPresented: optimizationMessagePresented) {
-            Button(AppStrings.localized("common.ok")) {
-                databaseOptimizationMessage = nil
-            }
-        } message: {
-            Text(databaseOptimizationMessage ?? "")
+            handleExportResult(result)
         }
     }
 
@@ -96,9 +88,35 @@ struct SettingsView: View {
     }
 
     func prepareJSONExport() {
-        guard let json = store.jsonExport() else { return }
-        exportDocument = JSONExportDocument(text: json)
-        isExportPresented = true
+        dataOperationMessage = nil
+        do {
+            exportDocument = JSONExportDocument(text: try store.jsonExport())
+            isExportPresented = true
+        } catch {
+            presentSettingsError(context: .dataExport, error: error)
+        }
+    }
+
+    func handleExportResult(_ result: Result<URL, Error>) {
+        switch result {
+        case .success:
+            dataOperationMessage = AppStrings.localized("settings.export.saved")
+        case let .failure(error):
+            guard (error as? CocoaError)?.code != .userCancelled else { return }
+            dataOperationMessage = nil
+            presentSettingsError(context: .dataExport, error: error)
+        }
+    }
+
+    func presentSettingsError(context: AppSceneFeedbackContext, error: Error) {
+        let titleKey = context == .databaseMaintenance
+            ? "settings.optimizeDatabase"
+            : "settings.exportJSON"
+        feedbackRouter.present(
+            context: context,
+            title: AppStrings.localized(titleKey),
+            message: error.localizedDescription
+        )
     }
 
     func presentLLMConfiguration() {

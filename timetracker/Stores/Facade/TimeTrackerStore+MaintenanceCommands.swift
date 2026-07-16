@@ -86,13 +86,8 @@ extension TimeTrackerStore {
         }
     }
 
-    func jsonExport() -> String? {
-        do {
-            guard let modelContext else { throw StoreError.notConfigured }
-            return try syncConflictService.exportCloudSyncedData(context: modelContext)
-        } catch {
-            errorMessage = error.localizedDescription
-            return nil
-        }
+    func jsonExport() throws -> String {
+        guard let modelContext else { throw StoreError.notConfigured }
+        return try syncConflictService.exportCloudSyncedData(context: modelContext)
     }
 }

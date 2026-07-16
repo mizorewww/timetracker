@@ -112,6 +112,7 @@
 "settings.countdown.title.error.controlCharacters" = "请移除换行符和控制字符。";
 "settings.countdown.title.error.saveFailed" = "无法保存事件名称。你的编辑内容仍保留在此处。";
 "settings.exportJSON" = "导出 JSON";
+"settings.export.saved" = "JSON 导出已保存。";
 "settings.optimizeDatabase" = "清理已删除记录";
 "settings.data" = "数据";
 "settings.data.footer" = "JSON 会导出用户原始记录和同步偏好；可重建的分析缓存不包含在内。";

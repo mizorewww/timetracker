@@ -144,6 +144,8 @@ struct SettingsSyncSafetyContractTests {
         #expect(maintenanceSource.contains("removedCount == 0 ? [] : [.fullSync]"))
         #expect(confirmationSource.contains("let removedCount = try store.optimizeDatabase()"))
         #expect(confirmationSource.contains("dialog.optimize.failed"))
+        #expect(confirmationSource.contains("context: .databaseMaintenance"))
+        #expect(confirmationSource.contains("databaseOptimizationMessage") == false)
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {
             let strings = try sourceText("timetracker/\(locale).lproj/Localizable.strings")

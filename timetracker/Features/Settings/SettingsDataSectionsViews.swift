@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DataSettingsSection: View {
     let allowsPermanentCleanup: Bool
+    let operationMessage: String?
     let onExport: () -> Void
     let onOptimize: () -> Void
 
@@ -24,6 +25,19 @@ struct DataSettingsSection: View {
                     )
                 }
                 .buttonStyle(.plain)
+            }
+
+            if let operationMessage {
+                Label {
+                    Text(operationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+                .accessibilityIdentifier("settings.data.operationMessage")
             }
         } header: {
             SettingsHeader(symbol: "doc.text.fill", title: AppStrings.localized("settings.data"))

@@ -63,15 +63,20 @@ extension SettingsView {
         case .resetAllData:
             store.clearAllData()
         case .optimizeDatabase:
+            dataOperationMessage = nil
             do {
                 let removedCount = try store.optimizeDatabase()
-                databaseOptimizationMessage = removedCount == 0
+                dataOperationMessage = removedCount == 0
                     ? AppStrings.localized("dialog.optimize.none")
                     : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
             } catch {
-                databaseOptimizationMessage = String(
-                    format: AppStrings.localized("dialog.optimize.failed"),
-                    error.localizedDescription
+                feedbackRouter.present(
+                    context: .databaseMaintenance,
+                    title: AppStrings.localized("settings.optimizeDatabase"),
+                    message: String(
+                        format: AppStrings.localized("dialog.optimize.failed"),
+                        error.localizedDescription
+                    )
                 )
             }
         case let .replaceCloud(expectedConflictID):

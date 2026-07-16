@@ -112,6 +112,7 @@
 "settings.countdown.title.error.controlCharacters" = "Remove line breaks and control characters.";
 "settings.countdown.title.error.saveFailed" = "The event name couldn’t be saved. Your edit is still here.";
 "settings.exportJSON" = "Export JSON";
+"settings.export.saved" = "JSON export saved.";
 "settings.optimizeDatabase" = "Clean Deleted Records";
 "settings.data" = "Data";
 "settings.data.footer" = "JSON exports your source records and synced preferences. Rebuildable analytics caches are not included.";

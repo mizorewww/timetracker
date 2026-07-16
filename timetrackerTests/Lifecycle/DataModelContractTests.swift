@@ -411,7 +411,7 @@ struct DataModelContractTests {
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        let json = try #require(store.jsonExport())
+        let json = try store.jsonExport()
 
         #expect(json.contains("\"format\" : \"timetracker.cloudSyncedData\""))
         #expect(json.contains("\"tasks\""))
@@ -421,10 +421,12 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func jsonExportFailureDoesNotReturnAPlaceholderDocument() {
+    func jsonExportFailureThrowsWithoutMutatingGlobalFeedback() {
         let store = makeTestStore()
 
-        #expect(store.jsonExport() == nil)
-        #expect(store.errorMessage != nil)
+        #expect(throws: TimeTrackerStore.StoreError.self) {
+            try store.jsonExport()
+        }
+        #expect(store.errorMessage == nil)
     }
 }

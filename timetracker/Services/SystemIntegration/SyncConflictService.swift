@@ -30,8 +30,10 @@ struct SyncConflictService {
     }
 
     func bootstrap(context: ModelContext) throws -> SyncConflictPrompt? {
-        try withExclusiveStateAccess {
-            try bootstrapWithLockedState(context: context)
+        try withLockedFreshStoreContext(context: context) { lockedContext in
+            try withExclusiveStateAccess {
+                try bootstrapWithLockedState(context: lockedContext)
+            }
         }
     }
 

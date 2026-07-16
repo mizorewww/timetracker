@@ -1,6 +1,10 @@
 import SwiftData
 
 extension SyncDataSnapshot {
+    /// Captures from the supplied context. Production sync entrypoints must
+    /// call this only with the fresh context supplied by
+    /// `withLockedFreshStoreContext`; direct calls are intended for isolated
+    /// migrations and tests.
     @MainActor
     static func capture(context: ModelContext) throws -> SyncDataSnapshot {
         try capture(
@@ -10,6 +14,8 @@ extension SyncDataSnapshot {
         )
     }
 
+    /// Incremental variant with the same store-lock precondition as the full
+    /// capture entrypoint.
     @MainActor
     static func capture(
         context: ModelContext,

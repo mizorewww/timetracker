@@ -212,6 +212,32 @@ struct StoreScopedTimerMutationLockTests {
         )
     }
 
+    @Test
+    func readTransactionUsesFreshContextsWithoutSavingThem() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let scope = fixture.scope(named: "read.store")
+        let container = try timetrackerApp.makeUnitTestHostModelContainer()
+        let transaction = StoreScopedTimerMutationTransaction(
+            scope: scope,
+            container: container
+        )
+        var firstContext: ModelContext?
+
+        try transaction.withFreshReadContext { context in
+            firstContext = context
+            context.insert(
+                TaskNode(title: "Must not save", parentID: nil, deviceID: "test")
+            )
+        }
+
+        let persistedTitles = try transaction.withFreshReadContext { context in
+            #expect(context !== firstContext)
+            return try context.fetch(FetchDescriptor<TaskNode>()).map(\.title)
+        }
+        #expect(persistedTitles.isEmpty)
+    }
+
     private struct InjectedFailure: Error {}
 
     private struct Fixture {

@@ -7,8 +7,14 @@ extension SyncConflictService {
     }
 
     func recordLocalMutation(context: ModelContext, events: Set<StoreDomainEvent>) throws {
-        try withExclusiveStateAccess {
-            try recordLocalMutationWithLockedState(context: context, events: events)
+        guard shouldRecordLocalMutationSnapshot else { return }
+        try withLockedFreshStoreContext(context: context) { lockedContext in
+            try withExclusiveStateAccess {
+                try recordLocalMutationWithLockedState(
+                    context: lockedContext,
+                    events: events
+                )
+            }
         }
     }
 
@@ -75,6 +81,14 @@ extension SyncConflictService {
                 AppCloudSync.requestCloudUploadReset()
             }
         }
+    }
+
+    private var shouldRecordLocalMutationSnapshot: Bool {
+        AppCloudSync.persistenceMode == AppCloudSync.modeICloud ||
+            AppCloudSync.shouldStageLocalMutationsForCloudRecovery ||
+            UserDefaults.standard.bool(
+                forKey: AppCloudSync.pendingCloudUploadResetKey
+            )
     }
 
     private func snapshotDomains(for events: Set<StoreDomainEvent>) -> Set<SyncSnapshotDomain> {

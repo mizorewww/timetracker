@@ -17,14 +17,12 @@ struct TimerModelContextFactory {
     }
 }
 
-/// Transaction boundary used by the timer coordinator. The fresh context is
-/// created only after the store lock is held, so it cannot carry a stale
-/// active-segment snapshot into the critical section.
+/// Shared transaction boundary for coordinated store reads and writes. The
+/// fresh context is created only after the store lock is held, so it cannot
+/// carry a stale snapshot into the critical section.
 ///
 /// Ordinary timer commands, task lifecycle writes, Pomodoro phase commands,
-/// and ledger record editing/deletion use this boundary. Snapshot restoration
-/// still requires store-scoped coordination before every related writer shares
-/// this lock domain.
+/// ledger record editing/deletion, and sync snapshot work use this lock domain.
 @MainActor
 struct StoreScopedTimerMutationTransaction {
     let scope: TimerStoreScope
@@ -56,12 +54,23 @@ struct StoreScopedTimerMutationTransaction {
     func withFreshContext<Result>(
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
-        try mutationLock.withExclusiveAccess(for: scope) {
-            let context = try contextFactory.makeFreshContext()
-            context.autosaveEnabled = false
+        try withFreshReadContext { context in
             return try context.performAtomicMutation {
                 try operation(context)
             }
+        }
+    }
+
+    /// Holds the store lock around a fresh read context without saving it.
+    /// Snapshot capture uses this path so a read cannot manufacture a CloudKit
+    /// export or commit accidental changes.
+    func withFreshReadContext<Result>(
+        _ operation: (ModelContext) throws -> Result
+    ) throws -> Result {
+        try mutationLock.withExclusiveAccess(for: scope) {
+            let context = try contextFactory.makeFreshContext()
+            context.autosaveEnabled = false
+            return try operation(context)
         }
     }
 }

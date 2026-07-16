@@ -87,6 +87,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/SystemIntegration/SyncConflictService+State.swift",
             "timetracker/Services/SystemIntegration/SyncConflictService+StateLock.swift",
             "timetracker/Services/SystemIntegration/SyncConflictService+StateLocations.swift",
+            "timetracker/Services/SystemIntegration/SyncConflictService+StoreTransaction.swift",
             "timetracker/Services/SystemIntegration/SyncConflictState.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+Capture.swift",

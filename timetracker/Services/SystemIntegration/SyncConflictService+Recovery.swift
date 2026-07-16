@@ -4,22 +4,29 @@ extension SyncConflictService {
     func stageCurrentLocalSnapshotForCloudEnablement(
         context: ModelContext
     ) throws -> SyncRecoveryResult {
-        try withExclusiveStateAccess {
-            let snapshot = try SyncDataSnapshot.capture(context: context)
-            if snapshot.hasProtectableUserContent {
-                return try forceUploadLocalData(context: context)
+        try withLockedFreshStoreContext(context: context) { lockedContext in
+            try withExclusiveStateAccess {
+                let snapshot = try SyncDataSnapshot.capture(context: lockedContext)
+                if snapshot.hasProtectableUserContent {
+                    return try forceUploadLocalDataWithLockedState(
+                        context: lockedContext
+                    )
+                }
+                return try acceptCurrentCloudDataWithLockedState()
             }
-            return try acceptCurrentCloudData(context: context)
         }
     }
 
     func forceUploadLocalData(context: ModelContext) throws -> SyncRecoveryResult {
-        try withExclusiveStateAccess {
-            try forceUploadLocalDataWithLockedState(context: context)
+        try withLockedFreshStoreContext(context: context) { lockedContext in
+            try withExclusiveStateAccess {
+                try forceUploadLocalDataWithLockedState(context: lockedContext)
+            }
         }
     }
 
-    private func forceUploadLocalDataWithLockedState(
+    /// Caller must already hold the store lock followed by the sync-state lock.
+    func forceUploadLocalDataWithLockedState(
         context: ModelContext
     ) throws -> SyncRecoveryResult {
         var state = try loadState()
@@ -56,17 +63,23 @@ extension SyncConflictService {
 
     func acceptCurrentCloudData(context: ModelContext) throws -> SyncRecoveryResult {
         try withExclusiveStateAccess {
-            var state = try loadState()
-            state.advanceSyncEpoch()
-            state.baseFingerprint = nil
-            state.localSnapshot = nil
-            state.localFingerprint = nil
-            state.pendingForcedUploadSnapshot = nil
-            state.clearPendingConflict()
-            try saveState(state)
-            AppCloudSync.requestCloudDownloadReset()
-            return .queuedForNextLaunch
+            try acceptCurrentCloudDataWithLockedState()
         }
+    }
+
+    /// Caller must already hold the sync-state lock. A surrounding store lock
+    /// is required when this participates in a store-backed resolution flow.
+    func acceptCurrentCloudDataWithLockedState() throws -> SyncRecoveryResult {
+        var state = try loadState()
+        state.advanceSyncEpoch()
+        state.baseFingerprint = nil
+        state.localSnapshot = nil
+        state.localFingerprint = nil
+        state.pendingForcedUploadSnapshot = nil
+        state.clearPendingConflict()
+        try saveState(state)
+        AppCloudSync.requestCloudDownloadReset()
+        return .queuedForNextLaunch
     }
 
     private func snapshotForForcedUpload(

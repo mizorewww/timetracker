@@ -7,12 +7,14 @@ extension SyncConflictService {
         resolution: SyncConflictResolution,
         context: ModelContext
     ) throws -> SyncConflictResolutionResult {
-        try withExclusiveStateAccess {
-            try resolveWithLockedState(
-                expectedConflictID: expectedConflictID,
-                resolution: resolution,
-                context: context
-            )
+        try withLockedFreshStoreContext(context: context) { lockedContext in
+            try withExclusiveStateAccess {
+                try resolveWithLockedState(
+                    expectedConflictID: expectedConflictID,
+                    resolution: resolution,
+                    context: lockedContext
+                )
+            }
         }
     }
 
@@ -30,9 +32,11 @@ extension SyncConflictService {
             let recoveryResult: SyncRecoveryResult
             switch resolution {
             case .uploadLocal:
-                recoveryResult = try forceUploadLocalData(context: context)
+                recoveryResult = try forceUploadLocalDataWithLockedState(
+                    context: context
+                )
             case .downloadCloud:
-                recoveryResult = try acceptCurrentCloudData(context: context)
+                recoveryResult = try acceptCurrentCloudDataWithLockedState()
             }
             return Self.resolutionResult(for: recoveryResult)
         }
@@ -41,9 +45,11 @@ extension SyncConflictService {
             let recoveryResult: SyncRecoveryResult
             switch resolution {
             case .uploadLocal:
-                recoveryResult = try forceUploadLocalData(context: context)
+                recoveryResult = try forceUploadLocalDataWithLockedState(
+                    context: context
+                )
             case .downloadCloud:
-                recoveryResult = try acceptCurrentCloudData(context: context)
+                recoveryResult = try acceptCurrentCloudDataWithLockedState()
             }
             return Self.resolutionResult(for: recoveryResult)
         }

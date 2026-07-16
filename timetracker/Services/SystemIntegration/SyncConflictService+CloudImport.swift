@@ -5,8 +5,10 @@ import SwiftData
 
 extension SyncConflictService {
     func handleCloudImport(context: ModelContext) throws -> SyncConflictPrompt? {
-        try withExclusiveStateAccess {
-            try handleCloudImportWithLockedState(context: context)
+        try withLockedFreshStoreContext(context: context) { lockedContext in
+            try withExclusiveStateAccess {
+                try handleCloudImportWithLockedState(context: lockedContext)
+            }
         }
     }
 

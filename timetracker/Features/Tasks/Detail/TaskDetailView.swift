@@ -5,10 +5,9 @@ struct TaskDetailView: View {
     let taskID: UUID
     @State private var range: AnalyticsRange = .week
     @State private var snapshot: TaskAnalyticsSnapshot?
-    @State private var loadedRequest: TaskAnalyticsSnapshotRequest?
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
+        TimelineView(.periodic(from: .now, by: 60)) { context in
             if let task = store.task(for: taskID) {
                 let request = store.taskAnalyticsSnapshotRequest(
                     for: task,
@@ -16,7 +15,7 @@ struct TaskDetailView: View {
                     now: context.date
                 )
                 Group {
-                    if let snapshot, loadedRequest == request {
+                    if let snapshot {
                         TaskDetailList(store: store, task: task, snapshot: snapshot, range: $range)
                     } else {
                         ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -25,7 +24,6 @@ struct TaskDetailView: View {
                 }
                 .task(id: request) {
                     snapshot = store.taskAnalyticsSnapshot(for: request, now: context.date)
-                    loadedRequest = request
                 }
             } else {
                 ContentUnavailableView(

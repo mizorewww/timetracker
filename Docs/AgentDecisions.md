@@ -955,7 +955,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 背景：启动 bootstrap、CloudKit import 或前台刷新一旦产生 pending conflict，`ContentView` 会自动弹出同时包含两个破坏性覆盖方向的 confirmation dialog；Settings 又提供相同动作和更完整的两侧摘要。用户可能在尚未看到副本差异时就面对高风险选择，启动 UI 被阻断，根 dialog 还会与错误 alert、scene sheet 竞争。
 
-决策：根 scene 改为 `SyncConflictNotice`，只说明需要比较副本，并提供“查看副本”导航与本 scene 忽略。iOS 使用位于浮动 Tab Bar 上方的材质卡片，避免与大标题和工具栏争夺顶部空间；macOS 使用顶部 safe-area inset。点按查看统一设置 `desktopDestination = .settings`，由 iPhone navigation、iPad detail 或 macOS Settings scene 按各自 shell 路由；提示本身没有上传/下载闭包。只有 Settings 的同步恢复区展示本机/iCloud 摘要、两个明确方向和随后 item-driven 破坏性确认。scene 记录已忽略的 conflict ID；同 token 不反复打扰，resolution-relevant 内容变化并旋转 token 后再提示。
+决策：根 scene 改为 `SyncConflictNotice`，只说明需要比较副本，并提供“查看副本”导航与本 scene 忽略。提示只在主持久化可写时出现，不能覆盖 `PersistenceRecoveryView`。iPhone 把材质卡片交给根 `TabView` 的系统 `tabViewBottomAccessory`，随浮动/收起 Tab Bar 自适应；iPad 与 macOS 使用各自 shell 的顶部 safe-area inset。禁止用固定 bottom padding 猜测系统 chrome。点按查看统一设置 `desktopDestination = .settings`，由 iPhone navigation、iPad detail 或 macOS Settings scene 按各自 shell 路由；提示本身没有上传/下载闭包。只有 Settings 的同步恢复区展示本机/iCloud 摘要、两个明确方向和随后 item-driven 破坏性确认。scene 记录已忽略的 conflict ID；同 token 不反复打扰，resolution-relevant 内容变化并旋转 token 后再提示。
 
 后果：App 启动和后台同步不再强迫用户立即做数据覆盖决定；破坏动作发生前总有比较两侧摘要的路径。忽略只隐藏当前 scene 的提示，不清 pending state、不解除恢复保护；Settings 仍可随时解决。后续不得在根层重新加入自动冲突 confirmation，或让 notice 直接执行覆盖。
 

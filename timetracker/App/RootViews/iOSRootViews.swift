@@ -3,32 +3,43 @@ import SwiftUI
 #if os(iOS)
 import UIKit
 
-struct iOSRootView: View {
+struct iOSRootView<SyncConflictContent: View>: View {
     let store: TimeTrackerStore
+    let syncConflictContent: SyncConflictContent
     private let layoutPolicy: RootLayoutPolicy
 
     init(
         store: TimeTrackerStore,
         layoutPolicy: RootLayoutPolicy = RootLayoutPolicy(
             userInterfaceIdiom: UIDevice.current.userInterfaceIdiom
-        )
+        ),
+        @ViewBuilder syncConflictContent: () -> SyncConflictContent
     ) {
         self.store = store
         self.layoutPolicy = layoutPolicy
+        self.syncConflictContent = syncConflictContent()
     }
 
     var body: some View {
         switch layoutPolicy.shell {
         case .phone:
-            PhoneRootView(store: store)
+            PhoneRootView(
+                store: store,
+                syncConflictContent: syncConflictContent
+            )
         case .pad:
             iPadRootView(store: store)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    syncConflictContent
+                        .padding(8)
+                }
         }
     }
 }
 
-struct PhoneRootView: View {
+struct PhoneRootView<SyncConflictContent: View>: View {
     let store: TimeTrackerStore
+    let syncConflictContent: SyncConflictContent
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
 
@@ -82,6 +93,10 @@ struct PhoneRootView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .tabViewBottomAccessory {
+            syncConflictContent
+                .padding(.horizontal, 12)
+        }
         .accessibilityIdentifier("phone.tabView")
         .onAppear {
             synchronize(with: store.desktopDestination)

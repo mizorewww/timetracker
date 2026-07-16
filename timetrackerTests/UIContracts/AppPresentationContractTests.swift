@@ -59,6 +59,9 @@ struct AppPresentationContractTests {
     @Test
     func rootSyncConflictNoticeRoutesToSettingsWithoutAutomaticDestructiveActions() throws {
         let content = try sourceText("timetracker/App/ContentView.swift")
+        let iOSRoot = try sourceText(
+            "timetracker/App/RootViews/iOSRootViews.swift"
+        )
         let notice = try sourceText(
             "timetracker/SharedUI/Components/SyncConflictNotice.swift"
         )
@@ -70,6 +73,10 @@ struct AppPresentationContractTests {
         #expect(content.contains("store.desktopDestination = .settings"))
         #expect(content.contains("dialog.syncConflict.uploadLocal") == false)
         #expect(content.contains("dialog.syncConflict.downloadCloud") == false)
+        #expect(content.contains("store.effectivePersistenceWriteSafety == .ready"))
+        #expect(content.contains(".padding(.bottom, 84)") == false)
+        #expect(iOSRoot.contains(".tabViewBottomAccessory"))
+        #expect(iOSRoot.contains(".safeAreaInset(edge: .top, spacing: 0)"))
         #expect(notice.contains("sync.conflict.notice.review"))
         #expect(recovery.contains("pendingConflict.localSummary"))
         #expect(recovery.contains("pendingConflict.cloudSummary"))

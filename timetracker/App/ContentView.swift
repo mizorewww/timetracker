@@ -28,7 +28,9 @@ struct ContentView: View {
                 #if os(macOS)
                 DesktopRootView(store: store)
                 #else
-                iOSRootView(store: store)
+                iOSRootView(store: store) {
+                    syncConflictNotice
+                }
                 #endif
             } else {
                 PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
@@ -42,13 +44,7 @@ struct ContentView: View {
             feedbackRouter: feedbackRouter
         )
         .appSceneFeedbackHost(router: feedbackRouter)
-        #if os(iOS)
-        .overlay(alignment: .bottom) {
-            syncConflictNotice
-                .padding(.horizontal, 12)
-                .padding(.bottom, 84)
-        }
-        #else
+        #if os(macOS)
         .safeAreaInset(edge: .top, spacing: 0) {
             syncConflictNotice
                 .padding(8)
@@ -171,7 +167,8 @@ struct ContentView: View {
 
     @ViewBuilder
     private var syncConflictNotice: some View {
-        if let conflict = store.pendingSyncConflict,
+        if store.effectivePersistenceWriteSafety == .ready,
+           let conflict = store.pendingSyncConflict,
            dismissedSyncConflictID != conflict.id {
             SyncConflictNotice(
                 onReview: {

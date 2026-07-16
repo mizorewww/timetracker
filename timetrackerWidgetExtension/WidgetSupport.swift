@@ -10,10 +10,12 @@ enum WidgetDeepLinks {
     static let today = URL(string: "timetracker://open/today")!
 
     static func startTimer(taskID: UUID) -> URL {
-        URL(string: "timetracker://timer/start?taskID=\(taskID.uuidString)")!
+        URL(
+            string: "timetracker://timer/start?taskID=\(taskID.uuidString)&source=widget"
+        )!
     }
 
-    static func stopTimer(segmentID: String) -> URL {
+    nonisolated static func stopTimer(segmentID: String) -> URL {
         URL(string: "timetracker://timer/stop?segmentID=\(segmentID)")!
     }
 }

@@ -44,7 +44,7 @@ private func linearSRGB(_ component: Double) -> Double {
 enum LiveActivityDeepLinks {
     static let today = URL(string: "timetracker://open/today")!
 
-    static func stopTimer(segmentID: String) -> URL {
+    nonisolated static func stopTimer(segmentID: String) -> URL {
         URL(string: "timetracker://timer/stop?segmentID=\(segmentID)")!
     }
 }

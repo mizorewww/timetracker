@@ -80,6 +80,39 @@ struct CoreDeepLinkRoutingTests {
     }
 
     @Test @MainActor
+    func widgetStartDeepLinkPersistsItsSystemSurfaceSource() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Widget task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let url = try #require(
+            URL(
+                string: "timetracker://timer/start?taskID=\(task.id.uuidString)&source=widget"
+            )
+        )
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: AppPresentationRouter())
+                == .handled
+        )
+        let persistedSegment = try #require(
+            SwiftDataTimeTrackingRepository(
+                context: ModelContext(context.container),
+                deviceID: "test"
+            ).allSegments().first
+        )
+        #expect(persistedSegment.source == .widget)
+    }
+
+    @Test @MainActor
     func latestDesiredStateReconcilerSerializesAndCoalescesStopStartTransitions() async {
         let probe = LiveActivityReconciliationProbe()
         let reconciler = LatestDesiredStateReconciler<String> { state in
@@ -121,7 +154,8 @@ struct CoreDeepLinkRoutingTests {
         #expect(router.action(for: try #require(URL(string: "timetracker://open/tasks"))) == .open(.tasks))
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/start"))) == .startTimerPicker)
         let taskID = UUID()
-        #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?taskID=\(taskID.uuidString)"))) == .startTimer(taskID))
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?taskID=\(taskID.uuidString)"))) == .startTimer(taskID, source: .timer))
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?taskID=\(taskID.uuidString)&source=widget"))) == .startTimer(taskID, source: .widget))
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?taskID=\(taskID.uuidString)"))) == .stopTimer(.task(taskID)))
         let segmentID = UUID()
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?segmentID=\(segmentID.uuidString)"))) == .stopTimer(.segment(segmentID)))
@@ -142,6 +176,8 @@ struct CoreDeepLinkRoutingTests {
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?segmentID=invalid"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?taskID=\(UUID())&segmentID=\(UUID())"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?other=value"))) == nil)
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?taskID=\(UUID())&source=shortcut"))) == nil)
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?taskID=\(UUID())&source=widget&source=widget"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://open/inbox/extra"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://open/inbox#fragment"))) == nil)
     }
@@ -470,6 +506,7 @@ struct CoreDeepLinkRoutingTests {
         #expect(contentView.contains("PendingDeepLinkQueue"))
         #expect(contentView.contains("store.handleDeepLink"))
         #expect(widget.contains("timetracker://timer/start"))
+        #expect(widget.contains("source=widget"))
         #expect(widget.contains("timetracker://open/today"))
     }
 

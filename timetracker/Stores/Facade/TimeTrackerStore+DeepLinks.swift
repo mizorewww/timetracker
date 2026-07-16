@@ -33,8 +33,8 @@ extension TimeTrackerStore {
             closeTaskDetailNavigation()
             desktopDestination = .today
             return .handled
-        case .startTimer(let taskID):
-            guard startTask(taskID: taskID) else {
+        case .startTimer(let taskID, let source):
+            guard startTask(taskID: taskID, source: source) else {
                 return .rejected
             }
             closeTaskDetailNavigation()

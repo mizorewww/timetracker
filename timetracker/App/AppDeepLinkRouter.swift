@@ -3,7 +3,7 @@ import Foundation
 enum AppDeepLinkAction: Equatable {
     case open(TimeTrackerStore.DesktopDestination)
     case startTimerPicker
-    case startTimer(UUID)
+    case startTimer(UUID, source: TimeSessionSource)
     case stopTimer(AppDeepLinkStopTarget?)
     case newTask
     case openTask(UUID)
@@ -38,18 +38,27 @@ struct AppDeepLinkRouter {
             return .open(destination)
         case "timer":
             guard path.count == 1, let operation = path.first else { return nil }
-            let parameter = timerParameter(from: url)
-            switch (operation, parameter) {
-            case ("start", .absent):
-                return .startTimerPicker
-            case ("start", .task(let taskID)):
-                return .startTimer(taskID)
-            case ("stop", .absent):
-                return .stopTimer(nil)
-            case ("stop", .task(let taskID)):
-                return .stopTimer(.task(taskID))
-            case ("stop", .segment(let segmentID)):
-                return .stopTimer(.segment(segmentID))
+            switch operation {
+            case "start":
+                switch timerStartParameter(from: url) {
+                case .absent:
+                    return .startTimerPicker
+                case .task(let taskID, let source):
+                    return .startTimer(taskID, source: source)
+                case .invalid:
+                    return nil
+                }
+            case "stop":
+                switch timerStopParameter(from: url) {
+                case .absent:
+                    return .stopTimer(nil)
+                case .task(let taskID):
+                    return .stopTimer(.task(taskID))
+                case .segment(let segmentID):
+                    return .stopTimer(.segment(segmentID))
+                case .invalid:
+                    return nil
+                }
             default:
                 return nil
             }
@@ -87,7 +96,32 @@ struct AppDeepLinkRouter {
         URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.isEmpty ?? true
     }
 
-    private func timerParameter(from url: URL) -> TimerParameter {
+    private func timerStartParameter(from url: URL) -> TimerStartParameter {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return .invalid
+        }
+        let queryItems = components.queryItems ?? []
+        guard queryItems.isEmpty == false else { return .absent }
+        guard queryItems.count == 1 || queryItems.count == 2 else { return .invalid }
+
+        let taskItems = queryItems.filter { $0.name == "taskID" }
+        guard taskItems.count == 1,
+              let rawTaskID = taskItems[0].value,
+              let taskID = UUID(uuidString: rawTaskID) else {
+            return .invalid
+        }
+        if queryItems.count == 1 {
+            return .task(taskID, source: .timer)
+        }
+
+        let sourceItems = queryItems.filter { $0.name == "source" }
+        guard sourceItems.count == 1, sourceItems[0].value == "widget" else {
+            return .invalid
+        }
+        return .task(taskID, source: .widget)
+    }
+
+    private func timerStopParameter(from url: URL) -> TimerStopParameter {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return .invalid
         }
@@ -109,7 +143,13 @@ struct AppDeepLinkRouter {
     }
 }
 
-private enum TimerParameter {
+private enum TimerStartParameter {
+    case absent
+    case task(UUID, source: TimeSessionSource)
+    case invalid
+}
+
+private enum TimerStopParameter {
     case absent
     case task(UUID)
     case segment(UUID)

@@ -6,6 +6,7 @@ extension TimeTrackerStore {
         TaskEditorDraft(
             task: task,
             categoryID: taskCategoryIDByRootTaskID[task.id],
+            categoryAssignment: taskCategoryAssignmentByRootTaskID[task.id],
             checklistItems: checklistItems(for: task.id),
             visualByChecklistID: checklistVisualByItemID
         )
@@ -21,58 +22,29 @@ extension TimeTrackerStore {
             errorMessage = AppStrings.localized("task.nameRequired")
             return false
         }
-        if let taskID = draft.taskID,
-           let currentTask = task(for: taskID),
-           currentTask.status != draft.status,
-           draft.status == .archived || draft.status == .completed,
-           hasActiveTimer(inTaskSubtree: taskID) {
-            errorMessage = AppStrings.localized(
-                draft.status == .completed
-                    ? "task.action.complete.stopFirst"
-                    : "task.action.archive.stopFirst"
-            )
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
             return false
         }
-        if let taskID = draft.taskID,
-           let currentTask = task(for: taskID),
-           currentTask.parentID != draft.parentID,
-           let blocker = parentChangeBlocker(for: currentTask) {
-            let messageKey = switch blocker {
-            case .completed: "task.parent.completedLocked"
-            case .archived: "task.parent.archivedLocked"
-            case .deleted: "task.parent.deletedLocked"
-            }
-            errorMessage = AppStrings.localized(messageKey)
-            return false
-        }
-        if let parentID = draft.parentID,
-           trackableTaskIDs.contains(parentID) == false,
-           draft.taskID.flatMap({ task(for: $0) })?.parentID != parentID {
-            errorMessage = AppStrings.localized("task.parentUnavailable")
-            return false
-        }
-
-        let affectedHierarchyIDs = affectedTaskIDsForHierarchyChange(taskID: draft.taskID, parentID: draft.parentID)
-        let primaryDraftTaskIDs = draft.taskID.map { Set([$0]) } ?? []
-        var savedTaskID: UUID?
-        let didSave = perform(events: [
-            .taskChanged(taskID: draft.taskID, affectedAncestorIDs: affectedHierarchyIDs.subtracting(primaryDraftTaskIDs)),
-            .checklistChanged(taskID: draft.taskID, affectedAncestorIDs: affectedAncestorIDs(for: draft.taskID, parentID: draft.parentID))
-        ]) {
-            savedTaskID = try taskDraftCommandHandler.save(
-                draft: draft,
-                sanitizedTitle: sanitizedTitle,
-                taskRepository: requiredTaskRepository(),
-                saveChecklistDrafts: saveChecklistDrafts
-            )
-        }
-        if didSave {
-            selectedTaskID = savedTaskID
+        do {
+            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).save(draft: draft, sanitizedTitle: sanitizedTitle)
+            finishStoreScopedMutation(events: outcome.events)
+            refreshStoreScopedTimerReadModels()
+            selectedTaskID = outcome.savedTaskID
             if let returnDestination {
                 desktopDestination = returnDestination
             }
+            return true
+        } catch {
+            if error is TaskLifecycleMutationError {
+                refreshStoreScopedTaskLifecycleReadModels()
+            }
+            errorMessage = error.localizedDescription
+            return false
         }
-        return didSave
     }
 
     @discardableResult
@@ -161,14 +133,12 @@ extension TimeTrackerStore {
             desktopDestination = destinationBeforeDelete
             return true
         } catch {
+            if error is TaskLifecycleMutationError {
+                refreshStoreScopedTaskLifecycleReadModels()
+            }
             errorMessage = error.localizedDescription
             return false
         }
-    }
-
-    private func saveChecklistDrafts(_ drafts: [ChecklistEditorDraft], taskID: UUID) throws {
-        guard let modelContext else { throw StoreError.notConfigured }
-        try checklistDraftService.save(drafts: drafts, taskID: taskID, context: modelContext)
     }
 
     private func performStoreScopedTaskStatusTransition(
@@ -192,8 +162,28 @@ extension TimeTrackerStore {
             refreshStoreScopedTimerReadModels()
             return true
         } catch {
+            if error is TaskLifecycleMutationError {
+                refreshStoreScopedTaskLifecycleReadModels()
+            }
             errorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    /// Converges every read model used by a task-lifecycle admission check
+    /// after a fresh-context command rejects stale scene input.
+    private func refreshStoreScopedTaskLifecycleReadModels() {
+        do {
+            try refresh(
+                plan: StoreRefreshPlan(
+                    scopes: [.tasks, .ledgerVisible, .pomodoro, .checklist]
+                )
+            )
+        } catch {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                error.localizedDescription
+            )
         }
     }
 }

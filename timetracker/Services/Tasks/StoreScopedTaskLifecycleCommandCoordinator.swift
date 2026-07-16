@@ -1,100 +1,6 @@
 import Foundation
 import SwiftData
 
-enum TaskLifecycleMutationError: LocalizedError, Equatable {
-    case taskNotFound
-    case activeWorkMustStop(TaskStatus)
-
-    var errorDescription: String? {
-        switch self {
-        case .taskNotFound:
-            AppStrings.localized("systemAction.error.taskNotFound")
-        case .activeWorkMustStop(let status):
-            AppStrings.localized(
-                status == .completed
-                    ? "task.action.complete.stopFirst"
-                    : "task.action.archive.stopFirst"
-            )
-        }
-    }
-}
-
-struct TaskStatusMutationOutcome: Equatable {
-    let taskID: UUID
-    let didMutate: Bool
-    let relatedTaskIDs: Set<UUID>
-
-    var events: Set<StoreDomainEvent> {
-        guard didMutate else { return [] }
-        return [
-            .taskChanged(
-                taskID: taskID,
-                affectedAncestorIDs: relatedTaskIDs.subtracting([taskID])
-            ),
-        ]
-    }
-}
-
-struct TaskLifecyclePomodoroSnapshot: Equatable, Hashable {
-    let runID: UUID
-    let sessionID: UUID?
-    let taskID: UUID
-}
-
-struct TaskLifecycleSegmentSnapshot: Equatable, Hashable {
-    let segmentID: UUID
-    let sessionID: UUID
-    let taskID: UUID
-    let isPomodoro: Bool
-}
-
-struct TaskDeletionMutationOutcome: Equatable {
-    let taskID: UUID
-    let deletedTaskIDs: Set<UUID>
-    let relatedTaskIDs: Set<UUID>
-    let stoppedSegments: [TaskLifecycleSegmentSnapshot]
-    let terminatedPomodoros: [TaskLifecyclePomodoroSnapshot]
-
-    var events: Set<StoreDomainEvent> {
-        var events: Set<StoreDomainEvent> = [
-            .taskChanged(
-                taskID: taskID,
-                affectedAncestorIDs: relatedTaskIDs.subtracting([taskID])
-            ),
-        ]
-        let terminatedSessionIDs = Set(terminatedPomodoros.compactMap(\.sessionID))
-        for segment in stoppedSegments {
-            events.insert(
-                .ledgerChanged(
-                    taskID: segment.taskID,
-                    dateInterval: nil,
-                    isVisible: true
-                )
-            )
-            if segment.isPomodoro,
-               terminatedSessionIDs.contains(segment.sessionID) == false {
-                events.insert(
-                    .pomodoroChanged(
-                        runID: nil,
-                        sessionID: segment.sessionID,
-                        taskID: segment.taskID
-                    )
-                )
-            }
-        }
-        for run in terminatedPomodoros {
-            events.insert(
-                .pomodoroChanged(
-                    runID: run.runID,
-                    sessionID: run.sessionID,
-                    taskID: run.taskID
-                )
-            )
-        }
-        return events
-    }
-}
-
 /// Serializes local task availability changes with every timer admission for
 /// the same SwiftData store. The canonical subtree and active work set are
 /// fetched only after the shared timer lock is held.
@@ -249,7 +155,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         }
     }
 
-    private static func relatedTaskIDs(
+    static func relatedTaskIDs(
         for task: TaskNode,
         tasks: [TaskNode]
     ) -> Set<UUID> {

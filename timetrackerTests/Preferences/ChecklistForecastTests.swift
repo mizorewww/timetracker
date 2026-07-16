@@ -102,7 +102,7 @@ struct ChecklistForecastTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var firstDraft = TaskEditorDraft(task: task, checklistItems: [])
+        var firstDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
         firstDraft.checklistItems = [
             ChecklistEditorDraft(title: "Done", isCompleted: true),
             ChecklistEditorDraft(title: "Todo", isCompleted: false)
@@ -117,7 +117,7 @@ struct ChecklistForecastTests {
         #expect(firstRollup.historicalActiveDayCount == 1)
         #expect(abs((firstRollup.projectedDays ?? 0) - 1.0) < 0.05)
 
-        var secondDraft = TaskEditorDraft(task: task, checklistItems: store.checklistItems(for: task.id))
+        var secondDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
         secondDraft.checklistItems.append(ChecklistEditorDraft(title: "Also done", isCompleted: true))
         store.saveTaskDraft(secondDraft)
 
@@ -148,7 +148,7 @@ struct ChecklistForecastTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var draft = TaskEditorDraft(task: task, checklistItems: [])
+        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
         draft.checklistItems = [
             ChecklistEditorDraft(title: "Already done", isCompleted: true),
             ChecklistEditorDraft(title: "Tap me", isCompleted: false)

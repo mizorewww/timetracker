@@ -8,10 +8,7 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     @Test
     func staleSceneCannotCompleteSubtreeStartedBySiblingContext() throws {
         let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(
-            context: context,
-            deviceID: "test"
-        )
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let parent = try taskRepository.createTask(
             title: "Parent",
             parentID: nil,
@@ -36,31 +33,22 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
 
         #expect(store.setTaskStatus(.completed, taskID: parent.id) == false)
         #expect(
-            try freshTaskRepository(context.container).task(id: parent.id)?.status
-                == .active
+            try freshTaskRepository(context.container).task(id: parent.id)?.status == .active
         )
-        #expect(
-            store.errorMessage
-                == AppStrings.localized("task.action.complete.stopFirst")
-        )
+        #expect(store.errorMessage == AppStrings.localized("task.action.complete.stopFirst"))
     }
 
     @Test
     func staleSceneCanCompleteAfterSiblingContextStopsTimer() throws {
         let context = try makeTestContext()
-        let task = try SwiftDataTaskRepository(
-            context: context,
-            deviceID: "test"
-        ).createTask(
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Fresh stop",
             parentID: nil,
             colorHex: nil,
             iconName: nil
         )
-        let segment = try SwiftDataTimeTrackingRepository(
-            context: context,
-            deviceID: "test"
-        ).startTask(taskID: task.id, source: .timer)
+        let segment = try SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+            .startTask(taskID: task.id, source: .timer)
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         #expect(store.activeSegments.map(\.id) == [segment.id])
@@ -72,8 +60,7 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
 
         #expect(store.setTaskStatus(.completed, taskID: task.id))
         #expect(
-            try freshTaskRepository(context.container).task(id: task.id)?.status
-                == .completed
+            try freshTaskRepository(context.container).task(id: task.id)?.status == .completed
         )
         #expect(store.activeSegments.isEmpty)
     }
@@ -81,10 +68,7 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     @Test
     func breakOnlyPomodoroStillBlocksArchive() throws {
         let context = try makeTestContext()
-        let task = try SwiftDataTaskRepository(
-            context: context,
-            deviceID: "test"
-        ).createTask(
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Resting task",
             parentID: nil,
             colorHex: nil,
@@ -107,22 +91,15 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
 
         #expect(store.archiveSelectedTask(taskID: task.id) == false)
         #expect(
-            try freshTaskRepository(context.container).task(id: task.id)?.status
-                == .active
+            try freshTaskRepository(context.container).task(id: task.id)?.status == .active
         )
-        #expect(
-            store.errorMessage
-                == AppStrings.localized("task.action.archive.stopFirst")
-        )
+        #expect(store.errorMessage == AppStrings.localized("task.action.archive.stopFirst"))
     }
 
     @Test
     func staleSceneDeletionDiscoversSiblingChildAndStopsItsTimer() throws {
         let context = try makeTestContext()
-        let parent = try SwiftDataTaskRepository(
-            context: context,
-            deviceID: "test"
-        ).createTask(
+        let parent = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Known parent",
             parentID: nil,
             colorHex: nil,
@@ -156,15 +133,9 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
         let freshContext = ModelContext(context.container)
         let persistedTasks = try freshContext.fetch(FetchDescriptor<TaskNode>())
         let persistedSegments = try freshContext.fetch(FetchDescriptor<TimeSegment>())
-        #expect(
-            persistedTasks.first { $0.id == parent.id }?.deletedAt != nil
-        )
-        #expect(
-            persistedTasks.first { $0.id == child.id }?.deletedAt != nil
-        )
-        #expect(
-            persistedSegments.first { $0.id == segmentID }?.endedAt != nil
-        )
+        #expect(persistedTasks.first { $0.id == parent.id }?.deletedAt != nil)
+        #expect(persistedTasks.first { $0.id == child.id }?.deletedAt != nil)
+        #expect(persistedSegments.first { $0.id == segmentID }?.endedAt != nil)
         #expect(store.task(for: parent.id) == nil)
         #expect(store.task(for: child.id) == nil)
         #expect(store.activeSegments.isEmpty)

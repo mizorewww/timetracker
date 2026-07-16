@@ -333,6 +333,7 @@
 "task.status.blockedByCompletion" = "待重新開啟";
 "task.archived.trackingUnavailable" = "此任務或其上層任務已完成或封存，不能接收新工作。請先重新開啟或還原相應任務。";
 "task.parentUnavailable" = "所選父任務已完成、已封存或不再可用。";
+"task.editor.staleDraft" = "此任務已在其他位置發生變更。請查看最新版本後重試。";
 "task.parent.completedLocked" = "此任務已完成，重新開啟後才能移動。";
 "task.parent.archivedLocked" = "此任務已封存，還原後才能移動。";
 "task.parent.deletedLocked" = "已刪除的任務不能移動。";

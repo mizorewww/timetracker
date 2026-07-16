@@ -333,6 +333,7 @@
 "task.status.blockedByCompletion" = "待重新打开";
 "task.archived.trackingUnavailable" = "此任务或其上级任务已完成或归档，不能接收新工作。请先重新打开或恢复相应任务。";
 "task.parentUnavailable" = "所选父任务已完成、已归档或不再可用。";
+"task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";
 "task.parent.completedLocked" = "此任务已完成，重新打开后才能移动。";
 "task.parent.archivedLocked" = "此任务已归档，恢复后才能移动。";
 "task.parent.deletedLocked" = "已删除的任务不能移动。";

@@ -39,10 +39,4 @@ extension TimeTrackerStore {
         selectionCoordinator.affectedAncestorIDs(for: taskID, parentID: parentID, taskByID: taskByID)
     }
 
-    func affectedTaskIDsForHierarchyChange(taskID: UUID?, parentID: UUID? = nil) -> Set<UUID> {
-        guard let taskID else { return [] }
-        return affectedAncestorIDs(for: taskID, parentID: parentID)
-            .union(taskTreeService.descendantIDs(of: taskID, tasks: tasks))
-            .union([taskID])
-    }
 }

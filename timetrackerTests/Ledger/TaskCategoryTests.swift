@@ -205,7 +205,7 @@ struct TaskCategoryTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var draft = TaskEditorDraft(task: root, categoryID: work.id, checklistItems: [])
+        var draft = store.editorDraft(for: try #require(store.task(for: root.id)))
         draft.categoryID = life.id
         #expect(store.saveTaskDraft(draft))
 

@@ -1,7 +1,15 @@
 import Foundation
 
+struct TaskEditorDraftBaseline: Equatable {
+    let taskMutationID: UUID
+    let checklistItemMutationIDs: [UUID: UUID]
+    let checklistVisualMutationIDs: [UUID: UUID]
+    let categoryAssignmentMutationID: UUID?
+}
+
 struct TaskEditorDraft: Identifiable, Equatable {
     let id = UUID()
+    let baseline: TaskEditorDraftBaseline?
     var taskID: UUID?
     var title: String
     var status: TaskStatus
@@ -16,6 +24,7 @@ struct TaskEditorDraft: Identifiable, Equatable {
     var checklistItems: [ChecklistEditorDraft]
 
     init(parentID: UUID?, categoryID: UUID? = nil) {
+        self.baseline = nil
         self.taskID = nil
         self.title = ""
         self.status = .active
@@ -33,9 +42,22 @@ struct TaskEditorDraft: Identifiable, Equatable {
     init(
         task: TaskNode,
         categoryID: UUID? = nil,
+        categoryAssignment: TaskCategoryAssignment? = nil,
         checklistItems: [ChecklistItem],
         visualByChecklistID: [UUID: ChecklistItemVisual] = [:]
     ) {
+        let checklistItemMutationIDs = checklistItems.reduce(into: [UUID: UUID]()) {
+            $0[$1.id] = $1.clientMutationID
+        }
+        self.baseline = TaskEditorDraftBaseline(
+            taskMutationID: task.clientMutationID,
+            checklistItemMutationIDs: checklistItemMutationIDs,
+            checklistVisualMutationIDs: visualByChecklistID.reduce(into: [UUID: UUID]()) {
+                guard checklistItemMutationIDs[$1.key] != nil else { return }
+                $0[$1.key] = $1.value.clientMutationID
+            },
+            categoryAssignmentMutationID: categoryAssignment?.clientMutationID
+        )
         self.taskID = task.id
         self.title = task.title
         self.status = task.status

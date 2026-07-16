@@ -596,7 +596,7 @@ struct PreferencesChecklistForecastTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var firstDraft = TaskEditorDraft(task: task, checklistItems: [])
+        var firstDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
         firstDraft.checklistItems = [
             ChecklistEditorDraft(title: "Write copy"),
             ChecklistEditorDraft(title: "Ship build")
@@ -605,7 +605,7 @@ struct PreferencesChecklistForecastTests {
         #expect(store.checklistItems(for: task.id).map(\.title) == ["Write copy", "Ship build"])
 
         let existing = store.checklistItems(for: task.id)
-        var secondDraft = TaskEditorDraft(task: task, checklistItems: existing)
+        var secondDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
         secondDraft.checklistItems = [
             ChecklistEditorDraft(item: existing[1]),
             ChecklistEditorDraft(item: existing[0])

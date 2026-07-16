@@ -186,7 +186,6 @@ final class TimeTrackerStore {
     let taskTreeService = TaskTreeService()
     let taskTrackingAvailabilityService = TaskTrackingAvailabilityService()
     let ledgerSummaryService = LedgerSummaryService()
-    let checklistDraftService = ChecklistDraftService()
     let inboxSuggestionStateService = InboxSuggestionStateService()
     let forecastDisplayService = ForecastDisplayService()
     let databaseMaintenanceService = DatabaseMaintenanceService()
@@ -213,6 +212,7 @@ final class TimeTrackerStore {
     var taskByID: [UUID: TaskNode] = [:]
     var taskCategoryByID: [UUID: TaskCategory] = [:]
     var taskCategoryIDByRootTaskID: [UUID: UUID] = [:]
+    var taskCategoryAssignmentByRootTaskID: [UUID: TaskCategoryAssignment] = [:]
     var forecastEligibleTaskIDCache: Set<UUID> = []
     @ObservationIgnored var taskTreeIndexes = TaskTreeIndexes.empty
     var childrenByParentID: [UUID?: [TaskNode]] = [:]

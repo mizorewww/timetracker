@@ -203,6 +203,9 @@ extension TimeTrackerStore {
         let logicalWinners = taskCategoryAssignments
             .deduplicatedByID()
             .logicalWinnersByTaskID()
+        taskCategoryAssignmentByRootTaskID = logicalWinners.filter {
+            $0.value.deletedAt == nil
+        }
         let categoryIDs: [UUID: UUID] = logicalWinners.compactMapValues { assignment -> UUID? in
             guard assignment.deletedAt == nil else { return nil }
             return assignment.categoryID

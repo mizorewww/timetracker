@@ -791,6 +791,18 @@
 
 验证：正常字号 iPhone UI 测试必须让 Focus 主动作和 Analytics 最后一项完整位于当前系统 chrome 顶部至少 8 pt；截图同时确认首屏五项 Tab Bar 完整、下滚后缩为当前标签。generic iOS 设备 SDK 自动签名构建继续保留主 App、Widget、Live Activity、Watch 的付费签名与 APS、CloudKit、App Group。一次性设备与结果路径只记录在 dated Audit。
 
+## AD-062：Focus 首屏优先完成设置与启动
+
+状态：Accepted
+
+背景：正常字号 iPhone 的 Focus 首屏把计时器、计划、任务、主操作和四项计划摘要排成过高的纵向卡片。任务选择又同时显示标题和包含该标题的完整路径，造成重复；四项计划摘要固定为 2×2 网格，进一步把“开始专注”后的必要上下文推到浮动 Tab Bar 下方。此前 112 pt 固定底部 content margin 还与系统滚动安全区和可收起 Tab Bar 重复。
+
+决策：紧凑宽度使用 18 pt 卡片内边距、20 pt section spacing 和 16 pt 页面垂直边距；常规宽度保留 24 pt 节奏。任务选择主行只显示任务标题，第二行显示不重复标题的父级路径；Picker 菜单继续使用完整路径区分同名任务。四项计划指标优先在一行展示，宽度不足时由 `ViewThatFits` 回退到 2×2 Grid。正常字号滚动末端只保留 16 pt 内容节奏并依赖系统 safe-area/tab chrome inset；不得再用大块固定空白掩盖首屏层级问题。
+
+后果：正常字号 iPhone 首屏可以同时看到完整设置卡、开始专注和全部四项计划事实，最近记录仍作为次级可滚动内容。Mac、iPad 和宽窗口继续使用更宽松间距；同名任务的区分能力保留在父级路径和完整 Picker 项中。后续新增 setup 信息必须先判断是否属于启动前必要事实，不能继续纵向堆叠到主操作之前。
+
+验证：布局策略与源码契约固定紧凑/常规间距、页面垂直边距和“标题 + 父级路径”任务身份。付费签名的 macOS 合并定向回归 71/71 通过；正常字号 iPhone 17 Pro / iOS 27 Focus UI 1/1 通过，截图确认完整设置、主操作及四项摘要都位于系统 Tab Bar 上方。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保留 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 APS、CloudKit 和 App Group。一次性证据路径与设备清理记录见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

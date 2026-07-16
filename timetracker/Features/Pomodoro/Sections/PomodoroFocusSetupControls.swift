@@ -7,6 +7,7 @@ struct PomodoroFocusSetupControls: View {
     let availableTasks: [TaskNode]
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
+    let contentSpacing: CGFloat
 
     private var taskColor: Color {
         Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
@@ -17,7 +18,7 @@ struct PomodoroFocusSetupControls: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: contentSpacing) {
             PomodoroTimerFace(
                 timeText: DurationFormatter.clock(plan.focusSeconds),
                 title: selectedTask?.title ?? AppStrings.localized("pomodoro.chooseTask"),
@@ -68,14 +69,22 @@ private struct PomodoroPlanDetails: View {
     let plan: PomodoroPlan
 
     var body: some View {
-        Grid(horizontalSpacing: 24, verticalSpacing: 16) {
-            GridRow {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 8) {
                 metric("pomodoro.focus", value: minutes(plan.focusMinutes))
                 metric("pomodoro.shortBreak", value: minutes(plan.shortBreakMinutes))
-            }
-            GridRow {
                 metric("pomodoro.longBreak", value: minutes(plan.longBreakMinutes))
                 metric("pomodoro.rounds", value: String(plan.rounds))
+            }
+            Grid(horizontalSpacing: 24, verticalSpacing: 16) {
+                GridRow {
+                    metric("pomodoro.focus", value: minutes(plan.focusMinutes))
+                    metric("pomodoro.shortBreak", value: minutes(plan.shortBreakMinutes))
+                }
+                GridRow {
+                    metric("pomodoro.longBreak", value: minutes(plan.longBreakMinutes))
+                    metric("pomodoro.rounds", value: String(plan.rounds))
+                }
             }
         }
         .frame(maxWidth: .infinity)

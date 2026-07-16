@@ -38,6 +38,7 @@ struct PomodoroSetupSelectionControls: View {
             PomodoroSelectionLabel(
                 title: AppStrings.localized("pomodoro.choosePlan"),
                 value: selectedPlan?.displayName ?? AppStrings.localized("common.choose"),
+                detail: nil,
                 systemImage: selectedPlan?.iconName ?? "slider.horizontal.3",
                 tint: Color(hex: selectedPlan?.colorHex) ?? PomodoroStyle.accent
             )
@@ -62,7 +63,8 @@ struct PomodoroSetupSelectionControls: View {
         } label: {
             PomodoroSelectionLabel(
                 title: AppStrings.localized("pomodoro.chooseTask"),
-                value: selectedTask.map(store.path(for:)) ?? AppStrings.localized("common.choose"),
+                value: selectedTask?.title ?? AppStrings.localized("common.choose"),
+                detail: selectedTask.flatMap(store.parentPath(for:)),
                 systemImage: selectedTask?.iconName ?? "checklist",
                 tint: Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
             )
@@ -78,6 +80,7 @@ struct PomodoroSetupSelectionControls: View {
 private struct PomodoroSelectionLabel: View {
     let title: String
     let value: String
+    let detail: String?
     let systemImage: String
     let tint: Color
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -96,10 +99,7 @@ private struct PomodoroSelectionLabel: View {
                     }
 
                     HStack(alignment: .top, spacing: 8) {
-                        Text(value)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        selectionValue
                         Spacer(minLength: 4)
                         chevron
                     }
@@ -113,10 +113,7 @@ private struct PomodoroSelectionLabel: View {
                         Text(title)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(value)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        selectionValue
                     }
                     Spacer(minLength: 8)
                     chevron
@@ -128,6 +125,24 @@ private struct PomodoroSelectionLabel: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
         .accessibilityValue(value)
+    }
+
+    private var selectionValue: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            if let detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var chevron: some View {

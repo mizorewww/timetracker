@@ -28,6 +28,18 @@ struct CoreArchitectureBehaviorTests {
     }
 
     @Test
+    func focusPickerSeparatesTaskTitleFromParentContext() throws {
+        let source = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
+        )
+
+        #expect(source.contains("value: selectedTask?.title"))
+        #expect(source.contains("detail: selectedTask.flatMap(store.parentPath(for:))"))
+        #expect(source.contains("value: selectedTask.map(store.path(for:))") == false)
+        #expect(source.contains(".truncationMode(.middle)"))
+    }
+
+    @Test
     func enumDisplayTextUsesLocalizationKeys() throws {
         #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.today"))
         #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
@@ -118,5 +130,10 @@ struct CoreArchitectureBehaviorTests {
         #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
         #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))
         #expect(SplitColumnLayoutPolicy.mac.detail == ColumnWidth(min: 420, ideal: 720, max: nil))
+        #expect(PomodoroLayoutPolicy(horizontalSizeClass: .compact).setupCardPadding == 18)
+        #expect(PomodoroLayoutPolicy(horizontalSizeClass: .compact).setupSectionSpacing == 20)
+        #expect(PomodoroLayoutPolicy(horizontalSizeClass: .regular).setupCardPadding == 24)
+        #expect(PomodoroPageLayoutPolicy(viewportWidth: 390, prefersSingleColumn: false).verticalPadding == 16)
+        #expect(PomodoroPageLayoutPolicy(viewportWidth: 900, prefersSingleColumn: false).verticalPadding == 24)
     }
 }

@@ -180,6 +180,14 @@ struct PomodoroLayoutPolicy {
     var showsInlineHeader: Bool {
         !sizeClassPolicy.isCompactPhone
     }
+
+    var setupCardPadding: CGFloat {
+        sizeClassPolicy.isCompactPhone ? 18 : 24
+    }
+
+    var setupSectionSpacing: CGFloat {
+        sizeClassPolicy.isCompactPhone ? 20 : 24
+    }
 }
 
 struct SplitColumnLayoutPolicy {

@@ -38,13 +38,13 @@ struct PomodoroPageLayout<Primary: View, Secondary: View>: View {
                     }
                 }
                 .frame(width: layout.contentWidth)
-                .padding(.vertical, 24)
+                .padding(.vertical, layout.verticalPadding)
                 .frame(maxWidth: .infinity)
             }
             #if os(iOS)
             .contentMargins(
                 .bottom,
-                dynamicTypeSize.isAccessibilitySize ? 144 : 112,
+                dynamicTypeSize.isAccessibilitySize ? 144 : 16,
                 for: .scrollContent
             )
             #endif
@@ -77,5 +77,9 @@ struct PomodoroPageLayoutPolicy {
 
     var supportingColumnWidth: CGFloat {
         min(340, max(280, contentWidth * 0.34))
+    }
+
+    var verticalPadding: CGFloat {
+        viewportWidth < 720 ? 16 : 24
     }
 }

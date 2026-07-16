@@ -5,6 +5,9 @@ struct PomodoroSetupCard: View {
     let plan: PomodoroPlan
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
     private var selectedTask: TaskNode? {
         guard let task = store.selectedTaskID.flatMap({ store.task(for: $0) }),
@@ -19,8 +22,9 @@ struct PomodoroSetupCard: View {
     }
 
     var body: some View {
+        let layout = PomodoroLayoutPolicy(horizontalSizeClass: effectiveHorizontalSizeClass)
         PomodoroPageLayout {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: layout.setupSectionSpacing) {
                 setupHeader
                 if availableTasks.isEmpty {
                     PomodoroSetupEmptyState(store: store)
@@ -31,14 +35,23 @@ struct PomodoroSetupCard: View {
                         selectedTask: selectedTask,
                         availableTasks: availableTasks,
                         availablePlans: availablePlans,
-                        selectedPlanID: $selectedPlanID
+                        selectedPlanID: $selectedPlanID,
+                        contentSpacing: layout.setupSectionSpacing
                     )
                 }
             }
-            .appCard(padding: 24)
+            .appCard(padding: layout.setupCardPadding)
         } secondary: {
             PomodoroLedgerCard(store: store)
         }
+    }
+
+    private var effectiveHorizontalSizeClass: UserInterfaceSizeClass? {
+        #if os(iOS)
+        horizontalSizeClass
+        #else
+        nil
+        #endif
     }
 
     private var setupHeader: some View {

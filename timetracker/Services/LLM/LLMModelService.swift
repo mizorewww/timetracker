@@ -164,16 +164,26 @@ struct LLMModelService {
     }
 }
 
-struct LLMModelListResponse: Decodable {
-    struct Model: Decodable {
+nonisolated struct LLMModelListResponse: Decodable {
+    nonisolated struct Model: Decodable {
         let id: String
     }
 
-    let data: [Model]
+    let modelIDs: [String]
 
-    var modelIDs: [String] {
-        Array(Set(data.map {
-            $0.id.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.filter { !$0.isEmpty })).sorted()
+    private enum CodingKeys: String, CodingKey {
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        var models = try container.nestedUnkeyedContainer(forKey: .data)
+        var accumulator = AppPreferenceValueSanitizer.LLMModelIDAccumulator()
+
+        while !models.isAtEnd {
+            let model = try models.decode(Model.self)
+            accumulator.insert(model.id)
+        }
+        modelIDs = accumulator.values
     }
 }

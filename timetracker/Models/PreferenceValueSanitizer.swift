@@ -4,8 +4,8 @@ enum AppPreferenceValueSanitizer {
     static let maximumPomodoroPlanCount = 24
     static let maximumPomodoroPlanNameLength = 80
     static let maximumQuickStartTaskCount = 24
-    static let maximumLLMModelCount = 256
-    static let maximumLLMModelIDByteCount = 256
+    nonisolated static let maximumLLMModelCount = 256
+    nonisolated static let maximumLLMModelIDByteCount = 256
     static let maximumLLMEndpointLength = 2_048
 
     static func preferredColorScheme(_ value: String) -> String {
@@ -54,7 +54,7 @@ enum AppPreferenceValueSanitizer {
         boundedTrimmed(value, maximumLength: maximumLLMEndpointLength)
     }
 
-    static func llmModelID(_ value: String) -> String {
+    nonisolated static func llmModelID(_ value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.utf8.count <= maximumLLMModelIDByteCount,
               !trimmed.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
@@ -63,21 +63,63 @@ enum AppPreferenceValueSanitizer {
         return trimmed
     }
 
-    static func llmModelIDs(_ values: [String]) -> [String] {
-        var normalizedValues = Set<String>()
+    nonisolated static func llmModelIDs(_ values: [String]) -> [String] {
+        var accumulator = LLMModelIDAccumulator()
         for value in values {
-            let normalized = llmModelID(value)
-            if !normalized.isEmpty {
-                normalizedValues.insert(normalized)
-            }
+            accumulator.insert(value)
         }
-        let uniqueValues = normalizedValues.sorted()
-        return Array(uniqueValues.prefix(maximumLLMModelCount))
+        return accumulator.values
     }
 
     private static func boundedTrimmed(_ value: String, maximumLength: Int) -> String {
         let bounded = String(value.prefix(maximumLength + 1))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return String(bounded.prefix(maximumLength))
+    }
+
+    nonisolated struct LLMModelIDAccumulator {
+        private(set) var values: [String] = []
+        private var retainedValues = Set<String>()
+
+        /// Keeps the same sorted-prefix policy as persisted preferences. Extra
+        /// identifiers are truncated rather than turning a valid response into
+        /// an error, while memory remains bounded by `maximumLLMModelCount`.
+        mutating func insert(_ value: String) {
+            let normalized = AppPreferenceValueSanitizer.llmModelID(value)
+            guard !normalized.isEmpty,
+                  !retainedValues.contains(normalized) else {
+                return
+            }
+
+            if values.count == AppPreferenceValueSanitizer.maximumLLMModelCount,
+               let greatestRetainedValue = values.last,
+               normalized > greatestRetainedValue {
+                return
+            }
+
+            let insertionIndex = insertionIndex(for: normalized)
+            values.insert(normalized, at: insertionIndex)
+            retainedValues.insert(normalized)
+
+            if values.count > AppPreferenceValueSanitizer.maximumLLMModelCount {
+                let removedValue = values.removeLast()
+                retainedValues.remove(removedValue)
+            }
+        }
+
+        private func insertionIndex(for value: String) -> Int {
+            var lowerBound = values.startIndex
+            var upperBound = values.endIndex
+
+            while lowerBound < upperBound {
+                let midpoint = lowerBound + (upperBound - lowerBound) / 2
+                if values[midpoint] < value {
+                    lowerBound = midpoint + 1
+                } else {
+                    upperBound = midpoint
+                }
+            }
+            return lowerBound
+        }
     }
 }

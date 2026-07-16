@@ -803,6 +803,18 @@
 
 验证：布局策略与源码契约固定紧凑/常规间距、页面垂直边距和“标题 + 父级路径”任务身份。付费签名的 macOS 合并定向回归 71/71 通过；正常字号 iPhone 17 Pro / iOS 27 Focus UI 1/1 通过，截图确认完整设置、主操作及四项摘要都位于系统 Tab Bar 上方。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保留 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 APS、CloudKit 和 App Group。一次性证据路径与设备清理记录见 dated Audit。
 
+## AD-063：LLM 模型发现于解码阶段保持固定上限
+
+状态：Accepted
+
+背景：模型响应虽然已有 2 MiB transport 上限，旧 `LLMModelListResponse` 仍会先把整个 `data` 数组解码为 `[Model]`，随后才建立无界 `Set`、排序并交给偏好 sanitizer 截到 256 项。异常服务可以在字节预算内返回大量短 ID，使临时对象数量、集合和排序开销显著高于最终 UI/偏好能够使用的范围。
+
+决策：模型列表使用 unkeyed container 逐项解码，并把 ID 立即送入共享 `LLMModelIDAccumulator`。Accumulator 复用偏好层的完整 opaque ID 验证，始终只保留按字符串升序最小的 256 个唯一有效 ID；新值只有进入这个有界前缀时才插入，超出后立即丢弃。模型 ID 仍按完整 UTF-8 值比较和发送，不裁剪、不改写；偏好数组与网络响应必须得到相同的确定性结果。
+
+后果：模型发现的业务内存与排序集合固定在 256 项，不再随服务返回的 model count 增长；transport 的 2 MiB 总字节上限仍是外层防御。若将来 UI 支持分页或服务端搜索，应新增明确协议而不是扩大这个本地全量列表。不得重新先解码整个 `[Model]` 或为“显示更多”维护无界集合。
+
+验证：测试覆盖精确 256 项、超限后更小 ID 替换、重复/空白/控制字符、256-byte ASCII/Unicode 边界和超限 Unicode，并确认网络响应结果与偏好 sanitizer 完全一致。付费签名 macOS `LLMSettingsTests` 21/21、0 error/0 warning；当前合并工作树 generic iOS 自动签名构建 0 error/0 warning，主 App 与所有嵌入目标保留 Team `LT98S43NKA`、付费 Apple Development 签名及主 App 的 APS/CloudKit/App Group。一次性 xcresult 见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

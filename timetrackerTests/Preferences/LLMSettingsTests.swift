@@ -144,6 +144,62 @@ struct LLMSettingsTests {
     }
 
     @Test
+    func modelListResponseKeepsTheExactMaximumModelCount() throws {
+        let modelIDs = (0..<AppPreferenceValueSanitizer.maximumLLMModelCount).map {
+            String(format: "model-%03d", $0)
+        }
+
+        #expect(try decodedModelIDs(modelIDs) == modelIDs)
+    }
+
+    @Test
+    func modelListResponseTruncatesToTheSortedPreferenceBoundary() throws {
+        let limit = AppPreferenceValueSanitizer.maximumLLMModelCount
+        let modelIDs = (1...limit).map {
+            String(format: "model-%03d", $0)
+        } + ["model-999", "model-000"]
+
+        let decoded = try decodedModelIDs(modelIDs)
+
+        #expect(decoded.count == limit)
+        #expect(decoded.first == "model-000")
+        #expect(decoded.last == String(format: "model-%03d", limit - 1))
+        #expect(!decoded.contains(String(format: "model-%03d", limit)))
+        #expect(!decoded.contains("model-999"))
+        #expect(decoded == AppPreferenceValueSanitizer.llmModelIDs(modelIDs))
+    }
+
+    @Test
+    func modelListResponsePreservesValidUnicodeAndFiltersDuplicateOrInvalidIDs() throws {
+        let exactByteBoundary = String(
+            repeating: "m",
+            count: AppPreferenceValueSanitizer.maximumLLMModelIDByteCount
+        )
+        let exactUnicodeByteBoundary = String(repeating: "🧭", count: 64)
+        let oversizedUnicode = String(repeating: "🧭", count: 65)
+        let modelIDs = [
+            "  模型-α  ",
+            "gpt-z",
+            "gpt-z",
+            "model\u{0000}suffix",
+            oversizedUnicode,
+            "   ",
+            exactByteBoundary,
+            exactUnicodeByteBoundary
+        ]
+
+        let decoded = try decodedModelIDs(modelIDs)
+
+        #expect(decoded == [
+            exactByteBoundary,
+            exactUnicodeByteBoundary,
+            "gpt-z",
+            "模型-α"
+        ].sorted())
+        #expect(decoded == AppPreferenceValueSanitizer.llmModelIDs(modelIDs))
+    }
+
+    @Test
     func fetchModelsReportsHTTPFailures() async throws {
         let service = LLMModelService { request in
             let url = try #require(request.url)
@@ -162,6 +218,14 @@ struct LLMSettingsTests {
         } catch let error as LLMModelServiceError {
             #expect(error == .responseStatus(401))
         }
+    }
+
+    private func decodedModelIDs(_ modelIDs: [String]) throws -> [String] {
+        let payload = [
+            "data": modelIDs.map { ["id": $0] }
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        return try JSONDecoder().decode(LLMModelListResponse.self, from: data).modelIDs
     }
 
     @Test

@@ -325,6 +325,7 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 注入 transport 仍须在 Model/Inbox/Checklist service 层对成功响应执行 2 MiB 二次防御；响应类型和 HTTP 状态优先于 buffered-body 上限，保持真实与替代 transport 的错误语义一致。
 - 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/16 KiB JSON，prompt 最多 24 KiB，request body 最多 32 KiB，持久化 model ID 最多 256 bytes，字段按 UTF-8 bytes 以完整 `Character` 裁剪。model ID 上限必须与同步快照 compact-field restore 上限保持一致；这些裁剪仅用于网络 DTO，不回写 canonical facts。
 - 模型 ID 是 opaque identifier，不是可安全缩写的展示文本。偏好 sanitizer 只接受最多 256 UTF-8 bytes 且不含控制字符的完整 ID；超限项从模型列表过滤、超限选择变为空配置，绝不能截断后向服务端发送另一个标识。
+- 模型发现不得先把服务端 `data` 全量物化为数组或无界 Set。`LLMModelListResponse` 逐项解码到 `LLMModelIDAccumulator`，只保留与偏好 sanitizer 相同的升序前 256 个唯一有效完整 ID；总响应仍同时受 transport 的 2 MiB 上限约束。
 - Inbox 候选集先取 Quick Start 固定任务，再取高频/近期任务，最后稳定补足。候选归一化去重后再按实际 JSON 字节预算取舍；不能回退成对全库纯字母截断。
 - `SymbolCatalog.symbolNames` 保留完整本机 picker 目录，`aiSuggestionSymbolNames` 是请求中的 78 项精选语义集。普通 icon sanitizer 用 `symbolNameSet` O(1) 查找；AI 返回 icon 只接受已公告精选集，Inbox task UUID 只接受实际发送候选。
 - 日志和错误信息不得打印密钥或完整敏感请求。

@@ -168,6 +168,34 @@ struct TaskPersistencePolicyTests {
     }
 
     @Test @MainActor
+    func statusCommandsPreserveTheOriginalArchiveTimestamp() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
+        let task = try repository.createTask(
+            title: "Archive command lifecycle",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        try repository.setTaskStatus(taskID: task.id, status: .archived)
+        #expect(task.archivedAt == task.updatedAt)
+
+        let originalArchivedAt = Date(timeIntervalSince1970: 1_000)
+        task.archivedAt = originalArchivedAt
+        try context.save()
+
+        try repository.setTaskStatus(taskID: task.id, status: .archived)
+        #expect(task.archivedAt == originalArchivedAt)
+
+        try repository.archiveTask(taskID: task.id)
+        #expect(task.archivedAt == originalArchivedAt)
+
+        try repository.setTaskStatus(taskID: task.id, status: .active)
+        #expect(task.archivedAt == nil)
+    }
+
+    @Test @MainActor
     func invalidCategoryWritesHaveNoPersistentOrInMemorySideEffects() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")

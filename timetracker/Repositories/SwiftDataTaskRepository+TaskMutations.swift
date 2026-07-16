@@ -104,9 +104,10 @@ extension SwiftDataTaskRepository {
 
     func setTaskStatus(taskID: UUID, status: TaskStatus) throws {
         guard let node = try task(id: taskID) else { return }
+        let now = Date()
         node.status = status
-        node.archivedAt = status == .archived ? Date() : nil
-        node.updatedAt = Date()
+        node.archivedAt = status == .archived ? (node.archivedAt ?? now) : nil
+        node.updatedAt = now
         node.deviceID = deviceID
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()
@@ -114,9 +115,10 @@ extension SwiftDataTaskRepository {
 
     func archiveTask(taskID: UUID) throws {
         guard let node = try task(id: taskID) else { return }
+        let now = Date()
         node.status = .archived
-        node.archivedAt = Date()
-        node.updatedAt = Date()
+        node.archivedAt = node.archivedAt ?? now
+        node.updatedAt = now
         node.deviceID = deviceID
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()

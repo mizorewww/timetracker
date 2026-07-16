@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -23,6 +24,58 @@ struct CoreDeepLinkRoutingTests {
                 startedAt: startedAt,
                 isStale: true
             ) == .frozen(seconds: 8 * 60 * 60)
+        )
+    }
+
+    @Test @MainActor
+    func timerDeepLinksResolveFreshStoreStateInsteadOfFacadeCaches() throws {
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureRepositoriesIfNeeded(context: context)
+        #expect(store.tasks.isEmpty)
+        #expect(store.activeSegments.isEmpty)
+
+        let writerContext = ModelContext(context.container)
+        let task = try SwiftDataTaskRepository(
+            context: writerContext,
+            deviceID: "external"
+        ).createTask(
+            title: "Arrived after scene refresh",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let startURL = try #require(
+            URL(string: "timetracker://timer/start?taskID=\(task.id.uuidString)")
+        )
+        let presentationRouter = AppPresentationRouter()
+
+        #expect(
+            store.handleDeepLink(startURL, presentationRouter: presentationRouter)
+                == .handled
+        )
+        let activeSegment = try #require(store.activeSegments.first)
+        #expect(activeSegment.taskID == task.id)
+        #expect(store.task(for: task.id)?.title == task.title)
+
+        // Make the scene cache stale again, then require the exact stop to be
+        // resolved from the store-scoped fresh context.
+        store.activeSegments = []
+        let stopURL = try #require(
+            URL(
+                string: "timetracker://timer/stop?segmentID=\(activeSegment.id.uuidString)"
+            )
+        )
+        #expect(
+            store.handleDeepLink(stopURL, presentationRouter: presentationRouter)
+                == .handled
+        )
+        #expect(store.activeSegments.isEmpty)
+        #expect(
+            try SwiftDataTimeTrackingRepository(
+                context: ModelContext(context.container),
+                deviceID: "test"
+            ).activeSegments().isEmpty
         )
     }
 

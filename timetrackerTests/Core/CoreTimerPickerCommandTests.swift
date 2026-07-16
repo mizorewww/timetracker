@@ -42,8 +42,15 @@ struct CoreTimerPickerCommandTests {
 
         store.stop(segment: segment)
 
-        #expect(try timeRepository.activeSegments().isEmpty)
-        #expect(segment.endedAt != nil)
+        let freshRepository = SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "test"
+        )
+        #expect(try freshRepository.activeSegments().isEmpty)
+        #expect(
+            try freshRepository.allSegments().first { $0.id == segment.id }?.endedAt
+                != nil
+        )
     }
 
     @Test @MainActor
@@ -71,10 +78,18 @@ struct CoreTimerPickerCommandTests {
         store.preferences.allowParallelTimers = false
 
         let outcome = store.performTimerPickerSelection(nextTask)
-        let activeSegments = try timeRepository.activeSegments()
+        let freshRepository = SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "test"
+        )
+        let activeSegments = try freshRepository.activeSegments()
 
         #expect(outcome == .switched)
-        #expect(firstSegment.endedAt != nil)
+        #expect(
+            try freshRepository.allSegments().first {
+                $0.id == firstSegment.id
+            }?.endedAt != nil
+        )
         #expect(activeSegments.count == 1)
         #expect(activeSegments.first?.taskID == nextTask.id)
     }
@@ -104,7 +119,10 @@ struct CoreTimerPickerCommandTests {
         store.preferences.allowParallelTimers = true
 
         let outcome = store.performTimerPickerSelection(nextTask)
-        let activeSegments = try timeRepository.activeSegments()
+        let activeSegments = try SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "test"
+        ).activeSegments()
 
         #expect(outcome == .started)
         #expect(firstSegment.endedAt == nil)

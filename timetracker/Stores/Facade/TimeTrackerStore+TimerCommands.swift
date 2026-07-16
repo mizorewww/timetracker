@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     func startSelectedTask() {
@@ -8,10 +9,6 @@ extension TimeTrackerStore {
 
     @discardableResult
     func startTask(_ task: TaskNode) -> Bool {
-        guard isTaskAvailableForTracking(task) else {
-            errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
-            return false
-        }
         let didStart = startTask(taskID: task.id)
         if didStart {
             selectTask(task.id, revealInToday: false)
@@ -20,20 +17,27 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    private func startTask(taskID: UUID) -> Bool {
-        guard let task = task(for: taskID), isTaskAvailableForTracking(task) else {
-            errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
+    func startTask(
+        taskID: UUID,
+        source: TimeSessionSource = .timer
+    ) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
             return false
         }
-        return perform(events: timerStartMutationEvents(taskID: taskID)) {
-            try timerCommandHandler.startTask(
+        do {
+            let outcome = try SystemActionCommandHandler(
+                writeAuthorization: writeAuthorization
+            ).startTimerMutation(
                 taskID: taskID,
                 allowParallelTimers: preferences.allowParallelTimers,
-                activeSegments: activeSegments,
-                pomodoroRuns: pomodoroRuns,
-                timeRepository: requiredTimeRepository(),
-                context: modelContext
+                source: source,
+                container: modelContext.container
             )
+            return finishStoreScopedTimerCommand(outcome)
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -63,9 +67,32 @@ extension TimeTrackerStore {
         }
     }
 
-    func stop(segment: TimeSegment) {
-        perform(events: timerStopMutationEvents(segment: segment)) {
-            try timerCommandHandler.stop(segment: segment, pomodoroRuns: pomodoroRuns, timeRepository: requiredTimeRepository(), context: modelContext)
+    @discardableResult
+    func stop(segment: TimeSegment) -> Bool {
+        stopTimer(segmentID: segment.id)
+    }
+
+    @discardableResult
+    func stopTimer(
+        segmentID: UUID? = nil,
+        taskID: UUID? = nil
+    ) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try SystemActionCommandHandler(
+                writeAuthorization: writeAuthorization
+            ).stopTimerMutation(
+                segmentID: segmentID,
+                taskID: taskID,
+                container: modelContext.container
+            )
+            return finishStoreScopedTimerCommand(outcome)
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

@@ -34,29 +34,27 @@ extension TimeTrackerStore {
             desktopDestination = .today
             return .handled
         case .startTimer(let taskID):
-            guard let task = task(for: taskID), isTaskAvailableForTracking(task) else {
+            guard startTask(taskID: taskID) else {
                 return .rejected
             }
             closeTaskDetailNavigation()
             desktopDestination = .today
-            startTask(task)
             return .handled
         case .stopTimer(let target):
-            let candidates: [TimeSegment]
+            let didStop: Bool
             switch target {
             case .some(.segment(let segmentID)):
-                candidates = activeSegments.filter { $0.id == segmentID }
+                didStop = stopTimer(segmentID: segmentID)
             case .some(.task(let taskID)):
-                candidates = activeSegments.filter { $0.taskID == taskID }
+                didStop = stopTimer(taskID: taskID)
             case .none:
-                candidates = activeSegments
+                didStop = stopTimer()
             }
-            guard candidates.count == 1, let segment = candidates.first else {
+            guard didStop else {
                 return .rejected
             }
             closeTaskDetailNavigation()
             desktopDestination = .today
-            stop(segment: segment)
             return .handled
         case .newTask:
             guard presentationRouter.presentNewTask(

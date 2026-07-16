@@ -135,6 +135,50 @@ extension TimeTrackerStore {
         return outcome
     }
 
+    /// Applies the result of a timer transaction that already committed in a
+    /// fresh sibling context under the store-scoped timer lock.
+    ///
+    /// A pure reuse or rejected stale target has no durable mutation to record,
+    /// but still refreshes timer read models so a scene with an older context
+    /// converges on the canonical active set.
+    @discardableResult
+    func finishStoreScopedTimerCommand(
+        _ outcome: StoreScopedTimerCommandOutcome
+    ) -> Bool {
+        var missingTaskRefreshError: Error?
+        if outcome.referencedTaskIDs.contains(where: { taskByID[$0] == nil }) {
+            do {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+            } catch {
+                missingTaskRefreshError = error
+            }
+        }
+
+        if outcome.didMutate {
+            finishCommittedMutation(events: outcome.events)
+        } else {
+            let refreshEvents: Set<StoreDomainEvent> = [
+                .ledgerChanged(taskID: nil, dateInterval: nil, isVisible: true),
+                .pomodoroChanged(runID: nil, sessionID: nil, taskID: nil),
+            ]
+            do {
+                try refresh(plan: refreshPlanner.plan(after: refreshEvents))
+            } catch {
+                errorMessage = String(
+                    format: AppStrings.localized("error.savedRefreshFailed"),
+                    error.localizedDescription
+                )
+            }
+        }
+        if let missingTaskRefreshError {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                missingTaskRefreshError.localizedDescription
+            )
+        }
+        return outcome.subjectSegmentID != nil
+    }
+
     private func executeAuthorizedMutation<Result>(
         _ action: () throws -> Result
     ) throws -> Result {

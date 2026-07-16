@@ -25,9 +25,24 @@ nonisolated struct TimerMutationSegmentSnapshot: Hashable, Sendable {
 nonisolated struct StoreScopedTimerCommandOutcome: Hashable, Sendable {
     /// The active segment selected by Start, or the segment actually closed by
     /// Stop. A stale or ambiguous Stop has no subject and is a successful no-op.
-    let subjectSegmentID: UUID?
+    let subjectSegment: TimerMutationSegmentSnapshot?
     let createdSegment: TimerMutationSegmentSnapshot?
     let stoppedSegments: [TimerMutationSegmentSnapshot]
+
+    var subjectSegmentID: UUID? {
+        subjectSegment?.segmentID
+    }
+
+    var referencedTaskIDs: Set<UUID> {
+        var taskIDs = Set(stoppedSegments.map(\.taskID))
+        if let subjectSegment {
+            taskIDs.insert(subjectSegment.taskID)
+        }
+        if let createdSegment {
+            taskIDs.insert(createdSegment.taskID)
+        }
+        return taskIDs
+    }
 
     var didMutate: Bool {
         createdSegment != nil || stoppedSegments.isEmpty == false
@@ -146,8 +161,11 @@ struct StoreScopedTimerCommandCoordinator {
                     throw StoreScopedTimerCommandCoordinatorError
                         .inconsistentAdmissionPlan
                 }
+                let survivorSnapshot = TimerMutationSegmentSnapshot(
+                    segment: segment
+                )
                 return StoreScopedTimerCommandOutcome(
-                    subjectSegmentID: segment.id,
+                    subjectSegment: survivorSnapshot,
                     createdSegment: nil,
                     stoppedSegments: stoppedSegments
                 )
@@ -156,9 +174,10 @@ struct StoreScopedTimerCommandCoordinator {
                     taskID: taskID,
                     source: source
                 )
+                let createdSegment = TimerMutationSegmentSnapshot(segment: segment)
                 return StoreScopedTimerCommandOutcome(
-                    subjectSegmentID: segment.id,
-                    createdSegment: TimerMutationSegmentSnapshot(segment: segment),
+                    subjectSegment: createdSegment,
+                    createdSegment: createdSegment,
                     stoppedSegments: stoppedSegments
                 )
             }
@@ -235,7 +254,7 @@ struct StoreScopedTimerCommandCoordinator {
             )
             let stopped = TimerMutationSegmentSnapshot(segment: segment)
             return StoreScopedTimerCommandOutcome(
-                subjectSegmentID: stopped.segmentID,
+                subjectSegment: stopped,
                 createdSegment: nil,
                 stoppedSegments: [stopped]
             )
@@ -279,7 +298,7 @@ struct StoreScopedTimerCommandCoordinator {
     }
 
     private static let noOpOutcome = StoreScopedTimerCommandOutcome(
-        subjectSegmentID: nil,
+        subjectSegment: nil,
         createdSegment: nil,
         stoppedSegments: []
     )

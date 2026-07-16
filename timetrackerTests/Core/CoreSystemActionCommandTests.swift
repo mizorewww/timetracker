@@ -142,7 +142,7 @@ struct CoreSystemActionCommandTests {
             taskID: UUID()
         )
         let events = StoreScopedTimerCommandOutcome(
-            subjectSegmentID: started.segmentID,
+            subjectSegment: started,
             createdSegment: started,
             stoppedSegments: [stopped]
         ).events

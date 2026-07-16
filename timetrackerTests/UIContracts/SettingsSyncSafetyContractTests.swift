@@ -159,7 +159,7 @@ struct SettingsSyncSafetyContractTests {
     }
 
     @Test
-    func cloudActivityIsRecordedOnlyAfterLocalRefreshAndConflictProcessing() throws {
+    func cloudActivityIsRecordedOnlyAfterConflictProcessingAndFinalRefresh() throws {
         let observerSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift"
         )
@@ -167,14 +167,23 @@ struct SettingsSyncSafetyContractTests {
             "timetracker/Models/SyncFeedbackModels.swift"
         )
 
+        let conflictUpdate = try #require(
+            observerSource.range(of: "try updateConflictState(after: batch)")
+        )
+        let readModelRefresh = try #require(
+            observerSource.range(of: "try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))")
+        )
+        let activityRecording = try #require(
+            observerSource.range(of: "recordSyncActivity(for: activityReason)")
+        )
+        #expect(conflictUpdate.lowerBound < readModelRefresh.lowerBound)
+        #expect(readModelRefresh.lowerBound < activityRecording.lowerBound)
+        #expect(observerSource.contains("pendingSyncConflict = try syncConflictService.handleCloudImport("))
         #expect(
             observerSource.contains(
-                "try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))\n" +
-                    "                try updateConflictState(after: reason)\n" +
-                    "                recordSyncActivity(for: reason)"
+                "processingFailureMessage: processingFailure.localizedDescription"
             )
         )
-        #expect(observerSource.contains("processingFailureMessage: error.localizedDescription"))
         #expect(observerSource.contains("event.error?.localizedDescription"))
         #expect(observerSource.contains("errorMessage =") == false)
         #expect(observerSource.contains("lastSyncRefreshAt") == false)

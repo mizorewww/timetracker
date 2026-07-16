@@ -14,96 +14,6 @@ final class SyncNotificationObserverToken {
 }
 
 extension TimeTrackerStore {
-    enum SyncRefreshReason: Sendable {
-        case remoteStoreChanged
-        case cloudImportFinished(
-            succeeded: Bool,
-            reportsConflict: Bool,
-            failureMessage: String?
-        )
-        case cloudExportFinished(
-            eventID: UUID,
-            succeeded: Bool,
-            reportsConflict: Bool,
-            failureMessage: String?
-        )
-        case cloudSetupFinished(succeeded: Bool, failureMessage: String?)
-
-        var priority: Int {
-            switch self {
-            case .remoteStoreChanged:
-                return 0
-            case let .cloudExportFinished(_, succeeded, reportsConflict, _):
-                return reportsConflict ? 4 : (succeeded ? 1 : 3)
-            case let .cloudImportFinished(succeeded, reportsConflict, _):
-                return reportsConflict ? 4 : (succeeded ? 2 : 3)
-            case let .cloudSetupFinished(succeeded, _):
-                return succeeded ? 1 : 3
-            }
-        }
-
-        var activityKind: SyncActivityKind {
-            switch self {
-            case .remoteStoreChanged:
-                return .remoteRefresh
-            case .cloudImportFinished:
-                return .importData
-            case .cloudExportFinished:
-                return .exportData
-            case .cloudSetupFinished:
-                return .setup
-            }
-        }
-
-        func activityOutcome(
-            completedAt: Date,
-            processingFailureMessage: String? = nil
-        ) -> SyncActivityOutcome? {
-            if let processingFailureMessage {
-                return SyncActivityOutcome(
-                    kind: activityKind,
-                    completedAt: completedAt,
-                    result: .failed(message: processingFailureMessage)
-                )
-            }
-            switch self {
-            case .remoteStoreChanged:
-                return nil
-            case let .cloudImportFinished(succeeded, _, failureMessage),
-                 let .cloudSetupFinished(succeeded, failureMessage):
-                return eventOutcome(
-                    succeeded: succeeded,
-                    failureMessage: failureMessage,
-                    completedAt: completedAt
-                )
-            case let .cloudExportFinished(_, succeeded, _, failureMessage):
-                return eventOutcome(
-                    succeeded: succeeded,
-                    failureMessage: failureMessage,
-                    completedAt: completedAt
-                )
-            }
-        }
-
-        private func eventOutcome(
-            succeeded: Bool,
-            failureMessage: String?,
-            completedAt: Date
-        ) -> SyncActivityOutcome {
-            let result: SyncActivityResult = succeeded
-                ? .succeeded
-                : .failed(
-                    message: failureMessage
-                        ?? AppStrings.localized("sync.activity.unknownFailure")
-                )
-            return SyncActivityOutcome(
-                kind: activityKind,
-                completedAt: completedAt,
-                result: result
-            )
-        }
-    }
-
     func recordSyncActivity(
         for reason: SyncRefreshReason,
         completedAt: Date = Date(),
@@ -205,25 +115,39 @@ extension TimeTrackerStore {
         if case let .cloudExportFinished(eventID, succeeded, _, _) = reason {
             completedCloudExportResults[eventID] = succeeded
         }
-        scheduledSyncRefreshReason = [scheduledSyncRefreshReason, reason]
-            .compactMap { $0 }
-            .max { lhs, rhs in lhs.priority < rhs.priority }
+        var batch = scheduledSyncRefreshBatch ?? SyncRefreshBatch()
+        batch.insert(reason)
+        scheduledSyncRefreshBatch = batch
         scheduledSyncRefreshTask?.cancel()
         scheduledSyncRefreshTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
             guard let self else { return }
-            let reason = scheduledSyncRefreshReason ?? reason
-            scheduledSyncRefreshReason = nil
+            let batch = scheduledSyncRefreshBatch ?? {
+                var fallback = SyncRefreshBatch()
+                fallback.insert(reason)
+                return fallback
+            }()
+            scheduledSyncRefreshBatch = nil
+            var processingFailure: Error?
+            do {
+                try updateConflictState(after: batch)
+            } catch {
+                processingFailure = error
+            }
             do {
                 try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))
-                try updateConflictState(after: reason)
-                recordSyncActivity(for: reason)
             } catch {
+                processingFailure = processingFailure ?? error
+            }
+            guard let activityReason = batch.activityReason else { return }
+            if let processingFailure {
                 recordSyncActivity(
-                    for: reason,
-                    processingFailureMessage: error.localizedDescription
+                    for: activityReason,
+                    processingFailureMessage: processingFailure.localizedDescription
                 )
+            } else {
+                recordSyncActivity(for: activityReason)
             }
         }
     }
@@ -236,30 +160,18 @@ extension TimeTrackerStore {
         }
     }
 
-    private func updateConflictState(after reason: SyncRefreshReason) throws {
+    private func updateConflictState(after batch: SyncRefreshBatch) throws {
         guard let modelContext else { return }
         let completedExports = completedCloudExportResults
         completedCloudExportResults.removeAll()
         for (eventID, succeeded) in completedExports {
             try syncConflictService.markCloudExportFinished(eventID: eventID, succeeded: succeeded)
         }
-        switch reason {
-        case let .cloudImportFinished(succeeded, reportsConflict, _):
-            if succeeded || reportsConflict {
-                if let conflict = try syncConflictService.handleCloudImport(context: modelContext) {
-                    pendingSyncConflict = conflict
-                }
-            } else {
-                pendingSyncConflict = try syncConflictService.prompt()
-            }
-        case let .cloudExportFinished(_, _, reportsConflict, _):
-            if reportsConflict,
-               let conflict = try syncConflictService.handleCloudImport(context: modelContext) {
-                pendingSyncConflict = conflict
-            } else {
-                pendingSyncConflict = try syncConflictService.prompt()
-            }
-        case .remoteStoreChanged, .cloudSetupFinished:
+        if batch.requiresCloudImportHandling {
+            pendingSyncConflict = try syncConflictService.handleCloudImport(
+                context: modelContext
+            )
+        } else {
             pendingSyncConflict = try syncConflictService.prompt()
         }
     }

@@ -102,7 +102,7 @@ struct CoreSyncActivityOutcomeTests {
     }
 
     @Test @MainActor
-    func failureAndConflictReasonsOutrankSuccessfulEventsDuringCoalescing() {
+    func coalescingPreservesImportHandlingWhileSelectingTheHighestSeverityActivity() {
         let success = TimeTrackerStore.SyncRefreshReason.cloudImportFinished(
             succeeded: true,
             reportsConflict: false,
@@ -120,8 +120,17 @@ struct CoreSyncActivityOutcomeTests {
             failureMessage: "Conflict"
         )
 
-        #expect(failure.priority > success.priority)
-        #expect(conflict.priority > failure.priority)
+        var batch = TimeTrackerStore.SyncRefreshBatch()
+        batch.insert(success)
+        batch.insert(failure)
+
+        #expect(batch.requiresCloudImportHandling)
+        #expect(batch.reasons.count == 2)
+        #expect(batch.activityReason?.priority == failure.priority)
+
+        batch.insert(conflict)
+        #expect(batch.requiresCloudImportHandling)
+        #expect(batch.activityReason?.priority == conflict.priority)
     }
 
     private func cloudStatus() -> SyncStatus {

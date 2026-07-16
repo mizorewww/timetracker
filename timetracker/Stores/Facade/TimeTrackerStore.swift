@@ -231,6 +231,6 @@ final class TimeTrackerStore {
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
     var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?
-    var scheduledSyncRefreshReason: SyncRefreshReason?
+    var scheduledSyncRefreshBatch: SyncRefreshBatch?
     var completedCloudExportResults: [UUID: Bool] = [:]
 }

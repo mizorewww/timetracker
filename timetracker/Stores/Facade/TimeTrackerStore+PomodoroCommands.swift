@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     func startPomodoroForSelectedTask(
@@ -28,24 +29,30 @@ extension TimeTrackerStore {
         longBreakSeconds: Int? = nil,
         targetRounds: Int = 1
     ) -> Bool {
-        guard let task = task(for: taskID), isTaskAvailableForTracking(task) else {
-            errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
             return false
         }
-        return perform(event: .pomodoroChanged(runID: nil, sessionID: nil, taskID: taskID)) {
-            _ = try pomodoroCommandHandler.start(
+        do {
+            let outcome = try StoreScopedPomodoroCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).start(
                 taskID: taskID,
                 focusSeconds: focusSeconds,
                 breakSeconds: breakSeconds,
                 longBreakSeconds: longBreakSeconds,
                 targetRounds: targetRounds,
-                allowParallelTimers: preferences.allowParallelTimers,
-                activeSegments: activeSegments,
-                pomodoroRuns: pomodoroRuns,
-                timeRepository: requiredTimeRepository(),
-                pomodoroRepository: requiredPomodoroRepository(),
-                context: modelContext
+                allowParallelTimers: preferences.allowParallelTimers
             )
+            finishStoreScopedPomodoroMutation(
+                events: outcome.events,
+                referencedTaskIDs: outcome.referencedTaskIDs
+            )
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -73,51 +80,35 @@ extension TimeTrackerStore {
 
     @discardableResult
     func resumeActivePomodoroAfterBreak(
-        runID: UUID,
-        expectedState: PomodoroState
+        phase: PomodoroPhaseToken
     ) -> Bool {
-        guard let run = activePomodoroRun,
-              run.id == runID,
-              run.state == expectedState,
-              expectedState == .shortBreak || expectedState == .longBreak else {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
             return false
         }
-        let outcome = performMutation(
-            eventsForOutcome: { outcome in
-                pomodoroResumeMutationEvents(outcome: outcome)
+        do {
+            let outcome = try StoreScopedPomodoroCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).resume(
+                phase: phase,
+                allowParallelTimers: preferences.allowParallelTimers
+            )
+            switch outcome {
+            case .resumed(let mutation):
+                finishStoreScopedPomodoroMutation(
+                    events: mutation.events,
+                    referencedTaskIDs: mutation.referencedTaskIDs
+                )
+                return true
+            case .rejected:
+                refreshStoreScopedPomodoroAdmissionReadModels()
+                return false
             }
-        ) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            return try pomodoroCommandHandler.resumeFocusAfterBreak(
-                runID: run.id,
-                expectedState: expectedState,
-                allowParallelTimers: preferences.allowParallelTimers,
-                timeRepository: requiredTimeRepository(),
-                repository: requiredPomodoroRepository(),
-                context: modelContext
-            )
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
-        return outcome != nil
-    }
-
-    func pomodoroResumeMutationEvents(
-        outcome: PomodoroBreakResumeOutcome
-    ) -> Set<StoreDomainEvent> {
-        var events: Set<StoreDomainEvent> = [
-            .ledgerChanged(taskID: outcome.taskID, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(
-                runID: outcome.runID,
-                sessionID: outcome.resumedSessionID,
-                taskID: outcome.taskID
-            )
-        ]
-        for stoppedSegment in outcome.stoppedSegments {
-            events.formUnion(timerStopMutationEvents(
-                taskID: stoppedSegment.taskID,
-                sessionID: stoppedSegment.sessionID
-            ))
-        }
-        return events
     }
 
     func cancelActivePomodoro() {
@@ -206,6 +197,42 @@ extension TimeTrackerStore {
             run.deletedAt == nil &&
             run.endedAt == nil &&
             (run.state == .focusing || run.state == .interrupted)
+        }
+    }
+
+    private func finishStoreScopedPomodoroMutation(
+        events: Set<StoreDomainEvent>,
+        referencedTaskIDs: Set<UUID>
+    ) {
+        var missingTaskRefreshError: Error?
+        if referencedTaskIDs.contains(where: { taskByID[$0] == nil }) {
+            do {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+            } catch {
+                missingTaskRefreshError = error
+            }
+        }
+        finishStoreScopedMutation(events: events)
+        if let missingTaskRefreshError {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                missingTaskRefreshError.localizedDescription
+            )
+        }
+    }
+
+    private func refreshStoreScopedPomodoroAdmissionReadModels() {
+        do {
+            try refresh(
+                plan: StoreRefreshPlan(
+                    scopes: [.tasks, .ledgerVisible, .pomodoro]
+                )
+            )
+        } catch {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                error.localizedDescription
+            )
         }
     }
 }

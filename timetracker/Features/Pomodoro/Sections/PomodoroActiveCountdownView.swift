@@ -61,13 +61,9 @@ struct PomodoroActiveCountdownView: View {
 
     private func resumeButton(remaining: Int) -> some View {
         let presentation = PomodoroBreakActionPresentation(remainingSeconds: remaining)
-        let runID = run.id
-        let expectedState = run.state
+        let phase = PomodoroPhaseToken(run: run)
         return Button {
-            store.resumeActivePomodoroAfterBreak(
-                runID: runID,
-                expectedState: expectedState
-            )
+            store.resumeActivePomodoroAfterBreak(phase: phase)
         } label: {
             Label(
                 AppStrings.localized(presentation.titleKey),

@@ -124,17 +124,12 @@ struct PomodoroTests {
 
         let breakRun = try #require(store.activePomodoroRun)
         let expectedState = breakRun.state
+        let phase = PomodoroPhaseToken(run: breakRun)
         #expect(expectedState == .shortBreak)
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: breakRun.id,
-            expectedState: expectedState
-        ))
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase))
         let resumedSegmentID = try #require(store.activeSegments.first?.id)
 
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: breakRun.id,
-            expectedState: expectedState
-        ) == false)
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase) == false)
         #expect(store.activePomodoroRun?.state == .focusing)
         #expect(store.activePomodoroRun?.completedFocusRounds == 1)
         #expect(store.activeSegments.map(\.id) == [resumedSegmentID])
@@ -201,14 +196,11 @@ struct PomodoroTests {
         )
         #expect(store.completeActivePomodoroFocus())
         let breakRun = try #require(store.activePomodoroRun)
-        let expectedState = breakRun.state
+        let phase = PomodoroPhaseToken(run: breakRun)
 
         store.startTask(otherTask)
         let otherSegment = try #require(store.activeSegments.first { $0.taskID == otherTask.id })
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: breakRun.id,
-            expectedState: expectedState
-        ))
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase))
 
         #expect(otherSegment.endedAt != nil)
         #expect(store.activeSegments.count == 1)
@@ -246,7 +238,7 @@ struct PomodoroTests {
         )
         #expect(store.completeActivePomodoroFocus())
         let breakRun = try #require(store.activePomodoroRun)
-        let expectedState = breakRun.state
+        let phase = PomodoroPhaseToken(run: breakRun)
 
         let externalSegment = try timeRepository.startTask(
             taskID: externalTask.id,
@@ -255,10 +247,7 @@ struct PomodoroTests {
         #expect(store.activeSegments.contains { $0.id == externalSegment.id } == false)
         #expect(try timeRepository.activeSegments().contains { $0.id == externalSegment.id })
 
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: breakRun.id,
-            expectedState: expectedState
-        ))
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase))
 
         #expect(externalSegment.endedAt != nil)
         let canonicalActiveSegments = try timeRepository.activeSegments()
@@ -364,8 +353,23 @@ struct PomodoroTests {
         #expect(outcome.taskID == pomodoroTask.id)
         #expect(try timeRepository.activeSegments().map(\.id) == [outcome.resumedSegmentID])
 
-        let eventStore = makeTestStore()
-        let events = eventStore.pomodoroResumeMutationEvents(outcome: outcome)
+        let resumedRun = try #require(try pomodoroRepository.run(id: run.id))
+        let events = StoreScopedPomodoroResumeMutation(
+            resumedFocus: PomodoroFocusMutationSnapshot(
+                runID: outcome.runID,
+                taskID: outcome.taskID,
+                sessionID: outcome.resumedSessionID,
+                segmentID: outcome.resumedSegmentID,
+                phaseToken: PomodoroPhaseToken(run: resumedRun)
+            ),
+            stoppedSegments: outcome.stoppedSegments.map {
+                TimerMutationSegmentSnapshot(
+                    segmentID: $0.segmentID,
+                    sessionID: $0.sessionID,
+                    taskID: $0.taskID
+                )
+            }
+        ).events
         var expectedEvents: Set<StoreDomainEvent> = [
             .ledgerChanged(taskID: pomodoroTask.id, dateInterval: nil, isVisible: true),
             .pomodoroChanged(
@@ -375,10 +379,20 @@ struct PomodoroTests {
             )
         ]
         for stoppedSegment in expectedStops {
-            expectedEvents.formUnion(eventStore.timerStopMutationEvents(
-                taskID: stoppedSegment.taskID,
-                sessionID: stoppedSegment.sessionID
-            ))
+            expectedEvents.insert(
+                .ledgerChanged(
+                    taskID: stoppedSegment.taskID,
+                    dateInterval: nil,
+                    isVisible: true
+                )
+            )
+            expectedEvents.insert(
+                .pomodoroChanged(
+                    runID: nil,
+                    sessionID: stoppedSegment.sessionID,
+                    taskID: stoppedSegment.taskID
+                )
+            )
         }
         #expect(events == expectedEvents)
         let affectedTaskIDs = events.reduce(into: Set<UUID>()) { taskIDs, event in
@@ -476,7 +490,7 @@ struct PomodoroTests {
         )
         #expect(store.completeActivePomodoroFocus())
         let staleBreakRun = try #require(store.activePomodoroRun)
-        let expectedState = staleBreakRun.state
+        let phase = PomodoroPhaseToken(run: staleBreakRun)
         store.startTask(otherTask)
         let otherSegment = try #require(store.activeSegment(for: otherTask.id))
 
@@ -501,12 +515,10 @@ struct PomodoroTests {
         #expect(store.activePomodoroRun?.state == .shortBreak)
         #expect(try store.requiredPomodoroRepository().run(id: staleBreakRun.id)?.state == .completed)
         let analyticsRevision = store.analyticsRevision
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: staleBreakRun.id,
-            expectedState: expectedState
-        ) == false)
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase) == false)
 
-        #expect(store.analyticsRevision == analyticsRevision)
+        #expect(store.analyticsRevision > analyticsRevision)
+        #expect(store.activePomodoroRun == nil)
         #expect(otherSegment.endedAt == nil)
         #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
         #expect(try timeRepository.allSegments().filter { $0.source == .pomodoro }.count == 1)
@@ -560,6 +572,7 @@ struct PomodoroTests {
         #expect(store.completeActivePomodoroFocus())
         let breakRun = try #require(store.activePomodoroRun)
         let expectedState = breakRun.state
+        let phase = PomodoroPhaseToken(run: breakRun)
         #expect(expectedState == .shortBreak)
 
         store.startTask(otherTask)
@@ -582,10 +595,7 @@ struct PomodoroTests {
         let analyticsRevision = store.analyticsRevision
         let errorMessage = store.errorMessage
 
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: breakRun.id,
-            expectedState: expectedState
-        ) == false)
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase) == false)
 
         let canonicalRun = try #require(
             try store.requiredPomodoroRepository().run(id: breakRun.id)
@@ -595,7 +605,8 @@ struct PomodoroTests {
         #expect(otherSegment.endedAt == nil)
         #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
         #expect(Set(try timeRepository.allSegments().map(\.id)) == segmentIDsBeforeResume)
-        #expect(store.analyticsRevision == analyticsRevision)
+        #expect(store.analyticsRevision > analyticsRevision)
+        #expect(store.trackableTaskIDs.contains(pomodoroTaskID) == false)
         #expect(store.errorMessage == errorMessage)
     }
 
@@ -671,15 +682,12 @@ struct PomodoroTests {
         )
         #expect(store.completeActivePomodoroFocus())
         let breakRun = try #require(store.activePomodoroRun)
-        let expectedState = breakRun.state
+        let phase = PomodoroPhaseToken(run: breakRun)
 
         store.startTask(task)
         let regularSegment = try #require(store.activeSegments.first)
         #expect(regularSegment.source == .timer)
-        #expect(store.resumeActivePomodoroAfterBreak(
-            runID: breakRun.id,
-            expectedState: expectedState
-        ))
+        #expect(store.resumeActivePomodoroAfterBreak(phase: phase))
 
         #expect(regularSegment.endedAt != nil)
         #expect(store.activeSegments.count == 1)

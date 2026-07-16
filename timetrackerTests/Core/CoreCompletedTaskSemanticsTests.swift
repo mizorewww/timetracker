@@ -126,13 +126,14 @@ struct CoreCompletedTaskSemanticsTests {
             issuedAt: Date(),
             deviceID: "watch"
         )
-        #expect(throws: SystemActionCommandError.taskNotFound) {
-            try makeTestWatchCommandProcessor(receiptStore: InMemoryWatchCommandReceiptStore()).process(
-                watchCommand,
-                allowParallelTimers: true,
-                context: context
-            )
-        }
+        let watchResult = try makeTestWatchCommandProcessor(
+            receiptStore: InMemoryWatchCommandReceiptStore()
+        ).process(
+            watchCommand,
+            allowParallelTimers: true,
+            context: context
+        )
+        #expect(watchResult == .missingTask(task.id))
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         #expect(try timeRepository.activeSegments().isEmpty)
     }

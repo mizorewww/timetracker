@@ -17,12 +17,13 @@ struct TimerModelContextFactory {
     }
 }
 
-/// Foundation for the future timer coordinator. The fresh context is created
-/// only after the store lock is held, so it cannot carry a stale active-segment
-/// snapshot into the critical section.
+/// Transaction boundary used by the timer coordinator. The fresh context is
+/// created only after the store lock is held, so it cannot carry a stale
+/// active-segment snapshot into the critical section.
 ///
-/// This type is deliberately not wired to any timer writer yet. The existing
-/// multi-writer admission race remains until every writer enters one coordinator.
+/// System actions and Watch commands use this boundary today. UI, deep-link,
+/// Pomodoro, ledger-edit, and task-lifecycle writers must join the same lock
+/// domain before timer admission is fully serialized across the application.
 @MainActor
 struct StoreScopedTimerMutationTransaction {
     let scope: TimerStoreScope

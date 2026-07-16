@@ -87,50 +87,47 @@ struct CoreSystemActionCommandTests {
         )
 
         #expect(returnedID == selectedSegment.id)
-        #expect(try timeRepository.activeSegments().map(\.id) == [selectedSegment.id])
-        #expect(otherSegment.endedAt != nil)
-        #expect(try timeRepository.allSegments().count == 2)
+        let freshRepository = SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "test"
+        )
+        #expect(try freshRepository.activeSegments().map(\.id) == [selectedSegment.id])
+        #expect(
+            try freshRepository.allSegments().first { $0.id == otherSegment.id }?.endedAt
+                != nil
+        )
+        #expect(try freshRepository.allSegments().count == 2)
     }
 
     @Test @MainActor
-    func activeSetDiffPublishesBothStoppedAndStartedTimerDomains() throws {
-        let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-        let firstTask = try taskRepository.createTask(
-            title: "Stopped event task",
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
+    func mutationOutcomePublishesBothStoppedAndStartedTimerDomains() {
+        let stopped = TimerMutationSegmentSnapshot(
+            segmentID: UUID(),
+            sessionID: UUID(),
+            taskID: UUID()
         )
-        let secondTask = try taskRepository.createTask(
-            title: "Started event task",
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
+        let started = TimerMutationSegmentSnapshot(
+            segmentID: UUID(),
+            sessionID: UUID(),
+            taskID: UUID()
         )
-        let stopped = try timeRepository.startTask(taskID: firstTask.id, source: .timer)
-        let before = try timeRepository.activeSegments()
-        try timeRepository.stopSegment(segmentID: stopped.id)
-        let started = try timeRepository.startTask(taskID: secondTask.id, source: .timer)
-        let after = try timeRepository.activeSegments()
+        let events = StoreScopedTimerCommandOutcome(
+            subjectSegmentID: started.segmentID,
+            createdSegment: started,
+            stoppedSegments: [stopped]
+        ).events
 
-        let events = TimerActiveSetMutationService().events(
-            beforeActiveSegments: before,
-            afterActiveSegments: after
-        )
-
-        #expect(events.contains(.ledgerChanged(taskID: firstTask.id, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.ledgerChanged(taskID: stopped.taskID, dateInterval: nil, isVisible: true)))
         #expect(events.contains(.pomodoroChanged(
             runID: nil,
             sessionID: stopped.sessionID,
-            taskID: firstTask.id
+            taskID: stopped.taskID
         )))
-        #expect(events.contains(.ledgerChanged(taskID: secondTask.id, dateInterval: nil, isVisible: true)))
+        #expect(events.contains(.ledgerChanged(taskID: started.taskID, dateInterval: nil, isVisible: true)))
         #expect(events.contains(.pomodoroChanged(
             runID: nil,
             sessionID: started.sessionID,
-            taskID: secondTask.id
+            taskID: started.taskID
         )))
         #expect(events.count == 4)
     }
@@ -268,9 +265,14 @@ struct CoreSystemActionCommandTests {
         )
 
         #expect(stoppedID == first.id)
-        #expect(first.endedAt != nil)
-        #expect(second.endedAt == nil)
-        #expect(try timeRepository.activeSegments().map(\.id) == [second.id])
+        let freshRepository = SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "test"
+        )
+        let persistedSegments = try freshRepository.allSegments()
+        #expect(persistedSegments.first { $0.id == first.id }?.endedAt != nil)
+        #expect(persistedSegments.first { $0.id == second.id }?.endedAt == nil)
+        #expect(try freshRepository.activeSegments().map(\.id) == [second.id])
     }
 
     @Test @MainActor

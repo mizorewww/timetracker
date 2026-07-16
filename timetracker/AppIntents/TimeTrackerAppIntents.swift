@@ -39,23 +39,22 @@ struct StartTimerIntent: AppIntent {
         let context = SystemActionContextProvider.makeContext()
         let taskID = try task.uuid()
         let commandHandler = SystemActionCommandHandler()
-        let timeRepository = SwiftDataTimeTrackingRepository(context: context)
-        let activeSegmentsBefore = try timeRepository.activeSegments()
-        _ = try commandHandler.startTimer(
+        let outcome = try commandHandler.startTimerMutation(
             taskID: taskID,
             allowParallelTimers: try commandHandler.allowParallelTimersPreference(context: context),
-            context: context
+            container: SystemActionContextProvider.container
         )
-        let events = TimerActiveSetMutationService().events(
-            beforeActiveSegments: activeSegmentsBefore,
-            afterActiveSegments: try timeRepository.activeSegments()
-        )
+        let events = outcome.events
         if events.isEmpty == false {
+            let postCommitContext = SystemActionContextProvider.makeContext()
             CommittedMutationSnapshotRecorder().recordLocalMutation(
-                context: context,
+                context: postCommitContext,
                 events: events
             )
-            CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
+            CommittedMutationSurfaceSynchronizer().synchronize(
+                context: postCommitContext,
+                events: events
+            )
         }
         return .result()
     }
@@ -71,29 +70,22 @@ struct StopTimerIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let context = SystemActionContextProvider.makeContext()
         let targetID = try timer.uuid()
-        let targetSegment = try SwiftDataTimeTrackingRepository(context: context)
-            .activeSegments()
-            .first { $0.id == targetID }
-        let segmentID = try SystemActionCommandHandler().stopTimer(
+        let outcome = try SystemActionCommandHandler().stopTimerMutation(
             segmentID: targetID,
-            context: context
+            container: SystemActionContextProvider.container
         )
-        if segmentID == targetID, let targetSegment {
-            let events: Set<StoreDomainEvent> = [
-                .ledgerChanged(taskID: targetSegment.taskID, dateInterval: nil, isVisible: true),
-                .pomodoroChanged(
-                    runID: nil,
-                    sessionID: targetSegment.sessionID,
-                    taskID: targetSegment.taskID
-                )
-            ]
+        let events = outcome.events
+        if outcome.subjectSegmentID == targetID, events.isEmpty == false {
+            let postCommitContext = SystemActionContextProvider.makeContext()
             CommittedMutationSnapshotRecorder().recordLocalMutation(
-                context: context,
+                context: postCommitContext,
                 events: events
             )
-            CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
+            CommittedMutationSurfaceSynchronizer().synchronize(
+                context: postCommitContext,
+                events: events
+            )
         }
         return .result()
     }
@@ -259,7 +251,11 @@ struct TaskNodeEntityQuery: EntityStringQuery {
 
 @MainActor
 enum SystemActionContextProvider {
+    static var container: ModelContainer {
+        timetrackerApp.applicationModelContainer
+    }
+
     static func makeContext() -> ModelContext {
-        ModelContext(timetrackerApp.applicationModelContainer)
+        ModelContext(container)
     }
 }

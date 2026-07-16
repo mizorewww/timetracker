@@ -82,7 +82,6 @@ struct WatchCommandProcessor {
         guard command.isValid(at: now) else {
             return .invalid
         }
-        try writeAuthorization.requireUserWritesAllowed()
 
         switch command.type {
         case .startTask:
@@ -98,19 +97,19 @@ struct WatchCommandProcessor {
         context: ModelContext
     ) throws -> WatchCommandProcessingResult {
         guard let taskID = command.taskID else { return .invalid }
-        let taskRepository = SwiftDataTaskRepository(context: context)
-        guard try taskRepository.task(id: taskID) != nil else {
+        let segmentID: UUID?
+        do {
+            segmentID = try SystemActionCommandHandler(
+                writeAuthorization: writeAuthorization
+            ).startTimerMutation(
+                taskID: taskID,
+                allowParallelTimers: allowParallelTimers,
+                source: .watch,
+                container: context.container
+            ).subjectSegmentID
+        } catch SystemActionCommandError.taskNotFound {
             return .missingTask(taskID)
         }
-
-        let segmentID = try SystemActionCommandHandler(
-            writeAuthorization: writeAuthorization
-        ).startTimer(
-            taskID: taskID,
-            allowParallelTimers: allowParallelTimers,
-            source: .watch,
-            context: context
-        )
         guard let segmentID else { return .invalid }
         receiptStore.markProcessed(command.id)
         return .started(segmentID)
@@ -121,19 +120,13 @@ struct WatchCommandProcessor {
         context: ModelContext
     ) throws -> WatchCommandProcessingResult {
         guard let segmentID = command.segmentID else { return .invalid }
-        let timeRepository = SwiftDataTimeTrackingRepository(context: context)
-        guard let segment = try timeRepository.activeSegments().first(where: { $0.id == segmentID }) else {
-            return .missingSegment(segmentID)
-        }
-        try context.performAtomicMutation {
-            let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
-            try TimerCommandHandler().stop(
-                segment: segment,
-                pomodoroRuns: try pomodoroRepository.runs(),
-                timeRepository: timeRepository,
-                context: context
-            )
-        }
+        let stoppedID = try SystemActionCommandHandler(
+            writeAuthorization: writeAuthorization
+        ).stopTimerMutation(
+            segmentID: segmentID,
+            container: context.container
+        ).subjectSegmentID
+        guard stoppedID == segmentID else { return .missingSegment(segmentID) }
         receiptStore.markProcessed(command.id)
         return .stopped(segmentID)
     }

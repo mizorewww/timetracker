@@ -83,43 +83,6 @@ struct CommittedMutationSurfaceSynchronizer {
     }
 }
 
-struct TimerActiveSetMutationService {
-    func events(
-        beforeActiveSegments: [TimeSegment],
-        afterActiveSegments: [TimeSegment]
-    ) -> Set<StoreDomainEvent> {
-        let beforeByID = beforeActiveSegments.reduce(into: [UUID: TimeSegment]()) {
-            $0[$1.id] = $1
-        }
-        let afterByID = afterActiveSegments.reduce(into: [UUID: TimeSegment]()) {
-            $0[$1.id] = $1
-        }
-        let stoppedIDs = Set(beforeByID.keys).subtracting(afterByID.keys)
-        let startedIDs = Set(afterByID.keys).subtracting(beforeByID.keys)
-        var events = Set<StoreDomainEvent>()
-
-        for id in stoppedIDs {
-            guard let segment = beforeByID[id] else { continue }
-            events.insert(.ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true))
-            events.insert(.pomodoroChanged(
-                runID: nil,
-                sessionID: segment.sessionID,
-                taskID: segment.taskID
-            ))
-        }
-        for id in startedIDs {
-            guard let segment = afterByID[id] else { continue }
-            events.insert(.ledgerChanged(taskID: segment.taskID, dateInterval: nil, isVisible: true))
-            events.insert(.pomodoroChanged(
-                runID: nil,
-                sessionID: segment.sessionID,
-                taskID: segment.taskID
-            ))
-        }
-        return events
-    }
-}
-
 @MainActor
 struct SystemActionCommandHandler {
     let writeAuthorization: StoreWriteAuthorization
@@ -156,36 +119,28 @@ struct SystemActionCommandHandler {
         source: TimeSessionSource = .timer,
         context: ModelContext
     ) throws -> UUID? {
-        try context.performAtomicMutation {
-            try writeAuthorization.requireUserWritesAllowed()
-            let taskRepository = SwiftDataTaskRepository(context: context)
-            let availableTaskIDs = TaskTrackingAvailabilityService().availableTaskIDs(
-                tasks: try taskRepository.allNodes()
-            )
-            guard availableTaskIDs.contains(taskID) else {
-                throw SystemActionCommandError.taskNotFound
-            }
+        try startTimerMutation(
+            taskID: taskID,
+            allowParallelTimers: allowParallelTimers,
+            source: source,
+            container: context.container
+        ).subjectSegmentID
+    }
 
-            let timeRepository = SwiftDataTimeTrackingRepository(context: context)
-            let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
-            let activeSegments = try timeRepository.activeSegments()
-            let existingSegmentID = activeSegments.first(where: { $0.taskID == taskID })?.id
-
-            try TimerCommandHandler().startTask(
-                taskID: taskID,
-                allowParallelTimers: allowParallelTimers,
-                activeSegments: activeSegments,
-                pomodoroRuns: try pomodoroRepository.runs(),
-                timeRepository: timeRepository,
-                context: context,
-                source: source
-            )
-
-            if let existingSegmentID {
-                return existingSegmentID
-            }
-            return try timeRepository.activeSegments().first(where: { $0.taskID == taskID })?.id
-        }
+    func startTimerMutation(
+        taskID: UUID,
+        allowParallelTimers: Bool,
+        source: TimeSessionSource = .timer,
+        container: ModelContainer
+    ) throws -> StoreScopedTimerCommandOutcome {
+        try StoreScopedTimerCommandCoordinator(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).start(
+            taskID: taskID,
+            allowParallelTimers: allowParallelTimers,
+            source: source
+        )
     }
 
     @discardableResult
@@ -194,36 +149,22 @@ struct SystemActionCommandHandler {
         taskID: UUID? = nil,
         context: ModelContext
     ) throws -> UUID? {
-        try context.performAtomicMutation {
-            try writeAuthorization.requireUserWritesAllowed()
-            let timeRepository = SwiftDataTimeTrackingRepository(context: context)
-            let activeSegments = try timeRepository.activeSegments()
-            let candidates: [TimeSegment]
-            if let segmentID {
-                guard taskID == nil else { return nil }
-                candidates = activeSegments.filter { $0.id == segmentID }
-            } else if let taskID {
-                candidates = activeSegments.filter { $0.taskID == taskID }
-            } else {
-                candidates = activeSegments
-            }
+        try stopTimerMutation(
+            segmentID: segmentID,
+            taskID: taskID,
+            container: context.container
+        ).subjectSegmentID
+    }
 
-            // Untargeted legacy callers remain compatible only when there is
-            // exactly one possible timer. Parallel timers must never be
-            // resolved by repository ordering.
-            guard candidates.count == 1, let segment = candidates.first else {
-                return nil
-            }
-
-            let pomodoroRepository = SwiftDataPomodoroRepository(context: context, timeRepository: timeRepository)
-            try TimerCommandHandler().stop(
-                segment: segment,
-                pomodoroRuns: try pomodoroRepository.runs(),
-                timeRepository: timeRepository,
-                context: context
-            )
-            return segment.id
-        }
+    func stopTimerMutation(
+        segmentID: UUID? = nil,
+        taskID: UUID? = nil,
+        container: ModelContainer
+    ) throws -> StoreScopedTimerCommandOutcome {
+        try StoreScopedTimerCommandCoordinator(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).stop(segmentID: segmentID, taskID: taskID)
     }
 
     func allowParallelTimersPreference(context: ModelContext) throws -> Bool {

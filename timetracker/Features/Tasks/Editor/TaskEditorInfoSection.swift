@@ -65,9 +65,9 @@ struct TaskInfoEditorSection: View {
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
                 inheritedCategoryHint
-                if isParentSelectionLocked {
+                if let parentSelectionLockMessageKey {
                     Label(
-                        AppStrings.localized("task.parent.completedLocked"),
+                        AppStrings.localized(parentSelectionLockMessageKey),
                         systemImage: "lock.fill"
                     )
                 }
@@ -138,8 +138,25 @@ struct TaskInfoEditorSection: View {
     }
 
     private var isParentSelectionLocked: Bool {
-        guard let originalTask else { return false }
-        return !store.isTaskAvailableForTracking(originalTask)
+        parentChangeBlocker != nil
+    }
+
+    private var parentChangeBlocker: TaskParentChangeBlocker? {
+        guard let originalTask else { return nil }
+        return store.parentChangeBlocker(for: originalTask)
+    }
+
+    private var parentSelectionLockMessageKey: String? {
+        switch parentChangeBlocker {
+        case .completed:
+            "task.parent.completedLocked"
+        case .archived:
+            "task.parent.archivedLocked"
+        case .deleted:
+            "task.parent.deletedLocked"
+        case nil:
+            nil
+        }
     }
 
     private var hasActiveTimerInSubtree: Bool {
@@ -151,9 +168,39 @@ struct TaskInfoEditorSection: View {
         Picker(AppStrings.localized("editor.task.parent"), selection: $draft.parentID) {
             Text(.app("editor.task.rootLevel")).tag(Optional<UUID>.none)
             ForEach(parentCandidates, id: \.id) { task in
-                Text(indentedTitle(task)).tag(Optional(task.id))
+                Text(parentOptionTitle(task))
+                    .tag(Optional(task.id))
+                    .disabled(
+                        store.isTaskAvailableForTracking(task) == false &&
+                            draft.parentID != task.id
+                    )
+            }
+            if let missingCurrentParentID {
+                Text(.app("task.parent.currentMissing"))
+                    .tag(Optional(missingCurrentParentID))
             }
         }
+    }
+
+    private var missingCurrentParentID: UUID? {
+        guard let parentID = draft.parentID,
+              parentCandidates.contains(where: { $0.id == parentID }) == false else {
+            return nil
+        }
+        return parentID
+    }
+
+    private func parentOptionTitle(_ task: TaskNode) -> String {
+        let title = indentedTitle(task)
+        guard store.isTaskAvailableForTracking(task) == false else { return title }
+        return String.localizedStringWithFormat(
+            AppStrings.localized(
+                draft.parentID == task.id
+                    ? "task.parent.currentUnavailableFormat"
+                    : "task.parent.unavailableFormat"
+            ),
+            title
+        )
     }
 
     private func indentedTitle(_ task: TaskNode) -> String {

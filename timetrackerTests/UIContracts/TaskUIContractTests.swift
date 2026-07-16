@@ -672,6 +672,22 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskEditorKeepsUnavailableCurrentParentsVisibleWhileAllowingRecoveryMoves() throws {
+        let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let info = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift")
+        let readModels = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift")
+
+        #expect(editor.contains("candidates.append(currentParent)"))
+        #expect(editor.contains("store.isTaskVisible(currentParent)") == false)
+        #expect(info.contains("store.parentChangeBlocker(for: originalTask)"))
+        #expect(info.contains("task.parent.currentUnavailableFormat"))
+        #expect(info.contains("task.parent.unavailableFormat"))
+        #expect(info.contains("task.parent.currentMissing"))
+        #expect(info.contains("!store.isTaskAvailableForTracking(originalTask)") == false)
+        #expect(readModels.contains("func parentChangeBlocker(for task: TaskNode)"))
+    }
+
+    @Test
     func taskEditorShowsAccessiblePersistenceErrorsBesideFieldsAndBlocksSave() throws {
         let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
         let components = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")

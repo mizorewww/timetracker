@@ -32,15 +32,15 @@ extension SwiftDataTaskRepository {
     func canMove(nodeID: UUID, to newParentID: UUID?, nodes: [TaskNode]) -> Bool {
         guard let node = nodes.first(where: { $0.id == nodeID }) else { return false }
         let isChangingParent = node.parentID != newParentID
-        let trackableTaskIDs = TaskTrackingAvailabilityService()
-            .trackableTaskIDs(tasks: nodes)
-        if isChangingParent, trackableTaskIDs.contains(nodeID) == false {
+        guard isChangingParent else { return true }
+        let availabilityService = TaskTrackingAvailabilityService()
+        if availabilityService.parentChangeBlocker(for: node) != nil {
             return false
         }
         guard let newParentID else { return true }
         guard nodeID != newParentID else { return false }
         guard nodes.contains(where: { $0.id == newParentID }) else { return false }
-        if isChangingParent, trackableTaskIDs.contains(newParentID) == false {
+        if availabilityService.trackableTaskIDs(tasks: nodes).contains(newParentID) == false {
             return false
         }
         return !descendantIDs(of: nodeID, nodes: nodes).contains(newParentID)
@@ -62,19 +62,16 @@ extension SwiftDataTaskRepository {
 
     func applyHierarchy(
         to node: TaskNode,
-        parentID: UUID?,
-        requiresTrackableParent: Bool = true
+        parentID: UUID?
     ) throws {
         if let parentID {
             guard let parent = try task(id: parentID) else {
                 throw TaskRepositoryError.invalidMove
             }
-            if requiresTrackableParent {
-                guard TaskTrackingAvailabilityService()
-                    .trackableTaskIDs(tasks: try allNodes())
-                    .contains(parentID) else {
-                    throw TaskRepositoryError.invalidMove
-                }
+            guard TaskTrackingAvailabilityService()
+                .trackableTaskIDs(tasks: try allNodes())
+                .contains(parentID) else {
+                throw TaskRepositoryError.invalidMove
             }
             node.depth = parent.depth + 1
             node.path = TaskHierarchyMetadata.canonicalPath(for: node.id)

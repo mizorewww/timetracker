@@ -333,7 +333,12 @@
 "task.status.blockedByCompletion" = "待重新打开";
 "task.archived.trackingUnavailable" = "此任务或其上级任务已完成或归档，不能接收新工作。请先重新打开或恢复相应任务。";
 "task.parentUnavailable" = "所选父任务已完成、已归档或不再可用。";
-"task.parent.completedLocked" = "重新打开此任务及已完成的上级任务后，才能移动它。";
+"task.parent.completedLocked" = "此任务已完成，重新打开后才能移动。";
+"task.parent.archivedLocked" = "此任务已归档，恢复后才能移动。";
+"task.parent.deletedLocked" = "已删除的任务不能移动。";
+"task.parent.currentUnavailableFormat" = "%@（当前不可用）";
+"task.parent.unavailableFormat" = "%@（不可用）";
+"task.parent.currentMissing" = "当前父任务（不可用）";
 "task.status.menu" = "状态";
 "task.empty.selectTask" = "选择一个任务";
 "task.section.info" = "基本信息";

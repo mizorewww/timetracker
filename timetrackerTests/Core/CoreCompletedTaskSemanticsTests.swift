@@ -178,6 +178,48 @@ struct CoreCompletedTaskSemanticsTests {
     }
 
     @Test @MainActor
+    func taskEditorCanMoveAnActiveChildOutOfACompletedBranchButNotTheCompletedTask() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let completedParent = try repository.createTask(
+            title: "Completed parent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let activeChild = try repository.createTask(
+            title: "Recoverable child",
+            parentID: completedParent.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let destination = try repository.createTask(
+            title: "Available destination",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.setTaskStatus(taskID: completedParent.id, status: .completed)
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        #expect(store.parentChangeBlocker(for: activeChild) == nil)
+        #expect(store.validParentTasks(for: activeChild.id).map(\.id) == [destination.id])
+
+        var childDraft = store.editorDraft(for: activeChild)
+        childDraft.parentID = destination.id
+        #expect(store.saveTaskDraft(childDraft))
+        #expect(try repository.task(id: activeChild.id)?.parentID == destination.id)
+
+        var completedDraft = store.editorDraft(for: completedParent)
+        completedDraft.parentID = destination.id
+        #expect(store.saveTaskDraft(completedDraft) == false)
+        #expect(store.errorMessage == AppStrings.localized("task.parent.completedLocked"))
+        #expect(try repository.task(id: completedParent.id)?.parentID == nil)
+    }
+
+    @Test @MainActor
     func existingTimerUnderNewlyCompletedBranchRemainsVisibleAndStoppable() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

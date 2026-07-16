@@ -71,11 +71,9 @@ extension SwiftDataTaskRepository {
         node.updatedAt = now
         node.deviceID = deviceID
         node.clientMutationID = UUID()
-        try applyHierarchy(
-            to: node,
-            parentID: parentID,
-            requiresTrackableParent: isChangingParent
-        )
+        if isChangingParent {
+            try applyHierarchy(to: node, parentID: parentID)
+        }
         updateDescendantHierarchy(of: node, nodes: nodes, now: now)
         try setCategoryAssignment(categoryID: parentID == nil ? categoryID : nil, forRootTaskID: node.id)
         try context.saveAfterMutationStep()

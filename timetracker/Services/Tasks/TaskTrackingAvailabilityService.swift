@@ -5,6 +5,12 @@ struct TaskWorkEligibility: Equatable {
     let trackableTaskIDs: Set<UUID>
 }
 
+enum TaskParentChangeBlocker: Equatable {
+    case completed
+    case archived
+    case deleted
+}
+
 /// Resolves visibility and work eligibility for an entire hierarchy in linear
 /// time without rewriting descendants' own workflow statuses.
 ///
@@ -54,6 +60,23 @@ struct TaskTrackingAvailabilityService {
     /// "available" as "can accept new time/work".
     func availableTaskIDs(tasks: [TaskNode]) -> Set<UUID> {
         trackableTaskIDs(tasks: tasks)
+    }
+
+    /// A task can leave an unavailable ancestor branch as long as its own
+    /// lifecycle still accepts edits. This intentionally differs from work
+    /// eligibility, which also inherits completed and archived ancestors.
+    func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
+        if task.deletedAt != nil {
+            return .deleted
+        }
+        switch task.status {
+        case .completed:
+            return .completed
+        case .archived:
+            return .archived
+        case .planned, .active:
+            return nil
+        }
     }
 
     func completedBlockingTaskIDs(for taskID: UUID, tasks: [TaskNode]) -> [UUID] {

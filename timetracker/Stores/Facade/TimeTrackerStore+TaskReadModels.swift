@@ -87,7 +87,10 @@ extension TimeTrackerStore {
 
     func validParentTasks(for taskID: UUID?) -> [TaskNode] {
         taskTreeService.validParentTasks(for: taskID, tasks: tasks)
-            .filter(isTaskAvailableForTracking)
+    }
+
+    func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
+        taskTrackingAvailabilityService.parentChangeBlocker(for: task)
     }
 
     func isTaskAvailableForTracking(_ task: TaskNode) -> Bool {

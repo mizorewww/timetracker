@@ -89,21 +89,37 @@ struct TaskTreeService {
     }
 
     func canMove(taskID: UUID, to newParentID: UUID?, tasks: [TaskNode]) -> Bool {
-        let visibleTasks = tasks.visibleDeduplicatedByID()
-        guard visibleTasks.contains(where: { $0.id == taskID }) else { return false }
+        let canonicalTasks = tasks.deduplicatedByID()
+        let availabilityService = TaskTrackingAvailabilityService()
+        let eligibility = availabilityService.eligibility(tasks: canonicalTasks)
+        guard eligibility.visibleTaskIDs.contains(taskID),
+              let task = canonicalTasks.first(where: { $0.id == taskID }) else { return false }
+        let isChangingParent = task.parentID != newParentID
+        guard isChangingParent else { return true }
+        if availabilityService.parentChangeBlocker(for: task) != nil {
+            return false
+        }
         guard let newParentID else { return true }
         guard taskID != newParentID else { return false }
-        guard visibleTasks.contains(where: { $0.id == newParentID }) else { return false }
-        return !descendantIDs(of: taskID, tasks: visibleTasks).contains(newParentID)
+        guard eligibility.visibleTaskIDs.contains(newParentID),
+              eligibility.trackableTaskIDs.contains(newParentID) else {
+            return false
+        }
+        return !descendantIDs(of: taskID, tasks: canonicalTasks).contains(newParentID)
     }
 
     func validParentTasks(for taskID: UUID?, tasks: [TaskNode]) -> [TaskNode] {
-        let visibleTasks = tasks.visibleDeduplicatedByID()
-        guard let taskID else {
-            return visibleTasks
+        let canonicalTasks = tasks.deduplicatedByID()
+        let eligibility = TaskTrackingAvailabilityService().eligibility(tasks: canonicalTasks)
+        let eligibleParents = canonicalTasks.filter {
+            eligibility.visibleTaskIDs.contains($0.id) &&
+                eligibility.trackableTaskIDs.contains($0.id)
         }
-        let invalidIDs = descendantIDs(of: taskID, tasks: visibleTasks).union([taskID])
-        return visibleTasks.filter { !invalidIDs.contains($0.id) }
+        guard let taskID else {
+            return eligibleParents
+        }
+        let invalidIDs = descendantIDs(of: taskID, tasks: canonicalTasks).union([taskID])
+        return eligibleParents.filter { !invalidIDs.contains($0.id) }
     }
 
     private static func displayPath(components: [String], wasTruncated: Bool) -> String {

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -36,6 +37,33 @@ struct CoreTaskStoreTests {
         #expect(child.status == .active)
         #expect(grandchild.status == .active)
         #expect(completedChild.status == .active)
+
+        let availabilityService = TaskTrackingAvailabilityService()
+        #expect(availabilityService.parentChangeBlocker(for: archivedRoot) == .archived)
+        #expect(availabilityService.parentChangeBlocker(for: deletedRoot) == .deleted)
+        #expect(availabilityService.parentChangeBlocker(for: completedRoot) == .completed)
+        #expect(availabilityService.parentChangeBlocker(for: completedChild) == nil)
+
+        let treeService = TaskTreeService()
+        let candidates = treeService.validParentTasks(
+            for: completedChild.id,
+            tasks: [
+                archivedRoot,
+                child,
+                grandchild,
+                availableRoot,
+                deletedRoot,
+                deletedDescendant,
+                completedRoot,
+                completedChild
+            ]
+        )
+        #expect(candidates.map(\.id) == [availableRoot.id])
+        #expect(treeService.canMove(
+            taskID: completedChild.id,
+            to: availableRoot.id,
+            tasks: [completedRoot, completedChild, availableRoot]
+        ))
     }
 
     @Test @MainActor
@@ -67,11 +95,14 @@ struct CoreTaskStoreTests {
         #expect(throws: TaskRepositoryError.invalidMove) {
             try repository.moveTask(taskID: activeRoot.id, newParentID: archivedRoot.id, sortOrder: 10)
         }
+        #expect(throws: TaskRepositoryError.invalidMove) {
+            try repository.moveTask(taskID: archivedRoot.id, newParentID: activeRoot.id, sortOrder: 10)
+        }
         #expect(try repository.allNodes().map(\.id).contains(activeRoot.id))
     }
 
     @Test @MainActor
-    func repositoryRequiresReopeningBeforeCreatingOrMovingWorkInCompletedBranch() throws {
+    func repositoryLetsActiveDescendantsEscapeCompletedBranchesButKeepsCompletedTasksLocked() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let completedRoot = try repository.createTask(
@@ -102,10 +133,6 @@ struct CoreTaskStoreTests {
                 iconName: nil
             )
         }
-        #expect(throws: TaskRepositoryError.invalidMove) {
-            try repository.moveTask(taskID: child.id, newParentID: activeRoot.id, sortOrder: 10)
-        }
-
         // Metadata on visible history remains editable while its parent stays
         // unchanged; editing must not become a hidden move operation.
         try repository.updateTask(
@@ -122,9 +149,59 @@ struct CoreTaskStoreTests {
         )
         #expect(try repository.task(id: child.id)?.title == "Updated history")
 
-        try repository.setTaskStatus(taskID: completedRoot.id, status: .active)
-        try repository.moveTask(taskID: child.id, newParentID: activeRoot.id, sortOrder: 10)
+        try repository.updateTask(
+            taskID: child.id,
+            title: "Recovered child",
+            status: .active,
+            parentID: activeRoot.id,
+            categoryID: nil,
+            colorHex: nil,
+            iconName: nil,
+            notes: "Preserved",
+            estimatedSeconds: nil,
+            dueAt: nil
+        )
         #expect(try repository.task(id: child.id)?.parentID == activeRoot.id)
+
+        #expect(throws: TaskRepositoryError.invalidMove) {
+            try repository.moveTask(taskID: completedRoot.id, newParentID: activeRoot.id, sortOrder: 10)
+        }
+    }
+
+    @Test @MainActor
+    func repositoryPreservesAnUnchangedMissingParentDuringMetadataEdits() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let missingParentID = UUID()
+        let task = TaskNode(
+            title: "Staged child",
+            parentID: missingParentID,
+            deviceID: "remote"
+        )
+        context.insert(task)
+        try context.save()
+
+        try repository.updateTask(
+            taskID: task.id,
+            title: "Edited staged child",
+            status: .active,
+            parentID: missingParentID,
+            categoryID: nil,
+            colorHex: nil,
+            iconName: nil,
+            notes: "Keep the staged relationship",
+            estimatedSeconds: nil,
+            dueAt: nil
+        )
+
+        let updated = try #require(try repository.task(id: task.id))
+        #expect(updated.title == "Edited staged child")
+        #expect(updated.parentID == missingParentID)
+        #expect(TaskTreeService().canMove(
+            taskID: task.id,
+            to: missingParentID,
+            tasks: [task]
+        ))
     }
 
     @Test @MainActor

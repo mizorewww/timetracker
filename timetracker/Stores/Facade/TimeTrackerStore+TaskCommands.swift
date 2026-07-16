@@ -32,6 +32,18 @@ extension TimeTrackerStore {
             )
             return false
         }
+        if let taskID = draft.taskID,
+           let currentTask = task(for: taskID),
+           currentTask.parentID != draft.parentID,
+           let blocker = parentChangeBlocker(for: currentTask) {
+            let messageKey = switch blocker {
+            case .completed: "task.parent.completedLocked"
+            case .archived: "task.parent.archivedLocked"
+            case .deleted: "task.parent.deletedLocked"
+            }
+            errorMessage = AppStrings.localized(messageKey)
+            return false
+        }
         if let parentID = draft.parentID,
            trackableTaskIDs.contains(parentID) == false,
            draft.taskID.flatMap({ task(for: $0) })?.parentID != parentID {

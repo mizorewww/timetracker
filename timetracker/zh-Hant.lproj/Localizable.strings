@@ -333,7 +333,12 @@
 "task.status.blockedByCompletion" = "待重新開啟";
 "task.archived.trackingUnavailable" = "此任務或其上層任務已完成或封存，不能接收新工作。請先重新開啟或還原相應任務。";
 "task.parentUnavailable" = "所選父任務已完成、已封存或不再可用。";
-"task.parent.completedLocked" = "重新開啟此任務及已完成的上層任務後，才能移動它。";
+"task.parent.completedLocked" = "此任務已完成，重新開啟後才能移動。";
+"task.parent.archivedLocked" = "此任務已封存，還原後才能移動。";
+"task.parent.deletedLocked" = "已刪除的任務不能移動。";
+"task.parent.currentUnavailableFormat" = "%@（目前無法使用）";
+"task.parent.unavailableFormat" = "%@（無法使用）";
+"task.parent.currentMissing" = "目前父任務（無法使用）";
 "task.status.menu" = "狀態";
 "task.empty.selectTask" = "選擇一個任務";
 "task.section.info" = "基本資訊";

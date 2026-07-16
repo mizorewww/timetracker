@@ -44,7 +44,6 @@ struct TaskEditorPanel: View {
         var candidates = store.validParentTasks(for: initialDraft.taskID)
         if let currentParentID = initialDraft.parentID,
            let currentParent = store.task(for: currentParentID),
-           store.isTaskVisible(currentParent),
            candidates.contains(where: { $0.id == currentParentID }) == false {
             candidates.append(currentParent)
         }

@@ -1049,6 +1049,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：跨 scene 套件覆盖较新完成状态不可被旧 toggle 覆盖、删除 item 不复活、删除 task 后不产生 item/visual、连续 scene 新增排序唯一、父级移动后使用新 ancestor、快捷新增与 editor 共用持久化限制、旧重排不覆盖较新 mutation；Task draft、forecast、localization 与 source-layout 回归必须继续通过。
 
+## AD-083：Analytics 的排名、峰值与删除任务标题必须与输入顺序无关
+
+状态：Accepted
+
+背景：Task breakdown 先按 Dictionary 分组后只比较 gross seconds，Peak Hour 对 Dictionary 直接 `max`，删除任务标题从分组 session 取 `.first`。Dictionary 和 fetch 输入顺序不是稳定产品语义，同值数据会让 Top Task、Next Review、峰值小时或历史标题跨刷新/进程抖动。
+
+决策：`AnalyticsSelectionPolicy` 是确定性单值选择边界。Task breakdown 依次按 gross 降序、wall 降序、本地化标题升序、UUID 升序；peak-hour 并列选择最早本地小时；session fallback 只接受未删除且非空标题，按 `startedAt`、`updatedAt`、UUID 选择最新项。Task breakdown 与 overlap participants 共用同一个 resolver，禁止各自复制 comparator。纯汇总文件不再承担 task-ranking 职责，`AnalyticsStore+TaskBreakdown.swift` 独立所有。
+
+后果：同一 canonical facts 的排列变化不会改变首页洞察、分类详情或删除任务身份；不同 locale 仍可按用户语言排序，而 UUID 保证同一 locale 下最终决胜。新增 `.first`/`max` 消费者必须先说明并测试完整 tie-break。
+
+验证：permutation 测试覆盖等 gross/wall 任务、等峰值小时和新旧 session 正反输入；完整 Analytics timeline/store 回归继续覆盖快照、DST、overlap、cache 与历史周期。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

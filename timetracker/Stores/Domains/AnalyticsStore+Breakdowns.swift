@@ -148,38 +148,6 @@ extension AnalyticsStore {
         segments.filter { overlaps($0, interval: interval, now: cutoff) }
     }
 
-    func taskBreakdown(
-        items: [AnalyticsBoundedSegment],
-        tasks: [TaskNode],
-        sessions: [TimeSession],
-        taskPathByID: [UUID: String]
-    ) -> [TaskAnalyticsPoint] {
-        let taskByID = tasks.latestByID()
-        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
-        let grouped = Dictionary(grouping: items) { $0.segment.taskID }
-
-        return grouped.compactMap { taskID, taskItems -> TaskAnalyticsPoint? in
-            let gross = taskItems.reduce(0) { $0 + $1.durationSeconds }
-            guard gross > 0 else { return nil }
-
-            let task = taskByID[taskID]
-            let fallbackTitle = sessionsByTaskID[taskID]?.first?.titleSnapshot ?? AppStrings.localized("task.deleted")
-            return TaskAnalyticsPoint(
-                taskID: taskID,
-                title: task?.title ?? fallbackTitle,
-                path: task.map { taskPathByID[$0.id] ?? $0.title } ?? AppStrings.localized("task.deleted.path"),
-                colorHex: task?.colorHex,
-                iconName: task?.iconName,
-                status: task?.status,
-                grossSeconds: gross,
-                wallSeconds: TimeAggregationService().mergeOverlappingIntervals(taskItems.map(\.interval)).reduce(0) {
-                    $0 + Int($1.end.timeIntervalSince($1.start))
-                }
-            )
-        }
-        .sorted { $0.grossSeconds > $1.grossSeconds }
-    }
-
     func analyticsInterval(for range: AnalyticsRange, now: Date, calendar: Calendar) -> DateInterval? {
         switch range {
         case .today:

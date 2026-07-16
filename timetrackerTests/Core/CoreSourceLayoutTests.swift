@@ -31,6 +31,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Domains/AnalyticsStore+OverlapMaterialization.swift",
             "timetracker/Stores/Domains/AnalyticsStore+OverlapParticipants.swift",
             "timetracker/Stores/Domains/AnalyticsStore+OverlapSweep.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+TaskBreakdown.swift",
             "timetracker/Stores/Domains/AnalyticsStore+TaskSnapshot.swift",
             "timetracker/Stores/Domains/AnalyticsSnapshotModels.swift",
             "timetracker/Stores/Domains/ChecklistStore.swift",
@@ -64,6 +65,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Models/PomodoroPreferenceModels.swift",
             "timetracker/Models/SyncFeedbackModels.swift",
             "timetracker/Services/Analytics/AnalyticsEngine.swift",
+            "timetracker/Services/Analytics/AnalyticsSelectionPolicy.swift",
             "timetracker/Services/Analytics/TimelineLayoutModels.swift",
             "timetracker/Services/Analytics/TimelineAxisCompression.swift",
             "timetracker/Services/Checklist/ChecklistDraftService.swift",
@@ -506,6 +508,7 @@ struct CoreSourceLayoutTests {
             "AnalyticsStore+OverlapMaterialization.swift",
             "AnalyticsStore+OverlapParticipants.swift",
             "AnalyticsStore+OverlapSweep.swift",
+            "AnalyticsStore+TaskBreakdown.swift",
             "AnalyticsStore+TaskSnapshot.swift"
         ]
 
@@ -641,6 +644,7 @@ struct CoreSourceLayoutTests {
             "HourStackLayoutEngine.swift",
             "HourTaskActivityService.swift",
             "AnalyticsTimelineSnapshotService.swift",
+            "AnalyticsSelectionPolicy.swift",
             "LedgerBucketCache.swift"
         ]
 

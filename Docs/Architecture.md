@@ -93,6 +93,8 @@ Checklist quick add, completion, and reorder commands share the store-scoped mut
 
 `AnalyticsStore` caches overview and task snapshots by range, true calendar period start, and optional minute live bucket. A live bucket exists only when an active segment overlaps the selected range, so historical views do not recompute for clock ticks. Ledger events invalidate snapshots and only intersecting day buckets; every cache remains disposable and reconstructable from ledger facts.
 
+Analytics ranking and single-value selections are deterministic. Task ties resolve by gross time, wall time, localized title, then UUID; peak-hour ties choose the earliest local hour. Deleted-task titles use the latest valid session snapshot by start time, update time, and UUID, shared by task breakdown and overlap participants. Collection input order and dictionary iteration order are never product semantics.
+
 ## Deletion Rules
 
 Tasks are soft-deleted by default. Deleting a task tree first stops its active timers and ends active Pomodoro runs, then tombstones the tasks while retaining historical ledger/Pomodoro facts. Production Local, iCloud, fallback, and emergency stores never physically purge tombstones: CloudKit has no per-device deletion acknowledgement, so an offline device could otherwise resurrect old rows. Permanent cleanup is available only to isolated Demo/UI Test stores and only for expired tombstone graphs; a temporarily missing parent during staged import is not deletion evidence.

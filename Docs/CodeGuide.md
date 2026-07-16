@@ -140,6 +140,8 @@ Analytics 不能把一个历史周期压缩成单个“结束前一秒”的伪 
 
 Analytics 月导航先从所选月份的 `Calendar` interval start 位移到目标月，再把根页面持有的 `AnalyticsMonthNavigationAnchor` 映射回目标月。锚点保存原始本地日号和时分秒；目标月缺少该日时只对当月结果 clamp 到月末，不修改锚点，所以 Jan 31 → Feb 28/29 后仍会得到 Mar 31。该状态由 landing 与 category detail 共用，也必须跨 `ViewThatFits` 布局分支保持一致。直接选日期、切换 range、回到今天或进入当前月会清除旧锚点；目标为当前月或未来月时返回真实 `liveNow`，不得停在未来。
 
+`AnalyticsSelectionPolicy` 固化所有会被 `.first` 或单值摘要消费的决胜规则。Task breakdown 按 gross seconds 降序、wall seconds 降序、本地化标题升序、UUID 升序；并列 peak hour 选择最早的本地小时。任务已删除时，breakdown 与 overlap 共用 session title resolver，按 `startedAt`、`updatedAt`、UUID 选择最新有效 snapshot。不得依赖 `Dictionary(grouping:)` 的遍历顺序，也不得在不同投影重新实现不同 fallback。
+
 本地 `addManualSegment` 和 `updateSegment` 在 repository 写入前拒绝未来结束时间或未来 active start，返回 typed `TimeTrackingRepositoryError.futureTime` 与三语 `segment.error.timeNotFuture`。CloudKit、导入和旧 store 可能已含时钟偏差值；不为“修复”而删除事实，而是在每条读/聚合路径安全裁剪。DST 中的持续时长使用绝对 elapsed seconds，本地日 bucket 边界仍交给 `Calendar`。
 
 SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditorPanel` 的开始/结束 `DatePicker` 上限为当前 `now`，时长与保存 enablement 调用 `TrackedTimePolicy`。`TrackedTimeDisplaySnapshot` 是 Today timeline、Task Detail recent records 和 `DurationLabel` 的共享显示适配层；future-ended 只显示到 `now`，future-only/future-active 在开始前显示 0，已结束的固定 label 不启动每秒刷新。

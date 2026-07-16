@@ -7,39 +7,17 @@ extension AnalyticsStore {
         sessions: [TimeSession]
     ) -> [UUID: OverlapAnalyticsParticipant] {
         let taskByID = tasks.latestByID()
-        let fallbackTitleByTaskID = sessions.deduplicatedByID().reduce(
-            into: [UUID: TimeSession]()
-        ) { result, session in
-            guard session.deletedAt == nil,
-                  session.titleSnapshot?.isEmpty == false,
-                  taskIDs.contains(session.taskID) else {
-                return
-            }
-            guard let existing = result[session.taskID] else {
-                result[session.taskID] = session
-                return
-            }
-            if overlapSessionPrecedes(existing, session) {
-                result[session.taskID] = session
-            }
-        }
+        let fallbackTitleByTaskID = AnalyticsSelectionPolicy.latestSessionTitleByTaskID(
+            sessions: sessions,
+            restrictingTo: taskIDs
+        )
 
         return taskIDs.reduce(into: [UUID: OverlapAnalyticsParticipant]()) { result, taskID in
             let title = taskByID[taskID]?.title
-                ?? fallbackTitleByTaskID[taskID]?.titleSnapshot
+                ?? fallbackTitleByTaskID[taskID]
                 ?? AppStrings.localized("task.deleted")
             result[taskID] = OverlapAnalyticsParticipant(id: taskID, title: title)
         }
-    }
-
-    private func overlapSessionPrecedes(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt < rhs.startedAt
-        }
-        if lhs.updatedAt != rhs.updatedAt {
-            return lhs.updatedAt < rhs.updatedAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
     }
 
     func firstActiveParticipants(

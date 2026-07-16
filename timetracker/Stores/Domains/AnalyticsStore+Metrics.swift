@@ -147,14 +147,14 @@ extension AnalyticsStore {
             calendar: calendar
         )
         let hourly = hourlySeconds(items: bounded, calendar: calendar)
-        let peak = hourly.max { $0.value < $1.value }
+        let peak = AnalyticsSelectionPolicy.peakHour(in: hourly)
         let longestContinuous = longestMergedDuration(items: bounded)
 
         return AnalyticsRhythm(
             activeDayCount: dailyTotals.count,
             dailyAverageGrossSeconds: dailyTotals.isEmpty ? 0 : gross / dailyTotals.count,
-            peakHour: peak?.key,
-            peakHourSeconds: peak?.value ?? 0,
+            peakHour: peak?.hour,
+            peakHourSeconds: peak?.seconds ?? 0,
             longestContinuousSeconds: longestContinuous,
             averageSegmentSeconds: durations.isEmpty ? 0 : gross / durations.count,
             medianSegmentSeconds: median(durations),

@@ -985,6 +985,18 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：队列核心与 presentation 回归 11/11（`/tmp/timetracker-scene-feedback-core-tests-20260717.xcresult`）；scene 接线、JSON/清理边界与相关源码合同最终两组各 34/34（`/tmp/timetracker-settings-scene-feedback-tests-20260717-final.xcresult`、`/tmp/timetracker-settings-scene-feedback-taskui-tests-20260717.xcresult`）；完整 sync conflict、stale token 与 scene recovery 回归 55/55（`/tmp/timetracker-sync-recovery-scene-feedback-tests-20260717.xcresult`）。全部使用 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，0 skip/runtime warning。本批未创建模拟器，每轮后均确认无 owned build/test/runner 或 Booted device；没有安排 Accessibility 专项。
 
+## AD-078：同步状态只陈述已完成且已在本机处理成功的 CloudKit 活动
+
+状态：Accepted
+
+背景：旧实现把后台通知后的本机 `refresh()` 时间写入 `lastSyncRefreshAt`，状态卡随即显示绿色“刚刚刷新”。失败的 CloudKit import 会被降级成普通 remote change；账户检查和显式恢复也可能留下看似同步完成的时间戳。因此 UI 无法区分“收到变化信号”“本机重载成功”和“CloudKit import/export 已成功结束”。
+
+决策：以 `SyncActivityOutcome(kind, completedAt, result)` 取代裸时间戳。CloudKit import、export、setup 结束事件保留成功标志与系统 failure message；合并窗口中 conflict 优先于失败，失败优先于成功。只有事件成功，且本机 refresh 与冲突处理都成功后才记录成功。remote-store 通知本身不宣称云操作完成；任一后处理错误覆盖事件成功并记录失败。账户可用性检查和用户选择的覆盖恢复不生成 CloudKit 完成活动。状态卡优先显示账户不可用与实际失败，未来时间戳也不能进入 120 秒绿色窗口。
+
+后果：失败事件不再短暂或持续显示为绿色；后台错误在 Settings 状态卡中可诊断，不占用 scene alert 队列。最近活动能明确区分 import、export 和 setup，但它仍是当前进程观察到的 CloudKit 事件，不是多设备端到端一致性的证明。
+
+验证：同步活动、账户状态、冲突状态与 Settings 契约签名回归 76/76（`/tmp/timetracker-sync-activity-tests-20260717-b.xcresult`），使用 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，0 failed/skip/runtime warning。本批未创建模拟器；完成后确认无 owned build/test/runner 与 Booted device。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

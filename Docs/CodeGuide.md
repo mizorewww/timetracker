@@ -221,6 +221,8 @@ CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态�
 
 同步刷新是事件驱动的：`NSPersistentStoreRemoteChange` 和 `NSPersistentCloudKitContainer.eventChangedNotification` 进入 `TimeTrackerStore+SyncObservers`，350 ms 合并窗口保留最高优先级原因，再由 refresh planner 执行一次一致性刷新。启动与 scene 回到 active 时仍会刷新；不要重新引入常驻 5 秒轮询。`SyncedPreferenceService.latestByKey` 必须先完成 LWW/tombstone 选择，再过滤已删除结果，否则旧 active preference 会复活。legacy `UserDefaults` 迁移也必须从 logical-key LWW winner 判断 key 是否已迁移；winning tombstone 仍表示“已迁移”，必须阻止旧本机值重新导入。
 
+Settings 的同步状态使用 typed `SyncActivityOutcome`，不能从“本机执行过 refresh”反推 CloudKit 成功。只有带结束时间且无 CloudKit error 的 import/export/setup event，在本机 read-model refresh 与冲突状态处理都成功后，才能记录 `.succeeded`；单独的 `NSPersistentStoreRemoteChange` 只触发刷新，不生成绿色活动。CloudKit error、export checkpoint 状态写入失败或本机后处理失败记录 `.failed(message:)`，并由状态卡呈现，不写共享 `errorMessage`。最近成功只在完成时间不晚于当前时间且 120 秒内成立；账户检查独立更新 `CloudAccountCheckOutcome`，不得伪造或清除同步活动。
+
 `AppCloudSync.enabledKey` 是设备本地启动配置，只保存在 `UserDefaults`，修改后下次启动生效。它不属于 `AppPreferenceKey`，也不能进入 `SyncedPreference`、冲突快照或导出/恢复数据。历史 `TimeTrackerCloudSyncEnabled` 记录在这些边界统一过滤。普通 Local、Demo 和 UI Test 模式的 mutation 不生成冲突快照；CloudKit 活跃或存在待上传恢复时，`StoreDomainEvent` 只重抓受影响的 task、ledger、pomodoro、preference、countdown、checklist 或 inbox 域。仅 full sync、远程 import 和没有 baseline 的初始化需要捕获全部域。
 
 启动期 CloudKit reset 由 `CloudRecoveryGate` 严格门控。factory 必须先退出 demo 与用户禁用分支，再处理 pending reset；缺失/不可读的受保护上传快照为 deferred，store 或同步状态删除失败为 failed，均保留 pending 并停在本地恢复路径。只有 completed 返回的 `CompletedCloudRecovery` token 能传给 `recordCloudKitEnabled(after:)`；而且必须等 CloudKit container 真实创建成功后才能消费 token、清 pending/error。不得恢复无参 acknowledgement、Bool 门控或失败后继续尝试云容器。

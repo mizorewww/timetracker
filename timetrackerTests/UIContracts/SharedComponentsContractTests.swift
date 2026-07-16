@@ -74,7 +74,10 @@ struct SharedComponentsContractTests {
     @Test
     func primaryActionLabelsWrapLegiblyAndExposeStableActions() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
-        let homeSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let homeSource = try [
+            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/Features/Home/Controls/TaskStartPickerRows.swift"
+        ].map(sourceText).joined(separator: "\n")
         let homeTimelineSource = try sourceText("timetracker/Features/Home/Sections/HomeTimelineViews.swift")
         let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
 

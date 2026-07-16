@@ -72,12 +72,13 @@ Before shipping the next minor version:
 7. Any schema change has an old-store compatibility test.
 8. No performance budget test regresses without a documented reason.
 9. No new large production Swift file violates `CoreSourceLayoutTests`.
-10. Accessibility Extra Large screenshots pass on iPhone for Today, Tasks, Task Detail, Analytics, and Settings; iPad split-view screenshots remain clean.
-11. A nonempty SwiftUI/Time Profiler trace from the frozen source state has no unexplained application-owned hitch or invalidation hotspot.
+10. Normal-text-size screenshots and ordinary interaction smoke tests pass for the affected iPhone, iPad split-view, and macOS surfaces. Maximum Dynamic Type is added only when a change affects text reflow/truncation or a reported regression creates that risk.
+11. Performance-sensitive changes include a nonempty SwiftUI/Time Profiler trace from the frozen source state with no unexplained application-owned hitch or invalidation hotspot; unrelated feature work does not create a trace merely to satisfy a fixed matrix.
 12. A Countdown created in Settings remains visible from Today on iPhone, iPad, and macOS, with compact and wide screenshots guarding against platform regressions.
 13. App Intent titles, descriptions, parameters, shortcut short titles, task entity type names, and all interpolated App Shortcut phrase templates are localized in English, Simplified Chinese, and Traditional Chinese and verified in Shortcuts/Siri discovery surfaces.
-14. Every Keychain configuration/read/write error shown through the global alert uses localized user copy in all three languages while retaining the OSStatus for diagnostics.
+14. Every migrated Keychain configuration/read/write error shown through the initiating scene's feedback router uses localized user copy in all three languages while retaining the OSStatus for diagnostics. Remaining preference/LLM callers on the shared Store error bridge are tracked as migration work and new code may not expand that bridge.
 15. Duration, clock, and date-range text follows locale and the system 12/24-hour preference; tests cover at least English and both Chinese locales instead of asserting fixed `h/m`, `HH:mm`, or `MM/dd` output.
 16. AI configuration preserves Test→Save draft semantics, automatic suggestions default to off/local-only consent, and the actual default/recommended endpoint's operator, purpose, retention, training, cross-border processing, and deletion channel are reflected in product privacy disclosures.
 17. Production Local/iCloud/local-fallback/emergency stores never physically purge tombstones; Demo/UI Test cleanup and demo-store isolation tests stay green.
 18. App/Shortcuts sync-state file locking and epoch/generation export acknowledgement tests pass under concurrent and out-of-order events.
+19. Every simulator/UI-test/profile batch records an owner and exact UDIDs, terminates its App/extensions/runners/traces, shuts down and deletes devices created for the batch, closes Simulator/DeviceHub/Problem Reporter only when batch-owned, and ends with no owned process or Booted device.

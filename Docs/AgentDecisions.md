@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-07-16
+最近更新：2026-07-17
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现写入带日期的 Audit 文档，未来计划写入 Plan 文档。
 
@@ -286,7 +286,7 @@
 
 后果：同一组件允许普通字号和辅助功能字号使用不同 composition，但必须共享动作、语义、稳定 identity 与数据来源。新增水平密集行必须同时设计 accessibility-size 结构。
 
-验证：至少覆盖 iPhone 深色 Accessibility Extra Large 的 Today、Tasks、Task Detail、Analytics 和 Settings，以及 iPad 宽屏；检查文本无重叠、主操作可见、列表最后一项可滚到 tab bar 上方，并运行相关 UI contract。
+验证：默认先覆盖正常字号的受影响页面、主操作和 iPad 宽屏。只有变更直接触及上述密集行的重排/截断，或已有回归信号时，才定向增加对应页面的 Accessibility Extra Large；不再固定重跑全套页面。
 
 ## AD-020：大规模拆分按职责固化，不复活退役聚合文件
 
@@ -538,7 +538,7 @@
 
 后果：不得恢复标题/计时器隐藏点击、卡片内嵌卡片选择器、只显示任务短标题、遗漏长休息的摘要、根页面 periodic timeline 或 break 归零后的无限刷新。UI 可以改变布局与提前继续的操作时机，但 deadline、reconcile、run/session/segment 写入及停止确认仍由既有领域命令负责。
 
-验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。Focus UI test 必须按当前系统 TabBar 的真实 frame 把主操作完整滚到其上方，不能以部分可点的 `isHittable` 代替无遮挡。最终发布前仍需保留付费开发者签名，完成 iPhone/iPad/macOS build，并以普通/最大辅助字号、VoiceOver、长同名任务、break 未到期/刚到期及宽窄窗口做实机或模拟器截图验收；每次使用后释放模拟器资源。
+验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。Focus UI test 必须按当前系统 TabBar 的真实 frame 把主操作完整滚到其上方，不能以部分可点的 `isHittable` 代替无遮挡。最终发布前仍需保留付费开发者签名，完成受影响平台的正常字号、长同名任务、break 边界和宽窄窗口验收；只有文本重排/语义发生变化时才增加最大辅助字号或 VoiceOver 专项。每次使用后释放模拟器资源。
 
 ## AD-041：Analytics 首页先复盘，再渐进披露图表与指标
 
@@ -550,7 +550,7 @@
 
 后果：首屏优先呈现可行动的复盘入口，详细趋势、分布、专注记录和术语继续渐进披露；路由值、快照数据和详情内容不变。任何新 category 都必须显式归入一组，不能因 `allCases` 自动追加到意外位置。
 
-验证：单元测试固定两组顺序与完整性；source contract 固定分组、三语键与稳定 accessibility identifier；iPhone UI 测试滚动到最后的 Metrics 入口，并按真实 Tab Bar frame 验证整行无遮挡。后续仍需覆盖最大 Dynamic Type、深色、iPad 和 macOS 宽屏截图。
+验证：单元测试固定两组顺序与完整性；source contract 固定分组、三语键与稳定 accessibility identifier；iPhone 正常字号 UI 测试滚动到最后的 Metrics 入口，并按真实 Tab Bar frame 验证整行无遮挡。深色、iPad/macOS 宽屏按对应视觉变更选择；最大 Dynamic Type 仅在文本布局风险触发时加入。
 
 ## AD-042：Analytics 刷新由数据截止时间驱动
 
@@ -657,7 +657,7 @@
 
 后果：Accessibility 字号会使用更多垂直空间，但不会把关键动作变成谜语，也不会以“简化”为名删除任务事实。视觉布局和 VoiceOver 投影可以分别优化呈现方式，字段集合必须保持同步；新增任务行元数据时必须同时更新普通/紧凑/辅助布局、语义快照和测试。
 
-验证：源码契约固定 Today 无字号分支的完整文字操作、Tasks 辅助布局的路径/时长/进度/预测/子任务字段以及不使用语义替换或忽略 children；单元测试固定语义快照的字段顺序、阻塞状态替换和重复路径消除。Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)` 签名的 macOS 定向套件 50/50 通过，xcresult 为 `/tmp/timetracker-accessibility-context-final-20260716.xcresult`。显式拥有的 iPhone 17 Pro（iOS 27）以 Accessibility XXXL 串行执行 Today、Tasks、Settings 三条 UI 用例，3/3 通过；xcresult 为 `/tmp/timetracker-accessibility-context-ui-20260716.xcresult`，导出的三张截图位于 `/tmp/timetracker-accessibility-context-ui-images-20260716` 并已目视检查文字换行、字段完整性与主动作可见性。UI 测试检查了 VoiceOver 使用的 accessibility label/value 投影，但未把它冒充真人 VoiceOver 遍历；该项仍属于最终人工矩阵。专用设备 `9CEA8CAE-F2B6-4AE7-B092-DEFB389653F4` 已终止、关闭并删除，最终无 Booted 设备、runner、`xcodebuild`、`xctest`、Simulator 或 Problem Reporter 残留。
+验证：源码契约固定 Today 完整文字操作、Tasks 各布局的同一事实集，单元测试固定语义快照的字段顺序、阻塞状态和重复路径消除。默认回归以正常字号和常规路径为主；只在 AD-057 的风险触发条件下重跑极端字号。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-051：系统表面把“打开”与“修改”分离并冻结陈旧计时
 
@@ -669,7 +669,7 @@
 
 后果：背景点击不再产生意外账本事实；陈旧系统投影不会伪装成仍在实时同步；大字和窄宽度优先保留任务身份、冻结状态与停止能力。八小时后的主账本计时仍可继续，冻结只描述 Live Activity 投影可信度。
 
-验证：纯行为测试固定 stale date、live/frozen 两种 presentation 与八小时秒数；源码契约固定 Widget 背景 URL、显式 Quick Start、冻结 formatter/accessibility value、Dynamic Type 分支、`ViewThatFits` 和两行回退；三语本地化键集保持一致。Team `LT98S43NKA` 的签名定向套件 39/39 通过，xcresult 为 `/tmp/timetracker-widget-liveactivity-semantics-20260716.xcresult`；generic iOS 自动签名构建及主 App、Widget、Live Activity、Watch 的 embedded binary validation/严格签名校验通过，构建结果为 `/tmp/timetracker-widget-liveactivity-signed-build-20260716.xcresult`。小屏普通字号与最大辅助字号截图仍由主 Agent 在后续显式拥有的模拟器批次完成并清理资源。
+验证：纯行为测试固定 stale date、live/frozen 两种 presentation 与八小时秒数；源码契约固定 Widget 背景 URL、显式 Quick Start、冻结 formatter/value、布局回退和三语键集。受影响系统表面需保持自动签名与严格嵌入产物校验；一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-052：APS 使用 provisioning profile 认可的规范 entitlement 键
 
@@ -681,7 +681,7 @@
 
 后果：开发构建会真正携带 APS entitlement，CloudKit 远程变更通知不再因键名错误被静默剥离。Release/Distribution 的环境值仍由对应 profile 和配置决定，不能把开发构建的 `development` 证据冒充发布证据。
 
-验证：`SigningEntitlementContractTests` 固定规范键和值并禁止旧键，签名定向运行 1/1 通过，xcresult 为 `/tmp/timetracker-aps-entitlement-contract-20260716.xcresult`。使用 Team `LT98S43NKA` 与 `Apple Development: ZEXUAN GAO (PX46M259V3)` 的 generic iOS 自动签名重建通过，结果为 `/tmp/timetracker-aps-entitlement-signed-build-20260716.xcresult`；源 entitlement、生成 `.xcent`、embedded profile 和最终 App signature 均确认为 `aps-environment = development`，并同时保留 CloudKit、App Group 与相同 team identifier。主 App 及所有嵌入目标通过 `codesign --verify --deep --strict` 和 Xcode embedded binary validation。
+验证：`SigningEntitlementContractTests` 固定规范键和值并禁止旧键。每次签名验收同时检查源 entitlement、`.xcent`、embedded profile、最终 signature 和嵌入产物严格校验；一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-053：计时选择与停止使用彼此独立的显式命令
 
@@ -693,7 +693,7 @@
 
 后果：任务行不再把状态伪装成动作，误点运行任务不会丢失正在记录的时间上下文；停止、开始与切换均有单独可发现的触点和稳定的 Voice Control/VoiceOver 名称。`TimeTrackerStore.startTask` 返回真实写入成功值，使 sheet 不会在写入失败时假装完成。其他计时入口如需复用选择器，必须调用同一 policy/Store 编排，不得在 View 中按 `activeSegment` 自行写成 toggle。
 
-验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop 才结束该 segment、独占切换停止旧计时、并行开始保留旧计时，以及写入失败时不改变原任务 selection。UI source contract 固定运行/可选分区、独立 Stop 标识、成功后才 dismiss、Start/Switch 基本语义、任务身份色与三语键。付费 Apple Development 签名的 command/UI 定向套件 9/9 通过（`/tmp/timetracker-timer-picker-layout-macos-rerun-20260716.xcresult`）；正常字号 iPhone 17 Pro / iOS 27 操作与截图 1/1 通过（`/tmp/timetracker-timer-picker-ui-color-retry-20260716.xcresult`）。截图确认顶部搜索、完整标题、仅父级路径、分行 Start/Running/Stop，以及任务身份主文本色与红色 Stop 图标/文字；一次中间重跑只在 App launch 阶段超时，不计为通过。两台专用设备均在各自批次后终止、关闭并删除，不为极端字号另开专项批次。
+验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop、独占/并行语义和写入失败保留上下文；UI 契约固定分区、独立 Stop、成功后 dismiss 和三语语义。正常字号核心路径是默认 UI 验收；一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-054：任务树 projection 由 mutation-owned read index 与有界缓存发布
 
@@ -721,15 +721,15 @@
 
 ## AD-056：定向停止链接不得回退到其他计时
 
-状态：Accepted
+状态：Superseded by AD-080
 
 背景：Live Activity 的停止链接携带所属任务的 `taskID`，共享 system-action command 也接受可选任务 identity。两处旧处理逻辑都把“未找到该任务的活动 segment”和“动作没有 taskID”合并成 nil-coalescing 回退；如果用户延迟点击已结束任务的陈旧系统表面，而另一任务正在计时，就会误停后者。
 
-决策：停止深链分为两种明确语义。带 `taskID` 的定向动作只查询该任务的活动 segment，目标不存在时无操作；只有不带 `taskID` 的通用动作才选择当前最近的活动 segment。路由校验与 Store 执行都保留这个 optional identity，禁止用一次 `flatMap ?? fallback` 再次抹平两种状态。
+决策：本条首先确立“定向目标失效不得回退”的边界。AD-080 随后把目标从 task identity 收紧为 segment identity，并把无目标行为从“最近一条”改为“仅唯一活动时间片时兼容”。当前实现与新增入口必须遵守 AD-080；本条不再授权按最近顺序停止。
 
-后果：陈旧 Live Activity、Widget 或外部定向链接不会修改无关任务；通用“停止计时”链接仍能停止当前最近计时。新增系统入口必须明确选择定向或通用语义，不能在定向目标失效时扩大 mutation 范围。
+后果：陈旧 Live Activity、Widget 或外部定向链接不会修改无关任务。历史上的 task-ID/no-target 规则只说明演进过程，不能覆盖 AD-080 的精确 segment 与唯一候选约束。
 
-验证：Store 与共享 system-action command 的行为测试都构造“目标任务已停止、另一任务仍运行”，固定定向停止后无关 segment 在内存 read model 与 repository 中保持活动；既有无目标测试继续约束通用动作停止最近计时。主 Agent 使用付费开发者身份执行 deep-link 与 system-action 签名定向套件，23/23 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
+验证：原始回归继续证明定向目标失效不修改其它时间片；当前完整矩阵和签名证据由 AD-080 与 dated Audit 记录。
 
 ## AD-057：正常字号、核心操作路径与 HIG 是默认审核主线
 
@@ -751,7 +751,7 @@
 
 决策：`SyncSettingsSection` 只保留无数据覆盖语义的日常状态与操作；`SyncRecoverySettingsSection` 成为独立的低频危险区。恢复按钮使用系统 destructive role、共享红色 label，并直接写明“用本设备替换 iCloud”或“用 iCloud 替换本设备”。存在冲突时，两个动作之前必须展示 `SyncConflictPrompt` 的本机与 iCloud 摘要，而且两个方向都调用 `resolveSyncConflict`，与全局冲突对话进入相同的冲突解析边界；无冲突时才使用基于当前 store 的手动恢复命令。二次确认使用简短替换动词，并同时说明其他设备传播、先完成同步以及 local-fallback 需重启排队的后果。
 
-后果：Settings 的常用路径不再把恢复工具伪装成普通刷新；用户在选择权威副本前能比较两侧事实。全局冲突对话与 Settings 使用相同的方向性文案。恢复实现、iCloud 数据结构和排队语义不在此 UI 批次修改；以后新增恢复命令也必须留在危险区，不能混入日常状态 Section。
+后果：Settings 的常用路径不再把恢复工具伪装成普通刷新；用户在选择权威副本前能比较两侧事实。根 scene 只显示非阻断冲突提示（AD-075），真正的方向选择与确认只存在于 Settings。以后新增恢复命令也必须留在危险区，不能混入日常状态 Section。
 
 验证：源码合同固定两个 Section 的职责分离、两项 destructive role、冲突双摘要、明确确认动词和三语键。主 Agent 使用付费开发者身份执行同步冲突行为、Settings 安全合同与共享组件签名定向套件，55/55 通过；正常字号的 iPhone/iPad/Mac“数据与同步”页面及确认对话目视检查进入后续 UI 批次，任何模拟器都按批次明确拥有并在当批删除。
 
@@ -765,7 +765,7 @@
 
 后果：重建、清理、清空与两个同步覆盖方向共享相同且可达的系统 presentation 边界，不会因 modifier 顺序让只有最后一个动作能显示。新增 Settings 危险操作必须扩展枚举并复用该入口；普通刷新、检查和导航不进入这个状态机。iOS 27 可能把确认呈现为 popover，并通过弹窗外区域取消，测试不能为了关闭面板点击真实破坏性动作。
 
-验证：首轮 UI 失败保留为缺陷发现证据，不计通过。修复后 iPhone 17 Pro / iOS 27 正常字号 UI 回归分别打开“替换 iCloud”和“替换本机”确认，核对方向性按钮和说明，随后只点击系统 `PopoverDismissRegion`；1/1 通过，xcresult 为 `/tmp/timetracker-sync-confirmation-rerun3-20260716.xcresult`。Settings 安全合同与同步冲突签名回归 43/43，xcresult 为 `/tmp/timetracker-settings-confirmation-macos-20260716.xcresult`，Team `LT98S43NKA`，identity `Apple Development: ZEXUAN GAO (PX46M259V3)`。专用模拟器已删除，设备、runner 与测试进程审计为空。
+验证：UI 回归必须在正常字号下分别打开两个方向的确认，核对说明与 destructive action，并只用系统取消路径退出；源码契约固定 Form-owned 唯一 owner。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-060：恢复关键本机文件共享耐久提交与有界隔离 primitive
 
@@ -869,11 +869,11 @@
 
 背景：Quick Start 在 iPhone 同时显示任务标题和包含该标题的完整路径，造成重复；iPad/macOS tile 则只显示标题，并把任务自己的 symbol 替换成播放或停止图标。结果是同名子任务无法区分，用户也无法稳定识别任务本身，三个平台和编辑器使用了不同的身份表达。View 直接调用 `path(for:)` 还让展示规则分散，并可能诱使后续代码通过拆分带 `/` 的可变标题来推导父级。
 
-决策：`TaskIdentityPresentation` 是脱离任务树上下文的统一展示投影，由既有 `TaskTreeIndexes` 使用 task、parent path 和 full path 索引 O(1) 构造。`.hierarchical`、`.standard`、`.compact` 分别表达只有标题、标题加父级路径、单行完整路径三种明确上下文；根任务的空父路径规范为 nil。`TaskVisualPresentation` 在 SwiftUI 边界前把未知 symbol 和颜色规范为 canonical fallback。Quick Start 的 iPhone 行、iPad/macOS tile 和编辑器使用 `.standard`：任务 symbol 始终表达身份，播放/停止 glyph 始终单独表达动作，不得互相替换。路径仅作展示，不从字符串反向解析层级。
+决策：`TaskIdentityPresentation` 是脱离任务树上下文的统一展示投影，由既有 `TaskTreeIndexes` 使用 task、parent path 和 full path 索引 O(1) 构造。`.hierarchical`、`.standard`、`.compact` 分别表达只有标题、标题加父级路径、单行完整路径三种明确上下文；根任务的空父路径规范为 nil。`TaskVisualPresentation` 在 SwiftUI 边界前把未知 symbol 和颜色规范为 canonical fallback。Quick Start 的 iPhone 行、iPad/macOS tile 和编辑器使用 `.standard`：任务 symbol 始终表达身份，尾部动作或状态始终是独立元素，不得替换任务 symbol；当前未运行项显示 play，运行项按 AD-079 显示 Running badge。路径仅作展示，不从字符串反向解析层级。
 
 后果：同名子任务可通过父级路径区分，根任务不再重复标题，标题中包含 `/` 也不会破坏身份推导；三个平台和编辑器共享一致信息层级。以后迁移任务选择器、Pomodoro、Widget 或 Watch 时可以按所在表面选 context，但必须继续消费索引投影，不在 View 中重造路径或视觉 fallback。该投影不改变持久模型或 iCloud schema。
 
-验证：纯值与索引测试覆盖根/子任务、同名任务、标题内 `/`、三个 context 和无效视觉 fallback；源码合同固定 Quick Start 不调用 `store.path(for:)`、身份与动作 glyph 分离。付费签名 macOS 定向套件 22/22、0 warning；正常字号 iPhone 交互与截图 1/1、0 warning，确认根/子任务、独立动作 glyph 和编辑器层级。generic iOS 自动签名构建严格验证全部嵌入 bundle 与主 App entitlement。macOS UI runner 两次因系统认证正在运行而在测试初始化前被系统取消，不计作 UI 通过，也不继续重试；一次性设备、截图、失败发现和 xcresult 只记录在 dated Audit。
+验证：纯值与索引测试覆盖根/子任务、同名任务、标题内 `/`、三个 context 和无效视觉 fallback；源码合同固定 Quick Start 不调用 `store.path(for:)`，并把任务身份与尾部动作/状态分离。当前运行态行为与证据见 AD-079 和 dated Audit。
 
 ## AD-069：计时事务先按持久 store 串行化，再创建 fresh context
 
@@ -907,11 +907,11 @@
 
 决策：每个可呈现 UI 的 scene 以 `@State` 持有一个 `AppPresentationRouter`，并只附加一个 `AppPresentationHost.sheet(item:)`。`AppPresentation.Content` 以 typed payload 承载任务编辑、分类编辑、手工时间、segment 编辑、任务选择器、Quick Start 和 LLM 配置；Store 不再保存这些 draft 或 `isPresented`。router 忙时拒绝普通新请求，不替换当前编辑；replace/dismiss 必须匹配当前 presentation ID，旧 closure 不能关闭后来内容。任务选择器进入新建任务使用 matching-ID 原子替换，不经过异步 dismiss/yield。主窗口与 macOS Settings 共享应用级 Store、但各自拥有 router；focused Mac 命令只使用当前主 scene 的 router，并在 slot 忙时禁用。Settings 删除“手动补录”入口，补录保留在任务/时间线工作流和 Mac `Shift-Command-M`。未被任何生产入口使用的 Inbox suggestion editor UI 被删除，Inbox 继续保留明确的 apply/discard 流程。
 
-Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal 的动作必须先取得当前 scene 的 presentation slot，再修改 destination；slot 忙时进入既有 16 项、语义去重的 `PendingDeepLinkQueue`，sheet 关闭后有界重放。start/stop 不需要 modal，可以在无关编辑器打开时直接执行。全局 store error 与 sync-conflict alert/dialog 仍是下一项独立的 scene 归属问题，本决策不把它们伪装成已经解决。
+Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal 的动作必须先取得当前 scene 的 presentation slot，再修改 destination；slot 忙时进入既有 16 项、语义去重的 `PendingDeepLinkQueue`，sheet 关闭后有界重放。start/stop 不需要 modal，可以在无关编辑器打开时直接执行。瞬时错误的 scene 归属后续由 AD-077 完成；同步冲突的非阻断导航由 AD-075 完成。
 
 后果：同一 scene 只有一个 App 级 sheet，脏编辑器不会被其他 feature 的 modal 请求覆盖；独立 Settings 不会把 UI 弹到主窗口。保存命令只返回业务成功，presentation 的关闭由 sheet 自己的 `dismiss` 负责；失败保持原草稿。新增 App 级 sheet 必须扩展 typed content 和唯一 host，不得在 feature 或共享 Store 重建平行 `.sheet` 状态。局部确认对话、文件 exporter 和真正属于单个控件的 popover 可以保留局部 owner，但必须与 App 级 slot 的职责区分。
 
-验证：付费签名 macOS presentation/deep-link/refactor/completed-task/UI-contract 定向套件 96/96，0 skip、0 runtime warning；正常字号 iPhone 17 Pro / iOS 27 的任务编辑→Focus 与 Today→任务选择器两条 UI 流程 2/2，截图导出到 `/tmp/timetracker-scene-presentation-iphone-images-20260716`。任务编辑截图底部出现的是该新模拟器的一次性 iOS 键盘教学浮层，不是 App 自绘内容；另外两张确认 Today 与单一任务选择 sheet 的正常层级。generic iOS 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均通过 `codesign --verify --deep --strict`，保持 Team `LT98S43NKA`、`Apple Development: ZEXUAN GAO (PX46M259V3)`；主 App 保留 development APS、CloudKit 与 App Group。唯一专用 UDID `4ECB7632-880B-45B8-9E04-7045B511B895` 已终止、关闭并删除，最终无 Booted device、owned build/test/runner、Simulator 或 Problem Reporter。本批只验证正常字号常规路径，没有安排 Accessibility 专项。
+验证：presentation/deep-link 套件固定 matching-ID 仲裁与有界排队；正常字号 UI 覆盖任务编辑→Focus 和 Today→任务选择器。一次性结果、签名与资源清理证据见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-072：任务行的菜单与滑动删除共用一个确认 owner
 
@@ -923,7 +923,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：一行一次只能有一个删除确认，取消与确认路径一致；共享 swipe modifier 不再暗中引入 modal 状态。后续新增任务行入口必须复用 `requestDelete`，不得为了入口便利再在 modifier 中叠加 confirmation。领域层仍保留 tombstone 和历史账本，这不需要成为用户操作名称。
 
-验证：付费 Apple Development 签名的 `TaskUIContractTests` 最终 34/34、0 skip/runtime warning，source contract 固定 swipe modifier 无 `@State`/`confirmationDialog`、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不再引用 `task.action.softDelete`；xcresult 为 `/tmp/timetracker-delete-confirmation-tests-final-20260716.xcresult`。本批未创建模拟器，结束后无 owned build/test/runner 或 Booted device；只检查正常交互结构，没有启动 Accessibility 专项。
+验证：`TaskUIContractTests` 固定 swipe modifier 无独立确认状态、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不暴露 soft-delete 术语。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-073：同步覆盖确认绑定精确 conflict token，并在 state lock 内 CAS
 
@@ -935,7 +935,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：旧确认不能覆盖后来到达或后来变化的同步版本；用户必须重新阅读最新摘要并再次选择方向。expected nil 表示“确认时仍应没有 pending conflict”，不是跳过校验。Store 不得在锁外先比较 cached prompt，也不得从当前 persistence mode 推测 queued/immediate。token 只在实际 branch fingerprint 变化时旋转，重复无变化通知不会制造确认风暴；检测时间保留首次冲突发生时间。
 
-验证：付费签名 macOS 的完整 `CoreSyncConflictTests`、新 resolution identity 套件与 Settings 安全合同最终 47/47、0 skip/runtime warning（`/tmp/timetracker-conflict-identity-tests-rerun4-20260716.xcresult`）。覆盖 matching/stale ID、expected-none、state bytes/epoch/local+cloud snapshot/模型 fingerprint/用户数据零副作用、Store prompt 保留，以及 pending local/cloud 变化后旧 token 失效。generic iOS 自动签名构建 0 error/0 warning（`/tmp/timetracker-conflict-identity-ios-signed-20260716.xcresult`）；主 App、Widget、Live Activity、Watch 均通过严格签名，保持 Team `LT98S43NKA`、付费 Apple Development，主 App 保留 development APS、CloudKit 与 App Group。本批未创建模拟器，最终无 owned build/test/runner 或 Booted device；没有安排 Accessibility 专项。
+验证：冲突与 Settings 套件覆盖 matching/stale ID、expected-none、state/epoch/snapshot/fingerprint/用户数据零副作用、prompt 保留和 branch 变化后旧 token 失效。一次性结果与签名证据见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-074：读取冲突 prompt 失败不能伪装成“没有冲突”
 
@@ -947,7 +947,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：损坏 state 会被隔离并显式报告，不再被解释为“同步安全”；调用方新增 prompt 读取点必须处理错误，禁止重新加 `try?`。同样地，已提交的业务动作与提交后 projection/snapshot/prompt 刷新必须保持不同失败语义。
 
-验证：付费 Apple Development 签名的 macOS `CoreSyncConflictTests`、resolution identity 与 Watch command 套件 74/74、0 skip/runtime warning（`/tmp/timetracker-throwing-conflict-prompt-tests-rerun-20260716.xcresult`），新增损坏 state prompt 抛错并隔离测试；签名身份为 `Apple Development: ZEXUAN GAO (PX46M259V3)`、Team `LT98S43NKA`。本批未创建 simulator，测试后终止 owned app/TestManager，最终无 build/test/runner 或 Booted device。
+验证：冲突、resolution identity 与 Watch command 套件覆盖损坏 state 读取抛错/隔离，以及已提交 Watch 命令不反转 terminal result。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-075：同步冲突先非阻断导航，再在 Settings 主动确认
 
@@ -959,7 +959,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：App 启动和后台同步不再强迫用户立即做数据覆盖决定；破坏动作发生前总有比较两侧摘要的路径。忽略只隐藏当前 scene 的提示，不清 pending state、不解除恢复保护；Settings 仍可随时解决。后续不得在根层重新加入自动冲突 confirmation，或让 notice 直接执行覆盖。
 
-验证：付费签名 macOS `AppPresentationContractTests` 最终 11/11、0 runtime warning（`/tmp/timetracker-sync-conflict-notice-macos-tests-final-20260716.xcresult`）。正常字号 iPhone 17 Pro / iOS 27 完成“提示 → 查看副本 → Data & Sync → 两侧摘要”1/1（`/tmp/timetracker-sync-conflict-notice-iphone-tests-card-final-20260716.xcresult`），最终截图位于 `/tmp/timetracker-sync-conflict-notice-iphone-attachments-20260716-card-success`；确认提示不遮挡大标题或 Tab Bar，且破坏性动作只在摘要之后出现。generic iOS 自动签名最终 0 error/0 warning（`/tmp/timetracker-sync-conflict-notice-ios-build-final-rerun2-20260716.xcresult`），四个产品 bundle 保持 Team `LT98S43NKA`、付费 Apple Development，主 App 保留 development APS、CloudKit 与 App Group。本批五个诊断/迭代 UDID 均已删除，最终无 Booted device 或 owned runner；只验证正常字号常规路径，没有安排 Accessibility 专项。
+验证：presentation 契约与正常字号 UI 路径覆盖“提示 → 查看副本 → 两侧摘要”，并确认破坏动作只出现在摘要之后。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-076：只有完成恢复门控后才能启动并确认 CloudKit
 
@@ -971,7 +971,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：失败或无法证明安全的恢复不会进入云容器、不会清 pending、不会宣称成功；用户修复文件保护/存储错误后可以在下次启动继续。无 pending 请求是唯一无需删除仍返回 completed 的情形。后续不得重新增加无 token 的 CloudKit-enabled 状态转换，或用 `try?`/Bool 把 deferred 与 failed 合并为可继续。
 
-验证：恢复门控与相关同步回归 49/49（`/tmp/timetracker-cloud-recovery-gate-tests-20260716.xcresult`），覆盖备份缺失/不可读、不可 reset、无请求、两类删除失败和成功后才清标记；MainActor 边界最终定向测试 6/6（`/tmp/timetracker-cloud-recovery-isolation-tests-rerun-20260716.xcresult`）。generic iOS 最终自动签名构建 0 error/0 warning（`/tmp/timetracker-sync-conflict-notice-ios-build-final-rerun2-20260716.xcresult`），严格签名与 entitlement 保持不变；本门控测试未创建模拟器。
+验证：恢复门控与 MainActor 套件覆盖快照缺失/不可读、不可 reset、无请求、两类删除失败和成功后才清标记。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-077：瞬时反馈归属发起 scene，共享 Store 不拥有 alert
 
@@ -983,7 +983,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：macOS Settings 的三类数据/同步操作不再在主窗口弹错，连续错误也不相互覆盖。`SyncConflictResolutionResult.failed` 和两个返回 optional 的旧 Store 恢复 facade 被删除，IO/restore/save 错误不再伪装成业务枚举或 `nil`。其他 Settings mutation、编辑器和后台健康错误仍需分批迁移；新代码不得使用过渡桥作为默认反馈 API。
 
-验证：队列核心与 presentation 回归 11/11（`/tmp/timetracker-scene-feedback-core-tests-20260717.xcresult`）；scene 接线、JSON/清理边界与相关源码合同最终两组各 34/34（`/tmp/timetracker-settings-scene-feedback-tests-20260717-final.xcresult`、`/tmp/timetracker-settings-scene-feedback-taskui-tests-20260717.xcresult`）；完整 sync conflict、stale token 与 scene recovery 回归 55/55（`/tmp/timetracker-sync-recovery-scene-feedback-tests-20260717.xcresult`）。全部使用 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，0 skip/runtime warning。本批未创建模拟器，每轮后均确认无 owned build/test/runner 或 Booted device；没有安排 Accessibility 专项。
+验证：队列核心、scene 接线、JSON/清理 throwing 边界、同步冲突与 stale token 回归必须覆盖 FIFO、matching UUID、场景隔离和失败不伪装成业务结果。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## AD-078：同步状态只陈述已完成且已在本机处理成功的 CloudKit 活动
 
@@ -995,7 +995,31 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：失败事件不再短暂或持续显示为绿色；后台错误在 Settings 状态卡中可诊断，不占用 scene alert 队列。最近活动能明确区分 import、export 和 setup，但它仍是当前进程观察到的 CloudKit 事件，不是多设备端到端一致性的证明。
 
-验证：同步活动、账户状态、冲突状态与 Settings 契约签名回归 76/76（`/tmp/timetracker-sync-activity-tests-20260717-b.xcresult`），使用 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，0 failed/skip/runtime warning。本批未创建模拟器；完成后确认无 owned build/test/runner 与 Booted device。
+验证：同步活动、账户状态、冲突状态与 Settings 套件必须覆盖 event kind/result、优先级合并、remote-only 不成功、后处理失败、账户独立性与未来/过期时间。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+
+## AD-079：Quick Start 整行只负责开始或打开，不按运行状态变成停止
+
+状态：Accepted
+
+背景：Quick Start 的任务行原先在未运行时开始计时，却在运行中无提示地把同一整行改成停止；视觉只把播放符号换成红色停止符号。快速入口因此成为隐藏 toggle，误点会结束正在记录的上下文，并与“正在计时”区的显式停止操作重复。
+
+决策：未运行的 Quick Start 任务行执行开始/切换；运行中的任务行显示 `RunningStatusBadge`，再次点击打开该任务详情。整行不得按隐藏运行状态调用 `store.stop`，也不得用红色停止 glyph 暗示 toggle。停止只存在于“正在计时”、任务详情、任务选择器运行区和携带明确目标的系统表面。iPhone 通过 scene 导航闭包打开任务，iPad/macOS 通过 canonical task-detail router 打开同一详情。
+
+后果：Quick Start 的主语义稳定为“进入这项工作”：未运行时开始，已运行时查看；停止始终是单独、可发现且带目标的操作。新增 Quick Start 布局必须复用该语义，不得重新把整行写成 start/stop toggle。
+
+验证：源码契约禁止 Quick Start 文件出现停止命令/停止 glyph，并要求运行 badge 与 canonical detail navigation；正常字号 iPhone 行为回归覆盖“开始 → Running → 再次点击进入详情且计时仍在”。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+
+## AD-080：系统表面的停止操作固化具体时间片，绝不按数组顺序猜目标
+
+状态：Accepted
+
+背景：Shortcut、Widget/Live Activity 和无参数深链曾以 `activeSegments.last` 选择停止目标。允许并行计时时，repository 顺序不等于用户看到的目标；状态刷新或跨进程读取还可能让旧操作停止另一条活动计时。
+
+决策：Stop Timer App Intent 使用 `ActiveTimerAppEntity` 选择并序列化 segment UUID；Widget 与 Live Activity 的 `Button(intent:)` 也把当前可见 segment UUID 写入 intent/deep link，Activity attributes 以 immutable `segmentID` 维持生命周期身份。命令层只接受唯一 segment 匹配；旧 task-ID 入口也必须只有一个匹配项。无目标兼容入口只在恰好一条活动时间片时执行，并行时拒绝，过期/无效目标绝不回退到其它时间片。
+
+后果：系统表面的停止能力与用户看到的计时一一对应；并行计时、陈旧 Widget/Activity 或重复同步行都不能通过集合顺序误停其它工作。新增停止入口必须传 segment identity；“当前”不得成为“最后一条”的同义词。
+
+验证：command/deep-link 行为测试覆盖唯一无目标兼容、并行拒绝、精确 segment 和过期目标不回退；系统表面契约固定 `Button(intent:)` 与 segment 序列化，并要求 generic iOS 自动签名和嵌入产物校验通过。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
 ## 2. Agent 工作清单
 
@@ -1014,7 +1038,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 2. 验证 iPhone、iPad、Mac 以及受影响的扩展。
 3. 检查正常字号下的 HIG、本地化、隐私、迁移和同步；保留低成本基础语义，但除非用户明确要求，不启动极端动态字号、VoiceOver 或专项 Accessibility 截图/trace 批次。
 4. 更新对应文档和决策。
-5. 使用模拟器后关闭本次启动的设备并确认没有遗留 runner/trace 进程。
+5. 按批次清理所有自有资源：终止受测 App 与扩展、等待或停止当批 `xcodebuild`/`xctest`/UI runner/trace，关闭并删除当批创建的 UDID；只在当批打开且无其他 owner 时退出 Simulator、Xcode DeviceHub 和 Problem Reporter。最后审计无自有进程且无自有 Booted 设备，不得终止其他 Agent 的资源。
 6. 报告仍为红色的测试与未验证环境，不宣称未获得的通过状态。
 
 ## 3. 相关文档

@@ -2,7 +2,7 @@
 
 Status: current implementation
 
-Reviewed: 2026-07-16
+Reviewed: 2026-07-17
 
 Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag.
 
@@ -99,6 +99,8 @@ Tasks are soft-deleted by default. Deleting a task tree first stops its active t
 
 iCloud sync is controlled by `AppCloudSync` and the SwiftData model container configuration. Eligible user preferences sync through `SyncedPreference`; iCloud enablement, device identity, migration flags, build info, secrets, automatic-AI consent, and CloudKit error text stay local. The app refreshes on launch, foreground, SwiftData remote changes, and completed CloudKit import/export events. Consecutive notifications are coalesced before entering the refresh planner; there is no permanent foreground polling loop. Local/Demo/UI Test mutations do not capture conflict snapshots; in CloudKit/recovery mode `StoreDomainEvent` refreshes only affected snapshot domains unless a full baseline/import is required.
 
+Settings reports recent Cloud activity with a typed `SyncActivityOutcome(kind, completedAt, result)`, not a generic local refresh timestamp. Only a completed import, export, or setup event with no CloudKit error can become success, and only after the local read-model refresh and conflict update also succeed. A remote-store signal alone triggers refresh but never claims a completed cloud operation. CloudKit, export-checkpoint, or local post-processing failures remain typed failures with their diagnostic message. Account availability is tracked separately, and a future completion date or one older than the 120-second recent window cannot appear as recent success.
+
 Every `SyncConflictState.json` read-modify-write runs under a recursive process lock plus POSIX `lockf` advisory file lock, so app and Shortcuts processes share one serialized state transaction. JSON replacement is atomic, and the forced-upload mirror cannot override an existing authoritative state. Reads and writes cap authoritative state at 128 MiB and the recovery mirror at 64 MiB. Reads use metadata preflight plus `FileHandle.read(upToCount: limit + 1)` to catch growth between checks without an unbounded allocation. Writes encode and preflight the authoritative state and required mirror before resolving paths, creating directories, or replacing either file; an independent mirror rewrite checks its final bytes again. Either rejection preserves the previous valid files. An oversized or corrupt authoritative file is quarantined for explicit recovery; an oversized or corrupt pending-forced-upload mirror is quarantined and ignored so it cannot block an otherwise usable main store. Oversized quarantine moves the file without loading its complete JSON into memory. Prompt assembly is a throwing read boundary, so an unreadable authoritative state is never reported as “no conflict.” Local generations, sync epochs, and per-export event checkpoints ensure only the exact exported fingerprint/generation is acknowledged; failed, stale, or out-of-order callbacks cannot mark newer local work clean. `pendingConflictID` is also the compare-and-swap token for the exact local/cloud summaries a person reviewed: material changes to either resolution branch rotate it, and resolution validates the expected optional ID under the same state lock before any model, epoch, reset, or state mutation. Scrubbing a legacy excluded preference recomputes the fingerprint and invalidates checkpoints for the old payload. Checkpoints are bounded to 16 entries and 24 hours.
 
 Snapshot restore treats transport data as untrusted historical input. A pure preflight runs before the atomic mutation and rejects per-table/aggregate record overflow, duplicate UUIDs, per-field/aggregate UTF-8 overflow, unsupported dates/raw values, unsafe sort orders, invalid Pomodoro bounds, malformed typed or unknown preference JSON, and provable session/task or Inbox suggestion-identity inconsistencies. Missing referenced records remain legal for staged CloudKit import; a relationship is rejected only when both records exist and disagree. Rejection leaves existing facts and tombstones unchanged; restore never silently deduplicates or clamps invalid transport. Limits are 100,000 records per table, 250,000 total, 4 KiB titles, 64 KiB notes/reasons, 256-byte compact fields, 256 KiB preference JSON, and 32 MiB total text. This boundary covers explicit `SyncDataSnapshot.restoreAsLocalWinner` calls, not records already materialized directly into a SwiftData context by the initial CloudKit import path.
@@ -127,10 +129,12 @@ Persistent deduplication and synced preferences use deterministic last-write-win
 
 ## UI Structure
 
+Application data is app-scoped, while presentation and transient feedback are scene-scoped. Each visible scene owns one `AppPresentationRouter`/`AppPresentationHost` pair for typed sheets and one `AppSceneFeedbackRouter`/`AppSceneFeedbackHost` pair for alerts. The feedback router is FIFO and dismisses only the matching feedback UUID, so a stale callback cannot clear a later message. Settings export, database maintenance, and sync recovery use throwing boundaries: successes stay inline and failures enter only the initiating scene. `ContentView` bridges the remaining shared Store error slot into its own queue only for legacy callers; new work must not expand that bridge.
+
 The app source is organized by ownership. New files should land next to the domain they affect:
 
 ```text
-timetracker/App       Startup, scene roots, typed presentation router/host, and commands
+timetracker/App       Startup, scene roots, typed presentation and feedback router/hosts, and commands
 timetracker/Models
 timetracker/Repositories
 timetracker/Commands

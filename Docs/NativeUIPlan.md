@@ -250,17 +250,17 @@ Before merging UI work:
 8. Is custom animation necessary, or can the system interaction speak for itself?
 9. Are visual-only changes covered by a manual screenshot checklist rather than brittle source-string tests?
 10. Are user-facing strings localized in all three languages?
-11. At Accessibility Extra Large, do dense horizontal rows reflow and can the final content scroll above the tab bar?
+11. At normal text sizes, are the main hierarchy and ordinary interaction path clear and unobscured? If this change affects text reflow/truncation, also run the targeted large-text check for the affected rows.
 
 ## Manual Screenshot Checklist
 
-For each future UI polish round, capture or manually inspect:
+For each future UI polish round, capture or manually inspect the affected normal-text-size flows below. Do not rerun every screen or maximum Dynamic Type by default; add dark appearance, long localization, or large-text cases only when the changed layout or a reported regression makes them relevant:
 
 - iPhone Inbox with no items, one suggestion, many items, and dismissed suggestion.
 - iPhone Today with no active timers, one timer, multiple timers.
 - iPhone Tasks with nested tasks and long titles.
 - iPhone Tasks and Task Detail with a completed parent, blocked child, and reopened path.
-- iPhone dark appearance at Accessibility Extra Large for Today, Tasks, Task Detail, Analytics, and Settings.
+- iPhone dark appearance, long localization, or large text for only the screens whose layout changed.
 - iPad landscape Today and Task Detail with the sidebar visible and collapsed.
 - macOS settings window and main split view.
 - Analytics Today with short tasks, overlapping tasks, and empty data.

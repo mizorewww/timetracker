@@ -2,7 +2,7 @@
 
 Status: current verification policy
 
-Reviewed: 2026-07-16
+Reviewed: 2026-07-17
 
 ## Baseline Commands
 
@@ -54,6 +54,8 @@ Signed export:
 
 ## What Must Stay Covered
 
+The default UI matrix uses normal text sizes and ordinary interaction paths. The accessibility-specific invariants below protect already-implemented behavior, but maximum Dynamic Type, VoiceOver traversal, and dedicated accessibility screenshot/trace batches run only when the changed code affects text reflow/semantics, a regression is reported, or the release risk explicitly calls for them.
+
 - Every new feature should first document its expected behavior in `Docs/Architecture.md`, `Docs/ArchitecturePlan.md`, or a focused feature note, then add failing tests before implementation. If the behavior is UI-only, write the acceptance checklist before changing layout code.
 - Gross vs wall-clock aggregation.
 - Reference-time integrity: local manual/update writes reject future ends and future active starts; every read clips through `TrackedTimePolicy`. Cover `startedAt == now`, future-only rows, future-ended growth until its end, half-open range boundaries, DST elapsed seconds, gross/wall/summary/analytics/forecast/timeline/cache/range-query consistency, time-sensitive forward ticks, backward clock correction, and incremental equality with a full rebuild. UI contracts must also cover DatePicker `...now` bounds, shared validation/duration, clipped Today/Task Detail rows, zero future-only labels, and no periodic timer for fixed closed durations.
@@ -73,6 +75,7 @@ Signed export:
 - Legacy Countdown migration: accept at most 256 KiB of JSON and 256 source records; allow titles up to 4 KiB by UTF-8 byte count and finite dates in `[1900-01-01, 2201-01-01)`; preserve valid UUIDs, keep the first valid record for duplicate UUIDs, retain distinct no-ID records, suppress import when SwiftData already has Countdown facts, and finalize the flag/payload only after a successful import save. Exercise a real read-only SwiftData store so a thrown `save()` proves the migration flag remains false and the legacy payload remains available for retry.
 - Store refresh planning: each user invalidation event must map to domain-sized refresh scopes, carry affected task IDs where available, and combined invalidations must not silently escalate to a full refresh.
 - Observation and external refresh: the main facade stays `@Observable` without `@Published`; CloudKit/remote-store notifications coalesce correctly, foreground activation refreshes once, and no permanent polling timer is reintroduced.
+- Typed Cloud activity: cover import/export/setup success and failure, priority coalescing, remote-store-only refresh without success, local refresh/conflict/checkpoint post-processing failure overriding event success, account checks leaving activity untouched, and future or older-than-120-second activity never appearing as recent success.
 - Deterministic sync: entity and preference LWW behavior is input-order independent, equal-time tombstones win, restored newer rows remain active, and duplicate cleanup cannot overwrite the canonical row.
 - Atomic writes: a multi-step store/system action saves once, rolls back all pending changes when any step/final save fails, and does not call an already committed mutation a failure when only post-commit refresh fails.
 - Sync snapshot scope: Local/Demo/UI Test writes skip conflict capture; CloudKit/recovery writes refresh only domains selected by `StoreDomainEvent`; full import/baseline still captures all domains.

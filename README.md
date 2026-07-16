@@ -182,6 +182,7 @@ Widget extension 与快照代码已经存在，主应用和扩展已启用 `grou
 - 并行计时、总时长/墙钟时间显示和倒计时事件。
 - Pomodoro 专注计划。
 - iCloud 同步开关和同步状态反馈。开关仅保存在当前设备，并在下次启动时决定是否创建 CloudKit 容器；它不会跨设备同步。
+- 同步状态只把 CloudKit 明确结束、且本机刷新与冲突处理均成功的 import、export 或 setup 显示为最近成功活动。remote-store 通知只触发刷新；CloudKit 事件或本机后处理失败显示原因，账户检查不会伪造同步成功。
 - OpenAI-compatible endpoint、API key 和模型选择使用 Test→Save 草稿：键入不持久化，测试只加载模型，用户明确保存后才写入偏好/Keychain。API key 仅存于本机不同步的 Keychain，每台设备需单独设置。
 - 可同步偏好在写入前按 key 完成整批类型检查、规范化与 256 KiB JSON 上限验证；任一值为 `null`、畸形、类型错误或超限时整批不变，保存失败会回滚。
 - 自动 AI 建议是默认关闭、设备本地的第二个明确开关；配置成功不会自动开启内容发送。
@@ -212,7 +213,7 @@ Widget extension 与快照代码已经存在，主应用和扩展已启用 `grou
 
 ## 架构概览
 
-项目采用本地优先的模块化单体结构。UI 不直接写 SwiftData，持久化和业务动作通过 command、repository、domain store 和 service 分层。`TimeTrackerStore` 是 `@MainActor @Observable` 门面；SwiftUI 使用 `@State` 持有它。每个可呈现 UI 的 scene 另持有自己的 typed `AppPresentationRouter`，共享 Store 但不共享 sheet 草稿；只在系统 binding 确实需要时建立局部 `@Bindable`。
+项目采用本地优先的模块化单体结构。UI 不直接写 SwiftData，持久化和业务动作通过 command、repository、domain store 和 service 分层。`TimeTrackerStore` 是 `@MainActor @Observable` 门面；SwiftUI 使用 `@State` 持有它。每个可呈现 UI 的 scene 另持有自己的 typed `AppPresentationRouter` 和 `AppSceneFeedbackRouter`，共享 Store 但不共享 sheet 草稿或瞬时 alert 队列；只在系统 binding 确实需要时建立局部 `@Bindable`。
 
 ```text
 SwiftUI Feature
@@ -229,7 +230,7 @@ SwiftUI Feature
 
 - `Features`：SwiftUI 页面和局部组件。
 - `SharedUI`：跨功能复用的原生风格控件、布局策略和视觉 token。
-- `App`：启动与 scene 根视图，以及每个 scene 唯一的 App 级 presentation router/host。
+- `App`：启动与 scene 根视图，以及每个 scene 唯一的 App 级 presentation router/host 和 feedback router/host。
 - `Stores/Facade`：`TimeTrackerStore` 的 UI-facing 适配层。
 - `Stores/Domains`：Task、Ledger、Checklist、Rollup、Analytics、Preference 等领域状态。
 - `Commands`：持久写入动作，例如开始计时、移动任务、切换 checklist、应用 Inbox 建议。
@@ -238,7 +239,7 @@ SwiftUI Feature
 - `Models`：SwiftData 模型、schema、迁移计划、read models。
 - `SharedLiveActivity` / `timetrackerLiveActivityExtension`：Live Activity 共享模型和扩展 UI。
 
-本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics landing page/typed category detail/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections 与共享 row foundation/action/input/presentation/sync-feedback、Task Detail sections、ledger infrastructure、facade configuration/lifecycle、Widget provider/view/support、Watch dashboard/timer/status/color，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、snapshot restore 预检/分域写入和 record DTO 都已分离。当前仍较集中的 Watch connectivity store、Home root composition 和大型 row 文件如实记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不以“所有文件都已单一职责”作泛化承诺。
+本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics landing page/typed category detail/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections 与共享 row foundation/action/input/presentation/sync-feedback、Task Detail sections、ledger infrastructure、facade configuration/lifecycle、Widget provider/view/support、Watch dashboard/timer/status/color 与 base/commands/connectivity/session-delegate store family，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、snapshot restore 预检/分域写入和 record DTO 都已分离。当前仍较集中的任务行、Analytics decision sections 和 Settings category router 如实记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不以“所有文件都已单一职责”作泛化承诺。
 
 CloudKit 刷新由持久存储远程变更和 CloudKit import/export 事件驱动，并做短暂合并；前台激活仍会进行一次一致性刷新。没有常驻的 5 秒全量轮询。
 

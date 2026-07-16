@@ -28,6 +28,8 @@ timetracker/
 
 `TimeTrackerStore` is still the SwiftUI facade, but it is now split into lifecycle, read-model, analytics, maintenance, and domain command extensions. The facade is `@MainActor @Observable`. App roots own it with `@State`; injected feature views keep a plain reference, and presentation bindings use a local `@Bindable`. Do not reintroduce `ObservableObject/@Published` on the facade or store action closures in focused values.
 
+Each visible scene separately owns typed presentation and feedback state. `AppPresentationRouter`/`AppPresentationHost` arbitrate App-level sheets, while `AppSceneFeedbackRouter`/`AppSceneFeedbackHost` present a FIFO queue of matching-ID alerts. Main and macOS Settings scenes share the application store but not their sheet drafts or transient errors. User-initiated export, maintenance, and sync-recovery failures return through throwing boundaries to the initiating scene; a shared Store error slot is only a temporary compatibility bridge and is not an extension point.
+
 Domain stores own state snapshots:
 
 - `TaskStore` owns task tree snapshots.
@@ -55,6 +57,8 @@ fullSync
 `StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`. This keeps refresh behavior testable. When the task topology is stable, `LedgerStore` fetches only invalidated ranges, `ChecklistStore` replaces only affected task buckets, and `RollupStore` consumes segment before/after deltas plus direct/ancestor IDs. Active and future-ended segments form the time-sensitive set for forward clock movement; a backward clock correction stays in the same pipeline but reevaluates every segment because candidates cannot be narrowed safely. `AnalyticsStore` invalidates snapshot caches and only the day buckets intersecting ledger ranges. Full structural rebuild remains the explicit path for startup, topology/full-sync changes, remote import without a safe scope, and calendar/time-zone changes.
 
 External CloudKit changes enter the same pipeline through remote-store and completed import/export notifications. The observer coalesces bursts before emitting `remoteImportCompleted`; launch and foreground activation remain consistency boundaries. There is no permanent foreground polling timer.
+
+Cloud activity is a typed outcome, not a refresh timestamp. Completed import/export/setup events preserve success or failure, and local refresh/conflict-processing failure overrides an otherwise successful event. A remote-store notification never produces a green activity by itself. Account availability is a separate outcome, and only non-future successful activity inside the 120-second recent window is presented as recent success.
 
 Sync-conflict state is a separate cross-process state machine. A recursive local lock plus POSIX `lockf` serializes app/Shortcuts read-modify-write transactions. Epoch/generation/fingerprint checkpoints tie Cloud export completion to the exact version that started it, so stale or out-of-order callbacks cannot acknowledge newer local mutations. The state uses bounded lightweight checkpoints, not a full snapshot per event.
 
@@ -186,7 +190,7 @@ The UI should feel like a native Apple productivity app: predictable navigation,
 - Prefer `NavigationSplitView`, `NavigationStack`, `List`, `Form`, `Table`, `Menu`, `Picker`, and system toolbar items before custom containers. Task Detail is currently the canonical selected-task surface; adding an inspector requires an explicit product decision rather than being a default layout assumption.
 - macOS uses one main `Window`, not `WindowGroup`; its Settings scene receives the same application store. Multi-window support requires a prior split between app-scoped persistence/automation and scene-scoped navigation/editor drafts.
 - Cards are only for grouped content that benefits from framing. Avoid nested cards.
-- iPhone rows may use two lines; iPad and macOS rows should prioritize scanability and alignment. At accessibility Dynamic Type sizes, dense rows must reflow vertically or use a space-efficient native control such as a menu; truncating primary text is not an acceptable substitute.
+- iPhone rows may use two lines; iPad and macOS rows should prioritize scanability and alignment. Default review uses normal text sizes and ordinary interaction paths. Existing large-text adaptations stay intact, but maximum Dynamic Type is a risk-triggered check when a change affects text flow or a regression is reported, not a mandatory batch for every UI change.
 - Expensive derived values should be passed in, not recalculated by rows.
 - User-facing copy should explain outcomes, not internal model names.
 - Repeated cards, metric cells, chart containers, checklist controls, and layout breakpoints belong in `SharedUI` or layout policy types before a second feature copies them.
@@ -241,4 +245,4 @@ Before merging a feature:
 7. Are compact iPhone, iPad split view, and macOS sidebar/detail layouts considered separately?
 8. Are all strings localized in English, Simplified Chinese, and Traditional Chinese?
 9. Are tests behavior-based rather than fragile source scans?
-10. Did the final working-tree macOS tests, UI tests, signed builds, simulator screenshots, and required trace pass, with evidence recorded in the dated Audit rather than inferred from an earlier batch?
+10. Did verification match the change's risk: relevant signed tests/builds for code changes, normal-size screenshots for affected visual flows, and Instruments only for performance-sensitive work? Is dated evidence recorded in the Audit rather than inferred from an earlier batch, and are all owned simulator/test/trace resources released?

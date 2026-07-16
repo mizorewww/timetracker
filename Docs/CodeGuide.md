@@ -1,7 +1,7 @@
 # TimeTracker 代码文档
 
 状态：当前实现说明
-校对日期：2026-07-16
+校对日期：2026-07-17
 
 本文面向维护者，说明当前代码边界、数据流、扩展方式和验证入口。架构目标与未完成计划分别见 [Architecture](Architecture.md) 和 [NextDevelopmentPlan](NextDevelopmentPlan.md)。
 

@@ -1,6 +1,6 @@
 # Code Refactor Status And Guardrails
 
-Status: current source-structure record after the 2026-07-14 repository-wide split and the 2026-07-16 Today composition refactor. This document records what was split, what is still concentrated, and the engineering rules that keep the project maintainable. It is not a product feature backlog and it does not substitute for the final build, test, simulator, and Instruments evidence in [Audit-2026-07-14](Audit-2026-07-14.md).
+Status: current source-structure record after the 2026-07-14 repository-wide split and the 2026-07-17 scene/sync refinements. This document records what was split, what is still concentrated, and the engineering rules that keep the project maintainable. It is not a product feature backlog and it does not substitute for the final risk-proportionate build, test, simulator, and Instruments evidence in [Audit-2026-07-14](Audit-2026-07-14.md).
 
 ## Review Summary
 
@@ -15,7 +15,7 @@ The current pass established semantic folders, split domain stores and repositor
 - The retired `TimeTrackerServices.swift` was replaced by `AppCloudSync`, persistence-write safety, timer command, aggregation, formatting, device identity, and ledger-summary files.
 - Facade startup/configuration and post-commit system-surface attachment were split from refresh/mutation/recovery lifecycle; both files now stay under the facade source-layout budget.
 - Widget entry/provider/configuration, active-timer layouts, supplementary/error states, and deep-link/localization/color support are separate files.
-- Watch dashboard orchestration, timer rows, status/error/empty states, and color support are separate files. `WatchAppStore.swift` now owns observable state and safe restoration, `WatchAppStore+Commands.swift` owns command queue/timeout/persistence, and `WatchAppStore+Connectivity.swift` owns WCSession transport, payload application, freshness, and delegate callbacks.
+- Watch dashboard orchestration, timer rows, status/error/empty states, and color support are separate files. `WatchAppStore.swift` owns observable state and safe restoration, `WatchAppStore+Commands.swift` owns command queue/timeout/persistence, `WatchAppStore+Connectivity.swift` owns activation/transport/payload/freshness, and `WatchAppStore+SessionDelegate.swift` owns WCSession callbacks.
 - Ledger's ordered flat-array mutation/index maintenance is isolated in `LedgerStore+FlatSegmentIndex.swift`; day/change indexing remains in `LedgerStore+SegmentIndex.swift`.
 - Incremental rollup state/full rebuild remains in `RollupIncrementalIndex.swift`, while scoped segment/checklist mutation and replacement-delta application lives in `RollupIncrementalIndex+Mutation.swift`.
 - Today compact composition, wide composition, section content, row presentation, and centralized read models have separate owners; `HomeViews.swift` now contains only the wide wrapper/composition and header.
@@ -44,7 +44,7 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 
 ## Completed Structural Work
 
-- App startup is split into container creation, commands, app delegate, settings scene, root views, and scene-owned typed presentation routing/hosting.
+- App startup is split into container creation, commands, app delegate, settings scene, root views, and scene-owned typed presentation and FIFO feedback routing/hosting.
 - Settings is split into actions, bindings, data sections, and presentation sections.
 - Inbox commands are split between item mutations and LLM suggestion mutations.
 - Checklist commands are split between item mutations and LLM visual suggestions.
@@ -62,7 +62,7 @@ Sync is no longer a line-size concentration, but it remains the highest semantic
 - Sync-conflict bootstrap/prompt, local mutation, Cloud import/export, recovery/resolution, state persistence, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and organization/ledger/planning/checklist/Inbox record DTOs are split by responsibility.
 - `TimeTrackerStore+Configuration.swift` owns first configuration, repository-only attachment, and committed-mutation surface refresh; `TimeTrackerStore+Lifecycle.swift` owns generic refresh, mutation, recovery, and error boundaries.
 - Widget entry/provider/configuration, active-timer views, supplementary states, and support helpers are split into `TimeTrackerWidget.swift`, `ActiveTimerWidgetView.swift`, `WidgetSupplementaryViews.swift`, and `WidgetSupport.swift`.
-- Watch UI composition is split into `WatchDashboardView.swift`, `WatchTimerRows.swift`, `WatchStatusViews.swift`, and `WatchColorSupport.swift`; the store family is split into observable state/restore (`WatchAppStore.swift`), commands/queue timeout/persistence (`WatchAppStore+Commands.swift`), and WCSession connectivity/payload/freshness (`WatchAppStore+Connectivity.swift`).
+- Watch UI composition is split into `WatchDashboardView.swift`, `WatchTimerRows.swift`, `WatchStatusViews.swift`, and `WatchColorSupport.swift`; the store family is split into observable state/restore (`WatchAppStore.swift`), commands/queue timeout/persistence (`WatchAppStore+Commands.swift`), activation/transport/payload/freshness (`WatchAppStore+Connectivity.swift`), and WCSession callbacks (`WatchAppStore+SessionDelegate.swift`).
 - Ledger ordered-array mutation/index maintenance is split into `LedgerStore+FlatSegmentIndex.swift`; `LedgerStore+SegmentIndex.swift` retains day/change indexing and scoped replacement coordination.
 - Rollup scoped mutation/replacement logic is split into `RollupIncrementalIndex+Mutation.swift`; the base type retains state and full rebuild, with pace, topology, and activity in their existing focused extensions.
 - Source-layout tests guard the important boundaries so new work does not rebuild the earlier large-file problem; the current focused suite includes file-existence and per-family size contracts for all three splits.

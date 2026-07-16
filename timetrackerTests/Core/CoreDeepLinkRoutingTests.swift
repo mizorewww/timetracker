@@ -90,6 +90,36 @@ struct CoreDeepLinkRoutingTests {
     }
 
     @Test @MainActor
+    func targetedStopDeepLinkDoesNotStopAnUnrelatedActiveTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let staleTarget = try taskRepository.createTask(
+            title: "Already stopped",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let runningTask = try taskRepository.createTask(
+            title: "Still running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let runningSegment = try timeRepository.startTask(taskID: runningTask.id, source: .timer)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let url = try #require(
+            URL(string: "timetracker://timer/stop?taskID=\(staleTarget.id.uuidString)")
+        )
+
+        store.handleDeepLink(url)
+
+        #expect(store.activeSegments.map(\.id) == [runningSegment.id])
+        #expect(try timeRepository.activeSegments().map(\.id) == [runningSegment.id])
+    }
+
+    @Test @MainActor
     func pendingDeepLinksAreValidatedDeduplicatedBoundedAndDrained() throws {
         var queue = PendingDeepLinkQueue(capacity: 2)
         let inbox = try #require(URL(string: "timetracker://open/inbox"))

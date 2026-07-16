@@ -21,9 +21,13 @@ extension TimeTrackerStore {
         case .stopTimer(let taskID):
             closeTaskDetailNavigation()
             desktopDestination = .today
-            guard let segment = taskID.flatMap({ id in
-                activeSegment(for: id)
-            }) ?? activeSegments.last else { return }
+            let segment: TimeSegment?
+            if let taskID {
+                segment = activeSegment(for: taskID)
+            } else {
+                segment = activeSegments.last
+            }
+            guard let segment else { return }
             stop(segment: segment)
         case .newTask:
             closeTaskDetailNavigation()

@@ -713,6 +713,17 @@
 后果：明细与总览在任意并发度下守恒，不再把“发生并发的 1 小时”误报为“五路计时多出的 1 小时”。同一 task 的重复 segment 会增加并发度和 excess，但参与任务只出现一次。跨日与 DST 先在 bounded read boundary 裁剪，再按绝对 elapsed seconds 计算；UI 的时间范围只描述墙钟窗口，数值明确标为 excess。不得重新引入 title-based identity、只取前两个 segment 的 pair 模型，或隐藏剩余窗口却不公开其 excess。
 
 验证：覆盖五路同窗、三路交错、同 task 重复 segment、同名 task 仍按 UUID 分离、同边界替换并合并、隐藏 participant 替换不合并、仅边界相接不重叠、零/负时长排除、春秋 DST 跨午夜裁剪、稳定 tie 顺序、输入倒序和亚秒余数守恒；presentation 测试确认可见 excess 与隐藏 excess 合计不丢秒。source contract 固定 wall/excess 分离、UUID participant、明确 excess 文案与隐藏汇总。主 Agent 使用付费开发者身份执行 Analytics store、timeline 与 UI contract 签名定向套件，86/86 通过；正常字号的 Analytics 实机目视验收并入后续单设备 UI 批次，不另开辅助功能专项批次。
+## AD-056：定向停止链接不得回退到其他计时
+
+状态：Accepted
+
+背景：Live Activity 的停止链接携带所属任务的 `taskID`，共享 system-action command 也接受可选任务 identity。两处旧处理逻辑都把“未找到该任务的活动 segment”和“动作没有 taskID”合并成 nil-coalescing 回退；如果用户延迟点击已结束任务的陈旧系统表面，而另一任务正在计时，就会误停后者。
+
+决策：停止深链分为两种明确语义。带 `taskID` 的定向动作只查询该任务的活动 segment，目标不存在时无操作；只有不带 `taskID` 的通用动作才选择当前最近的活动 segment。路由校验与 Store 执行都保留这个 optional identity，禁止用一次 `flatMap ?? fallback` 再次抹平两种状态。
+
+后果：陈旧 Live Activity、Widget 或外部定向链接不会修改无关任务；通用“停止计时”链接仍能停止当前最近计时。新增系统入口必须明确选择定向或通用语义，不能在定向目标失效时扩大 mutation 范围。
+
+验证：Store 与共享 system-action command 的行为测试都构造“目标任务已停止、另一任务仍运行”，固定定向停止后无关 segment 在内存 read model 与 repository 中保持活动；既有无目标测试继续约束通用动作停止最近计时。主 Agent 使用付费开发者身份执行 deep-link 与 system-action 签名定向套件，23/23 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
 
 ## 2. Agent 工作清单
 

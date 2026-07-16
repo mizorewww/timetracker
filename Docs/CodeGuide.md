@@ -291,7 +291,7 @@ Watch UI 是单一 Crown-scrollable `NavigationStack/List`：Active Timer 优先
 
 ### Deep link 与 scene 生命周期
 
-`AppDeepLinkRouter` 只接受 `timetracker` scheme、最长 2,048 bytes、无 user/password/port/fragment 的白名单路由；每个 host/path 还限制 query 名称、数量和 UUID 格式。`ContentView` 在 repository 尚未配置时把合法 URL 放入 scene-local `PendingDeepLinkQueue`：容量 16，按解析后的 `AppDeepLinkAction` 去重，满时丢弃最旧项，配置成功后按顺序 drain，scene 消失时清空。不要把未验证 URL、closure 或可无限增长的数组放入启动队列。
+`AppDeepLinkRouter` 只接受 `timetracker` scheme、最长 2,048 bytes、无 user/password/port/fragment 的白名单路由；每个 host/path 还限制 query 名称、数量和 UUID 格式。`ContentView` 在 repository 尚未配置时把合法 URL 放入 scene-local `PendingDeepLinkQueue`：容量 16，按解析后的 `AppDeepLinkAction` 去重，满时丢弃最旧项，配置成功后按顺序 drain，scene 消失时清空。带 `taskID` 的停止链接与共享 system-action command 都只能停止该任务的活动 segment；目标已停止时必须成为无操作，不能回退停止另一条并行计时。只有不带 `taskID` 的通用停止动作可以选择当前最近的活动 segment。不要把未验证 URL、closure 或可无限增长的数组放入启动队列。
 
 iOS `WindowGroup` 可以产生多个 scene，而 `WatchConnectivityBridge` 只有一个进程级 command handler。`WatchCommandRouter` 因此保存 scene registration 与弱 `TimeTrackerStore` 引用，优先最近 active scene，没有 active scene 时才回退到最近仍存活的注册；注销/释放会清理 route，最后一个 route 消失时移除 bridge closure。不得让 singleton closure 强持有 scene store，或由每个 `ContentView` 无条件覆盖全局 handler。
 

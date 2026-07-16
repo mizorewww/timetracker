@@ -197,9 +197,13 @@ struct SystemActionCommandHandler {
             try writeAuthorization.requireUserWritesAllowed()
             let timeRepository = SwiftDataTimeTrackingRepository(context: context)
             let activeSegments = try timeRepository.activeSegments()
-            guard let segment = taskID.flatMap({ taskID in
-                activeSegments.first { $0.taskID == taskID }
-            }) ?? activeSegments.last else {
+            let segment: TimeSegment?
+            if let taskID {
+                segment = activeSegments.first { $0.taskID == taskID }
+            } else {
+                segment = activeSegments.last
+            }
+            guard let segment else {
                 return nil
             }
 

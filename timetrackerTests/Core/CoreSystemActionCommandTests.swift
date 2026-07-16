@@ -231,6 +231,34 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
+    func targetedSystemStopDoesNotFallBackToAnUnrelatedActiveTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let staleTarget = try taskRepository.createTask(
+            title: "Already stopped",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let runningTask = try taskRepository.createTask(
+            title: "Still running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let runningSegment = try timeRepository.startTask(taskID: runningTask.id, source: .timer)
+
+        let stoppedID = try makeTestSystemActionCommandHandler().stopTimer(
+            taskID: staleTarget.id,
+            context: context
+        )
+
+        #expect(stoppedID == nil)
+        #expect(try timeRepository.activeSegments().map(\.id) == [runningSegment.id])
+    }
+
+    @Test @MainActor
     func systemActionStopClipsExpiredPomodoroToPersistedDeadline() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

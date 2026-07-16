@@ -318,8 +318,6 @@
 "task.archived.trackingUnavailable" = "This task cannot receive new work because it or a parent is complete or archived. Reopen or restore that task first.";
 "task.parentUnavailable" = "The selected parent is complete, archived, or no longer available.";
 "task.parent.completedLocked" = "Reopen this task and its completed parent tasks before moving it.";
-"task.action.softDelete" = "Soft Delete";
-"task.action.softDeleteTask" = "Soft Delete Task";
 "task.status.menu" = "Status";
 "task.empty.selectTask" = "Select a task";
 "task.section.info" = "Info";

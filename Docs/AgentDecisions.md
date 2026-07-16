@@ -913,6 +913,18 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：付费签名 macOS presentation/deep-link/refactor/completed-task/UI-contract 定向套件 96/96，0 skip、0 runtime warning；正常字号 iPhone 17 Pro / iOS 27 的任务编辑→Focus 与 Today→任务选择器两条 UI 流程 2/2，截图导出到 `/tmp/timetracker-scene-presentation-iphone-images-20260716`。任务编辑截图底部出现的是该新模拟器的一次性 iOS 键盘教学浮层，不是 App 自绘内容；另外两张确认 Today 与单一任务选择 sheet 的正常层级。generic iOS 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均通过 `codesign --verify --deep --strict`，保持 Team `LT98S43NKA`、`Apple Development: ZEXUAN GAO (PX46M259V3)`；主 App 保留 development APS、CloudKit 与 App Group。唯一专用 UDID `4ECB7632-880B-45B8-9E04-7045B511B895` 已终止、关闭并删除，最终无 Booted device、owned build/test/runner、Simulator 或 Problem Reporter。本批只验证正常字号常规路径，没有安排 Accessibility 专项。
 
+## AD-072：任务行的菜单与滑动删除共用一个确认 owner
+
+状态：Accepted
+
+背景：Tasks 与 Sidebar 的每个任务行都在 row 内为 context menu 保存删除确认 Bool、附加 `confirmationDialog`，随后 `TaskRowSwipeActions` 又保存第二个同名 Bool 并附加第二个相同 dialog。同一视图分支因此存在两个互不仲裁的删除 modal owner，可能竞争 presentation 或重复发起删除；同一动作在菜单又叫 “Soft Delete/软删除”，在滑动和确认中叫 “Delete/删除”，把持久实现细节暴露成了用户概念。
+
+决策：`TaskRowSwipeActions` 只负责操作发现与转发，删除按钮调用必传的 `requestDelete`；它不持有确认 state，也不附加 dialog。`TaskManagementFlatRow` 与 `SidebarTaskTreeRow` 分别让 context menu 和 swipe 接到本 row 唯一的 `isDeleteConfirmationPresented`，确认时继续传显式 `task.id`，不从可变化的全局 selection 推断目标。Task Detail 作为不同页面保留自己唯一的确认 owner。菜单、滑动和确认统一使用 Delete/删除；未使用的 soft-delete 三语键删除。
+
+后果：一行一次只能有一个删除确认，取消与确认路径一致；共享 swipe modifier 不再暗中引入 modal 状态。后续新增任务行入口必须复用 `requestDelete`，不得为了入口便利再在 modifier 中叠加 confirmation。领域层仍保留 tombstone 和历史账本，这不需要成为用户操作名称。
+
+验证：付费 Apple Development 签名的 `TaskUIContractTests` 最终 34/34、0 skip/runtime warning，source contract 固定 swipe modifier 无 `@State`/`confirmationDialog`、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不再引用 `task.action.softDelete`；xcresult 为 `/tmp/timetracker-delete-confirmation-tests-final-20260716.xcresult`。本批未创建模拟器，结束后无 owned build/test/runner 或 Booted device；只检查正常交互结构，没有启动 Accessibility 专项。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

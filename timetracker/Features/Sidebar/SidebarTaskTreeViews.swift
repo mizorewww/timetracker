@@ -58,7 +58,12 @@ struct SidebarTaskTreeRow: View {
         } message: {
             Text(.app("task.delete.confirm.message"))
         }
-        .taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)
+        .taskRowSwipeActions(
+            store: store,
+            task: task,
+            labelStyle: .iconOnly,
+            requestDelete: { isDeleteConfirmationPresented = true }
+        )
     }
 
     @ViewBuilder

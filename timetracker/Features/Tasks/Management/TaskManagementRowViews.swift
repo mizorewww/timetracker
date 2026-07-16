@@ -72,7 +72,12 @@ struct TaskManagementFlatRow: View {
         } message: {
             Text(.app("task.delete.confirm.message"))
         }
-        .taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)
+        .taskRowSwipeActions(
+            store: store,
+            task: task,
+            preservingDestination: .tasks,
+            requestDelete: { isDeleteConfirmationPresented = true }
+        )
         #if os(iOS)
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         #endif

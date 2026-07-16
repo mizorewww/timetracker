@@ -605,8 +605,16 @@ struct TaskUIContractTests {
         #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
         #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
         #expect(taskRowSource.contains("case iconOnly"))
-        #expect(managementSource.contains(".taskRowSwipeActions(store: store, task: task, preservingDestination: .tasks)"))
-        #expect(sidebarSource.contains(".taskRowSwipeActions(store: store, task: task, labelStyle: .iconOnly)"))
+        #expect(taskRowSource.contains("let requestDelete: () -> Void"))
+        #expect(taskRowSource.contains("@State private var isDeleteConfirmationPresented") == false)
+        #expect(taskRowSource.contains(".confirmationDialog(") == false)
+        #expect(taskRowSource.contains("requestDelete()"))
+        #expect(taskRowSource.contains("Label(AppStrings.delete, systemImage: \"trash\")"))
+        #expect(taskRowSource.contains("task.action.softDelete") == false)
+        #expect(managementSource.contains("requestDelete: { isDeleteConfirmationPresented = true }"))
+        #expect(sidebarSource.contains("requestDelete: { isDeleteConfirmationPresented = true }"))
+        #expect(managementSource.components(separatedBy: ".confirmationDialog(").count - 1 == 1)
+        #expect(sidebarSource.components(separatedBy: ".confirmationDialog(").count - 1 == 1)
     }
 
     @Test

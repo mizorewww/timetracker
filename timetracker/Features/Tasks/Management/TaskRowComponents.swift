@@ -126,7 +126,7 @@ struct TaskContextMenu: View {
         Button(role: .destructive) {
             requestDelete()
         } label: {
-            Label(AppStrings.localized("task.action.softDelete"), systemImage: "trash")
+            Label(AppStrings.delete, systemImage: "trash")
         }
     }
 }
@@ -142,7 +142,7 @@ struct TaskRowSwipeActions: ViewModifier {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     var labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon
     var preservingDestination: TimeTrackerStore.DesktopDestination?
-    @State private var isDeleteConfirmationPresented = false
+    let requestDelete: () -> Void
 
     private var activeSegment: TimeSegment? {
         store.activeSegment(for: task.id)
@@ -216,22 +216,10 @@ struct TaskRowSwipeActions: ViewModifier {
                 .tint(.gray)
 
                 Button(role: .destructive) {
-                    isDeleteConfirmationPresented = true
+                    requestDelete()
                 } label: {
                     actionLabel(AppStrings.delete, systemImage: "trash")
                 }
-            }
-            .confirmationDialog(
-                AppStrings.localized("task.delete.confirm.title"),
-                isPresented: $isDeleteConfirmationPresented,
-                titleVisibility: .visible
-            ) {
-                Button(AppStrings.delete, role: .destructive) {
-                    store.deleteSelectedTask(taskID: task.id, preservingDestination: preservingDestination)
-                }
-                Button(AppStrings.cancel, role: .cancel) {}
-            } message: {
-                Text(.app("task.delete.confirm.message"))
             }
     }
 
@@ -252,14 +240,16 @@ extension View {
         store: TimeTrackerStore,
         task: TaskNode,
         labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon,
-        preservingDestination: TimeTrackerStore.DesktopDestination? = nil
+        preservingDestination: TimeTrackerStore.DesktopDestination? = nil,
+        requestDelete: @escaping () -> Void
     ) -> some View {
         modifier(
             TaskRowSwipeActions(
                 store: store,
                 task: task,
                 labelStyle: labelStyle,
-                preservingDestination: preservingDestination
+                preservingDestination: preservingDestination,
+                requestDelete: requestDelete
             )
         )
     }

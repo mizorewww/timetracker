@@ -318,8 +318,6 @@
 "task.archived.trackingUnavailable" = "此任务或其上级任务已完成或归档，不能接收新工作。请先重新打开或恢复相应任务。";
 "task.parentUnavailable" = "所选父任务已完成、已归档或不再可用。";
 "task.parent.completedLocked" = "重新打开此任务及已完成的上级任务后，才能移动它。";
-"task.action.softDelete" = "软删除";
-"task.action.softDeleteTask" = "软删除任务";
 "task.status.menu" = "状态";
 "task.empty.selectTask" = "选择一个任务";
 "task.section.info" = "基本信息";

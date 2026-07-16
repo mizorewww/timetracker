@@ -219,18 +219,26 @@ legacy `CountdownEventsJSON` 是一次性 `UserDefaults`→SwiftData 迁移，�
 
 CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态不同。紧急内存 fallback 只能用于保持应用可诊断，绝不能被描述为持久存储。
 
-同步刷新是事件驱动的：`NSPersistentStoreRemoteChange` 和 `NSPersistentCloudKitContainer.eventChangedNotification` 进入 `TimeTrackerStore+SyncObservers`，350 ms 合并窗口保留最高优先级原因，再由 refresh planner 执行一次一致性刷新。启动与 scene 回到 active 时仍会刷新；不要重新引入常驻 5 秒轮询。`SyncedPreferenceService.latestByKey` 必须先完成 LWW/tombstone 选择，再过滤已删除结果，否则旧 active preference 会复活。legacy `UserDefaults` 迁移也必须从 logical-key LWW winner 判断 key 是否已迁移；winning tombstone 仍表示“已迁移”，必须阻止旧本机值重新导入。
+同步刷新是事件驱动的：`NSPersistentStoreRemoteChange` 和 `NSPersistentCloudKitContainer.eventChangedNotification` 进入 `TimeTrackerStore+SyncObservers`。首个通知建立固定 350 ms 截止时间，后续通知只合并进常量空间的 batch，不取消并后推计时器；否则持续导入会让刷新饥饿并让原因队列无界增长。窗口保留最高优先级活动、最新 import 结果与是否需要冲突处理，再由 refresh planner 执行一次一致性刷新。启动与 scene 回到 active 时仍会刷新；不要重新引入常驻 5 秒轮询。`SyncedPreferenceService.latestByKey` 必须先完成 LWW/tombstone 选择，再过滤已删除结果，否则旧 active preference 会复活。legacy `UserDefaults` 迁移也必须从 logical-key LWW winner 判断 key 是否已迁移；winning tombstone 仍表示“已迁移”，必须阻止旧本机值重新导入。
 
-Settings 的同步状态使用 typed `SyncActivityOutcome`，不能从“本机执行过 refresh”反推 CloudKit 成功。只有带结束时间且无 CloudKit error 的 import/export/setup event，在本机 read-model refresh 与冲突状态处理都成功后，才能记录 `.succeeded`；单独的 `NSPersistentStoreRemoteChange` 只触发刷新，不生成绿色活动。CloudKit error、export checkpoint 状态写入失败或本机后处理失败记录 `.failed(message:)`，并由状态卡呈现，不写共享 `errorMessage`。最近成功只在完成时间不晚于当前时间且 120 秒内成立；账户检查独立更新 `CloudAccountCheckOutcome`，不得伪造或清除同步活动。
+Settings 的同步状态使用 typed `SyncActivityOutcome`，不能从“本机执行过 refresh”反推 CloudKit 成功。只有带结束时间且 `event.succeeded == true` 的 import/export/setup event，在本机 read-model refresh 与冲突状态处理都成功后，才能记录 `.succeeded`；单独的 `NSPersistentStoreRemoteChange` 只触发刷新，不生成绿色活动。CloudKit error、export checkpoint 状态写入失败或本机后处理失败记录 `.failed(message:)`，并由状态卡呈现，不写共享 `errorMessage`。最近成功只在完成时间不晚于当前时间且 120 秒内成立；账户检查独立更新 `CloudAccountCheckOutcome`，不得伪造或清除同步活动。
 
 `AppCloudSync.enabledKey` 是设备本地启动配置，只保存在 `UserDefaults`，修改后下次启动生效。它不属于 `AppPreferenceKey`，也不能进入 `SyncedPreference`、冲突快照或导出/恢复数据。历史 `TimeTrackerCloudSyncEnabled` 记录在这些边界统一过滤。普通 Local、Demo 和 UI Test 模式的 mutation 不生成冲突快照；CloudKit 活跃或存在待上传恢复时，`StoreDomainEvent` 只重抓受影响的 task、ledger、pomodoro、preference、countdown、checklist 或 inbox 域。仅 full sync、远程 import 和没有 baseline 的初始化需要捕获全部域。
 
 启动期 CloudKit reset 由 `CloudRecoveryGate` 严格门控。factory 必须先退出 demo 与用户禁用分支，再处理 pending reset；缺失/不可读的受保护上传快照为 deferred，store 或同步状态删除失败为 failed，均保留 pending 并停在本地恢复路径。只有 completed 返回的 `CompletedCloudRecovery` token 能传给 `recordCloudKitEnabled(after:)`；而且必须等 CloudKit container 真实创建成功后才能消费 token、清 pending/error。不得恢复无参 acknowledgement、Bool 门控或失败后继续尝试云容器。
 
+恢复意图必须区分 `.reconcileWithCloud` 与 `.explicitlyReplaceCloud`。自动 fallback/重新启用只排队 reconciliation：保护本机快照、建立 fresh CloudKit cache、等完整首次导入，再比较 fingerprint；相同则收敛，不同则生成两侧冲突，比较前不得恢复本机快照或制造 export。只有用户明确选择本机赢家才保存 explicit intent，并在恢复 bootstrap 中把受保护快照恢复为本地赢家一次。legacy/missing intent 和独立 mirror 在没有不含糊的 upload marker 时一律按 conservative reconciliation 推断。
+
+upload、download 与 reconciliation 请求在 `AppCloudSync+RecoveryIntent` 中互斥；新选择清除相反 pending/active marker。若旧版本留下同时 upload+download 的矛盾标记，gate 返回 `.conflictingRecoveryRequests`，不得删除 store。CloudKit recovery container 已经附着后，Settings 旧 scene 发起的 stage/upload/download/resolution 通过 `requireNoAttachedCloudRecovery()` 拒绝，防止中途改变方向。
+
+fresh-store hydration 以持久 `CloudRecoveryImportSession` 为屏障，而不是 setup、remote change 或任意 import。会话记录 UUID、kind、startedAt、storeIdentifier、成功 setup 完成时间和其后的成功 initial import 完成时间；只接受 `endDate != nil`、`event.succeeded`、event start 不早于 epoch、setup 先完成、同一 storeIdentifier 且 import start 不早于 setup completion 的事件。`CloudRecoveryImportBuffer` 在 ModelContainer 创建前先收集可能过早到达的完成事件，observer 安装后再 drain。下载/reconciliation 只在会话 kind 与当前 gate 一致且 initial import 完成时解除；错误 kind、旧 epoch、失败、乱序或其它 store 的事件都不能解锁写入。
+
+崩溃重启只复用完整的 setup+import 会话；未完成会话重新排队 fresh-store reset，避免半次导入被误判成功，也避免永远等待已丢失的通知。恢复期 `TimeTrackerStore` 只安装 read-side repositories/observers 并刷新读模型，推迟偏好迁移、seed、Pomodoro reconciliation、LLM/system side effects 和账户检查。恢复完成通知会更新每个已配置 scene；同一 store 的启动配置用 single-flight + 一次合并重试防止同步通知造成 reentrant bootstrap 和重复恢复。
+
 同步文件所有权如下：
 
 - `SyncConflictService.swift`：bootstrap 与 prompt 组装。
-- `SyncConflictService+LocalMutation.swift`、`+CloudImport.swift`、`+CloudExport.swift`、`+Recovery.swift`、`+Resolution.swift`：本地变更、云事件与显式恢复流程。
+- `SyncConflictService+LocalMutation.swift`、`+CloudImport.swift`、`+CloudExport.swift`、`+CloudRecoveryEvents.swift`、`+Recovery.swift`、`+Resolution.swift`：本地变更、云事件/恢复回执与显式恢复流程。
 - `SyncConflictService+State.swift`、`+StateWriting.swift`、`+StateLock.swift`、`+StateLocations.swift` 与 `SyncConflictState.swift`：有界本机状态读写、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state。
 - `SyncConflictService+Export.swift`：过滤后的 JSON export encoding。
 - `SyncDataSnapshot.swift`：版本化全域快照、摘要和 fingerprint。

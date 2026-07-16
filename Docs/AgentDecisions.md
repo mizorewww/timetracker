@@ -1021,6 +1021,22 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：command/deep-link 行为测试覆盖唯一无目标兼容、并行拒绝、精确 segment 和过期目标不回退；系统表面契约固定 `Button(intent:)` 与 segment 序列化，并要求 generic iOS 自动签名和嵌入产物校验通过。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
 
+## AD-081：CloudKit 恢复必须先完成同一 fresh store 的初始导入，再比较或解锁写入
+
+状态：Accepted；补充并收紧 AD-076，AD-076 的 typed reset gate 与 completion token 继续有效
+
+背景：AD-076 阻止 reset 失败后继续创建 CloudKit container，但“container 创建成功”仍不能证明 fresh cache 已经下载完整云端。setup、remote-store 通知或任意 import 都可能早于、晚于或属于另一 store；进程又可能在收到事件与保存回执之间退出。若自动重新启用 iCloud 先恢复本机快照，CloudKit 会在比较前导出并覆盖远端；若只凭 setup 解除只读，空 cache 会被误当成空云端。旧设置窗口还可能在 recovery container 已附着后改变上传/下载方向。
+
+决策：恢复意图持久区分 `reconcileWithCloud` 与 `explicitlyReplaceCloud`。自动 fallback/重新启用只执行 reconciliation：保存受保护本机分支，建立 fresh cache，完整导入后比较；相同直接收敛，不同产生明确冲突，比较前禁止恢复/导出本机分支。只有用户明确选择本机赢家才执行 explicit replacement，并且 bootstrap across recovery→normal startup 只恢复一次。legacy nil intent 与缺少明确 upload marker 的镜像按 conservative reconciliation。
+
+每次 download/reconciliation reset 建立 `CloudRecoveryImportSession(id, kind, startedAt)`。完成屏障必须依次记录成功且已结束的 setup 与其后的成功 import；两者 start 不早于本次 epoch，storeIdentifier 相同，import start 不早于 setup completion，并且 session kind 与当前 gate 相同。`CloudRecoveryImportBuffer` 在创建 ModelContainer 前开始接收事件，observer 安装后 drain；回执在 debounce/刷新前同步持久化。setup-only、remote change、失败/乱序事件、错误 kind、旧 epoch 或其它 store 不能解锁写入。
+
+upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求返回 typed deferred 而不删除 store。recovery container 已附着后，所有会改变方向的 stage/force/accept/resolve API 拒绝陈旧命令。崩溃后只复用完整 setup+import 会话；不完整会话重新 reset fresh cache。恢复期 store 只配置读侧，推迟迁移、seed、Pomodoro reconciliation、账户检查与其它写侧副作用；完成广播更新每个 scene，而单个 store 的启动配置必须 single-flight，避免同步通知重入 bootstrap。
+
+后果：自动重连不会在看见云端前静默覆盖 iCloud，空 fresh cache 不会被误判为权威空云端，下载/比较期间的新用户写入也不会落入即将再次删除的 store。一次通知丢失最多导致下一次安全重建，不会把半次 hydration 当成成功；显式本机覆盖仍保留，但只能来自清楚确认的方向。
+
+验证：恢复 gate、activity、conflict、state-write、identity、persistence safety 与 test-host isolation 套件覆盖同 store setup→import、跨 service 回执持久化、错误 kind/epoch/store/顺序、未完成/完整崩溃重启、初始空云端、自动比较冲突、显式赢家只恢复一次、互斥/矛盾方向、陈旧 scene 命令拒绝、恢复期无迁移/seed/账户副作用，以及多 scene 完成广播。付费签名、当前 Team 与资源清理要求继续遵守 AGENTS；一次性执行证据只写 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

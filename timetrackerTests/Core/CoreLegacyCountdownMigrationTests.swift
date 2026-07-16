@@ -147,7 +147,7 @@ struct CoreLegacyCountdownMigrationTests {
     }
 
     @Test @MainActor
-    func existingSwiftDataEventsSuppressLegacyImportAndRetirePayload() throws {
+    func existingSwiftDataEventsMergeWithLegacyImportBeforeRetiringPayload() throws {
         let defaults = try makeDefaults()
         defer { clear(defaults) }
         defaults.set(
@@ -165,7 +165,77 @@ struct CoreLegacyCountdownMigrationTests {
         )
 
         let events = try context.fetch(FetchDescriptor<CountdownEvent>())
-        #expect(events.map(\.title) == ["Existing"])
+        #expect(Set(events.map(\.title)) == Set(["Existing", "Legacy"]))
+        #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey))
+        #expect(defaults.object(forKey: LegacyCountdownMigrationPolicy.payloadKey) == nil)
+    }
+
+    @Test @MainActor
+    func existingLogicalIdentityWinsWhileUnrelatedLegacyEventsStillMigrate() throws {
+        let defaults = try makeDefaults()
+        defer { clear(defaults) }
+        let existingID = UUID()
+        defaults.set(
+            """
+            [
+              {"id":"\(existingID.uuidString)","title":"Stale legacy copy","date":"2030-01-01T00:00:00Z"},
+              {"title":"Keep this legacy event","date":"2031-01-01T00:00:00Z"}
+            ]
+            """,
+            forKey: LegacyCountdownMigrationPolicy.payloadKey
+        )
+        let context = try makeTestContext()
+        let existing = CountdownEvent(
+            title: "CloudKit winner",
+            date: Date(timeIntervalSince1970: 1_900_000_000),
+            deviceID: "cloud"
+        )
+        existing.id = existingID
+        context.insert(existing)
+        try context.save()
+
+        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
+            context: context,
+            defaults: defaults,
+            deviceID: "local"
+        )
+
+        let events = try context.fetch(FetchDescriptor<CountdownEvent>()).deduplicatedByID()
+        #expect(events.count == 2)
+        #expect(events.first(where: { $0.id == existingID })?.title == "CloudKit winner")
+        #expect(events.contains(where: { $0.title == "Keep this legacy event" }))
+    }
+
+    @Test @MainActor
+    func retryAfterCommittedSaveDoesNotDuplicateIdentitylessLegacyEvents() throws {
+        let defaults = try makeDefaults()
+        defer { clear(defaults) }
+        let payload = """
+        [
+          {"title":"Same","date":"2030-01-01T00:00:00Z"},
+          {"title":"Same","date":"2030-01-01T00:00:00Z"}
+        ]
+        """
+        defaults.set(payload, forKey: LegacyCountdownMigrationPolicy.payloadKey)
+        let context = try makeTestContext()
+        let store = makeTestStore()
+
+        try store.migrateLegacyCountdownEventsIfNeeded(
+            context: context,
+            defaults: defaults,
+            deviceID: "local"
+        )
+        defaults.set(false, forKey: LegacyCountdownMigrationPolicy.migrationKey)
+        defaults.set(payload, forKey: LegacyCountdownMigrationPolicy.payloadKey)
+
+        try store.migrateLegacyCountdownEventsIfNeeded(
+            context: context,
+            defaults: defaults,
+            deviceID: "local"
+        )
+
+        let events = try context.fetch(FetchDescriptor<CountdownEvent>())
+        #expect(events.count == 2)
         #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey))
         #expect(defaults.object(forKey: LegacyCountdownMigrationPolicy.payloadKey) == nil)
     }

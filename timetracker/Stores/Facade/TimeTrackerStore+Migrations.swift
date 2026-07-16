@@ -16,12 +16,23 @@ extension TimeTrackerStore {
         }
 
         let existing = try context.fetch(FetchDescriptor<CountdownEvent>())
-        guard existing.isEmpty else {
-            finishLegacyCountdownMigration(defaults: defaults)
-            return
-        }
+        let canonicalExisting = existing.deduplicatedByID()
+        var existingIDs = Set(canonicalExisting.map(\.id))
+        var availableFingerprintCounts = Dictionary(
+            grouping: canonicalExisting,
+            by: { LegacyCountdownFingerprint($0) }
+        ).mapValues(\.count)
 
         for legacy in LegacyCountdownMigrationPolicy.decode(json) {
+            if let id = legacy.id {
+                guard existingIDs.insert(id).inserted else { continue }
+            } else {
+                let fingerprint = LegacyCountdownFingerprint(legacy)
+                if let count = availableFingerprintCounts[fingerprint], count > 0 {
+                    availableFingerprintCounts[fingerprint] = count - 1
+                    continue
+                }
+            }
             let event = CountdownEvent(
                 title: legacy.title,
                 date: legacy.date,
@@ -122,3 +133,18 @@ private struct LegacyCountdownPayload: Decodable {
 }
 
 private enum LegacyCountdownPayloadError: Error { case tooManyEvents }
+
+private struct LegacyCountdownFingerprint: Hashable {
+    let title: String
+    let date: Date
+
+    init(_ event: CountdownEvent) {
+        title = event.title
+        date = event.date
+    }
+
+    init(_ event: LegacyCountdownEvent) {
+        title = event.title
+        date = event.date
+    }
+}

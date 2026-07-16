@@ -7,7 +7,11 @@ struct TaskUIContractTests {
     func taskTreeRowsExposeStableIdentifiersAndAccessibleDisclosureControls() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let rowSource = try taskManagementFeatureSource()
-        let serviceSource = try sourceText("timetracker/Services/Tasks/TaskTreeServices.swift")
+        let serviceSource = try [
+            "timetracker/Services/Tasks/TaskTreeModels.swift",
+            "timetracker/Services/Tasks/TaskTreeReadIndex.swift",
+            "timetracker/Services/Tasks/TaskTreeFlattener.swift"
+        ].map(sourceText).joined(separator: "\n")
 
         #expect(tasksSource.contains("List {"))
         #expect(tasksSource.contains(".accessibilityIdentifier(\"tasks.view\")"))

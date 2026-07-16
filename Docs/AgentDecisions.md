@@ -705,7 +705,7 @@
 
 后果：无关 timer、ledger、selection 或重复等价 task refresh 不再重建任务树/搜索 projection；task/category/assignment 的真实语义变化会在同一 store refresh 边界使所有 UI surface 看到新 revision。展开或新 query 的首次读取仍按可见行或可搜索 task 数线性计算，但同 key 重绘为有界 cache hit。新增 task-tree surface 必须消费该 read index/projection，不得在 `body` 重新 `filter/sorted/grouping` 全树；新增搜索字段必须同时进入 read-index equality/失效语义。容量不得改成无界历史。
 
-验证：等价性测试把新 projection 与旧 category+flattener 语义逐项比较，覆盖归档分支、分类/未分类、深度、child count、标题路径和 notes 搜索；identity 测试确认输入顺序改变不改变 hierarchy row/section IDs。cache 测试覆盖重复命中、LRU 容量、revision 失效和 store 对无关刷新/等价 refresh 不推进 revision。5,000 节点测试固定 fully-expanded projection 为每个可见 task 一次 child bucket lookup，并固定重复 projection/search 不增加 build count。主 Agent 使用付费开发者身份执行签名的 task-tree 与 task UI 定向套件，37/37 通过；该批不需要模拟器，结束后设备、构建、测试 runner 与 App 进程审计均为空。
+验证：等价性测试把新 projection 与旧 category+flattener 语义逐项比较，覆盖归档分支、分类/未分类、深度、child count、标题路径和 notes 搜索；identity 测试确认输入顺序改变不改变 hierarchy row/section IDs。cache 测试覆盖重复命中、LRU 容量、revision 失效和 store 对无关刷新/等价 refresh 不推进 revision。5,000 节点测试固定 fully-expanded projection 为每个可见 task 一次 child bucket lookup，并固定重复 projection/search 不增加 build count。旧的 624 行聚合实现进一步按 model、read index、projection cache、repair、service、flattener 与 read-index assembly 拆为 7 个 50–121 行文件，并由每文件不超过 160 行的结构合同约束。主 Agent 使用付费开发者身份执行签名的 task-ledger、task-tree read-index 与 task UI 定向套件，65/65 通过；精确 source-layout/Project Map 合同 3/3 通过。该批不需要模拟器；完整 SourceLayout suite 仍有既存 Analytics 文件预算红项，不能由本切片冒充全绿。
 
 ## AD-055：Analytics 重叠明细以 excess 守恒而非墙钟跨度计量
 

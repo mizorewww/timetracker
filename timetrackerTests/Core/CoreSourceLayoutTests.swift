@@ -106,7 +106,13 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/SystemIntegration/WatchConnectivityPayloadCodec.swift",
             "timetracker/Services/SystemIntegration/WatchIncomingCommandStore.swift",
             "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift",
-            "timetracker/Services/Tasks/TaskTreeServices.swift",
+            "timetracker/Services/Tasks/TaskHierarchyRepairPlan.swift",
+            "timetracker/Services/Tasks/TaskTreeFlattener.swift",
+            "timetracker/Services/Tasks/TaskTreeModels.swift",
+            "timetracker/Services/Tasks/TaskTreeProjectionCache.swift",
+            "timetracker/Services/Tasks/TaskTreeReadIndex.swift",
+            "timetracker/Services/Tasks/TaskTreeService.swift",
+            "timetracker/Services/Tasks/TaskTreeService+ReadIndex.swift",
             "timetracker/Shared/WatchCommandModels.swift",
             "timetracker/Shared/WatchStateSnapshotModels.swift",
             "timetracker/Repositories/SwiftDataTaskRepository.swift",
@@ -266,7 +272,8 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Sections/AnalyticsRowsViews.swift",
             "timetracker/Features/Tasks/Detail/TaskForecastPanel.swift",
             "timetracker/Features/Settings/SettingsSectionsViews.swift",
-            "timetracker/Services/Ledger/TimeTrackerServices.swift"
+            "timetracker/Services/Ledger/TimeTrackerServices.swift",
+            "timetracker/Services/Tasks/TaskTreeServices.swift"
         ]
         for relativePath in retiredViews {
             #expect(FileManager.default.fileExists(atPath: root.appending(path: relativePath).path) == false)
@@ -646,6 +653,36 @@ struct CoreSourceLayoutTests {
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
         }
+    }
+
+    @Test
+    func taskTreeServiceFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let taskServicesURL = root.appending(path: "timetracker/Services/Tasks")
+        let focusedFiles = [
+            "TaskHierarchyRepairPlan.swift",
+            "TaskTreeFlattener.swift",
+            "TaskTreeModels.swift",
+            "TaskTreeProjectionCache.swift",
+            "TaskTreeReadIndex.swift",
+            "TaskTreeService.swift",
+            "TaskTreeService+ReadIndex.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = taskServicesURL.appending(path: fileName)
+            #expect(FileManager.default.fileExists(atPath: file.path))
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 160, "\(fileName) has \(lineCount) lines")
+        }
+
+        #expect(
+            FileManager.default.fileExists(
+                atPath: taskServicesURL.appending(path: "TaskTreeServices.swift").path
+            ) == false
+        )
     }
 
     @Test

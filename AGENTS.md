@@ -27,3 +27,10 @@ Proactively use sub-agents and simulators when they improve review coverage or v
 - Record every simulator UDID created for a run. Avoid implicit UI-test runner clones; use explicitly owned destinations for a parallel device matrix.
 - After each simulator batch, terminate the tested app, shut down and delete devices owned by that batch, quit Simulator and Problem Reporter when opened by the batch, and verify that no owned `xcodebuild`, `xctest`, UI runner, app extension, trace process, or Booted device remains.
 - Never shut down a simulator or terminate a process that another active agent explicitly owns.
+
+## UI review priority
+
+This is a self-use app. Prioritize normal text sizes, ordinary interaction paths, platform conventions, and Apple HIG visual/behavioral quality.
+
+- Preserve inexpensive baseline semantics already present, but do not spend implementation, simulator, screenshot, trace, or review budget on specialized Accessibility or extreme Dynamic Type work unless the user explicitly requests it.
+- Do not block an otherwise verified UI refactor on an Accessibility-only audit that is outside the requested scope.

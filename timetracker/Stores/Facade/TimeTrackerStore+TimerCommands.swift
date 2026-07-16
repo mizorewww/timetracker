@@ -3,24 +3,26 @@ import Foundation
 extension TimeTrackerStore {
     func startSelectedTask() {
         guard let selectedTaskID else { return }
-        startTask(taskID: selectedTaskID)
+        _ = startTask(taskID: selectedTaskID)
     }
 
-    func startTask(_ task: TaskNode) {
+    @discardableResult
+    func startTask(_ task: TaskNode) -> Bool {
         guard isTaskAvailableForTracking(task) else {
             errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
-            return
+            return false
         }
         selectTask(task.id, revealInToday: false)
-        startTask(taskID: task.id)
+        return startTask(taskID: task.id)
     }
 
-    private func startTask(taskID: UUID) {
+    @discardableResult
+    private func startTask(taskID: UUID) -> Bool {
         guard let task = task(for: taskID), isTaskAvailableForTracking(task) else {
             errorMessage = AppStrings.localized("systemAction.error.taskNotFound")
-            return
+            return false
         }
-        perform(events: timerStartMutationEvents(taskID: taskID)) {
+        return perform(events: timerStartMutationEvents(taskID: taskID)) {
             try timerCommandHandler.startTask(
                 taskID: taskID,
                 allowParallelTimers: preferences.allowParallelTimers,
@@ -29,6 +31,32 @@ extension TimeTrackerStore {
                 timeRepository: requiredTimeRepository(),
                 context: modelContext
             )
+        }
+    }
+
+    var timerPickerMode: TimerPickerMode {
+        TimerPickerCommandPolicy().mode(
+            hasActiveTimers: activeSegments.isEmpty == false,
+            allowParallelTimers: preferences.allowParallelTimers
+        )
+    }
+
+    func timerPickerSelectionCommand(for task: TaskNode) -> TimerPickerSelectionCommand {
+        TimerPickerCommandPolicy().selectionCommand(
+            isTaskRunning: activeSegment(for: task.id) != nil,
+            mode: timerPickerMode
+        )
+    }
+
+    @discardableResult
+    func performTimerPickerSelection(_ task: TaskNode) -> TimerPickerSelectionOutcome {
+        switch timerPickerSelectionCommand(for: task) {
+        case .alreadyRunning:
+            return .alreadyRunning
+        case .start:
+            return startTask(task) ? .started : .failed
+        case .switchTimer:
+            return startTask(task) ? .switched : .failed
         }
     }
 

@@ -35,15 +35,11 @@ struct TodayTimerAction: View {
     }
 
     private var actionTitle: String {
-        guard !store.activeSegments.isEmpty else { return AppStrings.startTimer }
-        return store.preferences.allowParallelTimers
-            ? AppStrings.localized("home.startAnotherTimer")
-            : AppStrings.localized("home.switchTimer")
+        store.timerPickerMode.title
     }
 
     private var actionSystemImage: String {
-        guard !store.activeSegments.isEmpty else { return "play.fill" }
-        return store.preferences.allowParallelTimers ? "plus" : "arrow.left.arrow.right"
+        store.timerPickerMode.systemImage
     }
 }
 
@@ -84,9 +80,24 @@ struct TaskStartPicker: View {
         }
     }
 
+    private var filteredItems: [TaskStartPickerItem] {
+        filteredTasks.map { task in
+            TaskStartPickerItem(
+                task: task,
+                path: store.path(for: task),
+                activeSegment: store.activeSegment(for: task.id),
+                command: store.timerPickerSelectionCommand(for: task)
+            )
+        }
+    }
+
     var body: some View {
+        let items = filteredItems
+        let runningItems = items.filter { $0.command == .alreadyRunning }
+        let selectableItems = items.filter { $0.command != .alreadyRunning }
+
         Group {
-            if filteredTasks.isEmpty {
+            if items.isEmpty {
                 ContentUnavailableView {
                     Label(
                         availableTasks.isEmpty
@@ -110,31 +121,55 @@ struct TaskStartPicker: View {
                 }
             } else {
                 List {
-                    Section {
-                        ForEach(filteredTasks, id: \.id) { task in
-                            let activeSegment = store.activeSegment(for: task.id)
-                            Button {
-                                if let activeSegment {
-                                    store.stop(segment: activeSegment)
-                                } else {
-                                    store.startTask(task)
-                                }
-                                onDone()
-                            } label: {
-                                TaskStartPickerRow(
-                                    task: task,
-                                    path: store.path(for: task),
-                                    isRunning: activeSegment != nil
+                    if runningItems.isEmpty == false {
+                        Section {
+                            ForEach(runningItems) { item in
+                                TaskStartPickerRunningRow(
+                                    task: item.task,
+                                    path: item.path,
+                                    onStop: {
+                                        guard let activeSegment = item.activeSegment else { return }
+                                        store.stop(segment: activeSegment)
+                                    }
+                                )
+                                .accessibilityIdentifier(
+                                    "timer.taskPicker.running.\(item.id.uuidString)"
                                 )
                             }
-                            .accessibilityHint(AppStrings.localized(
-                                activeSegment == nil ? "timer.task.startHint" : "timer.task.stopHint"
-                            ))
+                        } header: {
+                            Text(.app("timer.picker.runningHeader"))
                         }
-                    } header: {
-                        Text(.app("timer.chooseTaskHeader"))
-                    } footer: {
-                        Text(.app("timer.chooseTaskFooter"))
+                    }
+
+                    if selectableItems.isEmpty == false {
+                        Section {
+                            ForEach(selectableItems) { item in
+                                Button {
+                                    let outcome = store.performTimerPickerSelection(item.task)
+                                    if outcome.shouldDismissPicker {
+                                        onDone()
+                                    }
+                                } label: {
+                                    TaskStartPickerActionRow(
+                                        task: item.task,
+                                        path: item.path,
+                                        command: item.command
+                                    )
+                                }
+                                .accessibilityLabel(
+                                    item.command.accessibilityLabel(for: item.task.title)
+                                )
+                                .accessibilityValue(item.path)
+                                .accessibilityHint(item.command.accessibilityHint)
+                                .accessibilityIdentifier(
+                                    "timer.taskPicker.select.\(item.id.uuidString)"
+                                )
+                            }
+                        } header: {
+                            Text(store.timerPickerMode.sectionHeader)
+                        } footer: {
+                            Text(store.timerPickerMode.footer)
+                        }
                     }
                 }
                 #if os(iOS)
@@ -151,7 +186,7 @@ struct TaskStartPicker: View {
         .background(AppColors.background)
         #endif
         .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
-        .navigationTitle(AppStrings.startTimer)
+        .navigationTitle(store.timerPickerMode.title)
         .accessibilityIdentifier("timer.taskPicker")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -168,30 +203,6 @@ struct TaskStartPicker: View {
         Task { @MainActor in
             await Task.yield()
             store.presentNewTask()
-        }
-    }
-}
-
-private struct TaskStartPickerRow: View {
-    let task: TaskNode
-    let path: String
-    let isRunning: Bool
-
-    var body: some View {
-        HStack(spacing: 12) {
-            TaskIcon(task: task, size: 28)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(task.title)
-                    .foregroundStyle(.primary)
-                Text(path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            if isRunning {
-                RunningStatusBadge()
-            }
         }
     }
 }

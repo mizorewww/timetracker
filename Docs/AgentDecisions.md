@@ -863,6 +863,18 @@
 
 验证：源码合同固定 iOS push、macOS popover 和不存在内层 sheet/Done；付费签名 macOS `TaskUIContractTests` 34/34、0 error/0 warning。正常字号 iPhone 17 Pro / iOS 27 UI 回归完成“新建任务 → 输入草稿 → 搜索并选择 calendar → Back”，确认 sheet 数不增加、草稿和选择保留、返回后键盘不重弹，1/1、0 warning。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保持 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 development APS、CloudKit 和 App Group。一次性证据与模拟器清理记录见 dated Audit。
 
+## AD-068：独立任务表面显示标题与父级上下文，动作图标不冒充身份
+
+状态：Accepted
+
+背景：Quick Start 在 iPhone 同时显示任务标题和包含该标题的完整路径，造成重复；iPad/macOS tile 则只显示标题，并把任务自己的 symbol 替换成播放或停止图标。结果是同名子任务无法区分，用户也无法稳定识别任务本身，三个平台和编辑器使用了不同的身份表达。View 直接调用 `path(for:)` 还让展示规则分散，并可能诱使后续代码通过拆分带 `/` 的可变标题来推导父级。
+
+决策：`TaskIdentityPresentation` 是脱离任务树上下文的统一展示投影，由既有 `TaskTreeIndexes` 使用 task、parent path 和 full path 索引 O(1) 构造。`.hierarchical`、`.standard`、`.compact` 分别表达只有标题、标题加父级路径、单行完整路径三种明确上下文；根任务的空父路径规范为 nil。`TaskVisualPresentation` 在 SwiftUI 边界前把未知 symbol 和颜色规范为 canonical fallback。Quick Start 的 iPhone 行、iPad/macOS tile 和编辑器使用 `.standard`：任务 symbol 始终表达身份，播放/停止 glyph 始终单独表达动作，不得互相替换。路径仅作展示，不从字符串反向解析层级。
+
+后果：同名子任务可通过父级路径区分，根任务不再重复标题，标题中包含 `/` 也不会破坏身份推导；三个平台和编辑器共享一致信息层级。以后迁移任务选择器、Pomodoro、Widget 或 Watch 时可以按所在表面选 context，但必须继续消费索引投影，不在 View 中重造路径或视觉 fallback。该投影不改变持久模型或 iCloud schema。
+
+验证：纯值与索引测试覆盖根/子任务、同名任务、标题内 `/`、三个 context 和无效视觉 fallback；源码合同固定 Quick Start 不调用 `store.path(for:)`、身份与动作 glyph 分离。付费签名 macOS 定向套件 22/22、0 warning；正常字号 iPhone 交互与截图 1/1、0 warning，确认根/子任务、独立动作 glyph 和编辑器层级。generic iOS 自动签名构建严格验证全部嵌入 bundle 与主 App entitlement。macOS UI runner 两次因系统认证正在运行而在测试初始化前被系统取消，不计作 UI 通过，也不继续重试；一次性设备、截图、失败发现和 xcresult 只记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

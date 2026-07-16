@@ -83,8 +83,7 @@ struct PhoneQuickStartSection: View {
                 ForEach(tasks, id: \.id) { task in
                     let activeSegment = store.activeSegment(for: task.id)
                     PhoneQuickStartRow(
-                        task: task,
-                        path: store.path(for: task),
+                        presentation: store.taskIdentityPresentation(for: task),
                         isRunning: activeSegment != nil
                     ) {
                         if let activeSegment {

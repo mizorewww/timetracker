@@ -479,6 +479,72 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testQuickStartShowsRootAndChildIdentityWithSeparateActionGlyphs() throws {
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let quickStartRows = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "home.quickStart.task."
+            )
+        )
+        let root = quickStartRows.matching(
+            NSPredicate(format: "label == %@", "Time Tracker App")
+        ).firstMatch
+        let child = quickStartRows.matching(
+            NSPredicate(format: "label == %@", "Design System")
+        ).firstMatch
+        scrollUntilHittable(child, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                root,
+                timeout: 5,
+                diagnosticName: "quick-start-root",
+                in: app
+            ) && root.isHittable
+        )
+        XCTAssertTrue(
+            waitForElement(
+                child,
+                timeout: 5,
+                diagnosticName: "quick-start-child",
+                in: app
+            ) && child.isHittable
+        )
+        XCTAssertTrue((root.value as? String ?? "").isEmpty)
+        XCTAssertEqual(child.value as? String, "Time Tracker App")
+
+        activate(child)
+        let running = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Running"),
+            object: child
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [running], timeout: 5), .completed)
+        #if os(iOS)
+        let requiredLift = max(0, child.frame.maxY - systemChromeTop(in: app) + 20)
+        if requiredLift > 0 {
+            dragContentUp(by: requiredLift, in: app)
+        }
+        let navigationBottom = app.navigationBars.firstMatch.exists
+            ? app.navigationBars.firstMatch.frame.maxY
+            : app.frame.minY
+        XCTAssertGreaterThanOrEqual(root.frame.minY, navigationBottom)
+        XCTAssertLessThanOrEqual(child.frame.maxY, systemChromeTop(in: app) - 8)
+        #endif
+        try capture("quick-start-root-child-actions", app: app)
+
+        let edit = app.buttons["home.quickStart.edit"].firstMatch
+        scrollUntilHittable(edit, direction: .up, in: app)
+        XCTAssertTrue(edit.waitForExistence(timeout: 3) && edit.isHittable)
+        activate(edit)
+
+        XCTAssertTrue(app.navigationBars["Edit Quick Start"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Time Tracker App"].waitForExistence(timeout: 3))
+        try capture("quick-start-editor-task-identity", app: app)
+    }
+
+    @MainActor
     func testTodayPrimaryTimerActionOpensTaskPicker() throws {
         #if os(macOS)
         throw XCTSkip("The Today interaction screenshots require an iOS simulator.")

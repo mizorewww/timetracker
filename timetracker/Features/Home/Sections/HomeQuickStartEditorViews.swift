@@ -53,7 +53,10 @@ struct QuickStartEditorSheet: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(Array(pinnedTasks.enumerated()), id: \.element.id) { index, task in
-                            QuickStartPinnedTaskRow(task: task, path: store.path(for: task), order: index + 1)
+                            QuickStartPinnedTaskRow(
+                                presentation: store.taskIdentityPresentation(for: task),
+                                order: index + 1
+                            )
                         }
                         .onDelete { offsets in
                             selectedIDs.remove(atOffsets: offsets)
@@ -80,8 +83,7 @@ struct QuickStartEditorSheet: View {
                             togglePinned(task)
                         } label: {
                             QuickStartSelectableTaskRow(
-                                task: task,
-                                path: store.path(for: task),
+                                presentation: store.taskIdentityPresentation(for: task),
                                 isPinned: pinned,
                                 order: selectedIDs.firstIndex(of: task.id).map { $0 + 1 },
                                 isDisabled: false
@@ -146,20 +148,22 @@ struct QuickStartEditorSheet: View {
 }
 
 private struct QuickStartPinnedTaskRow: View {
-    let task: TaskNode
-    let path: String
+    let presentation: TaskIdentityPresentation
     let order: Int
 
     var body: some View {
+        let text = presentation.text(for: .standard)
         HStack(spacing: 12) {
-            TaskIcon(task: task, size: 28)
+            TaskIcon(visual: presentation.visual, size: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(task.title)
+                Text(text.primary)
                     .foregroundStyle(.primary)
-                Text(path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if let secondary = text.secondary {
+                    Text(secondary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer()
             Text("#\(order)")
@@ -172,22 +176,24 @@ private struct QuickStartPinnedTaskRow: View {
 }
 
 private struct QuickStartSelectableTaskRow: View {
-    let task: TaskNode
-    let path: String
+    let presentation: TaskIdentityPresentation
     let isPinned: Bool
     let order: Int?
     let isDisabled: Bool
 
     var body: some View {
+        let text = presentation.text(for: .standard)
         HStack(spacing: 12) {
-            TaskIcon(task: task, size: 28)
+            TaskIcon(visual: presentation.visual, size: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(task.title)
+                Text(text.primary)
                     .foregroundStyle(isDisabled ? .secondary : .primary)
-                Text(path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if let secondary = text.secondary {
+                    Text(secondary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer()
             if let order {

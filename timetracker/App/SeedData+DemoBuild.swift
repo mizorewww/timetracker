@@ -38,6 +38,19 @@ extension SeedData {
         let hig = try taskRepository.createTask(title: "Read Apple HIG", parentID: study.id, colorHex: "16A34A", iconName: "book.pages")
         let swift = try taskRepository.createTask(title: "SwiftData Docs", parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
 
+        if CommandLine.arguments.contains("--uitesting") {
+            context.insert(
+                SyncedPreference(
+                    key: AppPreferenceKey.quickStartTaskIDs.rawValue,
+                    valueJSON: try PreferenceJSON.encodeChecked([
+                        app.id.uuidString,
+                        design.id.uuidString
+                    ]),
+                    deviceID: "demo"
+                )
+            )
+        }
+
         macDesign.notes = "Refine the split layout and prioritize the timeline, task tree, and task detail flow."
         iosDesign.notes = "On mobile, prioritize quick start, current state, and an editable Today timeline."
         analytics.notes = "All analytics aggregate from TimeSegment records; cached summaries are never the source of truth."

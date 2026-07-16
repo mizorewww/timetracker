@@ -168,6 +168,19 @@ extension TimeTrackerStore {
         return path
     }
 
+    func taskIdentityPresentation(for task: TaskNode) -> TaskIdentityPresentation {
+        taskTreeIndexes.taskIdentityPresentation(for: task.id) ?? TaskIdentityPresentation(
+            id: task.id,
+            title: task.title,
+            parentPath: nil,
+            fullPath: task.title,
+            visual: TaskVisualPresentation(
+                iconName: task.iconName,
+                colorHex: task.colorHex
+            )
+        )
+    }
+
     func rebuildTaskIndexes() {
         let indexes = taskTreeService.indexes(tasks: tasks)
         taskTreeIndexes = indexes

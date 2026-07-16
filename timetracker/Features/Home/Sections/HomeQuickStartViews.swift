@@ -28,6 +28,7 @@ struct QuickStartSection: View {
                 .buttonStyle(.bordered)
                 .frame(minWidth: 44, minHeight: 44)
                 .accessibilityLabel(AppStrings.localized("quickStart.edit"))
+                .accessibilityIdentifier("home.quickStart.edit")
                 .help(AppStrings.localized("quickStart.edit"))
             }
 

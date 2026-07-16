@@ -65,38 +65,44 @@ struct PhoneSummaryMetric: View {
 }
 
 struct PhoneQuickStartRow: View {
-    let task: TaskNode
-    let path: String
+    let presentation: TaskIdentityPresentation
     let isRunning: Bool
     let start: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
+        let text = presentation.text(for: .standard)
         Button(action: start) {
             HStack(alignment: .top, spacing: 12) {
-                TaskIcon(task: task, size: 30)
+                TaskIcon(visual: presentation.visual, size: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(task.title)
+                    Text(text.primary)
                         .foregroundStyle(.primary)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                         .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
-                    Text(path)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                        .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
+                    if let secondary = text.secondary {
+                        Text(secondary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                            .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
+                    }
                 }
                 Spacer(minLength: 8)
                 Image(systemName: isRunning ? "stop.fill" : "play.fill")
-                    .foregroundStyle(isRunning ? .red : (Color(hex: task.colorHex) ?? .accentColor))
+                    .foregroundStyle(
+                        isRunning ? .red : (Color(hex: presentation.visual.colorHex) ?? .accentColor)
+                    )
                     .accessibilityHidden(true)
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(task.title)
-        .accessibilityValue(isRunning ? AppStrings.localized("status.running") : path)
+        .accessibilityLabel(text.primary)
+        .accessibilityValue(
+            isRunning ? AppStrings.localized("status.running") : (text.secondary ?? "")
+        )
         .accessibilityHint(
             AppStrings.localized(isRunning ? "timer.task.stopHint" : "timer.task.startHint")
         )

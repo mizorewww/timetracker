@@ -229,6 +229,38 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func quickStartUsesIndexedTaskIdentityAndKeepsActionGlyphsSeparate() throws {
+        let identitySource = try sourceText(
+            "timetracker/Services/Tasks/TaskIdentityPresentation.swift"
+        )
+        let quickStartSource = try [
+            "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Home/PhoneHomeSections.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
+
+        #expect(identitySource.contains("struct TaskIdentityText: Equatable, Sendable"))
+        #expect(identitySource.contains("struct TaskVisualPresentation: Equatable, Sendable"))
+        #expect(identitySource.contains("struct TaskIdentityPresentation: Equatable, Sendable"))
+        #expect(identitySource.contains("case hierarchical"))
+        #expect(identitySource.contains("case standard"))
+        #expect(identitySource.contains("case compact"))
+        #expect(identitySource.contains("taskByID[taskID]"))
+        #expect(identitySource.contains("taskParentPathByID[taskID]"))
+        #expect(identitySource.contains("taskPathByID[taskID]"))
+        #expect(identitySource.contains("components(separatedBy:") == false)
+        #expect(identitySource.contains(".split(separator:") == false)
+        #expect(quickStartSource.contains(".text(for: .standard)"))
+        #expect(quickStartSource.contains("TaskIcon(visual: presentation.visual"))
+        #expect(quickStartSource.contains("isRunning ? \"stop.fill\" : \"play.fill\""))
+        #expect(quickStartSource.contains("store.path(for: task)") == false)
+        #expect(quickStartSource.contains("Text(path)") == false)
+    }
+
+    @Test
     func homeExposesQuickStartAndTimelineAsAccessibleSections() throws {
         let homeSource = try [
             "timetracker/Features/Home/PhoneHomeView.swift",
@@ -352,6 +384,12 @@ struct HomeUIContractTests {
         .joined(separator: "\n")
         let homeMetricsSource = try sourceText("timetracker/Features/Home/Sections/HomeMetricsViews.swift")
         let sharedMetricsSource = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
+        let timerActionSource = try sourceText(
+            "timetracker/Features/Home/Controls/HomeActionsViews.swift"
+        )
+        let timerPickerRowSource = try sourceText(
+            "timetracker/Features/Home/Controls/TaskStartPickerRows.swift"
+        )
 
         #expect(source.contains("trendColor: grossTrend.color"))
         #expect(source.contains(".foregroundStyle(metric.trendColor)"))
@@ -364,7 +402,9 @@ struct HomeUIContractTests {
         #expect(homeMetricsSource.contains("if dynamicTypeSize.isAccessibilitySize"))
         #expect(homeMetricsSource.contains("verticalMetrics(metrics)"))
         #expect(source.contains("AppActionLabel(title: actionTitle"))
-        #expect(source.contains("home.switchTimer"))
+        #expect(timerActionSource.contains("store.timerPickerMode.title"))
+        #expect(timerPickerRowSource.contains("case .switchTimer:"))
+        #expect(timerPickerRowSource.contains("home.switchTimer"))
         #expect(source.contains("home.newTask") == false)
         #expect(source.contains(".layoutPriority(1.1)") == false)
     }

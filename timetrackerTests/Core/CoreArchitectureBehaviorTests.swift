@@ -5,7 +5,7 @@ import Testing
 
 @Suite(.serialized)
 struct CoreArchitectureBehaviorTests {
-    @Test
+    @Test @MainActor
     func rootLayoutPolicyUsesStableInterfaceIdiom() {
         #expect(RootLayoutPolicy(interfaceIdiom: .phone).shell == .phone)
         #expect(RootLayoutPolicy(interfaceIdiom: .pad).shell == .pad)

@@ -37,43 +37,46 @@ struct SymbolColorPickerButton: View {
     @Binding var colorHex: String
     var titleKey: String = "common.choose"
     var showsTitle: Bool = true
+    #if os(macOS)
     @State private var isPickerPresented = false
+    #endif
 
+    @ViewBuilder
     var body: some View {
+        #if os(macOS)
         Button {
             isPickerPresented = true
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: ChecklistVisualSanitizer.sanitizedIcon(symbolName))
-                    .foregroundStyle(Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .blue)
-                if showsTitle {
-                    Text(.app(titleKey))
-                }
-            }
+            pickerLabel
         }
         .accessibilityLabel(AppStrings.localized("editor.symbol.title"))
         .accessibilityValue(TaskColorPalette.accessibilityName(for: colorHex))
-        #if os(macOS)
+        .accessibilityIdentifier("symbol.picker.open")
         .popover(isPresented: $isPickerPresented) {
             picker.frame(width: 460, height: 520)
         }
         #else
-        .sheet(isPresented: $isPickerPresented) {
-            NavigationStack {
-                picker
-                    .navigationTitle(AppStrings.localized("editor.symbol.title"))
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(AppStrings.done) {
-                                isPickerPresented = false
-                            }
-                        }
-                    }
-            }
-            .presentationDetents([.large])
+        NavigationLink {
+            picker
+                .navigationTitle(AppStrings.localized("editor.symbol.title"))
+                .navigationBarTitleDisplayMode(.inline)
+        } label: {
+            pickerLabel
         }
+        .accessibilityLabel(AppStrings.localized("editor.symbol.title"))
+        .accessibilityValue(TaskColorPalette.accessibilityName(for: colorHex))
+        .accessibilityIdentifier("symbol.picker.open")
         #endif
+    }
+
+    private var pickerLabel: some View {
+        HStack(spacing: 8) {
+            Image(systemName: ChecklistVisualSanitizer.sanitizedIcon(symbolName))
+                .foregroundStyle(Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .blue)
+            if showsTitle {
+                Text(.app(titleKey))
+            }
+        }
     }
 
     private var picker: some View {
@@ -124,6 +127,7 @@ struct SymbolAndColorPicker: View {
 
             TextField(AppStrings.localized("editor.symbol.search"), text: $searchText)
                 .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("symbol.picker.search")
 
             ScrollView {
                 Group {
@@ -155,6 +159,7 @@ struct SymbolAndColorPicker: View {
                                 )
                             )
                             .accessibilityAddTraits(symbolName == symbol ? .isSelected : [])
+                            .accessibilityIdentifier("symbol.picker.symbol.\(symbol)")
                         }
                     }
                 }
@@ -200,6 +205,7 @@ struct SymbolAndColorPicker: View {
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("symbol.picker.view")
         .onChange(of: searchText, initial: true) { _, query in
             updateFilteredSymbols(query: query)
         }

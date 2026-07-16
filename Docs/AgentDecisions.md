@@ -851,6 +851,18 @@
 
 验证：12 项纯策略测试覆盖 exclusive/parallel、reuse/replaceAll、同任务重复段、四种输入排列、同刻 UUID tie-break、精确 segment 不回退、task stop all、current latest、逻辑重复输入和应用后的幂等收敛。付费签名 macOS 定向运行 12/12、0 error/0 warning；本批未启动模拟器。一次性 xcresult 见 dated Audit。
 
+## AD-067：iOS 编辑器子流程在同一个外层导航栈内推进
+
+状态：Accepted
+
+背景：任务、分类和 checklist 的符号/颜色入口位于本身已经由 sheet 承载的编辑器中。旧 iOS 实现再次打开带独立 `NavigationStack` 和 Done 按钮的 sheet，形成 sheet 叠 sheet、两套导航与一个没有提交语义的伪确认；返回外层页面时，新建任务标题的自动聚焦任务还会再次运行并重新弹出键盘。macOS 的 popover 没有这一层级问题。
+
+决策：iOS 的 `SymbolColorPickerButton` 使用 `NavigationLink`，把 `SymbolAndColorPicker` 推入 `TaskEditorPanel` 已有的外层 `NavigationStack`；macOS 继续使用轻量 popover。符号和颜色仍通过 binding 即时更新编辑草稿，子页面的 Back 只负责导航，不表示保存或提交；唯一持久提交和取消边界仍是外层编辑器的 Save/Cancel。新建任务标题只在本次编辑会话首次出现时自动聚焦，键盘支持 Done 提交与交互式滚动收起，页面从子流程返回时不得再次抢占焦点。
+
+后果：iPhone 不再叠加 modal、重复导航标题或显示无意义 Done；用户可以选择符号后返回继续填写同一草稿，最终仍能整体保存或取消。以后在 sheet 编辑器中增加父任务、分类、日期等多步子流程时，应优先复用同一个导航栈；只有独立、可单独取消且有明确事务边界的任务才新开 sheet。macOS 小型选择器继续遵循 popover 习惯。
+
+验证：源码合同固定 iOS push、macOS popover 和不存在内层 sheet/Done；付费签名 macOS `TaskUIContractTests` 34/34、0 error/0 warning。正常字号 iPhone 17 Pro / iOS 27 UI 回归完成“新建任务 → 输入草稿 → 搜索并选择 calendar → Back”，确认 sheet 数不增加、草稿和选择保留、返回后键盘不重弹，1/1、0 warning。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保持 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 development APS、CloudKit 和 App Group。一次性证据与模拟器清理记录见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

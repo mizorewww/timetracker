@@ -8,13 +8,19 @@ struct TaskInfoEditorSection: View {
     let parentCandidates: [TaskNode]
     @FocusState private var isTitleFocused: Bool
     @State private var hasEditedTitle = false
+    @State private var hasRequestedInitialTitleFocus = false
 
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 6) {
                 TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
                     .focused($isTitleFocused)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        isTitleFocused = false
+                    }
                     .accessibilityHint(visibleTitleError?.localizedDescription ?? "")
+                    .accessibilityIdentifier("task.editor.title.field")
                 if let visibleTitleError {
                     TaskEditorInlineValidationMessage(
                         error: visibleTitleError,
@@ -76,7 +82,9 @@ struct TaskInfoEditorSection: View {
             .foregroundStyle(.secondary)
         }
         .task {
-            guard draft.taskID == nil else { return }
+            guard draft.taskID == nil,
+                  hasRequestedInitialTitleFocus == false else { return }
+            hasRequestedInitialTitleFocus = true
             isTitleFocused = true
         }
         .onChange(of: draft.title) {

@@ -219,6 +219,66 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskEditorSymbolPickerPushPreservesTheOuterDraft() throws {
+        #if os(macOS)
+        throw XCTSkip("The pushed symbol picker is an iPhone navigation flow.")
+        #else
+        let app = launchApp()
+
+        XCTAssertTrue(homeIsReady(in: app))
+        openSection("Tasks", tabIdentifier: "phone.tab.tasks", sidebarIdentifier: "sidebar.Tasks", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 8))
+        let addTaskMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addTaskMenu.waitForExistence(timeout: 3) && addTaskMenu.isHittable)
+        activate(addTaskMenu)
+
+        let addRootTask = app.descendants(matching: .any)["tasks.addRoot"].firstMatch
+        XCTAssertTrue(addRootTask.waitForExistence(timeout: 3) && addRootTask.isHittable)
+        activate(addRootTask)
+
+        let editor = app.descendants(matching: .any)["task.editor"].firstMatch
+        let titleField = app.descendants(matching: .any)["task.editor.title.field"].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(titleField.waitForExistence(timeout: 3) && titleField.isHittable)
+        let editorSheetCount = app.sheets.count
+
+        let draftTitle = "Navigation draft"
+        titleField.typeText(draftTitle)
+        titleField.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertFalse(app.keyboards.firstMatch.waitForExistence(timeout: 1))
+
+        let symbolColor = app.buttons["symbol.picker.open"].firstMatch
+        scrollUntilHittable(symbolColor, direction: .up, in: app)
+        XCTAssertTrue(symbolColor.waitForExistence(timeout: 3) && symbolColor.isHittable)
+        activate(symbolColor)
+
+        let picker = app.descendants(matching: .any)["symbol.picker.view"].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.sheets.count, editorSheetCount)
+
+        let searchField = app.textFields["Search symbol names"].firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 3) && searchField.isHittable)
+        searchField.tap()
+        searchField.typeText("calendar")
+
+        let calendar = app.buttons["Symbol calendar"].firstMatch
+        XCTAssertTrue(calendar.waitForExistence(timeout: 3) && calendar.isHittable)
+        activate(calendar)
+        try capture("iphone-task-symbol-picker-pushed", app: app)
+
+        let back = app.navigationBars.buttons["New Task"].firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 3) && back.isHittable)
+        activate(back)
+
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        XCTAssertEqual(titleField.value as? String, draftTitle)
+        XCTAssertFalse(picker.exists)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        try capture("iphone-task-editor-symbol-return", app: app)
+        #endif
+    }
+
+    @MainActor
     func testFocusAdaptiveScreenshots() throws {
         #if os(macOS)
         throw XCTSkip("Focus adaptive screenshots require an iOS simulator.")

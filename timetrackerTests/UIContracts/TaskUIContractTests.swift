@@ -294,6 +294,17 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func symbolColorPickerPushesWithinIOSEditorsInsteadOfStackingSheets() throws {
+        let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
+
+        #expect(symbolPicker.contains("NavigationLink {"))
+        #expect(symbolPicker.contains(".navigationTitle(AppStrings.localized(\"editor.symbol.title\"))"))
+        #expect(symbolPicker.contains(".popover(isPresented: $isPickerPresented)"))
+        #expect(symbolPicker.contains(".sheet(isPresented: $isPickerPresented)") == false)
+        #expect(symbolPicker.contains("Button(AppStrings.done)") == false)
+    }
+
+    @Test
     func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
         let tasksSource = try taskManagementFeatureSource()
         let sharedSource = try [

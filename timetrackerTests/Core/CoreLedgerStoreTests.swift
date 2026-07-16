@@ -188,6 +188,56 @@ struct CoreLedgerStoreTests {
     }
 
     @Test @MainActor
+    func extremeHistoricalSegmentUsesOverflowIndexWithoutLosingQueryResults() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(
+            calendar.date(from: DateComponents(year: 1900, month: 1, day: 1))
+        )
+        let end = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 1))
+        )
+        let queryDay = try #require(
+            calendar.date(from: DateComponents(year: 2025, month: 6, day: 1))
+        )
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "legacy",
+            startedAt: start
+        )
+        session.endedAt = end
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "legacy",
+            startedAt: start,
+            endedAt: end
+        )
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSessions = [session]
+        repository.fullSegments = [segment]
+        var store = LedgerStore()
+
+        try store.refreshHistory(repository: repository, now: end, calendar: calendar)
+
+        #expect(store.segmentIDsByDay.isEmpty)
+        #expect(store.longSpanSegmentIDs == [segment.id])
+        let day = DateInterval(
+            start: queryDay,
+            end: try #require(calendar.date(byAdding: .day, value: 1, to: queryDay))
+        )
+        #expect(store.segments(overlapping: day, now: end).map(\.id) == [segment.id])
+        let wholeHistory = DateInterval(
+            start: start,
+            end: try #require(calendar.date(byAdding: .day, value: 1, to: end))
+        )
+        #expect(store.segments(overlapping: wholeHistory, now: end).map(\.id) == [segment.id])
+    }
+
+    @Test @MainActor
     func historicalCutoffDoesNotExpandIndexedQueryToTheWholeLedger() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))

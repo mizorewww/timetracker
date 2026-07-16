@@ -12,6 +12,7 @@ struct LedgerStore {
     var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
     var segmentArrayIndexByID: [UUID: Int] = [:]
     var segmentIDsByDay: [Date: Set<UUID>] = [:]
+    var longSpanSegmentIDs: Set<UUID> = []
     var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
     var segmentIDsBySessionID: [UUID: Set<UUID>] = [:]
     var activeSegmentIDs: Set<UUID> = []

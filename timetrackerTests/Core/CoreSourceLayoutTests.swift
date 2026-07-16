@@ -232,6 +232,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift",
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
@@ -564,6 +565,7 @@ struct CoreSourceLayoutTests {
         let analyticsURL = root.appending(path: "timetracker/Features/Analytics")
         let focusedFiles = [
             "AnalyticsViews.swift",
+            "AnalyticsHomeContent.swift",
             "AnalyticsCategoryDetailView.swift",
             "AnalyticsCategory.swift",
             "AnalyticsOverviewRows.swift",

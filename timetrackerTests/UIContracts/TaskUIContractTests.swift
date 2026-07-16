@@ -450,6 +450,7 @@ struct TaskUIContractTests {
     func analyticsPageSurfacesDecisionMetricsAndQualitySections() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
@@ -489,6 +490,7 @@ struct TaskUIContractTests {
     func analyticsMakesSelectedPeriodAndMetricMeaningsExplicit() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
@@ -560,6 +562,7 @@ struct TaskUIContractTests {
     func analyticsUsesAccessibilitySpecificRowsAndPeriodControls() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
             "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
@@ -723,7 +726,12 @@ struct TaskUIContractTests {
 
     @Test
     func analyticsHomeExposesPeriodNavigationAndChartsExposeReadableFallbacks() throws {
-        let analytics = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
+        let analytics = try [
+            "timetracker/Features/Analytics/AnalyticsViews.swift",
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let distribution = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
         let trends = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift")
         let timeline = try sourceText("timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift")

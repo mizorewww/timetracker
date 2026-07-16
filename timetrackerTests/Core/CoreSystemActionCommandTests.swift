@@ -22,6 +22,7 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("context.insert") == false)
         #expect(source.contains("allowParallelTimers: true") == false)
         #expect(source.contains("allowParallelTimersPreference(context: context)"))
+        #expect(source.contains("source: .shortcut"))
         #expect(source.contains("timetrackerApp.applicationModelContainer"))
         #expect(source.components(separatedBy: "CommittedMutationSnapshotRecorder()").count - 1 == 3)
         #expect(source.components(separatedBy: "CommittedMutationSurfaceSynchronizer()").count - 1 == 3)
@@ -58,6 +59,35 @@ struct CoreSystemActionCommandTests {
         #expect(segments.map(\.taskID) == [task.id])
         #expect(segments.map(\.source) == [.timer])
         #expect(segments.first?.endedAt == nil)
+    }
+
+    @Test @MainActor
+    func shortcutTimerSourceIsPersistedByTheSerializedCommand() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Shortcut source",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        let outcome = try makeTestSystemActionCommandHandler().startTimerMutation(
+            taskID: task.id,
+            allowParallelTimers: true,
+            source: .shortcut,
+            container: context.container
+        )
+
+        let freshRepository = SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "test"
+        )
+        let segment = try #require(try freshRepository.activeSegments().first)
+        #expect(segment.id == outcome.subjectSegmentID)
+        #expect(segment.source == .shortcut)
     }
 
     @Test @MainActor

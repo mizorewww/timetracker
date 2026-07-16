@@ -42,6 +42,7 @@ struct StartTimerIntent: AppIntent {
         let outcome = try commandHandler.startTimerMutation(
             taskID: taskID,
             allowParallelTimers: try commandHandler.allowParallelTimersPreference(context: context),
+            source: .shortcut,
             container: SystemActionContextProvider.container
         )
         let events = outcome.events

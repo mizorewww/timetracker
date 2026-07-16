@@ -87,4 +87,19 @@ struct SettingsSyncSafetyContractTests {
             #expect(source.contains("\"sync.forceUpload.conflictResolved\""), "Missing upload result in \(file)")
         }
     }
+
+    @Test
+    func databaseOptimizationFailureStaysInTheCurrentSettingsScene() throws {
+        let maintenanceSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+MaintenanceCommands.swift"
+        )
+        let confirmationSource = try sourceText(
+            "timetracker/Features/Settings/SettingsDestructiveConfirmation.swift"
+        )
+
+        #expect(maintenanceSource.contains("func optimizeDatabase() throws -> Int"))
+        #expect(maintenanceSource.contains("try performThrowingMutation"))
+        #expect(confirmationSource.contains("let removedCount = try store.optimizeDatabase()"))
+        #expect(confirmationSource.contains("databaseOptimizationMessage = error.localizedDescription"))
+    }
 }

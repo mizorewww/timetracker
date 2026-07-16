@@ -77,13 +77,11 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func optimizeDatabase() -> Int {
-        var removedCount = 0
-        let didOptimize = perform {
+    func optimizeDatabase() throws -> Int {
+        try performThrowingMutation {
             guard let modelContext else { throw StoreError.notConfigured }
-            removedCount = try databaseMaintenanceService.optimizeDatabase(context: modelContext)
+            return try databaseMaintenanceService.optimizeDatabase(context: modelContext)
         }
-        return didOptimize ? removedCount : 0
     }
 
     func jsonExport() -> String? {

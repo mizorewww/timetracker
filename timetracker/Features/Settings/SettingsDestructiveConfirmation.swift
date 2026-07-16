@@ -63,10 +63,14 @@ extension SettingsView {
         case .resetAllData:
             store.clearAllData()
         case .optimizeDatabase:
-            let removedCount = store.optimizeDatabase()
-            databaseOptimizationMessage = removedCount == 0
-                ? AppStrings.localized("dialog.optimize.none")
-                : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
+            do {
+                let removedCount = try store.optimizeDatabase()
+                databaseOptimizationMessage = removedCount == 0
+                    ? AppStrings.localized("dialog.optimize.none")
+                    : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
+            } catch {
+                databaseOptimizationMessage = error.localizedDescription
+            }
         case let .replaceCloud(expectedConflictID):
             forceUploadLocalData(expectedConflictID: expectedConflictID)
         case let .replaceDevice(expectedConflictID):

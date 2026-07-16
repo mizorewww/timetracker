@@ -122,6 +122,18 @@ extension TimeTrackerStore {
         return true
     }
 
+    /// Runs a committed mutation while preserving its original failure for a
+    /// scene-local caller to present. Use this for workflows whose UI must not
+    /// translate failure into a successful zero/empty result.
+    func performThrowingMutation<Outcome>(
+        events: Set<StoreDomainEvent> = [.fullSync],
+        _ action: () throws -> Outcome
+    ) throws -> Outcome {
+        let outcome = try executeAuthorizedMutation(action)
+        finishCommittedMutation(events: events)
+        return outcome
+    }
+
     /// Resolves mutation events from the committed command outcome so stale
     /// facade caches cannot over- or under-report the domains that changed.
     /// Returning `nil` is a canonical no-op and skips refresh and sync recording.

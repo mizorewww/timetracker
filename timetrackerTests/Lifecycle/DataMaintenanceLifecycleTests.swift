@@ -115,7 +115,7 @@ struct DataMaintenanceLifecycleTests {
         store.configureIfNeeded(context: context)
         #expect(store.allSegments.count == 1)
 
-        let removedCount = store.optimizeDatabase()
+        let removedCount = try store.optimizeDatabase()
 
         #expect(removedCount == 0)
         #expect(try timeRepository.allSegments().contains { $0.id == segment.id })
@@ -145,11 +145,24 @@ struct DataMaintenanceLifecycleTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        let removedCount = store.optimizeDatabase()
+        let removedCount = try store.optimizeDatabase()
 
         #expect(removedCount == 0)
         #expect(try context.fetch(FetchDescriptor<TimeSegment>()).contains { $0.id == segment.id })
         #expect(try context.fetch(FetchDescriptor<TimeSession>()).contains { $0.id == session.id })
+    }
+
+    @Test @MainActor
+    func optimizeDatabasePropagatesFailureWithoutPublishingGlobalError() {
+        let store = makeTestStore()
+
+        do {
+            _ = try store.optimizeDatabase()
+            Issue.record("An unconfigured store must not report a successful zero-row cleanup")
+        } catch {
+            #expect(error.localizedDescription.isEmpty == false)
+            #expect(store.errorMessage == nil)
+        }
     }
 
     @Test @MainActor

@@ -387,6 +387,7 @@ Today UI 测试以 `home.view` 判断根页面就绪，再滚动查找具体操�
 
 - 不要通过 `CODE_SIGNING_ALLOWED=NO`、`CODE_SIGNING_REQUIRED=NO` 或清空 `DEVELOPMENT_TEAM` 把签名错误隐藏成构建成功。
 - Simulator 日志中的 `Sign to Run Locally` 是正常本机模拟器步骤；generic/device/Release 构建仍必须验证 Apple Development identity、team、profile 和 entitlements。
+- APS 的规范签名键是 `aps-environment`。不要写成 `com.apple.developer.aps-environment`：Automatic Signing 可能仍成功构建，却把未知键从生成 `.xcent` 与最终签名中静默移除。能力验收必须对比源 entitlement、embedded profile、`.xcent` 和 `codesign -d --entitlements` 的实际结果。
 - CLI 优先使用仓库 scheme 和自动签名；只有 CLI 无法表达的 Xcode 账户/profile 操作才需要 Xcode UI。
 - 模拟器可以验证布局、导航和大部分领域交互；不能证明 App Group、CloudKit 账户、Watch 往返、Live Activity 系统限制或发行 profile 在真机有效。
 

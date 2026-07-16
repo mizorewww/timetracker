@@ -1,32 +1,59 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
-    func toggleChecklistItem(_ item: ChecklistItem) {
-        perform(event: .checklistChanged(taskID: item.taskID, affectedAncestorIDs: affectedAncestorIDs(for: item.taskID))) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try checklistCommandHandler.toggle(item, context: modelContext)
+    @discardableResult
+    func toggleChecklistItem(_ item: ChecklistItem) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
-    }
-
-    func addChecklistItem(taskID: UUID, title: String) {
-        perform(event: .checklistChanged(taskID: taskID, affectedAncestorIDs: affectedAncestorIDs(for: taskID))) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try checklistCommandHandler.add(
-                taskID: taskID,
-                title: title,
-                existingItems: checklistItems(for: taskID),
-                context: modelContext
+        do {
+            let outcome = try StoreScopedChecklistCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).setCompletion(
+                baseline: ChecklistMutationBaseline(item: item),
+                isCompleted: !item.isCompleted
             )
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            handleStoreScopedChecklistError(error)
+            return false
         }
     }
 
-    func reorderChecklistItems(taskID: UUID, sourceOffsets: IndexSet, destination: Int) {
+    @discardableResult
+    func addChecklistItem(taskID: UUID, title: String) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try StoreScopedChecklistCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).add(taskID: taskID, title: title)
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            handleStoreScopedChecklistError(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func reorderChecklistItems(taskID: UUID, sourceOffsets: IndexSet, destination: Int) -> Bool {
         let orderedItems = checklistItems(for: taskID).sorted { lhs, rhs in
             if lhs.isCompleted != rhs.isCompleted {
                 return !lhs.isCompleted
             }
             if lhs.sortOrder == rhs.sortOrder {
-                return lhs.createdAt < rhs.createdAt
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.id.uuidString < rhs.id.uuidString
             }
             return lhs.sortOrder < rhs.sortOrder
         }
@@ -35,16 +62,44 @@ extension TimeTrackerStore {
             sourceOffsets: sourceOffsets,
             destination: destination
         ) else {
-            return
+            return false
         }
 
-        perform(event: .checklistChanged(taskID: taskID, affectedAncestorIDs: affectedAncestorIDs(for: taskID))) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try checklistCommandHandler.reorder(
-                taskID: taskID,
-                orderedItemIDs: orderedIDs,
-                context: modelContext
-            )
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
+        do {
+            let outcome = try StoreScopedChecklistCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).reorder(
+                baseline: ChecklistOrderMutationBaseline(
+                    taskID: taskID,
+                    items: orderedItems
+                ),
+                orderedItemIDs: orderedIDs
+            )
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            handleStoreScopedChecklistError(error)
+            return false
+        }
+    }
+
+    private func handleStoreScopedChecklistError(_ error: Error) {
+        if error is StoreScopedChecklistMutationError {
+            do {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks, .checklist]))
+            } catch {
+                errorMessage = String(
+                    format: AppStrings.localized("error.savedRefreshFailed"),
+                    error.localizedDescription
+                )
+                return
+            }
+        }
+        errorMessage = error.localizedDescription
     }
 }

@@ -692,6 +692,8 @@
 "checklist.draft.error.titleRequiredFormat" = "清单第 %d 项需要填写标题。";
 "checklist.draft.error.controlCharacterFormat" = "清单第 %d 项的%@包含不支持的字符。";
 "checklist.draft.error.tooLongFormat" = "清单第 %d 项的%@内容过长，请缩短后重试。";
+"checklist.error.unavailable" = "此清单项已不可用。";
+"checklist.error.changed" = "此清单已在其他位置发生变化。请查看最新版本后重试。";
 "persistence.field.taskName" = "任务名称";
 "persistence.field.categoryName" = "分类名称";
 "persistence.field.notes" = "备注";

@@ -45,8 +45,25 @@ struct ChecklistCommandHandler {
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
-        item.isCompleted.toggle()
-        item.completedAt = item.isCompleted ? now : nil
+        try setCompletion(
+            item,
+            isCompleted: !item.isCompleted,
+            context: context,
+            now: now,
+            deviceID: deviceID
+        )
+    }
+
+    func setCompletion(
+        _ item: ChecklistItem,
+        isCompleted: Bool,
+        context: ModelContext,
+        now: Date = Date(),
+        deviceID: String = DeviceIdentity.current
+    ) throws {
+        guard item.isCompleted != isCompleted else { return }
+        item.isCompleted = isCompleted
+        item.completedAt = isCompleted ? now : nil
         item.updatedAt = now
         item.deviceID = deviceID
         item.clientMutationID = UUID()

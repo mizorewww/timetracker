@@ -89,6 +89,8 @@ No forecastable source exists:
 
 Mutation refresh is incremental after initial/full load. `LedgerStore` replaces only segments overlapping invalidated ranges and related sessions; `ChecklistStore` replaces affected task buckets; `RollupIncrementalIndex` applies segment before/after deltas and recalculates direct tasks plus ancestors. Active and future-ended segments are time-sensitive: forward clock movement reevaluates that bounded set, while a backward wall-clock correction reevaluates all ledger rows because a previously completed row can cross the reference boundary again. Full-history worked seconds remain exact, while only the 90-day pace buckets are bounded. `CorePerformanceBudgetTests` includes a 50,000-segment single-record mutation and cached frequent-task ranking budget.
 
+Checklist quick add, completion, and reorder commands share the store-scoped mutation lock with task-editor replacement and task lifecycle writes. The coordinator creates a fresh context after acquiring the lock, rejects stale item/order mutation baselines, validates the canonical task before inserting related rows, and derives refresh ancestors from the fresh hierarchy. This prevents stale scenes from resurrecting checklist tombstones, creating checklist/visual orphans, overwriting newer completion state, or invalidating only an obsolete parent chain.
+
 `AnalyticsStore` caches overview and task snapshots by range, true calendar period start, and optional minute live bucket. A live bucket exists only when an active segment overlaps the selected range, so historical views do not recompute for clock ticks. Ledger events invalidate snapshots and only intersecting day buckets; every cache remains disposable and reconstructable from ledger facts.
 
 ## Deletion Rules

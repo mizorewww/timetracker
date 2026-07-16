@@ -1037,6 +1037,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：恢复 gate、activity、conflict、state-write、identity、persistence safety 与 test-host isolation 套件覆盖同 store setup→import、跨 service 回执持久化、错误 kind/epoch/store/顺序、未完成/完整崩溃重启、初始空云端、自动比较冲突、显式赢家只恢复一次、互斥/矛盾方向、陈旧 scene 命令拒绝、恢复期无迁移/seed/账户副作用，以及多 scene 完成广播。付费签名、当前 Team 与资源清理要求继续遵守 AGENTS；一次性执行证据只写 dated Audit。
 
+## AD-082：Checklist 快捷命令与任务编辑器共享 store-scoped 事务域
+
+状态：Accepted
+
+背景：Task editor 保存完整 checklist 时已经在 store lock 内校验 task/checklist/visual baseline，但详情页 toggle、quick add 与 reorder 仍写 scene 持有的 SwiftData model 和缓存排序。兄弟 scene 删除 task/item、修改完成状态、移动父级或保存任务草稿后，旧窗口可以创建 item/visual 孤儿、覆盖或复活 tombstone、产生重复 sortOrder，并只失效旧父链。
+
+决策：新增、显式完成状态和重排统一进入 `StoreScopedChecklistCommandCoordinator`，复用 AD-069 的 `StoreScopedTimerMutationTransaction`。取得锁后才创建 fresh context；新增先验证 canonical task 并复用 `ChecklistDraftPersistencePolicy`，再从 fresh visible items 计算 sortOrder；完成状态以 item ID + task ID + `clientMutationID` 为 baseline；重排以 task ID + 全部 visible item mutation map 为 baseline，并要求 ordered IDs 与 canonical 集合精确相等。成功 outcome 从 fresh task hierarchy 计算 ancestors；stale/unavailable 只刷新 read model 并报告明确错误，不记录本机同步 mutation。所有排序以完成状态、sortOrder、createdAt、UUID 完整决胜。
+
+后果：Task editor 整表替换与详情页快捷操作不再互相旁路；旧 scene 只能先查看最新状态再重试。新增 Checklist writer 必须加入同一事务域；异步 visual suggestion 仍是后续需要单独协调的相邻写路径，不能因本决策被误报为已覆盖。
+
+验证：跨 scene 套件覆盖较新完成状态不可被旧 toggle 覆盖、删除 item 不复活、删除 task 后不产生 item/visual、连续 scene 新增排序唯一、父级移动后使用新 ancestor、快捷新增与 editor 共用持久化限制、旧重排不覆盖较新 mutation；Task draft、forecast、localization 与 source-layout 回归必须继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

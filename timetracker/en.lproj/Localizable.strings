@@ -692,6 +692,8 @@
 "checklist.draft.error.titleRequiredFormat" = "Checklist item %d needs a title.";
 "checklist.draft.error.controlCharacterFormat" = "Checklist item %d contains unsupported characters in its %@.";
 "checklist.draft.error.tooLongFormat" = "Checklist item %d has too much text in its %@. Shorten it and try again.";
+"checklist.error.unavailable" = "This checklist item is no longer available.";
+"checklist.error.changed" = "This checklist changed elsewhere. Review the latest version, then try again.";
 "persistence.field.taskName" = "task name";
 "persistence.field.categoryName" = "category name";
 "persistence.field.notes" = "notes";

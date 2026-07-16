@@ -692,6 +692,8 @@
 "checklist.draft.error.titleRequiredFormat" = "清單第 %d 項需要填寫標題。";
 "checklist.draft.error.controlCharacterFormat" = "清單第 %d 項的%@包含不支援的字元。";
 "checklist.draft.error.tooLongFormat" = "清單第 %d 項的%@內容過長，請縮短後再試。";
+"checklist.error.unavailable" = "此清單項目已無法使用。";
+"checklist.error.changed" = "此清單已在其他位置發生變更。請查看最新版本後重試。";
 "persistence.field.taskName" = "任務名稱";
 "persistence.field.categoryName" = "分類名稱";
 "persistence.field.notes" = "備註";

@@ -875,6 +875,18 @@
 
 验证：纯值与索引测试覆盖根/子任务、同名任务、标题内 `/`、三个 context 和无效视觉 fallback；源码合同固定 Quick Start 不调用 `store.path(for:)`、身份与动作 glyph 分离。付费签名 macOS 定向套件 22/22、0 warning；正常字号 iPhone 交互与截图 1/1、0 warning，确认根/子任务、独立动作 glyph 和编辑器层级。generic iOS 自动签名构建严格验证全部嵌入 bundle 与主 App entitlement。macOS UI runner 两次因系统认证正在运行而在测试初始化前被系统取消，不计作 UI 通过，也不继续重试；一次性设备、截图、失败发现和 xcresult 只记录在 dated Audit。
 
+## AD-069：计时事务先按持久 store 串行化，再创建 fresh context
+
+状态：Accepted
+
+背景：纯值 `TimerAdmissionPolicy` 已冻结 start/stop 语义，但 UI facade、SystemAction、Watch、App Intent 和 Pomodoro 仍可在不同 `ModelContext` 甚至不同进程中各自执行“读取 active → 判断 → 写入”。只在现有 context 外套进程内 actor 无法覆盖扩展进程；先创建 context 再等待文件锁又可能把锁前的旧 snapshot 带入临界区。持久 store 还可能通过带符号链接的不同路径被引用，若锁 identity 不先 canonicalize，会把同一数据误当作两个 store。
+
+决策：`TimerStoreScope` 为每个计时 store 提供稳定 identity：持久 store 解析已存在祖先的符号链接并保留尚未创建的尾部组件，内存 store 由 container owner 在整个生命周期复用显式 UUID。`StoreScopedTimerMutationLock` 从 scope 派生同目录 `.timer-mutations.lock`，复用已经审计的 `PathFileLockRegistry` 和 `PathProcessFileLock`，不再实现第二套 `flock`。`StoreScopedTimerMutationTransaction` 的固定顺序是“取得 store lock → 创建 fresh `ModelContext` → 关闭 autosave → 执行一次 `performAtomicMutation`”；operation 抛错或最终保存失败时回滚，离开作用域释放锁。
+
+后果：未来 coordinator 可以在单一临界区内重新读取 canonical active facts、计算 admission plan 并提交，且不同 store 不互相阻塞。锁内不得做网络、UI、系统 surface 刷新或返回依赖 context 生命周期的可变 model；提交后的 facade projection 与扩展通知在锁外进行。该提交只提供底座，没有迁移任何生产 writer，因此竞态仍然存在；后续接线必须一次覆盖所有 active-segment writer，禁止只保护某个 UI 入口后宣布完成。
+
+验证：6 项付费签名 macOS 测试覆盖持久路径别名、内存 lifetime identity、同 store 串行、不同 store 并行、抛错释放、锁内 fresh context、不同 context 实例，以及一次提交与抛错回滚；结果 6/6、0 error/0 warning。合并工作树 generic iOS 设备构建继续通过严格签名与 entitlement 审计；本批未创建模拟器。一次性 xcresult 见 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

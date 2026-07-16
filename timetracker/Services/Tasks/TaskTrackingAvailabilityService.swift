@@ -5,7 +5,7 @@ struct TaskWorkEligibility: Equatable {
     let trackableTaskIDs: Set<UUID>
 }
 
-enum TaskParentChangeBlocker: Equatable {
+nonisolated enum TaskParentChangeBlocker: Equatable {
     case completed
     case archived
     case deleted

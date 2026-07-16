@@ -84,7 +84,7 @@ struct AppSceneFeedbackContractTests {
             "timetracker/Features/Settings/SettingsViewActions.swift"
         )
         let lifecycle = try sourceText(
-            "timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift"
+            "timetracker/Stores/Facade/TimeTrackerStore+RefreshLifecycle.swift"
         )
 
         #expect(actions.contains("try store.resolveSyncConflict("))

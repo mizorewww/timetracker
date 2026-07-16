@@ -978,7 +978,9 @@ struct CoreSourceLayoutTests {
 
     @Test
     func commandErrorsUseTypedFacadeFailures() throws {
-        let lifecycle = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift")
+        let lifecycle = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+RepositoryRequirements.swift"
+        )
         let ledger = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+LedgerCommands.swift")
         let pomodoro = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+PomodoroCommands.swift")
         let inbox = try [

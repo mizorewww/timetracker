@@ -290,7 +290,9 @@ struct CoreSyncActivityOutcomeTests {
         #expect(batch.requiresCloudImportHandling)
         #expect(batch.hasSuccessfulCloudImport)
 
-        let source = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift")
+        let source = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncRefreshPipeline.swift"
+        )
         #expect(source.contains("guard scheduledSyncRefreshTask == nil else { return }"))
         #expect(source.contains("scheduledSyncRefreshTask?.cancel()") == false)
     }

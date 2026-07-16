@@ -52,7 +52,7 @@ struct SettingsSyncSafetyContractTests {
             "timetracker/Features/Settings/SettingsViews.swift"
         )
         let lifecycleSource = try sourceText(
-            "timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift"
+            "timetracker/Stores/Facade/TimeTrackerStore+RefreshLifecycle.swift"
         )
 
         #expect(routineSource.contains("settings.checkSync"))
@@ -90,7 +90,7 @@ struct SettingsSyncSafetyContractTests {
             "timetracker/Features/Settings/SettingsViewActions.swift"
         )
         let lifecycleSource = try sourceText(
-            "timetracker/Stores/Facade/TimeTrackerStore+Lifecycle.swift"
+            "timetracker/Stores/Facade/TimeTrackerStore+RefreshLifecycle.swift"
         )
 
         #expect(recoverySource.contains("summary: pendingConflict.localSummary"))
@@ -164,7 +164,9 @@ struct SettingsSyncSafetyContractTests {
     func cloudActivityIsRecordedOnlyAfterConflictProcessingAndFinalRefresh() throws {
         let observerSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift"
-        )
+        ) + (try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncRefreshPipeline.swift"
+        ))
         let feedbackSource = try sourceText(
             "timetracker/Models/SyncFeedbackModels.swift"
         )
@@ -211,7 +213,9 @@ struct SettingsSyncSafetyContractTests {
         )
         let observerSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift"
-        )
+        ) + (try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncRefreshPipeline.swift"
+        ))
         let refreshModelSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+SyncRefreshModels.swift"
         )

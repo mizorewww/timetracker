@@ -782,6 +782,30 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
+    func durableLocalFileInfrastructureStaysSplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let integrationURL = root.appending(path: "timetracker/Services/SystemIntegration")
+        let focusedFiles = [
+            "PathFileLock.swift",
+            "DurableLocalFile.swift",
+            "DurableLocalFile+Paths.swift",
+            "DurableLocalFile+Writing.swift",
+            "DurableLocalFile+Synchronization.swift",
+            "DurableLocalFile+Quarantine.swift",
+            "DurableLocalFile+QuarantinePruning.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = integrationURL.appending(path: fileName)
+            #expect(FileManager.default.fileExists(atPath: file.path))
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 160, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
     func forecastFilesStaySplitByResponsibility() throws {
         let root = try projectRootURL()
         let forecastingURL = root.appending(path: "timetracker/Services/Forecasting")

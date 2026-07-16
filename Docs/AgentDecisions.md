@@ -767,6 +767,18 @@
 
 验证：首轮 UI 失败保留为缺陷发现证据，不计通过。修复后 iPhone 17 Pro / iOS 27 正常字号 UI 回归分别打开“替换 iCloud”和“替换本机”确认，核对方向性按钮和说明，随后只点击系统 `PopoverDismissRegion`；1/1 通过，xcresult 为 `/tmp/timetracker-sync-confirmation-rerun3-20260716.xcresult`。Settings 安全合同与同步冲突签名回归 43/43，xcresult 为 `/tmp/timetracker-settings-confirmation-macos-20260716.xcresult`，Team `LT98S43NKA`，identity `Apple Development: ZEXUAN GAO (PX46M259V3)`。专用模拟器已删除，设备、runner 与测试进程审计为空。
 
+## AD-060：恢复关键本机文件共享耐久提交与有界隔离 primitive
+
+状态：Accepted
+
+背景：主应用、Shortcuts 与扩展将逐步共享 outbox、恢复 artifact 和小型状态文件。各自重复实现 `Data.write(.atomic)`、路径字符串锁和损坏文件改名，无法统一证明进程死亡、目录 entry 持久化、符号链接、并发隔离、文件保护与诊断保留上限；原始候选实现还曾因 Foundation 对文件系统根目录父路径的新表示进入无限祖先循环。
+
+决策：恢复关键的小型本机文件使用 `DurableLocalFile`/`PathFileLock` 作为文件系统底座，并由业务 owner 在其上提供版本、大小与语义验证。调用方为一个状态家族选择唯一、稳定且已存在的 durable root；同 root 的写入、删除和隔离共享保留锁文件。primitive 只接受普通 canonical 文件，拒绝符号链接、目录、特殊文件和锁文件本身；临时文件在发布前完成保护、backup metadata 与 full sync，再原子 rename 并同步目录。进程死亡遗留的严格命名临时文件在下一次同目录写入时有界清理。隔离目录跨 prefix 共用 8 文件、16 MiB、14 天上限，回滚失败必须暴露 canonical 和 quarantine 两个位置。
+
+后果：调用者不能把 durable root 当作随调用变化的“目标父目录”，也不能把这套 primitive 当作 JSON validator、ACID 多文件事务或敌对进程防护。发布后目录同步失败意味着新文件可能已经可见，恢复逻辑必须可重入。高频账本写入不应为了复用而逐条调用 full sync；它只服务需要进程死亡/掉电恢复语义的小型状态边界。既有私有持久化 owner 逐个迁移并各自提交，不能在一次大替换中混合数据结构、幂等策略和 CloudKit schema。
+
+验证：核心测试固定目录创建中断重放、发布前旧文件不变、崩溃临时文件回收、普通文件类型、保留锁路径、符号链接与 dangling symlink、跨 prefix 数量/字节/时间预算、超限删除、隔离回滚与回滚失败、硬链接别名互斥、写入/隔离共享 root 锁，以及每个生产文件不超过 160 行的职责合同。macOS 行为与结构套件、generic iOS 设备 SDK 自动签名构建都必须通过；iOS 构建还要保持主 App、Widget、Live Activity、Watch 的付费开发者签名及 APS、CloudKit、App Group 能力。一次性 xcresult 与路径记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

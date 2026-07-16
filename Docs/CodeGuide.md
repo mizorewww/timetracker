@@ -224,6 +224,16 @@ CloudKit 模式与纯本地模式共用业务模型，但容器和同步状态�
 - `SyncDataSnapshot+Restore.swift`、`SyncDataSnapshot+RestoreTasks.swift`、`SyncDataSnapshot+RestoreLedger.swift`、`SyncDataSnapshot+RestorePlanning.swift`、`SyncDataSnapshot+RestoreChecklist.swift` 与 `SyncDataSnapshot+RestoreInbox.swift`：预检通过后，在一个原子事务中分域恢复。
 - `SyncSnapshotRecords.swift`、`SyncSnapshotLedgerRecords.swift`、`SyncSnapshotPlanningRecords.swift`、`SyncSnapshotChecklistRecords.swift` 与 `SyncSnapshotInboxRecords.swift`：组织/任务基础和分域跨版本 Codable record DTO；它们不是第二套业务模型。
 
+通用的本机恢复文件基础设施位于 `Services/SystemIntegration/DurableLocalFile*` 与 `PathFileLock.swift`。它只负责文件系统提交，不负责 JSON schema、幂等 identity、重试状态机或业务合并：调用方必须先完成 payload 大小、版本、时间范围和语义预检。恢复关键路径必须传入同一状态家族的稳定、已存在 `durableRootURL`；兼容 overload 只适用于调用开始时最近既存祖先已经是可靠根目录的简单文件。对同一 canonical 文件混用不同 durable root 会产生不同锁，属于调用方错误。
+
+每个显式 root 使用保留的 `.TimeTrackerDurable.lock`。进程内递归锁与跨进程 `flock` 共用该 inode；写入、删除和隔离必须持有同一 root 锁，且 API 拒绝把锁文件本身当成 payload。目标只允许普通文件；符号链接、目录与特殊文件全部 fail closed，删除使用 `unlink`，不会递归删除目录。路径校验使用组件边界与 `O_NOFOLLOW_ANY`，防止词法 `..`、既存目录符号链接和 Foundation 根目录父路径表示差异把操作带出 root。该边界面向 App 自有容器内的协作进程，不是抵御能在检查与 rename 之间任意改写目录的敌对进程的完整 sandbox。
+
+写入在目标同目录创建权限为 `0600` 的随机临时文件，完整写入后先附加 iOS `completeUntilFirstUserAuthentication` 与可选 backup exclusion，再执行 `fsync`、`F_FULLFSYNC` 和原子 `rename`，最后同步父目录。发布前失败保留旧 canonical；发布后目录同步失败会明确抛错，调用方应按“新内容可能已发布”恢复。下一次同目录写入会在 root 锁内清理严格 `.TimeTrackerWrite-*.tmp` 命名的普通文件/符号链接并同步目录，因此进程死亡最多留下一个等待下次写入回收的临时文件，不会随重试无界增长。
+
+损坏文件隔离统一进入同级 `.TimeTrackerQuarantine`，整个目录而不是单个 prefix 共享上限：最多 8 个普通文件、总计 16 MiB、最长 14 天；过期、明显未来时间、超数量和超字节的条目在 root 锁内修剪并同步目录。超出单文件预算的 canonical 会被耐久删除但不保留诊断副本。隔离移动失败会回滚；若 canonical 已被其他内容占据或回滚本身失败，错误同时报告 canonical 与 quarantine 路径，调用方不得把它降级成普通 decode failure。
+
+这组 primitive 是后续 durable queue、outbox 和恢复 artifact 的共享底座；既有 `SyncConflictService` 私有状态文件仍保持自己的边界，迁移时必须在一个小任务里替换读写、故障恢复与测试，不能仅把写调用机械改名后宣称获得相同保证。
+
 `SyncConflictState.json` 的每次 read-modify-write 都在 `SyncConflictService.withExclusiveStateAccess` 内完成。进程内使用递归锁，跨主应用/Shortcuts 进程使用 POSIX advisory `lockf` 文件锁；两个进程不会用各自的旧状态副本互相覆盖。状态 JSON 原子替换，forced-upload mirror 只在权威 state 缺失/损坏隔离时恢复，并在下一次 locked load 校正。权威 state 读写上限为 128 MiB，recovery mirror 为 64 MiB。读取先用 file metadata 预检，再通过 `FileHandle.read(upToCount: limit + 1)` 抵御预检后文件增长的 TOCTOU，不做无界 `Data(contentsOf:)`。写入先编码并同时验证权威 state 与所需 mirror，只有两者都在上限内才解析目标路径、建目录或原子替换；独立 mirror rewrite 在最终写边界再次验长。大小拒绝不能改写旧的有效 state 或 mirror。损坏或超限的权威 state 会隔离并进入显式恢复；损坏或超限的 pending mirror 会隔离并安全忽略，不能阻塞主库。超限隔离直接移动文件，不把整份 JSON 载入内存。
 
 在 iOS 上，权威状态文件、pending forced-upload 恢复镜像和腐损状态隔离文件写入后都设置 `FileProtectionType.completeUntilFirstUserAuthentication`。这些文件在设备本次启动首次解锁前不可读，首次解锁后可供后台 Shortcuts/CloudKit 流程继续使用；lock 文件不是用户快照，也不能被描述为同样的受保护数据文件。macOS 不套用 iOS Data Protection 属性。

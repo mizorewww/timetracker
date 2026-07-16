@@ -23,6 +23,8 @@ struct SettingsSyncSafetyContractTests {
         #expect(routineSource.contains("operationMessage") == false)
         #expect(recoverySource.contains("settings.syncRecovery.operationMessage"))
         #expect(recoverySource.contains("struct SyncRecoverySettingsSection"))
+        #expect(recoverySource.contains("DisclosureGroup(isExpanded: $isManualRecoveryExpanded)"))
+        #expect(recoverySource.contains("settings.syncRecovery.showActions"))
         #expect(
             recoverySource.components(separatedBy: "Button(role: .destructive").count == 3
         )
@@ -97,6 +99,18 @@ struct SettingsSyncSafetyContractTests {
         #expect(recoverySource.contains("summary: pendingConflict.cloudSummary"))
         #expect(recoverySource.contains("settings.syncRecovery.replaceCloud"))
         #expect(recoverySource.contains("settings.syncRecovery.replaceDevice"))
+        #expect(recoverySource.contains("if let pendingConflict"))
+        let localSummary = try #require(
+            recoverySource.range(of: "summary: pendingConflict.localSummary")
+        )
+        let cloudSummary = try #require(
+            recoverySource.range(of: "summary: pendingConflict.cloudSummary")
+        )
+        let directActions = try #require(
+            recoverySource.range(of: "                recoveryActions")
+        )
+        #expect(localSummary.lowerBound < cloudSummary.lowerBound)
+        #expect(cloudSummary.lowerBound < directActions.lowerBound)
         #expect(recoverySource.contains("tint: .green") == false)
         #expect(recoverySource.contains("tint: .cyan") == false)
         #expect(confirmationSource.contains("dialog.forceUpload.confirm"))
@@ -127,6 +141,7 @@ struct SettingsSyncSafetyContractTests {
         for file in localeFiles {
             let source = try sourceText(file)
             #expect(source.contains("\"settings.syncRecovery.title\""), "Missing recovery title in \(file)")
+            #expect(source.contains("\"settings.syncRecovery.showActions\""), "Missing recovery disclosure in \(file)")
             #expect(source.contains("\"settings.syncRecovery.replaceCloud\""), "Missing upload direction in \(file)")
             #expect(source.contains("\"settings.syncRecovery.replaceDevice\""), "Missing download direction in \(file)")
             #expect(source.contains("\"dialog.forceUpload.confirm\""), "Missing upload confirmation in \(file)")

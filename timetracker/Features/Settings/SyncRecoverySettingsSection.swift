@@ -6,6 +6,7 @@ struct SyncRecoverySettingsSection: View {
     let operationMessage: String?
     let onReplaceCloud: () -> Void
     let onReplaceDevice: () -> Void
+    @State private var isManualRecoveryExpanded = false
 
     var body: some View {
         Section {
@@ -25,8 +26,19 @@ struct SyncRecoverySettingsSection: View {
                     tint: .blue
                 )
                 .accessibilityIdentifier("settings.syncRecovery.cloudSummary")
-            }
 
+                recoveryActions
+            } else {
+                DisclosureGroup(isExpanded: $isManualRecoveryExpanded) {
+                    recoveryActions
+                } label: {
+                    Label(
+                        AppStrings.localized("settings.syncRecovery.showActions"),
+                        systemImage: "lifepreserver"
+                    )
+                }
+                .accessibilityIdentifier("settings.syncRecovery.disclosure")
+            }
             if let operationMessage {
                 Label {
                     Text(operationMessage)
@@ -39,26 +51,6 @@ struct SyncRecoverySettingsSection: View {
                 }
                 .accessibilityIdentifier("settings.syncRecovery.operationMessage")
             }
-
-            Button(role: .destructive, action: onReplaceCloud) {
-                SettingsDestructiveActionLabel(
-                    title: AppStrings.localized("settings.syncRecovery.replaceCloud"),
-                    systemImage: "icloud.and.arrow.up.fill"
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isWorking)
-            .accessibilityIdentifier("settings.syncRecovery.replaceCloud")
-
-            Button(role: .destructive, action: onReplaceDevice) {
-                SettingsDestructiveActionLabel(
-                    title: AppStrings.localized("settings.syncRecovery.replaceDevice"),
-                    systemImage: "icloud.and.arrow.down.fill"
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isWorking)
-            .accessibilityIdentifier("settings.syncRecovery.replaceDevice")
         } header: {
             SettingsHeader(
                 symbol: pendingConflict == nil ? "lifepreserver.fill" : "exclamationmark.triangle.fill",
@@ -77,6 +69,34 @@ struct SyncRecoverySettingsSection: View {
                 )
             )
         }
+        .onChange(of: pendingConflict?.id) { previousID, currentID in
+            if previousID != nil, currentID == nil {
+                isManualRecoveryExpanded = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var recoveryActions: some View {
+        Button(role: .destructive, action: onReplaceCloud) {
+            SettingsDestructiveActionLabel(
+                title: AppStrings.localized("settings.syncRecovery.replaceCloud"),
+                systemImage: "icloud.and.arrow.up.fill"
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isWorking)
+        .accessibilityIdentifier("settings.syncRecovery.replaceCloud")
+
+        Button(role: .destructive, action: onReplaceDevice) {
+            SettingsDestructiveActionLabel(
+                title: AppStrings.localized("settings.syncRecovery.replaceDevice"),
+                systemImage: "icloud.and.arrow.down.fill"
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isWorking)
+        .accessibilityIdentifier("settings.syncRecovery.replaceDevice")
     }
 }
 

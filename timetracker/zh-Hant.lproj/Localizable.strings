@@ -127,6 +127,7 @@
 "settings.sync" = "同步";
 "settings.sync.footer" = "CloudKit 會自動匯入和匯出。帳戶檢查只會確認本裝置能否存取 iCloud。這個開關會在下次啟動時生效。";
 "settings.syncRecovery.title" = "同步復原";
+"settings.syncRecovery.showActions" = "開啟復原選項";
 "settings.syncRecovery.conflictTitle" = "解決同步衝突";
 "settings.syncRecovery.thisDevice" = "本裝置";
 "settings.syncRecovery.iCloud" = "iCloud";

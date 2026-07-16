@@ -749,9 +749,9 @@
 
 背景：旧“同步”Section 把开关、状态、检查、刷新和两个会覆盖一侧数据的恢复命令连续排列。恢复命令使用绿色/青色普通动作外观；用户即使在冲突时也看不到本机与 iCloud 摘要，只能根据“上传/下载”猜测哪一侧会被替换。
 
-决策：`SyncSettingsSection` 只保留无数据覆盖语义的日常状态与操作；`SyncRecoverySettingsSection` 成为独立的低频危险区。恢复按钮使用系统 destructive role、共享红色 label，并直接写明“用本设备替换 iCloud”或“用 iCloud 替换本设备”。存在冲突时，两个动作之前必须展示 `SyncConflictPrompt` 的本机与 iCloud 摘要，而且两个方向都调用 `resolveSyncConflict`，与全局冲突对话进入相同的冲突解析边界；无冲突时才使用基于当前 store 的手动恢复命令。二次确认使用简短替换动词，并同时说明其他设备传播、先完成同步以及 local-fallback 需重启排队的后果。
+决策：`SyncSettingsSection` 只保留无数据覆盖语义的日常状态与操作；`SyncRecoverySettingsSection` 成为独立的低频危险区。无冲突时默认只显示“打开恢复选项”入口，用户主动展开后才出现两个覆盖方向；存在冲突时不增加这层操作，直接先展示 `SyncConflictPrompt` 的本机与 iCloud 摘要，再展示两个方向。恢复按钮使用系统 destructive role、共享红色 label，并直接写明“用本设备替换 iCloud”或“用 iCloud 替换本设备”。冲突时两个方向都调用 `resolveSyncConflict`，与全局冲突提示进入相同的冲突解析边界；无冲突时才使用基于当前 store 的手动恢复命令。二次确认使用简短替换动词，并同时说明其他设备传播、先完成同步以及 local-fallback 需重启排队的后果。
 
-后果：Settings 的常用路径不再把恢复工具伪装成普通刷新；用户在选择权威副本前能比较两侧事实。根 scene 只显示非阻断冲突提示（AD-075），真正的方向选择与确认只存在于 Settings。以后新增恢复命令也必须留在危险区，不能混入日常状态 Section。
+后果：Settings 的常用路径不会常驻两个高风险覆盖按钮，也不再把恢复工具伪装成普通刷新；真正发生冲突时，用户仍能立即比较两侧事实并选择权威副本。根 scene 只显示非阻断冲突提示（AD-075），真正的方向选择与确认只存在于 Settings。以后新增恢复命令也必须留在默认收起的危险区，不能混入日常状态 Section。
 
 验证：源码合同固定两个 Section 的职责分离、两项 destructive role、冲突双摘要、明确确认动词和三语键。主 Agent 使用付费开发者身份执行同步冲突行为、Settings 安全合同与共享组件签名定向套件，55/55 通过；正常字号的 iPhone/iPad/Mac“数据与同步”页面及确认对话目视检查进入后续 UI 批次，任何模拟器都按批次明确拥有并在当批删除。
 

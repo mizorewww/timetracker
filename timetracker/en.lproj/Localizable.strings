@@ -127,6 +127,7 @@
 "settings.sync" = "Sync";
 "settings.sync.footer" = "CloudKit imports and exports run automatically. The account check only verifies whether this device can access iCloud. This switch takes effect after restart.";
 "settings.syncRecovery.title" = "Sync Recovery";
+"settings.syncRecovery.showActions" = "Open Recovery Options";
 "settings.syncRecovery.conflictTitle" = "Resolve Sync Conflict";
 "settings.syncRecovery.thisDevice" = "This Device";
 "settings.syncRecovery.iCloud" = "iCloud";

@@ -165,13 +165,30 @@ final class timetrackerUITests: XCTestCase {
         )
         activate(dataAndSync)
 
+        let recoveryDisclosure = app.descendants(matching: .any)[
+            "settings.syncRecovery.disclosure"
+        ].firstMatch
+        scrollUntilHittable(recoveryDisclosure, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                recoveryDisclosure,
+                timeout: 5,
+                diagnosticName: "settings-sync-recovery-disclosure",
+                in: app
+            ) && recoveryDisclosure.isHittable
+        )
+        XCTAssertFalse(app.buttons["settings.syncRecovery.replaceCloud"].firstMatch.exists)
+        XCTAssertFalse(app.buttons["settings.syncRecovery.replaceDevice"].firstMatch.exists)
+        try capture("iphone-settings-sync-recovery-collapsed", app: app)
+        activate(recoveryDisclosure)
+
         let replaceCloud = app.buttons["settings.syncRecovery.replaceCloud"].firstMatch
         scrollUntilHittable(replaceCloud, direction: .up, in: app)
         XCTAssertTrue(
             waitForElement(replaceCloud, timeout: 5, diagnosticName: "settings-replace-cloud", in: app)
                 && replaceCloud.isHittable
         )
-        try capture("iphone-settings-sync-recovery", app: app)
+        try capture("iphone-settings-sync-recovery-expanded", app: app)
 
         activate(replaceCloud)
         let replaceCloudConfirmation = app.buttons["Replace iCloud"].firstMatch

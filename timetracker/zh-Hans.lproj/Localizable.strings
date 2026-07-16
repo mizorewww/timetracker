@@ -127,6 +127,7 @@
 "settings.sync" = "同步";
 "settings.sync.footer" = "CloudKit 会自动导入和导出。账户检查只会确认本设备能否访问 iCloud。这个开关会在下次启动时生效。";
 "settings.syncRecovery.title" = "同步恢复";
+"settings.syncRecovery.showActions" = "打开恢复选项";
 "settings.syncRecovery.conflictTitle" = "解决同步冲突";
 "settings.syncRecovery.thisDevice" = "本设备";
 "settings.syncRecovery.iCloud" = "iCloud";

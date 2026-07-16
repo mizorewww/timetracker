@@ -1378,6 +1378,53 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func ledgerBucketCacheEvictsLeastRecentlyUsedHistoryBuckets() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))
+        )
+        let secondDay = try #require(calendar.date(byAdding: .day, value: 1, to: firstDay))
+        let thirdDay = try #require(calendar.date(byAdding: .day, value: 2, to: firstDay))
+        let dayInterval: (Date) -> DateInterval = { start in
+            DateInterval(
+                start: start,
+                end: calendar.date(byAdding: .day, value: 1, to: start) ?? start
+            )
+        }
+        var cache = LedgerBucketCache(maximumBucketCount: 2)
+
+        _ = cache.summaries(
+            segments: [],
+            interval: dayInterval(firstDay),
+            now: thirdDay,
+            calendar: calendar
+        )
+        _ = cache.summaries(
+            segments: [],
+            interval: dayInterval(secondDay),
+            now: thirdDay,
+            calendar: calendar
+        )
+        _ = cache.summaries(
+            segments: [],
+            interval: dayInterval(firstDay),
+            now: thirdDay,
+            calendar: calendar
+        )
+        _ = cache.summaries(
+            segments: [],
+            interval: dayInterval(thirdDay),
+            now: thirdDay.addingTimeInterval(86_400),
+            calendar: calendar
+        )
+
+        #expect(cache.bucketCount == 2)
+        cache.invalidate(intervals: [dayInterval(firstDay)])
+        #expect(cache.bucketCount == 1)
+    }
+
+    @Test @MainActor
     func ledgerBucketCacheSeparatesPartialIntervalsOnTheSameDay() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -11,10 +11,17 @@ struct LedgerBucketCache {
     private struct CacheEntry {
         let signature: Int
         let snapshot: DailySummarySnapshot
+        var lastAccess: UInt64
     }
 
     private let summaryService = DailySummaryService()
+    private let maximumBucketCount: Int
     private var entries: [CacheKey: CacheEntry] = [:]
+    private var accessSequence: UInt64 = 0
+
+    init(maximumBucketCount: Int = 512) {
+        self.maximumBucketCount = max(1, maximumBucketCount)
+    }
 
     var bucketCount: Int {
         entries.count
@@ -62,6 +69,7 @@ struct LedgerBucketCache {
 
     mutating func removeAll() {
         entries.removeAll()
+        accessSequence = 0
     }
 
     private mutating func summary(
@@ -80,7 +88,9 @@ struct LedgerBucketCache {
         )
         let signature = signature(for: daySegments, now: now)
 
-        if let cached = entries[key], cached.signature == signature {
+        if var cached = entries[key], cached.signature == signature {
+            cached.lastAccess = nextAccess()
+            entries[key] = cached
             return cached.snapshot
         }
 
@@ -94,9 +104,26 @@ struct LedgerBucketCache {
         ).first
 
         if let snapshot {
-            entries[key] = CacheEntry(signature: signature, snapshot: snapshot)
+            if entries[key] == nil,
+               entries.count >= maximumBucketCount,
+               let leastRecentlyUsedKey = entries.min(by: {
+                   $0.value.lastAccess < $1.value.lastAccess
+                })?.key {
+                entries.removeValue(forKey: leastRecentlyUsedKey)
+            }
+            let lastAccess = nextAccess()
+            entries[key] = CacheEntry(
+                signature: signature,
+                snapshot: snapshot,
+                lastAccess: lastAccess
+            )
         }
         return snapshot
+    }
+
+    private mutating func nextAccess() -> UInt64 {
+        accessSequence &+= 1
+        return accessSequence
     }
 
     private func segmentsByDay(

@@ -127,7 +127,6 @@ struct TaskCategoryEditorSheet: View {
     }
 
     private func cancel() {
-        store.taskCategoryEditorDraft = nil
         dismiss()
     }
 
@@ -137,7 +136,6 @@ struct TaskCategoryEditorSheet: View {
             return
         }
         if store.deleteTaskCategory(category) {
-            store.taskCategoryEditorDraft = nil
             dismiss()
         }
     }

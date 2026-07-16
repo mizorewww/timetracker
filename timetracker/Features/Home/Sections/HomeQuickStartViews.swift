@@ -3,11 +3,7 @@ import SwiftUI
 struct QuickStartSection: View {
     let store: TimeTrackerStore
     let tasks: [TaskNode]
-    @State private var isEditorPresented = false
-
-    private var selectedIDs: [UUID] {
-        store.preferences.quickStartTaskIDs
-    }
+    @Environment(AppPresentationRouter.self) private var presentationRouter
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -21,7 +17,7 @@ struct QuickStartSection: View {
                 }
                 Spacer()
                 Button {
-                    isEditorPresented = true
+                    presentationRouter.presentQuickStartEditor(using: store)
                 } label: {
                     Image(systemName: "slider.horizontal.3")
                 }
@@ -44,14 +40,5 @@ struct QuickStartSection: View {
             }
         }
         .accessibilityIdentifier("home.quickStart")
-        .sheet(isPresented: $isEditorPresented) {
-            QuickStartEditorSheet(
-                store: store,
-                selectedIDs: selectedIDs,
-                onSave: { ids in
-                    store.setQuickStartTaskIDs(ids)
-                }
-            )
-        }
     }
 }

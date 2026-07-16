@@ -5,8 +5,7 @@ struct PhoneHomeView: View {
     let store: TimeTrackerStore
     let openSettings: () -> Void
     let openTask: (UUID) -> Void
-    @State private var isTaskPickerPresented = false
-    @State private var isQuickStartEditorPresented = false
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -18,7 +17,7 @@ struct PhoneHomeView: View {
                 segments: content.activeSegments,
                 allowsParallelTimers: store.preferences.allowParallelTimers,
                 openTask: openTask,
-                startTimer: { isTaskPickerPresented = true }
+                startTimer: { presentationRouter.presentStartTaskPicker() }
             )
 
             Section(AppStrings.localized("home.overview.title")) {
@@ -29,8 +28,8 @@ struct PhoneHomeView: View {
             PhoneQuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,
-                startTimer: { isTaskPickerPresented = true },
-                editQuickStart: { isQuickStartEditorPresented = true }
+                startTimer: { presentationRouter.presentStartTaskPicker() },
+                editQuickStart: { presentationRouter.presentQuickStartEditor(using: store) }
             )
 
             PhoneTimelineSection(
@@ -67,18 +66,6 @@ struct PhoneHomeView: View {
                 }
                 .accessibilityIdentifier("settings.open")
             }
-        }
-        .sheet(isPresented: $isTaskPickerPresented) {
-            TaskStartPickerSheet(store: store) {
-                isTaskPickerPresented = false
-            }
-        }
-        .sheet(isPresented: $isQuickStartEditorPresented) {
-            QuickStartEditorSheet(
-                store: store,
-                selectedIDs: store.preferences.quickStartTaskIDs,
-                onSave: store.setQuickStartTaskIDs
-            )
         }
     }
 }

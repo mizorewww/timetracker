@@ -151,8 +151,18 @@ struct SharedComponentsContractTests {
         #expect(llmSource.contains("Button(action: testConnection)"))
         #expect(llmSource.contains("Button(AppStrings.localized(\"common.save\"), action: save)"))
         #expect(llmSource.contains(".editorDiscardConfirmation("))
-        #expect(settingsViewSource.contains(".sheet(isPresented: $isLLMConfigurationPresented)"))
-        #expect(settingsViewSource.contains("store.setLLMConfiguration("))
+        #expect(settingsViewSource.contains("@Environment(AppPresentationRouter.self)"))
+        #expect(settingsViewSource.contains(".sheet(") == false)
+        #expect(settingsViewSource.contains("isLLMConfigurationPresented") == false)
+        let settingsSectionsSource = try sourceText(
+            "timetracker/Features/Settings/SettingsCategorySections.swift"
+        )
+        let presentationHostSource = try sourceText(
+            "timetracker/App/AppPresentationHost.swift"
+        )
+        #expect(settingsSectionsSource.contains("onConfigure: presentLLMConfiguration"))
+        #expect(settingsViewSource.contains("presentationRouter.presentLLMConfiguration(using: store)"))
+        #expect(presentationHostSource.contains("store.setLLMConfiguration("))
         #expect(settingsViewSource.contains("store.setLLMEndpoint(configuration.endpoint)") == false)
         #expect(englishStrings.contains("\"settings.llm.testConnection\""))
     }

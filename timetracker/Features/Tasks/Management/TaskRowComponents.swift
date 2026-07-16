@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskContextMenu: View {
     let store: TimeTrackerStore
     let task: TaskNode
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
     let requestDelete: () -> Void
 
@@ -57,13 +58,17 @@ struct TaskContextMenu: View {
 
         if isAvailableForTracking {
             Button {
-                store.presentNewTask(parentID: task.id, preservingDestination: preservingDestination)
+                presentationRouter.presentNewTask(
+                    using: store,
+                    parentID: task.id,
+                    preservingDestination: preservingDestination
+                )
             } label: {
                 Label(AppStrings.localized("task.action.newSubtask"), systemImage: "plus")
             }
 
             Button {
-                store.presentManualTime(taskID: task.id)
+                presentationRouter.presentManualTime(taskID: task.id, using: store)
             } label: {
                 Label(AppStrings.localized("task.action.addManualTime"), systemImage: "calendar.badge.plus")
             }
@@ -98,7 +103,7 @@ struct TaskContextMenu: View {
         Divider()
 
         Button {
-            store.presentEditTask(task)
+            presentationRouter.presentEditTask(task, using: store)
         } label: {
             Label(AppStrings.edit, systemImage: "pencil")
         }
@@ -134,6 +139,7 @@ enum TaskRowSwipeLabelStyle {
 struct TaskRowSwipeActions: ViewModifier {
     let store: TimeTrackerStore
     let task: TaskNode
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     var labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon
     var preservingDestination: TimeTrackerStore.DesktopDestination?
     @State private var isDeleteConfirmationPresented = false
@@ -190,7 +196,11 @@ struct TaskRowSwipeActions: ViewModifier {
 
                 if isAvailableForTracking {
                     Button {
-                        store.presentNewTask(parentID: task.id, preservingDestination: preservingDestination)
+                        presentationRouter.presentNewTask(
+                            using: store,
+                            parentID: task.id,
+                            preservingDestination: preservingDestination
+                        )
                     } label: {
                         actionLabel(AppStrings.localized("task.swipe.subtask"), systemImage: "plus")
                     }
@@ -199,7 +209,7 @@ struct TaskRowSwipeActions: ViewModifier {
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button {
-                    store.presentEditTask(task)
+                    presentationRouter.presentEditTask(task, using: store)
                 } label: {
                     actionLabel(AppStrings.edit, systemImage: "pencil")
                 }

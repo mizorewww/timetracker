@@ -3,20 +3,23 @@ import SwiftUI
 
 struct TimeTrackerCommands: Commands {
     @FocusedValue(\.timeTrackerStore) private var store
+    @FocusedValue(\.appPresentationRouter) private var presentationRouter
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button(AppStrings.newTask) {
-                store?.presentNewTask()
+                guard let store, let presentationRouter else { return }
+                presentationRouter.presentNewTask(using: store)
             }
             .keyboardShortcut("n", modifiers: [.command])
-            .disabled(store == nil)
+            .disabled(store == nil || presentationRouter?.canPresent != true)
 
             Button(AppStrings.addTime) {
-                store?.presentManualTime()
+                guard let store, let presentationRouter else { return }
+                presentationRouter.presentManualTime(using: store)
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
-            .disabled(store == nil)
+            .disabled(store == nil || presentationRouter?.canPresent != true)
 
             Divider()
 

@@ -119,7 +119,7 @@ AI responses use one dedicated ephemeral `URLSession`, with cache and cookies di
 
 App Intents use the application model container and the same commands. After an intent commits, a narrow post-commit synchronizer refreshes only task/ledger/preference state needed by Widget, Watch, and Live Activity; it does not start the full app lifecycle or automatic LLM jobs. A projection failure never turns a committed, potentially non-idempotent action into an intent failure.
 
-System input routing is lifecycle-safe and bounded. `AppDeepLinkRouter` validates a small URL grammar before immediate execution or enqueue; each scene owns a semantic-deduplicating `PendingDeepLinkQueue` capped at 16 entries and drains it only after repositories are ready. `WatchCommandRouter` owns the process-wide Watch bridge callback but retains scene stores weakly, prefers the most recently active scene, removes released registrations, and uninstalls the callback when no scene remains. This prevents startup URLs from bypassing validation and prevents a singleton connectivity closure from leaking or targeting a stale scene.
+System input routing is lifecycle-safe and bounded. `AppDeepLinkRouter` validates a small URL grammar before immediate execution or enqueue; each scene owns a semantic-deduplicating `PendingDeepLinkQueue` capped at 16 entries and drains it only after repositories are ready and its typed presentation slot is available. Navigation/modal deep links acquire that slot before mutating destination state, while direct timer start/stop actions do not wait for an unrelated sheet. `WatchCommandRouter` owns the process-wide Watch bridge callback but retains scene stores weakly, prefers the most recently active scene, removes released registrations, and uninstalls the callback when no scene remains. This prevents startup URLs from bypassing validation and prevents a singleton connectivity closure from leaking or targeting a stale scene.
 
 System-surface projections are also untrusted transport boundaries. Widget and Watch producers cap record counts, clamp summaries and anomalous timer starts, and shorten projected title/path/style values at Unicode character boundaries. Each snapshot has a 128 KiB aggregate text budget. `SharedWidgetSnapshotStore` then validates before save and after load, rejects encoded data over 256 KiB, caps active timers and recent tasks at 64 each, and requires bounded fields/time values and unique timer/task IDs; invalid loads are reported as corrupted rather than empty. `WatchStateSnapshot` allows at most 64 active timers and 256 recent tasks under equivalent field/time/identity/text-budget validation. Independently, iPhone incoming and Watch pending/failed command queues each cap at 64 entries, and persisted queue JSON caps at 512 KiB. Projection shaping changes only extension DTOs; canonical task and ledger facts remain untouched.
 
@@ -130,7 +130,7 @@ Persistent deduplication and synced preferences use deterministic last-write-win
 The app source is organized by ownership. New files should land next to the domain they affect:
 
 ```text
-timetracker/App
+timetracker/App       Startup, scene roots, typed presentation router/host, and commands
 timetracker/Models
 timetracker/Repositories
 timetracker/Commands
@@ -158,7 +158,7 @@ timetracker/Features/Home
   Rows/           Active timer and timeline rows
   Sections/       Metrics, forecast, quick start, and timeline sections
 timetracker/Features/Inbox
-                  Capture, list rows, suggestion feedback, and suggestion editor
+                  Capture, list rows, suggestion feedback, and apply/discard actions
 timetracker/Features/Tasks
   Detail/         Canonical detail router plus identity, checklist, overview,
                    analytics, navigation, and record sections
@@ -184,7 +184,7 @@ timetracker/SharedUI
                    Settings foundation/action/input/presentation/sync-feedback owners
 ```
 
-Within `Features/Home`, keep the Today screen split by responsibility: `Features/Home/HomeViews.swift` composes the page, `Features/Home/Controls/HomeActionsViews.swift` owns start/new-task controls and the searchable task picker, `Features/Home/Sections/HomeMetricsViews.swift` renders the compact time summary, `Features/Home/Sections/HomeCountdownViews.swift` owns the shared countdown presentation, and forecast, quick start, timeline, and row files own their own sections. Generic day/week/month/year progress tiles were removed; countdown events are a low-priority Today section on every main-app platform. Within `Features/Settings`, `Features/Settings/SettingsViews.swift` owns category navigation and presentation; display/timing, Pomodoro, countdown, sync, data, AI draft configuration, binding, action, and support responsibilities stay focused. Shared rows are split into `SettingsRows.swift` foundation/value semantics, action/destructive labels, text/number inputs, platform presentation modifiers, and sync feedback. `SettingsSectionsViews.swift` and `TimeTrackerServices.swift` are retired names, not extension points.
+Within `Features/Home`, keep the Today screen split by responsibility: `Features/Home/HomeViews.swift` composes the page, `Features/Home/Controls/HomeActionsViews.swift` owns start/new-task controls and the searchable task picker, `Features/Home/Sections/HomeMetricsViews.swift` renders the compact time summary, `Features/Home/Sections/HomeCountdownViews.swift` owns the shared countdown presentation, and forecast, quick start, timeline, and row files own their own sections. Generic day/week/month/year progress tiles were removed; countdown events are a low-priority Today section on every main-app platform. App-level sheet arbitration belongs to one scene-owned `AppPresentationRouter` plus one `AppPresentationHost`; feature views request typed content and never put modal draft state in the application-shared store. Main and macOS Settings scenes share the store but own separate routers. Within `Features/Settings`, `Features/Settings/SettingsViews.swift` owns category navigation, export, alerts, and destructive confirmations; the scene host owns its LLM configuration sheet. Display/timing, Pomodoro, countdown, sync, data, AI draft configuration, binding, action, and support responsibilities stay focused. Shared rows are split into `SettingsRows.swift` foundation/value semantics, action/destructive labels, text/number inputs, platform presentation modifiers, and sync feedback. `SettingsSectionsViews.swift`, `TimeTrackerServices.swift`, and the unused Inbox suggestion editor are retired names, not extension points.
 
 The macOS app owns one main `Window` and one application-level `TimeTrackerStore`; the standard Settings scene receives that same store. Do not return to `WindowGroup` unless per-window persistence coordination is split from scene-local navigation/draft state first, or each window would duplicate observers and background automation.
 

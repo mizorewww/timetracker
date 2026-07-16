@@ -82,9 +82,13 @@ struct CoreCompletedTaskSemanticsTests {
         store.startPomodoroForSelectedTask(focusSeconds: 60, breakSeconds: 60)
         #expect(store.pomodoroRuns.isEmpty)
 
-        store.taskEditorDraft = nil
-        store.presentNewTask(parentID: child.id, preservingDestination: .tasks)
-        #expect(store.taskEditorDraft == nil)
+        let presentationRouter = AppPresentationRouter()
+        #expect(presentationRouter.presentNewTask(
+            using: store,
+            parentID: child.id,
+            preservingDestination: .tasks
+        ) == false)
+        #expect(presentationRouter.sheet == nil)
 
         var suggestionDraft = InboxSuggestionEditorDraft(
             item: inboxItem,

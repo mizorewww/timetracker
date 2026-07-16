@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TasksView: View {
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var searchText = ""
     @State private var expansionState = TaskExpansionState()
     @State private var categoryPendingDeletionID: UUID?
@@ -36,7 +37,7 @@ struct TasksView: View {
                         Text(.app("tasks.empty.description"))
                     } actions: {
                         Button(AppStrings.localized("tasks.newRoot")) {
-                            store.presentNewTask(preservingDestination: .tasks)
+                            presentationRouter.presentNewTask(using: store, preservingDestination: .tasks)
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -105,14 +106,14 @@ struct TasksView: View {
         .toolbar {
             Menu {
                 Button {
-                    store.presentNewTask(preservingDestination: .tasks)
+                    presentationRouter.presentNewTask(using: store, preservingDestination: .tasks)
                 } label: {
                     Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
                 }
                 .accessibilityIdentifier("tasks.addRoot")
 
                 Button {
-                    store.presentNewTaskCategory()
+                    presentationRouter.presentNewTaskCategory()
                 } label: {
                     Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
                 }
@@ -161,7 +162,8 @@ struct TasksView: View {
 
     private func newRootTaskAction(for section: TaskTreeVisibleSectionModel) -> () -> Void {
         {
-            store.presentNewTask(
+            presentationRouter.presentNewTask(
+                using: store,
                 preservingDestination: .tasks,
                 categoryID: section.categoryID
             )
@@ -174,7 +176,7 @@ struct TasksView: View {
             return nil
         }
         return {
-            store.presentEditTaskCategory(category)
+            presentationRouter.presentEditTaskCategory(category)
         }
     }
 

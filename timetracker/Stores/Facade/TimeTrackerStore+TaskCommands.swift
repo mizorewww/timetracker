@@ -1,24 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func presentNewTask(
-        parentID: UUID? = nil,
-        preservingDestination: DesktopDestination? = nil,
-        categoryID: UUID? = nil
-    ) {
-        if let parentID, trackableTaskIDs.contains(parentID) == false {
-            errorMessage = AppStrings.localized("task.parentUnavailable")
-            return
-        }
-        taskEditorReturnDestination = preservingDestination ?? desktopDestination
-        taskEditorDraft = TaskEditorDraft(parentID: parentID, categoryID: categoryID)
-    }
-
-    func presentEditTask(_ task: TaskNode) {
-        taskEditorReturnDestination = desktopDestination
-        taskEditorDraft = editorDraft(for: task)
-    }
-
     func editorDraft(for task: TaskNode) -> TaskEditorDraft {
         TaskEditorDraft(
             task: task,
@@ -29,7 +11,10 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func saveTaskDraft(_ draft: TaskEditorDraft) -> Bool {
+    func saveTaskDraft(
+        _ draft: TaskEditorDraft,
+        returnDestination: DesktopDestination? = nil
+    ) -> Bool {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
             errorMessage = AppStrings.localized("task.nameRequired")
@@ -56,7 +41,6 @@ extension TimeTrackerStore {
 
         let affectedHierarchyIDs = affectedTaskIDsForHierarchyChange(taskID: draft.taskID, parentID: draft.parentID)
         let primaryDraftTaskIDs = draft.taskID.map { Set([$0]) } ?? []
-        let returnDestination = taskEditorReturnDestination
         var savedTaskID: UUID?
         let didSave = perform(events: [
             .taskChanged(taskID: draft.taskID, affectedAncestorIDs: affectedHierarchyIDs.subtracting(primaryDraftTaskIDs)),
@@ -74,8 +58,6 @@ extension TimeTrackerStore {
             if let returnDestination {
                 desktopDestination = returnDestination
             }
-            taskEditorDraft = nil
-            taskEditorReturnDestination = nil
         }
         return didSave
     }

@@ -1,16 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func presentManualTime(taskID: UUID? = nil) {
-        let availableTasks = tasks.filter(isTaskAvailableForTracking)
-        let requestedTask = taskID.flatMap { taskByID[$0] }
-        let selectedTask = selectedTaskID.flatMap { taskByID[$0] }
-        let target = requestedTask.flatMap { isTaskAvailableForTracking($0) ? $0.id : nil } ??
-            selectedTask.flatMap { isTaskAvailableForTracking($0) ? $0.id : nil } ??
-            availableTasks.first?.id
-        manualTimeDraft = ManualTimeDraft(taskID: target, tasks: availableTasks)
-    }
-
     @discardableResult
     func saveManualTimeDraft(_ draft: ManualTimeDraft) -> Bool {
         guard let taskID = draft.taskID else {
@@ -29,14 +19,7 @@ extension TimeTrackerStore {
         let didSave = perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
             try ledgerCommandHandler.addManualTime(draft: draft, taskID: taskID, repository: requiredTimeRepository())
         }
-        if didSave {
-            manualTimeDraft = nil
-        }
         return didSave
-    }
-
-    func presentEditSegment(_ segment: TimeSegment) {
-        segmentEditorDraft = SegmentEditorDraft(segment: segment, note: note(for: segment))
     }
 
     @discardableResult
@@ -105,13 +88,12 @@ extension TimeTrackerStore {
         }
         if didSave {
             selectedTaskID = taskID
-            segmentEditorDraft = nil
         }
         return didSave
     }
 
     @discardableResult
-    func deleteSegment(_ segmentID: UUID) -> Bool {
+    func deleteSegment(_ segmentID: UUID, fallbackTaskID: UUID? = nil) -> Bool {
         let existingSegment = ledgerDomainStore.segment(for: segmentID)
         let activePomodoroSessionID = activePomodoroSessionID(for: existingSegment)
         let now = Date()
@@ -126,7 +108,7 @@ extension TimeTrackerStore {
         }
         var events: Set<StoreDomainEvent> = [
             .ledgerChanged(
-                taskID: existingSegment?.taskID ?? segmentEditorDraft?.taskID,
+                taskID: existingSegment?.taskID ?? fallbackTaskID,
                 dateInterval: range,
                 isVisible: existingSegment?.isActive == true
             )
@@ -149,9 +131,6 @@ extension TimeTrackerStore {
                 repository: requiredTimeRepository(),
                 context: modelContext
             )
-        }
-        if didDelete {
-            segmentEditorDraft = nil
         }
         return didDelete
     }

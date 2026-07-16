@@ -1,14 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func presentNewTaskCategory() {
-        taskCategoryEditorDraft = TaskCategoryEditorDraft()
-    }
-
-    func presentEditTaskCategory(_ category: TaskCategory) {
-        taskCategoryEditorDraft = TaskCategoryEditorDraft(category: category)
-    }
-
     @discardableResult
     func saveTaskCategoryDraft(_ draft: TaskCategoryEditorDraft) -> Bool {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -34,9 +26,6 @@ extension TimeTrackerStore {
                     includesInForecast: draft.includesInForecast
                 )
             }
-        }
-        if didSave {
-            taskCategoryEditorDraft = nil
         }
         return didSave
     }

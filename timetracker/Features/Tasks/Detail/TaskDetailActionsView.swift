@@ -4,6 +4,7 @@ struct TaskDetailActionsView: View {
     let store: TimeTrackerStore
     let task: TaskNode
     let activeSegment: TimeSegment?
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -134,7 +135,7 @@ struct TaskDetailActionsView: View {
 
     private var manualTimeAction: some View {
         Button {
-            store.presentManualTime(taskID: task.id)
+            presentationRouter.presentManualTime(taskID: task.id, using: store)
         } label: {
             AppActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus")
         }

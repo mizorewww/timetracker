@@ -29,7 +29,6 @@ extension SettingsView {
             DataSettingsSection(
                 allowsPermanentCleanup: AppCloudSync.allowsPermanentTombstonePurge,
                 onExport: prepareJSONExport,
-                onAddTime: { store.presentManualTime() },
                 onOptimize: { pendingDestructiveConfirmation = .optimizeDatabase }
             )
 
@@ -56,7 +55,7 @@ extension SettingsView {
                 hasAPIKey: !store.preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 selectedModel: store.preferences.llmSelectedModel,
                 availableModels: store.preferences.llmAvailableModelIDs,
-                onConfigure: { isLLMConfigurationPresented = true }
+                onConfigure: presentLLMConfiguration
             )
 
         case .advanced:

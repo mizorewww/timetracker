@@ -50,7 +50,8 @@ struct TaskUIContractTests {
 
         #expect(tasksSource.contains(".navigationTitle(AppStrings.tasks)"))
         #expect(tasksSource.contains(".navigationBarTitleDisplayMode(.inline)"))
-        #expect(tasksSource.contains("store.presentNewTask(preservingDestination: .tasks)"))
+        #expect(tasksSource.contains("presentationRouter.presentNewTask("))
+        #expect(tasksSource.contains("preservingDestination: .tasks"))
         #expect(tasksSource.contains(".accessibilityIdentifier(\"tasks.add\")"))
         #expect(tasksSource.contains(".accessibilityIdentifier(\"tasks.addRoot\")"))
         #expect(analyticsSource.contains(".navigationTitle(AppStrings.analytics)"))
@@ -159,15 +160,12 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskAssignmentPickersHideArchivedBranchesWithoutBreakingHistoryEdits() throws {
-        let inboxSource = try sourceText("timetracker/Features/Inbox/InboxSuggestionEditorViews.swift")
+    func trackedTimeAssignmentPickersHideArchivedBranchesWithoutBreakingHistoryEdits() throws {
         let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
         let segmentSource = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
 
-        #expect(inboxSource.contains("store.tasks.filter(store.isTaskAvailableForTracking)"))
         #expect(manualSource.contains("store.tasks.filter(store.isTaskAvailableForTracking)"))
         #expect(segmentSource.contains("store.isTaskAvailableForTracking(task) || task.id == initialDraft.taskID"))
-        #expect(inboxSource.contains("task.archivedAt == nil") == false)
         #expect(manualSource.contains("ForEach(store.tasks") == false)
         #expect(segmentSource.contains("ForEach(store.tasks") == false)
     }
@@ -356,7 +354,7 @@ struct TaskUIContractTests {
         #expect(iosRootSource.contains("TasksNavigationView(store: store)"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
-        #expect(detailSource.contains("store.presentEditTask(task)"))
+        #expect(detailSource.contains("presentationRouter.presentEditTask(task, using: store)"))
     }
 
     @Test

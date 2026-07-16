@@ -4,18 +4,17 @@ struct TaskEditorSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
     let initialDraft: TaskEditorDraft
+    let returnDestination: TimeTrackerStore.DesktopDestination
 
     var body: some View {
         TaskEditorPanel(
             store: store,
             initialDraft: initialDraft,
             onCancel: {
-                store.taskEditorDraft = nil
-                store.taskEditorReturnDestination = nil
                 dismiss()
             },
             onSave: { draft in
-                if store.saveTaskDraft(draft) {
+                if store.saveTaskDraft(draft, returnDestination: returnDestination) {
                     dismiss()
                 }
             }

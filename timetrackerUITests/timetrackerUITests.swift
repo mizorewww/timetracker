@@ -267,6 +267,7 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
+        try capture("scene-router-task-editor", app: app)
         closePresentedEditor(in: app)
 
         openSection("Focus", tabIdentifier: "phone.tab.focus", sidebarIdentifier: "sidebar.Pomodoro", in: app)

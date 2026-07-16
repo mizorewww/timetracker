@@ -1,0 +1,164 @@
+import Foundation
+import Observation
+
+struct AppPresentation: Identifiable {
+    enum Content {
+        case taskEditor(
+            draft: TaskEditorDraft,
+            returnDestination: TimeTrackerStore.DesktopDestination
+        )
+        case taskCategoryEditor(TaskCategoryEditorDraft)
+        case manualTime(ManualTimeDraft)
+        case segmentEditor(SegmentEditorDraft)
+        case startTaskPicker
+        case quickStartEditor(selectedIDs: [UUID])
+        case llmConfiguration(LLMConfigurationDraft)
+    }
+
+    let id: UUID
+    let content: Content
+
+    init(id: UUID = UUID(), content: Content) {
+        self.id = id
+        self.content = content
+    }
+}
+
+@MainActor
+@Observable
+final class AppPresentationRouter {
+    var sheet: AppPresentation?
+
+    var canPresent: Bool {
+        sheet == nil
+    }
+
+    @discardableResult
+    func present(_ content: AppPresentation.Content) -> Bool {
+        guard canPresent else { return false }
+        sheet = AppPresentation(content: content)
+        return true
+    }
+
+    @discardableResult
+    func replace(
+        presentationID: UUID,
+        with content: AppPresentation.Content
+    ) -> Bool {
+        guard sheet?.id == presentationID else { return false }
+        sheet = AppPresentation(content: content)
+        return true
+    }
+
+    func dismiss(presentationID: UUID) {
+        guard sheet?.id == presentationID else { return }
+        sheet = nil
+    }
+}
+
+extension AppPresentationRouter {
+    @discardableResult
+    func presentNewTask(
+        using store: TimeTrackerStore,
+        parentID: UUID? = nil,
+        preservingDestination: TimeTrackerStore.DesktopDestination? = nil,
+        categoryID: UUID? = nil
+    ) -> Bool {
+        guard let content = newTaskContent(
+            using: store,
+            parentID: parentID,
+            preservingDestination: preservingDestination,
+            categoryID: categoryID
+        ) else {
+            return false
+        }
+        return present(content)
+    }
+
+    @discardableResult
+    func replaceWithNewTask(
+        presentationID: UUID,
+        using store: TimeTrackerStore,
+        preservingDestination: TimeTrackerStore.DesktopDestination? = nil
+    ) -> Bool {
+        guard let content = newTaskContent(
+            using: store,
+            parentID: nil,
+            preservingDestination: preservingDestination,
+            categoryID: nil
+        ) else {
+            return false
+        }
+        return replace(presentationID: presentationID, with: content)
+    }
+
+    @discardableResult
+    func presentEditTask(_ task: TaskNode, using store: TimeTrackerStore) -> Bool {
+        present(.taskEditor(
+            draft: store.editorDraft(for: task),
+            returnDestination: store.desktopDestination
+        ))
+    }
+
+    @discardableResult
+    func presentNewTaskCategory() -> Bool {
+        present(.taskCategoryEditor(TaskCategoryEditorDraft()))
+    }
+
+    @discardableResult
+    func presentEditTaskCategory(_ category: TaskCategory) -> Bool {
+        present(.taskCategoryEditor(TaskCategoryEditorDraft(category: category)))
+    }
+
+    @discardableResult
+    func presentManualTime(taskID: UUID? = nil, using store: TimeTrackerStore) -> Bool {
+        let availableTasks = store.tasks.filter(store.isTaskAvailableForTracking)
+        let requestedTask = taskID.flatMap { store.taskByID[$0] }
+        let selectedTask = store.selectedTaskID.flatMap { store.taskByID[$0] }
+        let target = requestedTask.flatMap { store.isTaskAvailableForTracking($0) ? $0.id : nil } ??
+            selectedTask.flatMap { store.isTaskAvailableForTracking($0) ? $0.id : nil } ??
+            availableTasks.first?.id
+        return present(.manualTime(ManualTimeDraft(taskID: target, tasks: availableTasks)))
+    }
+
+    @discardableResult
+    func presentEditSegment(_ segment: TimeSegment, using store: TimeTrackerStore) -> Bool {
+        present(.segmentEditor(SegmentEditorDraft(segment: segment, note: store.note(for: segment))))
+    }
+
+    @discardableResult
+    func presentStartTaskPicker() -> Bool {
+        present(.startTaskPicker)
+    }
+
+    @discardableResult
+    func presentQuickStartEditor(using store: TimeTrackerStore) -> Bool {
+        present(.quickStartEditor(selectedIDs: store.preferences.quickStartTaskIDs))
+    }
+
+    @discardableResult
+    func presentLLMConfiguration(using store: TimeTrackerStore) -> Bool {
+        present(.llmConfiguration(LLMConfigurationDraft(
+            endpoint: store.preferences.llmEndpoint,
+            apiKey: store.preferences.llmAPIKey,
+            selectedModel: store.preferences.llmSelectedModel,
+            availableModels: store.preferences.llmAvailableModelIDs
+        )))
+    }
+
+    private func newTaskContent(
+        using store: TimeTrackerStore,
+        parentID: UUID?,
+        preservingDestination: TimeTrackerStore.DesktopDestination?,
+        categoryID: UUID?
+    ) -> AppPresentation.Content? {
+        if let parentID, store.trackableTaskIDs.contains(parentID) == false {
+            store.errorMessage = AppStrings.localized("task.parentUnavailable")
+            return nil
+        }
+        return .taskEditor(
+            draft: TaskEditorDraft(parentID: parentID, categoryID: categoryID),
+            returnDestination: preservingDestination ?? store.desktopDestination
+        )
+    }
+}

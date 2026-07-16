@@ -899,6 +899,20 @@
 
 验证：付费签名 macOS route/deep-link/lifecycle/UI-contract 定向套件 75/75、0 error/0 warning；正常字号 iPhone 17 Pro / iOS 27 系统 Back UI 1/1，截图确认详情返回后 `Study` 分支仍展开。generic iOS 自动签名设备构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 严格签名验证通过并保留 Team `LT98S43NKA`、付费 Apple Development、development APS、CloudKit 与 App Group。iPad Pro 首次自动化启动在进入 App 前 timeout，Xcode 收尾又挂起，因此终止该 owned build/diagnose 并记为基础设施阻塞，不计 UI 通过；两个专用 UDID 均已删除，最终无 Booted 设备或 owned runner/process。一次性证据见 dated Audit。
 
+## AD-071：App 级 sheet 按 scene 仲裁，共享 Store 不共享 presentation
+
+状态：Accepted
+
+背景：主 App 曾把任务、分类、手工时间、segment、Inbox 和任务选择器的 presentation 状态放在应用级 `TimeTrackerStore`，Today、Tasks、Timeline、Pomodoro 与 Settings 又各自附加独立 `.sheet`。这允许同一 scene 的多个入口同时竞争、覆盖带未保存修改的 draft，也会让 macOS Settings 中触发的“手动补录”错误出现在主窗口。任务选择器进入新建任务还依赖先关闭再 `Task.yield()`，存在 presentation 空窗；启动时连续 deep link 则能在先改导航后才发现 modal 冲突。共享 Store 对 CloudKit observers 和领域状态是正确的，但对窗口局部 UI 生命周期不是正确所有者。
+
+决策：每个可呈现 UI 的 scene 以 `@State` 持有一个 `AppPresentationRouter`，并只附加一个 `AppPresentationHost.sheet(item:)`。`AppPresentation.Content` 以 typed payload 承载任务编辑、分类编辑、手工时间、segment 编辑、任务选择器、Quick Start 和 LLM 配置；Store 不再保存这些 draft 或 `isPresented`。router 忙时拒绝普通新请求，不替换当前编辑；replace/dismiss 必须匹配当前 presentation ID，旧 closure 不能关闭后来内容。任务选择器进入新建任务使用 matching-ID 原子替换，不经过异步 dismiss/yield。主窗口与 macOS Settings 共享应用级 Store、但各自拥有 router；focused Mac 命令只使用当前主 scene 的 router，并在 slot 忙时禁用。Settings 删除“手动补录”入口，补录保留在任务/时间线工作流和 Mac `Shift-Command-M`。未被任何生产入口使用的 Inbox suggestion editor UI 被删除，Inbox 继续保留明确的 apply/discard 流程。
+
+Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal 的动作必须先取得当前 scene 的 presentation slot，再修改 destination；slot 忙时进入既有 16 项、语义去重的 `PendingDeepLinkQueue`，sheet 关闭后有界重放。start/stop 不需要 modal，可以在无关编辑器打开时直接执行。全局 store error 与 sync-conflict alert/dialog 仍是下一项独立的 scene 归属问题，本决策不把它们伪装成已经解决。
+
+后果：同一 scene 只有一个 App 级 sheet，脏编辑器不会被其他 feature 的 modal 请求覆盖；独立 Settings 不会把 UI 弹到主窗口。保存命令只返回业务成功，presentation 的关闭由 sheet 自己的 `dismiss` 负责；失败保持原草稿。新增 App 级 sheet 必须扩展 typed content 和唯一 host，不得在 feature 或共享 Store 重建平行 `.sheet` 状态。局部确认对话、文件 exporter 和真正属于单个控件的 popover 可以保留局部 owner，但必须与 App 级 slot 的职责区分。
+
+验证：付费签名 macOS presentation/deep-link/refactor/completed-task/UI-contract 定向套件 96/96，0 skip、0 runtime warning；正常字号 iPhone 17 Pro / iOS 27 的任务编辑→Focus 与 Today→任务选择器两条 UI 流程 2/2，截图导出到 `/tmp/timetracker-scene-presentation-iphone-images-20260716`。任务编辑截图底部出现的是该新模拟器的一次性 iOS 键盘教学浮层，不是 App 自绘内容；另外两张确认 Today 与单一任务选择 sheet 的正常层级。generic iOS 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均通过 `codesign --verify --deep --strict`，保持 Team `LT98S43NKA`、`Apple Development: ZEXUAN GAO (PX46M259V3)`；主 App 保留 development APS、CloudKit 与 App Group。唯一专用 UDID `4ECB7632-880B-45B8-9E04-7045B511B895` 已终止、关闭并删除，最终无 Booted device、owned build/test/runner、Simulator 或 Problem Reporter。本批只验证正常字号常规路径，没有安排 Accessibility 专项。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -1,14 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func presentInboxSuggestionEditor(_ item: InboxItem) {
-        inboxSuggestionEditorDraft = InboxSuggestionEditorDraft(
-            item: item,
-            suggestion: inboxSuggestion(for: item),
-            fallbackTaskID: tasks.first(where: isTaskAvailableForTracking)?.id
-        )
-    }
-
     @discardableResult
     func saveInboxSuggestionDraft(_ draft: InboxSuggestionEditorDraft) -> Bool {
         guard let item = inboxItems.first(where: { $0.id == draft.inboxItemID }) else { return false }
@@ -22,9 +14,6 @@ extension TimeTrackerStore {
                 draft: draft,
                 context: modelContext
             )
-        }
-        if didSave {
-            inboxSuggestionEditorDraft = nil
         }
         return didSave
     }

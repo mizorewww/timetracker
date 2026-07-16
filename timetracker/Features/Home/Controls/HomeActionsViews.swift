@@ -2,15 +2,10 @@ import SwiftUI
 
 struct TodayTimerAction: View {
     let store: TimeTrackerStore
-    @State private var isTaskPickerPresented = false
+    @Environment(AppPresentationRouter.self) private var presentationRouter
 
     var body: some View {
         startButton
-        .sheet(isPresented: $isTaskPickerPresented) {
-            TaskStartPickerSheet(store: store) {
-                isTaskPickerPresented = false
-            }
-        }
     }
 
     @ViewBuilder
@@ -26,7 +21,7 @@ struct TodayTimerAction: View {
 
     private var startButtonContent: some View {
         Button {
-            isTaskPickerPresented = true
+            presentationRouter.presentStartTaskPicker()
         } label: {
             AppActionLabel(title: actionTitle, systemImage: actionSystemImage)
         }
@@ -46,13 +41,18 @@ struct TodayTimerAction: View {
 struct TaskStartPickerSheet: View {
     let store: TimeTrackerStore
     let onDone: () -> Void
+    let onCreateTask: () -> Void
 #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 #endif
 
     var body: some View {
         NavigationStack {
-            TaskStartPicker(store: store, onDone: onDone)
+            TaskStartPicker(
+                store: store,
+                onDone: onDone,
+                onCreateTask: onCreateTask
+            )
         }
 #if os(iOS)
         .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
@@ -65,6 +65,7 @@ struct TaskStartPickerSheet: View {
 struct TaskStartPicker: View {
     let store: TimeTrackerStore
     let onDone: () -> Void
+    let onCreateTask: () -> Void
     @State private var searchText = ""
 
     private var availableTasks: [TaskNode] {
@@ -210,10 +211,6 @@ struct TaskStartPicker: View {
     }
 
     private func createTask() {
-        onDone()
-        Task { @MainActor in
-            await Task.yield()
-            store.presentNewTask()
-        }
+        onCreateTask()
     }
 }

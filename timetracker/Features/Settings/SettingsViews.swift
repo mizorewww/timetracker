@@ -3,12 +3,12 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State var pendingDestructiveConfirmation: SettingsDestructiveConfirmation?
     @State var isExportPresented = false
     @State private var exportDocument = JSONExportDocument(text: "")
     @State var isCheckingSync = false
-    @State var isLLMConfigurationPresented = false
     @State var syncCheckMessage: String?
     @State var databaseOptimizationMessage: String?
     @State private var selectedCategory: SettingsCategory? = .general
@@ -43,15 +43,6 @@ struct SettingsView: View {
             }
         } message: {
             Text(databaseOptimizationMessage ?? "")
-        }
-        .sheet(isPresented: $isLLMConfigurationPresented) {
-            LLMConfigurationEditor(
-                endpoint: store.preferences.llmEndpoint,
-                apiKey: store.preferences.llmAPIKey,
-                selectedModel: store.preferences.llmSelectedModel,
-                availableModels: store.preferences.llmAvailableModelIDs,
-                onSave: saveLLMConfiguration
-            )
         }
     }
 
@@ -117,12 +108,7 @@ struct SettingsView: View {
         isExportPresented = true
     }
 
-    private func saveLLMConfiguration(_ configuration: LLMConfigurationDraft) -> Bool {
-        store.setLLMConfiguration(
-            endpoint: configuration.endpoint,
-            apiKey: configuration.apiKey,
-            selectedModel: configuration.selectedModel,
-            availableModelIDs: configuration.availableModels
-        )
+    func presentLLMConfiguration() {
+        presentationRouter.presentLLMConfiguration(using: store)
     }
 }

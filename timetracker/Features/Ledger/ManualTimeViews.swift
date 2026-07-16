@@ -10,7 +10,6 @@ struct ManualTimeSheet: View {
             store: store,
             initialDraft: initialDraft,
             onCancel: {
-                store.manualTimeDraft = nil
                 dismiss()
             },
             onSave: { draft in

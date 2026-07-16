@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @State private var store: TimeTrackerStore
+    @State private var presentationRouter = AppPresentationRouter()
     @State private var dismissedSyncConflictID: UUID?
     @State private var pendingDeepLinks = PendingDeepLinkQueue()
     @State private var hasFinishedInitialConfiguration = false
@@ -21,7 +22,6 @@ struct ContentView: View {
     }
 
     var body: some View {
-        @Bindable var bindableStore = store
         Group {
             if AppCloudSync.allowsUserWrites {
                 #if os(macOS)
@@ -33,6 +33,8 @@ struct ContentView: View {
                 PersistenceRecoveryView(safety: AppCloudSync.persistenceWriteSafety)
             }
         }
+        .environment(presentationRouter)
+        .appPresentationHost(store: store, router: presentationRouter)
         .task {
             guard AppCloudSync.allowsUserWrites else { return }
             store.configureIfNeeded(context: modelContext)
@@ -63,7 +65,7 @@ struct ContentView: View {
                 pendingDeepLinks.enqueue(url)
                 return
             }
-            store.handleDeepLink(url)
+            routeOrQueueDeepLink(url)
         }
         .onDisappear {
             pendingDeepLinks.removeAll()
@@ -95,32 +97,26 @@ struct ContentView: View {
         .onChange(of: store.pendingSyncConflict?.id) { _, _ in
             dismissedSyncConflictID = nil
         }
-        .sheet(item: $bindableStore.taskEditorDraft) { draft in
-            TaskEditorSheet(store: store, initialDraft: draft)
-        }
-        .sheet(item: $bindableStore.taskCategoryEditorDraft) { draft in
-            TaskCategoryEditorSheet(store: store, initialDraft: draft)
-        }
-        .sheet(item: $bindableStore.manualTimeDraft) { draft in
-            ManualTimeSheet(store: store, initialDraft: draft)
-        }
-        .sheet(item: $bindableStore.segmentEditorDraft) { draft in
-            SegmentEditorSheet(store: store, initialDraft: draft)
-        }
-        .sheet(item: $bindableStore.inboxSuggestionEditorDraft) { draft in
-            InboxSuggestionEditorSheet(store: store, initialDraft: draft)
-        }
-        .sheet(isPresented: $bindableStore.isStartTaskPickerPresented) {
-            TaskStartPickerSheet(store: store) {
-                store.isStartTaskPickerPresented = false
-            }
+        .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
+            guard presentationID == nil else { return }
+            drainPendingDeepLinks()
         }
     }
 
     private func drainPendingDeepLinks() {
         guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else { return }
         for url in pendingDeepLinks.drain() {
-            store.handleDeepLink(url)
+            routeOrQueueDeepLink(url)
+        }
+    }
+
+    private func routeOrQueueDeepLink(_ url: URL) {
+        let disposition = store.handleDeepLink(
+            url,
+            presentationRouter: presentationRouter
+        )
+        if disposition == .deferred {
+            pendingDeepLinks.enqueue(url)
         }
     }
 

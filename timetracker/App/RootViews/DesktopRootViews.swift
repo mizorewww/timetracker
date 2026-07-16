@@ -5,6 +5,7 @@ struct DesktopRootView: View {
     @Environment(\.openSettings) private var openSettings
     #endif
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     #if os(macOS)
     @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
@@ -21,6 +22,7 @@ struct DesktopRootView: View {
         .accessibilityIdentifier("mac.splitNavigation")
         #if os(macOS)
         .focusedSceneValue(\.timeTrackerStore, store)
+        .focusedSceneValue(\.appPresentationRouter, presentationRouter)
         .onAppear {
             routeSettingsDestination(store.desktopDestination)
         }

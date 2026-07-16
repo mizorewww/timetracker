@@ -42,13 +42,13 @@
 
 | 路径 | 主要责任 |
 | --- | --- |
-| timetracker/App | 启动、依赖组装、平台根视图、导航 |
+| timetracker/App | 启动、依赖组装、平台根视图、导航与 scene 级 presentation |
 | timetracker/Features | Today、Inbox、Tasks、Pomodoro、Analytics、Settings 等界面 |
 | timetracker/Models | SwiftData 持久模型与 schema 版本 |
 | timetracker/Commands | 可持久业务动作与 use case handler |
 | timetracker/Repositories | SwiftData 查询与写入实现 |
 | timetracker/Services | 分析、预测、同步、安全、维护与系统集成服务 |
-| timetracker/Stores | `@Observable` UI 门面、领域快照、刷新规划和导航状态 |
+| timetracker/Stores | `@Observable` UI 门面、领域快照、刷新规划和业务/页面导航状态 |
 | timetracker/Shared | App/扩展可共享的 DTO、字符串与辅助类型 |
 | timetracker/SharedUI | 原生风格组件、布局策略和设计 token |
 | SharedLiveActivity | 主应用与扩展共用的 Activity attributes |
@@ -73,6 +73,7 @@
 - Watch：dashboard orchestration、完整任务列表、失败问题页、timer rows、status/error/empty states、command presentation index 与 color support 分文件；`WatchAppStore.swift` 保留 observable state/安全恢复，`WatchAppStore+Commands.swift` 负责 queue/timeout/persistence，`WatchAppStore+Connectivity.swift` 负责 transport/payload/freshness，`WatchAppStore+SessionDelegate.swift` 独立承接 WCSession callbacks。
 - Ledger/Rollup index：ordered flat segment array mutation 独立到 `LedgerStore+FlatSegmentIndex.swift`；增量 rollup 的 scoped mutation/replacement 独立到 `RollupIncrementalIndex+Mutation.swift`。
 - Today：`HomeViews.swift` 只组合宽屏优先级，`PhoneHomeSections.swift` 组合紧凑屏顺序，各 section 文件拥有具体内容；`TodayHomeContent` 在一次组合中集中生成 active/timeline、Quick Start、forecast 和 countdown 读模型，避免各 section 重复查询与分组。
+- App presentation：`AppPresentationRouter` 由每个可呈现 UI 的 scene 自己持有，`AppPresentationHost` 是该 scene 唯一的 App 级 sheet owner；feature 只请求 typed content，不在共享 facade 中保存 sheet draft 或 `isPresented`。任务选择器转入新建任务使用 matching presentation ID 的原子替换，不经过异步 dismiss/yield 空窗。
 
 分层不等于所有文件都已完成单一职责拆分。仍较集中的大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的 Home 组合拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
 
@@ -87,10 +88,10 @@
         → SwiftData model context
         → read model/service refresh
 
-`TimeTrackerStore` 是 `@MainActor @Observable` 的 UI 门面，但不是所有业务规则的最终归属。根视图用 `@State` 持有它，注入视图以普通引用读取，只有 sheet/item 等需要 Binding 的位置才建立局部 `@Bindable`。新功能应先判断规则属于：
+`TimeTrackerStore` 是 `@MainActor @Observable` 的 UI 门面，但不是所有业务规则的最终归属。根视图用 `@State` 持有它，注入视图以普通引用读取；scene-owned presentation router 另由对应根视图以 `@State` 持有，只有系统 presentation binding 等确实需要双向绑定的位置才建立局部 `@Bindable`。新功能应先判断规则属于：
 
 - View：布局、可访问性、展示状态。
-- Store：UI 可观察状态、动作编排、错误呈现和精确失效。
+- Store：业务/UI 可观察状态、动作编排、页面导航、错误投影和精确失效；不保存跨 scene 的 sheet 草稿。
 - Command：一次明确、可测试的业务写入。
 - Repository：模型查询与持久化细节。
 - Service：跨实体计算、同步、导入导出或系统集成。
@@ -104,6 +105,7 @@
 - iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Focus、Analytics）；Settings 是 Today 导航栈中的目的地。`nav.focus` 是 iPhone tab、iPad sidebar、macOS sidebar 与 Focus 页面标题的统一导航文案；`nav.pomodoro` 仍只描述账本来源、设置和分析中的 Pomodoro 领域，不得拿它恢复平台间不一致的导航标题。
 - iPad：设备 idiom 稳定选择 `NavigationSplitView` 侧边栏与详情；分屏、Stage Manager 或旋转造成的 compact width 只由该 split view 折叠列，不切换成 iPhone 根导航，因此当前目的地、sidebar selection 和详情状态不会随窗口宽度丢失。从侧边栏或任务列表选择任务会打开同一个 `TaskDetailView`。
 - macOS：单实例主 `Window` 承载 `NavigationSplitView` 工作区；独立系统 Settings scene、主窗口和 Settings 共享一个应用级 `TimeTrackerStore`，避免复制 CloudKit observers、自动 AI 建议与系统表面同步。
+- Scene presentation：主窗口与 macOS Settings 各自持有 `AppPresentationRouter`，共享 Store 但不共享 sheet。每个 scene 只有一个 `AppPresentationHost.sheet(item:)`，因此同一 scene 的编辑器不会重叠或覆盖脏草稿，另一个 scene 也不会错误弹出当前动作。router 忙时不替换现有内容；matching-ID callback 才能 replace/dismiss，防止旧 sheet 回调关闭新 sheet。macOS New Task / Add Time 命令只作用于 focused 主 scene，router 忙时禁用。
 - Today：iPhone 使用 `List`，顺序为 Now、Overview、Quick Start、Timeline、Forecast、Countdown。iPad/macOS 共享 `TodayHomeContent`；详情 viewport 扣除两侧 page padding、再受 1180 pt 上限约束后才得到实际内容宽度。该宽度达到 1000 pt 且存在辅助内容时，Quick Start/Timeline 进入主栏，Forecast/Countdown 进入 360 pt 辅助栏，否则保持单栏。Today 只有一个当前计时入口：无活动计时时为 Start Timer；有活动计时时根据并行偏好显示 Start Another Timer 或 Switch Timer。这个主动作在 Now 内容流中保留可见文字。`TimerPickerCommandPolicy` 以 `.start`、`.startAnother`、`.switchTimer` 固化入口模式，并把任务选择命令限定为开始、切换或 `alreadyRunning`。运行中任务只作为状态行出现，停止必须经过独立 Stop 按钮；选择行不得根据运行状态暗中改成停止命令。只有成功开始或切换后才关闭选择器，停止与失败都保留当前上下文。通用新建任务只存在于任务域和任务选择器，不与计时主操作竞争。
 - Task identity：脱离树结构的任务行或按钮统一从 `TaskTreeIndexes.taskIdentityPresentation(for:)` 取得 O(1) 投影，不在 View 中拆分路径字符串。`.hierarchical` 只显示标题，`.standard` 显示标题与不含自身的父级路径，`.compact` 才使用完整路径。`TaskVisualPresentation` 在进入 SwiftUI 前规范化 symbol 与颜色；任务身份图标和播放/停止等动作图标是两类事实，不得用动作状态替换任务图标。Quick Start 的 iPhone 行、iPad/macOS tile 和编辑器必须共享这套规则，根任务不得制造重复副标题，同名子任务必须保留分支上下文。
 - Task navigation：`TasksNavigationView` 是 iPhone、iPad 与 macOS 唯一的任务导航容器，持久承载一个 `TasksView`，并通过 `navigationDestination(item:)` 把 store-owned `TasksRoute?` 推入系统 `NavigationStack`。`selectedTaskID` 表示计时器等领域使用的业务选择，`tasksRoute` 只表示当前页面；系统 Back 只把 route 写回 nil，不得清空业务选择，也不得重建列表来模拟返回。搜索与展开状态归现存的 `TasksView` 实例所有。打开详情必须先验证任务存在且未删除；删除成功、外部删除、全量维护或刷新发现 route 失效时才清路由，写入失败必须保留原详情与选择。iPad/macOS sidebar 的 selection 直接从 route/destination 派生，并在 task-tree revision 变化时重新展开当前任务的新祖先，不维护第二份镜像 `@State`。
@@ -111,8 +113,8 @@
 - Task editors：任务/分类/checklist 的符号与颜色共用 `SymbolColorPickerButton`。iOS 入口必须用 `NavigationLink` 推入编辑器已经拥有的 `NavigationStack`，Back 只返回同一草稿，最终 Save/Cancel 仍由外层 sheet 独占；不得在编辑 sheet 内再叠加一个带伪 Done 的 sheet。macOS 使用 popover。新建任务标题每个编辑会话只自动聚焦一次，Return/Done 或滚动可以收起键盘，从子页面返回时不能重新抢焦点。
 - Task rows：普通/紧凑布局与 Accessibility 布局必须表达同一组事实。辅助字号按标题、完整路径、状态/运行中、已工作时长、清单/预测、子任务数纵向排列，不得只留下标题与异常徽章。`TaskManagementRowAccessibilitySnapshot` 是任务详情按钮的单一 VoiceOver 投影，依次保留状态、去重后的路径、运行状态、已工作时长、清单、预测与子任务数；不要用 `accessibilityRepresentation` 或忽略 children 后只补部分字段。
 - Task availability：`TaskTrackingAvailabilityService` 一次线性扫描分别产出 `visibleTaskIDs` 与 `trackableTaskIDs`。归档/删除分支不可见；完成分支仍可浏览详情与历史，但自身和后代不能接收新工作，直到 `reopenTaskForWork` 把路径上的完成阻塞项一起恢复为 active。Today、Quick Start、Pomodoro、手工记录、Inbox 建议、App Intent、任务创建/移动与任务动作共用该判定；归档或完成活动子树前先停止计时，历史 segment 编辑可保留原任务。
-- System routing：`AppDeepLinkRouter` 严格解析 URL；`PendingDeepLinkQueue` 只缓存初始化前已经通过相同验证的语义动作，按动作去重、先进先出且最多 16 项。`WatchCommandRouter` 用弱 store 引用选择最近活跃 iOS scene，并在最后一个 scene 注销后移除进程级 bridge handler。
-- Settings：五类导航 IA，不提供应用级 appearance override。`SyncSettingsSection` 只拥有开关、状态和日常检查/刷新；`SyncRecoverySettingsSection` 空间上独立展示会覆盖一侧数据的恢复命令，冲突时先显示本机与 iCloud 摘要，按钮与确认都必须使用破坏性语义和明确的替换方向。有 pending conflict 时两个方向都调用 `resolveSyncConflict`，与全局冲突对话进入相同的冲突解析边界；只有无冲突的手动恢复才调用 force-upload/current-cloud reset。所有 Settings 破坏性动作共用一个 `SettingsDestructiveConfirmation?` presentation state 和一个 `confirmationDialog`，而且 modifier 必须附着在实际承载按钮的 category `Form`；不得在根列表串联多个 presentation modifier，或把 modifier 放到 compact `NavigationLink` destination 之外。`CountdownTitleEditor` 持有仅属于界面的标题草稿，`CountdownTitleDraft` 负责脏状态、外部刷新合并和错误呈现；只有保存按钮、Return 或失焦会调用 `CountdownCommandHandler`。命令先规范化并验证标题，再执行 SwiftData 变更，因此逐字符输入不会产生数据库写入或半成品同步事实。日期仍通过独立动作即时保存。
+- System routing：`AppDeepLinkRouter` 严格解析 URL；`PendingDeepLinkQueue` 只缓存初始化未完成或当前 scene presentation 忙时已经通过相同验证的语义动作，按动作去重、先进先出且最多 16 项。会改变导航或打开 sheet 的 action 在取得 presentation slot 前不得先改 destination；start/stop 这类无 modal 动作可直接执行。sheet 关闭后再有界重放 deferred action。`WatchCommandRouter` 用弱 store 引用选择最近活跃 iOS scene，并在最后一个 scene 注销后移除进程级 bridge handler。
+- Settings：五类导航 IA，不提供应用级 appearance override，也不放置“手动补录”等日常工作流动作。LLM 配置编辑器通过当前 Settings scene 的 presentation router 打开。`SyncSettingsSection` 只拥有开关、状态和日常检查/刷新；`SyncRecoverySettingsSection` 空间上独立展示会覆盖一侧数据的恢复命令，冲突时先显示本机与 iCloud 摘要，按钮与确认都必须使用破坏性语义和明确的替换方向。有 pending conflict 时两个方向都调用 `resolveSyncConflict`，与全局冲突对话进入相同的冲突解析边界；只有无冲突的手动恢复才调用 force-upload/current-cloud reset。所有 Settings 破坏性动作共用一个 `SettingsDestructiveConfirmation?` presentation state 和一个 `confirmationDialog`，而且 modifier 必须附着在实际承载按钮的 category `Form`；不得在根列表串联多个 presentation modifier，或把 modifier 放到 compact `NavigationLink` destination 之外。`CountdownTitleEditor` 持有仅属于界面的标题草稿，`CountdownTitleDraft` 负责脏状态、外部刷新合并和错误呈现；只有保存按钮、Return 或失焦会调用 `CountdownCommandHandler`。命令先规范化并验证标题，再执行 SwiftData 变更，因此逐字符输入不会产生数据库写入或半成品同步事实。日期仍通过独立动作即时保存。
 - Pomodoro：下一次专注是唯一主流程，旁边或下方展示最近记录。Plan 和 Task 是两个可见的原生 `Menu`；已选任务主行显示标题，第二行显示不重复标题的父级路径，菜单项继续用完整路径区分同名任务。单一主操作紧跟选择器，计划摘要随后同时公开 focus/short break/long break/rounds，并在宽度允许时优先使用一行四项、否则回退为 2×2。section 测试标识只能属于标题或显式容器元素，不得从整张卡片覆盖 Menu/Button 自身标识；没有点击标题/计时器的隐藏选择逻辑。活动 break 在到期前提供“跳过休息”，到期后显示“开始下一轮专注”，两者都调用同一个显式 resume 命令；Task 当前不可工作时 UI 禁用入口。停止确认保存发起时的 run ID，active run 被替换后必须撤销旧确认，不能对“当前任意 run”执行破坏动作。
 - iOS 不设置 `CADisableMinimumFrameDurationOnPhone`；刷新率与帧调度交给系统，流畅度用 Release 截图/trace 和真实设备观察验证，不靠 Info.plist 强制覆盖。
 

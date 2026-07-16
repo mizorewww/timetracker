@@ -4,6 +4,7 @@ struct TimelineRow: View {
     let store: TimeTrackerStore
     let segment: TimeSegment
     var openTaskDetail: ((UUID) -> Void)? = nil
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isDeleteConfirmationPresented = false
@@ -108,13 +109,13 @@ struct TimelineRow: View {
     @ViewBuilder
     private var segmentActions: some View {
         Button {
-            store.presentEditSegment(segment)
+            presentationRouter.presentEditSegment(segment, using: store)
         } label: {
             Label(AppStrings.localized("timeline.editSegment"), systemImage: "pencil")
         }
 
         Button {
-            store.presentManualTime(taskID: segment.taskID)
+            presentationRouter.presentManualTime(taskID: segment.taskID, using: store)
         } label: {
             Label(AppStrings.localized("timeline.addSimilarTime"), systemImage: "calendar.badge.plus")
         }

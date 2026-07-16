@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PomodoroSetupEmptyState: View {
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
 
     var body: some View {
         ContentUnavailableView {
@@ -10,7 +11,7 @@ struct PomodoroSetupEmptyState: View {
             Text(.app("pomodoro.noTasks.description"))
         } actions: {
             Button(AppStrings.newTask) {
-                store.presentNewTask(preservingDestination: .pomodoro)
+                presentationRouter.presentNewTask(using: store, preservingDestination: .pomodoro)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("pomodoro.emptyState.newTask")

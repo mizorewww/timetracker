@@ -212,7 +212,7 @@ Widget extension 与快照代码已经存在，主应用和扩展已启用 `grou
 
 ## 架构概览
 
-项目采用本地优先的模块化单体结构。UI 不直接写 SwiftData，持久化和业务动作通过 command、repository、domain store 和 service 分层。`TimeTrackerStore` 是 `@MainActor @Observable` 门面；SwiftUI 使用 `@State` 持有它，并只在需要双向绑定时建立 `@Bindable`。
+项目采用本地优先的模块化单体结构。UI 不直接写 SwiftData，持久化和业务动作通过 command、repository、domain store 和 service 分层。`TimeTrackerStore` 是 `@MainActor @Observable` 门面；SwiftUI 使用 `@State` 持有它。每个可呈现 UI 的 scene 另持有自己的 typed `AppPresentationRouter`，共享 Store 但不共享 sheet 草稿；只在系统 binding 确实需要时建立局部 `@Bindable`。
 
 ```text
 SwiftUI Feature
@@ -229,6 +229,7 @@ SwiftUI Feature
 
 - `Features`：SwiftUI 页面和局部组件。
 - `SharedUI`：跨功能复用的原生风格控件、布局策略和视觉 token。
+- `App`：启动与 scene 根视图，以及每个 scene 唯一的 App 级 presentation router/host。
 - `Stores/Facade`：`TimeTrackerStore` 的 UI-facing 适配层。
 - `Stores/Domains`：Task、Ledger、Checklist、Rollup、Analytics、Preference 等领域状态。
 - `Commands`：持久写入动作，例如开始计时、移动任务、切换 checklist、应用 Inbox 建议。

@@ -100,7 +100,6 @@ final class TimeTrackerStore {
             }
         }
     }
-    var inboxSuggestionEditorDraft: InboxSuggestionEditorDraft?
     var inboxSuggestionInFlightIDs: Set<UUID> = []
     var inboxSuggestionFailureByItemID: [UUID: String] = [:]
     @ObservationIgnored var inboxSuggestionPendingIDs: [UUID] = []
@@ -117,15 +116,10 @@ final class TimeTrackerStore {
     var selectedTaskID: UUID?
     var selectedRange: RangePreset = .today
     var errorMessage: String?
-    var taskEditorDraft: TaskEditorDraft?
-    var taskCategoryEditorDraft: TaskCategoryEditorDraft?
-    var manualTimeDraft: ManualTimeDraft?
-    var segmentEditorDraft: SegmentEditorDraft?
     var desktopDestination: DesktopDestination = .today
     var tasksRoute: TasksRoute?
     var selectedTaskPulseID: UUID?
     var selectedTaskPulseToken = UUID()
-    var isStartTaskPickerPresented = false
     var cloudAccountStatus: String = AppCloudSync.accountStatus
     var lastSyncRefreshAt: Date?
     var pendingSyncConflict: SyncConflictPrompt?
@@ -186,7 +180,6 @@ final class TimeTrackerStore {
     var taskRepository: TaskRepository?
     var timeRepository: TimeTrackingRepository?
     var pomodoroRepository: PomodoroRepository?
-    var taskEditorReturnDestination: DesktopDestination?
     let aggregationService = TimeAggregationService()
     let analyticsEngine = AnalyticsEngine()
     let taskTreeService = TaskTreeService()

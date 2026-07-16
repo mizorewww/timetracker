@@ -38,13 +38,13 @@ These are the highest-priority mixed-responsibility owners, not an exhaustive li
 | --- | --- | --- |
 | `Features/Tasks/Management/TaskManagementRowViews.swift` | Flat-row presentation and its complete action/menu/accessibility surface remain together | Extract action/menu support from the canonical row without splitting one logical row into unstable identities |
 | `Features/Analytics/Sections/AnalyticsDecisionViews.swift` | Insight, forecast, rhythm, quality, and overlap presentation remain in one section family | Split by decision, forecast, and quality/overlap section families if those screens evolve independently |
-| `Features/Settings/SettingsViews.swift` | Category navigation, export/confirmation presentation, AI configuration presentation, and category-to-section routing remain together | Keep the category router authoritative; move modal/export orchestration into focused support only when it improves reviewability |
+| `Features/Settings/SettingsViews.swift` | Category navigation, export/alert/confirmation presentation, and category-to-section routing remain together; the LLM sheet is now scene-hosted | Keep the category router authoritative; move remaining local export/feedback orchestration into focused support only when it improves reviewability |
 
 Sync is no longer a line-size concentration, but it remains the highest semantic-risk subsystem because it combines security-, migration-, export-, and synchronization-sensitive behavior. Mechanical file movement alone is not completion: deterministic LWW/tombstone behavior, sensitive-key filtering, atomic restore behavior, force-upload recovery, legacy-state checkpoint invalidation, and per-domain snapshot tests must remain green after every change. The largest remaining production concentrations are the feature composition/row files listed above.
 
 ## Completed Structural Work
 
-- App startup is split into container creation, commands, app delegate, settings scene, and root views.
+- App startup is split into container creation, commands, app delegate, settings scene, root views, and scene-owned typed presentation routing/hosting.
 - Settings is split into actions, bindings, data sections, and presentation sections.
 - Inbox commands are split between item mutations and LLM suggestion mutations.
 - Checklist commands are split between item mutations and LLM visual suggestions.

@@ -3,6 +3,7 @@ import SwiftUI
 private struct TaskDetailNavigationModifier: ViewModifier {
     let store: TimeTrackerStore
     let taskID: UUID
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var isDeleteConfirmationPresented = false
 
     func body(content: Content) -> some View {
@@ -35,7 +36,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
 
     private func editButton(_ task: TaskNode) -> some View {
         Button {
-            store.presentEditTask(task)
+            presentationRouter.presentEditTask(task, using: store)
         } label: {
             Label(AppStrings.localized("task.detail.editor.expand"), systemImage: "pencil")
         }

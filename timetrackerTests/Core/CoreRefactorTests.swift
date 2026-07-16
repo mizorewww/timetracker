@@ -79,16 +79,23 @@ struct CoreRefactorTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         store.desktopDestination = .tasks
-        store.presentNewTask(preservingDestination: .tasks)
-        var draft = try #require(store.taskEditorDraft)
+        let presentationRouter = AppPresentationRouter()
+        #expect(presentationRouter.presentNewTask(
+            using: store,
+            preservingDestination: .tasks
+        ))
+        let presentation = try #require(presentationRouter.sheet)
+        guard case let .taskEditor(initialDraft, returnDestination) = presentation.content else {
+            Issue.record("Expected a new-task editor presentation.")
+            return
+        }
+        var draft = initialDraft
         draft.title = "Created from Tasks"
 
-        store.saveTaskDraft(draft)
+        #expect(store.saveTaskDraft(draft, returnDestination: returnDestination))
 
         #expect(store.desktopDestination == .tasks)
         #expect(store.selectedTask?.title == "Created from Tasks")
-        #expect(store.taskEditorDraft == nil)
-        #expect(store.taskEditorReturnDestination == nil)
     }
 
     @Test @MainActor

@@ -3,7 +3,6 @@ import SwiftUI
 struct DataSettingsSection: View {
     let allowsPermanentCleanup: Bool
     let onExport: () -> Void
-    let onAddTime: () -> Void
     let onOptimize: () -> Void
 
     var body: some View {
@@ -14,11 +13,6 @@ struct DataSettingsSection: View {
                     systemImage: "curlybraces.square",
                     tint: .purple
                 )
-            }
-            .buttonStyle(.plain)
-
-            Button(action: onAddTime) {
-                SettingsActionLabel(title: AppStrings.addTime, systemImage: "calendar.badge.plus", tint: .blue)
             }
             .buttonStyle(.plain)
 

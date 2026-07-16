@@ -10,7 +10,6 @@ struct SegmentEditorSheet: View {
             store: store,
             initialDraft: initialDraft,
             onCancel: {
-                store.segmentEditorDraft = nil
                 dismiss()
             },
             onSave: { draft in
@@ -18,8 +17,8 @@ struct SegmentEditorSheet: View {
                     dismiss()
                 }
             },
-            onDelete: { segmentID in
-                if store.deleteSegment(segmentID) {
+            onDelete: { draft in
+                if store.deleteSegment(draft.segmentID, fallbackTaskID: draft.taskID) {
                     dismiss()
                 }
             }
@@ -37,14 +36,14 @@ struct SegmentEditorPanel: View {
     let initialDraft: SegmentEditorDraft
     let onCancel: () -> Void
     let onSave: (SegmentEditorDraft) -> Void
-    let onDelete: (UUID) -> Void
+    let onDelete: (SegmentEditorDraft) -> Void
 
     init(
         store: TimeTrackerStore,
         initialDraft: SegmentEditorDraft,
         onCancel: @escaping () -> Void,
         onSave: @escaping (SegmentEditorDraft) -> Void,
-        onDelete: @escaping (UUID) -> Void
+        onDelete: @escaping (SegmentEditorDraft) -> Void
     ) {
         self.store = store
         self.initialDraft = initialDraft
@@ -161,7 +160,7 @@ struct SegmentEditorPanel: View {
             titleVisibility: .visible
         ) {
             Button(AppStrings.localized("segment.softDelete"), role: .destructive) {
-                onDelete(draft.segmentID)
+                onDelete(draft)
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {

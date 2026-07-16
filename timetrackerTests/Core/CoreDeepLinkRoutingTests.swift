@@ -113,7 +113,10 @@ struct CoreDeepLinkRoutingTests {
             URL(string: "timetracker://timer/stop?taskID=\(staleTarget.id.uuidString)")
         )
 
-        store.handleDeepLink(url)
+        #expect(
+            store.handleDeepLink(url, presentationRouter: AppPresentationRouter())
+                == .rejected
+        )
 
         #expect(store.activeSegments.map(\.id) == [runningSegment.id])
         #expect(try timeRepository.activeSegments().map(\.id) == [runningSegment.id])
@@ -135,14 +138,21 @@ struct CoreDeepLinkRoutingTests {
         let tasksURL = try #require(URL(string: "timetracker://open/tasks"))
 
         store.openTaskDetail(task.id)
-        store.handleDeepLink(todayURL)
+        let presentationRouter = AppPresentationRouter()
+        #expect(
+            store.handleDeepLink(todayURL, presentationRouter: presentationRouter)
+                == .handled
+        )
 
         #expect(store.tasksRoute == nil)
         #expect(store.selectedTaskID == task.id)
         #expect(store.desktopDestination == .today)
 
         store.openTaskDetail(task.id)
-        store.handleDeepLink(tasksURL)
+        #expect(
+            store.handleDeepLink(tasksURL, presentationRouter: presentationRouter)
+                == .handled
+        )
 
         #expect(store.tasksRoute == nil)
         #expect(store.selectedTaskID == task.id)
@@ -172,6 +182,169 @@ struct CoreDeepLinkRoutingTests {
         #expect(queue.urls == [tasks, analytics])
         let drainedURLs = queue.drain()
         #expect(drainedURLs == [tasks, analytics])
+        #expect(queue.urls.isEmpty)
+    }
+
+    @Test @MainActor
+    func presentationDeepLinksUseOnlyTheReceivingSceneRouter() throws {
+        let store = makeTestStore()
+        let receivingScene = AppPresentationRouter()
+        let otherScene = AppPresentationRouter()
+        let url = try #require(URL(string: "timetracker://timer/start"))
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: receivingScene)
+                == .handled
+        )
+
+        guard case .startTaskPicker = try #require(receivingScene.sheet).content else {
+            Issue.record("The receiving scene did not present the task picker.")
+            return
+        }
+        #expect(otherScene.sheet == nil)
+        #expect(store.desktopDestination == .today)
+    }
+
+    @Test @MainActor
+    func repeatedPresentationDeepLinkIsDeferredWithoutRecreatingTheSheet() throws {
+        let store = makeTestStore()
+        let presentationRouter = AppPresentationRouter()
+        let url = try #require(URL(string: "timetracker://timer/start"))
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: presentationRouter)
+                == .handled
+        )
+        let firstID = try #require(presentationRouter.sheet?.id)
+        #expect(
+            store.handleDeepLink(url, presentationRouter: presentationRouter)
+                == .deferred
+        )
+
+        #expect(presentationRouter.sheet?.id == firstID)
+        guard case .startTaskPicker = try #require(presentationRouter.sheet).content else {
+            Issue.record("A duplicate deep link replaced the current sheet.")
+            return
+        }
+    }
+
+    @Test @MainActor
+    func busySceneDefersNewTaskDeepLinkWithoutClosingItsCurrentPresentation() throws {
+        let store = makeTestStore()
+        store.desktopDestination = .analytics
+        let presentationRouter = AppPresentationRouter()
+        #expect(presentationRouter.presentStartTaskPicker())
+        let pickerID = try #require(presentationRouter.sheet?.id)
+        let url = try #require(URL(string: "timetracker://task/new"))
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: presentationRouter)
+                == .deferred
+        )
+
+        #expect(presentationRouter.sheet?.id == pickerID)
+        guard case .startTaskPicker = try #require(presentationRouter.sheet).content else {
+            Issue.record("The deep link displaced the busy scene's sheet.")
+            return
+        }
+        #expect(store.desktopDestination == .analytics)
+    }
+
+    @Test @MainActor
+    func unavailableTimerDeepLinkPreservesPresentationAndDestination() throws {
+        let store = makeTestStore()
+        store.desktopDestination = .analytics
+        let presentationRouter = AppPresentationRouter()
+        #expect(presentationRouter.presentQuickStartEditor(using: store))
+        let presentationID = try #require(presentationRouter.sheet?.id)
+        let url = try #require(
+            URL(string: "timetracker://timer/start?taskID=\(UUID().uuidString)")
+        )
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: presentationRouter)
+                == .rejected
+        )
+
+        #expect(store.desktopDestination == .analytics)
+        #expect(presentationRouter.sheet?.id == presentationID)
+    }
+
+    @Test @MainActor
+    func directTimerDeepLinksRunWhileAPresentationIsActive() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Direct timer",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let presentationRouter = AppPresentationRouter()
+        #expect(presentationRouter.presentQuickStartEditor(using: store))
+        let presentationID = try #require(presentationRouter.sheet?.id)
+        let startURL = try #require(
+            URL(string: "timetracker://timer/start?taskID=\(task.id.uuidString)")
+        )
+        let stopURL = try #require(
+            URL(string: "timetracker://timer/stop?taskID=\(task.id.uuidString)")
+        )
+
+        #expect(
+            store.handleDeepLink(startURL, presentationRouter: presentationRouter)
+                == .handled
+        )
+        #expect(store.activeSegment(for: task.id) != nil)
+        #expect(presentationRouter.sheet?.id == presentationID)
+
+        #expect(
+            store.handleDeepLink(stopURL, presentationRouter: presentationRouter)
+                == .handled
+        )
+        #expect(store.activeSegment(for: task.id) == nil)
+        #expect(presentationRouter.sheet?.id == presentationID)
+    }
+
+    @Test @MainActor
+    func deferredDeepLinksRemainQueuedUntilTheCurrentPresentationDismisses() throws {
+        let store = makeTestStore()
+        let presentationRouter = AppPresentationRouter()
+        var queue = PendingDeepLinkQueue()
+        let newTask = try #require(URL(string: "timetracker://task/new"))
+        let startPicker = try #require(URL(string: "timetracker://timer/start"))
+        let enqueuedNewTask = queue.enqueue(newTask)
+        let enqueuedStartPicker = queue.enqueue(startPicker)
+        #expect(enqueuedNewTask)
+        #expect(enqueuedStartPicker)
+
+        for url in queue.drain() {
+            if store.handleDeepLink(url, presentationRouter: presentationRouter) == .deferred {
+                let requeued = queue.enqueue(url)
+                #expect(requeued)
+            }
+        }
+
+        guard case .taskEditor = try #require(presentationRouter.sheet).content else {
+            Issue.record("The first queued presentation was not handled.")
+            return
+        }
+        #expect(queue.urls == [startPicker])
+        let firstID = try #require(presentationRouter.sheet?.id)
+        presentationRouter.dismiss(presentationID: firstID)
+
+        for url in queue.drain() {
+            if store.handleDeepLink(url, presentationRouter: presentationRouter) == .deferred {
+                let requeued = queue.enqueue(url)
+                #expect(requeued)
+            }
+        }
+
+        guard case .startTaskPicker = try #require(presentationRouter.sheet).content else {
+            Issue.record("The deferred presentation did not resume after dismissal.")
+            return
+        }
         #expect(queue.urls.isEmpty)
     }
 

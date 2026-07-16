@@ -202,6 +202,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Settings/PomodoroPickerViews.swift",
             "timetracker/Features/Settings/CountdownSettingsSection.swift",
             "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Settings/SyncRecoverySettingsSection.swift",
             "timetracker/Features/Sidebar/SidebarViews.swift",
             "timetracker/Features/Sidebar/SidebarDestinationViews.swift",
             "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift",
@@ -353,7 +354,8 @@ struct CoreSourceLayoutTests {
             "PomodoroSettingsSection.swift",
             "PomodoroPickerViews.swift",
             "CountdownSettingsSection.swift",
-            "SyncSettingsSection.swift"
+            "SyncSettingsSection.swift",
+            "SyncRecoverySettingsSection.swift"
         ]
 
         for fileName in focusedFiles {

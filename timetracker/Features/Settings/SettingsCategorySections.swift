@@ -37,14 +37,16 @@ extension SettingsView {
                 cloudSyncEnabled: cloudSyncEnabledBinding,
                 currentStorageValue: currentStorageValue,
                 feedback: syncFeedback,
-                pendingConflict: store.pendingSyncConflict,
                 isCheckingSync: isCheckingSync,
                 onCheckSync: checkSyncStatus,
-                onForceSync: forceSyncRefresh,
-                onForceUploadLocal: { isForceUploadConfirmationPresented = true },
-                onForceDownloadCloud: { isForceDownloadConfirmationPresented = true },
-                onUploadLocal: { isForceUploadConfirmationPresented = true },
-                onDownloadCloud: { isForceDownloadConfirmationPresented = true }
+                onForceSync: forceSyncRefresh
+            )
+
+            SyncRecoverySettingsSection(
+                pendingConflict: store.pendingSyncConflict,
+                isWorking: isCheckingSync,
+                onReplaceCloud: { isForceUploadConfirmationPresented = true },
+                onReplaceDevice: { isForceDownloadConfirmationPresented = true }
             )
 
         case .intelligence:

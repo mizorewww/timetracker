@@ -69,24 +69,16 @@ struct SettingsView: View {
             Text(.app("dialog.optimize.message"))
         }
         .confirmationDialog(AppStrings.localized("dialog.forceUpload.title"), isPresented: $isForceUploadConfirmationPresented, titleVisibility: .visible) {
-            Button(role: .destructive) {
-                if let result = store.forceUploadLocalDataToCloud() {
-                    syncCheckMessage = result == .appliedImmediately
-                        ? AppStrings.localized("sync.forceUpload.started")
-                        : AppStrings.localized("sync.forceUpload.queued")
-                }
-            } label: {
-                Label(AppStrings.localized("settings.forceUploadICloud"), systemImage: "icloud.and.arrow.up.fill")
+            Button(AppStrings.localized("dialog.forceUpload.confirm"), role: .destructive) {
+                forceUploadLocalData()
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(.app("dialog.forceUpload.message"))
         }
         .confirmationDialog(AppStrings.localized("dialog.forceDownload.title"), isPresented: $isForceDownloadConfirmationPresented, titleVisibility: .visible) {
-            Button(role: .destructive) {
+            Button(AppStrings.localized("dialog.forceDownload.confirm"), role: .destructive) {
                 forceDownloadCloudData()
-            } label: {
-                Label(AppStrings.localized("settings.forceDownloadICloud"), systemImage: "icloud.and.arrow.down.fill")
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {

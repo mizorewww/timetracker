@@ -4,14 +4,9 @@ struct SyncSettingsSection: View {
     let cloudSyncEnabled: Binding<Bool>
     let currentStorageValue: String
     let feedback: SyncFeedback
-    let pendingConflict: SyncConflictPrompt?
     let isCheckingSync: Bool
     let onCheckSync: () -> Void
     let onForceSync: () -> Void
-    let onForceUploadLocal: () -> Void
-    let onForceDownloadCloud: () -> Void
-    let onUploadLocal: () -> Void
-    let onDownloadCloud: () -> Void
 
     var body: some View {
         Section {
@@ -51,56 +46,10 @@ struct SyncSettingsSection: View {
             }
             .buttonStyle(.plain)
             .disabled(isCheckingSync)
-
-            Button {
-                if pendingConflict == nil {
-                    onForceUploadLocal()
-                } else {
-                    onUploadLocal()
-                }
-            } label: {
-                SettingsActionLabel(
-                    title: uploadTitle,
-                    systemImage: "icloud.and.arrow.up.fill",
-                    tint: .green,
-                    secondaryTint: .blue
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isCheckingSync)
-
-            Button {
-                if pendingConflict == nil {
-                    onForceDownloadCloud()
-                } else {
-                    onDownloadCloud()
-                }
-            } label: {
-                SettingsActionLabel(
-                    title: downloadTitle,
-                    systemImage: "icloud.and.arrow.down.fill",
-                    tint: .cyan,
-                    secondaryTint: .blue
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isCheckingSync)
         } header: {
             SettingsHeader(symbol: "icloud.fill", title: AppStrings.localized("settings.sync"))
         } footer: {
             Text(.app("settings.sync.footer"))
         }
-    }
-
-    private var uploadTitle: String {
-        pendingConflict == nil
-            ? AppStrings.localized("settings.forceUploadICloud")
-            : AppStrings.localized("dialog.syncConflict.uploadLocal")
-    }
-
-    private var downloadTitle: String {
-        pendingConflict == nil
-            ? AppStrings.localized("settings.forceDownloadICloud")
-            : AppStrings.localized("dialog.syncConflict.downloadCloud")
     }
 }

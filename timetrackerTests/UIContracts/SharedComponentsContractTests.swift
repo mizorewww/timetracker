@@ -24,6 +24,7 @@ struct SharedComponentsContractTests {
             "timetracker/Features/Settings/PomodoroPickerViews.swift",
             "timetracker/Features/Settings/CountdownSettingsSection.swift",
             "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Settings/SyncRecoverySettingsSection.swift",
             "timetracker/Features/Settings/LLMSettingsViews.swift",
             "timetracker/Features/Settings/LLMSettingsSection.swift"
         ].map(sourceText).joined(separator: "\n")
@@ -110,6 +111,7 @@ struct SharedComponentsContractTests {
             "timetracker/Features/Settings/PomodoroPickerViews.swift",
             "timetracker/Features/Settings/CountdownSettingsSection.swift",
             "timetracker/Features/Settings/SyncSettingsSection.swift",
+            "timetracker/Features/Settings/SyncRecoverySettingsSection.swift",
             "timetracker/Features/Settings/LLMSettingsViews.swift",
             "timetracker/Features/Settings/LLMSettingsSection.swift",
             "timetracker/Features/Settings/SettingsDataSectionsViews.swift",

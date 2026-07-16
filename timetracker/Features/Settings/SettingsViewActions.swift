@@ -48,6 +48,19 @@ extension SettingsView {
         }
     }
 
+    func forceUploadLocalData() {
+        if store.pendingSyncConflict != nil {
+            store.resolveSyncConflict(.uploadLocal)
+            if store.pendingSyncConflict == nil {
+                syncCheckMessage = AppStrings.localized("sync.forceUpload.conflictResolved")
+            }
+        } else if let result = store.forceUploadLocalDataToCloud() {
+            syncCheckMessage = result == .appliedImmediately
+                ? AppStrings.localized("sync.forceUpload.started")
+                : AppStrings.localized("sync.forceUpload.queued")
+        }
+    }
+
     func forceDownloadCloudData() {
         isCheckingSync = true
         Task {

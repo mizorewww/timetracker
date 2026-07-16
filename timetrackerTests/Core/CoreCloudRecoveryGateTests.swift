@@ -23,7 +23,7 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func missingAndUnreadableUploadBackupsDeferRecovery() throws {
-        try withRecoveryDefaults {
+        withRecoveryDefaults {
             let defaults = UserDefaults.standard
             let missingBackup = SyncConflictService.hasDefaultPendingForcedUploadBackup(
                 loadAuthoritativeSnapshot: { nil },
@@ -59,7 +59,7 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func noPendingRequestIsTheOnlyNoOpCompletion() throws {
-        try withRecoveryDefaults {
+        withRecoveryDefaults {
             var removalCount = 0
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
                 canResetUpload: false,
@@ -78,7 +78,7 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func persistentStoreDeletionFailureKeepsUploadPending() throws {
-        try withRecoveryDefaults {
+        withRecoveryDefaults {
             let defaults = UserDefaults.standard
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             var stateRemovalCount = 0
@@ -102,7 +102,7 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func downloadStateDeletionFailureKeepsDownloadPending() throws {
-        try withRecoveryDefaults {
+        withRecoveryDefaults {
             let defaults = UserDefaults.standard
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
             var storeRemovalCount = 0
@@ -126,7 +126,7 @@ struct CoreCloudRecoveryGateTests {
 
     @Test @MainActor
     func pendingMarkersClearOnlyAfterCompletedRecoveryIsAcknowledged() throws {
-        try withRecoveryDefaults {
+        withRecoveryDefaults {
             let defaults = UserDefaults.standard
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             defaults.set("previous recovery error", forKey: AppCloudSync.errorKey)

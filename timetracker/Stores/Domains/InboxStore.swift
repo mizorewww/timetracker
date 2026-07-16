@@ -1,15 +1,25 @@
 import Foundation
 
 struct InboxStore {
-    private(set) var items: [InboxItem] = []
+    private(set) var itemReadModels: [InboxItemReadModel] = []
     private(set) var suggestions: [InboxSuggestion] = []
 
+    var items: [InboxItem] {
+        itemReadModels.map(\.item)
+    }
+
     mutating func refresh(items: [InboxItem], suggestions: [InboxSuggestion]) {
-        let resolutions = InboxSuggestionIdentityService().visibleLogicalResolutions(from: items)
-        for resolution in resolutions {
-            resolution.materializeDismissal()
-        }
-        self.items = sortedItems(resolutions.map(\.winner))
+        refresh(
+            itemReadModels: InboxSuggestionIdentityService().visibleLogicalReadModels(from: items),
+            suggestions: suggestions
+        )
+    }
+
+    mutating func refresh(
+        itemReadModels: [InboxItemReadModel],
+        suggestions: [InboxSuggestion]
+    ) {
+        self.itemReadModels = sortedItemReadModels(itemReadModels)
         self.suggestions = sortedSuggestions(suggestions.deduplicatedByID())
     }
 
@@ -23,8 +33,10 @@ struct InboxStore {
         )
     }
 
-    private func sortedItems(_ items: [InboxItem]) -> [InboxItem] {
-        items.sorted { lhs, rhs in
+    private func sortedItemReadModels(_ readModels: [InboxItemReadModel]) -> [InboxItemReadModel] {
+        readModels.sorted { lhsReadModel, rhsReadModel in
+            let lhs = lhsReadModel.item
+            let rhs = rhsReadModel.item
             if lhs.sortOrder != rhs.sortOrder {
                 return lhs.sortOrder < rhs.sortOrder
             }

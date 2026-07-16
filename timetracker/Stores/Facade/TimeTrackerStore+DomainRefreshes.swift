@@ -117,10 +117,11 @@ extension TimeTrackerStore {
     }
 
     func refreshInboxDomain(plan: StoreRefreshPlan) throws {
-        inboxDomainStore.refresh(items: try fetchInboxItems(), suggestions: inboxSuggestions)
+        let itemReadModels = try fetchInboxItemReadModels()
+        inboxDomainStore.refresh(itemReadModels: itemReadModels, suggestions: inboxSuggestions)
         if plan.affectedInboxItemIDs.isEmpty || inboxSuggestions.isEmpty {
             inboxDomainStore.refresh(
-                items: inboxDomainStore.items,
+                itemReadModels: itemReadModels,
                 suggestions: try fetchInboxSuggestions()
             )
         } else {
@@ -130,6 +131,9 @@ extension TimeTrackerStore {
             )
         }
         suppressInboxSuggestionIndexRebuild = true
+        inboxItemReadModelByItemID = Dictionary(
+            uniqueKeysWithValues: inboxDomainStore.itemReadModels.map { ($0.item.id, $0) }
+        )
         inboxItems = inboxDomainStore.items
         inboxSuggestions = inboxDomainStore.suggestions
         suppressInboxSuggestionIndexRebuild = false

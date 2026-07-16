@@ -31,10 +31,12 @@ struct InboxSuggestionIdentityTests {
 
         var store = InboxStore()
         store.refresh(items: [dismissed, activeDuplicate], suggestions: [])
-        let winner = try #require(store.items.first)
+        let readModel = try #require(store.itemReadModels.first)
+        let winner = readModel.item
 
         #expect(winner === activeDuplicate)
-        #expect(winner.isCurrentSuggestionRevisionDismissed)
+        #expect(winner.dismissedSuggestionRevisionID == nil)
+        #expect(readModel.isCurrentSuggestionRevisionDismissed)
         #expect(winner.notes == "New notes")
         #expect(winner.isCompleted)
         #expect(winner.completedAt == Date(timeIntervalSinceReferenceDate: 190))
@@ -62,16 +64,20 @@ struct InboxSuggestionIdentityTests {
         var store = InboxStore()
         store.refresh(items: [original, rebuilt, unrelated], suggestions: [])
         #expect(store.items.count == 2)
-        let merged = try #require(
-            store.items.first { $0.effectiveSuggestionContextID == original.effectiveSuggestionContextID }
+        let mergedReadModel = try #require(
+            store.itemReadModels.first {
+                $0.item.effectiveSuggestionContextID == original.effectiveSuggestionContextID
+            }
         )
+        let merged = mergedReadModel.item
         #expect(merged.id == rebuilt.id)
-        #expect(merged.isCurrentSuggestionRevisionDismissed)
+        #expect(merged.dismissedSuggestionRevisionID == nil)
+        #expect(mergedReadModel.isCurrentSuggestionRevisionDismissed)
         #expect(merged.notes == "New notes")
         #expect(merged.sortOrder == 40)
         #expect(
             InboxSuggestionStateService().state(
-                for: merged,
+                for: mergedReadModel,
                 suggestion: nil,
                 isInFlight: false
             ) == .dismissed
@@ -100,6 +106,56 @@ struct InboxSuggestionIdentityTests {
         #expect(winner === edited)
         #expect(winner.dismissedSuggestionRevisionID == nil)
         #expect(winner.isCurrentSuggestionRevisionDismissed == false)
+    }
+
+    @Test @MainActor
+    func facadeRefreshProjectsMergedDismissalWithoutDirtyingSwiftData() throws {
+        let context = try makeTestContext()
+        let contextID = UUID()
+        let revisionID = UUID()
+        let dismissed = InboxItem(title: "Keep this dismissed", deviceID: "older")
+        dismissed.suggestionContextID = contextID
+        dismissed.suggestionRevisionID = revisionID
+        dismissed.dismissedSuggestionRevisionID = revisionID
+        dismissed.updatedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let current = InboxItem(title: dismissed.title, deviceID: "newer")
+        current.suggestionContextID = contextID
+        current.suggestionRevisionID = revisionID
+        current.updatedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let suggestion = InboxSuggestion(
+            inboxItemID: current.id,
+            inboxItemContextID: contextID,
+            inboxItemRevisionID: revisionID,
+            taskID: UUID(),
+            titleSnapshot: current.title,
+            deviceID: "newer"
+        )
+        context.insert(dismissed)
+        context.insert(current)
+        context.insert(suggestion)
+        try context.save()
+        #expect(context.hasChanges == false)
+
+        let store = makeTestStore()
+        store.configureRepositoriesIfNeeded(context: context)
+        try store.refresh(plan: StoreRefreshPlan(scopes: [.inbox]))
+
+        let winner = try #require(store.inboxItems.first)
+        let readModel = store.inboxItemReadModel(for: winner)
+        #expect(winner === current)
+        #expect(winner.dismissedSuggestionRevisionID == nil)
+        #expect(readModel.dismissedSuggestionRevisionID == revisionID)
+        #expect(readModel.isCurrentSuggestionRevisionDismissed)
+        #expect(store.inboxSuggestionByItemID[winner.id]?.id == suggestion.id)
+        #expect(store.inboxSuggestion(for: winner) == nil)
+        #expect(
+            InboxSuggestionStateService().state(
+                for: readModel,
+                suggestion: suggestion,
+                isInFlight: false
+            ) == .dismissed
+        )
+        #expect(context.hasChanges == false)
     }
 
     @Test @MainActor

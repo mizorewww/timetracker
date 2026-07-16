@@ -236,6 +236,7 @@ final class TimeTrackerStore {
     @ObservationIgnored var readableLedgerSegmentIDs: Set<UUID> = []
     var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
+    var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?
     var scheduledSyncRefreshReason: SyncRefreshReason?
     var completedCloudExportResults: [UUID: Bool] = [:]

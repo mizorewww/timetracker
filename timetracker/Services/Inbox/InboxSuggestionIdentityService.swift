@@ -62,15 +62,36 @@ struct InboxItemMergeResolution {
             : nil
     }
 
-    func materializeDismissal() {
-        winner.dismissedSuggestionRevisionID = mergedDismissedSuggestionRevisionID
+    var readModel: InboxItemReadModel {
+        InboxItemReadModel(
+            item: winner,
+            dismissedSuggestionRevisionID: mergedDismissedSuggestionRevisionID
+        )
+    }
+}
+
+/// A logical inbox winner plus state merged from its physical CloudKit siblings.
+///
+/// Keeping merged fields in this value prevents a read-only refresh from
+/// changing the SwiftData winner merely to present the resolved UI state.
+struct InboxItemReadModel {
+    let item: InboxItem
+    let dismissedSuggestionRevisionID: UUID?
+
+    var isCurrentSuggestionRevisionDismissed: Bool {
+        dismissedSuggestionRevisionID == item.effectiveSuggestionRevisionID
     }
 }
 
 struct InboxSuggestionIdentityService {
     func visibleLogicalItems<S: Sequence>(from items: S) -> [InboxItem]
     where S.Element == InboxItem {
-        visibleLogicalResolutions(from: items).map(\.winner)
+        visibleLogicalReadModels(from: items).map(\.item)
+    }
+
+    func visibleLogicalReadModels<S: Sequence>(from items: S) -> [InboxItemReadModel]
+    where S.Element == InboxItem {
+        visibleLogicalResolutions(from: items).map(\.readModel)
     }
 
     func logicalWinners<S: Sequence>(from items: S) -> [InboxItem]

@@ -801,7 +801,7 @@
 
 后果：正常字号 iPhone 首屏可以同时看到完整设置卡、开始专注和全部四项计划事实，最近记录仍作为次级可滚动内容。Mac、iPad 和宽窗口继续使用更宽松间距；同名任务的区分能力保留在父级路径和完整 Picker 项中。后续新增 setup 信息必须先判断是否属于启动前必要事实，不能继续纵向堆叠到主操作之前。
 
-验证：布局策略与源码契约固定紧凑/常规间距、页面垂直边距和“标题 + 父级路径”任务身份。付费签名的 macOS 合并定向回归 71/71 通过；正常字号 iPhone 17 Pro / iOS 27 Focus UI 1/1 通过，截图确认完整设置、主操作及四项摘要都位于系统 Tab Bar 上方。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保留 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 APS、CloudKit 和 App Group。一次性证据路径与设备清理记录见 dated Audit。
+验证：布局策略与源码契约固定紧凑/常规间距、页面垂直边距和“标题 + 父级路径”任务身份。付费签名的 macOS 合并定向回归 72/72 通过；正常字号 iPhone 17 Pro / iOS 27 Focus UI 1/1 通过，截图确认完整设置、主操作及四项摘要都位于系统 Tab Bar 上方。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保留 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 APS、CloudKit 和 App Group。一次性证据路径与设备清理记录见 dated Audit。
 
 ## AD-063：LLM 模型发现于解码阶段保持固定上限
 
@@ -814,6 +814,18 @@
 后果：模型发现的业务内存与排序集合固定在 256 项，不再随服务返回的 model count 增长；transport 的 2 MiB 总字节上限仍是外层防御。若将来 UI 支持分页或服务端搜索，应新增明确协议而不是扩大这个本地全量列表。不得重新先解码整个 `[Model]` 或为“显示更多”维护无界集合。
 
 验证：测试覆盖精确 256 项、超限后更小 ID 替换、重复/空白/控制字符、256-byte ASCII/Unicode 边界和超限 Unicode，并确认网络响应结果与偏好 sanitizer 完全一致。付费签名 macOS `LLMSettingsTests` 21/21、0 error/0 warning；当前合并工作树 generic iOS 自动签名构建 0 error/0 warning，主 App 与所有嵌入目标保留 Team `LT98S43NKA`、付费 Apple Development 签名及主 App 的 APS/CloudKit/App Group。一次性 xcresult 见 dated Audit。
+
+## AD-064：Inbox 刷新只发布合并读模型，不写回持久 winner
+
+状态：Accepted
+
+背景：CloudKit 可能暂时 materialize 同一 Inbox 逻辑条目的多个物理 sibling。内容以 LWW winner 展示，dismissal 则必须按精确 `(contextID, revisionID)` 从所有 sibling 合并。旧 `fetchInboxItems` / `InboxStore.refresh` 为了让 UI 看见 dismissal，会在读取时直接给 winner 写 `dismissedSuggestionRevisionID`；没有用户动作的一次 refresh 因此把 `ModelContext` 标为 changed，随后任意无关保存都可能把派生合并结果作为新同步事实上传。
+
+决策：`InboxItemMergeResolution` 生成不可持久化的 `InboxItemReadModel`，其中只保存 winner 引用与合并后的 dismissal revision。Inbox domain store 排序并发布这些 read model；facade 为当前物理 winner 建立索引，所有 suggestion display、自动生成准入和异步结果落库前校验都使用 read model 的合并状态。普通 fetch/refresh 不再调用 materialize。只有明确的 Inbox mutation command 在完成身份和文本预检后，才通过现有 logical-mutation 边界把 dismissal 物化到需要写入的 sibling。
+
+后果：启动、CloudKit 通知和普通 domain refresh 都保持 `ModelContext.hasChanges == false`，同时 UI 仍正确隐藏已驳回的当前修订，并阻止自动/延迟建议复活。读模型不成为第二套持久事实；每次 refresh 都从当前物理行重建。新增 Inbox 读取入口必须消费同一 resolution/read-model 语义，不得重新在 getter、sort、index rebuild 或 View 中写 SwiftData。
+
+验证：真实内存 SwiftData context 构造“旧 sibling 有 dismissal、新 winner 有更新内容”的逻辑条目，确认刷新后 winner 字段保持未改、建议不可见、state 为 dismissed 且 `context.hasChanges == false`。付费签名的 Inbox identity/apply/persistence/cancellation/store/write-safety 六套定向回归 46/46、0 error/0 warning；当前合并工作树 generic iOS 自动签名构建同样 0 error/0 warning并保留全部付费签名与主 App 能力。一次性 xcresult 与资源审计见 dated Audit。
 
 ## 2. Agent 工作清单
 

@@ -19,8 +19,18 @@ extension TimeTrackerStore {
 
     func inboxSuggestion(for item: InboxItem) -> InboxSuggestion? {
         inboxSuggestionStateService.displaySuggestion(
-            for: item,
+            for: inboxItemReadModel(for: item),
             suggestion: inboxSuggestionByItemID[item.id]
+        )
+    }
+
+    func inboxItemReadModel(for item: InboxItem) -> InboxItemReadModel {
+        if let readModel = inboxItemReadModelByItemID[item.id], readModel.item === item {
+            return readModel
+        }
+        return InboxItemReadModel(
+            item: item,
+            dismissedSuggestionRevisionID: item.dismissedSuggestionRevisionID
         )
     }
 

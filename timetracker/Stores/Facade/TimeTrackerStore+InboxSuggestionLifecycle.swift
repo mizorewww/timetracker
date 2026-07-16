@@ -22,7 +22,7 @@ extension TimeTrackerStore {
         ), showsErrors || preferences.llmAutomaticSuggestionsEnabled,
               let item = inboxItems.first(where: { $0.id == itemID }),
               inboxSuggestionStateService.canStoreGeneratedSuggestion(
-                  item: item,
+                  readModel: inboxItemReadModel(for: item),
                   requestedTitle: requestedTitle,
                   requestedIdentity: requestedIdentity,
                   currentSuggestion: inboxSuggestionByItemID[itemID]
@@ -73,7 +73,7 @@ extension TimeTrackerStore {
         ), showsErrors || preferences.llmAutomaticSuggestionsEnabled,
               let item = inboxItems.first(where: { $0.id == itemID }),
               inboxSuggestionStateService.canStoreGeneratedSuggestion(
-                  item: item,
+                  readModel: inboxItemReadModel(for: item),
                   requestedTitle: requestedTitle,
                   requestedIdentity: requestedIdentity,
                   currentSuggestion: inboxSuggestionByItemID[itemID]

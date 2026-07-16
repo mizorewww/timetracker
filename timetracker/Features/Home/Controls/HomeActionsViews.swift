@@ -84,7 +84,8 @@ struct TaskStartPicker: View {
         filteredTasks.map { task in
             TaskStartPickerItem(
                 task: task,
-                path: store.path(for: task),
+                fullPath: store.path(for: task),
+                parentPath: store.parentPath(for: task),
                 activeSegment: store.activeSegment(for: task.id),
                 command: store.timerPickerSelectionCommand(for: task)
             )
@@ -126,7 +127,8 @@ struct TaskStartPicker: View {
                             ForEach(runningItems) { item in
                                 TaskStartPickerRunningRow(
                                     task: item.task,
-                                    path: item.path,
+                                    fullPath: item.fullPath,
+                                    parentPath: item.parentPath,
                                     onStop: {
                                         guard let activeSegment = item.activeSegment else { return }
                                         store.stop(segment: activeSegment)
@@ -152,14 +154,14 @@ struct TaskStartPicker: View {
                                 } label: {
                                     TaskStartPickerActionRow(
                                         task: item.task,
-                                        path: item.path,
+                                        parentPath: item.parentPath,
                                         command: item.command
                                     )
                                 }
                                 .accessibilityLabel(
                                     item.command.accessibilityLabel(for: item.task.title)
                                 )
-                                .accessibilityValue(item.path)
+                                .accessibilityValue(item.fullPath)
                                 .accessibilityHint(item.command.accessibilityHint)
                                 .accessibilityIdentifier(
                                     "timer.taskPicker.select.\(item.id.uuidString)"
@@ -174,6 +176,7 @@ struct TaskStartPicker: View {
                 }
                 #if os(iOS)
                 .listStyle(.insetGrouped)
+                .listSectionSpacing(18)
                 #else
                 .listStyle(.inset)
                 #endif
@@ -185,7 +188,15 @@ struct TaskStartPicker: View {
         #else
         .background(AppColors.background)
         #endif
+        #if os(iOS)
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: AppStrings.localized("tasks.searchPrompt")
+        )
+        #else
         .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
+        #endif
         .navigationTitle(store.timerPickerMode.title)
         .accessibilityIdentifier("timer.taskPicker")
         #if os(iOS)

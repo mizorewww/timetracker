@@ -2,7 +2,8 @@ import SwiftUI
 
 struct TaskStartPickerItem: Identifiable {
     let task: TaskNode
-    let path: String
+    let fullPath: String
+    let parentPath: String?
     let activeSegment: TimeSegment?
     let command: TimerPickerSelectionCommand
 
@@ -11,42 +12,23 @@ struct TaskStartPickerItem: Identifiable {
 
 struct TaskStartPickerActionRow: View {
     let task: TaskNode
-    let path: String
+    let parentPath: String?
     let command: TimerPickerSelectionCommand
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 10) {
-                    identity
-                    actionLabel
-                }
-            } else {
-                HStack(spacing: 12) {
-                    identity
-                    Spacer(minLength: 8)
-                    actionLabel
-                }
+        HStack(alignment: .top, spacing: 12) {
+            TaskIcon(task: task, size: 28)
+            VStack(alignment: .leading, spacing: 8) {
+                TaskStartPickerTaskText(
+                    title: task.title,
+                    parentPath: parentPath
+                )
+                actionLabel
             }
         }
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .contentShape(Rectangle())
-    }
-
-    private var identity: some View {
-        HStack(spacing: 12) {
-            TaskIcon(task: task, size: 28)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(task.title)
-                    .foregroundStyle(.primary)
-                Text(path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                    .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
-            }
-        }
     }
 
     private var actionLabel: some View {
@@ -58,69 +40,45 @@ struct TaskStartPickerActionRow: View {
 
 struct TaskStartPickerRunningRow: View {
     let task: TaskNode
-    let path: String
+    let fullPath: String
+    let parentPath: String?
     let onStop: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 10) {
-                    runningStatus
-                    stopButton
-                }
-            } else {
+        HStack(alignment: .top, spacing: 12) {
+            TaskIcon(task: task, size: 28)
+            VStack(alignment: .leading, spacing: 8) {
+                runningSummary
                 HStack(spacing: 12) {
-                    runningStatus
+                    RunningStatusBadge()
+                        .accessibilityHidden(true)
                     Spacer(minLength: 8)
                     stopButton
                 }
             }
         }
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
     }
 
-    private var runningStatus: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 8) {
-                    identity
-                    RunningStatusBadge()
-                }
-            } else {
-                HStack(spacing: 12) {
-                    identity
-                    Spacer(minLength: 8)
-                    RunningStatusBadge()
-                }
-            }
-        }
+    private var runningSummary: some View {
+        TaskStartPickerTaskText(
+            title: task.title,
+            parentPath: parentPath
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             String(format: AppStrings.localized("timer.picker.runningTaskFormat"), task.title)
         )
-        .accessibilityValue(path)
+        .accessibilityValue(fullPath)
         .accessibilityHint(AppStrings.localized("timer.picker.runningHint"))
-    }
-
-    private var identity: some View {
-        HStack(spacing: 12) {
-            TaskIcon(task: task, size: 28)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(task.title)
-                    .foregroundStyle(.primary)
-                Text(path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                    .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
-            }
-        }
     }
 
     private var stopButton: some View {
         Button(action: onStop) {
             Label(AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(Color.red)
                 .frame(minHeight: 44)
         }
         .buttonStyle(.bordered)
@@ -130,6 +88,31 @@ struct TaskStartPickerRunningRow: View {
         )
         .accessibilityHint(AppStrings.localized("timer.task.stopHint"))
         .accessibilityIdentifier("timer.taskPicker.stop.\(task.id.uuidString)")
+    }
+}
+
+private struct TaskStartPickerTaskText: View {
+    let title: String
+    let parentPath: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Color.primary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
+
+            if let parentPath, parentPath.isEmpty == false {
+                Text(parentPath)
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

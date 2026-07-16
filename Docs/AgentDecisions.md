@@ -693,7 +693,7 @@
 
 后果：任务行不再把状态伪装成动作，误点运行任务不会丢失正在记录的时间上下文；停止、开始与切换均有单独可发现的触点和稳定的 Voice Control/VoiceOver 名称。`TimeTrackerStore.startTask` 返回真实写入成功值，使 sheet 不会在写入失败时假装完成。其他计时入口如需复用选择器，必须调用同一 policy/Store 编排，不得在 View 中按 `activeSegment` 自行写成 toggle。
 
-验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop 才结束该 segment、独占切换停止旧计时、并行开始保留旧计时，以及写入失败时不改变原任务 selection。UI source contract 固定运行/可选分区、独立 Stop 标识、成功后才 dismiss、Start/Switch 基本语义和三语键。主 Agent 使用付费开发者身份执行签名定向套件；正常字号操作路径并入单设备 UI 批次，不为极端字号单独消耗模拟器。
+验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop 才结束该 segment、独占切换停止旧计时、并行开始保留旧计时，以及写入失败时不改变原任务 selection。UI source contract 固定运行/可选分区、独立 Stop 标识、成功后才 dismiss、Start/Switch 基本语义、任务身份色与三语键。付费 Apple Development 签名的 command/UI 定向套件 9/9 通过（`/tmp/timetracker-timer-picker-layout-macos-rerun-20260716.xcresult`）；正常字号 iPhone 17 Pro / iOS 27 操作与截图 1/1 通过（`/tmp/timetracker-timer-picker-ui-color-retry-20260716.xcresult`）。截图确认顶部搜索、完整标题、仅父级路径、分行 Start/Running/Stop，以及任务身份主文本色与红色 Stop 图标/文字；一次中间重跑只在 App launch 阶段超时，不计为通过。两台专用设备均在各自批次后终止、关闭并删除，不为极端字号另开专项批次。
 
 ## AD-054：任务树 projection 由 mutation-owned read index 与有界缓存发布
 

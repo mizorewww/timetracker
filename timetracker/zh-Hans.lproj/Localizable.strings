@@ -46,8 +46,8 @@
 "timer.picker.availableHeader" = "可开始的任务";
 "timer.picker.switchHeader" = "切换到";
 "timer.picker.startFooter" = "选择一个任务开始计时。";
-"timer.picker.parallelFooter" = "选择一个任务再开始一个计时。只有明确点按“停止”才会结束正在运行的计时。";
-"timer.picker.switchFooter" = "选择任务后会先停止其他正在运行的计时，再开始所选任务。若只想停止，请点按运行中任务旁的“停止”。";
+"timer.picker.parallelFooter" = "为其他任务开始计时不会停止正在运行的计时。";
+"timer.picker.switchFooter" = "切换会先停止其他计时。若只想结束计时，请点按上方的“停止”。";
 "timer.picker.action.start" = "开始";
 "timer.picker.action.switch" = "切换";
 "timer.picker.startTaskFormat" = "开始“%@”";

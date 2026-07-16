@@ -46,8 +46,8 @@
 "timer.picker.availableHeader" = "可開始的任務";
 "timer.picker.switchHeader" = "切換至";
 "timer.picker.startFooter" = "選擇一個任務開始計時。";
-"timer.picker.parallelFooter" = "選擇一個任務再開始一個計時。只有明確點按「停止」才會結束正在執行的計時。";
-"timer.picker.switchFooter" = "選擇任務後會先停止其他正在執行的計時，再開始所選任務。若只想停止，請點按執行中任務旁的「停止」。";
+"timer.picker.parallelFooter" = "為其他任務開始計時不會停止正在執行的計時。";
+"timer.picker.switchFooter" = "切換會先停止其他計時。若只想結束計時，請點按上方的「停止」。";
 "timer.picker.action.start" = "開始";
 "timer.picker.action.switch" = "切換";
 "timer.picker.startTaskFormat" = "開始「%@」";

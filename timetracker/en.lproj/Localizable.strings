@@ -45,9 +45,9 @@
 "timer.picker.runningHeader" = "Running Timers";
 "timer.picker.availableHeader" = "Available Tasks";
 "timer.picker.switchHeader" = "Switch To";
-"timer.picker.startFooter" = "Choose a task to start timing.";
-"timer.picker.parallelFooter" = "Choose a task to start another timer. Running timers stop only when you choose Stop.";
-"timer.picker.switchFooter" = "Choosing a task stops other running timers, then starts the selected task. To stop without switching, choose Stop beside a running task.";
+"timer.picker.startFooter" = "Choose a task to start its timer.";
+"timer.picker.parallelFooter" = "Starting another task keeps running timers active.";
+"timer.picker.switchFooter" = "Switching stops other timers first. To end a timer without switching, choose Stop above.";
 "timer.picker.action.start" = "Start";
 "timer.picker.action.switch" = "Switch";
 "timer.picker.startTaskFormat" = "Start %@";

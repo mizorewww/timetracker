@@ -39,6 +39,26 @@ struct TimerPickerUIContractTests {
     }
 
     @Test
+    func normalRowsGiveTaskIdentityPriorityOverCommands() throws {
+        let pickerSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let rowSource = try sourceText("timetracker/Features/Home/Controls/TaskStartPickerRows.swift")
+
+        #expect(rowSource.contains("HStack(alignment: .top, spacing: 12)"))
+        #expect(rowSource.contains("VStack(alignment: .leading, spacing: 8)"))
+        #expect(rowSource.contains("TaskStartPickerTaskText("))
+        #expect(rowSource.contains(".lineLimit(2)"))
+        #expect(rowSource.contains(".foregroundStyle(Color.primary)"))
+        #expect(rowSource.contains(".foregroundStyle(Color.secondary)"))
+        #expect(rowSource.contains("let parentPath: String?"))
+        #expect(rowSource.contains("RunningStatusBadge()\n                        .accessibilityHidden(true)"))
+        #expect(pickerSource.contains("parentPath: store.parentPath(for: task)"))
+        #expect(pickerSource.contains("placement: .navigationBarDrawer(displayMode: .always)"))
+        #expect(pickerSource.contains(".listSectionSpacing(18)"))
+        #expect(rowSource.contains(".symbolRenderingMode(.monochrome)"))
+        #expect(rowSource.contains(".foregroundStyle(Color.red)"))
+    }
+
+    @Test
     func pickerCopyExplainsStartSwitchAndStopConsequencesInEveryLocale() throws {
         let localizationPaths = [
             "timetracker/en.lproj/Localizable.strings",

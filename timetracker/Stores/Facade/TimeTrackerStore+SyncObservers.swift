@@ -150,10 +150,10 @@ extension TimeTrackerStore {
                let conflict = try syncConflictService.handleCloudImport(context: modelContext) {
                 pendingSyncConflict = conflict
             } else {
-                pendingSyncConflict = syncConflictService.prompt()
+                pendingSyncConflict = try syncConflictService.prompt()
             }
         case .remoteStoreChanged:
-            pendingSyncConflict = syncConflictService.prompt()
+            pendingSyncConflict = try syncConflictService.prompt()
         }
     }
 }

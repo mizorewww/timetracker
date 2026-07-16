@@ -34,7 +34,7 @@ struct CoreSyncConflictTests {
 
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Local plan"])
-            #expect(service.prompt() == nil)
+            #expect(try service.prompt() == nil)
         }
     }
 
@@ -64,7 +64,7 @@ struct CoreSyncConflictTests {
 
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Cloud plan"])
-            #expect(service.prompt() == nil)
+            #expect(try service.prompt() == nil)
         }
     }
 
@@ -107,7 +107,7 @@ struct CoreSyncConflictTests {
 
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Mac local edit"])
-            #expect(service.prompt() == nil)
+            #expect(try service.prompt() == nil)
         }
     }
 
@@ -445,7 +445,7 @@ struct CoreSyncConflictTests {
             context.insert(laterTask)
             try context.save()
             try service.recordLocalMutation(context: context)
-            let currentPrompt = try #require(service.prompt())
+            let currentPrompt = try #require(try service.prompt())
             #expect(currentPrompt.id != prompt.id)
 
             #expect(
@@ -550,7 +550,7 @@ struct CoreSyncConflictTests {
             try context.save()
             try service.recordLocalMutation(context: context)
             try acknowledgeCurrentCloudExport(service: service, context: context)
-            let currentPrompt = try #require(service.prompt())
+            let currentPrompt = try #require(try service.prompt())
             #expect(currentPrompt.id != prompt.id)
 
             #expect(
@@ -820,7 +820,7 @@ struct CoreSyncConflictTests {
             let result = try service.forceUploadLocalData(context: context)
 
             #expect(result == .queuedForNextLaunch)
-            #expect(service.prompt() == nil)
+            #expect(try service.prompt() == nil)
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.enabledKey))
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
         }
@@ -909,7 +909,7 @@ struct CoreSyncConflictTests {
             #expect(try service.acceptCurrentCloudData(context: context) == .queuedForNextLaunch)
             #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
             #expect(try context.fetch(FetchDescriptor<TaskNode>()).contains { $0.deletedAt == nil })
-            #expect(service.prompt() == nil)
+            #expect(try service.prompt() == nil)
         }
     }
 
@@ -1085,6 +1085,22 @@ struct CoreSyncConflictTests {
     }
 
     @Test @MainActor
+    func promptSurfacesCorruptStateInsteadOfReportingNoConflict() throws {
+        let stateURL = temporaryStateURL()
+        try FileManager.default.createDirectory(
+            at: stateURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("not valid sync state".utf8).write(to: stateURL, options: [.atomic])
+        let service = SyncConflictService(stateURL: stateURL)
+
+        #expect(throws: SyncConflictStateFileError.self) {
+            _ = try service.prompt()
+        }
+        #expect(FileManager.default.fileExists(atPath: stateURL.path) == false)
+    }
+
+    @Test @MainActor
     func corruptRecoveryMirrorIsQuarantinedWithoutBlockingPrimaryData() throws {
         try withCloudSyncMode {
             let stateURL = temporaryStateURL()
@@ -1247,7 +1263,7 @@ struct CoreSyncConflictTests {
         try Data(stateJSON.utf8).write(to: stateURL, options: [.atomic])
 
         let service = SyncConflictService(stateURL: stateURL)
-        #expect(service.prompt() != nil)
+        #expect(try service.prompt() != nil)
 
         let rewrittenState = try String(contentsOf: stateURL, encoding: .utf8)
         #expect(!rewrittenState.contains("legacy-secret"))

@@ -74,8 +74,8 @@ struct SyncConflictService {
         return nil
     }
 
-    func prompt() -> SyncConflictPrompt? {
-        guard let state = try? loadState() else { return nil }
+    func prompt() throws -> SyncConflictPrompt? {
+        let state = try loadState()
         return prompt(from: state)
     }
 

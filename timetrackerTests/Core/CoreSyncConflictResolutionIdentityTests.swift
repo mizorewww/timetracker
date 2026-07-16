@@ -18,7 +18,7 @@ struct CoreSyncConflictResolutionIdentityTests {
             )
 
             #expect(result == .appliedImmediately)
-            #expect(fixture.service.prompt() == nil)
+            #expect(try fixture.service.prompt() == nil)
             #expect(try currentTaskTitle(in: fixture.context) == "Local plan")
         }
     }
@@ -49,7 +49,7 @@ struct CoreSyncConflictResolutionIdentityTests {
             )
 
             #expect(result == .conflictChanged)
-            #expect(fixture.service.prompt()?.id == replacementConflictID)
+            #expect(try fixture.service.prompt()?.id == replacementConflictID)
             #expect(try Data(contentsOf: fixture.stateURL) == stateBytesBeforeResolution)
             let stateAfterResolution = try fixture.service.loadState()
             #expect(stateAfterResolution.syncEpoch == stateBeforeResolution.syncEpoch)
@@ -86,7 +86,7 @@ struct CoreSyncConflictResolutionIdentityTests {
             )
 
             #expect(result == .conflictChanged)
-            #expect(fixture.service.prompt()?.id == fixture.prompt.id)
+            #expect(try fixture.service.prompt()?.id == fixture.prompt.id)
             #expect(try Data(contentsOf: fixture.stateURL) == stateBytesBeforeResolution)
             #expect(
                 try SyncDataSnapshot.capture(context: fixture.context).fingerprint()
@@ -105,7 +105,7 @@ struct CoreSyncConflictResolutionIdentityTests {
                 for: fixture.service,
                 replacing: fixture.prompt.id
             )
-            let replacementPrompt = try #require(fixture.service.prompt())
+            let replacementPrompt = try #require(try fixture.service.prompt())
             let store = TimeTrackerStore(
                 writeAuthorization: .isolatedTestHarness,
                 syncConflictService: fixture.service
@@ -124,7 +124,7 @@ struct CoreSyncConflictResolutionIdentityTests {
 
             #expect(result == .conflictChanged)
             #expect(store.pendingSyncConflict?.id == replacementConflictID)
-            #expect(fixture.service.prompt()?.id == replacementConflictID)
+            #expect(try fixture.service.prompt()?.id == replacementConflictID)
             #expect(try Data(contentsOf: fixture.stateURL) == stateBytesBeforeResolution)
             #expect(
                 try SyncDataSnapshot.capture(context: fixture.context).fingerprint()

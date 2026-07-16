@@ -50,7 +50,11 @@ extension TimeTrackerStore {
                 ).recordLocalMutation(context: modelContext, events: events) {
                     postCommitError = postCommitError ?? snapshotError
                 } else {
-                    pendingSyncConflict = snapshotService.prompt()
+                    do {
+                        pendingSyncConflict = try snapshotService.prompt()
+                    } catch {
+                        postCommitError = postCommitError ?? error
+                    }
                 }
 
                 if let postCommitError {

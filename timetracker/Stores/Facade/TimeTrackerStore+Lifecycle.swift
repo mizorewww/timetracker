@@ -42,7 +42,7 @@ extension TimeTrackerStore {
                 context: modelContext
             )
             guard result != .conflictChanged else {
-                pendingSyncConflict = syncConflictService.prompt()
+                pendingSyncConflict = try syncConflictService.prompt()
                 errorMessage = AppStrings.localized("sync.conflict.error.changed")
                 return result
             }
@@ -245,6 +245,6 @@ extension TimeTrackerStore {
             ? events
             : [.fullSync]
         try syncConflictService.recordLocalMutation(context: modelContext, events: snapshotEvents)
-        pendingSyncConflict = syncConflictService.prompt()
+        pendingSyncConflict = try syncConflictService.prompt()
     }
 }

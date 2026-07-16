@@ -937,6 +937,18 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：付费签名 macOS 的完整 `CoreSyncConflictTests`、新 resolution identity 套件与 Settings 安全合同最终 47/47、0 skip/runtime warning（`/tmp/timetracker-conflict-identity-tests-rerun4-20260716.xcresult`）。覆盖 matching/stale ID、expected-none、state bytes/epoch/local+cloud snapshot/模型 fingerprint/用户数据零副作用、Store prompt 保留，以及 pending local/cloud 变化后旧 token 失效。generic iOS 自动签名构建 0 error/0 warning（`/tmp/timetracker-conflict-identity-ios-signed-20260716.xcresult`）；主 App、Widget、Live Activity、Watch 均通过严格签名，保持 Team `LT98S43NKA`、付费 Apple Development，主 App 保留 development APS、CloudKit 与 App Group。本批未创建模拟器，最终无 owned build/test/runner 或 Booted device；没有安排 Accessibility 专项。
 
+## AD-074：读取冲突 prompt 失败不能伪装成“没有冲突”
+
+状态：Accepted
+
+背景：`SyncConflictService.prompt()` 曾用 `try? loadState()`，把损坏、超限、权限或文件系统错误全部降级成 `nil`。调用方无法区分“确实没有 pending conflict”和“权威状态没有读出来”，可能清空界面警告、继续恢复或在后台命令提交后把故障隐藏掉。
+
+决策：`prompt()` 改为 throwing API。前台 mutation、sync observer 与 stale-confirmation reload 沿既有 throwing 边界传播，Store 再产生明确错误反馈；Watch 命令若业务提交已成功，则把 prompt 读取错误计为 post-commit refresh failure，仍返回原 terminal command result，不能谎称已提交命令失败。只有成功读到合法 state 且其中没有完整 pending conflict，才返回 `nil`。
+
+后果：损坏 state 会被隔离并显式报告，不再被解释为“同步安全”；调用方新增 prompt 读取点必须处理错误，禁止重新加 `try?`。同样地，已提交的业务动作与提交后 projection/snapshot/prompt 刷新必须保持不同失败语义。
+
+验证：付费 Apple Development 签名的 macOS `CoreSyncConflictTests`、resolution identity 与 Watch command 套件 74/74、0 skip/runtime warning（`/tmp/timetracker-throwing-conflict-prompt-tests-rerun-20260716.xcresult`），新增损坏 state prompt 抛错并隔离测试；签名身份为 `Apple Development: ZEXUAN GAO (PX46M259V3)`、Team `LT98S43NKA`。本批未创建 simulator，测试后终止 owned app/TestManager，最终无 build/test/runner 或 Booted device。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

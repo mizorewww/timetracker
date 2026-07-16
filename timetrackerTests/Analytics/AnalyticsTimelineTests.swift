@@ -309,6 +309,111 @@ struct AnalyticsTimelineTests {
         #expect(snapshot.recentRecords.count == 2)
     }
 
+    @Test @MainActor
+    func taskAnalyticsRequestAndCacheIgnoreUnrelatedLiveTimersButIncludeDescendants() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 17,
+            hour: 12,
+            minute: 30
+        )))
+        let root = TaskNode(title: "Root", parentID: nil, deviceID: "test")
+        let child = TaskNode(title: "Child", parentID: root.id, deviceID: "test")
+        let unrelated = TaskNode(title: "Unrelated", parentID: nil, deviceID: "test")
+        let childSession = TimeSession(
+            taskID: child.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-1_800)
+        )
+        let unrelatedSession = TimeSession(
+            taskID: unrelated.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-3_600)
+        )
+        let childSegment = TimeSegment(
+            sessionID: childSession.id,
+            taskID: child.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: childSession.startedAt
+        )
+        let unrelatedSegment = TimeSegment(
+            sessionID: unrelatedSession.id,
+            taskID: unrelated.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: unrelatedSession.startedAt
+        )
+        let store = makeTestStore()
+        store.tasks = [root, child, unrelated]
+        store.sessions = [childSession, unrelatedSession]
+        store.allSegments = [childSegment, unrelatedSegment]
+        store.activeSegments = [unrelatedSegment]
+
+        let unrelatedOnlyRequest = store.taskAnalyticsSnapshotRequest(
+            for: root,
+            range: .today,
+            now: now,
+            calendar: calendar
+        )
+        let globalBucket = try #require(store.analyticsLiveRefreshBucket(
+            for: .today,
+            now: now,
+            calendar: calendar
+        ))
+
+        #expect(unrelatedOnlyRequest.taskIDs == [root.id, child.id])
+        #expect(unrelatedOnlyRequest.liveRefreshBucket == nil)
+        _ = try #require(store.taskAnalyticsSnapshot(
+            for: unrelatedOnlyRequest,
+            now: now,
+            calendar: calendar
+        ))
+        #expect(store.analyticsDomainStore.cachedTaskSnapshot(
+            taskID: root.id,
+            range: .today,
+            now: now,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        ) != nil)
+        #expect(store.analyticsDomainStore.cachedTaskSnapshot(
+            taskID: root.id,
+            range: .today,
+            now: now,
+            liveRefreshBucket: globalBucket,
+            calendar: calendar
+        ) == nil)
+
+        store.activeSegments = [childSegment, unrelatedSegment]
+        let descendantRequest = store.taskAnalyticsSnapshotRequest(
+            for: root,
+            range: .today,
+            now: now,
+            calendar: calendar
+        )
+        let descendantSnapshot = try #require(store.taskAnalyticsSnapshot(
+            for: descendantRequest,
+            now: now,
+            calendar: calendar
+        ))
+
+        #expect(descendantRequest.liveRefreshBucket == globalBucket)
+        #expect(descendantSnapshot.overview.grossSeconds == 1_800)
+        #expect(descendantSnapshot.descendantSeconds == 1_800)
+        #expect(store.analyticsDomainStore.cachedTaskSnapshot(
+            taskID: root.id,
+            range: .today,
+            now: now,
+            liveRefreshBucket: descendantRequest.liveRefreshBucket,
+            calendar: calendar
+        ) != nil)
+    }
+
 
     @Test
     func timelineLayoutUsesMinimumNumberOfLanes() {

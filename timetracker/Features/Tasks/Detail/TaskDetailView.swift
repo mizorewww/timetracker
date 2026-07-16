@@ -10,12 +10,10 @@ struct TaskDetailView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             if let task = store.task(for: taskID) {
-                let request = TaskAnalyticsSnapshotRequest(
-                    taskID: taskID,
+                let request = store.taskAnalyticsSnapshotRequest(
+                    for: task,
                     range: range,
-                    referenceDate: context.date,
-                    revision: store.analyticsRevision,
-                    liveRefreshBucket: store.analyticsLiveRefreshBucket(for: range, now: context.date)
+                    now: context.date
                 )
                 Group {
                     if let snapshot, loadedRequest == request {
@@ -26,7 +24,7 @@ struct TaskDetailView: View {
                     }
                 }
                 .task(id: request) {
-                    snapshot = store.taskAnalyticsSnapshot(for: task, range: range, now: context.date)
+                    snapshot = store.taskAnalyticsSnapshot(for: request, now: context.date)
                     loadedRequest = request
                 }
             } else {

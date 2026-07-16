@@ -284,6 +284,7 @@ nonisolated struct AnalyticsSnapshotRequest: Hashable, Sendable {
 
 struct TaskAnalyticsSnapshotRequest: Hashable {
     let taskID: UUID
+    let taskIDs: Set<UUID>
     let range: AnalyticsRange
     let periodStart: Date
     let revision: UInt
@@ -291,15 +292,16 @@ struct TaskAnalyticsSnapshotRequest: Hashable {
 
     init(
         taskID: UUID,
+        taskIDs: Set<UUID>,
         range: AnalyticsRange,
-        referenceDate: Date,
+        evaluation: AnalyticsPeriodEvaluation,
         revision: UInt,
-        liveRefreshBucket: Int?,
-        calendar: Calendar = .current
+        liveRefreshBucket: Int?
     ) {
         self.taskID = taskID
+        self.taskIDs = taskIDs
         self.range = range
-        periodStart = range.interval(containing: referenceDate, calendar: calendar)?.start ?? referenceDate
+        periodStart = evaluation.interval.start
         self.revision = revision
         self.liveRefreshBucket = liveRefreshBucket
     }

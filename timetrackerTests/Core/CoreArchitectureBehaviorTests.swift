@@ -71,7 +71,12 @@ struct CoreArchitectureBehaviorTests {
         #expect(facadeSource.contains("cachedSnapshot("))
         #expect(taskDetailSource.contains(".task(id: request)"))
         #expect(taskDetailSource.contains("snapshot: store.taskAnalyticsSnapshot") == false)
+        #expect(taskDetailSource.contains("store.taskAnalyticsSnapshotRequest("))
+        #expect(taskDetailSource.contains("store.analyticsLiveRefreshBucket(") == false)
+        #expect(taskDetailSource.contains("TaskAnalyticsSnapshotRequest(") == false)
         #expect(facadeSource.contains("cachedTaskSnapshot("))
+        #expect(facadeSource.contains("taskIDs: request.taskIDs"))
+        #expect(facadeSource.contains("liveRefreshBucket: request.liveRefreshBucket"))
     }
 
     @Test

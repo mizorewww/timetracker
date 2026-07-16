@@ -82,37 +82,68 @@ extension TimeTrackerStore {
     }
 
     func taskAnalyticsSnapshot(
-        for task: TaskNode,
-        range: AnalyticsRange,
-        now: Date = Date()
-    ) -> TaskAnalyticsSnapshot {
-        let taskIDs = taskAndDescendantIDs(for: task.id)
-        let liveRefreshBucket = analyticsLiveRefreshBucket(for: range, now: now, taskIDs: taskIDs)
+        for request: TaskAnalyticsSnapshotRequest,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> TaskAnalyticsSnapshot? {
+        guard let task = task(for: request.taskID) else { return nil }
         if let snapshot = analyticsDomainStore.cachedTaskSnapshot(
-            taskID: task.id,
-            range: range,
+            taskID: request.taskID,
+            range: request.range,
             now: now,
-            liveRefreshBucket: liveRefreshBucket
+            liveRefreshBucket: request.liveRefreshBucket,
+            calendar: calendar
         ) {
             return snapshot
         }
 
-        let segments = visibleSegments(forTaskIDs: taskIDs)
+        let segments = visibleSegments(forTaskIDs: request.taskIDs)
         let sessions = visibleSessions(for: segments)
         var store = analyticsDomainStore
         let snapshot = store.taskSnapshot(
-            range: range,
+            range: request.range,
             task: task,
-            taskIDs: taskIDs,
+            taskIDs: request.taskIDs,
             tasks: tasks,
             segments: segments,
             sessions: sessions,
             taskPathByID: taskPathByID,
-            now: now
+            now: now,
+            calendar: calendar
         )
-        store.cacheTaskSnapshot(snapshot, now: now, liveRefreshBucket: liveRefreshBucket)
+        store.cacheTaskSnapshot(
+            snapshot,
+            now: now,
+            liveRefreshBucket: request.liveRefreshBucket,
+            calendar: calendar
+        )
         analyticsDomainStore = store
         return snapshot
+    }
+
+    func taskAnalyticsSnapshotRequest(
+        for task: TaskNode,
+        range: AnalyticsRange,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> TaskAnalyticsSnapshotRequest {
+        let taskIDs = taskAndDescendantIDs(for: task.id)
+        let evaluation = range.evaluation(
+            referenceDate: now,
+            liveNow: now,
+            calendar: calendar
+        )
+        return TaskAnalyticsSnapshotRequest(
+            taskID: task.id,
+            taskIDs: taskIDs,
+            range: range,
+            evaluation: evaluation,
+            revision: analyticsRevision,
+            liveRefreshBucket: analyticsLiveRefreshBucket(
+                for: evaluation,
+                taskIDs: taskIDs
+            )
+        )
     }
 
     func analyticsLiveRefreshBucket(

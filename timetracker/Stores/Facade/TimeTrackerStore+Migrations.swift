@@ -23,7 +23,7 @@ extension TimeTrackerStore {
             by: { LegacyCountdownFingerprint($0) }
         ).mapValues(\.count)
 
-        for legacy in LegacyCountdownMigrationPolicy.decode(json) {
+        for legacy in try LegacyCountdownMigrationPolicy.decode(json) {
             if let id = legacy.id {
                 guard existingIDs.insert(id).inserted else { continue }
             } else {
@@ -62,17 +62,23 @@ enum LegacyCountdownMigrationPolicy {
     static let earliestSupportedDate = Date(timeIntervalSince1970: -2_208_988_800)
     static let latestSupportedDate = Date(timeIntervalSince1970: 7_289_654_400)
 
-    static func decode(_ json: String) -> [LegacyCountdownEvent] {
-        guard json.utf8.count <= maximumPayloadByteCount,
-              let data = json.data(using: .utf8) else {
-            return []
+    static func decode(_ json: String) throws -> [LegacyCountdownEvent] {
+        guard json.utf8.count <= maximumPayloadByteCount else {
+            throw LegacyCountdownPayloadError.payloadTooLarge
+        }
+        guard let data = json.data(using: .utf8) else {
+            throw LegacyCountdownPayloadError.invalidPayload
         }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        guard let payload = try? decoder.decode(LegacyCountdownPayload.self, from: data) else {
-            return []
+        do {
+            let payload = try decoder.decode(LegacyCountdownPayload.self, from: data)
+            return payload.events.sorted { $0.date < $1.date }
+        } catch let error as LegacyCountdownPayloadError {
+            throw error
+        } catch {
+            throw LegacyCountdownPayloadError.invalidPayload
         }
-        return payload.events.sorted { $0.date < $1.date }
     }
 
     static func accepts(_ event: LegacyCountdownEvent) -> Bool {
@@ -132,7 +138,22 @@ private struct LegacyCountdownPayload: Decodable {
     }
 }
 
-private enum LegacyCountdownPayloadError: Error { case tooManyEvents }
+private enum LegacyCountdownPayloadError: LocalizedError {
+    case payloadTooLarge
+    case tooManyEvents
+    case invalidPayload
+
+    var errorDescription: String? {
+        switch self {
+        case .payloadTooLarge:
+            AppStrings.localized("migration.countdown.error.payloadTooLarge")
+        case .tooManyEvents:
+            AppStrings.localized("migration.countdown.error.tooManyEvents")
+        case .invalidPayload:
+            AppStrings.localized("migration.countdown.error.invalidPayload")
+        }
+    }
+}
 
 private struct LegacyCountdownFingerprint: Hashable {
     let title: String

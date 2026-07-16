@@ -290,6 +290,9 @@
 "persistence.openSettingsFailed" = "无法打开设置。请从主屏幕打开“设置”，并检查时间追踪器的 iCloud 访问权限。";
 "persistence.reopenHint" = "检查 iCloud 访问权限后，请从 App 切换器关闭时间追踪器，然后重新打开。";
 "persistence.quit" = "退出时间追踪器";
+"migration.countdown.error.payloadTooLarge" = "旧版倒计时归档过大，无法安全迁移。原始归档已保留以便恢复。";
+"migration.countdown.error.tooManyEvents" = "旧版倒计时归档中的事件过多，无法安全迁移。原始归档已保留以便恢复。";
+"migration.countdown.error.invalidPayload" = "旧版倒计时归档已损坏或无法读取。原始归档已保留以便恢复。";
 "sync.state.conflict.title" = "同步冲突需要选择";
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";
 "sync.conflict.summary" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项";

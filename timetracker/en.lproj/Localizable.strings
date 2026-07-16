@@ -290,6 +290,9 @@
 "persistence.openSettingsFailed" = "Settings could not be opened. Open Settings from the Home Screen and check iCloud access for Time Tracker.";
 "persistence.reopenHint" = "After checking iCloud access, close Time Tracker from the App Switcher and reopen it.";
 "persistence.quit" = "Quit Time Tracker";
+"migration.countdown.error.payloadTooLarge" = "The legacy countdown archive is too large to migrate safely. The original archive was kept for recovery.";
+"migration.countdown.error.tooManyEvents" = "The legacy countdown archive contains too many events to migrate safely. The original archive was kept for recovery.";
+"migration.countdown.error.invalidPayload" = "The legacy countdown archive is damaged or unreadable. The original archive was kept for recovery.";
 "sync.state.conflict.title" = "Sync conflict needs a choice";
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";
 "sync.conflict.summary" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items";

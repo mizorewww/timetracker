@@ -43,7 +43,7 @@ struct CoreLegacyCountdownMigrationTests {
     }
 
     @Test @MainActor
-    func oversizedPayloadIsRejectedAndRetiredWithoutDecoding() throws {
+    func oversizedPayloadIsKeptForRecoveryAndRemainsRetryable() throws {
         let defaults = try makeDefaults()
         defer { clear(defaults) }
         defaults.set(
@@ -52,15 +52,17 @@ struct CoreLegacyCountdownMigrationTests {
         )
 
         let context = try makeTestContext()
-        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
-            context: context,
-            defaults: defaults,
-            deviceID: "test"
-        )
+        #expect(throws: (any Error).self) {
+            try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
+                context: context,
+                defaults: defaults,
+                deviceID: "test"
+            )
+        }
 
         #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).isEmpty)
-        #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey))
-        #expect(defaults.object(forKey: LegacyCountdownMigrationPolicy.payloadKey) == nil)
+        #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey) == false)
+        #expect(defaults.string(forKey: LegacyCountdownMigrationPolicy.payloadKey) != nil)
     }
 
     @Test @MainActor
@@ -73,18 +75,21 @@ struct CoreLegacyCountdownMigrationTests {
         defaults.set("[\(records.joined(separator: ","))]", forKey: LegacyCountdownMigrationPolicy.payloadKey)
 
         let context = try makeTestContext()
-        try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
-            context: context,
-            defaults: defaults,
-            deviceID: "test"
-        )
+        #expect(throws: (any Error).self) {
+            try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
+                context: context,
+                defaults: defaults,
+                deviceID: "test"
+            )
+        }
 
         #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).isEmpty)
-        #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey))
+        #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey) == false)
+        #expect(defaults.string(forKey: LegacyCountdownMigrationPolicy.payloadKey) != nil)
     }
 
     @Test @MainActor
-    func maximumCountTitleAndSupportedDatesRemainCompatible() {
+    func maximumCountTitleAndSupportedDatesRemainCompatible() throws {
         let records = (0..<LegacyCountdownMigrationPolicy.maximumEventCount).map { index in
             let title = index == 0
                 ? String(repeating: "x", count: LegacyCountdownMigrationPolicy.maximumTitleByteCount)
@@ -95,7 +100,7 @@ struct CoreLegacyCountdownMigrationTests {
             return "{\"title\":\"\(title)\",\"date\":\"\(date)\"}"
         }
 
-        let events = LegacyCountdownMigrationPolicy.decode(
+        let events = try LegacyCountdownMigrationPolicy.decode(
             "[\(records.joined(separator: ","))]"
         )
 
@@ -106,6 +111,27 @@ struct CoreLegacyCountdownMigrationTests {
             events.last?.date
                 == LegacyCountdownMigrationPolicy.latestSupportedDate.addingTimeInterval(-1)
         )
+    }
+
+    @Test @MainActor
+    func malformedPayloadIsKeptForRecoveryAndRemainsRetryable() throws {
+        let defaults = try makeDefaults()
+        defer { clear(defaults) }
+        let payload = "[{not valid JSON}]"
+        defaults.set(payload, forKey: LegacyCountdownMigrationPolicy.payloadKey)
+        let context = try makeTestContext()
+
+        #expect(throws: (any Error).self) {
+            try makeTestStore().migrateLegacyCountdownEventsIfNeeded(
+                context: context,
+                defaults: defaults,
+                deviceID: "test"
+            )
+        }
+
+        #expect(try context.fetch(FetchDescriptor<CountdownEvent>()).isEmpty)
+        #expect(defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey) == false)
+        #expect(defaults.string(forKey: LegacyCountdownMigrationPolicy.payloadKey) == payload)
     }
 
     @Test @MainActor

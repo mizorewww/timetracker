@@ -67,6 +67,21 @@ struct TaskStatusMutationOutcome: Equatable {
     }
 }
 
+struct TaskReopenMutationOutcome: Equatable {
+    let requestedTaskID: UUID
+    let reopenedTasks: [TaskStatusMutationOutcome]
+
+    var didMutate: Bool {
+        reopenedTasks.isEmpty == false
+    }
+
+    var events: Set<StoreDomainEvent> {
+        reopenedTasks.reduce(into: Set<StoreDomainEvent>()) { events, mutation in
+            events.formUnion(mutation.events)
+        }
+    }
+}
+
 struct TaskLifecyclePomodoroSnapshot: Equatable, Hashable {
     let runID: UUID
     let sessionID: UUID?

@@ -69,24 +69,29 @@ extension TimeTrackerStore {
         return performStoreScopedTaskStatusTransition(status, taskID: targetID)
     }
 
-    func reopenTaskForWork(_ taskID: UUID) {
-        guard let task = task(for: taskID) else { return }
-        let blockers = completedWorkBlockers(for: task)
-        guard blockers.isEmpty == false else { return }
-        let events = Set(blockers.map { blocker in
-            StoreDomainEvent.taskChanged(
-                taskID: blocker.id,
-                affectedAncestorIDs: affectedAncestorIDs(for: blocker.id)
-            )
-        })
-        perform(events: events) {
-            for blocker in blockers {
-                try taskDraftCommandHandler.setStatus(
-                    .active,
-                    taskID: blocker.id,
-                    repository: requiredTaskRepository()
-                )
+    @discardableResult
+    func reopenTaskForWork(_ taskID: UUID) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).reopenForWork(taskID: taskID)
+            if outcome.didMutate {
+                finishStoreScopedMutation(events: outcome.events)
+            } else {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
             }
+            return outcome.didMutate
+        } catch {
+            if error is TaskLifecycleMutationError {
+                refreshStoreScopedTaskLifecycleReadModels()
+            }
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

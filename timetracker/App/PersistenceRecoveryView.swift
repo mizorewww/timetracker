@@ -7,9 +7,7 @@ import UIKit
 
 struct PersistenceRecoveryView: View {
     @State private var didCopyDiagnostics = false
-    #if os(macOS)
-    @State private var dataFolderError: String?
-    #endif
+    @State private var actionError: String?
 
     let safety: PersistenceWriteSafety
 
@@ -33,47 +31,69 @@ struct PersistenceRecoveryView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            HStack(spacing: 12) {
-                Button(action: copyDiagnostics) {
-                    Label(
-                        AppStrings.localized(
-                            didCopyDiagnostics
-                                ? "persistence.diagnosticsCopied"
-                                : "persistence.copyDiagnostics"
-                        ),
-                        systemImage: didCopyDiagnostics ? "checkmark" : "doc.on.doc"
-                    )
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    recoveryActions
                 }
-                .buttonStyle(.bordered)
-
-                #if os(macOS)
-                Button(action: openDataFolder) {
-                    Label(AppStrings.localized("persistence.openDataFolder"), systemImage: "folder")
+                VStack(spacing: 10) {
+                    recoveryActions
                 }
-                .buttonStyle(.bordered)
-
-                Button {
-                    NSApplication.shared.terminate(nil)
-                } label: {
-                    Label(AppStrings.localized("persistence.quit"), systemImage: "power")
-                }
-                .buttonStyle(.borderedProminent)
-                #endif
             }
 
-            #if os(macOS)
-            if let dataFolderError {
-                Text(dataFolderError)
+            #if os(iOS)
+            Text(AppStrings.localized("persistence.reopenHint"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            #endif
+
+            if let actionError {
+                Text(actionError)
                     .font(.footnote)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
             }
-            #endif
         }
         .frame(maxWidth: 560)
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
+    }
+
+    @ViewBuilder
+    private var recoveryActions: some View {
+        #if os(iOS)
+        Button(action: openSystemSettings) {
+            Label(AppStrings.localized("persistence.openSettings"), systemImage: "gear")
+        }
+        .buttonStyle(.borderedProminent)
+        #endif
+
+        Button(action: copyDiagnostics) {
+            Label(
+                AppStrings.localized(
+                    didCopyDiagnostics
+                        ? "persistence.diagnosticsCopied"
+                        : "persistence.copyDiagnostics"
+                ),
+                systemImage: didCopyDiagnostics ? "checkmark" : "doc.on.doc"
+            )
+        }
+        .buttonStyle(.bordered)
+
+        #if os(macOS)
+        Button(action: openDataFolder) {
+            Label(AppStrings.localized("persistence.openDataFolder"), systemImage: "folder")
+        }
+        .buttonStyle(.bordered)
+
+        Button {
+            NSApplication.shared.terminate(nil)
+        } label: {
+            Label(AppStrings.localized("persistence.quit"), systemImage: "power")
+        }
+        .buttonStyle(.borderedProminent)
+        #endif
     }
 
     private func copyDiagnostics() {
@@ -90,14 +110,29 @@ struct PersistenceRecoveryView: View {
         #endif
     }
 
+    #if os(iOS)
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            actionError = AppStrings.localized("persistence.openSettingsFailed")
+            return
+        }
+        UIApplication.shared.open(url) { opened in
+            guard opened == false else { return }
+            Task { @MainActor in
+                actionError = AppStrings.localized("persistence.openSettingsFailed")
+            }
+        }
+    }
+    #endif
+
     #if os(macOS)
     private func openDataFolder() {
         let directory = AppCloudSync.persistentStoreURL.deletingLastPathComponent()
         guard NSWorkspace.shared.open(directory) else {
-            dataFolderError = AppStrings.localized("persistence.openDataFolderFailed")
+            actionError = AppStrings.localized("persistence.openDataFolderFailed")
             return
         }
-        dataFolderError = nil
+        actionError = nil
     }
     #endif
 }

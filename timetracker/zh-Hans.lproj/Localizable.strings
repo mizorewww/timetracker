@@ -286,6 +286,9 @@
 "persistence.diagnosticsCopied" = "已复制诊断信息";
 "persistence.openDataFolder" = "打开数据文件夹...";
 "persistence.openDataFolderFailed" = "无法在访达中打开数据文件夹。请复制诊断信息以查看存储位置。";
+"persistence.openSettings" = "打开设置";
+"persistence.openSettingsFailed" = "无法打开设置。请从主屏幕打开“设置”，并检查时间追踪器的 iCloud 访问权限。";
+"persistence.reopenHint" = "检查 iCloud 访问权限后，请从 App 切换器关闭时间追踪器，然后重新打开。";
 "persistence.quit" = "退出时间追踪器";
 "sync.state.conflict.title" = "同步冲突需要选择";
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";

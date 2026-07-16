@@ -286,6 +286,9 @@
 "persistence.diagnosticsCopied" = "Diagnostics Copied";
 "persistence.openDataFolder" = "Open Data Folder...";
 "persistence.openDataFolderFailed" = "The data folder could not be opened in Finder. Copy the diagnostics for the store location.";
+"persistence.openSettings" = "Open Settings";
+"persistence.openSettingsFailed" = "Settings could not be opened. Open Settings from the Home Screen and check iCloud access for Time Tracker.";
+"persistence.reopenHint" = "After checking iCloud access, close Time Tracker from the App Switcher and reopen it.";
 "persistence.quit" = "Quit Time Tracker";
 "sync.state.conflict.title" = "Sync conflict needs a choice";
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";

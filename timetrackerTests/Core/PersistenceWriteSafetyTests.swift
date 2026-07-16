@@ -53,6 +53,7 @@ struct PersistenceWriteSafetyTests {
         #expect(source.contains("UIPasteboard.general.string = text"))
         #expect(source.contains("NSWorkspace.shared.open(directory)"))
         #expect(source.contains("NSApplication.shared.terminate(nil)"))
+        #expect(source.contains("UIApplication.openSettingsURLString"))
         #expect(source.contains("requestCloudRetryAfterRecovery()") == false)
         #expect(source.contains("removePersistentStoreFiles") == false)
     }

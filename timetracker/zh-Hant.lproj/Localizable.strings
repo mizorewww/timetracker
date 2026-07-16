@@ -286,6 +286,9 @@
 "persistence.diagnosticsCopied" = "已複製診斷資訊";
 "persistence.openDataFolder" = "開啟資料夾...";
 "persistence.openDataFolderFailed" = "無法在 Finder 中開啟資料夾。請複製診斷資訊以查看儲存位置。";
+"persistence.openSettings" = "開啟設定";
+"persistence.openSettingsFailed" = "無法開啟設定。請從主畫面開啟「設定」，並檢查時間追蹤器的 iCloud 存取權限。";
+"persistence.reopenHint" = "檢查 iCloud 存取權限後，請從 App 切換器關閉時間追蹤器，然後重新開啟。";
 "persistence.quit" = "結束時間追蹤器";
 "sync.state.conflict.title" = "同步衝突需要選擇";
 "sync.state.conflict.message" = "請選擇上傳本裝置資料覆蓋 iCloud，還是從 iCloud 下載覆蓋本裝置。";

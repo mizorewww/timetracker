@@ -17,6 +17,19 @@ struct LocalizationContractTests {
         for keys in keySets.dropFirst() {
             #expect(keys == reference)
         }
+
+        for locale in locales {
+            let path = try #require(Bundle.main.path(
+                forResource: "Localizable",
+                ofType: "strings",
+                inDirectory: "\(locale).lproj"
+            ))
+            let values = try #require(
+                NSDictionary(contentsOfFile: path) as? [String: String]
+            ).values
+            #expect(values.contains { $0.localizedCaseInsensitiveContains("soft delete") } == false)
+            #expect(values.contains { $0.contains("软删除") || $0.contains("軟刪除") } == false)
+        }
     }
 
     @Test

@@ -60,6 +60,96 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testRunningTimeRecordEditorStagesAnExplicitCurrentEnd() throws {
+        #if os(macOS)
+        throw XCTSkip("The compact time-record editor requires an iOS simulator.")
+        #else
+        let app = launchApp()
+        let more = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "timeline.more.timer."
+            ))
+            .element(boundBy: 0)
+        scrollUntilHittable(more, direction: .up, in: app)
+        XCTAssertTrue(more.waitForExistence(timeout: 5) && more.isHittable)
+        activate(more)
+
+        let edit = app.buttons["Edit Time Record"].firstMatch
+        XCTAssertTrue(edit.waitForExistence(timeout: 3) && edit.isHittable)
+        activate(edit)
+
+        let editor = app.descendants(matching: .any)["segmentEditor.view"]
+        let endNow = app.buttons["segmentEditor.endNow"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(endNow.waitForExistence(timeout: 3) && endNow.isHittable)
+        XCTAssertFalse(app.switches["In Progress"].exists)
+        try capture("iphone-time-record-running", app: app)
+
+        activate(endNow)
+        let keepRunning = app.buttons["segmentEditor.keepRunning"]
+        XCTAssertTrue(
+            keepRunning.waitForExistence(timeout: 3) && keepRunning.isHittable
+        )
+        try capture("iphone-time-record-ended-at-current-time", app: app)
+
+        activate(app.buttons["Cancel"].firstMatch)
+        let discard = app.buttons["Discard Changes"].firstMatch
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+        activate(discard)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+        #endif
+    }
+
+    @MainActor
+    func testActiveFocusDeletionExplainsWholeSessionImpact() throws {
+        #if os(macOS)
+        throw XCTSkip("The compact time-record confirmation requires an iOS simulator.")
+        #else
+        let app = launchApp(route: "focus")
+        let startFocus = app.buttons["pomodoro.startFocus"].firstMatch
+        XCTAssertTrue(startFocus.waitForExistence(timeout: 8) && startFocus.isHittable)
+        activate(startFocus)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["pomodoro.active"]
+                .waitForExistence(timeout: 5)
+        )
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        let more = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "timeline.more.pomodoro."
+            ))
+            .firstMatch
+        scrollUntilHittable(more, direction: .up, in: app)
+        XCTAssertTrue(more.waitForExistence(timeout: 5) && more.isHittable)
+        activate(more)
+
+        let delete = app.buttons["Delete Time Record"].firstMatch
+        XCTAssertTrue(delete.waitForExistence(timeout: 3) && delete.isHittable)
+        activate(delete)
+
+        let destructiveConfirmation = app.buttons["End Focus and Delete"].firstMatch
+        XCTAssertTrue(
+            destructiveConfirmation.waitForExistence(timeout: 3) &&
+                destructiveConfirmation.isHittable
+        )
+        XCTAssertTrue(
+            app.staticTexts[
+                "This ends the active focus and removes all time records linked to this focus from totals and analytics."
+            ].exists
+        )
+        try capture("iphone-active-focus-delete-impact", app: app)
+        #endif
+    }
+
+    @MainActor
     func testSyncRecoveryUsesExplicitDestructiveConfirmations() throws {
         #if os(macOS)
         throw XCTSkip("The compact Settings recovery flow requires an iOS simulator.")

@@ -25,27 +25,8 @@ extension TimeTrackerStore {
 
     @discardableResult
     func saveSegmentDraft(_ draft: SegmentEditorDraft) -> Bool {
-        guard let taskID = draft.taskID else {
-            fail(.taskSelectionRequired)
-            return false
-        }
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
         do {
-            let outcome = try StoreScopedSegmentCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).update(
-                draft: draft,
-                taskID: taskID,
-                allowParallelTimers: preferences.allowParallelTimers
-            )
-            finishStoreScopedPomodoroMutation(
-                events: outcome.events,
-                referencedTaskIDs: outcome.referencedTaskIDs
-            )
+            try commitSegmentDraft(draft)
             return true
         } catch {
             handleSegmentMutationFailure(error)
@@ -58,24 +39,62 @@ extension TimeTrackerStore {
         _ segmentID: UUID,
         expectedBaseline: SegmentEditorDraftBaseline? = nil
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
         do {
-            let outcome = try StoreScopedSegmentCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).delete(segmentID: segmentID, expectedBaseline: expectedBaseline)
-            finishStoreScopedPomodoroMutation(
-                events: outcome.events,
-                referencedTaskIDs: outcome.referencedTaskIDs
+            try commitSegmentDeletion(
+                segmentID,
+                expectedBaseline: expectedBaseline
             )
             return true
         } catch {
             handleSegmentMutationFailure(error)
             return false
         }
+    }
+
+    func commitSegmentDraft(_ draft: SegmentEditorDraft) throws {
+        guard let taskID = draft.taskID else {
+            throw StoreError.taskSelectionRequired
+        }
+        guard let modelContext else {
+            throw StoreError.notConfigured
+        }
+        let outcome = try StoreScopedSegmentCommandCoordinator(
+            container: modelContext.container,
+            writeAuthorization: writeAuthorization
+        ).update(
+            draft: draft,
+            taskID: taskID,
+            allowParallelTimers: preferences.allowParallelTimers
+        )
+        finishStoreScopedPomodoroMutation(
+            events: outcome.events,
+            referencedTaskIDs: outcome.referencedTaskIDs
+        )
+    }
+
+    func commitSegmentDeletion(
+        _ segmentID: UUID,
+        expectedBaseline: SegmentEditorDraftBaseline?
+    ) throws {
+        guard let modelContext else {
+            throw StoreError.notConfigured
+        }
+        let outcome = try StoreScopedSegmentCommandCoordinator(
+            container: modelContext.container,
+            writeAuthorization: writeAuthorization
+        ).delete(segmentID: segmentID, expectedBaseline: expectedBaseline)
+        finishStoreScopedPomodoroMutation(
+            events: outcome.events,
+            referencedTaskIDs: outcome.referencedTaskIDs
+        )
+    }
+
+    func refreshSegmentEditorReadModels() throws {
+        try refresh(
+            plan: StoreRefreshPlan(
+                scopes: [.tasks, .ledgerHistory, .pomodoro]
+            )
+        )
     }
 
     private func handleSegmentMutationFailure(_ error: Error) {
@@ -92,11 +111,7 @@ extension TimeTrackerStore {
         }
 
         do {
-            try refresh(
-                plan: StoreRefreshPlan(
-                    scopes: [.tasks, .ledgerHistory, .pomodoro]
-                )
-            )
+            try refreshSegmentEditorReadModels()
             errorMessage = error.localizedDescription
         } catch let refreshError {
             errorMessage = String(

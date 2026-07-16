@@ -307,6 +307,19 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func timelineDeletionKeepsItsBaselineAndConfirmationTogether() throws {
+        let source = try sourceText(
+            "timetracker/Features/Home/Rows/HomeTimelineRows.swift"
+        )
+
+        #expect(source.contains("pendingDeletionRequest"))
+        #expect(source.contains("isDeleteConfirmationPresented") == false)
+        #expect(source.contains("deleteBaseline") == false)
+        #expect(source.contains("SegmentDeletionImpact("))
+        #expect(source.contains("expectedBaseline: pendingDeletionRequest"))
+    }
+
+    @Test
     func compactTaskPickerUsesTheSystemSheetMaterial() throws {
         let source = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
 

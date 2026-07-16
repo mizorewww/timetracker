@@ -219,7 +219,12 @@ struct AppPresentationContractTests {
             "timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift"
         )
         let manual = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
-        let segment = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
+        let segment = try [
+            "timetracker/Features/Ledger/SegmentEditorSheet.swift",
+            "timetracker/Features/Ledger/SegmentEditorViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let quickStart = try sourceText(
             "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift"
         )
@@ -228,7 +233,16 @@ struct AppPresentationContractTests {
         #expect(task.contains("if store.saveTaskDraft(draft"))
         #expect(category.contains("if store.saveTaskCategoryDraft(draft)"))
         #expect(manual.contains("if store.saveManualTimeDraft(draft)"))
-        #expect(segment.contains("if store.saveSegmentDraft(draft)"))
+        #expect(segment.contains("try store.commitSegmentDraft(draft)"))
+        #expect(segment.contains("try store.commitSegmentDeletion("))
+        #expect(segment.contains("currentDraft = latestDraft"))
+        #expect(segment.contains(".id(currentDraft.id)"))
+        #expect(segment.contains("segment.editor.discardAndClose"))
+        #expect(segment.contains("role: .destructive"))
+        #expect(segment.contains("Button(AppStrings.cancel, role: .cancel)"))
+        #expect(segment.contains("segment.editor.close") == false)
+        #expect(segment.contains("segment.editor.deleted.title"))
+        #expect(segment.contains("$0.id == currentDraft.segmentID"))
         #expect(quickStart.contains("if onSave(cleanedPinnedIDs())"))
         #expect(llm.contains("if onSave(draft.normalized)"))
 

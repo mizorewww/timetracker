@@ -1,36 +1,5 @@
 import SwiftUI
 
-struct SegmentEditorSheet: View {
-    let store: TimeTrackerStore
-    @Environment(\.dismiss) private var dismiss
-    let initialDraft: SegmentEditorDraft
-
-    var body: some View {
-        SegmentEditorPanel(
-            store: store,
-            initialDraft: initialDraft,
-            onCancel: {
-                dismiss()
-            },
-            onSave: { draft in
-                if store.saveSegmentDraft(draft) {
-                    dismiss()
-                }
-            },
-            onDelete: { draft in
-                if store.deleteSegment(
-                    draft.segmentID,
-                    expectedBaseline: draft.baseline
-                ) {
-                    dismiss()
-                }
-            }
-        )
-        .platformSheetFrame(width: 620, height: 620)
-        .presentationDetents([.medium, .large])
-    }
-}
-
 struct SegmentEditorPanel: View {
     let store: TimeTrackerStore
     @State private var draft: SegmentEditorDraft
@@ -58,13 +27,13 @@ struct SegmentEditorPanel: View {
 
     var body: some View {
         let now = Date()
-        let validation = trackedTimeValidation(at: now)
-        let noteError = noteValidationMessage
+        let validation = trackedTimeValidation(for: draft, at: now)
+        let noteError = noteValidationMessage(for: draft)
 
         NavigationStack {
             Form {
                 Section(AppStrings.localized("segment.assignment")) {
-                    Picker(AppStrings.localized("segment.task"), selection: taskBinding) {
+                    Picker(AppStrings.localized("segment.task"), selection: $draft.taskID) {
                         Text(.app("segment.choose")).tag(Optional<UUID>.none)
                         ForEach(availableTasks, id: \.id) { task in
                             Text(store.path(for: task)).tag(Optional(task.id))
@@ -81,13 +50,23 @@ struct SegmentEditorPanel: View {
                         in: ...now,
                         displayedComponents: [.date, .hourAndMinute]
                     )
-                    if draft.wasActive {
-                        Toggle(AppStrings.localized("segment.active"), isOn: $draft.isActive)
-                    } else {
-                        LabeledContent(
-                            AppStrings.localized("segment.status"),
-                            value: AppStrings.localized("segment.finished")
+                    LabeledContent(
+                        AppStrings.localized("segment.status"),
+                        value: AppStrings.localized(
+                            draft.isActive ? "segment.active" : "segment.finished"
                         )
+                    )
+                    if draft.wasActive && draft.isActive {
+                        Button {
+                            draft.endedAt = Date()
+                            draft.isActive = false
+                        } label: {
+                            Label(
+                                AppStrings.localized(endActionKey),
+                                systemImage: "stop.circle"
+                            )
+                        }
+                        .accessibilityIdentifier("segmentEditor.endNow")
                     }
                     if !draft.isActive {
                         DatePicker(
@@ -105,8 +84,17 @@ struct SegmentEditorPanel: View {
                                 .font(.headline.monospacedDigit())
                                 .foregroundStyle(validation == .valid ? Color.primary : Color.red)
                         }
+                        if draft.wasActive {
+                            Button(AppStrings.localized(keepRunningActionKey)) {
+                                draft.isActive = true
+                            }
+                            .accessibilityIdentifier("segmentEditor.keepRunning")
+                        }
                     }
-                    validationMessage(for: validation)
+                    validationMessage(
+                        for: validation,
+                        isActive: draft.isActive
+                    )
                 }
 
                 Section(AppStrings.localized("segment.notes")) {
@@ -126,11 +114,13 @@ struct SegmentEditorPanel: View {
                     Button(role: .destructive) {
                         isDeleteConfirmationPresented = true
                     } label: {
-                        Label(AppStrings.localized("segment.softDelete"), systemImage: "trash")
+                        Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")
                     }
+                    .accessibilityIdentifier("segmentEditor.delete")
                 }
             }
             .formStyle(.grouped)
+            .accessibilityIdentifier("segmentEditor.view")
             .navigationTitle(AppStrings.localized("segment.edit.title"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -158,16 +148,16 @@ struct SegmentEditorPanel: View {
             discard: onCancel
         )
         .confirmationDialog(
-            AppStrings.localized("segment.delete.confirm.title"),
+            deletionImpact.confirmationTitle,
             isPresented: $isDeleteConfirmationPresented,
             titleVisibility: .visible
         ) {
-            Button(AppStrings.localized("segment.softDelete"), role: .destructive) {
+            Button(deletionImpact.confirmationActionTitle, role: .destructive) {
                 onDelete(draft)
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
-            Text(.app("segment.delete.confirm.message"))
+            Text(deletionImpact.confirmationMessage)
         }
     }
 
@@ -176,65 +166,6 @@ struct SegmentEditorPanel: View {
             onCancel()
         } else {
             isDiscardConfirmationPresented = true
-        }
-    }
-
-    private func trackedTimeValidation(at now: Date) -> TrackedTimePolicy.WriteValidation {
-        TrackedTimePolicy.validateWrite(
-            startedAt: draft.startedAt,
-            endedAt: draft.isActive ? nil : draft.endedAt,
-            now: now
-        )
-    }
-
-    @ViewBuilder
-    private func validationMessage(for validation: TrackedTimePolicy.WriteValidation) -> some View {
-        switch validation {
-        case .valid:
-            EmptyView()
-        case .invalidRange:
-            timeValidationLabel(key: "segment.error.endAfterStart")
-        case .futureTime:
-            timeValidationLabel(
-                key: draft.isActive ? "segment.error.startNotFuture" : "segment.error.timeNotFuture"
-            )
-        }
-    }
-
-    private func timeValidationLabel(key: String) -> some View {
-        Label(AppStrings.localized(key), systemImage: "exclamationmark.triangle.fill")
-            .font(.caption)
-            .foregroundStyle(.red)
-            .accessibilityAddTraits(.isStaticText)
-    }
-
-    private var noteValidationMessage: String? {
-        do {
-            _ = try LedgerPersistencePolicy.prepareNote(draft.note)
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
-    private func noteValidationLabel(_ message: String) -> some View {
-        Label(message, systemImage: "exclamationmark.triangle.fill")
-            .font(.caption)
-            .foregroundStyle(.red)
-            .accessibilityAddTraits(.isStaticText)
-    }
-
-    private var taskBinding: Binding<UUID?> {
-        Binding {
-            draft.taskID
-        } set: { value in
-            draft.taskID = value
-        }
-    }
-
-    private var availableTasks: [TaskNode] {
-        store.tasks.filter { task in
-            store.isTaskAvailableForTracking(task) || task.id == initialDraft.taskID
         }
     }
 }

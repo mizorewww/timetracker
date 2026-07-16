@@ -164,7 +164,7 @@ struct TaskUIContractTests {
     @Test
     func trackedTimeAssignmentPickersHideArchivedBranchesWithoutBreakingHistoryEdits() throws {
         let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
-        let segmentSource = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
+        let segmentSource = try segmentEditorFeatureSource()
 
         #expect(manualSource.contains("store.tasks.filter(store.isTaskAvailableForTracking)"))
         #expect(segmentSource.contains("store.isTaskAvailableForTracking(task) || task.id == initialDraft.taskID"))
@@ -175,7 +175,7 @@ struct TaskUIContractTests {
     @Test
     func trackedTimeEditorsBoundPickersAndDurationsToNow() throws {
         let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
-        let segmentSource = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
+        let segmentSource = try segmentEditorFeatureSource()
 
         #expect(manualSource.components(separatedBy: "in: ...now").count - 1 == 2)
         #expect(segmentSource.components(separatedBy: "in: ...now").count - 1 == 2)
@@ -189,6 +189,13 @@ struct TaskUIContractTests {
         #expect(segmentSource.contains("validation != .valid"))
         #expect(segmentSource.contains("if draft.wasActive"))
         #expect(segmentSource.contains("segment.finished"))
+        #expect(segmentSource.contains("Toggle(AppStrings.localized(\"segment.active\")") == false)
+        #expect(segmentSource.contains("draft.endedAt = Date()"))
+        #expect(segmentSource.contains("segment.keepRunning"))
+        #expect(segmentSource.contains("segment.softDelete") == false)
+        #expect(segmentSource.contains(".presentationDetents([.large])"))
+        #expect(segmentSource.contains("@State private var draft"))
+        #expect(segmentSource.contains("@State var draft") == false)
         #expect(manualSource.contains("timeIntervalSince(draft.startedAt)") == false)
         #expect(segmentSource.contains("timeIntervalSince(draft.startedAt)") == false)
     }
@@ -196,7 +203,7 @@ struct TaskUIContractTests {
     @Test
     func trackedTimeNotesAreMultilineAndValidateBeforeSave() throws {
         let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
-        let segmentSource = try sourceText("timetracker/Features/Ledger/SegmentEditorViews.swift")
+        let segmentSource = try segmentEditorFeatureSource()
 
         for source in [manualSource, segmentSource] {
             #expect(source.contains("axis: .vertical"))
@@ -747,6 +754,16 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift"
         ]
         .map { try sourceText($0) }
+        .joined(separator: "\n")
+    }
+
+    private func segmentEditorFeatureSource() throws -> String {
+        try [
+            "timetracker/Features/Ledger/SegmentEditorSheet.swift",
+            "timetracker/Features/Ledger/SegmentEditorViews.swift",
+            "timetracker/Features/Ledger/SegmentEditorPanel+Validation.swift"
+        ]
+        .map(sourceText)
         .joined(separator: "\n")
     }
 

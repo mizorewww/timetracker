@@ -7,8 +7,7 @@ struct TimelineRow: View {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var isDeleteConfirmationPresented = false
-    @State private var deleteBaseline: SegmentEditorDraftBaseline?
+    @State private var pendingDeletionRequest: SegmentEditorDraftBaseline?
 
     private var isCompactPhone: Bool {
         SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
@@ -35,24 +34,31 @@ struct TimelineRow: View {
             }
             .menuStyle(.borderlessButton)
             .accessibilityLabel(AppStrings.localized("common.more"))
+            .accessibilityIdentifier(
+                "timeline.more.\(segment.source.rawValue).\(segment.id.uuidString)"
+            )
         }
         .contextMenu { segmentActions }
 
         .confirmationDialog(
-            AppStrings.localized("segment.delete.confirm.title"),
-            isPresented: $isDeleteConfirmationPresented,
+            pendingDeletionImpact.confirmationTitle,
+            isPresented: deletionPresentation,
             titleVisibility: .visible
         ) {
-            Button(AppStrings.localized("timeline.deleteSegment"), role: .destructive) {
+            Button(
+                pendingDeletionImpact.confirmationActionTitle,
+                role: .destructive
+            ) {
+                guard let pendingDeletionRequest else { return }
                 store.deleteSegment(
                     segment.id,
-                    expectedBaseline: deleteBaseline
+                    expectedBaseline: pendingDeletionRequest
                 )
-                deleteBaseline = nil
+                self.pendingDeletionRequest = nil
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
-            Text(.app("segment.delete.confirm.message"))
+            Text(pendingDeletionImpact.confirmationMessage)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, isCompactPhone ? 11 : 10)
@@ -132,10 +138,26 @@ struct TimelineRow: View {
                 store.errorMessage = SegmentMutationError.inconsistentSession.localizedDescription
                 return
             }
-            deleteBaseline = draft.baseline
-            isDeleteConfirmationPresented = true
+            pendingDeletionRequest = draft.baseline
         } label: {
             Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")
+        }
+    }
+
+    private var pendingDeletionImpact: SegmentDeletionImpact {
+        guard let pendingDeletionRequest else {
+            return .historicalRecord
+        }
+        return SegmentDeletionImpact(baseline: pendingDeletionRequest)
+    }
+
+    private var deletionPresentation: Binding<Bool> {
+        Binding {
+            pendingDeletionRequest != nil
+        } set: { isPresented in
+            if isPresented == false {
+                pendingDeletionRequest = nil
+            }
         }
     }
 

@@ -257,8 +257,12 @@
 "sync.state.available.message" = "Account status: %@.";
 "sync.state.syncing.title" = "Checking iCloud account";
 "sync.state.syncing.message" = "Verifying whether this device can access your iCloud account.";
-"sync.state.recent.title" = "Recently refreshed";
-"sync.state.recent.message" = "This device last checked sync at %@.";
+"sync.state.recent.title" = "Recent iCloud activity";
+"sync.activity.import.completed" = "Imported iCloud changes at %@.";
+"sync.activity.export.completed" = "Exported changes to iCloud at %@.";
+"sync.activity.setup.completed" = "Connected to iCloud at %@.";
+"sync.activity.remote.completed" = "Refreshed imported data at %@.";
+"sync.activity.unknownFailure" = "The iCloud operation failed without a diagnostic.";
 "sync.state.offline.title" = "Local storage is active";
 "sync.state.offline.message" = "Current status: %@. Changes stay on this device until iCloud is available.";
 "sync.state.accountUnavailable.title" = "iCloud account unavailable";

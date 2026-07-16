@@ -55,7 +55,7 @@ struct CoreCloudAccountOutcomeTests {
     }
 
     @Test @MainActor
-    func accountUnavailableOverridesARecentCloudActivityTimestamp() {
+    func accountUnavailableOverridesARecentSuccessfulCloudActivity() {
         var preferences = AppPreferences.defaults
         preferences.cloudSyncEnabled = true
         let now = Date(timeIntervalSinceReferenceDate: 789)
@@ -73,7 +73,11 @@ struct CoreCloudAccountOutcomeTests {
         let feedback = status.feedback(
             preferences: preferences,
             isChecking: false,
-            lastRefreshAt: now.addingTimeInterval(-30),
+            activity: SyncActivityOutcome(
+                kind: .importData,
+                completedAt: now.addingTimeInterval(-30),
+                result: .succeeded
+            ),
             now: now
         )
 
@@ -113,7 +117,7 @@ struct CoreCloudAccountOutcomeTests {
             checkedAt: secondDate,
             result: .available
         ))
-        #expect(store.lastSyncRefreshAt == nil)
+        #expect(store.lastSyncActivity == nil)
     }
 
     private enum ProbeError: LocalizedError {

@@ -520,7 +520,11 @@ struct PreferencesChecklistForecastTests {
         let recentFeedback = cloudStatus.feedback(
             preferences: preferences,
             isChecking: false,
-            lastRefreshAt: now.addingTimeInterval(-45),
+            activity: SyncActivityOutcome(
+                kind: .importData,
+                completedAt: now.addingTimeInterval(-45),
+                result: .succeeded
+            ),
             now: now
         )
         #expect(recentFeedback.state == .recentlySynced)
@@ -529,7 +533,7 @@ struct PreferencesChecklistForecastTests {
         let checkingFeedback = cloudStatus.feedback(
             preferences: preferences,
             isChecking: true,
-            lastRefreshAt: nil,
+            activity: nil,
             now: now
         )
         #expect(checkingFeedback.state == .syncing)
@@ -538,7 +542,7 @@ struct PreferencesChecklistForecastTests {
         let restartFeedback = cloudStatus.feedback(
             preferences: preferences,
             isChecking: false,
-            lastRefreshAt: nil,
+            activity: nil,
             now: now
         )
         #expect(restartFeedback.state == .needsRestart)
@@ -557,7 +561,7 @@ struct PreferencesChecklistForecastTests {
         let failedFeedback = failedStatus.feedback(
             preferences: preferences,
             isChecking: false,
-            lastRefreshAt: nil,
+            activity: nil,
             now: now
         )
         #expect(failedFeedback.state == .failed)
@@ -576,7 +580,7 @@ struct PreferencesChecklistForecastTests {
         let temporaryFeedback = temporaryStatus.feedback(
             preferences: preferences,
             isChecking: false,
-            lastRefreshAt: nil,
+            activity: nil,
             now: now
         )
         #expect(temporaryFeedback.state == .temporaryStore)

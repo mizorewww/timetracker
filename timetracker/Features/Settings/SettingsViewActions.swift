@@ -27,7 +27,7 @@ extension SettingsView {
         return store.syncStatus.feedback(
             preferences: store.preferences,
             isChecking: isCheckingSync,
-            lastRefreshAt: store.lastSyncRefreshAt
+            activity: store.lastSyncActivity
         )
     }
 

@@ -257,8 +257,12 @@
 "sync.state.available.message" = "帳戶狀態：%@。";
 "sync.state.syncing.title" = "正在檢查 iCloud 帳戶";
 "sync.state.syncing.message" = "正在確認本裝置能否存取你的 iCloud 帳戶。";
-"sync.state.recent.title" = "剛剛重新整理過";
-"sync.state.recent.message" = "這台裝置上次檢查同步是在 %@。";
+"sync.state.recent.title" = "最近的 iCloud 活動";
+"sync.activity.import.completed" = "已於 %@ 匯入 iCloud 變更。";
+"sync.activity.export.completed" = "已於 %@ 將變更匯出至 iCloud。";
+"sync.activity.setup.completed" = "已於 %@ 連線 iCloud。";
+"sync.activity.remote.completed" = "已於 %@ 重新整理匯入資料。";
+"sync.activity.unknownFailure" = "iCloud 操作失敗，但系統沒有提供詳細資訊。";
 "sync.state.offline.title" = "正在使用本機儲存";
 "sync.state.offline.message" = "目前狀態：%@。在 iCloud 可用前，改動會保留在這台裝置上。";
 "sync.state.accountUnavailable.title" = "iCloud 帳號無法使用";

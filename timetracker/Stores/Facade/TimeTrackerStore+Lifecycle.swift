@@ -56,7 +56,6 @@ extension TimeTrackerStore {
         }
         try refresh()
         pendingSyncConflict = nil
-        lastSyncRefreshAt = Date()
         return result
     }
 

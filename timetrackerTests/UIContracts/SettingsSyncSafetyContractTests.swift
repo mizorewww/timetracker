@@ -157,4 +157,28 @@ struct SettingsSyncSafetyContractTests {
             #expect(strings.contains("\"dialog.optimize.failed\""))
         }
     }
+
+    @Test
+    func cloudActivityIsRecordedOnlyAfterLocalRefreshAndConflictProcessing() throws {
+        let observerSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift"
+        )
+        let feedbackSource = try sourceText(
+            "timetracker/Models/SyncFeedbackModels.swift"
+        )
+
+        #expect(
+            observerSource.contains(
+                "try refresh(plan: refreshPlanner.plan(after: [.remoteImportCompleted]))\n" +
+                    "                try updateConflictState(after: reason)\n" +
+                    "                recordSyncActivity(for: reason)"
+            )
+        )
+        #expect(observerSource.contains("processingFailureMessage: error.localizedDescription"))
+        #expect(observerSource.contains("event.error?.localizedDescription"))
+        #expect(observerSource.contains("errorMessage =") == false)
+        #expect(observerSource.contains("lastSyncRefreshAt") == false)
+        #expect(feedbackSource.contains("case let .failed(message)"))
+        #expect(feedbackSource.contains("(0...120).contains(now.timeIntervalSince(activity.completedAt))"))
+    }
 }

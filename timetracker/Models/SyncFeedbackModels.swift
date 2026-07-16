@@ -35,7 +35,7 @@ struct SyncStatus {
     func feedback(
         preferences: AppPreferences,
         isChecking: Bool,
-        lastRefreshAt: Date?,
+        activity: SyncActivityOutcome?,
         now: Date = Date()
     ) -> SyncFeedback {
         if isChecking {
@@ -101,13 +101,31 @@ struct SyncStatus {
             }
         }
 
-        if let lastRefreshAt, now.timeIntervalSince(lastRefreshAt) <= 120 {
-            let time = DateFormatter.localizedString(from: lastRefreshAt, dateStyle: .none, timeStyle: .short)
-            return SyncFeedback(
-                state: .recentlySynced,
-                title: AppStrings.localized("sync.state.recent.title"),
-                message: String(format: AppStrings.localized("sync.state.recent.message"), time)
-            )
+        if let activity {
+            switch activity.result {
+            case let .failed(message):
+                return SyncFeedback(
+                    state: .failed,
+                    title: AppStrings.localized("sync.state.failed.title"),
+                    message: message
+                )
+            case .succeeded where (0...120).contains(now.timeIntervalSince(activity.completedAt)):
+                let time = DateFormatter.localizedString(
+                    from: activity.completedAt,
+                    dateStyle: .none,
+                    timeStyle: .short
+                )
+                return SyncFeedback(
+                    state: .recentlySynced,
+                    title: AppStrings.localized("sync.state.recent.title"),
+                    message: String(
+                        format: AppStrings.localized(activity.kind.recentMessageKey),
+                        time
+                    )
+                )
+            case .succeeded:
+                break
+            }
         }
 
         if isCloudBacked {

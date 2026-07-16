@@ -257,8 +257,12 @@
 "sync.state.available.message" = "账户状态：%@。";
 "sync.state.syncing.title" = "正在检查 iCloud 账户";
 "sync.state.syncing.message" = "正在确认本设备能否访问你的 iCloud 账户。";
-"sync.state.recent.title" = "刚刚刷新过";
-"sync.state.recent.message" = "这台设备上次检查同步是在 %@。";
+"sync.state.recent.title" = "最近的 iCloud 活动";
+"sync.activity.import.completed" = "已于 %@ 导入 iCloud 更改。";
+"sync.activity.export.completed" = "已于 %@ 将更改导出至 iCloud。";
+"sync.activity.setup.completed" = "已于 %@ 连接 iCloud。";
+"sync.activity.remote.completed" = "已于 %@ 刷新导入数据。";
+"sync.activity.unknownFailure" = "iCloud 操作失败，但系统没有提供详细信息。";
 "sync.state.offline.title" = "正在使用本地存储";
 "sync.state.offline.message" = "当前状态：%@。在 iCloud 可用前，改动会保留在这台设备上。";
 "sync.state.accountUnavailable.title" = "iCloud 账户不可用";

@@ -122,7 +122,7 @@ final class TimeTrackerStore {
     var selectedTaskPulseToken = UUID()
     var cloudAccountCheck: CloudAccountCheckOutcome?
     @ObservationIgnored var cloudAccountCheckRequestID: UUID?
-    var lastSyncRefreshAt: Date?
+    var lastSyncActivity: SyncActivityOutcome?
     var pendingSyncConflict: SyncConflictPrompt?
 
     enum RangePreset: String, CaseIterable, Identifiable {

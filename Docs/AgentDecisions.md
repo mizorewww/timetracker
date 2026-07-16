@@ -949,6 +949,30 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：付费 Apple Development 签名的 macOS `CoreSyncConflictTests`、resolution identity 与 Watch command 套件 74/74、0 skip/runtime warning（`/tmp/timetracker-throwing-conflict-prompt-tests-rerun-20260716.xcresult`），新增损坏 state prompt 抛错并隔离测试；签名身份为 `Apple Development: ZEXUAN GAO (PX46M259V3)`、Team `LT98S43NKA`。本批未创建 simulator，测试后终止 owned app/TestManager，最终无 build/test/runner 或 Booted device。
 
+## AD-075：同步冲突先非阻断导航，再在 Settings 主动确认
+
+状态：Accepted
+
+背景：启动 bootstrap、CloudKit import 或前台刷新一旦产生 pending conflict，`ContentView` 会自动弹出同时包含两个破坏性覆盖方向的 confirmation dialog；Settings 又提供相同动作和更完整的两侧摘要。用户可能在尚未看到副本差异时就面对高风险选择，启动 UI 被阻断，根 dialog 还会与错误 alert、scene sheet 竞争。
+
+决策：根 scene 改为 `SyncConflictNotice`，只说明需要比较副本，并提供“查看副本”导航与本 scene 忽略。iOS 使用位于浮动 Tab Bar 上方的材质卡片，避免与大标题和工具栏争夺顶部空间；macOS 使用顶部 safe-area inset。点按查看统一设置 `desktopDestination = .settings`，由 iPhone navigation、iPad detail 或 macOS Settings scene 按各自 shell 路由；提示本身没有上传/下载闭包。只有 Settings 的同步恢复区展示本机/iCloud 摘要、两个明确方向和随后 item-driven 破坏性确认。scene 记录已忽略的 conflict ID；同 token 不反复打扰，resolution-relevant 内容变化并旋转 token 后再提示。
+
+后果：App 启动和后台同步不再强迫用户立即做数据覆盖决定；破坏动作发生前总有比较两侧摘要的路径。忽略只隐藏当前 scene 的提示，不清 pending state、不解除恢复保护；Settings 仍可随时解决。后续不得在根层重新加入自动冲突 confirmation，或让 notice 直接执行覆盖。
+
+验证：付费签名 macOS `AppPresentationContractTests` 最终 11/11、0 runtime warning（`/tmp/timetracker-sync-conflict-notice-macos-tests-final-20260716.xcresult`）。正常字号 iPhone 17 Pro / iOS 27 完成“提示 → 查看副本 → Data & Sync → 两侧摘要”1/1（`/tmp/timetracker-sync-conflict-notice-iphone-tests-card-final-20260716.xcresult`），最终截图位于 `/tmp/timetracker-sync-conflict-notice-iphone-attachments-20260716-card-success`；确认提示不遮挡大标题或 Tab Bar，且破坏性动作只在摘要之后出现。generic iOS 自动签名最终 0 error/0 warning（`/tmp/timetracker-sync-conflict-notice-ios-build-final-rerun2-20260716.xcresult`），四个产品 bundle 保持 Team `LT98S43NKA`、付费 Apple Development，主 App 保留 development APS、CloudKit 与 App Group。本批五个诊断/迭代 UDID 均已删除，最终无 Booted device 或 owned runner；只验证正常字号常规路径，没有安排 Accessibility 专项。
+
+## AD-076：只有完成恢复门控后才能启动并确认 CloudKit
+
+状态：Accepted
+
+背景：排队的 upload/download reset 曾在删除 store、删除同步状态或寻找受保护上传快照失败后仍继续创建 CloudKit container；只要容器随后成功，`recordCloudKitEnabled()` 就会清除 pending/error 标记。这会把没有执行的恢复误报为完成，download 方向还可能过早解除只读保护。恢复逻辑又位于 demo/用户禁用分支之前，存在不应进入 CloudKit 时先删除本地 store 的风险。
+
+决策：恢复准备返回 typed `CloudRecoveryGate.completed/deferred/failed`。缺失或不可读的受保护上传快照返回 deferred；store 或同步状态删除失败返回 failed；两者都保留 pending 标记并阻止本次 CloudKit container 创建。只有 completed 携带不可由外部构造的 `CompletedCloudRecovery` token，CloudKit container 成功后 `recordCloudKitEnabled(after:)` 才能消费该 token 并清标记。factory 先处理 demo 与用户禁用分支，再运行恢复门控。恢复删除闭包显式属于 MainActor，避免同步文件操作跨隔离调用。
+
+后果：失败或无法证明安全的恢复不会进入云容器、不会清 pending、不会宣称成功；用户修复文件保护/存储错误后可以在下次启动继续。无 pending 请求是唯一无需删除仍返回 completed 的情形。后续不得重新增加无 token 的 CloudKit-enabled 状态转换，或用 `try?`/Bool 把 deferred 与 failed 合并为可继续。
+
+验证：恢复门控与相关同步回归 49/49（`/tmp/timetracker-cloud-recovery-gate-tests-20260716.xcresult`），覆盖备份缺失/不可读、不可 reset、无请求、两类删除失败和成功后才清标记；MainActor 边界最终定向测试 6/6（`/tmp/timetracker-cloud-recovery-isolation-tests-rerun-20260716.xcresult`）。generic iOS 最终自动签名构建 0 error/0 warning（`/tmp/timetracker-sync-conflict-notice-ios-build-final-rerun2-20260716.xcresult`），严格签名与 entitlement 保持不变；本门控测试未创建模拟器。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

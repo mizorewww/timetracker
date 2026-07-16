@@ -58,6 +58,7 @@ final class LiveActivityCoordinator {
     static let shared = LiveActivityCoordinator()
 
     private struct Request: Equatable {
+        let segmentID: String
         let taskID: String
         let state: TimeTrackingActivityAttributes.ContentState
     }
@@ -98,9 +99,13 @@ final class LiveActivityCoordinator {
             startedAt: primary.startedAt,
             additionalTimerCount: max(0, usableSegments.count - 1)
         )
-        let request = Request(taskID: primary.taskID.uuidString, state: state)
+        let request = Request(
+            segmentID: primary.id.uuidString,
+            taskID: primary.taskID.uuidString,
+            state: state
+        )
         let hasMatchingActivity = Activity<TimeTrackingActivityAttributes>.activities.contains {
-            $0.attributes.taskID == request.taskID
+            $0.attributes.segmentID == request.segmentID
         }
 
         guard request != lastRequest || !hasMatchingActivity || reconciler.isReconciling else {
@@ -126,14 +131,19 @@ final class LiveActivityCoordinator {
             return false
         }
 
-        let attributes = TimeTrackingActivityAttributes(taskID: request.taskID)
+        let attributes = TimeTrackingActivityAttributes(
+            segmentID: request.segmentID,
+            taskID: request.taskID
+        )
         let content = ActivityContent(
             state: request.state,
             staleDate: LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)
         )
         let activities = Activity<TimeTrackingActivityAttributes>.activities
 
-        if let existing = activities.first(where: { $0.attributes.taskID == request.taskID }) {
+        if let existing = activities.first(where: {
+            $0.attributes.segmentID == request.segmentID
+        }) {
             await existing.update(content)
 
             for stale in activities where stale.id != existing.id {

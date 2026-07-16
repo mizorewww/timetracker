@@ -1,3 +1,4 @@
+import AppIntents
 import Foundation
 import SwiftUI
 import WidgetKit
@@ -114,6 +115,14 @@ struct ActiveTimerContent: View {
                     .lineLimit(2)
                     .privacySensitive()
                 Spacer(minLength: 0)
+                Button(intent: WidgetStopTimerIntent(segmentID: timer.id)) {
+                    Image(systemName: "stop.fill")
+                        .font(.caption.weight(.bold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(localized("widget.action.stop")))
             }
 
             elapsedText

@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -25,7 +26,7 @@ struct ExpandedActivityDetails: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .privacySensitive()
 
-            LiveActivityStopButton(taskID: context.attributes.taskID)
+            LiveActivityStopButton(segmentID: context.attributes.segmentID)
         }
     }
 
@@ -51,7 +52,9 @@ struct ExpandedActivityDetails: View {
                 .lineLimit(2)
                 .privacySensitive()
 
-            Link(destination: LiveActivityDeepLinks.stopTimer(taskID: context.attributes.taskID)) {
+            Button(intent: LiveActivityStopTimerIntent(
+                segmentID: context.attributes.segmentID
+            )) {
                 Label(String(localized: "live.timer.stop"), systemImage: "stop.fill")
                     .font(.caption.weight(.semibold))
                     .lineLimit(2)

@@ -63,17 +63,24 @@ struct StartTimerIntent: AppIntent {
 
 struct StopTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "Stop Timer"
-    static var description = IntentDescription("Stop the current Time Tracker timer.")
+    static var description = IntentDescription("Stop a specific running Time Tracker timer.")
     static var openAppWhenRun = false
+
+    @Parameter(title: "Timer")
+    var timer: ActiveTimerAppEntity
 
     @MainActor
     func perform() async throws -> some IntentResult {
         let context = SystemActionContextProvider.makeContext()
+        let targetID = try timer.uuid()
         let targetSegment = try SwiftDataTimeTrackingRepository(context: context)
             .activeSegments()
-            .last
-        let segmentID = try SystemActionCommandHandler().stopTimer(taskID: nil, context: context)
-        if segmentID != nil, let targetSegment {
+            .first { $0.id == targetID }
+        let segmentID = try SystemActionCommandHandler().stopTimer(
+            segmentID: targetID,
+            context: context
+        )
+        if segmentID == targetID, let targetSegment {
             let events: Set<StoreDomainEvent> = [
                 .ledgerChanged(taskID: targetSegment.taskID, dateInterval: nil, isVisible: true),
                 .pomodoroChanged(
@@ -89,6 +96,62 @@ struct StopTimerIntent: AppIntent {
             CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
         }
         return .result()
+    }
+}
+
+struct ActiveTimerAppEntity: AppEntity, Identifiable {
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Running Timer")
+    static var defaultQuery = ActiveTimerEntityQuery()
+
+    let id: String
+    let title: String
+    let path: String
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(
+            title: "\(title)",
+            subtitle: path.isEmpty ? nil : "\(path)"
+        )
+    }
+
+    func uuid() throws -> UUID {
+        guard let uuid = UUID(uuidString: id) else {
+            throw SystemActionCommandError.taskNotFound
+        }
+        return uuid
+    }
+}
+
+struct ActiveTimerEntityQuery: EntityQuery {
+    @MainActor
+    func entities(for identifiers: [ActiveTimerAppEntity.ID]) async throws -> [ActiveTimerAppEntity] {
+        let ids = Set(identifiers)
+        return try fetchTimerEntities().filter { ids.contains($0.id) }
+    }
+
+    @MainActor
+    func suggestedEntities() async throws -> [ActiveTimerAppEntity] {
+        try fetchTimerEntities()
+    }
+
+    @MainActor
+    private func fetchTimerEntities() throws -> [ActiveTimerAppEntity] {
+        let context = SystemActionContextProvider.makeContext()
+        let activeSegments = try SwiftDataTimeTrackingRepository(context: context).activeSegments()
+        let tasks = try SwiftDataTaskRepository(context: context).allNodes()
+        let taskByID = tasks.reduce(into: [UUID: TaskNode]()) { result, task in
+            result[task.id] = task
+        }
+        let parentPathByID = TaskTreeService().indexes(tasks: tasks).taskParentPathByID
+
+        return activeSegments.compactMap { segment in
+            guard let task = taskByID[segment.taskID] else { return nil }
+            return ActiveTimerAppEntity(
+                id: segment.id.uuidString,
+                title: task.title,
+                path: parentPathByID[task.id] ?? ""
+            )
+        }
     }
 }
 

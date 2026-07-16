@@ -13,6 +13,9 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("struct AddInboxItemIntent: AppIntent"))
         #expect(source.contains("struct StartTimerIntent: AppIntent"))
         #expect(source.contains("struct StopTimerIntent: AppIntent"))
+        #expect(source.contains("var timer: ActiveTimerAppEntity"))
+        #expect(source.contains("segmentID: targetID"))
+        #expect(source.contains(".activeSegments()\n            .last") == false)
         #expect(source.contains("SystemActionCommandHandler()"))
         #expect(source.contains("TimeSegment(") == false)
         #expect(source.contains("TimeSession(") == false)
@@ -200,7 +203,7 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
-    func untargetedSystemStopClosesTheMostRecentlyStartedParallelTimer() throws {
+    func untargetedSystemStopRejectsParallelTimers() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -224,10 +227,50 @@ struct CoreSystemActionCommandTests {
 
         let stoppedID = try makeTestSystemActionCommandHandler().stopTimer(taskID: nil, context: context)
 
-        #expect(stoppedID == newer.id)
+        #expect(stoppedID == nil)
         #expect(older.endedAt == nil)
-        #expect(newer.endedAt != nil)
-        #expect(try timeRepository.activeSegments().map(\.id) == [older.id])
+        #expect(newer.endedAt == nil)
+        #expect(Set(try timeRepository.activeSegments().map(\.id)) == [older.id, newer.id])
+    }
+
+    @Test @MainActor
+    func untargetedSystemStopRemainsCompatibleForOneTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Only timer",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
+
+        let stoppedID = try makeTestSystemActionCommandHandler().stopTimer(context: context)
+
+        #expect(stoppedID == segment.id)
+        #expect(try timeRepository.activeSegments().isEmpty)
+    }
+
+    @Test @MainActor
+    func segmentTargetStopsOnlyTheSerializedParallelTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstTask = try taskRepository.createTask(title: "First", parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Second", parentID: nil, colorHex: nil, iconName: nil)
+        let first = try timeRepository.startTask(taskID: firstTask.id, source: .timer)
+        let second = try timeRepository.startTask(taskID: secondTask.id, source: .timer)
+
+        let stoppedID = try makeTestSystemActionCommandHandler().stopTimer(
+            segmentID: first.id,
+            context: context
+        )
+
+        #expect(stoppedID == first.id)
+        #expect(first.endedAt != nil)
+        #expect(second.endedAt == nil)
+        #expect(try timeRepository.activeSegments().map(\.id) == [second.id])
     }
 
     @Test @MainActor

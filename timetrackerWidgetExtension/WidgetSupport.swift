@@ -1,3 +1,4 @@
+import AppIntents
 import Foundation
 import SwiftUI
 
@@ -10,6 +11,29 @@ enum WidgetDeepLinks {
 
     static func startTimer(taskID: UUID) -> URL {
         URL(string: "timetracker://timer/start?taskID=\(taskID.uuidString)")!
+    }
+
+    static func stopTimer(segmentID: String) -> URL {
+        URL(string: "timetracker://timer/stop?segmentID=\(segmentID)")!
+    }
+}
+
+struct WidgetStopTimerIntent: AppIntent {
+    static var title: LocalizedStringResource = "Stop Timer"
+    static var description = IntentDescription("Stop this running Time Tracker timer.")
+    static var openAppWhenRun = false
+
+    @Parameter(title: "Timer")
+    var segmentID: String
+
+    init() {}
+
+    init(segmentID: UUID) {
+        self.segmentID = segmentID.uuidString
+    }
+
+    func perform() async throws -> some IntentResult {
+        .result(opensIntent: OpenURLIntent(WidgetDeepLinks.stopTimer(segmentID: segmentID)))
     }
 }
 

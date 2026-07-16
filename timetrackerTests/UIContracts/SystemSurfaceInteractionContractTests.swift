@@ -12,6 +12,27 @@ struct SystemSurfaceInteractionContractTests {
         #expect(source.contains("Link(destination: WidgetDeepLinks.startTimer(taskID: task.taskID))"))
         #expect(source.contains("widget.action.startTaskFormat"))
         #expect(source.contains("minHeight: 44"))
+        #expect(source.contains("Button(intent: WidgetStopTimerIntent(segmentID: timer.id))"))
+        #expect(source.contains("widget.action.stop"))
+    }
+
+    @Test
+    func stopActionsSerializeTheVisibleSegmentAcrossSystemSurfaces() throws {
+        let appIntent = try sourceText("timetracker/AppIntents/TimeTrackerAppIntents.swift")
+        let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
+        let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
+        let liveTimer = try sourceText("timetrackerLiveActivityExtension/LiveActivityTimerViews.swift")
+        let liveExpanded = try sourceText("timetrackerLiveActivityExtension/ExpandedActivityDetails.swift")
+        let liveSupport = try sourceText("timetrackerLiveActivityExtension/LiveActivitySupport.swift")
+
+        #expect(appIntent.contains("var timer: ActiveTimerAppEntity"))
+        #expect(appIntent.contains("segmentID: targetID"))
+        #expect(shared.contains("var segmentID: String"))
+        #expect(coordinator.contains("segmentID: primary.id.uuidString"))
+        #expect(liveTimer.contains("Button(intent: LiveActivityStopTimerIntent(segmentID: segmentID))"))
+        #expect(liveExpanded.contains("Button(intent: LiveActivityStopTimerIntent("))
+        #expect(liveSupport.contains("timetracker://timer/stop?segmentID="))
+        #expect(liveSupport.contains("var segmentID: String"))
     }
 
     @Test
@@ -58,6 +79,7 @@ struct SystemSurfaceInteractionContractTests {
             )
 
             #expect(widget.contains("\"widget.action.startTaskFormat\""))
+            #expect(widget.contains("\"widget.action.stop\""))
             #expect(liveActivity.contains("\"live.timer.staleHint\""))
         }
     }

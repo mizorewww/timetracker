@@ -4,9 +4,14 @@ enum AppDeepLinkAction: Equatable {
     case open(TimeTrackerStore.DesktopDestination)
     case startTimerPicker
     case startTimer(UUID)
-    case stopTimer(UUID?)
+    case stopTimer(AppDeepLinkStopTarget?)
     case newTask
     case openTask(UUID)
+}
+
+enum AppDeepLinkStopTarget: Equatable {
+    case segment(UUID)
+    case task(UUID)
 }
 
 struct AppDeepLinkRouter {
@@ -33,15 +38,18 @@ struct AppDeepLinkRouter {
             return .open(destination)
         case "timer":
             guard path.count == 1, let operation = path.first else { return nil }
-            switch (operation, taskIDParameter(from: url)) {
+            let parameter = timerParameter(from: url)
+            switch (operation, parameter) {
             case ("start", .absent):
                 return .startTimerPicker
-            case ("start", .value(let taskID)):
+            case ("start", .task(let taskID)):
                 return .startTimer(taskID)
             case ("stop", .absent):
                 return .stopTimer(nil)
-            case ("stop", .value(let taskID)):
-                return .stopTimer(taskID)
+            case ("stop", .task(let taskID)):
+                return .stopTimer(.task(taskID))
+            case ("stop", .segment(let segmentID)):
+                return .stopTimer(.segment(segmentID))
             default:
                 return nil
             }
@@ -79,26 +87,32 @@ struct AppDeepLinkRouter {
         URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.isEmpty ?? true
     }
 
-    private func taskIDParameter(from url: URL) -> TaskIDParameter {
+    private func timerParameter(from url: URL) -> TimerParameter {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return .invalid
         }
         let queryItems = components.queryItems ?? []
-        guard queryItems.allSatisfy({ $0.name == "taskID" }), queryItems.count <= 1 else {
-            return .invalid
-        }
+        guard queryItems.count <= 1 else { return .invalid }
         guard let item = queryItems.first else { return .absent }
         guard let rawValue = item.value,
-              let taskID = UUID(uuidString: rawValue) else {
+              let id = UUID(uuidString: rawValue) else {
             return .invalid
         }
-        return .value(taskID)
+        switch item.name {
+        case "taskID":
+            return .task(id)
+        case "segmentID":
+            return .segment(id)
+        default:
+            return .invalid
+        }
     }
 }
 
-private enum TaskIDParameter {
+private enum TimerParameter {
     case absent
-    case value(UUID)
+    case task(UUID)
+    case segment(UUID)
     case invalid
 }
 

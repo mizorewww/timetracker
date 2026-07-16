@@ -190,20 +190,28 @@ struct SystemActionCommandHandler {
 
     @discardableResult
     func stopTimer(
-        taskID: UUID?,
+        segmentID: UUID? = nil,
+        taskID: UUID? = nil,
         context: ModelContext
     ) throws -> UUID? {
         try context.performAtomicMutation {
             try writeAuthorization.requireUserWritesAllowed()
             let timeRepository = SwiftDataTimeTrackingRepository(context: context)
             let activeSegments = try timeRepository.activeSegments()
-            let segment: TimeSegment?
-            if let taskID {
-                segment = activeSegments.first { $0.taskID == taskID }
+            let candidates: [TimeSegment]
+            if let segmentID {
+                guard taskID == nil else { return nil }
+                candidates = activeSegments.filter { $0.id == segmentID }
+            } else if let taskID {
+                candidates = activeSegments.filter { $0.taskID == taskID }
             } else {
-                segment = activeSegments.last
+                candidates = activeSegments
             }
-            guard let segment else {
+
+            // Untargeted legacy callers remain compatible only when there is
+            // exactly one possible timer. Parallel timers must never be
+            // resolved by repository ordering.
+            guard candidates.count == 1, let segment = candidates.first else {
                 return nil
             }
 

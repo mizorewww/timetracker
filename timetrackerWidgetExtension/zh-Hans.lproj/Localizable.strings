@@ -5,6 +5,7 @@
 "widget.empty.message" = "在 Time Tracker 中开始记录。";
 "widget.action.start" = "开始计时";
 "widget.action.startTaskFormat" = "开始“%@”计时";
+"widget.action.stop" = "停止计时";
 "widget.action.open" = "打开 Time Tracker";
 "widget.quickStart.title" = "快速开始";
 "widget.preview.task" = "制作周报";

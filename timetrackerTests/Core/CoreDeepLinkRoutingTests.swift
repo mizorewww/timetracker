@@ -69,7 +69,9 @@ struct CoreDeepLinkRoutingTests {
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/start"))) == .startTimerPicker)
         let taskID = UUID()
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?taskID=\(taskID.uuidString)"))) == .startTimer(taskID))
-        #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?taskID=\(taskID.uuidString)"))) == .stopTimer(taskID))
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?taskID=\(taskID.uuidString)"))) == .stopTimer(.task(taskID)))
+        let segmentID = UUID()
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?segmentID=\(segmentID.uuidString)"))) == .stopTimer(.segment(segmentID)))
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop"))) == .stopTimer(nil))
         #expect(router.action(for: try #require(URL(string: "timetracker://task/new"))) == .newTask)
         #expect(router.action(for: try #require(URL(string: "timetracker://task/\(taskID.uuidString)"))) == .openTask(taskID))
@@ -84,6 +86,8 @@ struct CoreDeepLinkRoutingTests {
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/missing"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://task/not-a-uuid"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?taskID=invalid"))) == nil)
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?segmentID=invalid"))) == nil)
+        #expect(router.action(for: try #require(URL(string: "timetracker://timer/stop?taskID=\(UUID())&segmentID=\(UUID())"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://timer/start?other=value"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://open/inbox/extra"))) == nil)
         #expect(router.action(for: try #require(URL(string: "timetracker://open/inbox#fragment"))) == nil)
@@ -120,6 +124,60 @@ struct CoreDeepLinkRoutingTests {
 
         #expect(store.activeSegments.map(\.id) == [runningSegment.id])
         #expect(try timeRepository.activeSegments().map(\.id) == [runningSegment.id])
+    }
+
+    @Test @MainActor
+    func untargetedStopDeepLinkRejectsParallelTimers() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstTask = try taskRepository.createTask(title: "First", parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Second", parentID: nil, colorHex: nil, iconName: nil)
+        let first = try timeRepository.startTask(taskID: firstTask.id, source: .timer)
+        let second = try timeRepository.startTask(taskID: secondTask.id, source: .timer)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let url = try #require(URL(string: "timetracker://timer/stop"))
+
+        #expect(store.handleDeepLink(url, presentationRouter: AppPresentationRouter()) == .rejected)
+        #expect(Set(store.activeSegments.map(\.id)) == [first.id, second.id])
+        #expect(Set(try timeRepository.activeSegments().map(\.id)) == [first.id, second.id])
+    }
+
+    @Test @MainActor
+    func untargetedStopDeepLinkRemainsCompatibleForOneTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Only", parentID: nil, colorHex: nil, iconName: nil)
+        _ = try timeRepository.startTask(taskID: task.id, source: .timer)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let url = try #require(URL(string: "timetracker://timer/stop"))
+
+        #expect(store.handleDeepLink(url, presentationRouter: AppPresentationRouter()) == .handled)
+        #expect(store.activeSegments.isEmpty)
+        #expect(try timeRepository.activeSegments().isEmpty)
+    }
+
+    @Test @MainActor
+    func segmentStopDeepLinkStopsOnlyItsSerializedParallelTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let firstTask = try taskRepository.createTask(title: "First", parentID: nil, colorHex: nil, iconName: nil)
+        let secondTask = try taskRepository.createTask(title: "Second", parentID: nil, colorHex: nil, iconName: nil)
+        let first = try timeRepository.startTask(taskID: firstTask.id, source: .timer)
+        let second = try timeRepository.startTask(taskID: secondTask.id, source: .timer)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let url = try #require(
+            URL(string: "timetracker://timer/stop?segmentID=\(first.id.uuidString)")
+        )
+
+        #expect(store.handleDeepLink(url, presentationRouter: AppPresentationRouter()) == .handled)
+        #expect(store.activeSegments.map(\.id) == [second.id])
+        #expect(try timeRepository.activeSegments().map(\.id) == [second.id])
     }
 
     @Test @MainActor
@@ -372,8 +430,9 @@ struct CoreDeepLinkRoutingTests {
         ].map(sourceText).joined(separator: "\n")
         let strings = try sourceText("timetrackerLiveActivityExtension/en.lproj/Localizable.strings")
 
-        #expect(router.contains("case stopTimer(UUID?)"))
-        #expect(activity.contains("timetracker://timer/stop?taskID="))
+        #expect(router.contains("case stopTimer(AppDeepLinkStopTarget?)"))
+        #expect(activity.contains("timetracker://timer/stop?segmentID="))
+        #expect(activity.contains("Button(intent: LiveActivityStopTimerIntent"))
         #expect(activity.contains("live.timer.stop"))
         #expect(strings.contains("\"live.timer.stop\""))
     }
@@ -387,7 +446,7 @@ struct CoreDeepLinkRoutingTests {
             "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ].map(sourceText).joined(separator: "\n")
 
-        #expect(coordinator.contains("$0.attributes.taskID == request.taskID"))
+        #expect(coordinator.contains("$0.attributes.segmentID == request.segmentID"))
         #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
         #expect(!coordinator.contains("lastSignature"))
         #expect(activity.contains("context.isStale"))

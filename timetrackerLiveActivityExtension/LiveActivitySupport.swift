@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import Foundation
 import SwiftUI
 
@@ -43,8 +44,27 @@ private func linearSRGB(_ component: Double) -> Double {
 enum LiveActivityDeepLinks {
     static let today = URL(string: "timetracker://open/today")!
 
-    static func stopTimer(taskID: String) -> URL {
-        URL(string: "timetracker://timer/stop?taskID=\(taskID)")!
+    static func stopTimer(segmentID: String) -> URL {
+        URL(string: "timetracker://timer/stop?segmentID=\(segmentID)")!
+    }
+}
+
+struct LiveActivityStopTimerIntent: AppIntent {
+    static var title: LocalizedStringResource = "Stop Timer"
+    static var description = IntentDescription("Stop this running Time Tracker timer.")
+    static var openAppWhenRun = false
+
+    @Parameter(title: "Timer")
+    var segmentID: String
+
+    init() {}
+
+    init(segmentID: String) {
+        self.segmentID = segmentID
+    }
+
+    func perform() async throws -> some IntentResult {
+        .result(opensIntent: OpenURLIntent(LiveActivityDeepLinks.stopTimer(segmentID: segmentID)))
     }
 }
 

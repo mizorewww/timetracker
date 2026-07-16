@@ -38,6 +38,7 @@ nonisolated struct TimeTrackingActivityAttributes: ActivityAttributes, Sendable 
         var additionalTimerCount: Int
     }
 
+    var segmentID: String
     var taskID: String
 }
 #endif

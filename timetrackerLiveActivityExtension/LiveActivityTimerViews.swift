@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import Foundation
 import SwiftUI
 import WidgetKit
@@ -36,7 +37,7 @@ struct LockScreenTimerView: View {
                 style: .lockScreen
             )
 
-            LiveActivityStopButton(taskID: context.attributes.taskID)
+            LiveActivityStopButton(segmentID: context.attributes.segmentID)
         }
     }
 
@@ -49,7 +50,7 @@ struct LockScreenTimerView: View {
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .privacySensitive()
-                LiveActivityStopButton(taskID: context.attributes.taskID)
+                LiveActivityStopButton(segmentID: context.attributes.segmentID)
             }
 
             TimerText(
@@ -66,7 +67,7 @@ struct LockScreenTimerView: View {
                 ActivityIconView(state: context.state, size: 40)
                 ActivityTaskSummary(state: context.state, allowsWrapping: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                LiveActivityStopButton(taskID: context.attributes.taskID)
+                LiveActivityStopButton(segmentID: context.attributes.segmentID)
             }
 
             TimerText(
@@ -128,10 +129,10 @@ struct ActivityTaskSummary: View {
 }
 
 struct LiveActivityStopButton: View {
-    let taskID: String
+    let segmentID: String
 
     var body: some View {
-        Link(destination: LiveActivityDeepLinks.stopTimer(taskID: taskID)) {
+        Button(intent: LiveActivityStopTimerIntent(segmentID: segmentID)) {
             Image(systemName: "stop.fill")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.white)

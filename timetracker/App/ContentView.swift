@@ -35,6 +35,18 @@ struct ContentView: View {
         }
         .environment(presentationRouter)
         .appPresentationHost(store: store, router: presentationRouter)
+        #if os(iOS)
+        .overlay(alignment: .bottom) {
+            syncConflictNotice
+                .padding(.horizontal, 12)
+                .padding(.bottom, 84)
+        }
+        #else
+        .safeAreaInset(edge: .top, spacing: 0) {
+            syncConflictNotice
+                .padding(8)
+        }
+        #endif
         .task {
             guard AppCloudSync.allowsUserWrites else { return }
             store.configureIfNeeded(context: modelContext)
@@ -78,28 +90,6 @@ struct ContentView: View {
             }
         } message: {
             Text(store.errorMessage ?? "")
-        }
-        .confirmationDialog(
-            AppStrings.localized("dialog.syncConflict.title"),
-            isPresented: syncConflictDialogBinding,
-            titleVisibility: .visible,
-            presenting: store.pendingSyncConflict
-        ) { conflict in
-            Button(AppStrings.localized("dialog.syncConflict.uploadLocal"), role: .destructive) {
-                store.resolveSyncConflict(
-                    expectedConflictID: conflict.id,
-                    resolution: .uploadLocal
-                )
-            }
-            Button(AppStrings.localized("dialog.syncConflict.downloadCloud"), role: .destructive) {
-                store.resolveSyncConflict(
-                    expectedConflictID: conflict.id,
-                    resolution: .downloadCloud
-                )
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: { conflict in
-            Text(syncConflictMessage(for: conflict))
         }
         .onChange(of: store.pendingSyncConflict?.id) { _, _ in
             dismissedSyncConflictID = nil
@@ -165,23 +155,20 @@ struct ContentView: View {
         }
     }
 
-    private var syncConflictDialogBinding: Binding<Bool> {
-        Binding {
-            guard let conflict = store.pendingSyncConflict else { return false }
-            return dismissedSyncConflictID != conflict.id
-        } set: { isPresented in
-            if !isPresented {
-                dismissedSyncConflictID = store.pendingSyncConflict?.id
-            }
+    @ViewBuilder
+    private var syncConflictNotice: some View {
+        if let conflict = store.pendingSyncConflict,
+           dismissedSyncConflictID != conflict.id {
+            SyncConflictNotice(
+                onReview: {
+                    dismissedSyncConflictID = conflict.id
+                    store.desktopDestination = .settings
+                },
+                onDismiss: {
+                    dismissedSyncConflictID = conflict.id
+                }
+            )
         }
-    }
-
-    private func syncConflictMessage(for conflict: SyncConflictPrompt) -> String {
-        return String(
-            format: AppStrings.localized("dialog.syncConflict.message"),
-            conflict.localSummary,
-            conflict.cloudSummary
-        )
     }
 
 }

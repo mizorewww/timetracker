@@ -29,6 +29,15 @@ extension TimeTrackerStore {
         case "settings":
             closeTaskDetailNavigation()
             desktopDestination = .settings
+        case "sync-conflict":
+            closeTaskDetailNavigation()
+            desktopDestination = .today
+            pendingSyncConflict = SyncConflictPrompt(
+                id: UUID(),
+                detectedAt: Date(),
+                localSummary: "12 tasks · 24 time records",
+                cloudSummary: "11 tasks · 22 time records"
+            )
         case "task-detail":
             let requestedTitle = environment["TIMETRACKER_UI_AUDIT_TASK_TITLE"]
             if let task = tasks.first(where: { requestedTitle == nil || $0.title == requestedTitle }) {

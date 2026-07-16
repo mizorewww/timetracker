@@ -36,6 +36,10 @@ extension TimeTrackerStore {
 
     func installSyncObservers() {
         guard syncObservers.isEmpty else { return }
+        // UI tests use an isolated in-memory container and inject deterministic
+        // sync states explicitly. Remote-store callbacks from that container
+        // can otherwise race the injected route and erase it after launch.
+        guard AppCloudSync.persistenceMode != AppCloudSync.modeUITest else { return }
         let center = NotificationCenter.default
         let names: [Notification.Name] = [
             .NSPersistentStoreRemoteChange,

@@ -54,6 +54,38 @@ struct AppPresentationContractTests {
     }
 
     @Test
+    func rootSyncConflictNoticeRoutesToSettingsWithoutAutomaticDestructiveActions() throws {
+        let content = try sourceText("timetracker/App/ContentView.swift")
+        let notice = try sourceText(
+            "timetracker/SharedUI/Components/SyncConflictNotice.swift"
+        )
+        let recovery = try sourceText(
+            "timetracker/Features/Settings/SyncRecoverySettingsSection.swift"
+        )
+
+        #expect(content.contains("SyncConflictNotice("))
+        #expect(content.contains("store.desktopDestination = .settings"))
+        #expect(content.contains("dialog.syncConflict.uploadLocal") == false)
+        #expect(content.contains("dialog.syncConflict.downloadCloud") == false)
+        #expect(notice.contains("sync.conflict.notice.review"))
+        #expect(recovery.contains("pendingConflict.localSummary"))
+        #expect(recovery.contains("pendingConflict.cloudSummary"))
+        #expect(recovery.contains("Button(role: .destructive, action: onReplaceCloud)"))
+        #expect(recovery.contains("Button(role: .destructive, action: onReplaceDevice)"))
+    }
+
+    @Test
+    func uiTestConflictInjectionCannotBeErasedByRemoteStoreObservers() throws {
+        let observers = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+SyncObservers.swift"
+        )
+
+        #expect(observers.contains(
+            "AppCloudSync.persistenceMode != AppCloudSync.modeUITest"
+        ))
+    }
+
+    @Test
     func presentationTriggersUseTheSceneRouterAndPickerReplacementIsAtomic() throws {
         let content = try sourceText("timetracker/App/ContentView.swift")
         let homeActions = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")

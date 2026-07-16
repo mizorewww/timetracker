@@ -101,6 +101,39 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testSyncConflictNoticeRoutesToSummariesBeforeAnyDestructiveChoice() throws {
+        #if os(macOS)
+        throw XCTSkip("The compact conflict notice flow requires an iOS simulator.")
+        #else
+        let app = launchApp(route: "sync-conflict")
+        let notice = app.descendants(matching: .any)["sync.conflict.notice"].firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 8))
+        XCTAssertFalse(app.buttons["Replace iCloud"].firstMatch.exists)
+        XCTAssertFalse(app.buttons["Replace This Device"].firstMatch.exists)
+        try capture("iphone-sync-conflict-notice", app: app)
+
+        let review = app.buttons["sync.conflict.notice.review"].firstMatch
+        XCTAssertTrue(review.waitForExistence(timeout: 3) && review.isHittable)
+        activate(review)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 5))
+
+        let dataAndSync = app.buttons["settings.category.dataAndSync"].firstMatch
+        XCTAssertTrue(dataAndSync.waitForExistence(timeout: 3) && dataAndSync.isHittable)
+        activate(dataAndSync)
+        let localSummary = app.descendants(matching: .any)[
+            "settings.syncRecovery.localSummary"
+        ].firstMatch
+        let cloudSummary = app.descendants(matching: .any)[
+            "settings.syncRecovery.cloudSummary"
+        ].firstMatch
+        scrollUntilHittable(localSummary, direction: .up, in: app)
+        XCTAssertTrue(localSummary.waitForExistence(timeout: 3) && localSummary.isHittable)
+        XCTAssertTrue(cloudSummary.waitForExistence(timeout: 3))
+        try capture("iphone-sync-conflict-summaries", app: app)
+        #endif
+    }
+
+    @MainActor
     func testSettingsCategoryNavigationRemainsReachableAtLargeTextSizes() throws {
         let app = launchApp(
             contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"

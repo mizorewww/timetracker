@@ -174,6 +174,7 @@
 "settings.countdown.eventName" = "事件名稱";
 "settings.countdown.date" = "日期";
 "common.ok" = "好";
+"common.dismiss" = "忽略";
 "dialog.rebuildDemo.title" = "重建示範資料？";
 "dialog.rebuildDemo.confirm" = "清空並產生示範資料";
 "dialog.rebuildDemo.message" = "這會刪除目前本機 SwiftData 儲存中的任務和時間記錄，然後寫入一組多日示範資料。";
@@ -284,6 +285,8 @@
 "sync.conflict.error.cloudSnapshotMissing" = "找不到已儲存的 iCloud 快照，無法安全地取代本裝置資料。";
 "sync.conflict.error.uploadSnapshotMissing" = "沒有找到本裝置的可見資料，已取消排程覆蓋 iCloud。";
 "sync.conflict.error.changed" = "同步衝突在你確認前已經變更。請重新核對最新的本機與 iCloud 摘要，再次選擇。";
+"sync.conflict.notice.message" = "請先在設定中比較本裝置與 iCloud，再選擇要保留的副本。";
+"sync.conflict.notice.review" = "檢視副本";
 "sync.recovery.deferred.uploadSnapshotUnavailable" = "雲端復原正在等待可讀取的受保護上傳快照。";
 "sync.recovery.error.storeRemoval" = "雲端復原無法移除持久化儲存：%@";
 "sync.recovery.error.stateRemoval" = "雲端復原無法移除同步衝突狀態：%@";

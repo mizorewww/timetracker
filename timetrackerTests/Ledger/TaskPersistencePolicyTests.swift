@@ -147,6 +147,27 @@ struct TaskPersistencePolicyTests {
     }
 
     @Test @MainActor
+    func fullTaskUpdateMaintainsArchivedTimestampAcrossStatusTransitions() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
+        let task = try repository.createTask(
+            title: "Lifecycle",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        try update(task, status: .archived, repository: repository)
+        let firstArchivedAt = try #require(task.archivedAt)
+
+        try update(task, status: .archived, repository: repository, title: "Renamed")
+        #expect(task.archivedAt == firstArchivedAt)
+
+        try update(task, status: .active, repository: repository)
+        #expect(task.archivedAt == nil)
+    }
+
+    @Test @MainActor
     func invalidCategoryWritesHaveNoPersistentOrInMemorySideEffects() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
@@ -202,6 +223,27 @@ struct TaskPersistencePolicyTests {
         #expect(category.updatedAt == originalUpdatedAt)
         #expect(category.deviceID == "remote-device")
         #expect(category.clientMutationID == originalMutationID)
+    }
+
+    @MainActor
+    private func update(
+        _ task: TaskNode,
+        status: TaskStatus,
+        repository: SwiftDataTaskRepository,
+        title: String? = nil
+    ) throws {
+        try repository.updateTask(
+            taskID: task.id,
+            title: title ?? task.title,
+            status: status,
+            parentID: task.parentID,
+            categoryID: nil,
+            colorHex: task.colorHex,
+            iconName: task.iconName,
+            notes: task.notes,
+            estimatedSeconds: task.estimatedSeconds,
+            dueAt: task.dueAt
+        )
     }
 
     @Test @MainActor

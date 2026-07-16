@@ -58,15 +58,16 @@ extension SwiftDataTaskRepository {
             throw TaskRepositoryError.invalidMove
         }
 
+        let now = Date()
         node.title = values.title
         node.status = status
+        node.archivedAt = status == .archived ? (node.archivedAt ?? now) : nil
         node.parentID = parentID
         node.colorHex = values.colorHex
         node.iconName = values.iconName
         node.notes = values.notes
         node.estimatedSeconds = TaskEstimatePolicy.normalized(seconds: estimatedSeconds)
         node.dueAt = dueAt
-        let now = Date()
         node.updatedAt = now
         node.deviceID = deviceID
         node.clientMutationID = UUID()

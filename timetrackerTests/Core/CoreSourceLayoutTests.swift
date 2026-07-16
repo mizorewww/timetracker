@@ -154,6 +154,8 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/App/AppModelContainerFactory.swift",
+            "timetracker/App/AppModelContainerFactory+Testing.swift",
+            "timetracker/App/AppModelContainerFactory+Fallback.swift",
             "timetracker/App/AppDemoDataConfiguration.swift",
             "timetracker/App/SettingsSceneView.swift",
             "timetracker/App/TimeTrackerCommands.swift",
@@ -885,6 +887,8 @@ struct CoreSourceLayoutTests {
         let focusedFiles = [
             "timetrackerApp.swift",
             "AppModelContainerFactory.swift",
+            "AppModelContainerFactory+Testing.swift",
+            "AppModelContainerFactory+Fallback.swift",
             "SettingsSceneView.swift",
             "TimeTrackerCommands.swift",
             "TimeTrackerAppDelegate.swift",

@@ -40,8 +40,8 @@ extension AppCloudSync {
     static func performPendingCloudRecoveryResetIfNeeded(
         canResetUpload: Bool = true,
         storeURL: URL? = nil,
-        removeStoreFiles: ((URL) throws -> Void)? = nil,
-        removeSyncConflictState: (() throws -> Void)? = nil
+        removeStoreFiles: (@MainActor (URL) throws -> Void)? = nil,
+        removeSyncConflictState: (@MainActor () throws -> Void)? = nil
     ) -> CloudRecoveryGate {
         let defaults = UserDefaults.standard
         let shouldResetForDownload = defaults.bool(forKey: pendingCloudDownloadResetKey)
@@ -55,7 +55,14 @@ extension AppCloudSync {
         }
 
         let resolvedStoreURL = storeURL ?? persistentStoreURL
-        let storeFileRemover = removeStoreFiles ?? removePersistentStoreFiles
+        let storeFileRemover: @MainActor (URL) throws -> Void
+        if let removeStoreFiles {
+            storeFileRemover = removeStoreFiles
+        } else {
+            storeFileRemover = { url in
+                try removePersistentStoreFiles(at: url)
+            }
+        }
         do {
             try storeFileRemover(resolvedStoreURL)
         } catch {
@@ -73,7 +80,14 @@ extension AppCloudSync {
         )
 
         if reset == .download {
-            let stateRemover = removeSyncConflictState ?? SyncConflictService.removeDefaultState
+            let stateRemover: @MainActor () throws -> Void
+            if let removeSyncConflictState {
+                stateRemover = removeSyncConflictState
+            } else {
+                stateRemover = {
+                    try SyncConflictService.removeDefaultState()
+                }
+            }
             do {
                 try stateRemover()
             } catch {

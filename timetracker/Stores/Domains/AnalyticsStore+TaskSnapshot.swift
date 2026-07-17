@@ -97,8 +97,7 @@ extension AnalyticsStore {
                 taskIDs: taskIDs,
                 taskPathByID: taskPathByID,
                 now: now
-            ),
-            rangeSegments: filtered
+            )
         )
     }
 

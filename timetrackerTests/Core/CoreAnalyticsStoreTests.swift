@@ -807,7 +807,7 @@ struct CoreAnalyticsStoreTests {
         #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 900)
         #expect(snapshot.taskBreakdown.first?.grossSeconds == 900)
         #expect(snapshot.rhythm.segmentCount == 1)
-        #expect(snapshot.rangeSegments.count == 1)
+        #expect(snapshot.timeline.entries.count == 1)
     }
 
     @Test @MainActor

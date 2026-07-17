@@ -36,7 +36,7 @@ Domain stores own state snapshots:
 - `LedgerStore` owns active, today, history, segment/day/session indexes and mutation deltas.
 - `ChecklistStore` owns global bootstrap plus task-scoped item/visual replacement indexes.
 - `RollupStore` owns exact worked totals, checklist progress, forecast state and the bounded 90-local-day pace index.
-- `AnalyticsStore` owns overview/task snapshot caches keyed by full period, current local day, and optional live-minute identity, plus disposable ledger day buckets; cache operations are split into `AnalyticsStore+Caching`.
+- `AnalyticsStore` owns pure read-model overview/task snapshot caches keyed by full period, current local day, and optional live-minute identity, plus disposable ledger day buckets; cache operations are split into `AnalyticsStore+Caching`, and cached snapshots do not retain SwiftData segment objects.
 - `PreferenceStore` owns synced preference snapshots.
 
 `StoreRefreshCoordinator` owns refresh sequencing after command events. The facade no longer decides the order of task, ledger, checklist, rollup, analytics, selection validation, and Live Activity side effects inline.

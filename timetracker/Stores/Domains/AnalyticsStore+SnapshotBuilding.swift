@@ -218,8 +218,7 @@ extension AnalyticsStore {
                 items: boundedRangeSegments,
                 tasks: tasks,
                 sessions: sessions
-            ),
-            rangeSegments: rangeSegments
+            )
         )
     }
 }

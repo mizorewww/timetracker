@@ -51,5 +51,4 @@ struct TaskAnalyticsSnapshot {
     let childBreakdown: [AnalyticsGroupBreakdownPoint]
     let daily: [DailyAnalyticsPoint]
     let recentRecords: [TaskRecentRecordPoint]
-    let rangeSegments: [TimeSegment]
 }

@@ -14,5 +14,4 @@ struct AnalyticsSnapshot {
     let rootBreakdown: [AnalyticsGroupBreakdownPoint]
     let categoryBreakdown: [AnalyticsGroupBreakdownPoint]
     let overlaps: [OverlapAnalyticsPoint]
-    let rangeSegments: [TimeSegment]
 }

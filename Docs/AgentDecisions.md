@@ -1121,6 +1121,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：UTC 同一周 23:59→00:01 的 request、overview cache 与 task cache 全部 miss；历史周跨后续墙钟日保持相同 request。原 period/cutoff、DST、comparison、timeline、live-bucket、LRU 与 overlap 套件继续通过。
 
+## AD-089：Analytics 缓存只持有 read models，不保留 SwiftData segment
+
+状态：Accepted
+
+背景：`AnalyticsSnapshot` 与 `TaskAnalyticsSnapshot` 在已经生成 overview、daily、timeline、breakdown 和 recent records 后，仍把完整 `rangeSegments: [TimeSegment]` 保存在缓存对象里。生产没有读取该字段；full cache 的多个 range 与最多 24 个 task cache 因此长期强引用整月或整任务分支的 SwiftData 模型，扩大内存与 context 生命周期。
+
+决策：两个 snapshot 删除 `rangeSegments` 字段和构造参数。Segment 数组只作为单次 generation pipeline 的局部输入，输出缓存仅保留不可变展示/决策 read models。测试不得为方便检查内部数组而重新暴露持久模型，必须通过 overview、daily、timeline、task/group 或 recent-record 投影验证结果。
+
+后果：缓存容量现在近似由展示点数决定，不随原始 segment 数量额外线性持有 SwiftData 对象；cache 也不会成为第二个可误用的数据访问入口。真正的计算复杂度仍需通过 evaluation context、range-scoped query 和 merge 消重继续优化，本决策不宣称 full snapshot 已经 O(1)。
+
+验证：重复 Cloud row 的快照测试同时核对 overview、daily、task breakdown、rhythm 与 timeline 只出现一个 winner；完整 AnalyticsStore/Timeline 回归继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

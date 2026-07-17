@@ -328,7 +328,7 @@ Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新�
 
 Live Activity 是状态投影。Activity attributes 应保持小而稳定，不保存唯一业务事实。Activity 的 task identity、停止 deep link 和主应用命令必须一致；更新失败应重试或降级显示，但不应阻断主应用写入。扩展对任务文本使用隐私处理，并明确显示 stale 状态。
 
-`LiveActivityTimingPolicy` 是 ActivityKit `staleDate` 与 UI elapsed presentation 的共同边界：活动从 canonical `startedAt` 起最多实时增长八小时，进入 stale 后必须切换为固定的 `LiveActivityElapsedPresentation.frozen`，可见文本和 accessibility value 都使用同一个冻结秒数。不得只改状态标签而继续渲染 `Text(startedAt, style: .timer)`。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；展开 Dynamic Island 在辅助字号下保留两行任务标题和独立停止控件，普通字号也要为窄标题提供换行回退。系统强约束的 compact/minimal presentation 可以保持精简，但不能把其单行约束扩散到锁屏和 expanded surface。
+`LiveActivityTimingPolicy` 是 ActivityKit `staleDate` 与 UI elapsed presentation 的共同边界：活动从 canonical `startedAt` 起最多实时增长八小时，进入 stale 后必须切换为固定的 `LiveActivityElapsedPresentation.frozen`，可见文本和 accessibility value 都使用同一个冻结秒数。不得只改状态标签而继续渲染 `Text(startedAt, style: .timer)`；Dynamic Island compact trailing 也必须复用该 policy，不能成为继续增长的例外。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；展开 Dynamic Island 在辅助字号下保留两行任务标题和独立停止控件，普通字号也要为窄标题提供换行回退。系统强约束的 compact/minimal presentation 可以保持精简，但不能把其单行约束扩散到锁屏和 expanded surface。
 
 ### Watch
 
@@ -337,6 +337,8 @@ Watch target 的状态 owner 是同一个 `WatchAppStore` 类型，但职责按 
 Watch 使用持久快照加命令队列。每个 `WatchTimerCommand.id` 是幂等键；新命令和进程恢复命令走 durable `transferUserInfo`，可达时再用 `sendMessage` 加速；单纯 reachability 变化只重发即时消息，不能重复制造 durable 副本。手机返回七态 typed terminal result（success、duplicate、missingTask、missingSegment、invalid、failed、timeout），并用 durable user-info 再投递；20 秒无 terminal result 会进入可重试失败态，retry 保留 ID、刷新 `issuedAt`，用户也可 discard。`WatchCommandProcessor` 在 receipt lookup 后、任何 mutation 前校验 DTO 和时间边界：命令最多保留 30 秒，允许最多 5 分钟的未来设备时钟偏差；过期/非法命令返回 invalid 且不写 receipt 或 ledger，因此用户仍可用同 ID 明确重试。快照反射只为旧手机兼容确认。
 
 Watch UI 是单一 Crown-scrollable `NavigationStack/List`：Active Timer 优先；Quick Start 只显示前四项，其余最多 256 个可工作任务进入“全部任务”；行状态通过一次 Set/Dictionary index 构建，不能为每行线性扫描命令队列。主页只预览第一个失败，更多失败进入“全部问题”，每项提供 retry/discard。`WCSession.isReachable` 只表示即时消息通道，不等于后台同步离线，因此状态只描述首次等待、发送、已排队、连接错误或 stale。较旧 snapshot 不能覆盖较新的已显示状态。主 target 的 codec/state/processor 测试不能替代真机往返验证。
+
+Watch 的 activity elapsed 只能在快照 current 时由 `Text(startedAt, style: .timer)` 实时增长。超过 `WatchStateSnapshot.staleAfter` 时，row 必须冻结在 `generatedAt - startedAt`，并由顶部/状态行明确说明数据陈旧；不能一边标记 stale、一边继续显示计时仍在增长。任何 `refreshPreferences` 都要重新投影 Watch 快照，因为 `quickStartTaskIDs` 是 Watch 首页的直接输入。
 
 所有 WatchConnectivity payload 和本机恢复数据都按不可信输入处理。Codec 在构造领域 DTO 前后验证有限日期、UTF-8 byte 长度、数组数量、唯一 command/timer/task ID、summary 非负上限、active timer 年龄和未来时钟偏差。Watch state snapshot 最多包含 64 个 active timer 和 256 个 recent task。iPhone durable incoming queue 最多 64 个命令；Watch persisted pending/failed 各最多 64 项；编码队列最多 512 KiB。`WatchCommandQueueState.isSafeForRestoration` 拒绝结构非法、command/result ID 不一致或跨列表重复的状态。pending overflow 把最旧项转成 `queueOverflow` failure，failed overflow 丢弃最旧 failure；无法安全恢复的本机数据会清除，而不是解码后继续执行。字段上限的唯一常量表是 `WatchTransportLimits`，不得在 codec、store 和 UI 各写不同数值。
 
@@ -353,6 +355,8 @@ Widget 从版本化共享快照读取数据，区分共享容器不可用、缺�
 Widget 的容器级 `.widgetURL` 永远是 `WidgetDeepLinks.today`。启动任务是 mutation，必须由显示任务名的显式 `Link(destination: WidgetDeepLinks.startTimer(...))` 发起；不得根据 recent task 动态改写背景 URL，否则任意空白区域点击都会偷偷启动列表第一项。小型空状态只给首个 recent task 一个明确的 44 pt Quick Start 目标，中型布局的任务行各自持有链接，背景仍只负责打开应用。
 
 `WidgetSnapshotLimits` 同时是 consumer/store 验证的唯一上限表：解码字段的 title/path/style 硬上限为 4 KiB/16 KiB/256 UTF-8 bytes，并验证有限日期、最多 5 分钟未来偏差、summary/active-age 上限和唯一 ID。`SharedWidgetSnapshotStore.save` 在写 App Group UserDefaults 前拒绝非法/超限快照；`loadResult` 在 decode 前检查字节，decode 后重新验证，失败返回 `.corrupted`。Watch producer 复用裁剪后的 active timers，并对最多 256 recent task 应用同样的 Unicode-safe 512/1,024/128-byte 投影上限和共享 128 KiB 文本预算。这些裁剪不写回任务或账本。时间线根据 snapshot freshness 和 active timer 安排刷新。主应用和扩展已启用 `group.me.mezorewww.timetracker`，Xcode 自动签名构建已生成带该 entitlement 的 profile；发行门禁仍要求真机验证共享容器 URL、读写、刷新策略、锁屏与离线状态。
+
+Widget 的 elapsed 也以快照可信度为准：只有 `.current` 可使用 system timer text；`.stale` 与 `.clockAdjusted` 都冻结在 snapshot 的 `generatedAt`，并保留已有 stale/clock-adjusted 说明。WidgetKit 的时间线重载不会保证主应用事实仍然有效，因此不能借自动计时文本把陈旧 projection 伪装为实时状态。
 
 ## 8. AI 服务
 

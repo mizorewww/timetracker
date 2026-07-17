@@ -518,6 +518,29 @@ struct CoreWatchCommandTests {
         #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WatchStateSnapshot.staleAfter + 1)) == .stale)
     }
 
+    @Test
+    func staleWatchSnapshotFreezesElapsedTimeAtTheSnapshotBoundary() {
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 3_000)
+        let timer = WatchActiveTimerSnapshot(
+            id: UUID(),
+            taskID: UUID(),
+            title: "Focus",
+            path: "",
+            startedAt: generatedAt.addingTimeInterval(-30 * 60),
+            colorHex: nil,
+            iconName: nil
+        )
+
+        #expect(timer.elapsedPresentation(
+            for: .stale,
+            generatedAt: generatedAt
+        ) == .frozen(seconds: 30 * 60))
+        #expect(timer.elapsedPresentation(
+            for: .current,
+            generatedAt: generatedAt
+        ) == .live(startedAt: timer.startedAt))
+    }
+
     @Test @MainActor
     func watchSnapshotRanksPinnedTasksBeforeRecentTasks() throws {
         let context = try makeTestContext()
@@ -729,6 +752,7 @@ struct CoreWatchCommandTests {
         let facade = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+WatchSnapshot.swift")
 
         #expect(source.contains("syncWatchSnapshotIfAvailable"))
+        #expect(source.contains("plan.refreshPreferences"))
         #expect(facade.contains("watchTaskShortcuts()"))
         #expect(facade.contains("preferences.quickStartTaskIDs"))
         #expect(facade.contains("prefix(WatchTransportLimits.maximumRecentTasks)"))

@@ -39,7 +39,10 @@ struct TimeTrackerLiveActivityWidget: Widget {
                 .accessibilityLabel(String(localized: "live.timer.open"))
             } compactTrailing: {
                 Link(destination: LiveActivityDeepLinks.today) {
-                    Text(context.state.startedAt, style: .timer)
+                    CompactTimerText(
+                        startedAt: context.state.startedAt,
+                        isStale: context.isStale
+                    )
                         .font(.caption2.monospacedDigit().weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
@@ -47,7 +50,6 @@ struct TimeTrackerLiveActivityWidget: Widget {
                         .frame(maxWidth: 50)
                 }
                 .accessibilityLabel(String(localized: "live.timer.elapsed"))
-                .accessibilityValue(Text(context.state.startedAt, style: .timer))
             } minimal: {
                 Link(destination: LiveActivityDeepLinks.today) {
                     ActivityIconView(state: context.state, size: 25)

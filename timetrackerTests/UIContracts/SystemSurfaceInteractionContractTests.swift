@@ -40,13 +40,29 @@ struct SystemSurfaceInteractionContractTests {
         let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
         let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
         let timer = try sourceText("timetrackerLiveActivityExtension/LiveActivityTimerViews.swift")
+        let bundle = try sourceText("timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift")
 
         #expect(shared.contains("case frozen(seconds: Int)"))
         #expect(shared.contains("static let staleAfter: TimeInterval = 8 * 60 * 60"))
         #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
         #expect(timer.contains("LiveActivityTimingPolicy.elapsedPresentation("))
         #expect(timer.contains("Text(LiveActivityElapsedFormatter.clock(seconds))"))
+        #expect(bundle.contains("CompactTimerText("))
+        #expect(bundle.contains("isStale: context.isStale"))
         #expect(timer.contains(".accessibilityValue(elapsedAccessibilityValue)"))
+    }
+
+    @Test
+    func staleWidgetAndWatchSnapshotsFreezeTheirElapsedText() throws {
+        let widget = try sourceText("timetracker/Shared/WidgetSnapshotModels.swift")
+        let watchSnapshot = try sourceText("timetracker/Shared/WatchStateSnapshotModels.swift")
+        let watchRows = try sourceText("timetrackerWatchApp/WatchTimerRows.swift")
+
+        #expect(widget.contains("guard freshness != .current else"))
+        #expect(watchSnapshot.contains("enum WatchTimerElapsedPresentation"))
+        #expect(watchSnapshot.contains("guard freshness != .current else"))
+        #expect(watchRows.contains("timer.elapsedPresentation("))
+        #expect(watchRows.contains("Text(WatchElapsedFormatter.clock(seconds))"))
     }
 
     @Test

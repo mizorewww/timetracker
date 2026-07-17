@@ -226,3 +226,39 @@ struct TimerText: View {
         )
     }
 }
+
+struct CompactTimerText: View {
+    let startedAt: Date
+    let isStale: Bool
+
+    var body: some View {
+        elapsedText
+            .accessibilityValue(elapsedAccessibilityValue)
+    }
+
+    @ViewBuilder
+    private var elapsedText: some View {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(LiveActivityElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedAccessibilityValue: Text {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(LiveActivityElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedPresentation: LiveActivityElapsedPresentation {
+        LiveActivityTimingPolicy.elapsedPresentation(
+            startedAt: startedAt,
+            isStale: isStale
+        )
+    }
+}

@@ -1253,6 +1253,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名 macOS 定向回归覆盖 Inbox suggestion coordinator、primary coordinator、suggestion identity/apply/persistence、LLM cancellation、completed task、Core Inbox store 与 source layout，全部通过。generic iOS Debug 自动签名构建同样通过；主 App、Widget、Live Activity 和 Watch 均由 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)` 签名。新增测试覆盖 stale manual draft、stale suggestion baseline、fresh Checklist sort order、任务在命令前失效、旧 title 的 LLM 回应静默丢弃，以及纯 reorder 后回应仍可保存。未创建模拟器；结束后无 owned `xcodebuild`、`xctest` 或受测 App。
 
+## AD-100：陈旧的 companion snapshot 必须冻结时间而非伪造实时状态
+
+状态：Accepted
+
+背景：Widget 和 Watch 在超过十五分钟的 snapshot 上已经显示 stale 提示，但仍直接以 `Text(startedAt, style: .timer)` 渲染，时间会继续增长；Dynamic Island compact trailing 也绕过了 Live Activity 已有的 `context.isStale` 冻结策略。这会把“主机最后一次报告正在计时”误导为“现在仍在计时”，而 stopped/archived task 也可能已不再可操作。另一个遗漏是 `quickStartTaskIDs` 仅刷新 preference domain，没有重发直接依赖该偏好的 Watch snapshot。
+
+决策：Widget 的 `WidgetTimerSnapshot` 和 Watch 的 `WatchActiveTimerSnapshot` 都把 current snapshot 作为唯一 live elapsed 条件；`.stale`、`.clockAdjusted` 或 Watch stale 时，秒数固定为 `generatedAt - startedAt`，并继续显示已有的 stale/clock-adjusted 状态。Live Activity 的 Lock Screen、expanded 和 compact trailing 全部复用 `LiveActivityTimingPolicy.elapsedPresentation`。`StoreRefreshCoordinator` 将 `refreshPreferences` 纳入 Watch snapshot publish 条件，但不为纯偏好变化重载无依赖的 Widget timeline。
+
+后果：系统表面的 timer 只在有可信新鲜事实时动态计数，过期时仍保留最后已知值和明确的恢复路径；不会为“看起来更实时”而做无效轮询或额外 Widget reload。Quick Start 修改能立即收敛到 Watch 首页。该决策不改变 Watch command 的接收端保护：陈旧 stop/start 仍必须在主应用 fresh transaction 中重新验证目标与可追踪性。
+
+验证：`CoreWidgetSnapshotTests` 覆盖 current、stale、clock-adjusted elapsed；`CoreWatchCommandTests` 覆盖 Watch stale freeze 与 preference refresh publish；system-surface source contract 固定 Widget/Watch/Live Activity 三处都不再存在 compact stale bypass。2026-07-17 付费自动签名 macOS 定向回归 56/56 通过，签名身份为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`；本切片未创建模拟器，测试结束后清理了结果包且无 owned 测试进程。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

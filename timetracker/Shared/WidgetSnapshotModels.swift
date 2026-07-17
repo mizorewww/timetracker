@@ -155,7 +155,7 @@ nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendab
         for freshness: WidgetSnapshotFreshness,
         generatedAt: Date
     ) -> WidgetTimerElapsedPresentation {
-        guard freshness == .clockAdjusted else {
+        guard freshness != .current else {
             return .live(startedAt: startedAt)
         }
         let elapsed = generatedAt.timeIntervalSince(startedAt)

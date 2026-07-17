@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 enum WatchRowCommandState: Equatable {
@@ -68,6 +69,8 @@ struct WatchActiveTimerRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     let timer: WatchActiveTimerSnapshot
+    let snapshotFreshness: WatchSnapshotFreshness
+    let generatedAt: Date
     let commandState: WatchRowCommandState
     let action: () -> Void
 
@@ -108,10 +111,10 @@ struct WatchActiveTimerRow: View {
                 }
 
                 ViewThatFits(in: .horizontal) {
-                    Text(timer.startedAt, style: .timer)
+                    elapsedText
                         .font(.title2.monospacedDigit())
                         .lineLimit(1)
-                    Text(timer.startedAt, style: .timer)
+                    elapsedText
                         .font(.headline.monospacedDigit())
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -124,13 +127,47 @@ struct WatchActiveTimerRow: View {
         .disabled(commandState == .pending)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(Text(timer.startedAt, style: .timer))
+        .accessibilityValue(elapsedAccessibilityValue)
         .accessibilityHint(Text(commandState.timerHintKey))
+    }
+
+    @ViewBuilder
+    private var elapsedText: some View {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(WatchElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedAccessibilityValue: Text {
+        switch elapsedPresentation {
+        case let .live(startedAt):
+            Text(startedAt, style: .timer)
+        case let .frozen(seconds):
+            Text(WatchElapsedFormatter.clock(seconds))
+        }
+    }
+
+    private var elapsedPresentation: WatchTimerElapsedPresentation {
+        timer.elapsedPresentation(
+            for: snapshotFreshness,
+            generatedAt: generatedAt
+        )
     }
 
     private var accessibilityLabel: String {
         commandState.accessibilityLabel(
             timer.path.isEmpty ? timer.title : "\(timer.title), \(timer.path)"
+        )
+    }
+}
+
+private enum WatchElapsedFormatter {
+    static func clock(_ seconds: Int) -> String {
+        Duration.seconds(max(0, seconds)).formatted(
+            .time(pattern: .hourMinuteSecond).locale(.autoupdatingCurrent)
         )
     }
 }

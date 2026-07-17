@@ -202,7 +202,7 @@ struct CoreWidgetSnapshotTests {
     }
 
     @Test
-    func clockAdjustedWidgetFreezesElapsedTimeAtTheSnapshotBoundary() {
+    func untrustedWidgetSnapshotFreezesElapsedTimeAtTheSnapshotBoundary() {
         let generatedAt = Date(timeIntervalSinceReferenceDate: 40_000)
         let timer = WidgetTimerSnapshot(
             id: UUID(),
@@ -216,6 +216,10 @@ struct CoreWidgetSnapshotTests {
 
         #expect(timer.elapsedPresentation(
             for: .clockAdjusted,
+            generatedAt: generatedAt
+        ) == .frozen(seconds: 30 * 60))
+        #expect(timer.elapsedPresentation(
+            for: .stale,
             generatedAt: generatedAt
         ) == .frozen(seconds: 30 * 60))
         #expect(timer.elapsedPresentation(

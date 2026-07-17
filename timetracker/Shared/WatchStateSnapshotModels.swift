@@ -175,6 +175,11 @@ nonisolated enum WatchSnapshotFreshness: Equatable, Sendable {
     case stale
 }
 
+nonisolated enum WatchTimerElapsedPresentation: Equatable, Sendable {
+    case live(startedAt: Date)
+    case frozen(seconds: Int)
+}
+
 nonisolated struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var taskID: UUID
@@ -183,6 +188,22 @@ nonisolated struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, S
     var startedAt: Date
     var colorHex: String?
     var iconName: String?
+
+    func elapsedPresentation(
+        for freshness: WatchSnapshotFreshness,
+        generatedAt: Date
+    ) -> WatchTimerElapsedPresentation {
+        guard freshness != .current else {
+            return .live(startedAt: startedAt)
+        }
+        let elapsed = generatedAt.timeIntervalSince(startedAt)
+        guard elapsed.isFinite else { return .frozen(seconds: 0) }
+        let boundedElapsed = min(
+            max(0, elapsed),
+            WatchTransportLimits.maximumActiveTimerAge
+        )
+        return .frozen(seconds: Int(boundedElapsed.rounded(.down)))
+    }
 
     func isStructurallyValid(relativeTo generatedAt: Date) -> Bool {
         guard WatchTransportLimits.isFinite(startedAt),

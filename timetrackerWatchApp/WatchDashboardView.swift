@@ -23,6 +23,9 @@ struct WatchDashboardView: View {
             pendingCommands: pendingCommands,
             failedCommands: failedCommands
         )
+        let snapshotFreshness: WatchSnapshotFreshness = isSnapshotStale
+            ? .stale
+            : snapshot.freshness(at: Date())
         let failureItems = failedCommands.map {
             WatchCommandFailurePresentation(failure: $0, title: failureTitle(for: $0))
         }
@@ -81,6 +84,8 @@ struct WatchDashboardView: View {
                                 let command = commandIndex.stopTimer(timer.id)
                                 WatchActiveTimerRow(
                                     timer: timer,
+                                    snapshotFreshness: snapshotFreshness,
+                                    generatedAt: snapshot.generatedAt,
                                     commandState: command.state,
                                     action: {
                                         if let retryCommandID = command.retryCommandID {

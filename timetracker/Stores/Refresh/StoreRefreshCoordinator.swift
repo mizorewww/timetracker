@@ -96,6 +96,9 @@ struct StoreRefreshCoordinator {
 
         if plan.refreshLedger || plan.refreshTasks {
             store.syncWidgetSnapshotIfAvailable()
+        }
+
+        if plan.refreshLedger || plan.refreshTasks || plan.refreshPreferences {
             store.syncWatchSnapshotIfAvailable()
         }
 

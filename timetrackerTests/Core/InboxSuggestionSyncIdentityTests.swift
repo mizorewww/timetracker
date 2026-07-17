@@ -370,6 +370,27 @@ struct InboxSuggestionSyncIdentityTests {
         #expect(exportedJSON.contains("normalizedTitle") == false)
     }
 
+    @Test
+    func legacySnapshotMergeDoesNotTreatMissingReceiptTableAsAnEmptyTable() throws {
+        let item = InboxItem(title: "Existing receipt item", deviceID: "test")
+        let receipt = InboxCaptureReceipt(
+            commandKey: "test.integration\u{1F}\(UUID().uuidString.lowercased())",
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: item.id,
+            deviceID: "test"
+        )
+        var local = SyncDataSnapshot(
+            inboxItems: [InboxItemRecord(item)],
+            inboxCaptureReceipts: [InboxCaptureReceiptRecord(receipt)]
+        )
+        let legacyBaseline = SyncDataSnapshot()
+        let legacyUpdated = SyncDataSnapshot()
+
+        local.applyChanges(from: legacyBaseline, to: legacyUpdated)
+
+        #expect(local.inboxCaptureReceipts == [InboxCaptureReceiptRecord(receipt)])
+    }
+
     @Test @MainActor
     func snapshotRestoreSupersedesTombstonedPhysicalSibling() throws {
         let contextID = UUID()

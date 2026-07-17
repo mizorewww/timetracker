@@ -200,6 +200,34 @@ struct StoreScopedInboxCommandCoordinatorTests {
     }
 
     @Test
+    func conflictingCommittedResultsForOneExternalKeyAreRejected() throws {
+        let context = try makeTestContext()
+        let coordinator = coordinator(container: context.container)
+        let key = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let command = InboxCaptureCommand(title: "Original", externalCommandKey: key)
+        _ = try coordinator.add(command: command)
+
+        let receipt = try #require(
+            try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).first
+        )
+        let competingItem = InboxItem(title: "Competing capture", deviceID: "other-device")
+        let competingReceipt = InboxCaptureReceipt(
+            commandKey: receipt.commandKey,
+            payloadFingerprint: receipt.payloadFingerprint,
+            inboxItemID: competingItem.id,
+            deviceID: "other-device"
+        )
+        context.insert(competingItem)
+        context.insert(competingReceipt)
+        try context.save()
+
+        #expect(throws: StoreScopedInboxMutationError.externalCommandKeyConflict) {
+            try coordinator.add(command: command)
+        }
+        #expect(try allVisibleItems(in: context.container).count == 2)
+    }
+
+    @Test
     func facadeRefreshesAfterRejectingAStaleDrag() throws {
         let context = try makeTestContext()
         let store = makeTestStore()

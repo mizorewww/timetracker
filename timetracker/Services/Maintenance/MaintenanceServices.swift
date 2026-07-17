@@ -126,6 +126,14 @@ struct DatabaseMaintenanceService {
                 expiredInboxItemIDs.contains($0.inboxItemID) ||
                 expiredTaskIDs.contains($0.taskID)
         }
+        removedCount += try deleteMatching(
+            context: context,
+            descriptor: FetchDescriptor<InboxCaptureReceipt>(),
+            batchSize: fetchBatchSize
+        ) {
+            isExpired($0.deletedAt, cutoff: cutoff) ||
+                expiredInboxItemIDs.contains($0.inboxItemID)
+        }
 
         if removedCount > 0 {
             try context.saveAfterMutationStep()

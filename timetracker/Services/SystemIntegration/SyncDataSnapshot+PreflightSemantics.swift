@@ -195,6 +195,7 @@ extension SyncDataSnapshot {
         }
 
         let inboxItemIDs = Set(inboxItems.map(\.id))
+        var committedResultByCommandKey: [String: (payloadFingerprint: String, inboxItemID: UUID)] = [:]
         for receipt in inboxCaptureReceipts ?? [] {
             guard inboxItemIDs.contains(receipt.inboxItemID) else {
                 throw SyncDataSnapshotPreflightError.inconsistentInboxCaptureReceipt(
@@ -202,6 +203,19 @@ extension SyncDataSnapshot {
                     inboxItemID: receipt.inboxItemID
                 )
             }
+            guard receipt.deletedAt == nil else { continue }
+            let result = (
+                payloadFingerprint: receipt.payloadFingerprint,
+                inboxItemID: receipt.inboxItemID
+            )
+            if let existing = committedResultByCommandKey[receipt.commandKey],
+               (existing.payloadFingerprint != result.payloadFingerprint ||
+                   existing.inboxItemID != result.inboxItemID) {
+                throw SyncDataSnapshotPreflightError.inconsistentInboxCaptureCommandKey(
+                    commandKey: receipt.commandKey
+                )
+            }
+            committedResultByCommandKey[receipt.commandKey] = result
         }
     }
 }

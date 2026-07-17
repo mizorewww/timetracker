@@ -37,12 +37,19 @@ struct SyncDataSnapshot: Codable, Equatable {
         checklistItemVisuals.applyChanges(from: baseline.checklistItemVisuals, to: updated.checklistItemVisuals)
         inboxItems.applyChanges(from: baseline.inboxItems, to: updated.inboxItems)
         inboxSuggestions.applyChanges(from: baseline.inboxSuggestions, to: updated.inboxSuggestions)
-        var updatedReceipts = inboxCaptureReceipts ?? []
-        updatedReceipts.applyChanges(
+        applyInboxCaptureReceiptChanges(from: baseline, to: updated)
+    }
+
+    private mutating func applyInboxCaptureReceiptChanges(from baseline: Self, to updated: Self) {
+        // A missing V11 table is unknown legacy state, not an authoritative empty
+        // table. Only an explicit updated array may change receipt rows.
+        guard let updatedReceipts = updated.inboxCaptureReceipts else { return }
+        var receipts = inboxCaptureReceipts ?? []
+        receipts.applyChanges(
             from: baseline.inboxCaptureReceipts ?? [],
-            to: updated.inboxCaptureReceipts ?? []
+            to: updatedReceipts
         )
-        inboxCaptureReceipts = updatedReceipts
+        inboxCaptureReceipts = receipts
     }
 
     var hasProtectableUserContent: Bool {

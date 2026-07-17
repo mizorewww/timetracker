@@ -50,6 +50,7 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
     )
     case inconsistentInboxSuggestionIdentity(id: UUID, inboxItemID: UUID)
     case inconsistentInboxCaptureReceipt(id: UUID, inboxItemID: UUID)
+    case inconsistentInboxCaptureCommandKey(commandKey: String)
 
     var errorDescription: String? {
         switch self {
@@ -83,6 +84,8 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
             return "Sync snapshot Inbox suggestion \(id.uuidString) disagrees with Inbox item \(inboxItemID.uuidString) about logical suggestion identity."
         case let .inconsistentInboxCaptureReceipt(id, inboxItemID):
             return "Sync snapshot Inbox capture receipt \(id.uuidString) references missing Inbox item \(inboxItemID.uuidString)."
+        case let .inconsistentInboxCaptureCommandKey(commandKey):
+            return "Sync snapshot Inbox capture receipts disagree about the committed result for external command key '\(commandKey)'."
         }
     }
 }

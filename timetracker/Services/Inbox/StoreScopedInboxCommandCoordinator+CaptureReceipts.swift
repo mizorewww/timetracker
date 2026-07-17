@@ -14,18 +14,20 @@ extension StoreScopedInboxCommandCoordinator {
                 return InboxMutationOutcome(affectedItemIDs: [], didMutate: false)
             }
             let payloadFingerprint = try command.payloadFingerprint()
-            if let externalCommandKey = command.externalCommandKey,
-               let receipt = try activeCaptureReceipt(
-                   for: externalCommandKey,
-                   context: context
-               ) {
-                guard receipt.payloadFingerprint == payloadFingerprint else {
-                    throw StoreScopedInboxMutationError.externalCommandPayloadChanged
-                }
-                return InboxMutationOutcome(
-                    affectedItemIDs: [receipt.inboxItemID],
-                    didMutate: false
+            if let externalCommandKey = command.externalCommandKey {
+                let receipts = try activeCaptureReceipts(
+                    for: externalCommandKey,
+                    context: context
                 )
+                if let receipt = try replayReceipt(
+                    from: receipts,
+                    expectedPayloadFingerprint: payloadFingerprint
+                ) {
+                    return InboxMutationOutcome(
+                        affectedItemIDs: [receipt.inboxItemID],
+                        didMutate: false
+                    )
+                }
             }
 
             let items = try openItems(context: context)
@@ -50,22 +52,46 @@ extension StoreScopedInboxCommandCoordinator {
         }
     }
 
-    private func activeCaptureReceipt(
+    private func replayReceipt(
+        from receipts: [InboxCaptureReceipt],
+        expectedPayloadFingerprint: String
+    ) throws -> InboxCaptureReceipt? {
+        guard !receipts.isEmpty else { return nil }
+        let committedResults = Set(receipts.map {
+            CaptureReceiptResult(
+                payloadFingerprint: $0.payloadFingerprint,
+                inboxItemID: $0.inboxItemID
+            )
+        })
+        guard committedResults.count == 1 else {
+            throw StoreScopedInboxMutationError.externalCommandKeyConflict
+        }
+        guard receipts[0].payloadFingerprint == expectedPayloadFingerprint else {
+                    throw StoreScopedInboxMutationError.externalCommandPayloadChanged
+                }
+        return receipts.max { lhs, rhs in
+            if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
+            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+
+    private func activeCaptureReceipts(
         for externalCommandKey: ExternalCommandKey,
         context: ModelContext
-    ) throws -> InboxCaptureReceipt? {
+    ) throws -> [InboxCaptureReceipt] {
         let commandKey = externalCommandKey.storageValue
-        let matching = try context.fetch(
+        return try context.fetch(
             FetchDescriptor<InboxCaptureReceipt>(
                 predicate: #Predicate {
                     $0.commandKey == commandKey && $0.deletedAt == nil
                 }
             )
         )
-        return matching.max { lhs, rhs in
-            if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
-            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
-            return lhs.id.uuidString < rhs.id.uuidString
-        }
     }
+}
+
+private struct CaptureReceiptResult: Hashable {
+    let payloadFingerprint: String
+    let inboxItemID: UUID
 }

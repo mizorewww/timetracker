@@ -272,6 +272,38 @@ struct CoreSyncSnapshotPreflightTests {
         }
     }
 
+    @Test @MainActor
+    func inboxCaptureReceiptsRejectConflictingExternalCommandResults() {
+        let firstItem = InboxItem(title: "First capture", deviceID: "source")
+        let secondItem = InboxItem(title: "Second capture", deviceID: "source")
+        let commandKey = "test.integration\u{1F}\(UUID().uuidString.lowercased())"
+        let firstReceipt = InboxCaptureReceipt(
+            commandKey: commandKey,
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: firstItem.id,
+            deviceID: "source"
+        )
+        let secondReceipt = InboxCaptureReceipt(
+            commandKey: commandKey,
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: secondItem.id,
+            deviceID: "other-device"
+        )
+        let snapshot = SyncDataSnapshot(
+            inboxItems: [InboxItemRecord(firstItem), InboxItemRecord(secondItem)],
+            inboxCaptureReceipts: [
+                InboxCaptureReceiptRecord(firstReceipt),
+                InboxCaptureReceiptRecord(secondReceipt)
+            ]
+        )
+
+        #expect(throws: SyncDataSnapshotPreflightError.inconsistentInboxCaptureCommandKey(
+            commandKey: commandKey
+        )) {
+            try snapshot.validateForRestore()
+        }
+    }
+
     @MainActor
     private func makeSentinelContext() throws -> (ModelContext, UUID) {
         let context = try makeTestContext()

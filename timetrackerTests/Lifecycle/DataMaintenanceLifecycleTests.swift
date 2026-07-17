@@ -338,6 +338,36 @@ struct DataMaintenanceLifecycleTests {
     }
 
     @Test @MainActor
+    func optimizeDatabasePurgesReceiptsWhoseExpiredInboxItemWasRemoved() throws {
+        let context = try makeTestContext()
+        let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
+        let expiredAt = now.addingTimeInterval(-DatabaseMaintenanceService.defaultTombstoneRetention - 1)
+        let item = InboxItem(title: "Expired capture", deviceID: "test")
+        item.deletedAt = expiredAt
+        item.updatedAt = expiredAt
+        let receipt = InboxCaptureReceipt(
+            commandKey: "test.integration\u{1F}\(UUID().uuidString.lowercased())",
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: item.id,
+            deviceID: "test"
+        )
+        context.insert(item)
+        context.insert(receipt)
+        try context.save()
+
+        let removedCount = try DatabaseMaintenanceService().optimizeDatabase(
+            context: context,
+            now: now,
+            allowsPermanentTombstonePurge: true
+        )
+
+        #expect(removedCount == 2)
+        #expect(try context.fetch(FetchDescriptor<InboxItem>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).isEmpty)
+        #expect(try SyncDataSnapshot.capture(context: context).inboxCaptureReceipts == [])
+    }
+
+    @Test @MainActor
     func optimizeDatabaseStreamsLeafPurgesAcrossFetchBatches() throws {
         let context = try makeTestContext()
         let now = Date(timeIntervalSinceReferenceDate: 10_000_000)

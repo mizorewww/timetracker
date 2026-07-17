@@ -25,6 +25,7 @@ enum StoreScopedInboxMutationError: LocalizedError, Equatable {
     case inboxChanged
     case taskUnavailable
     case externalCommandPayloadChanged
+    case externalCommandKeyConflict
 
     var errorDescription: String? {
         switch self {
@@ -34,6 +35,8 @@ enum StoreScopedInboxMutationError: LocalizedError, Equatable {
             AppStrings.localized("inbox.suggestion.error.noValidTask")
         case .externalCommandPayloadChanged:
             "An external Inbox capture command key was reused with different content."
+        case .externalCommandKeyConflict:
+            "An external Inbox capture command key has conflicting committed results."
         }
     }
 }

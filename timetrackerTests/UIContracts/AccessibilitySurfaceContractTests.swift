@@ -24,7 +24,8 @@ struct AccessibilitySurfaceContractTests {
         ].map(sourceText).joined(separator: "\n")
         let liveActivity = try [
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
-            "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift"
+            "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+            "timetrackerLiveActivityExtension/LiveActivityTimerPresentationViews.swift"
         ].map(sourceText).joined(separator: "\n")
 
         #expect(widget.contains(".accessibilityValue(elapsedAccessibilityValue)"))

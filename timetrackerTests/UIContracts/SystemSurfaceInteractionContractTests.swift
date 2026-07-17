@@ -22,7 +22,7 @@ struct SystemSurfaceInteractionContractTests {
         let appIntent = try sourceText("timetracker/AppIntents/TimeTrackerAppIntents.swift")
         let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
         let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
-        let liveTimer = try sourceText("timetrackerLiveActivityExtension/LiveActivityTimerViews.swift")
+        let liveTimer = try liveActivityTimerSources()
         let liveExpanded = try sourceText("timetrackerLiveActivityExtension/ExpandedActivityDetails.swift")
         let liveSupport = try sourceText("timetrackerLiveActivityExtension/LiveActivitySupport.swift")
 
@@ -42,7 +42,7 @@ struct SystemSurfaceInteractionContractTests {
     func staleLiveActivityUsesFrozenElapsedPresentation() throws {
         let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
         let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
-        let timer = try sourceText("timetrackerLiveActivityExtension/LiveActivityTimerViews.swift")
+        let timer = try liveActivityTimerSources()
         let bundle = try sourceText("timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift")
 
         #expect(shared.contains("case frozen(seconds: Int)"))
@@ -103,4 +103,13 @@ struct SystemSurfaceInteractionContractTests {
             #expect(liveActivity.contains("\"live.timer.openToStop\""))
         }
     }
+}
+
+private func liveActivityTimerSources() throws -> String {
+    try [
+        "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+        "timetrackerLiveActivityExtension/LiveActivityTimerPresentationViews.swift"
+    ]
+    .map(sourceText)
+    .joined(separator: "\n")
 }

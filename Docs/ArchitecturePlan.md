@@ -36,7 +36,7 @@ Domain stores own state snapshots:
 - `LedgerStore` owns active, today, history, segment/day/session indexes and mutation deltas.
 - `ChecklistStore` owns global bootstrap plus task-scoped item/visual replacement indexes.
 - `RollupStore` owns exact worked totals, checklist progress, forecast state and the bounded 90-local-day pace index.
-- `AnalyticsStore` owns range/period/live-bucket overview and task snapshot caches plus disposable ledger day buckets.
+- `AnalyticsStore` owns overview/task snapshot caches keyed by full period, current local day, and optional live-minute identity, plus disposable ledger day buckets; cache operations are split into `AnalyticsStore+Caching`.
 - `PreferenceStore` owns synced preference snapshots.
 
 `StoreRefreshCoordinator` owns refresh sequencing after command events. The facade no longer decides the order of task, ledger, checklist, rollup, analytics, selection validation, and Live Activity side effects inline.
@@ -154,7 +154,7 @@ Parent tasks follow one display rule across Home, Analytics, and Task Detail:
 
 ## Ledger Query Strategy
 
-Initial/full range queries use SwiftData predicates plus deterministic clipping. Normal mutations use `LedgerStore` day/ID indexes to fetch and replace only segments overlapping `StoreInvalidationRange`, update related session IDs, and emit coalesced `LedgerSegmentChange` values. `AnalyticsStore` caches daily summaries plus full overview/task snapshots by range and true calendar period start; a minute key is added only when an active segment overlaps that range.
+Initial/full range queries use SwiftData predicates plus deterministic clipping. Normal mutations use `LedgerStore` day/ID indexes to fetch and replace only segments overlapping `StoreInvalidationRange`, update related session IDs, and emit coalesced `LedgerSegmentChange` values. `AnalyticsStore` caches daily summaries plus full overview/task snapshots by range and `AnalyticsEvaluationCacheKey`: complete calendar interval, current local-day identity, and an optional minute key only when an active segment overlaps that range. The day identity makes idle current weeks/months miss at midnight without making completed history follow the wall clock.
 
 Rules:
 

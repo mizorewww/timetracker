@@ -1109,6 +1109,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：跨 context 套件覆盖正常反转、较新 completion、并发 add、缺失 revision 的 order-only 变化，以及 facade 拒绝后刷新 open/completed 投影；原 Inbox logical identity、持久化、本地化与 UI source contract 继续通过。
 
+## AD-088：Analytics 请求与缓存共享完整 evaluation identity
+
+状态：Accepted
+
+背景：`AnalyticsRefreshPlan` 会在静态当前范围的下一个本地午夜更新 `liveNow`，但 landing/category request 只有 range、period start、revision 与 optional minute bucket；无活动计时的当前 week/month 跨日后这些值全部不变，SwiftUI 不重跑 snapshot task。即使调用 Store，overview/task cache 也只验证 period start 与 minute bucket，会继续返回昨天的 visible-day、daily 和 matched-comparison 结果。
+
+决策：`AnalyticsEvaluationCacheKey` 同时作为 View request 与 `AnalyticsStore` full/task cache identity。Key 固化完整 interval start/end、当前 local-day start 和 optional live-minute bucket；只有真实 `clockReference` 位于所选 interval 内才保存 local-day identity。生成者必须显式传递同一 key，低层 refresh 不得从 cutoff 猜测；cache lookup、保存、替换与失效集中在 `AnalyticsStore+Caching.swift`。
+
+后果：静态当前 week/month 在午夜会同时改变 `.task(id:)` 和 cache identity，即使没有活动 segment；活动范围仍按分钟更新。Completed/future period 没有 live-day identity，不会因后来墙钟日期变化无意义失效。完整 interval end 也使时区/日历导致的 period 边界变化自然 miss。Task Detail 继续保留其既有调度形态，但使用相同 key，不能另造只含 start 的 task cache。
+
+验证：UTC 同一周 23:59→00:01 的 request、overview cache 与 task cache 全部 miss；历史周跨后续墙钟日保持相同 request。原 period/cutoff、DST、comparison、timeline、live-bucket、LRU 与 overlap 套件继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -265,20 +265,23 @@ nonisolated struct AnalyticsMonthNavigationAnchor: Hashable, Sendable {
 
 nonisolated struct AnalyticsSnapshotRequest: Hashable, Sendable {
     let range: AnalyticsRange
-    let periodStart: Date
+    let evaluationKey: AnalyticsEvaluationCacheKey
     let revision: UInt
-    let liveRefreshBucket: Int?
 
     init(
         range: AnalyticsRange,
         evaluation: AnalyticsPeriodEvaluation,
         revision: UInt,
-        liveRefreshBucket: Int?
+        liveRefreshBucket: Int?,
+        calendar: Calendar = .current
     ) {
         self.range = range
-        periodStart = evaluation.interval.start
+        evaluationKey = AnalyticsEvaluationCacheKey(
+            evaluation: evaluation,
+            liveRefreshBucket: liveRefreshBucket,
+            calendar: calendar
+        )
         self.revision = revision
-        self.liveRefreshBucket = liveRefreshBucket
     }
 }
 
@@ -286,9 +289,10 @@ struct TaskAnalyticsSnapshotRequest: Hashable {
     let taskID: UUID
     let taskIDs: Set<UUID>
     let range: AnalyticsRange
-    let periodStart: Date
+    let evaluationKey: AnalyticsEvaluationCacheKey
     let revision: UInt
-    let liveRefreshBucket: Int?
+
+    var liveRefreshBucket: Int? { evaluationKey.liveRefreshBucket }
 
     init(
         taskID: UUID,
@@ -296,13 +300,17 @@ struct TaskAnalyticsSnapshotRequest: Hashable {
         range: AnalyticsRange,
         evaluation: AnalyticsPeriodEvaluation,
         revision: UInt,
-        liveRefreshBucket: Int?
+        liveRefreshBucket: Int?,
+        calendar: Calendar = .current
     ) {
         self.taskID = taskID
         self.taskIDs = taskIDs
         self.range = range
-        periodStart = evaluation.interval.start
+        evaluationKey = AnalyticsEvaluationCacheKey(
+            evaluation: evaluation,
+            liveRefreshBucket: liveRefreshBucket,
+            calendar: calendar
+        )
         self.revision = revision
-        self.liveRefreshBucket = liveRefreshBucket
     }
 }

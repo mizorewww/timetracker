@@ -7,7 +7,7 @@ Status: current source-structure record after the 2026-07-14 repository-wide spl
 The current pass established semantic folders, split domain stores and repositories, and then removed the largest mixed-responsibility production files:
 
 - `SyncConflictService.swift` was reduced to bootstrap/prompt ownership; local mutation, Cloud import/export, recovery/resolution, persisted state, file lock/locations, export encoding, snapshot capture/domain restores, snapshot state, and domain record DTOs now have focused files.
-- Analytics landing-page composition and `AnalyticsCategoryDetailView` were split; category navigation is typed, while overview-row, metric-list, detail-list, period, group-breakdown, metrics, overlap, and task-snapshot responsibilities have focused owners.
+- Analytics landing-page composition and `AnalyticsCategoryDetailView` were split; category navigation is typed, while overview-row, metric-list, detail-list, period, group-breakdown, metrics, overlap, task-snapshot, and snapshot-cache responsibilities have focused owners.
 - Pomodoro setup composition was split from its empty state, focus controls, Plan/Task selection controls, and timer face.
 - The retired `SettingsSectionsViews.swift` was replaced by focused display/timing, Pomodoro, countdown, sync, data, action, binding, and support files.
 - Shared Settings rows were split into foundation/value, action/destructive, input, platform-presentation, and sync-feedback files; each owner stays within the current production source-layout budget.
@@ -55,6 +55,7 @@ Sync remains the highest semantic-risk subsystem because it combines security-, 
 - Timeline layout models and axis compression are split from the lane-placement engine.
 - Today compact composition is in `PhoneHomeView.swift` and `PhoneHomeSections.swift`; wide priority composition remains in `HomeViews.swift`, while rows, actions, metrics, Quick Start, timeline, forecast, countdown, and shared read models have focused files.
 - Analytics landing-page routing stays in `AnalyticsViews.swift`; typed category-detail composition lives in `AnalyticsCategoryDetailView.swift`, while overview rows, metric/detail lists, period controls, and decision-support builders are split by responsibility.
+- `AnalyticsStore.swift` now owns snapshot generation state, while `AnalyticsStore+Caching.swift` owns full/task evaluation-key lookup, bounded replacement, invalidation, and cache counts.
 - Pomodoro setup is split into `PomodoroSetupViews.swift`, `PomodoroSetupEmptyState.swift`, `PomodoroFocusSetupControls.swift`, `PomodoroSetupSelectionViews.swift`, and `PomodoroTimerFace.swift`; the setup container remains the composition owner.
 - Settings timing, Pomodoro, countdown, sync, data, action, binding, and support responsibilities are split; `SettingsSectionsViews.swift` is retired.
 - Reusable Settings rows are split into `SettingsRows.swift`, `SettingsActionRows.swift`, `SettingsInputRows.swift`, `SettingsPresentationModifiers.swift`, and `SettingsSyncFeedbackRow.swift`; large Dynamic Type composition and VoiceOver title/value semantics remain part of those shared owners.

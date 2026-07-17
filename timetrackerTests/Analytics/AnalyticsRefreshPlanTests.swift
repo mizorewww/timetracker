@@ -106,4 +106,82 @@ struct AnalyticsRefreshPlanTests {
         )
         #expect(plan.deadline.timeIntervalSince(liveNow) == 22.5 * 60 * 60)
     }
+
+    @Test
+    func idleCurrentWeekRequestChangesAcrossLocalMidnight() throws {
+        let firstDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 23, minute: 59))
+        )
+        let nextDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 0, minute: 1))
+        )
+        let firstEvaluation = AnalyticsRange.week.evaluation(
+            referenceDate: firstDay,
+            liveNow: firstDay,
+            calendar: calendar
+        )
+        let nextEvaluation = AnalyticsRange.week.evaluation(
+            referenceDate: nextDay,
+            liveNow: nextDay,
+            calendar: calendar
+        )
+        #expect(firstEvaluation.interval == nextEvaluation.interval)
+
+        let firstRequest = AnalyticsSnapshotRequest(
+            range: .week,
+            evaluation: firstEvaluation,
+            revision: 1,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        )
+        let nextRequest = AnalyticsSnapshotRequest(
+            range: .week,
+            evaluation: nextEvaluation,
+            revision: 1,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        )
+
+        #expect(firstRequest != nextRequest)
+        #expect(firstRequest.evaluationKey.liveDayStart == calendar.startOfDay(for: firstDay))
+        #expect(nextRequest.evaluationKey.liveDayStart == calendar.startOfDay(for: nextDay))
+    }
+
+    @Test
+    func completedPeriodRequestDoesNotChangeWithLaterWallClockDays() throws {
+        let selected = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 7, hour: 12))
+        )
+        let firstLiveNow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let nextLiveNow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 12))
+        )
+        let first = AnalyticsSnapshotRequest(
+            range: .week,
+            evaluation: AnalyticsRange.week.evaluation(
+                referenceDate: selected,
+                liveNow: firstLiveNow,
+                calendar: calendar
+            ),
+            revision: 1,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        )
+        let second = AnalyticsSnapshotRequest(
+            range: .week,
+            evaluation: AnalyticsRange.week.evaluation(
+                referenceDate: selected,
+                liveNow: nextLiveNow,
+                calendar: calendar
+            ),
+            revision: 1,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        )
+
+        #expect(first == second)
+        #expect(first.evaluationKey.liveDayStart == nil)
+    }
 }

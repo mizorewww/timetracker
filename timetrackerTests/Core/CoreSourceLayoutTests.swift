@@ -22,6 +22,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Facade/TimeTrackerStore+DeepLinks.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+Selection.swift",
             "timetracker/Stores/Domains/AnalyticsStore.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+Caching.swift",
             "timetracker/Stores/Domains/AnalyticsStore+SnapshotBuilding.swift",
             "timetracker/Stores/Domains/AnalyticsStore+Breakdowns.swift",
             "timetracker/Stores/Domains/AnalyticsStore+DecisionSupport.swift",
@@ -505,6 +506,7 @@ struct CoreSourceLayoutTests {
         let domainURL = root.appending(path: "timetracker/Stores/Domains")
         let focusedFiles = [
             "AnalyticsStore.swift",
+            "AnalyticsStore+Caching.swift",
             "AnalyticsSnapshotModels.swift",
             "AnalyticsStore+SnapshotBuilding.swift",
             "AnalyticsStore+Breakdowns.swift",

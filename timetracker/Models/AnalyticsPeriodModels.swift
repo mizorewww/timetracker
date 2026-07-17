@@ -28,6 +28,47 @@ nonisolated struct AnalyticsPeriodEvaluation: Hashable, Sendable {
     let clockReference: Date
 }
 
+/// Shared identity for view requests and domain caches. Current week/month
+/// snapshots advance at local midnight even when no active timer creates a
+/// minute bucket; completed and future periods remain stable.
+nonisolated struct AnalyticsEvaluationCacheKey: Hashable, Sendable {
+    let intervalStart: Date
+    let intervalEnd: Date
+    let liveDayStart: Date?
+    let liveRefreshBucket: Int?
+
+    init(
+        evaluation: AnalyticsPeriodEvaluation,
+        liveRefreshBucket: Int?,
+        calendar: Calendar = .current
+    ) {
+        self.init(
+            interval: evaluation.interval,
+            clockReference: evaluation.clockReference,
+            liveRefreshBucket: liveRefreshBucket,
+            calendar: calendar
+        )
+    }
+
+    init(
+        interval: DateInterval,
+        clockReference: Date,
+        liveRefreshBucket: Int?,
+        calendar: Calendar = .current
+    ) {
+        intervalStart = interval.start
+        intervalEnd = interval.end
+        liveDayStart = interval.contains(clockReference)
+            ? calendar.dateInterval(of: .day, for: clockReference)?.start
+            : nil
+        self.liveRefreshBucket = liveRefreshBucket
+    }
+
+    var interval: DateInterval {
+        DateInterval(start: intervalStart, end: intervalEnd)
+    }
+}
+
 nonisolated extension AnalyticsRange {
     func interval(
         containing date: Date,

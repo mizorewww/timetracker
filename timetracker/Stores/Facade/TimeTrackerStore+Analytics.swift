@@ -14,10 +14,14 @@ extension TimeTrackerStore {
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
         let liveRefreshBucket = analyticsLiveRefreshBucket(for: evaluation)
+        let evaluationKey = AnalyticsEvaluationCacheKey(
+            evaluation: evaluation,
+            liveRefreshBucket: liveRefreshBucket,
+            calendar: calendar
+        )
         if let snapshot = analyticsDomainStore.cachedSnapshot(
             for: range,
-            period: evaluation.interval,
-            liveRefreshBucket: liveRefreshBucket
+            evaluationKey: evaluationKey
         ) {
             return snapshot
         }
@@ -41,6 +45,7 @@ extension TimeTrackerStore {
             taskParentPathByID: taskParentPathByID,
             evaluatedAt: evaluation.cutoff,
             liveRefreshBucket: liveRefreshBucket,
+            evaluationKey: evaluationKey,
             calendar: calendar
         )
         analyticsDomainStore = store
@@ -53,6 +58,7 @@ extension TimeTrackerStore {
 
     func refreshAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) {
         let evaluation = range.evaluation(referenceDate: now, liveNow: now)
+        let liveRefreshBucket = analyticsLiveRefreshBucket(for: evaluation)
         let segments = analyticsSegments(
             for: range,
             evaluation: evaluation,
@@ -70,7 +76,12 @@ extension TimeTrackerStore {
             sessions: sessions,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
-            evaluatedAt: evaluation.cutoff
+            evaluatedAt: evaluation.cutoff,
+            liveRefreshBucket: liveRefreshBucket,
+            evaluationKey: AnalyticsEvaluationCacheKey(
+                evaluation: evaluation,
+                liveRefreshBucket: liveRefreshBucket
+            )
         )
         analyticsDomainStore = store
     }
@@ -90,9 +101,7 @@ extension TimeTrackerStore {
         if let snapshot = analyticsDomainStore.cachedTaskSnapshot(
             taskID: request.taskID,
             range: request.range,
-            now: now,
-            liveRefreshBucket: request.liveRefreshBucket,
-            calendar: calendar
+            evaluationKey: request.evaluationKey
         ) {
             return snapshot
         }
@@ -113,9 +122,7 @@ extension TimeTrackerStore {
         )
         store.cacheTaskSnapshot(
             snapshot,
-            now: now,
-            liveRefreshBucket: request.liveRefreshBucket,
-            calendar: calendar
+            evaluationKey: request.evaluationKey
         )
         analyticsDomainStore = store
         return snapshot
@@ -142,7 +149,8 @@ extension TimeTrackerStore {
             liveRefreshBucket: analyticsLiveRefreshBucket(
                 for: evaluation,
                 taskIDs: taskIDs
-            )
+            ),
+            calendar: calendar
         )
     }
 

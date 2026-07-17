@@ -954,14 +954,35 @@ struct CoreAnalyticsStoreTests {
             taskPathByID: [:],
             taskParentPathByID: [:],
             evaluatedAt: evaluation.cutoff,
+            evaluationKey: AnalyticsEvaluationCacheKey(
+                evaluation: evaluation,
+                liveRefreshBucket: nil,
+                calendar: calendar
+            ),
             calendar: calendar
         )
 
-        #expect(store.cachedSnapshot(for: .today, period: evaluation.interval) != nil)
-        let nextPeriod = try #require(
-            AnalyticsRange.today.interval(containing: liveNow, calendar: calendar)
+        #expect(store.cachedSnapshot(
+            for: .today,
+            evaluationKey: AnalyticsEvaluationCacheKey(
+                evaluation: evaluation,
+                liveRefreshBucket: nil,
+                calendar: calendar
+            )
+        ) != nil)
+        let nextEvaluation = AnalyticsRange.today.evaluation(
+            referenceDate: liveNow,
+            liveNow: liveNow,
+            calendar: calendar
         )
-        #expect(store.cachedSnapshot(for: .today, period: nextPeriod) == nil)
+        #expect(store.cachedSnapshot(
+            for: .today,
+            evaluationKey: AnalyticsEvaluationCacheKey(
+                evaluation: nextEvaluation,
+                liveRefreshBucket: nil,
+                calendar: calendar
+            )
+        ) == nil)
     }
 
     @Test @MainActor
@@ -1027,6 +1048,52 @@ struct CoreAnalyticsStoreTests {
         }
 
         #expect(store.taskSnapshotCacheCount == 24)
+    }
+
+    @Test @MainActor
+    func idleWeekTaskCacheExpiresAtTheNextLocalDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 23, minute: 59))
+        )
+        let nextDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 0, minute: 1))
+        )
+        let task = TaskNode(title: "Week task", parentID: nil, deviceID: "test")
+        var store = AnalyticsStore()
+        let snapshot = store.taskSnapshot(
+            range: .week,
+            task: task,
+            taskIDs: [task.id],
+            tasks: [task],
+            segments: [],
+            sessions: [],
+            taskPathByID: [task.id: task.title],
+            now: firstDay,
+            calendar: calendar
+        )
+        store.cacheTaskSnapshot(
+            snapshot,
+            now: firstDay,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        )
+
+        #expect(store.cachedTaskSnapshot(
+            taskID: task.id,
+            range: .week,
+            now: firstDay,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        ) != nil)
+        #expect(store.cachedTaskSnapshot(
+            taskID: task.id,
+            range: .week,
+            now: nextDay,
+            liveRefreshBucket: nil,
+            calendar: calendar
+        ) == nil)
     }
 
     @Test @MainActor
@@ -1117,6 +1184,36 @@ struct CoreAnalyticsStoreTests {
 
         store.invalidateSnapshots()
         #expect(store.cachedSnapshot(for: .today) == nil)
+    }
+
+    @Test @MainActor
+    func idleWeekSnapshotCacheExpiresAtTheNextLocalDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 23, minute: 59))
+        )
+        let nextDay = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 0, minute: 1))
+        )
+        #expect(
+            AnalyticsRange.week.interval(containing: firstDay, calendar: calendar) ==
+                AnalyticsRange.week.interval(containing: nextDay, calendar: calendar)
+        )
+        var store = AnalyticsStore()
+        store.refreshSnapshot(
+            range: .week,
+            tasks: [],
+            segments: [],
+            sessions: [],
+            taskPathByID: [:],
+            taskParentPathByID: [:],
+            now: firstDay,
+            calendar: calendar
+        )
+
+        #expect(store.cachedSnapshot(for: .week, now: firstDay, calendar: calendar) != nil)
+        #expect(store.cachedSnapshot(for: .week, now: nextDay, calendar: calendar) == nil)
     }
 
     @Test @MainActor

@@ -41,7 +41,7 @@ struct CoreArchitectureBehaviorTests {
 
     @Test
     func enumDisplayTextUsesLocalizationKeys() throws {
-        #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.today"))
+        #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.day"))
         #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
 
         let analyticsSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")

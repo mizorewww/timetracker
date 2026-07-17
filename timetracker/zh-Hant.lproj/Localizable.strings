@@ -460,7 +460,7 @@
 "analytics.metric.overlap" = "並行超額";
 "analytics.metric.pomodoros" = "番茄鐘";
 "analytics.range" = "範圍";
-"analytics.range.today" = "今天";
+"analytics.range.day" = "日";
 "analytics.range.week" = "本週";
 "analytics.range.month" = "本月";
 "analytics.loading" = "正在載入分析…";

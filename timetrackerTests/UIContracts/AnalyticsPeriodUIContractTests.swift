@@ -24,6 +24,8 @@ struct AnalyticsPeriodUIContractTests {
         #expect(controls.contains("analytics.period.previous"))
         #expect(controls.contains("analytics.period.next"))
         #expect(controls.contains("analytics.period.today"))
+        #expect(controls.contains("if isCurrentPeriod == false {\n            todayButton\n        }"))
+        #expect(!controls.contains("todayButton\n        .disabled(isCurrentPeriod)"))
         #expect(
             controls.components(
                 separatedBy: ".frame(minWidth: 44, minHeight: 44)"
@@ -57,5 +59,7 @@ struct AnalyticsPeriodUIContractTests {
         #expect(controls.contains("analytics.period.returnToToday"))
         #expect(summary.contains(".accessibilityIdentifier(\"analytics.summary\")"))
         #expect(english.contains("\"analytics.period.returnToToday\" = \"Go to Today\";"))
+        #expect(english.contains("\"analytics.range.day\" = \"Day\";"))
+        #expect(!english.contains("\"analytics.range.today\""))
     }
 }

@@ -120,7 +120,6 @@ final class TimeTrackerStore {
     var analyticsDomainStore = AnalyticsStore()
     var analyticsRevision: UInt = 0
     var selectedTaskID: UUID?
-    var selectedRange: RangePreset = .today
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today
     var tasksRoute: TasksRoute?
@@ -134,25 +133,6 @@ final class TimeTrackerStore {
     @ObservationIgnored var hasBootstrappedSyncConflictState = false
     @ObservationIgnored var isConfiguringStartup = false
     @ObservationIgnored var shouldRetryStartupConfiguration = false
-
-    enum RangePreset: String, CaseIterable, Identifiable {
-        case today = "Today"
-        case week = "Week"
-        case month = "Month"
-
-        var id: String { rawValue }
-
-        var displayName: String {
-            switch self {
-            case .today:
-                return AppStrings.localized("analytics.range.today")
-            case .week:
-                return AppStrings.localized("analytics.range.week")
-            case .month:
-                return AppStrings.localized("analytics.range.month")
-            }
-        }
-    }
 
     enum DesktopDestination: String, CaseIterable, Identifiable {
         case today = "Today"

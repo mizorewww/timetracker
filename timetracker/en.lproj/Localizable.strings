@@ -460,7 +460,7 @@
 "analytics.metric.overlap" = "Overlap Excess";
 "analytics.metric.pomodoros" = "Pomodoros";
 "analytics.range" = "Range";
-"analytics.range.today" = "Today";
+"analytics.range.day" = "Day";
 "analytics.range.week" = "Week";
 "analytics.range.month" = "Month";
 "analytics.loading" = "Loading analytics…";

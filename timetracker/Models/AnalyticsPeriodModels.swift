@@ -10,7 +10,7 @@ enum AnalyticsRange: String, CaseIterable, Identifiable, Sendable {
     var displayName: String {
         switch self {
         case .today:
-            return AppStrings.localized("analytics.range.today")
+            return AppStrings.localized("analytics.range.day")
         case .week:
             return AppStrings.localized("analytics.range.week")
         case .month:

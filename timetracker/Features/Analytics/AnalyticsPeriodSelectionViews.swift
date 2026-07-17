@@ -16,14 +16,14 @@ struct AnalyticsPeriodNavigator: View {
                 previousButton
                 datePicker
                 nextButton
-                todayButton
+                returnToTodayButton
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 datePicker
                 HStack(spacing: 4) {
                     previousButton
-                    todayButton
+                    returnToTodayButton
                     nextButton
                 }
             }
@@ -65,6 +65,13 @@ struct AnalyticsPeriodNavigator: View {
         }
     }
 
+    @ViewBuilder
+    private var returnToTodayButton: some View {
+        if isCurrentPeriod == false {
+            todayButton
+        }
+    }
+
     private var todayButton: some View {
         Button {
             monthNavigationAnchor = nil
@@ -78,7 +85,6 @@ struct AnalyticsPeriodNavigator: View {
                     .frame(minWidth: 44, minHeight: 44)
             }
         }
-        .disabled(isCurrentPeriod)
         .accessibilityLabel(AppStrings.localized("analytics.period.returnToToday"))
         .accessibilityIdentifier("analytics.period.today")
         .help(AppStrings.localized("analytics.period.returnToToday"))

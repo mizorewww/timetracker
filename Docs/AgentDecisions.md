@@ -1397,6 +1397,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名 macOS SyncConflict、state-write、store serialization、System Action、Watch 与 source-layout 定向批次覆盖 returned prompt 和 manifest-backed Watch state；准确结果、首次失败重跑和资源清理记录在 dated Audit。
 
+## AD-112：Analytics 的范围名称表达日历单位，而非相对日期
+
+状态：Accepted
+
+背景：`AnalyticsRange.today` 的实现名沿用 Today，但它实际表示“按所选参考日期的一日”。当用户浏览历史日期时，range segmented control 仍显示“今天/本周/本月”，让当前标题与所选范围产生冲突；当前 period 还占用一个已禁用的“回到今天”按钮。
+
+决策：范围选择固定显示“日 / 周 / 月”（英文 Day / Week / Month），`today` 只保留为内部 case 名和 `AnalyticsPeriodText` 的当前日期标题。`AnalyticsPeriodNavigator` 仅在所选 period 不是当前 period 时显示“回到今天”；它是恢复当前位置的动作而不是第四个 range，返回后清除月导航锚点。删除未被消费者使用、与 `AnalyticsRange` 重复的 `TimeTrackerStore.RangePreset/selectedRange`，禁止再维护第二套 range 文案或状态。
+
+后果：历史复盘的粒度始终明确，当前界面减少无效控件；navigation、缓存 identity 和日/周/月计算不变。这是 UI 术语的 breaking change，不触及 SwiftData、CloudKit 或用户数据。
+
+验证：Analytics period UI contract、架构行为和三语 localization parity 必须覆盖新的 day key、历史动作条件与无残留 duplicate range state；实际签名结果记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

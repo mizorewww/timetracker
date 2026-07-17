@@ -37,8 +37,7 @@ struct StoreScopedSegmentPomodoroMutationTests {
             now: sessionStart.addingTimeInterval(300)
         ).update(
             draft: draft,
-            taskID: target.id,
-            allowParallelTimers: true
+            taskID: target.id
         )
 
         let freshContext = ModelContext(container)
@@ -98,8 +97,7 @@ struct StoreScopedSegmentPomodoroMutationTests {
             now: endedAt
         ).update(
             draft: draft,
-            taskID: task.id,
-            allowParallelTimers: true
+            taskID: task.id
         )
 
         let freshContext = ModelContext(container)

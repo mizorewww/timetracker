@@ -38,8 +38,7 @@ struct StoreScopedSegmentPomodoroIntegrityTests {
             now: startedAt.addingTimeInterval(180)
         ).update(
             draft: draft,
-            taskID: target.id,
-            allowParallelTimers: true
+            taskID: target.id
         )
 
         let freshContext = ModelContext(container)
@@ -101,6 +100,7 @@ struct StoreScopedSegmentPomodoroIntegrityTests {
         duplicateRun.state = .interrupted
         context.insert(duplicateRun)
         try context.save()
+        try setTestAllowParallelTimers(false, context: context)
         var draft = try makeStoreScopedSegmentDraft(
             segmentID: subject.id,
             container: container
@@ -113,8 +113,7 @@ struct StoreScopedSegmentPomodoroIntegrityTests {
                 now: startedAt.addingTimeInterval(60)
             ).update(
                 draft: draft,
-                taskID: subjectTask.id,
-                allowParallelTimers: false
+                taskID: subjectTask.id
             )
         }
 

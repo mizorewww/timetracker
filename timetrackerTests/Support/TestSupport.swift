@@ -51,6 +51,18 @@ func makeTestWatchCommandProcessor(
 }
 
 @MainActor
+func setTestAllowParallelTimers(
+    _ isEnabled: Bool,
+    context: ModelContext
+) throws {
+    try PreferenceCommandHandler().set(
+        key: .allowParallelTimers,
+        valueJSON: PreferenceJSON.encode(isEnabled),
+        context: context
+    )
+}
+
+@MainActor
 func makeTestStore(
     llmCredentialStore: any LLMCredentialStoring,
     inboxSuggestionService: LLMInboxSuggestionService

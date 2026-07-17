@@ -187,6 +187,7 @@ struct PomodoroTests {
         let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
+        try setTestAllowParallelTimers(false, context: context)
         store.preferences.allowParallelTimers = false
         store.selectedTaskID = pomodoroTask.id
         store.startPomodoroForSelectedTask(
@@ -229,6 +230,7 @@ struct PomodoroTests {
         let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
+        try setTestAllowParallelTimers(false, context: context)
         store.preferences.allowParallelTimers = false
         store.selectedTaskID = pomodoroTask.id
         store.startPomodoroForSelectedTask(
@@ -481,6 +483,7 @@ struct PomodoroTests {
         let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
+        try setTestAllowParallelTimers(false, context: context)
         store.preferences.allowParallelTimers = false
         store.selectedTaskID = pomodoroTask.id
         store.startPomodoroForSelectedTask(
@@ -562,6 +565,7 @@ struct PomodoroTests {
         let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
+        try setTestAllowParallelTimers(false, context: context)
         store.preferences.allowParallelTimers = false
         store.selectedTaskID = pomodoroTaskID
         store.startPomodoroForSelectedTask(
@@ -678,6 +682,7 @@ struct PomodoroTests {
         let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
+        try setTestAllowParallelTimers(true, context: context)
         store.preferences.allowParallelTimers = true
         store.selectedTaskID = task.id
         store.startPomodoroForSelectedTask(
@@ -1308,6 +1313,7 @@ struct PomodoroTests {
         let store = makeTestStore()
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
+        try setTestAllowParallelTimers(true, context: context)
         store.preferences.allowParallelTimers = true
         store.startTask(parent)
         let regularSegmentID = try #require(store.activeSegment(for: parent.id)?.id)

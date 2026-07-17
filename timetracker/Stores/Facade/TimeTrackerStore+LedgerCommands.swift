@@ -63,8 +63,7 @@ extension TimeTrackerStore {
             writeAuthorization: writeAuthorization
         ).update(
             draft: draft,
-            taskID: taskID,
-            allowParallelTimers: preferences.allowParallelTimers
+            taskID: taskID
         )
         finishStoreScopedPomodoroMutation(
             events: outcome.events,

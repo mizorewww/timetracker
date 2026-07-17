@@ -16,14 +16,14 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
             context: ModelContext(context.container),
             deviceID: "sibling"
         ).startTask(taskID: otherTask.id, source: .timer)
+        try setTestAllowParallelTimers(false, context: context)
 
         let outcome = try coordinator(context.container).start(
             taskID: focusTask.id,
             focusSeconds: 1_500,
             breakSeconds: 300,
             longBreakSeconds: nil,
-            targetRounds: 2,
-            allowParallelTimers: false
+            targetRounds: 2
         )
 
         #expect(outcome.stoppedSegments.map(\.segmentID) == [siblingSegment.id])
@@ -63,8 +63,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
                 focusSeconds: 1_500,
                 breakSeconds: 300,
                 longBreakSeconds: nil,
-                targetRounds: 2,
-                allowParallelTimers: false
+                targetRounds: 2
             )
         }
 
@@ -84,8 +83,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
             focusSeconds: 1_500,
             breakSeconds: 300,
             longBreakSeconds: nil,
-            targetRounds: 3,
-            allowParallelTimers: true
+            targetRounds: 3
         )
         let phase = try completeFocusAndBreakToken(
             runID: started.startedFocus.runID,
@@ -93,8 +91,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         )
 
         let first = try coordinator(context.container).resume(
-            phase: phase,
-            allowParallelTimers: true
+            phase: phase
         )
         guard case .resumed = first else {
             Issue.record("The current break phase should resume")
@@ -102,8 +99,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         }
         #expect(
             try coordinator(context.container).resume(
-                phase: phase,
-                allowParallelTimers: true
+                phase: phase
             ) == .rejected(.stalePhase)
         )
         #expect(try timeRepository(context.container).activeSegments().count == 1)
@@ -121,16 +117,14 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
             focusSeconds: 1_500,
             breakSeconds: 300,
             longBreakSeconds: nil,
-            targetRounds: 3,
-            allowParallelTimers: true
+            targetRounds: 3
         )
         let firstBreak = try completeFocusAndBreakToken(
             runID: started.startedFocus.runID,
             container: context.container
         )
         _ = try coordinator(context.container).resume(
-            phase: firstBreak,
-            allowParallelTimers: true
+            phase: firstBreak
         )
         let secondBreak = try completeFocusAndBreakToken(
             runID: started.startedFocus.runID,
@@ -141,8 +135,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
 
         #expect(
             try coordinator(context.container).resume(
-                phase: firstBreak,
-                allowParallelTimers: true
+                phase: firstBreak
             ) == .rejected(.stalePhase)
         )
         #expect(try timeRepository(context.container).activeSegments().isEmpty)
@@ -159,8 +152,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
             focusSeconds: 1_500,
             breakSeconds: 300,
             longBreakSeconds: nil,
-            targetRounds: 2,
-            allowParallelTimers: true
+            targetRounds: 2
         )
         let phase = try completeFocusAndBreakToken(
             runID: started.startedFocus.runID,
@@ -168,10 +160,10 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         )
         let siblingSegment = try timeRepository(context.container)
             .startTask(taskID: otherTask.id, source: .timer)
+        try setTestAllowParallelTimers(false, context: context)
 
         let outcome = try coordinator(context.container).resume(
-            phase: phase,
-            allowParallelTimers: false
+            phase: phase
         )
         guard case .resumed(let mutation) = outcome else {
             Issue.record("The current break phase should resume")
@@ -195,8 +187,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
             focusSeconds: 1_500,
             breakSeconds: 300,
             longBreakSeconds: nil,
-            targetRounds: 2,
-            allowParallelTimers: true
+            targetRounds: 2
         )
         let phase = try completeFocusAndBreakToken(
             runID: started.startedFocus.runID,
@@ -208,8 +199,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
 
         #expect(
             try coordinator(context.container).resume(
-                phase: phase,
-                allowParallelTimers: false
+                phase: phase
             ) == .rejected(.taskUnavailable(focusTask.id))
         )
         #expect(try timeRepository(context.container).activeSegments().map(\.id) == [otherSegment.id])

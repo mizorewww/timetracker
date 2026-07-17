@@ -75,6 +75,7 @@ struct CoreTimerPickerCommandTests {
         store.configureRepositoriesIfNeeded(context: context)
         store.tasks = [firstTask, nextTask]
         store.activeSegments = [firstSegment]
+        try setTestAllowParallelTimers(false, context: context)
         store.preferences.allowParallelTimers = false
 
         let outcome = store.performTimerPickerSelection(nextTask)
@@ -116,6 +117,7 @@ struct CoreTimerPickerCommandTests {
         store.configureRepositoriesIfNeeded(context: context)
         store.tasks = [firstTask, nextTask]
         store.activeSegments = [firstSegment]
+        try setTestAllowParallelTimers(true, context: context)
         store.preferences.allowParallelTimers = true
 
         let outcome = store.performTimerPickerSelection(nextTask)

@@ -22,8 +22,7 @@ struct StoreScopedSegmentCommandCoordinator {
 
     func update(
         draft: SegmentEditorDraft,
-        taskID: UUID,
-        allowParallelTimers: Bool
+        taskID: UUID
     ) throws -> StoreScopedSegmentMutationOutcome {
         try withLockedFreshContext { context, now, timeRepository, pomodoroRepository in
             let canonical = try requiredCanonicalState(
@@ -38,6 +37,8 @@ struct StoreScopedSegmentCommandCoordinator {
                 now: now,
                 context: context
             )
+            let allowParallelTimers = try TimerAdmissionPreferenceResolver
+                .allowParallelTimers(in: context)
             let activeSegments = try timeRepository.activeSegments()
             let sessionSiblingStops = activeSegments.filter { segment in
                 segment.id != canonical.segment.id &&

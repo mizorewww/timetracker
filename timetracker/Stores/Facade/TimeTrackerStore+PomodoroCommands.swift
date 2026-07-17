@@ -42,8 +42,7 @@ extension TimeTrackerStore {
                 focusSeconds: focusSeconds,
                 breakSeconds: breakSeconds,
                 longBreakSeconds: longBreakSeconds,
-                targetRounds: targetRounds,
-                allowParallelTimers: preferences.allowParallelTimers
+                targetRounds: targetRounds
             )
             finishStoreScopedPomodoroMutation(
                 events: outcome.events,
@@ -69,8 +68,7 @@ extension TimeTrackerStore {
                 container: modelContext.container,
                 writeAuthorization: writeAuthorization
             ).resume(
-                phase: phase,
-                allowParallelTimers: preferences.allowParallelTimers
+                phase: phase
             )
             switch outcome {
             case .resumed(let mutation):

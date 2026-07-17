@@ -113,6 +113,12 @@ struct CoreArchitectureBehaviorTests {
         let ledgerCommandSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+LedgerCommands.swift"
         )
+        let pomodoroCommandSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+PomodoroCommands.swift"
+        )
+        let pomodoroCoordinatorSource = try sourceText(
+            "timetracker/Services/TimeTracking/StoreScopedPomodoroCommandCoordinator.swift"
+        )
         let segmentCoordinatorSource = try [
             "timetracker/Services/TimeTracking/StoreScopedSegmentCommandCoordinator.swift",
             "timetracker/Services/TimeTracking/StoreScopedSegmentCommandCoordinator+Validation.swift"
@@ -128,6 +134,14 @@ struct CoreArchitectureBehaviorTests {
         #expect(calculationSource.contains("return updates"))
         #expect(ledgerCommandSource.contains("StoreScopedSegmentCommandCoordinator("))
         #expect(ledgerCommandSource.contains("allSegments.first") == false)
+        #expect(ledgerCommandSource.contains("preferences.allowParallelTimers") == false)
+        #expect(pomodoroCommandSource.contains("preferences.allowParallelTimers") == false)
+        #expect(
+            pomodoroCoordinatorSource.components(
+                separatedBy: "TimerAdmissionPreferenceResolver"
+            ).count - 1 == 2
+        )
+        #expect(segmentCoordinatorSource.contains("TimerAdmissionPreferenceResolver"))
         #expect(segmentCoordinatorSource.contains("transaction.withFreshContext"))
         #expect(segmentCoordinatorSource.contains("timeRepository.segments(ids: [segmentID]).first"))
         #expect(segmentCoordinatorSource.contains("allSegments.first") == false)

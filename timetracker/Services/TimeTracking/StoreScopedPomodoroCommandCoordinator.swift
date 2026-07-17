@@ -33,8 +33,7 @@ struct StoreScopedPomodoroCommandCoordinator {
         focusSeconds: Int,
         breakSeconds: Int,
         longBreakSeconds: Int?,
-        targetRounds: Int,
-        allowParallelTimers: Bool
+        targetRounds: Int
     ) throws -> StoreScopedPomodoroStartOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)
@@ -56,6 +55,8 @@ struct StoreScopedPomodoroCommandCoordinator {
                 .contains(taskID) else {
                 throw SystemActionCommandError.taskNotFound
             }
+            let allowParallelTimers = try TimerAdmissionPreferenceResolver
+                .allowParallelTimers(in: context)
 
             let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,
@@ -118,8 +119,7 @@ struct StoreScopedPomodoroCommandCoordinator {
     }
 
     func resume(
-        phase: PomodoroPhaseToken,
-        allowParallelTimers: Bool
+        phase: PomodoroPhaseToken
     ) throws -> StoreScopedPomodoroResumeOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)
@@ -163,6 +163,8 @@ struct StoreScopedPomodoroCommandCoordinator {
                 .contains(run.taskID) else {
                 return .rejected(.taskUnavailable(run.taskID))
             }
+            let allowParallelTimers = try TimerAdmissionPreferenceResolver
+                .allowParallelTimers(in: context)
 
             guard let outcome = try PomodoroCommandHandler(
                 deviceID: resolvedDeviceID,

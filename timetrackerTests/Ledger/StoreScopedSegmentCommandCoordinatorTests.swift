@@ -39,8 +39,7 @@ struct StoreScopedSegmentCommandCoordinatorTests {
                 now: stoppedAt
             ).update(
                 draft: staleDraft,
-                taskID: task.id,
-                allowParallelTimers: true
+                taskID: task.id
             )
         }
 
@@ -142,8 +141,7 @@ struct StoreScopedSegmentCommandCoordinatorTests {
                 now: startedAt.addingTimeInterval(60)
             ).update(
                 draft: draft,
-                taskID: targetTask.id,
-                allowParallelTimers: false
+                taskID: targetTask.id
             )
         }
 
@@ -154,6 +152,41 @@ struct StoreScopedSegmentCommandCoordinatorTests {
             ).activeSegments().map(\.id)
         )
         #expect(activeIDs == [subject.id, other.id])
+    }
+
+    @Test
+    func activeSegmentRebindReadsExclusiveAdmissionFromTheFreshStore() throws {
+        let context = try makeTestContext()
+        let container = context.container
+        let sourceTask = try makeTask("Source", context: context)
+        let targetTask = try makeTask("Target", context: context)
+        let otherTask = try makeTask("Other", context: context)
+        let startedAt = Date(timeIntervalSinceReferenceDate: 3_500_000)
+        let repository = timeRepository(context, now: startedAt)
+        let subject = try repository.startTask(taskID: sourceTask.id, source: .timer)
+        let other = try repository.startTask(taskID: otherTask.id, source: .watch)
+        var draft = try makeStoreScopedSegmentDraft(
+            segmentID: subject.id,
+            container: container
+        )
+        draft.taskID = targetTask.id
+        try setTestAllowParallelTimers(false, context: context)
+
+        _ = try makeStoreScopedSegmentCoordinator(
+            container: container,
+            now: startedAt.addingTimeInterval(60)
+        ).update(draft: draft, taskID: targetTask.id)
+
+        let freshRepository = timeRepository(
+            ModelContext(container),
+            now: startedAt.addingTimeInterval(60)
+        )
+        let active = try freshRepository.activeSegments()
+        #expect(active.map(\.id) == [subject.id])
+        #expect(active.first?.taskID == targetTask.id)
+        #expect(
+            try freshRepository.allSegments().first { $0.id == other.id }?.endedAt != nil
+        )
     }
 
     @Test
@@ -226,8 +259,7 @@ struct StoreScopedSegmentCommandCoordinatorTests {
             now: startedAt.addingTimeInterval(300)
         ).update(
             draft: draft,
-            taskID: task.id,
-            allowParallelTimers: true
+            taskID: task.id
         )
 
         let freshSibling = try #require(

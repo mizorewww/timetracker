@@ -16,8 +16,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             focusSeconds: 1_500,
             breakSeconds: 300,
             longBreakSeconds: nil,
-            targetRounds: 3,
-            allowParallelTimers: true
+            targetRounds: 3
         )
         let firstFocus = started.startedFocus.phaseToken
         guard case .mutated = try coordinator.complete(phase: firstFocus) else {
@@ -26,8 +25,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
         }
         let firstBreak = try phaseToken(runID: firstFocus.runID, container: context.container)
         guard case .resumed(let resumed) = try coordinator.resume(
-            phase: firstBreak,
-            allowParallelTimers: true
+            phase: firstBreak
         ) else {
             Issue.record("The current break phase should resume")
             return
@@ -56,8 +54,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             focusSeconds: 60,
             breakSeconds: 30,
             longBreakSeconds: nil,
-            targetRounds: 1,
-            allowParallelTimers: true
+            targetRounds: 1
         )
         let focus = started.startedFocus.phaseToken
         guard case .mutated = try coordinator.complete(phase: focus) else {
@@ -88,8 +85,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             focusSeconds: 600,
             breakSeconds: 60,
             longBreakSeconds: nil,
-            targetRounds: 2,
-            allowParallelTimers: true
+            targetRounds: 2
         )
         let focusSessionID = started.startedFocus.sessionID
         _ = try coordinator.complete(phase: started.startedFocus.phaseToken)
@@ -127,8 +123,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             focusSeconds: 25 * 60,
             breakSeconds: 5 * 60,
             longBreakSeconds: nil,
-            targetRounds: 2,
-            allowParallelTimers: true
+            targetRounds: 2
         )
         let siblingContext = ModelContext(context.container)
         let siblingRun = try #require(
@@ -172,8 +167,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             focusSeconds: 60,
             breakSeconds: 30,
             longBreakSeconds: nil,
-            targetRounds: 1,
-            allowParallelTimers: true
+            targetRounds: 1
         )
 
         guard case .mutated(let mutation) = try makeCoordinator(

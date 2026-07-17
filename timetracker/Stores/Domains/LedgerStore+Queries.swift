@@ -44,6 +44,32 @@ extension LedgerStore {
         }
     }
 
+    func segments(
+        overlapping interval: DateInterval,
+        taskIDs: Set<UUID>,
+        evaluatedAt cutoff: Date,
+        clockReference: Date
+    ) -> [TimeSegment] {
+        guard hasLoadedHistory else { return [] }
+        return taskScopedSegmentIDs(
+            overlapping: interval,
+            taskIDs: taskIDs,
+            evaluatedAt: cutoff,
+            clockReference: clockReference
+        ).compactMap { id in
+            guard let segment = segmentByID[id], segment.deletedAt == nil else { return nil }
+            guard TrackedTimePolicy.overlaps(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                interval: interval,
+                now: cutoff
+            ) else {
+                return nil
+            }
+            return segment
+        }
+    }
+
     /// Internal diagnostic boundary shared with performance-focused tests.
     /// Only a genuine wall-clock rewind expands a query to the full ledger.
     func segmentCandidateIDs(

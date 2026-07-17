@@ -36,9 +36,17 @@ extension LedgerStore {
     }
 
     func segments(forTaskIDs taskIDs: Set<UUID>) -> [TimeSegment] {
+        segmentIDs(forTaskIDs: taskIDs).compactMap { segmentByID[$0] }
+    }
+
+    func segmentIDs(forTaskIDs taskIDs: Set<UUID>) -> Set<UUID> {
         taskIDs.reduce(into: Set<UUID>()) { result, taskID in
             result.formUnion(segmentIDsByTaskID[taskID] ?? [])
-        }.compactMap { segmentByID[$0] }
+        }
+    }
+
+    func segmentCount(forTaskIDs taskIDs: Set<UUID>) -> Int {
+        taskIDs.reduce(0) { $0 + (segmentIDsByTaskID[$1]?.count ?? 0) }
     }
 
     func recentSegments(

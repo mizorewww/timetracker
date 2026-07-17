@@ -118,9 +118,10 @@ extension TimeTrackerStore {
         )
         let segments = visibleSegments(
             overlapping: decisionInterval,
+            taskIDs: request.taskIDs,
             evaluatedAt: now,
             clockReference: now
-        ).filter { request.taskIDs.contains($0.taskID) }
+        )
         let recentSegments = visibleRecentSegments(forTaskIDs: request.taskIDs)
         let sessions = visibleSessions(for: recentSegments)
         var store = analyticsDomainStore

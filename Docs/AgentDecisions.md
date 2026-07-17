@@ -1169,6 +1169,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：Ledger 回归覆盖有界索引、跨任务稳定合并和删除后补齐；Analytics 回归证明周期统计与独立历史 recent 输入不会串扰；架构合同禁止 facade 恢复 `visibleSegments(forTaskIDs:)` 全历史入口。付费签名的 Ledger、Analytics、Timeline、架构和三项 source-layout 合并批次 79/79 通过，重跑无新 Swift warning。
 
+## AD-093：Task analytics 在日期与任务索引中选择较小候选集
+
+状态：Accepted
+
+背景：AD-092 删除了“先读取任务分支全部历史”，但 facade 仍先从 day index 物化当前与上一周期内全 App 的 `TimeSegment`，随后才按 task subtree 过滤。高频计时或大团队导入数据下，一个小任务的分钟刷新仍会为同周期的所有无关记录解析模型并执行可见性过滤。
+
+决策：Ledger 提供 task-scoped interval query。Planner 不同时构造两份大 Set：先以 `segmentIDsByTaskID` 的计数与日期 day buckets、long-span、time-sensitive、clock-rewind 的候选上界比较；任务侧更小时合并 task ID buckets 后做 overlap，日期侧更小时使用原日期候选后按 snapshot.taskID 过滤。最终查询仍执行 `TrackedTimePolicy.overlaps` 精确校验，历史 cutoff 与真实 clock reference 保持分离；真实时钟回拨可以选择 task 侧，不必把无关任务纳入结果。
+
+后果：Task Detail 周期计算的模型物化成本接近 `min(任务分支历史候选, 全 App 周期候选)`，而不是固定选择其中一侧；空 task set 立即返回。Planner 上界允许重复计数但绝不能低于真实唯一日期候选；如果未来增加新的索引候选来源，必须同步更新上界。该决策不改变 Analytics 数值或缓存 identity。
+
+验证：Ledger 测试构造周期内 50 条无关记录、稀疏任务历史和深历史任务，分别覆盖任务侧与日期侧并只返回交集；完整 Ledger、Analytics、Timeline、架构与三项 source-layout 付费签名批次 80/80 通过，无新 Swift warning。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

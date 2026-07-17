@@ -82,6 +82,7 @@ struct CoreArchitectureBehaviorTests {
         #expect(facadeSource.contains("evaluationKey: request.evaluationKey"))
         #expect(facadeSource.contains("visibleSegments(forTaskIDs:") == false)
         #expect(facadeSource.contains("overlapping: decisionInterval"))
+        #expect(facadeSource.contains("taskIDs: request.taskIDs"))
         #expect(facadeSource.contains("visibleRecentSegments(forTaskIDs: request.taskIDs)"))
         #expect(facadeSource.contains("recentSegments: recentSegments"))
     }

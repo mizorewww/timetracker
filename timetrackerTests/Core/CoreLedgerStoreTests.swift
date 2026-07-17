@@ -467,6 +467,87 @@ struct CoreLedgerStoreTests {
             .map(\.id)
         #expect(store.recentSegments(forTaskIDs: [taskID], limit: 8).map(\.id) == remainingTaskSegments)
     }
+
+    @Test @MainActor
+    func taskScopedRangeQueryIntersectsDateAndTaskIndexes() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let day = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 17
+        )))
+        let interval = try #require(calendar.dateInterval(of: .day, for: day))
+        let sparseTaskID = UUID()
+        let deepHistoryTaskID = UUID()
+        let unrelatedTaskID = UUID()
+
+        func segment(taskID: UUID, startedAt: Date) -> (TimeSession, TimeSegment) {
+            let session = TimeSession(
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startedAt
+            )
+            return (
+                session,
+                TimeSegment(
+                    sessionID: session.id,
+                    taskID: taskID,
+                    source: .timer,
+                    deviceID: "test",
+                    startedAt: startedAt,
+                    endedAt: startedAt.addingTimeInterval(60)
+                )
+            )
+        }
+
+        let sparseCurrent = segment(
+            taskID: sparseTaskID,
+            startedAt: day.addingTimeInterval(3_600)
+        )
+        let deepCurrent = segment(
+            taskID: deepHistoryTaskID,
+            startedAt: day.addingTimeInterval(7_200)
+        )
+        let unrelated = (0..<50).map { index in
+            segment(
+                taskID: unrelatedTaskID,
+                startedAt: day.addingTimeInterval(Double(10_800 + index * 60))
+            )
+        }
+        let sparseHistory = (1...20).map { offset in
+            segment(
+                taskID: sparseTaskID,
+                startedAt: day.addingTimeInterval(Double(-offset * 86_400))
+            )
+        }
+        let deepHistory = (1...60).map { offset in
+            segment(
+                taskID: deepHistoryTaskID,
+                startedAt: day.addingTimeInterval(Double(-offset * 86_400))
+            )
+        }
+        let records = [sparseCurrent, deepCurrent] + unrelated + sparseHistory + deepHistory
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSessions = records.map { $0.0 }
+        repository.fullSegments = records.map { $0.1 }
+        var store = LedgerStore()
+        try store.refreshHistory(repository: repository, now: interval.end, calendar: calendar)
+
+        #expect(store.taskScopedSegmentIDs(
+            overlapping: interval,
+            taskIDs: [sparseTaskID],
+            evaluatedAt: interval.end,
+            clockReference: interval.end
+        ) == [sparseCurrent.1.id])
+        #expect(store.segments(
+            overlapping: interval,
+            taskIDs: [deepHistoryTaskID],
+            evaluatedAt: interval.end,
+            clockReference: interval.end
+        ).map(\.id) == [deepCurrent.1.id])
+    }
 }
 
 private final class LedgerRefreshSpyRepository: TimeTrackingRepository {

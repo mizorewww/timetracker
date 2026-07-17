@@ -1,6 +1,34 @@
 import Foundation
 
 extension TimeTrackerStore {
+    func visibleSegments(
+        overlapping interval: DateInterval,
+        taskIDs: Set<UUID>,
+        evaluatedAt cutoff: Date,
+        clockReference: Date
+    ) -> [TimeSegment] {
+        if ledgerDomainStore.hasIndexedSegmentHistory {
+            return ledgerDomainStore.segments(
+                overlapping: interval,
+                taskIDs: taskIDs,
+                evaluatedAt: cutoff,
+                clockReference: clockReference
+            )
+            .filter(isReadableLedgerSegment)
+        }
+        return allSegments.filter { segment in
+            guard segment.deletedAt == nil, taskIDs.contains(segment.taskID) else {
+                return false
+            }
+            return TrackedTimePolicy.overlaps(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                interval: interval,
+                now: cutoff
+            )
+        }
+    }
+
     func visibleRecentSegments(
         forTaskIDs taskIDs: Set<UUID>,
         limit: Int = LedgerStore.maximumRecentSegmentsPerTask

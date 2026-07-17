@@ -219,6 +219,7 @@ final class TimeTrackerStore {
     var inboxDomainStore = InboxStore()
     var preferenceDomainStore = PreferenceStore()
     var syncObservers: [SyncNotificationObserverToken] = []
+    @ObservationIgnored var systemActionMutationObserver: SyncNotificationObserverToken?
     var taskByID: [UUID: TaskNode] = [:]
     var taskCategoryByID: [UUID: TaskCategory] = [:]
     var taskCategoryIDByRootTaskID: [UUID: UUID] = [:]

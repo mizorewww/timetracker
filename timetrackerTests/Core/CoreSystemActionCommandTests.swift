@@ -29,10 +29,63 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("container: SystemActionContextProvider.container"))
         #expect(source.contains("let postCommitContext = SystemActionContextProvider.makeContext()"))
         #expect(source.contains("timetrackerApp.applicationModelContainer"))
-        #expect(source.components(separatedBy: "CommittedMutationSnapshotRecorder()").count - 1 == 3)
-        #expect(source.components(separatedBy: "CommittedMutationSurfaceSynchronizer()").count - 1 == 3)
+        #expect(source.components(separatedBy: "SystemActionPostCommitEffects().apply(").count - 1 == 3)
+        #expect(handler.contains("struct SystemActionPostCommitEffects"))
+        #expect(handler.contains("CommittedMutationSnapshotRecorder().recordLocalMutation"))
+        #expect(handler.contains("CommittedMutationSurfaceSynchronizer().synchronize"))
+        #expect(handler.contains("SystemActionMutationBroadcaster.publish(events: events)"))
         #expect(handler.contains("allowParallelTimers: Bool") == false)
         #expect(coordinator.contains("TimerAdmissionPreferenceResolver\n                .allowParallelTimers(in: context)"))
+    }
+
+    @Test @MainActor
+    func committedSystemActionRefreshesEveryConfiguredSceneWithoutStartingSuggestions() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Externally tracked",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let firstScene = makeTestStore()
+        let secondScene = makeTestStore()
+        let secondContext = ModelContext(context.container)
+        firstScene.configureRepositoriesIfNeeded(context: context)
+        secondScene.configureRepositoriesIfNeeded(context: secondContext)
+        try firstScene.refresh()
+        try secondScene.refresh()
+        firstScene.installSystemActionMutationObserverIfNeeded()
+        secondScene.installSystemActionMutationObserverIfNeeded()
+        defer {
+            firstScene.removeSystemActionMutationObserver()
+            secondScene.removeSystemActionMutationObserver()
+        }
+
+        let handler = makeTestSystemActionCommandHandler()
+        let started = try handler.startTimerMutation(
+            taskID: task.id,
+            source: .shortcut,
+            container: context.container
+        )
+        let segmentID = try #require(started.subjectSegmentID)
+        SystemActionMutationBroadcaster.publish(events: started.events)
+
+        #expect(firstScene.activeSegments.map(\.id) == [segmentID])
+        #expect(secondScene.activeSegments.map(\.id) == [segmentID])
+        #expect(firstScene.inboxSuggestionInFlightIDs.isEmpty)
+        #expect(secondScene.inboxSuggestionInFlightIDs.isEmpty)
+
+        let stopped = try handler.stopTimerMutation(
+            segmentID: segmentID,
+            container: context.container
+        )
+        SystemActionMutationBroadcaster.publish(events: stopped.events)
+
+        #expect(firstScene.activeSegments.isEmpty)
+        #expect(secondScene.activeSegments.isEmpty)
     }
 
     @Test @MainActor

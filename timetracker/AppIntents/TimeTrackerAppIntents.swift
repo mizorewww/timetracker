@@ -19,11 +19,7 @@ struct AddInboxItemIntent: AppIntent {
         if let itemID {
             let events: Set<StoreDomainEvent> = [.inboxChanged(itemIDs: [itemID])]
             let postCommitContext = SystemActionContextProvider.makeContext()
-            CommittedMutationSnapshotRecorder().recordLocalMutation(
-                context: postCommitContext,
-                events: events
-            )
-            CommittedMutationSurfaceSynchronizer().synchronize(
+            SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
                 events: events
             )
@@ -51,11 +47,7 @@ struct StartTimerIntent: AppIntent {
         let events = outcome.events
         if events.isEmpty == false {
             let postCommitContext = SystemActionContextProvider.makeContext()
-            CommittedMutationSnapshotRecorder().recordLocalMutation(
-                context: postCommitContext,
-                events: events
-            )
-            CommittedMutationSurfaceSynchronizer().synchronize(
+            SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
                 events: events
             )
@@ -82,11 +74,7 @@ struct StopTimerIntent: AppIntent {
         let events = outcome.events
         if outcome.subjectSegmentID == targetID, events.isEmpty == false {
             let postCommitContext = SystemActionContextProvider.makeContext()
-            CommittedMutationSnapshotRecorder().recordLocalMutation(
-                context: postCommitContext,
-                events: events
-            )
-            CommittedMutationSurfaceSynchronizer().synchronize(
+            SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
                 events: events
             )

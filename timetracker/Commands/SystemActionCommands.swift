@@ -3,6 +3,29 @@ import OSLog
 import SwiftData
 
 @MainActor
+enum SystemActionMutationBroadcaster {
+    private static let notificationName = Notification.Name(
+        "me.mezorewww.timetracker.systemActionMutationCommitted"
+    )
+    private static let eventsUserInfoKey = "events"
+
+    static func publish(events: Set<StoreDomainEvent>) {
+        guard events.isEmpty == false else { return }
+        NotificationCenter.default.post(
+            name: notificationName,
+            object: nil,
+            userInfo: [eventsUserInfoKey: events]
+        )
+    }
+
+    static func events(from notification: Notification) -> Set<StoreDomainEvent>? {
+        notification.userInfo?[eventsUserInfoKey] as? Set<StoreDomainEvent>
+    }
+
+    static var notification: Notification.Name { notificationName }
+}
+
+@MainActor
 struct CommittedMutationSnapshotRecorder {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
@@ -80,6 +103,24 @@ struct CommittedMutationSurfaceSynchronizer {
             )
             return error
         }
+    }
+}
+
+@MainActor
+struct SystemActionPostCommitEffects {
+    /// Each effect runs after the system action has committed. A best-effort
+    /// failure must not turn a durable action into a retryable failure.
+    func apply(context: ModelContext, events: Set<StoreDomainEvent>) {
+        guard events.isEmpty == false else { return }
+        _ = CommittedMutationSnapshotRecorder().recordLocalMutation(
+            context: context,
+            events: events
+        )
+        _ = CommittedMutationSurfaceSynchronizer().synchronize(
+            context: context,
+            events: events
+        )
+        SystemActionMutationBroadcaster.publish(events: events)
     }
 }
 

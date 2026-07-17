@@ -1289,6 +1289,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：行为回归覆盖任务身份、显式 Start → Running → 显式 Stop，以及运行中点击任务身份进入详情且不停止；source contract 只固定 stable component/command boundary。正常字号 iPhone/iPad/macOS 截图确认任务文本与 Start/Switch/Stop 不遮挡系统 chrome；一次性签名、设备和清理证据写入 dated Audit。
 
+## AD-103：App Intent 提交后让同进程的已配置 scene 只收敛读模型
+
+状态：Accepted
+
+背景：App Intent 的写入由 fresh store-scoped coordinator 正确提交，但 post-commit 只创建临时 `TimeTrackerStore` 来更新 Widget、Watch 和 Live Activity。已经显示在屏幕上的 scene 则持有自己的 Inbox、ledger、Pomodoro 等 read-model cache，并不订阅普通本机写入；用户从 Siri 或 Shortcuts 新增 Inbox、开始或停止计时后，可以继续看见旧界面直到下一次前台或 CloudKit refresh。
+
+决策：所有成功 App Intent 使用 `SystemActionPostCommitEffects`，按既有顺序记录 sync snapshot、更新系统表面，并发布带实际 `StoreDomainEvent` 的本机 mutation notification。每个已配置的 application-state `TimeTrackerStore` 订阅该 notification，并以既有 `StoreRefreshPlanner` 只执行 `refreshReadModels`。该 catch-up 不记录第二份 sync snapshot、不重复 Widget/Watch/Live Activity projection、不改变 command 成功结果，也不执行自动 Inbox/checklist suggestion。没有已配置 scene 时无需保留 transient notification；之后启动的 scene 从持久化事实完成正常首次 refresh。
+
+后果：外部系统动作和当前界面以同一 outcome events 收敛，多个已打开 scene 不必依赖用户切换页面或 CloudKit remote-change 才更新。notification 是 post-commit 的 best effort：surface/snapshot/read refresh 的失败都不能把已保存的 Inbox 或计时动作伪装为可安全重试的失败。App Intent delivery 的持久 receipt/idempotency 仍是后续独立边界，尤其 Add Inbox 不能由本机广播代替去重。
+
+验证：两个同容器、各有独立 `ModelContext` 的 scene Store 订阅后，外部 Start 与精确 Stop 同步收敛 active timer；回归还固定 App Intent 三条路径使用统一 effects，effects 同时保留 snapshot、surface 与 broadcaster，并确认 scene catch-up 走 `refreshReadModels`。一次性签名与清理证据写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -1145,6 +1145,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：Task UI source contract 同时要求 Manual Time/Segment Editor 只有 large，并明确拒绝 Manual Time 的 `.medium`；presentation 合同继续验证保存成功后才关闭。
 
+## AD-091：无目标的 Analytics comparison 不做价值判断
+
+状态：Accepted
+
+背景：Analytics 的区间比较只有“本期相对上期的记录时长变化”，没有用户目标、预算或期望方向。旧实现把负向差值标为绿色 positive，却把正向差值标为 neutral，等价于擅自认定“记录更少就是更好”；这对时间记录工具没有通用依据，也可能误导用户解读工作量变化。
+
+决策：没有显式目标语境时，gross duration 的增加和减少都使用 `.neutral` insight severity，只陈述变化事实与比较口径。只有未来引入用户明确设定的目标、上下限或预算，且能从该目标判断方向时，才允许输出 positive 或 warning；颜色不能替代目标语义。
+
+后果：Analytics 不再用绿色奖励任一变化方向，用户可以结合自己的计划解释数据。该决策只约束无目标的 comparison insight，不阻止明确目标完成度、数据异常或真实风险使用语义化状态。
+
+验证：`CoreAnalyticsStoreTests` 同时构造 gross duration 正差与负差，确认两者 comparison insight 都为 neutral；完整定向套件 37/37 通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

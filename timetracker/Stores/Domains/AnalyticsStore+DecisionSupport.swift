@@ -170,7 +170,7 @@ extension AnalyticsStore {
                 title: AppStrings.localized("analytics.insight.comparison.title"),
                 value: deltaText(comparison.grossDeltaSeconds),
                 body: comparisonBody(for: comparison),
-                severity: comparison.grossDeltaSeconds >= 0 ? .neutral : .positive,
+                severity: .neutral,
                 taskID: nil
             )
         )

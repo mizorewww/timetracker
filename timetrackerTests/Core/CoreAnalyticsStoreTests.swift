@@ -1844,4 +1844,65 @@ struct CoreAnalyticsStoreTests {
         #expect(futureWindow.current.duration == 0)
         #expect(futureWindow.previous.duration == 0)
     }
+
+    @Test @MainActor
+    func comparisonInsightDoesNotAssignValueJudgmentWithoutAGoal() {
+        let window = AnalyticsComparisonWindow(
+            current: DateInterval(start: .distantPast, duration: 1),
+            previous: DateInterval(start: .distantPast, duration: 1),
+            basis: .matchedProgress
+        )
+        let overview = AnalyticsOverview(
+            grossSeconds: 3_600,
+            wallSeconds: 3_600,
+            overlapSeconds: 0,
+            pomodoroCount: 0,
+            averageFocusSeconds: 3_600
+        )
+        let rhythm = AnalyticsRhythm(
+            activeDayCount: 1,
+            dailyAverageGrossSeconds: 3_600,
+            peakHour: nil,
+            peakHourSeconds: 0,
+            longestContinuousSeconds: 3_600,
+            averageSegmentSeconds: 3_600,
+            medianSegmentSeconds: 3_600,
+            segmentCount: 1
+        )
+        let quality = AnalyticsQuality(
+            overlapRatio: 0,
+            switchCount: 0,
+            shortSegmentCount: 0,
+            shortSegmentRatio: 0,
+            averageSegmentSeconds: 3_600,
+            longestContinuousSeconds: 3_600
+        )
+        let store = AnalyticsStore()
+
+        for comparison in [
+            AnalyticsComparison(
+                window: window,
+                currentGrossSeconds: 1_800,
+                previousGrossSeconds: 3_600,
+                currentWallSeconds: 1_800,
+                previousWallSeconds: 3_600
+            ),
+            AnalyticsComparison(
+                window: window,
+                currentGrossSeconds: 5_400,
+                previousGrossSeconds: 3_600,
+                currentWallSeconds: 5_400,
+                previousWallSeconds: 3_600
+            )
+        ] {
+            let insight = store.insights(
+                overview: overview,
+                comparison: comparison,
+                rhythm: rhythm,
+                quality: quality,
+                taskBreakdown: []
+            ).first(where: { $0.id == "comparison" })
+            #expect(insight?.severity.rawValue == AnalyticsInsight.Severity.neutral.rawValue)
+        }
+    }
 }

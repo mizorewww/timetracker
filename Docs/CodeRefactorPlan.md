@@ -22,6 +22,12 @@ Status: current source-structure record after the 2026-07-14 repository-wide spl
 4. **资源与签名。** 不用 Device Hub 代替自动化测试。每个 profiling 或 test batch 都记录 owner，并在结束时终止本批 app/process、删除 DerivedData/result/trace；只有为该批显式创建的 simulator 才可关闭和删除。构建与测试保留 Automatic Signing、团队和 paid Developer capabilities。
 5. **停止条件。** R1 的基线证明无需优化，或一次经过验证的优化达到预算且没有回归时，立刻停止主动重构；剩余表项保持记录状态。任何新 P0/P1 都必须先写成独立、有限的任务并由用户确认范围。
 
+### R1 基线证据（2026-07-17）
+
+已在保留自动签名的 macOS runner 上运行 `CorePerformanceBudgetTests`：8/8 通过，无 warning、无 simulator。`analyticsSnapshotStaysWithinPerformanceBudget()`（720 个 session/segment 的月度输入）测试总时长为 **98 ms**；`denseOverlapAnalyticsSnapshotStaysWithinPerformanceBudget()`（2,000 个高重叠 segment 的 Today 输入）为 **284 ms**。这两个数字包含 fixture 构造，因而不能伪装成纯 `AnalyticsStore` 调用的精确 microbenchmark；但两者均在 `@MainActor` 测试中执行，284 ms 已超过正常 range 切换或 live refresh 的交互预算。故 R1 进入一次受限实现：先建立 Sendable 输入投影，再把纯 snapshot 计算移出主 actor；不得以增大缓存、放宽测试预算或隐藏 progress indicator 代替修复。
+
+尝试直接运行 Release XCTest 未产生有效数据：Release module 默认没有为 `@testable import` 构建；一次性 `ENABLE_TESTABILITY=YES` 重试在 test worker materialization 无进展时被主动中止并清理。它不改变工程 signing 或发行设置。真实 Release/Archive trace 仍留在 R1 完成后的 release gate。
+
 ### 本轮仍未完成的事项
 
 - W0 的定向签名 XCTest、源码合同和提交尚未完成；除它以外没有正在实施的横向重构。

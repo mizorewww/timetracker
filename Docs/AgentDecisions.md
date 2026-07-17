@@ -1445,6 +1445,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：preference coordinator 测试覆盖 sibling preference 更新后锁内 logical winner；Countdown coordinator 测试覆盖 fresh-context 创建；架构合同固定 facades 不再用 `perform(event:)`/scene-owned add，并固定 coordinator 的 fresh mutation/Keychain lock boundary。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
 
+## AD-116：Analytics 的持久模型读取与纯 snapshot 计算分隔主 actor
+
+状态：Accepted
+
+背景：AnalyticsView/Category Detail 的 `.task(id:)` 在 main actor 直接调用 facade；虽然有 request identity、cache、同周期保留和 `Task.yield()`，cache miss 仍会同步执行 segment canonicalize、daily/rhythm/quality、overlap sweep、timeline 与 read-model materialization。2026-07-17 的签名 macOS 基线中，720 条月度 fixture 的完整测试为 98 ms，2,000 条高重叠 Today fixture 为 284 ms；总时长包含 fixture 创建，不是 microbenchmark，却已足以说明主 actor 错过交互预算。
+
+决策：R1 只建立一个明确边界。主 actor/Store 保留 SwiftData 可见性筛选、cache key/request identity、取消、最终缓存写入与 `@Observable` 发布；它把 `TaskNode`、`TimeSegment`、`TimeSession`、category/assignment 与路径字典复制成不可变 `Sendable` Analytics input。后台任务只能接触该 input 和纯服务，不得捕获 `ModelContext`、`PersistentModel`、SwiftUI binding、facade 或 mutation lock。返回时只发布仍匹配完整 request identity 的结果；range、calendar interval、revision 或 live bucket 改变时取消旧任务。不得为了绕过量测而增大缓存、降低输入精度、改变 gross/wall/overlap/comparison 语义，或把计算搬进未受控的 detached work 后继续读 SwiftData。
+
+后果：第一次 cache miss 不再冻结 period 控件、滚动或导航；SwiftData 与 CloudKit 的线程/隔离边界保持完整。输入投影会增加一次有界复制，只有量测显示该复制本身成为问题时才单独评估；R1 完成后停止主动重构，真实 Release/Archive trace 留作 release gate。
+
+验证：为输入投影和后台 engine 增加与既有 Analytics 同值的 deterministic regression；覆盖 cancellation/stale-result、same-period refresh、task-detail snapshot、cache hit 和 2,000 条高重叠 fixture。记录主 actor 投影与后台计算的独立时长；本机 runner、trace、result/DerivedData 和任何 owned simulator 都在每批结束后清理。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

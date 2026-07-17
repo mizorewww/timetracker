@@ -4,17 +4,17 @@ Status: current source-structure record after the 2026-07-14 repository-wide spl
 
 ## 2026-07-17 收口计划：只推进一个主动重构项目
 
-全面审查已经完成了横向的正确性、信息架构和源码职责检查。它留下的事项不能成为无限期、机会主义的“顺手重构”列表：每一项都必须有用户价值、可观察证据和明确停止条件。writer 事务修复已在 `e30fd6a` 完成、通过定向签名测试并提交；**唯一允许主动实施的重构项目是 R1**。R2 以后只记录为将来输入，不得与 R1 并行编码。
+全面审查和本轮收口均已完成。writer 事务修复已在 `e30fd6a` 提交，唯一主动重构 R1 已在 `55f19ae` 提交并通过最终验证。当前没有允许 Agent 自行继续推进的主动重构项目；R2、R3 和新发现只能作为记录，必须由用户另行授权为边界明确的新任务。
 
 | 顺序 | 项目 | 当前决定与价值 | 完成/停止条件 |
 | --- | --- | --- | --- |
 | W0（已完成） | Store writer 收口：同步偏好、LLM 凭据配置、Countdown 新建 | 修复跨 scene/进程 writer 与 timer admission 读写同一事实时使用旧 `ModelContext` 的竞态；LLM Keychain 补偿也不再读取锁外旧值。 | `e30fd6a`；coordinator、命令和回归测试通过，签名 macOS XCTest 成功，DerivedData/result 已删除且无 owned runner/simulator。 |
-| **R1（已完成，停止主动重构）** | **Analytics 读模型的交互性能边界** | Analytics 是持续使用的复盘入口。虽然缓存和同周期刷新已避免空白屏，Today 的小时活动、时间线布局和 overlap sweep 仍曾随 snapshot 在 `@MainActor` 运行；大账本或频繁 live bucket 更新可能抢占导航、滚动和 period 切换。这个项目直接改善最常见的等待和卡顿风险，同时不触碰 iCloud schema 或不必要地重画 UI。 | 主 actor 把 SwiftData 模型投影成 `Sendable` value input，后台只计算 Today visual read models；主 actor 仍拥有 SwiftData 可见性、core summary、cache/request identity、取消和发布。139/139 定向签名 macOS 测试与 9/9 性能预算回归已通过；不得继续拆别的 subsystem。 |
-| R2（记录，不实施） | Inbox 的重排与建议“应用/丢弃”动作层级 | UI 审查发现重复入口会增加误操作和学习成本；有价值，但不高于 R1 的日常流畅性和已确认的 writer 正确性。 | R1 已明确完成或取消后，只有用户再次授权才排入实现。 |
-| R3（记录，不实施） | Facade 余下的生命周期/同步观察者职责拆分 | 可降低维护成本，但没有用户可观察故障或量测瓶颈；单纯按行数拆文件是低价值工作。 | 除非 R1 的 profiling 指向它，或用户以独立任务授权，否则不做。 |
-| Release gate（非重构） | 全量签名 build/test、真实账户/iCloud 路径与一次正常操作路径验收 | 这是发布证据，不是无限重构的理由。仅在 R1 结束时执行风险相称的最终验证。 | 记录成功/失败证据与资源清理；发现新问题必须由用户决定是否开启新的有限项目。 |
+| **R1（已完成，停止主动重构）** | **Analytics 读模型的交互性能边界** | Analytics 是持续使用的复盘入口。虽然缓存和同周期刷新已避免空白屏，Today 的小时活动、时间线布局和 overlap sweep 仍曾随 snapshot 在 `@MainActor` 运行；大账本或频繁 live bucket 更新可能抢占导航、滚动和 period 切换。这个项目直接改善最常见的等待和卡顿风险，同时不触碰 iCloud schema 或不必要地重画 UI。 | `55f19ae`；主 actor 把 SwiftData 模型投影成 `Sendable` value input，后台只计算 Today visual read models；主 actor 仍拥有 SwiftData 可见性、core summary、cache/request identity、取消和发布。139/139 定向签名 macOS 测试与 9/9 性能预算回归已通过。 |
+| R2（记录，不实施） | Inbox 的重排与建议“应用/丢弃”动作层级 | UI 审查发现重复入口会增加误操作和学习成本；有价值，但不高于已完成 R1 的日常流畅性和 writer 正确性。 | 只有用户以独立任务再次授权才排入实现。 |
+| R3（记录，不实施） | Facade 余下的生命周期/同步观察者职责拆分 | 可降低维护成本，但没有用户可观察故障或量测瓶颈；单纯按行数拆文件是低价值工作。 | 只有用户以独立任务授权，或新的可复现故障/量测证据成立时才实施。 |
+| Release gate（已完成） | 风险相称的签名测试、性能回归与 Release archive | 发布证据不用于扩大重构范围；Agent 不修改真实账户的生产 iCloud 数据来制造验收。 | 签名测试 139/139、性能预算 9/9、universal macOS Release archive 成功；签名与资源清理均已核验。 |
 
-### R1 的工作契约
+### R1 的工作契约（已归档）
 
 1. **先测量，后改变。** 使用具有确定数量的 ledger fixture 和同一输入区间；记录 snapshot 总耗时、主线程繁忙区间、刷新/切换期间的可交互性。不得仅因文件大或猜测而引入 `Task.detached`、新缓存层或 schema。
 2. **一次边界，而非重写。** 如果量测证明需要优化，SwiftData 获取、request identity、取消、cache 和 `@Observable` 发布继续留在既有 owner；只把已量测的 Today visual submodels（小时活动、timeline、overlap）连同 Sendable 输入搬到后台。不得让后台持有 `ModelContext`、`PersistentModel` 或 SwiftUI state；其它 core summary 只能在显式 residual budget 内留在主 actor。
@@ -28,14 +28,15 @@ Status: current source-structure record after the 2026-07-14 repository-wide spl
 
 R1 的一次实现把 Today visual read models 提取成 `AnalyticsVisualSnapshotInput`/`AnalyticsVisualSnapshotService`：投影发生在 main actor，worker 不持有持久模型，`withTaskCancellationHandler` 会取消 owned detached task；task id 变化后 facade 不会缓存/发布过期结果。2,000 条输入的首轮拆分测量中，投影低于 **50 ms**，visual 之后的 main-actor core assembly 为 **145.17 ms**；因此保留一个 **175 ms** 的 high-density residual budget，而不是声称整个 snapshot 已完全后台化。该预算是新建的受控测试，不是放宽旧的 4 秒端到端保护；后者仍保留。语义回归同时比较 legacy hourly/timeline/overlap 与 Sendable worker，并覆盖空 Today 保持 24 个小时桶。
 
-尝试直接运行 Release XCTest 未产生有效数据：Release module 默认没有为 `@testable import` 构建；一次性 `ENABLE_TESTABILITY=YES` 重试在 test worker materialization 无进展时被主动中止并清理。它不改变工程 signing 或发行设置。真实 Release/Archive trace 仍留在 R1 完成后的 release gate。
+尝试直接运行 Release XCTest 未产生有效数据：Release module 默认没有为 `@testable import` 构建；一次性 `ENABLE_TESTABILITY=YES` 重试在 test worker materialization 无进展时被主动中止并清理。它没有改变工程 signing 或发行设置。最终改用与测试职责分离的 universal macOS Release archive 完成发行配置验证，archive 成功并保留付费开发者签名。
 
-### 本轮仍未完成的事项
+### 收口状态与非主动记录
 
-- W0 已完成并提交；除 R1 外没有正在实施的横向重构。
-- R1 的 Sendable visual boundary、139/139 定向签名测试、9/9 性能预算回归和一次 universal macOS Release archive 均已完成；只剩资源清理与小提交，随后立刻停止主动重构。
+- W0 已由 `e30fd6a` 提交；R1 已由 `55f19ae` 提交。当前工作树在提交后保持干净，本轮没有未提交代码或文档。
+- R1 的 Sendable visual boundary、139/139 定向签名测试、9/9 性能预算回归和一次 universal macOS Release archive 均已完成；主动重构已经停止。
 - Release archive 保留 `Apple Development: ZEXUAN GAO (PX46M259V3)` / team `LT98S43NKA` 签名，未禁用 signing。archive 仅报告既有 `timetrackerWatchApp` 缺少 App Category 的 metadata warning；记录在 audit，不在 R1 中扩展修复。发现新问题必须由用户决定是否开启新的有限项目。
 - R1 增加异步加载后，`AnalyticsCategoryDetailView` 与 `TimeTrackerStore+Analytics` 超出既有职责预算；已按真实 owner 将 category 的内容组合移到 `AnalyticsCategoryDetailContent.swift`、将异步 cache-miss 加载移到 `TimeTrackerStore+AnalyticsLoading.swift`。预算保持不变，不以放宽 source-layout contract 掩盖新增职责。
+- 所有本批 DerivedData、result bundle、archive 和临时目录均已删除；最终没有 owned `xcodebuild`、`xctest` 或 Booted simulator。
 
 ## Review Summary
 

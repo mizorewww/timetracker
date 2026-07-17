@@ -330,7 +330,7 @@ xcodebuild -list -project timetracker.xcodeproj
 
 ### 当前验证状态
 
-最终工作树的完整单元测试、完整 UI 测试、签名 Release 构建、模拟器截图与 SwiftUI Instruments 结果统一记录在 [Docs/Audit-2026-07-14.md](Docs/Audit-2026-07-14.md)。本轮源码和测试仍在收口时，历史批次的通过数不能替代最终复验；审核报告中的“待最终证据”标记清零前，不应把当前工作树描述为已通过全部发行门禁。
+本轮重构代码已由 `55f19ae` 收口并停止主动扩张。最终取得的 R1 定向测试、性能预算、签名 Release archive 与资源清理证据，以及没有执行因而不作通过声明的完整 unit/UI/设备/trace 矩阵，统一记录在 [Docs/Audit-2026-07-14.md](Docs/Audit-2026-07-14.md)。历史批次不能机械相加成“当前工作树全套通过”；未执行项是明确的声明边界，不表示 Agent 会继续无限重构或后台补跑。
 
 ## 版本与构建信息
 

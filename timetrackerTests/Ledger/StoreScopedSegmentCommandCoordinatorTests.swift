@@ -7,6 +7,34 @@ import Testing
 @MainActor
 struct StoreScopedSegmentCommandCoordinatorTests {
     @Test
+    func manualTimeUsesFreshTaskAvailabilityInsideTheStoreTransaction() throws {
+        let context = try makeTestContext()
+        let container = context.container
+        let task = try makeTask("Manual target", context: context)
+        let now = Date(timeIntervalSinceReferenceDate: 500_000)
+        var draft = ManualTimeDraft(taskID: task.id, tasks: [task])
+        draft.startedAt = now.addingTimeInterval(-600)
+        draft.endedAt = now.addingTimeInterval(-60)
+
+        try SwiftDataTaskRepository(
+            context: ModelContext(container),
+            deviceID: "sibling"
+        ).setTaskStatus(taskID: task.id, status: .completed)
+
+        #expect(throws: TimeTrackingRepositoryError.taskUnavailable) {
+            try makeStoreScopedSegmentCoordinator(
+                container: container,
+                now: now
+            ).addManualTime(draft: draft, taskID: task.id)
+        }
+        #expect(
+            try timeRepository(ModelContext(container), now: now)
+                .allSegments()
+                .isEmpty
+        )
+    }
+
+    @Test
     func staleActiveDraftCannotReopenSegmentStoppedBySibling() throws {
         let context = try makeTestContext()
         let container = context.container

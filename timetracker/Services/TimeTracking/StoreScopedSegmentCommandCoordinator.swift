@@ -20,6 +20,22 @@ struct StoreScopedSegmentCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
+    func addManualTime(
+        draft: ManualTimeDraft,
+        taskID: UUID
+    ) throws {
+        try withLockedFreshContext { _, now, timeRepository, _ in
+            _ = try LedgerCommandHandler(
+                deviceID: resolvedDeviceID,
+                nowProvider: { now }
+            ).addManualTime(
+                draft: draft,
+                taskID: taskID,
+                repository: timeRepository
+            )
+        }
+    }
+
     func update(
         draft: SegmentEditorDraft,
         taskID: UUID

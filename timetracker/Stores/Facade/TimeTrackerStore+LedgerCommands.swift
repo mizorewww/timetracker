@@ -16,11 +16,30 @@ extension TimeTrackerStore {
             fail(.taskTrackingUnavailable)
             return false
         }
-
-        let didSave = perform(event: .ledgerChanged(taskID: taskID, dateInterval: StoreInvalidationRange(start: draft.startedAt, end: draft.endedAt), isVisible: false)) {
-            try ledgerCommandHandler.addManualTime(draft: draft, taskID: taskID, repository: requiredTimeRepository())
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
         }
-        return didSave
+        do {
+            try StoreScopedSegmentCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).addManualTime(draft: draft, taskID: taskID)
+            finishStoreScopedMutation(events: [
+                .ledgerChanged(
+                    taskID: taskID,
+                    dateInterval: StoreInvalidationRange(
+                        start: draft.startedAt,
+                        end: draft.endedAt
+                    ),
+                    isVisible: false
+                )
+            ])
+            return true
+        } catch {
+            handleSegmentMutationFailure(error)
+            return false
+        }
     }
 
     @discardableResult

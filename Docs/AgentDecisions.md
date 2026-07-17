@@ -1421,6 +1421,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：纯 request 行为测试覆盖同日 revision/bucket 保留、跨日和跨 range 拒绝；架构/UI contract 固定 root/detail 的 request gate、yield 与 shared refresh indicator。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
 
+## AD-114：手工补录以锁内的任务可计时性作为最终准入
+
+状态：Accepted
+
+背景：Manual Time sheet 在打开时从 scene read model 选择可计时任务，旧保存路径也只检查同一份缓存，然后用 scene-owned repository 直接写入。另一窗口、App Intent 或 CloudKit 可以在两步之间完成、归档或删除任务及其祖先；旧 writer 因而能在目标已不再可接受新工作时创建新的 manual session/segment。
+
+决策：`StoreScopedSegmentCommandCoordinator.addManualTime` 使用 AD-069 的 store lock 与 fresh `ModelContext`。它在锁内调用 repository 的 `preparedTrackableTitleSnapshot`/`addManualSegment`，由 canonical task hierarchy 给出最终 `taskUnavailable`、时间范围、未来时间和持久化校验。facade 的缓存检查只保留作未配置 store 与显而易见不可用目标的快速用户反馈，不能替代或绕过锁内准入；成功后才在锁外刷新、记录同步快照并广播 ledger event。
+
+后果：补录与 timer、Pomodoro、segment edit/delete、task lifecycle 共享同一 writer domain，不会把新时间事实写到刚失效的任务。旧草稿因并发变更而被拒绝时，facade 刷新任务、ledger 与 Pomodoro read models，并显示既有的可计时性错误；用户需从最新可用任务重新提交。此规则不改变历史时间片继续保留原任务归属的读模型语义。
+
+验证：store-scoped coordinator 测试先由 sibling context 完成目标任务，再确认 manual writer 在 locked fresh context 拒绝且不创建 segment；架构合同禁止 facade 回退到 `ledgerCommandHandler`/scene repository。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

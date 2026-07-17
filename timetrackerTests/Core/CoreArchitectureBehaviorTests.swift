@@ -137,6 +137,8 @@ struct CoreArchitectureBehaviorTests {
         #expect(calculationSource.contains("calculateUpdates(buildOrder:"))
         #expect(calculationSource.contains("return updates"))
         #expect(ledgerCommandSource.contains("StoreScopedSegmentCommandCoordinator("))
+        #expect(ledgerCommandSource.contains(".addManualTime(draft: draft, taskID: taskID)"))
+        #expect(ledgerCommandSource.contains("ledgerCommandHandler.addManualTime") == false)
         #expect(ledgerCommandSource.contains("allSegments.first") == false)
         #expect(ledgerCommandSource.contains("preferences.allowParallelTimers") == false)
         #expect(pomodoroCommandSource.contains("preferences.allowParallelTimers") == false)
@@ -147,6 +149,7 @@ struct CoreArchitectureBehaviorTests {
         )
         #expect(segmentCoordinatorSource.contains("TimerAdmissionPreferenceResolver"))
         #expect(segmentCoordinatorSource.contains("transaction.withFreshContext"))
+        #expect(segmentCoordinatorSource.contains("func addManualTime("))
         #expect(segmentCoordinatorSource.contains("timeRepository.segments(ids: [segmentID]).first"))
         #expect(segmentCoordinatorSource.contains("allSegments.first") == false)
     }

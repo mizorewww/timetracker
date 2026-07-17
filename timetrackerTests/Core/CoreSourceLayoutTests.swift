@@ -81,6 +81,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Inbox/InboxSuggestionIdentityService.swift",
             "timetracker/Services/Inbox/InboxSuggestionStateService.swift",
             "timetracker/Services/Inbox/StoreScopedInboxCommandCoordinator.swift",
+            "timetracker/Services/Inbox/StoreScopedInboxSuggestionCommandCoordinator.swift",
             "timetracker/Services/Forecasting/TaskRollupService.swift",
             "timetracker/Services/Forecasting/TaskRollupCalculationContext.swift",
             "timetracker/Services/Ledger/AppCloudSync.swift",
@@ -313,6 +314,19 @@ struct CoreSourceLayoutTests {
         #expect(source.contains("OSAllocatedUnfairLock"))
         #expect(source.contains("LegacyTaskCategoryMigrationBuffer.consume()"))
         #expect(source.contains("nonisolated(unsafe)") == false)
+    }
+
+    @Test
+    func inboxSuggestionWritersUseTheStoreScopedCoordinator() throws {
+        let commands = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestionCommands.swift")
+        let lifecycle = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestionLifecycle.swift")
+
+        #expect(commands.contains("coordinator.saveSuggestionDraft("))
+        #expect(commands.contains("coordinator.applySuggestion("))
+        #expect(commands.contains("inboxCommandHandler.saveSuggestionDraft") == false)
+        #expect(commands.contains("inboxCommandHandler.applySuggestion") == false)
+        #expect(lifecycle.contains("coordinator.storeGeneratedSuggestion("))
+        #expect(lifecycle.contains("inboxCommandHandler.upsertSuggestion") == false)
     }
 
     @Test

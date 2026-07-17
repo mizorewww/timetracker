@@ -23,9 +23,15 @@ struct InboxOrderMutationBaseline: Equatable, Sendable {
 
 enum StoreScopedInboxMutationError: LocalizedError, Equatable {
     case inboxChanged
+    case taskUnavailable
 
     var errorDescription: String? {
-        AppStrings.localized("inbox.error.changed")
+        switch self {
+        case .inboxChanged:
+            AppStrings.localized("inbox.error.changed")
+        case .taskUnavailable:
+            AppStrings.localized("inbox.suggestion.error.noValidTask")
+        }
     }
 }
 
@@ -75,7 +81,7 @@ struct StoreScopedInboxCommandCoordinator {
         baseline: InboxOrderMutationBaseline,
         orderedItemIDs: [UUID]
     ) throws -> InboxMutationOutcome {
-        try mutate { context in
+        try withFreshLockedContext { context in
             let items = try openItems(context: context)
             let currentMutationIDs = items.reduce(into: [UUID: UUID]()) {
                 $0[$1.id] = $1.clientMutationID
@@ -108,7 +114,7 @@ struct StoreScopedInboxCommandCoordinator {
     }
 
     func add(title: String) throws -> InboxMutationOutcome {
-        try mutate { context in
+        try withFreshLockedContext { context in
             let items = try openItems(context: context)
             guard let item = try InboxCommandHandler().add(
                 title: title,
@@ -176,9 +182,9 @@ struct StoreScopedInboxCommandCoordinator {
         }
     }
 
-    private func mutate(
-        _ operation: (ModelContext) throws -> InboxMutationOutcome
-    ) throws -> InboxMutationOutcome {
+    func withFreshLockedContext<Outcome>(
+        _ operation: (ModelContext) throws -> Outcome
+    ) throws -> Outcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)
         return try StoreScopedTimerMutationTransaction(
@@ -191,7 +197,7 @@ struct StoreScopedInboxCommandCoordinator {
         baseline: InboxItemMutationBaseline,
         operation: (InboxItem, ModelContext) throws -> Void
     ) throws -> InboxMutationOutcome {
-        try mutate { context in
+        try withFreshLockedContext { context in
             guard let item = try visibleItem(id: baseline.itemID, context: context) else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
@@ -214,7 +220,7 @@ struct StoreScopedInboxCommandCoordinator {
         .filter { $0.isCompleted == false }
     }
 
-    private func visibleItem(id: UUID, context: ModelContext) throws -> InboxItem? {
+    func visibleItem(id: UUID, context: ModelContext) throws -> InboxItem? {
         InboxSuggestionIdentityService().visibleLogicalItems(
             from: try context.fetch(FetchDescriptor<InboxItem>())
         )

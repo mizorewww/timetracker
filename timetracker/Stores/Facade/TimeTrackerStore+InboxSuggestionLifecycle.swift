@@ -19,27 +19,28 @@ extension TimeTrackerStore {
             endpoint: endpoint,
             apiKey: apiKey,
             modelID: modelID
-        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled,
-              let item = inboxItems.first(where: { $0.id == itemID }),
-              inboxSuggestionStateService.canStoreGeneratedSuggestion(
-                  readModel: inboxItemReadModel(for: item),
-                  requestedTitle: requestedTitle,
-                  requestedIdentity: requestedIdentity,
-                  currentSuggestion: inboxSuggestionByItemID[itemID]
-              ),
-              trackableTaskIDs.contains(result.taskID) else {
+        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
         }
 
-        let didSave = perform(event: .inboxChanged(itemIDs: [itemID])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.upsertSuggestion(
-                item: item,
-                result: result,
-                context: modelContext
+        let outcome = performStoreScopedInboxMutation(
+            refreshScopes: [.inbox, .tasks],
+            eventsForOutcome: { (outcome: InboxMutationOutcome) in outcome.events }
+        ) { coordinator in
+            try coordinator.storeGeneratedSuggestion(
+                itemID: itemID,
+                requestedTitle: requestedTitle,
+                requestedIdentity: requestedIdentity,
+                result: result
             )
         }
-        inboxSuggestionFailureByItemID[itemID] = didSave ? nil : errorMessage
+        if outcome?.didMutate == true {
+            inboxSuggestionFailureByItemID[itemID] = nil
+        } else if outcome == nil {
+            inboxSuggestionFailureByItemID[itemID] = errorMessage
+        } else {
+            refreshStoreScopedInboxReadModels(scopes: [.inbox, .tasks])
+        }
     }
 
     func completeInboxSuggestionFailure(

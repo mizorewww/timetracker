@@ -1241,6 +1241,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名 macOS 定向运行 `StoreScopedInboxCommandCoordinatorTests`、`CoreSystemActionCommandTests` 与 `CoreSyncConflictTests` 通过；新增覆盖单项 stale revision 拒绝、facade stale refresh、锁内 Shortcut capture 与 recovery write guard。没有启动模拟器；结束后没有 owned `xcodebuild`、`xctest` 或受测 App，既存 CoreSimulator 服务未被触碰。
 
+## AD-099：Inbox suggestion 写入在锁内重验建议、任务和 Checklist
+
+状态：Accepted
+
+背景：AD-098 之后 primary Inbox command 已串行化，但手工 suggestion 草稿、LLM 网络回应的 upsert 和 suggestion apply 仍先从 scene read model 校验，再通过长存 context 写入。apply 同时会删除 Inbox、修改 suggestion、创建 Checklist/visual；旧 `checklistItems(for:)` 还可能让两个并发写入使用同一个 next sort order。异步 LLM 结果则可能在 title 改名、dismiss 或 task 失效后重新写回过期建议。
+
+决策：在单独的 `StoreScopedInboxSuggestionCommandCoordinator` extension 中实现三个 writer。手工草稿使用 item mutation baseline，并在锁内 fresh task graph 上校验 trackable target；LLM completion 使用 request title 和 logical `(contextID, revisionID)`，以 fresh logical resolution（含 merged dismissal）和 canonical suggestion 重新判断可写性，纯 reorder 不参与该判断。apply 固化 item/suggestion mutation IDs 与 logical identity，锁内再次选择 ready canonical suggestion、验证 task eligibility、查询 visible Checklist 以计算 next sort order，并用 fresh task index 生成 ancestor IDs。apply outcome 同时发 Inbox 与 Checklist events；过期 LLM 响应返回 no-op 并仅收敛 read model，不向用户误报网络或存储错误。
+
+后果：所有生产 Inbox suggestion writer 现在和 timer、checklist、同步恢复共享同一 store lock；已过期的手工操作不会覆盖新 title/suggestion，不能向刚完成、归档或删除的任务写入 Checklist，也不会产生并发排序冲突。LLM completion 仍在锁外进行网络请求，锁内只进行最终 fresh read-plan-write；网络延迟不会阻塞其他命令。底层 `InboxCommandHandler` 保留给可隔离的业务/rollback 单元测试，不是 production concurrency boundary。
+
+验证：付费自动签名 macOS 定向回归覆盖 Inbox suggestion coordinator、primary coordinator、suggestion identity/apply/persistence、LLM cancellation、completed task、Core Inbox store 与 source layout，全部通过。generic iOS Debug 自动签名构建同样通过；主 App、Widget、Live Activity 和 Watch 均由 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)` 签名。新增测试覆盖 stale manual draft、stale suggestion baseline、fresh Checklist sort order、任务在命令前失效、旧 title 的 LLM 回应静默丢弃，以及纯 reorder 后回应仍可保存。未创建模拟器；结束后无 owned `xcodebuild`、`xctest` 或受测 App。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

@@ -4,18 +4,19 @@ extension TimeTrackerStore {
     @discardableResult
     func saveInboxSuggestionDraft(_ draft: InboxSuggestionEditorDraft) -> Bool {
         guard let item = inboxItems.first(where: { $0.id == draft.inboxItemID }) else { return false }
-        guard let taskID = draft.taskID, trackableTaskIDs.contains(taskID) else {
+        guard draft.taskID != nil else {
             return fail(.invalidInboxSuggestion)
         }
-        let didSave = perform(event: .inboxChanged(itemIDs: [item.id])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.saveSuggestionDraft(
-                item: item,
-                draft: draft,
-                context: modelContext
+        let outcome = performStoreScopedInboxMutation(
+            refreshScopes: [.inbox, .tasks],
+            eventsForOutcome: { (outcome: InboxMutationOutcome) in outcome.events }
+        ) { coordinator in
+            try coordinator.saveSuggestionDraft(
+                baseline: InboxItemMutationBaseline(item: item),
+                draft: draft
             )
         }
-        return didSave
+        return outcome?.didMutate == true
     }
 
     func applyInboxSuggestion(_ item: InboxItem) {
@@ -24,21 +25,20 @@ extension TimeTrackerStore {
             fail(.invalidInboxSuggestion)
             return
         }
-        let didApply = perform(events: [
-            .inboxChanged(itemIDs: [item.id]),
-            .checklistChanged(taskID: suggestion.taskID, affectedAncestorIDs: affectedAncestorIDs(for: suggestion.taskID))
-        ]) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            _ = try inboxCommandHandler.applySuggestion(
-                item: item,
-                suggestion: suggestion,
-                existingChecklistItems: checklistItems(for: suggestion.taskID),
-                context: modelContext
+        let outcome = performStoreScopedInboxMutation(
+            refreshScopes: [.inbox, .tasks, .checklist],
+            eventsForOutcome: { (outcome: InboxSuggestionApplyOutcome) in outcome.events }
+        ) { coordinator in
+            try coordinator.applySuggestion(
+                baseline: InboxSuggestionApplyBaseline(
+                    item: item,
+                    suggestion: suggestion
+                )
             )
         }
-        if didApply {
+        if outcome?.didMutate == true {
             inboxSuggestionFailureByItemID[item.id] = nil
-        } else {
+        } else if outcome == nil {
             inboxSuggestionFailureByItemID[item.id] = errorMessage
         }
     }

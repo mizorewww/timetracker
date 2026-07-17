@@ -67,9 +67,21 @@ extension TimeTrackerStore {
         } != nil
     }
 
-    private func performStoreScopedInboxMutation(
+    func performStoreScopedInboxMutation(
         _ action: (StoreScopedInboxCommandCoordinator) throws -> InboxMutationOutcome
     ) -> InboxMutationOutcome? {
+        return performStoreScopedInboxMutation(
+            refreshScopes: [.inbox],
+            eventsForOutcome: { $0.events },
+            action
+        )
+    }
+
+    func performStoreScopedInboxMutation<Outcome>(
+        refreshScopes: Set<StoreRefreshScope>,
+        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
+        _ action: (StoreScopedInboxCommandCoordinator) throws -> Outcome
+    ) -> Outcome? {
         guard let modelContext else {
             errorMessage = StoreError.notConfigured.localizedDescription
             return nil
@@ -82,12 +94,12 @@ extension TimeTrackerStore {
                     writeAuthorization: writeAuthorization
                 )
             )
-            finishStoreScopedMutation(events: outcome.events)
+            finishStoreScopedMutation(events: eventsForOutcome(outcome))
             return outcome
         } catch {
             if error is StoreScopedInboxMutationError {
                 do {
-                    try refresh(plan: StoreRefreshPlan(scopes: [.inbox]))
+                    try refresh(plan: StoreRefreshPlan(scopes: refreshScopes))
                 } catch {
                     errorMessage = String(
                         format: AppStrings.localized("error.savedRefreshFailed"),
@@ -98,6 +110,17 @@ extension TimeTrackerStore {
             }
             errorMessage = error.localizedDescription
             return nil
+        }
+    }
+
+    func refreshStoreScopedInboxReadModels(scopes: Set<StoreRefreshScope>) {
+        do {
+            try refresh(plan: StoreRefreshPlan(scopes: scopes))
+        } catch {
+            errorMessage = String(
+                format: AppStrings.localized("error.savedRefreshFailed"),
+                error.localizedDescription
+            )
         }
     }
 }

@@ -133,13 +133,13 @@ struct LiveActivityStopButton: View {
 
     var body: some View {
         Button(intent: LiveActivityStopTimerIntent(segmentID: segmentID)) {
-            Image(systemName: "stop.fill")
+            Image(systemName: "arrow.up.forward.app")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
                 .background(.white.opacity(0.16), in: Circle())
         }
-        .accessibilityLabel(String(localized: "live.timer.stop"))
+        .accessibilityLabel(String(localized: "live.timer.openToStop"))
     }
 }
 

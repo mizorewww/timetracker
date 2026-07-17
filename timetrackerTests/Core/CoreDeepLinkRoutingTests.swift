@@ -523,8 +523,8 @@ struct CoreDeepLinkRoutingTests {
         #expect(router.contains("case stopTimer(AppDeepLinkStopTarget?)"))
         #expect(activity.contains("timetracker://timer/stop?segmentID="))
         #expect(activity.contains("Button(intent: LiveActivityStopTimerIntent"))
-        #expect(activity.contains("live.timer.stop"))
-        #expect(strings.contains("\"live.timer.stop\""))
+        #expect(activity.contains("live.timer.openToStop"))
+        #expect(strings.contains("\"live.timer.openToStop\""))
     }
 
     @Test

@@ -116,13 +116,13 @@ struct ActiveTimerContent: View {
                     .privacySensitive()
                 Spacer(minLength: 0)
                 Button(intent: WidgetStopTimerIntent(segmentID: timer.id)) {
-                    Image(systemName: "stop.fill")
+                    Image(systemName: "arrow.up.forward.app")
                         .font(.caption.weight(.bold))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text(localized("widget.action.stop")))
+                .accessibilityLabel(Text(localized("widget.action.openToStop")))
             }
 
             elapsedText

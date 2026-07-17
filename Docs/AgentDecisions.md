@@ -1313,6 +1313,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：fault injection 覆盖 state publish 前失败仍保留最后 committed state/mirror、quarantine publish 失败回滚 canonical、正常小型损坏文件进入 `.TimeTrackerQuarantine`，以及超限诊断受预算删除；保留多 service 的跨进程 state serialization 覆盖。付费签名定向结果与清理记录写入 dated Audit。
 
+## AD-105：Widget 与 Live Activity 的停止控件必须披露打开主应用的边界
+
+状态：Accepted
+
+背景：Widget 和 Live Activity 的 App Intent 已把可见 segment ID 写入 `timetracker://timer/stop`，实际 SwiftData mutation 由主应用收到 deep link 后完成。旧的 stop glyph、`Stop` label 和 intent description 却暗示 extension 原地、立即停止；存储尚未初始化时命令还会排队，不能作出这种保证。
+
+决策：这两个系统表面一律显示“打开 Time Tracker 后停止”及 app-opening symbol，Intent title/description 同样说明会打开 Time Tracker。仍保留 segment ID 精确路由，主应用准备完成后只尝试停止该 segment；目标已失效时不得回退停止另一个 timer。Widget/Live Activity 不在本次引入直接 SwiftData 写入、共享 CloudKit 权限或另一套 extension store。
+
+后果：控件不再伪装为 extension 内立即写入，用户会预期切回 App；并行计时的目标精度和已有的 deep-link 安全解析保持不变。真正的 in-place system surface mutation 需要独立设计共享持久化、entitlement、并发锁和恢复语义，不能通过改一个 Intent 偷渡。
+
+验证：source contract 固定两种 extension 都使用 app-opening copy/symbol、Intent description 与精确 `segmentID` URL；付费签名 macOS 定向回归覆盖 deep-link 路由只停止目标 segment。iPhone 正常字号模拟路径确认系统会先显示“Open in Time Tracker?”确认，故没有把未能在本机点击确认的路径伪报为已完成的实机 mutation。一次性模拟器、截图、result 与 owned process 清理记录写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

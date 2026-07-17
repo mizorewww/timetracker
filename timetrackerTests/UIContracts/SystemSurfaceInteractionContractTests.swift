@@ -13,7 +13,8 @@ struct SystemSurfaceInteractionContractTests {
         #expect(source.contains("widget.action.startTaskFormat"))
         #expect(source.contains("minHeight: 44"))
         #expect(source.contains("Button(intent: WidgetStopTimerIntent(segmentID: timer.id))"))
-        #expect(source.contains("widget.action.stop"))
+        #expect(source.contains("arrow.up.forward.app"))
+        #expect(source.contains("widget.action.openToStop"))
     }
 
     @Test
@@ -33,6 +34,8 @@ struct SystemSurfaceInteractionContractTests {
         #expect(liveExpanded.contains("Button(intent: LiveActivityStopTimerIntent("))
         #expect(liveSupport.contains("timetracker://timer/stop?segmentID="))
         #expect(liveSupport.contains("var segmentID: String"))
+        #expect(liveSupport.contains("Open Time Tracker to Stop"))
+        #expect(liveSupport.contains("Open Time Tracker to stop this specific running timer."))
     }
 
     @Test
@@ -95,8 +98,9 @@ struct SystemSurfaceInteractionContractTests {
             )
 
             #expect(widget.contains("\"widget.action.startTaskFormat\""))
-            #expect(widget.contains("\"widget.action.stop\""))
+            #expect(widget.contains("\"widget.action.openToStop\""))
             #expect(liveActivity.contains("\"live.timer.staleHint\""))
+            #expect(liveActivity.contains("\"live.timer.openToStop\""))
         }
     }
 }

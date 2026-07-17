@@ -55,7 +55,10 @@ struct ExpandedActivityDetails: View {
             Button(intent: LiveActivityStopTimerIntent(
                 segmentID: context.attributes.segmentID
             )) {
-                Label(String(localized: "live.timer.stop"), systemImage: "stop.fill")
+                Label(
+                    String(localized: "live.timer.openToStop"),
+                    systemImage: "arrow.up.forward.app"
+                )
                     .font(.caption.weight(.semibold))
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)

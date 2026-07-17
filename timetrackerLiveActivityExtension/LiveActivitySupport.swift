@@ -50,8 +50,10 @@ enum LiveActivityDeepLinks {
 }
 
 struct LiveActivityStopTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Stop Timer"
-    static var description = IntentDescription("Stop this running Time Tracker timer.")
+    static var title: LocalizedStringResource = "Open Time Tracker to Stop"
+    static var description = IntentDescription(
+        "Open Time Tracker to stop this specific running timer."
+    )
     static var openAppWhenRun = false
 
     @Parameter(title: "Timer")

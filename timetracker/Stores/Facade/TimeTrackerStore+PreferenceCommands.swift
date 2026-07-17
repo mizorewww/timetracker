@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
@@ -21,9 +22,20 @@ extension TimeTrackerStore {
 
     @discardableResult
     func setPreference(_ key: AppPreferenceKey, valueJSON: String) -> Bool {
-        perform(event: .preferenceChanged(key: key.rawValue)) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try preferenceCommandHandler.set(key: key, valueJSON: valueJSON, context: modelContext)
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            try StoreScopedPreferenceCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).set(key: key, valueJSON: valueJSON)
+            finishStoreScopedMutation(events: [.preferenceChanged(key: key.rawValue)])
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 }

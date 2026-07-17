@@ -48,6 +48,21 @@ struct StoreScopedCountdownCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
+    func add() throws {
+        try writeAuthorization.requireUserWritesAllowed()
+        let scope = try TimerStoreScope(container: container)
+        let transaction = StoreScopedTimerMutationTransaction(
+            scope: scope,
+            container: container
+        )
+        try transaction.withFreshContext { context in
+            _ = try CountdownCommandHandler().add(
+                context: context,
+                deviceID: deviceID
+            )
+        }
+    }
+
     func update(
         baseline: CountdownMutationBaseline,
         title: String?,

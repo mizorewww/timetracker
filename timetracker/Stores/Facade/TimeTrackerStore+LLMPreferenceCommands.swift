@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     func setLLMEndpoint(_ value: String) {
@@ -16,8 +17,13 @@ extension TimeTrackerStore {
         let changed = normalized != preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let taskSnapshot = llmSuggestionTaskSnapshot()
         do {
-            try writeAuthorization.requireUserWritesAllowed()
-            try llmCredentialStore.writeAPIKey(value)
+            guard let modelContext else { throw StoreError.notConfigured }
+            try StoreScopedPreferenceCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).withLockedStoreAccess {
+                try llmCredentialStore.writeAPIKey(value)
+            }
         } catch {
             errorMessage = error.localizedDescription
             return
@@ -88,27 +94,31 @@ extension TimeTrackerStore {
         )
         let taskSnapshot = llmSuggestionTaskSnapshot()
 
-        let previousAPIKey: String?
-        do {
-            previousAPIKey = try llmCredentialStore.readAPIKey()
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
-
+        var previousAPIKey: String?
         var credentialWasWritten = false
-        let didCommit = perform(event: .preferenceChanged(key: nil)) {
+        let didCommit: Bool
+        do {
             guard let modelContext else { throw StoreError.notConfigured }
-            try llmCredentialStore.writeAPIKey(normalizedAPIKey)
-            credentialWasWritten = true
-            try preferenceCommandHandler.set(
+            try StoreScopedPreferenceCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).set(
                 values: [
                     (.llmEndpoint, PreferenceJSON.encode(normalizedEndpoint)),
                     (.llmAvailableModelIDs, PreferenceJSON.encode(normalizedModels)),
                     (.llmSelectedModel, PreferenceJSON.encode(normalizedSelectedModel))
                 ],
-                context: modelContext
+                applyingLocalMutation: {
+                    previousAPIKey = try llmCredentialStore.readAPIKey()
+                    try llmCredentialStore.writeAPIKey(normalizedAPIKey)
+                    credentialWasWritten = true
+                }
             )
+            finishStoreScopedMutation(events: [.preferenceChanged(key: nil)])
+            didCommit = true
+        } catch {
+            errorMessage = error.localizedDescription
+            didCommit = false
         }
 
         if !didCommit, credentialWasWritten {

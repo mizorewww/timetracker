@@ -181,13 +181,8 @@ final class TimeTrackerStore {
     let databaseMaintenanceService = DatabaseMaintenanceService()
     let selectionCoordinator = StoreSelectionCoordinator()
     let refreshPlanner = StoreRefreshPlanner()
-    let taskDraftCommandHandler = TaskDraftCommandHandler()
-    let pomodoroCommandHandler = PomodoroCommandHandler()
-    let ledgerCommandHandler = LedgerCommandHandler()
-    let countdownCommandHandler = CountdownCommandHandler()
     let checklistCommandHandler = ChecklistCommandHandler()
     let inboxCommandHandler = InboxCommandHandler()
-    let preferenceCommandHandler = PreferenceCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
     let syncConflictService: SyncConflictService
     var taskDomainStore = TaskStore()

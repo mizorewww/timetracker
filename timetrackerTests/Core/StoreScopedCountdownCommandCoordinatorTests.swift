@@ -7,6 +7,25 @@ import Testing
 @MainActor
 struct StoreScopedCountdownCommandCoordinatorTests {
     @Test
+    func addCreatesTheCountdownInAFreshStoreContext() throws {
+        let context = try makeTestContext()
+
+        try StoreScopedCountdownCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "coordinator"
+        ).add()
+
+        let event = try #require(
+            ModelContext(context.container)
+                .fetch(FetchDescriptor<CountdownEvent>())
+                .visibleDeduplicatedByID()
+                .first
+        )
+        #expect(event.deviceID == "coordinator")
+    }
+
+    @Test
     func staleBaselineCannotOverwriteANewerCountdownMutation() throws {
         let context = try makeTestContext()
         let event = CountdownEvent(

@@ -2,6 +2,33 @@
 
 Status: current source-structure record after the 2026-07-14 repository-wide split and the 2026-07-17 scene/sync refinements. This document records what was split, what is still concentrated, and the engineering rules that keep the project maintainable. It is not a product feature backlog and it does not substitute for the final risk-proportionate build, test, simulator, and Instruments evidence in [Audit-2026-07-14](Audit-2026-07-14.md).
 
+## 2026-07-17 收口计划：只推进一个主动重构项目
+
+全面审查已经完成了横向的正确性、信息架构和源码职责检查。它留下的事项不能成为无限期、机会主义的“顺手重构”列表：每一项都必须有用户价值、可观察证据和明确停止条件。当前未提交的 writer 事务修复是既有审查的最后一个正确性检查点；它完成、通过定向签名测试并提交后，**唯一允许主动实施的重构项目是 R1**。R2 以后只记录为将来输入，不得与 R1 并行编码。
+
+| 顺序 | 项目 | 当前决定与价值 | 完成/停止条件 |
+| --- | --- | --- | --- |
+| W0（进行中） | Store writer 收口：同步偏好、LLM 凭据配置、Countdown 新建 | 修复跨 scene/进程 writer 与 timer admission 读写同一事实时使用旧 `ModelContext` 的竞态；LLM Keychain 补偿也不再读取锁外旧值。它是 R1 开始前必须提交的正确性前提，不是新的长期项目。 | coordinator、命令和回归测试通过；付费签名 macOS XCTest 成功；删除该批 DerivedData/result bundle，确认没有本批 `xcodebuild`/`xctest`/booted simulator 后提交。 |
+| **R1（唯一主动项目）** | **Analytics 读模型的交互性能边界** | Analytics 是持续使用的复盘入口。虽然缓存和同周期刷新已避免空白屏，snapshot 构建仍由 `@MainActor` store 触发；大账本或频繁 live bucket 更新可能抢占导航、滚动和 period 切换。这个项目直接改善最常见的等待和卡顿风险，同时不触碰 iCloud schema 或不必要地重画 UI。 | 先以签名 Release/macOS 以及一个明确、受控的大账本 fixture 取得主线程与 snapshot 时长基线；若没有实际预算违例，记录证据并**不改架构**。若有违例，只实现一次：把可发送的纯输入/计算移到后台边界，主 actor 只负责快照发布、请求 identity、取消和缓存。以相同 fixture 复测，保证结果、取消、周期切换和缓存命中不退化；完成后停止主动重构。 |
+| R2（记录，不实施） | Inbox 的重排与建议“应用/丢弃”动作层级 | UI 审查发现重复入口会增加误操作和学习成本；有价值，但不高于 R1 的日常流畅性和已确认的 writer 正确性。 | R1 已明确完成或取消后，只有用户再次授权才排入实现。 |
+| R3（记录，不实施） | Facade 余下的生命周期/同步观察者职责拆分 | 可降低维护成本，但没有用户可观察故障或量测瓶颈；单纯按行数拆文件是低价值工作。 | 除非 R1 的 profiling 指向它，或用户以独立任务授权，否则不做。 |
+| Release gate（非重构） | 全量签名 build/test、真实账户/iCloud 路径与一次正常操作路径验收 | 这是发布证据，不是无限重构的理由。仅在 R1 结束时执行风险相称的最终验证。 | 记录成功/失败证据与资源清理；发现新问题必须由用户决定是否开启新的有限项目。 |
+
+### R1 的工作契约
+
+1. **先测量，后改变。** 使用具有确定数量的 ledger fixture 和同一输入区间；记录 snapshot 总耗时、主线程繁忙区间、刷新/切换期间的可交互性。不得仅因文件大或猜测而引入 `Task.detached`、新缓存层或 schema。
+2. **一次边界，而非重写。** 如果量测证明需要优化，SwiftData 获取、请求 identity、取消、缓存和 `@Observable` 发布继续留在既有 owner；仅把 Sendable 的纯 Analytics 输入和计算搬到后台。不得让后台持有 `ModelContext`、`PersistentModel` 或 SwiftUI state。
+3. **正确性优先。** 同一 request identity 的结果才可发布；period/calendar/revision/live bucket 变化取消旧任务；分类、deleted task、gross/wall、comparison、overlap 和 task-detail 结果必须和优化前一致。没有可信的行为/性能证据就回退该实现，而不是追加补丁。
+4. **资源与签名。** 不用 Device Hub 代替自动化测试。每个 profiling 或 test batch 都记录 owner，并在结束时终止本批 app/process、删除 DerivedData/result/trace；只有为该批显式创建的 simulator 才可关闭和删除。构建与测试保留 Automatic Signing、团队和 paid Developer capabilities。
+5. **停止条件。** R1 的基线证明无需优化，或一次经过验证的优化达到预算且没有回归时，立刻停止主动重构；剩余表项保持记录状态。任何新 P0/P1 都必须先写成独立、有限的任务并由用户确认范围。
+
+### 本轮仍未完成的事项
+
+- W0 的定向签名 XCTest、源码合同和提交尚未完成；除它以外没有正在实施的横向重构。
+- R1 的量测基线、是否需要代码移动的决策，以及（仅在基线证明必要时）一次受限实现尚未完成。
+- 最终 release gate 尚未执行，且应在 R1 停止后而不是现在扩大为长期测试/重构循环。
+- 已知基线测试债务：当前 `HEAD` 的 `AnalyticsCategoryDetailView.swift` 已有 183 个物理行，而既有 `CoreSourceLayoutTests` 仍限制 180（由 `4f81577` 之前后遗留，非 W0 改动）。全套 source-layout suite 因此失败；它必须在最终 release gate 以一次明确的责任边界调整处理，不能为了当前 writer checkpoint 机械拆 UI 或悄悄放宽预算。
+
 ## Review Summary
 
 The current pass established semantic folders, split domain stores and repositories, and then removed the largest mixed-responsibility production files:

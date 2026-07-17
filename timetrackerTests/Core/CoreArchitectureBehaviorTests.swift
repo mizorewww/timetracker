@@ -117,6 +117,15 @@ struct CoreArchitectureBehaviorTests {
         let ledgerCommandSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+LedgerCommands.swift"
         )
+        let preferenceCommandSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+PreferenceCommands.swift"
+        )
+        let countdownCommandSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+CountdownCommands.swift"
+        )
+        let preferenceCoordinatorSource = try sourceText(
+            "timetracker/Services/Preferences/StoreScopedPreferenceCommandCoordinator.swift"
+        )
         let pomodoroCommandSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+PomodoroCommands.swift"
         )
@@ -141,6 +150,12 @@ struct CoreArchitectureBehaviorTests {
         #expect(ledgerCommandSource.contains("ledgerCommandHandler.addManualTime") == false)
         #expect(ledgerCommandSource.contains("allSegments.first") == false)
         #expect(ledgerCommandSource.contains("preferences.allowParallelTimers") == false)
+        #expect(preferenceCommandSource.contains("StoreScopedPreferenceCommandCoordinator("))
+        #expect(preferenceCommandSource.contains("perform(event:") == false)
+        #expect(countdownCommandSource.contains("StoreScopedCountdownCommandCoordinator("))
+        #expect(countdownCommandSource.contains("countdownCommandHandler.add") == false)
+        #expect(preferenceCoordinatorSource.contains("transaction.withFreshContext"))
+        #expect(preferenceCoordinatorSource.contains("withLockedStoreAccess"))
         #expect(pomodoroCommandSource.contains("preferences.allowParallelTimers") == false)
         #expect(
             pomodoroCoordinatorSource.components(

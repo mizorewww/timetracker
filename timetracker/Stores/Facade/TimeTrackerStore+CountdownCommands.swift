@@ -4,9 +4,20 @@ import SwiftData
 extension TimeTrackerStore {
     @discardableResult
     func addCountdownEvent() -> Bool {
-        perform(event: .countdownChanged) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try countdownCommandHandler.add(context: modelContext)
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            try StoreScopedCountdownCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).add()
+            finishStoreScopedMutation(events: [.countdownChanged])
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

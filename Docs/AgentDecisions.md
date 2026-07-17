@@ -1433,6 +1433,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：store-scoped coordinator 测试先由 sibling context 完成目标任务，再确认 manual writer 在 locked fresh context 拒绝且不创建 segment；架构合同禁止 facade 回退到 `ledgerCommandHandler`/scene repository。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
 
+## AD-115：同步偏好、LLM 凭据配置与 Countdown 新建共用 store writer 域
+
+状态：Accepted
+
+背景：Timer admission 已在 store lock 内读取 `allowParallelTimers`，但 Settings 的同步偏好写入和 Countdown 新建仍使用 scene-owned `ModelContext`。多窗口同时保存时可能基于过期的 physical preference rows 生成额外 sibling；更严重的是完整 LLM 配置先在锁外读取旧 Keychain key，再写入新 key/SwiftData，失败补偿可覆盖另一个窗口已经完成的 API key 修改。
+
+决策：`StoreScopedPreferenceCommandCoordinator` 和 `StoreScopedCountdownCommandCoordinator` 都使用 AD-069 的“lock → fresh context → atomic mutation”顺序。普通 synced preference 在锁内 canonicalize/logical-winner 更新；Countdown 新建也在同一临界区创建。完整 LLM 配置在该锁内按“读取旧 key → 写新 key → preference batch”执行，保存失败仅补偿同一临界区内捕获的旧 key；单独 API key 更新以不保存 SwiftData 的 fresh-read lock 与完整配置串行。锁不把 Keychain 和 SwiftData 宣称为一个 ACID transaction：Keychain 失败不写 preferences，SwiftData 失败仍必须报告和尽力恢复 Keychain，且不得在锁内做网络或 UI 工作。
+
+后果：Settings scene、Timer admission、App Intent 和其它 store writer 不会以不同 context 交错修改同一 preference/Countdown 事实；成功 writer 仍在锁外执行 read-model refresh、snapshot recording 与跨 scene broadcast。已废弃的 facade handler instance 不再保留，command handler 只由拥有 fresh context 的 coordinator 构造。设备本地 `UserDefaults` 开关保持独立，不被误加入 CloudKit preference transaction。
+
+验证：preference coordinator 测试覆盖 sibling preference 更新后锁内 logical winner；Countdown coordinator 测试覆盖 fresh-context 创建；架构合同固定 facades 不再用 `perform(event:)`/scene-owned add，并固定 coordinator 的 fresh mutation/Keychain lock boundary。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

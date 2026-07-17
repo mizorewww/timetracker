@@ -19,6 +19,10 @@ The primary agent must commit its completed work after every small, coherent tas
 - Keep repository agent resources, including `AGENTS.md` and `.agents/`, under version control. Do not add them to `.gitignore`; commit new or updated agent instructions and supporting files with the small task that uses them.
 - Preserve paid Apple Developer signing and entitlements in build and test commands. Never disable code signing merely to make a checkpoint pass.
 
+## Task reports
+
+After every small, coherent task reaches its commit checkpoint, the primary agent must report the completed scope, the validation and resource cleanup performed, cumulative progress toward the repository-wide goal, and the remaining expected checkpoints. Report failed or inconclusive verification honestly; do not present a checkpoint as complete before its owned simulator, build, test, trace, and temporary artifacts have been released.
+
 ## Parallel work and simulator ownership
 
 Proactively use sub-agents and simulators when they improve review coverage or verification speed. Resource cleanup is not a request for single-agent execution or artificially low load.

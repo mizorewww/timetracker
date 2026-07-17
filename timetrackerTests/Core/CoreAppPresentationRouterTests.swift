@@ -93,6 +93,33 @@ struct CoreAppPresentationRouterTests {
     }
 
     @Test @MainActor
+    func pomodoroTaskPickerKeepsItsSelectionCallbackInTheOwningScene() throws {
+        let router = AppPresentationRouter()
+        let selectedBeforePresenting = UUID()
+        let selectedFromPicker = UUID()
+        var receivedSelection: UUID?
+
+        #expect(router.presentPomodoroTaskPicker(
+            selectedTaskID: selectedBeforePresenting,
+            selectTask: { receivedSelection = $0 }
+        ))
+
+        let presentation = try #require(router.sheet)
+        guard case let .pomodoroTaskPicker(picker) = presentation.content else {
+            Issue.record("Focus did not use its typed scene picker route.")
+            return
+        }
+        #expect(picker.selectedTaskID == selectedBeforePresenting)
+
+        picker.selectTask(selectedFromPicker)
+        #expect(receivedSelection == selectedFromPicker)
+        #expect(router.sheet?.id == presentation.id)
+
+        router.dismiss(presentationID: presentation.id)
+        #expect(router.sheet == nil)
+    }
+
+    @Test @MainActor
     func separateSceneRoutersDoNotSharePresentationState() throws {
         let mainSceneRouter = AppPresentationRouter()
         let settingsSceneRouter = AppPresentationRouter()

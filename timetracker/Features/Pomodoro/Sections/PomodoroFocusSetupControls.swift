@@ -4,10 +4,10 @@ struct PomodoroFocusSetupControls: View {
     let store: TimeTrackerStore
     let plan: PomodoroPlan
     let selectedTask: TaskNode?
-    let availableTasks: [TaskNode]
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
     @Binding var focusTaskID: UUID?
+    let selectFocusTask: () -> Void
     let contentSpacing: CGFloat
 
     private var taskColor: Color {
@@ -35,10 +35,9 @@ struct PomodoroFocusSetupControls: View {
             PomodoroSetupSelectionControls(
                 store: store,
                 selectedTask: selectedTask,
-                availableTasks: availableTasks,
                 plans: availablePlans,
                 selectedPlanID: $selectedPlanID,
-                focusTaskID: $focusTaskID
+                onChooseTask: selectFocusTask
             )
 
             Button(action: startPomodoro) {

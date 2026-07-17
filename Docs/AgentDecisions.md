@@ -1325,6 +1325,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：source contract 固定两种 extension 都使用 app-opening copy/symbol、Intent description 与精确 `segmentID` URL；付费签名 macOS 定向回归覆盖 deep-link 路由只停止目标 segment。iPhone 正常字号模拟路径确认系统会先显示“Open in Time Tracker?”确认，故没有把未能在本机点击确认的路径伪报为已完成的实机 mutation。一次性模拟器、截图、result 与 owned process 清理记录写入 dated Audit。
 
+## AD-106：Focus 任务选择使用场景归属的可搜索表
+
+状态：Accepted（替代 AD-062 中“任务 Picker 菜单”的选择机制；不改变其标题/父级路径层级规则）
+
+背景：Focus 可选任务随库增长而增长，嵌套在按钮中的 `Menu` 不支持稳定搜索、取消或当前选择反馈；把 `focusTaskID` 接到全局任务选择又会让一次准备动作改变不相关页面的上下文。
+
+决策：计划数量小且稳定，继续使用原生 `Menu`。任务控件请求 scene-owned `AppPresentationRouter` 的 typed `pomodoroTaskPicker` sheet；sheet 搜索标题和完整路径、行展示标题与不重复的父级路径，并以勾选标出当前 task ID。匹配行的选择 callback 只更新触发它的 Focus view 的局部 `focusTaskID`，随后以 matching presentation ID 关闭 sheet；它不得开始 Pomodoro、写入账本或改写 `selectedTaskID`。
+
+后果：同名任务仍可被路径搜索区分，长任务库不再依赖菜单滚动；多个 scene 的选择不会互相覆盖。picker 仍依赖 `TaskTrackingAvailabilityService` 投影出的可跟踪集合，任务在 sheet 打开后失效时不会进入 setup selection；实际 start 命令继续在 transaction 内重新验证。
+
+验证：router 行为测试固定 scene callback、snapshot selected ID 和 matching dismiss；UI 流程搜索 seeded task、选择后确认 sheet 消失、Focus 标题更新且没有 active run。付费签名结果和资源清理写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

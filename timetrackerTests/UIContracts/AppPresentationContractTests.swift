@@ -34,6 +34,7 @@ struct AppPresentationContractTests {
             ".manualTime(",
             ".segmentEditor(",
             ".startTaskPicker",
+            ".pomodoroTaskPicker(",
             ".quickStartEditor(",
             ".settings",
             ".llmConfiguration("

@@ -6,6 +6,7 @@ struct PomodoroSetupCard: View {
     let availablePlans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
     @Binding var focusTaskID: UUID?
+    let selectFocusTask: () -> Void
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -34,10 +35,10 @@ struct PomodoroSetupCard: View {
                         store: store,
                         plan: plan,
                         selectedTask: selectedTask,
-                        availableTasks: availableTasks,
                         availablePlans: availablePlans,
                         selectedPlanID: $selectedPlanID,
                         focusTaskID: $focusTaskID,
+                        selectFocusTask: selectFocusTask,
                         contentSpacing: layout.setupSectionSpacing
                     )
                 }

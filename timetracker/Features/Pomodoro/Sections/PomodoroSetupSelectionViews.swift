@@ -3,10 +3,9 @@ import SwiftUI
 struct PomodoroSetupSelectionControls: View {
     let store: TimeTrackerStore
     let selectedTask: TaskNode?
-    let availableTasks: [TaskNode]
     let plans: [PomodoroPlan]
     @Binding var selectedPlanID: UUID?
-    @Binding var focusTaskID: UUID?
+    let onChooseTask: () -> Void
 
     private var selectedPlan: PomodoroPlan? {
         plans.first { $0.id == selectedPlanID }
@@ -52,16 +51,7 @@ struct PomodoroSetupSelectionControls: View {
     }
 
     private var taskMenu: some View {
-        Menu {
-            Picker(selection: $focusTaskID) {
-                ForEach(availableTasks, id: \.id) { task in
-                    Label(store.path(for: task), systemImage: task.iconName ?? "checklist")
-                        .tag(Optional(task.id))
-                }
-            } label: {
-                EmptyView()
-            }
-        } label: {
+        Button(action: onChooseTask) {
             PomodoroSelectionLabel(
                 title: AppStrings.localized("pomodoro.chooseTask"),
                 value: selectedTask?.title ?? AppStrings.localized("common.choose"),
@@ -70,11 +60,10 @@ struct PomodoroSetupSelectionControls: View {
                 tint: Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
             )
         }
-        .menuIndicator(.hidden)
         .buttonStyle(.bordered)
         .controlSize(.large)
         .frame(maxWidth: .infinity)
-        .accessibilityIdentifier("pomodoro.taskPicker")
+        .accessibilityIdentifier("pomodoro.taskPicker.open")
     }
 }
 

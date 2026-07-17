@@ -107,13 +107,24 @@ struct FocusUIContractTests {
         let selection = try sourceText(
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
         )
+        let picker = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroTaskPickerViews.swift"
+        )
         let controls = try sourceText(
             "timetracker/Features/Pomodoro/Sections/PomodoroFocusSetupControls.swift"
         )
+        let router = try sourceText("timetracker/App/AppPresentationRouter.swift")
 
         #expect(page.contains("@State private var focusTaskID"))
-        #expect(selection.contains("Picker(selection: $focusTaskID)"))
+        #expect(page.contains("presentationRouter.presentPomodoroTaskPicker("))
+        #expect(selection.contains("Button(action: onChooseTask)"))
+        #expect(selection.contains("Picker(selection: $focusTaskID)") == false)
         #expect(selection.contains("$store.selectedTaskID") == false)
+        #expect(picker.contains(".searchable("))
+        #expect(picker.contains("store.path(for: task).localizedCaseInsensitiveContains(query)"))
+        #expect(picker.contains("pomodoro.taskPicker.select."))
+        #expect(picker.contains("selectedTaskID: UUID?"))
+        #expect(router.contains("case pomodoroTaskPicker(PomodoroTaskPickerPresentation)"))
         #expect(controls.contains("store.startPomodoro(\n            taskID: focusTaskID"))
     }
 

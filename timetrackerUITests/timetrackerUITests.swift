@@ -517,6 +517,41 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testFocusTaskPickerSearchesAndSelectsWithoutStartingFocus() throws {
+        #if os(macOS)
+        throw XCTSkip("The Focus task picker interaction requires an iOS simulator.")
+        #else
+        let app = launchApp(route: "focus")
+        XCTAssertTrue(app.descendants(matching: .any)["pomodoro.view"].waitForExistence(timeout: 8))
+
+        let openPicker = app.buttons["pomodoro.taskPicker.open"].firstMatch
+        scrollUntilHittable(openPicker, direction: .up, in: app)
+        XCTAssertTrue(openPicker.waitForExistence(timeout: 5) && openPicker.isHittable)
+        activate(openPicker)
+
+        let picker = app.descendants(matching: .any)["pomodoro.taskPicker"].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        let search = app.searchFields["Search tasks, paths, or notes"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        search.tap()
+        search.typeText("SwiftData Docs")
+
+        let selectedTask = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "pomodoro.taskPicker.select.")
+        ).matching(
+            NSPredicate(format: "label == %@", "SwiftData Docs")
+        ).firstMatch
+        XCTAssertTrue(selectedTask.waitForExistence(timeout: 3) && selectedTask.isHittable)
+        activate(selectedTask)
+
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["SwiftData Docs"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.descendants(matching: .any)["pomodoro.active"].exists)
+        try capture("iphone-focus-task-picker-selection", app: app)
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsFinalCategoryScrollsAboveSystemChrome() throws {
         #if os(macOS)
         throw XCTSkip("Analytics system-chrome clearance requires an iOS simulator.")

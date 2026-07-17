@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PomodoroView: View {
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var selectedPlanID: UUID?
     @State private var focusTaskID: UUID?
     @State private var isStopConfirmationPresented = false
@@ -35,7 +36,8 @@ struct PomodoroView: View {
                     plan: selectedPlan,
                     availablePlans: availablePlans,
                     selectedPlanID: $selectedPlanID,
-                    focusTaskID: $focusTaskID
+                    focusTaskID: $focusTaskID,
+                    selectFocusTask: presentFocusTaskPicker
                 )
             }
         }
@@ -107,6 +109,15 @@ struct PomodoroView: View {
         } else {
             focusTaskID = availableFocusTaskIDs.first
         }
+    }
+
+    private func presentFocusTaskPicker() {
+        presentationRouter.presentPomodoroTaskPicker(
+            selectedTaskID: focusTaskID,
+            selectTask: { taskID in
+                focusTaskID = taskID
+            }
+        )
     }
 
 }

@@ -54,6 +54,18 @@ private struct AppPresentationSheet: View {
                     )
                 }
             )
+        case let .pomodoroTaskPicker(taskPicker):
+            PomodoroFocusTaskPickerSheet(
+                store: store,
+                selectedTaskID: taskPicker.selectedTaskID,
+                onSelect: { taskID in
+                    taskPicker.selectTask(taskID)
+                    router.dismiss(presentationID: presentation.id)
+                },
+                onCancel: {
+                    router.dismiss(presentationID: presentation.id)
+                }
+            )
         case let .quickStartEditor(selectedIDs):
             QuickStartEditorSheet(
                 store: store,

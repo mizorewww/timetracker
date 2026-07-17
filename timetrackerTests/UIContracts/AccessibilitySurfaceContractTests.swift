@@ -90,20 +90,21 @@ struct AccessibilitySurfaceContractTests {
     }
 
     @Test
-    func pomodoroMenusLetAccessibilityTextDetermineRowHeight() throws {
+    func pomodoroSelectionControlsKeepTaskIdentityAndUseARealTaskPicker() throws {
         let source = try sourceText(
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
         )
 
-        #expect(source.components(separatedBy: "Menu {").count - 1 == 2)
+        #expect(source.components(separatedBy: "Menu {").count - 1 == 1)
         #expect(source.contains("dynamicTypeSize.isAccessibilitySize"))
-        #expect(source.contains("@Binding var focusTaskID"))
-        #expect(source.contains("$focusTaskID"))
+        #expect(source.contains("let onChooseTask: () -> Void"))
+        #expect(source.contains("Button(action: onChooseTask)"))
+        #expect(source.contains("$focusTaskID") == false)
         #expect(source.contains("$store.selectedTaskID") == false)
         #expect(source.contains("selectedTask.flatMap(store.parentPath(for:))"))
         #expect(source.components(separatedBy: ".buttonStyle(.bordered)").count - 1 == 2)
         #expect(source.contains(".appCard(") == false)
         #expect(source.contains("pomodoro.planPicker"))
-        #expect(source.contains("pomodoro.taskPicker"))
+        #expect(source.contains("pomodoro.taskPicker.open"))
     }
 }

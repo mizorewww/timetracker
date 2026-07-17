@@ -999,7 +999,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 ## AD-079：Quick Start 整行只负责开始或打开，不按运行状态变成停止
 
-状态：Accepted
+状态：Superseded by AD-102
 
 背景：Quick Start 的任务行原先在未运行时开始计时，却在运行中无提示地把同一整行改成停止；视觉只把播放符号换成红色停止符号。快速入口因此成为隐藏 toggle，误点会结束正在记录的上下文，并与“正在计时”区的显式停止操作重复。
 
@@ -1007,7 +1007,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：Quick Start 的主语义稳定为“进入这项工作”：未运行时开始，已运行时查看；停止始终是单独、可发现且带目标的操作。新增 Quick Start 布局必须复用该语义，不得重新把整行写成 start/stop toggle。
 
-验证：源码契约禁止 Quick Start 文件出现停止命令/停止 glyph，并要求运行 badge 与 canonical detail navigation；正常字号 iPhone 行为回归覆盖“开始 → Running → 再次点击进入详情且计时仍在”。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：本条的历史回归保留为“运行态不把整行变为停止”的边界。当前独立任务内容与计时命令的合同、平台一致性和更新后的正常字号回归由 AD-102 负责。
 
 ## AD-080：系统表面的停止操作固化具体时间片，绝不按数组顺序猜目标
 
@@ -1276,6 +1276,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：主 App、Watch 与 Shortcuts 在同一持久事实下决定 exclusive/parallel；重复 Watch delivery、无效和 missing command 不产生伪造 events。Pomodoro start/break-resume 与手工 Segment 编辑也复用同一 resolver；纯 `TimerCommandHandler`/`PomodoroCommandHandler` 仍保留 Bool 作为无存储事实的 policy input，不能把它们误当作跨进程 writer。
 
 验证：timer、Pomodoro、Segment coordinator/system action/Watch suite 覆盖 canonical false preference 下的 exclusive reconcile、App Intent/handler 不再接收 caller Bool、Watch router 发布 actual outcome events。2026-07-17 的 Pomodoro/Segment 定向签名回归 71/71 通过，签名身份为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`；本切片未创建模拟器，结束后删除结果包并确认无 owned 测试进程。
+
+## AD-102：Quick Start 将任务导航与计时命令分为稳定的独立控件
+
+状态：Accepted
+
+背景：AD-079 消除了运行态整行的隐藏停止，但未运行项仍让任务标题同时承担“识别任务”和“开始/切换计时”。正常字号 iPhone 截图显示播放 glyph 是唯一提示，桌面 tile 也因状态改变整张卡片的点击含义；这与其它任务行始终进入详情的规则不一致，且不利于快速判断动作后果。
+
+决策：Quick Start 的任务图标、标题、父级路径和 Running badge 组成单独的任务导航控件，始终进入 canonical task detail。相邻 `QuickStartTimerAction` 使用明确可见的原生 bordered Start、Switch 或 Stop label，最小高度 44 pt；Start/Switch 只通过 `performTimerPickerSelection(_:)` 进入共享准入边界，Stop 只捕获并停止当前显示的 `TimeSegment`。iPhone、iPad 与 macOS 复用同一计时控件；不得嵌套按钮、把状态藏在 glyph 中，或让任务导航手势写入账本。
+
+后果：任务身份的点击结果在所有状态下稳定，计时写入也有可发现的文字、目标和 destructive role。Quick Start 仍可在一眼内完成开始、切换或停止，但详情、编辑和计时不再竞争同一 hit target。此变更有意替代 AD-079 的“未运行整行开始”历史语义。
+
+验证：行为回归覆盖任务身份、显式 Start → Running → 显式 Stop，以及运行中点击任务身份进入详情且不停止；source contract 只固定 stable component/command boundary。正常字号 iPhone/iPad/macOS 截图确认任务文本与 Start/Switch/Stop 不遮挡系统 chrome；一次性签名、设备和清理证据写入 dated Audit。
 
 ## 2. Agent 工作清单
 

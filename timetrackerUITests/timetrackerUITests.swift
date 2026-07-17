@@ -696,7 +696,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testQuickStartShowsRootAndChildIdentityWithSeparateActionGlyphs() throws {
+    func testQuickStartShowsRootAndChildIdentityWithSeparateTimerActions() throws {
         let app = launchApp()
         XCTAssertTrue(homeIsReady(in: app))
 
@@ -712,14 +712,13 @@ final class timetrackerUITests: XCTestCase {
         let child = quickStartRows.matching(
             NSPredicate(format: "label == %@", "Design System")
         ).firstMatch
-        scrollUntilHittable(child, direction: .up, in: app)
         XCTAssertTrue(
             waitForElement(
                 root,
                 timeout: 5,
                 diagnosticName: "quick-start-root",
                 in: app
-            ) && root.isHittable
+            )
         )
         XCTAssertTrue(
             waitForElement(
@@ -727,29 +726,40 @@ final class timetrackerUITests: XCTestCase {
                 timeout: 5,
                 diagnosticName: "quick-start-child",
                 in: app
-            ) && child.isHittable
+            )
         )
         XCTAssertTrue((root.value as? String ?? "").isEmpty)
         XCTAssertEqual(child.value as? String, "Time Tracker App")
 
-        activate(child)
+        scrollUntilHittable(child, direction: .up, in: app)
+        XCTAssertTrue(child.isHittable)
+        let childTimerAction = app.buttons[
+            "home.quickStart.timer.\(child.identifier.replacingOccurrences(of: "home.quickStart.task.", with: ""))"
+        ].firstMatch
+        XCTAssertTrue(childTimerAction.waitForExistence(timeout: 5) && childTimerAction.isHittable)
+        activate(childTimerAction)
         let running = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "Running"),
             object: child
         )
         XCTAssertEqual(XCTWaiter.wait(for: [running], timeout: 5), .completed)
-        #if os(iOS)
-        let requiredLift = max(0, child.frame.maxY - systemChromeTop(in: app) + 20)
-        if requiredLift > 0 {
-            dragContentUp(by: requiredLift, in: app)
-        }
-        let navigationBottom = app.navigationBars.firstMatch.exists
-            ? app.navigationBars.firstMatch.frame.maxY
-            : app.frame.minY
-        XCTAssertGreaterThanOrEqual(root.frame.minY, navigationBottom)
-        XCTAssertLessThanOrEqual(child.frame.maxY, systemChromeTop(in: app) - 8)
-        #endif
-        try capture("quick-start-root-child-actions", app: app)
+        let childTaskIdentifier = child.identifier.replacingOccurrences(
+            of: "home.quickStart.task.",
+            with: ""
+        )
+        let timerIdentifier = "home.quickStart.timer.\(childTaskIdentifier)"
+        let stopAction = app.buttons[timerIdentifier].firstMatch
+        XCTAssertTrue(stopAction.waitForExistence(timeout: 5))
+        try capture("quick-start-separate-actions-running", app: app)
+        scrollUntilFullyVisibleAboveSystemChrome(stopAction, in: app)
+        XCTAssertTrue(stopAction.isHittable)
+        XCTAssertEqual(stopAction.label, "Stop Design System")
+        activate(stopAction)
+        let stopped = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Time Tracker App"),
+            object: child
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [stopped], timeout: 5), .completed)
 
         let edit = app.buttons["home.quickStart.edit"].firstMatch
         scrollUntilHittable(edit, direction: .up, in: app)
@@ -780,7 +790,17 @@ final class timetrackerUITests: XCTestCase {
         scrollUntilHittable(child, direction: .up, in: app)
         XCTAssertTrue(child.waitForExistence(timeout: 5) && child.isHittable)
 
-        activate(child)
+        let childTimerAction = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "home.quickStart.timer."
+            )
+        ).matching(
+            NSPredicate(format: "label == %@", "Start Design System")
+        ).firstMatch
+        scrollUntilHittable(childTimerAction, direction: .up, in: app)
+        XCTAssertTrue(childTimerAction.waitForExistence(timeout: 5) && childTimerAction.isHittable)
+        activate(childTimerAction)
         let running = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "Running"),
             object: child

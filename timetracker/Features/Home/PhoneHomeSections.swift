@@ -85,15 +85,19 @@ struct PhoneQuickStartSection: View {
                     let activeSegment = store.activeSegment(for: task.id)
                     PhoneQuickStartRow(
                         presentation: store.taskIdentityPresentation(for: task),
-                        isRunning: activeSegment != nil
-                    ) {
-                        if activeSegment != nil {
+                        activeSegment: activeSegment,
+                        command: store.timerPickerSelectionCommand(for: task),
+                        openTask: {
                             openTask(task.id)
-                        } else {
-                            store.startTask(task)
+                        },
+                        performTimerAction: {
+                            if let activeSegment {
+                                store.stop(segment: activeSegment)
+                            } else {
+                                store.performTimerPickerSelection(task)
+                            }
                         }
-                    }
-                    .accessibilityIdentifier("home.quickStart.task.\(task.id.uuidString)")
+                    )
                 }
             }
 

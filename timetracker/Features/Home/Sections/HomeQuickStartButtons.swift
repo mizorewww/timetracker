@@ -15,14 +15,19 @@ struct QuickStartTaskGroup: View {
                 let activeSegment = store.activeSegment(for: task.id)
                 QuickStartTaskButton(
                     presentation: store.taskIdentityPresentation(for: task),
-                    isRunning: activeSegment != nil
-                ) {
-                    if activeSegment != nil {
+                    activeSegment: activeSegment,
+                    command: store.timerPickerSelectionCommand(for: task),
+                    openTask: {
                         store.openTaskDetail(task.id)
-                    } else {
-                        store.startTask(task)
+                    },
+                    performTimerAction: {
+                        if let activeSegment {
+                            store.stop(segment: activeSegment)
+                        } else {
+                            store.performTimerPickerSelection(task)
+                        }
                     }
-                }
+                )
             }
         }
     }
@@ -30,40 +35,50 @@ struct QuickStartTaskGroup: View {
 
 private struct QuickStartTaskButton: View {
     let presentation: TaskIdentityPresentation
-    let isRunning: Bool
-    let action: () -> Void
+    let activeSegment: TimeSegment?
+    let command: TimerPickerSelectionCommand
+    let openTask: () -> Void
+    let performTimerAction: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        Button(action: action) {
-            Group {
-                if dynamicTypeSize.isAccessibilitySize {
-                    VStack(alignment: .leading, spacing: 8) {
-                        taskIcon
-                        taskTitle
-                    }
-                } else {
-                    HStack(spacing: 8) {
-                        taskIcon
-                        taskTitle
+        HStack(alignment: .top, spacing: 12) {
+            Button(action: openTask) {
+                Group {
+                    if dynamicTypeSize.isAccessibilitySize {
+                        VStack(alignment: .leading, spacing: 8) {
+                            taskIcon
+                            taskTitle
+                        }
+                    } else {
+                        HStack(spacing: 8) {
+                            taskIcon
+                            taskTitle
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .buttonStyle(.plain)
+            .accessibilityLabel(presentation.title)
+            .accessibilityValue(
+                activeSegment == nil
+                    ? (presentation.parentPath ?? "")
+                    : AppStrings.localized("status.running")
+            )
+            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+            .accessibilityIdentifier("home.quickStart.task.\(presentation.id.uuidString)")
+
+            QuickStartTimerAction(
+                taskID: presentation.id,
+                taskTitle: presentation.title,
+                taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
+                activeSegment: activeSegment,
+                command: command,
+                action: performTimerAction
+            )
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .tint(Color(hex: presentation.visual.colorHex) ?? .blue)
-        .accessibilityLabel(presentation.title)
-        .accessibilityValue(
-            isRunning
-                ? AppStrings.localized("status.running")
-                : (presentation.parentPath ?? "")
-        )
-        .accessibilityHint(
-            AppStrings.localized(isRunning ? "timer.task.openRunningHint" : "timer.task.startHint")
-        )
-        .accessibilityIdentifier("home.quickStart.task.\(presentation.id.uuidString)")
+        .appCard(padding: 12)
     }
 
     private var taskIcon: some View {
@@ -86,14 +101,53 @@ private struct QuickStartTaskButton: View {
                 }
             }
             Spacer(minLength: 4)
-            if isRunning {
+            if activeSegment != nil {
                 RunningStatusBadge()
-            } else {
-                Image(systemName: "play.fill")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct QuickStartTimerAction: View {
+    let taskID: UUID
+    let taskTitle: String
+    let taskColor: Color
+    let activeSegment: TimeSegment?
+    let command: TimerPickerSelectionCommand
+    let action: () -> Void
+
+    var body: some View {
+        Button(role: activeSegment == nil ? nil : .destructive, action: action) {
+            Label(actionTitle, systemImage: actionSystemImage)
+                .lineLimit(1)
+                .font(.callout.weight(.semibold))
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .tint(activeSegment == nil ? taskColor : .red)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
+        .accessibilityIdentifier("home.quickStart.timer.\(taskID.uuidString)")
+    }
+
+    private var actionTitle: String {
+        activeSegment == nil ? command.actionTitle : AppStrings.localized("timer.action.stop")
+    }
+
+    private var actionSystemImage: String {
+        activeSegment == nil ? command.systemImage : "stop.fill"
+    }
+
+    private var accessibilityLabel: String {
+        activeSegment == nil
+            ? command.accessibilityLabel(for: taskTitle)
+            : String(format: AppStrings.localized("timer.action.stopTaskFormat"), taskTitle)
+    }
+
+    private var accessibilityHint: String {
+        activeSegment == nil
+            ? command.accessibilityHint
+            : AppStrings.localized("timer.task.stopHint")
     }
 }

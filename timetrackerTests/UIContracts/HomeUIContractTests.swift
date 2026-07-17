@@ -232,7 +232,7 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func quickStartUsesIndexedTaskIdentityAndKeepsActionGlyphsSeparate() throws {
+    func quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions() throws {
         let identitySource = try sourceText(
             "timetracker/Services/Tasks/TaskIdentityPresentation.swift"
         )
@@ -259,8 +259,12 @@ struct HomeUIContractTests {
         #expect(quickStartSource.contains(".text(for: .standard)"))
         #expect(quickStartSource.contains("TaskIcon(visual: presentation.visual"))
         #expect(quickStartSource.contains("RunningStatusBadge()"))
-        #expect(quickStartSource.contains("stop.fill") == false)
-        #expect(quickStartSource.contains("store.stop(segment:") == false)
+        #expect(quickStartSource.contains("struct QuickStartTimerAction"))
+        #expect(quickStartSource.contains("Button(action: openTask)"))
+        #expect(quickStartSource.contains("home.quickStart.timer."))
+        #expect(quickStartSource.contains("performTimerPickerSelection(task)"))
+        #expect(quickStartSource.contains("store.stop(segment: activeSegment)"))
+        #expect(quickStartSource.contains("stop.fill"))
         #expect(quickStartSource.contains("store.openTaskDetail(task.id)"))
         #expect(quickStartSource.contains("store.path(for: task)") == false)
         #expect(quickStartSource.contains("Text(path)") == false)
@@ -352,7 +356,8 @@ struct HomeUIContractTests {
         #expect(source.components(separatedBy: "isTaskAvailableForTracking").count >= 8)
         #expect(source.contains("let activeSegment = store.activeSegment(for: task.id)"))
         #expect(source.contains("store.stop(segment: activeSegment)"))
-        #expect(source.contains("timer.task.openRunningHint"))
+        #expect(source.contains("QuickStartTimerAction"))
+        #expect(source.contains("tasks.openDetail"))
         #expect(source.contains(".presentationBackground(") == false)
     }
 

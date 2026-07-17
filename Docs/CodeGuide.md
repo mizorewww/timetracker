@@ -72,7 +72,7 @@
 - Widget：entry/provider/config、active-timer family layouts、supplementary/error states 与 deep-link/localization/color support 分文件。
 - Watch：dashboard orchestration、完整任务列表、失败问题页、timer rows、status/error/empty states、command presentation index 与 color support 分文件；`WatchAppStore.swift` 保留 observable state/安全恢复，`WatchAppStore+Commands.swift` 负责 queue/timeout/persistence，`WatchAppStore+Connectivity.swift` 负责 transport/payload/freshness，`WatchAppStore+SessionDelegate.swift` 独立承接 WCSession callbacks。
 - Ledger/Rollup index：ordered flat segment array mutation 独立到 `LedgerStore+FlatSegmentIndex.swift`；增量 rollup 的 scoped mutation/replacement 独立到 `RollupIncrementalIndex+Mutation.swift`。
-- Today：`HomeViews.swift` 只组合宽屏优先级，`PhoneHomeSections.swift` 组合紧凑屏顺序，各 section 文件拥有具体内容；`TodayHomeContent` 在一次组合中集中生成 active/timeline、Quick Start、forecast 和 countdown 读模型，避免各 section 重复查询与分组。
+- Today：`HomeViews.swift` 只组合宽屏优先级，`PhoneHomeSections.swift` 组合紧凑屏顺序，各 section 文件拥有具体内容；`TodayHomeContent` 在一次组合中集中生成 active/timeline、Quick Start、forecast 和 countdown 读模型，避免各 section 重复查询与分组。Quick Start 的任务身份按钮始终路由详情，`QuickStartTimerAction` 是 iPhone/iPad/macOS 共用的独立计时命令；它以 fresh `TimerPickerSelectionCommand` 显示 Start/Switch，并仅对当前 `TimeSegment` 显示精确 Stop，不能复原状态相关的整行 toggle。
 - App presentation：`AppPresentationRouter` 由每个可呈现 UI 的 scene 自己持有，`AppPresentationHost` 是该 scene 唯一的 App 级 sheet owner；feature 只请求 typed content，不在共享 facade 中保存 sheet draft 或 `isPresented`。任务选择器转入新建任务使用 matching presentation ID 的原子替换，不经过异步 dismiss/yield 空窗。
 - App feedback：每个 scene 自己持有 `AppSceneFeedbackRouter` 与唯一 `AppSceneFeedbackHost`。队列按 FIFO 呈现，dismiss 必须匹配当前 feedback UUID；不得把 macOS Settings 的用户操作错误写回共享 Store 再由主窗口弹出。
 

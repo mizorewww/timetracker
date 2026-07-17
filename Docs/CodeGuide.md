@@ -62,7 +62,7 @@
 
 本轮已完成以下关键职责拆分：
 
-- Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
+- Sync conflict：`SyncConflictService` 只保留 bootstrap/prompt；local mutation、Cloud import/export、recovery/resolution、manifest/slot state persistence、file lock/locations、export encoding、snapshot capture/分域 restore、snapshot state 与分域 record DTO 分文件。
 - Analytics：root landing page 与 `AnalyticsCategoryDetailView` 分文件；category 使用 typed `NavigationLink(value:)` / `navigationDestination` 路由。首页顺序由 `AnalyticsCategory.reviewCategories` 和 `exploreCategories` 显式定义，两组合并必须对 `allCases` 完整、无重复；overview row、metric/detail list、period control 与 store 的 metrics/breakdowns/overlap/task snapshot 各有所有者。Facade 的 snapshot/request 生命周期留在 `TimeTrackerStore+Analytics.swift`，轻量 UI read model 留在 `TimeTrackerStore+AnalyticsReadModels.swift`；domain 层把 cache-aware daily assembly、comparison window、comparison calculation、insight narrative 与 raw metrics 分别归属 `Caching`、`ComparisonWindow`、`DecisionSupport`、`Insights`、`Metrics`，不得为方便而重新聚合。分布图切片值由 `AnalyticsDistributionSlice.swift` 持有，分组聚合与 “Other” 折叠规则由 `AnalyticsGroupBreakdownPresentation.swift` 持有，分段宽度算法由 `AnalyticsGroupBarLayout.swift` 持有；Today 小时活动的跨小时共享尺度与 task stack 守恒算法由 `HourStackLayoutEngine.swift` 持有，视图文件只保留组合与展示。
 - Pomodoro presentation：`PomodoroPageLayout` 从外层 `GeometryReader` 的有限 viewport 派生唯一布局分支，负责宽屏双栏与窄屏单栏；正常字号依赖系统 safe-area/tab chrome inset，只保留内容节奏所需的滚动末端余量。禁止用嵌套 `ViewThatFits` 同时测量整棵 primary/secondary 子树。setup composition、空状态、参数控件、Plan/Task 选择、timer face、active composition、active countdown、有限 timeline schedule 和 ledger 各有所有者。计划是小型稳定 `Menu`；任务选择通过 scene-owned typed sheet，按标题/完整路径搜索并以当前 Focus 页的回调更新局部 task ID，不能启动计时或改写全局 task selection。页面容器不承担 deadline 或账本写入。
 - Settings：display/timing、Pomodoro、countdown、sync、data、actions、bindings 与 support 分文件；`SharedUI/Components` 中的 foundation/value row、action/destructive label、text/number input、presentation modifier 和 sync feedback 也各有所有者。
@@ -259,7 +259,7 @@ fresh-store hydration 以持久 `CloudRecoveryImportSession` 为屏障，而不�
 
 - `SyncConflictService.swift`：bootstrap 与 prompt 组装。
 - `SyncConflictService+LocalMutation.swift`、`+CloudImport.swift`、`+CloudExport.swift`、`+CloudRecoveryEvents.swift`、`+Recovery.swift`、`+Resolution.swift`：本地变更、云事件/恢复回执与显式恢复流程。
-- `SyncConflictService+State.swift`、`+StateWriting.swift`、`+StateLock.swift`、`+StateLocations.swift` 与 `SyncConflictState.swift`：有界本机状态读写、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state。
+- `SyncConflictService+State.swift`、`+StateWriting.swift`、`+StateLock.swift`、`+StateLocations.swift`、`+SnapshotSlots.swift`、`+SnapshotSlotLocations.swift` 与 `SyncConflictStateManifest.swift`：有界本机 manifest/slot state 读写、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state；`SyncConflictState.swift` 仍是运行时读模型，不是新的磁盘格式。
 - `SyncConflictService+Export.swift`：过滤后的 JSON export encoding。
 - `SyncDataSnapshot.swift`：版本化全域快照、摘要和 fingerprint。
 - `SyncDataSnapshot+Capture.swift`：按域捕获当前事实。
@@ -277,13 +277,15 @@ fresh-store hydration 以持久 `CloudRecoveryImportSession` 为屏障，而不�
 
 这组 primitive 是后续 durable queue、outbox 和恢复 artifact 的共享底座；既有 `SyncConflictService` 私有状态文件仍保持自己的边界，迁移时必须在一个小任务里替换读写、故障恢复与测试，不能仅把写调用机械改名后宣称获得相同保证。
 
-`SyncConflictState.json` 的每次 read-modify-write 都在 `SyncConflictService.withExclusiveStateAccess` 内完成。进程内使用递归锁，跨主应用/Shortcuts 进程使用 POSIX advisory `lockf` 文件锁；两个进程不会用各自的旧状态副本互相覆盖。权威 state、forced-upload mirror、删除和损坏隔离都经注入的 `DurableLocalFile`：生产环境以稳定的 Application Support 父目录为 root，测试/诊断 override 只拥有显式 state directory。文件保护在 publish 前设置，随后执行 file 与 parent-directory full sync；损坏小文件进入有界 quarantine，超出诊断预算的文件只耐久删除而不保留副本。权威 state 先发布，mirror 随后发布或删除；两文件不是 ACID transaction，已发布权威 state 配旧 mirror 的极端掉电窗口仍由下一次 locked load 的 mirror 校正处理，不能把本 primitive 误称为双文件原子提交。权威 state 读写上限为 128 MiB，recovery mirror 为 64 MiB。读取先用 file metadata 预检，再通过 `FileHandle.read(upToCount: limit + 1)` 抵御预检后文件增长的 TOCTOU，不做无界 `Data(contentsOf:)`。写入先编码并同时验证权威 state 与所需 mirror，只有两者都在上限内才进入 durable write；独立 mirror rewrite 在最终写边界再次验长。大小拒绝不能改写旧的有效 state 或 mirror。损坏或超限的权威 state 会隔离并进入显式恢复；损坏或超限的 pending mirror 会隔离并安全忽略，不能阻塞主库。
+`SyncConflictState.json` 的每次 read-modify-write 都在 `SyncConflictService.withExclusiveStateAccess` 内完成。进程内使用递归锁，跨主应用/Shortcuts 进程使用 POSIX advisory `lockf` 文件锁；两个进程不会用各自的旧状态副本互相覆盖。磁盘 authority 是 V1 小型 manifest：它只存版本、epoch/generation/checkpoint 等标量和至多四个快照引用；`SyncConflictState` 的完整 snapshot 不再内联复制。每个引用指定八个受控 A/B slot 中的位置、generation、byte count 和 SHA-256；slot payload 先经 `DurableLocalFile` 写入并完整同步，最后才发布 manifest。因而中断在 manifest 前仍由旧 manifest 指向完整旧 slot；发布后才清理无引用 slot。首次读取旧的内联 JSON 会在同一锁内升级到 manifest，运行时调用方继续只处理 `SyncConflictState`。这只是设备本地恢复格式变更，不是 SwiftData/CloudKit schema。
+
+manifest、slot、forced-upload mirror、默认删除和损坏隔离都经注入的 `DurableLocalFile`：生产环境以稳定的 Application Support 父目录为 root，测试/诊断 override 只拥有显式 state directory。文件保护在 publish 前设置，随后执行 file 与 parent-directory full sync；损坏小文件进入有界 quarantine，超出诊断预算的文件只耐久删除而不保留副本。manifest 上限为 128 MiB，每个 slot 和 recovery mirror 上限为 64 MiB；读取先用 file metadata 预检，再通过 `FileHandle.read(upToCount: limit + 1)` 抵御预检后文件增长的 TOCTOU，不做无界 `Data(contentsOf:)`。写入在解析路径或替换 authority 前验证所有新 slot、manifest 和所需 mirror 的上限。若任一 manifest 引用的 slot 缺失、超限、无法解码、长度不符或 hash 不符，slot 与 manifest 都视为损坏并隔离，禁止把残缺 state 当作“没有冲突”。损坏/超限的独立 pending mirror 仍会安全忽略，不能阻塞主库；镜像只在 manifest 缺失时作为恢复来源。大小拒绝不能改写旧 manifest 或 mirror。
 
 `pendingConflictID` 同时是用户确认的版本 token，不只是一次冲突的标签。本机 branch 或待接受云 branch 的 resolution-relevant snapshot 发生实质变化时必须在上述锁内旋转 ID，并从保存后的 state 重建 prompt；不得继续返回变化前的摘要。恢复入口也必须在 locked `loadState()` 后、任何 epoch 推进、snapshot restore、reset flag、clear/save 之前比较 expected optional ID。旧 token 和“原来没有冲突、确认前出现冲突”都返回 `conflictChanged`，不能把检查放到锁外。
 
 `SyncConflictService.prompt()` 是 throwing read boundary：只有合法 state 中确实没有完整 pending conflict 才返回 `nil`。损坏、超限、权限和文件系统错误必须传播给 Store；禁止用 `try?` 把它们转换成“无冲突”。Watch 等已经提交业务 mutation 的入口把随后 prompt 读取失败报告为 post-commit refresh failure，不能把 terminal command 结果倒写成未提交。
 
-在 iOS 上，权威状态文件、pending forced-upload 恢复镜像和腐损状态隔离文件写入后都设置 `FileProtectionType.completeUntilFirstUserAuthentication`。这些文件在设备本次启动首次解锁前不可读，首次解锁后可供后台 Shortcuts/CloudKit 流程继续使用；lock 文件不是用户快照，也不能被描述为同样的受保护数据文件。macOS 不套用 iOS Data Protection 属性。
+在 iOS 上，manifest、其快照 slot、pending forced-upload 恢复镜像和腐损状态隔离文件写入后都设置 `FileProtectionType.completeUntilFirstUserAuthentication`。这些文件在设备本次启动首次解锁前不可读，首次解锁后可供后台 Shortcuts/CloudKit 流程继续使用；lock 文件不是用户快照，也不能被描述为同样的受保护数据文件。macOS 不套用 iOS Data Protection 属性。
 
 Cloud export 不以“收到任意成功回调”作为本机已同步证明。每次 local mutation 推进 `localGeneration`；import/强制恢复推进 `syncEpoch`；export start 记录 event ID、epoch、generation、fingerprint 和 startedAt。成功 finish 只确认同 epoch 且不早于已确认 generation 的 checkpoint，乱序旧回调不能回退 base 或清除较新的 pending forced upload。旧 state 清理被排除偏好时会重算 fingerprint 并同时清空清理前 payload 的在途 checkpoints，使延迟回调不能恢复旧 base。checkpoint 最多保留 16 个、最长 24 小时，不为每个事件复制整份用户 snapshot。
 

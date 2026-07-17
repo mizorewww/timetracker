@@ -109,6 +109,12 @@ extension SyncConflictService {
                     at: stateURL,
                     durableRootURL: durableRootURL
                 )
+                for snapshotURL in SyncConflictService.allConflictSnapshotSlotURLs(for: stateURL) {
+                    try durableFile.removeIfPresent(
+                        at: snapshotURL,
+                        durableRootURL: durableRootURL
+                    )
+                }
             }
     }
 }

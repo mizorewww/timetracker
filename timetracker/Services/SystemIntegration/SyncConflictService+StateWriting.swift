@@ -45,17 +45,22 @@ extension SyncConflictService {
 
     func saveStateWithoutLock(_ state: SyncConflictState) throws {
         // Preflight every payload before resolving paths, creating directories,
-        // or replacing either valid file. A size error must be all-or-nothing.
-        let stateData = try encodedStateForWrite(state)
+        // or replacing any valid file. A/B slot writes occur before the manifest
+        // commit, so an interrupted write cannot invalidate its old authority.
+        let manifestWrite = try prepareManifestWrite(for: state)
         let mirrorMutation = try pendingForcedUploadMirrorMutation(for: state)
 
+        try writeSnapshotSlotsWithoutLock(manifestWrite.snapshotSlots)
         let url = try stateURL()
         try localStateFile.write(
-            stateData,
+            manifestWrite.data,
             to: url,
             durableRootURL: try stateDurableRootURL()
         )
         try applyPendingForcedUploadMirrorMutation(mirrorMutation)
+        try removeUnreferencedSnapshotSlotsWithoutLock(
+            retaining: manifestWrite.manifest.snapshotReferences
+        )
     }
 
     func synchronizePendingForcedUploadMirrorWithoutLock(
@@ -83,17 +88,6 @@ extension SyncConflictService {
         return .save(try encodedRecoverySnapshotForWrite(snapshot))
     }
 
-    private func encodedStateForWrite(_ state: SyncConflictState) throws -> Data {
-        let data = try Self.sortedJSONEncoder().encode(state)
-        guard data.count <= localStateByteLimits.maximumStateFileByteCount else {
-            throw SyncConflictLocalStateWriteError.stateExceedsMaximumByteCount(
-                actualByteCount: data.count,
-                maximumByteCount: localStateByteLimits.maximumStateFileByteCount
-            )
-        }
-        return data
-    }
-
     private func encodedRecoverySnapshotForWrite(
         _ snapshot: SyncDataSnapshot
     ) throws -> Data {
@@ -102,7 +96,7 @@ extension SyncConflictService {
         return data
     }
 
-    private func validateRecoverySnapshotWriteByteCount(_ byteCount: Int) throws {
+    func validateRecoverySnapshotWriteByteCount(_ byteCount: Int) throws {
         guard byteCount <= localStateByteLimits.maximumRecoverySnapshotFileByteCount else {
             throw SyncConflictLocalStateWriteError.recoverySnapshotExceedsMaximumByteCount(
                 actualByteCount: byteCount,
@@ -142,7 +136,7 @@ extension SyncConflictService {
         )
     }
 
-    private static func sortedJSONEncoder() -> JSONEncoder {
+    static func sortedJSONEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         return encoder

@@ -52,8 +52,20 @@ extension SyncConflictService {
             throw SyncConflictStateFileError.corruptStateQuarantined
         }
         let decodedState: SyncConflictState
+        let requiresManifestMigration: Bool
         do {
-            decodedState = try JSONDecoder().decode(SyncConflictState.self, from: data)
+            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if object?["formatVersion"] != nil {
+                let manifest = try JSONDecoder().decode(SyncConflictStateManifest.self, from: data)
+                guard manifest.formatVersion == SyncConflictStateManifest.currentFormatVersion else {
+                    throw SyncConflictStateFileError.corruptStateQuarantined
+                }
+                decodedState = try loadState(from: manifest)
+                requiresManifestMigration = false
+            } else {
+                decodedState = try JSONDecoder().decode(SyncConflictState.self, from: data)
+                requiresManifestMigration = true
+            }
         } catch {
             let quarantineURL = try quarantineCorruptFile(
                 at: url,
@@ -69,7 +81,7 @@ extension SyncConflictService {
         var state = decodedState
         let removedExcludedPreferences = try state.removeExcludedPreferences()
         let prunedExportCheckpoints = state.pruneCloudExportCheckpoints()
-        if removedExcludedPreferences || prunedExportCheckpoints {
+        if requiresManifestMigration || removedExcludedPreferences || prunedExportCheckpoints {
             try saveStateWithoutLock(state)
         } else {
             try synchronizePendingForcedUploadMirrorWithoutLock(with: state)
@@ -147,7 +159,7 @@ extension SyncConflictService {
         )
     }
 
-    private nonisolated static func boundedData(
+    nonisolated static func boundedData(
         at url: URL,
         maximumByteCount: Int
     ) throws -> Data {
@@ -165,7 +177,7 @@ extension SyncConflictService {
         return data
     }
 
-    private func quarantineCorruptFile(
+    func quarantineCorruptFile(
         at url: URL,
         prefix: String
     ) throws -> URL? {

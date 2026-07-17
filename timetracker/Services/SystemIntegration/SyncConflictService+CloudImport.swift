@@ -151,7 +151,11 @@ extension SyncConflictService {
         state.pendingConflictID = conflictID
         state.pendingDetectedAt = detectedAt
         state.pendingCloudSnapshot = cloudSnapshot
-        state.pendingConflictWorkingSnapshot = cloudSnapshot
+        // The initial working baseline is the cloud snapshot itself. Keep the
+        // dedicated working slot empty until a local mutation or a later cloud
+        // import actually diverges it, instead of persisting the same large
+        // snapshot twice.
+        state.pendingConflictWorkingSnapshot = nil
         try saveState(state)
         return SyncConflictPrompt(
             id: conflictID,

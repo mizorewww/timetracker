@@ -80,10 +80,24 @@ extension timetrackerApp {
         }
 
         AppCloudSync.prepareInterruptedCloudDownloadRecovery()
-        let hasProtectedRecoverySnapshot = AppCloudSync.preparePendingCloudRecoveryReset()
-        let recoveryGate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
-            canResetUpload: hasProtectedRecoverySnapshot
-        )
+        let recoveryGate: AppCloudSync.CloudRecoveryGate
+        do {
+            recoveryGate = try performPendingCloudRecoveryResetAfterProtectingLocalFallback(
+                schema: schema,
+                localConfiguration: localConfiguration,
+                storeURL: storeURL
+            )
+        } catch {
+            // The existing local store is still the only fully current copy.
+            // Never delete it when its protected recovery branch could not be
+            // brought up to date first.
+            return makeLocalFallbackModelContainer(
+                schema: schema,
+                localConfiguration: localConfiguration,
+                emergencyConfiguration: emergencyConfiguration,
+                error: error
+            )
+        }
 
         let completedRecovery: AppCloudSync.CompletedCloudRecovery
         switch recoveryGate {

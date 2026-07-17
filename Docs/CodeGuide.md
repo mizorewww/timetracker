@@ -239,6 +239,8 @@ Settings 的同步状态使用 typed `SyncActivityOutcome`，不能从“本机�
 
 启动期 CloudKit reset 由 `CloudRecoveryGate` 严格门控。factory 必须先退出 demo 与用户禁用分支，再处理 pending reset；缺失/不可读的受保护上传快照为 deferred，store 或同步状态删除失败为 failed，均保留 pending 并停在本地恢复路径。只有 completed 返回的 `CompletedCloudRecovery` token 能传给 `recordCloudKitEnabled(after:)`；而且必须等 CloudKit container 真实创建成功后才能消费 token、清 pending/error。不得恢复无参 acknowledgement、Bool 门控或失败后继续尝试云容器。
 
+Local fallback 的 SwiftData commit 与 post-commit sync snapshot 不是同一文件事务；进程可在两者之间退出。再次尝试 CloudKit 时，`performPendingCloudRecoveryResetAfterProtectingLocalFallback` 必须用一个外层 `StoreScopedTimerMutationLock` 连续覆盖：重开仍完整的 local store、fresh context 全域 capture、权威 state 与 forced-upload mirror 落盘、恢复意图准备、destructive store reset。内部 snapshot/reset 可以递归取得同一路径锁，但外层锁在 reset 完成前不能释放；临时 `ModelContainer`/`ModelContext` 必须在删除 SQLite 前结束生命周期。Capture/state/mirror 任一步失败都回到原 local fallback，不删 store。`.downloadCloud` 是用户明确放弃本机分支，禁止 preflight recapture 把它反转成 reconciliation；upload/reconciliation 则必须保护最新 commit。这个保证只覆盖遵守共享 store lock 的 writer，任何新 writer 绕过该锁都会重新打开 snapshot/delete 竞态。
+
 恢复意图必须区分 `.reconcileWithCloud` 与 `.explicitlyReplaceCloud`。自动 fallback/重新启用只排队 reconciliation：保护本机快照、建立 fresh CloudKit cache、等完整首次导入，再比较 fingerprint；相同则收敛，不同则生成两侧冲突，比较前不得恢复本机快照或制造 export。只有用户明确选择本机赢家才保存 explicit intent，并在恢复 bootstrap 中把受保护快照恢复为本地赢家一次。legacy/missing intent 和独立 mirror 在没有不含糊的 upload marker 时一律按 conservative reconciliation 推断。
 
 upload、download 与 reconciliation 请求在 `AppCloudSync+RecoveryIntent` 中互斥；新选择清除相反 pending/active marker。若旧版本留下同时 upload+download 的矛盾标记，gate 返回 `.conflictingRecoveryRequests`，不得删除 store。CloudKit recovery container 已经附着后，Settings 旧 scene 发起的 stage/upload/download/resolution 通过 `requireNoAttachedCloudRecovery()` 拒绝，防止中途改变方向。

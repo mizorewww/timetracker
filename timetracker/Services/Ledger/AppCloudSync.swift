@@ -102,6 +102,14 @@ enum AppCloudSync {
         }
     }
 
+    /// A pending download is an explicit choice to replace the device branch,
+    /// so it must not be converted back into a local reconciliation request.
+    static var shouldRefreshLocalFallbackRecoverySnapshotBeforeReset: Bool {
+        isEnabled &&
+            persistenceMode == modeLocalFallback &&
+            UserDefaults.standard.bool(forKey: pendingCloudDownloadResetKey) == false
+    }
+
     static func requireUserWritesAllowed() throws {
         guard allowsUserWrites else {
             throw PersistenceWriteError.blocked(persistenceWriteSafety.message)

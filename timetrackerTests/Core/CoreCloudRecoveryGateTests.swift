@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -10,7 +11,7 @@ struct CoreCloudRecoveryGateTests {
         let demoBranch = try #require(source.range(of: "if AppDemoDataConfiguration.usesLocalDemoStore"))
         let disabledBranch = try #require(source.range(of: "guard AppCloudSync.isEnabled else"))
         let recoveryGate = try #require(
-            source.range(of: "AppCloudSync.performPendingCloudRecoveryResetIfNeeded(")
+            source.range(of: "performPendingCloudRecoveryResetAfterProtectingLocalFallback(")
         )
         let cloudContainer = try #require(
             source.range(of: "configurations: [cloudConfiguration]", options: .backwards)
@@ -19,6 +20,147 @@ struct CoreCloudRecoveryGateTests {
         #expect(demoBranch.lowerBound < disabledBranch.lowerBound)
         #expect(disabledBranch.lowerBound < recoveryGate.lowerBound)
         #expect(recoveryGate.lowerBound < cloudContainer.lowerBound)
+    }
+
+    @Test
+    func factoryKeepsFallbackProtectionAndDestructiveRecoveryUnderOneStoreLock() throws {
+        let factorySource = try sourceText("timetracker/App/AppModelContainerFactory.swift")
+        let fallbackSource = try sourceText(
+            "timetracker/App/AppModelContainerFactory+Fallback.swift"
+        )
+        #expect(
+            factorySource.contains(
+                "performPendingCloudRecoveryResetAfterProtectingLocalFallback("
+            )
+        )
+        let outerLock = try #require(
+            fallbackSource.range(of: "StoreScopedTimerMutationLock().withExclusiveAccess")
+        )
+        let fallbackRefresh = try #require(
+            fallbackSource.range(
+                of: "refreshLocalFallbackRecoverySnapshotBeforeCloudReset(",
+                range: outerLock.lowerBound..<fallbackSource.endIndex
+            )
+        )
+        let recoveryPreparation = try #require(
+            fallbackSource.range(
+                of: "AppCloudSync.preparePendingCloudRecoveryReset()",
+                range: fallbackRefresh.lowerBound..<fallbackSource.endIndex
+            )
+        )
+        let destructiveRecovery = try #require(
+            fallbackSource.range(
+                of: "AppCloudSync.performPendingCloudRecoveryResetIfNeeded(",
+                range: recoveryPreparation.lowerBound..<fallbackSource.endIndex
+            )
+        )
+
+        #expect(outerLock.lowerBound < fallbackRefresh.lowerBound)
+        #expect(fallbackRefresh.lowerBound < recoveryPreparation.lowerBound)
+        #expect(recoveryPreparation.lowerBound < destructiveRecovery.lowerBound)
+    }
+
+    @Test @MainActor
+    func localFallbackPreflightRecapturesACommitMissedByPostCommitRecording() throws {
+        try withRecoveryDefaults {
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: AppCloudSync.enabledKey)
+            defaults.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
+
+            let fixtureRoot = FileManager.default.temporaryDirectory
+                .appendingPathComponent(
+                    "TimeTrackerFallbackPreflightTests-\(UUID().uuidString)",
+                    isDirectory: true
+                )
+            defer { try? FileManager.default.removeItem(at: fixtureRoot) }
+            let storeURL = fixtureRoot.appendingPathComponent("fallback.store")
+            let stateURL = fixtureRoot.appendingPathComponent("sync/state.json")
+            let schema = TimeTrackerModelRegistry.currentSchema
+            let configuration = ModelConfiguration(
+                "FallbackCrashWindow",
+                schema: schema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let service = SyncConflictService(stateURL: stateURL)
+
+            try autoreleasepool {
+                let container = try ModelContainer(
+                    for: schema,
+                    migrationPlan: TimeTrackerMigrationPlan.self,
+                    configurations: [configuration]
+                )
+                let context = ModelContext(container)
+                context.autosaveEnabled = false
+                let task = TaskNode(
+                    title: "Protected before commit",
+                    parentID: nil,
+                    deviceID: "local"
+                )
+                context.insert(task)
+                try context.save()
+                #expect(try service.forceUploadLocalData(context: context) == .queuedForNextLaunch)
+
+                // Simulate termination after this commit but before the normal
+                // post-commit recorder can refresh the independent snapshot.
+                task.title = "Latest committed fallback edit"
+                task.updatedAt = Date().addingTimeInterval(60)
+                task.clientMutationID = UUID()
+                try context.save()
+            }
+
+            #expect(
+                try service.loadPendingForcedUploadSnapshot()?.tasks.map(\.title) ==
+                    ["Protected before commit"]
+            )
+
+            let competingWriterEntered = DispatchSemaphore(value: 0)
+            let competingWriterFinished = DispatchSemaphore(value: 0)
+            let scope = TimerStoreScope(persistentStoreURL: storeURL)
+            let gate = try timetrackerApp.performPendingCloudRecoveryResetAfterProtectingLocalFallback(
+                schema: schema,
+                localConfiguration: configuration,
+                storeURL: storeURL,
+                syncConflictService: service,
+                preparePendingRecovery: { true },
+                beforeDestructiveReset: {
+                    DispatchQueue.global().async {
+                        _ = try? StoreScopedTimerMutationLock().withExclusiveAccess(for: scope) {
+                            competingWriterEntered.signal()
+                        }
+                        competingWriterFinished.signal()
+                    }
+                    #expect(
+                        competingWriterEntered.wait(timeout: .now() + 0.05) == .timedOut
+                    )
+                }
+            )
+
+            guard case .completed(let recovery) = gate else {
+                Issue.record("Protected fallback recovery should complete")
+                return
+            }
+            #expect(recovery.reset == .upload)
+            #expect(
+                try service.loadPendingForcedUploadSnapshot()?.tasks.map(\.title) ==
+                    ["Latest committed fallback edit"]
+            )
+            #expect(FileManager.default.fileExists(atPath: storeURL.path) == false)
+            #expect(competingWriterEntered.wait(timeout: .now() + 1) == .success)
+            #expect(competingWriterFinished.wait(timeout: .now() + 1) == .success)
+        }
+    }
+
+    @Test @MainActor
+    func explicitDownloadRecoveryDoesNotRecaptureTheLocalFallbackBranch() {
+        withRecoveryDefaults {
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: AppCloudSync.enabledKey)
+            defaults.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
+            defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
+
+            #expect(AppCloudSync.shouldRefreshLocalFallbackRecoverySnapshotBeforeReset == false)
+        }
     }
 
     @Test @MainActor

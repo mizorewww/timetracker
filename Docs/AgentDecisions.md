@@ -1181,6 +1181,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：Ledger 测试构造周期内 50 条无关记录、稀疏任务历史和深历史任务，分别覆盖任务侧与日期侧并只返回交集；完整 Ledger、Analytics、Timeline、架构与三项 source-layout 付费签名批次 80/80 通过，无新 Swift warning。
 
+## AD-094：Fallback 最终快照与 destructive reset 必须共用一个外层 store lock
+
+状态：Accepted
+
+背景：Local fallback 的业务命令先提交 SwiftData，再在 post-commit 边界更新独立同步 state/mirror。进程在两者之间退出时，主 store 含最新事实而保护快照仍旧；下一次 CloudKit clean-store recovery 若直接依据旧 mirror 删除 store，会永久丢失最后一次已成功提交。仅在启动时先补快照、释放锁、随后重新取锁删除仍不够，另一个进程可以在两段锁之间提交并再次落入相同窗口。
+
+决策：Cloud-enabled factory 统一调用 `performPendingCloudRecoveryResetAfterProtectingLocalFallback`。它按 canonical store URL 持有一个外层 `StoreScopedTimerMutationLock`，锁内顺序固定为：重开 local configuration、fresh full-domain capture、原子保存 authoritative state 与 forced-upload mirror、准备恢复 marker、执行 destructive reset。已有 snapshot transaction 与 reset helper 递归获取同一路径 `NSRecursiveLock + flock`；外层直到 reset 返回才释放。临时 local container 限定在被调函数的 autorelease scope，删除 SQLite 前必须释放。任一步抛错都返回仍完整的 local fallback。Pending download 表示用户明确选择云端赢家，因此跳过 recapture；upload/reconciliation 必须刷新最新本机分支。
+
+后果：所有遵守共享 store lock 的进程都不能在最终 snapshot 与删库之间插入 commit；第一次 mutation 后立即崩溃、已有旧 mirror 后崩溃和显式 upload 都能保护最新数据。Fallback 重连会做一次 O(全量事实) capture；超过 snapshot 上限或文件保护/IO 失败时安全停留本地，而不是继续恢复。该保证不覆盖仍绕过共享锁的 legacy writer，Inbox/App Intent 等入口必须继续迁移，不能把本决策描述为任意 writer 的全局 ACID。
+
+验证：真实磁盘 fixture 先保存旧保护快照，再提交未记录的新标题；启动 preflight 捕获最新标题后真实删除 SQLite。竞争线程在 reset hook 中无法取得同一 store lock，只有 reset 完成后才进入。CloudRecovery Gate、SyncConflict、StateWrite、StoreSerialization、ResolutionIdentity 与 SnapshotPreflight 六个付费签名套件 102/102 通过，无源码或运行时 warning。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

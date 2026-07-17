@@ -1,6 +1,18 @@
 import SwiftData
 
 extension SyncConflictService {
+    /// Closes the process-termination window between a successful local-store
+    /// commit and its post-commit protected-snapshot write. The caller must run
+    /// this while the fallback store still exists and before any recovery reset.
+    func refreshProtectedLocalFallbackSnapshotBeforeReset(
+        context: ModelContext
+    ) throws {
+        guard AppCloudSync.shouldRefreshLocalFallbackRecoverySnapshotBeforeReset else {
+            return
+        }
+        try recordLocalMutation(context: context, events: [.fullSync])
+    }
+
     func stageCurrentLocalSnapshotForCloudEnablement(
         context: ModelContext
     ) throws -> SyncRecoveryResult {

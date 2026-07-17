@@ -1133,6 +1133,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：重复 Cloud row 的快照测试同时核对 overview、daily、task breakdown、rhythm 与 timeline 只出现一个 winner；完整 AnalyticsStore/Timeline 回归继续通过。
 
+## AD-090：完整时间编辑表单不提供不可完成流程的半高 detent
+
+状态：Accepted
+
+背景：Manual Time sheet 同时包含任务归属、开始/结束日期时间、派生时长、验证反馈和 3–8 行备注，却允许 `.medium` detent。正常 iPhone 高度下，半高状态只能看到表单片段，用户必须先理解并拖动 sheet 才能完成核心任务；Segment Editor 已经只使用 large，两个同类编辑器行为也不一致。
+
+决策：Manual Time 与 Segment Editor 在 iOS 都只声明 `.presentationDetents([.large])`。Mac 继续使用既有 platform frame。除非未来提供字段和完成动作都能在半高内独立闭环的真正 quick-entry 界面，否则不得把 `.medium` 加回完整表单。
+
+后果：打开补录后立即获得可完成的完整编辑空间，日期选择器、验证和备注不会藏在一个看似可用但实际需要二次扩展的状态里。这个决定不禁止其它内容更少、半高即可完成的 sheet 使用 medium。
+
+验证：Task UI source contract 同时要求 Manual Time/Segment Editor 只有 large，并明确拒绝 Manual Time 的 `.medium`；presentation 合同继续验证保存成功后才关闭。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

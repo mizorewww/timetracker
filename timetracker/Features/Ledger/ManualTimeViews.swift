@@ -19,7 +19,7 @@ struct ManualTimeSheet: View {
             }
         )
         .platformSheetFrame(width: 620, height: 560)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 }
 

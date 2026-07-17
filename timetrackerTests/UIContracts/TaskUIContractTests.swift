@@ -193,6 +193,8 @@ struct TaskUIContractTests {
         #expect(segmentSource.contains("draft.endedAt = Date()"))
         #expect(segmentSource.contains("segment.keepRunning"))
         #expect(segmentSource.contains("segment.softDelete") == false)
+        #expect(manualSource.contains(".presentationDetents([.large])"))
+        #expect(manualSource.contains(".medium") == false)
         #expect(segmentSource.contains(".presentationDetents([.large])"))
         #expect(segmentSource.contains("@State private var draft"))
         #expect(segmentSource.contains("@State var draft") == false)

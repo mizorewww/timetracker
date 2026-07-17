@@ -1097,6 +1097,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：领域测试先制造兄弟 context mutation，确认 typed save 返回 stale 且不写共享 error，再从刷新投影建立新 baseline 并成功保存；Task UI/presentation 契约固定显式 Reload/Keep、session baseline 和 parent candidate replacement。
 
+## AD-087：Inbox 重排必须在 fresh logical set 上验证完整顺序基线
+
+状态：Accepted
+
+背景：Inbox View 从 scene facade 的 open item 缓存计算拖拽结果，旧实现随后仍在同一长期存活 `ModelContext` 内重排。另一 scene 可能已新增、完成、删除、编辑或重新排序条目；旧命令只比较 ID 集合，随后会给整组 item 重写 sort、updatedAt 与 mutation metadata，并在 logical sibling 收敛时物化旧 scene 看到的内容。
+
+决策：重排进入 `StoreScopedInboxCommandCoordinator` 并复用 AD-069 的共享 store lock/fresh-context transaction。`InboxOrderMutationBaseline` 固化全部 open logical winner 的 `clientMutationID` 与按 sortOrder/createdAt/UUID 完全决胜的原顺序；锁内重新解析 current visible logical items，并要求 mutation map、原顺序、目标数量和目标 ID 集合全部精确匹配。无变化是 typed no-op；stale 只刷新 Inbox read model并展示明确错误，不写任何记录或推进同步 generation。
+
+后果：旧窗口不能丢掉后来新增条目、把已完成项重新纳入 open 排序，或覆盖后来 revision；即使某个异常 writer 改了 sortOrder 却没旋转 mutation ID，原顺序基线仍能拒绝。当前决策只覆盖 reorder；add/toggle/title/delete/suggestion 等相邻 writer 仍需逐个迁入同一事务域，不能借本决策宣称所有 Inbox 写竞态已完成。
+
+验证：跨 context 套件覆盖正常反转、较新 completion、并发 add、缺失 revision 的 order-only 变化，以及 facade 拒绝后刷新 open/completed 投影；原 Inbox logical identity、持久化、本地化与 UI source contract 继续通过。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

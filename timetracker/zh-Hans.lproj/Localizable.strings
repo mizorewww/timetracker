@@ -713,6 +713,7 @@
 "inbox.persistence.field.notes" = "收件箱备注";
 "inbox.persistence.field.reason" = "推荐理由";
 "inbox.persistence.field.symbol" = "推荐符号";
+"inbox.error.changed" = "此收件箱已在其他位置发生变化。请查看最新版本后重试。";
 "inbox.persistence.field.color" = "推荐颜色";
 "inbox.persistence.field.model" = "推荐模型";
 "inbox.persistence.field.titleSnapshot" = "推荐标题";

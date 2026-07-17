@@ -63,6 +63,8 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("if submit() {\n            title = \"\"\n        }") == false)
         #expect(inboxStoreSource.contains("suggestInboxItem(item, showsErrors: false)"))
         #expect(inboxStoreSource.contains("func reorderInboxItems(sourceOffsets: IndexSet, destination: Int)"))
+        #expect(inboxStoreSource.contains("StoreScopedInboxCommandCoordinator("))
+        #expect(inboxStoreSource.contains("InboxOrderMutationBaseline(items: currentItems)"))
         #expect(inboxSource.contains("rowHeight(forTitle:") == false)
         #expect(inboxSource.contains("estimatedTitleLineCount") == false)
         #expect(layoutSource.contains("rowHeight(forTitle:") == false)

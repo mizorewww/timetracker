@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
@@ -53,18 +54,42 @@ extension TimeTrackerStore {
         }
     }
 
-    func reorderInboxItems(sourceOffsets: IndexSet, destination: Int) {
+    @discardableResult
+    func reorderInboxItems(sourceOffsets: IndexSet, destination: Int) -> Bool {
+        let currentItems = openInboxItems
         let orderedIDs = inboxCommandHandler.reorderedOpenItemIDs(
-            items: openInboxItems,
+            items: currentItems,
             sourceOffsets: sourceOffsets,
             destination: destination
         )
-        perform(event: .inboxChanged(itemIDs: Set(orderedIDs))) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.reorderOpenItems(
-                orderedItemIDs: orderedIDs,
-                context: modelContext
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try StoreScopedInboxCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).reorder(
+                baseline: InboxOrderMutationBaseline(items: currentItems),
+                orderedItemIDs: orderedIDs
             )
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            if error is StoreScopedInboxMutationError {
+                do {
+                    try refresh(plan: StoreRefreshPlan(scopes: [.inbox]))
+                } catch {
+                    errorMessage = String(
+                        format: AppStrings.localized("error.savedRefreshFailed"),
+                        error.localizedDescription
+                    )
+                    return false
+                }
+            }
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 }

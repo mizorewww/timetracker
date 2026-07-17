@@ -33,7 +33,7 @@ struct CoreSystemActionCommandTests {
         #expect(handler.contains("struct SystemActionPostCommitEffects"))
         #expect(handler.contains("CommittedMutationSnapshotRecorder().recordLocalMutation"))
         #expect(handler.contains("CommittedMutationSurfaceSynchronizer().synchronize"))
-        #expect(handler.contains("SystemActionMutationBroadcaster.publish(events: events)"))
+        #expect(handler.contains("StoreMutationBroadcaster.publish(events: events)"))
         #expect(handler.contains("allowParallelTimers: Bool") == false)
         #expect(coordinator.contains("TimerAdmissionPreferenceResolver\n                .allowParallelTimers(in: context)"))
     }
@@ -57,11 +57,11 @@ struct CoreSystemActionCommandTests {
         secondScene.configureRepositoriesIfNeeded(context: secondContext)
         try firstScene.refresh()
         try secondScene.refresh()
-        firstScene.installSystemActionMutationObserverIfNeeded()
-        secondScene.installSystemActionMutationObserverIfNeeded()
+        firstScene.installStoreMutationObserverIfNeeded()
+        secondScene.installStoreMutationObserverIfNeeded()
         defer {
-            firstScene.removeSystemActionMutationObserver()
-            secondScene.removeSystemActionMutationObserver()
+            firstScene.removeStoreMutationObserver()
+            secondScene.removeStoreMutationObserver()
         }
 
         let handler = makeTestSystemActionCommandHandler()
@@ -71,7 +71,7 @@ struct CoreSystemActionCommandTests {
             container: context.container
         )
         let segmentID = try #require(started.subjectSegmentID)
-        SystemActionMutationBroadcaster.publish(events: started.events)
+        StoreMutationBroadcaster.publish(events: started.events)
 
         #expect(firstScene.activeSegments.map(\.id) == [segmentID])
         #expect(secondScene.activeSegments.map(\.id) == [segmentID])
@@ -82,10 +82,93 @@ struct CoreSystemActionCommandTests {
             segmentID: segmentID,
             container: context.container
         )
-        SystemActionMutationBroadcaster.publish(events: stopped.events)
+        StoreMutationBroadcaster.publish(events: stopped.events)
 
         #expect(firstScene.activeSegments.isEmpty)
         #expect(secondScene.activeSegments.isEmpty)
+    }
+
+    @Test @MainActor
+    func committedLocalInboxMutationRefreshesOtherScenesWithoutStartingSuggestions() throws {
+        let context = try makeTestContext()
+        _ = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Shared task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let firstScene = makeTestStore()
+        let delayedInboxService = LLMInboxSuggestionService { _ in
+            try await Task.sleep(for: .seconds(5))
+            throw CancellationError()
+        }
+        let secondScene = TimeTrackerStore(
+            inboxSuggestionService: delayedInboxService,
+            writeAuthorization: .isolatedTestHarness
+        )
+        firstScene.configureRepositoriesIfNeeded(context: context)
+        secondScene.configureRepositoriesIfNeeded(context: ModelContext(context.container))
+        try firstScene.refresh()
+        try secondScene.refresh()
+        secondScene.preferences.llmEndpoint = "https://example.test/v1"
+        secondScene.preferences.llmAPIKey = "test-key"
+        secondScene.preferences.llmSelectedModel = "test-model"
+        secondScene.preferences.llmAutomaticSuggestionsEnabled = true
+        firstScene.installStoreMutationObserverIfNeeded()
+        secondScene.installStoreMutationObserverIfNeeded()
+        defer {
+            firstScene.removeStoreMutationObserver()
+            secondScene.removeStoreMutationObserver()
+            secondScene.cancelAllInboxSuggestionRequests()
+        }
+
+        #expect(firstScene.addInboxItem(title: "Visible everywhere"))
+
+        #expect(secondScene.openInboxItems.map(\.title) == ["Visible everywhere"])
+        #expect(firstScene.inboxSuggestionInFlightIDs.isEmpty)
+        #expect(secondScene.inboxSuggestionInFlightIDs.isEmpty)
+        #expect(firstScene.checklistVisualSuggestionInFlightIDs.isEmpty)
+        #expect(secondScene.checklistVisualSuggestionInFlightIDs.isEmpty)
+    }
+
+    @Test @MainActor
+    func committedLocalTaskDeletionClearsOtherSceneSelectionAndRoute() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let retainedTask = try repository.createTask(
+            title: "Retained task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let deletedTask = try repository.createTask(
+            title: "Deleted task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let firstScene = makeTestStore()
+        let secondScene = makeTestStore()
+        firstScene.configureRepositoriesIfNeeded(context: context)
+        secondScene.configureRepositoriesIfNeeded(context: ModelContext(context.container))
+        try firstScene.refresh()
+        try secondScene.refresh()
+        secondScene.openTaskDetail(deletedTask.id)
+        firstScene.installStoreMutationObserverIfNeeded()
+        secondScene.installStoreMutationObserverIfNeeded()
+        defer {
+            firstScene.removeStoreMutationObserver()
+            secondScene.removeStoreMutationObserver()
+        }
+
+        #expect(firstScene.deleteSelectedTask(taskID: deletedTask.id))
+
+        #expect(secondScene.task(for: deletedTask.id) == nil)
+        #expect(secondScene.selectedTaskID == retainedTask.id)
+        #expect(secondScene.tasksRoute == nil)
     }
 
     @Test @MainActor

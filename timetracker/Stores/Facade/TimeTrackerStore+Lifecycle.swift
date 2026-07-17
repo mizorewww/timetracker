@@ -149,6 +149,10 @@ extension TimeTrackerStore {
         } catch {
             postCommitError = postCommitError ?? error
         }
+        StoreMutationBroadcaster.publish(
+            events: events,
+            source: self
+        )
 
         if let postCommitError {
             errorMessage = String(

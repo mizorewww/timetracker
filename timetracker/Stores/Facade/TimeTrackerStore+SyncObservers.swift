@@ -14,39 +14,44 @@ final class SyncNotificationObserverToken {
 }
 
 extension TimeTrackerStore {
-    func installSystemActionMutationObserverIfNeeded() {
-        guard systemActionMutationObserver == nil else { return }
+    func installStoreMutationObserverIfNeeded() {
+        guard storeMutationObserver == nil else { return }
 
         let token = NotificationCenter.default.addObserver(
-            forName: SystemActionMutationBroadcaster.notification,
+            forName: StoreMutationBroadcaster.notification,
             object: nil,
             queue: .main
         ) { [weak self] notification in
             MainActor.assumeIsolated { [weak self] in
-                guard let self,
-                      let events = SystemActionMutationBroadcaster.events(from: notification) else {
+                guard let self else { return }
+                if let source = notification.object as? TimeTrackerStore, source === self {
                     return
                 }
-                self.refreshExternalSystemActionReadModels(events: events)
+                guard let events = StoreMutationBroadcaster.events(from: notification) else {
+                    return
+                }
+                self.refreshExternalStoreMutationReadModels(events: events)
             }
         }
-        systemActionMutationObserver = SyncNotificationObserverToken(token)
+        storeMutationObserver = SyncNotificationObserverToken(token)
     }
 
-    func removeSystemActionMutationObserver() {
-        systemActionMutationObserver = nil
+    func removeStoreMutationObserver() {
+        storeMutationObserver = nil
     }
 
-    /// A system action has already committed and updated Widget, Watch, and
-    /// Live Activity projections. Refresh only this scene's read models: a
-    /// scene must converge, but it must not record the mutation again or start
-    /// automatic suggestion requests as a side effect of catching up.
-    func refreshExternalSystemActionReadModels(events: Set<StoreDomainEvent>) {
+    /// Another scene or system action has already committed. Refresh only this
+    /// scene's read models: catching up must not record the mutation again or
+    /// start automatic suggestion requests as a side effect.
+    func refreshExternalStoreMutationReadModels(events: Set<StoreDomainEvent>) {
         guard events.isEmpty == false else { return }
 
         do {
             let plan = refreshPlanner.plan(after: events)
             try refreshCoordinator.refreshReadModels(self, plan: plan)
+            if plan.validateSelection {
+                validateSelectedTask()
+            }
         } catch {
             errorMessage = String(
                 format: AppStrings.localized("error.savedRefreshFailed"),
@@ -78,7 +83,7 @@ extension TimeTrackerStore {
     }
 
     func installSyncObservers() {
-        installSystemActionMutationObserverIfNeeded()
+        installStoreMutationObserverIfNeeded()
         guard syncObservers.isEmpty else { return }
         // UI tests use an isolated in-memory container and inject deterministic
         // sync states explicitly. Remote-store callbacks from that container

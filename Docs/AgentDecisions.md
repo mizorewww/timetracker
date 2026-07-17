@@ -1361,6 +1361,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：store-scoped 领域测试覆盖“另一个 context 手动视觉编辑后迟到 suggestion 被丢弃”和未变化 revision 正常应用。签名回归、资源清理与运行数字记录在 dated Audit。
 
+## AD-109：普通本地提交必须使其它 open scene 收敛，但不能重复副作用
+
+状态：Accepted
+
+背景：每个 `ContentView` 持有独立的 `TimeTrackerStore` 与 `ModelContext`。原先只有 App Intent/System Action 通过进程内 notification 通知所有 scene；普通 UI 提交只刷新发送 scene，导致另一窗口保留过期任务、Checklist 或 timer read model，直到一次偶然的 CloudKit/前景刷新。把这类通知当成跨进程同步又不正确：`NotificationCenter.default` 仅限当前 App 进程。
+
+决策：所有 `finishCommittedMutation` 在 durable mutation、当前 scene refresh 和 snapshot recording 后经 `StoreMutationBroadcaster` 发布准确的 `StoreDomainEvent` 集合，并把发送 store 作为 source。接收 scene 仅调用 `refreshCoordinator.refreshReadModels`，不 record snapshot、不发布新通知、不自动启动 LLM；若 plan 要求 task/ledger selection validation，则在读刷新后补做该本地导航校正。source identity 相同的发送 scene 跳过重复 refresh。system action 没有 scene source，继续广播给所有本进程 scene。跨进程收敛仍由 persistent store/CloudKit 回调、durable snapshot 和各系统 surface 的 post-commit path 负责。
+
+后果：多窗口普通操作可立即收敛，且不会形成 notification loop、双写 snapshot 或重复 AI 请求。source identity 只存在于同步的进程内通知，不能进入 SwiftData、CloudKit 或被用于业务 identity；一个丢失的进程内通知只能延迟 UI 收敛，不能影响已提交数据的正确性。
+
+验证：store-scoped 自动化回归覆盖一个 scene 通过正常 Checklist command 提交、另一个独立 context 自动获取新 read model，且两端均不启动 Inbox/Checklist AI 请求；System Action 的 all-scene 回归继续覆盖无 origin 广播。最终数字与资源清理记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

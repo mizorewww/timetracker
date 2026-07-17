@@ -3,29 +3,6 @@ import OSLog
 import SwiftData
 
 @MainActor
-enum SystemActionMutationBroadcaster {
-    private static let notificationName = Notification.Name(
-        "me.mezorewww.timetracker.systemActionMutationCommitted"
-    )
-    private static let eventsUserInfoKey = "events"
-
-    static func publish(events: Set<StoreDomainEvent>) {
-        guard events.isEmpty == false else { return }
-        NotificationCenter.default.post(
-            name: notificationName,
-            object: nil,
-            userInfo: [eventsUserInfoKey: events]
-        )
-    }
-
-    static func events(from notification: Notification) -> Set<StoreDomainEvent>? {
-        notification.userInfo?[eventsUserInfoKey] as? Set<StoreDomainEvent>
-    }
-
-    static var notification: Notification.Name { notificationName }
-}
-
-@MainActor
 struct CommittedMutationSnapshotRecorder {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
@@ -120,7 +97,7 @@ struct SystemActionPostCommitEffects {
             context: context,
             events: events
         )
-        SystemActionMutationBroadcaster.publish(events: events)
+        StoreMutationBroadcaster.publish(events: events)
     }
 }
 

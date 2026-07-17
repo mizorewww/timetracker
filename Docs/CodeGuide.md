@@ -176,6 +176,8 @@ Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是�
 
 Checklist AI visual request 也不是对 scene 缓存的写授权。请求必须固化 item 的 mutation ID、规范化标题和 logical visual 的 `(ID, clientMutationID, userEditedAt)`；completion 在共享 store lock 内 fresh context 重验 task 可追踪性、item 和 visual revision 后才写入。任何另一个 scene 的手动图标/颜色编辑、标题/完成/删除、task 不可用或 logical visual 重建都会使结果变成无副作用的 stale discard，并只刷新当前 scene 的 read model。
 
+同一 App 进程中的多 scene 通过 `StoreMutationBroadcaster` 加速收敛：本地 durable commit 完成、当前 scene 已刷新并记录 snapshot 后，以 source store 广播 events；其它 scene 只按 event plan 刷新 read model，并在任务/ledger plan 时校正失效 selection/route，不再次记录 snapshot 或自动启动 LLM。发送者按 identity 跳过重复 refresh。该通知不是跨进程协议；Widget、Watch、Intent 和其它进程仍须依赖 durable snapshot、persistent history/CloudKit 回调与各自的 post-commit 机制。
+
 任务状态与可见性是两个维度。`completed` 表示“保留在任务树和历史中、暂停接收新工作”，`archived` 表示“隐藏整个分支”。完成祖先会阻塞所有后代的新 timer、manual entry、Pomodoro、Quick Start、Inbox conversion、App Intent 以及新建/移动目标；既有活动 timer 仍必须可见并可停止。重新开始工作时应恢复从所选任务到根路径上的全部完成阻塞项，而不是偷偷改变后代自身的状态。
 
 归档与删除语义不同。删除任务树会在一个原子动作中先结束该树的活动 Pomodoro 和 timer，再软删除任务；历史 segment/session/run 继续保留。普通 Local、iCloud、local-fallback 和 emergency 生产模式没有跨设备删除确认，因此 `AppCloudSync.allowsPermanentTombstonePurge` 为 false，`DatabaseMaintenanceService` 直接返回 0。只有隔离的 Demo/UI Test store 可物理清理过期 tombstone graph。

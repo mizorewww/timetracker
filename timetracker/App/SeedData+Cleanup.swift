@@ -91,6 +91,7 @@ extension SeedData {
         tombstone(try context.fetch(FetchDescriptor<ChecklistItemVisual>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<InboxSuggestion>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<InboxItem>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<TaskNode>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<TaskCategory>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()), now: now, deviceID: deviceID)

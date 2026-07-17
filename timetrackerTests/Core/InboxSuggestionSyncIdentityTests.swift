@@ -334,8 +334,11 @@ struct InboxSuggestionSyncIdentityTests {
             legacyItems[index].removeValue(forKey: "dismissedSuggestionRevisionID")
         }
         legacyJSON["inboxItems"] = legacyItems
+        legacyJSON.removeValue(forKey: "inboxCaptureReceipts")
         let legacyData = try JSONSerialization.data(withJSONObject: legacyJSON)
         let decoded = try JSONDecoder().decode(SyncDataSnapshot.self, from: legacyData)
+
+        #expect(decoded.inboxCaptureReceipts == nil)
 
         let restoredContext = try makeTestContext()
         try decoded.restoreAsLocalWinner(

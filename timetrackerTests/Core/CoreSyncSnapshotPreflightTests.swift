@@ -244,6 +244,34 @@ struct CoreSyncSnapshotPreflightTests {
         #expect(try context.fetch(FetchDescriptor<PomodoroRun>()).count == 1)
     }
 
+    @Test @MainActor
+    func inboxCaptureReceiptRequiresItsReferencedItemAndRestoresWithIt() throws {
+        let context = try makeTestContext()
+        let item = InboxItem(title: "Captured externally", deviceID: "source")
+        let receipt = InboxCaptureReceipt(
+            commandKey: "test.integration\u{1F}\(UUID().uuidString.lowercased())",
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: item.id,
+            deviceID: "source"
+        )
+        let record = InboxCaptureReceiptRecord(receipt)
+        let valid = SyncDataSnapshot(
+            inboxItems: [InboxItemRecord(item)],
+            inboxCaptureReceipts: [record]
+        )
+
+        try valid.restoreAsLocalWinner(context: context)
+        #expect(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).map(\.inboxItemID) == [item.id])
+
+        let missingItem = SyncDataSnapshot(inboxCaptureReceipts: [record])
+        #expect(throws: SyncDataSnapshotPreflightError.inconsistentInboxCaptureReceipt(
+            id: record.id,
+            inboxItemID: item.id
+        )) {
+            try missingItem.validateForRestore()
+        }
+    }
+
     @MainActor
     private func makeSentinelContext() throws -> (ModelContext, UUID) {
         let context = try makeTestContext()

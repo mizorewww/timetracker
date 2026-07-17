@@ -191,3 +191,25 @@ enum TimeTrackerSchemaV10: VersionedSchema {
         ]
     }
 }
+
+enum TimeTrackerSchemaV11: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 10, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            TaskNode.self,
+            TaskCategory.self,
+            TaskCategoryAssignment.self,
+            InboxItem.self,
+            InboxSuggestion.self,
+            InboxCaptureReceipt.self,
+            TimeSession.self,
+            TimeSegment.self,
+            PomodoroRun.self,
+            CountdownEvent.self,
+            SyncedPreference.self,
+            ChecklistItem.self,
+            ChecklistItemVisual.self
+        ]
+    }
+}

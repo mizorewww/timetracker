@@ -234,6 +234,32 @@ struct SyncSnapshotContentValidator {
                 id: record.id
             )
         }
+
+        for record in snapshot.inboxCaptureReceipts ?? [] {
+            try text(
+                record.commandKey,
+                maximum: .compact,
+                table: .inboxCaptureReceipts,
+                id: record.id,
+                field: "commandKey"
+            )
+            try text(
+                record.payloadFingerprint,
+                maximum: .compact,
+                table: .inboxCaptureReceipts,
+                id: record.id,
+                field: "payloadFingerprint"
+            )
+            try dates(
+                [
+                    ("createdAt", record.createdAt),
+                    ("updatedAt", record.updatedAt),
+                    ("deletedAt", record.deletedAt)
+                ],
+                table: .inboxCaptureReceipts,
+                id: record.id
+            )
+        }
     }
 }
 

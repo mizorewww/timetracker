@@ -38,6 +38,12 @@ struct DataMaintenanceLifecycleTests {
         let checklistVisual = ChecklistItemVisual(checklistItemID: checklistItem.id, deviceID: "test")
         let inboxItem = InboxItem(title: "Reset inbox", deviceID: "test")
         let inboxSuggestion = InboxSuggestion(inboxItemID: inboxItem.id, taskID: task.id, titleSnapshot: inboxItem.title, deviceID: "test")
+        let inboxReceipt = InboxCaptureReceipt(
+            commandKey: "test.integration\u{1F}\(UUID().uuidString.lowercased())",
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: inboxItem.id,
+            deviceID: "test"
+        )
 
         context.insert(task)
         context.insert(category)
@@ -51,6 +57,7 @@ struct DataMaintenanceLifecycleTests {
         context.insert(checklistVisual)
         context.insert(inboxItem)
         context.insert(inboxSuggestion)
+        context.insert(inboxReceipt)
         try context.save()
 
         let credentialStore = ResetTestCredentialStore()
@@ -85,6 +92,7 @@ struct DataMaintenanceLifecycleTests {
         #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<InboxItem>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).allSatisfy { $0.deletedAt != nil })
+        #expect(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).allSatisfy { $0.deletedAt != nil })
 
         let deletionSnapshot = try SyncDataSnapshot.capture(context: context)
         #expect(deletionSnapshot.hasProtectableUserContent)

@@ -136,14 +136,17 @@ struct SystemActionCommandHandler {
     func addInboxItem(
         title: String,
         container: ModelContainer,
+        externalCommandKey: ExternalCommandKey? = nil,
         deviceID: String = DeviceIdentity.current
-    ) throws -> UUID? {
-        let outcome = try StoreScopedInboxCommandCoordinator(
+    ) throws -> InboxMutationOutcome {
+        try StoreScopedInboxCommandCoordinator(
             container: container,
             writeAuthorization: writeAuthorization,
             deviceID: deviceID
-        ).add(title: title)
-        return outcome.didMutate ? outcome.affectedItemIDs.first : nil
+        ).add(command: InboxCaptureCommand(
+            title: title,
+            externalCommandKey: externalCommandKey
+        ))
     }
 
     @discardableResult

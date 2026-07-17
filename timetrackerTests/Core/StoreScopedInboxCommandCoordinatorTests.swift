@@ -124,6 +124,56 @@ struct StoreScopedInboxCommandCoordinatorTests {
     }
 
     @Test
+    func externalCaptureKeyReplaysOnlyItsExactCanonicalPayload() throws {
+        let context = try makeTestContext()
+        let key = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let command = InboxCaptureCommand(title: "  Capture once  ", externalCommandKey: key)
+
+        let first = try coordinator(container: context.container).add(command: command)
+        let replay = try coordinator(container: context.container).add(command: command)
+
+        #expect(first.didMutate)
+        #expect(replay.didMutate == false)
+        #expect(replay.affectedItemIDs == first.affectedItemIDs)
+        #expect(try allVisibleItems(in: context.container).map(\.title) == ["Capture once"])
+        #expect(try ModelContext(context.container).fetch(FetchDescriptor<InboxCaptureReceipt>()).count == 1)
+    }
+
+    @Test
+    func distinctExternalKeysDoNotDeduplicateMatchingTitles() throws {
+        let context = try makeTestContext()
+        let firstKey = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let secondKey = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let command = { (key: ExternalCommandKey) in
+            InboxCaptureCommand(title: "Legitimate duplicate", externalCommandKey: key)
+        }
+
+        _ = try coordinator(container: context.container).add(command: command(firstKey))
+        _ = try coordinator(container: context.container).add(command: command(secondKey))
+
+        #expect(try allVisibleItems(in: context.container).map(\.title) == [
+            "Legitimate duplicate",
+            "Legitimate duplicate"
+        ])
+        #expect(try ModelContext(context.container).fetch(FetchDescriptor<InboxCaptureReceipt>()).count == 2)
+    }
+
+    @Test
+    func reusedExternalKeyWithDifferentPayloadIsRejectedWithoutCreatingAnotherItem() throws {
+        let context = try makeTestContext()
+        let key = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let coordinator = coordinator(container: context.container)
+
+        _ = try coordinator.add(command: InboxCaptureCommand(title: "Original", externalCommandKey: key))
+        #expect(throws: StoreScopedInboxMutationError.externalCommandPayloadChanged) {
+            try coordinator.add(command: InboxCaptureCommand(title: "Changed", externalCommandKey: key))
+        }
+
+        #expect(try allVisibleItems(in: context.container).map(\.title) == ["Original"])
+        #expect(try ModelContext(context.container).fetch(FetchDescriptor<InboxCaptureReceipt>()).count == 1)
+    }
+
+    @Test
     func facadeRefreshesAfterRejectingAStaleDrag() throws {
         let context = try makeTestContext()
         let store = makeTestStore()

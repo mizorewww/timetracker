@@ -149,3 +149,4 @@ extension ChecklistItem: SoftDeletablePersistentUUIDModel, ClientMutationTracked
 extension ChecklistItemVisual: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
 extension InboxItem: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
 extension InboxSuggestion: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
+extension InboxCaptureReceipt: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}

@@ -193,5 +193,15 @@ extension SyncDataSnapshot {
                 )
             }
         }
+
+        let inboxItemIDs = Set(inboxItems.map(\.id))
+        for receipt in inboxCaptureReceipts ?? [] {
+            guard inboxItemIDs.contains(receipt.inboxItemID) else {
+                throw SyncDataSnapshotPreflightError.inconsistentInboxCaptureReceipt(
+                    id: receipt.id,
+                    inboxItemID: receipt.inboxItemID
+                )
+            }
+        }
     }
 }

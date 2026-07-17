@@ -21,6 +21,7 @@ extension SyncDataSnapshot {
             try restoreChecklistItemVisuals(context: context, now: now, deviceID: deviceID)
             try restoreInboxItems(context: context, now: now, deviceID: deviceID)
             try restoreInboxSuggestions(context: context, now: now, deviceID: deviceID)
+            try restoreInboxCaptureReceipts(context: context, now: now, deviceID: deviceID)
         }
     }
 }

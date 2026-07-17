@@ -98,18 +98,44 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("container: ModelContainer"))
         #expect(source.contains("InboxCommandHandler()\n                .add") == false)
 
-        let itemID = try #require(
-            try handler.addInboxItem(
-                title: "Capture from shortcut",
-                container: context.container,
-                deviceID: "test"
-            )
+        let outcome = try handler.addInboxItem(
+            title: "Capture from shortcut",
+            container: context.container,
+            deviceID: "test"
         )
+        let itemID = try #require(outcome.affectedItemIDs.first)
 
+        #expect(outcome.didMutate)
         let items = try context.fetch(FetchDescriptor<InboxItem>())
         #expect(items.map(\.id) == [itemID])
         #expect(items.map(\.title) == ["Capture from shortcut"])
         #expect(items.map(\.deviceID) == ["test"])
+    }
+
+    @Test @MainActor
+    func explicitExternalInboxKeyReplaysTheCommittedOutcomeWithoutAnotherMutation() throws {
+        let context = try makeTestContext()
+        let key = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let handler = makeTestSystemActionCommandHandler()
+
+        let first = try handler.addInboxItem(
+            title: "Capture once",
+            container: context.container,
+            externalCommandKey: key,
+            deviceID: "test"
+        )
+        let replay = try handler.addInboxItem(
+            title: "Capture once",
+            container: context.container,
+            externalCommandKey: key,
+            deviceID: "test"
+        )
+
+        #expect(first.didMutate)
+        #expect(replay.didMutate == false)
+        #expect(replay.affectedItemIDs == first.affectedItemIDs)
+        #expect(try context.fetch(FetchDescriptor<InboxItem>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).count == 1)
     }
 
     @Test @MainActor
@@ -468,13 +494,12 @@ struct CoreSystemActionCommandTests {
     func postCommitSnapshotFailureDoesNotUndoOrThrowForTheCommittedSystemAction() throws {
         try withSystemActionCloudSyncMode {
             let context = try makeTestContext()
-            let itemID = try #require(
-                try makeTestSystemActionCommandHandler().addInboxItem(
-                    title: "Committed before snapshot",
-                    container: context.container,
-                    deviceID: "test"
-                )
+            let outcome = try makeTestSystemActionCommandHandler().addInboxItem(
+                title: "Committed before snapshot",
+                container: context.container,
+                deviceID: "test"
             )
+            let itemID = try #require(outcome.affectedItemIDs.first)
             let unwritableStateURL = URL(fileURLWithPath: "/dev/null")
                 .appendingPathComponent("TimeTrackerState-\(UUID().uuidString).json")
             let error = CommittedMutationSnapshotRecorder(

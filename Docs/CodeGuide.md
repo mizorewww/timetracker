@@ -101,6 +101,8 @@
 
 `TimeTrackerStore.perform` 和 `SystemActionCommandHandler` 使用 `ModelContext.performAtomicMutation` 包住一个用户动作。命令/仓储内部的 `saveAfterMutationStep` 在独立调用时立即保存，在外层 transaction 中延迟到最后一次统一 `save()`；动作或最终保存抛错会 rollback 整个 unit of work。提交之后的 read-model refresh 或 sync snapshot 失败不可能撤销已保存事实，因此 `perform` 仍返回成功并展示“已保存但重新载入失败”。App Intent 还会在 commit 后发布实际 domain events，使已配置 scene 通过 read-only refresh 收敛；它不能以此重新记账、再次同步或启动自动 LLM。Feature 只能在 `perform == true` 后清理 transient success/failure 状态。Keychain 不能加入 SwiftData 的 ACID transaction：LLM 配置先记住旧密钥，将三项普通偏好批量成一次 SwiftData 保存，并在提交失败时尽力恢复旧密钥；恢复本身失败必须单独报告。任务、账本等 UI selection 也只在 `didSave` 后更新，因为它不会由 `ModelContext.rollback()` 自动恢复。
 
+`InboxCaptureCommand` 把普通用户 capture 与可重试的外部 integration 明确分开：没有 `ExternalCommandKey` 的调用每次都创建独立 Inbox 条目，标题、时间、`clientMutationID`、App Entity identity 都不得用于“猜测重复”。外部调用方若需要 at-most-once，必须自行持久并在重试时复用 `(origin, UUID)` key；`StoreScopedInboxCommandCoordinator` 会在同一 fresh store transaction 中写入 `InboxItem` 和 `InboxCaptureReceipt`，相同 canonical payload 重放只返回原 item ID/空 events，复用 key 却改变 payload 直接拒绝。receipt 是 V11 CloudKit 用户事实，也进入 conflict snapshot/restore、preflight、清空数据 tombstone 与 LWW duplicate handling；旧 V10 snapshot 缺少该 optional table 时不得反向删除已存在 receipt。没有可信上游 key 的 `AddInboxItemIntent` 诚实保留 at-least-once 语义，post-commit side effect failure 也绝不伪造可安全重试的 mutation failure。
+
 ### 当前平台 UI 合同
 
 - iPhone：五个系统 `Tab`（Today、Inbox、Tasks、Focus、Analytics）；Settings 从 Today 工具栏通过当前 scene 的 `AppPresentationRouter` 以 sheet 打开，关闭后保留原 tab、任务路由与滚动上下文，不进入 Today 的 `NavigationStack`。`nav.focus` 是 iPhone tab、iPad sidebar、macOS sidebar 与 Focus 页面标题的统一导航文案；`nav.pomodoro` 仍只描述账本来源、设置和分析中的 Pomodoro 领域，不得拿它恢复平台间不一致的导航标题。

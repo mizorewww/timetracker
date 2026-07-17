@@ -241,7 +241,8 @@ struct DataModelContractTests {
             "ChecklistItem",
             "ChecklistItemVisual",
             "InboxItem",
-            "InboxSuggestion"
+            "InboxSuggestion",
+            "InboxCaptureReceipt"
         ]
 
         #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
@@ -277,6 +278,12 @@ struct DataModelContractTests {
             titleSnapshot: inboxItem.title,
             deviceID: "test"
         )
+        let inboxReceipt = InboxCaptureReceipt(
+            commandKey: "test.integration\u{1F}\(UUID().uuidString.lowercased())",
+            payloadFingerprint: String(repeating: "a", count: 64),
+            inboxItemID: inboxItem.id,
+            deviceID: "test"
+        )
         let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
 
         context.insert(task)
@@ -286,6 +293,7 @@ struct DataModelContractTests {
         context.insert(checklistVisual)
         context.insert(inboxItem)
         context.insert(inboxSuggestion)
+        context.insert(inboxReceipt)
         context.insert(preference)
         try context.save()
 
@@ -293,6 +301,7 @@ struct DataModelContractTests {
         #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).map(\.iconName) == ["book"])
         #expect(try context.fetch(FetchDescriptor<InboxItem>()).map(\.title) == ["Cloud inbox"])
         #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).map(\.taskID) == [task.id])
+        #expect(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).map(\.inboxItemID) == [inboxItem.id])
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [category.id])
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).map(\.key) == [AppPreferenceKey.showGrossAndWallTogether.rawValue])
     }
@@ -306,7 +315,7 @@ struct DataModelContractTests {
             let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
             #expect(taskIDs == [fixture.taskID])
             #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV10.versionIdentifier)
+            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV11.versionIdentifier)
         }
     }
 

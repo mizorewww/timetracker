@@ -14,6 +14,9 @@ struct SyncDataSnapshot: Codable, Equatable {
     var checklistItemVisuals: [ChecklistItemVisualRecord] = []
     var inboxItems: [InboxItemRecord] = []
     var inboxSuggestions: [InboxSuggestionRecord] = []
+    /// Optional so snapshots written before schema V11 retain their existing
+    /// recovery path. New captures always write an array, including `[]`.
+    var inboxCaptureReceipts: [InboxCaptureReceiptRecord]?
 
     mutating func removeExcludedPreferences() -> Bool {
         let originalCount = syncedPreferences.count
@@ -34,6 +37,12 @@ struct SyncDataSnapshot: Codable, Equatable {
         checklistItemVisuals.applyChanges(from: baseline.checklistItemVisuals, to: updated.checklistItemVisuals)
         inboxItems.applyChanges(from: baseline.inboxItems, to: updated.inboxItems)
         inboxSuggestions.applyChanges(from: baseline.inboxSuggestions, to: updated.inboxSuggestions)
+        var updatedReceipts = inboxCaptureReceipts ?? []
+        updatedReceipts.applyChanges(
+            from: baseline.inboxCaptureReceipts ?? [],
+            to: updated.inboxCaptureReceipts ?? []
+        )
+        inboxCaptureReceipts = updatedReceipts
     }
 
     var hasProtectableUserContent: Bool {
@@ -48,7 +57,8 @@ struct SyncDataSnapshot: Codable, Equatable {
         !checklistItems.isEmpty ||
         !checklistItemVisuals.isEmpty ||
         !inboxItems.isEmpty ||
-        !inboxSuggestions.isEmpty
+        !inboxSuggestions.isEmpty ||
+        !(inboxCaptureReceipts ?? []).isEmpty
     }
 
     var hasVisibleUserContent: Bool {

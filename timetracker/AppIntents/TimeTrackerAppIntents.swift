@@ -12,16 +12,15 @@ struct AddInboxItemIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let itemID = try SystemActionCommandHandler().addInboxItem(
+        let outcome = try SystemActionCommandHandler().addInboxItem(
             title: titleText,
             container: SystemActionContextProvider.container
         )
-        if let itemID {
-            let events: Set<StoreDomainEvent> = [.inboxChanged(itemIDs: [itemID])]
+        if outcome.didMutate {
             let postCommitContext = SystemActionContextProvider.makeContext()
             SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
-                events: events
+                events: outcome.events
             )
         }
         return .result()

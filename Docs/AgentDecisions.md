@@ -1337,6 +1337,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：router 行为测试固定 scene callback、snapshot selected ID 和 matching dismiss；UI 流程搜索 seeded task、选择后确认 sheet 消失、Focus 标题更新且没有 active run。付费签名结果和资源清理写入 dated Audit。
 
+## AD-107：Inbox 外部 capture 只能以调用方提供的稳定 key 获得回执
+
+状态：Accepted
+
+背景：`AddInboxItemIntent` 只有用户输入的标题，原实现每次调用都会创建一个新条目。标题、时间戳、SwiftData `clientMutationID`、App Entity persistent identifier 和在 `perform()` 内临时生成 UUID 都不能代表同一次调用：同标题 capture 是正常、有效的两次用户意图。将回执写到 `UserDefaults` 又会在 Inbox commit 后、receipt 写入前留下崩溃窗口。
+
+决策：引入 `ExternalCommandKey(origin, UUID)` 与 `InboxCaptureCommand`。只有外部调用方持久并复用该 opaque key，才进入 `InboxCaptureReceipt` 路径；key 与 canonical payload fingerprint 在同一个 store-scoped fresh-context `performAtomicMutation` 中和 Inbox item 一起保存。重放相同 payload 返回既有 item ID、`didMutate = false` 与空 events；同 key 不同 payload 明确拒绝；不同 key 的相同标题继续产生两个条目。receipt 是独立 V11 SwiftData 模型，不能挪用用户 Inbox UUID，也不能只存在 `UserDefaults`。它纳入 CloudKit、sync snapshot、restore preflight 与全量清空 tombstone；缺少 V11 receipt table 的 legacy snapshot 只表示“未知”，不得删掉当前 receipt。Siri/App Shortcut 当前没有可信传入 key，因此保留 at-least-once capture，禁止在 Intent 内合成 key 或按内容去重。
+
+后果：普通用户 capture 不会因标题相同而丢失；有完善重试协议的 integration 可在一个已串行化 store 内避免重复提交和崩溃窗口。跨设备同时把同一个外部命令投递到尚未合并的 store 仍需要未来的分布式 delivery/冲突协议，不能以本地 receipt 宣称全局 exactly-once；也不得在没有调用方确认 horizon 时任意 prune receipt。
+
+验证：领域回归覆盖相同 key 重放、不同 key 同标题、key/payload 不匹配拒绝、System Action outcome 与 receipt/item 共同持久化；snapshot/restore、legacy V10 兼容、schema registry 和清空 tombstone 另纳入签名回归。本小节在可读取 xcresult 后补填最终数字。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

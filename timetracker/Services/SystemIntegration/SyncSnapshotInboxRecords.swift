@@ -71,6 +71,26 @@ extension InboxItemRecord {
     }
 }
 
+struct InboxCaptureReceiptRecord: Codable, Equatable, SyncSnapshotRecord {
+    let id: UUID
+    let commandKey: String
+    let payloadFingerprint: String
+    let inboxItemID: UUID
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    init(_ model: InboxCaptureReceipt) {
+        id = model.id
+        commandKey = model.commandKey
+        payloadFingerprint = model.payloadFingerprint
+        inboxItemID = model.inboxItemID
+        createdAt = model.createdAt
+        updatedAt = model.updatedAt
+        deletedAt = model.deletedAt
+    }
+}
+
 struct InboxSuggestionRecord: Codable, Equatable, SyncSnapshotRecord {
     let id: UUID
     let inboxItemID: UUID

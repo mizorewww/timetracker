@@ -13,6 +13,7 @@ enum SyncSnapshotTable: String, Equatable {
     case checklistItemVisuals
     case inboxItems
     case inboxSuggestions
+    case inboxCaptureReceipts
 }
 
 enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
@@ -48,6 +49,7 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
         actualTaskID: UUID
     )
     case inconsistentInboxSuggestionIdentity(id: UUID, inboxItemID: UUID)
+    case inconsistentInboxCaptureReceipt(id: UUID, inboxItemID: UUID)
 
     var errorDescription: String? {
         switch self {
@@ -79,6 +81,8 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
             return "Sync snapshot \(table.rawValue) record \(id.uuidString) references session \(sessionID.uuidString) for task \(expectedTaskID.uuidString), not \(actualTaskID.uuidString)."
         case let .inconsistentInboxSuggestionIdentity(id, inboxItemID):
             return "Sync snapshot Inbox suggestion \(id.uuidString) disagrees with Inbox item \(inboxItemID.uuidString) about logical suggestion identity."
+        case let .inconsistentInboxCaptureReceipt(id, inboxItemID):
+            return "Sync snapshot Inbox capture receipt \(id.uuidString) references missing Inbox item \(inboxItemID.uuidString)."
         }
     }
 }
@@ -118,7 +122,8 @@ extension SyncDataSnapshot {
             (.checklistItems, checklistItems.count),
             (.checklistItemVisuals, checklistItemVisuals.count),
             (.inboxItems, inboxItems.count),
-            (.inboxSuggestions, inboxSuggestions.count)
+            (.inboxSuggestions, inboxSuggestions.count),
+            (.inboxCaptureReceipts, (inboxCaptureReceipts ?? []).count)
         ]
 
         for (table, count) in tableCounts where count > SyncDataSnapshotRestoreLimits.maximumRecordsPerTable {
@@ -151,6 +156,7 @@ extension SyncDataSnapshot {
         try requireUniqueIdentifiers(checklistItemVisuals, table: .checklistItemVisuals)
         try requireUniqueIdentifiers(inboxItems, table: .inboxItems)
         try requireUniqueIdentifiers(inboxSuggestions, table: .inboxSuggestions)
+        try requireUniqueIdentifiers(inboxCaptureReceipts ?? [], table: .inboxCaptureReceipts)
     }
 
     private func requireUniqueIdentifiers<Record: SyncSnapshotRecord>(

@@ -72,6 +72,11 @@ extension SyncDataSnapshot {
             }.sortedByID()
             snapshot.inboxSuggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
                 .deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID()
+            snapshot.inboxCaptureReceipts = try context
+                .fetch(FetchDescriptor<InboxCaptureReceipt>())
+                .deduplicatedByID()
+                .map(InboxCaptureReceiptRecord.init)
+                .sortedByID()
         }
         return snapshot
     }
@@ -101,7 +106,8 @@ extension SyncDataSnapshot {
                     mergedDismissedSuggestionRevisionID: $0.mergedDismissedSuggestionRevisionID
                 )
             }.sortedByID(),
-            inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID()
+            inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID(),
+            inboxCaptureReceipts: try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).deduplicatedByID().map(InboxCaptureReceiptRecord.init).sortedByID()
         )
     }
 }

@@ -24,6 +24,7 @@ struct InboxOrderMutationBaseline: Equatable, Sendable {
 enum StoreScopedInboxMutationError: LocalizedError, Equatable {
     case inboxChanged
     case taskUnavailable
+    case externalCommandPayloadChanged
 
     var errorDescription: String? {
         switch self {
@@ -31,6 +32,8 @@ enum StoreScopedInboxMutationError: LocalizedError, Equatable {
             AppStrings.localized("inbox.error.changed")
         case .taskUnavailable:
             AppStrings.localized("inbox.suggestion.error.noValidTask")
+        case .externalCommandPayloadChanged:
+            "An external Inbox capture command key was reused with different content."
         }
     }
 }
@@ -108,27 +111,6 @@ struct StoreScopedInboxCommandCoordinator {
             )
             return InboxMutationOutcome(
                 affectedItemIDs: Set(orderedItemIDs),
-                didMutate: true
-            )
-        }
-    }
-
-    func add(title: String) throws -> InboxMutationOutcome {
-        try withFreshLockedContext { context in
-            let items = try openItems(context: context)
-            guard let item = try InboxCommandHandler().add(
-                title: title,
-                existingItems: items,
-                context: context,
-                deviceID: deviceID
-            ) else {
-                return InboxMutationOutcome(
-                    affectedItemIDs: [],
-                    didMutate: false
-                )
-            }
-            return InboxMutationOutcome(
-                affectedItemIDs: [item.id],
                 didMutate: true
             )
         }
@@ -213,7 +195,7 @@ struct StoreScopedInboxCommandCoordinator {
         }
     }
 
-    private func openItems(context: ModelContext) throws -> [InboxItem] {
+    func openItems(context: ModelContext) throws -> [InboxItem] {
         InboxSuggestionIdentityService().visibleLogicalItems(
             from: try context.fetch(FetchDescriptor<InboxItem>())
         )

@@ -127,6 +127,11 @@ private struct TaskDetailList: View {
         #else
         .listStyle(.inset)
         #endif
+        .contentMargins(
+            .bottom,
+            16,
+            for: .scrollContent
+        )
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .accessibilityIdentifier("task.detail")

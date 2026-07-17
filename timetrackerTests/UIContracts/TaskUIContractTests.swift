@@ -405,6 +405,7 @@ struct TaskUIContractTests {
     func taskDetailExposesReadFirstSectionsBeforeSeparateEditing() throws {
         let detailSource = try taskDetailFeatureSource()
         let rootSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let identitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift")
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.identity\")"))
@@ -418,6 +419,11 @@ struct TaskUIContractTests {
         #expect(rootSource.contains("loadedRequest == request ? snapshot : nil"))
         #expect(rootSource.contains("TaskDetailActionsView("))
         #expect(rootSource.contains("task.detail.analyticsLoading"))
+        #expect(rootSource.contains(".contentMargins("))
+        #expect(rootSource.contains("for: .scrollContent"))
+        #expect(rootSource.contains(".bottom,\n            16,"))
+        #expect(identitySource.contains("Text(task.title)") == false)
+        #expect(identitySource.contains("AppStrings.localized(\"task.root\")"))
     }
 
     @Test

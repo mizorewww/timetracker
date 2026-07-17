@@ -1217,6 +1217,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名的 macOS `CoreSourceLayoutTests`、`CoreAnalyticsStoreTests` 与 `AnalyticsTimelineTests` 通过；本批未启动模拟器，临时 DerivedData 与 owned build/test 进程已在退出时清理。
 
+## AD-097：Task Detail 标题只在系统导航栏出现一次
+
+状态：Accepted
+
+背景：任务详情的 inline navigation title 已显示任务名称，但首个 identity card 又以更大的文字重复同一名称。运行中的任务首屏因此把垂直空间花在重复信息上，真正可执行的 Stop / Add Time 及 Forecast 被推低；长标题还会和状态 badge 竞争一行。
+
+决策：系统 navigation title 是任务标题唯一 owner。`TaskDetailIdentityRow` 只呈现任务图标、父级 path（根任务明确显示 root）与运行/业务状态；不得在 row 中恢复 `Text(task.title)`。iPhone inset list 为正常字号保留 16 pt 的显式 `scrollContent` bottom margin，让最后一个 section 不紧贴系统 Tab Bar glass。
+
+后果：首屏更快建立“这里是哪一个任务”的层级上下文，同时把直接操作与 Forecast 提前；同名子任务仍以父级路径区分，根任务不会留下空白 identity 文本。这个决定不改变 task route、计时命令、分析 request 或同步数据。
+
+验证：付费自动签名 macOS Task UI/Core architecture/refresh/source-layout 定向回归通过；generic iOS Debug 自动签名构建通过。iPhone 17 Pro / iOS 27 的 UI TestManager 在测试 host 构建后空转，直接 seeded launch 又显示空白系统画布，二者均未计为视觉通过；两次专属 UDID、App、DerivedData、result/screenshot 目录均已删除。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

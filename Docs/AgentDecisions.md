@@ -1229,6 +1229,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名 macOS Task UI/Core architecture/refresh/source-layout 定向回归通过；generic iOS Debug 自动签名构建通过。iPhone 17 Pro / iOS 27 的 UI TestManager 在测试 host 构建后空转，直接 seeded launch 又显示空白系统画布，二者均未计为视觉通过；两次专属 UDID、App、DerivedData、result/screenshot 目录均已删除。
 
+## AD-098：Inbox 主命令与 App Intent capture 必须共用 store-scoped lock
+
+状态：Accepted
+
+背景：Inbox reorder 已在共享 store lock 中用 fresh context 复核完整排序 baseline，但新增、切换完成、改名、删除和丢弃建议仍通过 scene 长存的 `ModelContext` 写入；Shortcuts capture 更直接使用 App Intent context。两个场景、iCloud merge、恢复 reset 或快捷指令可以在错误的读取事实上并发写入，使新增排序冲突、旧操作覆盖新 revision，并继续留下 AD-094 的最终 snapshot/reset 间隙。
+
+决策：`StoreScopedInboxCommandCoordinator` 是 Inbox primary writer 的唯一入口。新增在锁内 fresh visible open set 上分配顺序；单项命令携带 `(itemID, clientMutationID)` baseline，锁内重新选择逻辑 winner 并拒绝缺失或 revision 不匹配目标；重排仍要求完整 set、顺序和 revision map 精确一致。所有 outcome 只有实际 mutation 才推进 Inbox event、refresh 与同步 generation；stale rejection 只刷新 Inbox read model。`SystemActionCommandHandler.addInboxItem` 只接收 container 并调用该 coordinator，`AddInboxItemIntent` 只有 commit 后才创建新的 context 用于 snapshot 和 Widget/Watch/Live Activity projection。
+
+后果：主 App 与 App Intent 的 primary Inbox command 与 timer、checklist、同步恢复等命令共享同一 store lock，不再用 scene 或 Intent context 作为并发边界。空 capture 和业务 no-op 不制造同步事实；已被其他场景修改或删除的目标不会被陈旧操作覆盖。此决定不覆盖 LLM suggestion 的异步 upsert、draft 保存或跨 Inbox/Checklist apply；这些仍必须在后续独立切片中迁入同一锁域并做 fresh task/suggestion revalidation。
+
+验证：付费自动签名 macOS 定向运行 `StoreScopedInboxCommandCoordinatorTests`、`CoreSystemActionCommandTests` 与 `CoreSyncConflictTests` 通过；新增覆盖单项 stale revision 拒绝、facade stale refresh、锁内 Shortcut capture 与 recovery write guard。没有启动模拟器；结束后没有 owned `xcodebuild`、`xctest` 或受测 App，既存 CoreSimulator 服务未被触碰。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

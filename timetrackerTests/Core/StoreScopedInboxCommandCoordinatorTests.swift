@@ -95,6 +95,35 @@ struct StoreScopedInboxCommandCoordinatorTests {
     }
 
     @Test
+    func staleItemBaselineCannotOverwriteANewerEdit() throws {
+        let context = try makeTestContext()
+        let item = try #require(try seedOpenItems(in: context.container).first)
+        let baseline = InboxItemMutationBaseline(item: item)
+        let siblingContext = ModelContext(context.container)
+        let siblingItem = try #require(
+            try siblingContext.fetch(FetchDescriptor<InboxItem>())
+                .first(where: { $0.id == item.id })
+        )
+        try InboxCommandHandler().updateTitle(
+            siblingItem,
+            title: "Edited in another scene",
+            context: siblingContext,
+            deviceID: "sibling"
+        )
+
+        #expect(throws: StoreScopedInboxMutationError.inboxChanged) {
+            try coordinator(container: context.container).toggle(baseline: baseline)
+        }
+
+        let persisted = try #require(
+            try allVisibleItems(in: context.container).first(where: { $0.id == item.id })
+        )
+        #expect(persisted.title == "Edited in another scene")
+        #expect(persisted.isCompleted == false)
+        #expect(persisted.deviceID == "sibling")
+    }
+
+    @Test
     func facadeRefreshesAfterRejectingAStaleDrag() throws {
         let context = try makeTestContext()
         let store = makeTestStore()
@@ -122,6 +151,31 @@ struct StoreScopedInboxCommandCoordinatorTests {
         #expect(store.errorMessage == AppStrings.localized("inbox.error.changed"))
         #expect(store.openInboxItems.map(\.title) == ["Second"])
         #expect(store.completedInboxItems.map(\.title) == ["First"])
+    }
+
+    @Test
+    func facadeRefreshesAfterRejectingAStaleTitleEdit() throws {
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.addInboxItem(title: "First"))
+        let staleItem = try #require(store.openInboxItems.first)
+        let siblingContext = ModelContext(context.container)
+        let siblingItem = try #require(
+            try siblingContext.fetch(FetchDescriptor<InboxItem>())
+                .first(where: { $0.id == staleItem.id })
+        )
+        try InboxCommandHandler().updateTitle(
+            siblingItem,
+            title: "Edited in another scene",
+            context: siblingContext,
+            deviceID: "sibling"
+        )
+
+        store.updateInboxItemTitle(staleItem, title: "Overwritten title")
+
+        #expect(store.errorMessage == AppStrings.localized("inbox.error.changed"))
+        #expect(store.openInboxItems.map(\.title) == ["Edited in another scene"])
     }
 
     private func coordinator(container: ModelContainer) -> StoreScopedInboxCommandCoordinator {

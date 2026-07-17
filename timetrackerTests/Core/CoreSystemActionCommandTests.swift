@@ -23,17 +23,30 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("allowParallelTimers: true") == false)
         #expect(source.contains("allowParallelTimersPreference(context: context)"))
         #expect(source.contains("source: .shortcut"))
+        #expect(source.contains("container: SystemActionContextProvider.container"))
+        #expect(source.contains("let postCommitContext = SystemActionContextProvider.makeContext()"))
         #expect(source.contains("timetrackerApp.applicationModelContainer"))
         #expect(source.components(separatedBy: "CommittedMutationSnapshotRecorder()").count - 1 == 3)
         #expect(source.components(separatedBy: "CommittedMutationSurfaceSynchronizer()").count - 1 == 3)
     }
 
     @Test @MainActor
-    func systemActionAddInboxItemUsesSharedCommandHandler() throws {
+    func systemActionAddInboxItemUsesStoreScopedCoordinator() throws {
         let context = try makeTestContext()
         let handler = makeTestSystemActionCommandHandler()
+        let source = try sourceText("timetracker/Commands/SystemActionCommands.swift")
 
-        let itemID = try #require(try handler.addInboxItem(title: "Capture from shortcut", context: context, deviceID: "test"))
+        #expect(source.contains("StoreScopedInboxCommandCoordinator("))
+        #expect(source.contains("container: ModelContainer"))
+        #expect(source.contains("InboxCommandHandler()\n                .add") == false)
+
+        let itemID = try #require(
+            try handler.addInboxItem(
+                title: "Capture from shortcut",
+                container: context.container,
+                deviceID: "test"
+            )
+        )
 
         let items = try context.fetch(FetchDescriptor<InboxItem>())
         #expect(items.map(\.id) == [itemID])
@@ -398,7 +411,7 @@ struct CoreSystemActionCommandTests {
             let itemID = try #require(
                 try makeTestSystemActionCommandHandler().addInboxItem(
                     title: "Committed before snapshot",
-                    context: context,
+                    container: context.container,
                     deviceID: "test"
                 )
             )

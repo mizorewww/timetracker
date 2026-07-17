@@ -4,52 +4,49 @@ import SwiftData
 extension TimeTrackerStore {
     @discardableResult
     func addInboxItem(title: String) -> Bool {
-        perform(event: .inboxChanged(itemIDs: [])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.add(
-                title: title,
-                existingItems: inboxItems,
-                context: modelContext
-            )
-        }
+        performStoreScopedInboxMutation { coordinator in
+            try coordinator.add(title: title)
+        }?.didMutate == true
     }
 
     func toggleInboxItem(_ item: InboxItem) {
-        perform(event: .inboxChanged(itemIDs: [item.id])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.toggle(item, context: modelContext)
+        _ = performStoreScopedInboxMutation { coordinator in
+            try coordinator.toggle(baseline: InboxItemMutationBaseline(item: item))
         }
     }
 
     func updateInboxItemTitle(_ item: InboxItem, title: String) {
         let oldTitle = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let didUpdate = perform(event: .inboxChanged(itemIDs: [item.id])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.updateTitle(item, title: title, context: modelContext)
+        let outcome = performStoreScopedInboxMutation { coordinator in
+            try coordinator.updateTitle(
+                baseline: InboxItemMutationBaseline(item: item),
+                title: title
+            )
         }
-        if didUpdate, !newTitle.isEmpty, newTitle != oldTitle {
+        if outcome?.didMutate == true,
+           !newTitle.isEmpty,
+           newTitle != oldTitle,
+           let updatedItem = inboxItems.first(where: { $0.id == item.id }) {
             inboxSuggestionFailureByItemID[item.id] = nil
-            suggestInboxItem(item, showsErrors: false)
+            suggestInboxItem(updatedItem, showsErrors: false)
         }
     }
 
     func deleteInboxItem(_ item: InboxItem) {
-        let didDelete = perform(event: .inboxChanged(itemIDs: [item.id])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.softDelete(item, context: modelContext)
+        let outcome = performStoreScopedInboxMutation { coordinator in
+            try coordinator.delete(baseline: InboxItemMutationBaseline(item: item))
         }
-        if didDelete {
+        if outcome?.didMutate == true {
             inboxSuggestionFailureByItemID[item.id] = nil
         }
     }
 
     func discardInboxSuggestion(_ item: InboxItem) {
-        let didDiscard = perform(event: .inboxChanged(itemIDs: [item.id])) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try inboxCommandHandler.discardSuggestion(item, context: modelContext)
+        let outcome = performStoreScopedInboxMutation { coordinator in
+            try coordinator.discardSuggestion(baseline: InboxItemMutationBaseline(item: item))
         }
-        if didDiscard {
+        if outcome?.didMutate == true {
             inboxSuggestionFailureByItemID[item.id] = nil
         }
     }
@@ -62,20 +59,31 @@ extension TimeTrackerStore {
             sourceOffsets: sourceOffsets,
             destination: destination
         )
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedInboxCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).reorder(
+        return performStoreScopedInboxMutation { coordinator in
+            try coordinator.reorder(
                 baseline: InboxOrderMutationBaseline(items: currentItems),
                 orderedItemIDs: orderedIDs
             )
+        } != nil
+    }
+
+    private func performStoreScopedInboxMutation(
+        _ action: (StoreScopedInboxCommandCoordinator) throws -> InboxMutationOutcome
+    ) -> InboxMutationOutcome? {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return nil
+        }
+
+        do {
+            let outcome = try action(
+                StoreScopedInboxCommandCoordinator(
+                    container: modelContext.container,
+                    writeAuthorization: writeAuthorization
+                )
+            )
             finishStoreScopedMutation(events: outcome.events)
-            return true
+            return outcome
         } catch {
             if error is StoreScopedInboxMutationError {
                 do {
@@ -85,11 +93,11 @@ extension TimeTrackerStore {
                         format: AppStrings.localized("error.savedRefreshFailed"),
                         error.localizedDescription
                     )
-                    return false
+                    return nil
                 }
             }
             errorMessage = error.localizedDescription
-            return false
+            return nil
         }
     }
 }

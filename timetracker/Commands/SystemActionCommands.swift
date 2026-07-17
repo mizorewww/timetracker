@@ -94,22 +94,15 @@ struct SystemActionCommandHandler {
     @discardableResult
     func addInboxItem(
         title: String,
-        context: ModelContext,
+        container: ModelContainer,
         deviceID: String = DeviceIdentity.current
     ) throws -> UUID? {
-        try context.performAtomicMutation {
-            try writeAuthorization.requireUserWritesAllowed()
-            let existingItems = try context.fetch(FetchDescriptor<InboxItem>())
-                .visibleDeduplicatedByID()
-                .sorted { lhs, rhs in
-                    if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-                    if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
-                    return lhs.id.uuidString < rhs.id.uuidString
-                }
-            return try InboxCommandHandler()
-                .add(title: title, existingItems: existingItems, context: context, deviceID: deviceID)?
-                .id
-        }
+        let outcome = try StoreScopedInboxCommandCoordinator(
+            container: container,
+            writeAuthorization: writeAuthorization,
+            deviceID: deviceID
+        ).add(title: title)
+        return outcome.didMutate ? outcome.affectedItemIDs.first : nil
     }
 
     @discardableResult

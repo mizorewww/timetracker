@@ -959,7 +959,10 @@ struct CoreSyncConflictTests {
 
             let context = try makeTestContext()
             #expect(throws: PersistenceWriteError.self) {
-                try SystemActionCommandHandler().addInboxItem(title: "Must not persist", context: context)
+                try SystemActionCommandHandler().addInboxItem(
+                    title: "Must not persist",
+                    container: context.container
+                )
             }
             #expect(try context.fetch(FetchDescriptor<InboxItem>()).isEmpty)
         }

@@ -12,15 +12,21 @@ struct AddInboxItemIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let context = SystemActionContextProvider.makeContext()
-        let itemID = try SystemActionCommandHandler().addInboxItem(title: titleText, context: context)
+        let itemID = try SystemActionCommandHandler().addInboxItem(
+            title: titleText,
+            container: SystemActionContextProvider.container
+        )
         if let itemID {
             let events: Set<StoreDomainEvent> = [.inboxChanged(itemIDs: [itemID])]
+            let postCommitContext = SystemActionContextProvider.makeContext()
             CommittedMutationSnapshotRecorder().recordLocalMutation(
-                context: context,
+                context: postCommitContext,
                 events: events
             )
-            CommittedMutationSurfaceSynchronizer().synchronize(context: context, events: events)
+            CommittedMutationSurfaceSynchronizer().synchronize(
+                context: postCommitContext,
+                events: events
+            )
         }
         return .result()
     }

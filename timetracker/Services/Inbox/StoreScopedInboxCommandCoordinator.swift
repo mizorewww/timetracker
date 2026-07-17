@@ -39,8 +39,19 @@ struct InboxMutationOutcome: Equatable {
     }
 }
 
-/// Serializes Inbox ordering with the other store-scoped writers. The visible
-/// open set and every item revision are revalidated only after the lock is held.
+struct InboxItemMutationBaseline: Equatable, Sendable {
+    let itemID: UUID
+    let clientMutationID: UUID
+
+    init(item: InboxItem) {
+        itemID = item.id
+        clientMutationID = item.clientMutationID
+    }
+}
+
+/// Serializes every Inbox command with the other store-scoped writers. The
+/// canonical item set and every item revision are revalidated only after the
+/// lock is held in a fresh context.
 @MainActor
 struct StoreScopedInboxCommandCoordinator {
     let container: ModelContainer
@@ -64,13 +75,7 @@ struct StoreScopedInboxCommandCoordinator {
         baseline: InboxOrderMutationBaseline,
         orderedItemIDs: [UUID]
     ) throws -> InboxMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        return try transaction.withFreshContext { context in
+        try mutate { context in
             let items = try openItems(context: context)
             let currentMutationIDs = items.reduce(into: [UUID: UUID]()) {
                 $0[$1.id] = $1.clientMutationID
@@ -102,11 +107,118 @@ struct StoreScopedInboxCommandCoordinator {
         }
     }
 
+    func add(title: String) throws -> InboxMutationOutcome {
+        try mutate { context in
+            let items = try openItems(context: context)
+            guard let item = try InboxCommandHandler().add(
+                title: title,
+                existingItems: items,
+                context: context,
+                deviceID: deviceID
+            ) else {
+                return InboxMutationOutcome(
+                    affectedItemIDs: [],
+                    didMutate: false
+                )
+            }
+            return InboxMutationOutcome(
+                affectedItemIDs: [item.id],
+                didMutate: true
+            )
+        }
+    }
+
+    func toggle(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
+        try mutateItem(baseline: baseline) { item, context in
+            try InboxCommandHandler().toggle(
+                item,
+                context: context,
+                now: nowProvider(),
+                deviceID: deviceID
+            )
+        }
+    }
+
+    func updateTitle(
+        baseline: InboxItemMutationBaseline,
+        title: String
+    ) throws -> InboxMutationOutcome {
+        try mutateItem(baseline: baseline) { item, context in
+            try InboxCommandHandler().updateTitle(
+                item,
+                title: title,
+                context: context,
+                now: nowProvider(),
+                deviceID: deviceID
+            )
+        }
+    }
+
+    func delete(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
+        try mutateItem(baseline: baseline) { item, context in
+            try InboxCommandHandler().softDelete(
+                item,
+                context: context,
+                now: nowProvider(),
+                deviceID: deviceID
+            )
+        }
+    }
+
+    func discardSuggestion(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
+        try mutateItem(baseline: baseline) { item, context in
+            try InboxCommandHandler().discardSuggestion(
+                item,
+                context: context,
+                now: nowProvider(),
+                deviceID: deviceID
+            )
+        }
+    }
+
+    private func mutate(
+        _ operation: (ModelContext) throws -> InboxMutationOutcome
+    ) throws -> InboxMutationOutcome {
+        try writeAuthorization.requireUserWritesAllowed()
+        let scope = try TimerStoreScope(container: container)
+        return try StoreScopedTimerMutationTransaction(
+            scope: scope,
+            container: container
+        ).withFreshContext(operation)
+    }
+
+    private func mutateItem(
+        baseline: InboxItemMutationBaseline,
+        operation: (InboxItem, ModelContext) throws -> Void
+    ) throws -> InboxMutationOutcome {
+        try mutate { context in
+            guard let item = try visibleItem(id: baseline.itemID, context: context) else {
+                throw StoreScopedInboxMutationError.inboxChanged
+            }
+            guard item.clientMutationID == baseline.clientMutationID else {
+                throw StoreScopedInboxMutationError.inboxChanged
+            }
+            let mutationIDBeforeOperation = item.clientMutationID
+            try operation(item, context)
+            return InboxMutationOutcome(
+                affectedItemIDs: [item.id],
+                didMutate: item.clientMutationID != mutationIDBeforeOperation
+            )
+        }
+    }
+
     private func openItems(context: ModelContext) throws -> [InboxItem] {
         InboxSuggestionIdentityService().visibleLogicalItems(
             from: try context.fetch(FetchDescriptor<InboxItem>())
         )
         .filter { $0.isCompleted == false }
+    }
+
+    private func visibleItem(id: UUID, context: ModelContext) throws -> InboxItem? {
+        InboxSuggestionIdentityService().visibleLogicalItems(
+            from: try context.fetch(FetchDescriptor<InboxItem>())
+        )
+        .first { $0.id == id }
     }
 
     private static func ordered(_ items: [InboxItem]) -> [InboxItem] {

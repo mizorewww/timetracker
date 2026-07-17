@@ -163,6 +163,68 @@ struct CoreSyncConflictStateWriteTests {
         #expect(try Data(contentsOf: mirrorURL) == legacyMirrorData)
     }
 
+    @Test @MainActor
+    func durableStateWriteFailureKeepsTheLastCommittedStateAndMirror() throws {
+        let stateURL = temporaryStateURL()
+        defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
+        let existing = try seedExistingPair(at: stateURL)
+        let service = SyncConflictService(
+            stateURL: stateURL,
+            localStateFile: DurableLocalFile(injectFault: { point in
+                if point == .afterAtomicWriteBeforeFileSync {
+                    throw InjectedDurableWriteFailure()
+                }
+            })
+        )
+        var replacement = SyncConflictState()
+        replacement.pendingForcedUploadSnapshot = snapshot(title: "Replacement")
+
+        #expect(throws: InjectedDurableWriteFailure.self) {
+            try service.saveState(replacement)
+        }
+
+        #expect(try Data(contentsOf: stateURL) == existing.state)
+        #expect(try Data(contentsOf: mirrorURL(for: stateURL)) == existing.mirror)
+        let temporaryFiles = try FileManager.default.contentsOfDirectory(
+            at: stateURL.deletingLastPathComponent(),
+            includingPropertiesForKeys: nil
+        ).filter { $0.lastPathComponent.hasPrefix(".TimeTrackerWrite-") }
+        #expect(temporaryFiles.isEmpty)
+    }
+
+    @Test @MainActor
+    func durableQuarantineFailureRestoresTheCanonicalStateFile() throws {
+        let stateURL = temporaryStateURL()
+        defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
+        let corruptData = Data("not JSON".utf8)
+        try FileManager.default.createDirectory(
+            at: stateURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try corruptData.write(to: stateURL)
+        let service = SyncConflictService(
+            stateURL: stateURL,
+            localStateFile: DurableLocalFile(injectFault: { point in
+                if point == .afterQuarantineMoveBeforeFileSync {
+                    throw InjectedDurableWriteFailure()
+                }
+            })
+        )
+
+        #expect(throws: InjectedDurableWriteFailure.self) {
+            _ = try service.loadState()
+        }
+
+        #expect(try Data(contentsOf: stateURL) == corruptData)
+        let quarantineDirectory = stateURL.deletingLastPathComponent()
+            .appendingPathComponent(".TimeTrackerQuarantine", isDirectory: true)
+        let retainedQuarantines = (try? FileManager.default.contentsOfDirectory(
+            at: quarantineDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        #expect(retainedQuarantines.isEmpty)
+    }
+
     @MainActor
     private func expectWriteError(
         _ expected: SyncConflictLocalStateWriteError,
@@ -221,4 +283,6 @@ struct CoreSyncConflictStateWriteTests {
             SyncConflictService.pendingForcedUploadSnapshotFileName
         )
     }
+
+    private struct InjectedDurableWriteFailure: Error {}
 }

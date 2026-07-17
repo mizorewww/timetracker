@@ -90,17 +90,25 @@ extension SyncConflictService {
         let stateURL = try defaultStateURL()
         let backupURL = try defaultPendingForcedUploadSnapshotURL()
         let lockURL = stateLockURL(for: stateURL)
+        let durableRootURL = stateURL
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .standardizedFileURL
+        let durableFile = DurableLocalFile()
         try SyncConflictFileLockRegistry.shared
             .lock(for: lockURL)
             .withExclusiveAccess(lockURL: lockURL) {
                 // If interrupted, a still-present authoritative state remains
-                // preferable to an orphaned recovery mirror.
-                if FileManager.default.fileExists(atPath: backupURL.path) {
-                    try FileManager.default.removeItem(at: backupURL)
-                }
-                if FileManager.default.fileExists(atPath: stateURL.path) {
-                    try FileManager.default.removeItem(at: stateURL)
-                }
+                // preferable to an orphaned recovery mirror. Each removal is
+                // durably published before proceeding to the next file.
+                try durableFile.removeIfPresent(
+                    at: backupURL,
+                    durableRootURL: durableRootURL
+                )
+                try durableFile.removeIfPresent(
+                    at: stateURL,
+                    durableRootURL: durableRootURL
+                )
             }
     }
 }

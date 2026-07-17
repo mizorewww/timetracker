@@ -1636,10 +1636,10 @@ struct CoreSyncConflictTests {
             }
             #expect(FileManager.default.fileExists(atPath: stateURL.path) == false)
 
-            let quarantinedFiles = try FileManager.default.contentsOfDirectory(
-                at: stateURL.deletingLastPathComponent(),
-                includingPropertiesForKeys: nil
-            ).filter { $0.lastPathComponent.hasPrefix(SyncConflictService.corruptStateFilePrefix) }
+            let quarantinedFiles = try quarantineEntries(
+                near: stateURL,
+                prefix: SyncConflictService.corruptStateFilePrefix
+            )
             #expect(quarantinedFiles.count == 1)
 
             #expect(try service.bootstrap(context: context) == nil)
@@ -1691,14 +1691,10 @@ struct CoreSyncConflictTests {
             #expect(try service.bootstrap(context: context) == nil)
             #expect(FileManager.default.fileExists(atPath: stateURL.path))
             #expect(FileManager.default.fileExists(atPath: mirrorURL.path) == false)
-            let quarantinedMirrors = try FileManager.default.contentsOfDirectory(
-                at: mirrorURL.deletingLastPathComponent(),
-                includingPropertiesForKeys: nil
-            ).filter {
-                $0.lastPathComponent.hasPrefix(
-                    SyncConflictService.corruptPendingSnapshotFilePrefix
-                )
-            }
+            let quarantinedMirrors = try quarantineEntries(
+                near: mirrorURL,
+                prefix: SyncConflictService.corruptPendingSnapshotFilePrefix
+            )
             #expect(quarantinedMirrors.count == 1)
             let visibleTasks = try context.fetch(FetchDescriptor<TaskNode>())
                 .visibleDeduplicatedByID()
@@ -1718,15 +1714,11 @@ struct CoreSyncConflictTests {
         }
         #expect(FileManager.default.fileExists(atPath: stateURL.path) == false)
 
-        let quarantinedFiles = try FileManager.default.contentsOfDirectory(
-            at: stateURL.deletingLastPathComponent(),
-            includingPropertiesForKeys: [.fileSizeKey]
-        ).filter { $0.lastPathComponent.hasPrefix(SyncConflictService.corruptStateFilePrefix) }
-        let quarantinedFile = try #require(quarantinedFiles.first)
-        #expect(quarantinedFiles.count == 1)
         #expect(
-            try quarantinedFile.resourceValues(forKeys: [.fileSizeKey]).fileSize
-                == oversizedByteCount
+            try quarantineEntries(
+                near: stateURL,
+                prefix: SyncConflictService.corruptStateFilePrefix
+            ).isEmpty
         )
     }
 
@@ -1742,19 +1734,11 @@ struct CoreSyncConflictTests {
         #expect(state.pendingForcedUploadSnapshot == nil)
         #expect(FileManager.default.fileExists(atPath: mirrorURL.path) == false)
 
-        let quarantinedFiles = try FileManager.default.contentsOfDirectory(
-            at: mirrorURL.deletingLastPathComponent(),
-            includingPropertiesForKeys: [.fileSizeKey]
-        ).filter {
-            $0.lastPathComponent.hasPrefix(
-                SyncConflictService.corruptPendingSnapshotFilePrefix
-            )
-        }
-        let quarantinedFile = try #require(quarantinedFiles.first)
-        #expect(quarantinedFiles.count == 1)
         #expect(
-            try quarantinedFile.resourceValues(forKeys: [.fileSizeKey]).fileSize
-                == oversizedByteCount
+            try quarantineEntries(
+                near: mirrorURL,
+                prefix: SyncConflictService.corruptPendingSnapshotFilePrefix
+            ).isEmpty
         )
     }
 
@@ -1970,6 +1954,18 @@ struct CoreSyncConflictTests {
           "inboxSuggestions": []
         }
         """
+    }
+
+    private func quarantineEntries(near url: URL, prefix: String) throws -> [URL] {
+        let quarantineDirectory = url.deletingLastPathComponent()
+            .appendingPathComponent(".TimeTrackerQuarantine", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: quarantineDirectory.path) else {
+            return []
+        }
+        return try FileManager.default.contentsOfDirectory(
+            at: quarantineDirectory,
+            includingPropertiesForKeys: nil
+        ).filter { $0.lastPathComponent.hasPrefix(prefix) }
     }
 
     private func withCloudSyncMode(_ body: () throws -> Void) throws {

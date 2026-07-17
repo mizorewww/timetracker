@@ -21,6 +21,17 @@ extension SyncConflictService {
         Self.stateLockURL(for: try stateURL())
     }
 
+    /// Production uses the stable Application Support parent, so a retry can
+    /// replay the directory sync that publishes `TimeTrackerSync`. Test and
+    /// diagnostic overrides own their explicitly supplied state directory.
+    nonisolated func stateDurableRootURL() throws -> URL {
+        let stateDirectory = try stateURL().deletingLastPathComponent()
+        if stateURLOverride != nil {
+            return stateDirectory.standardizedFileURL
+        }
+        return stateDirectory.deletingLastPathComponent().standardizedFileURL
+    }
+
     nonisolated static func stateLockURL(for stateURL: URL) -> URL {
         stateURL.deletingLastPathComponent().appendingPathComponent(
             ".\(stateURL.lastPathComponent).lock"

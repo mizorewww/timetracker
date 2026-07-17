@@ -50,12 +50,11 @@ extension SyncConflictService {
         let mirrorMutation = try pendingForcedUploadMirrorMutation(for: state)
 
         let url = try stateURL()
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+        try localStateFile.write(
+            stateData,
+            to: url,
+            durableRootURL: try stateDurableRootURL()
         )
-        try stateData.write(to: url, options: [.atomic])
-        try protectSensitiveFileIfSupported(at: url)
         try applyPendingForcedUploadMirrorMutation(mirrorMutation)
     }
 
@@ -128,19 +127,19 @@ extension SyncConflictService {
         // the combined state preflight boundary.
         try validateRecoverySnapshotWriteByteCount(data.count)
         let url = try pendingForcedUploadSnapshotURL()
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+        try localStateFile.write(
+            data,
+            to: url,
+            durableRootURL: try stateDurableRootURL()
         )
-        try data.write(to: url, options: [.atomic])
-        try protectSensitiveFileIfSupported(at: url)
     }
 
     private func removePendingForcedUploadSnapshotWithoutLock() throws {
         let url = try pendingForcedUploadSnapshotURL()
-        if FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.removeItem(at: url)
-        }
+        try localStateFile.removeIfPresent(
+            at: url,
+            durableRootURL: try stateDurableRootURL()
+        )
     }
 
     private static func sortedJSONEncoder() -> JSONEncoder {

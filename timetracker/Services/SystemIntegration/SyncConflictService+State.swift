@@ -43,11 +43,11 @@ extension SyncConflictService {
         } catch SyncConflictLocalStateReadError.exceedsMaximumByteCount {
             let quarantineURL = try quarantineCorruptFile(
                 at: url,
-                data: nil,
                 prefix: Self.corruptStateFilePrefix
             )
-            Self.stateLogger.error(
-                "Quarantined oversized sync state at \(quarantineURL.path, privacy: .public)"
+            logCorruptStateQuarantine(
+                quarantineURL,
+                message: "oversized sync state"
             )
             throw SyncConflictStateFileError.corruptStateQuarantined
         }
@@ -57,11 +57,11 @@ extension SyncConflictService {
         } catch {
             let quarantineURL = try quarantineCorruptFile(
                 at: url,
-                data: data,
                 prefix: Self.corruptStateFilePrefix
             )
-            Self.stateLogger.error(
-                "Quarantined corrupt sync state at \(quarantineURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            logCorruptStateQuarantine(
+                quarantineURL,
+                message: "corrupt sync state: \(error.localizedDescription)"
             )
             throw SyncConflictStateFileError.corruptStateQuarantined
         }
@@ -113,11 +113,11 @@ extension SyncConflictService {
         } catch SyncConflictLocalStateReadError.exceedsMaximumByteCount {
             let quarantineURL = try quarantineCorruptFile(
                 at: url,
-                data: nil,
                 prefix: Self.corruptPendingSnapshotFilePrefix
             )
-            Self.stateLogger.error(
-                "Quarantined oversized recovery snapshot at \(quarantineURL.path, privacy: .public)"
+            logCorruptStateQuarantine(
+                quarantineURL,
+                message: "oversized recovery snapshot"
             )
             return nil
         }
@@ -126,11 +126,11 @@ extension SyncConflictService {
         } catch {
             let quarantineURL = try quarantineCorruptFile(
                 at: url,
-                data: data,
                 prefix: Self.corruptPendingSnapshotFilePrefix
             )
-            Self.stateLogger.error(
-                "Quarantined corrupt recovery snapshot at \(quarantineURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            logCorruptStateQuarantine(
+                quarantineURL,
+                message: "corrupt recovery snapshot: \(error.localizedDescription)"
             )
             return nil
         }
@@ -167,30 +167,25 @@ extension SyncConflictService {
 
     private func quarantineCorruptFile(
         at url: URL,
-        data: Data?,
         prefix: String
-    ) throws -> URL {
-        let quarantineURL = url.deletingLastPathComponent().appendingPathComponent(
-            prefix + UUID().uuidString + ".json"
+    ) throws -> URL? {
+        try localStateFile.quarantineIfPresent(
+            at: url,
+            prefix: prefix,
+            durableRootURL: try stateDurableRootURL()
         )
-        do {
-            try FileManager.default.moveItem(at: url, to: quarantineURL)
-        } catch {
-            guard let data else { throw error }
-            try data.write(to: quarantineURL, options: [.atomic])
-            try FileManager.default.removeItem(at: url)
-        }
-        try protectSensitiveFileIfSupported(at: quarantineURL)
-        return quarantineURL
     }
 
-    func protectSensitiveFileIfSupported(at url: URL) throws {
-        #if os(iOS)
-        try FileManager.default.setAttributes(
-            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            ofItemAtPath: url.path
-        )
-        #endif
+    private func logCorruptStateQuarantine(_ url: URL?, message: String) {
+        if let url {
+            Self.stateLogger.error(
+                "Quarantined \(message, privacy: .public) at \(url.path, privacy: .public)"
+            )
+        } else {
+            Self.stateLogger.error(
+                "Removed \(message, privacy: .public) without retaining a diagnostic copy"
+            )
+        }
     }
 }
 

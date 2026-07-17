@@ -1301,6 +1301,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：两个同容器、各有独立 `ModelContext` 的 scene Store 订阅后，外部 Start 与精确 Stop 同步收敛 active timer；回归还固定 App Intent 三条路径使用统一 effects，effects 同时保留 snapshot、surface 与 broadcaster，并确认 scene catch-up 走 `refreshReadModels`。一次性签名与清理证据写入 dated Audit。
 
+## AD-104：SyncConflict state/mirror 的单文件提交必须使用 durable primitive
+
+状态：Accepted
+
+背景：`SyncConflictService` 已有跨进程 read-modify-write 锁和大小预检，但 state、recovery mirror、删除与腐损隔离仍各自调用 Foundation atomic write、remove 或 move。它们不能保证 rename 后的文件/父目录落盘，文件保护也曾在发布后设置；同时手写隔离绕开了 `DurableLocalFile` 的符号链接拒绝、有界诊断与回滚保证。
+
+决策：保持既有 `SyncConflictService.withExclusiveStateAccess` 与 store → state lock 顺序，在锁内把权威 state、pending mirror、默认状态删除和损坏隔离统一交给注入的 `DurableLocalFile`。生产 state family 使用 Application Support 的稳定父目录为 `durableRootURL`，使首次 `TimeTrackerSync` 目录创建后的重试仍会同步发布它的父目录；测试/诊断 state override 只使用其被显式拥有的 state directory。权威 state 先完成 durable publish，随后 mirror write/remove；各单文件提交是耐久的，但不宣称两个文件组成 ACID transaction。若权威 state 已发布而 mirror 随后失败，下次 locked load 是既有的 repair 点；要消除这一双文件窗口必须另行设计 generation journal 或单一提交记录。
+
+后果：任何新的 SyncConflict state artifact 都不得绕过这一 owner 使用 `Data.write(.atomic)`、`FileManager.removeItem` 或手写 move。超限/腐损文件沿用 `DurableLocalFile` 的全局 quarantine budget；超出预算时会耐久删除而不是无限保存诊断副本。`DurableLocalFile` 的 full sync 只适用于低频恢复状态，不得用于高频 ledger mutation。
+
+验证：fault injection 覆盖 state publish 前失败仍保留最后 committed state/mirror、quarantine publish 失败回滚 canonical、正常小型损坏文件进入 `.TimeTrackerQuarantine`，以及超限诊断受预算删除；保留多 service 的跨进程 state serialization 覆盖。付费签名定向结果与清理记录写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

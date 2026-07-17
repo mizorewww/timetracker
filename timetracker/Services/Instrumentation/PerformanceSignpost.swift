@@ -1,13 +1,13 @@
 import Foundation
 import OSLog
 
-enum PerformanceSignpost {
+nonisolated enum PerformanceSignpost {
     private static let signposter = OSSignposter(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
         category: "Performance"
     )
 
-    static func interval<T>(_ name: StaticString, _ operation: () throws -> T) rethrows -> T {
+    nonisolated static func interval<T>(_ name: StaticString, _ operation: () throws -> T) rethrows -> T {
         let state = signposter.beginInterval(name)
         defer { signposter.endInterval(name, state) }
         return try operation()

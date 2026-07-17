@@ -57,7 +57,13 @@ struct CoreArchitectureBehaviorTests {
         let viewSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
         let detailSource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
         let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
-        let facadeSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift")
+        let facadeSource = try [
+            "timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+AnalyticsLoading.swift"
+        ].map(sourceText).joined(separator: "\n")
+        let visualTaskSource = try sourceText(
+            "timetracker/Services/Analytics/AnalyticsVisualSnapshotModels.swift"
+        )
 
         #expect(viewSource.contains("TimelineView") == false)
         #expect(detailSource.contains("TimelineView") == false)
@@ -67,10 +73,16 @@ struct CoreArchitectureBehaviorTests {
         #expect(viewSource.contains(".task(id: request)"))
         #expect(viewSource.contains("canRemainVisible(whileLoading: request)"))
         #expect(viewSource.contains("await Task.yield()"))
+        #expect(viewSource.contains("await store.loadAnalyticsSnapshot("))
+        #expect(detailSource.contains("await store.loadAnalyticsSnapshot("))
         #expect(viewSource.contains(".NSSystemClockDidChange"))
         #expect(viewSource.contains(".NSSystemTimeZoneDidChange"))
         #expect(facadeSource.contains("liveRefreshBucket: liveRefreshBucket"))
         #expect(facadeSource.contains("cachedSnapshot("))
+        #expect(facadeSource.contains("if range == .today"))
+        #expect(facadeSource.contains("AnalyticsVisualSnapshotTask.resolve"))
+        #expect(visualTaskSource.contains("Task.detached(priority: .userInitiated)"))
+        #expect(visualTaskSource.contains("withTaskCancellationHandler"))
         #expect(taskDetailSource.contains(".task(id: request)"))
         #expect(taskDetailSource.contains("snapshot: store.taskAnalyticsSnapshot") == false)
         #expect(taskDetailSource.contains("TimelineView") == false)

@@ -96,7 +96,7 @@ struct HourlyAnalyticsPoint: Identifiable {
     }
 }
 
-struct HourTaskActivity: Identifiable, Equatable {
+nonisolated struct HourTaskActivity: Identifiable, Equatable, Sendable {
     let hour: Int
     let slices: [HourTaskSlice]
 
@@ -104,7 +104,7 @@ struct HourTaskActivity: Identifiable, Equatable {
     var totalSeconds: Int { slices.reduce(0) { $0 + $1.seconds } }
 }
 
-struct HourTaskSlice: Identifiable, Equatable {
+nonisolated struct HourTaskSlice: Identifiable, Equatable, Sendable {
     let taskID: UUID
     let title: String
     let symbolName: String

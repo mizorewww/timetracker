@@ -1,6 +1,6 @@
 import Foundation
 
-struct TimelineLayoutItem: Identifiable, Equatable {
+nonisolated struct TimelineLayoutItem: Identifiable, Equatable, Sendable {
     let id: UUID
     let startedAt: Date
     let endedAt: Date
@@ -10,14 +10,14 @@ struct TimelineLayoutItem: Identifiable, Equatable {
     }
 }
 
-struct TimelineLayoutEntry: Identifiable, Equatable {
+nonisolated struct TimelineLayoutEntry: Identifiable, Equatable, Sendable {
     let item: TimelineLayoutItem
     let lane: Int
 
     var id: UUID { item.id }
 }
 
-struct TimelineLayoutResult: Equatable {
+nonisolated struct TimelineLayoutResult: Equatable, Sendable {
     let displayInterval: DateInterval
     let entries: [TimelineLayoutEntry]
 
@@ -26,7 +26,7 @@ struct TimelineLayoutResult: Equatable {
     }
 }
 
-struct TimelineOmittedGap: Identifiable, Equatable {
+nonisolated struct TimelineOmittedGap: Identifiable, Equatable, Sendable {
     let start: Date
     let end: Date
     let compressedStartOffset: TimeInterval

@@ -168,6 +168,84 @@ struct CorePerformanceBudgetTests {
     }
 
     @Test @MainActor
+    func denseAnalyticsVisualProjectionKeepsMainActorWorkBounded() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(year: 2026, month: 4, day: 12, hour: 0))
+            ?? Date(timeIntervalSince1970: 1_776_000_000)
+        let now = dayStart.addingTimeInterval(24 * 60 * 60 - 1)
+        let tasks = (0..<80).map { index in
+            TaskNode(title: "Dense Task \(index)", parentID: nil, deviceID: "test")
+        }
+        let sessions = (0..<2_000).map { index in
+            let task = tasks[index % tasks.count]
+            return TimeSession(
+                taskID: task.id,
+                source: index.isMultiple(of: 7) ? .pomodoro : .timer,
+                deviceID: "test",
+                startedAt: dayStart.addingTimeInterval(Double(index * 11)),
+                titleSnapshot: task.title
+            )
+        }
+        let segments = sessions.enumerated().map { index, session in
+            TimeSegment(
+                sessionID: session.id,
+                taskID: session.taskID,
+                source: index.isMultiple(of: 7) ? .pomodoro : .timer,
+                deviceID: "test",
+                startedAt: session.startedAt,
+                endedAt: min(
+                    session.startedAt.addingTimeInterval(Double(1_800 + (index % 15) * 45)),
+                    now
+                )
+            )
+        }
+        let period = try #require(calendar.dateInterval(of: .day, for: now))
+
+        let projectionStart = CFAbsoluteTimeGetCurrent()
+        let input = AnalyticsVisualSnapshotInput(
+            range: .today,
+            period: period,
+            evaluatedAt: now,
+            calendar: calendar,
+            segments: segments,
+            tasks: tasks,
+            sessions: sessions,
+            taskParentPathByID: [:]
+        )
+        let projectionElapsed = CFAbsoluteTimeGetCurrent() - projectionStart
+        let visual = try #require(await AnalyticsVisualSnapshotTask.resolve(input))
+
+        var store = AnalyticsStore()
+        let coreStart = CFAbsoluteTimeGetCurrent()
+        let snapshot = store.refreshSnapshot(
+            range: .today,
+            period: period,
+            tasks: tasks,
+            segments: segments,
+            sessions: sessions,
+            taskPathByID: Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0.title) }),
+            taskParentPathByID: [:],
+            evaluatedAt: now,
+            evaluationKey: AnalyticsEvaluationCacheKey(
+                interval: period,
+                clockReference: now,
+                liveRefreshBucket: nil,
+                calendar: calendar
+            ),
+            visualSnapshot: visual,
+            calendar: calendar
+        )
+        let coreElapsed = CFAbsoluteTimeGetCurrent() - coreStart
+
+        #expect(projectionElapsed < 0.05)
+        #expect(coreElapsed < 0.175)
+        #expect(snapshot.overlaps == visual.overlaps)
+        #expect(snapshot.timeline == visual.timeline)
+        #expect(snapshot.todayActivity == visual.todayActivity)
+    }
+
+    @Test @MainActor
     func longChecklistRollupStaysWithinPerformanceBudget() {
         let root = TaskNode(title: "Root Forecast", parentID: nil, deviceID: "test")
         let children = (0..<300).map { index in

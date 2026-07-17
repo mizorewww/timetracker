@@ -470,6 +470,7 @@ struct TaskUIContractTests {
             "timetracker/Features/Analytics/AnalyticsViews.swift",
             "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
@@ -490,7 +491,7 @@ struct TaskUIContractTests {
         #expect(analyticsSource.contains("AnalyticsPeriodSection("))
         #expect(analyticsSource.contains("monthNavigationAnchor: $monthNavigationAnchor"))
         #expect(analyticsSource.contains("range.evaluation("))
-        #expect(analyticsSource.contains("analyticsSnapshot(for: range, evaluation: evaluation)"))
+        #expect(analyticsSource.contains("await store.loadAnalyticsSnapshot("))
         #expect(analyticsSource.contains("TimelineView") == false)
         #expect(analyticsSource.contains("AnalyticsInsightList(insights: snapshot.insights)"))
         #expect(analyticsSource.contains("AnalyticsQualityContent(quality: snapshot.quality)"))
@@ -510,6 +511,7 @@ struct TaskUIContractTests {
             "timetracker/Features/Analytics/AnalyticsViews.swift",
             "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift"

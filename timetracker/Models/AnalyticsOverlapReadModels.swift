@@ -1,11 +1,11 @@
 import Foundation
 
-struct OverlapAnalyticsParticipant: Identifiable, Equatable {
+nonisolated struct OverlapAnalyticsParticipant: Identifiable, Equatable, Sendable {
     let id: UUID
     let title: String
 }
 
-struct OverlapAnalyticsPoint: Identifiable {
+nonisolated struct OverlapAnalyticsPoint: Identifiable, Equatable, Sendable {
     let start: Date
     let end: Date
     let concurrentSegmentCount: Int

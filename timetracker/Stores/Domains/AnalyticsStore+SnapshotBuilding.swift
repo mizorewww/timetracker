@@ -88,6 +88,7 @@ extension AnalyticsStore {
         daily: [DailyAnalyticsPoint],
         period: DateInterval,
         evaluatedAt cutoff: Date,
+        visualSnapshot: AnalyticsVisualSnapshot? = nil,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
         let boundedRangeSegments = boundedSegments(
@@ -109,19 +110,8 @@ extension AnalyticsStore {
             evaluatedAt: cutoff,
             calendar: calendar
         )
-        let rhythm = rhythm(
-            segments: rangeSegments,
-            interval: period,
-            taskIDs: nil,
-            now: cutoff,
-            calendar: calendar
-        )
-        let quality = quality(
-            segments: rangeSegments,
-            interval: period,
-            taskIDs: nil,
-            now: cutoff
-        )
+        let rhythm = rhythm(items: boundedRangeSegments, calendar: calendar)
+        let quality = quality(items: boundedRangeSegments)
         let rootBreakdown = rootBreakdown(
             segments: rangeSegments,
             tasks: tasks,
@@ -138,6 +128,23 @@ extension AnalyticsStore {
             interval: period,
             evaluatedAt: cutoff
         )
+        let todayVisualSnapshot: AnalyticsVisualSnapshot?
+        if range == .today {
+            todayVisualSnapshot = visualSnapshot ?? AnalyticsVisualSnapshotService().snapshot(
+                AnalyticsVisualSnapshotInput(
+                    range: range,
+                    period: period,
+                    evaluatedAt: cutoff,
+                    calendar: calendar,
+                    segments: rangeSegments,
+                    tasks: tasks,
+                    sessions: sessions,
+                    taskParentPathByID: taskParentPathByID
+                )
+            )
+        } else {
+            todayVisualSnapshot = nil
+        }
         return AnalyticsSnapshot(
             range: range,
             overview: overview,
@@ -152,31 +159,12 @@ extension AnalyticsStore {
                 taskBreakdown: taskBreakdown
             ),
             daily: daily,
-            todayActivity: range == .today
-                ? HourTaskActivityService().hourlyActivity(
-                    segments: rangeSegments,
-                    tasks: tasks,
-                    sessions: sessions,
-                    date: period.start,
-                    now: cutoff,
-                    calendar: calendar
-                )
-                : [],
-            timeline: range == .today
-                ? AnalyticsTimelineSnapshotService().snapshot(
-                    segments: rangeSegments,
-                    tasks: tasks,
-                    sessions: sessions,
-                    taskParentPathByID: taskParentPathByID,
-                    date: period.start,
-                    now: cutoff,
-                    calendar: calendar
-                )
-                : .empty,
+            todayActivity: todayVisualSnapshot?.todayActivity ?? [],
+            timeline: todayVisualSnapshot?.timeline ?? .empty,
             taskBreakdown: taskBreakdown,
             rootBreakdown: rootBreakdown,
             categoryBreakdown: categoryBreakdown,
-            overlaps: overlapSegments(
+            overlaps: todayVisualSnapshot?.overlaps ?? overlapSegments(
                 items: boundedRangeSegments,
                 tasks: tasks,
                 sessions: sessions

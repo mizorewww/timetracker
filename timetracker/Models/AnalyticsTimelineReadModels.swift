@@ -1,6 +1,6 @@
 import Foundation
 
-struct AnalyticsTimelineSnapshot: Equatable {
+nonisolated struct AnalyticsTimelineSnapshot: Equatable, Sendable {
     let entries: [AnalyticsTimelineEntry]
     let displayInterval: DateInterval?
     let axisCompression: TimelineAxisCompression?
@@ -16,7 +16,7 @@ struct AnalyticsTimelineSnapshot: Equatable {
     }
 }
 
-struct AnalyticsTimelineEntry: Identifiable, Equatable {
+nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
     let id: UUID
     let taskID: UUID
     let title: String

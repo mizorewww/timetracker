@@ -43,7 +43,13 @@ struct AnalyticsCategoryDetailView: View {
         .task(id: request) {
             await Task.yield()
             guard Task.isCancelled == false else { return }
-            snapshot = store.analyticsSnapshot(for: range, evaluation: evaluation)
+            guard let resolvedSnapshot = await store.loadAnalyticsSnapshot(
+                for: range,
+                evaluation: evaluation
+            ) else {
+                return
+            }
+            snapshot = resolvedSnapshot
             guard Task.isCancelled == false else { return }
             loadedRequest = request
         }
@@ -69,115 +75,4 @@ struct AnalyticsCategoryDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private func categoryContent(snapshot: AnalyticsSnapshot) -> some View {
-        switch category {
-        case .overview:
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.summary.title"),
-                subtitle: AppStrings.localized("analytics.category.overview.subtitle")
-            ) {
-                AnalyticsMetricList(
-                    overview: snapshot.overview,
-                    comparison: snapshot.comparison,
-                    rhythm: snapshot.rhythm
-                )
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.glossary.title"),
-                subtitle: nil
-            ) {
-                AnalyticsGlossaryList()
-            }
-        case .time:
-            if range == .today {
-                AnalyticsDetailSection(
-                    title: AppStrings.localized("analytics.hourDistribution.title"),
-                    subtitle: AppStrings.localized("analytics.hourDistribution.subtitle")
-                ) {
-                    TodayActivityContent(activity: snapshot.todayActivity)
-                }
-                AnalyticsDetailSection(
-                    title: AppStrings.localized("analytics.timeline.title"),
-                    subtitle: AppStrings.localized("analytics.timeline.subtitle")
-                ) {
-                    OverlappingTimelineContent(timeline: snapshot.timeline)
-                }
-            } else {
-                AnalyticsDetailSection(
-                    title: AppStrings.localized("analytics.dailyTrend.title"),
-                    subtitle: AppStrings.localized("analytics.dailyTrend.subtitle")
-                ) {
-                    DailyTrendContent(daily: snapshot.daily)
-                }
-            }
-        case .tasks:
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.taskUsage.title"),
-                subtitle: AppStrings.localized("analytics.taskUsage.subtitle")
-            ) {
-                TaskDonutContent(
-                    tasks: snapshot.taskBreakdown,
-                    totalSeconds: snapshot.overview.grossSeconds
-                )
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.rootUsage.title"),
-                subtitle: AppStrings.localized("analytics.rootUsage.subtitle")
-            ) {
-                AnalyticsGroupBreakdownContent(
-                    items: snapshot.rootBreakdown,
-                    totalSeconds: snapshot.rootBreakdown.reduce(0) { $0 + $1.grossSeconds }
-                )
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.categoryUsage.title"),
-                subtitle: AppStrings.localized("analytics.categoryUsage.subtitle")
-            ) {
-                AnalyticsGroupBreakdownContent(
-                    items: snapshot.categoryBreakdown,
-                    totalSeconds: snapshot.categoryBreakdown.reduce(0) { $0 + $1.grossSeconds }
-                )
-            }
-        case .pomodoro:
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.category.pomodoro.title"),
-                subtitle: AppStrings.localized("analytics.category.pomodoro.subtitle")
-            ) {
-                PomodoroLedgerContent(store: store)
-            }
-        case .decisions:
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.decisions.title"),
-                subtitle: AppStrings.localized("analytics.decisions.subtitle")
-            ) {
-                AnalyticsInsightList(insights: snapshot.insights)
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.forecasts.title"),
-                subtitle: AppStrings.localized("analytics.forecasts.subtitle")
-            ) {
-                TaskForecastsContent(store: store)
-            }
-        case .quality:
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.rhythm.title"),
-                subtitle: AppStrings.localized("analytics.rhythm.subtitle")
-            ) {
-                AnalyticsRhythmContent(rhythm: snapshot.rhythm)
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.quality.title"),
-                subtitle: AppStrings.localized("analytics.quality.subtitle")
-            ) {
-                AnalyticsQualityContent(quality: snapshot.quality)
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.overlap.title"),
-                subtitle: AppStrings.localized("analytics.overlap.subtitle")
-            ) {
-                AnalyticsOverlapContent(overlaps: snapshot.overlaps)
-            }
-        }
-    }
 }

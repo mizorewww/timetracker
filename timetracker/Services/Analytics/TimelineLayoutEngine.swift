@@ -1,6 +1,6 @@
 import Foundation
 
-enum TimelineLayoutEngine {
+nonisolated enum TimelineLayoutEngine {
     static func layout(
         items: [TimelineLayoutItem],
         dayInterval: DateInterval,
@@ -126,12 +126,12 @@ enum TimelineLayoutEngine {
     }
 }
 
-private struct LaneAvailability {
+private nonisolated struct LaneAvailability {
     let lane: Int
     let endedAt: Date
 }
 
-private struct MinHeap<Element> {
+private nonisolated struct MinHeap<Element> {
     private var elements: [Element] = []
     private let sort: (Element, Element) -> Bool
 

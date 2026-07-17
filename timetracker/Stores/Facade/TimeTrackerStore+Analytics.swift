@@ -206,7 +206,7 @@ extension TimeTrackerStore {
         return Int(evaluation.clockReference.timeIntervalSinceReferenceDate / 60)
     }
 
-    private func analyticsSegments(
+    func analyticsSegments(
         for range: AnalyticsRange,
         evaluation: AnalyticsPeriodEvaluation,
         calendar: Calendar

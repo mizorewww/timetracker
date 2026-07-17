@@ -65,7 +65,13 @@ struct AnalyticsView: View {
         .task(id: request) {
             await Task.yield()
             guard Task.isCancelled == false else { return }
-            snapshot = store.analyticsSnapshot(for: range, evaluation: evaluation)
+            guard let resolvedSnapshot = await store.loadAnalyticsSnapshot(
+                for: range,
+                evaluation: evaluation
+            ) else {
+                return
+            }
+            snapshot = resolvedSnapshot
             guard Task.isCancelled == false else { return }
             loadedRequest = request
         }

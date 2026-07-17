@@ -68,6 +68,7 @@ struct AnalyticsStore {
         evaluatedAt cutoff: Date,
         liveRefreshBucket: Int? = nil,
         evaluationKey: AnalyticsEvaluationCacheKey,
+        visualSnapshot: AnalyticsVisualSnapshot? = nil,
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
         PerformanceSignpost.interval("Analytics snapshot generation") {
@@ -89,6 +90,7 @@ struct AnalyticsStore {
                 taskParentPathByID: taskParentPathByID,
                 period: period,
                 evaluatedAt: cutoff,
+                visualSnapshot: visualSnapshot,
                 calendar: calendar
             )
             snapshots[range] = snapshot

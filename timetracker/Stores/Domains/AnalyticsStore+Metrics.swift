@@ -33,17 +33,24 @@ extension AnalyticsStore {
         calendar: Calendar
     ) -> AnalyticsRhythm {
         let bounded = boundedSegments(segments, in: interval, taskIDs: taskIDs, now: now)
-        guard !bounded.isEmpty else { return emptyRhythm }
+        return rhythm(items: bounded, calendar: calendar)
+    }
 
-        let durations = bounded.map(\.durationSeconds).filter { $0 > 0 }.sorted()
+    func rhythm(
+        items: [AnalyticsBoundedSegment],
+        calendar: Calendar
+    ) -> AnalyticsRhythm {
+        guard !items.isEmpty else { return emptyRhythm }
+
+        let durations = items.map(\.durationSeconds).filter { $0 > 0 }.sorted()
         let gross = durations.reduce(0, +)
         let dailyTotals = TimeAggregationService().secondsByDay(
-            intervals: bounded.map(\.interval),
+            intervals: items.map(\.interval),
             calendar: calendar
         )
-        let hourly = hourlySeconds(items: bounded, calendar: calendar)
+        let hourly = hourlySeconds(items: items, calendar: calendar)
         let peak = AnalyticsSelectionPolicy.peakHour(in: hourly)
-        let longestContinuous = longestMergedDuration(items: bounded)
+        let longestContinuous = longestMergedDuration(items: items)
 
         return AnalyticsRhythm(
             activeDayCount: dailyTotals.count,
@@ -64,12 +71,16 @@ extension AnalyticsStore {
         now: Date
     ) -> AnalyticsQuality {
         let bounded = boundedSegments(segments, in: interval, taskIDs: taskIDs, now: now)
-        guard !bounded.isEmpty else { return emptyQuality }
+        return quality(items: bounded)
+    }
 
-        let overview = overview(items: bounded)
-        let durations = bounded.map(\.durationSeconds).filter { $0 > 0 }.sorted()
+    func quality(items: [AnalyticsBoundedSegment]) -> AnalyticsQuality {
+        guard !items.isEmpty else { return emptyQuality }
+
+        let overview = overview(items: items)
+        let durations = items.map(\.durationSeconds).filter { $0 > 0 }.sorted()
         let shortCount = durations.filter { $0 < 5 * 60 }.count
-        let sorted = bounded.sorted {
+        let sorted = items.sorted {
             if $0.interval.start == $1.interval.start {
                 return $0.segment.id.uuidString < $1.segment.id.uuidString
             }
@@ -87,7 +98,7 @@ extension AnalyticsStore {
             shortSegmentCount: shortCount,
             shortSegmentRatio: durations.isEmpty ? 0 : Double(shortCount) / Double(durations.count),
             averageSegmentSeconds: durations.isEmpty ? 0 : durations.reduce(0, +) / durations.count,
-            longestContinuousSeconds: longestMergedDuration(items: bounded)
+            longestContinuousSeconds: longestMergedDuration(items: items)
         )
     }
 

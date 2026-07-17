@@ -128,6 +128,7 @@ extension AnalyticsStore {
         taskParentPathByID: [UUID: String],
         period: DateInterval,
         evaluatedAt cutoff: Date,
+        visualSnapshot: AnalyticsVisualSnapshot? = nil,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
         let daily = cachedDailyBreakdown(
@@ -150,6 +151,7 @@ extension AnalyticsStore {
             daily: daily,
             period: period,
             evaluatedAt: cutoff,
+            visualSnapshot: visualSnapshot,
             calendar: calendar
         )
     }

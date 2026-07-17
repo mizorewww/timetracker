@@ -517,7 +517,10 @@ struct AnalyticsTimelineTests {
     @Test
     func analyticsTaskDistributionUsesTaskBucketsAndTaskColors() throws {
         let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
-        let categorySource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
+        let categorySource = try [
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift"
+        ].map(sourceText).joined(separator: "\n")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("id: task.taskID.uuidString"))
@@ -535,7 +538,8 @@ struct AnalyticsTimelineTests {
     func todayActivityDistributionUsesTaskColorBuckets() throws {
         let entrySource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
-            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift"
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift"
         ]
             .map(sourceText)
             .joined(separator: "\n")

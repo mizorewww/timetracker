@@ -1,29 +1,45 @@
+import Combine
+import Foundation
 import SwiftUI
 
 struct TaskDetailView: View {
+    @Environment(\.scenePhase) private var scenePhase
+
     let store: TimeTrackerStore
     let taskID: UUID
     @State private var range: AnalyticsRange = .week
+    @State private var liveNow = Date()
     @State private var snapshot: TaskAnalyticsSnapshot?
+    @State private var loadedRequest: TaskAnalyticsSnapshotRequest?
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
+        Group {
             if let task = store.task(for: taskID) {
+                let evaluationDate = liveNow
                 let request = store.taskAnalyticsSnapshotRequest(
                     for: task,
                     range: range,
-                    now: context.date
+                    now: evaluationDate
                 )
-                Group {
-                    if let snapshot {
-                        TaskDetailList(store: store, task: task, snapshot: snapshot, range: $range)
-                    } else {
-                        ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .accessibilityLabel(AppStrings.localized("analytics.loading"))
-                    }
-                }
+                let refreshPlan = scenePhase == .active
+                    ? AnalyticsRefreshPlan.next(
+                        liveNow: evaluationDate,
+                        followsCurrentPeriod: true,
+                        liveRefreshBucket: request.liveRefreshBucket
+                    )
+                    : nil
+                TaskDetailList(
+                    store: store,
+                    task: task,
+                    snapshot: loadedRequest == request ? snapshot : nil,
+                    range: $range
+                )
                 .task(id: request) {
-                    snapshot = store.taskAnalyticsSnapshot(for: request, now: context.date)
+                    snapshot = store.taskAnalyticsSnapshot(for: request, now: evaluationDate)
+                    loadedRequest = request
+                }
+                .task(id: refreshPlan) {
+                    await waitForRefresh(refreshPlan)
                 }
             } else {
                 ContentUnavailableView(
@@ -33,13 +49,38 @@ struct TaskDetailView: View {
             }
         }
         .taskDetailNavigation(store: store, taskID: taskID)
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            liveNow = Date()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            liveNow = Date()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
+            liveNow = Date()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            liveNow = Date()
+        }
+    }
+
+    private func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {
+        guard let plan else { return }
+        let delay = max(0, plan.deadline.timeIntervalSinceNow)
+        do {
+            try await Task.sleep(for: .seconds(delay))
+        } catch {
+            return
+        }
+        guard Task.isCancelled == false else { return }
+        liveNow = Date()
     }
 }
 
 private struct TaskDetailList: View {
     let store: TimeTrackerStore
     let task: TaskNode
-    let snapshot: TaskAnalyticsSnapshot
+    let snapshot: TaskAnalyticsSnapshot?
     @Binding var range: AnalyticsRange
 
     private var activeSegment: TimeSegment? {
@@ -55,17 +96,29 @@ private struct TaskDetailList: View {
 
             TaskDetailActionsView(store: store, task: task, activeSegment: activeSegment)
 
-            TaskDetailOverviewSection(snapshot: snapshot)
             TaskDetailChecklistSection(store: store, task: task)
-
             TaskDetailForecastSection(store: store, task: task)
-            TaskDetailAnalysisSection(range: $range, snapshot: snapshot)
-            TaskDetailRecordsSection(records: snapshot.recentRecords)
 
             if let notes = task.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
                 Section(AppStrings.localized("editor.task.notes")) {
                     Text(notes)
                         .textSelection(.enabled)
+                }
+            }
+
+            if let snapshot {
+                TaskDetailOverviewSection(snapshot: snapshot)
+                TaskDetailAnalysisSection(range: $range, snapshot: snapshot)
+                TaskDetailRecordsSection(records: snapshot.recentRecords)
+            } else {
+                Section(AppStrings.localized("task.detail.analysis")) {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(AppStrings.localized("analytics.loading"))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("task.detail.analyticsLoading")
                 }
             }
         }

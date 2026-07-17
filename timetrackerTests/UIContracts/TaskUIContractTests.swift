@@ -404,6 +404,7 @@ struct TaskUIContractTests {
     @Test
     func taskDetailExposesReadFirstSectionsBeforeSeparateEditing() throws {
         let detailSource = try taskDetailFeatureSource()
+        let rootSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.identity\")"))
@@ -413,6 +414,10 @@ struct TaskUIContractTests {
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.analysis\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
         #expect(detailSource.contains("TextField(") == false)
+        #expect(rootSource.contains("TimelineView") == false)
+        #expect(rootSource.contains("loadedRequest == request ? snapshot : nil"))
+        #expect(rootSource.contains("TaskDetailActionsView("))
+        #expect(rootSource.contains("task.detail.analyticsLoading"))
     }
 
     @Test

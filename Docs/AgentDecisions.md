@@ -1193,6 +1193,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：真实磁盘 fixture 先保存旧保护快照，再提交未记录的新标题；启动 preflight 捕获最新标题后真实删除 SQLite。竞争线程在 reset hook 中无法取得同一 store lock，只有 reset 完成后才进入。CloudRecovery Gate、SyncConflict、StateWrite、StoreSerialization、ResolutionIdentity 与 SnapshotPreflight 六个付费签名套件 102/102 通过，无源码或运行时 warning。
 
+## AD-095：Task Detail 的可执行核心不等待分析快照
+
+状态：Accepted
+
+背景：旧详情把整个 `List` 放进 `TimelineView`，初次 task analytics snapshot 尚未生成时以全页 `ProgressView` 替代所有内容。分析即使已经有有界索引，仍可能需要读取当前/上一周期、计算预测与投影；用户在这段时间看不到开始、停止、重新打开、清单或添加时间。周期性 `TimelineView` 也让详情页为时钟而持续重组整棵 UI，且在后台没有明确的取消/恢复边界。
+
+决策：`TaskDetailView` 始终先组合 `TaskDetailList` 的身份、动作、清单、预测与备注。当前 `TaskAnalyticsSnapshotRequest` 通过 `.task(id:)` 载入，只有 `loadedRequest == request` 才把概览、分析与近期记录传入；否则该 section 单独显示系统 loading row，绝不复用旧 request 的快照。详情自行复用 `AnalyticsRefreshPlan`：仅 active scene 计划下一活动分钟或本地日边界，scene reactivation、日历日、系统时钟和时区改变重新取样。不得恢复全页 `TimelineView`，也不得把每秒/每分钟 tick 写入共享 Store。
+
+后果：打开详情的第一帧先提供可执行操作；分析可能随后出现，但 task/range/revision 更新期间不会闪现错误范围的数据。静态当前周期只在真正跨本地日时重算，活动任务只在真实分钟边界刷新，后台不保留详情时钟任务。这个决定不把同步 analytics 计算移出 `@MainActor`；其成本仍由 AD-092/093 的有界 query 限制，若 profile 显示计算本身造成首帧卡顿，应另行设计可取消的 read-model 计算边界，而不是重新隐藏操作区。
+
+验证：Core architecture、Task UI contract 与 refresh-plan 的付费签名 macOS 定向回归 48/48 通过；generic iOS Debug 自动签名构建通过，主 App、Widget、Live Activity 与 Watch 均为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，主 App 保留 development APS、CloudKit 与 App Group。iPhone 17 Pro / iOS 27 默认字号的“运行中 Quick Start → Task Detail”UI 用例 1/1 通过，导出的截图目视确认首屏 Stop/Add Time/Forecast 可用。两轮专用 UDID `149E80D2-4DF1-413C-B797-0A8413571DB7`、`89E77671-60BA-4490-A563-012849D04222`、result bundle、截图与 DerivedData 均已删除。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

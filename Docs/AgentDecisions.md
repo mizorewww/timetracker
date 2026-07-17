@@ -1381,7 +1381,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 决策：把磁盘权威格式升级为 V1 manifest。manifest 保留原有标量状态，快照改为带 slot、A/B generation、byte count 和 SHA-256 的引用；最多八个固定 slot 是唯一允许的 payload 位置。先以 `DurableLocalFile` 写入并同步新的 slot，再发布 manifest，manifest 才是提交点；成功后只删除未被新 manifest 引用的 slot。读取对每个引用有界读、长度和 digest 校验，任一缺失、损坏或不匹配都会隔离该 slot 和 manifest，显式进入恢复而不是降级成“无 pending conflict”。旧内联 state 首次 locked read 后重写为 manifest；`SyncConflictState` 仍是所有调用方的完整运行时读模型。新的 conflict 初始 working baseline 为空，读取时以 cloud baseline 作为 working fallback，只有真正分歧后才持久化另一份 working snapshot。
 
-后果：同步恢复状态的根文件大小只随元数据增长，完整 snapshot 受每 slot 64 MiB 上限约束，且不会在 root 中四重复制。写入中断不会使旧 manifest 指向半写入 payload；没有被提交的 slot 可以在下一次成功保存时复用或清理。该格式仅位于设备本地 Application Support，不进入 SwiftData、CloudKit 或导出 JSON；因此不增加模型 schema migration，但不再支持把新 manifest 当作旧版内联 JSON 读取。默认状态清除必须同时删除 mirror、manifest 和全部 slot。
+后果：同步恢复状态的根文件大小只随元数据增长，完整 snapshot 受每 slot 64 MiB 上限约束，且不会在 root 中四重复制。slot writer/reader 对已持有的 canonical JSON 直接计算 digest，避免为同一 payload 再编码一次。写入中断不会使旧 manifest 指向半写入 payload；没有被提交的 slot 可以在下一次成功保存时复用或清理。该格式仅位于设备本地 Application Support，不进入 SwiftData、CloudKit 或导出 JSON；因此不增加模型 schema migration，但不再支持把新 manifest 当作旧版内联 JSON 读取。默认状态清除必须同时删除 mirror、manifest 和全部 slot。
 
 验证：付费自动签名 macOS XCTest 覆盖 legacy inline migration、精确 state/slot 边界、large snapshot manifest bound、sidecar hash 破坏后的 fail-closed quarantine、existing state/mirror write failure 与 source-layout；结果和资源清理记录在 dated Audit。
 

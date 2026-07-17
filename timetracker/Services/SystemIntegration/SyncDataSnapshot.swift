@@ -99,7 +99,14 @@ struct SyncDataSnapshot: Codable, Equatable {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(self)
-        let digest = SHA256.hash(data: data)
+        return Self.fingerprint(serializedData: data)
+    }
+
+    /// Reuses the SHA-256 contract of `fingerprint()` when a caller already
+    /// owns the canonical sorted JSON bytes. This avoids encoding a large
+    /// snapshot a second time on the durable-slot write and read paths.
+    nonisolated static func fingerprint(serializedData: Data) -> String {
+        let digest = SHA256.hash(data: serializedData)
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

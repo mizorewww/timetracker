@@ -5,6 +5,18 @@ import Testing
 @Suite(.serialized)
 struct CoreSyncConflictStateWriteTests {
     @Test @MainActor
+    func canonicalSnapshotDataHasTheSameFingerprintAsTheSnapshot() throws {
+        let captured = snapshot(title: "Canonical fingerprint")
+        let serializedData = try sortedJSON(captured)
+        let expectedFingerprint = try captured.fingerprint()
+
+        #expect(
+            SyncDataSnapshot.fingerprint(serializedData: serializedData)
+                == expectedFingerprint
+        )
+    }
+
+    @Test @MainActor
     func pendingLocalIntentRoundTripsAndLegacyStateStillDecodes() throws {
         let stateURL = temporaryStateURL()
         defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }

@@ -26,7 +26,7 @@ extension SyncConflictService {
             guard let snapshot else { return nil }
             let data = try Self.sortedJSONEncoder().encode(snapshot)
             try validateRecoverySnapshotWriteByteCount(data.count)
-            let digest = try snapshot.fingerprint()
+            let digest = SyncDataSnapshot.fingerprint(serializedData: data)
             if let prepared = referencesByDigest[digest] {
                 return prepared
             }
@@ -118,10 +118,10 @@ extension SyncConflictService {
                 guard data.count == reference.byteCount else {
                     throw SyncConflictStateFileError.corruptStateQuarantined
                 }
-                let decoded = try JSONDecoder().decode(SyncDataSnapshot.self, from: data)
-                guard try decoded.fingerprint() == reference.sha256 else {
+                guard SyncDataSnapshot.fingerprint(serializedData: data) == reference.sha256 else {
                     throw SyncConflictStateFileError.corruptStateQuarantined
                 }
+                let decoded = try JSONDecoder().decode(SyncDataSnapshot.self, from: data)
                 loadedSnapshots[reference] = decoded
                 return decoded
             } catch {

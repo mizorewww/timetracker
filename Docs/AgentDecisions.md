@@ -1205,6 +1205,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：Core architecture、Task UI contract 与 refresh-plan 的付费签名 macOS 定向回归 48/48 通过；generic iOS Debug 自动签名构建通过，主 App、Widget、Live Activity 与 Watch 均为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，主 App 保留 development APS、CloudKit 与 App Group。iPhone 17 Pro / iOS 27 默认字号的“运行中 Quick Start → Task Detail”UI 用例 1/1 通过，导出的截图目视确认首屏 Stop/Add Time/Forecast 可用。两轮专用 UDID `149E80D2-4DF1-413C-B797-0A8413571DB7`、`89E77671-60BA-4490-A563-012849D04222`、result bundle、截图与 DerivedData 均已删除。
 
+## AD-096：Analytics 源文件按稳定计算边界拆分
+
+状态：Accepted
+
+背景：analytics 的 public API 和缓存语义已经稳定，但比较周期、原始指标、洞察文案、cache-aware daily assembly 与 facade 的轻量 read model 继续集中在四个文件中。它们超过职责/行数预算后，等价的小修正会继续扩大冲突面，也让 SwiftUI 调用者难以分辨 snapshot 生命周期与展示投影。
+
+决策：`TimeTrackerStore+Analytics.swift` 只保留 snapshot/request 生命周期、live refresh bucket 和 scoped segment 输入；UI-facing overview/daily/hourly/task/overlap projections 归 `TimeTrackerStore+AnalyticsReadModels.swift`。`AnalyticsStore+ComparisonWindow.swift` 独立处理 previous period、DST 和短月的 matched-progress window；`Metrics` 只处理 bounded aggregation；`DecisionSupport` 只计算 comparison/range adapter；`Insights` 同时拥有 insight narrative 与其格式化 helpers；`Caching` 同时拥有 cache lookup/invalidation 和以 cached daily buckets 组装 snapshot 的边界。移动不得改变 public API、cache key、截断 cutoff、统计值或 iCloud 数据。
+
+后果：各文件都处于 source-layout budget 内，DST/month-end comparison、缓存和 UI 的调用语义保持不变。新 analytics 行为必须落在既有 owner；若新逻辑跨越这些边界，应先增加明确的 domain/service owner，而不是重新合并文件。
+
+验证：付费自动签名的 macOS `CoreSourceLayoutTests`、`CoreAnalyticsStoreTests` 与 `AnalyticsTimelineTests` 通过；本批未启动模拟器，临时 DerivedData 与 owned build/test 进程已在退出时清理。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

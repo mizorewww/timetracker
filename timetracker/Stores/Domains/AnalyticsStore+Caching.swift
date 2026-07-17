@@ -116,6 +116,44 @@ extension AnalyticsStore {
         )
     }
 
+    mutating func cachedDailySnapshot(
+        range: AnalyticsRange,
+        tasks: [TaskNode],
+        taskCategories: [TaskCategory],
+        taskCategoryAssignments: [TaskCategoryAssignment],
+        rangeSegments: [TimeSegment],
+        allSegments: [TimeSegment],
+        sessions: [TimeSession],
+        taskPathByID: [UUID: String],
+        taskParentPathByID: [UUID: String],
+        period: DateInterval,
+        evaluatedAt cutoff: Date,
+        calendar: Calendar
+    ) -> AnalyticsSnapshot {
+        let daily = cachedDailyBreakdown(
+            segments: rangeSegments,
+            range: range,
+            interval: period,
+            evaluatedAt: cutoff,
+            calendar: calendar
+        )
+        return analyticsSnapshot(
+            range: range,
+            tasks: tasks,
+            taskCategories: taskCategories,
+            taskCategoryAssignments: taskCategoryAssignments,
+            rangeSegments: rangeSegments,
+            allSegments: allSegments,
+            sessions: sessions,
+            taskPathByID: taskPathByID,
+            taskParentPathByID: taskParentPathByID,
+            daily: daily,
+            period: period,
+            evaluatedAt: cutoff,
+            calendar: calendar
+        )
+    }
+
     mutating func invalidateSnapshots(invalidatedIntervals: [DateInterval] = []) {
         snapshots.removeAll(keepingCapacity: true)
         snapshotEvaluationKeys.removeAll(keepingCapacity: true)

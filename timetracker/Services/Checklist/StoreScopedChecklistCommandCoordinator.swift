@@ -85,7 +85,7 @@ struct StoreScopedChecklistCommandCoordinator {
         let preparedTitle = try ChecklistDraftPersistencePolicy.prepare([
             ChecklistEditorDraft(title: title),
         ])[0].title
-        return try withCanonicalTask(taskID: taskID) { context in
+        return try withCanonicalTask(taskID: taskID) { context, _ in
             let existingItems = try visibleItems(taskID: taskID, context: context)
             guard let item = try ChecklistCommandHandler().add(
                 taskID: taskID,
@@ -104,7 +104,7 @@ struct StoreScopedChecklistCommandCoordinator {
         baseline: ChecklistMutationBaseline,
         isCompleted: Bool
     ) throws -> ChecklistMutationOutcome {
-        try withCanonicalTask(taskID: baseline.taskID) { context in
+        try withCanonicalTask(taskID: baseline.taskID) { context, _ in
             let items = try visibleItems(taskID: baseline.taskID, context: context)
             guard let item = items.first(where: { $0.id == baseline.itemID }) else {
                 throw StoreScopedChecklistMutationError.itemUnavailable
@@ -130,7 +130,7 @@ struct StoreScopedChecklistCommandCoordinator {
         baseline: ChecklistOrderMutationBaseline,
         orderedItemIDs: [UUID]
     ) throws -> ChecklistMutationOutcome {
-        try withCanonicalTask(taskID: baseline.taskID) { context in
+        try withCanonicalTask(taskID: baseline.taskID) { context, _ in
             let items = try visibleItems(taskID: baseline.taskID, context: context)
             let currentMutationIDs = items.reduce(into: [UUID: UUID]()) {
                 $0[$1.id] = $1.clientMutationID
@@ -155,9 +155,9 @@ struct StoreScopedChecklistCommandCoordinator {
         }
     }
 
-    private func withCanonicalTask(
+    func withCanonicalTask(
         taskID: UUID,
-        operation: (ModelContext) throws -> (itemID: UUID?, didMutate: Bool)
+        operation: (ModelContext, [TaskNode]) throws -> (itemID: UUID?, didMutate: Bool)
     ) throws -> ChecklistMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)
@@ -173,7 +173,7 @@ struct StoreScopedChecklistCommandCoordinator {
             guard tasks.contains(where: { $0.id == taskID }) else {
                 throw StoreScopedChecklistMutationError.taskUnavailable
             }
-            let result = try operation(context)
+            let result = try operation(context, tasks)
             let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
             let ancestorIDs = Set(
                 StoreSelectionCoordinator().ancestorTaskIDs(
@@ -190,7 +190,7 @@ struct StoreScopedChecklistCommandCoordinator {
         }
     }
 
-    private func visibleItems(taskID: UUID, context: ModelContext) throws -> [ChecklistItem] {
+    func visibleItems(taskID: UUID, context: ModelContext) throws -> [ChecklistItem] {
         let requestedTaskID = taskID
         return try context.fetch(
             FetchDescriptor<ChecklistItem>(

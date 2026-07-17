@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     func completeChecklistVisualSuggestion(
@@ -17,31 +18,31 @@ extension TimeTrackerStore {
             )
         }
 
-        let policy = ChecklistVisualSuggestionPolicy()
         guard matchesCurrentLLMConfiguration(
                   endpoint: request.endpoint,
                   apiKey: request.apiKey,
                   modelID: request.modelID
               ),
               preferences.llmAutomaticSuggestionsEnabled,
-              let item = checklistItems.first(where: { $0.id == request.itemID }),
-              item.taskID == request.taskID,
-              item.deletedAt == nil,
-              let task = taskByID[item.taskID],
-              isTaskAvailableForTracking(task),
-              policy.normalizedTitle(item.title) == request.title,
-              policy.shouldSuggest(item: item, visual: checklistVisual(for: item)) else {
+              let modelContext else {
             return
         }
 
-        _ = perform(event: .checklistChanged(taskID: item.taskID, affectedAncestorIDs: affectedAncestorIDs(for: item.taskID))) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try checklistCommandHandler.applyVisualSuggestion(
-                item: item,
-                result: result,
-                existingVisual: checklistVisual(for: item),
-                context: modelContext
-            )
+        do {
+            let outcome = try StoreScopedChecklistCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).applyVisualSuggestion(baseline: request.baseline, result: result)
+            if outcome.didMutate {
+                finishStoreScopedMutation(events: outcome.events)
+            } else {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks, .checklist]))
+            }
+        } catch {
+            // LLM output is advisory. A task/item that disappeared or changed in
+            // another scene is a stale result, not an error that should overwrite
+            // user feedback. Refresh the local read models when possible.
+            try? refresh(plan: StoreRefreshPlan(scopes: [.tasks, .checklist]))
         }
     }
 
@@ -113,6 +114,7 @@ struct ChecklistVisualSuggestionRequest {
     let itemID: UUID
     let taskID: UUID
     let title: String
+    let baseline: ChecklistVisualSuggestionBaseline
     let taskTitle: String
     let taskPath: String
     let endpoint: String

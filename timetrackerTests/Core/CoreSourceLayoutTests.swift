@@ -78,6 +78,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Analytics/TimelineAxisCompression.swift",
             "timetracker/Services/Checklist/ChecklistDraftService.swift",
             "timetracker/Services/Checklist/StoreScopedChecklistCommandCoordinator.swift",
+            "timetracker/Services/Checklist/StoreScopedChecklistCommandCoordinator+VisualSuggestions.swift",
             "timetracker/Services/Inbox/InboxSuggestionIdentityService.swift",
             "timetracker/Services/Inbox/InboxSuggestionStateService.swift",
             "timetracker/Services/Inbox/StoreScopedInboxCommandCoordinator.swift",

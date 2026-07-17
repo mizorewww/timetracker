@@ -174,6 +174,8 @@ Inbox 的 primary command 与 suggestion writer 都由 `StoreScopedInboxCommandC
 
 Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是逻辑条目的不透明 UUID，`suggestionRevisionID` 在真实标题修改时轮换，`dismissedSuggestionRevisionID` 只标记当前修订。`InboxSuggestionIdentityService` 用纯 resolution 分开计算内容 LWW winner 与 dismissal identities：只有 exact `(context, revision)` 的 marker 会字段级合并，不能让旧 dismissal 整行覆盖较新的 notes、completion、completedAt 或 sortOrder，也不能跨标题 revision。读取层把 winner 与合并 dismissal 放入不可持久化的 `InboxItemReadModel`；fetch、refresh、排序、索引和 UI 读取不得为投影修改 SwiftData winner。command 通过身份/文本预检后才在原子 mutation 内 materialize，保证无效 reorder 等路径零写入。command 在驳回、删除、应用、重排或标题修改时同时处理同一 context 的 sibling（包括同 UUID 的不同 SwiftData 对象）与 suggestion。异步建议成功和失败都校验请求时标题与完整 identity；apply 必须从 context 重选 canonical active/ready suggestion，不能信任 UI 缓存对象。禁止用标题、规范化标题或其哈希生成 identity；相同标题的独立条目必须保持独立。每条 item/suggestion 只增加固定数量 UUID 字段，不维护无界驳回历史。
 
+Checklist AI visual request 也不是对 scene 缓存的写授权。请求必须固化 item 的 mutation ID、规范化标题和 logical visual 的 `(ID, clientMutationID, userEditedAt)`；completion 在共享 store lock 内 fresh context 重验 task 可追踪性、item 和 visual revision 后才写入。任何另一个 scene 的手动图标/颜色编辑、标题/完成/删除、task 不可用或 logical visual 重建都会使结果变成无副作用的 stale discard，并只刷新当前 scene 的 read model。
+
 任务状态与可见性是两个维度。`completed` 表示“保留在任务树和历史中、暂停接收新工作”，`archived` 表示“隐藏整个分支”。完成祖先会阻塞所有后代的新 timer、manual entry、Pomodoro、Quick Start、Inbox conversion、App Intent 以及新建/移动目标；既有活动 timer 仍必须可见并可停止。重新开始工作时应恢复从所选任务到根路径上的全部完成阻塞项，而不是偷偷改变后代自身的状态。
 
 归档与删除语义不同。删除任务树会在一个原子动作中先结束该树的活动 Pomodoro 和 timer，再软删除任务；历史 segment/session/run 继续保留。普通 Local、iCloud、local-fallback 和 emergency 生产模式没有跨设备删除确认，因此 `AppCloudSync.allowsPermanentTombstonePurge` 为 false，`DatabaseMaintenanceService` 直接返回 0。只有隔离的 Demo/UI Test store 可物理清理过期 tombstone graph。

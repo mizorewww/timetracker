@@ -69,6 +69,11 @@ extension TimeTrackerStore {
             itemID: item.id,
             taskID: item.taskID,
             title: policy.normalizedTitle(item.title),
+            baseline: ChecklistVisualSuggestionBaseline(
+                item: item,
+                visual: checklistVisual(for: item),
+                normalizedTitle: policy.normalizedTitle(item.title)
+            ),
             taskTitle: task.title,
             taskPath: taskPath(for: task),
             endpoint: preferences.llmEndpoint,

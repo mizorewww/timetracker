@@ -1349,6 +1349,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：领域回归覆盖相同 key 重放、不同 key 同标题、key/payload 不匹配拒绝、System Action outcome 与 receipt/item 共同持久化；snapshot/restore、legacy V10 兼容、schema registry 和清空 tombstone 另纳入签名回归。本小节在可读取 xcresult 后补填最终数字。
 
+## AD-108：Checklist AI completion 必须验证手动视觉 revision
+
+状态：Accepted
+
+背景：Checklist 图标/颜色建议通过异步 LLM 请求返回。请求开始后，另一 iPad/macOS scene 可以在任务编辑器中手动调整同一条目的视觉；旧实现直接把当前 scene 缓存对象写回 SwiftData，既未比较 visual `clientMutationID`，也未在共享 lock 内重取 canonical visual，因此迟到的 AI 结果会覆盖明确的用户编辑并清除 `userEditedAt`。
+
+决策：请求固化 item ID、task ID、item mutation ID、规范化标题以及 canonical visual 的可选 `(ID, clientMutationID, userEditedAt)`。completion 只在 shared store lock 和 fresh `ModelContext` 内检查 task 仍可追踪、item 未删除/完成且 revision 与标题一致、visual 仍是请求时的 logical winner 并仍满足 suggestion policy；通过后才调用 command handler。任一条件变化都返回无 mutation，当前 scene 只刷新 tasks/checklist read models。AI 输出始终是 advisory，stale 结果不显示为用户错误，也不能推进 sync generation。
+
+后果：手动图标/颜色编辑优先于任何已在途的 AI 响应；跨 scene 标题、完成、删除和 task lifecycle 变化也不能被旧响应复活。新的 receipt-like baseline 是内存期请求合同，不进入 CloudKit；持久化表不增加 schema 字段。
+
+验证：store-scoped 领域测试覆盖“另一个 context 手动视觉编辑后迟到 suggestion 被丢弃”和未变化 revision 正常应用。签名回归、资源清理与运行数字记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

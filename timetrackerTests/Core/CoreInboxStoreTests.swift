@@ -347,15 +347,19 @@ struct CoreInboxStoreTests {
 
         store.autoSuggestChecklistVisualsIfNeeded()
         try await Task.sleep(for: .milliseconds(10))
-        parent.status = .archived
-        store.tasks = [parent, child]
+        _ = try StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "sibling"
+        ).setStatus(.archived, taskID: parent.id)
 
         for _ in 0..<50 where !store.checklistVisualSuggestionInFlightIDs.isEmpty {
             try await Task.sleep(for: .milliseconds(10))
         }
 
         #expect(store.checklistVisualSuggestionInFlightIDs.isEmpty)
-        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
+        let visualContext = ModelContext(context.container)
+        #expect(try visualContext.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
         #expect(store.errorMessage == nil)
     }
 

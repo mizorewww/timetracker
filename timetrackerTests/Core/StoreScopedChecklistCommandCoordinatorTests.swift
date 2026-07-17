@@ -186,6 +186,102 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         #expect(persisted.first(where: { $0.id == staleItems[0].id })?.isCompleted == true)
     }
 
+    @Test
+    func staleVisualSuggestionCannotOverwriteAManualVisualFromAnotherScene() throws {
+        let context = try makeTestContext()
+        let task = try makeTask(in: context, title: "Visual owner")
+        let writer = coordinator(container: context.container, deviceID: "writer")
+        _ = try writer.add(taskID: task.id, title: "Prepare deck")
+
+        let item = try #require(try visibleItems(in: context.container).first)
+        let visual = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<ChecklistItemVisual>())
+                .first(where: { $0.checklistItemID == item.id })
+        )
+        let baseline = ChecklistVisualSuggestionBaseline(
+            item: item,
+            visual: visual,
+            normalizedTitle: ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+        )
+
+        let siblingContext = ModelContext(context.container)
+        let siblingVisual = try #require(
+            try siblingContext.fetch(FetchDescriptor<ChecklistItemVisual>())
+                .first(where: { $0.id == visual.id })
+        )
+        siblingVisual.iconName = "paintbrush"
+        siblingVisual.colorHex = "EF4444"
+        siblingVisual.userEditedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        siblingVisual.suggestionTitleSnapshot = item.title
+        siblingVisual.suggestionModelID = "manual"
+        siblingVisual.suggestionGeneratedAt = nil
+        siblingVisual.updatedAt = siblingVisual.userEditedAt ?? siblingVisual.updatedAt
+        siblingVisual.clientMutationID = UUID()
+        try siblingContext.save()
+
+        let outcome = try writer.applyVisualSuggestion(
+            baseline: baseline,
+            result: LLMChecklistVisualSuggestionResult(
+                iconName: "book",
+                colorHex: "16A34A",
+                reason: "Suggested automatically",
+                modelID: "test-model"
+            )
+        )
+
+        #expect(outcome.didMutate == false)
+        let persisted = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<ChecklistItemVisual>())
+                .first(where: { $0.id == visual.id })
+        )
+        #expect(persisted.iconName == "paintbrush")
+        #expect(persisted.colorHex == "EF4444")
+        #expect(persisted.userEditedAt != nil)
+    }
+
+    @Test
+    func freshVisualSuggestionAppliesOnlyAgainstItsCapturedRevision() throws {
+        let context = try makeTestContext()
+        let task = try makeTask(in: context, title: "Visual owner")
+        let writer = coordinator(container: context.container, deviceID: "writer")
+        _ = try writer.add(taskID: task.id, title: "Prepare deck")
+
+        let item = try #require(try visibleItems(in: context.container).first)
+        let visual = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<ChecklistItemVisual>())
+                .first(where: { $0.checklistItemID == item.id })
+        )
+        let baseline = ChecklistVisualSuggestionBaseline(
+            item: item,
+            visual: visual,
+            normalizedTitle: ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+        )
+
+        let outcome = try writer.applyVisualSuggestion(
+            baseline: baseline,
+            result: LLMChecklistVisualSuggestionResult(
+                iconName: "book",
+                colorHex: "16A34A",
+                reason: "Suggested automatically",
+                modelID: "test-model"
+            )
+        )
+
+        #expect(outcome.didMutate)
+        let persisted = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<ChecklistItemVisual>())
+                .first(where: { $0.id == visual.id })
+        )
+        #expect(persisted.iconName == "book")
+        #expect(persisted.colorHex == "16A34A")
+        #expect(persisted.userEditedAt == nil)
+        #expect(persisted.suggestionModelID == "test-model")
+    }
+
     private func makeTask(in context: ModelContext, title: String) throws -> TaskNode {
         try SwiftDataTaskRepository(context: context, deviceID: "seed").createTask(
             title: title,

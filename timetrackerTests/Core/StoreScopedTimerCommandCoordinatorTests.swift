@@ -25,12 +25,10 @@ struct StoreScopedTimerCommandCoordinatorTests {
 
         let first = try handler.startTimerMutation(
             taskID: task.id,
-            allowParallelTimers: true,
             container: firstCaller.container
         )
         let second = try handler.startTimerMutation(
             taskID: task.id,
-            allowParallelTimers: true,
             container: secondCaller.container
         )
 
@@ -67,7 +65,6 @@ struct StoreScopedTimerCommandCoordinatorTests {
 
         let outcome = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: task.id,
-            allowParallelTimers: true,
             container: container
         )
 
@@ -111,10 +108,14 @@ struct StoreScopedTimerCommandCoordinatorTests {
             source: .timer
         )
         let other = try repository.startTask(taskID: otherTask.id, source: .watch)
+        try PreferenceCommandHandler().set(
+            key: .allowParallelTimers,
+            valueJSON: PreferenceJSON.encode(false),
+            context: context
+        )
 
         let outcome = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: selectedTask.id,
-            allowParallelTimers: false,
             container: container
         )
 
@@ -182,7 +183,6 @@ struct StoreScopedTimerCommandCoordinatorTests {
 
         let replacement = try coordinator.start(
             taskID: task.id,
-            allowParallelTimers: true,
             sameTaskBehavior: .replaceAll
         )
         let staleStop = try coordinator.stop(segmentID: oldSegment.id)

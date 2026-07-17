@@ -83,6 +83,21 @@ private enum StoreScopedTimerCommandCoordinatorError: Error {
     case inconsistentAdmissionPlan
 }
 
+/// Resolves timer admission settings only after a writer owns the store lock.
+/// A scene, Watch command, or App Intent may have observed an older preference
+/// snapshot while it was waiting to commit.
+@MainActor
+enum TimerAdmissionPreferenceResolver {
+    static func allowParallelTimers(in context: ModelContext) throws -> Bool {
+        let preferences = try context.fetch(FetchDescriptor<SyncedPreference>())
+            .deduplicatedByID()
+            .filter {
+                $0.deletedAt == nil && SyncedPreferenceService.shouldSyncKey($0.key)
+            }
+        return AppPreferences(syncedPreferences: preferences).allowParallelTimers
+    }
+}
+
 /// Linearizes one timer read-plan-write sequence for one concrete SwiftData
 /// store. Every decision is made from a fresh context created after acquiring
 /// the store lock; no facade or caller cache participates in admission.
@@ -104,7 +119,6 @@ struct StoreScopedTimerCommandCoordinator {
 
     func start(
         taskID: UUID,
-        allowParallelTimers: Bool,
         sameTaskBehavior: TimerSameTaskStartBehavior = .reuseOldest,
         source: TimeSessionSource = .timer
     ) throws -> StoreScopedTimerCommandOutcome {
@@ -140,6 +154,8 @@ struct StoreScopedTimerCommandCoordinator {
             let activeByID = Dictionary(
                 uniqueKeysWithValues: activeSegments.map { ($0.id, $0) }
             )
+            let allowParallelTimers = try TimerAdmissionPreferenceResolver
+                .allowParallelTimers(in: context)
             let plan = TimerAdmissionPolicy().startPlan(
                 taskID: taskID,
                 mode: allowParallelTimers ? .parallel : .exclusive,

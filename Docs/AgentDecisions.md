@@ -1265,6 +1265,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：`CoreWidgetSnapshotTests` 覆盖 current、stale、clock-adjusted elapsed；`CoreWatchCommandTests` 覆盖 Watch stale freeze 与 preference refresh publish；system-surface source contract 固定 Widget/Watch/Live Activity 三处都不再存在 compact stale bypass。2026-07-17 付费自动签名 macOS 定向回归 56/56 通过，签名身份为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`；本切片未创建模拟器，测试结束后清理了结果包且无 owned 测试进程。
 
+## AD-101：计时准入设置只能在锁内读取，副作用只以实际 outcome 发布
+
+状态：Accepted
+
+背景：`allowParallelTimers` 原由主界面 Store、Watch router 或 App Intent 在提交锁外读取后传入。设置同步、另一 scene 的修改或等待 lock 的间隙可以使 Bool 过期，导致刚关闭“允许并行计时”的用户仍得到并行 segment。Watch router 还根据旧 Store projection 预猜 post-commit events，实际 fresh transaction 停止其他计时时，系统表面和同步 snapshot 可能漏掉被停项目。
+
+决策：普通 timer start 的 public command surface 不再接收 `allowParallelTimers`。`StoreScopedTimerCommandCoordinator` 取得 store lock 并创建 fresh `ModelContext` 后，以 `TimerAdmissionPreferenceResolver` 从 canonical `SyncedPreference` 解析它，再产生 admission plan。Watch 的兼容 `process` 只返回原有 typed result；实际 router 使用 `processWithMutationOutcome`，从锁内 `StoreScopedTimerCommandOutcome.events` 刷新 Widget/Watch/Live Activity 与同步 snapshot，禁止从调用者 cache 推测。
+
+后果：主 App、Watch 与 Shortcuts 在同一持久事实下决定 exclusive/parallel；重复 Watch delivery、无效和 missing command 不产生伪造 events。Pomodoro 与手工 segment 的设置读取是相邻独立 writer，仍必须迁移到同一 resolver，不能因普通 timer 修复而宣称已覆盖。
+
+验证：timer coordinator/system action/Watch suite 覆盖 canonical false preference 下的 exclusive reconcile、App Intent/handler 不再接收 caller Bool、Watch router 发布 actual outcome events。2026-07-17 付费自动签名 macOS 定向回归 73/73 通过，签名身份为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`；本切片未创建模拟器，结束后删除结果包并确认无 owned 测试进程。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

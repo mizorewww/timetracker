@@ -42,12 +42,9 @@ struct StartTimerIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let context = SystemActionContextProvider.makeContext()
         let taskID = try task.uuid()
-        let commandHandler = SystemActionCommandHandler()
-        let outcome = try commandHandler.startTimerMutation(
+        let outcome = try SystemActionCommandHandler().startTimerMutation(
             taskID: taskID,
-            allowParallelTimers: try commandHandler.allowParallelTimersPreference(context: context),
             source: .shortcut,
             container: SystemActionContextProvider.container
         )

@@ -21,7 +21,6 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
 
         _ = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: task.id,
-            allowParallelTimers: true,
             container: context.container
         )
         draft.title = "Must not persist"

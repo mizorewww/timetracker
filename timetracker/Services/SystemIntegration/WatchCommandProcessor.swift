@@ -53,6 +53,12 @@ final class InMemoryWatchCommandReceiptStore: WatchCommandReceiptStore {
 }
 
 @MainActor
+struct WatchCommandMutationOutcome {
+    let result: WatchCommandProcessingResult
+    let events: Set<StoreDomainEvent>
+}
+
+@MainActor
 struct WatchCommandProcessor {
     var receiptStore: WatchCommandReceiptStore
     let writeAuthorization: StoreWriteAuthorization
@@ -72,20 +78,30 @@ struct WatchCommandProcessor {
 
     func process(
         _ command: WatchTimerCommand,
-        allowParallelTimers: Bool,
         context: ModelContext,
         now: Date = Date()
     ) throws -> WatchCommandProcessingResult {
+        try processWithMutationOutcome(command, context: context, now: now).result
+    }
+
+    func processWithMutationOutcome(
+        _ command: WatchTimerCommand,
+        context: ModelContext,
+        now: Date = Date()
+    ) throws -> WatchCommandMutationOutcome {
         guard receiptStore.contains(command.id) == false else {
-            return .duplicate(command.id)
+            return WatchCommandMutationOutcome(
+                result: .duplicate(command.id),
+                events: []
+            )
         }
         guard command.isValid(at: now) else {
-            return .invalid
+            return WatchCommandMutationOutcome(result: .invalid, events: [])
         }
 
         switch command.type {
         case .startTask:
-            return try startTask(command, allowParallelTimers: allowParallelTimers, context: context)
+            return try startTask(command, context: context)
         case .stopSegment:
             return try stopSegment(command, context: context)
         }
@@ -93,41 +109,59 @@ struct WatchCommandProcessor {
 
     private func startTask(
         _ command: WatchTimerCommand,
-        allowParallelTimers: Bool,
         context: ModelContext
-    ) throws -> WatchCommandProcessingResult {
-        guard let taskID = command.taskID else { return .invalid }
-        let segmentID: UUID?
+    ) throws -> WatchCommandMutationOutcome {
+        guard let taskID = command.taskID else {
+            return WatchCommandMutationOutcome(result: .invalid, events: [])
+        }
+        let outcome: StoreScopedTimerCommandOutcome
         do {
-            segmentID = try SystemActionCommandHandler(
+            outcome = try SystemActionCommandHandler(
                 writeAuthorization: writeAuthorization
             ).startTimerMutation(
                 taskID: taskID,
-                allowParallelTimers: allowParallelTimers,
                 source: .watch,
                 container: context.container
-            ).subjectSegmentID
+            )
         } catch SystemActionCommandError.taskNotFound {
-            return .missingTask(taskID)
+            return WatchCommandMutationOutcome(
+                result: .missingTask(taskID),
+                events: []
+            )
         }
-        guard let segmentID else { return .invalid }
+        guard let segmentID = outcome.subjectSegmentID else {
+            return WatchCommandMutationOutcome(result: .invalid, events: [])
+        }
         receiptStore.markProcessed(command.id)
-        return .started(segmentID)
+        return WatchCommandMutationOutcome(
+            result: .started(segmentID),
+            events: outcome.events
+        )
     }
 
     private func stopSegment(
         _ command: WatchTimerCommand,
         context: ModelContext
-    ) throws -> WatchCommandProcessingResult {
-        guard let segmentID = command.segmentID else { return .invalid }
-        let stoppedID = try SystemActionCommandHandler(
+    ) throws -> WatchCommandMutationOutcome {
+        guard let segmentID = command.segmentID else {
+            return WatchCommandMutationOutcome(result: .invalid, events: [])
+        }
+        let outcome = try SystemActionCommandHandler(
             writeAuthorization: writeAuthorization
         ).stopTimerMutation(
             segmentID: segmentID,
             container: context.container
-        ).subjectSegmentID
-        guard stoppedID == segmentID else { return .missingSegment(segmentID) }
+        )
+        guard outcome.subjectSegmentID == segmentID else {
+            return WatchCommandMutationOutcome(
+                result: .missingSegment(segmentID),
+                events: []
+            )
+        }
         receiptStore.markProcessed(command.id)
-        return .stopped(segmentID)
+        return WatchCommandMutationOutcome(
+            result: .stopped(segmentID),
+            events: outcome.events
+        )
     }
 }

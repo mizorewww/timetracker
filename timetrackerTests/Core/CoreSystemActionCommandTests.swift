@@ -8,6 +8,10 @@ struct CoreSystemActionCommandTests {
     @Test
     func appIntentsAreThinWrappersAroundSystemActionCommands() throws {
         let source = try sourceText("timetracker/AppIntents/TimeTrackerAppIntents.swift")
+        let handler = try sourceText("timetracker/Commands/SystemActionCommands.swift")
+        let coordinator = try sourceText(
+            "timetracker/Services/TimeTracking/StoreScopedTimerCommandCoordinator.swift"
+        )
 
         #expect(source.contains("import AppIntents"))
         #expect(source.contains("struct AddInboxItemIntent: AppIntent"))
@@ -20,14 +24,15 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("TimeSegment(") == false)
         #expect(source.contains("TimeSession(") == false)
         #expect(source.contains("context.insert") == false)
-        #expect(source.contains("allowParallelTimers: true") == false)
-        #expect(source.contains("allowParallelTimersPreference(context: context)"))
+        #expect(source.contains("allowParallelTimers") == false)
         #expect(source.contains("source: .shortcut"))
         #expect(source.contains("container: SystemActionContextProvider.container"))
         #expect(source.contains("let postCommitContext = SystemActionContextProvider.makeContext()"))
         #expect(source.contains("timetrackerApp.applicationModelContainer"))
         #expect(source.components(separatedBy: "CommittedMutationSnapshotRecorder()").count - 1 == 3)
         #expect(source.components(separatedBy: "CommittedMutationSurfaceSynchronizer()").count - 1 == 3)
+        #expect(handler.contains("allowParallelTimers: Bool") == false)
+        #expect(coordinator.contains("TimerAdmissionPreferenceResolver\n                .allowParallelTimers(in: context)"))
     }
 
     @Test @MainActor
@@ -63,7 +68,6 @@ struct CoreSystemActionCommandTests {
 
         let segmentID = try #require(try handler.startTimer(
             taskID: task.id,
-            allowParallelTimers: true,
             context: context
         ))
 
@@ -89,7 +93,6 @@ struct CoreSystemActionCommandTests {
 
         let outcome = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: task.id,
-            allowParallelTimers: true,
             source: .shortcut,
             container: context.container
         )
@@ -122,10 +125,14 @@ struct CoreSystemActionCommandTests {
         )
         let selectedSegment = try timeRepository.startTask(taskID: selectedTask.id, source: .timer)
         let otherSegment = try timeRepository.startTask(taskID: otherTask.id, source: .timer)
+        try PreferenceCommandHandler().set(
+            key: .allowParallelTimers,
+            valueJSON: PreferenceJSON.encode(false),
+            context: context
+        )
 
         let returnedID = try makeTestSystemActionCommandHandler().startTimer(
             taskID: selectedTask.id,
-            allowParallelTimers: false,
             context: context
         )
 
@@ -190,7 +197,6 @@ struct CoreSystemActionCommandTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             try makeTestSystemActionCommandHandler().startTimer(
                 taskID: task.id,
-                allowParallelTimers: true,
                 context: context
             )
         }
@@ -218,7 +224,6 @@ struct CoreSystemActionCommandTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             try makeTestSystemActionCommandHandler().startTimer(
                 taskID: child.id,
-                allowParallelTimers: true,
                 context: context
             )
         }
@@ -393,7 +398,7 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
-    func systemActionReadsTheSyncedParallelTimerPreference() throws {
+    func timerAdmissionReadsTheSyncedParallelTimerPreference() throws {
         let context = try makeTestContext()
         try PreferenceCommandHandler().set(
             key: .allowParallelTimers,
@@ -401,7 +406,9 @@ struct CoreSystemActionCommandTests {
             context: context
         )
 
-        #expect(try makeTestSystemActionCommandHandler().allowParallelTimersPreference(context: context) == false)
+        #expect(
+            try TimerAdmissionPreferenceResolver.allowParallelTimers(in: context) == false
+        )
     }
 
     @Test @MainActor
@@ -455,7 +462,6 @@ struct CoreSystemActionCommandTests {
         let segmentID = try #require(
             try makeTestSystemActionCommandHandler().startTimer(
                 taskID: task.id,
-                allowParallelTimers: true,
                 context: context
             )
         )

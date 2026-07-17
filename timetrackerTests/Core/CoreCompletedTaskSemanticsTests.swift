@@ -113,7 +113,6 @@ struct CoreCompletedTaskSemanticsTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             try makeTestSystemActionCommandHandler().startTimer(
                 taskID: task.id,
-                allowParallelTimers: true,
                 context: context
             )
         }
@@ -130,7 +129,6 @@ struct CoreCompletedTaskSemanticsTests {
             receiptStore: InMemoryWatchCommandReceiptStore()
         ).process(
             watchCommand,
-            allowParallelTimers: true,
             context: context
         )
         #expect(watchResult == .missingTask(task.id))

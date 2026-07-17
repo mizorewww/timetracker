@@ -108,13 +108,11 @@ struct SystemActionCommandHandler {
     @discardableResult
     func startTimer(
         taskID: UUID,
-        allowParallelTimers: Bool,
         source: TimeSessionSource = .timer,
         context: ModelContext
     ) throws -> UUID? {
         try startTimerMutation(
             taskID: taskID,
-            allowParallelTimers: allowParallelTimers,
             source: source,
             container: context.container
         ).subjectSegmentID
@@ -122,7 +120,6 @@ struct SystemActionCommandHandler {
 
     func startTimerMutation(
         taskID: UUID,
-        allowParallelTimers: Bool,
         source: TimeSessionSource = .timer,
         container: ModelContainer
     ) throws -> StoreScopedTimerCommandOutcome {
@@ -131,7 +128,6 @@ struct SystemActionCommandHandler {
             writeAuthorization: writeAuthorization
         ).start(
             taskID: taskID,
-            allowParallelTimers: allowParallelTimers,
             source: source
         )
     }
@@ -160,12 +156,6 @@ struct SystemActionCommandHandler {
         ).stop(segmentID: segmentID, taskID: taskID)
     }
 
-    func allowParallelTimersPreference(context: ModelContext) throws -> Bool {
-        let preferences = try context.fetch(FetchDescriptor<SyncedPreference>())
-            .deduplicatedByID()
-            .filter { $0.deletedAt == nil && SyncedPreferenceService.shouldSyncKey($0.key) }
-        return AppPreferences(syncedPreferences: preferences).allowParallelTimers
-    }
 }
 
 enum SystemActionCommandError: LocalizedError, Equatable {

@@ -27,7 +27,6 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
 
         _ = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: child.id,
-            allowParallelTimers: true,
             container: context.container
         )
 
@@ -126,7 +125,6 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
         )
         let started = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: child.id,
-            allowParallelTimers: true,
             container: context.container
         )
         let segmentID = try #require(started.subjectSegmentID)

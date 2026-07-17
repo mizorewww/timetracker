@@ -30,7 +30,6 @@ extension TimeTrackerStore {
                 writeAuthorization: writeAuthorization
             ).startTimerMutation(
                 taskID: taskID,
-                allowParallelTimers: preferences.allowParallelTimers,
                 source: source,
                 container: modelContext.container
             )

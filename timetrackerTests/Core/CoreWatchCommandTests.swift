@@ -767,6 +767,7 @@ struct CoreWatchCommandTests {
         let contentView = try sourceText("timetracker/App/ContentView.swift")
         let router = try sourceText("timetracker/App/WatchCommandRouter.swift")
         let facade = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+WatchSnapshot.swift")
+        let processor = try sourceText("timetracker/Services/SystemIntegration/WatchCommandProcessor.swift")
 
         #expect(app.contains("WatchConnectivityBridge.shared.activateIfSupported"))
         #expect(contentView.contains("WatchCommandRouter.shared.register"))
@@ -777,6 +778,10 @@ struct CoreWatchCommandTests {
         #expect(router.contains("WatchConnectivityBridge.shared.commandHandler = nil"))
         #expect(facade.contains("handleWatchCommand"))
         #expect(facade.contains("writeAuthorization: writeAuthorization"))
+        #expect(facade.contains("processWithMutationOutcome"))
+        #expect(facade.contains("timerStartMutationEvents") == false)
+        #expect(processor.contains("allowParallelTimers: Bool") == false)
+        #expect(processor.contains("events: outcome.events"))
     }
 
     @Test @MainActor
@@ -798,14 +803,12 @@ struct CoreWatchCommandTests {
 
         let firstResult = try processor.process(
             command,
-            allowParallelTimers: true,
             context: context,
             now: issuedAt
         )
         try makeTestSystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
         let duplicateResult = try processor.process(
             command,
-            allowParallelTimers: true,
             context: context,
             now: issuedAt.addingTimeInterval(WatchTransportLimits.maximumCommandAge + 1)
         )
@@ -815,6 +818,53 @@ struct CoreWatchCommandTests {
         #expect(duplicateResult == .duplicate(command.id))
         #expect(segments.count == 1)
         #expect(segments.first?.source == .watch)
+    }
+
+    @Test @MainActor
+    func watchStartReReadsTheExclusiveTimerSettingInsideTheStoreTransaction() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let runningTask = try taskRepository.createTask(
+            title: "Already running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let requestedTask = try taskRepository.createTask(
+            title: "Watch request",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let runningSegment = try timeRepository.startTask(
+            taskID: runningTask.id,
+            source: .timer
+        )
+        try PreferenceCommandHandler().set(
+            key: .allowParallelTimers,
+            valueJSON: PreferenceJSON.encode(false),
+            context: context
+        )
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: requestedTask.id,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        let result = try makeTestWatchCommandProcessor(
+            receiptStore: InMemoryWatchCommandReceiptStore()
+        ).process(command, context: context)
+
+        guard case let .started(startedID) = result else {
+            Issue.record("The requested watch timer should start")
+            return
+        }
+        #expect(try timeRepository.activeSegments().map(\.id) == [startedID])
+        #expect(try timeRepository.allSegments().first { $0.id == runningSegment.id }?.endedAt != nil)
     }
 
     @Test @MainActor
@@ -835,7 +885,6 @@ struct CoreWatchCommandTests {
 
         let missingResult = try processor.process(
             command,
-            allowParallelTimers: true,
             context: context,
             now: issuedAt
         )
@@ -845,7 +894,6 @@ struct CoreWatchCommandTests {
         try context.save()
         let retryResult = try processor.process(
             command,
-            allowParallelTimers: true,
             context: context,
             now: issuedAt.addingTimeInterval(1)
         )
@@ -876,13 +924,11 @@ struct CoreWatchCommandTests {
 
         let firstResult = try processor.process(
             command,
-            allowParallelTimers: true,
             context: context,
             now: issuedAt
         )
         let duplicateResult = try processor.process(
             command,
-            allowParallelTimers: true,
             context: context,
             now: issuedAt.addingTimeInterval(WatchTransportLimits.maximumCommandAge + 1)
         )
@@ -920,7 +966,6 @@ struct CoreWatchCommandTests {
 
         let staleResult = try processor.process(
             staleCommand,
-            allowParallelTimers: true,
             context: context,
             now: retryDate
         )
@@ -933,7 +978,6 @@ struct CoreWatchCommandTests {
         retriedCommand.issuedAt = retryDate
         let retryResult = try processor.process(
             retriedCommand,
-            allowParallelTimers: true,
             context: context,
             now: retryDate
         )
@@ -985,7 +1029,7 @@ struct CoreWatchCommandTests {
             deviceID: "watch-test"
         )
 
-        let result = try processor.process(command, allowParallelTimers: true, context: context)
+        let result = try processor.process(command, context: context)
 
         let persistedRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
         let persistedSegment = try #require(try timeRepository.allSegments().first { $0.id == segment.id })

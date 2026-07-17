@@ -11,35 +11,23 @@ extension TimeTrackerStore {
         _ command: WatchTimerCommand,
         recordingWith snapshotService: SyncConflictService
     ) -> WatchCommandResult {
-        let targetSegment = command.segmentID.flatMap { segmentID in
-            activeSegments.first { $0.id == segmentID }
-        }
-        let events: Set<StoreDomainEvent>
-        switch command.type {
-        case .startTask:
-            events = command.taskID.map { timerStartMutationEvents(taskID: $0) } ?? []
-        case .stopSegment:
-            events = targetSegment.map { timerStopMutationEvents(segment: $0) } ?? [
-                .ledgerChanged(taskID: nil, dateInterval: nil, isVisible: true),
-                .pomodoroChanged(runID: nil, sessionID: nil, taskID: nil)
-            ]
-        }
-
         do {
             guard let modelContext else { throw StoreError.notConfigured }
-            let result = try WatchCommandProcessor(
+            let outcome = try WatchCommandProcessor(
                 writeAuthorization: writeAuthorization
-            ).process(
+            ).processWithMutationOutcome(
                 command,
-                allowParallelTimers: preferences.allowParallelTimers,
                 context: modelContext
             )
+            let result = outcome.result
             let terminalResult = result.terminalResult(commandID: command.id)
 
             if result.isProcessed {
                 var postCommitError: Error?
                 do {
-                    if let surfaceError = try refreshCommittedMutationSurfaces(events: events) {
+                    if let surfaceError = try refreshCommittedMutationSurfaces(
+                        events: outcome.events
+                    ) {
                         postCommitError = surfaceError
                     }
                 } catch {
@@ -47,7 +35,7 @@ extension TimeTrackerStore {
                 }
                 if let snapshotError = CommittedMutationSnapshotRecorder(
                     syncConflictService: snapshotService
-                ).recordLocalMutation(context: modelContext, events: events) {
+                ).recordLocalMutation(context: modelContext, events: outcome.events) {
                     postCommitError = postCommitError ?? snapshotError
                 } else {
                     do {

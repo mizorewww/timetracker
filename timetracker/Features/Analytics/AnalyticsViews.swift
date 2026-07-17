@@ -43,15 +43,19 @@ struct AnalyticsView: View {
                 followsCurrentPeriod = range.isCurrentPeriod(newDate, liveNow: actionNow)
             }
         )
+        let canKeepDisplayingSnapshot = loadedRequest.map {
+            $0.canRemainVisible(whileLoading: request)
+        } ?? false
 
         Group {
-            if let snapshot, loadedRequest == request {
+            if let snapshot, canKeepDisplayingSnapshot {
                 AnalyticsContent(
                     snapshot: snapshot,
                     range: $range,
                     referenceDate: effectiveReferenceDateBinding,
                     liveNow: liveNow,
-                    monthNavigationAnchor: $monthNavigationAnchor
+                    monthNavigationAnchor: $monthNavigationAnchor,
+                    isRefreshing: loadedRequest != request
                 )
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -59,7 +63,10 @@ struct AnalyticsView: View {
             }
         }
         .task(id: request) {
+            await Task.yield()
+            guard Task.isCancelled == false else { return }
             snapshot = store.analyticsSnapshot(for: range, evaluation: evaluation)
+            guard Task.isCancelled == false else { return }
             loadedRequest = request
         }
         .task(id: refreshPlan) {

@@ -8,6 +8,7 @@ struct AnalyticsContent: View {
     @Binding var referenceDate: Date
     let liveNow: Date
     @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
+    let isRefreshing: Bool
 
     var body: some View {
         List {
@@ -15,7 +16,8 @@ struct AnalyticsContent: View {
                 range: $range,
                 referenceDate: $referenceDate,
                 liveNow: liveNow,
-                monthNavigationAnchor: $monthNavigationAnchor
+                monthNavigationAnchor: $monthNavigationAnchor,
+                isRefreshing: isRefreshing
             )
 
             Section {

@@ -184,4 +184,66 @@ struct AnalyticsRefreshPlanTests {
         #expect(first == second)
         #expect(first.evaluationKey.liveDayStart == nil)
     }
+
+    @Test
+    func snapshotDisplayKeepsOnlyTheSameSelectedCalendarPeriod() throws {
+        let today = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 9))
+        )
+        let laterToday = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 10))
+        )
+        let tomorrow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 9))
+        )
+        let initial = AnalyticsSnapshotRequest(
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: today,
+                liveNow: today,
+                calendar: calendar
+            ),
+            revision: 1,
+            liveRefreshBucket: 9 * 60,
+            calendar: calendar
+        )
+        let refreshed = AnalyticsSnapshotRequest(
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: laterToday,
+                liveNow: laterToday,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 10 * 60,
+            calendar: calendar
+        )
+        let anotherDay = AnalyticsSnapshotRequest(
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: tomorrow,
+                liveNow: tomorrow,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 9 * 60,
+            calendar: calendar
+        )
+        let sameDateDifferentRange = AnalyticsSnapshotRequest(
+            range: .week,
+            evaluation: AnalyticsRange.week.evaluation(
+                referenceDate: laterToday,
+                liveNow: laterToday,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 10 * 60,
+            calendar: calendar
+        )
+
+        #expect(initial != refreshed)
+        #expect(initial.canRemainVisible(whileLoading: refreshed))
+        #expect(initial.canRemainVisible(whileLoading: anotherDay) == false)
+        #expect(initial.canRemainVisible(whileLoading: sameDateDifferentRange) == false)
+    }
 }

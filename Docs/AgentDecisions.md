@@ -1409,6 +1409,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：Analytics period UI contract、架构行为和三语 localization parity 必须覆盖新的 day key、历史动作条件与无残留 duplicate range state；实际签名结果记录在 dated Audit。
 
+## AD-113：Analytics 仅在同一日历周期内保留刷新中的快照
+
+状态：Accepted
+
+背景：Analytics request identity 同时包含 range、calendar period、revision、live day 和分钟 bucket。旧页面在任何 identity 变化时立即把整个 landing/category list 换成 spinner；一次普通的 minute refresh 或本机 mutation 因而产生明显闪烁。若反过来无条件保留旧 snapshot，又会在用户切换日期、周或月时把旧指标显示在新控制器下，造成更严重的统计语义错误。
+
+决策：`AnalyticsSnapshotRequest.canRemainVisible(whileLoading:)` 只在 `range` 和 cache key 的 calendar `interval` 同时相等时返回真。此时可以在 revision、live day 或 live bucket 刷新期间继续显示已有快照，并在 shared period controls 旁显示一个非交互的系统小型 progress indicator。range 或 interval 一旦变化，landing 仍使用全页 loading，category detail 仍只显示其 loading row；不得用旧 snapshot 充当新周期 placeholder。两个 snapshot task 都先 `Task.yield()`，让新的 loading/refresh UI 有机会提交，再进行保持在既有 main-actor 边界的有界计算。
+
+后果：活动当前 period 的读取更平稳，本机 mutation 不再打断用户正在看的相同 period；历史 navigation 和 day/week/month 切换始终保持内容与控件一致。此决定不声称把 analytics 计算移到后台；若 profile 证明它本身造成卡顿，必须以新的可取消 read-model 设计处理，不能扩大 stale-snapshot 规则。
+
+验证：纯 request 行为测试覆盖同日 revision/bucket 保留、跨日和跨 range 拒绝；架构/UI contract 固定 root/detail 的 request gate、yield 与 shared refresh indicator。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

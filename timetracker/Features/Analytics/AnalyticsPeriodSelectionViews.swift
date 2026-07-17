@@ -289,6 +289,14 @@ nonisolated struct AnalyticsSnapshotRequest: Hashable, Sendable {
         )
         self.revision = revision
     }
+
+    /// A snapshot can remain visible only while the selected calendar period
+    /// itself is unchanged. Revisions and live buckets may advance within that
+    /// period, but a range or interval change must never present old metrics
+    /// under the newly selected controls.
+    func canRemainVisible(whileLoading request: AnalyticsSnapshotRequest) -> Bool {
+        range == request.range && evaluationKey.interval == request.evaluationKey.interval
+    }
 }
 
 struct TaskAnalyticsSnapshotRequest: Hashable {

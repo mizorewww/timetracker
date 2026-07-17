@@ -5,6 +5,7 @@ struct AnalyticsPeriodSection: View {
     @Binding var referenceDate: Date
     let liveNow: Date
     @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
+    let isRefreshing: Bool
 
     var body: some View {
         Section {
@@ -12,7 +13,8 @@ struct AnalyticsPeriodSection: View {
                 range: $range,
                 referenceDate: $referenceDate,
                 liveNow: liveNow,
-                monthNavigationAnchor: $monthNavigationAnchor
+                monthNavigationAnchor: $monthNavigationAnchor,
+                isRefreshing: isRefreshing
             )
         }
     }
@@ -25,6 +27,7 @@ private struct AnalyticsPeriodFilter: View {
     @Binding var referenceDate: Date
     let liveNow: Date
     @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
+    let isRefreshing: Bool
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -38,16 +41,20 @@ private struct AnalyticsPeriodFilter: View {
                     monthNavigationAnchor: $monthNavigationAnchor
                 )
                 .fixedSize(horizontal: true, vertical: false)
+                refreshIndicator
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 rangePicker
-                AnalyticsPeriodNavigator(
-                    range: range,
-                    referenceDate: $referenceDate,
-                    liveNow: liveNow,
-                    monthNavigationAnchor: $monthNavigationAnchor
-                )
+                HStack {
+                    AnalyticsPeriodNavigator(
+                        range: range,
+                        referenceDate: $referenceDate,
+                        liveNow: liveNow,
+                        monthNavigationAnchor: $monthNavigationAnchor
+                    )
+                    refreshIndicator
+                }
             }
         }
         .padding(.vertical, 2)
@@ -61,6 +68,15 @@ private struct AnalyticsPeriodFilter: View {
             )
         )
         .accessibilityIdentifier("analytics.periodFilter")
+    }
+
+    @ViewBuilder
+    private var refreshIndicator: some View {
+        if isRefreshing {
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityLabel(AppStrings.localized("analytics.loading"))
+        }
     }
 
     @ViewBuilder

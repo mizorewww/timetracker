@@ -92,7 +92,7 @@ struct CoreArchitectureBehaviorTests {
     }
 
     @Test
-    func mutationRefreshUsesPersistentIndexesInsteadOfWholeSnapshotCopies() throws {
+    func mutationRefreshAndSegmentCommandsUseScopedIndexes() throws {
         let refreshSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+DomainRefreshes.swift"
         )
@@ -105,6 +105,10 @@ struct CoreArchitectureBehaviorTests {
         let ledgerCommandSource = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+LedgerCommands.swift"
         )
+        let segmentCoordinatorSource = try [
+            "timetracker/Services/TimeTracking/StoreScopedSegmentCommandCoordinator.swift",
+            "timetracker/Services/TimeTracking/StoreScopedSegmentCommandCoordinator+Validation.swift"
+        ].map(sourceText).joined(separator: "\n")
 
         #expect(refreshSource.contains("var store = rollupDomainStore") == false)
         #expect(refreshSource.contains("rollupDomainStore.refreshAffected("))
@@ -114,8 +118,11 @@ struct CoreArchitectureBehaviorTests {
         ))
         #expect(calculationSource.contains("calculateUpdates(buildOrder:"))
         #expect(calculationSource.contains("return updates"))
-        #expect(ledgerCommandSource.contains("ledgerDomainStore.segment(for:"))
+        #expect(ledgerCommandSource.contains("StoreScopedSegmentCommandCoordinator("))
         #expect(ledgerCommandSource.contains("allSegments.first") == false)
+        #expect(segmentCoordinatorSource.contains("transaction.withFreshContext"))
+        #expect(segmentCoordinatorSource.contains("timeRepository.segments(ids: [segmentID]).first"))
+        #expect(segmentCoordinatorSource.contains("allSegments.first") == false)
     }
 
     @Test @MainActor

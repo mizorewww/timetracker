@@ -10,7 +10,7 @@ extension SyncConflictService {
         guard AppCloudSync.shouldRefreshLocalFallbackRecoverySnapshotBeforeReset else {
             return
         }
-        try recordLocalMutation(context: context, events: [.fullSync])
+        _ = try recordLocalMutation(context: context, events: [.fullSync])
     }
 
     func stageCurrentLocalSnapshotForCloudEnablement(

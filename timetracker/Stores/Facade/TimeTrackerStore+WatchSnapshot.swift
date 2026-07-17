@@ -33,16 +33,19 @@ extension TimeTrackerStore {
                 } catch {
                     postCommitError = error
                 }
-                if let snapshotError = CommittedMutationSnapshotRecorder(
-                    syncConflictService: snapshotService
-                ).recordLocalMutation(context: modelContext, events: outcome.events) {
-                    postCommitError = postCommitError ?? snapshotError
-                } else {
-                    do {
+                do {
+                    let snapshotResult = try snapshotService.recordLocalMutation(
+                        context: modelContext,
+                        events: outcome.events
+                    )
+                    switch snapshotResult {
+                    case let .recorded(prompt):
+                        pendingSyncConflict = prompt
+                    case .notRecorded:
                         pendingSyncConflict = try snapshotService.prompt()
-                    } catch {
-                        postCommitError = postCommitError ?? error
                     }
+                } catch {
+                    postCommitError = postCommitError ?? error
                 }
 
                 if let postCommitError {

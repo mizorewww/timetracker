@@ -283,7 +283,7 @@ manifest、slot、forced-upload mirror、默认删除和损坏隔离都经注入
 
 `pendingConflictID` 同时是用户确认的版本 token，不只是一次冲突的标签。本机 branch 或待接受云 branch 的 resolution-relevant snapshot 发生实质变化时必须在上述锁内旋转 ID，并从保存后的 state 重建 prompt；不得继续返回变化前的摘要。恢复入口也必须在 locked `loadState()` 后、任何 epoch 推进、snapshot restore、reset flag、clear/save 之前比较 expected optional ID。旧 token 和“原来没有冲突、确认前出现冲突”都返回 `conflictChanged`，不能把检查放到锁外。
 
-`SyncConflictService.prompt()` 是 throwing read boundary：只有合法 state 中确实没有完整 pending conflict 才返回 `nil`。损坏、超限、权限和文件系统错误必须传播给 Store；禁止用 `try?` 把它们转换成“无冲突”。Watch 等已经提交业务 mutation 的入口把随后 prompt 读取失败报告为 post-commit refresh failure，不能把 terminal command 结果倒写成未提交。
+`SyncConflictService.prompt()` 是 throwing read boundary：只有合法 state 中确实没有完整 pending conflict 才返回 `nil`。损坏、超限、权限和文件系统错误必须传播给 Store；禁止用 `try?` 把它们转换成“无冲突”。已经写入 local snapshot 的 `recordLocalMutation` 会在同一 state lock 内返回 `.recorded(prompt:)`，调用方不得为同一次 mutation 再读一次 `prompt()`；`.notRecorded` 则保留原本的 throwing read 边界。Watch 等已经提交业务 mutation 的入口把真正随后发生的 prompt 读取失败报告为 post-commit refresh failure，不能把 terminal command 结果倒写成未提交。
 
 在 iOS 上，manifest、其快照 slot、pending forced-upload 恢复镜像和腐损状态隔离文件写入后都设置 `FileProtectionType.completeUntilFirstUserAuthentication`。这些文件在设备本次启动首次解锁前不可读，首次解锁后可供后台 Shortcuts/CloudKit 流程继续使用；lock 文件不是用户快照，也不能被描述为同样的受保护数据文件。macOS 不套用 iOS Data Protection 属性。
 

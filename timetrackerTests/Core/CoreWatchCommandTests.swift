@@ -1075,8 +1075,7 @@ struct CoreWatchCommandTests {
             store.handleWatchCommand(command, recordingWith: service)
 
             let segment = try #require(store.activeSegment(for: task.id))
-            let stateJSON = try String(contentsOf: stateURL, encoding: .utf8)
-            #expect(stateJSON.contains(segment.id.uuidString))
+            #expect(try service.loadState().localSnapshot?.segments.contains { $0.id == segment.id } == true)
         }
     }
 }

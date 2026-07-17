@@ -1385,6 +1385,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名 macOS XCTest 覆盖 legacy inline migration、精确 state/slot 边界、large snapshot manifest bound、sidecar hash 破坏后的 fail-closed quarantine、existing state/mirror write failure 与 source-layout；结果和资源清理记录在 dated Audit。
 
+## AD-111：已提交的同步快照在同一锁内返回 conflict prompt
+
+状态：Accepted
+
+背景：普通 store mutation 已在 store → SyncConflict state lock 内捕获快照并发布 manifest，但 `TimeTrackerStore` 随后再调用 `prompt()` 取得 UI 提示。这会立刻重读 manifest 和所有已引用的 slot；对大型恢复快照而言，提交后不必要地再次解码同一份数据，也在两次锁之间引入新的 state 版本。
+
+决策：`recordLocalMutation` 返回 `SyncLocalMutationSnapshotResult`。实际记录路径在同一把 state lock 内从刚保存的 runtime state 组装 `.recorded(prompt:)`；不需要记录快照的路径返回 `.notRecorded`，由既有调用方继续按原语义调用 throwing `prompt()`。正常 lifecycle 与 Watch post-commit refresh 消费已返回的 prompt；System Action 只需记录快照，显式忽略这个返回值。不得以 catch 后返回 `nil` 掩盖 state/slot 损坏或 I/O 失败。
+
+后果：已记录 mutation 避免一次重复 manifest/slot 读取，同时 UI 看到的 prompt 恰是本次提交的版本。未记录路径的可见错误边界不变；这不是新锁或新的同步协议，也不改变 CloudKit、SwiftData 或恢复数据结构。
+
+验证：付费自动签名 macOS SyncConflict、state-write、store serialization、System Action、Watch 与 source-layout 定向批次覆盖 returned prompt 和 manifest-backed Watch state；准确结果、首次失败重跑和资源清理记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

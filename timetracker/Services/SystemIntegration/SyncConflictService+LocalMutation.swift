@@ -1,35 +1,44 @@
 import Foundation
 import SwiftData
 
+enum SyncLocalMutationSnapshotResult {
+    case notRecorded
+    case recorded(prompt: SyncConflictPrompt?)
+}
+
 extension SyncConflictService {
-    func recordLocalMutation(context: ModelContext) throws {
+    @discardableResult
+    func recordLocalMutation(context: ModelContext) throws -> SyncLocalMutationSnapshotResult {
         try recordLocalMutation(context: context, events: [.fullSync])
     }
 
-    func recordLocalMutation(context: ModelContext, events: Set<StoreDomainEvent>) throws {
-        guard shouldRecordLocalMutationSnapshot else { return }
-        try withLockedFreshStoreContext(context: context) { lockedContext in
+    @discardableResult
+    func recordLocalMutation(context: ModelContext, events: Set<StoreDomainEvent>) throws -> SyncLocalMutationSnapshotResult {
+        guard shouldRecordLocalMutationSnapshot else { return .notRecorded }
+        let prompt = try withLockedFreshStoreContext(context: context) { lockedContext in
             try withExclusiveStateAccess {
-                try recordLocalMutationWithLockedState(
+                try recordLocalMutationPromptWithLockedState(
                     context: lockedContext,
                     events: events
                 )
             }
         }
+        return .recorded(prompt: prompt)
     }
 
-    private func recordLocalMutationWithLockedState(
+    private func recordLocalMutationPromptWithLockedState(
         context: ModelContext,
         events: Set<StoreDomainEvent>
-    ) throws {
+    ) throws -> SyncConflictPrompt? {
         let isCloudActive = AppCloudSync.persistenceMode == AppCloudSync.modeICloud
         let shouldStageForCloudRecovery = AppCloudSync.shouldStageLocalMutationsForCloudRecovery
         let hasPendingUploadRecovery = UserDefaults.standard.bool(
             forKey: AppCloudSync.pendingCloudUploadResetKey
         )
-        guard isCloudActive || shouldStageForCloudRecovery || hasPendingUploadRecovery else { return }
-
         var state = try loadState()
+        guard isCloudActive || shouldStageForCloudRecovery || hasPendingUploadRecovery else {
+            return prompt(from: state)
+        }
         let previousLocalFingerprint = state.localFingerprint
         let baseline: SyncDataSnapshot?
         if state.pendingConflictID != nil {
@@ -65,7 +74,7 @@ extension SyncConflictService {
             }
             state.advanceLocalGeneration()
             try saveState(state)
-            return
+            return prompt(from: state)
         }
 
         if snapshot.hasProtectableUserContent {
@@ -84,6 +93,7 @@ extension SyncConflictService {
                 AppCloudSync.requestCloudReconciliationReset()
             }
         }
+        return prompt(from: state)
     }
 
     private var shouldRecordLocalMutationSnapshot: Bool {

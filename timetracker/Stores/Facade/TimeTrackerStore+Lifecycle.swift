@@ -167,7 +167,15 @@ extension TimeTrackerStore {
         let snapshotEvents: Set<StoreDomainEvent> = scheduledSyncRefreshBatch == nil
             ? events
             : [.fullSync]
-        try syncConflictService.recordLocalMutation(context: modelContext, events: snapshotEvents)
-        pendingSyncConflict = try syncConflictService.prompt()
+        let snapshotResult = try syncConflictService.recordLocalMutation(
+            context: modelContext,
+            events: snapshotEvents
+        )
+        switch snapshotResult {
+        case let .recorded(prompt):
+            pendingSyncConflict = prompt
+        case .notRecorded:
+            pendingSyncConflict = try syncConflictService.prompt()
+        }
     }
 }

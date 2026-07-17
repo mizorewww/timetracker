@@ -27,7 +27,7 @@ struct CommittedMutationSnapshotRecorder {
         events: Set<StoreDomainEvent>
     ) -> Error? {
         do {
-            try syncConflictService.recordLocalMutation(context: context, events: events)
+            _ = try syncConflictService.recordLocalMutation(context: context, events: events)
             return nil
         } catch {
             Self.logger.error(

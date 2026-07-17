@@ -444,9 +444,14 @@ struct CoreSyncConflictTests {
             let laterTask = TaskNode(title: "Post-conflict task", parentID: nil, deviceID: "device-a")
             context.insert(laterTask)
             try context.save()
-            try service.recordLocalMutation(context: context)
-            let currentPrompt = try #require(try service.prompt())
+            let snapshotResult = try service.recordLocalMutation(context: context)
+            guard case let .recorded(prompt: returnedPrompt) = snapshotResult else {
+                Issue.record("Expected the active CloudKit state to record a local mutation")
+                return
+            }
+            let currentPrompt = try #require(returnedPrompt)
             #expect(currentPrompt.id != prompt.id)
+            #expect(try service.loadState().pendingConflictID == currentPrompt.id)
 
             #expect(
                 try service.resolveSyncConflict(

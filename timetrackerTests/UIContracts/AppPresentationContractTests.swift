@@ -75,7 +75,7 @@ struct AppPresentationContractTests {
         #expect(content.contains("dialog.syncConflict.downloadCloud") == false)
         #expect(content.contains("store.effectivePersistenceWriteSafety == .ready"))
         #expect(content.contains(".padding(.bottom, 84)") == false)
-        #expect(iOSRoot.contains(".tabViewBottomAccessory"))
+        #expect(iOSRoot.contains(".tabViewBottomAccessory") == false)
         #expect(iOSRoot.contains(".safeAreaInset(edge: .top, spacing: 0)"))
         #expect(notice.contains("sync.conflict.notice.review"))
         #expect(recovery.contains("pendingConflict.localSummary"))

@@ -93,9 +93,9 @@ struct PhoneRootView<SyncConflictContent: View>: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        .tabViewBottomAccessory {
+        .safeAreaInset(edge: .top, spacing: 0) {
             syncConflictContent
-                .padding(.horizontal, 12)
+                .padding(8)
         }
         .accessibilityIdentifier("phone.tabView")
         .onAppear {

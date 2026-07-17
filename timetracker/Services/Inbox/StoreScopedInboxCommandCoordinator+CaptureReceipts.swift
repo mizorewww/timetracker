@@ -54,10 +54,14 @@ extension StoreScopedInboxCommandCoordinator {
         for externalCommandKey: ExternalCommandKey,
         context: ModelContext
     ) throws -> InboxCaptureReceipt? {
-        let matching = try context.fetch(FetchDescriptor<InboxCaptureReceipt>())
-            .filter {
-                $0.commandKey == externalCommandKey.storageValue && $0.deletedAt == nil
-            }
+        let commandKey = externalCommandKey.storageValue
+        let matching = try context.fetch(
+            FetchDescriptor<InboxCaptureReceipt>(
+                predicate: #Predicate {
+                    $0.commandKey == commandKey && $0.deletedAt == nil
+                }
+            )
+        )
         return matching.max { lhs, rhs in
             if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
             if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }

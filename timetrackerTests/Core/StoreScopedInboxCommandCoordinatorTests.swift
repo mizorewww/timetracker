@@ -140,6 +140,32 @@ struct StoreScopedInboxCommandCoordinatorTests {
     }
 
     @Test
+    func externalCaptureReplayIgnoresUnrelatedReceiptHistory() throws {
+        let context = try makeTestContext()
+        let targetKey = try ExternalCommandKey(origin: "test.integration", id: UUID())
+        let coordinator = coordinator(container: context.container)
+
+        let first = try coordinator.add(command: InboxCaptureCommand(
+            title: "Target capture",
+            externalCommandKey: targetKey
+        ))
+        for index in 0..<32 {
+            _ = try coordinator.add(command: InboxCaptureCommand(
+                title: "Other capture \(index)",
+                externalCommandKey: ExternalCommandKey(origin: "test.integration", id: UUID())
+            ))
+        }
+        let replay = try coordinator.add(command: InboxCaptureCommand(
+            title: "Target capture",
+            externalCommandKey: targetKey
+        ))
+
+        #expect(replay.didMutate == false)
+        #expect(replay.affectedItemIDs == first.affectedItemIDs)
+        #expect(try allVisibleItems(in: context.container).count == 33)
+    }
+
+    @Test
     func distinctExternalKeysDoNotDeduplicateMatchingTitles() throws {
         let context = try makeTestContext()
         let firstKey = try ExternalCommandKey(origin: "test.integration", id: UUID())

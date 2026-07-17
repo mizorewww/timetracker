@@ -1905,4 +1905,62 @@ struct CoreAnalyticsStoreTests {
             #expect(insight?.severity.rawValue == AnalyticsInsight.Severity.neutral.rawValue)
         }
     }
+
+    @Test @MainActor
+    func taskSnapshotUsesScopedAnalyticsAndIndependentRecentRecords() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 17,
+            hour: 12
+        )))
+        let task = TaskNode(title: "Scoped", parentID: nil, deviceID: "test")
+        let currentSession = TimeSession(
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-3_600)
+        )
+        let currentSegment = TimeSegment(
+            sessionID: currentSession.id,
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: currentSession.startedAt,
+            endedAt: now
+        )
+        let historicalSession = TimeSession(
+            taskID: task.id,
+            source: .manual,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-400 * 86_400)
+        )
+        let historicalSegment = TimeSegment(
+            sessionID: historicalSession.id,
+            taskID: task.id,
+            source: .manual,
+            deviceID: "test",
+            startedAt: historicalSession.startedAt,
+            endedAt: historicalSession.startedAt.addingTimeInterval(600)
+        )
+
+        let snapshot = AnalyticsStore().taskSnapshot(
+            range: .today,
+            task: task,
+            taskIDs: [task.id],
+            tasks: [task],
+            segments: [currentSegment],
+            recentSegments: [historicalSegment],
+            sessions: [historicalSession],
+            taskPathByID: [task.id: task.title],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 3_600)
+        #expect(snapshot.recentRecords.map(\.id) == [historicalSegment.id])
+        #expect(snapshot.recentRecords.first?.durationSeconds == 600)
+    }
 }

@@ -406,6 +406,67 @@ struct CoreLedgerStoreTests {
         #expect(repository.segmentsByIDsCallCount == 1)
         #expect(repository.allSegmentsCallCount == 0)
     }
+
+    @Test @MainActor
+    func recentTaskIndexIsBoundedDeterministicAndRefillsAfterRemoval() throws {
+        let taskID = UUID()
+        let otherTaskID = UUID()
+        let base = Date(timeIntervalSinceReferenceDate: 2_000_000)
+        let sessions = (0..<14).map { index in
+            TimeSession(
+                taskID: index.isMultiple(of: 3) ? otherTaskID : taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: base.addingTimeInterval(Double(index * 60))
+            )
+        }
+        let segments = sessions.map { session in
+            TimeSegment(
+                sessionID: session.id,
+                taskID: session.taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: session.startedAt,
+                endedAt: session.startedAt.addingTimeInterval(30)
+            )
+        }
+        let repository = LedgerRefreshSpyRepository()
+        repository.fullSegments = segments
+        repository.fullSessions = sessions
+        var store = LedgerStore()
+
+        try store.refreshHistory(repository: repository, now: base.addingTimeInterval(1_000))
+
+        #expect(store.recentSegmentIDsByTaskID[taskID]?.count == 8)
+        let expected = segments
+            .filter { $0.taskID == taskID || $0.taskID == otherTaskID }
+            .sorted { lhs, rhs in
+                if lhs.startedAt != rhs.startedAt { return lhs.startedAt > rhs.startedAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .prefix(4)
+            .map(\.id)
+        #expect(store.recentSegments(forTaskIDs: [taskID, otherTaskID], limit: 4).map(\.id) == expected)
+
+        let removed = try #require(store.recentSegments(forTaskIDs: [taskID], limit: 8).first)
+        store.replaceSegments(
+            ids: [removed.id],
+            with: [],
+            now: base.addingTimeInterval(1_100),
+            calendar: .current,
+            refreshUnchangedTimeSensitiveSegments: false
+        )
+
+        let remainingTaskSegments = segments
+            .filter { $0.taskID == taskID && $0.id != removed.id }
+            .sorted { lhs, rhs in
+                if lhs.startedAt != rhs.startedAt { return lhs.startedAt > rhs.startedAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .prefix(8)
+            .map(\.id)
+        #expect(store.recentSegments(forTaskIDs: [taskID], limit: 8).map(\.id) == remainingTaskSegments)
+    }
 }
 
 private final class LedgerRefreshSpyRepository: TimeTrackingRepository {

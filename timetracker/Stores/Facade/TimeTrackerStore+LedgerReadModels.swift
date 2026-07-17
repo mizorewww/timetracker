@@ -193,14 +193,6 @@ extension TimeTrackerStore {
         }
     }
 
-    func visibleSegments(forTaskIDs taskIDs: Set<UUID>) -> [TimeSegment] {
-        if ledgerDomainStore.hasIndexedSegmentHistory {
-            return ledgerDomainStore.segments(forTaskIDs: taskIDs)
-                .filter(isReadableLedgerSegment)
-        }
-        return allSegments.filter { $0.deletedAt == nil && taskIDs.contains($0.taskID) }
-    }
-
     func visibleSessions(for segments: [TimeSegment]) -> [TimeSession] {
         let sessionIDs = Set(segments.map(\.sessionID))
         if ledgerDomainStore.hasIndexedSegmentHistory {

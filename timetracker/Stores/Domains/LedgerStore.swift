@@ -14,6 +14,7 @@ struct LedgerStore {
     var segmentIDsByDay: [Date: Set<UUID>] = [:]
     var longSpanSegmentIDs: Set<UUID> = []
     var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
+    var recentSegmentIDsByTaskID: [UUID: [UUID]] = [:]
     var segmentIDsBySessionID: [UUID: Set<UUID>] = [:]
     var activeSegmentIDs: Set<UUID> = []
     var timeSensitiveSegmentIDs: Set<UUID> = []

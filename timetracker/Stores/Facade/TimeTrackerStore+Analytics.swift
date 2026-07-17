@@ -106,8 +106,23 @@ extension TimeTrackerStore {
             return snapshot
         }
 
-        let segments = visibleSegments(forTaskIDs: request.taskIDs)
-        let sessions = visibleSessions(for: segments)
+        let currentInterval = request.evaluationKey.interval
+        let previousInterval = analyticsDomainStore.previousDecisionInterval(
+            for: request.range,
+            currentInterval: currentInterval,
+            calendar: calendar
+        )
+        let decisionInterval = DateInterval(
+            start: previousInterval?.start ?? currentInterval.start,
+            end: currentInterval.end
+        )
+        let segments = visibleSegments(
+            overlapping: decisionInterval,
+            evaluatedAt: now,
+            clockReference: now
+        ).filter { request.taskIDs.contains($0.taskID) }
+        let recentSegments = visibleRecentSegments(forTaskIDs: request.taskIDs)
+        let sessions = visibleSessions(for: recentSegments)
         var store = analyticsDomainStore
         let snapshot = store.taskSnapshot(
             range: request.range,
@@ -115,6 +130,7 @@ extension TimeTrackerStore {
             taskIDs: request.taskIDs,
             tasks: tasks,
             segments: segments,
+            recentSegments: recentSegments,
             sessions: sessions,
             taskPathByID: taskPathByID,
             now: now,

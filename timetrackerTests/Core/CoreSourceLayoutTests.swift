@@ -11,6 +11,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Facade/TimeTrackerStore+ReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+LedgerReadModels.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+LedgerRecentRecords.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+PomodoroReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+ChecklistReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxReadModels.swift",
@@ -34,6 +35,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Domains/AnalyticsStore+OverlapSweep.swift",
             "timetracker/Stores/Domains/AnalyticsStore+TaskBreakdown.swift",
             "timetracker/Stores/Domains/AnalyticsStore+TaskSnapshot.swift",
+            "timetracker/Stores/Domains/AnalyticsStore+TaskRecentRecords.swift",
             "timetracker/Stores/Domains/AnalyticsSnapshotModels.swift",
             "timetracker/Stores/Domains/ChecklistStore.swift",
             "timetracker/Stores/Domains/ChecklistStore+ArrayIndexes.swift",
@@ -518,7 +520,8 @@ struct CoreSourceLayoutTests {
             "AnalyticsStore+OverlapParticipants.swift",
             "AnalyticsStore+OverlapSweep.swift",
             "AnalyticsStore+TaskBreakdown.swift",
-            "AnalyticsStore+TaskSnapshot.swift"
+            "AnalyticsStore+TaskSnapshot.swift",
+            "AnalyticsStore+TaskRecentRecords.swift"
         ]
 
         for fileName in focusedFiles {

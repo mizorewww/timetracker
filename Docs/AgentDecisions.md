@@ -1157,6 +1157,18 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：`CoreAnalyticsStoreTests` 同时构造 gross duration 正差与负差，确认两者 comparison insight 都为 neutral；完整定向套件 37/37 通过。
 
+## AD-092：Task Detail 分离周期分析输入与最近记录输入
+
+状态：Accepted
+
+背景：Task Detail 在相关任务存在活动 segment 时按分钟刷新。旧 facade 先通过 task ID index 取根任务与全部后代的完整历史，然后 domain 层才过滤当前周期、上一比较周期和最近 8 条；因此一个长期任务的每分钟刷新成本随全部历史线性增长，即使界面只展示有限数据。
+
+决策：Task analytics 的统计输入只查询 `previous period start ... current period end` 的 Ledger day index，再按 task subtree 过滤；最近记录使用 `LedgerStore+RecordIndexes` 维护的每任务最近 8 条 ID，并跨 subtree 合并为全局最近 8 条。`AnalyticsStore.taskSnapshot` 显式区分 `segments` 与 `recentSegments`，session 查询也只跟随 recent records。最近顺序以 startedAt 降序、UUID 升序完整决胜。CloudKit 关系隔离过滤掉有界候选时允许 facade 回退完整 task index，以正确性优先；一致数据不得走回退路径。
+
+后果：活动详情的分钟刷新不再扫描任务全部历史，长期使用的成本由两个日历周期内记录、任务分支宽度和固定 recent 上限决定。每个任务只额外保留最多 8 个 recent UUID；删除/改期会从现有 task ID set 补齐索引。该决策没有消除周期内数据量本身的线性聚合，后续若单月记录极密仍需 evaluation context 或后台计算。
+
+验证：Ledger 回归覆盖有界索引、跨任务稳定合并和删除后补齐；Analytics 回归证明周期统计与独立历史 recent 输入不会串扰；架构合同禁止 facade 恢复 `visibleSegments(forTaskIDs:)` 全历史入口。付费签名的 Ledger、Analytics、Timeline、架构和三项 source-layout 合并批次 79/79 通过，重跑无新 Swift warning。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

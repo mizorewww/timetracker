@@ -768,6 +768,60 @@ struct CoreSyncConflictTests {
     }
 
     @Test @MainActor
+    func tombstoneOnlyResetCanExplicitlyReplaceVisibleCloudData() throws {
+        try withCloudSyncMode {
+            let stateURL = temporaryStateURL()
+            defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
+            let context = try makeTestContext()
+            let task = TaskNode(
+                title: "Personal test data",
+                parentID: nil,
+                deviceID: "device-a"
+            )
+            let checklist = ChecklistItem(
+                taskID: task.id,
+                title: "Old cloud child",
+                deviceID: "device-a"
+            )
+            context.insert(task)
+            context.insert(checklist)
+            try context.save()
+
+            try SeedData.clearAllChanges(
+                context: context,
+                includesPreferences: true
+            )
+            let clearedSnapshot = try SyncDataSnapshot.capture(context: context)
+            #expect(clearedSnapshot.hasProtectableUserContent)
+            #expect(clearedSnapshot.hasVisibleUserContent == false)
+
+            let service = SyncConflictService(stateURL: stateURL)
+            #expect(
+                try service.forceUploadLocalData(context: context)
+                    == .appliedImmediately
+            )
+
+            let protectedWinner = try #require(
+                try service.loadState().pendingForcedUploadSnapshot
+            )
+            #expect(protectedWinner.hasProtectableUserContent)
+            #expect(protectedWinner.hasVisibleUserContent == false)
+            #expect(protectedWinner.tasks.first?.deletedAt != nil)
+            #expect(protectedWinner.checklistItems.first?.deletedAt != nil)
+            #expect(
+                try context.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .isEmpty
+            )
+            #expect(
+                try context.fetch(FetchDescriptor<ChecklistItem>())
+                    .visibleDeduplicatedByID()
+                    .isEmpty
+            )
+        }
+    }
+
+    @Test @MainActor
     func forceUploadLocalDataMarksCurrentRowsAsNewLocalChanges() throws {
         try withCloudSyncMode {
             let context = try makeTestContext()

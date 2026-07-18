@@ -32,10 +32,10 @@ extension SyncConflictService {
         }
     }
 
-    nonisolated static func isConflictSnapshotSlotURL(_ url: URL) -> Bool {
+    nonisolated static func isConflictSnapshotSlotFileName(_ fileName: String) -> Bool {
         SyncConflictSnapshotStorageSlot.allCases.contains { slot in
             (0...1).contains { generation in
-                url.lastPathComponent == "\(slot.fileStem)-\(generation).json"
+                fileName == "\(slot.fileStem)-\(generation).json"
             }
         }
     }

@@ -236,6 +236,114 @@ struct CoreSyncConflictStateWriteTests {
     }
 
     @Test @MainActor
+    func publishingANewManifestKeepsItsReferencedSlotAndRemovesTheOrphan() throws {
+        let stateURL = temporaryStateURL()
+        defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
+        let service = SyncConflictService(stateURL: stateURL)
+        var firstState = SyncConflictState()
+        firstState.localSnapshot = snapshot(title: "First local winner")
+
+        try service.saveState(firstState)
+        let firstManifest = try JSONDecoder().decode(
+            SyncConflictStateManifest.self,
+            from: Data(contentsOf: stateURL)
+        )
+        let firstReference = try #require(firstManifest.localSnapshot)
+        let firstSlotURL = try service.conflictSnapshotURL(for: firstReference)
+        #expect(FileManager.default.fileExists(atPath: firstSlotURL.path))
+
+        var secondState = SyncConflictState()
+        secondState.localSnapshot = snapshot(title: "Tombstone replacement")
+        try service.saveState(secondState)
+
+        let secondManifest = try JSONDecoder().decode(
+            SyncConflictStateManifest.self,
+            from: Data(contentsOf: stateURL)
+        )
+        let secondReference = try #require(secondManifest.localSnapshot)
+        let secondSlotURL = try service.conflictSnapshotURL(for: secondReference)
+        #expect(firstReference != secondReference)
+        #expect(FileManager.default.fileExists(atPath: firstSlotURL.path) == false)
+        #expect(FileManager.default.fileExists(atPath: secondSlotURL.path))
+        #expect(try service.loadState().localSnapshot == secondState.localSnapshot)
+    }
+
+    @Test @MainActor
+    func durableRootUsesTheManagedTargetsPhysicalSpelling() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "TimeTrackerSyncPhysicalPathTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let physicalParent = root.appendingPathComponent("physical", isDirectory: true)
+        let physicalStateDirectory = physicalParent.appendingPathComponent(
+            "TimeTrackerSync",
+            isDirectory: true
+        )
+        let aliasParent = root.appendingPathComponent("alias", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: physicalStateDirectory,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: aliasParent,
+            withDestinationURL: physicalParent
+        )
+        let service = SyncConflictService(
+            stateURL: aliasParent
+                .appendingPathComponent("TimeTrackerSync", isDirectory: true)
+                .appendingPathComponent("state.json")
+        )
+        let physicalSlotURL = physicalStateDirectory.appendingPathComponent(
+            "LocalSnapshot-0.json"
+        )
+        let durableRoot = service.stateDurableRootURL(for: physicalSlotURL)
+
+        try DurableLocalFile().write(
+            Data("physical".utf8),
+            to: physicalSlotURL,
+            durableRootURL: durableRoot
+        )
+
+        #expect(durableRoot.path == physicalStateDirectory.path)
+        #expect(try String(contentsOf: physicalSlotURL, encoding: .utf8) == "physical")
+    }
+
+    @Test @MainActor
+    func orphanCleanupStillRejectsASymbolicLinkWithAValidSlotName() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "TimeTrackerSyncSlotLinkTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let stateURL = root
+            .appendingPathComponent("sync", isDirectory: true)
+            .appendingPathComponent("state.json")
+        let externalURL = root.appendingPathComponent("outside.json")
+        try FileManager.default.createDirectory(
+            at: stateURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("keep".utf8).write(to: externalURL)
+        let linkedSlotURL = stateURL.deletingLastPathComponent()
+            .appendingPathComponent("LocalSnapshot-0.json")
+        try FileManager.default.createSymbolicLink(
+            at: linkedSlotURL,
+            withDestinationURL: externalURL
+        )
+        let service = SyncConflictService(stateURL: stateURL)
+
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try service.removeUnreferencedSnapshotSlotsWithoutLock(retaining: [])
+        }
+        #expect(try String(contentsOf: externalURL, encoding: .utf8) == "keep")
+        #expect(
+            try FileManager.default.destinationOfSymbolicLink(atPath: linkedSlotURL.path)
+                == externalURL.path
+        )
+    }
+
+    @Test @MainActor
     func corruptReferencedSnapshotQuarantinesTheManifestAuthority() throws {
         let stateURL = temporaryStateURL()
         defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }

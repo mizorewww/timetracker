@@ -91,10 +91,11 @@ extension SyncConflictService {
         _ slots: [PreparedSyncConflictSnapshotSlot]
     ) throws {
         for slot in slots {
+            let url = try conflictSnapshotURL(for: slot.reference)
             try localStateFile.write(
                 slot.data,
-                to: try conflictSnapshotURL(for: slot.reference),
-                durableRootURL: try stateDurableRootURL()
+                to: url,
+                durableRootURL: stateDurableRootURL(for: url)
             )
         }
     }
@@ -146,17 +147,26 @@ extension SyncConflictService {
     func removeUnreferencedSnapshotSlotsWithoutLock(
         retaining references: Set<SyncConflictSnapshotReference>
     ) throws {
-        let directory = try stateURL().deletingLastPathComponent()
-        let protectedURLs = Set(try references.map { try conflictSnapshotURL(for: $0) })
-        let contents = try FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )
-        for url in contents where Self.isConflictSnapshotSlotURL(url) && !protectedURLs.contains(url) {
+        let resolvedStateURL = try stateURL()
+        let directory = resolvedStateURL.deletingLastPathComponent()
+        let protectedFileNames = Set(references.map {
+            Self.conflictSnapshotURL(
+                for: $0,
+                stateURL: resolvedStateURL
+            ).lastPathComponent
+        })
+        let fileNames = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        for fileName in fileNames
+        where Self.isConflictSnapshotSlotFileName(fileName)
+            && protectedFileNames.contains(fileName) == false {
+            // Directory enumeration may return a physical `/private/var` URL
+            // even when the state location was obtained as logical `/var`.
+            // Rebuild the managed target from the same directory spelling used
+            // for the durable root; the controlled filename is its identity.
+            let url = directory.appendingPathComponent(fileName)
             try localStateFile.removeIfPresent(
                 at: url,
-                durableRootURL: try stateDurableRootURL()
+                durableRootURL: stateDurableRootURL(for: url)
             )
         }
     }

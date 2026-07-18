@@ -184,7 +184,7 @@ extension SyncConflictService {
         try localStateFile.quarantineIfPresent(
             at: url,
             prefix: prefix,
-            durableRootURL: try stateDurableRootURL()
+            durableRootURL: stateDurableRootURL(for: url)
         )
     }
 

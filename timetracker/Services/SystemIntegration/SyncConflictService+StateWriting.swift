@@ -55,7 +55,7 @@ extension SyncConflictService {
         try localStateFile.write(
             manifestWrite.data,
             to: url,
-            durableRootURL: try stateDurableRootURL()
+            durableRootURL: stateDurableRootURL(for: url)
         )
         try applyPendingForcedUploadMirrorMutation(mirrorMutation)
         try removeUnreferencedSnapshotSlotsWithoutLock(
@@ -124,7 +124,7 @@ extension SyncConflictService {
         try localStateFile.write(
             data,
             to: url,
-            durableRootURL: try stateDurableRootURL()
+            durableRootURL: stateDurableRootURL(for: url)
         )
     }
 
@@ -132,7 +132,7 @@ extension SyncConflictService {
         let url = try pendingForcedUploadSnapshotURL()
         try localStateFile.removeIfPresent(
             at: url,
-            durableRootURL: try stateDurableRootURL()
+            durableRootURL: stateDurableRootURL(for: url)
         )
     }
 

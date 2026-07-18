@@ -93,7 +93,6 @@ extension SyncConflictService {
         let durableRootURL = stateURL
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .standardizedFileURL
         let durableFile = DurableLocalFile()
         try SyncConflictFileLockRegistry.shared
             .lock(for: lockURL)

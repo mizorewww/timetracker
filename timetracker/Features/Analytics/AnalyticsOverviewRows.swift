@@ -6,22 +6,40 @@ struct AnalyticsHomeSummaryRow: View {
     let snapshot: AnalyticsSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            headlineMetrics
+        Group {
+            if snapshot.overview.grossSeconds > 0 {
+                VStack(alignment: .leading, spacing: 14) {
+                    headlineMetrics
 
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 8) {
-                    summaryMetadata
+                    if dynamicTypeSize.isAccessibilitySize {
+                        VStack(alignment: .leading, spacing: 8) {
+                            summaryMetadata
+                        }
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 14) {
+                                summaryMetadata
+                            }
+                            VStack(alignment: .leading, spacing: 8) {
+                                summaryMetadata
+                            }
+                        }
+                    }
                 }
             } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 14) {
-                        summaryMetadata
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        summaryMetadata
-                    }
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(
+                        AppStrings.localized("analytics.summary.emptyTitle"),
+                        systemImage: "clock"
+                    )
+                    .font(.headline)
+
+                    Text(AppStrings.localized("analytics.summary.emptyMessage"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.vertical, 6)
@@ -52,7 +70,7 @@ struct AnalyticsHomeSummaryRow: View {
                 .font(.largeTitle.weight(.semibold).monospacedDigit())
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.72)
-            Text(AppStrings.grossTime)
+            Text(AppStrings.localized("analytics.summary.grossLabel"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -64,7 +82,7 @@ struct AnalyticsHomeSummaryRow: View {
                 .font(.title3.weight(.semibold).monospacedDigit())
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.72)
-            Text(AppStrings.wallTime)
+            Text(AppStrings.localized("analytics.summary.wallLabel"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -106,55 +124,28 @@ private struct AnalyticsSummaryMiniMetric: View {
 }
 
 struct AnalyticsCategoryRow: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     let category: AnalyticsCategory
     let snapshot: AnalyticsSnapshot
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 10) {
-                    categoryIdentity
-                    categoryValue
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                HStack(spacing: 12) {
-                    categoryIdentity
-                    Spacer(minLength: 8)
-                    categoryValue
-                        .multilineTextAlignment(.trailing)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var categoryIdentity: some View {
         HStack(alignment: .top, spacing: 12) {
             SettingsRowIcon(systemImage: category.systemImage, tint: category.tint)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(category.title)
-                    .font(.body)
-                Text(category.subtitle)
-                    .font(.caption)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(category.questionTitle)
+                    .font(.body.weight(.medium))
+                Text(category.answerPreview(from: snapshot))
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                Text(category.openLabel)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.tint)
             }
-        }
-    }
 
-    private var categoryValue: some View {
-        VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
-            Text(category.value(from: snapshot))
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-            Text(category.valueLabel(from: snapshot))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 }

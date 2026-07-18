@@ -254,5 +254,50 @@ Status: completed and verified
   No owned app, extension, UI runner, `xcodebuild`, `xctest`, Simulator,
   Problem Reporter, or Booted device remained.
 
+## Checkpoint 10 — question-led Analytics
+
+Status: completed and verified
+
+- The Analytics landing page now asks six concrete questions instead of
+  presenting abstract category names. Every native `NavigationLink` row states
+  the question, answers it with data from the selected range, and names the
+  detail destination.
+- The six destinations remain one native list and navigation model. The change
+  does not add cards with competing tap gestures or a second category system.
+- A range with no tracked time now presents one explicit empty Summary and the
+  same no-recorded-time answer for every question. It no longer describes
+  missing samples as `0%` quality or one meaningful signal.
+- Summary labels explain that gross time sums task timers while elapsed time
+  counts overlaps once. Daily average is explicitly per tracked day.
+- User-visible Pomodoro analysis is named Focus Sessions. Historical range
+  labels are the neutral Day, Week, and Month equivalents in all three
+  localizations.
+- Detail-section explanations appear before their chart or records. Unsupported
+  “decision-ready” quality claims, the duplicate next-action signal, and the
+  duplicate longest-run quality row were removed.
+- The focused Analytics presentation and Core Analytics tests pass. The full
+  `TaskUIContractTests` and `LocalizationContractTests` pass on the signed
+  macOS target; all three main-app strings files pass property-list validation
+  and key parity.
+- A signed generic iOS build passes with
+  `Apple Development: ZEXUAN GAO (PX46M259V3)`, the provisioning profile, and
+  the embedded mobile provision intact.
+- The normal-size iPhone path verifies all six combined question/answer/detail
+  labels, scrolls the final row fully above system chrome, enters Time
+  Patterns, and waits for the hourly distribution without fixed sleeps. The
+  final run passed 1/1 on iOS 27.0.
+- Three visually reviewed screenshots are exported under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/analytics-checkpoint-10-questions-verified`.
+  Visual review also caught and corrected an overly faint Questions
+  explanation and a screenshot taken before the period controls had settled.
+- The explicitly owned iPhone 17 Pro simulator
+  `D86BCCF3-FF2F-4810-8299-C6AFBDCD9B1E` was terminated, shut down, and
+  deleted. All derived data and result bundles for the batch were deleted; no
+  owned app, UI runner, `xcodebuild`, `xctest`, or Booted device remained.
+
+The next Analytics checkpoint must make Focus Session records and current-task
+forecasts obey, or explicitly opt out of, the selected historical range before
+the detail pages can be considered semantically complete.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

@@ -8,12 +8,18 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
     case decisions
     case quality
 
-    static let reviewCategories: [AnalyticsCategory] = [.decisions, .quality]
-    static let exploreCategories: [AnalyticsCategory] = [.time, .tasks, .pomodoro, .overview]
+    static let questionCategories: [AnalyticsCategory] = [
+        .overview,
+        .time,
+        .tasks,
+        .pomodoro,
+        .decisions,
+        .quality
+    ]
 
     var id: String { rawValue }
 
-    var title: String {
+    var destinationTitle: String {
         switch self {
         case .overview:
             return AppStrings.localized("analytics.category.overview.title")
@@ -30,20 +36,20 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
-    var subtitle: String {
+    var questionTitle: String {
         switch self {
         case .overview:
-            return AppStrings.localized("analytics.category.overview.subtitle")
+            return AppStrings.localized("analytics.question.overview")
         case .time:
-            return AppStrings.localized("analytics.category.time.subtitle")
+            return AppStrings.localized("analytics.question.time")
         case .tasks:
-            return AppStrings.localized("analytics.category.tasks.subtitle")
+            return AppStrings.localized("analytics.question.tasks")
         case .pomodoro:
-            return AppStrings.localized("analytics.category.pomodoro.subtitle")
+            return AppStrings.localized("analytics.question.pomodoro")
         case .decisions:
-            return AppStrings.localized("analytics.category.decisions.subtitle")
+            return AppStrings.localized("analytics.question.decisions")
         case .quality:
-            return AppStrings.localized("analytics.category.quality.subtitle")
+            return AppStrings.localized("analytics.question.quality")
         }
     }
 
@@ -81,46 +87,70 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
-    func value(from snapshot: AnalyticsSnapshot) -> String {
+    func answerPreview(from snapshot: AnalyticsSnapshot) -> String {
+        guard snapshot.overview.grossSeconds > 0 else {
+            return AppStrings.localized("analytics.question.answer.noRecordedTime")
+        }
+
         switch self {
         case .overview:
-            return DurationFormatter.compact(snapshot.overview.grossSeconds)
-        case .time:
-            return DurationFormatter.compact(snapshot.overview.wallSeconds)
-        case .tasks:
             return String(
-                format: AppStrings.localized("analytics.category.value.tasksFormat"),
-                snapshot.taskBreakdown.count
+                format: AppStrings.localized("analytics.question.answer.totalFormat"),
+                DurationFormatter.compact(snapshot.overview.grossSeconds)
+            )
+        case .time:
+            guard let peakHour = snapshot.rhythm.peakHour else {
+                return AppStrings.localized("analytics.question.answer.noPeak")
+            }
+            return String(
+                format: AppStrings.localized("analytics.question.answer.peakFormat"),
+                peakHour,
+                DurationFormatter.compact(snapshot.rhythm.peakHourSeconds)
+            )
+        case .tasks:
+            guard let topTask = snapshot.taskBreakdown.first else {
+                return AppStrings.localized("analytics.question.answer.noTask")
+            }
+            return String(
+                format: AppStrings.localized("analytics.question.answer.taskFormat"),
+                topTask.title,
+                DurationFormatter.compact(topTask.grossSeconds)
             )
         case .pomodoro:
             return String(
-                format: AppStrings.localized("analytics.category.value.pomodorosFormat"),
+                format: AppStrings.localized("analytics.question.answer.focusFormat"),
                 snapshot.overview.pomodoroCount
             )
         case .decisions:
+            guard let insight = priorityInsight(from: snapshot.insights) else {
+                return AppStrings.localized("analytics.question.answer.noSignal")
+            }
             return String(
-                format: AppStrings.localized("analytics.category.value.insightsFormat"),
-                snapshot.insights.count
+                format: AppStrings.localized("analytics.question.answer.signalFormat"),
+                insight.title,
+                insight.value
             )
         case .quality:
-            return "\(Int((snapshot.quality.overlapRatio * 100).rounded()))%"
+            return String(
+                format: AppStrings.localized("analytics.question.answer.overlapFormat"),
+                Int((snapshot.quality.overlapRatio * 100).rounded())
+            )
         }
     }
 
-    func valueLabel(from snapshot: AnalyticsSnapshot) -> String {
-        switch self {
-        case .overview:
-            return AppStrings.grossTime
-        case .time:
-            return AppStrings.wallTime
-        case .tasks:
-            return AppStrings.tasks
-        case .pomodoro:
-            return AppStrings.localized("analytics.metric.pomodoros")
-        case .decisions:
-            return AppStrings.localized("analytics.category.value.insights")
-        case .quality:
-            return AppStrings.localized("analytics.quality.overlapRatio")
+    var openLabel: String {
+        String(
+            format: AppStrings.localized("analytics.question.openFormat"),
+            destinationTitle
+        )
+    }
+
+    private func priorityInsight(from insights: [AnalyticsInsight]) -> AnalyticsInsight? {
+        if let warning = insights.first(where: {
+            $0.severity == .warning || $0.severity == .critical
+        }) {
+            return warning
         }
+        return insights.first(where: { $0.id == "comparison" }) ?? insights.first
     }
 }

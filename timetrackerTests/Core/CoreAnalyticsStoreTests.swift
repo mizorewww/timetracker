@@ -1907,6 +1907,67 @@ struct CoreAnalyticsStoreTests {
     }
 
     @Test @MainActor
+    func cleanTrackingDoesNotInventAQualitySignalOrDuplicateTheTopTask() {
+        let window = AnalyticsComparisonWindow(
+            current: DateInterval(start: .distantPast, duration: 1),
+            previous: DateInterval(start: .distantPast, duration: 1),
+            basis: .matchedProgress
+        )
+        let overview = AnalyticsOverview(
+            grossSeconds: 3_600,
+            wallSeconds: 3_600,
+            overlapSeconds: 0,
+            pomodoroCount: 1,
+            averageFocusSeconds: 3_600
+        )
+        let comparison = AnalyticsComparison(
+            window: window,
+            currentGrossSeconds: 3_600,
+            previousGrossSeconds: 3_600,
+            currentWallSeconds: 3_600,
+            previousWallSeconds: 3_600
+        )
+        let rhythm = AnalyticsRhythm(
+            activeDayCount: 1,
+            dailyAverageGrossSeconds: 3_600,
+            peakHour: 9,
+            peakHourSeconds: 3_600,
+            longestContinuousSeconds: 3_600,
+            averageSegmentSeconds: 3_600,
+            medianSegmentSeconds: 3_600,
+            segmentCount: 1
+        )
+        let quality = AnalyticsQuality(
+            overlapRatio: 0,
+            switchCount: 0,
+            shortSegmentCount: 0,
+            shortSegmentRatio: 0,
+            averageSegmentSeconds: 3_600,
+            longestContinuousSeconds: 3_600
+        )
+        let topTask = TaskAnalyticsPoint(
+            taskID: UUID(),
+            title: "Write release notes",
+            path: "Write release notes",
+            colorHex: nil,
+            iconName: nil,
+            status: nil,
+            grossSeconds: 3_600,
+            wallSeconds: 3_600
+        )
+
+        let insightIDs = AnalyticsStore().insights(
+            overview: overview,
+            comparison: comparison,
+            rhythm: rhythm,
+            quality: quality,
+            taskBreakdown: [topTask]
+        ).map(\.id)
+
+        #expect(insightIDs == ["top-task", "comparison"])
+    }
+
+    @Test @MainActor
     func taskSnapshotUsesScopedAnalyticsAndIndependentRecentRecords() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))

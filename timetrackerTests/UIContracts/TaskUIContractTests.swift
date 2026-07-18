@@ -472,7 +472,7 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func analyticsPageSurfacesDecisionMetricsAndQualitySections() throws {
+    func analyticsPageAnswersQuestionsAndKeepsNativeDetailNavigation() throws {
         let analyticsSource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
             "timetracker/Features/Analytics/AnalyticsHomeContent.swift",
@@ -481,6 +481,7 @@ struct TaskUIContractTests {
             "timetracker/Features/Analytics/AnalyticsCategory.swift",
             "timetracker/Features/Analytics/AnalyticsDetailListViews.swift",
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift",
+            "timetracker/Features/Analytics/AnalyticsOverviewRows.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSection.swift",
             "timetracker/Features/Analytics/AnalyticsPeriodSelectionViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownViews.swift",
@@ -492,6 +493,8 @@ struct TaskUIContractTests {
         .joined(separator: "\n")
         let modelsSource = try analyticsReadModelSource()
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+        let simplifiedStrings = try sourceText("timetracker/zh-Hans.lproj/Localizable.strings")
+        let traditionalStrings = try sourceText("timetracker/zh-Hant.lproj/Localizable.strings")
 
         #expect(analyticsSource.contains("case decisions"))
         #expect(analyticsSource.contains(".accessibilityIdentifier(\"analytics.decisionSummary\")"))
@@ -505,11 +508,53 @@ struct TaskUIContractTests {
         #expect(analyticsSource.contains("snapshot.categoryBreakdown"))
         #expect(analyticsSource.contains("NavigationLink(value: category)"))
         #expect(analyticsSource.contains(".navigationDestination(for: AnalyticsCategory.self)"))
-        #expect(analyticsSource.contains(".navigationTitle(category.title)"))
+        #expect(analyticsSource.contains(".navigationTitle(category.destinationTitle)"))
+        #expect(analyticsSource.contains("AnalyticsCategory.questionCategories"))
+        #expect(analyticsSource.contains("category.questionTitle"))
+        #expect(analyticsSource.contains("category.answerPreview(from: snapshot)"))
+        #expect(analyticsSource.contains("category.openLabel"))
+        #expect(analyticsSource.contains("guard snapshot.overview.grossSeconds > 0"))
+        #expect(analyticsSource.contains("if snapshot.overview.grossSeconds > 0"))
         #expect(modelsSource.contains("struct AnalyticsInsight"))
         #expect(modelsSource.contains("struct TaskAnalyticsSnapshot"))
         #expect(englishStrings.contains("\"analytics.decisions.title\""))
         #expect(englishStrings.contains("\"analytics.quality.title\""))
+        #expect(englishStrings.contains("\"analytics.question.overview\""))
+        #expect(englishStrings.contains("\"analytics.question.time\""))
+        #expect(englishStrings.contains("\"analytics.question.tasks\""))
+        #expect(englishStrings.contains("\"analytics.question.pomodoro\""))
+        #expect(englishStrings.contains("\"analytics.question.decisions\""))
+        #expect(englishStrings.contains("\"analytics.question.quality\""))
+        #expect(englishStrings.contains("\"analytics.question.openFormat\""))
+        #expect(englishStrings.contains("\"analytics.question.answer.noRecordedTime\""))
+        #expect(
+            englishStrings.contains(
+                "\"analytics.questions.subtitle\" = \"Choose a question to see the explanation and supporting details.\""
+            )
+        )
+        #expect(
+            simplifiedStrings.contains(
+                "\"analytics.questions.subtitle\" = \"选择一个问题，查看对应的说明和详细数据。\""
+            )
+        )
+        #expect(
+            traditionalStrings.contains(
+                "\"analytics.questions.subtitle\" = \"選擇一個問題，查看對應的說明和詳細資料。\""
+            )
+        )
+        #expect(englishStrings.contains("\"analytics.summary.grossLabel\""))
+        #expect(englishStrings.contains("\"analytics.summary.wallLabel\""))
+        #expect(englishStrings.contains("\"analytics.summary.emptyTitle\""))
+        #expect(englishStrings.contains("\"analytics.summary.emptyMessage\""))
+        #expect(
+            englishStrings.contains(
+                "\"analytics.summary.dailyAverage\" = \"Average per Tracked Day\""
+            )
+        )
+        #expect(simplifiedStrings.contains("\"analytics.range.week\" = \"周\""))
+        #expect(simplifiedStrings.contains("\"analytics.range.month\" = \"月\""))
+        #expect(traditionalStrings.contains("\"analytics.range.week\" = \"週\""))
+        #expect(traditionalStrings.contains("\"analytics.range.month\" = \"月\""))
     }
 
     @Test
@@ -548,9 +593,35 @@ struct TaskUIContractTests {
         #expect(uiTestSource.contains("testAnalyticsFinalCategoryScrollsAboveSystemChrome"))
         #expect(uiTestSource.contains("analytics.category.overview"))
         #expect(analyticsSource.contains("analytics.category.\\(category.rawValue)"))
-        #expect(analyticsSource.contains("AnalyticsCategory.reviewCategories"))
-        #expect(analyticsSource.contains("AnalyticsCategory.exploreCategories"))
-        #expect(englishStrings.contains("\"analytics.review.title\""))
+        #expect(analyticsSource.contains("AnalyticsCategory.questionCategories"))
+        #expect(englishStrings.contains("\"analytics.questions.title\""))
+        #expect(englishStrings.contains("\"analytics.questions.subtitle\""))
+
+        let detailSectionSource = try sourceText(
+            "timetracker/Features/Analytics/AnalyticsMetricListViews.swift"
+        )
+        let subtitleIndex = try #require(detailSectionSource.range(of: "Text(subtitle)"))
+        let contentIndex = try #require(detailSectionSource.range(of: "\n                content"))
+        #expect(subtitleIndex.lowerBound < contentIndex.lowerBound)
+        #expect(detailSectionSource.contains("} footer: {") == false)
+    }
+
+    @Test
+    func analyticsAvoidsUnsupportedAndDuplicateReviewSignals() throws {
+        let insightSource = try sourceText(
+            "timetracker/Stores/Domains/AnalyticsStore+Insights.swift"
+        )
+        let qualitySource = try sourceText(
+            "timetracker/Features/Analytics/Sections/AnalyticsQualityViews.swift"
+        )
+        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
+
+        #expect(insightSource.contains("\"quality-steady\"") == false)
+        #expect(insightSource.contains("\"next-action\"") == false)
+        #expect(qualitySource.contains("analytics.quality.longest") == false)
+        #expect(englishStrings.contains("\"analytics.insight.quality.steadyBody\"") == false)
+        #expect(englishStrings.contains("\"analytics.insight.next.title\"") == false)
+        #expect(englishStrings.contains("\"analytics.quality.longest\"") == false)
     }
 
     @Test

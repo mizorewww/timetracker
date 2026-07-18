@@ -38,17 +38,16 @@ struct AnalyticsContent: View {
             }
 
             Section {
-                categoryLinks(AnalyticsCategory.reviewCategories)
+                categoryLinks(AnalyticsCategory.questionCategories)
             } header: {
-                Text(AppStrings.localized("analytics.review.title"))
-            }
-
-            Section {
-                categoryLinks(AnalyticsCategory.exploreCategories)
-            } header: {
-                Text(AppStrings.localized("analytics.categories.title"))
-            } footer: {
-                Text(AppStrings.localized("analytics.categories.footer"))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(AppStrings.localized("analytics.questions.title"))
+                    Text(AppStrings.localized("analytics.questions.subtitle"))
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
+                        .textCase(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         #if os(iOS)

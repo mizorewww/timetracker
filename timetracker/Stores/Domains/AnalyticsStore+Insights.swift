@@ -4,7 +4,7 @@ extension AnalyticsStore {
     func insights(
         overview: AnalyticsOverview,
         comparison: AnalyticsComparison,
-        rhythm: AnalyticsRhythm,
+        rhythm _: AnalyticsRhythm,
         quality: AnalyticsQuality,
         taskBreakdown: [TaskAnalyticsPoint]
     ) -> [AnalyticsInsight] {
@@ -71,30 +71,6 @@ extension AnalyticsStore {
                     body: AppStrings.localized("analytics.insight.quality.fragmentedBody"),
                     severity: .warning,
                     taskID: nil
-                )
-            )
-        } else {
-            result.append(
-                AnalyticsInsight(
-                    id: "quality-steady",
-                    title: AppStrings.localized("analytics.insight.quality.title"),
-                    value: DurationFormatter.compact(rhythm.longestContinuousSeconds),
-                    body: AppStrings.localized("analytics.insight.quality.steadyBody"),
-                    severity: .positive,
-                    taskID: nil
-                )
-            )
-        }
-
-        if let nextTask = taskBreakdown.first {
-            result.append(
-                AnalyticsInsight(
-                    id: "next-action",
-                    title: AppStrings.localized("analytics.insight.next.title"),
-                    value: nextTask.title,
-                    body: AppStrings.localized("analytics.insight.next.body"),
-                    severity: .neutral,
-                    taskID: nextTask.taskID
                 )
             )
         }

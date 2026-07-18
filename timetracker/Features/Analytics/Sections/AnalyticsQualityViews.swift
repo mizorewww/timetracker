@@ -48,10 +48,6 @@ struct AnalyticsQualityContent: View {
                     percentText(quality.shortSegmentRatio)
                 )
             )
-            InfoRow(
-                title: AppStrings.localized("analytics.quality.longest"),
-                value: DurationFormatter.compact(quality.longestContinuousSeconds)
-            )
         }
     }
 

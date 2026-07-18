@@ -7,14 +7,20 @@ struct AnalyticsDetailSection<Content: View>: View {
 
     var body: some View {
         Section {
-            content
-                .padding(.vertical, 6)
+            VStack(alignment: .leading, spacing: 12) {
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                content
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
         } header: {
             Text(title)
-        } footer: {
-            if let subtitle, !subtitle.isEmpty {
-                Text(subtitle)
-            }
         }
     }
 }

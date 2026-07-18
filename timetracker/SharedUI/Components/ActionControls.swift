@@ -28,3 +28,17 @@ struct AppActionLabel: View {
         .contentShape(Rectangle())
     }
 }
+
+struct TrailingMenuLabel: View {
+    let systemImage: String
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .frame(
+                minWidth: AppLayout.minimumInteractiveTarget,
+                minHeight: AppLayout.minimumInteractiveTarget,
+                alignment: .trailing
+            )
+            .contentShape(Rectangle())
+    }
+}

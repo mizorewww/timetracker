@@ -28,9 +28,7 @@ struct TimelineRow: View {
             Menu {
                 segmentActions
             } label: {
-                Image(systemName: "ellipsis")
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                TrailingMenuLabel(systemImage: "ellipsis")
             }
             .menuStyle(.borderlessButton)
             .accessibilityLabel(AppStrings.localized("common.more"))
@@ -60,7 +58,8 @@ struct TimelineRow: View {
         } message: {
             Text(pendingDeletionImpact.confirmationMessage)
         }
-        .padding(.horizontal, 14)
+        .padding(.leading, 14)
+        .padding(.trailing, isCompactPhone ? 0 : 14)
         .padding(.vertical, isCompactPhone ? 11 : 10)
     }
 

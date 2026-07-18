@@ -69,11 +69,9 @@ struct InboxItemRow: View {
                 Label(AppStrings.delete, systemImage: "trash")
             }
         } label: {
-            Image(systemName: "ellipsis")
+            TrailingMenuLabel(systemImage: "ellipsis")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
         }
         .menuIndicator(.hidden)
         .accessibilityLabel(AppStrings.localized("common.more"))

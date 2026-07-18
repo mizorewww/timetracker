@@ -39,6 +39,55 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTrailingMenusStayReachableAtTaskCardEdges() throws {
+        #if os(macOS)
+        throw XCTSkip("Card-edge geometry is verified on iPhone.")
+        #else
+        let tasksApp = launchApp(route: "tasks")
+        XCTAssertTrue(
+            tasksApp.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 8)
+        )
+        let categoryMenu = tasksApp.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "tasks.category.actions."
+            ))
+            .firstMatch
+        let firstTaskRow = tasksApp.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "tasks.row."
+            ))
+            .firstMatch
+        XCTAssertTrue(categoryMenu.waitForExistence(timeout: 5) && categoryMenu.isHittable)
+        XCTAssertTrue(firstTaskRow.waitForExistence(timeout: 5) && firstTaskRow.isHittable)
+        XCTAssertGreaterThanOrEqual(categoryMenu.frame.width, 44)
+        XCTAssertEqual(
+            categoryMenu.frame.maxX,
+            firstTaskRow.frame.maxX,
+            accuracy: 2,
+            "The category action target must share the task card's trailing content edge."
+        )
+        try capture("iphone-task-category-trailing-menu", app: tasksApp)
+        tasksApp.terminate()
+
+        let homeApp = launchApp()
+        XCTAssertTrue(homeIsReady(in: homeApp))
+        let timelineMenu = homeApp.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "timeline.more."
+            ))
+            .firstMatch
+        scrollUntilHittable(timelineMenu, direction: .up, in: homeApp)
+        XCTAssertTrue(timelineMenu.waitForExistence(timeout: 5) && timelineMenu.isHittable)
+        XCTAssertGreaterThanOrEqual(timelineMenu.frame.width, 44)
+        try capture("iphone-home-timeline-trailing-menu", app: homeApp)
+        #endif
+    }
+
+    @MainActor
     func testPhoneSettingsSheetDismissesToAnUnmodifiedTodayStack() throws {
         #if os(macOS)
         throw XCTSkip("The phone Settings sheet requires an iOS simulator.")

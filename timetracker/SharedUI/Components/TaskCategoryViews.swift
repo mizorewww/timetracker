@@ -123,9 +123,8 @@ struct TaskCategorySectionHeader: View {
                     }
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
+                TrailingMenuLabel(systemImage: "ellipsis.circle")
                     .foregroundStyle(.secondary)
-                    .frame(minWidth: AppLayout.minimumInteractiveTarget, minHeight: AppLayout.minimumInteractiveTarget)
             }
             .buttonStyle(.borderless)
             .accessibilityIdentifier("tasks.category.actions.\(section.id)")

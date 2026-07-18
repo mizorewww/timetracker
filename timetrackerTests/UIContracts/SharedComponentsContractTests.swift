@@ -101,6 +101,28 @@ struct SharedComponentsContractTests {
     }
 
     @Test
+    func trailingMenuLabelsAlignVisibleActionsWithoutShrinkingHitTargets() throws {
+        let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
+        let categorySource = try sourceText("timetracker/SharedUI/Components/TaskCategoryViews.swift")
+        let timelineSource = try sourceText("timetracker/Features/Home/Rows/HomeTimelineRows.swift")
+        let inboxSource = try sourceText("timetracker/Features/Inbox/InboxItemRow.swift")
+
+        #expect(sharedSource.contains("struct TrailingMenuLabel"))
+        #expect(sharedSource.contains("minWidth: AppLayout.minimumInteractiveTarget"))
+        #expect(sharedSource.contains("minHeight: AppLayout.minimumInteractiveTarget"))
+        #expect(sharedSource.contains("alignment: .trailing"))
+        #expect(sharedSource.contains(".contentShape(Rectangle())"))
+        #expect(categorySource.contains("TrailingMenuLabel(systemImage: \"ellipsis.circle\")"))
+        #expect(timelineSource.contains("TrailingMenuLabel(systemImage: \"ellipsis\")"))
+        #expect(inboxSource.contains("TrailingMenuLabel(systemImage: \"ellipsis\")"))
+        #expect(categorySource.contains(".frame(minWidth: AppLayout.minimumInteractiveTarget") == false)
+        #expect(timelineSource.contains(".frame(width: 44, height: 44)") == false)
+        #expect(timelineSource.contains(".padding(.trailing, isCompactPhone ? 0 : 14)"))
+        #expect(timelineSource.contains(".padding(.horizontal, 14)") == false)
+        #expect(inboxSource.contains(".frame(width: 44, height: 44)") == false)
+    }
+
+    @Test
     func settingsActionRowsUseSharedComponent() throws {
         let sharedSource = try [
             "timetracker/SharedUI/Components/SettingsRows.swift",

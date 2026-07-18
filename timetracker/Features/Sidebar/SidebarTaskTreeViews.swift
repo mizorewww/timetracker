@@ -26,13 +26,10 @@ struct SidebarTaskTreeRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Color.clear
-                .frame(width: CGFloat(min(row.depth, 6)) * 14)
-                .accessibilityHidden(true)
-
             disclosureControl
             taskContent
         }
+        .padding(.leading, CGFloat(min(row.depth, 6)) * 14)
         .contentShape(Rectangle())
         .taskSelectionPulse(
             selectedID: store.selectedTaskPulseID,
@@ -68,7 +65,8 @@ struct SidebarTaskTreeRow: View {
 
     @ViewBuilder
     private var disclosureControl: some View {
-        if row.hasChildren {
+        switch TaskTreeDisclosureSlot(depth: row.depth, hasChildren: row.hasChildren) {
+        case .control:
             Button {
                 expansionState.toggle(task.id)
             } label: {
@@ -81,13 +79,16 @@ struct SidebarTaskTreeRow: View {
             .buttonStyle(.plain)
             .frame(width: disclosureTargetSize, height: disclosureTargetSize)
             .contentShape(Rectangle())
+            .accessibilityIdentifier("sidebar.disclosure.\(task.id.uuidString)")
             .accessibilityLabel(
                 "\(task.title), \(row.isExpanded ? AppStrings.localized("task.tree.collapse") : AppStrings.localized("task.tree.expand"))"
             )
-        } else {
+        case .reserved:
             Color.clear
                 .frame(width: disclosureTargetSize, height: disclosureTargetSize)
                 .accessibilityHidden(true)
+        case .none:
+            EmptyView()
         }
     }
 

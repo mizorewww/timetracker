@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import timetracker
 
 @Suite(.serialized)
 struct PlatformShellContractTests {
@@ -26,6 +27,54 @@ struct PlatformShellContractTests {
         #expect(ipadRoot.contains(".onChange(of: store.desktopDestination)"))
         #expect(ipadRoot.contains("SidebarRevealButton") == false)
         #expect(ipadRoot.contains("ToolbarItem(placement: .topBarLeading)") == false)
+    }
+
+    @Test
+    func todayUsesTheNativeCollapsingNavigationTitle() throws {
+        let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
+
+        #expect(source.contains(".navigationTitle(AppStrings.today)"))
+        #expect(source.contains(".navigationBarTitleDisplayMode(.large)"))
+        #expect(source.contains("struct HeaderBar") == false)
+        #expect(source.contains("HeaderBar()") == false)
+        #expect(source.contains("Text(.app(\"home.subtitle\"))"))
+        #expect(source.contains(".onGeometryChange(for: CGFloat.self)"))
+        #expect(source.contains("GeometryReader") == false)
+    }
+
+    @Test
+    @MainActor
+    func taskTreeDisclosureSlotsOnlyIndentRowsThatNeedHierarchySpace() throws {
+        #expect(TaskTreeDisclosureSlot(depth: 0, hasChildren: true) == .control)
+        #expect(TaskTreeDisclosureSlot(depth: 0, hasChildren: false) == .none)
+        #expect(TaskTreeDisclosureSlot(depth: 1, hasChildren: true) == .control)
+        #expect(TaskTreeDisclosureSlot(depth: 1, hasChildren: false) == .reserved)
+
+        let sidebar = try sourceText(
+            "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift"
+        )
+        let tasks = try sourceText(
+            "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift"
+        )
+        let hierarchyPicker = try sourceText(
+            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift"
+        )
+
+        #expect(sidebar.contains(
+            "TaskTreeDisclosureSlot(depth: row.depth, hasChildren: row.hasChildren)"
+        ))
+        #expect(tasks.contains(
+            "TaskTreeDisclosureSlot(depth: treeDepth, hasChildren: childCount > 0)"
+        ))
+        #expect(hierarchyPicker.contains(
+            "TaskTreeDisclosureSlot(depth: item.depth, hasChildren: item.hasChildren)"
+        ))
+        #expect(sidebar.contains(
+            ".padding(.leading, CGFloat(min(row.depth, 6)) * 14)"
+        ))
+        #expect(sidebar.contains(
+            ".accessibilityIdentifier(\"sidebar.disclosure.\\(task.id.uuidString)\")"
+        ))
     }
 
     @Test

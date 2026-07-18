@@ -102,7 +102,8 @@ struct TaskManagementFlatRow: View {
 
     @ViewBuilder
     private var disclosureButton: some View {
-        if childCount > 0 {
+        switch TaskTreeDisclosureSlot(depth: treeDepth, hasChildren: childCount > 0) {
+        case .control:
             Button {
                 toggleExpansion?()
             } label: {
@@ -116,14 +117,12 @@ struct TaskManagementFlatRow: View {
             .accessibilityIdentifier("tasks.disclosure.\(task.id.uuidString)")
             .accessibilityLabel(isExpanded ? AppStrings.localized("tasks.collapse") : AppStrings.localized("tasks.expand"))
             .accessibilityValue(task.title)
-        } else if treeDepth > 0 {
+        case .reserved:
             Color.clear
                 .frame(width: 44, height: 44)
                 .accessibilityHidden(true)
-        } else {
-            Color.clear
-                .frame(width: 4, height: 44)
-                .accessibilityHidden(true)
+        case .none:
+            EmptyView()
         }
     }
 

@@ -39,6 +39,13 @@ extension SeedData {
         let swift = try taskRepository.createTask(title: "SwiftData Docs", parentID: study.id, colorHex: "0EA5E9", iconName: "swift")
 
         if CommandLine.arguments.contains("--uitesting") {
+            _ = try taskRepository.createTask(
+                title: "Standalone Task",
+                parentID: nil,
+                categoryID: workCategory.id,
+                colorHex: "64748B",
+                iconName: "checkmark.circle"
+            )
             context.insert(
                 SyncedPreference(
                     key: AppPreferenceKey.quickStartTaskIDs.rawValue,

@@ -1488,6 +1488,103 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testIPadTodayUsesNativeTitleAndUnindentedRootLeaf() throws {
+        #if os(macOS)
+        throw XCTSkip("The native iPad shell requires an iOS simulator.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = launchApp()
+        guard app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 5) else {
+            throw XCTSkip("This shell audit only runs on iPad.")
+        }
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let navigationBar = app.navigationBars["Today"].firstMatch
+        XCTAssertTrue(
+            navigationBar.waitForExistence(timeout: 5),
+            "Today must use a native navigation title on iPad."
+        )
+        let expandedHeight = navigationBar.frame.height
+        try capture("ipad-today-native-title-expanded", app: app)
+
+        let home = app.descendants(matching: .any)["home.view"].firstMatch
+        XCTAssertTrue(home.waitForExistence(timeout: 3))
+        for _ in 0..<3 where navigationBar.frame.height >= expandedHeight - 12 {
+            home.swipeUp()
+        }
+        XCTAssertTrue(navigationBar.waitForExistence(timeout: 3))
+        XCTAssertLessThan(
+            navigationBar.frame.height,
+            expandedHeight - 12,
+            "The large Today title must collapse into the top navigation bar while scrolling."
+        )
+        XCTAssertTrue(navigationBar.staticTexts["Today"].firstMatch.exists)
+        try capture("ipad-today-native-title-collapsed", app: app)
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.descendants(matching: .any)["ipad.splitNavigation"].waitForExistence(timeout: 3))
+
+        let rootLeaf = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                "Standalone Task"
+            ))
+            .firstMatch
+        if !rootLeaf.waitForExistence(timeout: 2) {
+            let systemToggle = app.buttons["Show Sidebar"].firstMatch
+            if systemToggle.waitForExistence(timeout: 2), systemToggle.isHittable {
+                activate(systemToggle)
+            }
+        }
+        XCTAssertTrue(rootLeaf.waitForExistence(timeout: 5) && rootLeaf.isHittable)
+
+        let rootDisclosure = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@",
+                "sidebar.disclosure.",
+                "Time Tracker App"
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            rootDisclosure.waitForExistence(timeout: 3) && rootDisclosure.isHittable
+        )
+        XCTAssertGreaterThanOrEqual(rootDisclosure.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(rootDisclosure.frame.height, 44)
+        XCTAssertLessThanOrEqual(
+            rootLeaf.frame.minX,
+            rootDisclosure.frame.minX - 12,
+            "A root leaf must start at the list edge instead of reserving an empty disclosure slot."
+        )
+
+        let studyDisclosure = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@",
+                "sidebar.disclosure.",
+                "Study"
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            studyDisclosure.waitForExistence(timeout: 3) && studyDisclosure.isHittable
+        )
+        activate(studyDisclosure)
+
+        let nestedLeaf = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                "Read Apple HIG"
+            ))
+            .firstMatch
+        XCTAssertTrue(nestedLeaf.waitForExistence(timeout: 3) && nestedLeaf.isHittable)
+        try capture("ipad-sidebar-root-and-nested-alignment", app: app)
+        #endif
+    }
+
+    @MainActor
     private func launchApp(
         route: String = "today",
         contentSizeCategory: String? = nil

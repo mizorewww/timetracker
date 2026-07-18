@@ -7,19 +7,23 @@ extension TaskHierarchyPicker {
     ) -> some View {
         HStack(alignment: .top, spacing: 4) {
             if sectionKind == .hierarchy {
-                Color.clear
-                    .frame(width: CGFloat(min(item.depth, 6)) * 12)
-                    .accessibilityHidden(true)
                 disclosureControl(item)
             }
 
             selectionButton(item, sectionKind: sectionKind)
         }
+        .padding(
+            .leading,
+            sectionKind == .hierarchy
+                ? CGFloat(min(item.depth, 6)) * 12
+                : 0
+        )
     }
 
     @ViewBuilder
     func disclosureControl(_ item: TaskHierarchyProjection.Item) -> some View {
-        if item.hasChildren {
+        switch TaskTreeDisclosureSlot(depth: item.depth, hasChildren: item.hasChildren) {
+        case .control:
             Button {
                 toggleExpansion(item.id)
             } label: {
@@ -36,10 +40,12 @@ extension TaskHierarchyPicker {
             .accessibilityIdentifier(
                 "taskHierarchy.disclosure.\(item.id.uuidString)"
             )
-        } else {
+        case .reserved:
             Color.clear
                 .frame(width: disclosureTargetSize, height: disclosureTargetSize)
                 .accessibilityHidden(true)
+        case .none:
+            EmptyView()
         }
     }
 

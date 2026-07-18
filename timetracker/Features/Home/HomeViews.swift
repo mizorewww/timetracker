@@ -2,20 +2,30 @@ import SwiftUI
 
 struct DesktopMainView: View {
     let store: TimeTrackerStore
+    @State private var viewportWidth: CGFloat = 720
 
     var body: some View {
-        GeometryReader { proxy in
-            let layout = HomeLayoutPolicy(width: proxy.size.width)
-            let content = TodayHomeContent(store: store, quickStartLimit: 6)
-            ScrollView {
-                DesktopTodayContent(store: store, content: content, layout: layout)
-                    .frame(width: layout.contentWidth, alignment: .leading)
-                    .padding(.vertical, layout.pagePadding)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .background(AppColors.background)
-            .accessibilityIdentifier("home.view")
+        let layout = HomeLayoutPolicy(width: viewportWidth)
+        let content = TodayHomeContent(store: store, quickStartLimit: 6)
+
+        ScrollView {
+            DesktopTodayContent(store: store, content: content, layout: layout)
+                .frame(width: layout.contentWidth, alignment: .leading)
+                .padding(.vertical, layout.pagePadding)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            guard abs(viewportWidth - width) > 0.5 else { return }
+            viewportWidth = width
+        }
+        .background(AppColors.background)
+        .accessibilityIdentifier("home.view")
+        .navigationTitle(AppStrings.today)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.large)
+        #endif
     }
 }
 
@@ -26,7 +36,9 @@ private struct DesktopTodayContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            HeaderBar()
+            Text(.app("home.subtitle"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             ActiveTimersSection(store: store, segments: content.activeSegments)
             TodayOverviewSection(store: store)
 
@@ -55,18 +67,6 @@ private struct DesktopTodayContent: View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
             TaskForecastSummarySection(store: store, forecasts: content.forecasts)
             HomeCountdownSection(events: content.countdownEvents)
-        }
-    }
-}
-
-struct HeaderBar: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(AppStrings.today)
-                .font(.largeTitle.bold())
-            Text(.app("home.subtitle"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
         }
     }
 }

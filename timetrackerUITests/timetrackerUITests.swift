@@ -1366,3 +1366,129 @@ final class timetrackerUITests: XCTestCase {
         return false
     }
 }
+
+// MARK: - TEMP Analytics review screenshots (remove after review)
+
+final class AnalyticsReviewScreenshotTests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = true
+    }
+
+    override func tearDownWithError() throws {
+        XCUIApplication().terminate()
+    }
+
+    @MainActor
+    private func launchAnalytics() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--uitesting",
+            "-ApplePersistenceIgnoreState", "YES",
+            "-AppleLanguages", "(en)",
+            "-AppleLocale", "en_US",
+            "-TimeTrackerAutomaticDemoDataModeOverride", "seedIfEmpty",
+            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
+        ]
+        app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
+        app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = "analytics"
+        app.launch()
+        app.activate()
+        XCTAssertTrue(app.descendants(matching: .any)["analytics.summary"].waitForExistence(timeout: 15))
+        return app
+    }
+
+    @MainActor
+    private func shot(_ name: String, _ app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    private func scrollToHittable(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<6 where !element.isHittable {
+            app.swipeUp()
+        }
+    }
+
+    @MainActor
+    private func openCategory(_ identifier: String, in app: XCUIApplication) {
+        let row = app.descendants(matching: .any)[identifier].firstMatch
+        scrollToHittable(row, in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 5) && row.isHittable)
+        row.tap()
+        sleep(1)
+    }
+
+    @MainActor
+    private func backToAnalyticsHome(in app: XCUIApplication) {
+        let back = app.navigationBars.buttons.firstMatch
+        if back.waitForExistence(timeout: 3) && back.isHittable {
+            back.tap()
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["analytics.summary"].waitForExistence(timeout: 8))
+    }
+
+    @MainActor
+    func testReviewAnalyticsTodayFlow() throws {
+        let app = launchAnalytics()
+        shot("review-01-home-today", app)
+
+        openCategory("analytics.category.time", in: app)
+        shot("review-02-time-today-distribution", app)
+        app.swipeUp()
+        app.swipeUp()
+        shot("review-03-time-today-timeline", app)
+        backToAnalyticsHome(in: app)
+
+        openCategory("analytics.category.tasks", in: app)
+        shot("review-04-tasks-donut", app)
+        app.swipeUp()
+        shot("review-05-tasks-breakdowns", app)
+        backToAnalyticsHome(in: app)
+
+        openCategory("analytics.category.decisions", in: app)
+        shot("review-06-decisions", app)
+        app.swipeUp()
+        shot("review-07-decisions-forecasts", app)
+        backToAnalyticsHome(in: app)
+
+        openCategory("analytics.category.quality", in: app)
+        shot("review-08-quality", app)
+        app.swipeUp()
+        shot("review-09-quality-overlap", app)
+        backToAnalyticsHome(in: app)
+
+        openCategory("analytics.category.pomodoro", in: app)
+        shot("review-10-pomodoro", app)
+        backToAnalyticsHome(in: app)
+    }
+
+    @MainActor
+    func testReviewAnalyticsMonth() throws {
+        let app = launchAnalytics()
+
+        for _ in 0..<4 { app.swipeDown() }
+        let month = app.segmentedControls.buttons["Month"].firstMatch
+        XCTAssertTrue(month.waitForExistence(timeout: 5) && month.isHittable)
+        month.tap()
+        sleep(1)
+        shot("review-13-home-month", app)
+
+        openCategory("analytics.category.time", in: app)
+        shot("review-14-time-month-trend", app)
+        backToAnalyticsHome(in: app)
+
+        for _ in 0..<4 { app.swipeDown() }
+        let week = app.segmentedControls.buttons["Week"].firstMatch
+        XCTAssertTrue(week.waitForExistence(timeout: 5) && week.isHittable)
+        week.tap()
+        sleep(1)
+        shot("review-15-home-week", app)
+
+        openCategory("analytics.category.tasks", in: app)
+        shot("review-16-tasks-week-donut", app)
+        backToAnalyticsHome(in: app)
+    }
+}

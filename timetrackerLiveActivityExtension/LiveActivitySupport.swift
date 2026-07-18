@@ -1,10 +1,17 @@
 import ActivityKit
-import AppIntents
 import Foundation
 import SwiftUI
 
 func path(for state: TimeTrackingActivityAttributes.ContentState) -> String {
     state.taskPath.isEmpty ? String(localized: "live.timer.defaultPath") : state.taskPath
+}
+
+func abbreviatedPath(for state: TimeTrackingActivityAttributes.ContentState) -> String {
+    guard let abbreviated = state.taskPathAbbreviated,
+          abbreviated.isEmpty == false else {
+        return path(for: state)
+    }
+    return abbreviated
 }
 
 func activityColor(_ hex: String) -> Color {
@@ -43,31 +50,6 @@ private func linearSRGB(_ component: Double) -> Double {
 
 enum LiveActivityDeepLinks {
     static let today = URL(string: "timetracker://open/today")!
-
-    nonisolated static func stopTimer(segmentID: String) -> URL {
-        URL(string: "timetracker://timer/stop?segmentID=\(segmentID)")!
-    }
-}
-
-struct LiveActivityStopTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Time Tracker to Stop"
-    static var description = IntentDescription(
-        "Open Time Tracker to stop this specific running timer."
-    )
-    static var openAppWhenRun = false
-
-    @Parameter(title: "Timer")
-    var segmentID: String
-
-    init() {}
-
-    init(segmentID: String) {
-        self.segmentID = segmentID
-    }
-
-    func perform() async throws -> some IntentResult {
-        .result(opensIntent: OpenURLIntent(LiveActivityDeepLinks.stopTimer(segmentID: segmentID)))
-    }
 }
 
 enum LiveActivityElapsedFormatter {

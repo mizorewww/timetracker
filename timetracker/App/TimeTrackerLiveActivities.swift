@@ -69,17 +69,17 @@ final class LiveActivityCoordinator {
     }
 
     private var lastRequest: Request?
+    private let projectionService = LiveActivityProjectionService()
     private lazy var reconciler = LatestDesiredStateReconciler<DesiredState> { [weak self] state in
         guard let self else { return }
         await reconcile(state)
     }
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
-        let usableSegments = activeSegments
-            .filter { $0.deletedAt == nil && $0.startedAt <= now }
-            .sorted { $0.startedAt < $1.startedAt }
-
-        guard let primary = usableSegments.first else {
+        guard let primary = projectionService.primarySegment(
+            from: activeSegments,
+            now: now
+        ) else {
             let hasWork = lastRequest != nil
                 || reconciler.isReconciling
                 || !Activity<TimeTrackingActivityAttributes>.activities.isEmpty
@@ -90,14 +90,19 @@ final class LiveActivityCoordinator {
             return
         }
 
-        let task = tasks.first { $0.id == primary.taskID }
+        let projection = projectionService.taskProjection(
+            taskID: primary.taskID,
+            tasks: tasks,
+            fallbackTitle: primary.titleSnapshotFallback
+        )
         let state = TimeTrackingActivityAttributes.ContentState(
-            taskTitle: task?.title ?? primary.titleSnapshotFallback,
-            taskPath: task.map { displayPath(for: $0, tasks: tasks) } ?? AppStrings.localized("live.timer.defaultPath"),
-            iconName: task?.iconName ?? "timer",
-            colorHex: task?.colorHex ?? "0A84FF",
+            taskTitle: projection.title,
+            taskPath: projection.path,
+            taskPathAbbreviated: projection.abbreviatedPath,
+            iconName: projection.iconName,
+            colorHex: projection.colorHex,
             startedAt: primary.startedAt,
-            additionalTimerCount: max(0, usableSegments.count - 1)
+            additionalTimerCount: 0
         )
         let request = Request(
             segmentID: primary.id.uuidString,
@@ -169,6 +174,7 @@ final class LiveActivityCoordinator {
             state: TimeTrackingActivityAttributes.ContentState(
                 taskTitle: AppStrings.localized("live.timer.endedTitle"),
                 taskPath: "",
+                taskPathAbbreviated: nil,
                 iconName: "checkmark",
                 colorHex: "34C759",
                 startedAt: Date(),
@@ -179,19 +185,6 @@ final class LiveActivityCoordinator {
         for activity in Activity<TimeTrackingActivityAttributes>.activities {
             await activity.end(content, dismissalPolicy: .immediate)
         }
-    }
-
-    private func displayPath(for task: TaskNode, tasks: [TaskNode]) -> String {
-        var parentNames: [String] = []
-        var cursor = task.parentID
-        var visited: Set<UUID> = [task.id]
-        while let parentID = cursor,
-              visited.insert(parentID).inserted,
-              let parent = tasks.first(where: { $0.id == parentID }) {
-            parentNames.insert(parent.title, at: 0)
-            cursor = parent.parentID
-        }
-        return parentNames.isEmpty ? AppStrings.rootTask : parentNames.joined(separator: " / ")
     }
 }
 

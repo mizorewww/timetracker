@@ -1,7 +1,5 @@
 "live.timer.defaultPath" = "Tracking time";
-"live.timer.additionalFormat" = "%d more";
 "live.timer.elapsed" = "Elapsed";
-"live.timer.openToStop" = "Open Time Tracker to Stop";
 "live.timer.open" = "Open Time Tracker";
 "live.timer.stale" = "Update delayed";
 "live.timer.staleHint" = "Elapsed time is frozen at the last confirmed update.";

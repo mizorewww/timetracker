@@ -661,7 +661,7 @@
 
 ## AD-051：系统表面把“打开”与“修改”分离并冻结陈旧计时
 
-状态：Accepted
+状态：Accepted；其中 Live Activity 可见停止控件与展开布局由 AD-118 替代，stale freeze 与自适应回退保留
 
 背景：小组件空状态曾把整个背景 URL 改为第一项 recent task 的启动链接，点击非控件区域也会创建计时；Live Activity 虽然显示 stale 标签，计时文本和 VoiceOver value 仍持续增长。锁屏视图又把图标、任务、计时和停止按钮永久压在一个横行，长本地化标题、窄设备和辅助功能字号会互相挤压。
 
@@ -1011,7 +1011,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 ## AD-080：系统表面的停止操作固化具体时间片，绝不按数组顺序猜目标
 
-状态：Accepted
+状态：Accepted；其中 Live Activity 可见停止入口由 AD-118 替代，Activity immutable segment ID 生命周期与其余精确停止语义保留
 
 背景：Shortcut、Widget/Live Activity 和无参数深链曾以 `activeSegments.last` 选择停止目标。允许并行计时时，repository 顺序不等于用户看到的目标；状态刷新或跨进程读取还可能让旧操作停止另一条活动计时。
 
@@ -1315,7 +1315,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## AD-105：Widget 与 Live Activity 的停止控件必须披露打开主应用的边界
 
-状态：Accepted
+状态：Widget 部分 Accepted；Live Activity 部分由 AD-118 替代
 
 背景：Widget 和 Live Activity 的 App Intent 已把可见 segment ID 写入 `timetracker://timer/stop`，实际 SwiftData mutation 由主应用收到 deep link 后完成。旧的 stop glyph、`Stop` label 和 intent description 却暗示 extension 原地、立即停止；存储尚未初始化时命令还会排队，不能作出这种保证。
 
@@ -1477,6 +1477,23 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：颜色重新成为直接、可视的二级选择，不再长期占据图标列表，也不需要阅读色名菜单。依赖回退只需移除一个 package 引用和 `SymbolColorWell` 适配文件；持久数据仍是可移植的六位 sRGB 字符串。未来升级必须重新审查许可证、公开 API、iOS scene/presentation 行为和触控尺寸，不能把上游固定 30 pt 的全窗口 presenter 直接恢复到 iPhone。
 
 验证：单元测试固定十六进制规范化、任意 sRGB round trip 与 AI 白名单；source contract 固定官方 URL/revision、Core 复用、44 pt 样式和四类调用方复用。签名 macOS 与 iOS 构建必须同时编译；正常字号 iPhone/iPad 行为验证覆盖软件键盘上方的 symbol viewport、44 pt 颜色入口、Blossom 展开/选色/收起、搜索选图标及 Back 后外层草稿和颜色不丢失。截图、签名结果和 owned 资源清理写入 dated Audit。
+
+## AD-118：Live Activity 只保留与 Today 一致的可扫读计时身份
+
+状态：Accepted
+
+替代关系：本决策替代 AD-051 的 Live Activity 可见停止控件与展开布局要求、AD-080 的 Live Activity `Button(intent:)`/停止入口，以及 AD-105 的 Live Activity 停止控件；Widget 的显式停止入口不变，AD-080 的 Activity immutable segment 身份、Shortcut/Widget 精确停止语义和 AD-100 的 stale elapsed 冻结规则仍然有效。
+
+背景：锁屏 Live Activity 把图标、任务标题、路径、时间、附加计时数量、状态说明与停止动作同时塞进有限空间；展开 Dynamic Island 又把同一信息拆到多个 region。它既没有对齐 Today/Now 已经稳定的任务身份层级，也让用户难以在一眼内找到真正重要的任务和时间。用户明确要求锁屏对齐 Today/Now（不需要停止指示），并要求展开 Dynamic Island 只在同一行显示 icon、任务名称和时间。
+
+决策：Live Activity 是可点开、不可就地修改账本的只读投影。锁屏与 expanded Dynamic Island 共用 extension 内唯一的 `LiveActivityTimerRow`。锁屏沿用 Today/Now 的 34 pt 任务图标、headline 标题、caption breadcrumb 与 title3 等宽 elapsed hierarchy；expanded 普通字号只显示 30 pt 图标、单行标题和 elapsed，不显示路径、附加计时数量、Elapsed caption 或停止按钮。整个表面只深链到 Today，用户在 Today 的正在计时行停止对应计时。普通字号优先横排；空间确实不足或辅助功能字号时允许共享行纵向回退，不能为了字面单行而裁掉身份。compact 由小图标、可截断标题和 frozen-aware time 组成；minimal 优先显示 frozen-aware time，并用任务色 keyline 保留身份，因为系统宽度无法容纳三项。
+
+任务身份必须复用 `TaskIdentityPresentation` 的 canonical visual 与 readable/abbreviated breadcrumb，不再维护 Live Activity 专用 parent-path 算法。标题、两种路径、图标和颜色分别采用 Unicode-safe UTF-8 上限，使最大投影在 ActivityKit 4 KiB 边界内保留余量。相同开始时间以 segment UUID 作稳定次级排序；隐藏附加计时数量后将兼容字段固定为零，避免不可见状态触发无意义 Activity 更新。
+
+后果：锁屏与应用内 Now 形成同一视觉语法，展开 Dynamic Island 只有一个主信息行；并行计时仍以最早活动时间片作为单一投影。移除 Live Activity stop intent 不会删除应用的精确 stop deep link、Shortcut 或 Widget 能力；immutable segment ID 仍用于 Activity 生命周期协调。stale 图标、冻结值、privacy-sensitive 任务文本和辅助功能值继续保留。
+
+验证：系统表面与 deep-link source contract 必须固定共享 row、expanded 单一 bottom region、Today-only `widgetURL`、无 Live Activity `Button(intent:)`/stop URL/附加计时文案，并继续覆盖 Lock Screen、expanded、compact 与 minimal 的 stale elapsed policy。projection limits 测试覆盖 Unicode 边界与总预算；三语 localization parity、付费签名 macOS 定向测试、generic iOS extension build 和正常字号 iPhone 锁屏/展开 Dynamic Island 视觉证据完成后，才能勾选对应真人反馈。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

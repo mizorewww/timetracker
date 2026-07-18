@@ -19,24 +19,22 @@ struct TimeTrackerLiveActivityWidget: Widget {
                 .widgetURL(LiveActivityDeepLinks.today)
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    ActivityIconView(state: context.state, size: 44)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    TimerText(
-                        startedAt: context.state.startedAt,
-                        isStale: context.isStale,
-                        style: .expanded
-                    )
-                }
                 DynamicIslandExpandedRegion(.bottom) {
                     ExpandedActivityDetails(context: context)
                 }
             } compactLeading: {
                 Link(destination: LiveActivityDeepLinks.today) {
-                    ActivityIconView(state: context.state, size: 24)
+                    HStack(spacing: 3) {
+                        ActivityIconView(state: context.state, size: 18)
+                        Text(context.state.taskTitle)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .privacySensitive()
+                    }
+                    .frame(maxWidth: 62, alignment: .leading)
                 }
-                .accessibilityLabel(String(localized: "live.timer.open"))
+                .accessibilityLabel(context.state.taskTitle)
             } compactTrailing: {
                 Link(destination: LiveActivityDeepLinks.today) {
                     CompactTimerText(
@@ -52,9 +50,17 @@ struct TimeTrackerLiveActivityWidget: Widget {
                 .accessibilityLabel(String(localized: "live.timer.elapsed"))
             } minimal: {
                 Link(destination: LiveActivityDeepLinks.today) {
-                    ActivityIconView(state: context.state, size: 25)
+                    CompactTimerText(
+                        startedAt: context.state.startedAt,
+                        isStale: context.isStale
+                    )
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+                    .frame(maxWidth: 45)
                 }
-                .accessibilityLabel(String(localized: "live.timer.open"))
+                .accessibilityLabel(String(localized: "live.timer.elapsed"))
             }
             .keylineTint(activityColor(context.state.colorHex))
             .widgetURL(LiveActivityDeepLinks.today)

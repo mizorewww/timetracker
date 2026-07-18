@@ -6,6 +6,102 @@ import Testing
 @Suite(.serialized)
 struct CoreDeepLinkRoutingTests {
     @Test
+    func liveActivityProjectionBoundsPreserveUnicodeAndPayloadHeadroom() {
+        let source = String(repeating: "任务🧠/Focus", count: 256)
+        let bounded = LiveActivityProjectionLimits.boundedUTF8Prefix(
+            source,
+            maximumUTF8Bytes: LiveActivityProjectionLimits.maximumTitleUTF8Bytes
+        )
+
+        #expect(bounded.utf8.count <= LiveActivityProjectionLimits.maximumTitleUTF8Bytes)
+        #expect(source.hasPrefix(bounded))
+        #expect(bounded.contains("\u{FFFD}") == false)
+        #expect(
+            LiveActivityProjectionLimits.maximumTitleUTF8Bytes
+                + LiveActivityProjectionLimits.maximumPathUTF8Bytes * 2
+                + LiveActivityProjectionLimits.maximumIconUTF8Bytes
+                + LiveActivityProjectionLimits.maximumColorUTF8Bytes
+                < 3_072
+        )
+    }
+
+    @Test
+    func liveActivityProjectionReusesTaskIdentityBreadcrumbAndVisual() {
+        let root = TaskNode(
+            title: "Client",
+            parentID: nil,
+            deviceID: "test",
+            colorHex: "1677FF",
+            iconName: "folder"
+        )
+        let child = TaskNode(
+            title: "Review",
+            parentID: root.id,
+            deviceID: "test",
+            colorHex: "34C759",
+            iconName: "checkmark.circle"
+        )
+
+        let projection = LiveActivityProjectionService().taskProjection(
+            taskID: child.id,
+            tasks: [child, root],
+            fallbackTitle: "Fallback"
+        )
+
+        #expect(projection.title == "Review")
+        #expect(projection.path == "/Client/Review")
+        #expect(projection.abbreviatedPath == "/C/R")
+        #expect(projection.iconName == "checkmark.circle")
+        #expect(projection.colorHex == "34C759")
+    }
+
+    @Test
+    func liveActivityPrimarySelectionIsStableAndRejectsUnusableSegments() throws {
+        let taskID = UUID()
+        let startedAt = Date(timeIntervalSinceReferenceDate: 50_000)
+        let lowerID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let higherID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        let higher = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: startedAt
+        )
+        higher.id = higherID
+        let lower = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: startedAt
+        )
+        lower.id = lowerID
+        let deleted = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: startedAt.addingTimeInterval(-60)
+        )
+        deleted.deletedAt = startedAt
+        let future = TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: startedAt.addingTimeInterval(60)
+        )
+
+        let selected = LiveActivityProjectionService().primarySegment(
+            from: [future, higher, deleted, lower],
+            now: startedAt
+        )
+
+        #expect(selected?.id == lowerID)
+    }
+
+    @Test
     func liveActivityTimingPolicyFreezesElapsedTimeAtItsStaleBoundary() {
         let startedAt = Date(timeIntervalSinceReferenceDate: 10_000)
 
@@ -511,20 +607,23 @@ struct CoreDeepLinkRoutingTests {
     }
 
     @Test
-    func liveActivityDeclaresStopDeepLinkAndLocalizedAction() throws {
+    func liveActivityOnlyOpensTodayAndLeavesStoppingToTheApp() throws {
         let router = try sourceText("timetracker/App/AppDeepLinkRouter.swift")
         let activity = try [
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
             "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
+            "timetrackerLiveActivityExtension/ExpandedActivityDetails.swift",
             "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ].map(sourceText).joined(separator: "\n")
         let strings = try sourceText("timetrackerLiveActivityExtension/en.lproj/Localizable.strings")
 
         #expect(router.contains("case stopTimer(AppDeepLinkStopTarget?)"))
-        #expect(activity.contains("timetracker://timer/stop?segmentID="))
-        #expect(activity.contains("Button(intent: LiveActivityStopTimerIntent"))
-        #expect(activity.contains("live.timer.openToStop"))
-        #expect(strings.contains("\"live.timer.openToStop\""))
+        #expect(activity.contains("static let today = URL(string: \"timetracker://open/today\")!"))
+        #expect(activity.contains(".widgetURL(LiveActivityDeepLinks.today)"))
+        #expect(activity.contains("timetracker://timer/stop") == false)
+        #expect(activity.contains("Button(intent:") == false)
+        #expect(activity.contains("LiveActivityStopTimerIntent") == false)
+        #expect(strings.contains("\"live.timer.openToStop\"") == false)
     }
 
     @Test
@@ -540,8 +639,10 @@ struct CoreDeepLinkRoutingTests {
         #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
         #expect(!coordinator.contains("lastSignature"))
         #expect(activity.contains("context.isStale"))
+        #expect(activity.contains("LiveActivityTimerRow("))
+        #expect(activity.contains("state.taskTitle"))
         #expect(activity.contains(".privacySensitive()"))
-        #expect(activity.contains("width: 44, height: 44"))
+        #expect(activity.contains("ActivityIconView(state:"))
         #expect(activity.contains(".widgetURL(LiveActivityDeepLinks.today)"))
     }
 }

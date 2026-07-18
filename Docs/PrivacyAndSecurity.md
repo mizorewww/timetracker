@@ -110,7 +110,7 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 
 ### Live Activity
 
-Live Activity 接收当前计时的最小展示状态。它不是事实存储，系统终止活动不会删除主应用记录。
+Live Activity 接收当前计时的最小展示状态。它不是事实存储，系统终止活动不会删除主应用记录。锁屏和灵动岛只展示任务身份与经过时间；点按只打开主应用的“今日”，扩展没有停止按钮，也不直接执行 SwiftData、CloudKit 或其它持久 mutation。
 
 ### Widget
 

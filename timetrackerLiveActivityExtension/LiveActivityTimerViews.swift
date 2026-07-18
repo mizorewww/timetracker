@@ -1,145 +1,139 @@
 import ActivityKit
-import AppIntents
 import Foundation
 import SwiftUI
 import WidgetKit
 
 struct LockScreenTimerView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let context: ActivityViewContext<TimeTrackingActivityAttributes>
+
+    var body: some View {
+        LiveActivityTimerRow(
+            state: context.state,
+            isStale: context.isStale,
+            style: .lockScreen
+        )
+        .padding(14)
+    }
+}
+
+enum LiveActivityTimerRowStyle {
+    case lockScreen
+    case dynamicIsland
+
+    var iconSize: CGFloat {
+        switch self {
+        case .lockScreen:
+            34
+        case .dynamicIsland:
+            30
+        }
+    }
+
+    var showsPath: Bool {
+        self == .lockScreen
+    }
+
+    var timerStyle: TimerText.Style {
+        switch self {
+        case .lockScreen:
+            .lockScreen
+        case .dynamicIsland:
+            .expanded
+        }
+    }
+}
+
+struct LiveActivityTimerRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let state: TimeTrackingActivityAttributes.ContentState
+    let isStale: Bool
+    let style: LiveActivityTimerRowStyle
 
     var body: some View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
-                accessibilityContent
+                stackedContent
             } else {
                 ViewThatFits(in: .horizontal) {
-                    wideContent
+                    horizontalContent
                     stackedContent
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
     }
 
-    private var wideContent: some View {
-        HStack(spacing: 12) {
-            ActivityIconView(state: context.state, size: 48)
-            ActivityTaskSummary(state: context.state, allowsWrapping: false)
-                .fixedSize(horizontal: true, vertical: false)
+    private var horizontalContent: some View {
+        HStack(alignment: .center, spacing: 10) {
+            ActivityIconView(state: state, size: style.iconSize)
 
-            Spacer(minLength: 4)
-
-            TimerText(
-                startedAt: context.state.startedAt,
-                isStale: context.isStale,
-                style: .lockScreen
+            ActivityTaskSummary(
+                state: state,
+                showsPath: style.showsPath,
+                allowsWrapping: false
             )
 
-            LiveActivityStopButton(segmentID: context.attributes.segmentID)
-        }
-    }
+            Spacer(minLength: 6)
 
-    private var accessibilityContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 8) {
-                Text(context.state.taskTitle)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .privacySensitive()
-                LiveActivityStopButton(segmentID: context.attributes.segmentID)
-            }
-
-            TimerText(
-                startedAt: context.state.startedAt,
-                isStale: context.isStale,
-                style: .lockScreen
-            )
+            timer
+                .layoutPriority(2)
         }
     }
 
     private var stackedContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
-                ActivityIconView(state: context.state, size: 40)
-                ActivityTaskSummary(state: context.state, allowsWrapping: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                LiveActivityStopButton(segmentID: context.attributes.segmentID)
+                ActivityIconView(state: state, size: style.iconSize)
+
+                ActivityTaskSummary(
+                    state: state,
+                    showsPath: style.showsPath,
+                    allowsWrapping: true
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            TimerText(
-                startedAt: context.state.startedAt,
-                isStale: context.isStale,
-                style: .lockScreen
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            timer
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var timer: some View {
+        TimerText(
+            startedAt: state.startedAt,
+            isStale: isStale,
+            style: style.timerStyle
+        )
     }
 }
 
 struct ActivityTaskSummary: View {
     let state: TimeTrackingActivityAttributes.ContentState
+    let showsPath: Bool
     let allowsWrapping: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            if allowsWrapping {
-                Text(state.taskTitle)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .privacySensitive()
-                additionalTimerBadge
-            } else {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(state.taskTitle)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .privacySensitive()
-                    additionalTimerBadge
-                }
-            }
-
-            Text(path(for: state))
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.66))
+        VStack(alignment: .leading, spacing: 3) {
+            Text(state.taskTitle)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
                 .lineLimit(allowsWrapping ? 2 : 1)
                 .privacySensitive()
-        }
-    }
 
-    @ViewBuilder
-    private var additionalTimerBadge: some View {
-        if state.additionalTimerCount > 0 {
-            Text(String.localizedStringWithFormat(
-                String(localized: "live.timer.additionalFormat"),
-                state.additionalTimerCount
-            ))
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.9))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(.white.opacity(0.14), in: Capsule())
+            if showsPath {
+                ViewThatFits(in: .horizontal) {
+                    Text(path(for: state))
+                        .fixedSize(horizontal: true, vertical: false)
+                    Text(abbreviatedPath(for: state))
+                }
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.66))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .privacySensitive()
+            }
         }
-    }
-}
-
-struct LiveActivityStopButton: View {
-    let segmentID: String
-
-    var body: some View {
-        Button(intent: LiveActivityStopTimerIntent(segmentID: segmentID)) {
-            Image(systemName: "arrow.up.forward.app")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(.white.opacity(0.16), in: Circle())
-        }
-        .accessibilityLabel(String(localized: "live.timer.openToStop"))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .layoutPriority(1)
     }
 }
 
@@ -148,10 +142,14 @@ struct ActivityIconView: View {
     let size: CGFloat
 
     var body: some View {
+        let shape = RoundedRectangle(
+            cornerRadius: size * 0.24,
+            style: .continuous
+        )
         ZStack {
-            Circle()
+            shape
                 .fill(activityColor(state.colorHex).gradient)
-            Circle()
+            shape
                 .stroke(activityForegroundColor(state.colorHex).opacity(0.24), lineWidth: 1)
             Image(systemName: state.iconName)
                 .font(.system(size: size * 0.42, weight: .semibold))

@@ -196,6 +196,7 @@ struct CoreSourceLayoutTests {
             "timetracker/App/TimeTrackerCommands.swift",
             "timetracker/App/TimeTrackerAppDelegate.swift",
             "timetracker/App/AppDeepLinkRouter.swift",
+            "timetracker/App/LiveActivityProjection.swift",
             "timetracker/App/WatchCommandRouter.swift",
             "timetracker/App/RootViews/DesktopRootViews.swift",
             "timetracker/App/RootViews/iOSRootViews.swift",

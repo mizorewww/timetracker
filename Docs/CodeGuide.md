@@ -339,9 +339,9 @@ Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新�
 
 ### Live Activity
 
-Live Activity 是状态投影。Activity attributes 应保持小而稳定，不保存唯一业务事实。Activity 的 task identity、停止 deep link 和主应用命令必须一致；Widget/Live Activity 的“打开 Time Tracker 后停止”只携带当前可见 segment ID 到主应用，extension 不直接写 SwiftData 或 iCloud，因此文案和符号必须表达 app-opening，而不是伪装为原地即时停止。更新失败应重试或降级显示，但不应阻断主应用写入。扩展对任务文本使用隐私处理，并明确显示 stale 状态。
+Live Activity 是只读状态投影。Activity attributes 应保持小而稳定，不保存唯一业务事实；extension 不直接写 SwiftData 或 iCloud。锁屏与展开 Dynamic Island 必须复用同一个 `LiveActivityTimerRow`：锁屏采用与 Today/Now 相同的“34 pt 图标 / headline 标题与 caption 路径 / title3 等宽时间”层级，展开 Dynamic Island 在普通字号只保留“图标 / 标题 / 时间”单行，不显示路径、附加计时数量或停止控件。点按任意 Live Activity 表面只打开 Today，停止操作由 Today 的可见计时行完成。Widget 的显式停止入口仍携带当前可见 segment ID，不受本规则影响。更新失败应重试或降级显示，但不应阻断主应用写入。扩展对任务文本使用隐私处理，并明确表达 stale 状态。
 
-`LiveActivityTimingPolicy` 是 ActivityKit `staleDate` 与 UI elapsed presentation 的共同边界：活动从 canonical `startedAt` 起最多实时增长八小时，进入 stale 后必须切换为固定的 `LiveActivityElapsedPresentation.frozen`，可见文本和 accessibility value 都使用同一个冻结秒数。不得只改状态标签而继续渲染 `Text(startedAt, style: .timer)`；Dynamic Island compact trailing 也必须复用该 policy，不能成为继续增长的例外。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；展开 Dynamic Island 在辅助字号下保留两行任务标题和独立停止控件，普通字号也要为窄标题提供换行回退。系统强约束的 compact/minimal presentation 可以保持精简，但不能把其单行约束扩散到锁屏和 expanded surface。
+`LiveActivityTimingPolicy` 是 ActivityKit `staleDate` 与 UI elapsed presentation 的共同边界：活动从 canonical `startedAt` 起最多实时增长八小时，进入 stale 后必须切换为固定的 `LiveActivityElapsedPresentation.frozen`，可见文本和 accessibility value 都使用同一个冻结秒数。不得只改状态标签而继续渲染 `Text(startedAt, style: .timer)`；Dynamic Island compact trailing 与 minimal 也必须复用该 policy，不能成为继续增长的例外。任务身份由现有 `TaskIdentityPresentation` 生成，完整/缩写 breadcrumb 都按 Unicode 边界投影到受限字段，不能在 Live Activity 内另建一套 parent-path 算法。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；expanded 普通字号优先单行，空间确实不足或辅助功能字号才使用同一组件的纵向回退。compact 可截断任务名，minimal 只显示 frozen-aware elapsed，因为系统宽度无法容纳完整身份。
 
 ### Watch
 

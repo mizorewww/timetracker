@@ -18,24 +18,18 @@ struct SystemSurfaceInteractionContractTests {
     }
 
     @Test
-    func stopActionsSerializeTheVisibleSegmentAcrossSystemSurfaces() throws {
+    func stopActionsSerializeTheVisibleSegmentAcrossShortcutAndWidget() throws {
         let appIntent = try sourceText("timetracker/AppIntents/TimeTrackerAppIntents.swift")
-        let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
-        let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
-        let liveTimer = try liveActivityTimerSources()
-        let liveExpanded = try sourceText("timetrackerLiveActivityExtension/ExpandedActivityDetails.swift")
-        let liveSupport = try sourceText("timetrackerLiveActivityExtension/LiveActivitySupport.swift")
+        let widget = try sourceText("timetrackerWidgetExtension/ActiveTimerWidgetView.swift")
+        let widgetSupport = try sourceText("timetrackerWidgetExtension/WidgetSupport.swift")
 
         #expect(appIntent.contains("var timer: ActiveTimerAppEntity"))
         #expect(appIntent.contains("segmentID: targetID"))
-        #expect(shared.contains("var segmentID: String"))
-        #expect(coordinator.contains("segmentID: primary.id.uuidString"))
-        #expect(liveTimer.contains("Button(intent: LiveActivityStopTimerIntent(segmentID: segmentID))"))
-        #expect(liveExpanded.contains("Button(intent: LiveActivityStopTimerIntent("))
-        #expect(liveSupport.contains("timetracker://timer/stop?segmentID="))
-        #expect(liveSupport.contains("var segmentID: String"))
-        #expect(liveSupport.contains("Open Time Tracker to Stop"))
-        #expect(liveSupport.contains("Open Time Tracker to stop this specific running timer."))
+        #expect(widget.contains("Button(intent: WidgetStopTimerIntent(segmentID: timer.id))"))
+        #expect(widgetSupport.contains("timetracker://timer/stop?segmentID="))
+        #expect(widgetSupport.contains("var segmentID: String"))
+        #expect(widgetSupport.contains("Open Time Tracker to Stop"))
+        #expect(widgetSupport.contains("Open Time Tracker to stop this specific running timer."))
     }
 
     @Test
@@ -49,10 +43,36 @@ struct SystemSurfaceInteractionContractTests {
         #expect(shared.contains("static let staleAfter: TimeInterval = 8 * 60 * 60"))
         #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
         #expect(timer.contains("LiveActivityTimingPolicy.elapsedPresentation("))
+        #expect(timer.contains("timerInterval: startedAt...LiveActivityTimingPolicy.staleDate(for: startedAt)"))
+        #expect(timer.contains("countsDown: false"))
         #expect(timer.contains("Text(LiveActivityElapsedFormatter.clock(seconds))"))
         #expect(bundle.contains("CompactTimerText("))
         #expect(bundle.contains("isStale: context.isStale"))
         #expect(timer.contains(".accessibilityValue(elapsedAccessibilityValue)"))
+    }
+
+    @Test
+    func liveActivityProjectionUsesCanonicalBoundedTaskIdentity() throws {
+        let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
+        let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
+        let projection = try sourceText("timetracker/App/LiveActivityProjection.swift")
+        let timer = try sourceText(
+            "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift"
+        )
+
+        #expect(shared.contains("var segmentID: String"))
+        #expect(shared.contains("var taskPathAbbreviated: String?"))
+        #expect(shared.contains("boundedUTF8Prefix("))
+        #expect(coordinator.contains("segmentID: primary.id.uuidString"))
+        #expect(coordinator.contains("projectionService.taskProjection("))
+        #expect(coordinator.contains("additionalTimerCount: 0"))
+        #expect(projection.contains("TaskTreeService().indexes(tasks: tasks)"))
+        #expect(projection.contains(".taskIdentityPresentation(for:"))
+        #expect(projection.contains("presentation.breadcrumb.readable"))
+        #expect(projection.contains("presentation.breadcrumb.abbreviated"))
+        #expect(projection.contains("$0.id.uuidString < $1.id.uuidString"))
+        #expect(timer.contains("ViewThatFits(in: .horizontal)"))
+        #expect(timer.contains("Text(abbreviatedPath(for: state))"))
     }
 
     @Test
@@ -69,26 +89,45 @@ struct SystemSurfaceInteractionContractTests {
     }
 
     @Test
-    func liveActivityLayoutsAdaptInsteadOfForcingOneHorizontalLine() throws {
+    func liveActivityReusesOneGlanceableTimerRowWithoutMutationControls() throws {
         let lockScreen = try sourceText(
             "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift"
         )
         let expanded = try sourceText(
             "timetrackerLiveActivityExtension/ExpandedActivityDetails.swift"
         )
+        let bundle = try sourceText(
+            "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift"
+        )
+        let support = try sourceText(
+            "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
+        )
 
+        #expect(lockScreen.contains("struct LiveActivityTimerRow: View"))
         #expect(lockScreen.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(lockScreen.contains("ViewThatFits(in: .horizontal)"))
-        #expect(lockScreen.contains("accessibilityContent"))
+        #expect(lockScreen.contains("horizontalContent"))
         #expect(lockScreen.contains("stackedContent"))
-        #expect(lockScreen.components(separatedBy: ".lineLimit(2)").count - 1 >= 2)
-        #expect(expanded.contains("dynamicTypeSize.isAccessibilitySize"))
-        #expect(expanded.contains("ViewThatFits(in: .horizontal)"))
-        #expect(expanded.contains(".lineLimit(2)"))
+        #expect(lockScreen.contains("case dynamicIsland"))
+        #expect(lockScreen.contains("self == .lockScreen"))
+        #expect(lockScreen.contains(".lineLimit(allowsWrapping ? 2 : 1)"))
+        #expect(expanded.contains("LiveActivityTimerRow("))
+        #expect(expanded.contains("style: .dynamicIsland"))
+        #expect(expanded.contains("ActivityTaskSummary(") == false)
+        #expect(bundle.contains(".widgetURL(LiveActivityDeepLinks.today)"))
+        #expect(bundle.contains("DynamicIslandExpandedRegion(.bottom)"))
+        #expect(bundle.contains("DynamicIslandExpandedRegion(.leading)") == false)
+        #expect(bundle.contains("DynamicIslandExpandedRegion(.trailing)") == false)
+        #expect(bundle.contains("Text(context.state.taskTitle)"))
+        #expect(bundle.components(separatedBy: "CompactTimerText(").count - 1 == 2)
+        #expect(lockScreen.contains("Button(intent:") == false)
+        #expect(expanded.contains("Button(intent:") == false)
+        #expect(support.contains("timetracker://timer/stop") == false)
+        #expect(support.contains("LiveActivityStopTimerIntent") == false)
     }
 
     @Test
-    func systemSurfaceActionAndStaleCopyExistInEveryExtensionLocale() throws {
+    func systemSurfaceCopyExistsInEveryExtensionLocale() throws {
         for locale in ["en", "zh-Hans", "zh-Hant"] {
             let widget = try sourceText(
                 "timetrackerWidgetExtension/\(locale).lproj/Localizable.strings"
@@ -100,7 +139,8 @@ struct SystemSurfaceInteractionContractTests {
             #expect(widget.contains("\"widget.action.startTaskFormat\""))
             #expect(widget.contains("\"widget.action.openToStop\""))
             #expect(liveActivity.contains("\"live.timer.staleHint\""))
-            #expect(liveActivity.contains("\"live.timer.openToStop\""))
+            #expect(liveActivity.contains("\"live.timer.openToStop\"") == false)
+            #expect(liveActivity.contains("\"live.timer.additionalFormat\"") == false)
         }
     }
 }

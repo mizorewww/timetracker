@@ -1,7 +1,5 @@
 "live.timer.defaultPath" = "正在記錄時間";
-"live.timer.additionalFormat" = "另有 %d 個";
 "live.timer.elapsed" = "已計時";
-"live.timer.openToStop" = "打開 Time Tracker 後停止";
 "live.timer.open" = "打開 Time Tracker";
 "live.timer.stale" = "更新延遲";
 "live.timer.staleHint" = "已用時間已停在最後確認的更新時間。";

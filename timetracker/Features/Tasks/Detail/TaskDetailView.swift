@@ -7,15 +7,22 @@ struct TaskDetailView: View {
 
     let store: TimeTrackerStore
     let taskID: UUID
+    let returnDestination: TimeTrackerStore.DesktopDestination
     @State private var range: AnalyticsRange = .week
     @State private var liveNow = Date()
     @State private var snapshot: TaskAnalyticsSnapshot?
     @State private var loadedRequest: TaskAnalyticsSnapshotRequest?
     @State private var editorDraft: TaskEditorDraft?
 
-    init(store: TimeTrackerStore, taskID: UUID, startsEditing: Bool = false) {
+    init(
+        store: TimeTrackerStore,
+        taskID: UUID,
+        startsEditing: Bool = false,
+        returnDestination: TimeTrackerStore.DesktopDestination = .tasks
+    ) {
         self.store = store
         self.taskID = taskID
+        self.returnDestination = returnDestination
         _editorDraft = State(
             initialValue: startsEditing
                 ? store.task(for: taskID).map { store.editorDraft(for: $0) }
@@ -34,7 +41,7 @@ struct TaskDetailView: View {
                         onSave: { draft in
                             store.saveTaskDraftResult(
                                 draft,
-                                returnDestination: .tasks
+                                returnDestination: returnDestination
                             )
                         },
                         onSaved: finishEditing
@@ -92,7 +99,8 @@ struct TaskDetailView: View {
             store: store,
             taskID: taskID,
             isEditing: editorDraft != nil,
-            beginEditing: beginEditing
+            beginEditing: beginEditing,
+            preservingDestination: returnDestination
         )
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }

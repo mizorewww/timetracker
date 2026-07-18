@@ -88,10 +88,14 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func phoneTabsBindToSharedNavigationDestination() throws {
+    func phoneTabsKeepTodayTaskDetailsOnTheirSourceStack() throws {
         let rootSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let todayNavigationSource = try sourceText(
+            "timetracker/Features/Home/TodayTaskNavigation.swift"
+        )
 
         #expect(rootSource.contains("@State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today"))
+        #expect(rootSource.contains("@State private var todayTaskRoute: TasksRoute?"))
         #expect(rootSource.contains("TabView(selection: $selectedDestination)"))
         #expect(rootSource.contains(".onChange(of: store.desktopDestination)"))
         #expect(rootSource.contains(".onChange(of: selectedDestination)"))
@@ -102,9 +106,16 @@ struct TaskUIContractTests {
         #expect(rootSource.contains("private enum PhoneTodayRoute: Hashable") == false)
         #expect(rootSource.contains("todayPath") == false)
         #expect(rootSource.contains("presentationRouter.presentSettings()"))
-        #expect(rootSource.contains("store.openTaskDetail(taskID)"))
-        #expect(rootSource.contains("selectedDestination = .tasks"))
+        #expect(rootSource.contains("todayTaskRoute = store.prepareTaskDetailRoute(taskID)"))
+        #expect(rootSource.contains("store.openTaskDetail(taskID)") == false)
+        #expect(rootSource.contains("selectedDestination = .tasks") == false)
         #expect(rootSource.contains("case task(UUID)") == false)
+        #expect(todayNavigationSource.contains(".navigationDestination(item: $route)"))
+        #expect(todayNavigationSource.contains("returnDestination: .today"))
+        #expect(todayNavigationSource.contains("private var routedTaskIsValid: Bool"))
+        #expect(todayNavigationSource.contains(".onChange(of: routedTaskIsValid)"))
+        #expect(todayNavigationSource.contains("clearInvalidRoute()"))
+        #expect(todayNavigationSource.contains("store.taskTreeReadIndexRevision") == false)
     }
 
     @Test
@@ -762,16 +773,22 @@ struct TaskUIContractTests {
     func taskDetailExposesDiscoverableActionsAndUsesSystemBackNavigation() throws {
         let detailSource = try taskDetailFeatureSource()
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
+        let contextMenuSource = actionSource.components(
+            separatedBy: "enum TaskRowSwipeLabelStyle"
+        ).first ?? actionSource
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.more\")"))
         #expect(detailSource.contains("TaskContextMenu("))
+        #expect(detailSource.contains("editTask: { beginEditing(task) }"))
         #expect(detailSource.contains("task.delete.confirm.message"))
         #expect(detailSource.contains("task.detail.back") == false)
         #expect(detailSource.contains("store.closeTaskDetailNavigation()") == false)
         #expect(detailSource.contains("@Environment(\\.dismiss)") == false)
         #expect(detailSource.contains("dismiss()") == false)
-        #expect(actionSource.contains("if let activeSegment"))
-        #expect(actionSource.contains("store.stop(segment: activeSegment)"))
+        #expect(contextMenuSource.contains("if let activeSegment"))
+        #expect(contextMenuSource.contains("store.stop(segment: activeSegment)"))
+        #expect(contextMenuSource.contains("Button(action: editTask)"))
+        #expect(contextMenuSource.contains("store.openTaskEditor(task.id)") == false)
     }
 
     @Test

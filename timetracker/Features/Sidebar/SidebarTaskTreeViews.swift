@@ -40,6 +40,7 @@ struct SidebarTaskTreeRow: View {
             TaskContextMenu(
                 store: store,
                 task: task,
+                editTask: { store.openTaskEditor(task.id) },
                 requestDelete: { isDeleteConfirmationPresented = true }
             )
         }

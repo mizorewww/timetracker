@@ -184,6 +184,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Home/HomeViews.swift",
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Home/TodayTaskNavigation.swift",
             "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Rows/HomeTimerRows.swift",

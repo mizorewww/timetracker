@@ -3,6 +3,7 @@ import SwiftUI
 struct QuickStartTaskGroup: View {
     let tasks: [TaskNode]
     let store: TimeTrackerStore
+    let openTask: (UUID) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var columns: [GridItem] {
@@ -22,8 +23,9 @@ struct QuickStartTaskGroup: View {
                     presentation: store.taskIdentityPresentation(for: task),
                     activeSegment: activeSegment,
                     command: store.timerPickerSelectionCommand(for: task),
+                    actionLabelStyle: .titleAndIcon,
                     openTask: {
-                        store.openTaskDetail(task.id)
+                        openTask(task.id)
                     },
                     performTimerAction: {
                         if let activeSegment {

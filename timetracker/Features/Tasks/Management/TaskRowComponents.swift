@@ -5,6 +5,7 @@ struct TaskContextMenu: View {
     let task: TaskNode
     @Environment(AppPresentationRouter.self) private var presentationRouter
     var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
+    let editTask: () -> Void
     let requestDelete: () -> Void
 
     private var activeSegment: TimeSegment? {
@@ -102,11 +103,10 @@ struct TaskContextMenu: View {
 
         Divider()
 
-        Button {
-            store.openTaskEditor(task.id)
-        } label: {
+        Button(action: editTask) {
             Label(AppStrings.edit, systemImage: "pencil")
         }
+        .accessibilityIdentifier("task.context.edit")
 
         if store.isTaskVisible(task) {
             if hasActiveTimerInSubtree {

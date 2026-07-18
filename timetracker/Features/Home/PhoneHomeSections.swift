@@ -28,6 +28,7 @@ struct PhoneNowSection: View {
                         ActiveTimerRow(
                             store: store,
                             segment: segment,
+                            actionLabelStyle: .iconOnly,
                             openTaskDetail: openTask
                         )
                         .padding(12)
@@ -103,6 +104,7 @@ struct PhoneQuickStartSection: View {
                             presentation: store.taskIdentityPresentation(for: task),
                             activeSegment: activeSegment,
                             command: store.timerPickerSelectionCommand(for: task),
+                            actionLabelStyle: .iconOnly,
                             openTask: {
                                 openTask(task.id)
                             },

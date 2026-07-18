@@ -58,6 +58,28 @@ struct CoreTasksRouteTests {
     }
 
     @Test @MainActor
+    func preparingTodayDetailSelectsTheTaskWithoutChangingItsNavigationSource() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Today detail",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.desktopDestination = .today
+
+        let route = store.prepareTaskDetailRoute(task.id)
+
+        #expect(route == .detail(taskID: task.id))
+        #expect(store.selectedTaskID == task.id)
+        #expect(store.tasksRoute == nil)
+        #expect(store.desktopDestination == .today)
+    }
+
+    @Test @MainActor
     func deletingAParentClosesItsDescendantDetailRoute() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -121,5 +143,28 @@ struct CoreTasksRouteTests {
 
         #expect(store.tasksRoute == nil)
         #expect(store.task(for: task.id) == nil)
+    }
+
+    @Test @MainActor
+    func externalDeletionInvalidatesAPreparedTodayRouteWithoutChangingItsSource() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Today route removed elsewhere",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.desktopDestination = .today
+        let route = try #require(store.prepareTaskDetailRoute(task.id))
+
+        try repository.softDeleteTask(taskID: task.id)
+        try store.refresh()
+
+        #expect(store.isTaskDetailRouteValid(route.taskID) == false)
+        #expect(store.tasksRoute == nil)
+        #expect(store.desktopDestination == .today)
     }
 }

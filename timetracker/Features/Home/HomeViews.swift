@@ -3,13 +3,19 @@ import SwiftUI
 struct DesktopMainView: View {
     let store: TimeTrackerStore
     @State private var viewportWidth: CGFloat = 720
+    @State private var todayTaskRoute: TasksRoute?
 
     var body: some View {
         let layout = HomeLayoutPolicy(width: viewportWidth)
         let content = TodayHomeContent(store: store, quickStartLimit: 6)
 
         ScrollView {
-            DesktopTodayContent(store: store, content: content, layout: layout)
+            DesktopTodayContent(
+                store: store,
+                content: content,
+                layout: layout,
+                openTask: openTask
+            )
                 .frame(width: layout.contentWidth, alignment: .leading)
                 .padding(.vertical, layout.pagePadding)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -23,9 +29,17 @@ struct DesktopMainView: View {
         .background(AppColors.background)
         .accessibilityIdentifier("home.view")
         .navigationTitle(AppStrings.today)
+        .todayTaskNavigationDestination(
+            store: store,
+            route: $todayTaskRoute
+        )
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
+    }
+
+    private func openTask(_ taskID: UUID) {
+        todayTaskRoute = store.prepareTaskDetailRoute(taskID)
     }
 }
 
@@ -33,13 +47,18 @@ private struct DesktopTodayContent: View {
     let store: TimeTrackerStore
     let content: TodayHomeContent
     let layout: HomeLayoutPolicy
+    let openTask: (UUID) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
             Text(.app("home.subtitle"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            ActiveTimersSection(store: store, segments: content.activeSegments)
+            ActiveTimersSection(
+                store: store,
+                segments: content.activeSegments,
+                openTask: openTask
+            )
             TodayOverviewSection(store: store)
 
             if layout.usesTwoColumnContent && content.hasSupportingContent {
@@ -58,14 +77,26 @@ private struct DesktopTodayContent: View {
 
     private var primarySections: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            QuickStartSection(store: store, tasks: content.quickStartTasks)
-            TimelineSection(store: store, segments: content.timelineSegments)
+            QuickStartSection(
+                store: store,
+                tasks: content.quickStartTasks,
+                openTask: openTask
+            )
+            TimelineSection(
+                store: store,
+                segments: content.timelineSegments,
+                openTask: openTask
+            )
         }
     }
 
     private var supportingSections: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            TaskForecastSummarySection(store: store, forecasts: content.forecasts)
+            TaskForecastSummarySection(
+                store: store,
+                forecasts: content.forecasts,
+                openTask: openTask
+            )
             HomeCountdownSection(events: content.countdownEvents)
         }
     }

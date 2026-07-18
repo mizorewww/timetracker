@@ -1225,6 +1225,17 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
         XCTAssertTrue(homeIsReady(in: app))
 
+        let quickStartHeading = app.staticTexts["Quick Start"].firstMatch
+        scrollTodayUntilHittable(quickStartHeading, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                quickStartHeading,
+                timeout: 5,
+                diagnosticName: "quick-start-heading",
+                in: app
+            ) && quickStartHeading.isHittable
+        )
+
         let quickStartRows = app.buttons.matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@",
@@ -1237,6 +1248,7 @@ final class timetrackerUITests: XCTestCase {
         let child = quickStartRows.matching(
             NSPredicate(format: "label == %@", "Design System")
         ).firstMatch
+        scrollTodayUntilHittable(root, in: app)
         XCTAssertTrue(
             waitForElement(
                 root,
@@ -1245,6 +1257,7 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
+        scrollTodayUntilHittable(child, in: app)
         XCTAssertTrue(
             waitForElement(
                 child,
@@ -1256,12 +1269,30 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue((root.value as? String ?? "").isEmpty)
         XCTAssertEqual(child.value as? String, "Time Tracker App")
 
-        scrollUntilHittable(child, direction: .up, in: app)
         XCTAssertTrue(child.isHittable)
         let childTimerAction = app.buttons[
             "home.quickStart.timer.\(child.identifier.replacingOccurrences(of: "home.quickStart.task.", with: ""))"
         ].firstMatch
         XCTAssertTrue(childTimerAction.waitForExistence(timeout: 5) && childTimerAction.isHittable)
+        #if os(iOS)
+        let usesIPadShell = app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1)
+        if usesIPadShell {
+            XCTAssertGreaterThan(
+                childTimerAction.frame.width,
+                childTimerAction.frame.height + 8,
+                "iPad must preserve the visible Start label."
+            )
+        } else {
+            XCTAssertEqual(
+                childTimerAction.frame.width,
+                childTimerAction.frame.height,
+                accuracy: 3,
+                "iPhone must use a centered square Start icon button."
+            )
+        }
+        #endif
+        try capture("quick-start-separate-actions-ready", app: app)
         activate(childTimerAction)
         let running = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "Running"),
@@ -1296,6 +1327,22 @@ final class timetrackerUITests: XCTestCase {
             child.frame.maxX,
             "Navigation and timer actions must remain separate hit targets."
         )
+        #if os(iOS)
+        if usesIPadShell {
+            XCTAssertGreaterThan(
+                stopAction.frame.width,
+                stopAction.frame.height + 8,
+                "iPad must preserve the visible Stop label."
+            )
+        } else {
+            XCTAssertEqual(
+                stopAction.frame.width,
+                stopAction.frame.height,
+                accuracy: 3,
+                "iPhone must use a centered square Stop icon button."
+            )
+        }
+        #endif
         activate(stopAction)
         let stopped = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "Time Tracker App"),
@@ -1303,14 +1350,20 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertEqual(XCTWaiter.wait(for: [stopped], timeout: 5), .completed)
 
+        #if os(macOS)
+        return
+        #else
+        guard usesIPadShell == false else { return }
+
         let edit = app.buttons["home.quickStart.edit"].firstMatch
-        scrollUntilHittable(edit, direction: .up, in: app)
+        scrollTodayUntilHittable(edit, in: app)
         XCTAssertTrue(edit.waitForExistence(timeout: 3) && edit.isHittable)
         activate(edit)
 
         XCTAssertTrue(app.navigationBars["Edit Quick Start"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Time Tracker App"].waitForExistence(timeout: 3))
         try capture("quick-start-editor-task-identity", app: app)
+        #endif
     }
 
     @MainActor
@@ -1320,6 +1373,10 @@ final class timetrackerUITests: XCTestCase {
         #else
         let app = launchApp()
         XCTAssertTrue(homeIsReady(in: app))
+        if app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1) {
+            throw XCTSkip("The compact Quick Start action is verified on iPhone.")
+        }
 
         let child = app.buttons.matching(
             NSPredicate(
@@ -1329,7 +1386,7 @@ final class timetrackerUITests: XCTestCase {
         ).matching(
             NSPredicate(format: "label == %@", "Design System")
         ).firstMatch
-        scrollUntilHittable(child, direction: .up, in: app)
+        scrollTodayUntilHittable(child, in: app)
         XCTAssertTrue(child.waitForExistence(timeout: 5) && child.isHittable)
 
         let childTimerAction = app.buttons.matching(
@@ -1340,7 +1397,7 @@ final class timetrackerUITests: XCTestCase {
         ).matching(
             NSPredicate(format: "label == %@", "Start Design System")
         ).firstMatch
-        scrollUntilHittable(childTimerAction, direction: .up, in: app)
+        scrollTodayUntilHittable(childTimerAction, in: app)
         XCTAssertTrue(childTimerAction.waitForExistence(timeout: 5) && childTimerAction.isHittable)
         activate(childTimerAction)
         let running = XCTNSPredicateExpectation(
@@ -1353,7 +1410,107 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(taskDetailIsReady(in: app))
         XCTAssertTrue(app.staticTexts["Design System"].waitForExistence(timeout: 3))
         try capture("quick-start-running-opens-detail", app: app)
+
+        let todayBack = app.navigationBars.buttons["Today"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                todayBack,
+                timeout: 5,
+                diagnosticName: "quick-start-detail-today-back",
+                in: app
+            ) && todayBack.isHittable,
+            "A task opened from Today must return to Today."
+        )
+        activate(todayBack)
+        XCTAssertTrue(homeIsReady(in: app))
+        let phoneTabView = app.descendants(matching: .any)["phone.tabView"].firstMatch
+        if phoneTabView.exists {
+            XCTAssertTrue(
+                app.descendants(matching: .any)["phone.tab.today"].firstMatch.isSelected
+            )
+        }
+        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
+        try capture("quick-start-detail-returned-to-today", app: app)
         #endif
+    }
+
+    @MainActor
+    func testTodayQuickStartTaskReturnsToToday() throws {
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let child = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "home.quickStart.task."
+            )
+        ).matching(
+            NSPredicate(format: "label == %@", "Design System")
+        ).firstMatch
+        scrollTodayUntilHittable(child, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                child,
+                timeout: 5,
+                diagnosticName: "today-quick-start-task",
+                in: app
+            ) && child.isHittable
+        )
+
+        #if os(iOS)
+        let usesIPadShell = app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1)
+        #endif
+
+        activate(child)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        XCTAssertTrue(app.staticTexts["Design System"].waitForExistence(timeout: 3))
+        try capture("today-quick-start-task-detail", app: app)
+
+        let more = app.descendants(matching: .any)["task.detail.more"].firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: 3) && more.isHittable)
+        activate(more)
+        let contextEdit = app.descendants(matching: .any)["task.context.edit"].firstMatch
+        XCTAssertTrue(contextEdit.waitForExistence(timeout: 3) && contextEdit.isHittable)
+        activate(contextEdit)
+
+        let editor = app.descendants(matching: .any)["task.editor"].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
+        try capture("today-quick-start-context-edit", app: app)
+        let save = app.buttons["task.editor.save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        activate(save)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
+
+        #if os(macOS)
+        let todayBack = app.buttons["Back"].firstMatch
+        #else
+        let todayBack = app.navigationBars.buttons["Today"].firstMatch
+        #endif
+        XCTAssertTrue(
+            waitForElement(
+                todayBack,
+                timeout: 5,
+                diagnosticName: "today-quick-start-source-back",
+                in: app
+            ) && todayBack.isHittable,
+            "A task opened from Today must expose the source stack's back action."
+        )
+        activate(todayBack)
+
+        XCTAssertTrue(homeIsReady(in: app))
+        #if os(iOS)
+        if usesIPadShell == false {
+            XCTAssertTrue(
+                app.descendants(matching: .any)["phone.tab.today"].firstMatch.isSelected
+            )
+        }
+        #endif
+        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
+        try capture("today-quick-start-returned-to-today", app: app)
     }
 
     @MainActor
@@ -1886,6 +2043,26 @@ final class timetrackerUITests: XCTestCase {
     ) {
         for _ in 0..<6 where !element.isHittable {
             scroll(direction: direction, toward: element, in: app)
+        }
+    }
+
+    @MainActor
+    private func scrollTodayUntilHittable(
+        _ element: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        let home = app.descendants(matching: .any)["home.view"].firstMatch
+        guard home.waitForExistence(timeout: 3) else {
+            scrollUntilHittable(element, direction: .up, in: app)
+            return
+        }
+
+        for _ in 0..<6 where !element.isHittable {
+            #if os(macOS)
+            scroll(direction: .up, toward: element, in: app)
+            #else
+            home.swipeUp()
+            #endif
         }
     }
 

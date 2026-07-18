@@ -57,6 +57,7 @@ struct TaskManagementFlatRow: View {
                 store: store,
                 task: task,
                 preservingDestination: .tasks,
+                editTask: { store.openTaskEditor(task.id) },
                 requestDelete: { isDeleteConfirmationPresented = true }
             )
         }

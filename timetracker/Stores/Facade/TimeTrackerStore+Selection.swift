@@ -16,17 +16,26 @@ extension TimeTrackerStore {
     }
 
     func openTaskDetail(_ taskID: UUID) {
-        guard isTaskDetailRouteValid(taskID) else { return }
-        tasksRoute = .detail(taskID: taskID)
-        selectTask(taskID, revealInToday: false)
+        guard let route = prepareTaskDetailRoute(taskID) else { return }
+        tasksRoute = route
         desktopDestination = .tasks
     }
 
     func openTaskEditor(_ taskID: UUID) {
-        guard isTaskDetailRouteValid(taskID) else { return }
-        tasksRoute = .editor(taskID: taskID)
-        selectTask(taskID, revealInToday: false)
+        guard let route = prepareTaskDetailRoute(taskID, startsEditing: true) else { return }
+        tasksRoute = route
         desktopDestination = .tasks
+    }
+
+    func prepareTaskDetailRoute(
+        _ taskID: UUID,
+        startsEditing: Bool = false
+    ) -> TasksRoute? {
+        guard isTaskDetailRouteValid(taskID) else { return nil }
+        selectTask(taskID, revealInToday: false)
+        return startsEditing
+            ? .editor(taskID: taskID)
+            : .detail(taskID: taskID)
     }
 
     func closeTaskDetailNavigation() {

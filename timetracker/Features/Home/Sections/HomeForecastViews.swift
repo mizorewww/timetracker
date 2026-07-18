@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskForecastSummarySection: View {
     let store: TimeTrackerStore
     let forecasts: [ForecastDisplayItem]
+    let openTask: (UUID) -> Void
 
     var body: some View {
         let rows = forecasts.compactMap { item in
@@ -23,7 +24,8 @@ struct TaskForecastSummarySection: View {
                         ForecastSummaryRow(
                             store: store,
                             task: row.task,
-                            rollup: row.item.rollup
+                            rollup: row.item.rollup,
+                            openTaskDetail: openTask
                         )
                         if row.id != rows.last?.id {
                             Divider().padding(.leading, 54)

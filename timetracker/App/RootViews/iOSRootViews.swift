@@ -42,6 +42,7 @@ struct PhoneRootView<SyncConflictContent: View>: View {
     let syncConflictContent: SyncConflictContent
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
+    @State private var todayTaskRoute: TasksRoute?
 
     var body: some View {
         TabView(selection: $selectedDestination) {
@@ -51,6 +52,10 @@ struct PhoneRootView<SyncConflictContent: View>: View {
                         store: store,
                         openSettings: openSettings,
                         openTask: openTask
+                    )
+                    .todayTaskNavigationDestination(
+                        store: store,
+                        route: $todayTaskRoute
                     )
                 }
             } label: {
@@ -122,8 +127,7 @@ struct PhoneRootView<SyncConflictContent: View>: View {
     }
 
     private func openTask(_ taskID: UUID) {
-        store.openTaskDetail(taskID)
-        selectedDestination = .tasks
+        todayTaskRoute = store.prepareTaskDetailRoute(taskID)
     }
 
     private func synchronize(with destination: TimeTrackerStore.DesktopDestination) {

@@ -217,7 +217,8 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("let recentTasks = store.frequentRecentTasks("))
         #expect(homeSource.contains("quickStartLimit - pinnedTasks.count"))
         #expect(homeSource.contains(".deduplicatedByID()"))
-        #expect(homeSource.contains("QuickStartTaskGroup(tasks: tasks"))
+        #expect(homeSource.contains("QuickStartTaskGroup("))
+        #expect(homeSource.contains("openTask: openTask"))
         #expect(homeSource.contains("HomeTimerTaskRow("))
         #expect(homeSource.contains("QuickStartTaskButton") == false)
         #expect(homeSource.contains("dynamicTypeSize.isAccessibilitySize ? 360 : 300"))
@@ -271,9 +272,43 @@ struct HomeUIContractTests {
         #expect(quickStartSource.contains("performTimerPickerSelection(task)"))
         #expect(quickStartSource.contains("store.stop(segment: activeSegment)"))
         #expect(timerRowSource.contains("stop.fill"))
-        #expect(quickStartSource.contains("store.openTaskDetail(task.id)"))
+        #expect(quickStartSource.contains("openTask(task.id)"))
+        #expect(quickStartSource.contains("store.openTaskDetail(task.id)") == false)
         #expect(quickStartSource.contains("store.path(for: task)") == false)
         #expect(quickStartSource.contains("Text(path)") == false)
+        #expect(timerRowSource.contains("enum HomeTimerActionLabelStyle"))
+        #expect(timerRowSource.contains("labelStyle == .iconOnly"))
+        #expect(timerRowSource.contains("horizontalSizeClass") == false)
+        #expect(quickStartSource.contains("actionLabelStyle: .iconOnly"))
+        #expect(quickStartSource.contains("actionLabelStyle: .titleAndIcon"))
+        #expect(timerRowSource.contains("AppStrings.localized(\"timer.action.stop\")"))
+        #expect(timerRowSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
+        #expect(timerRowSource.contains(".frame(width: 20, height: 20, alignment: .center)"))
+    }
+
+    @Test
+    func todayTaskNavigationIsSharedAcrossPlatformsAndEntryPoints() throws {
+        let homeSource = try [
+            "timetracker/Features/Home/HomeViews.swift",
+            "timetracker/Features/Home/Sections/HomeTimelineViews.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
+            "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
+            "timetracker/Features/Home/Sections/HomeForecastViews.swift"
+        ]
+            .map(sourceText)
+            .joined(separator: "\n")
+        let phoneRoot = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let navigation = try sourceText(
+            "timetracker/Features/Home/TodayTaskNavigation.swift"
+        )
+
+        #expect(homeSource.contains("@State private var todayTaskRoute: TasksRoute?"))
+        #expect(homeSource.contains("todayTaskRoute = store.prepareTaskDetailRoute(taskID)"))
+        #expect(homeSource.components(separatedBy: "openTask: openTask").count - 1 >= 5)
+        #expect(phoneRoot.contains(".todayTaskNavigationDestination("))
+        #expect(homeSource.contains(".todayTaskNavigationDestination("))
+        #expect(navigation.contains("TaskDetailView("))
+        #expect(navigation.contains("returnDestination: .today"))
     }
 
     @Test

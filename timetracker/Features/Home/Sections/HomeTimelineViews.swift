@@ -3,6 +3,7 @@ import SwiftUI
 struct ActiveTimersSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
+    let openTask: (UUID) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -23,7 +24,12 @@ struct ActiveTimersSection: View {
                 } else {
                     let lastActiveSegmentID = segments.last?.id
                     ForEach(segments, id: \.id) { segment in
-                        ActiveTimerRow(store: store, segment: segment)
+                        ActiveTimerRow(
+                            store: store,
+                            segment: segment,
+                            actionLabelStyle: .titleAndIcon,
+                            openTaskDetail: openTask
+                        )
                             .padding(14)
                         if segment.id != lastActiveSegmentID {
                             Divider()
@@ -46,6 +52,7 @@ struct ActiveTimersSection: View {
 struct TimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
+    let openTask: (UUID) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -71,7 +78,11 @@ struct TimelineSection: View {
 
                     let lastTimelineSegmentID = segments.last?.id
                     ForEach(segments, id: \.id) { segment in
-                        TimelineRow(store: store, segment: segment)
+                        TimelineRow(
+                            store: store,
+                            segment: segment,
+                            openTaskDetail: openTask
+                        )
                         if segment.id != lastTimelineSegmentID {
                             Divider().padding(.leading, 18)
                         }

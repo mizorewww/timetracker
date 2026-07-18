@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum HomeTimerActionLabelStyle {
+    case iconOnly
+    case titleAndIcon
+}
+
 private struct HomeTimerTaskPathText: View {
     let presentation: TaskBreadcrumbPresentation
 
@@ -28,6 +33,7 @@ struct HomeTimerTaskRow: View {
     let presentation: TaskIdentityPresentation
     let activeSegment: TimeSegment?
     let command: TimerPickerSelectionCommand
+    let actionLabelStyle: HomeTimerActionLabelStyle
     let openTask: () -> Void
     let performTimerAction: () -> Void
     let taskAccessibilityIdentifier: String
@@ -54,6 +60,7 @@ struct HomeTimerTaskRow: View {
                 taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
                 activeSegment: activeSegment,
                 command: command,
+                labelStyle: actionLabelStyle,
                 action: performTimerAction,
                 accessibilityIdentifier: actionAccessibilityIdentifier
             )
@@ -74,6 +81,7 @@ struct HomeTimerTaskRow: View {
                     taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
                     activeSegment: activeSegment,
                     command: command,
+                    labelStyle: actionLabelStyle,
                     action: performTimerAction,
                     accessibilityIdentifier: actionAccessibilityIdentifier
                 )
@@ -143,17 +151,34 @@ private struct HomeTimerTaskAction: View {
     let taskColor: Color
     let activeSegment: TimeSegment?
     let command: TimerPickerSelectionCommand
+    let labelStyle: HomeTimerActionLabelStyle
     let action: () -> Void
     let accessibilityIdentifier: String
+
+    private var usesIconOnly: Bool {
+        labelStyle == .iconOnly
+    }
+
+    private var actionTitle: String {
+        activeSegment == nil
+            ? command.actionTitle
+            : AppStrings.localized("timer.action.stop")
+    }
+
+    private var actionSystemImage: String {
+        activeSegment == nil ? command.systemImage : "stop.fill"
+    }
 
     var body: some View {
         Button(role: activeSegment == nil ? nil : .destructive, action: action) {
             actionLabel
-                .frame(minHeight: 30)
         }
         .buttonStyle(.bordered)
+        .buttonBorderShape(usesIconOnly ? .circle : .capsule)
         .tint(activeSegment == nil ? taskColor : .red)
-        .frame(minWidth: 44, minHeight: 44)
+        .frame(width: usesIconOnly ? 44 : nil)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier(accessibilityIdentifier)
@@ -162,16 +187,15 @@ private struct HomeTimerTaskAction: View {
 
     @ViewBuilder
     private var actionLabel: some View {
-        if activeSegment != nil {
-            Image(systemName: "stop.fill")
+        if usesIconOnly {
+            Image(systemName: actionSystemImage)
+                .font(.callout.weight(.semibold))
+                .frame(width: 20, height: 20, alignment: .center)
         } else {
-            ViewThatFits(in: .horizontal) {
-                Label(command.actionTitle, systemImage: command.systemImage)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                Image(systemName: command.systemImage)
-            }
-            .font(.callout.weight(.semibold))
+            Label(actionTitle, systemImage: actionSystemImage)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .font(.callout.weight(.semibold))
         }
     }
 
@@ -194,6 +218,7 @@ private struct HomeTimerTaskAction: View {
 struct ActiveTimerRow: View {
     let store: TimeTrackerStore
     let segment: TimeSegment
+    let actionLabelStyle: HomeTimerActionLabelStyle
     var openTaskDetail: ((UUID) -> Void)? = nil
 
     private var presentation: TaskIdentityPresentation {
@@ -220,6 +245,7 @@ struct ActiveTimerRow: View {
             presentation: presentation,
             activeSegment: segment,
             command: .alreadyRunning,
+            actionLabelStyle: actionLabelStyle,
             openTask: openTask,
             performTimerAction: {
                 store.stop(segment: segment)

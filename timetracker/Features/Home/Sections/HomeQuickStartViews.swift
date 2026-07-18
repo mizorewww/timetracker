@@ -3,6 +3,7 @@ import SwiftUI
 struct QuickStartSection: View {
     let store: TimeTrackerStore
     let tasks: [TaskNode]
+    let openTask: (UUID) -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
 
     var body: some View {
@@ -36,7 +37,11 @@ struct QuickStartSection: View {
                 )
                 .frame(maxWidth: .infinity, minHeight: 104)
             } else {
-                QuickStartTaskGroup(tasks: tasks, store: store)
+                QuickStartTaskGroup(
+                    tasks: tasks,
+                    store: store,
+                    openTask: openTask
+                )
             }
         }
         .accessibilityIdentifier("home.quickStart")

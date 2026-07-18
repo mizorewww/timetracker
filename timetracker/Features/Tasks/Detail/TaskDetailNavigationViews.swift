@@ -5,6 +5,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
     let taskID: UUID
     let isEditing: Bool
     let beginEditing: (TaskNode) -> Void
+    let preservingDestination: TimeTrackerStore.DesktopDestination
     @State private var isDeleteConfirmationPresented = false
 
     func body(content: Content) -> some View {
@@ -27,7 +28,10 @@ private struct TaskDetailNavigationModifier: ViewModifier {
                 titleVisibility: .visible
             ) {
                 Button(AppStrings.delete, role: .destructive) {
-                    store.deleteSelectedTask(taskID: taskID, preservingDestination: .tasks)
+                    store.deleteSelectedTask(
+                        taskID: taskID,
+                        preservingDestination: preservingDestination
+                    )
                 }
                 Button(AppStrings.cancel, role: .cancel) {}
             } message: {
@@ -49,7 +53,8 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             TaskContextMenu(
                 store: store,
                 task: task,
-                preservingDestination: .tasks,
+                preservingDestination: preservingDestination,
+                editTask: { beginEditing(task) },
                 requestDelete: { isDeleteConfirmationPresented = true }
             )
         } label: {
@@ -64,14 +69,16 @@ extension View {
         store: TimeTrackerStore,
         taskID: UUID,
         isEditing: Bool,
-        beginEditing: @escaping (TaskNode) -> Void
+        beginEditing: @escaping (TaskNode) -> Void,
+        preservingDestination: TimeTrackerStore.DesktopDestination
     ) -> some View {
         modifier(
             TaskDetailNavigationModifier(
                 store: store,
                 taskID: taskID,
                 isEditing: isEditing,
-                beginEditing: beginEditing
+                beginEditing: beginEditing,
+                preservingDestination: preservingDestination
             )
         )
     }

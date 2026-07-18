@@ -79,6 +79,11 @@ struct CountdownSettingsContractTests {
         #expect(categorySource.contains("accessibilityCategoryRow"))
         #expect(categorySource.contains(".accessibilityHint(Text(category.subtitle))"))
         #expect(categorySource.contains(".accessibilityElement(children: .ignore)"))
+        #expect(
+            categorySource.components(
+                separatedBy: ".frame(maxWidth: .infinity, alignment: .leading)"
+            ).count - 1 == 2
+        )
         #expect(settingsSource.contains("settings.categories.footer") == false)
         #expect(english.contains("\"settings.categories.footer\"") == false)
     }

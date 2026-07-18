@@ -95,5 +95,15 @@ Verification:
 | Analytics landing | Abstract category names and values do not clearly promise navigation | Question-led labels, explanatory values, and visible disclosure |
 | Settings | Category contents do not explicitly fill and lead-align the sidebar row | Full-width, leading-aligned navigation rows |
 
+## Checkpoint 2 — conventional Settings category alignment
+
+Status: completed and verified
+
+- Both ordinary and large-text Settings category rows fill the navigation
+  column and align their icon/title content to the leading edge.
+- The whole native `NavigationLink` row remains the interaction target; the
+  fix does not add a competing custom button or gesture.
+- The Settings category contract suite passes on the signed macOS target.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

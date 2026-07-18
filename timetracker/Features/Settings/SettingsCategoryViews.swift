@@ -57,6 +57,7 @@ struct SettingsCategoryRow: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(category.title))
         .accessibilityHint(Text(category.subtitle))
@@ -76,6 +77,7 @@ struct SettingsCategoryRow: View {
             }
         }
         .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 }

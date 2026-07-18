@@ -60,27 +60,24 @@ BUILD_ROOT=/tmp/timetracker-artifacts ./scripts/export_signed_artifacts.sh
 
 ## `build_install_all.sh`
 
-构建 Watch、iOS/iPadOS 和 macOS app，安装到可用的物理 iOS/watchOS 设备，并将 macOS app 复制到 `/Applications/timetracker.app`：
+构建含 Watch 伴侣的 iOS/iPadOS app 和 macOS app，安装到可用的物理 iOS/iPadOS 设备，并将 macOS app 复制到 `/Applications/timetracker.app`：
 
 ```sh
 ./scripts/build_install_all.sh
 ```
 
-它会使用独立的 `build/Install/DerivedData`，并保留自动签名。macOS 目标会先复制到同一目录中的临时 `.app`，再替换目的 app；非法的 `PRODUCT_NAME` 会被拒绝，避免删除 `/Applications` 外的路径。
+它会使用独立的 `build/Install/DerivedData`，并保留自动签名。iOS 构建会同时构建依赖型 Watch App、将其嵌入 iOS app 的 `Watch/` 目录，并在安装前校验两端 bundle ID、伴侣关系、签名，以及开发 profile 是否包含当前可见的 Apple Watch。看不到物理 Watch 时会给出提示但继续安装 iPhone app。脚本只把 iOS app 安装到 iPhone；配对 Apple Watch 的安装由系统处理。macOS 目标会先复制到同一目录中的临时 `.app`，再替换目的 app；非法的 `PRODUCT_NAME` 会被拒绝，避免删除 `/Applications` 外的路径。
 
 常用变量：
 
 | 变量 | 默认值 | 用途 |
 | --- | --- | --- |
 | `PROJECT`、`SCHEME` | 项目 / `timetracker` | iOS/macOS 构建目标 |
-| `WATCH_SCHEME` | `timetrackerWatchApp` | Watch 构建 scheme |
 | `CONFIGURATION` | `Debug` | 构建配置 |
 | `DEVELOPMENT_TEAM` | `LT98S43NKA` | 自动签名团队 |
 | `APPLICATIONS_DIR` | `/Applications` | macOS app 安装目录 |
 | `LAUNCH_AFTER_INSTALL=1` | `0` | iOS 安装后启动 app |
-| `BUILD_WATCH_FOR_PHYSICAL=1` | `0` | 为每个可见物理 Watch 单独构建 |
 | `ALLOW_DEVICE_FAILURES=1` | `0` | 将设备安装/启动失败降为非致命 |
-| `ALLOW_INVALID_WATCH_PROFILE=1` | `0` | 跳过 Watch profile 验证；仅用于明确知情的排查 |
 | `DEVICE_TIMEOUT` | `30` | `devicectl` 查询超时秒数 |
 
-Apple Watch 需要 Developer Mode；直接安装还要求设备可用、隧道已连接且 DDI 服务可用。没有可安装的 Watch 时，iOS app 仍包含 companion，由系统在配对手表上安装。
+iPhone 的 Watch app 中启用“自动安装 App”后，安装 iOS app 会让系统把内嵌伴侣安装到兼容的配对 Apple Watch。这个系统级用户设置不能由应用或脚本强制开启；关闭时可在 Watch app 的“可用 App”中手动安装。Debug 开发安装还要求 Apple Watch 已开启 Developer Mode、对 Xcode 可见且已包含在 provisioning profile 中；App Store/TestFlight 发行安装不使用开发设备名单。

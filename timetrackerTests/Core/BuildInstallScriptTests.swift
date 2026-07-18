@@ -4,38 +4,27 @@ import Testing
 @Suite(.serialized)
 struct BuildInstallScriptTests {
     @Test
-    func buildInstallScriptBuildsAndInstallsWatchApp() throws {
+    func buildInstallScriptInstallsIOSContainerWithDependentWatchCompanion() throws {
         let script = try sourceText("scripts/build_install_all.sh")
 
-        #expect(script.contains("WATCH_SCHEME=\"${WATCH_SCHEME:-timetrackerWatchApp}\""))
-        #expect(script.contains("WATCH_PRODUCTS=\"$DERIVED_DATA/Build/Products/${CONFIGURATION}-watchos\""))
-        #expect(script.contains("WATCH_APP=\"$WATCH_PRODUCTS/${WATCH_PRODUCT_NAME}.app\""))
         #expect(script.contains("IOS_EMBEDDED_WATCH_APP=\"$IOS_APP/Watch/${WATCH_PRODUCT_NAME}.app\""))
-        #expect(script.contains("report_embedded_watch_content"))
         #expect(script.contains("-allowProvisioningDeviceRegistration"))
-        #expect(script.contains("validate_watch_profile \"$IOS_EMBEDDED_WATCH_APP\" \"embedded Watch companion\""))
-        #expect(script.contains("validate_watch_profile \"$WATCH_APP\" \"watchOS app\""))
-        #expect(script.contains("ALLOW_INVALID_WATCH_PROFILE=\"${ALLOW_INVALID_WATCH_PROFILE:-0}\""))
-        #expect(script.contains("profile_contains_connected_watch"))
-        #expect(script.contains("connected_watch_udids()"))
-        #expect(script.contains("profile_provisioned_devices()"))
-        #expect(script.contains("available_watch_devices_json()"))
-        #expect(script.contains("install_on_available_watch_devices()"))
-        #expect(script.contains("watch_xcodebuild_destinations()"))
-        #expect(script.contains("build_watch_app()"))
+        #expect(script.contains("validate_embedded_watch_companion"))
+        #expect(script.contains("validate_embedded_watch_profile"))
+        #expect(script.contains("connected_watch_udids"))
+        #expect(script.contains("ProvisionedDevices"))
         #expect(script.contains("hardwareProperties.platform == 'watchOS'"))
+        #expect(script.contains("WKCompanionAppBundleIdentifier"))
+        #expect(script.contains("WKRunsIndependentlyOfCompanionApp"))
+        #expect(script.contains("WKApplication"))
+        #expect(script.contains("$ios_bundle_id.watchkitapp"))
+        #expect(script.contains("codesign --verify --deep --strict"))
         #expect(script.contains("xcrun devicectl list devices"))
         #expect(script.contains("run_xcodebuild \"$SCHEME\" -sdk iphoneos -destination \"generic/platform=iOS\" build"))
-        #expect(script.contains("run_xcodebuild \"$WATCH_SCHEME\" -destination \"$destination\" build"))
-        #expect(script.contains("run_xcodebuild \"$WATCH_SCHEME\" -destination \"generic/platform=watchOS\" build"))
-        #expect(!script.contains("run_xcodebuild -scheme \"$WATCH_SCHEME\""))
-        #expect(script.contains("install_app_on_device \"$device_id\" \"$device_name\" \"$WATCH_APP\" \"watchOS\" \"\""))
-        #expect(script.contains("Skipping direct watch install"))
-        #expect(script.contains("embedded Watch companion"))
-        #expect(script.contains("includes the connected Apple Watch"))
-        #expect(script.contains("cannot be verified for the connected Apple Watch"))
-        #expect(script.contains("integrity could not be verified"))
-        #expect(script.contains("watchOS app:   $WATCH_APP"))
+        #expect(script.contains("install_app_on_device \"$device_id\" \"$device_name\" \"$IOS_APP\" \"iOS/iPadOS\" \"$BUNDLE_ID\""))
+        #expect(!script.contains("install_on_available_watch_devices"))
+        #expect(!script.contains("WATCH_SCHEME"))
+        #expect(script.contains("Automatic App Install"))
         #expect(script.contains("embedded watch: $IOS_EMBEDDED_WATCH_APP"))
     }
 
@@ -47,6 +36,9 @@ struct BuildInstallScriptTests {
         #expect(project.contains("dstPath = \"$(CONTENTS_FOLDER_PATH)/Watch\";"))
         #expect(project.contains("timetrackerWatchApp.app in Embed Watch Content"))
         #expect(project.contains("target = E7000000000000000000000D /* timetrackerWatchApp */;"))
+        #expect(project.contains("PRODUCT_BUNDLE_IDENTIFIER = me.mezorewww.timetracker.watchkitapp;"))
+        #expect(project.contains("INFOPLIST_KEY_WKCompanionAppBundleIdentifier = me.mezorewww.timetracker;"))
+        #expect(project.contains("INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;"))
     }
 
     @Test

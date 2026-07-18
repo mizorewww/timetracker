@@ -177,7 +177,7 @@ Live Activity 不需要在 App 内手动创建：iPhone 允许 Live Activity 时
 
 安装并取得第一次快照：
 
-1. 先在配对 iPhone 上安装“时间追踪”。iPhone App 包内已经包含 Watch 伴随应用；若没有自动安装，在 iPhone 的 Watch app 中找到“时间追踪”并点按“安装”。Apple Watch 需要满足当前最低 watchOS 版本。
+1. 在 iPhone 的 Watch app 中启用“自动安装 App”，再在配对 iPhone 上安装“时间追踪”。iPhone App 包内包含依赖型 Watch 伴侣，系统会把它安装到满足最低 watchOS 版本的配对手表；若关闭了系统自动安装，可在 Watch app 的“可用 App”中手动安装。
 2. 在 iPhone 上打开一次 TimeTracker 主应用，再打开 Watch app。Watch 会先读取手机上次发送的 application context；首次没有快照时会显示“正在等待 iPhone”。
 3. 保持 iPhone 与 Watch 在附近，并让 iPhone 主应用完成启动和数据刷新。Watch 收到快照后才显示活动计时与任务；“更新延迟”或“连接出现问题”时也用同样方式让 iPhone 主应用重新刷新。
 

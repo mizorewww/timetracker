@@ -2,7 +2,7 @@
 
 Status: current implementation
 
-Reviewed: 2026-07-18
+Reviewed: 2026-07-19
 
 Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag.
 
@@ -25,6 +25,8 @@ Views may format and present state, but durable business actions should go throu
 
 `TaskNode` represents a task tree node. All tasks can contain child tasks and all tasks can be timed. `parentID` is the hierarchy authority; `depth` is repairable metadata; `path` is the stable canonical locator `/<task UUID>`, not a persisted ancestor chain or user-facing title path. `TaskTreeService` derives display paths from current titles and caps them at six components. Startup, task refresh, and sync restore repair missing parents/cycles deterministically before rendering. Moving a task prevents cycles and updates only metadata that actually changed.
 
+Tasks no longer have a product-facing workflow status. `TaskNode.statusRaw` remains only because V4-era schemas, existing local/CloudKit records, and sync snapshots already contain it. Restore and compatibility boundaries continue accepting `planned`, `active`, `completed`, and `archived` without a migration or bulk CloudKit rewrite. The first three values are inert compatibility bytes; only the historical `archived` value participates in archive compatibility.
+
 `TimeSession` represents one work intention. `TimeSegment` represents actual worked time and is the ledger fact used for analytics. Active work has an open segment; stopping closes the segment and its session.
 
 `TrackedTimePolicy` is the single read boundary for persisted tracked time. For a reference `now`, the effective end is `min(endedAt ?? now, now)`; the resulting interval is then intersected with the requested half-open range. A segment starting at or after `now`, or with no positive intersection, contributes zero. Local manual-entry and segment-update writes reject a future end or a future open start with typed `TimeTrackingRepositoryError.futureTime`. Clock-skewed CloudKit/import/legacy facts are retained rather than migrated away, but every aggregation, forecast, timeline, cache, rollup, and range query must clip them through this policy.
@@ -35,11 +37,11 @@ Views may format and present state, but durable business actions should go throu
 
 `SyncedPreference` stores sync-eligible user-facing settings as JSON values in SwiftData so they travel through the same iCloud-backed store as tasks and timers. The iCloud enablement flag is different: it is a device-local `UserDefaults` startup configuration because the model container must know whether to start in CloudKit mode before SwiftData can fetch cloud values. It is excluded from `SyncedPreference`, conflict snapshots, and export/restore boundaries, and changes take effect on the next launch.
 
-`ChecklistItem` belongs to a `TaskNode`, but it is not a task. Checklist items are for progress and estimation only; timers, manual entries, pomodoros, widgets, and Live Activities still attach time to the task itself.
+`ChecklistItem` belongs to a `TaskNode`, but it is not a task. Checklist items are the product-level completion and progress signal and can provide forecast evidence; completing them never locks the task or blocks later work. Timers, manual entries, pomodoros, widgets, and Live Activities still attach time to the task itself.
 
 `InboxItem` owns an opaque suggestion context UUID plus a title-revision UUID. The context survives a physical SwiftData row rebuild, while a real title edit rotates only the revision. Dismissing a suggestion records that revision, so another synced copy of the same logical item cannot resurrect it; separately created items remain distinct even when their titles match. These identifiers are random or legacy-record UUIDs, never hashes or normalized projections of user text. Logical deletion/restoration and content fields follow last-write-wins with tombstones winning ties; dismissal is a separate field-level OR only for the exact context/revision. Thus an older marker survives sync without rolling back newer notes, completion metadata or ordering, and never crosses a title revision. `InboxCaptureReceipt` is deliberately separate: only a caller-provided external `(origin, UUID)` key can replay one capture; title, timestamp and model IDs never act as a receipt. The item and receipt commit in one store transaction, and V11 snapshot/restore preserves that acknowledgement. Multiple active receipts for one external key must describe the same payload and Inbox item; a disagreement is an explicit sync conflict, never a time-ordered replay choice.
 
-Task visibility and work eligibility are intentionally separate. Archived or deleted branches are hidden. Completed tasks and descendants stay visible so detail and history remain reachable, but a completed task anywhere on the ancestor path blocks new timers, manual entries, Pomodoro runs, Quick Start, Inbox conversion, App Intents, and create/move destinations. Reopening for work restores every completed blocker on that path to active. An already-running segment remains visible and stoppable if completion arrives from another device or historical state.
+Task visibility and work eligibility derive only from archive/deletion lifecycle markers. A task is archived when `archivedAt != nil` or its compatibility raw value is `archived`; archive commands write both markers so older clients still understand the result. Archived or deleted branches are hidden and cannot accept new work. Archiving a branch requires its active timers and Pomodoro work to stop first. Legacy `planned`, `active`, and `completed` raw values do not change visibility, editing, hierarchy, or work eligibility. Deleted-task tombstones and historical ledger ownership remain unchanged.
 
 The current SwiftData schema is V11 (`1.10.0`). V9 removed the persisted `DailySummary` derived cache through a lightweight V8→V9 migration. V10 adds optional opaque Inbox suggestion identity fields; the V9→V10 migration deterministically initializes legacy rows and preserves the old “generated with no active suggestion” dismissal state. V11 adds durable Inbox capture receipts with a lightweight V10→V11 migration. Legacy V9 Inbox model shapes remain frozen for migration, and current analytics still creates disposable `DailySummarySnapshot` values from ledger facts.
 
@@ -50,7 +52,7 @@ Forecasting is local and explainable. `TaskRollupService` recursively combines d
 The current task's explicit estimate takes precedence over checklist inference. `TaskEstimatePolicy` accepts `0...600` minutes, treats zero as absent, and clamps positive legacy values to 36,000 seconds. Checklist items use an equal-weight fallback only when there is no explicit estimate:
 
 ```text
-if task is completed or every checklist item is completed:
+if every checklist item is completed:
   ownRemaining = 0
 else if explicitEstimate exists:
   estimatedTotal = max(explicitEstimate, ownWorkedSeconds)
@@ -231,7 +233,7 @@ Task tree display is derived UI state. The durable hierarchy remains `TaskNode.p
 
 ## Feature Status
 
-The current app includes local SwiftData persistence, iCloud-backed user preferences, task creation/editing/status, task checklists, soft delete/archive, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, local task forecasting, analytics overview, JSON export, isolated demo-data management, production-safe tombstone retention, iCloud configuration, App Intents, Live Activity, Widget code, and a Watch companion. Permanent tombstone maintenance exists only for isolated Demo/UI Test stores.
+The current app includes local SwiftData persistence, iCloud-backed user preferences, task creation/editing, task checklists, soft delete/archive, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, local task forecasting, analytics overview, JSON export, isolated demo-data management, production-safe tombstone retention, iCloud configuration, App Intents, Live Activity, Widget code, and a Watch companion. Permanent tombstone maintenance exists only for isolated Demo/UI Test stores.
 
 Future work should preserve the ledger contract: every timer, pomodoro, manual entry, widget action, Live Activity action, or Watch command must ultimately create or update `TimeSession` and `TimeSegment` records through shared use cases.
 

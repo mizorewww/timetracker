@@ -22,7 +22,6 @@ struct TaskManagementFlatRow: View {
             rollup: rollup,
             workedSeconds: rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task),
             childCount: childCount,
-            isAvailableForTracking: store.isTaskAvailableForTracking(task),
             isRunning: store.activeSegment(for: task.id) != nil
         )
         rowContent(presentation: presentation)

@@ -128,7 +128,7 @@ App Intents 把系统提供的用户参数传入共享领域命令。Intent 结�
 
 ### Deep links
 
-Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应用只接受最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query，并校验 UUID；无效 URL 在执行或排队前即被拒绝。数据库尚未准备好时，每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过 completed/archived task 的可工作性检查。
+Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应用只接受最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query，并校验 UUID；无效 URL 在执行或排队前即被拒绝。数据库尚未准备好时，每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过归档、删除或不存在任务的可工作性检查；Checklist 完成不构成工作阻止。
 
 ## 6. JSON 导出
 

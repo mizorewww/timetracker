@@ -8,7 +8,7 @@ nonisolated enum TaskDraftSaveResult: Equatable, Sendable {
 
 enum TaskLifecycleMutationError: LocalizedError, Equatable {
     case taskNotFound
-    case activeWorkMustStop(TaskStatus)
+    case activeWorkMustStop
     case parentChangeBlocked(TaskParentChangeBlocker)
     case parentUnavailable
     case staleDraft
@@ -17,15 +17,10 @@ enum TaskLifecycleMutationError: LocalizedError, Equatable {
         switch self {
         case .taskNotFound:
             return AppStrings.localized("systemAction.error.taskNotFound")
-        case .activeWorkMustStop(let status):
-            return AppStrings.localized(
-                status == .completed
-                    ? "task.action.complete.stopFirst"
-                    : "task.action.archive.stopFirst"
-            )
+        case .activeWorkMustStop:
+            return AppStrings.localized("task.action.archive.stopFirst")
         case .parentChangeBlocked(let blocker):
             let key = switch blocker {
-            case .completed: "task.parent.completedLocked"
             case .archived: "task.parent.archivedLocked"
             case .deleted: "task.parent.deletedLocked"
             }
@@ -57,7 +52,7 @@ struct TaskDraftMutationOutcome: Equatable {
     }
 }
 
-struct TaskStatusMutationOutcome: Equatable {
+struct TaskArchiveMutationOutcome: Equatable {
     let taskID: UUID
     let didMutate: Bool
     let relatedTaskIDs: Set<UUID>
@@ -70,21 +65,6 @@ struct TaskStatusMutationOutcome: Equatable {
                 affectedAncestorIDs: relatedTaskIDs.subtracting([taskID])
             ),
         ]
-    }
-}
-
-struct TaskReopenMutationOutcome: Equatable {
-    let requestedTaskID: UUID
-    let reopenedTasks: [TaskStatusMutationOutcome]
-
-    var didMutate: Bool {
-        reopenedTasks.isEmpty == false
-    }
-
-    var events: Set<StoreDomainEvent> {
-        reopenedTasks.reduce(into: Set<StoreDomainEvent>()) { events, mutation in
-            events.formUnion(mutation.events)
-        }
     }
 }
 

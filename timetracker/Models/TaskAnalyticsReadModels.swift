@@ -6,7 +6,6 @@ struct TaskAnalyticsPoint: Identifiable {
     let path: String
     let colorHex: String?
     let iconName: String?
-    let status: TaskStatus?
     let grossSeconds: Int
     let wallSeconds: Int
 

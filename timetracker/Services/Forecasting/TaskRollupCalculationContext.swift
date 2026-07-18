@@ -120,7 +120,6 @@ struct TaskRollupCalculationContext {
             historicalActiveDayCount: pace?.activeDayCount ?? 0,
             checklistProgress: progress,
             confidence: estimate == nil ? .none : resolver.confidence(
-                task: task,
                 ownForecast: ownForecast,
                 childRollups: childRollups,
                 estimate: estimate

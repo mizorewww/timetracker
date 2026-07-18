@@ -6,17 +6,15 @@ struct TaskWorkEligibility: Equatable {
 }
 
 nonisolated enum TaskParentChangeBlocker: Equatable {
-    case completed
     case archived
     case deleted
 }
 
 /// Resolves visibility and work eligibility for an entire hierarchy in linear
-/// time without rewriting descendants' own workflow statuses.
+/// time.
 ///
-/// Archived or deleted branches are hidden. Completed branches stay visible so
-/// their detail and history remain reachable, but they cannot receive new work
-/// until every completed task on the path is reopened.
+/// Archived or deleted branches are hidden and cannot receive new work. Legacy
+/// planned/active/completed raw values are inert compatibility bytes.
 struct TaskTrackingAvailabilityService {
     func eligibility(tasks: [TaskNode]) -> TaskWorkEligibility {
         let canonicalTasks = tasks.deduplicatedByID()
@@ -32,19 +30,9 @@ struct TaskTrackingAvailabilityService {
             ),
             childIDsByParentID: childIDsByParentID
         )
-        let completedTaskIDs = Set(
-            canonicalTasks.lazy
-                .filter { $0.status == .completed }
-                .map(\.id)
-        )
-        let workBlockedTaskIDs = descendantClosure(
-            startingWith: hiddenTaskIDs.union(completedTaskIDs),
-            childIDsByParentID: childIDsByParentID
-        )
-
         return TaskWorkEligibility(
             visibleTaskIDs: allTaskIDs.subtracting(hiddenTaskIDs),
-            trackableTaskIDs: allTaskIDs.subtracting(workBlockedTaskIDs)
+            trackableTaskIDs: allTaskIDs.subtracting(hiddenTaskIDs)
         )
     }
 
@@ -63,8 +51,7 @@ struct TaskTrackingAvailabilityService {
     }
 
     /// A task can leave an unavailable ancestor branch as long as its own
-    /// lifecycle still accepts edits. This intentionally differs from work
-    /// eligibility, which also inherits completed and archived ancestors.
+    /// lifecycle still accepts edits.
     func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
         if task.deletedAt != nil {
             return .deleted
@@ -72,33 +59,7 @@ struct TaskTrackingAvailabilityService {
         if task.isArchivedForLifecycle {
             return .archived
         }
-        switch task.status {
-        case .completed:
-            return .completed
-        case .planned, .active, .archived:
-            return nil
-        }
-    }
-
-    func completedBlockingTaskIDs(for taskID: UUID, tasks: [TaskNode]) -> [UUID] {
-        let taskByID = tasks.deduplicatedByID().latestByID()
-        var currentID: UUID? = taskID
-        var visited = Set<UUID>()
-        var result: [UUID] = []
-
-        while let candidateID = currentID,
-              visited.insert(candidateID).inserted,
-              let task = taskByID[candidateID] {
-            if task.deletedAt != nil || task.isArchivedForLifecycle {
-                return []
-            }
-            if task.status == .completed {
-                result.append(candidateID)
-            }
-            currentID = task.parentID
-        }
-
-        return Array(result.reversed())
+        return nil
     }
 
     private func descendantClosure(

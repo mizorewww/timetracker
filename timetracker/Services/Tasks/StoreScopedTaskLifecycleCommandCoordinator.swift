@@ -20,10 +20,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         self.deviceID = deviceID
     }
 
-    func setStatus(
-        _ status: TaskStatus,
-        taskID: UUID
-    ) throws -> TaskStatusMutationOutcome {
+    func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)
         let transaction = StoreScopedTimerMutationTransaction(
@@ -45,89 +42,45 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
                 for: task,
                 tasks: tasks
             )
-            let hasCanonicalArchiveMarker = status == .archived
-                ? task.archivedAt != nil
-                : task.archivedAt == nil
-            guard task.status != status || !hasCanonicalArchiveMarker else {
-                return TaskStatusMutationOutcome(
+            let hasCanonicalArchiveMarkers =
+                task.archivedAt != nil &&
+                task.statusRaw == LegacyTaskStatusRaw.archived
+            guard hasCanonicalArchiveMarkers == false else {
+                return TaskArchiveMutationOutcome(
                     taskID: taskID,
                     didMutate: false,
                     relatedTaskIDs: relatedTaskIDs
                 )
             }
 
-            if status == .completed || status == .archived {
-                let subtreeIDs = TaskTreeService()
-                    .descendantIDs(of: taskID, tasks: tasks)
-                    .union([taskID])
-                let timeRepository = SwiftDataTimeTrackingRepository(
-                    context: context,
-                    deviceID: deviceID
-                )
-                let pomodoroRepository = SwiftDataPomodoroRepository(
-                    context: context,
-                    timeRepository: timeRepository,
-                    deviceID: deviceID
-                )
-                let hasActiveSegment = try timeRepository.activeSegments()
-                    .contains { subtreeIDs.contains($0.taskID) }
-                let hasActivePomodoro = try pomodoroRepository.activeRuns()
-                    .contains { subtreeIDs.contains($0.taskID) }
-                guard hasActiveSegment == false, hasActivePomodoro == false else {
-                    throw TaskLifecycleMutationError.activeWorkMustStop(status)
-                }
-            }
-
-            try taskRepository.setTaskStatus(taskID: taskID, status: status)
-            return TaskStatusMutationOutcome(
-                taskID: taskID,
-                didMutate: true,
-                relatedTaskIDs: relatedTaskIDs
-            )
-        }
-    }
-
-    func reopenForWork(taskID: UUID) throws -> TaskReopenMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext { context in
-            let taskRepository = SwiftDataTaskRepository(
+            let subtreeIDs = TaskTreeService()
+                .descendantIDs(of: taskID, tasks: tasks)
+                .union([taskID])
+            let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,
                 deviceID: deviceID
             )
-            let tasks = try taskRepository.allNodes()
-            guard tasks.contains(where: { $0.id == taskID }) else {
-                throw TaskLifecycleMutationError.taskNotFound
+            let pomodoroRepository = SwiftDataPomodoroRepository(
+                context: context,
+                timeRepository: timeRepository,
+                deviceID: deviceID
+            )
+            let hasActiveSegment = try timeRepository.activeSegments()
+                .contains { subtreeIDs.contains($0.taskID) }
+            let hasActivePomodoro = try pomodoroRepository.activeRuns()
+                .contains { subtreeIDs.contains($0.taskID) }
+            guard hasActiveSegment == false, hasActivePomodoro == false else {
+                throw TaskLifecycleMutationError.activeWorkMustStop
             }
 
-            let blockerIDs = TaskTrackingAvailabilityService()
-                .completedBlockingTaskIDs(for: taskID, tasks: tasks)
-            let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-            let mutations = blockerIDs.compactMap { blockerID -> TaskStatusMutationOutcome? in
-                guard let blocker = taskByID[blockerID], blocker.status == .completed else {
-                    return nil
-                }
-                return TaskStatusMutationOutcome(
-                    taskID: blockerID,
-                    didMutate: true,
-                    relatedTaskIDs: Self.relatedTaskIDs(for: blocker, tasks: tasks)
-                )
-            }
-
-            for mutation in mutations {
-                try taskRepository.setTaskStatus(
-                    taskID: mutation.taskID,
-                    status: .active
-                )
-            }
-            return TaskReopenMutationOutcome(
-                requestedTaskID: taskID,
-                reopenedTasks: mutations
+            try TaskDraftCommandHandler().archive(
+                taskID: taskID,
+                repository: taskRepository
+            )
+            return TaskArchiveMutationOutcome(
+                taskID: taskID,
+                didMutate: true,
+                relatedTaskIDs: relatedTaskIDs
             )
         }
     }

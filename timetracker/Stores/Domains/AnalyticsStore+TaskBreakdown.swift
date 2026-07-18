@@ -27,7 +27,6 @@ extension AnalyticsStore {
                 } ?? AppStrings.localized("task.deleted.path"),
                 colorHex: task?.colorHex,
                 iconName: task?.iconName,
-                status: task?.status,
                 grossSeconds: gross,
                 wallSeconds: TimeAggregationService()
                     .mergeOverlappingIntervals(taskItems.map(\.interval))

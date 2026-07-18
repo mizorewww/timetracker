@@ -101,18 +101,18 @@ Plan:
 
 - Keep `List` with flat visible rows from `TaskTreeFlattener`.
 - Use native swipe actions for start, child task, edit, and delete.
-- Put task status in a secondary line on compact width.
+- Use the compact secondary line for parent path or running context, not a workflow status.
 - Put checklist progress on the trailing side only when there is enough width; otherwise show it below the title line.
 - Category headers should be native section headers with subtle dividers, not custom drop targets.
 - Reordering and moving should use reliable native edit/menu flows before drag-and-drop is reintroduced.
-- Keep completed tasks as visible native rows with an explicit unavailable-work explanation and reopen action. Archived branches stay hidden; do not make both states look like deletion.
+- Treat tasks carrying legacy planned/active/completed raw values as ordinary native rows. Archived branches stay hidden; do not add workflow-status badges or make Archive look like Delete.
 
 Acceptance:
 
 - Every visible task is an independent row for tap, context menu, and swipe actions.
 - Indentation is stable across expand/collapse.
 - Deleting or creating a task preserves the Tasks destination.
-- A completed parent and its children remain navigable, cannot start new work, and expose a clear path-level reopen action without losing history.
+- Checklist completion remains editable and never disables timing or descendants. Task rows and detail expose no status picker, status badge, Complete action, or Reopen action.
 
 ### Task Editor
 
@@ -259,7 +259,7 @@ For each future UI polish round, capture or manually inspect the affected normal
 - iPhone Inbox with no items, one suggestion, many items, and dismissed suggestion.
 - iPhone Today with no active timers, one timer, multiple timers.
 - iPhone Tasks with nested tasks and long titles.
-- iPhone Tasks and Task Detail with a completed parent, blocked child, and reopened path.
+- iPhone Tasks and Task Detail with nested checklist progress, a legacy completed raw task that remains usable, and an archived branch that stays hidden.
 - iPhone dark appearance, long localization, or large text for only the screens whose layout changed.
 - iPad landscape Today and Task Detail with the sidebar visible and collapsed.
 - macOS settings window and main split view.

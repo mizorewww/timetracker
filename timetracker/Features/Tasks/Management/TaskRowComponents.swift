@@ -16,20 +16,6 @@ struct TaskContextMenu: View {
         store.isTaskAvailableForTracking(task)
     }
 
-    private var completedWorkBlocker: TaskNode? {
-        store.completedWorkBlocker(for: task)
-    }
-
-    private var reopenActionTitle: String {
-        guard let completedWorkBlocker, completedWorkBlocker.id != task.id else {
-            return AppStrings.localized("task.action.reopen")
-        }
-        return String(
-            format: AppStrings.localized("task.action.reopenAncestorFormat"),
-            completedWorkBlocker.title
-        )
-    }
-
     private var hasActiveTimerInSubtree: Bool {
         store.hasActiveTimer(inTaskSubtree: task.id)
     }
@@ -46,14 +32,6 @@ struct TaskContextMenu: View {
                 store.startTask(task)
             } label: {
                 Label(AppStrings.localized("task.action.startTimer"), systemImage: "play.fill")
-            }
-        }
-
-        if completedWorkBlocker != nil {
-            Button {
-                store.reopenTaskForWork(task.id)
-            } label: {
-                Label(reopenActionTitle, systemImage: "arrow.uturn.backward.circle")
             }
         }
 
@@ -75,33 +53,9 @@ struct TaskContextMenu: View {
             }
         }
 
-        Menu(AppStrings.localized("task.status.menu")) {
-            ForEach(TaskStatus.editableCases, id: \.self) { status in
-                if status == .completed,
-                   task.status != .completed,
-                   hasActiveTimerInSubtree {
-                    Button {} label: {
-                        Label(
-                            AppStrings.localized("task.action.complete.stopFirst"),
-                            systemImage: status.symbolName
-                        )
-                    }
-                    .disabled(true)
-                } else {
-                    Button {
-                        if status == .active, completedWorkBlocker != nil {
-                            store.reopenTaskForWork(task.id)
-                        } else {
-                            store.setTaskStatus(status, taskID: task.id)
-                        }
-                    } label: {
-                        Label(status.displayName, systemImage: status.symbolName)
-                    }
-                }
-            }
+        if activeSegment != nil || isAvailableForTracking {
+            Divider()
         }
-
-        Divider()
 
         Button(action: editTask) {
             Label(AppStrings.edit, systemImage: "pencil")
@@ -152,20 +106,6 @@ struct TaskRowSwipeActions: ViewModifier {
         store.isTaskAvailableForTracking(task)
     }
 
-    private var completedWorkBlocker: TaskNode? {
-        store.completedWorkBlocker(for: task)
-    }
-
-    private var reopenActionTitle: String {
-        guard let completedWorkBlocker, completedWorkBlocker.id != task.id else {
-            return AppStrings.localized("task.action.reopen")
-        }
-        return String(
-            format: AppStrings.localized("task.action.reopenAncestorFormat"),
-            completedWorkBlocker.title
-        )
-    }
-
     func body(content: Content) -> some View {
         content
             .swipeActions(edge: .leading) {
@@ -183,15 +123,6 @@ struct TaskRowSwipeActions: ViewModifier {
                         actionLabel(AppStrings.localized("task.swipe.start"), systemImage: "play.fill")
                     }
                     .tint(.blue)
-                }
-
-                if completedWorkBlocker != nil {
-                    Button {
-                        store.reopenTaskForWork(task.id)
-                    } label: {
-                        actionLabel(reopenActionTitle, systemImage: "arrow.uturn.backward.circle")
-                    }
-                    .tint(.orange)
                 }
 
                 if isAvailableForTracking {

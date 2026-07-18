@@ -30,13 +30,12 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 existingTask = nil
             }
 
-            try Self.validateDraftTransition(
+            try Self.validateDraft(
                 draft,
                 existingTask: existingTask,
                 tasks: tasksBeforeSave,
                 taskRepository: taskRepository,
-                context: context,
-                deviceID: resolvedDeviceID
+                context: context
             )
 
             let relatedBeforeSave = existingTask.map {
@@ -92,13 +91,12 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         return ancestors
     }
 
-    private static func validateDraftTransition(
+    private static func validateDraft(
         _ draft: TaskEditorDraft,
         existingTask: TaskNode?,
         tasks: [TaskNode],
         taskRepository: SwiftDataTaskRepository,
-        context: ModelContext,
-        deviceID: String
+        context: ModelContext
     ) throws {
         if let existingTask {
             guard let baseline = draft.baseline,
@@ -110,30 +108,6 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                     context: context
                   ) else {
                 throw TaskLifecycleMutationError.staleDraft
-            }
-        }
-
-        if let existingTask,
-           existingTask.status != draft.status,
-           draft.status == .completed || draft.status == .archived {
-            let subtreeIDs = TaskTreeService()
-                .descendantIDs(of: existingTask.id, tasks: tasks)
-                .union([existingTask.id])
-            let timeRepository = SwiftDataTimeTrackingRepository(
-                context: context,
-                deviceID: deviceID
-            )
-            let pomodoroRepository = SwiftDataPomodoroRepository(
-                context: context,
-                timeRepository: timeRepository,
-                deviceID: deviceID
-            )
-            let hasActiveSegment = try timeRepository.activeSegments()
-                .contains { subtreeIDs.contains($0.taskID) }
-            let hasActivePomodoro = try pomodoroRepository.activeRuns()
-                .contains { subtreeIDs.contains($0.taskID) }
-            guard hasActiveSegment == false, hasActivePomodoro == false else {
-                throw TaskLifecycleMutationError.activeWorkMustStop(draft.status)
             }
         }
 

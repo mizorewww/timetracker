@@ -6,7 +6,7 @@ import Testing
 @Suite(.serialized)
 struct CoreTaskStoreTests {
     @Test @MainActor
-    func legacyArchiveMarkersDriveLifecycleReadsWithoutChangingCompletedOrPlannedBehavior() {
+    func legacyArchiveMarkersDriveLifecycleWhileOtherRawValuesStayInert() {
         let timestampArchived = TaskNode(
             title: "Timestamp archived",
             parentID: nil,
@@ -34,14 +34,14 @@ struct CoreTaskStoreTests {
         )
 
         let completed = TaskNode(title: "Completed", parentID: nil, deviceID: "test")
-        completed.status = .completed
+        completed.statusRaw = LegacyTaskStatusRaw.completed
         let completedChild = TaskNode(
             title: "Completed child",
             parentID: completed.id,
             deviceID: "test"
         )
         let planned = TaskNode(title: "Planned", parentID: nil, deviceID: "test")
-        planned.status = .planned
+        planned.statusRaw = LegacyTaskStatusRaw.planned
         let tasks = [
             timestampArchived,
             timestampArchivedChild,
@@ -52,7 +52,7 @@ struct CoreTaskStoreTests {
             planned,
         ]
 
-        #expect(timestampArchived.status == .active)
+        #expect(timestampArchived.statusRaw == LegacyTaskStatusRaw.active)
         #expect(timestampArchived.isArchivedForLifecycle)
         #expect(rawArchived.archivedAt == nil)
         #expect(rawArchived.isArchivedForLifecycle)
@@ -65,17 +65,14 @@ struct CoreTaskStoreTests {
             eligibility.visibleTaskIDs ==
                 Set([completed.id, completedChild.id, planned.id])
         )
-        #expect(eligibility.trackableTaskIDs == Set([planned.id]))
+        #expect(
+            eligibility.trackableTaskIDs ==
+                Set([completed.id, completedChild.id, planned.id])
+        )
         #expect(availability.parentChangeBlocker(for: timestampArchived) == .archived)
         #expect(availability.parentChangeBlocker(for: rawArchived) == .archived)
-        #expect(availability.parentChangeBlocker(for: completed) == .completed)
+        #expect(availability.parentChangeBlocker(for: completed) == nil)
         #expect(availability.parentChangeBlocker(for: planned) == nil)
-        #expect(
-            availability.completedBlockingTaskIDs(
-                for: completedChild.id,
-                tasks: tasks
-            ) == [completed.id]
-        )
 
         let store = makeTestStore()
         store.tasks = tasks
@@ -86,9 +83,9 @@ struct CoreTaskStoreTests {
     }
 
     @Test
-    func taskEligibilitySeparatesVisibleHistoryFromNewWork() {
+    func taskEligibilityHidesOnlyArchivedAndDeletedBranches() {
         let archivedRoot = TaskNode(title: "Archived", parentID: nil, deviceID: "test")
-        archivedRoot.status = .archived
+        archivedRoot.statusRaw = LegacyTaskStatusRaw.archived
         let child = TaskNode(title: "Child", parentID: archivedRoot.id, deviceID: "test")
         let grandchild = TaskNode(title: "Grandchild", parentID: child.id, deviceID: "test")
         let availableRoot = TaskNode(title: "Available", parentID: nil, deviceID: "test")
@@ -96,8 +93,8 @@ struct CoreTaskStoreTests {
         deletedRoot.deletedAt = Date()
         let deletedDescendant = TaskNode(title: "Hidden descendant", parentID: deletedRoot.id, deviceID: "test")
         let completedRoot = TaskNode(title: "Completed", parentID: nil, deviceID: "test")
-        completedRoot.status = .completed
-        let completedChild = TaskNode(title: "Visible blocked child", parentID: completedRoot.id, deviceID: "test")
+        completedRoot.statusRaw = LegacyTaskStatusRaw.completed
+        let completedChild = TaskNode(title: "Ordinary child", parentID: completedRoot.id, deviceID: "test")
 
         let eligibility = TaskTrackingAvailabilityService().eligibility(
             tasks: [
@@ -113,15 +110,15 @@ struct CoreTaskStoreTests {
         )
 
         #expect(eligibility.visibleTaskIDs == Set([availableRoot.id, completedRoot.id, completedChild.id]))
-        #expect(eligibility.trackableTaskIDs == Set([availableRoot.id]))
-        #expect(child.status == .active)
-        #expect(grandchild.status == .active)
-        #expect(completedChild.status == .active)
+        #expect(eligibility.trackableTaskIDs == eligibility.visibleTaskIDs)
+        #expect(child.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(grandchild.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(completedChild.statusRaw == LegacyTaskStatusRaw.active)
 
         let availabilityService = TaskTrackingAvailabilityService()
         #expect(availabilityService.parentChangeBlocker(for: archivedRoot) == .archived)
         #expect(availabilityService.parentChangeBlocker(for: deletedRoot) == .deleted)
-        #expect(availabilityService.parentChangeBlocker(for: completedRoot) == .completed)
+        #expect(availabilityService.parentChangeBlocker(for: completedRoot) == nil)
         #expect(availabilityService.parentChangeBlocker(for: completedChild) == nil)
 
         let treeService = TaskTreeService()
@@ -138,7 +135,7 @@ struct CoreTaskStoreTests {
                 completedChild
             ]
         )
-        #expect(candidates.map(\.id) == [availableRoot.id])
+        #expect(Set(candidates.map(\.id)) == Set([availableRoot.id, completedRoot.id]))
         #expect(treeService.canMove(
             taskID: completedChild.id,
             to: availableRoot.id,
@@ -182,7 +179,7 @@ struct CoreTaskStoreTests {
     }
 
     @Test @MainActor
-    func repositoryLetsActiveDescendantsEscapeCompletedBranchesButKeepsCompletedTasksLocked() throws {
+    func repositoryTreatsLegacyCompletedBranchesAsOrdinaryHierarchy() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let completedRoot = try repository.createTask(
@@ -203,22 +200,18 @@ struct CoreTaskStoreTests {
             colorHex: nil,
             iconName: nil
         )
-        try repository.setTaskStatus(taskID: completedRoot.id, status: .completed)
+        completedRoot.statusRaw = LegacyTaskStatusRaw.completed
+        try context.save()
 
-        #expect(throws: TaskRepositoryError.invalidMove) {
-            try repository.createTask(
-                title: "New child",
-                parentID: completedRoot.id,
-                colorHex: nil,
-                iconName: nil
-            )
-        }
-        // Metadata on visible history remains editable while its parent stays
-        // unchanged; editing must not become a hidden move operation.
+        let newChild = try repository.createTask(
+            title: "New child",
+            parentID: completedRoot.id,
+            colorHex: nil,
+            iconName: nil
+        )
         try repository.updateTask(
             taskID: child.id,
             title: "Updated history",
-            status: .active,
             parentID: completedRoot.id,
             categoryID: nil,
             colorHex: nil,
@@ -232,7 +225,6 @@ struct CoreTaskStoreTests {
         try repository.updateTask(
             taskID: child.id,
             title: "Recovered child",
-            status: .active,
             parentID: activeRoot.id,
             categoryID: nil,
             colorHex: nil,
@@ -243,9 +235,17 @@ struct CoreTaskStoreTests {
         )
         #expect(try repository.task(id: child.id)?.parentID == activeRoot.id)
 
-        #expect(throws: TaskRepositoryError.invalidMove) {
-            try repository.moveTask(taskID: completedRoot.id, newParentID: activeRoot.id, sortOrder: 10)
-        }
+        try repository.moveTask(
+            taskID: completedRoot.id,
+            newParentID: activeRoot.id,
+            sortOrder: 10
+        )
+        #expect(try repository.task(id: completedRoot.id)?.parentID == activeRoot.id)
+        #expect(try repository.task(id: newChild.id)?.parentID == completedRoot.id)
+        #expect(
+            try repository.task(id: completedRoot.id)?.statusRaw ==
+                LegacyTaskStatusRaw.completed
+        )
     }
 
     @Test @MainActor
@@ -264,7 +264,6 @@ struct CoreTaskStoreTests {
         try repository.updateTask(
             taskID: task.id,
             title: "Edited staged child",
-            status: .active,
             parentID: missingParentID,
             categoryID: nil,
             colorHex: nil,
@@ -387,9 +386,8 @@ private final class TaskStoreTestRepository: TaskRepository {
         return task
     }
 
-    func updateTask(taskID: UUID, title: String, status: TaskStatus, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws {}
+    func updateTask(taskID: UUID, title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws {}
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {}
-    func setTaskStatus(taskID: UUID, status: TaskStatus) throws {}
     func archiveTask(taskID: UUID) throws {}
     func softDeleteTask(taskID: UUID) throws {
         tasksByID.removeValue(forKey: taskID)

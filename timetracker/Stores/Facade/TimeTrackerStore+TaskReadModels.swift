@@ -3,7 +3,7 @@ import Foundation
 extension TimeTrackerStore {
     var recentTasks: [TaskNode] {
         tasks
-            .filter { $0.status == .active && isTaskAvailableForTracking($0) }
+            .filter(isTaskAvailableForTracking)
             .sorted { lhs, rhs in
                 if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
                 return lhs.id.uuidString < rhs.id.uuidString
@@ -83,16 +83,6 @@ extension TimeTrackerStore {
 
     func isTaskVisible(_ task: TaskNode) -> Bool {
         visibleTaskIDs.contains(task.id)
-    }
-
-    func completedWorkBlockers(for task: TaskNode) -> [TaskNode] {
-        taskTrackingAvailabilityService
-            .completedBlockingTaskIDs(for: task.id, tasks: tasks)
-            .compactMap { taskByID[$0] }
-    }
-
-    func completedWorkBlocker(for task: TaskNode) -> TaskNode? {
-        completedWorkBlockers(for: task).last
     }
 
     func preferredTaskIDForSelection() -> UUID? {

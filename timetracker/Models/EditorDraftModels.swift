@@ -12,7 +12,6 @@ struct TaskEditorDraft: Identifiable, Equatable {
     let baseline: TaskEditorDraftBaseline?
     var taskID: UUID?
     var title: String
-    var status: TaskStatus
     var parentID: UUID?
     var categoryID: UUID?
     var colorHex: String
@@ -27,7 +26,6 @@ struct TaskEditorDraft: Identifiable, Equatable {
         self.baseline = nil
         self.taskID = nil
         self.title = ""
-        self.status = .active
         self.parentID = parentID
         self.categoryID = parentID == nil ? categoryID : nil
         self.colorHex = "1677FF"
@@ -60,7 +58,6 @@ struct TaskEditorDraft: Identifiable, Equatable {
         )
         self.taskID = task.id
         self.title = task.title
-        self.status = task.status
         self.parentID = task.parentID
         self.categoryID = task.parentID == nil ? categoryID : nil
         self.colorHex = task.colorHex ?? "1677FF"

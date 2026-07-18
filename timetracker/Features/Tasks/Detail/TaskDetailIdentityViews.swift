@@ -14,15 +14,19 @@ struct TaskDetailIdentityRow: View {
                         TaskIcon(task: task, size: 44)
                         identityText
                     }
-                    statusBadge
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if isRunning {
+                        RunningStatusBadge()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             } else {
                 HStack(alignment: .top, spacing: 14) {
                     TaskIcon(task: task, size: 44)
                     identityText
                     Spacer(minLength: 8)
-                    statusBadge
+                    if isRunning {
+                        RunningStatusBadge()
+                    }
                 }
             }
         }
@@ -39,16 +43,5 @@ struct TaskDetailIdentityRow: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var statusBadge: some View {
-        if isRunning {
-            RunningStatusBadge()
-        } else if task.status != .completed && !store.isTaskAvailableForTracking(task) {
-            TaskWorkBlockedStatusBadge()
-        } else {
-            TaskStatusBadge(status: task.status)
-        }
     }
 }

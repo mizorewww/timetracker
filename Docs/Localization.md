@@ -2,7 +2,7 @@
 
 Status: current localization contract
 
-Reviewed: 2026-07-15
+Reviewed: 2026-07-19
 
 Supported languages:
 
@@ -19,13 +19,13 @@ User-facing copy should be added to the `Localizable.strings` files under each t
 - Keep `InfoPlist.strings` in parity for the main app, Live Activity, Widget, and Watch, and keep the main app's `AppShortcuts.strings` in parity. These resource families currently need an explicit plist/static check in addition to the `Localizable.strings` unit suite.
 - Prefer concise labels that fit on iPhone.
 - Avoid implementation terms in everyday UI. Use ledger terminology only when the user is editing historical records or reading data-management settings.
-- Keep task states semantically distinct: “completed” remains visible but pauses new work, “archived” hides the branch, and “reopen” restores a completed path for work. Do not translate these as interchangeable delete/hide actions.
+- Do not expose or translate legacy task workflow values (`planned`, `active`, `completed`) as product state. Checklist completion copy belongs to checklist items and does not imply that the task is locked. Keep Archive distinct from Delete: Archive hides a branch; Delete retains its soft-deletion/tombstone semantics.
 - Forecast copy must identify whether the source is the user's explicit estimate or checklist evidence. Recent-pace language may describe projected active days but must not imply that history generated the remaining work amount.
 - When adding a key, add it to all three languages in the same change.
 
 ## Current Migration State
 
-The current worktree localizes navigation, Today, Tasks, completed-task blocking/reopen actions, explicit-estimate forecast reasons, Pomodoro, Analytics, Settings, task editing, segment editing, manual time entry, Live Activity fallbacks, sync status, and core validation errors.
+The current worktree localizes navigation, Today, Tasks, archive lifecycle copy, explicit-estimate forecast reasons, Pomodoro, Analytics, Settings, task editing, segment editing, manual time entry, Live Activity fallbacks, sync status, and core validation errors.
 
 Demo data is seeded with ASCII titles and notes so it does not bypass localization tests. Future demo content that must be localized should be produced through localized string keys at seed time.
 

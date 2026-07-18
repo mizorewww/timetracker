@@ -60,10 +60,6 @@ struct TaskDraftCommandHandler {
         try ArchiveTaskUseCase(repository: repository).execute(taskID: taskID)
     }
 
-    func setStatus(_ status: TaskStatus, taskID: UUID, repository: TaskRepository) throws {
-        try SetTaskStatusUseCase(repository: repository).execute(taskID: taskID, status: status)
-    }
-
     func softDelete(
         taskID: UUID,
         affectedTaskIDs: Set<UUID>,
@@ -98,7 +94,6 @@ struct TaskDraftCommandHandler {
         try UpdateTaskUseCase(repository: repository).execute(
             taskID: taskID,
             title: title,
-            status: draft.status,
             parentID: draft.parentID,
             categoryID: draft.categoryID,
             colorHex: draft.colorHex,

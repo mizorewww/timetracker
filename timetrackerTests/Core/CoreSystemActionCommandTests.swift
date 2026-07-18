@@ -389,7 +389,7 @@ struct CoreSystemActionCommandTests {
                 context: context
             )
         }
-        #expect(child.status == .active)
+        #expect(child.statusRaw == LegacyTaskStatusRaw.active)
         #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
     }
 

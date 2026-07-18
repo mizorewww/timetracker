@@ -15,9 +15,7 @@ struct TaskDetailActionsView: View {
                     .accessibilityIdentifier("task.detail.actions")
             }
 
-            if completedWorkBlocker != nil {
-                completedWorkUnavailableView
-            } else if !store.isTaskVisible(task) {
+            if !store.isTaskVisible(task) {
                 Label(AppStrings.localized("status.archived"), systemImage: "archivebox")
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("task.detail.trackingUnavailable")
@@ -58,56 +56,6 @@ struct TaskDetailActionsView: View {
 
     private var isAvailableForTracking: Bool {
         store.isTaskAvailableForTracking(task)
-    }
-
-    private var completedWorkBlocker: TaskNode? {
-        store.completedWorkBlocker(for: task)
-    }
-
-    private var completedWorkUnavailableMessage: String {
-        guard let completedWorkBlocker, completedWorkBlocker.id != task.id else {
-            return AppStrings.localized("task.completed.workUnavailable")
-        }
-        return String(
-            format: AppStrings.localized("task.completed.ancestorUnavailableFormat"),
-            completedWorkBlocker.title
-        )
-    }
-
-    private var reopenActionTitle: String {
-        guard let completedWorkBlocker, completedWorkBlocker.id != task.id else {
-            return AppStrings.localized("task.action.reopen")
-        }
-        return String(
-            format: AppStrings.localized("task.action.reopenAncestorFormat"),
-            completedWorkBlocker.title
-        )
-    }
-
-    private var completedWorkUnavailableView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label(
-                AppStrings.localized("task.status.blockedByCompletion"),
-                systemImage: "pause.circle.fill"
-            )
-            .font(.headline)
-            .foregroundStyle(.orange)
-
-            Text(completedWorkUnavailableMessage)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button {
-                store.reopenTaskForWork(task.id)
-            } label: {
-                Label(reopenActionTitle, systemImage: "arrow.uturn.backward.circle")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(.vertical, 4)
-        .accessibilityIdentifier("task.detail.reopen")
     }
 
     @ViewBuilder

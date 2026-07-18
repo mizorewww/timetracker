@@ -59,7 +59,6 @@ extension SwiftDataTaskRepository {
     func updateTask(
         taskID: UUID,
         title: String,
-        status: TaskStatus,
         parentID: UUID?,
         categoryID: UUID?,
         colorHex: String?,
@@ -83,8 +82,6 @@ extension SwiftDataTaskRepository {
 
         let now = Date()
         node.title = values.title
-        node.status = status
-        node.archivedAt = status == .archived ? (node.archivedAt ?? now) : nil
         node.parentID = parentID
         node.colorHex = values.colorHex
         node.iconName = values.iconName
@@ -123,21 +120,10 @@ extension SwiftDataTaskRepository {
         try context.saveAfterMutationStep()
     }
 
-    func setTaskStatus(taskID: UUID, status: TaskStatus) throws {
-        guard let node = try task(id: taskID) else { return }
-        let now = Date()
-        node.status = status
-        node.archivedAt = status == .archived ? (node.archivedAt ?? now) : nil
-        node.updatedAt = now
-        node.deviceID = deviceID
-        node.clientMutationID = UUID()
-        try context.saveAfterMutationStep()
-    }
-
     func archiveTask(taskID: UUID) throws {
         guard let node = try task(id: taskID) else { return }
         let now = Date()
-        node.status = .archived
+        node.statusRaw = LegacyTaskStatusRaw.archived
         node.archivedAt = node.archivedAt ?? now
         node.updatedAt = now
         node.deviceID = deviceID

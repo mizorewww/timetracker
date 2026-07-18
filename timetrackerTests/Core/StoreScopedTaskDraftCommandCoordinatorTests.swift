@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct StoreScopedTaskDraftCommandCoordinatorTests {
     @Test
-    func staleSceneDraftCannotCompleteTaskStartedBySiblingContext() throws {
+    func draftMetadataCanSaveWhileSiblingTimerRuns() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Original title",
@@ -23,20 +23,19 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
             taskID: task.id,
             container: context.container
         )
-        draft.title = "Must not persist"
-        draft.status = .completed
+        draft.title = "Saved while running"
 
-        #expect(store.saveTaskDraft(draft) == false)
+        #expect(store.saveTaskDraft(draft))
         let fetched = try freshTaskRepository(context.container).task(id: task.id)
         let persisted = try #require(fetched)
-        #expect(persisted.title == "Original title")
-        #expect(persisted.status == .active)
+        #expect(persisted.title == "Saved while running")
+        #expect(persisted.statusRaw == LegacyTaskStatusRaw.active)
         #expect(store.activeSegments.count == 1)
-        #expect(store.errorMessage == AppStrings.localized("task.action.complete.stopFirst"))
+        #expect(store.errorMessage == nil)
     }
 
     @Test
-    func staleSceneDraftCannotMoveIntoSiblingCompletedParent() throws {
+    func draftCanMoveIntoLegacyCompletedParent() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let originalParent = try repository.createTask(
@@ -62,25 +61,25 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         var draft = store.editorDraft(for: try #require(store.task(for: child.id)))
         #expect(store.trackableTaskIDs.contains(destinationParent.id))
 
-        _ = try StoreScopedTaskLifecycleCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
-            deviceID: "sibling"
-        ).setStatus(.completed, taskID: destinationParent.id)
+        destinationParent.statusRaw = LegacyTaskStatusRaw.completed
+        try context.save()
         draft.parentID = destinationParent.id
-        draft.title = "Must not move"
+        draft.title = "Moved child"
 
-        #expect(store.saveTaskDraft(draft) == false)
+        #expect(store.saveTaskDraft(draft))
         let fetched = try freshTaskRepository(context.container).task(id: child.id)
         let persisted = try #require(fetched)
-        #expect(persisted.parentID == originalParent.id)
-        #expect(persisted.title == "Child")
-        #expect(store.task(for: destinationParent.id)?.status == .completed)
-        #expect(store.errorMessage == AppStrings.localized("task.parentUnavailable"))
+        #expect(persisted.parentID == destinationParent.id)
+        #expect(persisted.title == "Moved child")
+        #expect(
+            store.task(for: destinationParent.id)?.statusRaw ==
+                LegacyTaskStatusRaw.completed
+        )
+        #expect(store.errorMessage == nil)
     }
 
     @Test
-    func metadataEditOnAlreadyCompletedTaskDoesNotReapplyStopGate() throws {
+    func metadataEditPreservesLegacyCompletedRawValueWhileTimerRuns() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(
@@ -91,7 +90,8 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         _ = try SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
             .startTask(taskID: task.id, source: .timer)
-        try taskRepository.setTaskStatus(taskID: task.id, status: .completed)
+        task.statusRaw = LegacyTaskStatusRaw.completed
+        try context.save()
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
@@ -101,7 +101,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         let fetched = try freshTaskRepository(context.container).task(id: task.id)
         let persisted = try #require(fetched)
         #expect(persisted.title == "Updated metadata")
-        #expect(persisted.status == .completed)
+        #expect(persisted.statusRaw == LegacyTaskStatusRaw.completed)
         #expect(store.activeSegments.count == 1)
     }
 
@@ -118,19 +118,27 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         store.configureIfNeeded(context: context)
         var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
 
-        _ = try StoreScopedTaskLifecycleCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
-            deviceID: "sibling"
-        ).setStatus(.completed, taskID: task.id)
+        let siblingRepository = freshTaskRepository(context.container, deviceID: "sibling")
+        let siblingTask = try #require(try siblingRepository.task(id: task.id))
+        try siblingRepository.updateTask(
+            taskID: siblingTask.id,
+            title: "Sibling title",
+            parentID: siblingTask.parentID,
+            categoryID: nil,
+            colorHex: siblingTask.colorHex,
+            iconName: siblingTask.iconName,
+            notes: siblingTask.notes,
+            estimatedSeconds: siblingTask.estimatedSeconds,
+            dueAt: siblingTask.dueAt
+        )
         draft.title = "Stale title"
 
         #expect(store.saveTaskDraft(draft) == false)
         let fetched = try freshTaskRepository(context.container).task(id: task.id)
         let persisted = try #require(fetched)
-        #expect(persisted.title == "Canonical title")
-        #expect(persisted.status == .completed)
-        #expect(store.task(for: task.id)?.status == .completed)
+        #expect(persisted.title == "Sibling title")
+        #expect(persisted.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(store.task(for: task.id)?.title == "Sibling title")
         #expect(store.errorMessage == AppStrings.localized("task.editor.staleDraft"))
     }
 
@@ -301,11 +309,12 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
     }
 
     private func freshTaskRepository(
-        _ container: ModelContainer
+        _ container: ModelContainer,
+        deviceID: String = "test"
     ) -> SwiftDataTaskRepository {
         SwiftDataTaskRepository(
             context: ModelContext(container),
-            deviceID: "test"
+            deviceID: deviceID
         )
     }
 }

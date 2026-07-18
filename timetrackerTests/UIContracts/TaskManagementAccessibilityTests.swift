@@ -30,7 +30,6 @@ struct TaskManagementAccessibilityTests {
             rollup: rollup,
             workedSeconds: 3_600,
             childCount: 2,
-            isAvailableForTracking: true,
             isRunning: true
         )
 
@@ -41,7 +40,6 @@ struct TaskManagementAccessibilityTests {
 
         #expect(snapshot.label == task.title)
         #expect(snapshot.valueComponents == [
-            task.status.displayName,
             path,
             AppStrings.running,
             String(
@@ -59,15 +57,14 @@ struct TaskManagementAccessibilityTests {
     }
 
     @Test
-    func snapshotReplacesActiveWithBlockedAndAvoidsDuplicatePath() {
-        let task = TaskNode(title: "Blocked task", parentID: nil, deviceID: "test")
+    func snapshotAvoidsDuplicatePathAndOmitsWorkflowStatus() {
+        let task = TaskNode(title: "Ordinary task", parentID: nil, deviceID: "test")
         let presentation = TaskManagementRowPresentation(
             path: task.title,
             progress: ChecklistProgress(taskID: task.id, totalCount: 0, completedCount: 0),
             rollup: nil,
             workedSeconds: 0,
             childCount: 0,
-            isAvailableForTracking: false,
             isRunning: false
         )
 
@@ -77,7 +74,6 @@ struct TaskManagementAccessibilityTests {
         )
 
         #expect(snapshot.valueComponents == [
-            AppStrings.localized("task.status.blockedByCompletion"),
             String(
                 format: AppStrings.localized("tasks.workedFormat"),
                 DurationFormatter.compact(0)

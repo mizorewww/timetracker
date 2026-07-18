@@ -11,10 +11,7 @@ struct TaskManagementRowAccessibilitySnapshot {
     init(task: TaskNode, presentation: TaskManagementRowPresentation) {
         label = task.title
 
-        var components = [task.status.displayName]
-        if !presentation.isAvailableForTracking, task.status != .completed {
-            components[0] = AppStrings.localized("task.status.blockedByCompletion")
-        }
+        var components: [String] = []
         if !presentation.path.isEmpty,
            presentation.path.localizedCaseInsensitiveCompare(task.title) != .orderedSame {
             components.append(presentation.path)
@@ -72,8 +69,6 @@ struct TaskManagementAccessibilityBody: View {
             HStack(alignment: .top, spacing: 10) {
                 Text(task.title)
                     .font(.headline)
-                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                    .strikethrough(task.status == .completed)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,11 +91,8 @@ struct TaskManagementAccessibilityBody: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if showsExceptionalStatus || presentation.isRunning {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 6) { statusItems }
-                    VStack(alignment: .leading, spacing: 6) { statusItems }
-                }
+            if presentation.isRunning {
+                RunningStatusBadge()
             }
 
             Text(
@@ -132,28 +124,5 @@ struct TaskManagementAccessibilityBody: View {
             }
         }
         .padding(.vertical, 8)
-    }
-
-    @ViewBuilder
-    private var statusItems: some View {
-        if task.status != .active || !presentation.isAvailableForTracking {
-            statusMetadataBadge
-        }
-        if presentation.isRunning {
-            RunningStatusBadge()
-        }
-    }
-
-    @ViewBuilder
-    private var statusMetadataBadge: some View {
-        if task.status != .completed && !presentation.isAvailableForTracking {
-            TaskWorkBlockedStatusBadge()
-        } else if task.status != .active {
-            TaskStatusBadge(status: task.status)
-        }
-    }
-
-    private var showsExceptionalStatus: Bool {
-        task.status != .active || !presentation.isAvailableForTracking
     }
 }

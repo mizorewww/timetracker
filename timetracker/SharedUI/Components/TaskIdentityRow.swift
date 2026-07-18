@@ -1,15 +1,8 @@
 import SwiftUI
 
-enum TaskIdentityRowState: Equatable {
-    case normal
-    case completed
-    case blocked
-}
-
 struct TaskIdentityRow: View {
     let presentation: TaskIdentityPresentation
     var context: TaskIdentityPresentation.Context = .standard
-    var state: TaskIdentityRowState = .normal
     var iconSize: CGFloat = 28
 
     var body: some View {
@@ -20,8 +13,6 @@ struct TaskIdentityRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(text.primary)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(state == .completed ? .secondary : .primary)
-                    .strikethrough(state == .completed)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .layoutPriority(1)
@@ -32,15 +23,6 @@ struct TaskIdentityRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-
-                switch state {
-                case .normal:
-                    EmptyView()
-                case .completed:
-                    TaskStatusBadge(status: .completed)
-                case .blocked:
-                    TaskWorkBlockedStatusBadge()
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

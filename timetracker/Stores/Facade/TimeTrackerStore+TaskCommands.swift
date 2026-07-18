@@ -76,47 +76,11 @@ extension TimeTrackerStore {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return false }
         let wasSelected = selectedTaskID == targetID
-        let didArchive = performStoreScopedTaskStatusTransition(
-            .archived,
-            taskID: targetID
-        )
+        let didArchive = performStoreScopedTaskArchive(taskID: targetID)
         if didArchive, wasSelected {
             selectedTaskID = tasks.first(where: { $0.id != targetID && isTaskAvailableForTracking($0) })?.id
         }
         return didArchive
-    }
-
-    @discardableResult
-    func setTaskStatus(_ status: TaskStatus, taskID: UUID? = nil) -> Bool {
-        let targetID = taskID ?? selectedTaskID
-        guard let targetID else { return false }
-        return performStoreScopedTaskStatusTransition(status, taskID: targetID)
-    }
-
-    @discardableResult
-    func reopenTaskForWork(_ taskID: UUID) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).reopenForWork(taskID: taskID)
-            if outcome.didMutate {
-                finishStoreScopedMutation(events: outcome.events)
-            } else {
-                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
-            }
-            return outcome.didMutate
-        } catch {
-            if error is TaskLifecycleMutationError {
-                refreshStoreScopedTaskLifecycleReadModels()
-            }
-            errorMessage = error.localizedDescription
-            return false
-        }
     }
 
     @discardableResult
@@ -170,10 +134,7 @@ extension TimeTrackerStore {
         }
     }
 
-    private func performStoreScopedTaskStatusTransition(
-        _ status: TaskStatus,
-        taskID: UUID
-    ) -> Bool {
+    private func performStoreScopedTaskArchive(taskID: UUID) -> Bool {
         guard let modelContext else {
             errorMessage = StoreError.notConfigured.localizedDescription
             return false
@@ -182,7 +143,7 @@ extension TimeTrackerStore {
             let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
                 container: modelContext.container,
                 writeAuthorization: writeAuthorization
-            ).setStatus(status, taskID: taskID)
+            ).archive(taskID: taskID)
             if outcome.didMutate {
                 finishStoreScopedMutation(events: outcome.events)
             } else {

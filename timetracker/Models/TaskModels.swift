@@ -1,9 +1,10 @@
 import Foundation
 import SwiftData
 
-/// Raw values persisted since schema V4. Keep this namespace independent from
-/// presentation semantics so legacy stores and restore preflight share one
-/// compatibility contract.
+/// Raw values persisted since schema V4. This is a deprecated archive
+/// compatibility contract, not a product-facing task state model. Existing
+/// stores, CloudKit records, and backup snapshots must continue to round-trip
+/// all four values without giving planned/active/completed any behavior.
 nonisolated enum LegacyTaskStatusRaw {
     static let active = "active"
     static let planned = "planned"
@@ -18,13 +19,6 @@ nonisolated enum LegacyTaskStatusRaw {
     ]
 }
 
-enum TaskStatus: String, Codable, CaseIterable {
-    case planned
-    case active
-    case completed
-    case archived
-}
-
 @Model
 final class TaskNode {
     var id: UUID = UUID()
@@ -34,6 +28,8 @@ final class TaskNode {
     var sortOrder: Double = 0
     var path: String = ""
     var depth: Int = 0
+    /// Deprecated persistence compatibility. New product behavior only
+    /// interprets the legacy archived value.
     var statusRaw: String = LegacyTaskStatusRaw.active
     var colorHex: String?
     var iconName: String?
@@ -161,52 +157,5 @@ extension Sequence where Element == TaskCategoryAssignment {
 extension TaskNode {
     var isArchivedForLifecycle: Bool {
         archivedAt != nil || statusRaw == LegacyTaskStatusRaw.archived
-    }
-
-    var status: TaskStatus {
-        get { TaskStatus(rawValue: statusRaw) ?? .active }
-        set { statusRaw = newValue.rawValue }
-    }
-}
-
-extension TaskStatus {
-    static var editableCases: [TaskStatus] {
-        [.planned, .active, .completed]
-    }
-
-    var displayName: String {
-        switch self {
-        case .planned: return AppStrings.localized("status.planned")
-        case .active: return AppStrings.localized("status.active")
-        case .completed: return AppStrings.localized("status.completed")
-        case .archived: return AppStrings.localized("status.archived")
-        }
-    }
-
-    var exampleText: String {
-        switch self {
-        case .planned: return AppStrings.localized("editor.task.status.planned.example")
-        case .active: return AppStrings.localized("editor.task.status.active.example")
-        case .completed: return AppStrings.localized("editor.task.status.completed.example")
-        case .archived: return AppStrings.localized("status.archived")
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .planned: return "calendar"
-        case .active: return "circle"
-        case .completed: return "checkmark.circle.fill"
-        case .archived: return "archivebox"
-        }
-    }
-
-    var colorHex: String {
-        switch self {
-        case .planned: return "0EA5E9"
-        case .active: return "64748B"
-        case .completed: return "16A34A"
-        case .archived: return "64748B"
-        }
     }
 }

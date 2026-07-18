@@ -54,7 +54,6 @@ struct UpdateTaskUseCase {
     func execute(
         taskID: UUID,
         title: String,
-        status: TaskStatus,
         parentID: UUID?,
         categoryID: UUID?,
         colorHex: String?,
@@ -66,7 +65,6 @@ struct UpdateTaskUseCase {
         try repository.updateTask(
             taskID: taskID,
             title: title,
-            status: status,
             parentID: parentID,
             categoryID: categoryID,
             colorHex: colorHex,
@@ -83,14 +81,6 @@ struct ArchiveTaskUseCase {
 
     func execute(taskID: UUID) throws {
         try repository.archiveTask(taskID: taskID)
-    }
-}
-
-struct SetTaskStatusUseCase {
-    let repository: TaskRepository
-
-    func execute(taskID: UUID, status: TaskStatus) throws {
-        try repository.setTaskStatus(taskID: taskID, status: status)
     }
 }
 

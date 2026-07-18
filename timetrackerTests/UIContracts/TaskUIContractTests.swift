@@ -144,17 +144,20 @@ struct TaskUIContractTests {
         #expect(actionSource.contains("store.stop(segment: activeSegment)"))
         #expect(detailSource.contains("task.detail.trackingUnavailable"))
         #expect(detailSource.contains("task.archived.trackingUnavailable"))
-        #expect(identitySource.contains("!store.isTaskAvailableForTracking(task)"))
+        #expect(identitySource.contains("RunningStatusBadge()"))
+        #expect(identitySource.contains("isTaskAvailableForTracking") == false)
+        #expect(identitySource.contains("TaskStatusBadge") == false)
     }
 
     @Test
-    func completedTasksStayVisibleButExposeReopenInsteadOfNewWork() throws {
+    func legacyTaskStatusHasNoWorkflowUIOrAdmissionSemantics() throws {
         let readModels = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift")
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
         let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
         let editorSource = try taskEditorFeatureSource()
         let appIntentSource = try sourceText("timetracker/AppIntents/TimeTrackerAppIntents.swift")
+        let modelSource = try sourceText("timetracker/Models/TaskModels.swift")
 
         #expect(readModels.contains("visibleTaskIDs = eligibility.visibleTaskIDs"))
         #expect(readModels.contains("trackableTaskIDs = eligibility.trackableTaskIDs"))
@@ -162,13 +165,14 @@ struct TaskUIContractTests {
         #expect(tasksSource.contains("store.visibleTaskCount == 0"))
         #expect(tasksSource.contains("store.taskSearchResults(matching: query)"))
         #expect(tasksSource.contains("store.tasks.contains(where: store.isTaskVisible)") == false)
-        #expect(actionSource.contains("store.reopenTaskForWork(task.id)"))
-        #expect(actionSource.contains("task.action.reopenAncestorFormat"))
-        #expect(actionSource.contains("task.action.complete.stopFirst"))
-        #expect(detailSource.contains("task.completed.workUnavailable"))
-        #expect(detailSource.contains("task.detail.reopen"))
-        #expect(editorSource.contains("task.parent.completedLocked"))
-        #expect(editorSource.contains("disabledStatuses:"))
+        #expect(actionSource.contains("TaskStatus") == false)
+        #expect(actionSource.contains("reopenTask") == false)
+        #expect(detailSource.contains("task.completed.") == false)
+        #expect(editorSource.contains("TaskStatus") == false)
+        #expect(editorSource.contains("draft.status") == false)
+        #expect(modelSource.contains("enum TaskStatus") == false)
+        #expect(modelSource.contains("var status:") == false)
+        #expect(modelSource.contains("LegacyTaskStatusRaw"))
         #expect(appIntentSource.contains(".trackableTaskIDs(tasks: tasks)"))
     }
 
@@ -250,7 +254,8 @@ struct TaskUIContractTests {
         #expect(rowSource.contains(".accessibilityElement(children: .ignore)") == false)
         #expect(rowSource.contains("struct TaskManagementRowPresentation"))
         #expect(rowSource.contains("ListFormatter.localizedString(byJoining: valueComponents)"))
-        #expect(rowSource.contains("else if task.status != .active"))
+        #expect(rowSource.contains("TaskStatusBadge") == false)
+        #expect(rowSource.contains("RunningStatusBadge()"))
         #expect(rowSource.contains(".lineLimit(nil)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.disclosure.\\(task.id.uuidString)\")"))
@@ -283,15 +288,15 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskEditorUsesInlineStatusPickerAndRemovesTaskKindClassification() throws {
+    func taskEditorOmitsWorkflowStatusAndTaskKindClassification() throws {
         let editorSource = try taskEditorFeatureSource()
         let modelsSource = try sourceText("timetracker/Models/TaskModels.swift")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(editorSource.contains("TaskStatusPicker("))
-        #expect(editorSource.contains("selection: $draft.status"))
-        #expect(editorSource.contains(".pickerStyle(.inline)"))
-        #expect(editorSource.contains("TaskStatusPickerOption(status: status)"))
+        #expect(editorSource.contains("TaskStatusPicker(") == false)
+        #expect(editorSource.contains("draft.status") == false)
+        #expect(modelsSource.contains("enum TaskStatus") == false)
+        #expect(englishStrings.contains("editor.task.status") == false)
         #expect(editorSource.contains("TaskKindPicker") == false)
         #expect(modelsSource.contains("enum TaskNodeKind") == false)
         #expect(englishStrings.contains("editor.task.kind") == false)
@@ -397,7 +402,7 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskListShowsStatusBadgesInsteadOfTaskKindBadges() throws {
+    func taskListShowsRunningStateWithoutWorkflowStatusBadges() throws {
         let tasksSource = try taskManagementFeatureSource()
         let sharedSource = try [
             "timetracker/SharedUI/Components/ChecklistControls.swift",
@@ -407,12 +412,13 @@ struct TaskUIContractTests {
         .map { try sourceText($0) }
         .joined(separator: "\n")
 
-        #expect(tasksSource.contains("TaskStatusBadge(status: task.status)"))
+        #expect(tasksSource.contains("TaskStatusBadge") == false)
+        #expect(tasksSource.contains("task.status") == false)
         #expect(tasksSource.contains("store.selectTask(task.id, revealInToday: false)") == false)
         #expect(tasksSource.contains("RunningStatusBadge()"))
         #expect(tasksSource.contains("TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
-        #expect(sharedSource.contains("struct TaskStatusBadge"))
+        #expect(sharedSource.contains("struct TaskStatusBadge") == false)
         #expect(sharedSource.contains("struct RunningStatusBadge"))
     }
 
@@ -517,27 +523,27 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskWorkspaceKeepsAReadableStatusAndUsesTheNativeEditorControl() throws {
+    func taskWorkspaceOmitsWorkflowStatusFromIdentityAndEditor() throws {
         let detailSource = try taskDetailFeatureSource()
         let editorSource = try taskEditorFeatureSource()
 
-        #expect(detailSource.contains("TaskStatusBadge(status: task.status)"))
+        #expect(detailSource.contains("TaskStatusBadge") == false)
+        #expect(detailSource.contains("task.status") == false)
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.identity\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
-        #expect(editorSource.contains("TaskStatusPicker("))
-        #expect(editorSource.contains("selection: $draft.status"))
-        #expect(editorSource.contains(".pickerStyle(.inline)"))
+        #expect(editorSource.contains("TaskStatusPicker(") == false)
+        #expect(editorSource.contains("draft.status") == false)
         #expect(editorSource.contains("TaskDetailStatusSelector") == false)
     }
 
     @Test
-    func taskRowsKeepStatusWithMetadataInsteadOfFloatingAtTrailingEdge() throws {
+    func taskRowsKeepWorkflowStatusOutOfMetadataAndTrailingEdge() throws {
         let rowSource = try taskManagementFeatureSource()
 
-        #expect(rowSource.contains("private var statusMetadataBadge"))
-        #expect(rowSource.contains("statusMetadataBadge"))
-        #expect(rowSource.contains("TaskStatusBadge(status: task.status)\n\n            if showsNavigationChevron") == false)
-        #expect(rowSource.contains("TaskStatusBadge(status: task.status)\n                    if isRunning") == false)
+        #expect(rowSource.contains("statusMetadataBadge") == false)
+        #expect(rowSource.contains("TaskStatusBadge") == false)
+        #expect(rowSource.contains("task.status") == false)
+        #expect(rowSource.contains("RunningStatusBadge()"))
     }
 
     @Test
@@ -974,7 +980,6 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",
-            "timetracker/Features/Tasks/Editor/TaskStatusPicker.swift",
             "timetracker/Features/Tasks/Editor/TaskPlanEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",

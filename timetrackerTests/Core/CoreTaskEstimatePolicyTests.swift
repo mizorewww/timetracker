@@ -28,7 +28,6 @@ struct CoreTaskEstimatePolicyTests {
         try repository.updateTask(
             taskID: task.id,
             title: task.title,
-            status: task.status,
             parentID: task.parentID,
             categoryID: nil,
             colorHex: task.colorHex,

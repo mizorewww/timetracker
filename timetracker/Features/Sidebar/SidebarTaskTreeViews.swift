@@ -96,7 +96,7 @@ struct SidebarTaskTreeRow: View {
     private var taskContent: some View {
         let progress = store.checklistProgress(for: task.id)
         let childCount = row.childCount
-        let blocked = task.status != .completed && !store.isTaskAvailableForTracking(task)
+        let isRunning = store.activeSegment(for: task.id) != nil
 
         return HStack(spacing: 8) {
             Image(systemName: task.iconName ?? "checkmark.circle")
@@ -104,8 +104,6 @@ struct SidebarTaskTreeRow: View {
                 .accessibilityHidden(true)
 
             Text(task.title)
-                .strikethrough(task.status == .completed)
-                .foregroundStyle(task.status == .completed ? .secondary : .primary)
                 .lineLimit(1)
 
             Spacer(minLength: 4)
@@ -120,37 +118,31 @@ struct SidebarTaskTreeRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Image(systemName: blocked ? "pause.circle.fill" : task.status.symbolName)
-                .font(.caption)
-                .foregroundStyle(
-                    blocked ? .orange : (Color(hex: task.status.colorHex) ?? .secondary)
-                )
-                .frame(width: 14)
-                .accessibilityHidden(true)
-                .help(
-                    blocked
-                        ? AppStrings.localized("task.status.blockedByCompletion")
-                        : task.status.displayName
-                )
+            if isRunning {
+                RunningStatusBadge()
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("sidebar.task.\(task.id.uuidString)")
         .accessibilityLabel(task.title)
         .accessibilityValue(
-            accessibilityValue(progress: progress, childCount: childCount, blocked: blocked)
+            accessibilityValue(
+                progress: progress,
+                childCount: childCount,
+                isRunning: isRunning
+            )
         )
     }
 
     private func accessibilityValue(
         progress: ChecklistProgress,
         childCount: Int,
-        blocked: Bool
+        isRunning: Bool
     ) -> String {
-        var values = [
-            blocked
-                ? AppStrings.localized("task.status.blockedByCompletion")
-                : task.status.displayName
-        ]
+        var values: [String] = []
+        if isRunning {
+            values.append(AppStrings.running)
+        }
         if progress.totalCount > 0 {
             values.append(progress.label)
         }

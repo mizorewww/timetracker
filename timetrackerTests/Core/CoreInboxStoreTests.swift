@@ -351,7 +351,7 @@ struct CoreInboxStoreTests {
             container: context.container,
             writeAuthorization: .isolatedTestHarness,
             deviceID: "sibling"
-        ).setStatus(.archived, taskID: parent.id)
+        ).archive(taskID: parent.id)
 
         for _ in 0..<50 where !store.checklistVisualSuggestionInFlightIDs.isEmpty {
             try await Task.sleep(for: .milliseconds(10))
@@ -463,7 +463,7 @@ struct CoreInboxStoreTests {
     func staleSuggestionCannotWriteIntoAChildOfAnArchivedTask() {
         let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
-        parent.status = .archived
+        parent.statusRaw = LegacyTaskStatusRaw.archived
         let item = InboxItem(title: "Should stay in inbox", deviceID: "test")
         let suggestion = InboxSuggestion(
             inboxItemID: item.id,

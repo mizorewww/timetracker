@@ -14,10 +14,6 @@ struct TaskInfoEditorSection: View {
         let parentChangeBlocker = originalTask.flatMap {
             store.parentChangeBlocker(for: $0)
         }
-        let hasActiveTimerInSubtree = draft.taskID.map {
-            store.hasActiveTimer(inTaskSubtree: $0)
-        } ?? false
-        let blocksCompletion = hasActiveTimerInSubtree && originalTask?.status != .completed
 
         Section {
             VStack(alignment: .leading, spacing: 6) {
@@ -36,10 +32,6 @@ struct TaskInfoEditorSection: View {
                     )
                 }
             }
-            TaskStatusPicker(
-                selection: $draft.status,
-                disabledStatuses: blocksCompletion ? [.completed] : []
-            )
             TaskParentPickerRow(
                 selection: $draft.parentID,
                 options: parentOptions,
@@ -78,11 +70,12 @@ struct TaskInfoEditorSection: View {
         } header: {
             Text(AppStrings.localized("editor.task.info"))
         } footer: {
-            TaskHierarchyEditorHints(
-                inheritedCategory: inheritedCategoryHint,
-                parentChangeBlocker: parentChangeBlocker,
-                blocksCompletion: blocksCompletion
-            )
+            if inheritedCategoryHint != nil || parentChangeBlocker != nil {
+                TaskHierarchyEditorHints(
+                    inheritedCategory: inheritedCategoryHint,
+                    parentChangeBlocker: parentChangeBlocker
+                )
+            }
         }
         .task {
             guard draft.taskID == nil,

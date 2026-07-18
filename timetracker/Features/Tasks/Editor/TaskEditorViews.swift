@@ -130,16 +130,7 @@ struct TaskEditorPanel: View {
     }
 
     private func canSave(_ validation: TaskEditorValidation) -> Bool {
-        validation.isValid && !isBlockedCompletionTransition
-    }
-
-    private var isBlockedCompletionTransition: Bool {
-        guard let taskID = draft.taskID,
-              draft.status == .completed,
-              sessionBaseline.status != .completed else {
-            return false
-        }
-        return store.hasActiveTimer(inTaskSubtree: taskID)
+        validation.isValid
     }
 
     private func requestCancel() {

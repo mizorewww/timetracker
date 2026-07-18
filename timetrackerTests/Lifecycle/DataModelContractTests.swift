@@ -213,7 +213,7 @@ struct DataModelContractTests {
         try context.save()
 
         #expect(task.id.uuidString.isEmpty == false)
-        #expect(task.status == .active)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.active)
         #expect(segment.source == .timer)
         #expect(run.state == .planned)
         #expect(countdown.deletedAt == nil)
@@ -391,17 +391,26 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func taskStatusCanBePlannedAndCompleted() throws {
+    func legacyTaskStatusRawValuesRemainPersistableButOnlyArchiveChangesLifecycle() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try repository.createTask(title: "Plan draft", parentID: nil, colorHex: nil, iconName: nil)
 
-        try repository.setTaskStatus(taskID: task.id, status: .planned)
-        #expect(try repository.task(id: task.id)?.status == .planned)
+        task.statusRaw = LegacyTaskStatusRaw.planned
+        try context.save()
+        #expect(try repository.task(id: task.id)?.statusRaw == LegacyTaskStatusRaw.planned)
+        #expect(try repository.task(id: task.id)?.isArchivedForLifecycle == false)
 
-        try repository.setTaskStatus(taskID: task.id, status: .completed)
-        #expect(try repository.task(id: task.id)?.status == .completed)
-        #expect(TaskStatus.completed.displayName == AppStrings.localized("status.completed"))
+        task.statusRaw = LegacyTaskStatusRaw.completed
+        try context.save()
+        #expect(try repository.task(id: task.id)?.statusRaw == LegacyTaskStatusRaw.completed)
+        #expect(try repository.task(id: task.id)?.isArchivedForLifecycle == false)
+
+        try repository.archiveTask(taskID: task.id)
+        let archived = try #require(try repository.task(id: task.id))
+        #expect(archived.statusRaw == LegacyTaskStatusRaw.archived)
+        #expect(archived.archivedAt != nil)
+        #expect(archived.isArchivedForLifecycle)
     }
 
     @Test @MainActor

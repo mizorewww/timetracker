@@ -302,7 +302,6 @@ struct TaskLedgerTests {
         try repository.updateTask(
             taskID: task.id,
             title: "Updated",
-            status: .active,
             parentID: nil,
             categoryID: nil,
             colorHex: nil,
@@ -316,11 +315,6 @@ struct TaskLedgerTests {
         task.deviceID = "remote-device"
         try context.save()
         try repository.moveTask(taskID: task.id, newParentID: destination.id, sortOrder: 10)
-        #expect(task.deviceID == "local-device")
-
-        task.deviceID = "remote-device"
-        try context.save()
-        try repository.setTaskStatus(taskID: task.id, status: .completed)
         #expect(task.deviceID == "local-device")
 
         task.deviceID = "remote-device"

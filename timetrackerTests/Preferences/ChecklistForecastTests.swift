@@ -325,17 +325,30 @@ struct ChecklistForecastTests {
     }
 
     @Test @MainActor
-    func taskRollupHandlesMissingDataDeletedChecklistAndCompletedTasks() throws {
+    func taskRollupTreatsLegacyCompletedRawAsOrdinaryAndChecklistAsCompletion() throws {
         let empty = TaskNode(title: "Empty", parentID: nil, deviceID: "test")
         let planned = TaskNode(title: "Planned", parentID: nil, deviceID: "test")
         planned.estimatedSeconds = 900
-        let completed = TaskNode(title: "Done", parentID: nil, deviceID: "test")
-        completed.status = .completed
-        completed.estimatedSeconds = 3_600
+        let legacyCompleted = TaskNode(title: "Legacy Done", parentID: nil, deviceID: "test")
+        legacyCompleted.statusRaw = LegacyTaskStatusRaw.completed
+        legacyCompleted.estimatedSeconds = 3_600
+        let checklistCompleted = TaskNode(title: "Checklist Done", parentID: nil, deviceID: "test")
+        checklistCompleted.estimatedSeconds = 1_800
         let deletedChecklist = ChecklistItem(taskID: planned.id, title: "Removed", isCompleted: true, sortOrder: 10, deviceID: "test")
         deletedChecklist.deletedAt = Date()
+        let completedChecklist = ChecklistItem(
+            taskID: checklistCompleted.id,
+            title: "Finished",
+            isCompleted: true,
+            sortOrder: 10,
+            deviceID: "test"
+        )
 
-        let rollups = TaskRollupService().rollups(tasks: [empty, planned, completed], segments: [], checklistItems: [deletedChecklist])
+        let rollups = TaskRollupService().rollups(
+            tasks: [empty, planned, legacyCompleted, checklistCompleted],
+            segments: [],
+            checklistItems: [deletedChecklist, completedChecklist]
+        )
 
         #expect(rollups[empty.id]?.estimatedTotalSeconds == nil)
         #expect(rollups[empty.id]?.confidence == ForecastConfidence.none)
@@ -344,8 +357,10 @@ struct ChecklistForecastTests {
         #expect(rollups[planned.id]?.estimatedTotalSeconds == 900)
         #expect(rollups[planned.id]?.remainingSeconds == 900)
         #expect(rollups[planned.id]?.forecastState == .ready)
-        #expect(rollups[completed.id]?.remainingSeconds == 0)
-        #expect(rollups[completed.id]?.forecastState == .completed)
+        #expect(rollups[legacyCompleted.id]?.remainingSeconds == 3_600)
+        #expect(rollups[legacyCompleted.id]?.forecastState == .ready)
+        #expect(rollups[checklistCompleted.id]?.remainingSeconds == 0)
+        #expect(rollups[checklistCompleted.id]?.forecastState == .completed)
     }
 
     @Test @MainActor

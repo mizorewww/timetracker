@@ -229,7 +229,6 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",
-            "timetracker/Features/Tasks/Editor/TaskStatusPicker.swift",
             "timetracker/Features/Tasks/Editor/TaskPlanEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift",
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
@@ -385,7 +384,6 @@ struct CoreSourceLayoutTests {
             "TaskEditorComponents.swift",
             "TaskEditorInfoSection.swift",
             "TaskEditorHierarchyRows.swift",
-            "TaskStatusPicker.swift",
             "TaskPlanEditorSection.swift",
             "TaskNotesEditorSection.swift",
             "TaskChecklistEditorSection.swift",
@@ -1162,7 +1160,7 @@ struct CoreSourceLayoutTests {
 
         let requiredEntryPoints = [
             "Start/stop timer behavior",
-            "Task create/edit/move/complete/reopen/archive/delete",
+            "Task create/edit/move/archive/delete",
             "Checklist UI or persistence",
             "Forecast math",
             "Analytics chart data",

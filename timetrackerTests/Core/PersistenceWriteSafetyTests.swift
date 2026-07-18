@@ -89,7 +89,6 @@ struct PersistenceWriteSafetyTests {
             try repository.updateTask(
                 taskID: taskID,
                 title: "Unsaved replacement",
-                status: .completed,
                 parentID: nil,
                 categoryID: nil,
                 colorHex: "AABBCC",
@@ -104,7 +103,7 @@ struct PersistenceWriteSafetyTests {
             context.fetch(FetchDescriptor<TaskNode>()).first { $0.id == taskID }
         )
         #expect(restored.title == "Original task")
-        #expect(restored.status == .active)
+        #expect(restored.statusRaw == LegacyTaskStatusRaw.active)
         #expect(restored.colorHex == "112233")
         #expect(restored.iconName == "circle")
         #expect(restored.notes == nil)

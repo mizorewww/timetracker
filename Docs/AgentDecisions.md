@@ -1514,6 +1514,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：2026-07-19 的冻结源码已完成 41/41 Watch command/projection/UI source-contract 定向回归与 3/3 相关 source-layout 预算回归，均为付费自动签名 macOS 测试且无 failed、skipped 或 runtime warning。generic iOS 与独立 generic watchOS Debug 自动签名构建均为 0 error/0 warning/analyzer warning；主 App、Watch、Widget 与 Live Activity 严格 codesign 通过，保留 Team `LT98S43NKA` 和付费开发签名。专属 Apple Watch SE 3 40mm / watchOS 27.0 模拟器覆盖三页、attention override、后续状态不抢页、44 pt Review、failure/status/timer 顺序、运行任务 timer 图标与回到 Active、pending、stale、connection error、大字号及空状态，截图与完整资源清理证据写入 dated Audit。未取得配对真机证据，因此 WatchConnectivity 往返、离线恢复、Always On 实机遮盖和功耗仍明确属于后续真机门禁。
 
+## AD-120：移除任务工作流状态，仅保留归档兼容边界
+
+状态：Accepted
+
+替代关系：本决策完整替代 AD-028。AD-028 保留为历史记录；所有更早决策中“任务 completed 会阻止新工作”“显示任务状态/完成/重开”或“必须先重开完成路径”的局部条款同样由本决策替代，其余关于锁、fresh context、原子提交、stale 校验、账本和 Pomodoro 一致性的边界继续有效。
+
+背景：`planned / active / completed / archived` 最初同时承担持久化兼容、任务组织和准入语义，后来又扩散成编辑器 Picker、列表/详情 badge、完成阻塞、路径级 Reopen 和多入口过滤。同一任务还拥有 Checklist 完成度，用户必须猜“完成任务”和“完成清单”之间的关系；旧 raw 值又已经存在于 V4 schema、本机/iCloud 数据和同步快照中，不能用一次破坏性的批量清洗换取表面简化。
+
+决策：
+
+- 任务不再拥有产品层 workflow status。编辑器、任务行、详情、菜单和辅助功能值都不显示状态选择器、状态徽章、Complete 或 Reopen。
+- Checklist 是任务完成与进度的唯一产品语义，并继续提供 checklist-derived forecast evidence。全部 checklist 完成时自身 remaining 为零，但任务和后代仍可继续计时、编辑、添加清单或接收其它新工作；显式任务 estimate 与子任务 rollup 规则不变。
+- `TaskNode.statusRaw` 作为旧 schema、snapshot 和 CloudKit record 的兼容字段保留。`LegacyTaskStatusRaw` 继续接受并 round-trip V4 的 `planned`、`active`、`completed`、`archived`，不迁移、不批量回写 iCloud；前三者完全不影响显示、层级、编辑、forecast 或 work admission。
+- 归档是独立生命周期：`archivedAt != nil` 或 raw `archived` 任一成立就隐藏该分支并拒绝新工作；新的 Archive 命令同时写 `archivedAt` 与 raw `archived` 以兼容旧客户端。归档活动子树前只要求先停止其中的 timer/Pomodoro，不再存在“完成任务前停止”或“重开路径”。
+- Delete 的 soft-delete/tombstone、历史 segment/session/Pomodoro 归属、生产 store 不永久清 tombstone 等规则不变。旧 `statusRaw` 也不能替代 `deletedAt`。
+
+后果：任务层只有“可工作”与“已归档/已删除”这组可解释边界，清单完成不会制造不可见的写入阻塞；Today、Quick Start、Pomodoro、Manual Time、Inbox、App Intent、Watch 和新建/移动目标都把 legacy planned/active/completed 当作普通任务。兼容字段仍能让历史数据和旧客户端往返，新客户端不再为它维护第二套状态机。
+
+验证：领域测试必须覆盖三种非归档 legacy raw 值仍可见、可编辑、可计时、可作父级并参与 forecast；archive 任一 marker 的读兼容、双写、活动子树拒绝和 marker 修复；snapshot preflight 四值接受且不批量改写；Checklist 全完成只把 checklist-derived remaining 置零。UI/source contract 必须确认状态 Picker、badge、Complete/Reopen 文案与命令入口消失，同时保留 Running、Archive、Delete 和 checklist 交互。签名测试、构建、三语 parity、正常字号操作路径和资源清理证据写入 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

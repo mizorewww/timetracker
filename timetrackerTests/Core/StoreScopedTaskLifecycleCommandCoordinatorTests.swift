@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     @Test
-    func matchingStatusRepairsAConflictingLegacyArchiveTimestamp() throws {
+    func archiveCanonicalizesATimestampOnlyLegacyArchiveMarker() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Conflicting archive timestamp",
@@ -16,28 +16,29 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
             iconName: nil
         )
         task.statusRaw = LegacyTaskStatusRaw.active
-        task.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        task.archivedAt = archivedAt
         try context.save()
         let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
             container: context.container,
             deviceID: "test"
         )
 
-        let repaired = try coordinator.setStatus(.active, taskID: task.id)
+        let repaired = try coordinator.archive(taskID: task.id)
 
         #expect(repaired.didMutate)
         let fetchedTask = try freshTaskRepository(context.container).task(id: task.id)
         let freshTask = try #require(fetchedTask)
-        #expect(freshTask.statusRaw == LegacyTaskStatusRaw.active)
-        #expect(freshTask.archivedAt == nil)
-        #expect(freshTask.isArchivedForLifecycle == false)
+        #expect(freshTask.statusRaw == LegacyTaskStatusRaw.archived)
+        #expect(freshTask.archivedAt == archivedAt)
+        #expect(freshTask.isArchivedForLifecycle)
 
-        let canonicalNoOp = try coordinator.setStatus(.active, taskID: task.id)
+        let canonicalNoOp = try coordinator.archive(taskID: task.id)
         #expect(canonicalNoOp.didMutate == false)
     }
 
     @Test
-    func matchingArchivedStatusRepairsAMissingArchiveTimestamp() throws {
+    func archiveCanonicalizesARawOnlyLegacyArchiveMarker() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Raw-only archive",
@@ -53,7 +54,7 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
             deviceID: "test"
         )
 
-        let repaired = try coordinator.setStatus(.archived, taskID: task.id)
+        let repaired = try coordinator.archive(taskID: task.id)
 
         #expect(repaired.didMutate)
         let fetchedTask = try freshTaskRepository(context.container).task(id: task.id)
@@ -64,7 +65,7 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     }
 
     @Test
-    func staleSceneCannotCompleteSubtreeStartedBySiblingContext() throws {
+    func staleSceneCannotArchiveSubtreeStartedBySiblingContext() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let parent = try taskRepository.createTask(
@@ -88,15 +89,17 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
             container: context.container
         )
 
-        #expect(store.setTaskStatus(.completed, taskID: parent.id) == false)
-        #expect(
-            try freshTaskRepository(context.container).task(id: parent.id)?.status == .active
+        #expect(store.archiveSelectedTask(taskID: parent.id) == false)
+        let persisted = try #require(
+            try freshTaskRepository(context.container).task(id: parent.id)
         )
-        #expect(store.errorMessage == AppStrings.localized("task.action.complete.stopFirst"))
+        #expect(persisted.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(persisted.archivedAt == nil)
+        #expect(store.errorMessage == AppStrings.localized("task.action.archive.stopFirst"))
     }
 
     @Test
-    func staleSceneCanCompleteAfterSiblingContextStopsTimer() throws {
+    func staleSceneCanArchiveAfterSiblingContextStopsTimer() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Fresh stop",
@@ -115,10 +118,13 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
             container: context.container
         )
 
-        #expect(store.setTaskStatus(.completed, taskID: task.id))
-        #expect(
-            try freshTaskRepository(context.container).task(id: task.id)?.status == .completed
+        #expect(store.archiveSelectedTask(taskID: task.id))
+        let persisted = try #require(
+            try freshTaskRepository(context.container).task(id: task.id)
         )
+        #expect(persisted.statusRaw == LegacyTaskStatusRaw.archived)
+        #expect(persisted.archivedAt != nil)
+        #expect(persisted.isArchivedForLifecycle)
         #expect(store.activeSegments.isEmpty)
     }
 
@@ -152,9 +158,11 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
         #expect(store.activePomodoroRun?.state == .shortBreak)
 
         #expect(store.archiveSelectedTask(taskID: task.id) == false)
-        #expect(
-            try freshTaskRepository(context.container).task(id: task.id)?.status == .active
+        let persisted = try #require(
+            try freshTaskRepository(context.container).task(id: task.id)
         )
+        #expect(persisted.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(persisted.archivedAt == nil)
         #expect(store.errorMessage == AppStrings.localized("task.action.archive.stopFirst"))
     }
 

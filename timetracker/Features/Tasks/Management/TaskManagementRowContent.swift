@@ -6,7 +6,6 @@ struct TaskManagementRowPresentation {
     let rollup: TaskRollup?
     let workedSeconds: Int
     let childCount: Int
-    let isAvailableForTracking: Bool
     let isRunning: Bool
 }
 
@@ -45,14 +44,11 @@ struct TaskManagementRowContent: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(task.title)
                     .font(.headline)
-                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                    .strikethrough(task.status == .completed)
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
                     Text(presentation.path)
                         .lineLimit(1)
-                    statusMetadataBadge
                     if presentation.isRunning {
                         RunningStatusBadge()
                     }
@@ -105,12 +101,9 @@ struct TaskManagementRowContent: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(task.title)
                     .font(.headline)
-                    .foregroundStyle(task.status == .completed ? .secondary : .primary)
-                    .strikethrough(task.status == .completed)
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
-                    statusMetadataBadge
                     if presentation.isRunning {
                         RunningStatusBadge()
                     }
@@ -160,14 +153,4 @@ struct TaskManagementRowContent: View {
         }
         .padding(.vertical, 6)
     }
-
-    @ViewBuilder
-    private var statusMetadataBadge: some View {
-        if task.status != .completed && !presentation.isAvailableForTracking {
-            TaskWorkBlockedStatusBadge()
-        } else if task.status != .active {
-            TaskStatusBadge(status: task.status)
-        }
-    }
-
 }

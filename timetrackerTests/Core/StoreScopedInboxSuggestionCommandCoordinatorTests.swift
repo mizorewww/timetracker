@@ -107,10 +107,10 @@ struct StoreScopedInboxSuggestionCommandCoordinatorTests {
         let baseline = InboxSuggestionApplyBaseline(item: item, suggestion: suggestion)
 
         let siblingContext = ModelContext(context.container)
-        try SwiftDataTaskRepository(context: siblingContext, deviceID: "sibling").setTaskStatus(
-            taskID: task.id,
-            status: .completed
-        )
+        try SwiftDataTaskRepository(
+            context: siblingContext,
+            deviceID: "sibling"
+        ).archiveTask(taskID: task.id)
 
         #expect(throws: StoreScopedInboxMutationError.taskUnavailable) {
             try coordinator(container: context.container).applySuggestion(baseline: baseline)

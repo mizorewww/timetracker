@@ -15,9 +15,8 @@ protocol TaskRepository {
     func updateCategory(categoryID: UUID, title: String, colorHex: String?, iconName: String?, includesInForecast: Bool) throws
     func softDeleteCategory(categoryID: UUID) throws
     @discardableResult func createTask(title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode
-    func updateTask(taskID: UUID, title: String, status: TaskStatus, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
+    func updateTask(taskID: UUID, title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
-    func setTaskStatus(taskID: UUID, status: TaskStatus) throws
     func archiveTask(taskID: UUID) throws
     func softDeleteTask(taskID: UUID) throws
 }

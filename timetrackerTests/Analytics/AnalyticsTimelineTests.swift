@@ -6,13 +6,14 @@ import Testing
 @Suite(.serialized)
 struct AnalyticsTimelineTests {
     @Test @MainActor
-    func analyticsOverviewBreakdownAndOverlapUseSegments() throws {
+    func analyticsOverviewBreakdownAndOverlapIgnoreLegacyTaskStatusRaw() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let firstTask = try taskRepository.createTask(title: "Coding", parentID: nil, colorHex: "1677FF", iconName: nil)
         let secondTask = try taskRepository.createTask(title: "Meeting", parentID: nil, colorHex: "EF4444", iconName: nil)
-        secondTask.status = .planned
+        firstTask.statusRaw = LegacyTaskStatusRaw.completed
+        secondTask.statusRaw = LegacyTaskStatusRaw.planned
         let calendar = Calendar.current
         let now = fixedAnalyticsMidday()
         let startOfDay = calendar.startOfDay(for: now)
@@ -41,7 +42,8 @@ struct AnalyticsTimelineTests {
         let tasks = store.taskBreakdown(range: .week, now: now)
         #expect(tasks.count == 2)
         #expect(tasks.first?.grossSeconds == 3_600)
-        #expect(tasks.first { $0.taskID == secondTask.id }?.status == .planned)
+        #expect(tasks.map(\.taskID).contains(firstTask.id))
+        #expect(tasks.map(\.taskID).contains(secondTask.id))
 
         let overlaps = store.overlapSegments(range: .week, now: now)
         #expect(overlaps.first?.wallDurationSeconds == 1_800)

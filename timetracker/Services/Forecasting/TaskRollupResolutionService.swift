@@ -23,16 +23,6 @@ struct TaskRollupForecastResolution {
         reason: AppStrings.localized("forecast.reason.needsChecklist")
     )
 
-    static func completed(sourceIDs: [UUID], sourceCount: Int) -> Self {
-        Self(
-            remainingSeconds: 0,
-            state: .completed,
-            sourceIDs: sourceIDs,
-            sourceCount: sourceCount,
-            reason: AppStrings.localized("forecast.reason.completed")
-        )
-    }
-
     static func aggregate(remainingSeconds: Int, sourceIDs: [UUID], sourceCount: Int) -> Self {
         Self(
             remainingSeconds: remainingSeconds,
@@ -63,13 +53,6 @@ struct TaskRollupResolutionService {
 
         if forecastEligibleTaskIDs?.contains(task.id) == false {
             return .disabled
-        }
-        if task.status == .completed {
-            let ownSourceCount = ownForecast.contributesSource ? 1 : 0
-            return .completed(
-                sourceIDs: (ownForecast.contributesSource ? [task.id] : []) + childSourceIDs,
-                sourceCount: ownSourceCount + childSourceCount
-            )
         }
         if ownForecast.remainingSeconds != nil {
             return resolutionForTaskWithOwnForecast(
@@ -107,12 +90,11 @@ struct TaskRollupResolutionService {
     }
 
     func confidence(
-        task: TaskNode,
         ownForecast: OwnChecklistForecast,
         childRollups: [TaskRollup],
         estimate: Int?
     ) -> ForecastConfidence {
-        task.status == .completed ? .high : service.confidence(
+        service.confidence(
             ownForecast: ownForecast,
             childRollups: childRollups.filter(\.isDisplayableForecast),
             estimate: estimate

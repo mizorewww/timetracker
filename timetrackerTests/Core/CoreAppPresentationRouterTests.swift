@@ -202,7 +202,7 @@ struct CoreAppPresentationRouterTests {
             parentID: nil,
             deviceID: "test"
         )
-        unavailableParent.status = .archived
+        unavailableParent.statusRaw = LegacyTaskStatusRaw.archived
         let store = makeTestStore()
         store.tasks = [unavailableParent]
         let router = AppPresentationRouter()

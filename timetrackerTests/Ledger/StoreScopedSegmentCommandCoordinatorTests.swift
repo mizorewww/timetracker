@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct StoreScopedSegmentCommandCoordinatorTests {
     @Test
-    func manualTimeUsesFreshTaskAvailabilityInsideTheStoreTransaction() throws {
+    func manualTimeAcceptsFreshLegacyCompletedTaskInsideTheStoreTransaction() throws {
         let context = try makeTestContext()
         let container = context.container
         let task = try makeTask("Manual target", context: context)
@@ -16,21 +16,29 @@ struct StoreScopedSegmentCommandCoordinatorTests {
         draft.startedAt = now.addingTimeInterval(-600)
         draft.endedAt = now.addingTimeInterval(-60)
 
-        try SwiftDataTaskRepository(
-            context: ModelContext(container),
+        let siblingContext = ModelContext(container)
+        let siblingRepository = SwiftDataTaskRepository(
+            context: siblingContext,
             deviceID: "sibling"
-        ).setTaskStatus(taskID: task.id, status: .completed)
+        )
+        let siblingTask = try #require(try siblingRepository.task(id: task.id))
+        siblingTask.statusRaw = LegacyTaskStatusRaw.completed
+        try siblingContext.save()
 
-        #expect(throws: TimeTrackingRepositoryError.taskUnavailable) {
-            try makeStoreScopedSegmentCoordinator(
-                container: container,
-                now: now
-            ).addManualTime(draft: draft, taskID: task.id)
-        }
+        try makeStoreScopedSegmentCoordinator(
+            container: container,
+            now: now
+        ).addManualTime(draft: draft, taskID: task.id)
+
+        let segments = try timeRepository(
+            ModelContext(container),
+            now: now
+        ).allSegments()
+        #expect(segments.count == 1)
         #expect(
-            try timeRepository(ModelContext(container), now: now)
-                .allSegments()
-                .isEmpty
+            segments.first?.taskID == task.id &&
+                segments.first?.startedAt == draft.startedAt &&
+                segments.first?.endedAt == draft.endedAt
         )
     }
 
@@ -161,7 +169,7 @@ struct StoreScopedSegmentCommandCoordinatorTests {
         try SwiftDataTaskRepository(
             context: ModelContext(container),
             deviceID: "sibling"
-        ).setTaskStatus(taskID: targetTask.id, status: .completed)
+        ).archiveTask(taskID: targetTask.id)
 
         #expect(throws: TimeTrackingRepositoryError.taskUnavailable) {
             _ = try makeStoreScopedSegmentCoordinator(

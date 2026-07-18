@@ -92,7 +92,9 @@ struct AccessibilitySurfaceContractTests {
         #expect(trend.contains("DurationFormatter.compact(point.wallSeconds)"))
         #expect(trend.contains("DurationFormatter.compact(point.grossSeconds)"))
         #expect(sidebar.contains(".accessibilityLabel(task.title)"))
-        #expect(sidebar.contains("accessibilityValue(progress: progress, childCount: childCount, blocked: blocked)"))
+        #expect(sidebar.contains("isRunning: isRunning"))
+        #expect(sidebar.contains("values.append(AppStrings.running)"))
+        #expect(sidebar.contains("blocked: blocked") == false)
         #expect(sidebar.contains("private var disclosureTargetSize: CGFloat"))
     }
 

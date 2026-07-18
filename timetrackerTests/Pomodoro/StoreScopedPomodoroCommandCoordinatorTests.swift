@@ -48,14 +48,14 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
     }
 
     @Test
-    func unavailableTaskStartDoesNotStopUnrelatedTimer() throws {
+    func archivedTaskStartDoesNotStopUnrelatedTimer() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let focusTask = try makeTask("Unavailable", repository: taskRepository)
         let otherTask = try makeTask("Other", repository: taskRepository)
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let otherSegment = try timeRepository.startTask(taskID: otherTask.id, source: .timer)
-        try taskRepository.setTaskStatus(taskID: focusTask.id, status: .completed)
+        try taskRepository.archiveTask(taskID: focusTask.id)
 
         #expect(throws: SystemActionCommandError.taskNotFound) {
             _ = try coordinator(context.container).start(
@@ -69,6 +69,41 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
 
         #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
         #expect(try pomodoroRepository(context).activeRuns().isEmpty)
+    }
+
+    @Test
+    func legacyCompletedTaskStartRemainsUsable() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let focusTask = try makeTask("Legacy completed", repository: taskRepository)
+        let otherTask = try makeTask("Other", repository: taskRepository)
+        focusTask.statusRaw = LegacyTaskStatusRaw.completed
+        try context.save()
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let otherSegment = try timeRepository.startTask(taskID: otherTask.id, source: .timer)
+        try setTestAllowParallelTimers(false, context: context)
+
+        let outcome = try coordinator(context.container).start(
+            taskID: focusTask.id,
+            focusSeconds: 1_500,
+            breakSeconds: 300,
+            longBreakSeconds: nil,
+            targetRounds: 2
+        )
+
+        #expect(outcome.stoppedSegments.map(\.segmentID) == [otherSegment.id])
+        let freshContext = ModelContext(context.container)
+        let activeSegments = try SwiftDataTimeTrackingRepository(
+            context: freshContext,
+            deviceID: "test"
+        ).activeSegments()
+        #expect(activeSegments.count == 1)
+        #expect(activeSegments.first?.taskID == focusTask.id)
+        #expect(activeSegments.first?.source == .pomodoro)
+        #expect(
+            try pomodoroRepository(freshContext).activeRuns().map(\.id) ==
+                [outcome.startedFocus.runID]
+        )
     }
 
     @Test
@@ -177,7 +212,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
     }
 
     @Test
-    func unavailableTaskResumeDoesNotStopUnrelatedTimer() throws {
+    func archivedTaskResumeDoesNotStopUnrelatedTimer() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let focusTask = try makeTask("Focus", repository: taskRepository)
@@ -195,7 +230,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         )
         let otherSegment = try timeRepository(context.container)
             .startTask(taskID: otherTask.id, source: .timer)
-        try taskRepository.setTaskStatus(taskID: focusTask.id, status: .completed)
+        try taskRepository.archiveTask(taskID: focusTask.id)
 
         #expect(
             try coordinator(context.container).resume(

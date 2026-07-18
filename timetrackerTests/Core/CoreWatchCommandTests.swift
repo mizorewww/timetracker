@@ -738,7 +738,7 @@ struct CoreWatchCommandTests {
         }
 
         let archivedTask = createdTasks[11]
-        archivedTask.status = .archived
+        archivedTask.statusRaw = LegacyTaskStatusRaw.archived
         let deletedTask = createdTasks[10]
         deletedTask.deletedAt = Date(timeIntervalSinceReferenceDate: 10)
         try context.save()

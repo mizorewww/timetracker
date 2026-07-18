@@ -24,7 +24,6 @@ struct AnalyticsDistributionPresentationTests {
                 path: "Project \(index + 1)",
                 colorHex: nil,
                 iconName: nil,
-                status: .active,
                 grossSeconds: (5 - index) * 100,
                 wallSeconds: (5 - index) * 100
             )
@@ -54,7 +53,6 @@ struct AnalyticsDistributionPresentationTests {
             path: "Work",
             colorHex: nil,
             iconName: nil,
-            status: .active,
             grossSeconds: 600,
             wallSeconds: 600
         )

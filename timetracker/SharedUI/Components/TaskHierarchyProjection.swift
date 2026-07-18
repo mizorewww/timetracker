@@ -42,7 +42,6 @@ struct TaskHierarchyProjection: Equatable {
         let childCount: Int
         let isExpanded: Bool
         let isAvailable: Bool
-        let isCompleted: Bool
         let isRunning: Bool
         let unavailableReason: String?
         let timerCommand: TimerPickerSelectionCommand
@@ -158,26 +157,11 @@ struct TaskHierarchyProjection: Equatable {
             childCount: childCount,
             isExpanded: isExpanded,
             isAvailable: isAvailable,
-            isCompleted: task.status == .completed,
             isRunning: store.activeSegment(for: task.id) != nil,
-            unavailableReason: isAvailable ? nil : unavailableReason(for: task, store: store),
+            unavailableReason: isAvailable
+                ? nil
+                : AppStrings.localized("task.parentUnavailable"),
             timerCommand: store.timerPickerSelectionCommand(for: task)
-        )
-    }
-
-    private static func unavailableReason(
-        for task: TaskNode,
-        store: TimeTrackerStore
-    ) -> String {
-        guard let blocker = store.completedWorkBlocker(for: task) else {
-            return AppStrings.localized("task.parentUnavailable")
-        }
-        if blocker.id == task.id {
-            return AppStrings.localized("task.completed.workUnavailable")
-        }
-        return String(
-            format: AppStrings.localized("task.completed.ancestorUnavailableFormat"),
-            blocker.title
         )
     }
 }

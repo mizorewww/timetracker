@@ -77,8 +77,7 @@ extension TaskHierarchyPicker {
             VStack(alignment: .leading, spacing: 8) {
                 TaskIdentityRow(
                     presentation: item.identity,
-                    context: identityContext(for: sectionKind),
-                    state: identityState(for: item)
+                    context: identityContext(for: sectionKind)
                 )
                 Label(
                     item.timerCommand.actionTitle,
@@ -94,8 +93,7 @@ extension TaskHierarchyPicker {
             HStack(alignment: .top, spacing: 8) {
                 TaskIdentityRow(
                     presentation: item.identity,
-                    context: identityContext(for: sectionKind),
-                    state: identityState(for: item)
+                    context: identityContext(for: sectionKind)
                 )
                 if isSelected(item) {
                     Image(systemName: "checkmark")
@@ -174,15 +172,6 @@ extension TaskHierarchyPicker {
         for sectionKind: TaskHierarchyProjection.Section.Kind
     ) -> TaskIdentityPresentation.Context {
         sectionKind == .hierarchy ? .hierarchical : .standard
-    }
-
-    private func identityState(
-        for item: TaskHierarchyProjection.Item
-    ) -> TaskIdentityRowState {
-        if item.isCompleted {
-            return .completed
-        }
-        return item.isAvailable ? .normal : .blocked
     }
 
     private func disclosureLabel(

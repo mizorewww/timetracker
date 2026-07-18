@@ -31,7 +31,7 @@ struct TaskHierarchyPickerTests {
     }
 
     @Test @MainActor
-    func projectionPreservesHierarchyAndMakesCompletedBranchesUnavailable() throws {
+    func projectionTreatsLegacyCompletedBranchesAsOrdinaryTasks() throws {
         let store = makeTestStore()
         let category = TaskCategory(
             title: "Work",
@@ -44,7 +44,7 @@ struct TaskHierarchyPickerTests {
             parentID: nil,
             deviceID: "test"
         )
-        completedParent.status = .completed
+        completedParent.statusRaw = LegacyTaskStatusRaw.completed
         let child = TaskNode(
             title: "Follow-up",
             parentID: completedParent.id,
@@ -90,12 +90,13 @@ struct TaskHierarchyPickerTests {
         #expect(projection.hasVisibleTasks)
         #expect(workSection.items.map(\.id) == [completedParent.id, child.id])
         #expect(completedItem.depth == 0)
-        #expect(completedItem.isCompleted)
-        #expect(completedItem.isAvailable == false)
+        #expect(completedItem.isAvailable)
+        #expect(completedItem.unavailableReason == nil)
+        #expect(completedItem.timerCommand == .start)
         #expect(childItem.depth == 1)
-        #expect(childItem.isCompleted == false)
-        #expect(childItem.isAvailable == false)
-        #expect(childItem.unavailableReason?.contains(completedParent.title) == true)
+        #expect(childItem.isAvailable)
+        #expect(childItem.unavailableReason == nil)
+        #expect(childItem.timerCommand == .start)
         #expect(availableItem.isAvailable)
         #expect(availableItem.timerCommand == .start)
     }
@@ -141,7 +142,7 @@ struct TaskHierarchyPickerTests {
             parentID: nil,
             deviceID: "test"
         )
-        archivedTask.status = .archived
+        archivedTask.statusRaw = LegacyTaskStatusRaw.archived
         let segment = TimeSegment(
             sessionID: UUID(),
             taskID: archivedTask.id,

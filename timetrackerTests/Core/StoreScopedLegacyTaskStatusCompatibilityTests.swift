@@ -5,77 +5,83 @@ import Testing
 
 @Suite(.serialized)
 @MainActor
-struct StoreScopedTaskReopenCommandCoordinatorTests {
+/// Exercises stale-store admission against inert legacy raw values and archive.
+struct StoreScopedLegacyTaskStatusCompatibilityTests {
     @Test
-    func staleSceneReopensCanonicalBlockerChain() throws {
+    func staleSceneTreatsLegacyCompletedAncestorChainAsOrdinaryWork() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let parent = try makeTask("Parent", parentID: nil, repository: repository)
         let child = try makeTask("Child", parentID: parent.id, repository: repository)
         let grandchild = try makeTask("Grandchild", parentID: child.id, repository: repository)
-        try repository.setTaskStatus(taskID: parent.id, status: .completed)
+        parent.statusRaw = LegacyTaskStatusRaw.completed
+        child.statusRaw = LegacyTaskStatusRaw.planned
+        try context.save()
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        #expect(store.completedWorkBlockers(for: grandchild).map(\.id) == [parent.id])
+        #expect(store.isTaskAvailableForTracking(grandchild))
 
-        try freshRepository(context.container, deviceID: "sibling")
-            .setTaskStatus(taskID: child.id, status: .completed)
+        let segmentID = try makeTestSystemActionCommandHandler().startTimer(
+            taskID: grandchild.id,
+            context: ModelContext(context.container)
+        )
 
-        #expect(store.reopenTaskForWork(grandchild.id))
+        #expect(segmentID != nil)
         let fresh = freshRepository(context.container)
-        #expect(try fresh.task(id: parent.id)?.status == .active)
-        #expect(try fresh.task(id: child.id)?.status == .active)
+        #expect(try fresh.task(id: parent.id)?.statusRaw == LegacyTaskStatusRaw.completed)
+        #expect(try fresh.task(id: child.id)?.statusRaw == LegacyTaskStatusRaw.planned)
         #expect(store.isTaskAvailableForTracking(grandchild))
     }
 
     @Test
-    func reparentedTargetDoesNotReopenItsOldAncestor() throws {
+    func legacyCompletedDestinationAcceptsAReparentedTask() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let oldParent = try makeTask("Old", parentID: nil, repository: repository)
-        let newParent = try makeTask("New", parentID: nil, repository: repository)
+        let destination = try makeTask("Imported destination", parentID: nil, repository: repository)
         let child = try makeTask("Child", parentID: oldParent.id, repository: repository)
-        try repository.setTaskStatus(taskID: oldParent.id, status: .completed)
+        destination.statusRaw = LegacyTaskStatusRaw.completed
+        try context.save()
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        #expect(store.completedWorkBlockers(for: child).map(\.id) == [oldParent.id])
+        var draft = store.editorDraft(for: try #require(store.task(for: child.id)))
+        draft.parentID = destination.id
 
-        let siblingRepository = freshRepository(context.container, deviceID: "sibling")
-        try siblingRepository.moveTask(
-            taskID: child.id,
-            newParentID: newParent.id,
-            sortOrder: 10
-        )
-        try siblingRepository.setTaskStatus(taskID: newParent.id, status: .completed)
-
-        #expect(store.reopenTaskForWork(child.id))
+        #expect(store.saveTaskDraft(draft))
         let fresh = freshRepository(context.container)
-        #expect(try fresh.task(id: oldParent.id)?.status == .completed)
-        #expect(try fresh.task(id: newParent.id)?.status == .active)
-        #expect(try fresh.task(id: child.id)?.parentID == newParent.id)
+        #expect(try fresh.task(id: child.id)?.parentID == destination.id)
+        #expect(
+            try fresh.task(id: destination.id)?.statusRaw ==
+                LegacyTaskStatusRaw.completed
+        )
     }
 
     @Test
-    func deletedTargetCannotReopenStaleAncestor() throws {
+    func staleTimerAdmissionStillRejectsAnArchivedAncestor() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let parent = try makeTask("Parent", parentID: nil, repository: repository)
         let child = try makeTask("Child", parentID: parent.id, repository: repository)
-        try repository.setTaskStatus(taskID: parent.id, status: .completed)
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         try freshRepository(context.container, deviceID: "sibling")
-            .softDeleteTask(taskID: child.id)
+            .archiveTask(taskID: parent.id)
 
-        #expect(store.reopenTaskForWork(child.id) == false)
+        #expect(throws: SystemActionCommandError.taskNotFound) {
+            try makeTestSystemActionCommandHandler().startTimer(
+                taskID: child.id,
+                context: context
+            )
+        }
         #expect(
-            try freshRepository(context.container).task(id: parent.id)?.status == .completed
+            try SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+                .activeSegments()
+                .isEmpty
         )
-        #expect(store.task(for: child.id) == nil)
-        #expect(store.errorMessage == AppStrings.localized("systemAction.error.taskNotFound"))
+        #expect(store.task(for: child.id) != nil)
     }
 
     private func makeTask(

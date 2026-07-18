@@ -15,8 +15,7 @@ extension TaskRollupService {
         ownWorkedSeconds: Int,
         progress: ChecklistProgress
     ) -> OwnChecklistForecast {
-        if task.status == .completed ||
-            (progress.totalCount > 0 && progress.completedCount == progress.totalCount) {
+        if progress.totalCount > 0 && progress.completedCount == progress.totalCount {
             return OwnChecklistForecast(
                 estimatedTotalSeconds: max(ownWorkedSeconds, 0),
                 remainingSeconds: 0,

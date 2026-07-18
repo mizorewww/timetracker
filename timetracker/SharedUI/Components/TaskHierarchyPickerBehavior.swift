@@ -93,15 +93,7 @@ extension TaskHierarchyPicker {
     func accessibilityValue(
         for item: TaskHierarchyProjection.Item
     ) -> String {
-        var values = [item.identity.fullPath]
-        if item.isCompleted {
-            values.append(TaskStatus.completed.displayName)
-        } else if item.isAvailable == false {
-            values.append(
-                AppStrings.localized("task.status.blockedByCompletion")
-            )
-        }
-        return values.joined(separator: ", ")
+        item.identity.fullPath
     }
 
     func accessibilityHint(

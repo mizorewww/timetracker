@@ -14,7 +14,7 @@ struct TaskTreeReadIndexTests {
         let grandchild = TaskNode(title: "Transcript", parentID: child.id, deviceID: "test", sortOrder: 10)
         let uncategorized = TaskNode(title: "Errands", parentID: nil, deviceID: "test", sortOrder: 20)
         let archived = TaskNode(title: "Archived", parentID: nil, deviceID: "test", sortOrder: 30)
-        archived.status = .archived
+        archived.statusRaw = LegacyTaskStatusRaw.archived
         let hiddenChild = TaskNode(title: "Hidden", parentID: archived.id, deviceID: "test")
         let tasks = [root, child, grandchild, uncategorized, archived, hiddenChild]
         let indexes = service.indexes(tasks: tasks)

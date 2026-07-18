@@ -122,7 +122,7 @@ Views should render existing snapshots. They should not calculate analytics, tre
 | --- | --- | --- | --- | --- | --- |
 | Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
-| Task edit, move, complete/reopen, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
+| Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
 | Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
 | Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `ChecklistStore`, `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks/Editor`, `Features/Tasks/Detail` |
 | Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Tasks/Detail` |
@@ -139,12 +139,14 @@ Views should render existing snapshots. They should not calculate analytics, tre
 Forecast is explicit-plan-first and otherwise evidence-driven. Do not invent remaining hours from unrelated history.
 
 ```text
-Completed task or completed checklist = own remaining time is zero
+Every checklist item completed = own remaining time is zero
 Explicit estimate = max(estimate - own worked time, 0), with total never below worked time
 Checklist fallback = task has checklist + at least one completed item + tracked time on that task
 Estimate policy = 0...600 minutes; zero means absent; positive legacy values clamp to 36,000 seconds
 Recent pace = active-day average over the latest 90 local days, used only to turn existing remaining seconds into projected active days
 ```
+
+Checklist completion is the only task-level completion/progress semantic and never makes a task unavailable for later work. The task editor, rows, and detail surface therefore do not expose a workflow-status picker, status badge, Complete action, or Reopen action.
 
 Parent tasks follow one display rule across Home, Analytics, and Task Detail:
 
@@ -181,6 +183,8 @@ Rules:
 
 Current examples: V9 (`1.8.0`) removes the derived `DailySummary` cache from the active schema with a lightweight V8→V9 migration. V10 (`1.9.0`) freezes the V9 Inbox model shape and uses a custom V9→V10 migration to initialize optional opaque suggestion context/revision UUIDs while preserving legacy dismissal state. Real V8 and V9 disk fixtures must continue to open. Removing a reconstructable cache must never remove its source facts, and adding sync identity must not derive it from user text.
 
+`TaskNode.statusRaw` is a frozen compatibility field for old schemas, snapshots, and CloudKit records. Preflight continues to accept all four V4 raw values without bulk rewriting existing data. `planned`, `active`, and `completed` have no product behavior. Archive reads accept either `archivedAt` or raw `archived`, while archive writes set both markers for older clients.
+
 The guiding principle is forward migration, not feature rollback: existing user data opens first, then new feature data is added in a compatible layer.
 
 ## UI Rules
@@ -193,6 +197,7 @@ The UI should feel like a native Apple productivity app: predictable navigation,
 - iPhone rows may use two lines; iPad and macOS rows should prioritize scanability and alignment. Default review uses normal text sizes and ordinary interaction paths. Existing large-text adaptations stay intact, but maximum Dynamic Type is a risk-triggered check when a change affects text flow or a regression is reported, not a mandatory batch for every UI change.
 - Expensive derived values should be passed in, not recalculated by rows.
 - User-facing copy should explain outcomes, not internal model names.
+- Do not expose legacy task workflow status in editors, rows, badges, menus, accessibility values, or actions. Archive remains a separate lifecycle command; checklist completion remains editable and does not lock a task.
 - Repeated cards, metric cells, chart containers, checklist controls, and layout breakpoints belong in `SharedUI` or layout policy types before a second feature copies them.
 
 ## Localization Rules
@@ -204,7 +209,7 @@ Tests should cover:
 - Key parity across English, Simplified Chinese, and Traditional Chinese.
 - No hard-coded Chinese in Swift source outside previews/tests.
 - A small whitelist for non-user-facing English identifiers.
-- Localized labels for task status, pomodoro state, analytics range, sync state, forecast state, and forecast confidence.
+- Localized archive lifecycle copy, pomodoro state, analytics range, sync state, forecast state, and forecast confidence.
 
 ## Testing Strategy
 

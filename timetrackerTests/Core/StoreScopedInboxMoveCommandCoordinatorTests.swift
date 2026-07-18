@@ -144,7 +144,7 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         try SwiftDataTaskRepository(
             context: taskSiblingContext,
             deviceID: "sibling"
-        ).setTaskStatus(taskID: unavailableTask.id, status: .completed)
+        ).archiveTask(taskID: unavailableTask.id)
 
         #expect(throws: StoreScopedInboxMutationError.taskUnavailable) {
             try coordinator(container: taskContext.container).moveToTask(

@@ -55,11 +55,12 @@ struct TaskPersistencePolicyTests {
             colorHex: "112233",
             iconName: "circle"
         )
+        task.statusRaw = LegacyTaskStatusRaw.planned
+        try context.save()
         let originalDueAt = Date(timeIntervalSinceReferenceDate: 2_000_000)
         try repository.updateTask(
             taskID: task.id,
             title: task.title,
-            status: .planned,
             parentID: nil,
             categoryID: nil,
             colorHex: task.colorHex,
@@ -85,7 +86,6 @@ struct TaskPersistencePolicyTests {
             try repository.updateTask(
                 taskID: task.id,
                 title: "Replacement",
-                status: .completed,
                 parentID: nil,
                 categoryID: nil,
                 colorHex: "AABBCC",
@@ -97,7 +97,7 @@ struct TaskPersistencePolicyTests {
         }
 
         #expect(task.title == "Original")
-        #expect(task.status == .planned)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.planned)
         #expect(task.parentID == nil)
         #expect(task.colorHex == "112233")
         #expect(task.iconName == "circle")
@@ -130,7 +130,6 @@ struct TaskPersistencePolicyTests {
         try repository.updateTask(
             taskID: task.id,
             title: task.title,
-            status: .active,
             parentID: nil,
             categoryID: nil,
             colorHex: task.colorHex,
@@ -147,7 +146,7 @@ struct TaskPersistencePolicyTests {
     }
 
     @Test @MainActor
-    func fullTaskUpdateMaintainsArchivedTimestampAcrossStatusTransitions() throws {
+    func fullTaskUpdatePreservesArchiveCompatibilityMarkers() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
         let task = try repository.createTask(
@@ -157,21 +156,18 @@ struct TaskPersistencePolicyTests {
             iconName: nil
         )
 
-        try update(task, status: .archived, repository: repository)
+        try repository.archiveTask(taskID: task.id)
         let firstArchivedAt = try #require(task.archivedAt)
         #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
-        try update(task, status: .archived, repository: repository, title: "Renamed")
+        try update(task, repository: repository, title: "Renamed")
+        #expect(task.title == "Renamed")
         #expect(task.archivedAt == firstArchivedAt)
         #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
-
-        try update(task, status: .active, repository: repository)
-        #expect(task.archivedAt == nil)
-        #expect(task.statusRaw == LegacyTaskStatusRaw.active)
     }
 
     @Test @MainActor
-    func statusCommandsPreserveTheOriginalArchiveTimestamp() throws {
+    func archiveCommandPreservesTheOriginalArchiveTimestamp() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
         let task = try repository.createTask(
@@ -181,7 +177,7 @@ struct TaskPersistencePolicyTests {
             iconName: nil
         )
 
-        try repository.setTaskStatus(taskID: task.id, status: .archived)
+        try repository.archiveTask(taskID: task.id)
         #expect(task.archivedAt == task.updatedAt)
         #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
@@ -189,16 +185,13 @@ struct TaskPersistencePolicyTests {
         task.archivedAt = originalArchivedAt
         try context.save()
 
-        try repository.setTaskStatus(taskID: task.id, status: .archived)
-        #expect(task.archivedAt == originalArchivedAt)
-
         try repository.archiveTask(taskID: task.id)
         #expect(task.archivedAt == originalArchivedAt)
         #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
-        try repository.setTaskStatus(taskID: task.id, status: .active)
-        #expect(task.archivedAt == nil)
-        #expect(task.statusRaw == LegacyTaskStatusRaw.active)
+        try repository.archiveTask(taskID: task.id)
+        #expect(task.archivedAt == originalArchivedAt)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
     }
 
     @Test @MainActor
@@ -262,14 +255,12 @@ struct TaskPersistencePolicyTests {
     @MainActor
     private func update(
         _ task: TaskNode,
-        status: TaskStatus,
         repository: SwiftDataTaskRepository,
         title: String? = nil
     ) throws {
         try repository.updateTask(
             taskID: task.id,
             title: title ?? task.title,
-            status: status,
             parentID: task.parentID,
             categoryID: nil,
             colorHex: task.colorHex,

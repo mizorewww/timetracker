@@ -39,30 +39,3 @@ struct RunningStatusBadge: View {
         )
     }
 }
-
-struct TaskStatusBadge: View {
-    let status: TaskStatus
-    var compact = true
-
-    var body: some View {
-        AppStatusBadge(
-            title: status.displayName,
-            systemImage: status.symbolName,
-            tint: Color(hex: status.colorHex) ?? .secondary,
-            compact: compact
-        )
-    }
-}
-
-struct TaskWorkBlockedStatusBadge: View {
-    var compact = true
-
-    var body: some View {
-        AppStatusBadge(
-            title: AppStrings.localized("task.status.blockedByCompletion"),
-            systemImage: "pause.circle.fill",
-            tint: .orange,
-            compact: compact
-        )
-    }
-}

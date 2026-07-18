@@ -124,15 +124,27 @@ struct CoreSyncSnapshotPreflightTests {
         )
         #expect(Set(restoredByRaw.keys) == LegacyTaskStatusRaw.acceptedValues)
         let active = try #require(restoredByRaw[LegacyTaskStatusRaw.active])
-        #expect(active.status == .active)
+        #expect(active.statusRaw == LegacyTaskStatusRaw.active)
         #expect(active.archivedAt == archivedAt)
         #expect(active.isArchivedForLifecycle)
-        #expect(restoredByRaw[LegacyTaskStatusRaw.planned]?.status == .planned)
-        #expect(restoredByRaw[LegacyTaskStatusRaw.completed]?.status == .completed)
+        let planned = try #require(restoredByRaw[LegacyTaskStatusRaw.planned])
+        let completed = try #require(restoredByRaw[LegacyTaskStatusRaw.completed])
+        #expect(planned.statusRaw == LegacyTaskStatusRaw.planned)
+        #expect(planned.isArchivedForLifecycle == false)
+        #expect(completed.statusRaw == LegacyTaskStatusRaw.completed)
+        #expect(completed.isArchivedForLifecycle == false)
         let archived = try #require(restoredByRaw[LegacyTaskStatusRaw.archived])
-        #expect(archived.status == .archived)
+        #expect(archived.statusRaw == LegacyTaskStatusRaw.archived)
         #expect(archived.archivedAt == nil)
         #expect(archived.isArchivedForLifecycle)
+
+        let eligibility = TaskTrackingAvailabilityService().eligibility(
+            tasks: Array(restoredByRaw.values)
+        )
+        #expect(eligibility.trackableTaskIDs.contains(planned.id))
+        #expect(eligibility.trackableTaskIDs.contains(completed.id))
+        #expect(eligibility.trackableTaskIDs.contains(active.id) == false)
+        #expect(eligibility.trackableTaskIDs.contains(archived.id) == false)
     }
 
     @Test @MainActor

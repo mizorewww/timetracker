@@ -78,7 +78,6 @@ struct TaskCategoryPickerRow: View {
 struct TaskHierarchyEditorHints: View {
     let inheritedCategory: TaskInheritedCategoryHint?
     let parentChangeBlocker: TaskParentChangeBlocker?
-    let blocksCompletion: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -103,21 +102,12 @@ struct TaskHierarchyEditorHints: View {
                 )
                 .foregroundStyle(.secondary)
             }
-            if blocksCompletion {
-                Label(
-                    AppStrings.localized("task.action.complete.stopFirst"),
-                    systemImage: "stop.circle"
-                )
-                .foregroundStyle(.secondary)
-            }
         }
         .font(.caption)
     }
 
     private var parentSelectionLockMessageKey: String? {
         switch parentChangeBlocker {
-        case .completed:
-            "task.parent.completedLocked"
         case .archived:
             "task.parent.archivedLocked"
         case .deleted:

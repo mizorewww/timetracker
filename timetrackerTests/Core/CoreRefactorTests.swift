@@ -111,7 +111,11 @@ struct CoreRefactorTests {
 
         store.archiveSelectedTask(taskID: parent.id)
 
-        #expect(try taskRepository.task(id: parent.id)?.status == .active)
+        #expect(
+            try taskRepository.task(id: parent.id)?.statusRaw ==
+                LegacyTaskStatusRaw.active
+        )
+        #expect(try taskRepository.task(id: parent.id)?.archivedAt == nil)
         #expect(store.errorMessage == AppStrings.localized("task.action.archive.stopFirst"))
         #expect(store.activeSegments.contains { $0.taskID == child.id })
     }
@@ -130,9 +134,13 @@ struct CoreRefactorTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        store.setTaskStatus(.archived, taskID: parent.id)
+        store.archiveSelectedTask(taskID: parent.id)
 
-        #expect(try taskRepository.task(id: parent.id)?.status == .active)
+        #expect(
+            try taskRepository.task(id: parent.id)?.statusRaw ==
+                LegacyTaskStatusRaw.active
+        )
+        #expect(try taskRepository.task(id: parent.id)?.archivedAt == nil)
         #expect(store.errorMessage == AppStrings.localized("task.action.archive.stopFirst"))
     }
 
@@ -140,7 +148,7 @@ struct CoreRefactorTests {
     func manualTimeCannotBeAddedToAChildOfAnArchivedTask() {
         let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
-        parent.status = .archived
+        parent.statusRaw = LegacyTaskStatusRaw.archived
         let store = makeTestStore()
         store.tasks = [parent, child]
         var draft = ManualTimeDraft(taskID: child.id, tasks: [child])

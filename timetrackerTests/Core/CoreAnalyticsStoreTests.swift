@@ -2134,7 +2134,6 @@ struct CoreAnalyticsStoreTests {
             path: "Write release notes",
             colorHex: nil,
             iconName: nil,
-            status: nil,
             grossSeconds: 3_600,
             wallSeconds: 3_600
         )

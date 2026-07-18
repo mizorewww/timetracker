@@ -643,6 +643,8 @@ struct CoreWatchCommandTests {
             "timetrackerWatchApp/WatchCommandFailuresView.swift",
             "timetrackerWatchApp/WatchCommandPresentationIndex.swift",
             "timetrackerWatchApp/WatchTaskListView.swift",
+            "timetrackerWatchApp/WatchTaskRows.swift",
+            "timetrackerWatchApp/WatchStatusViews.swift",
             "timetrackerWatchApp/WatchTimerRows.swift"
         ].map(sourceText).joined(separator: "\n")
 
@@ -660,7 +662,9 @@ struct CoreWatchCommandTests {
         #expect(source.contains("pendingStartTaskIDs: Set<UUID>"))
         #expect(source.contains("failedStartCommandIDs: [UUID: UUID]"))
         #expect(source.contains("minHeight: 44"))
-        #expect(source.contains("dynamicTypeSize.isAccessibilitySize ? 3 : 2"))
+        #expect(source.contains("dynamicTypeSize >= .xxLarge"))
+        #expect(source.contains(".padding(.vertical, 6)"))
+        #expect(source.contains("fixedSize(horizontal: false, vertical: true)"))
         #expect(source.contains("commandState.accessibilityLabel"))
         #expect(source.contains("minimumScaleFactor(0.8)"))
         #expect(source.contains("if !hasReceivedSnapshot, let status"))

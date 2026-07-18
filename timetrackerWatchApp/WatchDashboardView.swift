@@ -67,6 +67,7 @@ struct WatchDashboardView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 44)
+                                .padding(.vertical, 4)
                             }
                             .accessibilityHint(Text("watch.commandFailures.allHint"))
                         }
@@ -126,6 +127,7 @@ struct WatchDashboardView: View {
                                             minHeight: 44,
                                             alignment: .leading
                                         )
+                                        .padding(.vertical, 4)
                                 }
                                 .accessibilityHint(Text("watch.tasks.allHint"))
                             }

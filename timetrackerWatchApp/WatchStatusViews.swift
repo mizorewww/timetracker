@@ -15,19 +15,17 @@ struct WatchCommandFailureRow: View {
                     .foregroundStyle(result.status.failureTint)
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.headline)
-                        .lineLimit(3)
-                        .privacySensitive()
-                        .redacted(reason: isLuminanceReduced ? .placeholder : [])
-                    Text(result.status.failureMessageKey)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .accessibilityElement(children: .combine)
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(3)
+                    .privacySensitive()
+                    .redacted(reason: isLuminanceReduced ? .placeholder : [])
             }
+
+            Text(result.status.failureMessageKey)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 6) {
@@ -41,6 +39,8 @@ struct WatchCommandFailureRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
     }
 
     private var retryButton: some View {
@@ -145,31 +145,34 @@ struct WatchStatusRow: View {
     let snapshotDate: Date
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: status.systemImage)
-                .font(.headline)
-                .foregroundStyle(status.tint)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: status.systemImage)
+                    .font(.headline)
+                    .foregroundStyle(status.tint)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
                 Text(status.titleKey)
                     .font(.caption.weight(.semibold))
-                Text(status.messageKey)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
 
-                if status.showsLastUpdated {
-                    HStack(spacing: 3) {
-                        Text("watch.status.lastUpdated")
-                        Text(snapshotDate, style: .relative)
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            Text(status.messageKey)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if status.showsLastUpdated {
+                HStack(spacing: 3) {
+                    Text("watch.status.lastUpdated")
+                    Text(snapshotDate, style: .relative)
                 }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
     }
 }
@@ -182,8 +185,11 @@ struct WatchIconTile: View {
         Image(systemName: systemImage)
             .font(.title3.weight(.semibold))
             .foregroundStyle(tint)
-            .frame(width: 38, height: 40)
-            .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .frame(width: 34, height: 36)
+            .background(
+                tint.opacity(0.16),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
             .accessibilityHidden(true)
     }
 }
@@ -206,8 +212,10 @@ struct WatchEmptyState: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, minHeight: 88)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 }

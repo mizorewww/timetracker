@@ -198,6 +198,8 @@ struct CoreSourceLayoutTests {
             "timetrackerWatchApp/TimeTrackerWatchApp.swift",
             "timetrackerWatchApp/WatchDashboardView.swift",
             "timetrackerWatchApp/WatchTimerRows.swift",
+            "timetrackerWatchApp/WatchTaskRows.swift",
+            "timetrackerWatchApp/WatchUIAuditRoot.swift",
             "timetrackerWatchApp/WatchStatusViews.swift",
             "timetrackerWatchApp/WatchColorSupport.swift",
             "timetrackerWatchApp/WatchAppStore.swift",

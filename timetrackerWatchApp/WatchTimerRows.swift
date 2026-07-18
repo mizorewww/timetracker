@@ -7,64 +7,6 @@ enum WatchRowCommandState: Equatable {
     case failed
 }
 
-struct WatchTaskShortcutRow: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
-    let task: WatchRecentTaskSnapshot
-    let commandState: WatchRowCommandState
-    let action: () -> Void
-
-    private var tint: Color {
-        Color(hex: task.colorHex) ?? .blue
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 9) {
-                WatchIconTile(systemImage: task.iconName ?? "play.fill", tint: tint)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(task.title)
-                        .font(.headline)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
-                        .multilineTextAlignment(.leading)
-                        .privacySensitive()
-                        .redacted(reason: isLuminanceReduced ? .placeholder : [])
-
-                    if !dynamicTypeSize.isAccessibilitySize, !task.path.isEmpty {
-                        Text(task.path)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .privacySensitive()
-                            .redacted(reason: isLuminanceReduced ? .placeholder : [])
-                    }
-                }
-
-                Spacer(minLength: 2)
-
-                Image(systemName: commandState.taskSystemImage)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(commandState.tint(default: tint))
-                    .accessibilityHidden(true)
-            }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(commandState == .pending)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(Text(commandState.taskHintKey))
-    }
-
-    private var accessibilityLabel: String {
-        commandState.accessibilityLabel(
-            task.path.isEmpty ? task.title : "\(task.title), \(task.path)"
-        )
-    }
-}
-
 struct WatchActiveTimerRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
@@ -81,33 +23,27 @@ struct WatchActiveTimerRow: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 7) {
-                HStack(spacing: 8) {
-                    WatchIconTile(systemImage: timer.iconName ?? "timer", tint: tint)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(timer.title)
-                            .font(.headline)
-                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
-                            .multilineTextAlignment(.leading)
-                            .privacySensitive()
-                            .redacted(reason: isLuminanceReduced ? .placeholder : [])
-
-                        if !dynamicTypeSize.isAccessibilitySize, !timer.path.isEmpty {
-                            Text(timer.path)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .privacySensitive()
-                                .redacted(reason: isLuminanceReduced ? .placeholder : [])
+                Group {
+                    if usesStackedIdentity {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                timerIcon
+                                Spacer(minLength: 4)
+                                timerStateIcon
+                            }
+                            timerTitle
+                        }
+                    } else {
+                        HStack(spacing: 8) {
+                            timerIcon
+                            VStack(alignment: .leading, spacing: 3) {
+                                timerTitle
+                                timerPath
+                            }
+                            Spacer(minLength: 0)
+                            timerStateIcon
                         }
                     }
-
-                    Spacer(minLength: 0)
-
-                    Image(systemName: commandState.timerSystemImage)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(commandState.tint(default: tint))
-                        .accessibilityHidden(true)
                 }
 
                 ViewThatFits(in: .horizontal) {
@@ -121,6 +57,7 @@ struct WatchActiveTimerRow: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -129,6 +66,42 @@ struct WatchActiveTimerRow: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(elapsedAccessibilityValue)
         .accessibilityHint(Text(commandState.timerHintKey))
+    }
+
+    private var usesStackedIdentity: Bool {
+        dynamicTypeSize >= .xxLarge
+    }
+
+    private var timerIcon: some View {
+        WatchIconTile(systemImage: timer.iconName ?? "timer", tint: tint)
+    }
+
+    private var timerTitle: some View {
+        Text(timer.title)
+            .font(.headline)
+            .lineLimit(usesStackedIdentity ? 3 : 2)
+            .multilineTextAlignment(.leading)
+            .privacySensitive()
+            .redacted(reason: isLuminanceReduced ? .placeholder : [])
+    }
+
+    @ViewBuilder
+    private var timerPath: some View {
+        if !timer.path.isEmpty {
+            Text(timer.path)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .privacySensitive()
+                .redacted(reason: isLuminanceReduced ? .placeholder : [])
+        }
+    }
+
+    private var timerStateIcon: some View {
+        Image(systemName: commandState.timerSystemImage)
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(commandState.tint(default: tint))
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -172,7 +145,7 @@ private enum WatchElapsedFormatter {
     }
 }
 
-private extension WatchRowCommandState {
+extension WatchRowCommandState {
     func accessibilityLabel(_ baseLabel: String) -> String {
         guard let accessibilityStatus else { return baseLabel }
         return "\(baseLabel), \(String(localized: accessibilityStatus))"

@@ -62,7 +62,7 @@ extension TaskHierarchyPicker {
     }
 
     var selectedTaskID: UUID? {
-        guard case .singleSelection(let selectedTaskID) = mode else {
+        guard case let .singleSelection(selectedTaskID, _) = mode else {
             return nil
         }
         return selectedTaskID
@@ -74,8 +74,8 @@ extension TaskHierarchyPicker {
         switch mode {
         case .timer:
             "timer.taskPicker.select.\(item.id.uuidString)"
-        case .singleSelection:
-            "pomodoro.taskPicker.select.\(item.id.uuidString)"
+        case let .singleSelection(_, context):
+            "\(context.accessibilityIdentifier).select.\(item.id.uuidString)"
         }
     }
 
@@ -113,8 +113,8 @@ extension TaskHierarchyPicker {
         switch mode {
         case .timer:
             return item.timerCommand.accessibilityHint
-        case .singleSelection:
-            return ""
+        case let .singleSelection(_, context):
+            return context.selectionHint
         }
     }
 }

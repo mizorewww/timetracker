@@ -5,6 +5,32 @@ import Testing
 @Suite(.serialized)
 struct TaskHierarchyPickerTests {
     @Test @MainActor
+    func selectionContextsPreservePomodoroDefaultsAndSeparateInboxSemantics() {
+        let selectedTaskID = UUID()
+
+        #expect(
+            TaskHierarchyPickerMode.singleSelection(
+                selectedTaskID: selectedTaskID
+            ) == .singleSelection(
+                selectedTaskID: selectedTaskID,
+                context: .pomodoro
+            )
+        )
+        #expect(
+            TaskHierarchyPickerSelectionContext.pomodoro
+                .accessibilityIdentifier == "pomodoro.taskPicker"
+        )
+        #expect(
+            TaskHierarchyPickerSelectionContext.inboxDestination
+                .accessibilityIdentifier == "inbox.taskPicker"
+        )
+        #expect(
+            TaskHierarchyPickerSelectionContext.pomodoro.navigationTitle !=
+                TaskHierarchyPickerSelectionContext.inboxDestination.navigationTitle
+        )
+    }
+
+    @Test @MainActor
     func projectionPreservesHierarchyAndMakesCompletedBranchesUnavailable() throws {
         let store = makeTestStore()
         let category = TaskCategory(
@@ -141,12 +167,16 @@ struct TaskHierarchyPickerTests {
     }
 
     @Test
-    func todayAndPomodoroUseTheSameHierarchyPickerSurface() throws {
-        let home = try sourceText(
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift"
+    func timerPomodoroAndInboxUseTheSameHierarchyPickerSurface() throws {
+        let host = try sourceText("timetracker/App/AppPresentationHost.swift")
+        let sheet = try sourceText(
+            "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift"
         )
         let pomodoro = try sourceText(
-            "timetracker/Features/Pomodoro/Sections/PomodoroTaskPickerViews.swift"
+            "timetracker/Features/Pomodoro/PomodoroViews.swift"
+        )
+        let inbox = try sourceText(
+            "timetracker/Features/Inbox/InboxItemRow.swift"
         )
         let picker = try [
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
@@ -160,11 +190,12 @@ struct TaskHierarchyPickerTests {
         )
         let root = try projectRootURL()
 
-        #expect(home.contains("TaskHierarchyPicker("))
-        #expect(home.contains("mode: .timer"))
-        #expect(pomodoro.contains("TaskHierarchyPicker("))
-        #expect(pomodoro.contains(".singleSelection(selectedTaskID: selectedTaskID)"))
-        #expect(home.contains(".searchable(") == false)
+        #expect(sheet.contains("TaskHierarchyPicker("))
+        #expect(host.contains("mode: .timer"))
+        #expect(host.contains("mode: .singleSelection("))
+        #expect(pomodoro.contains("presentPomodoroTaskPicker("))
+        #expect(inbox.contains("context: .inboxDestination"))
+        #expect(sheet.contains(".searchable(") == false)
         #expect(pomodoro.contains(".searchable(") == false)
         #expect(picker.contains("TaskIdentityRow("))
         #expect(picker.contains("TaskCategorySectionHeader("))

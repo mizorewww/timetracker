@@ -70,6 +70,10 @@
 "inbox.itemPlaceholder" = "Inbox item";
 "inbox.markCompleted" = "Mark Completed";
 "inbox.markOpen" = "Mark Open";
+"inbox.moveToTask" = "Move to Task…";
+"inbox.moveToTask.title" = "Move to Task";
+"inbox.moveToTask.emptyDescription" = "Create an active task before moving Inbox items.";
+"inbox.moveToTask.selectionHint" = "Moves this Inbox item to the selected task.";
 "inbox.delete.confirm.title" = "Delete Inbox Item?";
 "inbox.delete.confirm.message" = "This item and its suggestion will be removed from every synced device.";
 "inbox.completed.countFormat" = "Completed (%d)";
@@ -385,6 +389,7 @@
 "tasks.searchTitle" = "Search Tasks";
 "tasks.searchHint" = "Search task titles, paths, and notes.";
 "tasks.search.clear" = "Clear Search";
+"tasks.search.empty.description" = "No tasks match your search.";
 "tasks.childCount" = "%d subtasks";
 "tasks.workedFormat" = "%@ worked";
 "task.swipe.start" = "Start";
@@ -395,6 +400,7 @@
 "pomodoro.chooseTask" = "Choose Task";
 "pomodoro.noTasks.title" = "Create a Task First";
 "pomodoro.noTasks.description" = "A focus session needs a task so its time can be recorded correctly.";
+"pomodoro.taskPicker.selectionHint" = "Selects this task for the next focus session.";
 "pomodoro.setup.title" = "Next Focus";
 "pomodoro.setup.subtitle" = "Choose a plan and task. Your focus time will be saved to that task.";
 "pomodoro.focusDuration.accessibility" = "%@ focus duration";

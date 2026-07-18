@@ -42,9 +42,10 @@ private struct AppPresentationSheet: View {
         case let .segmentEditor(draft):
             SegmentEditorSheet(store: store, initialDraft: draft)
         case .startTaskPicker:
-            TaskStartPickerSheet(
+            TaskHierarchyPickerSheet(
                 store: store,
-                onDone: {
+                mode: .timer,
+                onDismiss: {
                     router.dismiss(presentationID: presentation.id)
                 },
                 onCreateTask: {
@@ -54,16 +55,20 @@ private struct AppPresentationSheet: View {
                     )
                 }
             )
-        case let .pomodoroTaskPicker(taskPicker):
-            PomodoroFocusTaskPickerSheet(
+        case let .singleTaskPicker(taskPicker):
+            TaskHierarchyPickerSheet(
                 store: store,
-                selectedTaskID: taskPicker.selectedTaskID,
-                onSelect: { taskID in
-                    taskPicker.selectTask(taskID)
+                mode: .singleSelection(
+                    selectedTaskID: taskPicker.selectedTaskID,
+                    context: taskPicker.context
+                ),
+                onDismiss: {
                     router.dismiss(presentationID: presentation.id)
                 },
-                onCancel: {
-                    router.dismiss(presentationID: presentation.id)
+                onSelect: { taskID in
+                    if taskPicker.selectTask(taskID) {
+                        router.dismiss(presentationID: presentation.id)
+                    }
                 }
             )
         case let .quickStartEditor(selectedIDs):

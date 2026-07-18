@@ -50,8 +50,8 @@ extension TaskHierarchyPicker {
         switch mode {
         case .timer:
             store.timerPickerMode.title
-        case .singleSelection:
-            AppStrings.localized("pomodoro.chooseTask")
+        case let .singleSelection(_, context):
+            context.navigationTitle
         }
     }
 
@@ -59,8 +59,8 @@ extension TaskHierarchyPicker {
         switch mode {
         case .timer:
             "timer.taskPicker"
-        case .singleSelection:
-            "pomodoro.taskPicker"
+        case let .singleSelection(_, context):
+            context.accessibilityIdentifier
         }
     }
 
@@ -73,8 +73,8 @@ extension TaskHierarchyPicker {
         switch mode {
         case .timer:
             return AppStrings.localized("tasks.empty.title")
-        case .singleSelection:
-            return AppStrings.localized("pomodoro.noTasks.title")
+        case let .singleSelection(_, context):
+            return context.emptyStateTitle
         }
     }
 
@@ -82,13 +82,13 @@ extension TaskHierarchyPicker {
         _ projection: TaskHierarchyProjection
     ) -> String {
         if projection.hasVisibleTasks {
-            return AppStrings.localized("timer.search.empty.description")
+            return AppStrings.localized("tasks.search.empty.description")
         }
         switch mode {
         case .timer:
             return AppStrings.localized("tasks.empty.description")
-        case .singleSelection:
-            return AppStrings.localized("pomodoro.noTasks.description")
+        case let .singleSelection(_, context):
+            return context.emptyStateDescription
         }
     }
 
@@ -98,6 +98,50 @@ extension TaskHierarchyPicker {
         #else
         24
         #endif
+    }
+}
+
+extension TaskHierarchyPickerSelectionContext {
+    var navigationTitle: String {
+        switch self {
+        case .pomodoro:
+            AppStrings.localized("pomodoro.chooseTask")
+        case .inboxDestination:
+            AppStrings.localized("inbox.moveToTask.title")
+        }
+    }
+    var accessibilityIdentifier: String {
+        switch self {
+        case .pomodoro:
+            "pomodoro.taskPicker"
+        case .inboxDestination:
+            "inbox.taskPicker"
+        }
+    }
+    var selectionHint: String {
+        switch self {
+        case .pomodoro:
+            AppStrings.localized("pomodoro.taskPicker.selectionHint")
+        case .inboxDestination:
+            AppStrings.localized("inbox.moveToTask.selectionHint")
+        }
+    }
+    var emptyStateTitle: String {
+        switch self {
+        case .pomodoro:
+            AppStrings.localized("pomodoro.noTasks.title")
+        case .inboxDestination:
+            AppStrings.localized("tasks.empty.title")
+        }
+    }
+
+    var emptyStateDescription: String {
+        switch self {
+        case .pomodoro:
+            AppStrings.localized("pomodoro.noTasks.description")
+        case .inboxDestination:
+            AppStrings.localized("inbox.moveToTask.emptyDescription")
+        }
     }
 }
 

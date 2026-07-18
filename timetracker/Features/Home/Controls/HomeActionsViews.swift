@@ -37,28 +37,3 @@ struct TodayTimerAction: View {
         store.timerPickerMode.systemImage
     }
 }
-
-struct TaskStartPickerSheet: View {
-    let store: TimeTrackerStore
-    let onDone: () -> Void
-    let onCreateTask: () -> Void
-#if os(iOS)
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-#endif
-
-    var body: some View {
-        NavigationStack {
-            TaskHierarchyPicker(
-                store: store,
-                mode: .timer,
-                onDismiss: onDone,
-                onCreateTask: onCreateTask
-            )
-        }
-#if os(iOS)
-        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
-#else
-        .frame(minWidth: 420, minHeight: 520)
-#endif
-    }
-}

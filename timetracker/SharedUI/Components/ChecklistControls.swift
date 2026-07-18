@@ -182,6 +182,7 @@ struct EditableChecklistTextRow: View {
     var showsIcon = true
     var completionVisualSize: CGFloat = 30
     var textStyle: Font = .subheadline
+    var textFieldAccessibilityIdentifier: String?
     let toggle: () -> Void
     let commit: () -> Void
 
@@ -203,21 +204,7 @@ struct EditableChecklistTextRow: View {
                     .padding(.top, 1)
             }
 
-            TextField(placeholder, text: $title, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...5)
-                .strikethrough(isCompleted)
-                .foregroundStyle(isCompleted ? .secondary : .primary)
-                .focused($isFocused)
-                .submitLabel(.done)
-                .onSubmit(commit)
-                .labelsHidden()
-                .accessibilityLabel(placeholder)
-                .onChange(of: title) { _, newValue in
-                    guard newValue.contains(where: \.isNewline) else { return }
-                    title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
-                    commit()
-                }
+            titleField
         }
         .font(textStyle)
         .frame(minHeight: 44)
@@ -227,5 +214,33 @@ struct EditableChecklistTextRow: View {
                 commit()
             }
         }
+    }
+
+    @ViewBuilder
+    private var titleField: some View {
+        if let textFieldAccessibilityIdentifier {
+            baseTitleField
+                .accessibilityIdentifier(textFieldAccessibilityIdentifier)
+        } else {
+            baseTitleField
+        }
+    }
+
+    private var baseTitleField: some View {
+        TextField(placeholder, text: $title, axis: .vertical)
+            .textFieldStyle(.plain)
+            .lineLimit(1...5)
+            .strikethrough(isCompleted)
+            .foregroundStyle(isCompleted ? .secondary : .primary)
+            .focused($isFocused)
+            .submitLabel(.done)
+            .onSubmit(commit)
+            .labelsHidden()
+            .accessibilityLabel(placeholder)
+            .onChange(of: title) { _, newValue in
+                guard newValue.contains(where: \.isNewline) else { return }
+                title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
+                commit()
+            }
     }
 }

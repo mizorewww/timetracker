@@ -409,6 +409,88 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testInboxItemMovesThroughTheSharedTaskHierarchyPicker() throws {
+        #if os(macOS)
+        throw XCTSkip("The Inbox task-routing interaction requires an iOS simulator.")
+        #else
+        let app = launchApp()
+        openSection(
+            "Inbox",
+            tabIdentifier: "phone.tab.inbox",
+            sidebarIdentifier: "sidebar.Inbox",
+            in: app
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["inbox.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        let field = app.descendants(matching: .any)["inbox.capture.field"].firstMatch
+        let addButton = app.buttons["inbox.capture.add"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 3) && field.isHittable)
+        XCTAssertTrue(addButton.waitForExistence(timeout: 3) && addButton.isHittable)
+        activate(field)
+        field.typeText("Route release checklist")
+        activate(addButton)
+
+        let menu = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.item.menu."
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                menu,
+                timeout: 5,
+                diagnosticName: "inbox-route-menu",
+                in: app
+            ) && menu.isHittable
+        )
+        activate(menu)
+
+        let move = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.moveToTask."
+            ))
+            .firstMatch
+        XCTAssertTrue(move.waitForExistence(timeout: 3) && move.isHittable)
+        activate(move)
+
+        let picker = app.descendants(matching: .any)["inbox.taskPicker"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                picker,
+                timeout: 5,
+                diagnosticName: "inbox-shared-task-picker",
+                in: app
+            )
+        )
+        try capture("iphone-inbox-shared-task-picker", app: app)
+
+        let search = app.searchFields["Search tasks, paths, or notes"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        activate(search)
+        search.typeText("SwiftData Docs")
+
+        let target = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.taskPicker.select."
+            ))
+            .matching(NSPredicate(format: "label == %@", "SwiftData Docs"))
+            .firstMatch
+        XCTAssertTrue(target.waitForExistence(timeout: 3) && target.isHittable)
+        activate(target)
+
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
+        try capture("iphone-inbox-routed-to-task", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTaskEditorAndPomodoroFlowOpen() throws {
         let app = launchApp()
 

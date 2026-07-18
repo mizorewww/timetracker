@@ -221,5 +221,38 @@ Status: completed and verified
   identity and is reserved for a later schema checkpoint.
 - No simulator was allocated for this domain-only checkpoint.
 
+## Checkpoint 9 — one hierarchy picker for every single-task choice
+
+Status: completed and verified
+
+- Timer start/switch, Pomodoro setup, and manual Inbox routing now present the
+  same `TaskHierarchyPickerSheet`. Feature-specific wrapper sheets were removed
+  rather than restyling three copies.
+- The picker owns typed single-selection contexts. Each context supplies its
+  title, empty/search copy, accessibility identifiers, and selection semantics
+  while retaining one tree projection, task identity row, path treatment, and
+  availability policy.
+- Scene-owned presentation state now carries one generic single-task
+  transaction. Pomodoro's existing route forwards to it for compatibility, and
+  the host dismisses only after the destination callback confirms success.
+- Inbox captures a mutation baseline before presenting the picker and invokes
+  the atomic routing command on selection. A stale or unavailable selection
+  therefore leaves the picker open instead of pretending the item moved.
+- Stable accessibility identifiers are scoped to the actual title field, menu,
+  menu command, picker, search field, and selection rows. The list-row
+  identifier no longer leaks through SwiftUI and overwrites every child
+  control.
+- The focused Inbox and shared-picker suites pass on macOS. All three main-app
+  localizations pass property-list validation, and the generic iOS build passes
+  with the Apple Development identity and provisioning profile intact.
+- The real iPhone path passed for capture, More, Move to Task, shared hierarchy
+  presentation, search, selection, atomic removal, and dismissal. Screenshots
+  of the shared picker and the cleared Inbox were exported and visually
+  reviewed.
+- The explicitly owned iPhone 17 Pro simulator
+  `6DEA613D-C126-4B1F-BE20-3D46799F3606` was terminated, shut down, and deleted.
+  No owned app, extension, UI runner, `xcodebuild`, `xctest`, Simulator,
+  Problem Reporter, or Booted device remained.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

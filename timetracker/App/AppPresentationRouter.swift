@@ -11,7 +11,7 @@ struct AppPresentation: Identifiable {
         case manualTime(ManualTimeDraft)
         case segmentEditor(SegmentEditorDraft)
         case startTaskPicker
-        case pomodoroTaskPicker(PomodoroTaskPickerPresentation)
+        case singleTaskPicker(SingleTaskPickerPresentation)
         case quickStartEditor(selectedIDs: [UUID])
         case settings
         case llmConfiguration(LLMConfigurationDraft)
@@ -26,9 +26,10 @@ struct AppPresentation: Identifiable {
     }
 }
 
-struct PomodoroTaskPickerPresentation {
+struct SingleTaskPickerPresentation {
     let selectedTaskID: UUID?
-    let selectTask: (UUID) -> Void
+    let context: TaskHierarchyPickerSelectionContext
+    let selectTask: (UUID) -> Bool
 }
 
 @MainActor
@@ -139,8 +140,24 @@ extension AppPresentationRouter {
         selectedTaskID: UUID?,
         selectTask: @escaping (UUID) -> Void
     ) -> Bool {
-        present(.pomodoroTaskPicker(PomodoroTaskPickerPresentation(
+        presentSingleTaskPicker(
             selectedTaskID: selectedTaskID,
+            context: .pomodoro
+        ) { taskID in
+            selectTask(taskID)
+            return true
+        }
+    }
+
+    @discardableResult
+    func presentSingleTaskPicker(
+        selectedTaskID: UUID?,
+        context: TaskHierarchyPickerSelectionContext,
+        selectTask: @escaping (UUID) -> Bool
+    ) -> Bool {
+        present(.singleTaskPicker(SingleTaskPickerPresentation(
+            selectedTaskID: selectedTaskID,
+            context: context,
             selectTask: selectTask
         )))
     }

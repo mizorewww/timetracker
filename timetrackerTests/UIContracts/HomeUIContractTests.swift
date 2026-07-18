@@ -356,16 +356,17 @@ struct HomeUIContractTests {
     @Test
     func compactTaskPickerUsesTheSystemSheetMaterial() throws {
         let source = try [
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPicker.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")
 
         #expect(source.contains(".presentationBackground(") == false)
         #expect(source.contains(".scrollContentBackground(.hidden)"))
-        #expect(source.contains("struct TaskStartPickerSheet"))
-        #expect(source.contains("dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large]"))
+        #expect(source.contains("struct TaskHierarchyPickerSheet"))
+        #expect(source.contains("dynamicTypeSize.isAccessibilitySize"))
+        #expect(source.contains("[.medium, .large]"))
     }
 
     @Test
@@ -384,11 +385,11 @@ struct HomeUIContractTests {
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift",
-            "timetracker/Features/Pomodoro/Sections/PomodoroTaskPickerViews.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift",
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         ]
         .map(sourceText)

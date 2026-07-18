@@ -35,7 +35,7 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains(".accessibilityIdentifier(\"inbox.view\")"))
         #expect(inboxSource.contains(".accessibilityIdentifier(\"inbox.capture.add\")"))
         #expect(inboxSource.contains(".accessibilityIdentifier(\"inbox.capture.field\")"))
-        #expect(inboxSource.contains(".accessibilityIdentifier(\"inbox.item.\\(item.id.uuidString)\")"))
+        #expect(inboxSource.contains("textFieldAccessibilityIdentifier: \"inbox.item.\\(item.id.uuidString)\""))
         #expect(inboxSource.contains(".accessibilityIdentifier(\"inbox.sort\")"))
         #expect(inboxSource.contains("InboxCaptureRow("))
         #expect(inboxSource.contains("InboxListRow("))
@@ -60,6 +60,13 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains(".accessibilityHint(Text(.app(\"inbox.empty.description\")))"))
         #expect(inboxSource.contains("Image(systemName: \"ellipsis\")"))
         #expect(inboxSource.contains(".accessibilityLabel(AppStrings.localized(\"common.more\"))"))
+        #expect(inboxSource.contains("inbox.item.menu.\\(item.id.uuidString)"))
+        #expect(inboxSource.contains("if item.isCompleted == false"))
+        #expect(inboxSource.contains("systemImage: \"folder\""))
+        #expect(inboxSource.contains("InboxMoveToTaskBaseline(item: item)"))
+        #expect(inboxSource.contains("context: .inboxDestination"))
+        #expect(inboxSource.contains("store.moveInboxItem(\n                baseline: baseline,"))
+        #expect(inboxSource.contains("inbox.moveToTask.\\(item.id.uuidString)"))
         #expect(inboxSource.contains("common.sort"))
         #expect(inboxItemSource.contains("common.sort") == false)
         #expect(inboxSource.contains(".navigationTitle(AppStrings.inbox)"))
@@ -142,6 +149,27 @@ struct InboxUIContractTests {
         #expect(source.contains("inbox.suggestion.targetFormat"))
         #expect(source.contains("String.localizedStringWithFormat("))
         #expect(source.contains("+ Text(taskTitle)") == false)
+    }
+
+    @Test
+    func inboxMovePickerCopyExistsInEveryMainAppLocale() throws {
+        let requiredKeys = [
+            "inbox.moveToTask",
+            "inbox.moveToTask.title",
+            "inbox.moveToTask.emptyDescription",
+            "inbox.moveToTask.selectionHint",
+            "tasks.search.empty.description",
+            "pomodoro.taskPicker.selectionHint"
+        ]
+
+        for locale in ["en", "zh-Hans", "zh-Hant"] {
+            let source = try sourceText(
+                "timetracker/\(locale).lproj/Localizable.strings"
+            )
+            for key in requiredKeys {
+                #expect(source.contains("\"\(key)\" ="))
+            }
+        }
     }
 
     private func inboxFeatureSource() throws -> String {

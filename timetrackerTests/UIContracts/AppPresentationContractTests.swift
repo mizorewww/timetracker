@@ -34,7 +34,7 @@ struct AppPresentationContractTests {
             ".manualTime(",
             ".segmentEditor(",
             ".startTaskPicker",
-            ".pomodoroTaskPicker(",
+            ".singleTaskPicker(",
             ".quickStartEditor(",
             ".settings",
             ".llmConfiguration("
@@ -116,6 +116,7 @@ struct AppPresentationContractTests {
         #expect(quickStart.contains("presentationRouter.presentQuickStartEditor(using: store)"))
         #expect(settings.contains("presentationRouter.presentLLMConfiguration(using: store)"))
         #expect(host.contains("router.replaceWithNewTask("))
+        #expect(host.contains("if taskPicker.selectTask(taskID)"))
         #expect(homeActions.contains("Task.yield()") == false)
     }
 

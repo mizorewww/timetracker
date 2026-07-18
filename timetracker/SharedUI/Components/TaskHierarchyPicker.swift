@@ -1,8 +1,16 @@
 import SwiftUI
 
+enum TaskHierarchyPickerSelectionContext: Equatable {
+    case pomodoro
+    case inboxDestination
+}
+
 enum TaskHierarchyPickerMode: Equatable {
     case timer
-    case singleSelection(selectedTaskID: UUID?)
+    case singleSelection(
+        selectedTaskID: UUID?,
+        context: TaskHierarchyPickerSelectionContext = .pomodoro
+    )
 }
 
 struct TaskHierarchyPicker: View {

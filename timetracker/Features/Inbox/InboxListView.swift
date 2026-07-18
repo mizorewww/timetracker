@@ -52,7 +52,6 @@ struct InboxListRow: View {
         } message: {
             Text(.app("inbox.delete.confirm.message"))
         }
-        .accessibilityIdentifier("inbox.item.\(item.id.uuidString)")
     }
 
     private func requestDelete() {

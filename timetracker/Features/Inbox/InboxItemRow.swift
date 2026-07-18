@@ -5,6 +5,7 @@ struct InboxItemRow: View {
     let item: InboxItem
     let isCompact: Bool
     let requestDelete: () -> Void
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var draftTitle = ""
 
     var body: some View {
@@ -17,6 +18,7 @@ struct InboxItemRow: View {
                     showsIcon: false,
                     completionVisualSize: 24,
                     textStyle: .body,
+                    textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
                     toggle: {
                         store.toggleInboxItem(item)
                     },
@@ -49,6 +51,18 @@ struct InboxItemRow: View {
                 )
             }
 
+            if item.isCompleted == false {
+                Button(action: presentMoveToTaskPicker) {
+                    Label(
+                        AppStrings.localized("inbox.moveToTask"),
+                        systemImage: "folder"
+                    )
+                }
+                .accessibilityIdentifier(
+                    "inbox.moveToTask.\(item.id.uuidString)"
+                )
+            }
+
             Button(role: .destructive) {
                 requestDelete()
             } label: {
@@ -63,6 +77,22 @@ struct InboxItemRow: View {
         }
         .menuIndicator(.hidden)
         .accessibilityLabel(AppStrings.localized("common.more"))
+        .accessibilityIdentifier(
+            "inbox.item.menu.\(item.id.uuidString)"
+        )
+    }
+
+    private func presentMoveToTaskPicker() {
+        let baseline = InboxMoveToTaskBaseline(item: item)
+        presentationRouter.presentSingleTaskPicker(
+            selectedTaskID: nil,
+            context: .inboxDestination
+        ) { taskID in
+            store.moveInboxItem(
+                baseline: baseline,
+                toTaskID: taskID
+            )
+        }
     }
 
     @ViewBuilder

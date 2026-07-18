@@ -105,18 +105,40 @@ struct CoreAppPresentationRouterTests {
         ))
 
         let presentation = try #require(router.sheet)
-        guard case let .pomodoroTaskPicker(picker) = presentation.content else {
+        guard case let .singleTaskPicker(picker) = presentation.content else {
             Issue.record("Focus did not use its typed scene picker route.")
             return
         }
         #expect(picker.selectedTaskID == selectedBeforePresenting)
+        #expect(picker.context == .pomodoro)
 
-        picker.selectTask(selectedFromPicker)
+        #expect(picker.selectTask(selectedFromPicker))
         #expect(receivedSelection == selectedFromPicker)
         #expect(router.sheet?.id == presentation.id)
 
         router.dismiss(presentationID: presentation.id)
         #expect(router.sheet == nil)
+    }
+
+    @Test @MainActor
+    func genericTaskPickerPreservesContextAndReportsRejectedSelections() throws {
+        let router = AppPresentationRouter()
+        let attemptedTaskID = UUID()
+
+        #expect(router.presentSingleTaskPicker(
+            selectedTaskID: nil,
+            context: .inboxDestination,
+            selectTask: { _ in false }
+        ))
+
+        let presentation = try #require(router.sheet)
+        guard case let .singleTaskPicker(picker) = presentation.content else {
+            Issue.record("Inbox did not use the generic task-picker route.")
+            return
+        }
+        #expect(picker.context == .inboxDestination)
+        #expect(picker.selectTask(attemptedTaskID) == false)
+        #expect(router.sheet?.id == presentation.id)
     }
 
     @Test @MainActor

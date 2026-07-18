@@ -168,6 +168,7 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift",
             "timetracker/SharedUI/Components/TaskProgressViews.swift",
             "timetracker/SharedUI/Components/SectionHeaders.swift",
             "timetracker/SharedUI/Components/ActionControls.swift",
@@ -432,6 +433,7 @@ struct CoreSourceLayoutTests {
             "TaskHierarchyPickerRows.swift",
             "TaskHierarchyPickerBehavior.swift",
             "TaskHierarchyPickerPresentation.swift",
+            "TaskHierarchyPickerSheet.swift",
             "TaskHierarchyProjection.swift",
             "TaskIdentityRow.swift"
         ]

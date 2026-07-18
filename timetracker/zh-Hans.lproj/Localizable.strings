@@ -70,6 +70,10 @@
 "inbox.itemPlaceholder" = "收件箱项目";
 "inbox.markCompleted" = "标记完成";
 "inbox.markOpen" = "标记未完成";
+"inbox.moveToTask" = "移动到任务…";
+"inbox.moveToTask.title" = "移动到任务";
+"inbox.moveToTask.emptyDescription" = "请先创建一个可用任务，再移动收件箱项目。";
+"inbox.moveToTask.selectionHint" = "将此收件箱项目移动到所选任务。";
 "inbox.delete.confirm.title" = "删除收件箱项目？";
 "inbox.delete.confirm.message" = "此项目及其推荐会从所有同步设备中移除。";
 "inbox.completed.countFormat" = "已完成（%d）";
@@ -385,6 +389,7 @@
 "tasks.searchTitle" = "搜索任务";
 "tasks.searchHint" = "搜索任务标题、路径和备注。";
 "tasks.search.clear" = "清除搜索";
+"tasks.search.empty.description" = "没有任务符合当前搜索。";
 "tasks.childCount" = "%d 子任务";
 "tasks.workedFormat" = "已投入 %@";
 "task.swipe.start" = "开始";
@@ -395,6 +400,7 @@
 "pomodoro.chooseTask" = "选择任务";
 "pomodoro.noTasks.title" = "请先创建任务";
 "pomodoro.noTasks.description" = "专注时段需要关联任务，才能正确记录时间。";
+"pomodoro.taskPicker.selectionHint" = "选择此任务用于下一次专注时段。";
 "pomodoro.setup.title" = "下一次专注";
 "pomodoro.setup.subtitle" = "选择计划和任务；专注时间会记录到该任务。";
 "pomodoro.focusDuration.accessibility" = "专注时长 %@";

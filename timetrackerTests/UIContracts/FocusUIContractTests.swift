@@ -108,11 +108,12 @@ struct FocusUIContractTests {
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"
         )
         let picker = try sourceText(
-            "timetracker/Features/Pomodoro/Sections/PomodoroTaskPickerViews.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift"
         )
         let sharedPicker = try [
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")
@@ -130,12 +131,12 @@ struct FocusUIContractTests {
         #expect(selection.contains("Picker(selection: $focusTaskID)") == false)
         #expect(selection.contains("$store.selectedTaskID") == false)
         #expect(picker.contains("TaskHierarchyPicker("))
-        #expect(picker.contains(".singleSelection(selectedTaskID: selectedTaskID)"))
         #expect(sharedPicker.contains(".searchable("))
         #expect(projection.contains("store.taskSearchResults(matching: query)"))
-        #expect(sharedPicker.contains("pomodoro.taskPicker.select."))
-        #expect(picker.contains("selectedTaskID: UUID?"))
-        #expect(router.contains("case pomodoroTaskPicker(PomodoroTaskPickerPresentation)"))
+        #expect(sharedPicker.contains("\"pomodoro.taskPicker\""))
+        #expect(sharedPicker.contains("context.accessibilityIdentifier"))
+        #expect(router.contains("case singleTaskPicker(SingleTaskPickerPresentation)"))
+        #expect(router.contains("context: .pomodoro"))
         #expect(controls.contains("store.startPomodoro(\n            taskID: focusTaskID"))
     }
 

@@ -1,21 +1,14 @@
 import BlossomColorPicker
-#if os(iOS)
 import BlossomColorPickerCore
-#endif
 import SwiftUI
 
 enum SymbolBlossomTouchMetrics {
     static let targetDiameter: CGFloat = 44
-    static let innerPetalCount = 6
-    static let outerPetalCount = 12
-    static let innerRadius: CGFloat = 44
-    static let outerRadius: CGFloat = 88
+    static let sourcePetalDiameter = BlossomConstants.petalSize
+    static let scale = targetDiameter / sourcePetalDiameter
 
-    static func adjacentCenterSpacing(
-        radius: CGFloat,
-        count: Int
-    ) -> CGFloat {
-        2 * radius * sin(.pi / CGFloat(count))
+    static func scaled(_ value: CGFloat) -> CGFloat {
+        value * scale
     }
 }
 
@@ -68,8 +61,9 @@ struct SymbolColorWell: View {
         }
         .buttonStyle(.plain)
         .popover(isPresented: $isPresented) {
-            ExpandedBlossomView(model: model, layout: Self.touchLayout)
-                .blossomStyle(Self.touchStyle)
+            ExpandedBlossomView(model: model, layout: Self.defaultLayout)
+                .frame(width: Self.defaultSize, height: Self.defaultSize)
+                .scaleEffect(SymbolBlossomTouchMetrics.scale)
                 .frame(width: Self.touchSize, height: Self.touchSize)
                 .padding(8)
                 .onAppear {
@@ -122,22 +116,10 @@ struct SymbolColorWell: View {
     }
 
     #if os(iOS)
-    private static let touchLayout = PetalLayout(
-        innerPetalCount: SymbolBlossomTouchMetrics.innerPetalCount,
-        outerPetalCount: SymbolBlossomTouchMetrics.outerPetalCount,
-        innerRadius: SymbolBlossomTouchMetrics.innerRadius,
-        outerRadius: SymbolBlossomTouchMetrics.outerRadius
+    private static let defaultLayout = PetalLayout()
+    private static let defaultSize = ExpandedBlossomView.totalSize(
+        layout: defaultLayout
     )
-    private static let touchStyle = BlossomStyle(
-        petalSize: SymbolBlossomTouchMetrics.targetDiameter,
-        innerPetalSize: SymbolBlossomTouchMetrics.targetDiameter,
-        outerRingBorderWidth: 8,
-        centerCircleSize: SymbolBlossomTouchMetrics.targetDiameter,
-        sliderWidth: 18
-    )
-    private static let touchSize = ExpandedBlossomView.totalSize(
-        layout: touchLayout,
-        style: touchStyle
-    )
+    private static let touchSize = SymbolBlossomTouchMetrics.scaled(defaultSize)
     #endif
 }

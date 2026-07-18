@@ -240,21 +240,14 @@ struct TimeTrackerUtilityTests {
     }
 
     @Test
-    func blossomTouchLayoutKeepsEachColorRegionFingerSized() {
+    func blossomTouchScaleMakesUpstreamPetalsFingerSized() {
         let metrics = SymbolBlossomTouchMetrics.self
-        let innerSpacing = metrics.adjacentCenterSpacing(
-            radius: metrics.innerRadius,
-            count: metrics.innerPetalCount
-        )
-        let outerSpacing = metrics.adjacentCenterSpacing(
-            radius: metrics.outerRadius,
-            count: metrics.outerPetalCount
-        )
 
-        #expect(metrics.innerRadius >= metrics.targetDiameter)
-        #expect(metrics.outerRadius - metrics.innerRadius >= metrics.targetDiameter)
-        #expect(innerSpacing >= metrics.targetDiameter - 0.001)
-        #expect(outerSpacing >= metrics.targetDiameter - 0.001)
+        #expect(metrics.scale > 1)
+        #expect(
+            abs(metrics.scaled(metrics.sourcePetalDiameter) - metrics.targetDiameter) <
+                0.001
+        )
     }
 
     @Test @MainActor

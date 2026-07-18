@@ -959,7 +959,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(colorWell.waitForExistence(timeout: 3) && colorWell.isHittable)
         XCTAssertGreaterThanOrEqual(colorWell.frame.width, 44)
         XCTAssertGreaterThanOrEqual(colorWell.frame.height, 44)
-        let initialColorName = colorWell.value as? String
+        let initialColorName = try XCTUnwrap(colorWell.value as? String)
         activate(colorWell)
         XCTAssertTrue(keyboard.waitForNonExistence(timeout: 3))
 
@@ -967,23 +967,36 @@ final class timetrackerUITests: XCTestCase {
             "symbol.picker.color.blossom"
         ].firstMatch
         XCTAssertTrue(blossom.waitForExistence(timeout: 3))
-        XCTAssertGreaterThanOrEqual(blossom.frame.width, 320)
-        XCTAssertGreaterThanOrEqual(blossom.frame.height, 320)
+        XCTAssertGreaterThanOrEqual(blossom.frame.width, 280)
+        XCTAssertGreaterThanOrEqual(blossom.frame.height, 280)
         XCTAssertEqual(app.sheets.count, editorSheetCount)
         try capture("task-symbol-color-blossom", app: app)
 
-        let topOuterPetal = blossom.coordinate(
-            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.23)
+        let petalOffsets = [
+            CGVector(dx: 0.5, dy: 0.32),
+            CGVector(dx: 0.68, dy: 0.5),
+            CGVector(dx: 0.5, dy: 0.40)
+        ]
+        var previousColorName = initialColorName
+        for offset in petalOffsets {
+            blossom.coordinate(withNormalizedOffset: offset).tap()
+            XCTAssertTrue(
+                waitUntil(timeout: 3) {
+                    guard let currentColorName = colorWell.value as? String else {
+                        return false
+                    }
+                    return currentColorName != previousColorName
+                },
+                "Each visible Blossom ring must update the shared color binding."
+            )
+            previousColorName = try XCTUnwrap(colorWell.value as? String)
+        }
+        let selectedColorName = previousColorName
+
+        let selectedPetal = blossom.coordinate(
+            withNormalizedOffset: petalOffsets.last!
         )
-        topOuterPetal.tap()
-        XCTAssertTrue(
-            waitUntil(timeout: 3) {
-                (colorWell.value as? String) != initialColorName
-            },
-            "Selecting a Blossom petal must update the shared color binding."
-        )
-        let selectedColorName = colorWell.value as? String
-        topOuterPetal.tap()
+        selectedPetal.tap()
         XCTAssertTrue(blossom.waitForNonExistence(timeout: 3))
         try capture("task-symbol-and-color-picker-selected", app: app)
 

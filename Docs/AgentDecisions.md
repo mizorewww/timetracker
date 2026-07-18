@@ -1463,20 +1463,20 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 替代关系：本决策只对 BlossomColorPicker 取代 AD-011 的“当前不新增第三方库”；不得据此引入 FlowDown 的其余依赖栈。
 
-背景：任务、分类、Checklist 与 Pomodoro 计划共享同一组符号和颜色，但 iPhone 的完整 inline 色板会压缩符号 viewport；软件键盘出现后，小屏设备可能看不到可点图标。文字菜单虽然释放了空间，却把本应直接识别的颜色变成需要阅读和逐层扫描的命令。用户明确指定 [Lakr233/BlossomColorPicker](https://github.com/Lakr233/BlossomColorPicker/)；审查的官方提交 `9a1ee3df309e37ae271362818dcdfdb072ea9611` 使用 MIT 许可证、没有网络或数据访问，也没有传递依赖。其顶层 iOS presenter 固定使用 30 pt 花瓣并自行寻找 window；公开的 `BlossomColorPickerCore` 则允许应用继续复用同一个花瓣视图、模型、色板、亮度滑杆和命中算法，同时提供触控样式。
+背景：任务、分类、Checklist 与 Pomodoro 计划共享同一组符号和颜色，但 iPhone 的完整 inline 色板会压缩符号 viewport；软件键盘出现后，小屏设备可能看不到可点图标。文字菜单虽然释放了空间，却把本应直接识别的颜色变成需要阅读和逐层扫描的命令。用户明确指定 [Lakr233/BlossomColorPicker](https://github.com/Lakr233/BlossomColorPicker/)；审查的官方提交 `9a1ee3df309e37ae271362818dcdfdb072ea9611` 使用 MIT 许可证、没有网络或数据访问，也没有传递依赖。其顶层 iOS presenter 固定使用 30 pt 花瓣并自行寻找 window，而且没有公开 `BlossomStyle` 参数；公开的 `BlossomColorPickerCore` 允许应用复用同一个默认花瓣视图、模型、色板、亮度滑杆和命中算法。首版适配虽然复用了 Core，却自行改成 44/88 pt 环半径，偏离了“只把上游组件放大”的用户要求。
 
 决策：
 
 - 工程通过 Swift Package Manager 固定官方 BlossomColorPicker 的精确提交，不复制或改写其色轮实现。`Package.resolved` 与工程引用必须同时锁定该 revision。
-- iOS/iPadOS 使用原生 44 pt `Button` 作为当前颜色入口，并在 scene-owned SwiftUI popover 中直接组合库公开的 `ExpandedBlossomView`、`BlossomColorPickerModel`、`PetalLayout` 和 `BlossomStyle`。外环花瓣、内环花瓣和中心圆均为 44 pt，内外环半径分别为 44/88 pt，使同环相邻色瓣的中心距不小于 44 pt；应用薄适配层只负责触控尺寸、键盘焦点、popover 边界与十六进制 binding，不另造色轮、色板、亮度控制或命中算法。
+- iOS/iPadOS 使用原生 44 pt `Button` 作为当前颜色入口，并在 scene-owned 的系统 SwiftUI popover 中直接使用库公开的默认 `ExpandedBlossomView`、`BlossomColorPickerModel` 与 `PetalLayout()`。整个上游视图统一按 `44 / BlossomConstants.petalSize` 等比放大，使可见花瓣从上游 30 pt 变为 44 pt；花瓣相对位置、颜色、动画、亮度轨道和命中逻辑保持上游默认值。应用薄适配层只负责统一缩放、键盘焦点、popover 边界与十六进制 binding，不另造或重排色轮，也不在系统 popover 内添加第二张应用自有 picker 卡片。
 - macOS 直接使用库的顶层 `BlossomColorPicker` presenter；平台差异只存在于同一个 `SymbolColorWell` 内。任务、分类、Checklist 与 Pomodoro 计划继续只复用 `SymbolColorPickerButton`，调用方不得复制 picker。
 - 打开颜色入口前结束符号搜索焦点；即使软件键盘仍在，符号 viewport 也至少保留一个完整 44 pt 可点行。选择符号、提交搜索或滚动同样遵循统一的焦点规则。
 - 人工选择可保存任意有效的六位 sRGB 十六进制值；既有 24 色只继续作为 AI 输出白名单，不能把 Blossom 选出的颜色在保存时偷偷量化回固定 palette。
 - Blossom 包含的浅色在深色外观下不能继续叠加固定白色图标。选中符号、Checklist 完成标记和 Timeline 色块统一根据实际背景亮度选择黑/白前景，并保持至少 4.5:1 对比度。
 
-后果：颜色重新成为直接、可视的二级选择，不再长期占据图标列表，也不需要阅读色名菜单。依赖回退只需移除一个 package 引用和 `SymbolColorWell` 适配文件；持久数据仍是可移植的六位 sRGB 字符串。未来升级必须重新审查许可证、公开 API、iOS scene/presentation 行为和触控尺寸，不能把上游固定 30 pt 的全窗口 presenter 直接恢复到 iPhone。
+后果：颜色重新成为直接、可视的二级选择，不再长期占据图标列表，也不需要阅读色名菜单；视觉与交互继续由 Blossom 自身定义，应用不再维护第二套花瓣几何。依赖回退只需移除一个 package 引用和 `SymbolColorWell` 适配文件；持久数据仍是可移植的六位 sRGB 字符串。未来升级必须重新审查许可证、公开 API、iOS scene/presentation 行为和触控尺寸，不能把上游固定 30 pt 的全窗口 presenter 直接恢复到 iPhone。
 
-验证：单元测试固定十六进制规范化、任意 sRGB round trip 与 AI 白名单；source contract 固定官方 URL/revision、Core 复用、44 pt 样式和四类调用方复用。签名 macOS 与 iOS 构建必须同时编译；正常字号 iPhone/iPad 行为验证覆盖软件键盘上方的 symbol viewport、44 pt 颜色入口、Blossom 展开/选色/收起、搜索选图标及 Back 后外层草稿和颜色不丢失。截图、签名结果和 owned 资源清理写入 dated Audit。
+验证：单元测试固定十六进制规范化、任意 sRGB round trip、AI 白名单及 30→44 pt 等比系数；source contract 固定官方 URL/revision、默认 Core layout、统一缩放、禁止自建 `BlossomStyle` 和四类调用方复用。签名 macOS 与 iOS 构建必须同时编译；正常字号 iPhone/iPad 行为验证覆盖软件键盘上方的 symbol viewport、44 pt 颜色入口、Blossom 展开/选色/收起、搜索选图标及 Back 后外层草稿和颜色不丢失。截图、签名结果和 owned 资源清理写入 dated Audit。
 
 ## AD-118：Live Activity 只保留与 Today 一致的可扫读计时身份
 

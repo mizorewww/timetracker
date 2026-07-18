@@ -307,10 +307,14 @@ Status: completed and verified
   blossom view, model, color data, brightness control, and hit testing inside
   a scene-owned SwiftUI popover; macOS uses the package's top-level presenter.
   No color-wheel or palette implementation was copied into the app.
-- The collapsed color well and every visible petal are 44 pt. Inner and outer
-  radii are 44/88 pt, so adjacent centers and the gap between rings are at
-  least one full touch target apart. The resulting 340 pt popover fits the
-  narrow iPhone SE portrait width.
+- Follow-up hands-on feedback rejected the first adapter's custom 44/88 pt
+  ring geometry as an unnecessary second design. The iOS adapter now uses
+  Blossom's unmodified default `ExpandedBlossomView` and `PetalLayout()` and
+  uniformly scales the whole upstream picker by `44 / 30`. The collapsed color
+  well and every visible petal are therefore 44 pt, while Blossom continues to
+  own the relative geometry, animation, slider, palette, and hit testing. The
+  flower is hosted directly in the scene-owned system popover; the app does not
+  add another picker card or visual treatment inside that system container.
 - Color is a secondary disclosure beside the SF Symbols heading. With the
   software keyboard visible, the symbol viewport retains at least one complete
   44 pt row above the keyboard. Opening color, selecting a symbol, submitting

@@ -18,6 +18,43 @@ nonisolated struct TaskVisualPresentation: Equatable, Sendable {
     }
 }
 
+nonisolated struct TaskBreadcrumbPresentation: Equatable, Sendable {
+    let readable: String
+    let abbreviated: String
+    let componentCount: Int
+
+    var isRoot: Bool {
+        componentCount <= 1
+    }
+
+    init(
+        visibleComponents: [String],
+        totalComponentCount: Int
+    ) {
+        let components = visibleComponents.filter { $0.isEmpty == false }
+        componentCount = max(components.count, totalComponentCount)
+        readable = Self.path(from: components)
+        abbreviated = Self.path(
+            from: components.map { component in
+                guard component != "…" else { return component }
+                return component.first.map(String.init) ?? component
+            }
+        )
+    }
+
+    static func root(title: String) -> TaskBreadcrumbPresentation {
+        TaskBreadcrumbPresentation(
+            visibleComponents: [title],
+            totalComponentCount: 1
+        )
+    }
+
+    private static func path(from components: [String]) -> String {
+        guard components.isEmpty == false else { return "/" }
+        return "/" + components.joined(separator: "/")
+    }
+}
+
 nonisolated struct TaskIdentityPresentation: Equatable, Sendable {
     enum Context: Equatable, Sendable {
         /// The surrounding tree already communicates ancestry.
@@ -33,19 +70,22 @@ nonisolated struct TaskIdentityPresentation: Equatable, Sendable {
     let parentPath: String?
     let fullPath: String
     let visual: TaskVisualPresentation
+    let breadcrumb: TaskBreadcrumbPresentation
 
     init(
         id: UUID,
         title: String,
         parentPath: String?,
         fullPath: String,
-        visual: TaskVisualPresentation
+        visual: TaskVisualPresentation,
+        breadcrumb: TaskBreadcrumbPresentation
     ) {
         self.id = id
         self.title = title
         self.parentPath = parentPath.flatMap { $0.isEmpty ? nil : $0 }
         self.fullPath = fullPath.isEmpty ? title : fullPath
         self.visual = visual
+        self.breadcrumb = breadcrumb
     }
 
     func text(for context: Context) -> TaskIdentityText {
@@ -71,7 +111,8 @@ extension TaskTreeIndexes {
             visual: TaskVisualPresentation(
                 iconName: task.iconName,
                 colorHex: task.colorHex
-            )
+            ),
+            breadcrumb: taskBreadcrumbByID[taskID] ?? .root(title: task.title)
         )
     }
 }

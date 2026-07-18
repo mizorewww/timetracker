@@ -218,10 +218,9 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("quickStartLimit - pinnedTasks.count"))
         #expect(homeSource.contains(".deduplicatedByID()"))
         #expect(homeSource.contains("QuickStartTaskGroup(tasks: tasks"))
-        #expect(homeSource.contains("QuickStartTaskButton"))
-        #expect(homeSource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
-        #expect(homeSource.contains(".multilineTextAlignment(.leading)"))
-        #expect(homeSource.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(homeSource.contains("HomeTimerTaskRow("))
+        #expect(homeSource.contains("QuickStartTaskButton") == false)
+        #expect(homeSource.contains("dynamicTypeSize.isAccessibilitySize ? 360 : 300"))
         #expect(homeSource.contains("private let maxPinnedTasks = 3") == false)
         #expect(homeSource.contains("QuickStartSelectableTaskRow"))
         #expect(homeSource.contains("selectedIDs.append(task.id)"))
@@ -244,6 +243,9 @@ struct HomeUIContractTests {
         ]
             .map(sourceText)
             .joined(separator: "\n")
+        let timerRowSource = try sourceText(
+            "timetracker/Features/Home/Rows/HomeTimerRows.swift"
+        )
 
         #expect(identitySource.contains("struct TaskIdentityText: Equatable, Sendable"))
         #expect(identitySource.contains("struct TaskVisualPresentation: Equatable, Sendable"))
@@ -256,15 +258,19 @@ struct HomeUIContractTests {
         #expect(identitySource.contains("taskPathByID[taskID]"))
         #expect(identitySource.contains("components(separatedBy:") == false)
         #expect(identitySource.contains(".split(separator:") == false)
-        #expect(quickStartSource.contains(".text(for: .standard)"))
-        #expect(quickStartSource.contains("TaskIcon(visual: presentation.visual"))
-        #expect(quickStartSource.contains("RunningStatusBadge()"))
-        #expect(quickStartSource.contains("struct QuickStartTimerAction"))
-        #expect(quickStartSource.contains("Button(action: openTask)"))
+        #expect(identitySource.contains("taskBreadcrumbByID[taskID]"))
+        #expect(quickStartSource.components(separatedBy: "HomeTimerTaskRow(").count - 1 == 2)
+        #expect(quickStartSource.contains("PhoneQuickStartRow") == false)
+        #expect(quickStartSource.contains("RunningStatusBadge()") == false)
+        #expect(quickStartSource.contains("struct QuickStartTimerAction") == false)
+        #expect(timerRowSource.contains("TaskIcon(visual: presentation.visual"))
+        #expect(timerRowSource.contains("Button(action: openTask)"))
+        #expect(timerRowSource.contains("HomeTimerTaskPathText"))
+        #expect(timerRowSource.contains("ViewThatFits(in: .horizontal)"))
         #expect(quickStartSource.contains("home.quickStart.timer."))
         #expect(quickStartSource.contains("performTimerPickerSelection(task)"))
         #expect(quickStartSource.contains("store.stop(segment: activeSegment)"))
-        #expect(quickStartSource.contains("stop.fill"))
+        #expect(timerRowSource.contains("stop.fill"))
         #expect(quickStartSource.contains("store.openTaskDetail(task.id)"))
         #expect(quickStartSource.contains("store.path(for: task)") == false)
         #expect(quickStartSource.contains("Text(path)") == false)
@@ -377,6 +383,7 @@ struct HomeUIContractTests {
             "timetracker/Features/Home/PhoneHomeRows.swift",
             "timetracker/Features/Home/PhoneHomeSections.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift",
@@ -398,7 +405,7 @@ struct HomeUIContractTests {
         #expect(source.components(separatedBy: "isTaskAvailableForTracking").count >= 8)
         #expect(source.contains("let activeSegment = store.activeSegment(for: task.id)"))
         #expect(source.contains("store.stop(segment: activeSegment)"))
-        #expect(source.contains("QuickStartTimerAction"))
+        #expect(source.contains("HomeTimerTaskRow"))
         #expect(source.contains("tasks.openDetail"))
         #expect(source.contains(".presentationBackground(") == false)
     }

@@ -195,8 +195,14 @@ struct TaskTreeReadIndexTests {
 
         let search = cache.searchProjection(readIndex: readIndex, revision: 1, query: "Level 4999")
         let lastTask = try #require(tasks.last)
+        let breadcrumb = try #require(
+            indexes.taskIdentityPresentation(for: lastTask.id)
+        ).breadcrumb
         #expect(search.inspectedTaskCount == tasks.count)
         #expect(search.taskIDs == [lastTask.id])
+        #expect(breadcrumb.componentCount == tasks.count)
+        #expect(breadcrumb.readable == "/Level 0/…/Level 4998/Level 4999")
+        #expect(breadcrumb.abbreviated == "/L/…/L/L")
         _ = cache.searchProjection(readIndex: readIndex, revision: 1, query: "Level 4999")
         #expect(cache.searchBuildCount == 1)
     }

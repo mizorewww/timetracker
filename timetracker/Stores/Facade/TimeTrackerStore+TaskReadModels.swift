@@ -180,7 +180,8 @@ extension TimeTrackerStore {
             visual: TaskVisualPresentation(
                 iconName: task.iconName,
                 colorHex: task.colorHex
-            )
+            ),
+            breadcrumb: .root(title: task.title)
         )
     }
 

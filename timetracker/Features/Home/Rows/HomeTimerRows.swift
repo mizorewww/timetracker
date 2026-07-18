@@ -1,159 +1,232 @@
 import SwiftUI
 
-struct ActiveTimerRow: View {
-    let store: TimeTrackerStore
-    let segment: TimeSegment
-    var openTaskDetail: ((UUID) -> Void)? = nil
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+private struct HomeTimerTaskPathText: View {
+    let presentation: TaskBreadcrumbPresentation
 
-    private var isCompactPhone: Bool {
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
+    var body: some View {
+        Group {
+            if presentation.isRoot {
+                Text(AppStrings.rootTask)
+            } else if presentation.readable == presentation.abbreviated {
+                Text(presentation.readable)
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    Text(presentation.readable)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Text(presentation.abbreviated)
+                }
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .truncationMode(.middle)
     }
+}
+
+struct HomeTimerTaskRow: View {
+    let presentation: TaskIdentityPresentation
+    let activeSegment: TimeSegment?
+    let command: TimerPickerSelectionCommand
+    let openTask: () -> Void
+    let performTimerAction: () -> Void
+    let taskAccessibilityIdentifier: String
+    let actionAccessibilityIdentifier: String
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
                 accessibilityContent
-            } else if isCompactPhone {
-                compactContent
             } else {
-                ViewThatFits(in: .horizontal) {
-                    regularContent
-                    compactContent
-                }
+                standardContent
             }
         }
-        .padding(isCompactPhone ? 10 : 14)
+        .frame(minHeight: 44)
+    }
+
+    private var standardContent: some View {
+        HStack(alignment: .center, spacing: 10) {
+            taskButton(showsElapsedTime: true)
+
+            HomeTimerTaskAction(
+                taskTitle: presentation.title,
+                taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
+                activeSegment: activeSegment,
+                command: command,
+                action: performTimerAction,
+                accessibilityIdentifier: actionAccessibilityIdentifier
+            )
+        }
     }
 
     private var accessibilityContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
-                Button(action: openTask) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(store.displayTitle(for: segment))
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(displayPathText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .contentShape(Rectangle())
+        VStack(alignment: .leading, spacing: 10) {
+            taskButton(showsElapsedTime: false)
+
+            HStack(spacing: 12) {
+                if let activeSegment {
+                    elapsedTime(for: activeSegment)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(store.displayTitle(for: segment))
-                .accessibilityValue(displayPathText)
-                .accessibilityHint(AppStrings.localized("tasks.openDetail"))
-
-                stopButton(size: 28)
+                Spacer(minLength: 0)
+                HomeTimerTaskAction(
+                    taskTitle: presentation.title,
+                    taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
+                    activeSegment: activeSegment,
+                    command: command,
+                    action: performTimerAction,
+                    accessibilityIdentifier: actionAccessibilityIdentifier
+                )
             }
-
-            DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                .font(.body.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(.primary)
         }
     }
 
-    private var regularContent: some View {
-        HStack(spacing: 12) {
-            Button(action: openTask) {
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
-                        .frame(width: 10, height: 10)
+    private func taskButton(showsElapsedTime: Bool) -> some View {
+        Button(action: openTask) {
+            HStack(alignment: .center, spacing: 10) {
+                TaskIcon(visual: presentation.visual, size: 34)
 
-                    TaskIcon(task: store.task(for: segment.taskID))
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(store.displayTitle(for: segment))
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text(displayPathText)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: 10)
-
-                    DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                        .font(.title.weight(.medium).monospacedDigit())
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(presentation.title)
+                        .font(.headline)
                         .foregroundStyle(.primary)
-                        .minimumScaleFactor(0.75)
-                        .frame(minWidth: 86, alignment: .trailing)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                        .minimumScaleFactor(0.82)
+                        .fixedSize(
+                            horizontal: false,
+                            vertical: dynamicTypeSize.isAccessibilitySize
+                        )
+
+                    HomeTimerTaskPathText(presentation: presentation.breadcrumb)
                 }
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
 
-            stopButton(size: 32)
-        }
-    }
-
-    private var compactContent: some View {
-        HStack(spacing: 10) {
-            Button(action: openTask) {
-                HStack(alignment: .center, spacing: 12) {
-                    TaskIcon(task: store.task(for: segment.taskID), size: 34)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(store.displayTitle(for: segment))
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-                        Text(displayPathText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-                        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-                            .font(.title3.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                    }
+                if showsElapsedTime, let activeSegment {
+                    elapsedTime(for: activeSegment)
                 }
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
-
-            Spacer(minLength: 0)
-            stopButton(size: 30)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(presentation.title)
+        .accessibilityValue(
+            activeSegment == nil
+                ? (presentation.parentPath ?? "")
+                : AppStrings.localized("status.running")
+        )
+        .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+        .accessibilityIdentifier(taskAccessibilityIdentifier)
     }
 
-    private var displayPathText: String {
-        let path = store.displayPath(for: segment)
-        return path.isEmpty ? AppStrings.rootTask : path
+    private func elapsedTime(for segment: TimeSegment) -> some View {
+        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
+            .font(.title3.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .frame(
+                minWidth: 78,
+                idealWidth: 88,
+                maxWidth: 104,
+                minHeight: 44,
+                alignment: .trailing
+            )
+            .accessibilityIdentifier("home.timer.elapsed.\(segment.id.uuidString)")
     }
+}
 
-    private func stopButton(size: CGFloat) -> some View {
-        Button(role: .destructive) {
-            store.stop(segment: segment)
-        } label: {
-            Image(systemName: "stop.fill")
-                .frame(width: size, height: size)
+private struct HomeTimerTaskAction: View {
+    let taskTitle: String
+    let taskColor: Color
+    let activeSegment: TimeSegment?
+    let command: TimerPickerSelectionCommand
+    let action: () -> Void
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        Button(role: activeSegment == nil ? nil : .destructive, action: action) {
+            actionLabel
+                .frame(minHeight: 30)
         }
         .buttonStyle(.bordered)
+        .tint(activeSegment == nil ? taskColor : .red)
         .frame(minWidth: 44, minHeight: 44)
-        .accessibilityLabel(
-            String.localizedStringWithFormat(
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
+        .accessibilityIdentifier(accessibilityIdentifier)
+        .help(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var actionLabel: some View {
+        if activeSegment != nil {
+            Image(systemName: "stop.fill")
+        } else {
+            ViewThatFits(in: .horizontal) {
+                Label(command.actionTitle, systemImage: command.systemImage)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Image(systemName: command.systemImage)
+            }
+            .font(.callout.weight(.semibold))
+        }
+    }
+
+    private var accessibilityLabel: String {
+        activeSegment == nil
+            ? command.accessibilityLabel(for: taskTitle)
+            : String.localizedStringWithFormat(
                 AppStrings.localized("timer.action.stopTaskFormat"),
-                store.displayTitle(for: segment)
+                taskTitle
             )
+    }
+
+    private var accessibilityHint: String {
+        activeSegment == nil
+            ? command.accessibilityHint
+            : AppStrings.localized("timer.task.stopHint")
+    }
+}
+
+struct ActiveTimerRow: View {
+    let store: TimeTrackerStore
+    let segment: TimeSegment
+    var openTaskDetail: ((UUID) -> Void)? = nil
+
+    private var presentation: TaskIdentityPresentation {
+        guard let task = store.task(for: segment.taskID) else {
+            let title = store.displayTitle(for: segment)
+            let parentPath = store.displayPath(for: segment)
+            let fullPath = parentPath.isEmpty
+                ? title
+                : "\(parentPath) / \(title)"
+            return TaskIdentityPresentation(
+                id: segment.taskID,
+                title: title,
+                parentPath: parentPath,
+                fullPath: fullPath,
+                visual: TaskVisualPresentation(iconName: nil, colorHex: nil),
+                breadcrumb: .root(title: title)
+            )
+        }
+        return store.taskIdentityPresentation(for: task)
+    }
+
+    var body: some View {
+        HomeTimerTaskRow(
+            presentation: presentation,
+            activeSegment: segment,
+            command: .alreadyRunning,
+            openTask: openTask,
+            performTimerAction: {
+                store.stop(segment: segment)
+            },
+            taskAccessibilityIdentifier: "home.activeTimer.task.\(segment.taskID.uuidString)",
+            actionAccessibilityIdentifier: "home.timer.stop.\(segment.id.uuidString)"
         )
-        .accessibilityHint(AppStrings.localized("timer.task.stopHint"))
-        .accessibilityIdentifier("home.timer.stop.\(segment.id.uuidString)")
     }
 
     private func openTask() {

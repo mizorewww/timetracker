@@ -24,11 +24,14 @@ struct ActiveTimersSection: View {
                     let lastActiveSegmentID = segments.last?.id
                     ForEach(segments, id: \.id) { segment in
                         ActiveTimerRow(store: store, segment: segment)
+                            .padding(14)
                         if segment.id != lastActiveSegmentID {
                             Divider()
+                                .padding(.horizontal, 14)
                         }
                     }
                     Divider()
+                        .padding(.horizontal, 14)
                     TodayTimerAction(store: store)
                         .frame(maxWidth: 320)
                         .frame(maxWidth: .infinity, alignment: .trailing)

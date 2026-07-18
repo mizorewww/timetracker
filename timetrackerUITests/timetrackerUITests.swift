@@ -1177,6 +1177,23 @@ final class timetrackerUITests: XCTestCase {
         scrollUntilFullyVisibleAboveSystemChrome(stopAction, in: app)
         XCTAssertTrue(stopAction.isHittable)
         XCTAssertEqual(stopAction.label, "Stop Design System")
+        XCTAssertEqual(
+            stopAction.frame.height,
+            child.frame.height,
+            accuracy: 4,
+            "The timer action and task target should stay visually aligned."
+        )
+        XCTAssertEqual(
+            stopAction.frame.midY,
+            child.frame.midY,
+            accuracy: 4,
+            "The timer action and task target should share a vertical center."
+        )
+        XCTAssertGreaterThan(
+            stopAction.frame.minX,
+            child.frame.maxX,
+            "Navigation and timer actions must remain separate hit targets."
+        )
         activate(stopAction)
         let stopped = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "Time Tracker App"),

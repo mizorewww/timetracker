@@ -26,6 +26,8 @@ struct TaskTreeService {
         var parentPathCache: [UUID: String] = [:]
         var componentCache: [UUID: [String]] = [:]
         var pathWasTruncatedByTaskID: [UUID: Bool] = [:]
+        var breadcrumbAccumulatorByTaskID: [UUID: TaskBreadcrumbAccumulator] = [:]
+        var breadcrumbByTaskID: [UUID: TaskBreadcrumbPresentation] = [:]
         var pending = childrenByParentID[nil] ?? []
         var cursor = 0
         var visited = Set<UUID>()
@@ -46,6 +48,16 @@ struct TaskTreeService {
             pathWasTruncatedByTaskID[task.id] = wasTruncated
             parentPathCache[task.id] = parentID.flatMap { pathCache[$0] } ?? ""
             pathCache[task.id] = Self.displayPath(components: components, wasTruncated: wasTruncated)
+
+            let breadcrumbAccumulator: TaskBreadcrumbAccumulator
+            if let parentID,
+               let parentBreadcrumb = breadcrumbAccumulatorByTaskID[parentID] {
+                breadcrumbAccumulator = parentBreadcrumb.appending(task.title)
+            } else {
+                breadcrumbAccumulator = .root(task.title)
+            }
+            breadcrumbAccumulatorByTaskID[task.id] = breadcrumbAccumulator
+            breadcrumbByTaskID[task.id] = breadcrumbAccumulator.presentation
             pending.append(contentsOf: childrenByParentID[task.id] ?? [])
         }
 
@@ -54,7 +66,8 @@ struct TaskTreeService {
             taskByID: taskByID,
             childrenByParentID: childrenByParentID,
             taskPathByID: pathCache,
-            taskParentPathByID: parentPathCache
+            taskParentPathByID: parentPathCache,
+            taskBreadcrumbByID: breadcrumbByTaskID
         )
     }
 
@@ -133,5 +146,48 @@ struct TaskTreeService {
         if titleOrder != .orderedSame { return titleOrder == .orderedAscending }
         if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+}
+
+private struct TaskBreadcrumbAccumulator {
+    static let maximumExactComponentCount = 4
+
+    let firstComponent: String
+    let recentComponents: [String]
+    let exactComponents: [String]?
+    let componentCount: Int
+
+    static func root(_ title: String) -> TaskBreadcrumbAccumulator {
+        TaskBreadcrumbAccumulator(
+            firstComponent: title,
+            recentComponents: [title],
+            exactComponents: [title],
+            componentCount: 1
+        )
+    }
+
+    func appending(_ component: String) -> TaskBreadcrumbAccumulator {
+        let updatedExactComponents: [String]?
+        if let exactComponents,
+           exactComponents.count < Self.maximumExactComponentCount {
+            updatedExactComponents = exactComponents + [component]
+        } else {
+            updatedExactComponents = nil
+        }
+        return TaskBreadcrumbAccumulator(
+            firstComponent: firstComponent,
+            recentComponents: Array((recentComponents + [component]).suffix(2)),
+            exactComponents: updatedExactComponents,
+            componentCount: componentCount + 1
+        )
+    }
+
+    var presentation: TaskBreadcrumbPresentation {
+        let visibleComponents = exactComponents ??
+            [firstComponent, "…"] + recentComponents
+        return TaskBreadcrumbPresentation(
+            visibleComponents: visibleComponents,
+            totalComponentCount: componentCount
+        )
     }
 }

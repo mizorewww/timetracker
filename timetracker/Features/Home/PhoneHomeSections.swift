@@ -23,27 +23,37 @@ struct PhoneNowSection: View {
                 .listRowBackground(Color.clear)
                 .accessibilityIdentifier("home.startTimer")
             } else {
-                ForEach(segments, id: \.id) { segment in
-                    ActiveTimerRow(
-                        store: store,
-                        segment: segment,
-                        openTaskDetail: openTask
-                    )
-                    .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
-                }
+                VStack(spacing: 0) {
+                    ForEach(segments, id: \.id) { segment in
+                        ActiveTimerRow(
+                            store: store,
+                            segment: segment,
+                            openTaskDetail: openTask
+                        )
+                        .padding(12)
+                        .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
 
-                Button(action: startTimer) {
-                    Label {
-                        Text(activeTimerActionTitle)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: activeTimerActionSystemImage)
+                        Divider()
+                            .padding(.horizontal, 12)
                     }
-                    .font(.body.weight(.medium))
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+
+                    Button(action: startTimer) {
+                        Label {
+                            Text(activeTimerActionTitle)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: activeTimerActionSystemImage)
+                        }
+                        .font(.body.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .accessibilityIdentifier("home.startTimer")
                 }
-                .accessibilityIdentifier("home.startTimer")
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
             }
         } header: {
             Text(.app("home.now.title"))
@@ -75,37 +85,54 @@ struct PhoneQuickStartSection: View {
 
     var body: some View {
         Section {
-            if tasks.isEmpty {
-                Button(action: startTimer) {
-                    Label(AppStrings.startTimer, systemImage: "clock.arrow.circlepath")
-                        .frame(minHeight: 44)
-                }
-            } else {
-                ForEach(tasks, id: \.id) { task in
-                    let activeSegment = store.activeSegment(for: task.id)
-                    PhoneQuickStartRow(
-                        presentation: store.taskIdentityPresentation(for: task),
-                        activeSegment: activeSegment,
-                        command: store.timerPickerSelectionCommand(for: task),
-                        openTask: {
-                            openTask(task.id)
-                        },
-                        performTimerAction: {
-                            if let activeSegment {
-                                store.stop(segment: activeSegment)
-                            } else {
-                                store.performTimerPickerSelection(task)
-                            }
-                        }
-                    )
-                }
-            }
+            VStack(spacing: 0) {
+                if tasks.isEmpty {
+                    Button(action: startTimer) {
+                        Label(AppStrings.startTimer, systemImage: "clock.arrow.circlepath")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
 
-            Button(action: editQuickStart) {
-                Label(AppStrings.localized("quickStart.edit"), systemImage: "slider.horizontal.3")
-                    .frame(minHeight: 44)
+                    Divider()
+                        .padding(.horizontal, 12)
+                } else {
+                    ForEach(tasks, id: \.id) { task in
+                        let activeSegment = store.activeSegment(for: task.id)
+                        HomeTimerTaskRow(
+                            presentation: store.taskIdentityPresentation(for: task),
+                            activeSegment: activeSegment,
+                            command: store.timerPickerSelectionCommand(for: task),
+                            openTask: {
+                                openTask(task.id)
+                            },
+                            performTimerAction: {
+                                if let activeSegment {
+                                    store.stop(segment: activeSegment)
+                                } else {
+                                    store.performTimerPickerSelection(task)
+                                }
+                            },
+                            taskAccessibilityIdentifier: "home.quickStart.task.\(task.id.uuidString)",
+                            actionAccessibilityIdentifier: "home.quickStart.timer.\(task.id.uuidString)"
+                        )
+                        .padding(12)
+
+                        Divider()
+                            .padding(.horizontal, 12)
+                    }
+                }
+
+                Button(action: editQuickStart) {
+                    Label(AppStrings.localized("quickStart.edit"), systemImage: "slider.horizontal.3")
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .accessibilityIdentifier("home.quickStart.edit")
             }
-            .accessibilityIdentifier("home.quickStart.edit")
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
         } header: {
             Text(AppStrings.quickStart)
                 .accessibilityIdentifier("home.quickStart")

@@ -6,7 +6,8 @@ struct TaskTreeIndexes {
         taskByID: [:],
         childrenByParentID: [:],
         taskPathByID: [:],
-        taskParentPathByID: [:]
+        taskParentPathByID: [:],
+        taskBreadcrumbByID: [:]
     )
 
     let orderedTaskIDs: [UUID]
@@ -14,6 +15,7 @@ struct TaskTreeIndexes {
     let childrenByParentID: [UUID?: [TaskNode]]
     let taskPathByID: [UUID: String]
     let taskParentPathByID: [UUID: String]
+    let taskBreadcrumbByID: [UUID: TaskBreadcrumbPresentation]
 }
 
 struct TaskTreeProjectionOperationCounts: Equatable {

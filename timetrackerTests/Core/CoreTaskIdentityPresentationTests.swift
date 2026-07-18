@@ -10,7 +10,11 @@ struct CoreTaskIdentityPresentationTests {
             title: "Review",
             parentPath: "Work / Release",
             fullPath: "Work / Release / Review",
-            visual: TaskVisualPresentation(iconName: "doc.text", colorHex: "0A84FF")
+            visual: TaskVisualPresentation(iconName: "doc.text", colorHex: "0A84FF"),
+            breadcrumb: TaskBreadcrumbPresentation(
+                visibleComponents: ["Work", "Release", "Review"],
+                totalComponentCount: 3
+            )
         )
 
         #expect(
@@ -34,7 +38,8 @@ struct CoreTaskIdentityPresentationTests {
             title: "Root",
             parentPath: "",
             fullPath: "Root",
-            visual: TaskVisualPresentation(iconName: nil, colorHex: nil)
+            visual: TaskVisualPresentation(iconName: nil, colorHex: nil),
+            breadcrumb: .root(title: "Root")
         )
 
         #expect(presentation.parentPath == nil)
@@ -105,6 +110,54 @@ struct CoreTaskIdentityPresentationTests {
         #expect(second.parentPath == "Product / macOS")
         #expect(second.fullPath == "Product / macOS / Review / Ship")
         #expect(first.text(for: .standard) != second.text(for: .standard))
+        #expect(first.breadcrumb.componentCount == 2)
+        #expect(first.breadcrumb.readable == "/Product / iOS/Review / Ship")
+        #expect(first.breadcrumb.abbreviated == "/P/R")
+    }
+
+    @Test @MainActor
+    func indexedBreadcrumbKeepsSemanticComponentsAndBoundsDeepPaths() throws {
+        let titles = [
+            "👨‍👩‍👧 Family / Personal",
+            "规划",
+            "Implementation",
+            "Review",
+            "Ship"
+        ]
+        var tasks: [TaskNode] = []
+        var parentID: UUID?
+        for title in titles {
+            let task = TaskNode(
+                title: title,
+                parentID: parentID,
+                deviceID: "test"
+            )
+            tasks.append(task)
+            parentID = task.id
+        }
+
+        let indexes = TaskTreeService().indexes(tasks: tasks)
+        let root = try #require(indexes.taskIdentityPresentation(for: tasks[0].id))
+        let fourLevels = try #require(indexes.taskIdentityPresentation(for: tasks[3].id))
+        let fiveLevels = try #require(indexes.taskIdentityPresentation(for: tasks[4].id))
+
+        #expect(root.breadcrumb.isRoot)
+        #expect(fourLevels.breadcrumb.readable == "/👨‍👩‍👧 Family / Personal/规划/Implementation/Review")
+        #expect(fourLevels.breadcrumb.abbreviated == "/👨‍👩‍👧/规/I/R")
+        #expect(fiveLevels.breadcrumb.componentCount == 5)
+        #expect(fiveLevels.breadcrumb.readable == "/👨‍👩‍👧 Family / Personal/…/Review/Ship")
+        #expect(fiveLevels.breadcrumb.abbreviated == "/👨‍👩‍👧/…/R/S")
+    }
+
+    @Test
+    func breadcrumbComponentCountCannotUndershootVisibleSemanticComponents() {
+        let breadcrumb = TaskBreadcrumbPresentation(
+            visibleComponents: ["Root", "Child"],
+            totalComponentCount: 1
+        )
+
+        #expect(breadcrumb.componentCount == 2)
+        #expect(breadcrumb.isRoot == false)
     }
 
     @Test @MainActor

@@ -169,8 +169,11 @@ Analytics 从 `TimeSegment` 聚合，不把统计结果当成事实来源。
 
 - App Intents 支持添加收件箱项目、开始计时和停止计时，并由系统快捷指令发现。
 - Apple Watch 通过 WatchConnectivity 接收主应用快照，并持久排队用户命令；命令与 terminal result 使用 durable `transferUserInfo`，可达消息仅用于加速。
+- Watch 主界面是 Active Timers、Quick Start、All Tasks 三张系统纵向页面。第一份快照通常有活动计时就落在 Active Timers，否则落在 Quick Start；若命令失败、同步发送/排队、连接错误或 stale 状态需要处理，即使没有 timer 也先落在 Active Timers。后续出现 status/failure 不抢走当前页面，而是在 Quick Start 与 All Tasks 顶部提供 44 pt “Review/查看状态”按钮跳回 Active Timers；Active Timers 内按 failure、status、timer 的顺序让恢复信息优先可见。
+- Quick Start 独立使用固定任务顺序并以高频/近期任务补足至四项；All Tasks 不继承固定顺序，而按 segment count 降序、last-start 降序、UUID 稳定排序。运行任务仍留在 All Tasks，点按后回到 Active Timers；其它任务即使已有计时也可发起开始，最终并行或切换由锁内读取的全局并行偏好决定。
 - Watch 上的操作以手机 typed terminal result 为主要确认；20 秒超时后可用同一 command ID 安全重试或丢弃，重试会刷新命令时间。手机拒绝超过 30 秒的旧命令，避免离线队列在很久以后意外开始或停止计时；旧手机的快照反射保留为兼容路径。
-- Watch 状态快照最多包含 64 个活动计时和 256 个近期任务，文本总预算 128 KiB；producer 按 Unicode 字符边界缩短超长投影文本，并裁剪 summary 与异常 timer start，不修改主账本/任务事实。命令 incoming/pending/failed 队列各 64 项，本地编码队列最多 512 KiB。超限、重复 ID、异常时间或过大字段不会被接受为有效快照或可恢复队列。
+- Watch 状态快照最多包含 64 个活动计时和 256 个可工作任务，文本总预算 128 KiB。producer 按四级 membership 优先级去重选择：实际传输的 running tasks、新 Quick Start pins、旧 Watch 会显示的前四个非运行 legacy Quick rows、canonical usage remainder；集合确定后才为旧 Watch 兼容重排 wire 数组。既有 `recentTasks` key 及其 legacy pinned-first 数组顺序保持不变，只新增可选 `quickStartRank` 与 `allTasksRank`：新 Watch 用后者恢复独立的 usage 排序，旧 Watch 忽略新字段仍得到原 Quick Start，新 Watch 收到旧手机 payload 时则回退到 wire 顺序。producer 按 Unicode 字符边界缩短超长投影文本，并裁剪 summary 与异常 timer start，不修改主账本/任务事实。命令 incoming/pending/failed 队列各 64 项，本地编码队列最多 512 KiB。超限、重复 ID、异常时间或过大字段不会被接受为有效快照或可恢复队列。
+- 命令失败、陈旧快照冻结和 Always On 隐私遮盖继续保留；三页重排不把失败吞掉，也不让 stale elapsed 继续增长。
 - 这些入口复用领域命令，不单独维护第二套账本逻辑。
 - Widget、Live Activity 和系统链接使用同一个严格 deep-link router。App 在 SwiftData 尚未准备好时只保留经验证、按动作去重且有上限的待处理链接，初始化完成后再执行；无效或超长 URL 不进入队列。
 - iOS 的 Watch command handler 由进程级弱引用 router 选择最近活跃 scene；scene 消失时注销，避免单例 bridge 永久强持有旧 `TimeTrackerStore` 或把命令发给错误窗口。
@@ -244,7 +247,7 @@ SwiftUI Feature
 - `Models`：SwiftData 模型、schema、迁移计划、read models。
 - `SharedLiveActivity` / `timetrackerLiveActivityExtension`：Live Activity 共享模型和扩展 UI。
 
-本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics landing page/typed category detail/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections 与共享 row foundation/action/input/presentation/sync-feedback、Task Detail sections、ledger infrastructure、facade configuration、Widget provider/view/support、Watch dashboard/timer/status/color 与 base/commands/connectivity/session-delegate store family，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、snapshot restore 预检/分域写入和 record DTO 都已分离。当前仍超出或接近结构预算的 facade lifecycle/preference/sync observer、任务行动作和 Analytics period selection 等真实文件记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不再引用已经删除的旧聚合文件，也不以“所有文件都已单一职责”作泛化承诺。
+本轮结构拆分已经落到文件系统，而不是只停留在计划：Analytics landing page/typed category detail/store、Pomodoro setup composition/empty/focus/selection/timer face、Settings sections 与共享 row foundation/action/input/presentation/sync-feedback、Task Detail sections、ledger infrastructure、facade configuration、Widget provider/view/support、Watch 三页 dashboard/active timers/task list/timer/status/color 与 base/commands/connectivity/session-delegate store family，以及 SyncConflict 的 bootstrap、本地变更、云导入/导出、恢复、状态锁、snapshot restore 预检/分域写入和 record DTO 都已分离。当前仍超出或接近结构预算的 facade lifecycle/preference/sync observer、任务行动作和 Analytics period selection 等真实文件记录在 [Docs/CodeRefactorPlan.md](Docs/CodeRefactorPlan.md)，不再引用已经删除的旧聚合文件，也不以“所有文件都已单一职责”作泛化承诺。
 
 CloudKit 刷新由持久存储远程变更和 CloudKit import/export 事件驱动，并做短暂合并；前台激活仍会进行一次一致性刷新。没有常驻的 5 秒全量轮询。
 

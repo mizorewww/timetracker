@@ -113,9 +113,17 @@ extension TimeTrackerStore {
     /// Converges scene read models after another context may have changed the
     /// timer set before this locked command entered. This is refresh-only work:
     /// it must not advance the durable sync generation or change command success.
-    func refreshStoreScopedTimerReadModels() {
+    func refreshStoreScopedTimerReadModels(includingTasks: Bool = false) {
         do {
-            try refresh(plan: StoreRefreshPlan(scopes: [.ledgerVisible, .pomodoro]))
+            var scopes: Set<StoreRefreshScope> = [.ledgerVisible, .pomodoro]
+            if includingTasks {
+                scopes.insert(.tasks)
+            }
+            let plan = StoreRefreshPlan(scopes: scopes)
+            try refreshCoordinator.refreshReadModels(self, plan: plan)
+            if plan.validateSelection {
+                validateSelectedTask()
+            }
         } catch {
             errorMessage = String(
                 format: AppStrings.localized("error.savedRefreshFailed"),

@@ -179,11 +179,31 @@ extension TimeTrackerStore {
         }
         guard surfaceEvents.isEmpty == false else { return nil }
 
-        let taskPlan = StoreRefreshPlan(scopes: [.tasks])
+        let eventPlan = StoreRefreshPlanner().plan(after: surfaceEvents)
+        let taskPlan = StoreRefreshPlan(
+            scopes: [.tasks],
+            affectedTaskIDs: eventPlan.affectedTaskIDs,
+            directlyAffectedTaskIDs: eventPlan.directlyAffectedTaskIDs,
+            explicitlyAffectedAncestorTaskIDs: eventPlan.explicitlyAffectedAncestorTaskIDs
+        )
         try refreshTaskDomain(plan: taskPlan)
 
-        let ledgerPlan = StoreRefreshPlan(scopes: [.ledgerVisible])
+        let hasLoadedLedgerHistory = ledgerDomainStore.hasLoadedHistory
+        let includesLedgerHistory = hasLoadedLedgerHistory == false ||
+            eventPlan.includeLedgerHistory
+        let ledgerPlan = StoreRefreshPlan(
+            scopes: includesLedgerHistory
+                ? [.ledgerHistory, .rollups]
+                : [.ledgerVisible, .rollups],
+            affectedTaskIDs: eventPlan.affectedTaskIDs,
+            directlyAffectedTaskIDs: eventPlan.directlyAffectedTaskIDs,
+            explicitlyAffectedAncestorTaskIDs: eventPlan.explicitlyAffectedAncestorTaskIDs,
+            affectedLedgerRanges: hasLoadedLedgerHistory && eventPlan.includeLedgerHistory
+                ? eventPlan.affectedLedgerRanges
+                : []
+        )
         try refreshLedgerDomain(plan: ledgerPlan)
+        refreshRollupDomain(plan: ledgerPlan)
 
         let currentPreferences = try fetchSyncedPreferences()
         preferenceDomainStore.refresh(

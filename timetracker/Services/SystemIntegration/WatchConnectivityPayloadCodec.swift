@@ -29,6 +29,8 @@ enum WatchConnectivityPayloadCodec {
     nonisolated private static let startedAtKey = "startedAt"
     nonisolated private static let colorHexKey = "colorHex"
     nonisolated private static let iconNameKey = "iconName"
+    nonisolated private static let quickStartRankKey = "quickStartRank"
+    nonisolated private static let allTasksRankKey = "allTasksRank"
 
     nonisolated static func encode(command: WatchTimerCommand) -> [String: Any] {
         var payload: [String: Any] = [
@@ -159,6 +161,8 @@ enum WatchConnectivityPayloadCodec {
         ]
         payload[colorHexKey] = recentTask.colorHex
         payload[iconNameKey] = recentTask.iconName
+        payload[quickStartRankKey] = recentTask.quickStartRank
+        payload[allTasksRankKey] = recentTask.allTasksRank
         return payload
     }
 
@@ -194,7 +198,9 @@ enum WatchConnectivityPayloadCodec {
             title: title,
             path: path,
             colorHex: payload[colorHexKey] as? String,
-            iconName: payload[iconNameKey] as? String
+            iconName: payload[iconNameKey] as? String,
+            quickStartRank: payload[quickStartRankKey] as? Int,
+            allTasksRank: payload[allTasksRankKey] as? Int
         )
     }
 

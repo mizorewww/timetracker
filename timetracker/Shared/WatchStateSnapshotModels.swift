@@ -16,6 +16,8 @@ nonisolated enum WatchTransportLimits {
     static let maximumSnapshotTextBytes = 128 * 1_024
     static let maximumActiveTimers = 64
     static let maximumRecentTasks = 256
+    static let maximumQuickStartTasks = 24
+    static let legacyQuickStartTaskLimit = 4
     static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
     static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
     static let maximumIncomingCommands = 64
@@ -137,6 +139,15 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     }
 
     func isValid(at now: Date) -> Bool {
+        let quickStartRanks = recentTasks.compactMap(\.quickStartRank)
+        let allTasksRanks = recentTasks.compactMap(\.allTasksRank)
+        let hasValidQuickStartRanks = quickStartRanks.isEmpty ||
+            Set(quickStartRanks) == Set(0..<quickStartRanks.count)
+        let hasValidAllTasksRanks = allTasksRanks.isEmpty ||
+            (
+                allTasksRanks.count == recentTasks.count &&
+                Set(allTasksRanks) == Set(0..<recentTasks.count)
+            )
         let textByteCount = activeTimers.reduce(into: 0) { total, timer in
             total += WatchTransportLimits.textByteCount(
                 title: timer.title,
@@ -163,10 +174,31 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
               activeTimers.allSatisfy({ $0.isStructurallyValid(relativeTo: generatedAt) }),
               recentTasks.allSatisfy(\.isStructurallyValid),
               Set(activeTimers.map(\.id)).count == activeTimers.count,
-              Set(recentTasks.map(\.taskID)).count == recentTasks.count else {
+              Set(recentTasks.map(\.taskID)).count == recentTasks.count,
+              hasValidQuickStartRanks,
+              hasValidAllTasksRanks else {
             return false
         }
         return true
+    }
+
+    /// New watch builds restore the usage order from optional metadata while
+    /// the wire array remains pinned-first for older watch builds.
+    var allTasksByUsage: [WatchRecentTaskSnapshot] {
+        Array(recentTasks.enumerated())
+            .sorted { lhs, rhs in
+                switch (lhs.element.allTasksRank, rhs.element.allTasksRank) {
+                case let (lhsRank?, rhsRank?) where lhsRank != rhsRank:
+                    return lhsRank < rhsRank
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                default:
+                    return lhs.offset < rhs.offset
+                }
+            }
+            .map(\.element)
     }
 }
 
@@ -233,6 +265,8 @@ nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Se
     var path: String
     var colorHex: String?
     var iconName: String?
+    var quickStartRank: Int? = nil
+    var allTasksRank: Int? = nil
 
     nonisolated var id: UUID { taskID }
 
@@ -246,6 +280,12 @@ nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Se
                 maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
             ) &&
             WatchTransportLimits.isValidStyleValue(colorHex) &&
-            WatchTransportLimits.isValidStyleValue(iconName)
+            WatchTransportLimits.isValidStyleValue(iconName) &&
+            quickStartRank.map {
+                (0..<WatchTransportLimits.maximumQuickStartTasks).contains($0)
+            } != false &&
+            allTasksRank.map {
+                (0..<WatchTransportLimits.maximumRecentTasks).contains($0)
+            } != false
     }
 }

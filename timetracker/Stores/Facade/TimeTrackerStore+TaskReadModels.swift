@@ -14,29 +14,13 @@ extension TimeTrackerStore {
 
     func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3) -> [TaskNode] {
         guard limit > 0 else { return [] }
-
-        let availableTasks = tasks.filter {
-            isTaskAvailableForTracking($0) &&
-            !excludedIDs.contains($0.id)
-        }
-        let rankedTasks = availableTasks.compactMap { task -> (task: TaskNode, count: Int, lastStartedAt: Date)? in
-            guard let activity = rollupDomainStore.activitySummary(for: task.id) else { return nil }
-            return (task, activity.segmentCount, activity.lastStartedAt)
-        }
-        .sorted { lhs, rhs in
-            if lhs.count != rhs.count {
-                return lhs.count > rhs.count
-            }
-            return lhs.lastStartedAt > rhs.lastStartedAt
-        }
-        .map(\.task)
-
-        let rankedIDs = Set(rankedTasks.map(\.id))
+        let historicallyUsedTasks = rankedTrackableTasks(excluding: excludedIDs)
+            .filter { rollupDomainStore.activitySummary(for: $0.id) != nil }
+        let historicallyUsedIDs = Set(historicallyUsedTasks.map(\.id))
         let fallbackTasks = recentTasks.filter {
-            !excludedIDs.contains($0.id) && !rankedIDs.contains($0.id)
+            !excludedIDs.contains($0.id) && !historicallyUsedIDs.contains($0.id)
         }
-
-        return Array((rankedTasks + fallbackTasks).prefix(limit))
+        return Array((historicallyUsedTasks + fallbackTasks).prefix(limit))
     }
 
     var archivedTasks: [TaskNode] {

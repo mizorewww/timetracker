@@ -6,8 +6,16 @@
 "watch.tasks.allHint" = "Shows every available task.";
 "watch.tasks.empty.title" = "No Tasks Yet";
 "watch.tasks.empty.message" = "Create a task on your iPhone to start tracking from your watch.";
+"watch.active.empty.title" = "No Active Timer";
+"watch.active.empty.message" = "Turn the Digital Crown to open Quick Start.";
+"watch.quickStart.empty.title" = "No Quick Start Tasks";
+"watch.quickStart.empty.message" = "Turn the Digital Crown to browse all tasks.";
 "watch.tasks.startHint" = "Starts tracking this task.";
 "watch.tasks.stopHint" = "Stops the running timer for this task.";
+"watch.tasks.running" = "Running";
+"watch.tasks.runningHint" = "Shows this task on the active timers page.";
+"watch.attention.open" = "Review";
+"watch.attention.hint" = "Opens Active Timers to review command and connection status.";
 "watch.tasks.pendingHint" = "This action is waiting for confirmation.";
 "watch.tasks.failedHint" = "Retries this action safely.";
 "watch.commandState.pending" = "Pending";

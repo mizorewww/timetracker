@@ -5,6 +5,7 @@ struct WatchTaskShortcutRow: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     let task: WatchRecentTaskSnapshot
     let commandState: WatchRowCommandState
+    let isRunning: Bool
     let action: () -> Void
 
     private var tint: Color {
@@ -43,7 +44,7 @@ struct WatchTaskShortcutRow: View {
         .disabled(commandState == .pending)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(Text(commandState.taskHintKey))
+        .accessibilityHint(Text(taskHintKey))
     }
 
     private var usesStackedIdentity: Bool {
@@ -76,15 +77,42 @@ struct WatchTaskShortcutRow: View {
     }
 
     private var taskStateIcon: some View {
-        Image(systemName: commandState.taskSystemImage)
+        Image(systemName: taskSystemImage)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(commandState.tint(default: tint))
+            .foregroundStyle(taskStateTint)
             .accessibilityHidden(true)
     }
 
     private var accessibilityLabel: String {
-        commandState.accessibilityLabel(
-            task.path.isEmpty ? task.title : "\(task.title), \(task.path)"
+        let identity = task.path.isEmpty ? task.title : "\(task.title), \(task.path)"
+        let baseLabel = if isRunning {
+            "\(identity), \(String(localized: "watch.tasks.running"))"
+        } else {
+            identity
+        }
+        return commandState.accessibilityLabel(
+            baseLabel
         )
+    }
+
+    private var taskSystemImage: String {
+        if commandState == .idle, isRunning {
+            return "timer"
+        }
+        return commandState.taskSystemImage
+    }
+
+    private var taskStateTint: Color {
+        if commandState == .idle, isRunning {
+            return .green
+        }
+        return commandState.tint(default: tint)
+    }
+
+    private var taskHintKey: LocalizedStringKey {
+        if commandState == .idle, isRunning {
+            return "watch.tasks.runningHint"
+        }
+        return commandState.taskHintKey
     }
 }

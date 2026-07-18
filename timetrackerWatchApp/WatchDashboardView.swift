@@ -1,8 +1,28 @@
 import SwiftUI
 
+enum WatchDashboardPage: Hashable {
+    case activeTimers
+    case quickStart
+    case allTasks
+
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .activeTimers:
+            "watch.active.title"
+        case .quickStart:
+            "watch.quickStart.title"
+        case .allTasks:
+            "watch.tasks.all"
+        }
+    }
+}
+
 struct WatchDashboardView: View {
-    private static let quickStartTaskLimit = 4
-    private static let failurePreviewLimit = 1
+    private static let quickStartTaskLimit =
+        WatchTransportLimits.legacyQuickStartTaskLimit
+
+    @State private var selectedPage: WatchDashboardPage = .activeTimers
+    @State private var hasSelectedInitialPage = false
 
     let snapshot: WatchStateSnapshot
     let isReachable: Bool
@@ -17,148 +37,100 @@ struct WatchDashboardView: View {
     let onDiscardCommand: (UUID) -> Void
 
     var body: some View {
-        let inactiveTasks = inactiveRecentTasks
-        let quickStartTasks = Array(inactiveTasks.prefix(Self.quickStartTaskLimit))
         let commandIndex = WatchCommandPresentationIndex(
             pendingCommands: pendingCommands,
             failedCommands: failedCommands
         )
-        let snapshotFreshness: WatchSnapshotFreshness = isSnapshotStale
-            ? .stale
-            : snapshot.freshness(at: Date())
-        let failureItems = failedCommands.map {
-            WatchCommandFailurePresentation(failure: $0, title: failureTitle(for: $0))
-        }
-        let failurePreview = Array(failureItems.prefix(Self.failurePreviewLimit))
+        let activeTaskIDs = Set(snapshot.activeTimers.map(\.taskID))
 
         NavigationStack {
-            List {
-                if !hasReceivedSnapshot, let status {
-                    Section {
-                        WatchStatusRow(status: status, snapshotDate: snapshot.generatedAt)
-                    }
+            TabView(selection: $selectedPage) {
+                WatchActiveTimersPage(
+                    timers: snapshot.activeTimers,
+                    snapshotFreshness: snapshotFreshness,
+                    generatedAt: snapshot.generatedAt,
+                    hasReceivedSnapshot: hasReceivedSnapshot,
+                    status: status,
+                    failures: failureItems,
+                    commandIndex: commandIndex,
+                    onStopTimer: onStopTimer,
+                    onRetryCommand: onRetryCommand,
+                    onDiscardCommand: onDiscardCommand
+                )
+                .tag(WatchDashboardPage.activeTimers)
+                .accessibilityIdentifier("watch.page.active")
+
+                WatchTaskListView(
+                    kind: .quickStart,
+                    tasks: quickStartTasks(activeTaskIDs: activeTaskIDs),
+                    activeTaskIDs: activeTaskIDs,
+                    hasReceivedSnapshot: hasReceivedSnapshot,
+                    commandIndex: commandIndex,
+                    onStartTask: onStartTask,
+                    onRetryCommand: onRetryCommand,
+                    onShowActiveTimers: showActiveTimers
+                )
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    attentionButton
                 }
+                .tag(WatchDashboardPage.quickStart)
+                .accessibilityIdentifier("watch.page.quickStart")
 
-                if !failureItems.isEmpty {
-                    Section {
-                        ForEach(failurePreview) { failure in
-                            WatchCommandFailureActionRow(
-                                failure: failure,
-                                onRetryCommand: onRetryCommand,
-                                onDiscardCommand: onDiscardCommand
-                            )
-                        }
-
-                        if failureItems.count > failurePreview.count {
-                            NavigationLink {
-                                WatchCommandFailuresView(
-                                    failures: failureItems,
-                                    onRetryCommand: onRetryCommand,
-                                    onDiscardCommand: onDiscardCommand
-                                )
-                            } label: {
-                                HStack {
-                                    Label(
-                                        "watch.commandFailures.all",
-                                        systemImage: "exclamationmark.bubble"
-                                    )
-                                    Spacer(minLength: 4)
-                                    Text(failureItems.count, format: .number)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .padding(.vertical, 4)
-                            }
-                            .accessibilityHint(Text("watch.commandFailures.allHint"))
-                        }
-                    } header: {
-                        Text("watch.commandFailures.title")
-                    } footer: {
-                        Text("watch.commandFailures.footer")
-                    }
+                WatchTaskListView(
+                    kind: .allTasks,
+                    tasks: snapshot.allTasksByUsage,
+                    activeTaskIDs: activeTaskIDs,
+                    hasReceivedSnapshot: hasReceivedSnapshot,
+                    commandIndex: commandIndex,
+                    onStartTask: onStartTask,
+                    onRetryCommand: onRetryCommand,
+                    onShowActiveTimers: showActiveTimers
+                )
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    attentionButton
                 }
-
-                if hasReceivedSnapshot {
-                    if !snapshot.activeTimers.isEmpty {
-                        Section("watch.active.title") {
-                            ForEach(snapshot.activeTimers) { timer in
-                                let command = commandIndex.stopTimer(timer.id)
-                                WatchActiveTimerRow(
-                                    timer: timer,
-                                    snapshotFreshness: snapshotFreshness,
-                                    generatedAt: snapshot.generatedAt,
-                                    commandState: command.state,
-                                    action: {
-                                        if let retryCommandID = command.retryCommandID {
-                                            onRetryCommand(retryCommandID)
-                                        } else {
-                                            onStopTimer(timer.id)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    if !inactiveTasks.isEmpty {
-                        Section("watch.quickStart.title") {
-                            ForEach(quickStartTasks) { task in
-                                let command = commandIndex.startTask(task.taskID)
-                                WatchTaskActionRow(
-                                    task: task,
-                                    command: command,
-                                    onStartTask: onStartTask,
-                                    onRetryCommand: onRetryCommand
-                                )
-                            }
-
-                            if inactiveTasks.count > quickStartTasks.count {
-                                NavigationLink {
-                                    WatchTaskListView(
-                                        tasks: inactiveTasks,
-                                        commandIndex: commandIndex,
-                                        onStartTask: onStartTask,
-                                        onRetryCommand: onRetryCommand
-                                    )
-                                } label: {
-                                    Label("watch.tasks.all", systemImage: "list.bullet")
-                                        .frame(
-                                            maxWidth: .infinity,
-                                            minHeight: 44,
-                                            alignment: .leading
-                                        )
-                                        .padding(.vertical, 4)
-                                }
-                                .accessibilityHint(Text("watch.tasks.allHint"))
-                            }
-                        }
-                    }
-
-                    if snapshot.activeTimers.isEmpty && inactiveTasks.isEmpty {
-                        Section {
-                            WatchEmptyState(
-                                title: String(localized: "watch.tasks.empty.title"),
-                                message: String(localized: "watch.tasks.empty.message"),
-                                systemImage: "list.bullet"
-                            )
-                        }
-                    }
-
-                    if let status {
-                        Section {
-                            WatchStatusRow(status: status, snapshotDate: snapshot.generatedAt)
-                        }
-                    }
-                }
+                .tag(WatchDashboardPage.allTasks)
+                .accessibilityIdentifier("watch.page.allTasks")
             }
-            .navigationTitle("watch.title")
+            .tabViewStyle(.verticalPage)
+            .navigationTitle(selectedPage.titleKey)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                selectInitialPageIfNeeded()
+            }
+            .onChange(of: hasReceivedSnapshot) {
+                selectInitialPageIfNeeded()
+            }
         }
     }
 
-    private var inactiveRecentTasks: [WatchRecentTaskSnapshot] {
-        let activeTaskIDs = Set(snapshot.activeTimers.map(\.taskID))
-        return snapshot.recentTasks.filter { !activeTaskIDs.contains($0.taskID) }
+    private var snapshotFreshness: WatchSnapshotFreshness {
+        isSnapshotStale ? .stale : snapshot.freshness(at: Date())
+    }
+
+    private func quickStartTasks(activeTaskIDs: Set<UUID>) -> [WatchRecentTaskSnapshot] {
+        let availableTasks = snapshot.recentTasks.filter {
+            !activeTaskIDs.contains($0.taskID)
+        }
+        let pinnedTasks = availableTasks
+            .filter { $0.quickStartRank != nil }
+            .sorted {
+                ($0.quickStartRank ?? .max) < ($1.quickStartRank ?? .max)
+            }
+        let pinnedTaskIDs = Set(pinnedTasks.map(\.taskID))
+        let frequentFillTasks = availableTasks.filter {
+            !pinnedTaskIDs.contains($0.taskID)
+        }
+        return Array(
+            (pinnedTasks + frequentFillTasks)
+                .prefix(Self.quickStartTaskLimit)
+        )
+    }
+
+    private var failureItems: [WatchCommandFailurePresentation] {
+        failedCommands.map {
+            WatchCommandFailurePresentation(failure: $0, title: failureTitle(for: $0))
+        }
     }
 
     private var status: WatchSyncStatus? {
@@ -171,6 +143,74 @@ struct WatchDashboardView: View {
         if hasConnectivityError { return .connectionError }
         if isSnapshotStale { return .stale }
         return nil
+    }
+
+    private func showActiveTimers() {
+        selectedPage = .activeTimers
+    }
+
+    @ViewBuilder
+    private var attentionButton: some View {
+        if status != nil || failureItems.isEmpty == false {
+            HStack {
+                Button(action: showActiveTimers) {
+                    Label(
+                        "watch.attention.open",
+                        systemImage: attentionSystemImage
+                    )
+                    .font(.caption.weight(.semibold))
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .tint(failureItems.isEmpty ? status?.tint ?? .orange : .orange)
+                .accessibilityHint(Text("watch.attention.hint"))
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    private var attentionSystemImage: String {
+        if failureItems.isEmpty == false {
+            return "exclamationmark.triangle.fill"
+        }
+        return status?.systemImage ?? "exclamationmark.circle"
+    }
+
+    private func selectInitialPageIfNeeded() {
+        guard hasReceivedSnapshot, hasSelectedInitialPage == false else { return }
+        #if DEBUG
+        selectedPage = auditInitialPage ?? preferredInitialPage
+        #else
+        selectedPage = preferredInitialPage
+        #endif
+        hasSelectedInitialPage = true
+    }
+
+    #if DEBUG
+    private var auditInitialPage: WatchDashboardPage? {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--watch-ui-audit-page-active") {
+            return .activeTimers
+        }
+        if arguments.contains("--watch-ui-audit-page-quick") {
+            return .quickStart
+        }
+        if arguments.contains("--watch-ui-audit-page-all") {
+            return .allTasks
+        }
+        return nil
+    }
+    #endif
+
+    private var preferredInitialPage: WatchDashboardPage {
+        if snapshot.activeTimers.isEmpty == false ||
+            status != nil ||
+            failureItems.isEmpty == false {
+            return .activeTimers
+        }
+        return .quickStart
     }
 
     private func failureTitle(for failure: WatchFailedCommand) -> String {

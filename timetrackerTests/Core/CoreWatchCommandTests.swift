@@ -381,7 +381,9 @@ struct CoreWatchCommandTests {
                     title: "Continue",
                     path: "Work",
                     colorHex: "#0A84FF",
-                    iconName: "bolt"
+                    iconName: "bolt",
+                    quickStartRank: 0,
+                    allTasksRank: 0
                 )
             ]
         )
@@ -391,6 +393,26 @@ struct CoreWatchCommandTests {
 
         #expect(decoded == snapshot)
         #expect(snapshot.isValid(at: snapshot.generatedAt))
+        #expect(
+            (payload["recentTasks"] as? [[String: Any]])?.first?["quickStartRank"] as? Int == 0
+        )
+        #expect(
+            (payload["recentTasks"] as? [[String: Any]])?.first?["allTasksRank"] as? Int == 0
+        )
+
+        var legacyPayload = payload
+        var legacyTasks = try #require(
+            legacyPayload["recentTasks"] as? [[String: Any]]
+        )
+        legacyTasks[0].removeValue(forKey: "quickStartRank")
+        legacyTasks[0].removeValue(forKey: "allTasksRank")
+        legacyPayload["recentTasks"] = legacyTasks
+        let legacySnapshot = try #require(
+            WatchConnectivityPayloadCodec.decodeState(from: legacyPayload)
+        )
+        #expect(legacySnapshot.recentTasks.first?.quickStartRank == nil)
+        #expect(legacySnapshot.recentTasks.first?.allTasksRank == nil)
+        #expect(legacySnapshot.allTasksByUsage == legacySnapshot.recentTasks)
 
         var invalidSummary = snapshot
         invalidSummary.todayGrossSeconds = -1
@@ -413,6 +435,115 @@ struct CoreWatchCommandTests {
             WatchTransportLimits.maximumFutureClockSkew + 1
         )
         #expect(futureSnapshot.isValid(at: snapshot.generatedAt) == false)
+
+        var duplicateRanks = snapshot
+        duplicateRanks.recentTasks.append(
+            WatchRecentTaskSnapshot(
+                taskID: UUID(),
+                title: "Duplicate rank",
+                path: "",
+                colorHex: nil,
+                iconName: nil,
+                quickStartRank: 0
+            )
+        )
+        #expect(duplicateRanks.isValid(at: snapshot.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(state: duplicateRanks)
+            ) == nil
+        )
+
+        var duplicateAllTasksRanks = snapshot
+        duplicateAllTasksRanks.recentTasks.append(
+            WatchRecentTaskSnapshot(
+                taskID: UUID(),
+                title: "Duplicate all-tasks rank",
+                path: "",
+                colorHex: nil,
+                iconName: nil,
+                allTasksRank: 0
+            )
+        )
+        #expect(duplicateAllTasksRanks.isValid(at: snapshot.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(
+                    state: duplicateAllTasksRanks
+                )
+            ) == nil
+        )
+
+        var reversedAllTasksRanks = snapshot
+        reversedAllTasksRanks.recentTasks[0].allTasksRank = 1
+        let reorderedTaskID = UUID()
+        reversedAllTasksRanks.recentTasks.append(
+            WatchRecentTaskSnapshot(
+                taskID: reorderedTaskID,
+                title: "First by all-tasks rank",
+                path: "",
+                colorHex: nil,
+                iconName: nil,
+                allTasksRank: 0
+            )
+        )
+        #expect(reversedAllTasksRanks.isValid(at: snapshot.generatedAt))
+        #expect(reversedAllTasksRanks.allTasksByUsage.first?.taskID == reorderedTaskID)
+
+        var partialAllTasksRanks = snapshot
+        partialAllTasksRanks.recentTasks.append(
+            WatchRecentTaskSnapshot(
+                taskID: UUID(),
+                title: "Missing all-tasks rank",
+                path: "",
+                colorHex: nil,
+                iconName: nil
+            )
+        )
+        #expect(partialAllTasksRanks.isValid(at: snapshot.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(state: partialAllTasksRanks)
+            ) == nil
+        )
+
+        var gappedAllTasksRanks = snapshot
+        gappedAllTasksRanks.recentTasks.append(
+            WatchRecentTaskSnapshot(
+                taskID: UUID(),
+                title: "Gapped all-tasks rank",
+                path: "",
+                colorHex: nil,
+                iconName: nil,
+                allTasksRank: 2
+            )
+        )
+        #expect(gappedAllTasksRanks.isValid(at: snapshot.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(state: gappedAllTasksRanks)
+            ) == nil
+        )
+
+        var outOfRangeRank = snapshot
+        outOfRangeRank.recentTasks[0].quickStartRank =
+            WatchTransportLimits.maximumQuickStartTasks
+        #expect(outOfRangeRank.isValid(at: snapshot.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(state: outOfRangeRank)
+            ) == nil
+        )
+
+        outOfRangeRank = snapshot
+        outOfRangeRank.recentTasks[0].allTasksRank =
+            WatchTransportLimits.maximumRecentTasks
+        #expect(outOfRangeRank.isValid(at: snapshot.generatedAt) == false)
+        #expect(
+            WatchConnectivityPayloadCodec.decodeState(
+                from: WatchConnectivityPayloadCodec.encode(state: outOfRangeRank)
+            ) == nil
+        )
     }
 
     @Test
@@ -542,7 +673,7 @@ struct CoreWatchCommandTests {
     }
 
     @Test @MainActor
-    func watchSnapshotRanksPinnedTasksBeforeRecentTasks() throws {
+    func watchSnapshotRanksAllTasksByUsageAndKeepsQuickStartMetadata() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -576,13 +707,21 @@ struct CoreWatchCommandTests {
 
         let snapshot = store.watchStateSnapshot(now: start.addingTimeInterval(3_000))
 
-        #expect(Array(snapshot.recentTasks.map(\.taskID).prefix(3)) == [pinned.id, frequent.id, occasional.id])
-        #expect(snapshot.recentTasks.first?.title == "Pinned")
-        #expect(snapshot.recentTasks.first?.iconName == "pin")
+        #expect(
+            Array(snapshot.allTasksByUsage.map(\.taskID).prefix(3)) ==
+                [frequent.id, occasional.id, pinned.id]
+        )
+        #expect(snapshot.recentTasks.first?.taskID == pinned.id)
+        let pinnedSnapshot = try #require(
+            snapshot.recentTasks.first { $0.taskID == pinned.id }
+        )
+        #expect(pinnedSnapshot.quickStartRank == 0)
+        #expect(pinnedSnapshot.title == "Pinned")
+        #expect(pinnedSnapshot.iconName == "pin")
     }
 
     @Test @MainActor
-    func watchSnapshotIncludesEveryAvailableTaskAfterPinnedAndRecentTasks() throws {
+    func watchSnapshotIncludesEveryAvailableTaskWithoutPinsChangingAllTaskOrder() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         var createdTasks: [TaskNode] = []
@@ -611,9 +750,404 @@ struct CoreWatchCommandTests {
         let snapshot = store.watchStateSnapshot(now: Date(timeIntervalSinceReferenceDate: 20))
 
         #expect(snapshot.recentTasks.count == 10)
-        #expect(Array(snapshot.recentTasks.map(\.taskID).prefix(2)) == [createdTasks[7].id, createdTasks[2].id])
+        #expect(
+            snapshot.recentTasks.first { $0.taskID == createdTasks[7].id }?.quickStartRank == 0
+        )
+        #expect(
+            snapshot.recentTasks.first { $0.taskID == createdTasks[2].id }?.quickStartRank == 1
+        )
+        #expect(
+            Array(snapshot.recentTasks.map(\.taskID).prefix(2)) ==
+                [createdTasks[7].id, createdTasks[2].id]
+        )
         #expect(!snapshot.recentTasks.map(\.taskID).contains(archivedTask.id))
         #expect(!snapshot.recentTasks.map(\.taskID).contains(deletedTask.id))
+    }
+
+    @Test @MainActor
+    func watchSnapshotBreaksUsageTiesByRecencyThenStableIdentity() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let olderFirstID = try #require(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000001")
+        )
+        let olderSecondID = try #require(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000002")
+        )
+        let recentID = try #require(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000003")
+        )
+        let olderSecond = try taskRepository.createTask(
+            proposedID: olderSecondID,
+            title: "A title must not override stable identity",
+            parentID: nil
+        )
+        let recent = try taskRepository.createTask(
+            proposedID: recentID,
+            title: "Recent",
+            parentID: nil
+        )
+        let olderFirst = try taskRepository.createTask(
+            proposedID: olderFirstID,
+            title: "Z title must not override stable identity",
+            parentID: nil
+        )
+        let olderStart = Date(timeIntervalSinceReferenceDate: 1_000)
+        let recentStart = olderStart.addingTimeInterval(300)
+
+        for task in [olderSecond, olderFirst] {
+            _ = try timeRepository.addManualSegment(
+                taskID: task.id,
+                startedAt: olderStart,
+                endedAt: olderStart.addingTimeInterval(60),
+                note: nil
+            )
+        }
+        _ = try timeRepository.addManualSegment(
+            taskID: recent.id,
+            startedAt: recentStart,
+            endedAt: recentStart.addingTimeInterval(60),
+            note: nil
+        )
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        #expect(
+            store.watchStateSnapshot(
+                now: recentStart.addingTimeInterval(120)
+            ).allTasksByUsage.map(\.taskID) ==
+                [recentID, olderFirstID, olderSecondID]
+        )
+    }
+
+    @Test @MainActor
+    func watchSnapshotReservesTransportCapacityForPinnedQuickStartTasks() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let fixedUpdatedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        var createdTasks: [TaskNode] = []
+        for index in 0..<(WatchTransportLimits.maximumRecentTasks + 4) {
+            let taskID = try #require(
+                UUID(
+                    uuidString: String(
+                        format: "00000000-0000-0000-0000-%012X",
+                        index + 1
+                    )
+                )
+            )
+            let task = try taskRepository.createTask(
+                proposedID: taskID,
+                title: "Task",
+                parentID: nil
+            )
+            task.updatedAt = fixedUpdatedAt
+            createdTasks.append(task)
+        }
+        let pinnedTask = try #require(createdTasks.last)
+        try context.save()
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.setQuickStartTaskIDs([pinnedTask.id])
+
+        let snapshot = store.watchStateSnapshot(
+            now: Date(timeIntervalSinceReferenceDate: 10_000)
+        )
+
+        #expect(snapshot.recentTasks.count == WatchTransportLimits.maximumRecentTasks)
+        #expect(
+            snapshot.recentTasks.first { $0.taskID == pinnedTask.id }?.quickStartRank == 0
+        )
+        #expect(snapshot.recentTasks.first?.taskID == pinnedTask.id)
+        #expect(snapshot.allTasksByUsage.last?.taskID == pinnedTask.id)
+        #expect(
+            snapshot.allTasksByUsage.map(\.taskID) ==
+                Array(
+                    createdTasks
+                        .prefix(WatchTransportLimits.maximumRecentTasks - 1)
+                        .map(\.id)
+                ) + [pinnedTask.id]
+        )
+    }
+
+    @Test @MainActor
+    func watchSnapshotPreservesLegacyQuickStartPreviewAtCapacity() throws {
+        let context = try makeTestContext()
+        let baselineDate = Date(timeIntervalSinceReferenceDate: 1_000)
+        var taskIDs: [UUID] = []
+
+        for index in 1...(WatchTransportLimits.maximumRecentTasks + 4) {
+            let taskID = try #require(
+                UUID(
+                    uuidString: String(
+                        format: "00000000-0000-0000-0000-%012X",
+                        index
+                    )
+                )
+            )
+            taskIDs.append(taskID)
+            let task = TaskNode(
+                title: "Task",
+                parentID: nil,
+                deviceID: "fixture"
+            )
+            task.id = taskID
+            task.updatedAt = index > WatchTransportLimits.maximumRecentTasks
+                ? baselineDate.addingTimeInterval(TimeInterval(index))
+                : baselineDate
+            context.insert(task)
+        }
+        try context.save()
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let snapshot = store.watchStateSnapshot(
+            now: baselineDate.addingTimeInterval(1_000)
+        )
+        let expectedLegacyPreview = Array(taskIDs.suffix(4).reversed())
+        let expectedUsageMembership =
+            Array(taskIDs.prefix(WatchTransportLimits.maximumRecentTasks - 4)) +
+                Array(taskIDs.suffix(4))
+
+        #expect(snapshot.recentTasks.count == WatchTransportLimits.maximumRecentTasks)
+        #expect(
+            Array(
+                snapshot.recentTasks
+                    .prefix(WatchTransportLimits.legacyQuickStartTaskLimit)
+                    .map(\.taskID)
+            ) == expectedLegacyPreview
+        )
+        #expect(
+            snapshot.allTasksByUsage.map(\.taskID) == expectedUsageMembership
+        )
+    }
+
+    @Test @MainActor
+    func watchSnapshotReservesTransportCapacityForRunningTasks() throws {
+        let context = try makeTestContext()
+        let now = Date()
+        let historicalStart = now.addingTimeInterval(-3_600)
+        var frequentTaskIDs: [UUID] = []
+
+        for index in 1...WatchTransportLimits.maximumRecentTasks {
+            let taskID = try #require(
+                UUID(
+                    uuidString: String(
+                        format: "00000000-0000-0000-0000-%012X",
+                        index
+                    )
+                )
+            )
+            frequentTaskIDs.append(taskID)
+            let task = TaskNode(
+                title: "Frequent \(index)",
+                parentID: nil,
+                deviceID: "fixture"
+            )
+            task.id = taskID
+            context.insert(task)
+
+            for segmentOffset in 0..<2 {
+                let startedAt = historicalStart.addingTimeInterval(
+                    TimeInterval(segmentOffset * 120)
+                )
+                let session = TimeSession(
+                    taskID: taskID,
+                    source: .timer,
+                    deviceID: "fixture",
+                    startedAt: startedAt,
+                    titleSnapshot: task.title
+                )
+                session.endedAt = startedAt.addingTimeInterval(60)
+                context.insert(session)
+                context.insert(
+                    TimeSegment(
+                        sessionID: session.id,
+                        taskID: taskID,
+                        source: .timer,
+                        deviceID: "fixture",
+                        startedAt: startedAt,
+                        endedAt: startedAt.addingTimeInterval(60)
+                    )
+                )
+            }
+        }
+
+        let runningTaskID = try #require(
+            UUID(uuidString: "00000000-0000-0000-0000-FFFFFFFFFFFF")
+        )
+        let runningTask = TaskNode(
+            title: "Running beyond the usage cap",
+            parentID: nil,
+            deviceID: "fixture"
+        )
+        runningTask.id = runningTaskID
+        context.insert(runningTask)
+        let runningSession = TimeSession(
+            taskID: runningTaskID,
+            source: .watch,
+            deviceID: "fixture",
+            startedAt: now.addingTimeInterval(-60),
+            titleSnapshot: runningTask.title
+        )
+        context.insert(runningSession)
+        let runningSegment = TimeSegment(
+            sessionID: runningSession.id,
+            taskID: runningTaskID,
+            source: .watch,
+            deviceID: "fixture",
+            startedAt: runningSession.startedAt
+        )
+        context.insert(runningSegment)
+        try context.save()
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let snapshot = store.watchStateSnapshot(now: now)
+        let expectedUsageOrder =
+            Array(frequentTaskIDs.dropLast()) + [runningTaskID]
+        let activeTaskIDs = Set(snapshot.activeTimers.map(\.taskID))
+
+        #expect(snapshot.recentTasks.count == WatchTransportLimits.maximumRecentTasks)
+        #expect(snapshot.recentTasks.contains { $0.taskID == runningTaskID })
+        #expect(snapshot.activeTimers.contains { $0.id == runningSegment.id })
+        #expect(snapshot.allTasksByUsage.map(\.taskID) == expectedUsageOrder)
+        #expect(snapshot.recentTasks.contains { $0.taskID == frequentTaskIDs.last } == false)
+        #expect(
+            Array(
+                snapshot.recentTasks
+                    .filter { activeTaskIDs.contains($0.taskID) == false }
+                    .prefix(WatchTransportLimits.legacyQuickStartTaskLimit)
+                    .map(\.taskID)
+            ) ==
+                Array(
+                    frequentTaskIDs.prefix(
+                        WatchTransportLimits.legacyQuickStartTaskLimit
+                    )
+                )
+        )
+    }
+
+    @Test @MainActor
+    func closedAppWatchProjectionBootstrapsFullHistoryBeforeRanking() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let frequent = try taskRepository.createTask(
+            title: "Frequent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let recent = try taskRepository.createTask(
+            title: "Recent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let oldStart = Date(timeIntervalSinceReferenceDate: 1_000)
+        _ = try timeRepository.addManualSegment(
+            taskID: frequent.id,
+            startedAt: oldStart,
+            endedAt: oldStart.addingTimeInterval(60),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: frequent.id,
+            startedAt: oldStart.addingTimeInterval(120),
+            endedAt: oldStart.addingTimeInterval(180),
+            note: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: recent.id,
+            startedAt: oldStart.addingTimeInterval(240),
+            endedAt: oldStart.addingTimeInterval(300),
+            note: nil
+        )
+
+        let suiteName = "WatchHistoryBootstrap-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = makeTestStore()
+        store.configureRepositoriesIfNeeded(context: context)
+        let now = Date(timeIntervalSinceReferenceDate: 50_000)
+
+        let cacheError = try store.refreshCommittedMutationSurfaces(
+            events: [
+                .ledgerChanged(
+                    taskID: recent.id,
+                    dateInterval: nil,
+                    isVisible: true
+                )
+            ],
+            widgetCache: WidgetSnapshotCache(
+                store: SharedWidgetSnapshotStore(defaults: defaults)
+            ),
+            now: now
+        )
+
+        #expect(cacheError == nil)
+        #expect(
+            Array(
+                store.watchStateSnapshot(now: now)
+                    .allTasksByUsage
+                    .map(\.taskID)
+                    .prefix(2)
+            ) ==
+                [frequent.id, recent.id]
+        )
+    }
+
+    @Test @MainActor
+    func loadedWatchProjectionRefreshesHistoricalUsageChanges() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let initialLeader = try taskRepository.createTask(
+            title: "Initial leader",
+            parentID: nil
+        )
+        let challenger = try taskRepository.createTask(
+            title: "Challenger",
+            parentID: nil
+        )
+        let initialStart = Date(timeIntervalSinceReferenceDate: 1_000)
+        _ = try timeRepository.addManualSegment(
+            taskID: initialLeader.id,
+            startedAt: initialStart,
+            endedAt: initialStart.addingTimeInterval(60),
+            note: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.watchStateSnapshot().allTasksByUsage.first?.taskID == initialLeader.id)
+
+        let challengerStart = initialStart.addingTimeInterval(1_000)
+        for offset in [0.0, 120.0] {
+            _ = try timeRepository.addManualSegment(
+                taskID: challenger.id,
+                startedAt: challengerStart.addingTimeInterval(offset),
+                endedAt: challengerStart.addingTimeInterval(offset + 60),
+                note: nil
+            )
+        }
+        let refreshError = try store.refreshCommittedMutationSurfaces(
+            events: [
+                .ledgerChanged(
+                    taskID: challenger.id,
+                    dateInterval: StoreInvalidationRange(
+                        start: challengerStart,
+                        end: challengerStart.addingTimeInterval(180)
+                    ),
+                    isVisible: false
+                )
+            ]
+        )
+
+        #expect(refreshError == nil)
+        #expect(store.watchStateSnapshot().allTasksByUsage.first?.taskID == challenger.id)
     }
 
     @Test
@@ -637,9 +1171,10 @@ struct CoreWatchCommandTests {
     }
 
     @Test
-    func watchDashboardUsesASingleGlanceableCrownScrollableLayout() throws {
+    func watchDashboardUsesThreeGlanceableVerticalPages() throws {
         let source = try [
             "timetrackerWatchApp/WatchDashboardView.swift",
+            "timetrackerWatchApp/WatchActiveTimersPage.swift",
             "timetrackerWatchApp/WatchCommandFailuresView.swift",
             "timetrackerWatchApp/WatchCommandPresentationIndex.swift",
             "timetrackerWatchApp/WatchTaskListView.swift",
@@ -649,11 +1184,37 @@ struct CoreWatchCommandTests {
         ].map(sourceText).joined(separator: "\n")
 
         #expect(source.contains("NavigationStack"))
+        #expect(source.contains("TabView(selection: $selectedPage)"))
+        #expect(source.contains(".tabViewStyle(.verticalPage)"))
+        #expect(source.contains(".tag(WatchDashboardPage.activeTimers)"))
+        #expect(source.contains(".tag(WatchDashboardPage.quickStart)"))
+        #expect(source.contains(".tag(WatchDashboardPage.allTasks)"))
+        #expect(source.contains("hasSelectedInitialPage"))
+        #expect(source.contains("selectInitialPageIfNeeded()"))
+        #expect(source.contains("preferredInitialPage"))
+        #expect(source.contains("snapshot.activeTimers.isEmpty == false"))
+        #expect(source.contains("status != nil"))
+        #expect(source.contains("failureItems.isEmpty == false"))
+        #expect(source.contains("\"watch.page.active\""))
+        #expect(source.contains("\"watch.page.quickStart\""))
+        #expect(source.contains("\"watch.page.allTasks\""))
         #expect(source.contains("List {"))
         #expect(source.contains("WatchActiveTimerRow"))
         #expect(source.contains("WatchTaskShortcutRow"))
-        #expect(source.contains("quickStartTaskLimit = 4"))
-        #expect(source.contains("inactiveTasks.prefix(Self.quickStartTaskLimit)"))
+        #expect(
+            source.contains(
+                "WatchTransportLimits.legacyQuickStartTaskLimit"
+            )
+        )
+        #expect(source.contains(".prefix(Self.quickStartTaskLimit)"))
+        #expect(source.contains("tasks: snapshot.allTasksByUsage"))
+        #expect(source.contains("!activeTaskIDs.contains($0.taskID)"))
+        #expect(source.contains("isRunning: activeTaskIDs.contains(task.taskID)"))
+        #expect(source.contains("onShowActiveTimers"))
+        #expect(source.contains("attentionButton"))
+        #expect(source.contains(".safeAreaInset(edge: .top"))
+        #expect(source.contains("\"watch.attention.open\""))
+        #expect(source.contains(".frame(minHeight: 44)"))
         #expect(source.contains("NavigationLink"))
         #expect(source.contains("WatchTaskListView"))
         #expect(source.contains("WatchCommandPresentationIndex"))
@@ -667,13 +1228,12 @@ struct CoreWatchCommandTests {
         #expect(source.contains("fixedSize(horizontal: false, vertical: true)"))
         #expect(source.contains("commandState.accessibilityLabel"))
         #expect(source.contains("minimumScaleFactor(0.8)"))
-        #expect(source.contains("if !hasReceivedSnapshot, let status"))
         #expect(source.contains("isReachable && !hasConnectivityError ? .sending : .queued"))
         #expect(!source.contains("return .offline"))
         #expect(source.contains(".privacySensitive()"))
         #expect(source.contains("\\.isLuminanceReduced"))
-        #expect(!source.contains("TabView"))
         #expect(!source.contains("TimelineView"))
+        #expect(!source.contains(".horizontalPage"))
         #expect(!source.contains("handGestureShortcut"))
     }
 
@@ -757,9 +1317,10 @@ struct CoreWatchCommandTests {
 
         #expect(source.contains("syncWatchSnapshotIfAvailable"))
         #expect(source.contains("plan.refreshPreferences"))
-        #expect(facade.contains("watchTaskShortcuts()"))
+        #expect(facade.contains("rankedTrackableTasks()"))
         #expect(facade.contains("preferences.quickStartTaskIDs"))
-        #expect(facade.contains("prefix(WatchTransportLimits.maximumRecentTasks)"))
+        #expect(facade.contains("WatchTransportLimits.maximumRecentTasks"))
+        #expect(facade.contains("quickStartRankByTaskID"))
         #expect(facade.contains("maximumSnapshotTextBytes"))
         #expect(facade.contains("boundedUTF8Prefix"))
         #expect(facade.contains("WatchConnectivityBridge.shared.updateApplicationContext"))
@@ -770,7 +1331,7 @@ struct CoreWatchCommandTests {
         let app = try sourceText("timetracker/App/timetrackerApp.swift")
         let contentView = try sourceText("timetracker/App/ContentView.swift")
         let router = try sourceText("timetracker/App/WatchCommandRouter.swift")
-        let facade = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+WatchSnapshot.swift")
+        let commands = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+WatchCommands.swift")
         let processor = try sourceText("timetracker/Services/SystemIntegration/WatchCommandProcessor.swift")
 
         #expect(app.contains("WatchConnectivityBridge.shared.activateIfSupported"))
@@ -780,10 +1341,10 @@ struct CoreWatchCommandTests {
         #expect(router.contains("weak var value: TimeTrackerStore?"))
         #expect(router.contains("[weak self] command"))
         #expect(router.contains("WatchConnectivityBridge.shared.commandHandler = nil"))
-        #expect(facade.contains("handleWatchCommand"))
-        #expect(facade.contains("writeAuthorization: writeAuthorization"))
-        #expect(facade.contains("processWithMutationOutcome"))
-        #expect(facade.contains("timerStartMutationEvents") == false)
+        #expect(commands.contains("handleWatchCommand"))
+        #expect(commands.contains("writeAuthorization: writeAuthorization"))
+        #expect(commands.contains("processWithMutationOutcome"))
+        #expect(commands.contains("timerStartMutationEvents") == false)
         #expect(processor.contains("allowParallelTimers: Bool") == false)
         #expect(processor.contains("events: outcome.events"))
     }
@@ -869,6 +1430,208 @@ struct CoreWatchCommandTests {
         }
         #expect(try timeRepository.activeSegments().map(\.id) == [startedID])
         #expect(try timeRepository.allSegments().first { $0.id == runningSegment.id }?.endedAt != nil)
+    }
+
+    @Test @MainActor
+    func watchCanStartAnotherTaskWhileParallelTimersAreEnabled() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let runningTask = try taskRepository.createTask(
+            title: "Already running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let requestedTask = try taskRepository.createTask(
+            title: "Watch request",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let runningSegment = try timeRepository.startTask(
+            taskID: runningTask.id,
+            source: .timer
+        )
+        try PreferenceCommandHandler().set(
+            key: .allowParallelTimers,
+            valueJSON: PreferenceJSON.encode(true),
+            context: context
+        )
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: requestedTask.id,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        let result = try makeTestWatchCommandProcessor(
+            receiptStore: InMemoryWatchCommandReceiptStore()
+        ).process(command, context: context)
+
+        guard case let .started(startedID) = result else {
+            Issue.record("The requested watch timer should start")
+            return
+        }
+        #expect(Set(try timeRepository.activeSegments().map(\.id)) == [runningSegment.id, startedID])
+    }
+
+    @Test @MainActor
+    func watchFacadeRefreshesAnExternallyStartedTimerThatTheCommandReuses() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Started elsewhere",
+            parentID: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.activeSegment(for: task.id) == nil)
+
+        let stateDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "WatchReuse-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try FileManager.default.createDirectory(
+            at: stateDirectory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: stateDirectory) }
+
+        try withWatchCloudSyncMode {
+            let service = SyncConflictService(
+                stateURL: stateDirectory.appendingPathComponent("state.json")
+            )
+            #expect(try service.bootstrap(context: context) == nil)
+            let generationBeforeReuse = try service.loadState().localGeneration
+            let siblingContext = ModelContext(context.container)
+            let siblingRepository = SwiftDataTimeTrackingRepository(
+                context: siblingContext,
+                deviceID: "sibling"
+            )
+            let existingSegment = try siblingRepository.startTask(
+                taskID: task.id,
+                source: .timer
+            )
+            let command = WatchTimerCommand(
+                id: UUID(),
+                type: .startTask,
+                taskID: task.id,
+                segmentID: nil,
+                issuedAt: Date(),
+                deviceID: "watch-test"
+            )
+
+            let result = store.handleWatchCommand(
+                command,
+                recordingWith: service
+            )
+
+            #expect(result.status == .success)
+            #expect(result.relatedID == existingSegment.id)
+            #expect(
+                store.watchStateSnapshot().activeTimers.contains {
+                    $0.id == existingSegment.id
+                }
+            )
+            #expect(try service.loadState().localGeneration == generationBeforeReuse)
+        }
+    }
+
+    @Test @MainActor
+    func missingWatchStopRefreshesAnExternallyStoppedTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Stopped elsewhere",
+            parentID: nil
+        )
+        let segment = try timeRepository.startTask(
+            taskID: task.id,
+            source: .timer
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.watchStateSnapshot().activeTimers.contains { $0.id == segment.id })
+
+        let siblingContext = ModelContext(context.container)
+        try SwiftDataTimeTrackingRepository(
+            context: siblingContext,
+            deviceID: "sibling"
+        ).stopSegment(segmentID: segment.id)
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .stopSegment,
+            taskID: nil,
+            segmentID: segment.id,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        let result = store.handleWatchCommand(
+            command,
+            recordingWith: SyncConflictService(
+                stateURL: FileManager.default.temporaryDirectory
+                    .appendingPathComponent(
+                        "WatchMissingSegment-\(UUID().uuidString).json"
+                    )
+            )
+        )
+
+        #expect(result.status == .missingSegment)
+        #expect(
+            store.watchStateSnapshot().activeTimers.contains {
+                $0.id == segment.id
+            } == false
+        )
+    }
+
+    @Test @MainActor
+    func missingWatchStartRefreshesAnExternallyArchivedTask() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Archived elsewhere",
+            parentID: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.watchStateSnapshot().recentTasks.contains { $0.taskID == task.id })
+
+        let siblingContext = ModelContext(context.container)
+        try SwiftDataTaskRepository(
+            context: siblingContext,
+            deviceID: "sibling"
+        ).archiveTask(taskID: task.id)
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        let result = store.handleWatchCommand(
+            command,
+            recordingWith: SyncConflictService(
+                stateURL: FileManager.default.temporaryDirectory
+                    .appendingPathComponent(
+                        "WatchMissingTask-\(UUID().uuidString).json"
+                    )
+            )
+        )
+
+        #expect(result.status == .missingTask)
+        #expect(
+            store.watchStateSnapshot().recentTasks.contains {
+                $0.taskID == task.id
+            } == false
+        )
     }
 
     @Test @MainActor

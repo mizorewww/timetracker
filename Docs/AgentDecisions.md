@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-07-17
+最近更新：2026-07-19
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现写入带日期的 Audit 文档，未来计划写入 Plan 文档。
 
@@ -1493,6 +1493,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：锁屏与应用内 Now 形成同一视觉语法，展开 Dynamic Island 只有一个主信息行；并行计时仍以最早活动时间片作为单一投影。移除 Live Activity stop intent 不会删除应用的精确 stop deep link、Shortcut 或 Widget 能力；immutable segment ID 仍用于 Activity 生命周期协调。stale 图标、冻结值、privacy-sensitive 任务文本和辅助功能值继续保留。
 
 验证：系统表面与 deep-link source contract 必须固定共享 row、expanded 单一 bottom region、Today-only `widgetURL`、无 Live Activity `Button(intent:)`/stop URL/附加计时文案，并继续覆盖 Lock Screen、expanded、compact 与 minimal 的 stale elapsed policy。projection limits 测试覆盖 Unicode 边界与总预算；三语 localization parity、付费签名 macOS 定向测试、generic iOS extension build 和正常字号 iPhone 锁屏/展开 Dynamic Island 视觉证据完成后，才能勾选对应真人反馈。
+
+## AD-119：Watch 使用三页纵向分页，并解耦 Quick Start 与全任务排序
+
+状态：Accepted
+
+关联关系：本决策只替代此前文档中“单一 Crown-scrollable 长列表、其余任务 push 到全部任务”的 UI 组织；AD-004 的 durable command/typed terminal result/payload 上限、AD-100 的 stale elapsed，以及 AD-101 的锁内并行偏好仍继续有效。
+
+背景：旧 Watch dashboard 把活动计时、Quick Start、失败与“所有任务”入口串在一张列表里。用户有活动计时时，开始另一项工作需要先越过计时行再进入次级页面；Quick Start 的 pinned 顺序又和全任务列表混成同一个“近期任务”概念，无法清楚回答“正在做什么”“马上开始什么”“全部可工作任务是什么”。
+
+决策：
+
+- `WatchDashboardView` 在同一个 `NavigationStack` 中使用 `.verticalPage` `TabView`，固定三张同级页：Active Timers、Quick Start、All Tasks。第一次收到有效 snapshot 时只选择一次默认页：通常有活动计时进入 Active Timers，否则进入 Quick Start；若存在任何 status（sending/queued、connectivity error、stale）或 command failure，即使没有 timer 也进入 Active Timers，让恢复路径优先可见。之后任何 snapshot、命令结果、status/failure、stale 或连接刷新都不得抢走用户当前页；若用户停留在 Quick Start 或 All Tasks，页面顶部必须出现 label 高度至少 44 pt 的本地化“Review/查看状态”按钮，显式返回 Active Timers。
+- Quick Start 排除运行任务，先按手机偏好的 pinned 顺序放入任务，再按全任务使用顺序补足，Watch 正常界面最多显示四项。All Tasks 不继承 pin 顺序，统一按 segment count 降序、last-start 降序、UUID 字符串升序；从未使用的任务以最早日期参与稳定尾部排序。
+- All Tasks 必须保留运行任务，并以绿色 timer 图标表达运行状态；本地化的 Running 文案属于辅助功能标签，不在狭窄表盘上重复占据一列。点按运行任务只切回 Active Timers，不发送 stop；精确停止只属于 Active Timers 的 segment row。点按其它任务可以在已有计时时发送 start，最终并行还是先停止冲突计时由手机在 store lock 内读取全局 `allowParallelTimers` 决定。
+- 传输继续使用既有 `recentTasks` key，并保留其 legacy pinned-first 数组顺序，避免旧 Watch 的 Quick Start 行为发生 wire break。`quickStartRank` 与 `allTasksRank` 都是可选字段，旧 payload 缺少时解码为 `nil`；两种 rank 各自必须唯一并落在对应 `WatchTransportLimits` 上限内。producer 在 256 个任务和与 active timers 共用的 128 KiB 文本预算内按四级优先级去重决定 membership：(1) Watch 实际传输且仍有 task projection 的 running tasks；(2) 新 `quickStartRank` pins；(3) 旧 Watch 会显示的前 `legacyQuickStartTaskLimit == 4` 个非运行 legacy Quick rows；(4) canonical usage remainder。只有集合固定后，才把入选项按 legacy order 重排为 wire array，并写入连续 `allTasksRank` 供新 Watch 恢复 All Tasks 的 usage 顺序；最终兼容重排不能改变 membership。旧 Watch 忽略两个新字段后继续得到既有前四项 Quick Start；新 Watch 连接旧手机时按 wire 顺序回退。任何 reservation 都不得偷偷改写带 rank 的 All Tasks 顺序。
+- 失败预览、全部问题、pending/retry/discard、连接与 stale 状态继续属于 Active Timers 页，并固定排在 timer rows 之前；陈旧 elapsed 继续冻结，任务/计时/失败标题在 luminance-reduced/Always On 状态继续隐私遮盖。三页重排不得削弱这些既有安全边界。
+
+后果：数码表冠在三个单一目的的同级页面之间自然移动；用户可以不先停止当前计时就去选择另一任务，同时明确知道运行项不会因整行点击被停止。Quick Start 仍尊重个人固定项，而 All Tasks 提供可解释、稳定、独立的使用排序。wire key、legacy 数组顺序和 optional 字段同时维持双向兼容；旧 payload 没有 rank metadata 时，新 Watch 的 Quick Start 与 All Tasks 都按收到的原数组稳定回退。
+
+验证：2026-07-19 的冻结源码已完成 41/41 Watch command/projection/UI source-contract 定向回归与 3/3 相关 source-layout 预算回归，均为付费自动签名 macOS 测试且无 failed、skipped 或 runtime warning。generic iOS 与独立 generic watchOS Debug 自动签名构建均为 0 error/0 warning/analyzer warning；主 App、Watch、Widget 与 Live Activity 严格 codesign 通过，保留 Team `LT98S43NKA` 和付费开发签名。专属 Apple Watch SE 3 40mm / watchOS 27.0 模拟器覆盖三页、attention override、后续状态不抢页、44 pt Review、failure/status/timer 顺序、运行任务 timer 图标与回到 Active、pending、stale、connection error、大字号及空状态，截图与完整资源清理证据写入 dated Audit。未取得配对真机证据，因此 WatchConnectivity 往返、离线恢复、Always On 实机遮盖和功耗仍明确属于后续真机门禁。
 
 ## 2. Agent 工作清单
 

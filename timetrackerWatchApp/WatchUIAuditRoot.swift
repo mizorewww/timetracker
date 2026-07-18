@@ -7,16 +7,19 @@ struct WatchUIAuditRoot: View {
     private let feedbackTaskID = UUID()
     private let readingTaskID = UUID()
     private let failedCommandID = UUID()
+    private let pendingCommandID = UUID()
 
     var body: some View {
         WatchDashboardView(
             snapshot: snapshot,
-            isReachable: false,
+            isReachable: arguments.contains("--watch-ui-audit-reachable"),
             hasReceivedSnapshot: true,
-            pendingCommands: [],
+            pendingCommands: pendingCommands,
             failedCommands: showsFailure ? [failedCommand] : [],
-            isSnapshotStale: false,
-            hasConnectivityError: false,
+            isSnapshotStale: arguments.contains("--watch-ui-audit-stale"),
+            hasConnectivityError: arguments.contains(
+                "--watch-ui-audit-connection-error"
+            ),
             onStopTimer: { _ in },
             onStartTask: { _ in },
             onRetryCommand: { _ in },
@@ -24,8 +27,35 @@ struct WatchUIAuditRoot: View {
         )
     }
 
+    private var arguments: [String] {
+        ProcessInfo.processInfo.arguments
+    }
+
     private var showsFailure: Bool {
-        ProcessInfo.processInfo.arguments.contains("--watch-ui-audit")
+        arguments.contains("--watch-ui-audit") ||
+            arguments.contains("--watch-ui-audit-failure")
+    }
+
+    private var hidesActiveTimer: Bool {
+        arguments.contains("--watch-ui-audit-no-active")
+    }
+
+    private var showsPendingCommand: Bool {
+        arguments.contains("--watch-ui-audit-pending")
+    }
+
+    private var pendingCommands: [WatchTimerCommand] {
+        guard showsPendingCommand else { return [] }
+        return [
+            WatchTimerCommand(
+                id: pendingCommandID,
+                type: .startTask,
+                taskID: feedbackTaskID,
+                segmentID: nil,
+                issuedAt: Date(),
+                deviceID: "watch-ui-audit"
+            )
+        ]
     }
 
     private var snapshot: WatchStateSnapshot {
@@ -33,7 +63,7 @@ struct WatchUIAuditRoot: View {
             generatedAt: Date(),
             todayGrossSeconds: 0,
             todayWallSeconds: 0,
-            activeTimers: [
+            activeTimers: hidesActiveTimer ? [] : [
                 WatchActiveTimerSnapshot(
                     id: activeTimerID,
                     taskID: taskID,

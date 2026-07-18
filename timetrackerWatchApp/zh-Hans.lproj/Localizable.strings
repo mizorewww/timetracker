@@ -6,8 +6,16 @@
 "watch.tasks.allHint" = "显示所有可用任务。";
 "watch.tasks.empty.title" = "还没有任务";
 "watch.tasks.empty.message" = "请先在 iPhone 上创建任务，然后就能在手表上开始计时。";
+"watch.active.empty.title" = "没有正在计时";
+"watch.active.empty.message" = "旋转数码表冠即可打开“快速开始”。";
+"watch.quickStart.empty.title" = "没有快速开始任务";
+"watch.quickStart.empty.message" = "旋转数码表冠即可浏览所有任务。";
 "watch.tasks.startHint" = "开始记录这个任务。";
 "watch.tasks.stopHint" = "停止这个任务的计时。";
+"watch.tasks.running" = "正在计时";
+"watch.tasks.runningHint" = "在“正在计时”页面显示这个任务。";
+"watch.attention.open" = "查看状态";
+"watch.attention.hint" = "打开“正在计时”页面，查看操作和连接状态。";
 "watch.tasks.pendingHint" = "此操作正在等待确认。";
 "watch.tasks.failedHint" = "安全地重试此操作。";
 "watch.commandState.pending" = "待确认";

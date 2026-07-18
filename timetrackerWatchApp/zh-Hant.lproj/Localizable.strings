@@ -6,8 +6,16 @@
 "watch.tasks.allHint" = "顯示所有可用任務。";
 "watch.tasks.empty.title" = "還沒有任務";
 "watch.tasks.empty.message" = "請先在 iPhone 上建立任務，之後就能在手錶上開始計時。";
+"watch.active.empty.title" = "沒有正在計時";
+"watch.active.empty.message" = "旋轉數位錶冠即可開啟「快速開始」。";
+"watch.quickStart.empty.title" = "沒有快速開始任務";
+"watch.quickStart.empty.message" = "旋轉數位錶冠即可瀏覽所有任務。";
 "watch.tasks.startHint" = "開始記錄這個任務。";
 "watch.tasks.stopHint" = "停止這個任務的計時。";
+"watch.tasks.running" = "正在計時";
+"watch.tasks.runningHint" = "在「正在計時」頁面顯示這個任務。";
+"watch.attention.open" = "查看狀態";
+"watch.attention.hint" = "開啟「正在計時」頁面，查看操作和連線狀態。";
 "watch.tasks.pendingHint" = "此操作正在等待確認。";
 "watch.tasks.failedHint" = "安全地重試此操作。";
 "watch.commandState.pending" = "待確認";

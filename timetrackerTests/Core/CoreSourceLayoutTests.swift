@@ -280,8 +280,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Sections/AnalyticsQualityViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
-            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
+            "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartGrid.swift",
+            "timetracker/SharedUI/Components/TimelineChartBars.swift",
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
             "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
             "timetrackerLiveActivityExtension/LiveActivityTimerPresentationViews.swift",
@@ -976,18 +978,18 @@ struct CoreSourceLayoutTests {
     }
 
     @Test
-    func analyticsTimelineFilesStaySplitByResponsibility() throws {
+    func sharedTimelineFilesStaySplitByResponsibility() throws {
         let root = try projectRootURL()
-        let timelineURL = root.appending(path: "timetracker/Features/Analytics/Timeline")
         let focusedFiles = [
-            "AnalyticsTimelineViews.swift",
-            "AnalyticsTimelineGridViews.swift",
-            "AnalyticsTimelineRows.swift",
-            "AnalyticsTimelineSupportViews.swift"
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
+            "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartGrid.swift",
+            "timetracker/SharedUI/Components/TimelineChartBars.swift"
         ]
 
         for fileName in focusedFiles {
-            let file = timelineURL.appending(path: fileName)
+            let file = root.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
         }

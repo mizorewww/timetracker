@@ -57,6 +57,15 @@ struct TimelineSection: View {
                     }
                     .padding(18)
                 } else {
+                    TodayTimelineChart(
+                        store: store,
+                        segments: segments,
+                        compactHeight: 320
+                    )
+                    .padding(16)
+
+                    Divider()
+
                     let lastTimelineSegmentID = segments.last?.id
                     ForEach(segments, id: \.id) { segment in
                         TimelineRow(store: store, segment: segment)
@@ -69,5 +78,25 @@ struct TimelineSection: View {
             .appCard(padding: 0)
         }
         .accessibilityIdentifier("home.timeline")
+    }
+}
+
+struct TodayTimelineChart: View {
+    let store: TimeTrackerStore
+    let segments: [TimeSegment]
+    var compactHeight: CGFloat = 320
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            TimelineChart(
+                timeline: store.timelineSnapshot(
+                    segments: segments,
+                    date: context.date,
+                    now: context.date
+                ),
+                compactHeight: compactHeight
+            )
+        }
+        .accessibilityIdentifier("home.timeline.graph")
     }
 }

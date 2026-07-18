@@ -135,6 +135,12 @@ struct PhoneTimelineSection: View {
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .accessibilityElement(children: .combine)
             } else {
+                TodayTimelineChart(
+                    store: store,
+                    segments: segments,
+                    compactHeight: 340
+                )
+
                 ForEach(segments, id: \.id) { segment in
                     TimelineRow(
                         store: store,

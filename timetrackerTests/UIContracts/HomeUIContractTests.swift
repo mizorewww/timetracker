@@ -288,6 +288,36 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func todayAndAnalyticsShareOneGraphicalTimelineComponent() throws {
+        let sharedSource = try [
+            "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartGrid.swift",
+            "timetracker/SharedUI/Components/TimelineChartBars.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+        let homeSource = try [
+            "timetracker/Features/Home/Sections/HomeTimelineViews.swift",
+            "timetracker/Features/Home/PhoneHomeSections.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+        let analyticsSource = try sourceText(
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift"
+        )
+
+        #expect(sharedSource.contains("struct TimelineChart: View"))
+        #expect(sharedSource.contains("TimelineAxisCompression"))
+        #expect(sharedSource.contains("horizontalTimeline"))
+        #expect(sharedSource.contains("verticalTimeline"))
+        #expect(homeSource.contains("TodayTimelineChart("))
+        #expect(homeSource.contains(".accessibilityIdentifier(\"home.timeline.graph\")"))
+        #expect(analyticsSource.contains("TimelineChart("))
+        #expect(analyticsSource.contains("horizontalTimeline") == false)
+        #expect(analyticsSource.contains("verticalTimeline") == false)
+    }
+
+    @Test
     func trackedTimeRowsUseSharedBoundedDisplayPolicy() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/DurationLabels.swift")
         let homeTimelineSource = try sourceText("timetracker/Features/Home/Rows/HomeTimelineRows.swift")

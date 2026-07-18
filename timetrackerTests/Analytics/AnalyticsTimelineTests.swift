@@ -548,7 +548,9 @@ struct AnalyticsTimelineTests {
             "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
-            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineGridViews.swift"
+            "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartGrid.swift",
+            "timetracker/SharedUI/Components/TimelineChartBars.swift"
         ]
             .map(sourceText)
             .joined(separator: "\n")

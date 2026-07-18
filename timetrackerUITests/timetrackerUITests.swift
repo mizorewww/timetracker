@@ -1066,6 +1066,59 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testHomeAndAnalyticsShareReadableTimelineVisuals() throws {
+        let app = launchApp()
+
+        XCTAssertTrue(homeIsReady(in: app))
+        let homeTimeline = app.descendants(matching: .any)["home.timeline"].firstMatch
+        scrollUntilHittable(homeTimeline, direction: .up, in: app)
+        XCTAssertTrue(homeTimeline.waitForExistence(timeout: 5) && homeTimeline.isHittable)
+        #if os(macOS)
+        try capture("mac-home-centered-timeline", app: app)
+        #else
+        try capture("iphone-home-centered-timeline", app: app)
+        #endif
+
+        app.terminate()
+        let analyticsApp = launchApp(route: "analytics")
+        XCTAssertTrue(analyticsIsReady(in: analyticsApp))
+
+        let time = analyticsApp.descendants(matching: .any)[
+            "analytics.category.time"
+        ].firstMatch
+        scrollUntilHittable(time, direction: .up, in: analyticsApp)
+        XCTAssertTrue(time.waitForExistence(timeout: 5) && time.isHittable)
+        activate(time)
+
+        let detail = analyticsApp.descendants(matching: .any)[
+            "analytics.categoryDetail.time"
+        ].firstMatch
+        let analyticsTimeline = analyticsApp.descendants(matching: .any)[
+            "analytics.timeline.section"
+        ].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        scrollUntilHittable(
+            analyticsTimeline,
+            direction: .up,
+            in: analyticsApp
+        )
+        XCTAssertTrue(
+            analyticsTimeline.waitForExistence(timeout: 5) &&
+                analyticsTimeline.isHittable
+        )
+        scroll(
+            direction: .up,
+            toward: analyticsTimeline,
+            in: analyticsApp
+        )
+        #if os(macOS)
+        try capture("mac-analytics-centered-timeline", app: analyticsApp)
+        #else
+        try capture("iphone-analytics-centered-timeline", app: analyticsApp)
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsTodayDistributionUsesSharedScale() throws {
         #if os(macOS)
         throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")
@@ -1832,13 +1885,39 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication
     ) {
         for _ in 0..<6 where !element.isHittable {
-            switch direction {
-            case .up:
-                app.swipeUp()
-            case .down:
-                app.swipeDown()
-            }
+            scroll(direction: direction, toward: element, in: app)
         }
+    }
+
+    @MainActor
+    private func scroll(
+        direction: ScrollDirection,
+        toward element: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        #if os(macOS)
+        let targetX = element.exists
+            ? element.frame.midX
+            : app.windows.firstMatch.frame.midX
+        let targetScrollView = app.scrollViews.allElementsBoundByIndex
+            .filter { scrollView in
+                let frame = scrollView.frame
+                return frame.width > 0 &&
+                    frame.minX <= targetX &&
+                    frame.maxX >= targetX
+            }
+            .min { $0.frame.width < $1.frame.width }
+            ?? app.scrollViews.firstMatch
+        let deltaY: CGFloat = direction == .up ? -420 : 420
+        targetScrollView.scroll(byDeltaX: 0, deltaY: deltaY)
+        #else
+        switch direction {
+        case .up:
+            app.swipeUp()
+        case .down:
+            app.swipeDown()
+        }
+        #endif
     }
 
     @MainActor

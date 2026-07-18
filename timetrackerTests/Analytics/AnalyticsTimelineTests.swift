@@ -430,6 +430,132 @@ struct AnalyticsTimelineTests {
     }
 
     @Test
+    func timelineChartCentersLaneGroupsInsideEachPlotArea() {
+        let vertical = TimelineChartLayout.verticalLanes(
+            width: 340,
+            laneCount: 1
+        )
+        let verticalPlotMidpoint: CGFloat = 68 + (340 - 68 - 12) / 2
+        #expect(abs(vertical.midpoint - verticalPlotMidpoint) < 0.001)
+
+        let verticalOverlap = TimelineChartLayout.verticalLanes(
+            width: 340,
+            laneCount: 3
+        )
+        #expect(abs(verticalOverlap.midpoint - verticalPlotMidpoint) < 0.001)
+        #expect(verticalOverlap.origin >= 68)
+        #expect(verticalOverlap.origin + verticalOverlap.groupExtent <= 328)
+
+        let horizontal = TimelineChartLayout.horizontalLanes(
+            height: 120,
+            laneCount: 1
+        )
+        #expect(abs(horizontal.midpoint - 48) < 0.001)
+
+        let horizontalOverlap = TimelineChartLayout.horizontalLanes(
+            height: 120,
+            laneCount: 3
+        )
+        #expect(abs(horizontalOverlap.midpoint - 48) < 0.001)
+        #expect(horizontalOverlap.origin >= 0)
+        #expect(horizontalOverlap.origin + horizontalOverlap.groupExtent <= 96)
+
+        #expect(
+            TimelineChartLayout.axisLabelOrigin(
+                position: 0,
+                axisLength: 340,
+                labelExtent: 52,
+                role: .start
+            ) == 0
+        )
+        #expect(
+            TimelineChartLayout.axisLabelOrigin(
+                position: 170,
+                axisLength: 340,
+                labelExtent: 52,
+                role: .interior
+            ) == 144
+        )
+        #expect(
+            TimelineChartLayout.axisLabelOrigin(
+                position: 340,
+                axisLength: 340,
+                labelExtent: 52,
+                role: .end
+            ) == 288
+        )
+    }
+
+    @Test
+    func timelineChartTicksPreserveExactBoundsWithoutCrowdingNearbyHours() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 18,
+                    hour: 9,
+                    minute: 55
+                )
+            )
+        )
+        let eleven = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 18,
+                    hour: 11
+                )
+            )
+        )
+        let end = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 18,
+                    hour: 12,
+                    minute: 5
+                )
+            )
+        )
+        let interval = DateInterval(start: start, end: end)
+        let compression = TimelineAxisCompression(
+            displayInterval: interval,
+            busyIntervals: [interval]
+        )
+
+        let ticks = TimelineChartLayout.axisTicks(
+            displayInterval: interval,
+            compression: compression,
+            axisLength: 340,
+            minimumSpacing: 28,
+            calendar: calendar
+        )
+
+        #expect(ticks.map(\.date) == [start, eleven, end])
+        #expect(ticks.map(\.role) == [.start, .interior, .end])
+
+        let shortEnd = start.addingTimeInterval(10 * 60)
+        let shortInterval = DateInterval(start: start, end: shortEnd)
+        let shortTicks = TimelineChartLayout.axisTicks(
+            displayInterval: shortInterval,
+            compression: TimelineAxisCompression(
+                displayInterval: shortInterval,
+                busyIntervals: [shortInterval]
+            ),
+            axisLength: 20,
+            minimumSpacing: 28,
+            calendar: calendar
+        )
+        #expect(shortTicks.map(\.date) == [start, shortEnd])
+        #expect(shortTicks.first?.role == .start)
+    }
+
+    @Test
     func timelineLayoutKeepsBackToBackSegmentsVisuallySeparated() {
         let day = Date(timeIntervalSince1970: 0)
         let dayInterval = DateInterval(start: day, duration: 24 * 60 * 60)
@@ -549,6 +675,7 @@ struct AnalyticsTimelineTests {
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
             "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartLayout.swift",
             "timetracker/SharedUI/Components/TimelineChartGrid.swift",
             "timetracker/SharedUI/Components/TimelineChartBars.swift"
         ]

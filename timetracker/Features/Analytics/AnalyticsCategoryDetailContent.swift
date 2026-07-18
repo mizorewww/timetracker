@@ -35,6 +35,7 @@ extension AnalyticsCategoryDetailView {
                 ) {
                     OverlappingTimelineContent(timeline: snapshot.timeline)
                 }
+                .accessibilityIdentifier("analytics.timeline.section")
             } else {
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.dailyTrend.title"),

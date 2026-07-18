@@ -3,7 +3,8 @@ import SwiftUI
 extension TimelineChart {
     func horizontalBar(
         entry: AnalyticsTimelineEntry,
-        width: CGFloat
+        width: CGFloat,
+        lanes: TimelineChartLaneLayout
     ) -> some View {
         let startRatio = axisCompression.ratio(for: entry.interval.start)
         let endRatio = axisCompression.ratio(for: entry.interval.end)
@@ -13,36 +14,31 @@ extension TimelineChart {
 
         return RoundedRectangle(cornerRadius: 5, style: .continuous)
             .fill(Color(hex: entry.colorHex) ?? .blue)
-            .frame(width: barWidth, height: 24)
+            .frame(width: barWidth, height: lanes.laneExtent)
             .overlay {
                 Image(systemName: entry.iconName)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white)
             }
-            .offset(x: x, y: CGFloat(entry.lane) * 34 + 16)
+            .offset(x: x, y: lanes.offset(for: entry.lane))
             .help("\(entry.title) \(shortRange(entry))")
     }
 
     func verticalBar(
         entry: AnalyticsTimelineEntry,
-        width: CGFloat,
-        height: CGFloat
+        height: CGFloat,
+        lanes: TimelineChartLaneLayout
     ) -> some View {
         let startRatio = axisCompression.ratio(for: entry.interval.start)
         let endRatio = axisCompression.ratio(for: entry.interval.end)
         let durationRatio = max(0, endRatio - startRatio)
-        let leftAxis: CGFloat = 68
-        let laneWidth = max(
-            22,
-            min(38, (width - leftAxis - 12) / CGFloat(max(laneCount, 1)) - 8)
-        )
         let barHeight = max(20, height * CGFloat(durationRatio))
-        let x = leftAxis + CGFloat(entry.lane) * (laneWidth + 8)
+        let x = lanes.offset(for: entry.lane)
         let y = height * CGFloat(startRatio)
 
         return RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(Color(hex: entry.colorHex) ?? .blue)
-            .frame(width: laneWidth, height: barHeight)
+            .frame(width: lanes.laneExtent, height: barHeight)
             .overlay(alignment: .top) {
                 Image(systemName: entry.iconName)
                     .font(.caption2.weight(.semibold))

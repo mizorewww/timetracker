@@ -297,6 +297,7 @@ struct HomeUIContractTests {
     func todayAndAnalyticsShareOneGraphicalTimelineComponent() throws {
         let sharedSource = try [
             "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartLayout.swift",
             "timetracker/SharedUI/Components/TimelineChartGrid.swift",
             "timetracker/SharedUI/Components/TimelineChartBars.swift"
         ]
@@ -316,6 +317,10 @@ struct HomeUIContractTests {
         #expect(sharedSource.contains("TimelineAxisCompression"))
         #expect(sharedSource.contains("horizontalTimeline"))
         #expect(sharedSource.contains("verticalTimeline"))
+        #expect(sharedSource.contains("TimelineChartLayout.horizontalLanes("))
+        #expect(sharedSource.contains("TimelineChartLayout.verticalLanes("))
+        #expect(sharedSource.contains("TimelineChartLayout.axisTicks("))
+        #expect(sharedSource.contains("tick.role.isBoundary"))
         #expect(homeSource.contains("TodayTimelineChart("))
         #expect(homeSource.contains(".accessibilityIdentifier(\"home.timeline.graph\")"))
         #expect(analyticsSource.contains("TimelineChart("))

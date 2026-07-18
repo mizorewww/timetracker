@@ -295,6 +295,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
             "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartLayout.swift",
             "timetracker/SharedUI/Components/TimelineChartGrid.swift",
             "timetracker/SharedUI/Components/TimelineChartBars.swift",
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
@@ -1023,6 +1024,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
             "timetracker/SharedUI/Components/TimelineChart.swift",
+            "timetracker/SharedUI/Components/TimelineChartLayout.swift",
             "timetracker/SharedUI/Components/TimelineChartGrid.swift",
             "timetracker/SharedUI/Components/TimelineChartBars.swift"
         ]

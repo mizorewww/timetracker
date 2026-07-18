@@ -1,48 +1,75 @@
 import SwiftUI
-
 extension TimelineChart {
     func horizontalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach(visibleHourTicks, id: \.self) { tick in
-                let ratio = axisCompression.ratio(for: tick)
+            ForEach(
+                visibleHourTicks(axisLength: width, minimumSpacing: 84),
+                id: \.date
+            ) { tick in
+                let ratio = axisCompression.ratio(for: tick.date)
                 let x = width * CGFloat(ratio)
-                VStack(alignment: .leading, spacing: 4) {
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.16))
-                        .frame(width: 1, height: height - 24)
-                    Text(hourLabel(tick))
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.92)
-                        .frame(width: 52, alignment: .leading)
-                }
-                .offset(x: min(max(0, x), width - 52))
+                TimelineGridLine(position: x, isVertical: true)
+                    .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
+                    .frame(width: width, height: max(0, height - 24))
+                Text(hourLabel(tick.date))
+                    .font(
+                        .footnote
+                            .weight(tick.role.isBoundary ? .semibold : .regular)
+                            .monospacedDigit()
+                    )
+                    .foregroundStyle(
+                        tick.role.isBoundary ? Color.primary : Color.secondary
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.92)
+                    .frame(width: 52, height: 20, alignment: .leading)
+                    .offset(
+                        x: TimelineChartLayout.axisLabelOrigin(
+                            position: x,
+                            axisLength: width,
+                            labelExtent: 52,
+                            role: tick.role
+                        ),
+                        y: max(0, height - 20)
+                    )
             }
         }
     }
-
     func verticalHourGrid(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            ForEach(visibleHourTicks, id: \.self) { tick in
-                let ratio = axisCompression.ratio(for: tick)
+            ForEach(
+                visibleHourTicks(axisLength: height, minimumSpacing: 28),
+                id: \.date
+            ) { tick in
+                let ratio = axisCompression.ratio(for: tick.date)
                 let y = height * CGFloat(ratio)
-                HStack(spacing: 8) {
-                    Text(hourLabel(tick))
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.92)
-                        .frame(width: 56, alignment: .trailing)
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.16))
-                        .frame(height: 1)
-                }
-                .offset(y: min(max(0, y - 6), height - 12))
+                TimelineGridLine(position: y, isVertical: false)
+                    .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
+                    .frame(width: max(0, width - 68), height: height)
+                    .offset(x: 68)
+                Text(hourLabel(tick.date))
+                    .font(
+                        .footnote
+                            .weight(tick.role.isBoundary ? .semibold : .regular)
+                            .monospacedDigit()
+                    )
+                    .foregroundStyle(
+                        tick.role.isBoundary ? Color.primary : Color.secondary
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.92)
+                    .frame(width: 56, height: 16, alignment: .trailing)
+                    .offset(
+                        y: TimelineChartLayout.axisLabelOrigin(
+                            position: y,
+                            axisLength: height,
+                            labelExtent: 16,
+                            role: tick.role
+                        )
+                    )
             }
         }
     }
-
     func horizontalGapMarker(
         _ gap: TimelineOmittedGap,
         width: CGFloat,
@@ -62,7 +89,6 @@ extension TimelineChart {
             }
             .offset(x: min(max(0, x), width - 1), y: 4)
     }
-
     func verticalGapMarker(
         _ gap: TimelineOmittedGap,
         width: CGFloat,
@@ -99,31 +125,16 @@ extension TimelineChart {
         .fixedSize()
     }
 
-    private var visibleHourTicks: [Date] {
-        hourTicks().filter { !axisCompression.isInsideOmittedGap($0) }
-    }
-
-    private func hourTicks() -> [Date] {
-        let calendar = Calendar.current
-        let totalHours = max(1, displayInterval.duration / 3_600)
-        let step = totalHours <= 4 ? 1 : (totalHours <= 10 ? 2 : 4)
-        let firstHour = calendar.dateInterval(of: .hour, for: displayInterval.start)?.start
-            ?? displayInterval.start
-        var tick = firstHour
-        var result: [Date] = []
-        while tick <= displayInterval.end {
-            if tick >= displayInterval.start {
-                result.append(tick)
-            }
-            guard let next = calendar.date(byAdding: .hour, value: step, to: tick) else {
-                break
-            }
-            tick = next
-        }
-        if result.isEmpty || result.last! < displayInterval.end {
-            result.append(displayInterval.end)
-        }
-        return result
+    private func visibleHourTicks(
+        axisLength: CGFloat,
+        minimumSpacing: CGFloat
+    ) -> [TimelineChartAxisTick] {
+        TimelineChartLayout.axisTicks(
+            displayInterval: displayInterval,
+            compression: axisCompression,
+            axisLength: axisLength,
+            minimumSpacing: minimumSpacing
+        )
     }
 
     private func hourLabel(_ date: Date) -> String {
@@ -142,6 +153,26 @@ private struct DashedTimelineLine: Shape {
         } else {
             path.move(to: CGPoint(x: rect.minX, y: rect.midY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        }
+        return path
+    }
+}
+private struct TimelineGridLine: Shape {
+    let position: CGFloat
+    let isVertical: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let coordinate = min(
+            max(0, position),
+            isVertical ? rect.width : rect.height
+        )
+        var path = Path()
+        if isVertical {
+            path.move(to: CGPoint(x: coordinate, y: rect.minY))
+            path.addLine(to: CGPoint(x: coordinate, y: rect.maxY))
+        } else {
+            path.move(to: CGPoint(x: rect.minX, y: coordinate))
+            path.addLine(to: CGPoint(x: rect.maxX, y: coordinate))
         }
         return path
     }

@@ -62,8 +62,16 @@ extension TimelineChart {
                 ForEach(axisCompression.omittedGaps) { gap in
                     horizontalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
                 }
+                let lanes = TimelineChartLayout.horizontalLanes(
+                    height: proxy.size.height,
+                    laneCount: laneCount
+                )
                 ForEach(laneEntries) { entry in
-                    horizontalBar(entry: entry, width: proxy.size.width)
+                    horizontalBar(
+                        entry: entry,
+                        width: proxy.size.width,
+                        lanes: lanes
+                    )
                 }
             }
         }
@@ -76,8 +84,16 @@ extension TimelineChart {
                 ForEach(axisCompression.omittedGaps) { gap in
                     verticalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
                 }
+                let lanes = TimelineChartLayout.verticalLanes(
+                    width: proxy.size.width,
+                    laneCount: laneCount
+                )
                 ForEach(laneEntries) { entry in
-                    verticalBar(entry: entry, width: proxy.size.width, height: proxy.size.height)
+                    verticalBar(
+                        entry: entry,
+                        height: proxy.size.height,
+                        lanes: lanes
+                    )
                 }
             }
         }

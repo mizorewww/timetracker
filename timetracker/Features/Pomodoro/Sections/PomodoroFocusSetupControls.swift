@@ -22,6 +22,7 @@ struct PomodoroFocusSetupControls: View {
         VStack(spacing: contentSpacing) {
             PomodoroTimerFace(
                 timeText: DurationFormatter.clock(plan.focusSeconds),
+                timeValue: plan.focusSeconds,
                 title: selectedTask?.title ?? AppStrings.localized("pomodoro.chooseTask"),
                 subtitle: selectedTask.flatMap(store.parentPath(for:)),
                 titleColor: taskColor,

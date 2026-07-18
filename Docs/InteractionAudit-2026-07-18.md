@@ -134,5 +134,18 @@ Status: completed and verified
 - Projection tests, timer-picker contracts, Home/Focus/shared-component
   contracts, source-layout checks, and a signed generic iOS build pass.
 
+## Checkpoint 5 — one changing-number treatment
+
+Status: completed and verified
+
+- Running ledger durations, Pomodoro setup durations, and the active Pomodoro
+  countdown use one `AnimatedClockText`.
+- The value change uses SwiftUI's native numeric content transition while
+  retaining monospaced digits. Reduce Motion disables the transition.
+- The component does not own a timer; existing narrow `TimelineView` schedules
+  remain the only clock sources.
+- The animated-clock contract, focused UI suites, source-layout checks, and
+  signed generic iOS build pass.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

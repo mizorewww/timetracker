@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PomodoroTimerFace: View {
     let timeText: String
+    let timeValue: Int
     let title: String
     let subtitle: String?
     let titleColor: Color
@@ -10,6 +11,7 @@ struct PomodoroTimerFace: View {
 
     init(
         timeText: String,
+        timeValue: Int,
         title: String,
         subtitle: String? = nil,
         titleColor: Color,
@@ -17,6 +19,7 @@ struct PomodoroTimerFace: View {
         spokenValue: String? = nil
     ) {
         self.timeText = timeText
+        self.timeValue = timeValue
         self.title = title
         self.subtitle = subtitle
         self.titleColor = titleColor
@@ -26,9 +29,8 @@ struct PomodoroTimerFace: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Text(timeText)
+            AnimatedClockText(text: timeText, value: timeValue)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .monospacedDigit()
                 .foregroundStyle(PomodoroStyle.timerText)
 
             Text(title)

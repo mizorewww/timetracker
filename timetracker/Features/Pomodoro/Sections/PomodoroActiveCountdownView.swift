@@ -25,6 +25,7 @@ struct PomodoroActiveCountdownView: View {
         return VStack(spacing: 20) {
             PomodoroTimerFace(
                 timeText: DurationFormatter.clock(remaining),
+                timeValue: remaining,
                 title: taskTitle,
                 subtitle: taskParentPath,
                 titleColor: taskColor,

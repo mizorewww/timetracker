@@ -97,7 +97,7 @@
 - Repository：模型查询与持久化细节。
 - Service：跨实体计算、同步、导入导出或系统集成。
 
-视图不应直接复制领域判断，也不应绕过命令与仓储执行长期写入。计时文本用 `TimelineView` 做局部刷新；不得为了时钟显示让整个 facade 每秒发布一次状态。Today 的活动计时行只让正在运行的行按秒刷新，已结束时间线保持静态；摘要每 30 秒刷新。`TodayHomeContent` 的数组在根组合处构造一次，Quick Start 去重并保留稳定任务 ID。Today 指标先规范化一次候选 segment，再以单个循环同时裁剪今日和前一日、累加 Gross；两组区间各自合并后得到 Wall。需要重叠时间时由 Gross 与 Wall 的差得到，不再扫描 segment。不得让每张卡重新遍历完整账本。
+视图不应直接复制领域判断，也不应绕过命令与仓储执行长期写入。计时文本用 `TimelineView` 做局部刷新；不得为了时钟显示让整个 facade 每秒发布一次状态。动态数字统一交给 `AnimatedClockText` 的原生 numeric transition，周围视图继续拥有唯一时钟 schedule；Reduce Motion 时不做过渡。Today 的活动计时行只让正在运行的行按秒刷新，已结束时间线保持静态；摘要每 30 秒刷新。`TodayHomeContent` 的数组在根组合处构造一次，Quick Start 去重并保留稳定任务 ID。Today 指标先规范化一次候选 segment，再以单个循环同时裁剪今日和前一日、累加 Gross；两组区间各自合并后得到 Wall。需要重叠时间时由 Gross 与 Wall 的差得到，不再扫描 segment。不得让每张卡重新遍历完整账本。
 
 `TimeTrackerStore.perform` 和 `SystemActionCommandHandler` 使用 `ModelContext.performAtomicMutation` 包住一个用户动作。命令/仓储内部的 `saveAfterMutationStep` 在独立调用时立即保存，在外层 transaction 中延迟到最后一次统一 `save()`；动作或最终保存抛错会 rollback 整个 unit of work。提交之后的 read-model refresh 或 sync snapshot 失败不可能撤销已保存事实，因此 `perform` 仍返回成功并展示“已保存但重新载入失败”。App Intent 还会在 commit 后发布实际 domain events，使已配置 scene 通过 read-only refresh 收敛；它不能以此重新记账、再次同步或启动自动 LLM。Feature 只能在 `perform == true` 后清理 transient success/failure 状态。Keychain 不能加入 SwiftData 的 ACID transaction：LLM 配置先记住旧密钥，将三项普通偏好批量成一次 SwiftData 保存，并在提交失败时尽力恢复旧密钥；恢复本身失败必须单独报告。任务、账本等 UI selection 也只在 `didSave` 后更新，因为它不会由 `ModelContext.rollback()` 自动恢复。
 

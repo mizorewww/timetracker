@@ -11,7 +11,7 @@ nonisolated extension DurableLocalFile {
         durableRootURL: URL,
         excludeFromBackup: Bool
     ) throws {
-        let directoryURL = url.deletingLastPathComponent().standardizedFileURL
+        let directoryURL = url.deletingLastPathComponent()
         try ensureDurableDirectory(at: directoryURL, through: durableRootURL)
         try rejectReservedLockPath(url, durableRootURL: durableRootURL)
         _ = try managedFileExists(at: url)
@@ -66,7 +66,7 @@ nonisolated extension DurableLocalFile {
     }
 
     func removeWithExclusiveAccess(at url: URL, durableRootURL: URL) throws {
-        let directoryURL = url.deletingLastPathComponent().standardizedFileURL
+        let directoryURL = url.deletingLastPathComponent()
         try ensureDurableDirectory(at: directoryURL, through: durableRootURL)
         try rejectReservedLockPath(url, durableRootURL: durableRootURL)
         // Replay the directory ancestry even when the file is already absent:

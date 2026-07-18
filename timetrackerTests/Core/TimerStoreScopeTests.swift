@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import SwiftData
 import Testing
@@ -85,9 +86,30 @@ struct TimerStoreScopeTests {
         let scope = TimerStoreScope(
             persistentStoreURL: aliasDirectory.appendingPathComponent("timer.store")
         )
-        let expectedStoreURL = physicalDirectory.appendingPathComponent("timer.store")
+        let expectedStoreURL = try CanonicalFileURL
+            .resolvingExistingPath(physicalDirectory)
+            .appendingPathComponent("timer.store")
 
-        #expect(scope.persistentStoreURL == expectedStoreURL.standardizedFileURL)
+        #expect(scope.persistentStoreURL == expectedStoreURL)
+        let value = try StoreScopedTimerMutationLock()
+            .withExclusiveAccess(for: scope) { 42 }
+        #expect(value == 42)
+    }
+
+    @Test
+    func persistentScopePreservesRealpathSystemAncestorForLocking() throws {
+        let sourceDirectory = FileManager.default.temporaryDirectory
+        let expectedDirectoryPath = try physicalPath(of: sourceDirectory)
+        let storeURL = sourceDirectory.appendingPathComponent(
+            "TimeTrackerSystemAncestor-\(UUID().uuidString).store"
+        )
+        let scope = TimerStoreScope(persistentStoreURL: storeURL)
+        defer { try? FileManager.default.removeItem(at: scope.mutationLockURL) }
+
+        #expect(
+            scope.persistentStoreURL?.deletingLastPathComponent().path
+                == expectedDirectoryPath
+        )
         let value = try StoreScopedTimerMutationLock()
             .withExclusiveAccess(for: scope) { 42 }
         #expect(value == 42)
@@ -133,6 +155,15 @@ struct TimerStoreScopeTests {
             migrationPlan: TimeTrackerMigrationPlan.self,
             configurations: [configuration]
         )
+    }
+
+    private func physicalPath(of url: URL) throws -> String {
+        let resolvedPath = url.path.withCString { Darwin.realpath($0, nil) }
+        guard let resolvedPath else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        defer { free(resolvedPath) }
+        return String(cString: resolvedPath)
     }
 
     private struct PersistentStoreFixture {

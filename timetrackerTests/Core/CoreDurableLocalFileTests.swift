@@ -97,6 +97,23 @@ struct CoreDurableLocalFileTests {
     }
 
     @Test
+    func managedPathsRejectEmbeddedNULBeforeThePOSIXBoundary() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let poisonedURL = URL(
+            fileURLWithPath: fixture.root.path
+                + "/\(DurableLocalFile.lockFileName)\0suffix"
+        )
+
+        #expect(throws: DurableLocalFileError.durableRootIsNotAncestor) {
+            try DurableLocalFile().canonicalManagedPaths(
+                at: poisonedURL,
+                through: fixture.root
+            )
+        }
+    }
+
+    @Test
     func faultBeforePublishPreservesCanonicalDataAndRemovesTemporaryFile() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
@@ -304,6 +321,38 @@ struct CoreDurableLocalFileTests {
 
     #if os(iOS)
     @Test
+    func managedPathChainPreservesThePhysicalSystemAncestor() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let file = DurableLocalFile()
+        let logicalURL = fixture.root.appendingPathComponent(
+            "nested/payload.json"
+        )
+        let paths = try file.canonicalManagedPaths(
+            at: logicalURL,
+            through: fixture.root
+        )
+        let directoryURL = paths.url.deletingLastPathComponent()
+        var cursor = directoryURL
+        var visitedPaths: [String] = []
+
+        #expect(
+            directoryURL.pathComponents.starts(with: paths.root.pathComponents),
+            "directory=\(directoryURL.path) root=\(paths.root.path)"
+        )
+        while cursor.path != paths.root.path,
+              cursor.pathComponents.count >= paths.root.pathComponents.count {
+            visitedPaths.append(cursor.path)
+            cursor.deleteLastPathComponent()
+        }
+        #expect(
+            cursor.path == paths.root.path,
+            "visited=\(visitedPaths) final=\(cursor.path) root=\(paths.root.path)"
+        )
+        try file.ensureDurableDirectory(at: directoryURL, through: paths.root)
+    }
+
+    @Test
     func writeAppliesProtectionBeforePublishingTheFile() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
@@ -325,7 +374,7 @@ struct CoreDurableLocalFileTests {
         private(set) var paths: [URL] = []
 
         func synchronize(_ url: URL) {
-            paths.append(url.standardizedFileURL)
+            paths.append(url)
         }
     }
 

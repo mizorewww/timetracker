@@ -28,7 +28,7 @@ nonisolated extension DurableLocalFile {
     private static var quarantineDirectoryName: String { ".TimeTrackerQuarantine" }
 
     func quarantineIfPresent(at url: URL, prefix: String) throws -> URL? {
-        let directoryURL = url.deletingLastPathComponent().standardizedFileURL
+        let directoryURL = url.deletingLastPathComponent()
         return try quarantineIfPresent(
             at: url,
             prefix: prefix,
@@ -107,7 +107,7 @@ nonisolated extension DurableLocalFile {
             // storage. Durably remove the canonical file and report that no
             // diagnostic copy was kept.
             try removeWithExclusiveAccess(
-                at: url.standardizedFileURL,
+                at: url,
                 durableRootURL: durableRootURL
             )
             return nil

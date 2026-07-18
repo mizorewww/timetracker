@@ -57,7 +57,7 @@ nonisolated struct DurableLocalFile {
         to url: URL,
         excludeFromBackup: Bool = false
     ) throws {
-        let directoryURL = url.deletingLastPathComponent().standardizedFileURL
+        let directoryURL = url.deletingLastPathComponent()
         try write(
             data,
             to: url,
@@ -87,7 +87,7 @@ nonisolated struct DurableLocalFile {
     }
 
     func removeIfPresent(at url: URL) throws {
-        let directoryURL = url.deletingLastPathComponent().standardizedFileURL
+        let directoryURL = url.deletingLastPathComponent()
         try removeIfPresent(
             at: url,
             durableRootURL: nearestExistingDirectory(atOrAbove: directoryURL)

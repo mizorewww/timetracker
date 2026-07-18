@@ -89,6 +89,5 @@ nonisolated final class PathFileLockRegistry: @unchecked Sendable {
         )
         return canonicalParent
             .appendingPathComponent(standardizedURL.lastPathComponent)
-            .standardizedFileURL
     }
 }

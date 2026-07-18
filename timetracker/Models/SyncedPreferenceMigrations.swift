@@ -137,6 +137,9 @@ extension SyncedPreferenceService {
                 .split(separator: ",")
                 .map(String.init) ?? []
             encodedValue = try? PreferenceJSON.encodeChecked(models)
+        case .llmTaskPlanInstructions:
+            guard let value = defaults.string(forKey: key.rawValue) else { return nil }
+            encodedValue = try? PreferenceJSON.encodeChecked(value)
         }
         guard let encodedValue else { return nil }
         return try? PreferenceJSON.canonicalValueJSON(for: key, from: encodedValue)

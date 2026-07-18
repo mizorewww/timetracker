@@ -101,6 +101,11 @@ enum PreferenceJSON {
         case .llmAvailableModelIDs:
             let value = try decodeChecked([String].self, from: valueJSON)
             return try encodeChecked(AppPreferenceValueSanitizer.llmModelIDs(value))
+        case .llmTaskPlanInstructions:
+            let value = try decodeChecked(String.self, from: valueJSON)
+            return try encodeChecked(
+                try AppPreferenceValueSanitizer.llmTaskPlanInstructions(value)
+            )
         }
     }
 }

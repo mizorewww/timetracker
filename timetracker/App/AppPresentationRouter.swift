@@ -15,6 +15,8 @@ struct AppPresentation: Identifiable {
         case quickStartEditor(selectedIDs: [UUID])
         case settings
         case llmConfiguration(LLMConfigurationDraft)
+        case llmTaskPlanInstructions(String)
+        case aiTaskPlanGenerator
     }
 
     let id: UUID
@@ -173,6 +175,11 @@ extension AppPresentationRouter {
     }
 
     @discardableResult
+    func presentAITaskPlanGenerator() -> Bool {
+        present(.aiTaskPlanGenerator)
+    }
+
+    @discardableResult
     func presentLLMConfiguration(using store: TimeTrackerStore) -> Bool {
         present(.llmConfiguration(LLMConfigurationDraft(
             endpoint: store.preferences.llmEndpoint,
@@ -180,6 +187,13 @@ extension AppPresentationRouter {
             selectedModel: store.preferences.llmSelectedModel,
             availableModels: store.preferences.llmAvailableModelIDs
         )))
+    }
+
+    @discardableResult
+    func presentLLMTaskPlanInstructions(using store: TimeTrackerStore) -> Bool {
+        present(.llmTaskPlanInstructions(
+            store.preferences.llmTaskPlanInstructions
+        ))
     }
 
     private func newTaskContent(

@@ -40,6 +40,7 @@ struct LLMSettingsSection: View {
     let selectedModel: String
     let availableModels: [String]
     let onConfigure: () -> Void
+    let onEditTaskPlanInstructions: () -> Void
 
     private var isConfigured: Bool {
         LLMModelService.modelsURL(endpoint: endpoint) != nil &&
@@ -57,6 +58,17 @@ struct LLMSettingsSection: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.llm.configure")
+
+            Button(action: onEditTaskPlanInstructions) {
+                SettingsActionLabel(
+                    title: AppStrings.localized("settings.llm.taskPlanInstructions.edit"),
+                    systemImage: "text.quote",
+                    tint: .indigo
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.llm.taskPlanInstructions.edit")
 
             SettingsValueRow(
                 title: AppStrings.localized("settings.llm.connection"),

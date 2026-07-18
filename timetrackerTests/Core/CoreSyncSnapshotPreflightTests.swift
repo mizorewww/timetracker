@@ -127,6 +127,26 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
+    func invalidTaskPlanInstructionsAreRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let preference = SyncedPreference(
+            key: AppPreferenceKey.llmTaskPlanInstructions.rawValue,
+            valueJSON: PreferenceJSON.encode("Plan\u{0000}tasks"),
+            deviceID: "source"
+        )
+        let preferenceRecord = SyncedPreferenceRecord(preference)
+
+        #expect(throws: SyncDataSnapshotPreflightError.invalidPreferenceValue(
+            id: preferenceRecord.id,
+            key: AppPreferenceKey.llmTaskPlanInstructions.rawValue
+        )) {
+            try SyncDataSnapshot(syncedPreferences: [preferenceRecord])
+                .restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
     func extremeSortOrderAndUnsafePreferenceKeysAreRejected() throws {
         let sortOrderContext = try makeSentinelContext()
         let task = TaskNode(title: "Unadvanceable order", parentID: nil, deviceID: "source")

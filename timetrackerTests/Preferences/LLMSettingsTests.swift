@@ -64,6 +64,71 @@ struct LLMSettingsTests {
     }
 
     @Test
+    func taskPlanInstructionsAreUTF8BoundedAndPreserveSupportedMultilineText() throws {
+        let multiline = "Prefer concise categories.\n\tKeep checklist items actionable."
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(multiline) ==
+                multiline
+        )
+
+        let exactASCII = String(
+            repeating: "a",
+            count: AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
+        )
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(exactASCII) ==
+                exactASCII
+        )
+
+        let exactUnicode = String(repeating: "🧭", count: 1_024)
+        #expect(exactUnicode.utf8.count == 4 * 1_024)
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(exactUnicode) ==
+                exactUnicode
+        )
+
+        let oversizedUnicode = exactUnicode + "🧭"
+        #expect(throws: LLMTaskPlanInstructionsValidationError.byteLimitExceeded(
+            actual: oversizedUnicode.utf8.count,
+            maximum: AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
+        )) {
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(oversizedUnicode)
+        }
+
+        #expect(throws: LLMTaskPlanInstructionsValidationError.controlCharacter) {
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions("Plan\u{0000}tasks")
+        }
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(" \n\t ") ==
+                LLMTaskPlanPrompt.defaultInstructions
+        )
+    }
+
+    @Test @MainActor
+    func taskPlanInstructionsRoundTripAsANonSensitiveSyncedPreference() throws {
+        let instructions = "Use one category per durable area.\n\tPrefer small tasks."
+        let valueJSON = try PreferenceJSON.canonicalValueJSON(
+            for: .llmTaskPlanInstructions,
+            from: PreferenceJSON.encode(instructions)
+        )
+        let preference = SyncedPreference(
+            key: AppPreferenceKey.llmTaskPlanInstructions.rawValue,
+            valueJSON: valueJSON,
+            deviceID: "test"
+        )
+        let preferences = AppPreferences(syncedPreferences: [preference])
+
+        #expect(preferences.llmTaskPlanInstructions == instructions)
+        #expect(SyncedPreferenceService.shouldSyncKey(preference.key))
+        #expect(!SyncedPreferenceService.isSensitiveKey(preference.key))
+        #expect(!SyncedPreferenceService.isDeviceLocalKey(preference.key))
+        #expect(
+            preferences.valueJSON(for: .llmTaskPlanInstructions) ==
+                PreferenceJSON.encode(instructions)
+        )
+    }
+
+    @Test
     func modelListRequestUsesOpenAICompatibleModelsEndpoint() throws {
         let service = LLMModelService()
         let request = try service.modelListRequest(

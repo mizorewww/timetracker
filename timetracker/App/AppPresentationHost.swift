@@ -98,6 +98,31 @@ private struct AppPresentationSheet: View {
                     availableModelIDs: configuration.availableModels
                 )
             }
+        case let .llmTaskPlanInstructions(instructions):
+            LLMTaskPlanInstructionsEditor(instructions: instructions) {
+                store.setLLMTaskPlanInstructions($0)
+            }
+        case .aiTaskPlanGenerator:
+            AITaskPlanGeneratorSheet(
+                store: store,
+                onConfigureAI: {
+                    router.replace(
+                        presentationID: presentation.id,
+                        with: .settings
+                    )
+                },
+                onCreate: { draft in
+                    switch store.saveAITaskPlan(draft) {
+                    case let .saved(firstRootTaskID, _):
+                        if let firstRootTaskID {
+                            store.openTaskDetail(firstRootTaskID)
+                        }
+                        return .created
+                    case let .failed(message):
+                        return .failed(message: message)
+                    }
+                }
+            )
         }
     }
 }

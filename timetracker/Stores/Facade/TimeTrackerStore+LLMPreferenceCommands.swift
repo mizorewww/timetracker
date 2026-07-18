@@ -71,6 +71,20 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
+    func setLLMTaskPlanInstructions(_ value: String) -> Bool {
+        do {
+            let normalized = try AppPreferenceValueSanitizer.llmTaskPlanInstructions(value)
+            return setPreference(
+                .llmTaskPlanInstructions,
+                valueJSON: PreferenceJSON.encode(normalized)
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
     func setLLMConfiguration(
         endpoint: String,
         apiKey: String,

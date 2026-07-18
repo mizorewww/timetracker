@@ -13,6 +13,7 @@ enum AppPreferenceKey: String, CaseIterable {
     case llmEndpoint = "LLMEndpoint"
     case llmSelectedModel = "LLMSelectedModel"
     case llmAvailableModelIDs = "LLMAvailableModelIDs"
+    case llmTaskPlanInstructions = "LLMTaskPlanInstructions"
 }
 
 enum AppLocalPreferenceKey {
@@ -34,6 +35,7 @@ struct AppPreferences: Equatable {
     var llmAPIKey = ""
     var llmSelectedModel = ""
     var llmAvailableModelIDs: [String] = []
+    var llmTaskPlanInstructions = LLMTaskPlanPrompt.defaultInstructions
     var llmAutomaticSuggestionsEnabled = false
 
     static var defaults: AppPreferences { AppPreferences() }
@@ -90,6 +92,15 @@ struct AppPreferences: Equatable {
             llmAvailableModelIDs = AppPreferenceValueSanitizer.llmModelIDs(
                 PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
             )
+        case .llmTaskPlanInstructions:
+            let storedValue = PreferenceJSON.decode(
+                String.self,
+                from: preference.valueJSON,
+                default: LLMTaskPlanPrompt.defaultInstructions
+            )
+            llmTaskPlanInstructions = (try? AppPreferenceValueSanitizer.llmTaskPlanInstructions(
+                storedValue
+            )) ?? LLMTaskPlanPrompt.defaultInstructions
         }
     }
 
@@ -127,6 +138,11 @@ struct AppPreferences: Equatable {
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
         case .llmAvailableModelIDs:
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
+        case .llmTaskPlanInstructions:
+            let instructions = (try? AppPreferenceValueSanitizer.llmTaskPlanInstructions(
+                llmTaskPlanInstructions
+            )) ?? LLMTaskPlanPrompt.defaultInstructions
+            return PreferenceJSON.encode(instructions)
         }
     }
 }

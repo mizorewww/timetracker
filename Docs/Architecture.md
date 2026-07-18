@@ -2,7 +2,7 @@
 
 Status: current implementation
 
-Reviewed: 2026-07-17
+Reviewed: 2026-07-18
 
 Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag.
 
@@ -121,9 +121,15 @@ One user mutation is committed through `ModelContext.performAtomicMutation`. Nes
 
 Preference writes add a pure batch-preparation boundary before that mutation. `PreferenceJSON` rejects payloads above 256 KiB and decodes each value according to its `AppPreferenceKey`; `PreferenceCommandHandler` canonicalizes the complete batch before fetching or touching any `SyncedPreference`. JSON `null`, malformed syntax, type mismatches, and oversized values therefore cannot leave earlier batch entries pending. The prepared batch is then committed atomically, including standalone command calls. Legacy encoding failures are skipped rather than persisted as `null`.
 
+The editable AI task-planning instructions are a bounded synced string preference. The sanitizer normalizes line endings, treats blank input as the built-in default, rejects unsupported control characters, and enforces a 4 KiB UTF-8 limit at editor, command, JSON, migration, snapshot-preflight, and request boundaries. The fixed response schema and safety contract remain service-owned and are never stored in this editable preference.
+
 Keychain is intentionally outside SwiftData's ACID boundary. Saving LLM configuration batches endpoint, model list, and selected model into one preference transaction, while preserving the previous Keychain value for compensating restore if that transaction fails. A compensation failure is a separate error, never proof of atomic cross-storage rollback. “Clear all data” likewise clears the Keychain API key and device-local automatic-suggestion consent, attempts to restore them if the SwiftData reset fails, and leaves the device-local iCloud startup switch unchanged.
 
 Inbox and checklist AI requests use one bounded network-projection policy. Inbox selects at most 48 trackable candidates by Quick Start pin, indexed frequent/recent use, then stable path; normalized candidate JSON is capped at 16 KiB. Both flows cap the user prompt at 24 KiB and the final request body at 32 KiB, bound each transmitted field by UTF-8 bytes, and shorten only at complete `Character` boundaries. The full on-device symbol catalogue remains available to the picker, while prompts advertise a 78-symbol semantic subset. Returned task IDs must belong to the transmitted candidates, and returned icons must belong to the advertised subset. Projection shaping never mutates canonical Task, Inbox, or Checklist text.
+
+AI task-plan generation is explicit and draft-first. `LLMTaskPlanService` sends only the user's 4 KiB request, the sanitized 4 KiB planning instructions, and icon/color allowlists under an immutable system contract. It accepts one flat response capped at 128 KiB, maps textual references to locally generated UUIDs, and rejects duplicate/orphan references, cycles, child-task categories, depth beyond six, invalid fields, more than 8 categories, 64 tasks, 32 checklist items per task, or 256 checklist items total. The SwiftUI sheet owns the mutable preview; it can rename or remove proposed items but cannot write facts directly.
+
+One explicit Create action passes the reviewed draft to `StoreScopedAITaskPlanCommandCoordinator`. After acquiring the store mutation scope, a fresh context validates the complete graph and persistent field policies, checks proposed category/task UUIDs for all-present idempotent replay versus mixed identity conflict, then creates categories, topologically ordered tasks, assignments, and checklist rows in one `performAtomicMutation`. Any failure rolls back every proposed fact. The feature only creates new facts; it never updates or deletes existing tasks.
 
 AI responses use one dedicated ephemeral `URLSession`, with cache and cookies disabled and a 60-second resource timeout. `AsyncBytes` enforces a 2 MiB actual-body ceiling even when Content-Length is missing or false; oversized declarations and non-2xx status are rejected at headers and the task is cancelled before body consumption. Structured cancellation propagates to the URLSession task. Service-level validation repeats the byte ceiling for injected transports without changing HTTP status priority.
 

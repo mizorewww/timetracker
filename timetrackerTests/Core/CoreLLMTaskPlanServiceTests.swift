@@ -1,0 +1,481 @@
+import Foundation
+import Testing
+@testable import timetracker
+
+@Suite(.serialized)
+struct CoreLLMTaskPlanServiceTests {
+    @Test
+    func generateMapsFlatReferencesIntoAnEditableDraft() async throws {
+        let contentData = try JSONSerialization.data(withJSONObject: [
+            "categories": [
+                [
+                    "reference": " Work ",
+                    "title": " Work ",
+                    "iconName": "briefcase",
+                    "colorHex": "1677FF"
+                ]
+            ],
+            "tasks": [
+                [
+                    "reference": " ROOT ",
+                    "categoryReference": "work",
+                    "parentReference": NSNull(),
+                    "title": " Plan release ",
+                    "notes": " Useful context ",
+                    "estimatedMinutes": 25,
+                    "iconName": "target",
+                    "colorHex": "34C759"
+                ],
+                [
+                    "reference": "child",
+                    "categoryReference": NSNull(),
+                    "parentReference": "root",
+                    "title": "Ship build",
+                    "notes": NSNull(),
+                    "estimatedMinutes": NSNull(),
+                    "iconName": "paperplane",
+                    "colorHex": "0A84FF"
+                ]
+            ],
+            "checklistItems": [
+                [
+                    "reference": "verify",
+                    "taskReference": " ROOT ",
+                    "title": "Verify tests",
+                    "iconName": "checkmark.circle",
+                    "colorHex": "1677FF"
+                ]
+            ]
+        ])
+        let content = try #require(String(data: contentData, encoding: .utf8))
+        let responseData = try Self.chatResponseData(content: content)
+        let service = LLMTaskPlanService { request in
+            let response = try #require(
+                HTTPURLResponse(
+                    url: request.url ?? URL(string: "https://example.test")!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )
+            )
+            return (responseData, response)
+        }
+
+        let draft = try await service.generate(
+            request: "Prepare the release",
+            instructions: "",
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "model-1"
+        )
+
+        let category = try #require(draft.categories.first)
+        let root = try #require(draft.tasks.first { $0.title == "Plan release" })
+        let child = try #require(draft.tasks.first { $0.title == "Ship build" })
+        #expect(draft.modelID == "model-1")
+        #expect(category.title == "Work")
+        #expect(root.categoryID == category.id)
+        #expect(root.parentID == nil)
+        #expect(root.notes == " Useful context ")
+        #expect(root.estimatedMinutes == 25)
+        #expect(root.checklistItems.map(\.title) == ["Verify tests"])
+        #expect(child.categoryID == nil)
+        #expect(child.parentID == root.id)
+        #expect(Set(draft.tasks.map(\.id)).count == 2)
+    }
+
+    @Test
+    func requestBuilderUsesFixedContractAndNormalizedUserJSON() throws {
+        let request = try LLMTaskPlanService().generationRequest(
+            request: "  Build a release plan  ",
+            instructions: "Line one\r\nLine two\rLine three",
+            endpoint: " https://example.test/v1/ ",
+            apiKey: " secret ",
+            modelID: " model-1 "
+        )
+        let body = try #require(request.httpBody)
+        let envelope = try JSONDecoder().decode(ChatRequestEnvelope.self, from: body)
+        let userMessage = try #require(envelope.messages.last)
+        let prompt = try JSONDecoder().decode(
+            UserPromptEnvelope.self,
+            from: Data(userMessage.content.utf8)
+        )
+
+        #expect(request.httpMethod == "POST")
+        #expect(request.url?.absoluteString == "https://example.test/v1/chat/completions")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer secret")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        #expect(envelope.model == "model-1")
+        #expect(envelope.responseFormat.type == "json_object")
+        #expect(envelope.messages.map(\.role) == ["system", "user"])
+        #expect(envelope.messages[0].content.contains("three flat arrays"))
+        #expect(envelope.messages[0].content.contains("maximum task depth is 6"))
+        #expect(prompt.request == "Build a release plan")
+        #expect(prompt.instructions == "Line one\nLine two\nLine three")
+        #expect(prompt.allowedSymbols == SymbolCatalog.aiSuggestionSymbolNames)
+        #expect(prompt.allowedColors == TaskColorPalette.hexValues)
+
+        let defaultRequest = try LLMTaskPlanService().generationRequest(
+            request: "Plan",
+            instructions: " \n ",
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "model"
+        )
+        let defaultBody = try #require(defaultRequest.httpBody)
+        let defaultEnvelope = try JSONDecoder().decode(
+            ChatRequestEnvelope.self,
+            from: defaultBody
+        )
+        let defaultPrompt = try JSONDecoder().decode(
+            UserPromptEnvelope.self,
+            from: Data(try #require(defaultEnvelope.messages.last).content.utf8)
+        )
+        #expect(defaultPrompt.instructions == LLMTaskPlanPrompt.defaultInstructions)
+    }
+
+    @Test
+    func duplicateAndOrphanReferencesRejectTheWholePayload() {
+        Self.expectError(.duplicateReference) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: [
+                    Self.task("Duplicate"),
+                    Self.task(" duplicate ")
+                ]),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.orphanReference) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: [
+                    Self.task("root", category: "missing")
+                ]),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.orphanReference) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: [
+                    Self.task("child", parent: "missing")
+                ]),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.orphanReference) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(
+                    tasks: [Self.task("root")],
+                    checklistItems: [Self.checklist("item", task: "missing")]
+                ),
+                modelID: "model"
+            )
+        }
+    }
+
+    @Test
+    func cycleChildCategoryAndExcessiveDepthAreRejected() {
+        Self.expectError(.cycle) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: [
+                    Self.task("a", parent: "b"),
+                    Self.task("b", parent: "a")
+                ]),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.childCategory) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(
+                    categories: [Self.category("work")],
+                    tasks: [
+                        Self.task("root", category: "work"),
+                        Self.task("child", category: "work", parent: "root")
+                    ]
+                ),
+                modelID: "model"
+            )
+        }
+
+        let tooDeepTasks = (0...7).map { index in
+            Self.task(
+                "task-\(index)",
+                parent: index == 0 ? nil : "task-\(index - 1)"
+            )
+        }
+        Self.expectError(.depthExceeded) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: tooDeepTasks),
+                modelID: "model"
+            )
+        }
+    }
+
+    @Test
+    func categoryTaskAndChecklistCountLimitsRejectTheWholePayload() {
+        Self.expectError(.limitExceeded) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(
+                    categories: (0...LLMTaskPlanService.maximumCategoryCount).map {
+                        Self.category("category-\($0)")
+                    },
+                    tasks: [Self.task("root")]
+                ),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.limitExceeded) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(
+                    tasks: (0...LLMTaskPlanService.maximumTaskCount).map {
+                        Self.task("task-\($0)")
+                    }
+                ),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.limitExceeded) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(
+                    tasks: [Self.task("root")],
+                    checklistItems: (
+                        0...LLMTaskPlanService.maximumChecklistItemCountPerTask
+                    ).map {
+                        Self.checklist("item-\($0)", task: "root")
+                    }
+                ),
+                modelID: "model"
+            )
+        }
+
+        let tasks = (0..<9).map { Self.task("task-\($0)") }
+        let tooManyChecklistItems = (
+            0...LLMTaskPlanService.maximumChecklistItemCount
+        ).map {
+            Self.checklist("item-\($0)", task: "task-\($0 % tasks.count)")
+        }
+        Self.expectError(.limitExceeded) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(
+                    tasks: tasks,
+                    checklistItems: tooManyChecklistItems
+                ),
+                modelID: "model"
+            )
+        }
+        Self.expectError(.noTasks) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: []),
+                modelID: "model"
+            )
+        }
+    }
+
+    @Test
+    func UTF8BudgetsAreEnforcedWithoutSplittingMultibyteText() throws {
+        let exactLimit = String(
+            repeating: "é",
+            count: LLMTaskPlanService.maximumRequestByteCount / 2
+        )
+        let service = LLMTaskPlanService()
+        let requestAtLimit = try service.generationRequest(
+            request: exactLimit,
+            instructions: "",
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "model"
+        )
+        #expect(requestAtLimit.httpBody != nil)
+
+        Self.expectError(.requestTooLarge) {
+            _ = try service.generationRequest(
+                request: exactLimit + "a",
+                instructions: "",
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "model"
+            )
+        }
+
+        let instructionsAtLimit = String(
+            repeating: "é",
+            count: LLMTaskPlanService.maximumInstructionsByteCount / 2
+        )
+        let instructionsRequest = try service.generationRequest(
+            request: "Plan",
+            instructions: instructionsAtLimit,
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "model"
+        )
+        #expect(instructionsRequest.httpBody != nil)
+
+        Self.expectError(.instructionsTooLarge) {
+            _ = try service.generationRequest(
+                request: "Plan",
+                instructions: instructionsAtLimit + "a",
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "model"
+            )
+        }
+        Self.expectError(.invalidField) {
+            _ = try service.generationRequest(
+                request: "Plan",
+                instructions: "Unsafe\u{0000}instruction",
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "model"
+            )
+        }
+    }
+
+    @MainActor
+    @Test
+    func oversizedResponseContentIsRejectedBeforePayloadDecoding() async {
+        let oversizedContent = String(
+            repeating: "x",
+            count: LLMTaskPlanService.maximumResponseContentByteCount + 1
+        )
+        let responseData: Data
+        do {
+            responseData = try Self.chatResponseData(content: oversizedContent)
+        } catch {
+            Issue.record("Could not construct response fixture: \(error)")
+            return
+        }
+        let service = LLMTaskPlanService { request in
+            let response = HTTPURLResponse(
+                url: request.url ?? URL(string: "https://example.test")!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (responseData, response)
+        }
+
+        await Self.expectError(.responseContentTooLarge) {
+            _ = try await service.generate(
+                request: "Plan",
+                instructions: "",
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "model"
+            )
+        }
+    }
+
+    private static func payload(
+        categories: [AITaskPlanCategoryPayload] = [],
+        tasks: [AITaskPlanTaskPayload],
+        checklistItems: [AITaskPlanChecklistPayload] = []
+    ) -> AITaskPlanPayload {
+        AITaskPlanPayload(
+            categories: categories,
+            tasks: tasks,
+            checklistItems: checklistItems
+        )
+    }
+
+    private static func category(_ reference: String) -> AITaskPlanCategoryPayload {
+        AITaskPlanCategoryPayload(
+            reference: reference,
+            title: reference,
+            iconName: "folder",
+            colorHex: "1677FF"
+        )
+    }
+
+    private static func task(
+        _ reference: String,
+        category: String? = nil,
+        parent: String? = nil
+    ) -> AITaskPlanTaskPayload {
+        AITaskPlanTaskPayload(
+            reference: reference,
+            categoryReference: category,
+            parentReference: parent,
+            title: reference,
+            notes: nil,
+            estimatedMinutes: nil,
+            iconName: "checkmark.circle",
+            colorHex: "1677FF"
+        )
+    }
+
+    private static func checklist(
+        _ reference: String,
+        task: String
+    ) -> AITaskPlanChecklistPayload {
+        AITaskPlanChecklistPayload(
+            reference: reference,
+            taskReference: task,
+            title: reference,
+            iconName: "checkmark.circle",
+            colorHex: "1677FF"
+        )
+    }
+
+    private static func chatResponseData(content: String) throws -> Data {
+        try JSONSerialization.data(withJSONObject: [
+            "choices": [
+                ["message": ["content": content]]
+            ]
+        ])
+    }
+
+    private static func expectError(
+        _ expected: LLMTaskPlanServiceError,
+        operation: () throws -> Void
+    ) {
+        do {
+            try operation()
+            Issue.record("Expected \(expected)")
+        } catch let error as LLMTaskPlanServiceError {
+            #expect(error == expected)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    private static func expectError(
+        _ expected: LLMTaskPlanServiceError,
+        operation: () async throws -> Void
+    ) async {
+        do {
+            try await operation()
+            Issue.record("Expected \(expected)")
+        } catch let error as LLMTaskPlanServiceError {
+            #expect(error == expected)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+}
+
+private struct ChatRequestEnvelope: Decodable {
+    let model: String
+    let messages: [Message]
+    let responseFormat: ResponseFormat
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case messages
+        case responseFormat = "response_format"
+    }
+
+    struct Message: Decodable {
+        let role: String
+        let content: String
+    }
+
+    struct ResponseFormat: Decodable {
+        let type: String
+    }
+}
+
+private struct UserPromptEnvelope: Decodable {
+    let instructions: String
+    let request: String
+    let allowedSymbols: [String]
+    let allowedColors: [String]
+}

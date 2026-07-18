@@ -38,6 +38,26 @@ extension SwiftDataTaskRepository {
         iconName: String? = nil,
         includesInForecast: Bool = true
     ) throws -> TaskCategory {
+        try createCategory(
+            proposedID: UUID(),
+            title: title,
+            colorHex: colorHex,
+            iconName: iconName,
+            includesInForecast: includesInForecast
+        )
+    }
+
+    /// Creates a category with an identity chosen by an enclosing idempotent
+    /// command. The protocol entry point intentionally keeps its existing
+    /// repository-owned identity behavior.
+    @discardableResult
+    func createCategory(
+        proposedID: UUID,
+        title: String,
+        colorHex: String? = nil,
+        iconName: String? = nil,
+        includesInForecast: Bool = true
+    ) throws -> TaskCategory {
         let values = try TaskPersistencePolicy.prepareCategory(
             title: title,
             colorHex: colorHex,
@@ -52,6 +72,7 @@ extension SwiftDataTaskRepository {
             includesInForecast: includesInForecast,
             sortOrder: (existing.last?.sortOrder ?? 0) + 10
         )
+        category.id = proposedID
         context.insert(category)
         try context.saveAfterMutationStep()
         return category

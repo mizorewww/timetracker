@@ -117,6 +117,18 @@ struct TasksView: View {
                 } label: {
                     Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
                 }
+
+                Divider()
+
+                Button {
+                    presentationRouter.presentAITaskPlanGenerator()
+                } label: {
+                    Label(
+                        AppStrings.localized("aiTaskPlan.generateMenu"),
+                        systemImage: "sparkles"
+                    )
+                }
+                .accessibilityIdentifier("tasks.generatePlan")
             } label: {
                 Label(AppStrings.localized("tasks.add"), systemImage: "plus")
             }

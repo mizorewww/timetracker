@@ -733,6 +733,151 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAITaskPlanDraftReviewAtomicCreateAndInstructionsEditor() throws {
+        #if os(macOS)
+        throw XCTSkip("Task-plan review geometry is verified on iPhone and iPad.")
+        #else
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-ai-task-plan"]
+        )
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let tasksView = app.descendants(matching: .any)["tasks.view"].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 8))
+
+        let addMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addMenu.waitForExistence(timeout: 3) && addMenu.isHittable)
+        activate(addMenu)
+
+        let generatePlan = app.descendants(matching: .any)[
+            "tasks.generatePlan"
+        ].firstMatch
+        XCTAssertTrue(
+            generatePlan.waitForExistence(timeout: 3) && generatePlan.isHittable
+        )
+        activate(generatePlan)
+
+        let request = app.descendants(matching: .any)["aiTaskPlan.request"].firstMatch
+        if !request.waitForExistence(timeout: 5),
+           addMenu.waitForExistence(timeout: 2),
+           addMenu.isHittable {
+            activate(addMenu)
+            if generatePlan.waitForExistence(timeout: 2), generatePlan.isHittable {
+                activate(generatePlan)
+            }
+        }
+        let generate = app.buttons["aiTaskPlan.generate"].firstMatch
+        XCTAssertTrue(request.waitForExistence(timeout: 5) && request.isHittable)
+        XCTAssertTrue(generate.waitForExistence(timeout: 3))
+        XCTAssertFalse(generate.isEnabled)
+        activate(request)
+        request.typeText("Build a practical daily fitness and learning plan")
+        XCTAssertTrue(generate.isEnabled)
+        try capture("ai-task-plan-request", app: app)
+
+        let cancelPlan = app.buttons["aiTaskPlan.cancel"].firstMatch
+        XCTAssertTrue(cancelPlan.waitForExistence(timeout: 3) && cancelPlan.isHittable)
+        activate(cancelPlan)
+        let discardRequest = discardDialogButton(
+            identifier: "editor.discard.confirm",
+            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
+            in: app
+        )
+        XCTAssertTrue(
+            discardRequest.waitForExistence(timeout: 3) && discardRequest.isHittable
+        )
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        XCTAssertTrue(discardRequest.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(request.waitForExistence(timeout: 3))
+        XCTAssertTrue(generate.waitForExistence(timeout: 3) && generate.isHittable)
+
+        activate(generate)
+
+        let create = app.buttons["aiTaskPlan.create"].firstMatch
+        let editRequest = app.buttons["aiTaskPlan.editRequest"].firstMatch
+        let summary = app.staticTexts[
+            "2 categories · 3 tasks · 4 checklist items"
+        ].firstMatch
+        XCTAssertTrue(create.waitForExistence(timeout: 8) && create.isHittable)
+        XCTAssertTrue(editRequest.waitForExistence(timeout: 3))
+        XCTAssertTrue(summary.waitForExistence(timeout: 3))
+        XCTAssertGreaterThanOrEqual(create.frame.height, 28)
+        try capture("ai-task-plan-preview", app: app)
+
+        activate(editRequest)
+        let discardDraft = discardDialogButton(
+            identifier: "editor.discard.confirm",
+            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
+            in: app
+        )
+        XCTAssertTrue(
+            discardDraft.waitForExistence(timeout: 3) && discardDraft.isHittable
+        )
+        activate(discardDraft)
+        XCTAssertTrue(discardDraft.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(request.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            generate.waitForExistence(timeout: 3) &&
+                generate.isEnabled &&
+                generate.isHittable
+        )
+        activate(generate)
+        XCTAssertTrue(create.waitForExistence(timeout: 8) && create.isHittable)
+
+        activate(create)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["aiTaskPlan.sheet"]
+                .waitForNonExistence(timeout: 8)
+        )
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        try capture("ai-task-plan-created-detail", app: app)
+
+        app.terminate()
+        let settingsApp = launchApp(route: "settings")
+        let settingsView = settingsApp.descendants(matching: .any)[
+            "settings.view"
+        ].firstMatch
+        if !settingsView.waitForExistence(timeout: 3) {
+            openSettings(in: settingsApp)
+        }
+        XCTAssertTrue(settingsView.waitForExistence(timeout: 8))
+
+        let intelligence = settingsApp.descendants(matching: .any)[
+            "settings.category.intelligence"
+        ].firstMatch
+        XCTAssertTrue(
+            intelligence.waitForExistence(timeout: 3) && intelligence.isHittable
+        )
+        activate(intelligence)
+
+        let editInstructions = settingsApp.descendants(matching: .any)[
+            "settings.llm.taskPlanInstructions.edit"
+        ].firstMatch
+        XCTAssertTrue(
+            editInstructions.waitForExistence(timeout: 5) &&
+                editInstructions.isHittable
+        )
+        activate(editInstructions)
+
+        let editor = settingsApp.descendants(matching: .any)[
+            "settings.llm.taskPlanInstructions.editor"
+        ].firstMatch
+        let byteCount = settingsApp.descendants(matching: .any)[
+            "settings.llm.taskPlanInstructions.byteCount"
+        ].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5) && editor.isHittable)
+        XCTAssertTrue(byteCount.waitForExistence(timeout: 3))
+        try capture("ai-task-plan-instructions-editor", app: settingsApp)
+        #endif
+    }
+
+    @MainActor
     func testTaskEditorSymbolPickerPushPreservesTheOuterDraft() throws {
         #if os(macOS)
         throw XCTSkip("The pushed symbol picker is an iPhone navigation flow.")
@@ -2317,6 +2462,45 @@ final class timetrackerUITests: XCTestCase {
     @MainActor
     private func anyStaticText(_ labels: [String], in app: XCUIApplication) -> Bool {
         labels.contains { app.staticTexts[$0].waitForExistence(timeout: 1) }
+    }
+
+    @MainActor
+    private func discardDialogButton(
+        identifier: String,
+        localizedLabels: [String],
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        let identifiedButton = app.buttons[identifier].firstMatch
+        let deadline = Date().addingTimeInterval(3)
+        repeat {
+            if identifiedButton.exists, identifiedButton.isHittable {
+                return identifiedButton
+            }
+
+            for label in localizedLabels {
+                let matchingButtons = app.buttons
+                    .matching(NSPredicate(format: "label == %@", label))
+                    .allElementsBoundByIndex
+                if let button = matchingButtons.first(where: \.isHittable) {
+                    return button
+                }
+            }
+
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        } while Date() < deadline
+
+        if identifiedButton.exists {
+            return identifiedButton
+        }
+
+        for label in localizedLabels {
+            let button = app.buttons[label].firstMatch
+            if button.exists {
+                return button
+            }
+        }
+
+        return identifiedButton
     }
 
     @MainActor

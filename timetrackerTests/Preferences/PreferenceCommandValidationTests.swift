@@ -29,6 +29,35 @@ struct PreferenceCommandValidationTests {
     }
 
     @Test @MainActor
+    func invalidTaskPlanInstructionsNeverCreateAPreferenceRecord() throws {
+        let context = try makeTestContext()
+        let handler = PreferenceCommandHandler()
+        let oversized = String(
+            repeating: "🧭",
+            count: AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount / 4 + 1
+        )
+
+        #expect(throws: LLMTaskPlanInstructionsValidationError.controlCharacter) {
+            try handler.set(
+                key: .llmTaskPlanInstructions,
+                valueJSON: PreferenceJSON.encode("Plan\u{0000}tasks"),
+                context: context
+            )
+        }
+        #expect(throws: LLMTaskPlanInstructionsValidationError.byteLimitExceeded(
+            actual: oversized.utf8.count,
+            maximum: AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
+        )) {
+            try handler.set(
+                key: .llmTaskPlanInstructions,
+                valueJSON: PreferenceJSON.encode(oversized),
+                context: context
+            )
+        }
+        #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).isEmpty)
+    }
+
+    @Test @MainActor
     func invalidLaterBatchValueLeavesEveryExistingRecordUnchanged() throws {
         let context = try makeTestContext()
         let originalDate = Date(timeIntervalSinceReferenceDate: 100_000)

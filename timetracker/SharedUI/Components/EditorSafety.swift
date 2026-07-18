@@ -12,8 +12,15 @@ extension View {
                 isPresented: isPresented,
                 titleVisibility: .visible
             ) {
-                Button(AppStrings.localized("editor.discard.confirm"), role: .destructive, action: discard)
+                Button(
+                    AppStrings.localized("editor.discard.confirm"),
+                    role: .destructive,
+                    action: discard
+                )
+                .accessibilityIdentifier("editor.discard.confirm")
+
                 Button(AppStrings.cancel, role: .cancel) {}
+                    .accessibilityIdentifier("editor.discard.cancel")
             } message: {
                 Text(.app("editor.discard.message"))
             }

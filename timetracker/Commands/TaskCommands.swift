@@ -27,6 +27,35 @@ struct TaskDraftCommandHandler {
         return task.id
     }
 
+    /// Persists a new task with an identity owned by an enclosing idempotent
+    /// transaction. Ordinary task creation continues to use `save`, where the
+    /// repository owns identity generation.
+    @discardableResult
+    func saveNew(
+        draft: TaskEditorDraft,
+        proposedTaskID: UUID,
+        sanitizedTitle: String,
+        taskRepository: SwiftDataTaskRepository,
+        saveChecklistDrafts: ([ChecklistEditorDraft], UUID) throws -> Void
+    ) throws -> UUID {
+        let task = try taskRepository.createTask(
+            proposedID: proposedTaskID,
+            title: sanitizedTitle,
+            parentID: draft.parentID,
+            categoryID: draft.categoryID,
+            colorHex: draft.colorHex,
+            iconName: draft.iconName
+        )
+        try update(
+            taskID: task.id,
+            draft: draft,
+            title: sanitizedTitle,
+            repository: taskRepository
+        )
+        try saveChecklistDrafts(draft.checklistItems, task.id)
+        return task.id
+    }
+
     func archive(taskID: UUID, repository: TaskRepository) throws {
         try ArchiveTaskUseCase(repository: repository).execute(taskID: taskID)
     }

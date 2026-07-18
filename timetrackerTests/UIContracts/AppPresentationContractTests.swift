@@ -37,7 +37,9 @@ struct AppPresentationContractTests {
             ".singleTaskPicker(",
             ".quickStartEditor(",
             ".settings",
-            ".llmConfiguration("
+            ".llmConfiguration(",
+            ".llmTaskPlanInstructions(",
+            ".aiTaskPlanGenerator"
         ] {
             #expect(host.contains(route))
         }
@@ -115,6 +117,9 @@ struct AppPresentationContractTests {
         #expect(phoneHome.contains("presentationRouter.presentQuickStartEditor(using: store)"))
         #expect(quickStart.contains("presentationRouter.presentQuickStartEditor(using: store)"))
         #expect(settings.contains("presentationRouter.presentLLMConfiguration(using: store)"))
+        #expect(settings.contains(
+            "presentationRouter.presentLLMTaskPlanInstructions(using: store)"
+        ))
         #expect(host.contains("router.replaceWithNewTask("))
         #expect(host.contains("if taskPicker.selectTask(taskID)"))
         #expect(homeActions.contains("Task.yield()") == false)
@@ -136,7 +141,13 @@ struct AppPresentationContractTests {
         #expect(dataSections.contains("onAddTime") == false)
         #expect(dataSections.contains("AppStrings.addTime") == false)
         #expect(categorySections.contains("onConfigure: presentLLMConfiguration"))
+        #expect(categorySections.contains(
+            "onEditTaskPlanInstructions: presentLLMTaskPlanInstructions"
+        ))
         #expect(settingsView.contains("presentationRouter.presentLLMConfiguration(using: store)"))
+        #expect(settingsView.contains(
+            "presentationRouter.presentLLMTaskPlanInstructions(using: store)"
+        ))
         #expect(presentationHost.contains("private struct AppSettingsSheet: View"))
         #expect(presentationHost.contains("@State private var childRouter = AppPresentationRouter()"))
         #expect(presentationHost.contains(".environment(childRouter)"))

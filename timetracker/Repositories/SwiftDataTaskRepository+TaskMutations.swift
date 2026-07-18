@@ -10,6 +10,28 @@ extension SwiftDataTaskRepository {
         colorHex: String? = nil,
         iconName: String? = nil
     ) throws -> TaskNode {
+        try createTask(
+            proposedID: UUID(),
+            title: title,
+            parentID: parentID,
+            categoryID: categoryID,
+            colorHex: colorHex,
+            iconName: iconName
+        )
+    }
+
+    /// Creates a task with an identity chosen by an enclosing idempotent
+    /// command. This remains a concrete-repository API so ordinary callers
+    /// continue to receive repository-owned UUIDs through `TaskRepository`.
+    @discardableResult
+    func createTask(
+        proposedID: UUID,
+        title: String,
+        parentID: UUID?,
+        categoryID: UUID? = nil,
+        colorHex: String? = nil,
+        iconName: String? = nil
+    ) throws -> TaskNode {
         let values = try TaskPersistencePolicy.prepareTask(
             title: title,
             colorHex: colorHex,
@@ -25,6 +47,7 @@ extension SwiftDataTaskRepository {
             iconName: values.iconName,
             sortOrder: (siblings.last?.sortOrder ?? 0) + 10
         )
+        node.id = proposedID
 
         try applyHierarchy(to: node, parentID: parentID)
         context.insert(node)

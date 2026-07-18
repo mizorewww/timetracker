@@ -249,6 +249,10 @@ struct PreferencesChecklistForecastTests {
         defaults.set("test-key", forKey: SyncedPreferenceService.legacyLLMAPIKey)
         defaults.set("gpt-test", forKey: AppPreferenceKey.llmSelectedModel.rawValue)
         defaults.set("gpt-test,gpt-other", forKey: AppPreferenceKey.llmAvailableModelIDs.rawValue)
+        defaults.set(
+            "Prefer concise generated tasks.",
+            forKey: AppPreferenceKey.llmTaskPlanInstructions.rawValue
+        )
 
         let context = try makeTestContext()
         let credentialStore = TestLLMCredentialStore()
@@ -277,6 +281,7 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.llmAPIKey == "test-key")
         #expect(preferences.llmSelectedModel == "gpt-test")
         #expect(preferences.llmAvailableModelIDs == ["gpt-other", "gpt-test"])
+        #expect(preferences.llmTaskPlanInstructions == "Prefer concise generated tasks.")
         let defaultPlans = PomodoroPlan.defaultPlans
         #expect(preferences.pomodoroPlans.map(\.name) == defaultPlans.map(\.name))
         #expect(preferences.pomodoroPlans.map(\.iconName) == defaultPlans.map(\.iconName))

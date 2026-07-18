@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-16
+校对日期：2026-07-18
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -57,7 +57,7 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 
 应用向用户配置的 OpenAI-compatible endpoint 发起模型列表和聊天请求。
 
-设置采用 Test→Save 草稿：在配置 sheet 中输入 endpoint/API key 不会逐字持久化；“测试连接”会向该 endpoint 发送带凭证的模型列表请求，但不会保存；用户选择模型并点击“保存”后才写入偏好和 Keychain。endpoint、模型列表和已选模型作为一次 SwiftData 偏好提交，Keychain 则是独立安全存储；偏好提交失败时应用尽力恢复旧密钥，补偿失败会单独报告，因此这不是跨存储 ACID transaction。自动建议是默认关闭的本机开关，只有用户另行开启后才会为 Inbox/checklist 自动发送内容。手动点击建议仍是一次明确请求。
+设置采用 Test→Save 草稿：在配置 sheet 中输入 endpoint/API key 不会逐字持久化；“测试连接”会向该 endpoint 发送带凭证的模型列表请求，但不会保存；用户选择模型并点击“保存”后才写入偏好和 Keychain。endpoint、模型列表和已选模型作为一次 SwiftData 偏好提交，Keychain 则是独立安全存储；偏好提交失败时应用尽力恢复旧密钥，补偿失败会单独报告，因此这不是跨存储 ACID transaction。自动建议是默认关闭的本机开关，只有用户另行开启后才会为 Inbox/checklist 自动发送内容。手动点击建议或从任务页生成任务计划仍是一次明确请求。
 
 ### 收件箱任务建议
 
@@ -80,7 +80,17 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 
 Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路径最多 1,024 bytes。Inbox 与 checklist 共用 78 个常见语义 SF Symbols 的精选发送列表，不会把完整的 8,000+ 图标目录附在每个请求中；这不会缩减用户本机图标选择器。
 
-两类建议的 user prompt 最多 24 KiB，最终 JSON request body 最多 32 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
+### 任务计划生成
+
+请求只在用户从任务页填写需求并明确点按“生成”后发出，可能包含：
+
+- 用户当次输入的计划需求，最多 4 KiB UTF-8 bytes。
+- “任务规划指令”设置，最多 4 KiB UTF-8 bytes。它是可同步、可导出的普通偏好，不是秘密；不应填写密码或 API key。
+- 允许模型使用的精选系统图标名和颜色列表。
+
+请求不包含现有任务库、历史时间记录、Inbox 或 checklist 内容。固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿；响应正文在服务层再限制为 128 KiB，并校验引用、层级、字段及 8 个分类、64 个任务、每任务 32/总计 256 个 checklist 的数量上限。通过校验的结果只进入本机可编辑预览；用户点按“创建”后才在一个 SwiftData 事务中新增事实。该流程不会自动修改、删除或覆盖既有任务，任一步失败都不留下半份计划。
+
+两类建议和任务计划生成的 user prompt 最多 24 KiB，最终 JSON request body 最多 32 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
 
 ### 凭证与传输
 
@@ -181,6 +191,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
 - [ ] Inbox/checklist 请求的候选数、字段/prompt/body UTF-8 预算、精选图标列表、非候选 UUID 拒绝和结果字段归一化通过回归。
+- [ ] 任务计划的显式生成、可编辑预览、同步指令、字段/数量/层级上限、原子创建回滚和幂等重放通过回归。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
 - [ ] Watch DTO 不包含 secret；codec/queue 的字段、数量、唯一 ID、时间和 512 KiB 恢复边界通过自动测试；持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过配对真机验证。
 - [ ] V8→V9 `DailySummary` cache 移除与 V9→V10 Inbox suggestion identity/dismissal 迁移都在真实磁盘 fixture 上保留用户事实；旧 JSON 快照缺少新 UUID 字段时也能兼容恢复。

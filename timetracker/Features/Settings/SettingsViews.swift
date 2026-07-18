@@ -133,4 +133,8 @@ struct SettingsView: View {
     func presentLLMConfiguration() {
         presentationRouter.presentLLMConfiguration(using: store)
     }
+
+    func presentLLMTaskPlanInstructions() {
+        presentationRouter.presentLLMTaskPlanInstructions(using: store)
+    }
 }

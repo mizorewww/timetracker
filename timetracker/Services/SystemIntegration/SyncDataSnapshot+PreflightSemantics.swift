@@ -115,8 +115,18 @@ extension SyncDataSnapshot {
             let isValid: Bool
             if let key = AppPreferenceKey(rawValue: record.key) {
                 switch key {
-                case .preferredColorScheme, .pomodoroDefaultMode, .llmEndpoint, .llmSelectedModel:
+                case .preferredColorScheme,
+                     .pomodoroDefaultMode,
+                     .llmEndpoint,
+                     .llmSelectedModel:
                     isValid = decodes(String.self, from: data)
+                case .llmTaskPlanInstructions:
+                    isValid = (
+                        try? PreferenceJSON.canonicalValueJSON(
+                            for: key,
+                            from: record.valueJSON
+                        )
+                    ) != nil
                 case .defaultFocusMinutes, .defaultBreakMinutes, .defaultPomodoroRounds:
                     isValid = decodes(Int.self, from: data)
                 case .pomodoroPlans:

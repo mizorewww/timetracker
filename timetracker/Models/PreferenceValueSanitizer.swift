@@ -1,5 +1,23 @@
 import Foundation
 
+enum LLMTaskPlanInstructionsValidationError: LocalizedError, Equatable {
+    case controlCharacter
+    case byteLimitExceeded(actual: Int, maximum: Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .controlCharacter:
+            AppStrings.localized("settings.llm.taskPlanInstructions.error.controlCharacter")
+        case let .byteLimitExceeded(actual, maximum):
+            String.localizedStringWithFormat(
+                AppStrings.localized("settings.llm.taskPlanInstructions.error.tooLongFormat"),
+                Int64(actual),
+                Int64(maximum)
+            )
+        }
+    }
+}
+
 enum AppPreferenceValueSanitizer {
     static let maximumPomodoroPlanCount = 24
     static let maximumPomodoroPlanNameLength = 80
@@ -7,6 +25,7 @@ enum AppPreferenceValueSanitizer {
     nonisolated static let maximumLLMModelCount = 256
     nonisolated static let maximumLLMModelIDByteCount = 256
     static let maximumLLMEndpointLength = 2_048
+    static let maximumLLMTaskPlanInstructionsByteCount = 4 * 1_024
 
     static func preferredColorScheme(_ value: String) -> String {
         ["system", "light", "dark"].contains(value) ? value : "system"
@@ -69,6 +88,33 @@ enum AppPreferenceValueSanitizer {
             accumulator.insert(value)
         }
         return accumulator.values
+    }
+
+    static func llmTaskPlanInstructions(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = trimmed
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let resolved = normalized.isEmpty
+            ? LLMTaskPlanPrompt.defaultInstructions
+            : normalized
+
+        let containsUnsupportedControl = resolved.unicodeScalars.contains { scalar in
+            guard CharacterSet.controlCharacters.contains(scalar) else { return false }
+            return scalar.value != 9 && scalar.value != 10
+        }
+        guard !containsUnsupportedControl else {
+            throw LLMTaskPlanInstructionsValidationError.controlCharacter
+        }
+
+        let actualByteCount = resolved.utf8.count
+        guard actualByteCount <= maximumLLMTaskPlanInstructionsByteCount else {
+            throw LLMTaskPlanInstructionsValidationError.byteLimitExceeded(
+                actual: actualByteCount,
+                maximum: maximumLLMTaskPlanInstructionsByteCount
+            )
+        }
+        return resolved
     }
 
     private static func boundedTrimmed(_ value: String, maximumLength: Int) -> String {

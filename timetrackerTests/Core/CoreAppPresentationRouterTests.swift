@@ -93,6 +93,18 @@ struct CoreAppPresentationRouterTests {
     }
 
     @Test @MainActor
+    func taskPlanGeneratorUsesTheTypedScenePresentationRoute() throws {
+        let router = AppPresentationRouter()
+
+        #expect(router.presentAITaskPlanGenerator())
+
+        guard case .aiTaskPlanGenerator = try #require(router.sheet).content else {
+            Issue.record("Task plan generation did not use the scene presentation route.")
+            return
+        }
+    }
+
+    @Test @MainActor
     func pomodoroTaskPickerKeepsItsSelectionCallbackInTheOwningScene() throws {
         let router = AppPresentationRouter()
         let selectedBeforePresenting = UUID()

@@ -19,10 +19,14 @@ struct ChecklistEditorRow: View {
             .padding(.top, 2)
 
             SymbolColorPickerButton(
-                colors: TaskColorPalette.hexValues,
                 symbolName: $item.iconName,
                 colorHex: $item.colorHex,
-                showsTitle: false
+                showsTitle: false,
+                pickerAccessibilityIdentifier:
+                    "symbol.picker.open.checklist.\(item.id.uuidString)",
+                onOpen: {
+                    focus.wrappedValue = nil
+                }
             )
             .buttonStyle(.plain)
             .frame(

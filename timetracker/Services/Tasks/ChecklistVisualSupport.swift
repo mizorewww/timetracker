@@ -14,14 +14,10 @@ enum ChecklistVisualSanitizer {
     }
 
     nonisolated static func sanitizedColor(_ colorHex: String?, fallback: String? = nil) -> String {
-        let candidates = [
-            colorHex?.trimmingCharacters(in: CharacterSet.alphanumerics.inverted).uppercased(),
-            fallback?.trimmingCharacters(in: CharacterSet.alphanumerics.inverted).uppercased(),
-            defaultColor
-        ]
-        return candidates.compactMap(\.self).first { candidate in
-            TaskColorPalette.hexValues.contains(candidate)
-        } ?? defaultColor
+        [colorHex, fallback, defaultColor]
+            .lazy
+            .compactMap(TaskColorPalette.normalizedHex)
+            .first ?? defaultColor
     }
 
     nonisolated static func isDefault(iconName: String?, colorHex: String?) -> Bool {

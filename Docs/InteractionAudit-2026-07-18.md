@@ -295,6 +295,46 @@ Status: completed and verified
   deleted. All derived data and result bundles for the batch were deleted; no
   owned app, UI runner, `xcodebuild`, `xctest`, or Booted device remained.
 
+## Checkpoint 11 — touch-sized Blossom color selection
+
+Status: completed and verified
+
+- The text color menu and always-expanded palette were removed. Task,
+  category, Checklist, and Pomodoro editors now reuse one
+  `SymbolColorPickerButton` and one `SymbolColorWell`.
+- BlossomColorPicker is pinned to official revision
+  `9a1ee3df309e37ae271362818dcdfdb072ea9611`. iOS/iPadOS reuse its Core
+  blossom view, model, color data, brightness control, and hit testing inside
+  a scene-owned SwiftUI popover; macOS uses the package's top-level presenter.
+  No color-wheel or palette implementation was copied into the app.
+- The collapsed color well and every visible petal are 44 pt. Inner and outer
+  radii are 44/88 pt, so adjacent centers and the gap between rings are at
+  least one full touch target apart. The resulting 340 pt popover fits the
+  narrow iPhone SE portrait width.
+- Color is a secondary disclosure beside the SF Symbols heading. With the
+  software keyboard visible, the symbol viewport retains at least one complete
+  44 pt row above the keyboard. Opening color, selecting a symbol, submitting
+  search, or scrolling ends search focus.
+- Manual selection preserves arbitrary sRGB colors as canonical six-digit hex;
+  legacy three-digit values remain readable and normalize to six digits. AI
+  output remains restricted to the reviewed 24-color allowlist.
+- Selected symbols, Checklist completion marks, and Timeline icons choose a
+  black or white foreground from the resolved background luminance, including
+  Blossom's pastel colors in Dark Mode, with a 4.5:1 contrast floor.
+- The final focused signed macOS suites passed 54/54. A follow-up run of the
+  utility and accessibility suites after the legacy-color and contrast guards
+  passed 16/16. The signed generic iOS application build passed with the Apple
+  Development identity and provisioning profile intact.
+- The real operation path passed 1/1 on both an iPhone SE (third generation)
+  and an iPad Pro 11-inch (fourth generation), iOS/iPadOS 27.0. It covers
+  software-keyboard clearance, the 44 pt color well, Blossom expansion,
+  actual color selection, repeated-selection collapse, symbol search and
+  selection, and Back preserving the outer title/color draft.
+- Five visually reviewed screenshots are retained under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/symbol-picker-checkpoint-11-verified`.
+  Both explicitly owned simulators were terminated, shut down, and deleted,
+  and the temporary software-keyboard preference was restored.
+
 The next Analytics checkpoint must make Focus Session records and current-task
 forecasts obey, or explicitly opt out of, the selected historical range before
 the detail pages can be considered semantically complete.

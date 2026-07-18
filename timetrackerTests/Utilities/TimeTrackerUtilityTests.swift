@@ -217,6 +217,44 @@ struct TimeTrackerUtilityTests {
 
         #expect(bright.relativeLuminance <= 0.184)
         #expect(dark.relativeLuminance >= 0.174)
+        #expect(bright.prefersDarkForeground)
+        #expect(dark.prefersDarkForeground == false)
+        #expect(bright.contrastRatio(againstLuminance: 0) >= 4.5)
+        #expect(dark.contrastRatio(againstLuminance: 1) >= 4.5)
+
+        let darkModePastel = AccessibleSRGB(red: 0.99, green: 0.99, blue: 0.80)
+            .adapted(forDarkBackground: true)
+        #expect(darkModePastel.prefersDarkForeground)
+        #expect(darkModePastel.contrastRatio(againstLuminance: 0) >= 4.5)
+    }
+
+    @Test
+    func taskColorHexRoundTripsSystemPickerValuesCanonically() {
+        #expect(TaskColorPalette.normalizedHex("#0a84ff") == "0A84FF")
+        #expect(TaskColorPalette.normalizedHex("12Ab34") == "12AB34")
+        #expect(TaskColorPalette.normalizedHex("#aB3") == "AABB33")
+        #expect(TaskColorPalette.normalizedHex("12345") == nil)
+        #expect(TaskColorPalette.normalizedHex("GGGGGG") == nil)
+        #expect(TaskColorPalette.hex(red: 0, green: 0.5, blue: 1) == "0080FF")
+        #expect(ChecklistVisualSanitizer.sanitizedColor("#12ab34") == "12AB34")
+    }
+
+    @Test
+    func blossomTouchLayoutKeepsEachColorRegionFingerSized() {
+        let metrics = SymbolBlossomTouchMetrics.self
+        let innerSpacing = metrics.adjacentCenterSpacing(
+            radius: metrics.innerRadius,
+            count: metrics.innerPetalCount
+        )
+        let outerSpacing = metrics.adjacentCenterSpacing(
+            radius: metrics.outerRadius,
+            count: metrics.outerPetalCount
+        )
+
+        #expect(metrics.innerRadius >= metrics.targetDiameter)
+        #expect(metrics.outerRadius - metrics.innerRadius >= metrics.targetDiameter)
+        #expect(innerSpacing >= metrics.targetDiameter - 0.001)
+        #expect(outerSpacing >= metrics.targetDiameter - 0.001)
     }
 
     @Test @MainActor

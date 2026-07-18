@@ -40,8 +40,6 @@ struct TaskEditorPanel: View {
     let onSave: (TaskEditorDraft) -> TaskDraftSaveResult
     let onSaved: () -> Void
 
-    private let colors = TaskColorPalette.hexValues
-
     init(
         store: TimeTrackerStore,
         initialDraft: TaskEditorDraft,
@@ -72,7 +70,6 @@ struct TaskEditorPanel: View {
             store: store,
             draft: $draft,
             validation: validation,
-            colors: colors,
             parentCandidates: parentCandidates,
             focusedChecklistDraftID: $focusedChecklistDraftID,
             orderedChecklistIndices: orderedChecklistIndices,

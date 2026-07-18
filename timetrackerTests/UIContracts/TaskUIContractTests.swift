@@ -321,12 +321,80 @@ struct TaskUIContractTests {
     @Test
     func symbolColorPickerPushesWithinIOSEditorsInsteadOfStackingSheets() throws {
         let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
+        let colorWell = try sourceText(
+            "timetracker/Features/Tasks/Editor/SymbolColorWell.swift"
+        )
+        let project = try sourceText("timetracker.xcodeproj/project.pbxproj")
+        let resolved = try sourceText(
+            "timetracker.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+        )
 
         #expect(symbolPicker.contains("NavigationLink {"))
         #expect(symbolPicker.contains(".navigationTitle(AppStrings.localized(\"editor.symbol.title\"))"))
         #expect(symbolPicker.contains(".popover(isPresented: $isPickerPresented)"))
         #expect(symbolPicker.contains(".sheet(isPresented: $isPickerPresented)") == false)
         #expect(symbolPicker.contains("Button(AppStrings.done)") == false)
+        #expect(symbolPicker.contains("@FocusState private var isSearchFocused"))
+        #expect(symbolPicker.contains(".layoutPriority(1)"))
+        #expect(symbolPicker.contains(".scrollDismissesKeyboard(.interactively)"))
+        #expect(symbolPicker.contains("SymbolColorWell("))
+        #expect(colorWell.contains("import BlossomColorPicker"))
+        #expect(colorWell.contains("import BlossomColorPickerCore"))
+        #expect(colorWell.contains("ExpandedBlossomView("))
+        #expect(colorWell.contains("BlossomStyle("))
+        #expect(colorWell.contains("targetDiameter: CGFloat = 44"))
+        #expect(colorWell.contains("innerRadius: CGFloat = 44"))
+        #expect(colorWell.contains("outerRadius: CGFloat = 88"))
+        #expect(colorWell.contains("petalSize: SymbolBlossomTouchMetrics.targetDiameter"))
+        #expect(colorWell.contains("centerCircleSize: SymbolBlossomTouchMetrics.targetDiameter"))
+        #expect(colorWell.contains(".presentationCompactAdaptation(.popover)"))
+        #expect(symbolPicker.contains(".onAppear(perform: onOpen)"))
+        #expect(project.contains(
+            "repositoryURL = \"https://github.com/Lakr233/BlossomColorPicker\";"
+        ))
+        #expect(project.contains(
+            "revision = 9a1ee3df309e37ae271362818dcdfdb072ea9611;"
+        ))
+        #expect(resolved.contains("\"identity\" : \"blossomcolorpicker\""))
+        #expect(resolved.contains(
+            "\"revision\" : \"9a1ee3df309e37ae271362818dcdfdb072ea9611\""
+        ))
+    }
+
+    @Test
+    func allTaskEditorsReuseTheSharedSymbolColorPickerLauncher() throws {
+        let task = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift"
+        )
+        let category = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift"
+        )
+        let checklist = try sourceText(
+            "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift"
+        )
+        let pomodoro = try sourceText(
+            "timetracker/Features/Settings/PomodoroSettingsSection.swift"
+        )
+
+        #expect(task.contains("SymbolColorPickerRow("))
+        #expect(task.contains("pickerAccessibilityIdentifier: \"symbol.picker.open.task\""))
+        #expect(task.contains("isTitleFocused = false"))
+        #expect(category.contains("SymbolColorPickerRow("))
+        #expect(category.contains("pickerAccessibilityIdentifier: \"symbol.picker.open.category\""))
+        #expect(category.contains("isTitleFocused = false"))
+        #expect(checklist.contains("SymbolColorPickerButton("))
+        #expect(checklist.contains("symbol.picker.open.checklist."))
+        #expect(checklist.contains("focus.wrappedValue = nil"))
+        #expect(pomodoro.contains("SymbolColorPickerButton("))
+        #expect(pomodoro.contains("symbol.picker.open.pomodoro."))
+        #expect(task.contains("SymbolAndColorPicker(") == false)
+        #expect(category.contains("SymbolAndColorPicker(") == false)
+        #expect(checklist.contains("SymbolAndColorPicker(") == false)
+        #expect(pomodoro.contains("SymbolAndColorPicker(") == false)
+        #expect(task.contains("LazyVGrid(") == false)
+        #expect(category.contains("LazyVGrid(") == false)
+        #expect(checklist.contains("LazyVGrid(") == false)
+        #expect(pomodoro.contains("LazyVGrid(") == false)
     }
 
     @Test

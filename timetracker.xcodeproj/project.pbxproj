@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		F10000000000000000000001 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* MarkdownView */; };
+		F20000000000000000000001 /* BlossomColorPicker in Frameworks */ = {isa = PBXBuildFile; productRef = F20000000000000000000003 /* BlossomColorPicker */; };
 		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E40100000000000000000001 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
 		E40100000000000000000002 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
@@ -171,6 +172,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F20000000000000000000001 /* BlossomColorPicker in Frameworks */,
 				F10000000000000000000001 /* MarkdownView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -271,6 +273,7 @@
 			);
 			name = timetracker;
 			packageProductDependencies = (
+				F20000000000000000000003 /* BlossomColorPicker */,
 				F10000000000000000000003 /* MarkdownView */,
 			);
 			productName = timetracker;
@@ -433,6 +436,7 @@
 			mainGroup = D41D8E852F9CC4B50024913B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				F20000000000000000000002 /* XCRemoteSwiftPackageReference "BlossomColorPicker" */,
 				F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -1197,6 +1201,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		F20000000000000000000002 /* XCRemoteSwiftPackageReference "BlossomColorPicker" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Lakr233/BlossomColorPicker";
+			requirement = {
+				kind = revision;
+				revision = 9a1ee3df309e37ae271362818dcdfdb072ea9611;
+			};
+		};
 		F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Lakr233/MarkdownView";
@@ -1208,6 +1220,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F20000000000000000000003 /* BlossomColorPicker */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F20000000000000000000002 /* XCRemoteSwiftPackageReference "BlossomColorPicker" */;
+			productName = BlossomColorPicker;
+		};
 		F10000000000000000000003 /* MarkdownView */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */;

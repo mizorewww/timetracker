@@ -7,6 +7,7 @@ struct TaskCategoryEditorSheet: View {
     @State private var draft: TaskCategoryEditorDraft
     @State private var isDiscardConfirmationPresented = false
     @State private var isDeleteConfirmationPresented = false
+    @State private var hasRequestedInitialTitleFocus = false
     @FocusState private var isTitleFocused: Bool
 
     init(store: TimeTrackerStore, initialDraft: TaskCategoryEditorDraft) {
@@ -23,6 +24,10 @@ struct TaskCategoryEditorSheet: View {
                 Section(AppStrings.localized("taskCategory.editor.info")) {
                     TextField(AppStrings.localized("taskCategory.name"), text: $draft.title)
                         .focused($isTitleFocused)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            isTitleFocused = false
+                        }
                     if let validationError {
                         Label(validationError, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
@@ -31,7 +36,10 @@ struct TaskCategoryEditorSheet: View {
                             .accessibilityIdentifier("taskCategory.validation")
                     }
                     SymbolColorPickerRow(
-                        colors: TaskColorPalette.hexValues,
+                        pickerAccessibilityIdentifier: "symbol.picker.open.category",
+                        onOpen: {
+                            isTitleFocused = false
+                        },
                         symbolName: $draft.iconName,
                         colorHex: $draft.colorHex
                     )
@@ -84,7 +92,9 @@ struct TaskCategoryEditorSheet: View {
         }
         .platformSheetFrame(width: 460, height: 440)
         .task {
-            guard initialDraft.categoryID == nil else { return }
+            guard initialDraft.categoryID == nil,
+                  hasRequestedInitialTitleFocus == false else { return }
+            hasRequestedInitialTitleFocus = true
             isTitleFocused = true
         }
         .editorDiscardConfirmation(

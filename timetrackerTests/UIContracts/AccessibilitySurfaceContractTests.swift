@@ -57,13 +57,19 @@ struct AccessibilitySurfaceContractTests {
 
     @Test
     func customSelectorsExposeSelectionAndReadableColorNames() throws {
-        let symbolPicker = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
+        let symbolPicker = try [
+            "timetracker/Features/Tasks/Editor/SymbolPickerViews.swift",
+            "timetracker/Features/Tasks/Editor/SymbolColorWell.swift"
+        ].map(sourceText).joined(separator: "\n")
         let quickStart = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift")
         let colors = try sourceText("timetracker/SharedUI/Foundation/ColorSupport.swift")
 
-        #expect(symbolPicker.components(separatedBy: ".accessibilityAddTraits(").count - 1 >= 2)
-        #expect(symbolPicker.contains("TaskColorPalette.accessibilityName(for: hex)"))
+        #expect(symbolPicker.contains(".accessibilityAddTraits(symbolName == symbol"))
         #expect(symbolPicker.contains("editor.symbol.symbolValue"))
+        #expect(symbolPicker.contains("TaskColorPalette.accessibilityName(for: selection)"))
+        #expect(symbolPicker.contains("TaskColorPalette.contrastingForegroundColor(for: colorHex)"))
+        #expect(symbolPicker.contains("symbol.picker.color.well"))
+        #expect(symbolPicker.contains("symbol.picker.color.blossom"))
         #expect(quickStart.contains(".accessibilityAddTraits(pinned ? .isSelected : [])"))
         #expect(quickStart.contains("quickStart.selection.pinnedOrder"))
         #expect(quickStart.contains("quickStart.selection.notPinned"))

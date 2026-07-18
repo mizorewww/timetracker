@@ -121,10 +121,16 @@ nonisolated enum LLMSuggestionInputPolicy {
     }
 
     static func sanitizedSuggestedColor(_ colorHex: String, fallback: String) -> String {
-        ChecklistVisualSanitizer.sanitizedColor(
+        let candidates = [
             boundedTrimmedUTF8(colorHex, maximumByteCount: maximumColorByteCount),
-            fallback: fallback
-        )
+            fallback,
+            ChecklistVisualSanitizer.defaultColor
+        ]
+        return candidates
+            .lazy
+            .compactMap(TaskColorPalette.normalizedHex)
+            .first { TaskColorPalette.hexValues.contains($0) } ??
+            ChecklistVisualSanitizer.defaultColor
     }
 
     static func sanitizedTaskID(_ taskID: String) -> UUID? {

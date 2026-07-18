@@ -18,7 +18,9 @@ extension TimelineChart {
             .overlay {
                 Image(systemName: entry.iconName)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
+                    )
             }
             .offset(x: x, y: lanes.offset(for: entry.lane))
             .help("\(entry.title) \(shortRange(entry))")
@@ -42,7 +44,9 @@ extension TimelineChart {
             .overlay(alignment: .top) {
                 Image(systemName: entry.iconName)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
+                    )
                     .padding(.top, 4)
             }
             .offset(x: x, y: min(y, height - barHeight))

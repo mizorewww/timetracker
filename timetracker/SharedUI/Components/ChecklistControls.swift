@@ -54,12 +54,16 @@ struct ChecklistCompletionMark: View {
     var visualSize: CGFloat = 30
 
     var body: some View {
+        let sanitizedColor = ChecklistVisualSanitizer.sanitizedColor(colorHex)
         ZStack {
             if isCompleted {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: visualSize, weight: .regular))
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .green)
+                    .foregroundStyle(
+                        TaskColorPalette.contrastingForegroundColor(for: sanitizedColor),
+                        Color(hex: sanitizedColor) ?? .green
+                    )
             } else {
                 Circle()
                     .strokeBorder(.secondary.opacity(0.55), lineWidth: 1.6)

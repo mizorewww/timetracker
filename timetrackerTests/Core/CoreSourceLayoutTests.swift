@@ -230,6 +230,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskChecklistEditorSection.swift",
             "timetracker/Features/Tasks/Editor/ChecklistEditorRow.swift",
             "timetracker/Features/Tasks/Editor/SymbolPickerViews.swift",
+            "timetracker/Features/Tasks/Editor/SymbolColorWell.swift",
             "timetracker/Features/Tasks/Editor/SymbolColorPickerRow.swift",
             "timetracker/Features/Tasks/Editor/SymbolCatalog.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
@@ -385,6 +386,7 @@ struct CoreSourceLayoutTests {
             "TaskChecklistEditorSection.swift",
             "ChecklistEditorRow.swift",
             "SymbolPickerViews.swift",
+            "SymbolColorWell.swift",
             "SymbolColorPickerRow.swift",
             "SymbolCatalog.swift"
         ]

@@ -659,10 +659,8 @@ final class timetrackerUITests: XCTestCase {
         #if os(macOS)
         throw XCTSkip("The pushed symbol picker is an iPhone navigation flow.")
         #else
-        let app = launchApp()
+        let app = launchApp(route: "tasks", seedsDemoData: false)
 
-        XCTAssertTrue(homeIsReady(in: app))
-        openSection("Tasks", tabIdentifier: "phone.tab.tasks", sidebarIdentifier: "sidebar.Tasks", in: app)
         XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 8))
         let addTaskMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
         XCTAssertTrue(addTaskMenu.waitForExistence(timeout: 3) && addTaskMenu.isHittable)
@@ -680,10 +678,14 @@ final class timetrackerUITests: XCTestCase {
 
         let draftTitle = "Navigation draft"
         titleField.typeText(draftTitle)
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 3))
         titleField.typeText(XCUIKeyboardKey.return.rawValue)
-        XCTAssertFalse(app.keyboards.firstMatch.waitForExistence(timeout: 1))
+        XCTAssertTrue(keyboard.waitForNonExistence(timeout: 3))
 
-        let symbolColor = app.buttons["symbol.picker.open"].firstMatch
+        let symbolColor = app.descendants(matching: .any)[
+            "symbol.picker.open.task"
+        ].firstMatch
         scrollUntilHittable(symbolColor, direction: .up, in: app)
         XCTAssertTrue(symbolColor.waitForExistence(timeout: 3) && symbolColor.isHittable)
         activate(symbolColor)
@@ -691,16 +693,88 @@ final class timetrackerUITests: XCTestCase {
         let picker = app.descendants(matching: .any)["symbol.picker.view"].firstMatch
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
         XCTAssertEqual(app.sheets.count, editorSheetCount)
+        XCTAssertTrue(keyboard.waitForNonExistence(timeout: 3))
 
-        let searchField = app.textFields["Search symbol names"].firstMatch
+        var searchField = app.descendants(matching: .any)["symbol.picker.search"].firstMatch
+        if searchField.waitForExistence(timeout: 2) == false {
+            searchField = app.textFields["Search symbol names"].firstMatch
+        }
+        XCTAssertTrue(searchField.waitForExistence(timeout: 3) && searchField.isHittable)
+        searchField.tap()
+
+        let symbolViewport = app.descendants(matching: .any)["symbol.picker.symbols"].firstMatch
+        let firstVisibleSymbol = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "symbol.picker.symbol."
+            )
+        ).firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 3))
+        XCTAssertTrue(symbolViewport.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            firstVisibleSymbol.waitForExistence(timeout: 3) &&
+                firstVisibleSymbol.isHittable
+        )
+        XCTAssertGreaterThanOrEqual(
+            symbolViewport.frame.height,
+            44,
+            "The software keyboard must leave at least one tappable symbol row visible."
+        )
+        XCTAssertLessThanOrEqual(
+            symbolViewport.frame.maxY,
+            keyboard.frame.minY + 1,
+            "The symbol viewport must stay above the software keyboard."
+        )
+        XCTAssertLessThanOrEqual(
+            firstVisibleSymbol.frame.maxY,
+            keyboard.frame.minY + 1,
+            "A visible symbol must stay above the software keyboard."
+        )
+        try capture("task-symbol-picker-keyboard-clearance", app: app)
+
+        let colorWell = app.descendants(matching: .any)["symbol.picker.color.well"].firstMatch
+        XCTAssertTrue(colorWell.waitForExistence(timeout: 3) && colorWell.isHittable)
+        XCTAssertGreaterThanOrEqual(colorWell.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(colorWell.frame.height, 44)
+        let initialColorName = colorWell.value as? String
+        activate(colorWell)
+        XCTAssertTrue(keyboard.waitForNonExistence(timeout: 3))
+
+        let blossom = app.descendants(matching: .any)[
+            "symbol.picker.color.blossom"
+        ].firstMatch
+        XCTAssertTrue(blossom.waitForExistence(timeout: 3))
+        XCTAssertGreaterThanOrEqual(blossom.frame.width, 320)
+        XCTAssertGreaterThanOrEqual(blossom.frame.height, 320)
+        XCTAssertEqual(app.sheets.count, editorSheetCount)
+        try capture("task-symbol-color-blossom", app: app)
+
+        let topOuterPetal = blossom.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.23)
+        )
+        topOuterPetal.tap()
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                (colorWell.value as? String) != initialColorName
+            },
+            "Selecting a Blossom petal must update the shared color binding."
+        )
+        let selectedColorName = colorWell.value as? String
+        topOuterPetal.tap()
+        XCTAssertTrue(blossom.waitForNonExistence(timeout: 3))
+        try capture("task-symbol-and-color-picker-selected", app: app)
+
         XCTAssertTrue(searchField.waitForExistence(timeout: 3) && searchField.isHittable)
         searchField.tap()
         searchField.typeText("calendar")
 
-        let calendar = app.buttons["Symbol calendar"].firstMatch
+        let calendar = app.descendants(matching: .any)[
+            "symbol.picker.symbol.calendar"
+        ].firstMatch
         XCTAssertTrue(calendar.waitForExistence(timeout: 3) && calendar.isHittable)
         activate(calendar)
-        try capture("iphone-task-symbol-picker-pushed", app: app)
+        XCTAssertTrue(keyboard.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(calendar.isSelected)
 
         let back = app.navigationBars.buttons["New Task"].firstMatch
         XCTAssertTrue(back.waitForExistence(timeout: 3) && back.isHittable)
@@ -710,7 +784,8 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertEqual(titleField.value as? String, draftTitle)
         XCTAssertFalse(picker.exists)
         XCTAssertFalse(app.keyboards.firstMatch.exists)
-        try capture("iphone-task-editor-symbol-return", app: app)
+        XCTAssertEqual(symbolColor.value as? String, selectedColorName)
+        try capture("task-editor-symbol-return", app: app)
         #endif
     }
 
@@ -1797,7 +1872,8 @@ final class timetrackerUITests: XCTestCase {
     @MainActor
     private func launchApp(
         route: String = "today",
-        contentSizeCategory: String? = nil
+        contentSizeCategory: String? = nil,
+        seedsDemoData: Bool = true
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -1805,8 +1881,10 @@ final class timetrackerUITests: XCTestCase {
             "-ApplePersistenceIgnoreState", "YES",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
-            "-TimeTrackerAutomaticDemoDataModeOverride", "seedIfEmpty",
-            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
+            "-TimeTrackerAutomaticDemoDataModeOverride",
+            seedsDemoData ? "seedIfEmpty" : "off",
+            "-TimeTrackerAutomaticDemoSeedingDisabled",
+            seedsDemoData ? "NO" : "YES"
         ]
         if let contentSizeCategory {
             app.launchArguments += [
@@ -2171,5 +2249,20 @@ final class timetrackerUITests: XCTestCase {
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
         return false
+    }
+
+    @MainActor
+    private func waitUntil(
+        timeout: TimeInterval,
+        condition: () -> Bool
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        return condition()
     }
 }

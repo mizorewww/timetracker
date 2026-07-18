@@ -4,7 +4,6 @@ struct TaskEditorForm: View {
     let store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
     let validation: TaskEditorValidation
-    let colors: [String]
     let parentCandidates: [TaskNode]
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
@@ -17,7 +16,6 @@ struct TaskEditorForm: View {
                 store: store,
                 draft: $draft,
                 validation: validation,
-                colors: colors,
                 parentCandidates: parentCandidates
             )
             TaskPlanEditorSection(draft: $draft)

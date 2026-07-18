@@ -1,19 +1,22 @@
 import SwiftUI
 
 struct SymbolColorPickerRow: View {
-    let colors: [String]
     let titleKey: String
+    let pickerAccessibilityIdentifier: String
+    let onOpen: () -> Void
     @Binding var symbolName: String
     @Binding var colorHex: String
 
     init(
-        colors: [String],
         titleKey: String = "editor.task.symbolColor",
+        pickerAccessibilityIdentifier: String = "symbol.picker.open.task",
+        onOpen: @escaping () -> Void = {},
         symbolName: Binding<String>,
         colorHex: Binding<String>
     ) {
-        self.colors = colors
         self.titleKey = titleKey
+        self.pickerAccessibilityIdentifier = pickerAccessibilityIdentifier
+        self.onOpen = onOpen
         _symbolName = symbolName
         _colorHex = colorHex
     }
@@ -23,9 +26,10 @@ struct SymbolColorPickerRow: View {
             Text(.app(titleKey))
             Spacer()
             SymbolColorPickerButton(
-                colors: colors,
                 symbolName: $symbolName,
-                colorHex: $colorHex
+                colorHex: $colorHex,
+                pickerAccessibilityIdentifier: pickerAccessibilityIdentifier,
+                onOpen: onOpen
             )
         }
     }

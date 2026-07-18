@@ -4,7 +4,6 @@ struct TaskInfoEditorSection: View {
     let store: TimeTrackerStore
     @Binding var draft: TaskEditorDraft
     let validation: TaskEditorValidation
-    let colors: [String]
     let parentCandidates: [TaskNode]
     @FocusState private var isTitleFocused: Bool
     @State private var hasEditedTitle = false
@@ -54,7 +53,10 @@ struct TaskInfoEditorSection: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 SymbolColorPickerRow(
-                    colors: colors,
+                    pickerAccessibilityIdentifier: "symbol.picker.open.task",
+                    onOpen: {
+                        isTitleFocused = false
+                    },
                     symbolName: $draft.iconName,
                     colorHex: $draft.colorHex
                 )

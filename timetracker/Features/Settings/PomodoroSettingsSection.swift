@@ -113,9 +113,10 @@ private struct PomodoroPlanSettingsRows: View {
             Spacer(minLength: 8)
 
             SymbolColorPickerButton(
-                colors: TaskColorPalette.hexValues,
                 symbolName: $plan.iconName,
-                colorHex: $plan.colorHex
+                colorHex: $plan.colorHex,
+                pickerAccessibilityIdentifier:
+                    "symbol.picker.open.pomodoro.\(plan.id.uuidString)"
             )
         }
         .settingsRowSeparatorAligned()

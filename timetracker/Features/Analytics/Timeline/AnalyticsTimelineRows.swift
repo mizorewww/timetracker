@@ -28,7 +28,9 @@ extension OverlappingTimelineContent {
                 .overlay {
                     Image(systemName: entry.iconName)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(
+                            TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
+                        )
                 }
 
             VStack(alignment: .leading, spacing: 2) {

@@ -194,7 +194,7 @@ Acceptance:
 
 ### Sidebar And Detail
 
-Current state: iPad and macOS use `NavigationSplitView`; selecting a sidebar task opens the canonical read-first Task Detail. There is no separate Inspector feature.
+Current state: iPad and macOS use `NavigationSplitView`; selecting a sidebar task opens the canonical task workspace, whose evidence and editing states share one destination. There is no separate Inspector feature.
 
 Plan:
 

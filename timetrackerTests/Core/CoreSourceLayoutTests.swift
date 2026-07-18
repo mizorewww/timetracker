@@ -159,6 +159,12 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/ForecastInfoViews.swift",
             "timetracker/SharedUI/Components/StatusBadges.swift",
             "timetracker/SharedUI/Components/TaskVisuals.swift",
+            "timetracker/SharedUI/Components/TaskIdentityRow.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyProjection.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
             "timetracker/SharedUI/Components/TaskProgressViews.swift",
             "timetracker/SharedUI/Components/SectionHeaders.swift",
             "timetracker/SharedUI/Components/ActionControls.swift",
@@ -171,7 +177,6 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/InfoRows.swift",
             "timetracker/SharedUI/Components/SplitViewToolbarButtons.swift",
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
-            "timetracker/Features/Home/Controls/TaskStartPickerEmptyState.swift",
             "timetracker/Features/Home/HomeViews.swift",
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/PhoneHomeRows.swift",
@@ -222,6 +227,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/SymbolColorPickerRow.swift",
             "timetracker/Features/Tasks/Editor/SymbolCatalog.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
@@ -390,6 +396,7 @@ struct CoreSourceLayoutTests {
         let detailURL = root.appending(path: "timetracker/Features/Tasks/Detail")
         let focusedFiles = [
             "TaskDetailView.swift",
+            "TaskDetailContentView.swift",
             "TaskDetailActionsView.swift",
             "TaskDetailNavigationViews.swift",
             "TaskDetailIdentityViews.swift",
@@ -405,6 +412,28 @@ struct CoreSourceLayoutTests {
                 .split(separator: "\n", omittingEmptySubsequences: false)
                 .count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func taskHierarchyPickerFilesStaySplitByResponsibility() throws {
+        let root = try projectRootURL()
+        let componentURL = root.appending(path: "timetracker/SharedUI/Components")
+        let focusedFiles = [
+            "TaskHierarchyPicker.swift",
+            "TaskHierarchyPickerRows.swift",
+            "TaskHierarchyPickerBehavior.swift",
+            "TaskHierarchyPickerPresentation.swift",
+            "TaskHierarchyProjection.swift",
+            "TaskIdentityRow.swift"
+        ]
+
+        for fileName in focusedFiles {
+            let file = componentURL.appending(path: fileName)
+            let lineCount = try String(contentsOf: file, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .count
+            #expect(lineCount <= 230, "\(fileName) has \(lineCount) lines")
         }
     }
 

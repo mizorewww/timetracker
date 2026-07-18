@@ -7,20 +7,22 @@ struct TaskEditorSheet: View {
     let returnDestination: TimeTrackerStore.DesktopDestination
 
     var body: some View {
-        TaskEditorPanel(
-            store: store,
-            initialDraft: initialDraft,
-            onCancel: {
-                dismiss()
-            },
-            onSave: { draft in
-                store.saveTaskDraftResult(
-                    draft,
-                    returnDestination: returnDestination
-                )
-            },
-            onSaved: { dismiss() }
-        )
+        NavigationStack {
+            TaskEditorPanel(
+                store: store,
+                initialDraft: initialDraft,
+                onCancel: {
+                    dismiss()
+                },
+                onSave: { draft in
+                    store.saveTaskDraftResult(
+                        draft,
+                        returnDestination: returnDestination
+                    )
+                },
+                onSaved: { dismiss() }
+            )
+        }
         .platformSheetFrame(width: 520, height: 620)
         .presentationDetents([.large])
     }
@@ -66,43 +68,46 @@ struct TaskEditorPanel: View {
             colorHex: draft.colorHex
         )
 
-        NavigationStack {
-            TaskEditorForm(
-                store: store,
-                draft: $draft,
-                validation: validation,
-                colors: colors,
-                parentCandidates: parentCandidates,
-                focusedChecklistDraftID: $focusedChecklistDraftID,
-                orderedChecklistIndices: orderedChecklistIndices,
-                moveChecklistItems: { sourceOffsets, destination in
-                    moveChecklistItems(fromOffsets: sourceOffsets, toOffset: destination)
-                },
-                addChecklistItem: { visualIndex in
-                    addChecklistItem(afterVisualIndex: visualIndex)
+        TaskEditorForm(
+            store: store,
+            draft: $draft,
+            validation: validation,
+            colors: colors,
+            parentCandidates: parentCandidates,
+            focusedChecklistDraftID: $focusedChecklistDraftID,
+            orderedChecklistIndices: orderedChecklistIndices,
+            moveChecklistItems: { sourceOffsets, destination in
+                moveChecklistItems(fromOffsets: sourceOffsets, toOffset: destination)
+            },
+            addChecklistItem: { visualIndex in
+                addChecklistItem(afterVisualIndex: visualIndex)
+            }
+        )
+        .navigationTitle(
+            draft.taskID == nil
+                ? AppStrings.localized("editor.task.newTitle")
+                : AppStrings.localized("editor.task.editTitle")
+        )
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(AppStrings.cancel) {
+                    requestCancel()
                 }
-            )
-            .navigationTitle(draft.taskID == nil ? AppStrings.localized("editor.task.newTitle") : AppStrings.localized("editor.task.editTitle"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel) {
-                        requestCancel()
-                    }
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("task.editor.cancel")
-                }
+                .keyboardShortcut(.cancelAction)
+                .accessibilityIdentifier("task.editor.cancel")
+            }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppStrings.localized("common.save")) {
-                        save()
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!canSave(validation))
-                    .accessibilityIdentifier("task.editor.save")
+            ToolbarItem(placement: .confirmationAction) {
+                Button(AppStrings.localized("common.save")) {
+                    save()
                 }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!canSave(validation))
+                .accessibilityIdentifier("task.editor.save")
             }
         }
         .editorDiscardConfirmation(

@@ -103,7 +103,7 @@ struct TaskContextMenu: View {
         Divider()
 
         Button {
-            presentationRouter.presentEditTask(task, using: store)
+            store.openTaskEditor(task.id)
         } label: {
             Label(AppStrings.edit, systemImage: "pencil")
         }
@@ -209,7 +209,7 @@ struct TaskRowSwipeActions: ViewModifier {
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button {
-                    presentationRouter.presentEditTask(task, using: store)
+                    store.openTaskEditor(task.id)
                 } label: {
                     actionLabel(AppStrings.edit, systemImage: "pencil")
                 }

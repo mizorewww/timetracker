@@ -8,7 +8,11 @@ struct TasksNavigationView: View {
         NavigationStack {
             TasksView(store: store)
                 .navigationDestination(item: $bindableStore.tasksRoute) { route in
-                    TaskDetailView(store: store, taskID: route.taskID)
+                    TaskDetailView(
+                        store: store,
+                        taskID: route.taskID,
+                        startsEditing: route.startsEditing
+                    )
                 }
         }
     }

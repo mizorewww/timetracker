@@ -3,7 +3,8 @@ import SwiftUI
 private struct TaskDetailNavigationModifier: ViewModifier {
     let store: TimeTrackerStore
     let taskID: UUID
-    @Environment(AppPresentationRouter.self) private var presentationRouter
+    let isEditing: Bool
+    let beginEditing: (TaskNode) -> Void
     @State private var isDeleteConfirmationPresented = false
 
     func body(content: Content) -> some View {
@@ -13,7 +14,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                if let task = store.task(for: taskID) {
+                if !isEditing, let task = store.task(for: taskID) {
                     ToolbarItemGroup(placement: .primaryAction) {
                         editButton(task)
                         moreMenu(task)
@@ -36,7 +37,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
 
     private func editButton(_ task: TaskNode) -> some View {
         Button {
-            presentationRouter.presentEditTask(task, using: store)
+            beginEditing(task)
         } label: {
             Label(AppStrings.localized("task.detail.editor.expand"), systemImage: "pencil")
         }
@@ -59,7 +60,19 @@ private struct TaskDetailNavigationModifier: ViewModifier {
 }
 
 extension View {
-    func taskDetailNavigation(store: TimeTrackerStore, taskID: UUID) -> some View {
-        modifier(TaskDetailNavigationModifier(store: store, taskID: taskID))
+    func taskDetailNavigation(
+        store: TimeTrackerStore,
+        taskID: UUID,
+        isEditing: Bool,
+        beginEditing: @escaping (TaskNode) -> Void
+    ) -> some View {
+        modifier(
+            TaskDetailNavigationModifier(
+                store: store,
+                taskID: taskID,
+                isEditing: isEditing,
+                beginEditing: beginEditing
+            )
+        )
     }
 }

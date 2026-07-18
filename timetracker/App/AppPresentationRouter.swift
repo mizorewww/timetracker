@@ -100,14 +100,6 @@ extension AppPresentationRouter {
     }
 
     @discardableResult
-    func presentEditTask(_ task: TaskNode, using store: TimeTrackerStore) -> Bool {
-        present(.taskEditor(
-            draft: store.editorDraft(for: task),
-            returnDestination: store.desktopDestination
-        ))
-    }
-
-    @discardableResult
     func presentNewTaskCategory() -> Bool {
         present(.taskCategoryEditor(TaskCategoryEditorDraft()))
     }

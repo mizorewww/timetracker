@@ -11,35 +11,61 @@ struct TaskDetailView: View {
     @State private var liveNow = Date()
     @State private var snapshot: TaskAnalyticsSnapshot?
     @State private var loadedRequest: TaskAnalyticsSnapshotRequest?
+    @State private var editorDraft: TaskEditorDraft?
+
+    init(store: TimeTrackerStore, taskID: UUID, startsEditing: Bool = false) {
+        self.store = store
+        self.taskID = taskID
+        _editorDraft = State(
+            initialValue: startsEditing
+                ? store.task(for: taskID).map { store.editorDraft(for: $0) }
+                : nil
+        )
+    }
 
     var body: some View {
         Group {
             if let task = store.task(for: taskID) {
-                let evaluationDate = liveNow
-                let request = store.taskAnalyticsSnapshotRequest(
-                    for: task,
-                    range: range,
-                    now: evaluationDate
-                )
-                let refreshPlan = scenePhase == .active
-                    ? AnalyticsRefreshPlan.next(
-                        liveNow: evaluationDate,
-                        followsCurrentPeriod: true,
-                        liveRefreshBucket: request.liveRefreshBucket
+                if let editorDraft {
+                    TaskEditorPanel(
+                        store: store,
+                        initialDraft: editorDraft,
+                        onCancel: finishEditing,
+                        onSave: { draft in
+                            store.saveTaskDraftResult(
+                                draft,
+                                returnDestination: .tasks
+                            )
+                        },
+                        onSaved: finishEditing
                     )
-                    : nil
-                TaskDetailList(
-                    store: store,
-                    task: task,
-                    snapshot: loadedRequest == request ? snapshot : nil,
-                    range: $range
-                )
-                .task(id: request) {
-                    snapshot = store.taskAnalyticsSnapshot(for: request, now: evaluationDate)
-                    loadedRequest = request
-                }
-                .task(id: refreshPlan) {
-                    await waitForRefresh(refreshPlan)
+                } else {
+                    let evaluationDate = liveNow
+                    let request = store.taskAnalyticsSnapshotRequest(
+                        for: task,
+                        range: range,
+                        now: evaluationDate
+                    )
+                    let refreshPlan = scenePhase == .active
+                        ? AnalyticsRefreshPlan.next(
+                            liveNow: evaluationDate,
+                            followsCurrentPeriod: true,
+                            liveRefreshBucket: request.liveRefreshBucket
+                        )
+                        : nil
+                    TaskDetailList(
+                        store: store,
+                        task: task,
+                        snapshot: loadedRequest == request ? snapshot : nil,
+                        range: $range
+                    )
+                    .task(id: request) {
+                        snapshot = store.taskAnalyticsSnapshot(for: request, now: evaluationDate)
+                        loadedRequest = request
+                    }
+                    .task(id: refreshPlan) {
+                        await waitForRefresh(refreshPlan)
+                    }
                 }
             } else {
                 ContentUnavailableView(
@@ -48,7 +74,12 @@ struct TaskDetailView: View {
                 )
             }
         }
-        .taskDetailNavigation(store: store, taskID: taskID)
+        .taskDetailNavigation(
+            store: store,
+            taskID: taskID,
+            isEditing: editorDraft != nil,
+            beginEditing: beginEditing
+        )
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             liveNow = Date()
@@ -75,65 +106,17 @@ struct TaskDetailView: View {
         guard Task.isCancelled == false else { return }
         liveNow = Date()
     }
-}
 
-private struct TaskDetailList: View {
-    let store: TimeTrackerStore
-    let task: TaskNode
-    let snapshot: TaskAnalyticsSnapshot?
-    @Binding var range: AnalyticsRange
-
-    private var activeSegment: TimeSegment? {
-        store.activeSegment(for: task.id)
+    private func beginEditing(_ task: TaskNode) {
+        editorDraft = store.editorDraft(for: task)
     }
 
-    var body: some View {
-        List {
-            Section {
-                TaskDetailIdentityRow(store: store, task: task, isRunning: activeSegment != nil)
-            }
-            .accessibilityIdentifier("task.detail.identity")
-
-            TaskDetailActionsView(store: store, task: task, activeSegment: activeSegment)
-
-            TaskDetailChecklistSection(store: store, task: task)
-            TaskDetailForecastSection(store: store, task: task)
-
-            if let notes = task.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
-                Section(AppStrings.localized("editor.task.notes")) {
-                    Text(notes)
-                        .textSelection(.enabled)
-                }
-            }
-
-            if let snapshot {
-                TaskDetailOverviewSection(snapshot: snapshot)
-                TaskDetailAnalysisSection(range: $range, snapshot: snapshot)
-                TaskDetailRecordsSection(records: snapshot.recentRecords)
-            } else {
-                Section(AppStrings.localized("task.detail.analysis")) {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(AppStrings.localized("analytics.loading"))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("task.detail.analyticsLoading")
-                }
-            }
+    private func finishEditing() {
+        editorDraft = nil
+        guard store.tasksRoute?.taskID == taskID,
+              store.tasksRoute?.startsEditing == true else {
+            return
         }
-        #if os(iOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.inset)
-        #endif
-        .contentMargins(
-            .bottom,
-            16,
-            for: .scrollContent
-        )
-        .scrollContentBackground(.hidden)
-        .background(AppColors.background)
-        .accessibilityIdentifier("task.detail")
+        store.tasksRoute = .detail(taskID: taskID)
     }
 }

@@ -355,7 +355,12 @@ struct HomeUIContractTests {
 
     @Test
     func compactTaskPickerUsesTheSystemSheetMaterial() throws {
-        let source = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let source = try [
+            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPicker.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
 
         #expect(source.contains(".presentationBackground(") == false)
         #expect(source.contains(".scrollContentBackground(.hidden)"))
@@ -378,7 +383,13 @@ struct HomeUIContractTests {
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupEmptyState.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift",
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift",
-            "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift"
+            "timetracker/Features/Pomodoro/Sections/PomodoroTimerFace.swift",
+            "timetracker/Features/Pomodoro/Sections/PomodoroTaskPickerViews.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")
@@ -440,9 +451,12 @@ struct HomeUIContractTests {
         let timerActionSource = try sourceText(
             "timetracker/Features/Home/Controls/HomeActionsViews.swift"
         )
-        let timerPickerRowSource = try sourceText(
-            "timetracker/Features/Home/Controls/TaskStartPickerRows.swift"
-        )
+        let timerPickerRowSource = try [
+            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
 
         #expect(source.contains("trendColor: grossTrend.color"))
         #expect(source.contains(".foregroundStyle(metric.trendColor)"))

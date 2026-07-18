@@ -22,6 +22,13 @@ extension TimeTrackerStore {
         desktopDestination = .tasks
     }
 
+    func openTaskEditor(_ taskID: UUID) {
+        guard isTaskDetailRouteValid(taskID) else { return }
+        tasksRoute = .editor(taskID: taskID)
+        selectTask(taskID, revealInToday: false)
+        desktopDestination = .tasks
+    }
+
     func closeTaskDetailNavigation() {
         tasksRoute = nil
     }

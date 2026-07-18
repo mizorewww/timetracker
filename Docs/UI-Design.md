@@ -62,4 +62,4 @@ Adjacent tasks with no visible gap should use different lanes so their bars rema
 
 The task management screen must render each visible task as its own `List` row. Do not place an entire subtree inside one row, because iPhone context menus and swipe actions would attach to the parent subtree instead of the child task the user touched.
 
-Children are shown by flattening the expanded task tree into visible rows with indentation. This preserves infinite nesting while keeping native row behavior: tap opens the read-first Task Detail, an explicit pencil opens editing, and any swipe/context actions remain attached to the exact row the user touched.
+Children are shown by flattening the expanded task tree into visible rows with indentation. This preserves infinite nesting while keeping native row behavior: tap opens the task workspace, an explicit pencil opens that same destination directly in editing state, and any swipe/context actions remain attached to the exact row the user touched.

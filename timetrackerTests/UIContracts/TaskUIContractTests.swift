@@ -339,10 +339,13 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskRowsOpenReadOnlyDetailAndExposeSeparateEditAction() throws {
+    func taskRowsOpenOneWorkspaceAndEditActionsUseTheSameDestination() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let navigationSource = try sourceText("timetracker/Features/Tasks/Management/TasksNavigationView.swift")
         let rowSource = try taskManagementFeatureSource()
+        let actionSource = try sourceText(
+            "timetracker/Features/Tasks/Management/TaskRowComponents.swift"
+        )
         let detailSource = try taskDetailFeatureSource()
         let desktopRootSource = try sourceText("timetracker/App/RootViews/DesktopRootViews.swift")
         let iosRootSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
@@ -357,20 +360,25 @@ struct TaskUIContractTests {
         #expect(navigationSource.contains("@Bindable var bindableStore = store"))
         #expect(navigationSource.contains(".navigationDestination(item: $bindableStore.tasksRoute)"))
         #expect(navigationSource.contains("private var tasksPath") == false)
-        #expect(navigationSource.contains("TaskDetailView(store: store, taskID: route.taskID)"))
+        #expect(navigationSource.contains("TaskDetailView("))
+        #expect(navigationSource.contains("startsEditing: route.startsEditing"))
         #expect(rowSource.contains("Button(action: openTask)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
         #expect(rowSource.contains("store.selectTask(task.id, revealInToday: false)") == false)
         #expect(rowSource.contains("openTaskDetail(task)"))
         #expect(rowSource.contains("openTaskDetail?(task)") == false)
         #expect(rowSource.contains("presentEditTask") == false)
+        #expect(actionSource.contains("store.openTaskEditor(task.id)"))
+        #expect(actionSource.contains("presentEditTask") == false)
         #expect(desktopTasksCase.contains("TasksNavigationView(store: store)"))
         #expect(desktopTasksCase.contains("NavigationStack") == false)
         #expect(desktopTasksCase.contains("TaskDetailView") == false)
         #expect(iosRootSource.contains("TasksNavigationView(store: store)"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
-        #expect(detailSource.contains("presentationRouter.presentEditTask(task, using: store)"))
+        #expect(detailSource.contains("TaskEditorPanel("))
+        #expect(detailSource.contains("editorDraft = store.editorDraft(for: task)"))
+        #expect(detailSource.contains("presentationRouter.presentEditTask") == false)
     }
 
     @Test
@@ -402,7 +410,7 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskDetailExposesReadFirstSectionsBeforeSeparateEditing() throws {
+    func taskWorkspaceKeepsEvidenceAndEditingInOneDestination() throws {
         let detailSource = try taskDetailFeatureSource()
         let rootSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
         let identitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift")
@@ -414,20 +422,19 @@ struct TaskUIContractTests {
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.forecast\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.analysis\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
-        #expect(detailSource.contains("TextField(") == false)
+        #expect(rootSource.contains("@State private var editorDraft: TaskEditorDraft?"))
+        #expect(rootSource.contains("TaskEditorPanel("))
         #expect(rootSource.contains("TimelineView") == false)
         #expect(rootSource.contains("loadedRequest == request ? snapshot : nil"))
-        #expect(rootSource.contains("TaskDetailActionsView("))
-        #expect(rootSource.contains("task.detail.analyticsLoading"))
-        #expect(rootSource.contains(".contentMargins("))
-        #expect(rootSource.contains("for: .scrollContent"))
-        #expect(rootSource.contains(".bottom,\n            16,"))
+        #expect(detailSource.contains("TaskDetailActionsView("))
+        #expect(detailSource.contains("task.detail.analyticsLoading"))
+        #expect(detailSource.contains(".contentMargins(.bottom, 16, for: .scrollContent)"))
         #expect(identitySource.contains("Text(task.title)") == false)
         #expect(identitySource.contains("AppStrings.localized(\"task.root\")"))
     }
 
     @Test
-    func taskDetailKeepsStatusReadOnlyAndUsesNativeEditorControl() throws {
+    func taskWorkspaceKeepsAReadableStatusAndUsesTheNativeEditorControl() throws {
         let detailSource = try taskDetailFeatureSource()
         let editorSource = try taskEditorFeatureSource()
 
@@ -780,7 +787,12 @@ struct TaskUIContractTests {
         .joined(separator: "\n")
         let distribution = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
         let trends = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift")
-        let timeline = try sourceText("timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift")
+        let timeline = try [
+            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
+            "timetracker/SharedUI/Components/TimelineChart.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
 
         #expect(analytics.contains("AnalyticsPeriodSection("))
         #expect(analytics.contains("monthNavigationAnchor: $monthNavigationAnchor"))
@@ -847,6 +859,7 @@ struct TaskUIContractTests {
     private func taskDetailFeatureSource() throws -> String {
         try [
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",

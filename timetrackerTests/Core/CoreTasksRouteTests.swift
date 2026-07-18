@@ -6,6 +6,28 @@ import Testing
 @Suite(.serialized)
 struct CoreTasksRouteTests {
     @Test @MainActor
+    func editActionRoutesToTheSameTaskDestinationInEditingMode() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Editable",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        store.openTaskEditor(task.id)
+
+        #expect(store.tasksRoute == .editor(taskID: task.id))
+        #expect(store.tasksRoute?.taskID == task.id)
+        #expect(store.tasksRoute?.startsEditing == true)
+        #expect(store.selectedTaskID == task.id)
+        #expect(store.desktopDestination == .tasks)
+    }
+
+    @Test @MainActor
     func openingAnUnavailableTaskLeavesTheCurrentRouteUntouched() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")

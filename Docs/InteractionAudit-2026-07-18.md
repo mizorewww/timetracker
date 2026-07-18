@@ -105,5 +105,34 @@ Status: completed and verified
   fix does not add a competing custom button or gesture.
 - The Settings category contract suite passes on the signed macOS target.
 
+## Checkpoint 3 — one task workspace for evidence and editing
+
+Status: completed and verified
+
+- Existing-task Edit actions route to the canonical task destination in editing
+  state; they no longer open a competing sheet.
+- The destination switches between the evidence list and the shared
+  `TaskEditorPanel`, preserving explicit Save, dirty-draft discard confirmation,
+  validation, and stale-draft reload.
+- New-task creation remains modal because it is a bounded create/cancel
+  transaction, but it reuses the same editor session component.
+- While editing, the destination hides the system back action so a dirty draft
+  cannot be silently popped. Cancel returns to evidence in place.
+- Workspace contracts, functional task-route tests, the complete task UI
+  contract suite, and source-layout boundaries pass on macOS.
+
+## Checkpoint 4 — shared hierarchical task selection
+
+Status: completed and verified
+
+- Today and Pomodoro use one task-tree projection, one task identity row, and
+  one hierarchy picker surface instead of separate flat lists.
+- Today configures command semantics for start, switch, and explicit stop.
+  Pomodoro configures single selection and closes after selection.
+- Search uses the same indexed title/notes data and retains the parent path.
+  Completed or blocked branches remain understandable but cannot start work.
+- Projection tests, timer-picker contracts, Home/Focus/shared-component
+  contracts, source-layout checks, and a signed generic iOS build pass.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

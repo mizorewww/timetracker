@@ -57,6 +57,9 @@ struct CoreArchitectureBehaviorTests {
         let viewSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
         let detailSource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
         let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let taskDetailContentSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift"
+        )
         let facadeSource = try [
             "timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+AnalyticsLoading.swift"
@@ -89,8 +92,10 @@ struct CoreArchitectureBehaviorTests {
         #expect(taskDetailSource.contains("AnalyticsRefreshPlan.next("))
         #expect(taskDetailSource.contains("scenePhase == .active"))
         #expect(taskDetailSource.contains(".task(id: refreshPlan)"))
-        #expect(taskDetailSource.contains("loadedRequest == request ? snapshot : nil"))
-        #expect(taskDetailSource.contains("task.detail.analyticsLoading"))
+        #expect(taskDetailSource.contains("canRemainVisible(whileLoading: request)"))
+        #expect(taskDetailSource.contains("snapshot = resolvedSnapshot"))
+        #expect(taskDetailSource.contains("loadedRequest = request"))
+        #expect(taskDetailContentSource.contains("task.detail.analyticsLoading"))
         #expect(taskDetailSource.contains("store.taskAnalyticsSnapshotRequest("))
         #expect(taskDetailSource.contains("store.analyticsLiveRefreshBucket(") == false)
         #expect(taskDetailSource.contains("TaskAnalyticsSnapshotRequest(") == false)

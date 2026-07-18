@@ -365,6 +365,93 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskAnalysisRangeSwitchKeepsItsScrollPosition() throws {
+        #if os(macOS)
+        throw XCTSkip("This scroll-position regression is exercised on iPhone.")
+        #else
+        let app = launchApp(route: "tasks")
+        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 8))
+
+        let studyDisclosure = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
+            .matching(NSPredicate(format: "value == %@", "Study"))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                studyDisclosure,
+                timeout: 5,
+                diagnosticName: "task-analysis-study-disclosure",
+                in: app
+            ) && studyDisclosure.isHittable
+        )
+        activate(studyDisclosure)
+
+        let task = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
+            .matching(NSPredicate(format: "label == %@", "Read Apple HIG"))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                task,
+                timeout: 5,
+                diagnosticName: "task-analysis-demo-task",
+                in: app
+            ) && task.isHittable
+        )
+        activate(task)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        let rangePicker = app.segmentedControls.firstMatch
+        scrollUntilHittable(rangePicker, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                rangePicker,
+                timeout: 5,
+                diagnosticName: "task-analysis-range-picker",
+                in: app
+            ) && rangePicker.isHittable
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.detail.identity"].firstMatch.isHittable
+        )
+
+        for rangeName in ["Day", "Month", "Week"] {
+            let originalFrame = rangePicker.frame
+            let rangeButton = rangePicker.buttons[rangeName].firstMatch
+            XCTAssertTrue(
+                rangeButton.waitForExistence(timeout: 3) && rangeButton.isHittable
+            )
+            activate(rangeButton)
+
+            let selectionExpectation = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "selected == true"),
+                object: rangeButton
+            )
+            XCTAssertEqual(
+                XCTWaiter.wait(for: [selectionExpectation], timeout: 3),
+                .completed
+            )
+
+            XCTAssertTrue(
+                rangePicker.exists && rangePicker.isHittable,
+                "Changing to \(rangeName) must not scroll Task Analysis off screen."
+            )
+            XCTAssertLessThan(
+                abs(rangePicker.frame.minY - originalFrame.minY),
+                16,
+                "Changing to \(rangeName) unexpectedly moved the Task Analysis picker."
+            )
+            XCTAssertFalse(
+                app.descendants(matching: .any)["task.detail.identity"].firstMatch.isHittable,
+                "Changing to \(rangeName) unexpectedly jumped to the top of Task Detail."
+            )
+        }
+
+        try capture("iphone-task-analysis-range-scroll-preserved", app: app)
+        #endif
+    }
+
+    @MainActor
     func testInboxCaptureAffordanceFocusesThenAddsAValidDraft() throws {
         let app = launchApp()
         openSection(

@@ -5,6 +5,7 @@ struct TaskDetailList: View {
     let task: TaskNode
     let snapshot: TaskAnalyticsSnapshot?
     @Binding var range: AnalyticsRange
+    let isRefreshing: Bool
 
     private var activeSegment: TimeSegment? {
         store.activeSegment(for: task.id)
@@ -40,7 +41,11 @@ struct TaskDetailList: View {
 
             if let snapshot {
                 TaskDetailOverviewSection(snapshot: snapshot)
-                TaskDetailAnalysisSection(range: $range, snapshot: snapshot)
+                TaskDetailAnalysisSection(
+                    range: $range,
+                    snapshot: snapshot,
+                    isRefreshing: isRefreshing
+                )
                 TaskDetailRecordsSection(records: snapshot.recentRecords)
             } else {
                 Section(AppStrings.localized("task.detail.analysis")) {

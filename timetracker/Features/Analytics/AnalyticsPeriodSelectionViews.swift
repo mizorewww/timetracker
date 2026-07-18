@@ -327,4 +327,13 @@ struct TaskAnalyticsSnapshotRequest: Hashable {
         )
         self.revision = revision
     }
+
+    /// Keep the current task evidence in place while its data revision or live
+    /// minute advances. A different task, range, or calendar interval must load
+    /// before it replaces the visible snapshot.
+    func canRemainVisible(whileLoading request: TaskAnalyticsSnapshotRequest) -> Bool {
+        taskID == request.taskID
+            && range == request.range
+            && evaluationKey.interval == request.evaluationKey.interval
+    }
 }

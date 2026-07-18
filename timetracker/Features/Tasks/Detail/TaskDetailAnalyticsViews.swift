@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskDetailAnalysisSection: View {
     @Binding var range: AnalyticsRange
     let snapshot: TaskAnalyticsSnapshot
+    let isRefreshing: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -40,7 +41,16 @@ struct TaskDetailAnalysisSection: View {
                 }
             }
         } header: {
-            Text(AppStrings.localized("task.detail.analysis"))
+            HStack(spacing: 8) {
+                Text(AppStrings.localized("task.detail.analysis"))
+                if isRefreshing {
+                    Spacer()
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel(AppStrings.localized("analytics.loading"))
+                        .accessibilityIdentifier("task.detail.analyticsRefreshing")
+                }
+            }
         } footer: {
             Text(.app("task.detail.analysisSubtitle"))
         }
@@ -57,6 +67,7 @@ struct TaskDetailAnalysisSection: View {
             }
             .pickerStyle(.menu)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("task.detail.analysis.range")
         } else {
             Picker(AppStrings.localized("analytics.range"), selection: $range) {
                 ForEach(AnalyticsRange.allCases) { range in
@@ -64,6 +75,7 @@ struct TaskDetailAnalysisSection: View {
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("task.detail.analysis.range")
         }
     }
 }

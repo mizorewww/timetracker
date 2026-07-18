@@ -246,4 +246,89 @@ struct AnalyticsRefreshPlanTests {
         #expect(initial.canRemainVisible(whileLoading: anotherDay) == false)
         #expect(initial.canRemainVisible(whileLoading: sameDateDifferentRange) == false)
     }
+
+    @Test @MainActor
+    func taskSnapshotDisplayKeepsOnlyTheSameTaskAndCalendarPeriod() throws {
+        let taskID = UUID()
+        let anotherTaskID = UUID()
+        let today = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 9))
+        )
+        let laterToday = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 10))
+        )
+        let tomorrow = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 9))
+        )
+        let initial = TaskAnalyticsSnapshotRequest(
+            taskID: taskID,
+            taskIDs: [taskID],
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: today,
+                liveNow: today,
+                calendar: calendar
+            ),
+            revision: 1,
+            liveRefreshBucket: 9 * 60,
+            calendar: calendar
+        )
+        let refreshed = TaskAnalyticsSnapshotRequest(
+            taskID: taskID,
+            taskIDs: [taskID, anotherTaskID],
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: laterToday,
+                liveNow: laterToday,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 10 * 60,
+            calendar: calendar
+        )
+        let anotherTask = TaskAnalyticsSnapshotRequest(
+            taskID: anotherTaskID,
+            taskIDs: [anotherTaskID],
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: laterToday,
+                liveNow: laterToday,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 10 * 60,
+            calendar: calendar
+        )
+        let anotherDay = TaskAnalyticsSnapshotRequest(
+            taskID: taskID,
+            taskIDs: [taskID],
+            range: .today,
+            evaluation: AnalyticsRange.today.evaluation(
+                referenceDate: tomorrow,
+                liveNow: tomorrow,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 9 * 60,
+            calendar: calendar
+        )
+        let anotherRange = TaskAnalyticsSnapshotRequest(
+            taskID: taskID,
+            taskIDs: [taskID],
+            range: .week,
+            evaluation: AnalyticsRange.week.evaluation(
+                referenceDate: laterToday,
+                liveNow: laterToday,
+                calendar: calendar
+            ),
+            revision: 2,
+            liveRefreshBucket: 10 * 60,
+            calendar: calendar
+        )
+
+        #expect(initial.canRemainVisible(whileLoading: refreshed))
+        #expect(initial.canRemainVisible(whileLoading: anotherTask) == false)
+        #expect(initial.canRemainVisible(whileLoading: anotherDay) == false)
+        #expect(initial.canRemainVisible(whileLoading: anotherRange) == false)
+    }
 }

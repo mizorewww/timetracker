@@ -53,13 +53,27 @@ struct TaskDetailView: View {
                             liveRefreshBucket: request.liveRefreshBucket
                         )
                         : nil
+                    let canKeepDisplayingSnapshot = loadedRequest.map {
+                        $0.canRemainVisible(whileLoading: request)
+                    } ?? false
+                    let rangeSelection = Binding(
+                        get: { range },
+                        set: { selectedRange in
+                            selectRange(
+                                selectedRange,
+                                for: task
+                            )
+                        }
+                    )
                     TaskDetailList(
                         store: store,
                         task: task,
-                        snapshot: loadedRequest == request ? snapshot : nil,
-                        range: $range
+                        snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
+                        range: rangeSelection,
+                        isRefreshing: canKeepDisplayingSnapshot && loadedRequest != request
                     )
                     .task(id: request) {
+                        guard loadedRequest != request || snapshot == nil else { return }
                         snapshot = store.taskAnalyticsSnapshot(for: request, now: evaluationDate)
                         loadedRequest = request
                     }
@@ -93,6 +107,35 @@ struct TaskDetailView: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
             liveNow = Date()
         }
+    }
+
+    private func selectRange(
+        _ selectedRange: AnalyticsRange,
+        for task: TaskNode
+    ) {
+        guard selectedRange != range else { return }
+        let evaluationDate = Date()
+        let request = store.taskAnalyticsSnapshotRequest(
+            for: task,
+            range: selectedRange,
+            now: evaluationDate
+        )
+        guard let resolvedSnapshot = store.taskAnalyticsSnapshot(
+            for: request,
+            now: evaluationDate
+        ) else {
+            snapshot = nil
+            loadedRequest = nil
+            range = selectedRange
+            return
+        }
+
+        // Publish matching evidence before changing the Picker selection so the
+        // List never passes through a structurally different loading state.
+        snapshot = resolvedSnapshot
+        loadedRequest = request
+        range = selectedRange
+        liveNow = evaluationDate
     }
 
     private func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {

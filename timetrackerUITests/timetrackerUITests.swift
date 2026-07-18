@@ -627,6 +627,84 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testInboxNativeCardsShowAndApplyTheGeneratedVisualSuggestion() throws {
+        #if os(macOS)
+        throw XCTSkip("Inset-grouped card geometry is verified on iPhone and iPad.")
+        #else
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-inbox-suggestion"]
+        )
+        openSection(
+            "Inbox",
+            tabIdentifier: "phone.tab.inbox",
+            sidebarIdentifier: "sidebar.Inbox",
+            in: app
+        )
+        let inbox = app.descendants(matching: .any)["inbox.view"].firstMatch
+        XCTAssertTrue(inbox.waitForExistence(timeout: 8))
+
+        let captureField = app.textFields["inbox.capture.field"].firstMatch
+        let itemField = app.textFields
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.item."
+            ))
+            .firstMatch
+        let suggestion = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.suggestion.ready."
+            ))
+            .firstMatch
+        let apply = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.suggestion.apply."
+            ))
+            .firstMatch
+        let targetLabel = app.staticTexts["Suggested task: Design System"].firstMatch
+
+        XCTAssertTrue(captureField.waitForExistence(timeout: 5))
+        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
+        XCTAssertTrue(targetLabel.waitForExistence(timeout: 3))
+        XCTAssertGreaterThanOrEqual(
+            targetLabel.frame.width,
+            120,
+            "The generated task label must not collapse behind the action buttons."
+        )
+        XCTAssertTrue(
+            app.buttons["inbox.completed.disclosure"].firstMatch
+                .waitForExistence(timeout: 3)
+        )
+        XCTAssertTrue(apply.waitForExistence(timeout: 3) && apply.isHittable)
+        XCTAssertGreaterThanOrEqual(apply.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(apply.frame.height, 44)
+
+        let captureCard = app.cells
+            .containing(.textField, identifier: captureField.identifier)
+            .firstMatch
+        let itemCard = app.cells
+            .containing(.textField, identifier: itemField.identifier)
+            .firstMatch
+        XCTAssertTrue(captureCard.exists)
+        XCTAssertTrue(itemCard.exists)
+        let windowFrame = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(captureCard.frame.minX, windowFrame.minX + 12)
+        XCTAssertLessThan(captureCard.frame.maxX, windowFrame.maxX - 12)
+        XCTAssertGreaterThan(itemCard.frame.minX, windowFrame.minX + 12)
+        XCTAssertLessThan(itemCard.frame.maxX, windowFrame.maxX - 12)
+        try capture("inbox-native-cards-ready-suggestion", app: app)
+
+        activate(apply)
+        XCTAssertTrue(suggestion.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(itemCard.waitForNonExistence(timeout: 5))
+        try capture("inbox-native-cards-suggestion-applied", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTaskEditorAndPomodoroFlowOpen() throws {
         let app = launchApp()
 
@@ -1873,19 +1951,30 @@ final class timetrackerUITests: XCTestCase {
     private func launchApp(
         route: String = "today",
         contentSizeCategory: String? = nil,
-        seedsDemoData: Bool = true
+        seedsDemoData: Bool = true,
+        replacesDemoDataOnLaunch: Bool = false,
+        additionalLaunchArguments: [String] = []
     ) -> XCUIApplication {
         let app = XCUIApplication()
+        let demoDataMode: String
+        if seedsDemoData == false {
+            demoDataMode = "off"
+        } else if replacesDemoDataOnLaunch {
+            demoDataMode = "replaceOnLaunch"
+        } else {
+            demoDataMode = "seedIfEmpty"
+        }
         app.launchArguments = [
             "--uitesting",
             "-ApplePersistenceIgnoreState", "YES",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
             "-TimeTrackerAutomaticDemoDataModeOverride",
-            seedsDemoData ? "seedIfEmpty" : "off",
+            demoDataMode,
             "-TimeTrackerAutomaticDemoSeedingDisabled",
             seedsDemoData ? "NO" : "YES"
         ]
+        app.launchArguments.append(contentsOf: additionalLaunchArguments)
         if let contentSizeCategory {
             app.launchArguments += [
                 "-UIPreferredContentSizeCategoryName",

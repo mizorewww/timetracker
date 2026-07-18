@@ -5,6 +5,7 @@ struct InboxCompletedSection: View {
     let items: [InboxItem]
     let isCompact: Bool
     @Binding var isExpanded: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Section {
@@ -20,7 +21,9 @@ struct InboxCompletedSection: View {
             }
         } header: {
             Button {
-                isExpanded.toggle()
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+                    isExpanded.toggle()
+                }
             } label: {
                 HStack(spacing: 8) {
                     Text(completedLabel)

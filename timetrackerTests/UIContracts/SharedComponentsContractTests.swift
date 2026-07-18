@@ -258,10 +258,30 @@ struct SharedComponentsContractTests {
         #expect(homeActionSource.contains(".buttonStyle(.borderedProminent)"))
         #expect(homeActionSource.contains(".buttonStyle(.bordered)"))
         #expect(homeActionSource.contains("home.newTask") == false)
+        #expect(inboxSuggestionSource.contains("if isCompact {"))
         #expect(inboxSuggestionSource.contains("ViewThatFits(in: .horizontal)"))
         #expect(inboxSuggestionSource.contains("compactLayout"))
+        #expect(
+            inboxSuggestionSource.components(
+                separatedBy: ".frame(minWidth: 160, alignment: .leading)"
+            ).count - 1 == 2
+        )
         #expect(inboxSuggestionSource.contains("InboxSuggestionBackground") == false)
-        #expect(inboxSuggestionSource.components(separatedBy: ".frame(minWidth: 44, minHeight: 44)").count >= 4)
+        #expect(inboxSuggestionSource.contains("ChecklistItemIcon("))
+        #expect(inboxSuggestionSource.contains("style: .solid"))
+        #expect(
+            inboxSuggestionSource.contains(
+                ".padding(.leading, AppLayout.minimumInteractiveTarget + 10)"
+            )
+        )
+        #expect(inboxSuggestionSource.contains("CompactTextActionLabel("))
+        #expect(actionSource.contains("struct CompactTextActionLabel"))
+        #expect(
+            actionSource.contains(
+                "minWidth: AppLayout.minimumInteractiveTarget,\n" +
+                    "                minHeight: AppLayout.minimumInteractiveTarget"
+            )
+        )
         #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.apply\"))"))
         #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.discard\"))"))
     }

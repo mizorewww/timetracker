@@ -848,6 +848,9 @@
 "inbox.suggestion.generating" = "Suggesting automatically";
 "inbox.suggestion.failed" = "Suggestion unavailable";
 "inbox.suggestion.retry" = "Retry suggestion";
+"inbox.suggestion.dismissFailure" = "Dismiss Error";
+"inbox.suggestion.missingTarget" = "Unavailable task";
+"inbox.suggestion.targetUnavailable" = "This task is no longer available for new work.";
 "inbox.suggestion.prefix" = "Suggest";
 "inbox.suggestion.targetFormat" = "Suggested task: %@";
 "inbox.suggestion.editorTitle" = "Inbox Suggestion";

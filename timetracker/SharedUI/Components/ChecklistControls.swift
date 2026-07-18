@@ -24,12 +24,13 @@ struct ChecklistCompletionButton: View {
                 colorHex: colorHex,
                 visualSize: visualSize
             )
+            .frame(
+                minWidth: AppLayout.minimumInteractiveTarget,
+                minHeight: AppLayout.minimumInteractiveTarget
+            )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .frame(
-            minWidth: AppLayout.minimumInteractiveTarget,
-            minHeight: AppLayout.minimumInteractiveTarget
-        )
         .accessibilityLabel(AppStrings.localized("editor.checklist.completionControl"))
         .accessibilityValue(
             AppStrings.localized(
@@ -75,17 +76,32 @@ struct ChecklistCompletionMark: View {
     }
 }
 
+enum ChecklistItemIconStyle {
+    case tinted
+    case solid
+}
+
 struct ChecklistItemIcon: View {
     let iconName: String
     let colorHex: String
+    var style: ChecklistItemIconStyle = .tinted
 
     var body: some View {
-        let color = Color(hex: ChecklistVisualSanitizer.sanitizedColor(colorHex)) ?? .blue
+        let sanitizedColor = ChecklistVisualSanitizer.sanitizedColor(colorHex)
+        let color = Color(hex: sanitizedColor) ?? .blue
+        let foregroundColor = style == .solid
+            ? TaskColorPalette.contrastingForegroundColor(for: sanitizedColor)
+            : color
+        let backgroundColor = style == .solid ? color : color.opacity(0.12)
+
         Image(systemName: ChecklistVisualSanitizer.sanitizedIcon(iconName))
             .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(color)
+            .foregroundStyle(foregroundColor)
             .frame(width: 30, height: 30)
-            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(
+                backgroundColor,
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
             .accessibilityHidden(true)
     }
 }

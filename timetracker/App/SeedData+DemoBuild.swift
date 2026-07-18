@@ -56,6 +56,36 @@ extension SeedData {
                     deviceID: "demo"
                 )
             )
+
+            if CommandLine.arguments.contains("--uitesting-inbox-suggestion") {
+                let inboxItem = InboxItem(
+                    title: "Plan the next design review",
+                    sortOrder: 10,
+                    deviceID: "demo"
+                )
+                let completedInboxItem = InboxItem(
+                    title: "Archive the previous review notes",
+                    isCompleted: true,
+                    sortOrder: 20,
+                    deviceID: "demo"
+                )
+                context.insert(inboxItem)
+                context.insert(completedInboxItem)
+                context.insert(
+                    InboxSuggestion(
+                        inboxItemID: inboxItem.id,
+                        inboxItemContextID: inboxItem.suggestionContextID,
+                        inboxItemRevisionID: inboxItem.suggestionRevisionID,
+                        taskID: design.id,
+                        reason: "This belongs with the design-system work.",
+                        iconName: "sun.max",
+                        colorHex: "FFD60A",
+                        modelID: "ui-test",
+                        titleSnapshot: inboxItem.title,
+                        deviceID: "demo"
+                    )
+                )
+            }
         }
 
         macDesign.notes = "Refine the split layout and prioritize the timeline, task tree, and task detail flow."

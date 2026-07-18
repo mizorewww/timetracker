@@ -105,55 +105,6 @@ struct AnalyticsLayoutPolicy {
     }
 }
 
-struct InboxLayoutPolicy {
-    private let sizeClassPolicy: SizeClassLayoutPolicy
-
-    init(horizontalSizeClass: UserInterfaceSizeClass?) {
-        sizeClassPolicy = SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
-    }
-
-    var isCompact: Bool {
-        sizeClassPolicy.isCompactPhone
-    }
-
-    var contentMaxWidth: CGFloat? {
-        isCompact ? nil : 1100
-    }
-
-    var contentSpacing: CGFloat {
-        isCompact ? 14 : 24
-    }
-
-    var pageHorizontalPadding: CGFloat {
-        isCompact ? 28 : 34
-    }
-
-    var pageTopPadding: CGFloat {
-        isCompact ? 0 : 28
-    }
-
-    var cardCornerRadius: CGFloat {
-        isCompact ? 28 : 24
-    }
-
-    var cardHorizontalPadding: CGFloat {
-        isCompact ? 14 : 18
-    }
-
-    var captureTopPadding: CGFloat {
-        isCompact ? 14 : 18
-    }
-
-    var captureBottomPadding: CGFloat {
-        isCompact ? 16 : 18
-    }
-
-    var rowVerticalPadding: CGFloat {
-        isCompact ? 8 : 10
-    }
-
-}
-
 struct TaskListLayoutPolicy {
     private let sizeClassPolicy: SizeClassLayoutPolicy
 

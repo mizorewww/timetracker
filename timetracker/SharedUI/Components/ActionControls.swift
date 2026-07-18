@@ -29,6 +29,19 @@ struct AppActionLabel: View {
     }
 }
 
+struct CompactTextActionLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .frame(
+                minWidth: AppLayout.minimumInteractiveTarget,
+                minHeight: AppLayout.minimumInteractiveTarget
+            )
+            .contentShape(Rectangle())
+    }
+}
+
 struct TrailingMenuLabel: View {
     let systemImage: String
 

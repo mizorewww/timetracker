@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct InboxGeneratingSuggestionBar: View {
+    let itemID: UUID
+
     var body: some View {
         HStack(spacing: 8) {
             Label {
@@ -13,30 +15,45 @@ struct InboxGeneratingSuggestionBar: View {
             ProgressView()
                 .controlSize(.small)
         }
-        .font(.footnote)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
-        .padding(.leading, 44)
-        .frame(minHeight: 32)
+        .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
+        .frame(minHeight: AppLayout.minimumInteractiveTarget)
+        .accessibilityIdentifier("inbox.suggestion.generating.\(itemID.uuidString)")
     }
 }
 
 struct InboxSuggestionBar: View {
+    let itemID: UUID
     let taskTitle: String
+    let iconName: String
+    let colorHex: String
     let isCompact: Bool
+    let canApply: Bool
     let discard: () -> Void
     let apply: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            horizontalLayout
+        adaptiveLayout
+            .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
+    }
+
+    @ViewBuilder
+    private var adaptiveLayout: some View {
+        if isCompact {
             compactLayout
+        } else {
+            ViewThatFits(in: .horizontal) {
+                horizontalLayout
+                compactLayout
+            }
         }
-        .padding(.leading, 44)
     }
 
     private var horizontalLayout: some View {
-        HStack(spacing: isCompact ? 6 : 10) {
+        HStack(spacing: 10) {
             suggestionLabel
+                .frame(minWidth: 160, alignment: .leading)
                 .layoutPriority(1)
             Spacer(minLength: 4)
             actions
@@ -45,98 +62,170 @@ struct InboxSuggestionBar: View {
     }
 
     private var compactLayout: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
             suggestionLabel
-            actions
+            HStack {
+                Spacer(minLength: 0)
+                actions
+            }
         }
     }
 
     private var suggestionLabel: some View {
-        Label {
-            Text(
-                String.localizedStringWithFormat(
-                    AppStrings.localized("inbox.suggestion.targetFormat"),
-                    taskTitle
-                )
+        HStack(spacing: 8) {
+            ChecklistItemIcon(
+                iconName: iconName,
+                colorHex: colorHex,
+                style: .solid
             )
-            .lineLimit(2)
-            .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: "sparkles")
-                .foregroundStyle(.blue)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Label {
+                    Text(
+                        String.localizedStringWithFormat(
+                            AppStrings.localized("inbox.suggestion.targetFormat"),
+                            taskTitle
+                        )
+                    )
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(.blue)
+                }
+
+                if canApply == false {
+                    Text(.app("inbox.suggestion.targetUnavailable"))
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
-        .font(.footnote)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("inbox.suggestion.ready.\(itemID.uuidString)")
     }
 
     private var actions: some View {
         HStack(spacing: 4) {
-            Button(AppStrings.localized("common.dismiss"), action: discard)
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 44, minHeight: 44)
-                .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
+            Button(action: discard) {
+                CompactTextActionLabel(
+                    title: AppStrings.localized("common.dismiss")
+                )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
+            .accessibilityIdentifier(
+                "inbox.suggestion.discard.\(itemID.uuidString)"
+            )
 
-            Button(AppStrings.localized("inbox.suggestion.apply"), action: apply)
-                .buttonStyle(.plain)
-                .fontWeight(.semibold)
-                .foregroundStyle(.blue)
-                .frame(minWidth: 44, minHeight: 44)
-                .accessibilityLabel(AppStrings.localized("inbox.suggestion.apply"))
+            Button(action: apply) {
+                CompactTextActionLabel(
+                    title: AppStrings.localized("inbox.suggestion.apply")
+                )
+            }
+            .buttonStyle(.plain)
+            .fontWeight(.semibold)
+            .foregroundStyle(.blue)
+            .disabled(canApply == false)
+            .accessibilityLabel(AppStrings.localized("inbox.suggestion.apply"))
+            .accessibilityIdentifier(
+                "inbox.suggestion.apply.\(itemID.uuidString)"
+            )
         }
-        .font(.footnote)
+        .font(.subheadline)
     }
 }
 
 struct InboxSuggestionFailureBar: View {
+    let itemID: UUID
+    let message: String
     let isCompact: Bool
     let retry: () -> Void
     let discard: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: isCompact ? 6 : 10) {
-                failureLabel
-                    .layoutPriority(1)
-                Spacer(minLength: 4)
-                actions
-            }
+        adaptiveLayout
+            .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
+    }
 
-            VStack(alignment: .leading, spacing: 0) {
-                failureLabel
+    @ViewBuilder
+    private var adaptiveLayout: some View {
+        if isCompact {
+            compactLayout
+        } else {
+            ViewThatFits(in: .horizontal) {
+                horizontalLayout
+                compactLayout
+            }
+        }
+    }
+
+    private var horizontalLayout: some View {
+        HStack(spacing: 10) {
+            failureLabel
+                .frame(minWidth: 160, alignment: .leading)
+                .layoutPriority(1)
+            Spacer(minLength: 4)
+            actions
+        }
+    }
+
+    private var compactLayout: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            failureLabel
+            HStack {
+                Spacer(minLength: 0)
                 actions
             }
         }
-        .padding(.leading, 44)
     }
 
     private var failureLabel: some View {
         Label {
-            Text(.app("inbox.suggestion.failed"))
+            Text(message)
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
         }
-        .font(.footnote)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
+        .accessibilityIdentifier("inbox.suggestion.failure.\(itemID.uuidString)")
     }
 
     private var actions: some View {
         HStack(spacing: 4) {
-            Button(AppStrings.localized("common.dismiss"), action: discard)
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 44, minHeight: 44)
-                .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
+            Button(action: discard) {
+                CompactTextActionLabel(
+                    title: AppStrings.localized("inbox.suggestion.dismissFailure")
+                )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(
+                AppStrings.localized("inbox.suggestion.dismissFailure")
+            )
+            .accessibilityIdentifier(
+                "inbox.suggestion.dismissFailure.\(itemID.uuidString)"
+            )
 
-            Button(AppStrings.localized("inbox.suggestion.retry"), action: retry)
-                .buttonStyle(.plain)
-                .fontWeight(.semibold)
-                .foregroundStyle(.blue)
-                .frame(minWidth: 44, minHeight: 44)
-                .accessibilityLabel(AppStrings.localized("inbox.suggestion.retry"))
+            Button(action: retry) {
+                CompactTextActionLabel(
+                    title: AppStrings.localized("inbox.suggestion.retry")
+                )
+            }
+            .buttonStyle(.plain)
+            .fontWeight(.semibold)
+            .foregroundStyle(.blue)
+            .accessibilityLabel(AppStrings.localized("inbox.suggestion.retry"))
+            .accessibilityIdentifier(
+                "inbox.suggestion.retry.\(itemID.uuidString)"
+            )
         }
-        .font(.footnote)
+        .font(.subheadline)
     }
 }

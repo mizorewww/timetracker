@@ -41,6 +41,8 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxListRow("))
         #expect(inboxSource.contains("EditableChecklistTextRow("))
         #expect(inboxSource.contains("showsIcon: false"))
+        #expect(inboxSource.components(separatedBy: "Section {").count - 1 >= 4)
+        #expect(inboxSource.contains("if !openItems.isEmpty {\n                Section {"))
         #expect(inboxSource.contains("InboxCompletedSection("))
         #expect(inboxSource.contains("inbox.completed.disclosure"))
         #expect(inboxSource.contains("if openItems.isEmpty"))
@@ -58,7 +60,7 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(inboxSource.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(inboxSource.contains(".accessibilityHint(Text(.app(\"inbox.empty.description\")))"))
-        #expect(inboxSource.contains("Image(systemName: \"ellipsis\")"))
+        #expect(inboxSource.contains("TrailingMenuLabel(systemImage: \"ellipsis\")"))
         #expect(inboxSource.contains(".accessibilityLabel(AppStrings.localized(\"common.more\"))"))
         #expect(inboxSource.contains("inbox.item.menu.\\(item.id.uuidString)"))
         #expect(inboxSource.contains("if item.isCompleted == false"))
@@ -71,7 +73,9 @@ struct InboxUIContractTests {
         #expect(inboxItemSource.contains("common.sort") == false)
         #expect(inboxSource.contains(".navigationTitle(AppStrings.inbox)"))
         #expect(inboxSource.contains(".navigationBarTitleDisplayMode(.large)"))
-        #expect(inboxSource.contains(".listStyle(.plain)"))
+        #expect(inboxSource.contains(".listStyle(.insetGrouped)"))
+        #expect(inboxSource.contains(".scrollContentBackground(.hidden)"))
+        #expect(inboxSource.contains(".listStyle(.plain)") == false)
         #expect(inboxSource.contains("inbox.subtitle") == false)
         #expect(inboxSource.contains("inbox.footer") == false)
         #expect(inboxSource.contains("let submit: () -> Bool"))
@@ -104,6 +108,9 @@ struct InboxUIContractTests {
     @Test
     func inboxSuggestionsAreAutomaticAndExposeOnlyApplyOrDiscardActions() throws {
         let inboxSource = try inboxFeatureSource()
+        let checklistSource = try sourceText(
+            "timetracker/SharedUI/Components/ChecklistControls.swift"
+        )
         let storeSource = try [
             "timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxReadModels.swift",
@@ -129,7 +136,39 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("store.clearInboxSuggestionFailure(item)"))
         #expect(inboxSource.contains("inbox.suggestion.targetFormat"))
         #expect(inboxSource.contains("InboxSuggestionBackground") == false)
-        #expect(inboxSource.contains(".padding(.leading, 44)"))
+        #expect(inboxSource.contains(".padding(.leading, 44)") == false)
+        #expect(
+            inboxSource.contains(
+                ".padding(.leading, AppLayout.minimumInteractiveTarget + 10)"
+            )
+        )
+        #expect(inboxSource.contains("iconName: suggestion.iconName"))
+        #expect(inboxSource.contains("colorHex: suggestion.colorHex"))
+        #expect(inboxSource.contains("ChecklistItemIcon("))
+        #expect(inboxSource.contains("style: .solid"))
+        #expect(checklistSource.contains("enum ChecklistItemIconStyle"))
+        #expect(
+            checklistSource.contains(
+                "TaskColorPalette.contrastingForegroundColor(for: sanitizedColor)"
+            )
+        )
+        #expect(inboxSource.contains("message: failureMessage"))
+        #expect(inboxSource.contains("Text(message)"))
+        #expect(inboxSource.contains("inbox.suggestion.targetUnavailable"))
+        #expect(inboxSource.contains("inbox.suggestion.missingTarget"))
+        #expect(inboxSource.contains("} else if let suggestion {"))
+        #expect(inboxSource.contains("let targetTask = store.task(for: suggestion.taskID)"))
+        #expect(inboxSource.contains("store.trackableTaskIDs.contains(suggestion.taskID)"))
+        #expect(inboxSource.contains("@Environment(\\.accessibilityReduceMotion)"))
+        #expect(inboxSource.contains(".snappy(duration: 0.22)"))
+        #expect(inboxSource.contains("reduceMotion\n            ? .opacity"))
+        #expect(inboxSource.contains("inbox.suggestion.generating.\\(itemID.uuidString)"))
+        #expect(inboxSource.contains("inbox.suggestion.ready.\\(itemID.uuidString)"))
+        #expect(inboxSource.contains("inbox.suggestion.failure.\\(itemID.uuidString)"))
+        #expect(inboxSource.contains("inbox.suggestion.apply.\\(itemID.uuidString)"))
+        #expect(inboxSource.contains("inbox.suggestion.discard.\\(itemID.uuidString)"))
+        #expect(inboxSource.contains("inbox.suggestion.retry.\\(itemID.uuidString)"))
+        #expect(inboxSource.contains("CompactTextActionLabel("))
         #expect(storeSource.contains("func autoSuggestInboxItemsIfNeeded()"))
         #expect(storeSource.contains("enum InboxSuggestionStateKind"))
         #expect(storeSource.contains("func shouldAutoSuggest("))

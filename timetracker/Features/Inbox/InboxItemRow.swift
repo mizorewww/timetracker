@@ -6,10 +6,11 @@ struct InboxItemRow: View {
     let isCompact: Bool
     let requestDelete: () -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var draftTitle = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 4) {
                 EditableChecklistTextRow(
                     title: $draftTitle,
@@ -20,7 +21,9 @@ struct InboxItemRow: View {
                     textStyle: .body,
                     textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
                     toggle: {
-                        store.toggleInboxItem(item)
+                        performAnimated {
+                            store.toggleInboxItem(item)
+                        }
                     },
                     commit: commitTitleIfNeeded
                 )
@@ -30,6 +33,10 @@ struct InboxItemRow: View {
 
             suggestionBar
         }
+        .animation(
+            reduceMotion ? nil : .snappy(duration: 0.22),
+            value: suggestionPresentationKey
+        )
         .onAppear {
             draftTitle = item.title
         }
@@ -41,7 +48,9 @@ struct InboxItemRow: View {
     private var itemMenu: some View {
         Menu {
             Button {
-                store.toggleInboxItem(item)
+                performAnimated {
+                    store.toggleInboxItem(item)
+                }
             } label: {
                 Label(
                     item.isCompleted
@@ -98,33 +107,81 @@ struct InboxItemRow: View {
         if item.isCompleted {
             EmptyView()
         } else if store.inboxSuggestionInFlightIDs.contains(item.id) {
-            InboxGeneratingSuggestionBar()
-        } else if store.inboxSuggestionFailureMessage(for: item) != nil {
+            InboxGeneratingSuggestionBar(itemID: item.id)
+                .transition(suggestionTransition)
+        } else if let failureMessage = store.inboxSuggestionFailureMessage(for: item) {
             InboxSuggestionFailureBar(
+                itemID: item.id,
+                message: failureMessage,
                 isCompact: isCompact,
                 retry: {
-                    store.retryInboxSuggestion(item)
+                    performAnimated {
+                        store.retryInboxSuggestion(item)
+                    }
                 },
                 discard: {
-                    store.clearInboxSuggestionFailure(item)
+                    performAnimated {
+                        store.clearInboxSuggestionFailure(item)
+                    }
                 }
             )
-        } else if let suggestion, let task = store.task(for: suggestion.taskID) {
+            .transition(suggestionTransition)
+        } else if let suggestion {
+            let targetTask = store.task(for: suggestion.taskID)
             InboxSuggestionBar(
-                taskTitle: task.title,
+                itemID: item.id,
+                taskTitle: targetTask?.title ??
+                    AppStrings.localized("inbox.suggestion.missingTarget"),
+                iconName: suggestion.iconName,
+                colorHex: suggestion.colorHex,
                 isCompact: isCompact,
+                canApply: targetTask != nil &&
+                    store.trackableTaskIDs.contains(suggestion.taskID),
                 discard: {
-                    store.discardInboxSuggestion(item)
+                    performAnimated {
+                        store.discardInboxSuggestion(item)
+                    }
                 },
                 apply: {
-                    store.applyInboxSuggestion(item)
+                    performAnimated {
+                        store.applyInboxSuggestion(item)
+                    }
                 }
             )
+            .transition(suggestionTransition)
         }
+    }
+
+    private var suggestionPresentationKey: String {
+        if item.isCompleted {
+            return "completed"
+        }
+        if store.inboxSuggestionInFlightIDs.contains(item.id) {
+            return "generating"
+        }
+        if let message = store.inboxSuggestionFailureMessage(for: item) {
+            return "failure:\(message)"
+        }
+        if let suggestion {
+            return "ready:\(suggestion.id.uuidString):\(suggestion.clientMutationID.uuidString)"
+        }
+        return "none"
+    }
+
+    private var suggestionTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .opacity.combined(with: .move(edge: .top))
     }
 
     private var suggestion: InboxSuggestion? {
         store.inboxSuggestion(for: item)
+    }
+
+    private func performAnimated(_ action: () -> Void) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+            action()
+        }
     }
 
     private func commitTitleIfNeeded() {

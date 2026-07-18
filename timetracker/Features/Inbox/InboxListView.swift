@@ -5,6 +5,7 @@ struct InboxListRow: View {
     let item: InboxItem
     let isCompact: Bool
     @State private var isDeleteConfirmationPresented = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         InboxItemRow(
@@ -13,11 +14,12 @@ struct InboxListRow: View {
             isCompact: isCompact,
             requestDelete: requestDelete
         )
-        .padding(.vertical, 2)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if canApplySuggestion {
                 Button {
-                    store.applyInboxSuggestion(item)
+                    performAnimated {
+                        store.applyInboxSuggestion(item)
+                    }
                 } label: {
                     Label(AppStrings.localized("inbox.suggestion.apply"), systemImage: "checkmark")
                 }
@@ -33,7 +35,9 @@ struct InboxListRow: View {
 
             if canDiscardSuggestion {
                 Button {
-                    store.discardInboxSuggestion(item)
+                    performAnimated {
+                        store.discardInboxSuggestion(item)
+                    }
                 } label: {
                     Label(AppStrings.localized("inbox.suggestion.discard"), systemImage: "xmark")
                 }
@@ -46,11 +50,19 @@ struct InboxListRow: View {
             titleVisibility: .visible
         ) {
             Button(AppStrings.delete, role: .destructive) {
-                store.deleteInboxItem(item)
+                performAnimated {
+                    store.deleteInboxItem(item)
+                }
             }
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(.app("inbox.delete.confirm.message"))
+        }
+    }
+
+    private func performAnimated(_ action: () -> Void) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+            action()
         }
     }
 
@@ -61,7 +73,7 @@ struct InboxListRow: View {
     private var canApplySuggestion: Bool {
         guard !item.isCompleted,
               let suggestion = store.inboxSuggestion(for: item),
-              store.task(for: suggestion.taskID) != nil else {
+              store.trackableTaskIDs.contains(suggestion.taskID) else {
             return false
         }
         return true

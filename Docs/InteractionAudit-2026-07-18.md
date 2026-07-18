@@ -335,6 +335,40 @@ Status: completed and verified
   Both explicitly owned simulators were terminated, shut down, and deleted,
   and the temporary software-keyboard preference was restored.
 
+## Checkpoint 12 — native Inbox cards and visible AI preview
+
+Status: completed and verified
+
+- The later hands-on feedback supersedes Checkpoint 7's flat-list visual
+  choice; that checkpoint remains above as history. Inbox now uses native
+  `List` cards (`insetGrouped` on iOS and `inset` on macOS), with capture,
+  open items, the empty state, and completed items separated into system
+  sections instead of nested custom rounded cards.
+- A ready AI suggestion previews the actual generated symbol and color through
+  the shared `ChecklistItemIcon`, beside the proposed target task. Solid icon
+  contrast uses the same luminance policy as task visuals, including yellow.
+  The preview remains proposal state until Apply atomically creates the
+  checklist item.
+- Missing, completed, archived, or otherwise unavailable target tasks stay
+  explicit: Apply is disabled, the unavailable state is readable, and Discard
+  remains available. Suggestion failures show the actual error, with distinct
+  retry and dismiss-error actions.
+- Compact iPhone layouts deliberately stack the proposal above its actions;
+  noncompact iPad and macOS layouts may use the horizontal form when it fits.
+  Screenshot review caught and corrected an initial `ViewThatFits` result that
+  squeezed “Suggested task” into a few characters per line.
+- On touch platforms, Add, Apply, Discard, Retry, and completion controls own
+  44 pt label hit regions. User-caused insert, apply, discard, delete,
+  completion, suggestion state, and completed-section changes use a restrained
+  0.22-second snappy transition and honor Reduce Motion.
+- The signed focused macOS contract suites passed 27/27, and the Inbox domain
+  suites passed. Native card geometry, readable proposal width, real Apply,
+  exact item removal, and screenshots passed on an iPhone SE and an iPad Pro
+  11-inch in Dark Mode. Existing capture and shared hierarchy-picker UI
+  regressions also passed on iPhone.
+- Four visually reviewed screenshots are retained under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/inbox-checkpoint-12-native-cards`.
+
 The next Analytics checkpoint must make Focus Session records and current-task
 forecasts obey, or explicitly opt out of, the selected historical range before
 the detail pages can be considered semantically complete.

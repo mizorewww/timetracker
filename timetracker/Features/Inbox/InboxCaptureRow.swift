@@ -27,10 +27,11 @@ struct InboxCaptureRow: View {
                     .accessibilityHint(AppStrings.localized("inbox.capture.hint"))
                     .accessibilityIdentifier("inbox.capture.field")
 
-                Button(
-                    AppStrings.localized("inbox.capture.submit"),
-                    action: submitIfNeeded
-                )
+                Button(action: submitIfNeeded) {
+                    CompactTextActionLabel(
+                        title: AppStrings.localized("inbox.capture.submit")
+                    )
+                }
                 .buttonStyle(.borderless)
                 .font(.body.weight(.semibold))
                 .disabled(canSubmit == false)

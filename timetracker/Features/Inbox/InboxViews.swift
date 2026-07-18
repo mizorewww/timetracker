@@ -7,6 +7,7 @@ struct InboxView: View {
     @State private var isSorting = false
     @State private var showsCompleted = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -31,11 +32,12 @@ struct InboxView: View {
         inboxList
             #if os(iOS)
             .environment(\.editMode, .constant(isSorting ? EditMode.active : EditMode.inactive))
-            .listStyle(.plain)
+            .listStyle(.insetGrouped)
             .scrollDismissesKeyboard(.interactively)
             #else
             .listStyle(.inset)
             #endif
+            .scrollContentBackground(.hidden)
             .background(AppColors.background.ignoresSafeArea())
             .navigationTitle(AppStrings.inbox)
             #if os(iOS)
@@ -75,23 +77,27 @@ struct InboxView: View {
                     submit: submitDraft
                 )
                 .moveDisabled(true)
+            }
 
-                ForEach(openItems) { item in
-                    InboxListRow(
-                        store: store,
-                        item: item,
-                        isCompact: isCompact
-                    )
+            if !openItems.isEmpty {
+                Section {
+                    ForEach(openItems) { item in
+                        InboxListRow(
+                            store: store,
+                            item: item,
+                            isCompact: isCompact
+                        )
+                    }
+                    .onMove(perform: moveInboxItems)
                 }
-                .onMove(perform: moveInboxItems)
             }
 
             if openItems.isEmpty {
                 Section {
                     emptyState
-                    .frame(maxWidth: .infinity)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
             }
 
@@ -145,7 +151,9 @@ struct InboxView: View {
 
     @discardableResult
     private func submitDraft() -> Bool {
-        let didAdd = draft.submit(using: store.addInboxItem(title:))
+        let didAdd = withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+            draft.submit(using: store.addInboxItem(title:))
+        }
         focusCaptureField()
         return didAdd
     }

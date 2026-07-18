@@ -848,6 +848,9 @@
 "inbox.suggestion.generating" = "正在自動推薦";
 "inbox.suggestion.failed" = "暫時無法推薦";
 "inbox.suggestion.retry" = "重試推薦";
+"inbox.suggestion.dismissFailure" = "關閉錯誤";
+"inbox.suggestion.missingTarget" = "無法使用的任務";
+"inbox.suggestion.targetUnavailable" = "此任務已無法接收新的工作。";
 "inbox.suggestion.prefix" = "推薦";
 "inbox.suggestion.targetFormat" = "推薦任務：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推薦";

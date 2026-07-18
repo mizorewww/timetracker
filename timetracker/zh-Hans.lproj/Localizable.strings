@@ -848,6 +848,9 @@
 "inbox.suggestion.generating" = "正在自动推荐";
 "inbox.suggestion.failed" = "暂时无法推荐";
 "inbox.suggestion.retry" = "重试推荐";
+"inbox.suggestion.dismissFailure" = "关闭错误";
+"inbox.suggestion.missingTarget" = "不可用任务";
+"inbox.suggestion.targetUnavailable" = "此任务已无法接收新的工作。";
 "inbox.suggestion.prefix" = "推荐";
 "inbox.suggestion.targetFormat" = "推荐任务：%@";
 "inbox.suggestion.editorTitle" = "Inbox 推荐";

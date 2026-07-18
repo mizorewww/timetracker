@@ -229,6 +229,8 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/SymbolCatalog.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift",
+            "timetracker/Features/Tasks/Detail/TaskNotesMarkdownPreview.swift",
+            "timetracker/Features/Tasks/Detail/TaskNotesMarkdownRepresentable.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
@@ -398,6 +400,8 @@ struct CoreSourceLayoutTests {
         let focusedFiles = [
             "TaskDetailView.swift",
             "TaskDetailContentView.swift",
+            "TaskNotesMarkdownPreview.swift",
+            "TaskNotesMarkdownRepresentable.swift",
             "TaskDetailActionsView.swift",
             "TaskDetailNavigationViews.swift",
             "TaskDetailIdentityViews.swift",

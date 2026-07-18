@@ -34,8 +34,7 @@ struct TaskDetailList: View {
                 in: .whitespacesAndNewlines
             ), !notes.isEmpty {
                 Section(AppStrings.localized("editor.task.notes")) {
-                    Text(notes)
-                        .textSelection(.enabled)
+                    TaskNotesMarkdownPreview(markdown: notes)
                 }
             }
 

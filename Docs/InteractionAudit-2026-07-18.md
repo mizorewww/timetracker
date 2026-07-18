@@ -147,5 +147,24 @@ Status: completed and verified
 - The animated-clock contract, focused UI suites, source-layout checks, and
   signed generic iOS build pass.
 
+## Checkpoint 6 — Markdown task-note previews
+
+Status: completed and verified
+
+- Task-note evidence renders through MarkdownView 4.1.7, pinned to the exact
+  reviewed revision used by the FlowDown reference.
+- The app owns a small SwiftUI adapter around `MarkdownTextView` so links use
+  the platform `openURL` action and the rendered view reports its natural
+  height inside the task workspace.
+- The adapter creates a local `MarkdownTheme`; it does not mutate the package's
+  process-wide default theme.
+- Editing remains a raw `TextEditor`. Markdown is a portable note format, not a
+  hidden rich-text storage model.
+- Empty or whitespace-only notes remain absent from the evidence view.
+- The Markdown dependency/adapter and source-layout contract suites pass on
+  macOS. Both the AppKit and UIKit adapter branches compile in signed macOS and
+  generic iOS application builds.
+- No simulator was allocated for this source-and-build checkpoint.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

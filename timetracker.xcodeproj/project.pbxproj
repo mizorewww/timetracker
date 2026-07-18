@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F10000000000000000000001 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* MarkdownView */; };
 		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E40100000000000000000001 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
 		E40100000000000000000002 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
@@ -170,6 +171,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F10000000000000000000001 /* MarkdownView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -269,6 +271,7 @@
 			);
 			name = timetracker;
 			packageProductDependencies = (
+				F10000000000000000000003 /* MarkdownView */,
 			);
 			productName = timetracker;
 			productReference = D41D8E8E2F9CC4B50024913B /* timetracker.app */;
@@ -429,6 +432,9 @@
 			);
 			mainGroup = D41D8E852F9CC4B50024913B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D41D8E8F2F9CC4B50024913B /* Products */;
 			projectDirPath = "";
@@ -1189,6 +1195,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Lakr233/MarkdownView";
+			requirement = {
+				kind = exactVersion;
+				version = 4.1.7;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F10000000000000000000003 /* MarkdownView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */;
+			productName = MarkdownView;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D41D8E862F9CC4B50024913B /* Project object */;
 }

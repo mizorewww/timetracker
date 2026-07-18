@@ -5,6 +5,86 @@ import Testing
 
 @Suite(.serialized)
 struct CoreTaskStoreTests {
+    @Test @MainActor
+    func legacyArchiveMarkersDriveLifecycleReadsWithoutChangingCompletedOrPlannedBehavior() {
+        let timestampArchived = TaskNode(
+            title: "Timestamp archived",
+            parentID: nil,
+            deviceID: "test"
+        )
+        timestampArchived.statusRaw = LegacyTaskStatusRaw.active
+        timestampArchived.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let timestampArchivedChild = TaskNode(
+            title: "Timestamp archived child",
+            parentID: timestampArchived.id,
+            deviceID: "test"
+        )
+
+        let rawArchived = TaskNode(
+            title: "Raw archived",
+            parentID: nil,
+            deviceID: "test"
+        )
+        rawArchived.statusRaw = LegacyTaskStatusRaw.archived
+        rawArchived.archivedAt = nil
+        let rawArchivedChild = TaskNode(
+            title: "Raw archived child",
+            parentID: rawArchived.id,
+            deviceID: "test"
+        )
+
+        let completed = TaskNode(title: "Completed", parentID: nil, deviceID: "test")
+        completed.status = .completed
+        let completedChild = TaskNode(
+            title: "Completed child",
+            parentID: completed.id,
+            deviceID: "test"
+        )
+        let planned = TaskNode(title: "Planned", parentID: nil, deviceID: "test")
+        planned.status = .planned
+        let tasks = [
+            timestampArchived,
+            timestampArchivedChild,
+            rawArchived,
+            rawArchivedChild,
+            completed,
+            completedChild,
+            planned,
+        ]
+
+        #expect(timestampArchived.status == .active)
+        #expect(timestampArchived.isArchivedForLifecycle)
+        #expect(rawArchived.archivedAt == nil)
+        #expect(rawArchived.isArchivedForLifecycle)
+        #expect(completed.isArchivedForLifecycle == false)
+        #expect(planned.isArchivedForLifecycle == false)
+
+        let availability = TaskTrackingAvailabilityService()
+        let eligibility = availability.eligibility(tasks: tasks)
+        #expect(
+            eligibility.visibleTaskIDs ==
+                Set([completed.id, completedChild.id, planned.id])
+        )
+        #expect(eligibility.trackableTaskIDs == Set([planned.id]))
+        #expect(availability.parentChangeBlocker(for: timestampArchived) == .archived)
+        #expect(availability.parentChangeBlocker(for: rawArchived) == .archived)
+        #expect(availability.parentChangeBlocker(for: completed) == .completed)
+        #expect(availability.parentChangeBlocker(for: planned) == nil)
+        #expect(
+            availability.completedBlockingTaskIDs(
+                for: completedChild.id,
+                tasks: tasks
+            ) == [completed.id]
+        )
+
+        let store = makeTestStore()
+        store.tasks = tasks
+        #expect(
+            Set(store.archivedTasks.map(\.id)) ==
+                Set([timestampArchived.id, rawArchived.id])
+        )
+    }
+
     @Test
     func taskEligibilitySeparatesVisibleHistoryFromNewWork() {
         let archivedRoot = TaskNode(title: "Archived", parentID: nil, deviceID: "test")

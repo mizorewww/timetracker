@@ -19,7 +19,7 @@ extension SyncDataSnapshot {
                     value: record.kindRaw
                 )
             }
-            guard TaskStatus(rawValue: record.statusRaw) != nil else {
+            guard LegacyTaskStatusRaw.acceptedValues.contains(record.statusRaw) else {
                 throw SyncDataSnapshotPreflightError.invalidRawValue(
                     table: .tasks,
                     id: record.id,

@@ -45,7 +45,10 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
                 for: task,
                 tasks: tasks
             )
-            guard task.status != status else {
+            let hasCanonicalArchiveMarker = status == .archived
+                ? task.archivedAt != nil
+                : task.archivedAt == nil
+            guard task.status != status || !hasCanonicalArchiveMarker else {
                 return TaskStatusMutationOutcome(
                     taskID: taskID,
                     didMutate: false,

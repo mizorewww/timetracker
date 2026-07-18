@@ -1,6 +1,23 @@
 import Foundation
 import SwiftData
 
+/// Raw values persisted since schema V4. Keep this namespace independent from
+/// presentation semantics so legacy stores and restore preflight share one
+/// compatibility contract.
+nonisolated enum LegacyTaskStatusRaw {
+    static let active = "active"
+    static let planned = "planned"
+    static let completed = "completed"
+    static let archived = "archived"
+
+    static let acceptedValues: Set<String> = [
+        active,
+        planned,
+        completed,
+        archived,
+    ]
+}
+
 enum TaskStatus: String, Codable, CaseIterable {
     case planned
     case active
@@ -17,7 +34,7 @@ final class TaskNode {
     var sortOrder: Double = 0
     var path: String = ""
     var depth: Int = 0
-    var statusRaw: String = TaskStatus.active.rawValue
+    var statusRaw: String = LegacyTaskStatusRaw.active
     var colorHex: String?
     var iconName: String?
     var estimatedSeconds: Int?
@@ -44,7 +61,7 @@ final class TaskNode {
         self.sortOrder = sortOrder
         self.path = ""
         self.depth = 0
-        self.statusRaw = TaskStatus.active.rawValue
+        self.statusRaw = LegacyTaskStatusRaw.active
         self.colorHex = colorHex
         self.iconName = iconName
         self.createdAt = Date()
@@ -142,6 +159,10 @@ extension Sequence where Element == TaskCategoryAssignment {
 }
 
 extension TaskNode {
+    var isArchivedForLifecycle: Bool {
+        archivedAt != nil || statusRaw == LegacyTaskStatusRaw.archived
+    }
+
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }

@@ -100,7 +100,7 @@ struct ForecastDisplayService {
     }
 
     private func isVisible(_ task: TaskNode) -> Bool {
-        task.deletedAt == nil && task.status != .archived && task.status != .completed
+        task.deletedAt == nil && !task.isArchivedForLifecycle && task.status != .completed
     }
 
     private func isHierarchyVisible(_ taskID: UUID, taskByID: [UUID: TaskNode]) -> Bool {

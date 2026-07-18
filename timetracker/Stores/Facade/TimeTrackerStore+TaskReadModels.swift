@@ -24,7 +24,7 @@ extension TimeTrackerStore {
     }
 
     var archivedTasks: [TaskNode] {
-        tasks.filter { $0.status == .archived }
+        tasks.filter(\.isArchivedForLifecycle)
     }
 
     func task(for id: UUID) -> TaskNode? {

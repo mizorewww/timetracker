@@ -92,6 +92,50 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
+    func legacyTaskStatusRawValuesPassPreflightAndRestoreVerbatim() throws {
+        let context = try makeTestContext()
+        let rawValues = [
+            LegacyTaskStatusRaw.active,
+            LegacyTaskStatusRaw.planned,
+            LegacyTaskStatusRaw.completed,
+            LegacyTaskStatusRaw.archived,
+        ]
+        let sourceTasks = rawValues.map { rawValue in
+            let task = TaskNode(
+                title: "Legacy \(rawValue)",
+                parentID: nil,
+                deviceID: "source"
+            )
+            task.statusRaw = rawValue
+            task.archivedAt = nil
+            return task
+        }
+        let archivedAt = Date(timeIntervalSinceReferenceDate: 123)
+        sourceTasks[0].archivedAt = archivedAt
+        let snapshot = SyncDataSnapshot(tasks: sourceTasks.map(TaskRecord.init))
+
+        #expect(Set(rawValues) == LegacyTaskStatusRaw.acceptedValues)
+        try snapshot.validateForRestore()
+        try snapshot.restoreAsLocalWinner(context: context)
+
+        let restoredByRaw = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<TaskNode>())
+                .map { ($0.statusRaw, $0) }
+        )
+        #expect(Set(restoredByRaw.keys) == LegacyTaskStatusRaw.acceptedValues)
+        let active = try #require(restoredByRaw[LegacyTaskStatusRaw.active])
+        #expect(active.status == .active)
+        #expect(active.archivedAt == archivedAt)
+        #expect(active.isArchivedForLifecycle)
+        #expect(restoredByRaw[LegacyTaskStatusRaw.planned]?.status == .planned)
+        #expect(restoredByRaw[LegacyTaskStatusRaw.completed]?.status == .completed)
+        let archived = try #require(restoredByRaw[LegacyTaskStatusRaw.archived])
+        #expect(archived.status == .archived)
+        #expect(archived.archivedAt == nil)
+        #expect(archived.isArchivedForLifecycle)
+    }
+
+    @Test @MainActor
     func invalidDateAndKnownPreferenceTypeAreRejected() throws {
         let invalidDateContext = try makeSentinelContext()
         let invalidDateTask = TaskNode(title: "Invalid date", parentID: nil, deviceID: "source")

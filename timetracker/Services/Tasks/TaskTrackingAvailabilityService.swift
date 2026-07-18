@@ -27,7 +27,7 @@ struct TaskTrackingAvailabilityService {
         let hiddenTaskIDs = descendantClosure(
             startingWith: Set(
                 canonicalTasks.lazy
-                    .filter { $0.deletedAt != nil || $0.status == .archived }
+                    .filter { $0.deletedAt != nil || $0.isArchivedForLifecycle }
                     .map(\.id)
             ),
             childIDsByParentID: childIDsByParentID
@@ -69,12 +69,13 @@ struct TaskTrackingAvailabilityService {
         if task.deletedAt != nil {
             return .deleted
         }
+        if task.isArchivedForLifecycle {
+            return .archived
+        }
         switch task.status {
         case .completed:
             return .completed
-        case .archived:
-            return .archived
-        case .planned, .active:
+        case .planned, .active, .archived:
             return nil
         }
     }
@@ -88,7 +89,7 @@ struct TaskTrackingAvailabilityService {
         while let candidateID = currentID,
               visited.insert(candidateID).inserted,
               let task = taskByID[candidateID] {
-            if task.deletedAt != nil || task.status == .archived {
+            if task.deletedAt != nil || task.isArchivedForLifecycle {
                 return []
             }
             if task.status == .completed {

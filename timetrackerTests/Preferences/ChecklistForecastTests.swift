@@ -497,21 +497,64 @@ struct ChecklistForecastTests {
     }
 
     @Test @MainActor
-    func forecastDetailCannotSurfaceAChildHiddenByAnArchivedAncestor() throws {
-        let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
-        parent.status = .archived
-        let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
-        child.estimatedSeconds = 1_800
+    func forecastCannotSurfaceChildrenHiddenByEitherLegacyArchiveMarker() throws {
+        let rawArchivedParent = TaskNode(
+            title: "Raw archived parent",
+            parentID: nil,
+            deviceID: "test"
+        )
+        rawArchivedParent.statusRaw = LegacyTaskStatusRaw.archived
+        rawArchivedParent.archivedAt = nil
+        let rawArchivedChild = TaskNode(
+            title: "Raw hidden child",
+            parentID: rawArchivedParent.id,
+            deviceID: "test"
+        )
+        rawArchivedChild.estimatedSeconds = 1_800
+
+        let timestampArchivedParent = TaskNode(
+            title: "Timestamp archived parent",
+            parentID: nil,
+            deviceID: "test"
+        )
+        timestampArchivedParent.statusRaw = LegacyTaskStatusRaw.active
+        timestampArchivedParent.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let timestampArchivedChild = TaskNode(
+            title: "Timestamp hidden child",
+            parentID: timestampArchivedParent.id,
+            deviceID: "test"
+        )
+        timestampArchivedChild.estimatedSeconds = 1_800
+        let tasks = [
+            rawArchivedParent,
+            rawArchivedChild,
+            timestampArchivedParent,
+            timestampArchivedChild,
+        ]
         let rollups = TaskRollupService().rollups(
-            tasks: [parent, child],
+            tasks: tasks,
             segments: [],
             checklistItems: []
         )
         let service = ForecastDisplayService()
 
-        #expect(rollups[child.id]?.isDisplayableForecast == true)
-        #expect(service.displayItems(tasks: [parent, child], rollups: rollups).isEmpty)
-        #expect(service.displayItem(for: child.id, tasks: [parent, child], rollups: rollups) == nil)
+        #expect(rollups[rawArchivedChild.id]?.isDisplayableForecast == true)
+        #expect(rollups[timestampArchivedChild.id]?.isDisplayableForecast == true)
+        #expect(service.displayItems(tasks: tasks, rollups: rollups).isEmpty)
+        #expect(
+            service.displayItem(
+                for: rawArchivedChild.id,
+                tasks: tasks,
+                rollups: rollups
+            ) == nil
+        )
+        #expect(
+            service.displayItem(
+                for: timestampArchivedChild.id,
+                tasks: tasks,
+                rollups: rollups
+            ) == nil
+        )
     }
 }
 

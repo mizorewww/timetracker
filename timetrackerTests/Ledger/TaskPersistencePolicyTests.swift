@@ -159,12 +159,15 @@ struct TaskPersistencePolicyTests {
 
         try update(task, status: .archived, repository: repository)
         let firstArchivedAt = try #require(task.archivedAt)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
         try update(task, status: .archived, repository: repository, title: "Renamed")
         #expect(task.archivedAt == firstArchivedAt)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
         try update(task, status: .active, repository: repository)
         #expect(task.archivedAt == nil)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.active)
     }
 
     @Test @MainActor
@@ -180,6 +183,7 @@ struct TaskPersistencePolicyTests {
 
         try repository.setTaskStatus(taskID: task.id, status: .archived)
         #expect(task.archivedAt == task.updatedAt)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
         let originalArchivedAt = Date(timeIntervalSince1970: 1_000)
         task.archivedAt = originalArchivedAt
@@ -190,9 +194,11 @@ struct TaskPersistencePolicyTests {
 
         try repository.archiveTask(taskID: task.id)
         #expect(task.archivedAt == originalArchivedAt)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
         try repository.setTaskStatus(taskID: task.id, status: .active)
         #expect(task.archivedAt == nil)
+        #expect(task.statusRaw == LegacyTaskStatusRaw.active)
     }
 
     @Test @MainActor

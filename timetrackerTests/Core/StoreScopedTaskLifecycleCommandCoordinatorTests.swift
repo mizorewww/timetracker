@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import Testing
 @testable import timetracker
@@ -5,6 +6,63 @@ import Testing
 @Suite(.serialized)
 @MainActor
 struct StoreScopedTaskLifecycleCommandCoordinatorTests {
+    @Test
+    func matchingStatusRepairsAConflictingLegacyArchiveTimestamp() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
+            title: "Conflicting archive timestamp",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        task.statusRaw = LegacyTaskStatusRaw.active
+        task.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        try context.save()
+        let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        )
+
+        let repaired = try coordinator.setStatus(.active, taskID: task.id)
+
+        #expect(repaired.didMutate)
+        let fetchedTask = try freshTaskRepository(context.container).task(id: task.id)
+        let freshTask = try #require(fetchedTask)
+        #expect(freshTask.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(freshTask.archivedAt == nil)
+        #expect(freshTask.isArchivedForLifecycle == false)
+
+        let canonicalNoOp = try coordinator.setStatus(.active, taskID: task.id)
+        #expect(canonicalNoOp.didMutate == false)
+    }
+
+    @Test
+    func matchingArchivedStatusRepairsAMissingArchiveTimestamp() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
+            title: "Raw-only archive",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        task.statusRaw = LegacyTaskStatusRaw.archived
+        task.archivedAt = nil
+        try context.save()
+        let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        )
+
+        let repaired = try coordinator.setStatus(.archived, taskID: task.id)
+
+        #expect(repaired.didMutate)
+        let fetchedTask = try freshTaskRepository(context.container).task(id: task.id)
+        let freshTask = try #require(fetchedTask)
+        #expect(freshTask.statusRaw == LegacyTaskStatusRaw.archived)
+        #expect(freshTask.archivedAt != nil)
+        #expect(freshTask.isArchivedForLifecycle)
+    }
+
     @Test
     func staleSceneCannotCompleteSubtreeStartedBySiblingContext() throws {
         let context = try makeTestContext()

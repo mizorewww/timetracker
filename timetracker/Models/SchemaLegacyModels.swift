@@ -12,7 +12,7 @@ extension TimeTrackerSchemaV4 {
         var sortOrder: Double = 0
         var path: String = ""
         var depth: Int = 0
-        var statusRaw: String = TaskStatus.active.rawValue
+        var statusRaw: String = LegacyTaskStatusRaw.active
         var colorHex: String?
         var iconName: String?
         var estimatedSeconds: Int?
@@ -41,7 +41,7 @@ extension TimeTrackerSchemaV4 {
             self.sortOrder = sortOrder
             self.path = ""
             self.depth = 0
-            self.statusRaw = TaskStatus.active.rawValue
+            self.statusRaw = LegacyTaskStatusRaw.active
             self.colorHex = colorHex
             self.iconName = iconName
             self.createdAt = Date()

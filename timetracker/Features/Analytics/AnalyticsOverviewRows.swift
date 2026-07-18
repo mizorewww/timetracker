@@ -7,7 +7,7 @@ struct AnalyticsHomeSummaryRow: View {
 
     var body: some View {
         Group {
-            if snapshot.overview.grossSeconds > 0 {
+            if snapshot.overview.grossSeconds > 0 || snapshot.overview.pomodoroCount > 0 {
                 VStack(alignment: .leading, spacing: 14) {
                     headlineMetrics
 

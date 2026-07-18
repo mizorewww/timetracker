@@ -4,7 +4,13 @@ struct AnalyticsEngine {
     private let aggregationService = TimeAggregationService()
     private let dailySummaryService = DailySummaryService()
 
-    func overview(segments: [TimeSegment], range: AnalyticsRange, now: Date = Date(), calendar: Calendar = .current) -> AnalyticsOverview {
+    func overview(
+        segments: [TimeSegment],
+        range: AnalyticsRange,
+        cancelledPomodoroSessionIDs: Set<UUID> = [],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> AnalyticsOverview {
         guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else {
             return AnalyticsOverview(grossSeconds: 0, wallSeconds: 0, overlapSeconds: 0, pomodoroCount: 0, averageFocusSeconds: 0)
         }
@@ -18,17 +24,20 @@ struct AnalyticsEngine {
         }
         let focusSegments = bounded.filter { $0.segment.source == .pomodoro }
         let focusSeconds = focusSegments.reduce(0) { $0 + Int($1.interval.duration) }
+        let completedFocusRoundCount = segments.deduplicatedByID().filter { segment in
+            AnalyticsFocusRoundPolicy.isCompleted(
+                segment: segment,
+                period: interval,
+                evaluatedAt: now,
+                cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs
+            )
+        }.count
 
         return AnalyticsOverview(
             grossSeconds: gross,
             wallSeconds: wall,
             overlapSeconds: max(0, gross - wall),
-            pomodoroCount: focusSegments.filter { item in
-                guard let endedAt = item.segment.endedAt else { return false }
-                return endedAt <= now &&
-                    endedAt > item.interval.start &&
-                    endedAt <= item.interval.end
-            }.count,
+            pomodoroCount: completedFocusRoundCount,
             averageFocusSeconds: focusSegments.isEmpty ? 0 : focusSeconds / focusSegments.count
         )
     }

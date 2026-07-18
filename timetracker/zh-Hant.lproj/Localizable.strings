@@ -464,9 +464,9 @@
 "analytics.wall.footnote" = "真實經過的時間";
 "analytics.gross.footnote" = "任務時間相加";
 "analytics.overlap.footnote" = "並行記錄額外計入";
-"analytics.pomodoros.footnote" = "完成的專注片段";
+"analytics.pomodoros.footnote" = "每輪對應一個已完成的番茄專注片段";
 "analytics.metric.overlap" = "並行超額";
-"analytics.metric.pomodoros" = "番茄鐘";
+"analytics.metric.pomodoros" = "專注輪次";
 "analytics.range" = "範圍";
 "analytics.range.day" = "日";
 "analytics.range.week" = "週";
@@ -534,8 +534,8 @@
 "analytics.screenTime.title" = "任務使用時間";
 "analytics.screenTime.subtitle" = "類似螢幕使用時間：先看總量，再看顏色分段和任務列表。";
 "analytics.empty.todayTaskTime" = "今天還沒有任務時間";
-"analytics.forecasts.title" = "下一步任務決策";
-"analytics.forecasts.subtitle" = "可預測任務會優先展示最需要關注的工作。";
+"analytics.forecasts.title" = "目前任務預測";
+"analytics.forecasts.subtitle" = "依據目前清單進度和任務歷史，不作為所選分析時段的證據。";
 "analytics.forecasts.empty" = "新增清單項、至少完成一項並記錄時間後會顯示預測";
 "analytics.decisions.title" = "決策摘要";
 "analytics.decisions.subtitle" = "先看這裡：什麼變了、什麼占最多、哪裡值得處理。";
@@ -584,7 +584,7 @@
 "analytics.quality.shortSegmentsFormat" = "%d（%@）";
 "analytics.none" = "無";
 "analytics.summary.title" = "摘要";
-"analytics.summary.focusRuns" = "專注次數";
+"analytics.summary.focusRuns" = "專注輪次";
 "analytics.summary.dailyAverage" = "每個記錄日平均";
 "analytics.summary.grossLabel" = "各任務計時相加";
 "analytics.summary.wallLabel" = "重疊時段只算一次";
@@ -596,7 +596,7 @@
 "analytics.question.overview" = "這段時間我花了多久？";
 "analytics.question.time" = "我的時間在什麼時候最集中？";
 "analytics.question.tasks" = "哪個任務花的時間最多？";
-"analytics.question.pomodoro" = "我完成了多少次專注？";
+"analytics.question.pomodoro" = "我完成了多少輪專注？";
 "analytics.question.decisions" = "什麼值得我關注？";
 "analytics.question.quality" = "這些統計可以直接參考嗎？";
 "analytics.question.openFormat" = "查看詳情：%@";
@@ -606,7 +606,8 @@
 "analytics.question.answer.noPeak" = "這個範圍還沒有計時";
 "analytics.question.answer.taskFormat" = "%@ · %@";
 "analytics.question.answer.noTask" = "這個範圍還沒有任務時間";
-"analytics.question.answer.focusFormat" = "已完成 %d 次";
+"analytics.question.answer.focusSingularFormat" = "已完成 %d 輪";
+"analytics.question.answer.focusFormat" = "已完成 %d 輪";
 "analytics.question.answer.noSignal" = "還沒有複盤訊號";
 "analytics.question.answer.signalFormat" = "%@ · %@";
 "analytics.question.answer.overlapFormat" = "重疊占 %d%% · 請對照累計時間和實際時間";
@@ -618,10 +619,13 @@
 "analytics.category.time.subtitle" = "每日趨勢、今天分布和時間軸。";
 "analytics.category.tasks.title" = "任務分布";
 "analytics.category.tasks.subtitle" = "查看時間流向了哪些任務、分支和分類。";
-"analytics.category.pomodoro.title" = "專注次數";
-"analytics.category.pomodoro.subtitle" = "查看已完成的專注次數和最近計畫。";
+"analytics.category.pomodoro.title" = "專注輪次";
+"analytics.category.pomodoro.subtitle" = "每一列都是此日期範圍內完成的一個番茄專注片段。";
+"analytics.focusRounds.empty" = "這個範圍沒有已完成的專注輪次";
+"analytics.focusRounds.showingSingularFormat" = "顯示這個範圍內最近 %d/%d 個已完成專注輪次。";
+"analytics.focusRounds.showingFormat" = "顯示這個範圍內最近 %d/%d 個已完成專注輪次。";
 "analytics.category.decisions.title" = "複盤重點";
-"analytics.category.decisions.subtitle" = "查看變化和值得關注的任務預測。";
+"analytics.category.decisions.subtitle" = "查看此範圍內的變化；選擇目前週期時還會顯示目前任務預測。";
 "analytics.category.quality.title" = "計時檢查";
 "analytics.category.quality.subtitle" = "參考統計前，檢查重疊、切換和短記錄。";
 "task.detail.title" = "任務詳情";

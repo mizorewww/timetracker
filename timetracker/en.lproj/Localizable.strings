@@ -464,9 +464,9 @@
 "analytics.wall.footnote" = "Real elapsed time";
 "analytics.gross.footnote" = "Sum of task time";
 "analytics.overlap.footnote" = "Excess from simultaneous records";
-"analytics.pomodoros.footnote" = "Completed focus segments";
+"analytics.pomodoros.footnote" = "One completed Pomodoro focus segment per round";
 "analytics.metric.overlap" = "Overlap Excess";
-"analytics.metric.pomodoros" = "Pomodoros";
+"analytics.metric.pomodoros" = "Focus Rounds";
 "analytics.range" = "Range";
 "analytics.range.day" = "Day";
 "analytics.range.week" = "Week";
@@ -534,8 +534,8 @@
 "analytics.screenTime.title" = "Task Usage";
 "analytics.screenTime.subtitle" = "Similar to Screen Time: total first, then color segments and task rows.";
 "analytics.empty.todayTaskTime" = "No task time today";
-"analytics.forecasts.title" = "Next Task Decisions";
-"analytics.forecasts.subtitle" = "Forecastable tasks are sorted toward the work that most needs attention.";
+"analytics.forecasts.title" = "Current Task Forecasts";
+"analytics.forecasts.subtitle" = "These use current checklist progress and task history, not evidence from the selected Analytics range.";
 "analytics.forecasts.empty" = "Add checklist items, complete at least one, and track time to see forecasts";
 "analytics.decisions.title" = "Decision Summary";
 "analytics.decisions.subtitle" = "Start here: what changed, what dominated, and what deserves attention.";
@@ -584,7 +584,7 @@
 "analytics.quality.shortSegmentsFormat" = "%d (%@)";
 "analytics.none" = "None";
 "analytics.summary.title" = "Summary";
-"analytics.summary.focusRuns" = "Focus Sessions";
+"analytics.summary.focusRuns" = "Focus Rounds";
 "analytics.summary.dailyAverage" = "Average per Tracked Day";
 "analytics.summary.grossLabel" = "Task timers summed";
 "analytics.summary.wallLabel" = "Overlaps counted once";
@@ -596,7 +596,7 @@
 "analytics.question.overview" = "How much time did I spend?";
 "analytics.question.time" = "When was my time most concentrated?";
 "analytics.question.tasks" = "Which task took the most time?";
-"analytics.question.pomodoro" = "How many focus sessions did I finish?";
+"analytics.question.pomodoro" = "How many focus rounds did I finish?";
 "analytics.question.decisions" = "What deserves attention?";
 "analytics.question.quality" = "Can I rely on these totals?";
 "analytics.question.openFormat" = "View details: %@";
@@ -606,7 +606,8 @@
 "analytics.question.answer.noPeak" = "No tracked time in this range";
 "analytics.question.answer.taskFormat" = "%@ · %@";
 "analytics.question.answer.noTask" = "No task time in this range";
-"analytics.question.answer.focusFormat" = "%d completed";
+"analytics.question.answer.focusSingularFormat" = "%d round completed";
+"analytics.question.answer.focusFormat" = "%d rounds completed";
 "analytics.question.answer.noSignal" = "No review signal yet";
 "analytics.question.answer.signalFormat" = "%@ · %@";
 "analytics.question.answer.overlapFormat" = "%d%% overlap · compare summed and elapsed time";
@@ -618,10 +619,13 @@
 "analytics.category.time.subtitle" = "Daily trend, today distribution, and timeline.";
 "analytics.category.tasks.title" = "Task Breakdown";
 "analytics.category.tasks.subtitle" = "See which tasks, branches, and categories received time.";
-"analytics.category.pomodoro.title" = "Focus Sessions";
-"analytics.category.pomodoro.subtitle" = "Review completed focus sessions and recent plans.";
+"analytics.category.pomodoro.title" = "Focus Rounds";
+"analytics.category.pomodoro.subtitle" = "Each row is a completed Pomodoro focus segment in this date range.";
+"analytics.focusRounds.empty" = "No completed focus rounds in this range";
+"analytics.focusRounds.showingSingularFormat" = "Showing the latest %d of %d completed focus round in this range.";
+"analytics.focusRounds.showingFormat" = "Showing the latest %d of %d completed focus rounds in this range.";
 "analytics.category.decisions.title" = "Review Signals";
-"analytics.category.decisions.subtitle" = "Review changes and forecasted tasks worth attention.";
+"analytics.category.decisions.subtitle" = "Review changes in this range. Current periods also show current task forecasts.";
 "analytics.category.quality.title" = "Tracking Checks";
 "analytics.category.quality.subtitle" = "Check overlap, switches, and short records before using totals.";
 "task.detail.title" = "Task Detail";

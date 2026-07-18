@@ -20,18 +20,46 @@ struct AnalyticsCategoryPresentationTests {
 
     @Test @MainActor
     func everyQuestionUsesTheSameNoRecordedTimeAnswerForAnEmptyRange() {
+        let snapshot = makeSnapshot()
+        let expected = AppStrings.localized("analytics.question.answer.noRecordedTime")
+
+        for category in AnalyticsCategory.questionCategories {
+            #expect(category.answerPreview(from: snapshot) == expected)
+        }
+    }
+
+    @Test @MainActor
+    func completedFocusRoundAtThePeriodBoundaryRemainsVisibleWithoutTrackedDuration() {
+        let snapshot = makeSnapshot(grossSeconds: 0, pomodoroCount: 1)
+        let expected = String(
+            format: AppStrings.localized("analytics.question.answer.focusSingularFormat"),
+            1
+        )
+
+        #expect(AnalyticsCategory.pomodoro.answerPreview(from: snapshot) == expected)
+        #expect(
+            AnalyticsCategory.overview.answerPreview(from: snapshot) ==
+                AppStrings.localized("analytics.question.answer.noRecordedTime")
+        )
+    }
+
+    @MainActor
+    private func makeSnapshot(
+        grossSeconds: Int = 0,
+        pomodoroCount: Int = 0
+    ) -> AnalyticsSnapshot {
         let window = AnalyticsComparisonWindow(
             current: DateInterval(start: .distantPast, duration: 1),
             previous: DateInterval(start: .distantPast, duration: 1),
             basis: .matchedProgress
         )
-        let snapshot = AnalyticsSnapshot(
+        return AnalyticsSnapshot(
             range: .today,
             overview: AnalyticsOverview(
-                grossSeconds: 0,
+                grossSeconds: grossSeconds,
                 wallSeconds: 0,
                 overlapSeconds: 0,
-                pomodoroCount: 0,
+                pomodoroCount: pomodoroCount,
                 averageFocusSeconds: 0
             ),
             comparison: AnalyticsComparison(
@@ -63,15 +91,11 @@ struct AnalyticsCategoryPresentationTests {
             daily: [],
             todayActivity: [],
             timeline: .empty,
+            completedFocusRoundSegmentIDs: [],
             taskBreakdown: [],
             rootBreakdown: [],
             categoryBreakdown: [],
             overlaps: []
         )
-        let expected = AppStrings.localized("analytics.question.answer.noRecordedTime")
-
-        for category in AnalyticsCategory.questionCategories {
-            #expect(category.answerPreview(from: snapshot) == expected)
-        }
     }
 }

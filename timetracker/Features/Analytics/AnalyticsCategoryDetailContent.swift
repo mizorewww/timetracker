@@ -76,7 +76,10 @@ extension AnalyticsCategoryDetailView {
                 title: AppStrings.localized("analytics.category.pomodoro.title"),
                 subtitle: AppStrings.localized("analytics.category.pomodoro.subtitle")
             ) {
-                PomodoroLedgerContent(store: store)
+                AnalyticsFocusRoundsContent(
+                    store: store,
+                    segmentIDs: snapshot.completedFocusRoundSegmentIDs
+                )
             }
         case .decisions:
             AnalyticsDetailSection(
@@ -85,11 +88,13 @@ extension AnalyticsCategoryDetailView {
             ) {
                 AnalyticsInsightList(insights: snapshot.insights)
             }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.forecasts.title"),
-                subtitle: AppStrings.localized("analytics.forecasts.subtitle")
-            ) {
-                TaskForecastsContent(store: store)
+            if range.isCurrentPeriod(referenceDate, liveNow: liveNow) {
+                AnalyticsDetailSection(
+                    title: AppStrings.localized("analytics.forecasts.title"),
+                    subtitle: AppStrings.localized("analytics.forecasts.subtitle")
+                ) {
+                    TaskForecastsContent(store: store)
+                }
             }
         case .quality:
             AnalyticsDetailSection(
@@ -109,6 +114,73 @@ extension AnalyticsCategoryDetailView {
                 subtitle: AppStrings.localized("analytics.overlap.subtitle")
             ) {
                 AnalyticsOverlapContent(overlaps: snapshot.overlaps)
+            }
+        }
+    }
+}
+
+private struct AnalyticsFocusRoundsContent: View {
+    private static let maximumRenderedRoundCount = 20
+
+    let store: TimeTrackerStore
+    let segmentIDs: [UUID]
+
+    var body: some View {
+        let segments = store.completedFocusRoundSegments(
+            segmentIDs: Array(segmentIDs.prefix(Self.maximumRenderedRoundCount))
+        )
+
+        Group {
+            if segments.isEmpty {
+                EmptyStateRow(
+                    title: AppStrings.localized("analytics.focusRounds.empty"),
+                    icon: "timer"
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    let summaryFormatKey = segmentIDs.count == 1
+                        ? "analytics.focusRounds.showingSingularFormat"
+                        : "analytics.focusRounds.showingFormat"
+                    Text(
+                        String(
+                            format: AppStrings.localized(summaryFormatKey),
+                            segments.count,
+                            segmentIDs.count
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("analytics.focusRounds.summary")
+
+                    VStack(spacing: 0) {
+                        let lastSegmentID = segments.last?.id
+                        ForEach(segments, id: \.id) { segment in
+                            AnalyticsFocusRoundRow(
+                                store: store,
+                                segment: segment,
+                                showsDivider: segment.id != lastSegmentID
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct AnalyticsFocusRoundRow: View {
+    let store: TimeTrackerStore
+    let segment: TimeSegment
+    let showsDivider: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TimelineRow(store: store, segment: segment)
+
+            if showsDivider {
+                Divider()
+                    .padding(.leading, 18)
             }
         }
     }

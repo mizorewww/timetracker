@@ -692,9 +692,9 @@ final class timetrackerUITests: XCTestCase {
             ),
             (
                 "pomodoro",
-                "How many focus sessions did I finish?",
+                "How many focus rounds did I finish?",
                 "completed",
-                "Focus Sessions"
+                "Focus Rounds"
             ),
             (
                 "decisions",
@@ -762,6 +762,120 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(detail.waitForExistence(timeout: 8))
         XCTAssertTrue(distribution.waitForExistence(timeout: 8))
         try capture("iphone-analytics-time-details", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testAnalyticsFocusRoundsAndForecastsRespectSelectedPeriod() throws {
+        #if os(macOS)
+        throw XCTSkip("Analytics period evidence requires an iOS simulator.")
+        #else
+        let app = launchApp(route: "analytics")
+        if app.descendants(matching: .any)["analytics.view"]
+            .waitForExistence(timeout: 5) == false {
+            openSection(
+                "Analytics",
+                tabIdentifier: "phone.tab.analytics",
+                sidebarIdentifier: "sidebar.Analytics",
+                in: app
+            )
+        }
+        XCTAssertTrue(analyticsIsReady(in: app))
+
+        let focusRounds = app.descendants(matching: .any)[
+            "analytics.category.pomodoro"
+        ].firstMatch
+        scrollUntilHittable(focusRounds, direction: .up, in: app)
+        XCTAssertTrue(focusRounds.waitForExistence(timeout: 5) && focusRounds.isHittable)
+        activate(focusRounds)
+
+        let focusDetail = app.descendants(matching: .any)[
+            "analytics.categoryDetail.pomodoro"
+        ].firstMatch
+        let focusSummary = app.descendants(matching: .any)[
+            "analytics.focusRounds.summary"
+        ].firstMatch
+        XCTAssertTrue(focusDetail.waitForExistence(timeout: 8))
+        XCTAssertTrue(focusSummary.waitForExistence(timeout: 8))
+        let reconciledFocusRounds = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label CONTAINS %@", "latest 2 of 2"),
+            object: focusSummary
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [reconciledFocusRounds], timeout: 5),
+            .completed,
+            "The expired demo focus must reconcile before Analytics presents completed rounds. Label: \(focusSummary.label)"
+        )
+        try capture("iphone-analytics-current-focus-rounds", app: app)
+
+        let firstBackButton = app.navigationBars.buttons.element(boundBy: 0)
+        XCTAssertTrue(firstBackButton.waitForExistence(timeout: 3) && firstBackButton.isHittable)
+        activate(firstBackButton)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["analytics.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        let decisions = app.descendants(matching: .any)[
+            "analytics.category.decisions"
+        ].firstMatch
+        scrollUntilHittable(decisions, direction: .up, in: app)
+        XCTAssertTrue(decisions.waitForExistence(timeout: 5) && decisions.isHittable)
+        activate(decisions)
+
+        let decisionsDetail = app.descendants(matching: .any)[
+            "analytics.categoryDetail.decisions"
+        ].firstMatch
+        let currentForecasts = app.staticTexts["Current Task Forecasts"].firstMatch
+        XCTAssertTrue(decisionsDetail.waitForExistence(timeout: 8))
+        scrollUntilHittable(currentForecasts, direction: .up, in: app)
+        XCTAssertTrue(
+            currentForecasts.waitForExistence(timeout: 5) && currentForecasts.isHittable,
+            "The current Analytics period must disclose its live task forecasts."
+        )
+        try capture("iphone-analytics-current-task-forecasts", app: app)
+
+        let secondBackButton = app.navigationBars.buttons.element(boundBy: 0)
+        XCTAssertTrue(secondBackButton.waitForExistence(timeout: 3) && secondBackButton.isHittable)
+        activate(secondBackButton)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["analytics.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        let periodFilter = app.descendants(matching: .any)["analytics.periodFilter"].firstMatch
+        scrollUntilHittable(periodFilter, direction: .down, in: app)
+        XCTAssertTrue(periodFilter.waitForExistence(timeout: 5))
+        let previous = app.buttons["analytics.period.previous"].firstMatch
+        let next = app.buttons["analytics.period.next"].firstMatch
+        XCTAssertTrue(previous.waitForExistence(timeout: 5) && previous.isHittable)
+        activate(previous)
+
+        let nextEnabledExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"),
+            object: next
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [nextEnabledExpectation], timeout: 5),
+            .completed
+        )
+
+        scrollUntilHittable(decisions, direction: .up, in: app)
+        XCTAssertTrue(decisions.waitForExistence(timeout: 5) && decisions.isHittable)
+        activate(decisions)
+        XCTAssertTrue(decisionsDetail.waitForExistence(timeout: 8))
+        let historicalDecisionSummary = app.descendants(matching: .any)[
+            "analytics.decisionSummary"
+        ].firstMatch
+        XCTAssertTrue(
+            historicalDecisionSummary.waitForExistence(timeout: 8),
+            "Historical review signals must finish loading before forecast visibility is checked."
+        )
+        XCTAssertFalse(
+            app.staticTexts["Current Task Forecasts"].exists,
+            "A historical Analytics period must not present current forecasts as historical evidence."
+        )
+        try capture("iphone-analytics-historical-review-signals", app: app)
         #endif
     }
 

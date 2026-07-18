@@ -8,6 +8,7 @@ extension AnalyticsStore {
         taskCategoryAssignments: [TaskCategoryAssignment] = [],
         segments: [TimeSegment],
         sessions: [TimeSession],
+        cancelledPomodoroSessionIDs: Set<UUID> = [],
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         now: Date = Date(),
@@ -23,6 +24,7 @@ extension AnalyticsStore {
             taskCategoryAssignments: taskCategoryAssignments,
             segments: segments,
             sessions: sessions,
+            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
             evaluatedAt: now,
@@ -38,6 +40,7 @@ extension AnalyticsStore {
         taskCategoryAssignments: [TaskCategoryAssignment] = [],
         segments: [TimeSegment],
         sessions: [TimeSession],
+        cancelledPomodoroSessionIDs: Set<UUID> = [],
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         evaluatedAt cutoff: Date,
@@ -65,6 +68,7 @@ extension AnalyticsStore {
                 rangeSegments: rangeSegments,
                 allSegments: canonicalSegments,
                 sessions: sessions,
+                cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
                 daily: daily,
@@ -83,6 +87,7 @@ extension AnalyticsStore {
         rangeSegments: [TimeSegment],
         allSegments: [TimeSegment],
         sessions: [TimeSession],
+        cancelledPomodoroSessionIDs: Set<UUID>,
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         daily: [DailyAnalyticsPoint],
@@ -96,7 +101,16 @@ extension AnalyticsStore {
             in: period,
             now: cutoff
         )
-        let overview = overview(items: boundedRangeSegments)
+        let focusRoundSegmentIDs = completedFocusRoundSegmentIDs(
+            in: allSegments,
+            period: period,
+            evaluatedAt: cutoff,
+            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs
+        )
+        let overview = overview(
+            items: boundedRangeSegments,
+            completedFocusRoundCount: focusRoundSegmentIDs.count
+        )
         let taskBreakdown = taskBreakdown(
             items: boundedRangeSegments,
             tasks: tasks,
@@ -161,6 +175,7 @@ extension AnalyticsStore {
             daily: daily,
             todayActivity: todayVisualSnapshot?.todayActivity ?? [],
             timeline: todayVisualSnapshot?.timeline ?? .empty,
+            completedFocusRoundSegmentIDs: focusRoundSegmentIDs,
             taskBreakdown: taskBreakdown,
             rootBreakdown: rootBreakdown,
             categoryBreakdown: categoryBreakdown,

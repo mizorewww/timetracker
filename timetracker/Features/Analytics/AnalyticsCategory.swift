@@ -88,7 +88,8 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
     }
 
     func answerPreview(from snapshot: AnalyticsSnapshot) -> String {
-        guard snapshot.overview.grossSeconds > 0 else {
+        guard snapshot.overview.grossSeconds > 0 ||
+            (self == .pomodoro && snapshot.overview.pomodoroCount > 0) else {
             return AppStrings.localized("analytics.question.answer.noRecordedTime")
         }
 
@@ -117,8 +118,11 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
                 DurationFormatter.compact(topTask.grossSeconds)
             )
         case .pomodoro:
+            let formatKey = snapshot.overview.pomodoroCount == 1
+                ? "analytics.question.answer.focusSingularFormat"
+                : "analytics.question.answer.focusFormat"
             return String(
-                format: AppStrings.localized("analytics.question.answer.focusFormat"),
+                format: AppStrings.localized(formatKey),
                 snapshot.overview.pomodoroCount
             )
         case .decisions:

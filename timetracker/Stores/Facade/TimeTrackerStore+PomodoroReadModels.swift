@@ -1,6 +1,16 @@
 import Foundation
 
 extension TimeTrackerStore {
+    var cancelledPomodoroSessionIDs: Set<UUID> {
+        Set(pomodoroRuns.compactMap { run in
+            guard run.deletedAt == nil,
+                  run.state == .cancelled else {
+                return nil
+            }
+            return run.sessionID
+        })
+    }
+
     var activePomodoroRun: PomodoroRun? {
         pomodoroRuns.first { run in
             run.deletedAt == nil &&

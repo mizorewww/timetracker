@@ -10,6 +10,7 @@ struct AnalyticsSnapshot {
     let daily: [DailyAnalyticsPoint]
     let todayActivity: [HourTaskActivity]
     let timeline: AnalyticsTimelineSnapshot
+    let completedFocusRoundSegmentIDs: [UUID]
     let taskBreakdown: [TaskAnalyticsPoint]
     let rootBreakdown: [AnalyticsGroupBreakdownPoint]
     let categoryBreakdown: [AnalyticsGroupBreakdownPoint]

@@ -1,7 +1,10 @@
 import Foundation
 
 extension AnalyticsStore {
-    func overview(items: [AnalyticsBoundedSegment]) -> AnalyticsOverview {
+    func overview(
+        items: [AnalyticsBoundedSegment],
+        completedFocusRoundCount: Int? = nil
+    ) -> AnalyticsOverview {
         let gross = items.reduce(0) { $0 + $1.durationSeconds }
         let intervals = items.map(\.interval)
         let wall = TimeAggregationService().mergeOverlappingIntervals(intervals).reduce(0) {
@@ -14,12 +17,43 @@ extension AnalyticsStore {
             grossSeconds: gross,
             wallSeconds: wall,
             overlapSeconds: max(0, gross - wall),
-            pomodoroCount: focusItems.filter { item in
+            pomodoroCount: completedFocusRoundCount ?? focusItems.filter { item in
                 guard let endedAt = item.segment.endedAt else { return false }
                 return endedAt > item.interval.start && endedAt <= item.interval.end
             }.count,
             averageFocusSeconds: focusItems.isEmpty ? 0 : focusSeconds / focusItems.count
         )
+    }
+
+    /// Focus-round completion is an event, so an event exactly at the selected
+    /// period's start belongs to that period even if the segment's duration
+    /// clips to zero there.
+    func completedFocusRoundSegmentIDs(
+        in segments: [TimeSegment],
+        period: DateInterval,
+        evaluatedAt cutoff: Date,
+        cancelledPomodoroSessionIDs: Set<UUID> = []
+    ) -> [UUID] {
+        segments.filter { segment in
+            AnalyticsFocusRoundPolicy.isCompleted(
+                segment: segment,
+                period: period,
+                evaluatedAt: cutoff,
+                cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs
+            )
+        }
+            .sorted { lhs, rhs in
+                let lhsEnd = lhs.endedAt ?? period.start
+                let rhsEnd = rhs.endedAt ?? period.start
+                if lhsEnd != rhsEnd {
+                    return lhsEnd > rhsEnd
+                }
+                if lhs.startedAt != rhs.startedAt {
+                    return lhs.startedAt > rhs.startedAt
+                }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .map(\.id)
     }
 
     func boundedSegments(
@@ -187,5 +221,25 @@ struct AnalyticsBoundedSegment {
 
     var durationSeconds: Int {
         max(0, Int(interval.end.timeIntervalSince(interval.start)))
+    }
+}
+
+enum AnalyticsFocusRoundPolicy {
+    static func isCompleted(
+        segment: TimeSegment,
+        period: DateInterval,
+        evaluatedAt cutoff: Date,
+        cancelledPomodoroSessionIDs: Set<UUID>
+    ) -> Bool {
+        guard segment.deletedAt == nil,
+              segment.source == .pomodoro,
+              cancelledPomodoroSessionIDs.contains(segment.sessionID) == false,
+              let endedAt = segment.endedAt,
+              endedAt > segment.startedAt else {
+            return false
+        }
+        return endedAt >= period.start &&
+            endedAt < period.end &&
+            endedAt <= cutoff
     }
 }

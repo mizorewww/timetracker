@@ -59,6 +59,7 @@ extension TimeTrackerStore {
             taskCategoryAssignments: taskCategoryAssignments,
             segments: segments,
             sessions: sessions,
+            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
             evaluatedAt: evaluation.cutoff,

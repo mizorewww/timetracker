@@ -1156,8 +1156,191 @@ struct CoreAnalyticsStoreTests {
 
         #expect(firstSnapshot.overview.pomodoroCount == 0)
         #expect(secondSnapshot.overview.pomodoroCount == 1)
+        #expect(firstSnapshot.completedFocusRoundSegmentIDs.isEmpty)
+        #expect(secondSnapshot.completedFocusRoundSegmentIDs == [segment.id])
         #expect(firstEngineOverview.pomodoroCount == 0)
         #expect(secondEngineOverview.pomodoroCount == 1)
+    }
+
+    @Test @MainActor
+    func cancelledPomodoroKeepsTrackedTimeWithoutBecomingACompletedFocusRound() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 12))
+        )
+        let task = TaskNode(title: "Focus", parentID: nil, deviceID: "test")
+        let completedSession = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-50 * 60)
+        )
+        let cancelledSession = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: now.addingTimeInterval(-15 * 60)
+        )
+        let completedSegment = TimeSegment(
+            sessionID: completedSession.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: completedSession.startedAt,
+            endedAt: completedSession.startedAt.addingTimeInterval(25 * 60)
+        )
+        let cancelledSegment = TimeSegment(
+            sessionID: cancelledSession.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: cancelledSession.startedAt,
+            endedAt: cancelledSession.startedAt.addingTimeInterval(10 * 60)
+        )
+        let cancelledRun = PomodoroRun(
+            taskID: task.id,
+            deviceID: "test"
+        )
+        cancelledRun.sessionID = cancelledSession.id
+        cancelledRun.state = .cancelled
+        let deletedCancelledRun = PomodoroRun(
+            taskID: task.id,
+            deviceID: "test"
+        )
+        deletedCancelledRun.sessionID = completedSession.id
+        deletedCancelledRun.state = .cancelled
+        deletedCancelledRun.deletedAt = now
+        let store = makeTestStore()
+        store.pomodoroRuns = [cancelledRun, deletedCancelledRun]
+
+        #expect(store.cancelledPomodoroSessionIDs == Set([cancelledSession.id]))
+
+        let segments = [completedSegment, cancelledSegment]
+        let cancelledSessionIDs = store.cancelledPomodoroSessionIDs
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            tasks: [task],
+            segments: segments,
+            sessions: [completedSession, cancelledSession],
+            cancelledPomodoroSessionIDs: cancelledSessionIDs,
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            now: now,
+            calendar: calendar
+        )
+        let engineOverview = AnalyticsEngine().overview(
+            segments: segments,
+            range: .today,
+            cancelledPomodoroSessionIDs: cancelledSessionIDs,
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 35 * 60)
+        #expect(snapshot.overview.wallSeconds == 35 * 60)
+        #expect(snapshot.overview.pomodoroCount == 1)
+        #expect(snapshot.completedFocusRoundSegmentIDs == [completedSegment.id])
+        #expect(engineOverview.grossSeconds == 35 * 60)
+        #expect(engineOverview.pomodoroCount == 1)
+    }
+
+    @Test @MainActor
+    func focusRoundCompletionUsesStartInclusiveEndExclusivePeriod() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let referenceDate = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 15, hour: 12))
+        )
+        let period = try #require(calendar.dateInterval(of: .day, for: referenceDate))
+        let task = TaskNode(title: "Boundary focus", parentID: nil, deviceID: "test")
+        let session = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: period.start.addingTimeInterval(-25 * 60)
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: session.startedAt,
+            endedAt: period.start
+        )
+        let periodEndSession = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: period.end.addingTimeInterval(-25 * 60)
+        )
+        let periodEndSegment = TimeSegment(
+            sessionID: periodEndSession.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: periodEndSession.startedAt,
+            endedAt: period.end
+        )
+        let zeroDurationSession = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: period.start.addingTimeInterval(60 * 60)
+        )
+        let zeroDurationSegment = TimeSegment(
+            sessionID: zeroDurationSession.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: zeroDurationSession.startedAt,
+            endedAt: zeroDurationSession.startedAt
+        )
+        let reversedSession = TimeSession(
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: period.start.addingTimeInterval(3 * 60 * 60)
+        )
+        let reversedSegment = TimeSegment(
+            sessionID: reversedSession.id,
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: reversedSession.startedAt,
+            endedAt: reversedSession.startedAt.addingTimeInterval(-60 * 60)
+        )
+        let segments = [segment, zeroDurationSegment, reversedSegment]
+
+        let snapshot = AnalyticsStore().snapshot(
+            range: .today,
+            period: period,
+            tasks: [task],
+            segments: segments,
+            sessions: [session, zeroDurationSession, reversedSession],
+            taskPathByID: [task.id: task.title],
+            taskParentPathByID: [:],
+            evaluatedAt: referenceDate,
+            calendar: calendar
+        )
+        let engineOverview = AnalyticsEngine().overview(
+            segments: segments,
+            range: .today,
+            now: referenceDate,
+            calendar: calendar
+        )
+        let boundaryEventIDs = AnalyticsStore().completedFocusRoundSegmentIDs(
+            in: segments + [periodEndSegment],
+            period: period,
+            evaluatedAt: period.end
+        )
+
+        #expect(snapshot.overview.grossSeconds == 0)
+        #expect(snapshot.overview.pomodoroCount == 1)
+        #expect(snapshot.completedFocusRoundSegmentIDs == [segment.id])
+        #expect(engineOverview.grossSeconds == 0)
+        #expect(engineOverview.pomodoroCount == 1)
+        #expect(boundaryEventIDs == [segment.id])
     }
 
     @Test @MainActor

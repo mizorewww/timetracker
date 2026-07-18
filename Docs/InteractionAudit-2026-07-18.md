@@ -194,5 +194,32 @@ Status: completed and verified
   `96794599-F89A-4F10-ACEB-C7E8B72BE1C8` was then shut down and deleted; no
   owned app, UI runner, `xcodebuild`, `xctest`, or Booted device remained.
 
+## Checkpoint 8 — atomic manual Inbox routing
+
+Status: completed and verified
+
+- Moving an open Inbox item into a task is now one store-scoped transaction,
+  not a fabricated manual AI suggestion followed by a second write.
+- The transaction reuses the existing checklist-add command, including fresh
+  ordering and the standard default visual, then reuses Inbox soft deletion to
+  retire the logical item, duplicate siblings, and their suggestions.
+- A presentation baseline records the Inbox item's ID, mutation revision, and
+  logical suggestion identity. The command validates that baseline and the
+  destination task again under the shared write lock so an item or task changed
+  while the user is choosing cannot be routed using stale UI state.
+- Checklist creation, visual creation, Inbox removal, and suggestion cleanup
+  commit or roll back together. Successful routing publishes both Inbox and
+  checklist events, including affected task ancestors.
+- Focused coordinator tests cover fresh ordering, default visuals, duplicate
+  sibling cleanup, consumed-baseline replay, stale item and unavailable task
+  rejection, full rollback after persistence validation failure, and a late AI
+  response after manual routing. The focused macOS suites and signed generic
+  iOS application build pass.
+- This guarantees at-most-once routing within one store. Two offline devices
+  could still route the same logical capture into different checklist UUIDs;
+  strict distributed idempotency requires a persisted routing receipt/source
+  identity and is reserved for a later schema checkpoint.
+- No simulator was allocated for this domain-only checkpoint.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

@@ -17,7 +17,7 @@ struct InboxSuggestionApplyBaseline: Equatable, Sendable {
     }
 }
 
-struct InboxSuggestionApplyOutcome: Equatable {
+struct InboxChecklistRouteOutcome: Equatable {
     let inboxItemID: UUID
     let checklistItemID: UUID
     let taskID: UUID
@@ -121,7 +121,7 @@ extension StoreScopedInboxCommandCoordinator {
 
     func applySuggestion(
         baseline: InboxSuggestionApplyBaseline
-    ) throws -> InboxSuggestionApplyOutcome {
+    ) throws -> InboxChecklistRouteOutcome {
         try withFreshLockedContext { context in
             guard let resolution = try visibleLogicalResolution(
                 contextID: baseline.itemIdentity.contextID,
@@ -175,7 +175,7 @@ extension StoreScopedInboxCommandCoordinator {
                     taskByID: tasks.byID
                 )
             )
-            return InboxSuggestionApplyOutcome(
+            return InboxChecklistRouteOutcome(
                 inboxItemID: item.id,
                 checklistItemID: checklistItem.id,
                 taskID: suggestion.taskID,
@@ -185,7 +185,7 @@ extension StoreScopedInboxCommandCoordinator {
         }
     }
 
-    private func visibleLogicalResolution(
+    func visibleLogicalResolution(
         contextID: UUID,
         context: ModelContext
     ) throws -> InboxItemMergeResolution? {
@@ -209,7 +209,7 @@ extension StoreScopedInboxCommandCoordinator {
         }
     }
 
-    private func trackableTasks(
+    func trackableTasks(
         context: ModelContext
     ) throws -> (trackableIDs: Set<UUID>, byID: [UUID: TaskNode]) {
         let tasks = try SwiftDataTaskRepository(
@@ -222,7 +222,7 @@ extension StoreScopedInboxCommandCoordinator {
         )
     }
 
-    private func visibleChecklistItems(
+    func visibleChecklistItems(
         taskID: UUID,
         context: ModelContext
     ) throws -> [ChecklistItem] {

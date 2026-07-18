@@ -27,7 +27,7 @@ extension TimeTrackerStore {
         }
         let outcome = performStoreScopedInboxMutation(
             refreshScopes: [.inbox, .tasks, .checklist],
-            eventsForOutcome: { (outcome: InboxSuggestionApplyOutcome) in outcome.events }
+            eventsForOutcome: { (outcome: InboxChecklistRouteOutcome) in outcome.events }
         ) { coordinator in
             try coordinator.applySuggestion(
                 baseline: InboxSuggestionApplyBaseline(

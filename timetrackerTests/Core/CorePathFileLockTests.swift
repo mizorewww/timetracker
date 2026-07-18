@@ -69,6 +69,57 @@ struct CorePathFileLockTests {
     }
 
     @Test
+    func processLockOpensThroughASymbolicLinkOnlyAboveTheLockPath() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let physicalDirectory = fixture.root.appendingPathComponent(
+            "physical",
+            isDirectory: true
+        )
+        let aliasDirectory = fixture.root.appendingPathComponent(
+            "alias",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: physicalDirectory,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: aliasDirectory,
+            withDestinationURL: physicalDirectory
+        )
+        let lockURL = aliasDirectory.appendingPathComponent("state.lock")
+
+        let value = try PathFileLockRegistry.shared.lock(for: lockURL)
+            .withExclusiveAccess { 42 }
+
+        #expect(value == 42)
+        #expect(
+            FileManager.default.fileExists(
+                atPath: physicalDirectory.appendingPathComponent("state.lock").path
+            )
+        )
+    }
+
+    @Test
+    func processLockStillRejectsASymbolicLinkAtTheLockPath() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let targetURL = fixture.root.appendingPathComponent("target.lock")
+        let aliasURL = fixture.root.appendingPathComponent("alias.lock")
+        try Data().write(to: targetURL)
+        try FileManager.default.createSymbolicLink(
+            at: aliasURL,
+            withDestinationURL: targetURL
+        )
+
+        #expect(throws: POSIXError.self) {
+            try PathFileLockRegistry.shared.lock(for: aliasURL)
+                .withExclusiveAccess {}
+        }
+    }
+
+    @Test
     func hardLinkAliasesCannotEnterTheSameFileLockConcurrently() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }

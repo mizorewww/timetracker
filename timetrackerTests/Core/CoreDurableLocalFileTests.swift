@@ -21,7 +21,9 @@ struct CoreDurableLocalFileTests {
         #expect(try Data(contentsOf: url) == payload)
         #expect(
             probe.paths
-                == [leaf, two, one, fixture.root, leaf].map(\.standardizedFileURL)
+                == [leaf, two, one, fixture.root, leaf].map {
+                    CanonicalFileURL.resolvingExistingAncestor(of: $0)
+                }
         )
     }
 
@@ -59,7 +61,9 @@ struct CoreDurableLocalFileTests {
 
         #expect(
             retryProbe.paths
-                == [leaf, parent, fixture.root, leaf].map(\.standardizedFileURL)
+                == [leaf, parent, fixture.root, leaf].map {
+                    CanonicalFileURL.resolvingExistingAncestor(of: $0)
+                }
         )
         #expect(try String(contentsOf: url, encoding: .utf8) == "second")
     }
@@ -172,6 +176,128 @@ struct CoreDurableLocalFileTests {
                 at: lockURL,
                 prefix: "lock.corrupt-",
                 durableRootURL: fixture.root
+            )
+        }
+    }
+
+    @Test
+    func mutationsAllowASymbolicLinkOnlyAboveTheDurableRoot() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let physicalParent = fixture.root.appendingPathComponent(
+            "physical",
+            isDirectory: true
+        )
+        let physicalRoot = physicalParent.appendingPathComponent(
+            "managed",
+            isDirectory: true
+        )
+        let aliasParent = fixture.root.appendingPathComponent(
+            "alias",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: physicalRoot,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: aliasParent,
+            withDestinationURL: physicalParent
+        )
+        let aliasRoot = aliasParent.appendingPathComponent(
+            "managed",
+            isDirectory: true
+        )
+        let aliasURL = aliasRoot.appendingPathComponent("payload.json")
+
+        try DurableLocalFile().write(
+            Data("durable".utf8),
+            to: aliasURL,
+            durableRootURL: aliasRoot
+        )
+
+        let physicalURL = physicalRoot.appendingPathComponent("payload.json")
+        #expect(try String(contentsOf: physicalURL, encoding: .utf8) == "durable")
+
+        try DurableLocalFile().removeIfPresent(
+            at: aliasURL,
+            durableRootURL: aliasRoot
+        )
+        #expect(FileManager.default.fileExists(atPath: physicalURL.path) == false)
+
+        try DurableLocalFile().write(
+            Data("quarantine".utf8),
+            to: aliasURL,
+            durableRootURL: aliasRoot
+        )
+        let quarantined = try DurableLocalFile().quarantineIfPresent(
+            at: aliasURL,
+            prefix: "payload.corrupt-",
+            durableRootURL: aliasRoot
+        )
+        let quarantineURL = try #require(quarantined)
+        #expect(try String(contentsOf: quarantineURL, encoding: .utf8) == "quarantine")
+        #expect(FileManager.default.fileExists(atPath: physicalURL.path) == false)
+    }
+
+    @Test
+    func mutationsStillRejectASymbolicLinkAtTheDurableRoot() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let physicalRoot = fixture.root.appendingPathComponent(
+            "physical",
+            isDirectory: true
+        )
+        let aliasRoot = fixture.root.appendingPathComponent(
+            "alias",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: physicalRoot,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: aliasRoot,
+            withDestinationURL: physicalRoot
+        )
+
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try DurableLocalFile().write(
+                Data("blocked".utf8),
+                to: aliasRoot.appendingPathComponent("payload.json"),
+                durableRootURL: aliasRoot
+            )
+        }
+        let physicalURL = physicalRoot.appendingPathComponent("payload.json")
+        try Data("keep".utf8).write(to: physicalURL)
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try DurableLocalFile().removeIfPresent(
+                at: aliasRoot.appendingPathComponent("payload.json"),
+                durableRootURL: aliasRoot
+            )
+        }
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try DurableLocalFile().quarantineIfPresent(
+                at: aliasRoot.appendingPathComponent("payload.json"),
+                prefix: "payload.corrupt-",
+                durableRootURL: aliasRoot
+            )
+        }
+        #expect(try String(contentsOf: physicalURL, encoding: .utf8) == "keep")
+
+        let danglingRoot = fixture.root.appendingPathComponent(
+            "dangling",
+            isDirectory: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: danglingRoot,
+            withDestinationURL: fixture.root.appendingPathComponent("missing")
+        )
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try DurableLocalFile().write(
+                Data("blocked".utf8),
+                to: danglingRoot.appendingPathComponent("payload.json"),
+                durableRootURL: danglingRoot
             )
         }
     }

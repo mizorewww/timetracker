@@ -48,10 +48,10 @@ nonisolated extension DurableLocalFile {
               prefix.rangeOfCharacter(from: .controlCharacters) == nil else {
             throw DurableLocalFileError.invalidQuarantinePrefix
         }
-        let standardizedRoot = durableRootURL.standardizedFileURL
-        let standardizedURL = url.standardizedFileURL
+        let paths = try canonicalManagedPaths(at: url, through: durableRootURL)
+        let standardizedRoot = paths.root
+        let standardizedURL = paths.url
         let directoryURL = standardizedURL.deletingLastPathComponent()
-        try validateDurableRoot(standardizedRoot)
         try rejectReservedLockPath(standardizedURL, durableRootURL: standardizedRoot)
         return try withExclusiveAccess(through: standardizedRoot) {
             // Repair a directory-creation interruption after waiting for the

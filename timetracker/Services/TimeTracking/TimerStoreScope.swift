@@ -104,20 +104,6 @@ nonisolated struct TimerStoreScope: Hashable, Sendable {
     }
 
     private static func canonicalStoreURL(_ url: URL) -> URL {
-        let standardizedURL = url.standardizedFileURL
-        var cursor = standardizedURL
-        var missingComponents: [String] = []
-
-        while FileManager.default.fileExists(atPath: cursor.path) == false,
-              cursor.pathComponents.count > 1 {
-            missingComponents.insert(cursor.lastPathComponent, at: 0)
-            cursor.deleteLastPathComponent()
-        }
-
-        var canonicalURL = cursor.resolvingSymlinksInPath().standardizedFileURL
-        for component in missingComponents {
-            canonicalURL.appendPathComponent(component)
-        }
-        return canonicalURL.standardizedFileURL
+        CanonicalFileURL.resolvingExistingAncestor(of: url)
     }
 }

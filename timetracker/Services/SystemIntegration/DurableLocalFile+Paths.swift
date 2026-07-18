@@ -91,14 +91,24 @@ nonisolated extension DurableLocalFile {
         }
     }
 
-    func validateDurableRoot(_ rootURL: URL) throws {
+    func canonicalDurableRoot(_ rootURL: URL) throws -> URL {
+        let standardizedRoot = rootURL.standardizedFileURL
+        // The durable root itself is managed and must never be an alias. The
+        // caller's chosen boundary determines which ancestor aliases are trusted.
+        try rejectSymbolicLink(at: standardizedRoot)
         var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: rootURL.path, isDirectory: &isDirectory),
+        guard fileManager.fileExists(
+            atPath: standardizedRoot.path,
+            isDirectory: &isDirectory
+        ),
               isDirectory.boolValue else {
             throw DurableLocalFileError.durableRootUnavailable
         }
-        try rejectSymbolicLink(at: rootURL)
-        try validateDirectoryPath(rootURL)
+        let canonicalRoot = try CanonicalFileURL.resolvingExistingPath(
+            standardizedRoot
+        )
+        try validateDirectoryPath(canonicalRoot)
+        return canonicalRoot
     }
 
     private func directoryChain(from directoryURL: URL, through rootURL: URL) throws -> [URL] {

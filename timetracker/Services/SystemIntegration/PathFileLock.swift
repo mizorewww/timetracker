@@ -84,19 +84,11 @@ nonisolated final class PathFileLockRegistry: @unchecked Sendable {
 
     private func canonicalLockURL(for url: URL) -> URL {
         let standardizedURL = url.standardizedFileURL
-        var cursor = standardizedURL.deletingLastPathComponent()
-        var missingComponents = [standardizedURL.lastPathComponent]
-
-        while FileManager.default.fileExists(atPath: cursor.path) == false,
-              cursor.pathComponents.count > 1 {
-            missingComponents.insert(cursor.lastPathComponent, at: 0)
-            cursor.deleteLastPathComponent()
-        }
-
-        var canonicalURL = cursor.resolvingSymlinksInPath().standardizedFileURL
-        for component in missingComponents {
-            canonicalURL.appendPathComponent(component)
-        }
-        return canonicalURL.standardizedFileURL
+        let canonicalParent = CanonicalFileURL.resolvingExistingAncestor(
+            of: standardizedURL.deletingLastPathComponent()
+        )
+        return canonicalParent
+            .appendingPathComponent(standardizedURL.lastPathComponent)
+            .standardizedFileURL
     }
 }

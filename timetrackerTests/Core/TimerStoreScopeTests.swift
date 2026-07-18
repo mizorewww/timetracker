@@ -25,11 +25,14 @@ struct TimerStoreScopeTests {
         )
 
         let scope = try TimerStoreScope(container: container)
+        let expectedStoreURL = CanonicalFileURL.resolvingExistingAncestor(
+            of: configuredURL
+        )
 
-        #expect(scope.persistentStoreURL == configuredURL.standardizedFileURL)
+        #expect(scope.persistentStoreURL == expectedStoreURL)
         #expect(
             scope.mutationLockURL
-                == configuredURL.deletingLastPathComponent().appendingPathComponent(
+                == expectedStoreURL.deletingLastPathComponent().appendingPathComponent(
                     "timer.store.timer-mutations.lock"
                 )
         )
@@ -57,6 +60,37 @@ struct TimerStoreScopeTests {
 
         #expect(first != second)
         #expect(first.mutationLockURL != second.mutationLockURL)
+    }
+
+    @Test
+    func persistentScopeResolvesAnExistingParentAliasBeforeLocking() throws {
+        let fixture = try PersistentStoreFixture()
+        defer { fixture.remove() }
+        let physicalDirectory = fixture.root.appendingPathComponent(
+            "physical",
+            isDirectory: true
+        )
+        let aliasDirectory = fixture.root.appendingPathComponent(
+            "alias",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: physicalDirectory,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: aliasDirectory,
+            withDestinationURL: physicalDirectory
+        )
+        let scope = TimerStoreScope(
+            persistentStoreURL: aliasDirectory.appendingPathComponent("timer.store")
+        )
+        let expectedStoreURL = physicalDirectory.appendingPathComponent("timer.store")
+
+        #expect(scope.persistentStoreURL == expectedStoreURL.standardizedFileURL)
+        let value = try StoreScopedTimerMutationLock()
+            .withExclusiveAccess(for: scope) { 42 }
+        #expect(value == 42)
     }
 
     @Test

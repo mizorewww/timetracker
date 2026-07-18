@@ -271,7 +271,7 @@ fresh-store hydration 以持久 `CloudRecoveryImportSession` 为屏障，而不�
 
 通用的本机恢复文件基础设施位于 `Services/SystemIntegration/DurableLocalFile*` 与 `PathFileLock.swift`。它只负责文件系统提交，不负责 JSON schema、幂等 identity、重试状态机或业务合并：调用方必须先完成 payload 大小、版本、时间范围和语义预检。恢复关键路径必须传入同一状态家族的稳定、已存在 `durableRootURL`；兼容 overload 只适用于调用开始时最近既存祖先已经是可靠根目录的简单文件。对同一 canonical 文件混用不同 durable root 会产生不同锁，属于调用方错误。
 
-每个显式 root 使用保留的 `.TimeTrackerDurable.lock`。进程内递归锁与跨进程 `flock` 共用该 inode；写入、删除和隔离必须持有同一 root 锁，且 API 拒绝把锁文件本身当成 payload。目标只允许普通文件；符号链接、目录与特殊文件全部 fail closed，删除使用 `unlink`，不会递归删除目录。路径校验使用组件边界与 `O_NOFOLLOW_ANY`，防止词法 `..`、既存目录符号链接和 Foundation 根目录父路径表示差异把操作带出 root。该边界面向 App 自有容器内的协作进程，不是抵御能在检查与 rename 之间任意改写目录的敌对进程的完整 sandbox。
+每个显式 root 使用保留的 `.TimeTrackerDurable.lock`。进程内递归锁与跨进程 `flock` 共用该 inode；写入、删除和隔离必须持有同一 root 锁，且 API 拒绝把锁文件本身当成 payload。目标只允许普通文件；符号链接、目录与特殊文件全部 fail closed，删除使用 `unlink`，不会递归删除目录。路径校验使用组件边界与 `O_NOFOLLOW_ANY`，防止词法 `..`、既存目录符号链接和 Foundation 根目录父路径表示差异把操作带出 root。由于 iOS/macOS 的合法容器路径可能位于 `/var` 这类系统符号链接之后，primitive 会先用 `realpath(3)` 固定已存在 root 的物理路径，再把 root 内的相对后缀映射到该路径；调用方选择的 root 是信任边界，因此 root 之上的祖先别名（包括平台提供的路径别名）会被解析，而 root 自身、其子目录和 payload 仍然拒绝符号链接。该边界面向 App 自有容器内的协作进程，不是抵御能在检查与 rename 之间任意改写目录的敌对进程的完整 sandbox。
 
 写入在目标同目录创建权限为 `0600` 的随机临时文件，完整写入后先附加 iOS `completeUntilFirstUserAuthentication` 与可选 backup exclusion，再执行 `fsync`、`F_FULLFSYNC` 和原子 `rename`，最后同步父目录。发布前失败保留旧 canonical；发布后目录同步失败会明确抛错，调用方应按“新内容可能已发布”恢复。下一次同目录写入会在 root 锁内清理严格 `.TimeTrackerWrite-*.tmp` 命名的普通文件/符号链接并同步目录，因此进程死亡最多留下一个等待下次写入回收的临时文件，不会随重试无界增长。
 

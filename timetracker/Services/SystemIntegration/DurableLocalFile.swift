@@ -72,9 +72,9 @@ nonisolated struct DurableLocalFile {
         durableRootURL: URL,
         excludeFromBackup: Bool = false
     ) throws {
-        let standardizedRoot = durableRootURL.standardizedFileURL
-        let standardizedURL = url.standardizedFileURL
-        try validateDurableRoot(standardizedRoot)
+        let paths = try canonicalManagedPaths(at: url, through: durableRootURL)
+        let standardizedRoot = paths.root
+        let standardizedURL = paths.url
         try rejectReservedLockPath(standardizedURL, durableRootURL: standardizedRoot)
         try withExclusiveAccess(through: standardizedRoot) {
             try writeWithExclusiveAccess(
@@ -95,9 +95,9 @@ nonisolated struct DurableLocalFile {
     }
 
     func removeIfPresent(at url: URL, durableRootURL: URL) throws {
-        let standardizedRoot = durableRootURL.standardizedFileURL
-        let standardizedURL = url.standardizedFileURL
-        try validateDurableRoot(standardizedRoot)
+        let paths = try canonicalManagedPaths(at: url, through: durableRootURL)
+        let standardizedRoot = paths.root
+        let standardizedURL = paths.url
         try rejectReservedLockPath(standardizedURL, durableRootURL: standardizedRoot)
         try withExclusiveAccess(through: standardizedRoot) {
             try removeWithExclusiveAccess(

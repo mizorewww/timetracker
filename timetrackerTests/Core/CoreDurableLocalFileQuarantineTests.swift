@@ -218,7 +218,10 @@ struct CoreDurableLocalFileQuarantineTests {
                 Issue.record("Unexpected error: \(error)")
                 return
             }
-            #expect(canonicalPath == url.path)
+            #expect(
+                canonicalPath
+                    == CanonicalFileURL.resolvingExistingAncestor(of: url).path
+            )
             #expect(quarantinePath.contains(".TimeTrackerQuarantine"))
             #expect(FileManager.default.fileExists(atPath: quarantinePath))
         }
@@ -321,7 +324,8 @@ struct CoreDurableLocalFileQuarantineTests {
     }
 
     private func quarantineDirectory(in fixture: Fixture) -> URL {
-        fixture.root.appendingPathComponent(quarantineName, isDirectory: true)
+        CanonicalFileURL.resolvingExistingAncestor(of: fixture.root)
+            .appendingPathComponent(quarantineName, isDirectory: true)
     }
 
     private func fileSize(at url: URL) throws -> Int64 {

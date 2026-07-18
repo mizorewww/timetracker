@@ -166,5 +166,33 @@ Status: completed and verified
   generic iOS application builds.
 - No simulator was allocated for this source-and-build checkpoint.
 
+## Checkpoint 7 — quiet, capture-first Inbox
+
+Status: completed and verified
+
+- Capture and open items now form one flat, plain list instead of separate
+  floating groups. A quiet outlined plus identifies capture, while a distinct
+  Add button owns submission and visibly disables invalid input; Return keeps
+  the same submission behavior.
+- Inbox rows reuse the checklist completion/editor control but suppress the
+  unrelated decorative checklist icon. The title is the row's only primary
+  content; completion, delete, and reorder remain native list actions.
+- Automatic suggestions are secondary metadata under the title. Apply, dismiss,
+  retry, and failure states remain visible and accessible without drawing a
+  nested card inside every row.
+- Completed captures disappear from the working list immediately and live
+  behind a count-labelled disclosure that is collapsed by default.
+- An empty open list always states that Inbox is clear, even when completed
+  history is available below it.
+- Verification passed for `InboxUIContractTests`,
+  `SharedComponentsContractTests`, `CoreSourceLayoutTests`, and
+  `LocalizationContractTests`, followed by a signed generic iOS build.
+- The real iOS UI path for focusing capture, entering a valid item, submitting
+  it, and returning focus to capture passed twice on an explicitly owned
+  iPhone 17 Pro simulator. Empty and captured-list screenshots were exported
+  for the operation guide. Simulator
+  `96794599-F89A-4F10-ACEB-C7E8B72BE1C8` was then shut down and deleted; no
+  owned app, UI runner, `xcodebuild`, `xctest`, or Booted device remained.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

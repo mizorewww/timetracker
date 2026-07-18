@@ -5,6 +5,7 @@ struct InboxView: View {
     @State private var draft = InboxCaptureDraft()
     @State private var addFocusToken = 0
     @State private var isSorting = false
+    @State private var showsCompleted = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -30,16 +31,15 @@ struct InboxView: View {
         inboxList
             #if os(iOS)
             .environment(\.editMode, .constant(isSorting ? EditMode.active : EditMode.inactive))
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
             .scrollDismissesKeyboard(.interactively)
             #else
             .listStyle(.inset)
             #endif
-            .scrollContentBackground(.hidden)
             .background(AppColors.background.ignoresSafeArea())
             .navigationTitle(AppStrings.inbox)
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             #endif
             .accessibilityIdentifier("inbox.view")
             .toolbar {
@@ -74,48 +74,34 @@ struct InboxView: View {
                     focusToken: addFocusToken,
                     submit: submitDraft
                 )
+                .moveDisabled(true)
+
+                ForEach(openItems) { item in
+                    InboxListRow(
+                        store: store,
+                        item: item,
+                        isCompact: isCompact
+                    )
+                }
+                .onMove(perform: moveInboxItems)
             }
 
-            if openItems.isEmpty && completedItems.isEmpty {
+            if openItems.isEmpty {
                 Section {
                     emptyState
                     .frame(maxWidth: .infinity)
                     .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
-            } else {
-                if !openItems.isEmpty {
-                    Section {
-                        ForEach(openItems) { item in
-                            InboxListRow(
-                                store: store,
-                                item: item,
-                                isCompact: isCompact,
-                                isSorting: isSorting,
-                                canSort: openItems.count > 1,
-                                toggleSorting: toggleSorting
-                            )
-                        }
-                        .onMove(perform: moveInboxItems)
-                    }
-                }
+            }
 
-                if !completedItems.isEmpty {
-                    Section {
-                        ForEach(completedItems) { item in
-                            InboxListRow(
-                                store: store,
-                                item: item,
-                                isCompact: isCompact,
-                                isSorting: isSorting,
-                                canSort: false,
-                                toggleSorting: toggleSorting
-                            )
-                            .moveDisabled(true)
-                        }
-                    } header: {
-                        Text(.app("status.completed"))
-                    }
-                }
+            if !completedItems.isEmpty {
+                InboxCompletedSection(
+                    store: store,
+                    items: completedItems,
+                    isCompact: isCompact,
+                    isExpanded: $showsCompleted
+                )
             }
         }
     }

@@ -21,6 +21,7 @@ struct InboxUIContractTests {
         let contentSource = try appRootSource()
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let inboxSource = try inboxFeatureSource()
+        let inboxItemSource = try sourceText("timetracker/Features/Inbox/InboxItemRow.swift")
         let inboxStoreSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift")
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
         let layoutSource = try sourceText("timetracker/SharedUI/Foundation/LayoutPolicies.swift")
@@ -39,6 +40,10 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxCaptureRow("))
         #expect(inboxSource.contains("InboxListRow("))
         #expect(inboxSource.contains("EditableChecklistTextRow("))
+        #expect(inboxSource.contains("showsIcon: false"))
+        #expect(inboxSource.contains("InboxCompletedSection("))
+        #expect(inboxSource.contains("inbox.completed.disclosure"))
+        #expect(inboxSource.contains("if openItems.isEmpty"))
         #expect(inboxSource.contains(".onMove(perform: moveInboxItems)"))
         #expect(inboxSource.contains(".swipeActions(edge: .leading"))
         #expect(inboxSource.contains(".swipeActions(edge: .trailing"))
@@ -53,15 +58,19 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(inboxSource.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(inboxSource.contains(".accessibilityHint(Text(.app(\"inbox.empty.description\")))"))
+        #expect(inboxSource.contains("Image(systemName: \"ellipsis\")"))
         #expect(inboxSource.contains(".accessibilityLabel(AppStrings.localized(\"common.more\"))"))
+        #expect(inboxSource.contains("common.sort"))
+        #expect(inboxItemSource.contains("common.sort") == false)
         #expect(inboxSource.contains(".navigationTitle(AppStrings.inbox)"))
-        #expect(inboxSource.contains(".navigationBarTitleDisplayMode(.inline)"))
+        #expect(inboxSource.contains(".navigationBarTitleDisplayMode(.large)"))
+        #expect(inboxSource.contains(".listStyle(.plain)"))
         #expect(inboxSource.contains("inbox.subtitle") == false)
         #expect(inboxSource.contains("inbox.footer") == false)
         #expect(inboxSource.contains("let submit: () -> Bool"))
         #expect(inboxSource.contains("draft.submit(using: store.addInboxItem(title:))"))
         #expect(inboxSource.contains("if submit() {\n            title = \"\"\n        }") == false)
-        #expect(inboxStoreSource.contains("suggestInboxItem(item, showsErrors: false)"))
+        #expect(inboxStoreSource.contains("suggestInboxItem(updatedItem, showsErrors: false)"))
         #expect(inboxStoreSource.contains("func reorderInboxItems(sourceOffsets: IndexSet, destination: Int)"))
         #expect(inboxStoreSource.contains("StoreScopedInboxCommandCoordinator("))
         #expect(inboxStoreSource.contains("InboxOrderMutationBaseline(items: currentItems)"))
@@ -78,10 +87,9 @@ struct InboxUIContractTests {
 
         #expect(captureSource.contains("InboxPersistencePolicy.prepareItem("))
         #expect(captureSource.contains("guard canSubmit else { return }"))
-        #expect(captureSource.contains(".disabled(canSubmit == false)") == false)
-        #expect(captureSource.contains("if canSubmit {"))
-        #expect(captureSource.contains("inbox.capture.start"))
-        #expect(english.contains("\"inbox.capture.start\" = \"Start a new capture\";"))
+        #expect(captureSource.contains(".disabled(canSubmit == false)"))
+        #expect(captureSource.contains("inbox.capture.submit"))
+        #expect(english.contains("\"inbox.capture.submit\" = \"Add\";"))
         #expect(captureSource.contains("inbox.capture.validation"))
         #expect(captureSource.contains(".accessibilityAddTraits(.isStaticText)"))
     }
@@ -112,8 +120,9 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxSuggestionFailureBar("))
         #expect(inboxSource.contains("store.retryInboxSuggestion(item)"))
         #expect(inboxSource.contains("store.clearInboxSuggestionFailure(item)"))
-        #expect(inboxSource.contains("inbox.suggestion.prefix"))
-        #expect(inboxSource.contains(".padding(.leading, 74)") == false)
+        #expect(inboxSource.contains("inbox.suggestion.targetFormat"))
+        #expect(inboxSource.contains("InboxSuggestionBackground") == false)
+        #expect(inboxSource.contains(".padding(.leading, 44)"))
         #expect(storeSource.contains("func autoSuggestInboxItemsIfNeeded()"))
         #expect(storeSource.contains("enum InboxSuggestionStateKind"))
         #expect(storeSource.contains("func shouldAutoSuggest("))
@@ -130,14 +139,15 @@ struct InboxUIContractTests {
     func inboxSuggestionEmphasisUsesModernTextInterpolation() throws {
         let source = try sourceText("timetracker/Features/Inbox/InboxSuggestionRow.swift")
 
-        #expect(source.contains("private var suggestionText: Text"))
-        #expect(source.contains("return Text(\"\\(prefix) \\(title)\")"))
+        #expect(source.contains("inbox.suggestion.targetFormat"))
+        #expect(source.contains("String.localizedStringWithFormat("))
         #expect(source.contains("+ Text(taskTitle)") == false)
     }
 
     private func inboxFeatureSource() throws -> String {
         try [
             "timetracker/Features/Inbox/InboxViews.swift",
+            "timetracker/Features/Inbox/InboxCompletedSection.swift",
             "timetracker/Features/Inbox/InboxListView.swift",
             "timetracker/Features/Inbox/InboxCaptureRow.swift",
             "timetracker/Features/Inbox/InboxItemRow.swift",

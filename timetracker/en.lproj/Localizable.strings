@@ -66,11 +66,13 @@
 "inbox.addPlaceholder" = "New capture item";
 "inbox.capture.start" = "Start a new capture";
 "inbox.capture.hint" = "Press Return to add this item to Inbox.";
+"inbox.capture.submit" = "Add";
 "inbox.itemPlaceholder" = "Inbox item";
 "inbox.markCompleted" = "Mark Completed";
 "inbox.markOpen" = "Mark Open";
 "inbox.delete.confirm.title" = "Delete Inbox Item?";
 "inbox.delete.confirm.message" = "This item and its suggestion will be removed from every synced device.";
+"inbox.completed.countFormat" = "Completed (%d)";
 "quickStart.edit" = "Edit Quick Start";
 "menu.startSelectedTask" = "Start Selected Task";
 "menu.startPomodoro" = "Start Pomodoro";

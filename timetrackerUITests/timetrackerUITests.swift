@@ -381,7 +381,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 3))
         try capture("iphone-inbox-simplified-empty", app: app)
 
-        activate(addButton)
+        activate(field)
         let draftTitle = "Review capture flow"
         field.typeText(draftTitle)
         let valueExpectation = XCTNSPredicateExpectation(
@@ -405,6 +405,7 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
+        try capture("iphone-inbox-captured-item", app: app)
     }
 
     @MainActor

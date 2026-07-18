@@ -4,9 +4,6 @@ struct InboxListRow: View {
     let store: TimeTrackerStore
     let item: InboxItem
     let isCompact: Bool
-    let isSorting: Bool
-    let canSort: Bool
-    let toggleSorting: () -> Void
     @State private var isDeleteConfirmationPresented = false
 
     var body: some View {
@@ -14,12 +11,9 @@ struct InboxListRow: View {
             store: store,
             item: item,
             isCompact: isCompact,
-            isSorting: isSorting,
-            canSort: canSort,
-            toggleSorting: toggleSorting,
             requestDelete: requestDelete
         )
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if canApplySuggestion {
                 Button {

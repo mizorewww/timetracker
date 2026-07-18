@@ -212,6 +212,7 @@ struct CoreSourceLayoutTests {
             "timetrackerWatchApp/WatchAppStore+Commands.swift",
             "timetrackerWatchApp/WatchAppStore+Connectivity.swift",
             "timetracker/Features/Inbox/InboxViews.swift",
+            "timetracker/Features/Inbox/InboxCompletedSection.swift",
             "timetracker/Features/Inbox/InboxListView.swift",
             "timetracker/Features/Inbox/InboxCaptureRow.swift",
             "timetracker/Features/Inbox/InboxItemRow.swift",

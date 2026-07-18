@@ -66,11 +66,13 @@
 "inbox.addPlaceholder" = "新建收集项";
 "inbox.capture.start" = "开始收集新内容";
 "inbox.capture.hint" = "按下回车键，将此项目添加到收件箱。";
+"inbox.capture.submit" = "添加";
 "inbox.itemPlaceholder" = "收件箱项目";
 "inbox.markCompleted" = "标记完成";
 "inbox.markOpen" = "标记未完成";
 "inbox.delete.confirm.title" = "删除收件箱项目？";
 "inbox.delete.confirm.message" = "此项目及其推荐会从所有同步设备中移除。";
+"inbox.completed.countFormat" = "已完成（%d）";
 "quickStart.edit" = "编辑快速开始";
 "menu.startSelectedTask" = "开始所选任务计时";
 "menu.startPomodoro" = "开始番茄钟";

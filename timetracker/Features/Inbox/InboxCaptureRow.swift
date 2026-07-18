@@ -10,22 +10,11 @@ struct InboxCaptureRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
-                Button(action: addButtonTapped) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.blue)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(
-                    Text(
-                        AppStrings.localized(
-                            canSubmit ? "inbox.add" : "inbox.capture.start"
-                        )
-                    )
-                )
-                .accessibilityIdentifier("inbox.capture.add")
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 24, weight: .regular))
+                    .foregroundStyle(.blue)
+                    .frame(width: 30, height: 30)
+                    .accessibilityHidden(true)
 
                 TextField(placeholder, text: $title)
                     .textFieldStyle(.plain)
@@ -37,6 +26,15 @@ struct InboxCaptureRow: View {
                     .accessibilityLabel(AppStrings.localized("inbox.addPlaceholder"))
                     .accessibilityHint(AppStrings.localized("inbox.capture.hint"))
                     .accessibilityIdentifier("inbox.capture.field")
+
+                Button(
+                    AppStrings.localized("inbox.capture.submit"),
+                    action: submitIfNeeded
+                )
+                .buttonStyle(.borderless)
+                .font(.body.weight(.semibold))
+                .disabled(canSubmit == false)
+                .accessibilityIdentifier("inbox.capture.add")
             }
             if let validationMessage {
                 Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
@@ -60,13 +58,6 @@ struct InboxCaptureRow: View {
     private func submitIfNeeded() {
         guard canSubmit else { return }
         _ = submit()
-        isFocused = true
-    }
-
-    private func addButtonTapped() {
-        if canSubmit {
-            _ = submit()
-        }
         isFocused = true
     }
 

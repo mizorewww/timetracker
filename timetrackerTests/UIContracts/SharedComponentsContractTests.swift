@@ -238,9 +238,8 @@ struct SharedComponentsContractTests {
         #expect(homeActionSource.contains("home.newTask") == false)
         #expect(inboxSuggestionSource.contains("ViewThatFits(in: .horizontal)"))
         #expect(inboxSuggestionSource.contains("compactLayout"))
-        #expect(inboxSuggestionSource.contains("Image(systemName: \"checkmark\")"))
-        #expect(inboxSuggestionSource.contains("Image(systemName: \"xmark\")"))
-        #expect(inboxSuggestionSource.components(separatedBy: ".frame(width: 44, height: 44)").count >= 3)
+        #expect(inboxSuggestionSource.contains("InboxSuggestionBackground") == false)
+        #expect(inboxSuggestionSource.components(separatedBy: ".frame(minWidth: 44, minHeight: 44)").count >= 4)
         #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.apply\"))"))
         #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.discard\"))"))
     }

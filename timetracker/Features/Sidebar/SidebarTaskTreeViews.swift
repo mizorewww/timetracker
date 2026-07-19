@@ -28,6 +28,7 @@ struct SidebarTaskTreeRow: View {
             disclosureControl
             taskContent
         }
+        .frame(minHeight: minimumRowHeight)
         .padding(.leading, CGFloat(min(row.depth, 6)) * 14)
         .contentShape(Rectangle())
         .taskSelectionPulse(
@@ -90,7 +91,8 @@ struct SidebarTaskTreeRow: View {
             metadata: TaskSummaryRowMetadata(
                 checklistProgress: progress.totalCount > 0 ? progress : nil,
                 isRunning: isRunning
-            )
+            ),
+            layout: .inline
         )
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("sidebar.task.\(task.id.uuidString)")
@@ -132,6 +134,14 @@ struct SidebarTaskTreeRow: View {
         44
         #else
         24
+        #endif
+    }
+
+    private var minimumRowHeight: CGFloat? {
+        #if os(iOS)
+        44
+        #else
+        nil
         #endif
     }
 }

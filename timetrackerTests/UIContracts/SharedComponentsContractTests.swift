@@ -253,9 +253,9 @@ struct SharedComponentsContractTests {
         #expect(
             summary.contains(
                 "HStack(spacing: 8) {\n" +
-                    "                    checklistProgress\n" +
-                    "                    Spacer(minLength: 8)\n" +
-                    "                    trailingFacts"
+                    "                        checklistProgress\n" +
+                    "                        Spacer(minLength: 8)\n" +
+                    "                        trailingFacts"
             )
         )
         #expect(
@@ -290,6 +290,35 @@ struct SharedComponentsContractTests {
         #expect(home.contains("HomeTimerTaskAction") == false)
         #expect(home.contains("HomeTimerActionLabelStyle") == false)
         #expect(picker.contains("RunningStatusBadge()") == false)
+    }
+
+    @Test
+    func sidebarUsesTheSharedInlineTaskSummaryWithoutStatusDrivenRowHeight() throws {
+        let summary = try sourceText(
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
+        )
+        let sidebar = try sourceText(
+            "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift"
+        )
+
+        #expect(summary.contains("enum TaskSummaryRowLayout"))
+        #expect(summary.contains("case stacked"))
+        #expect(summary.contains("case inline"))
+        #expect(summary.contains("HStack(alignment: .center, spacing: 12)"))
+        #expect(summary.contains("primaryLineLimit: 1"))
+        #expect(summary.contains("showsProgressBar: layout == .stacked"))
+        #expect(
+            summary.contains(".fixedSize(horizontal: true, vertical: false)") == false
+        )
+        #expect(
+            summary.contains(
+                "minHeight: activeLayout == .stacked ? minimumRowHeight : nil"
+            )
+        )
+        #expect(sidebar.contains("TaskSummaryRow("))
+        #expect(sidebar.contains("layout: .inline"))
+        #expect(sidebar.contains(".frame(minHeight: minimumRowHeight)"))
+        #expect(sidebar.contains("Image(systemName: \"timer\")") == false)
     }
 
     @Test

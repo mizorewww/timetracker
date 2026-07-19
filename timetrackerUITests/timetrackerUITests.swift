@@ -2976,6 +2976,94 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testSidebarRunningTaskMatchesIdleSiblingRowGeometry() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+
+        #if os(iOS)
+        guard app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 5) else {
+            throw XCTSkip("The sidebar geometry audit requires an iPad.")
+        }
+        #endif
+
+        let studyDisclosure = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@",
+                "sidebar.disclosure.",
+                "Study"
+            ))
+            .firstMatch
+        if !studyDisclosure.waitForExistence(timeout: 2) {
+            #if os(iOS)
+            let identifiedToggle = app.descendants(matching: .any)["sidebar.show"].firstMatch
+            let systemToggle = app.buttons["Show Sidebar"].firstMatch
+            if identifiedToggle.waitForExistence(timeout: 1), identifiedToggle.isHittable {
+                activate(identifiedToggle)
+            } else if systemToggle.waitForExistence(timeout: 1), systemToggle.isHittable {
+                activate(systemToggle)
+            }
+            #endif
+        }
+        scrollUntilHittable(studyDisclosure, direction: .up, in: app)
+        XCTAssertTrue(
+            studyDisclosure.waitForExistence(timeout: 5) && studyDisclosure.isHittable,
+            "The deterministic demo tree must expose the Study disclosure."
+        )
+        activate(studyDisclosure)
+
+        let runningTask = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                "Read Apple HIG"
+            ))
+            .firstMatch
+        let idleTask = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                "SwiftData Docs"
+            ))
+            .firstMatch
+        scrollUntilHittable(runningTask, direction: .up, in: app)
+        scrollUntilHittable(idleTask, direction: .up, in: app)
+        XCTAssertTrue(runningTask.waitForExistence(timeout: 5) && runningTask.isHittable)
+        XCTAssertTrue(idleTask.waitForExistence(timeout: 5) && idleTask.isHittable)
+
+        #if os(iOS)
+        let runningValue = (runningTask.value as? String ?? "").lowercased()
+        let idleValue = (idleTask.value as? String ?? "").lowercased()
+        XCTAssertTrue(
+            runningValue.contains("running"),
+            "Expected the running task value to include Running; found \(String(describing: runningTask.value))."
+        )
+        XCTAssertFalse(
+            idleValue.contains("running"),
+            "Expected the idle sibling to omit Running; found \(String(describing: idleTask.value))."
+        )
+        #endif
+        XCTAssertEqual(runningTask.frame.minX, idleTask.frame.minX, accuracy: 1)
+        XCTAssertEqual(
+            runningTask.frame.height,
+            idleTask.frame.height,
+            accuracy: 1,
+            "A running indicator must not add a metadata line or alter sidebar row spacing."
+        )
+
+        #if os(macOS)
+        try capture("mac-sidebar-running-task-spacing", app: app)
+        #else
+        try capture("ipad-sidebar-running-task-spacing", app: app)
+        #endif
+    }
+
+    @MainActor
     private func launchApp(
         route: String = "today",
         contentSizeCategory: String? = nil,

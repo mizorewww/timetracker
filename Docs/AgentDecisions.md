@@ -1555,6 +1555,22 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：共享组件、Task、Home 与 picker source contracts 固定复用边界、两行标题、metadata 顺序、无 `RunningStatusBadge` 和精确 Stop。行为测试固定 timer mode 把运行任务移出可选 rows、single-selection 仍允许选择运行任务。2026-07-19 冻结范围的 macOS contracts 为 92/92；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 各自通过 Tasks 长标题/被动 timer metadata 和 picker Stop-only/停止后继续选择两条路径，共 4/4。generic iOS 与 macOS Debug 自动签名构建及严格 codesign 通过；截图、失败诊断边界和资源清理记录在 dated Audit。
 
+## AD-122：Analytics 定义由文字本身承担语义
+
+状态：Accepted
+
+背景：Gross Time、Wall Time 与 Overlap Excess 的 Definitions 卡片在每行放置了 `info.circle`，但图标既不能点击也没有补充弹层。它让解释内容看起来像三个未实现的帮助按钮，同时短句没有把三个指标的计算关系或并发场景讲清楚。
+
+决策：
+
+- Definitions 是原生 section 内的非交互说明，不使用暗示按钮或详情入口的装饰性信息图标。区块标题和开场句负责建立上下文，每个定义直接拥有名称、白话含义和计算口径。
+- Gross Time 是所有任务计时器的累计，Wall Time 是重叠区间合并后的真实经过时间，Overlap Excess 固定为 `Gross Time − Wall Time`。三者必须共享一个并发计时的数值示例，让用户能在同一场景内核对守恒关系。
+- 说明保持 leading alignment 与系统文字层级；不得为这些静态内容添加 popover、隐藏手势或另一套自绘卡片。每个语义块持有稳定 accessibility identifier，三语本地化必须保持键和值结构一致。
+
+后果：用户不需要猜图标是否可点，也能从一个具体场景理解并行计时为什么让 Gross 大于 Wall。以后新增分析术语应先把问题、定义、计算和示例写清楚；只有确实存在独立目标页面或动作时才显示 disclosure 或按钮 affordance。
+
+验证：source contract 禁止 Analytics 定义重新出现 `info.circle`，并固定介绍、三个定义、公式与示例的 identifiers 和三语键。付费签名 macOS contracts 45/45；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 定义路径各通过 1/1 并完成截图目视复核。macOS UI runner 两次在进入测试前启用 automation mode 超时，不冒充 UI 通过；完整证据和资源清理记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

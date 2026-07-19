@@ -220,6 +220,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 - Analytics 没有目标/预算模型时，tracked-time comparison 的正负 delta 都使用 `.neutral` insight severity；数值增减是事实，不是价值判断。只有未来引入显式用户目标后，目标上下文才能把某个方向标为 positive/warning，禁止仅按 delta 符号恢复绿色“更好”语义。
 - Analytics range 是日、周、月三个日历单位，不得把历史 period 写成“今天/本周/本月”。`AnalyticsRange.today` 是实现名，不是面向用户的文案；只有实际处于历史 period 时才显示“回到今天”动作，当前 period 不保留禁用的重复控件。
 - 月范围的前后导航只用 interval start 确定目标月份，不能把上一步被月末 clamp 的日期当成新的 day-of-month 锚点。`AnalyticsMonthNavigationAnchor` 必须由 Analytics 根状态持有并传到所有 period controls；手动日期选择和 range/Today 操作负责重置它。
+- Analytics Definitions 是 `AnalyticsGlossaryList` 拥有的非交互说明：区块开场、Gross/Wall/Overlap 的含义与计算、以及一个守恒的并发示例共同组成语义。不得用 `info.circle` 等图标暗示不存在的帮助动作，也不得为静态定义另造 popover；各定义使用稳定 identifier 并保持三语结构一致。
 - `CorePerformanceBudgetTests.fiftyThousandSegmentMutationUsesConstantSizedRollupDelta` 以 50,000 个 segment 约束单 segment 增量更新和 cached recent ranking；最终是否通过仍以冻结工作树的 xcresult 为准。
 
 ## 5. 持久化、CloudKit 与迁移

@@ -684,6 +684,26 @@ struct TaskUIContractTests {
         #expect(englishStrings.contains("\"analytics.glossary.gross\""))
         #expect(englishStrings.contains("\"analytics.glossary.wall\""))
         #expect(englishStrings.contains("\"analytics.glossary.overlap\""))
+        #expect(analyticsSource.contains("info.circle") == false)
+        #expect(analyticsSource.contains("analytics.definition.gross"))
+        #expect(analyticsSource.contains("analytics.definition.wall"))
+        #expect(analyticsSource.contains("analytics.definition.overlap"))
+        #expect(analyticsSource.contains("analytics.definition.example"))
+
+        let simplifiedStrings = try sourceText(
+            "timetracker/zh-Hans.lproj/Localizable.strings"
+        )
+        let traditionalStrings = try sourceText(
+            "timetracker/zh-Hant.lproj/Localizable.strings"
+        )
+        for strings in [englishStrings, simplifiedStrings, traditionalStrings] {
+            #expect(strings.contains("\"analytics.glossary.subtitle\""))
+            #expect(strings.contains("\"analytics.glossary.gross.calculation\""))
+            #expect(strings.contains("\"analytics.glossary.wall.calculation\""))
+            #expect(strings.contains("\"analytics.glossary.overlap.calculation\""))
+            #expect(strings.contains("\"analytics.glossary.example.title\""))
+            #expect(strings.contains("\"analytics.glossary.example.body\""))
+        }
 
         let focusedSections = try [
             "timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownViews.swift",

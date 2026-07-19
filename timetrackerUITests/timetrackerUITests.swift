@@ -1352,6 +1352,54 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsDefinitionsExplainGrossWallAndOverlap() throws {
+        let app = launchApp(route: "analytics")
+
+        XCTAssertTrue(analyticsIsReady(in: app))
+        let overview = app.descendants(matching: .any)[
+            "analytics.category.overview"
+        ].firstMatch
+        scrollUntilHittable(overview, direction: .up, in: app)
+        XCTAssertTrue(overview.waitForExistence(timeout: 5) && overview.isHittable)
+        activate(overview)
+
+        let detail = app.descendants(matching: .any)[
+            "analytics.categoryDetail.overview"
+        ].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+
+        let definitions = [
+            app.descendants(matching: .any)["analytics.definition.gross"].firstMatch,
+            app.descendants(matching: .any)["analytics.definition.wall"].firstMatch,
+            app.descendants(matching: .any)["analytics.definition.overlap"].firstMatch,
+            app.descendants(matching: .any)["analytics.definition.example"].firstMatch
+        ]
+        for definition in definitions {
+            scrollUntilHittable(definition, direction: .up, in: app)
+            XCTAssertTrue(
+                waitForElement(
+                    definition,
+                    timeout: 5,
+                    diagnosticName: "analytics-definition",
+                    in: app
+                )
+            )
+        }
+
+        let gross = definitions[0]
+        let wall = definitions[1]
+        let overlap = definitions[2]
+        let example = definitions[3]
+        XCTAssertTrue(gross.label.contains("every task timer"))
+        XCTAssertTrue(wall.label.contains("Overlapping intervals count once"))
+        XCTAssertTrue(overlap.label.contains("Gross Time − Wall Time"))
+        XCTAssertTrue(example.label.contains("Gross Time is 1h"))
+        XCTAssertTrue(example.label.contains("Wall Time is 30m"))
+        XCTAssertTrue(example.label.contains("Overlap Excess is 30m"))
+        try capture("analytics-detailed-definitions", app: app)
+    }
+
+    @MainActor
     func testAnalyticsDailyTrendShowsWallAndGrossLegend() throws {
         #if os(macOS)
         throw XCTSkip("Analytics trend layout screenshots require an iOS simulator.")

@@ -429,9 +429,42 @@ Status: completed and verified
   `Apple Development: ZEXUAN GAO (PX46M259V3)`. Owned simulator/result/build
   resource cleanup is recorded with the dated audit evidence.
 
-The next Analytics checkpoint must make Focus Session records and current-task
-forecasts obey, or explicitly opt out of, the selected historical range before
-the detail pages can be considered semantically complete.
+## Checkpoint 14 — explicit Analytics definitions
+
+Status: completed and verified
+
+- The Definitions section is explanatory content, not a row of hidden help
+  actions. Repeated decorative `info.circle` symbols were removed so users are
+  not asked to infer a tap target that does not exist.
+- The section now starts with the question these totals answer. Gross Time,
+  Wall Time, and Overlap Excess each state their plain-language meaning and
+  calculation, then share one worked concurrent-timer example whose values
+  reconcile: Gross 1h, Wall 30m, Overlap Excess 30m.
+- The content remains a native, leading-aligned section on iPhone, iPad, and
+  macOS. Stable identifiers cover the introduction, three definitions, and
+  example; English, Simplified Chinese, and Traditional Chinese contain the
+  same six new explanatory keys and all three plist files pass validation.
+- The frozen signed macOS contract batch passed 45/45 and its app passed strict
+  Apple Development signature verification. Two attempts to enter the focused
+  macOS UI test stopped before test entry while enabling automation mode; this
+  is recorded as runner infrastructure failure, not an app assertion or a UI
+  pass.
+- The normal-size iPhone 17 Pro path passed 1/1. The iPad Pro 11-inch first
+  attempt stopped before test entry waiting for the AX-loaded notification; a
+  warm retry passed 1/1. Both screenshots were exported and visually reviewed
+  under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/analytics-definitions-checkpoint-14`.
+  The complete definitions and worked example remain readable without icons or
+  tab-bar obstruction on both device classes.
+- Owned simulator UDIDs
+  `7F7D7FB8-E46B-4DCD-A19B-F561DBF013D9` and
+  `7256988A-6010-4D9F-93D3-63E47F65863B` were terminated, shut down, and
+  deleted. Owned result bundles and DerivedData were deleted after evidence
+  extraction; no owned runner or build process remained.
+
+The next Analytics interaction checkpoints are to restore the visible
+Review/Explore information architecture without losing question-led labels,
+then make task and category drill-down destinations unmistakably discoverable.
 
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

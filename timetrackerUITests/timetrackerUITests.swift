@@ -1751,6 +1751,54 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAppleHealthTimelineControlsStayVisibleAndContextual() throws {
+        #if os(macOS)
+        throw XCTSkip("Apple Health timeline controls require an iOS simulator.")
+        #else
+        let app = launchApp(
+            additionalLaunchArguments: [
+                "-AppleHealthTimelineEnabled",
+                "NO"
+            ]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let timelineAccess = app.descendants(matching: .any)[
+            "home.timeline.appleHealth"
+        ].firstMatch
+        scrollTodayUntilHittable(timelineAccess, in: app)
+        XCTAssertTrue(
+            timelineAccess.waitForExistence(timeout: 5) &&
+                timelineAccess.isHittable
+        )
+        XCTAssertGreaterThanOrEqual(timelineAccess.frame.height, 44)
+        XCTAssertTrue(
+            timelineAccess.label.localizedCaseInsensitiveContains(
+                "Show Apple Health in Timeline"
+            )
+        )
+        try capture("iphone-home-apple-health-timeline-access", app: app)
+
+        openSettings(in: app)
+        let general = app.buttons["settings.category.general"].firstMatch
+        XCTAssertTrue(general.waitForExistence(timeout: 5) && general.isHittable)
+        activate(general)
+
+        let timelineToggle = app.switches[
+            "settings.appleHealth.timelineToggle"
+        ].firstMatch
+        scrollUntilHittable(timelineToggle, direction: .up, in: app)
+        XCTAssertTrue(
+            timelineToggle.waitForExistence(timeout: 5) &&
+                timelineToggle.isHittable
+        )
+        XCTAssertTrue(timelineToggle.isEnabled)
+        XCTAssertEqual(timelineToggle.value as? String, "0")
+        try capture("iphone-settings-apple-health-timeline", app: app)
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsTodayDistributionUsesSharedScale() throws {
         #if os(macOS)
         throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")

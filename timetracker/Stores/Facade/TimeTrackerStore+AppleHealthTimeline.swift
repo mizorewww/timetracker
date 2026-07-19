@@ -1,0 +1,170 @@
+import Foundation
+
+extension TimeTrackerStore {
+    func showAppleHealthInTimeline(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) async {
+        guard appleHealthDataReader.isHealthDataAvailable else {
+            appleHealthTimelineState = .unavailable
+            return
+        }
+
+        appleHealthTimelinePreferenceStore.isTimelineEnabled = true
+        isAppleHealthTimelineEnabled = true
+        let requestID = beginAppleHealthTimelineRequest()
+        appleHealthTimelineState = .requesting
+
+        do {
+            try await appleHealthDataReader.requestReadAuthorization()
+        } catch {
+            guard isCurrentAppleHealthTimelineRequest(requestID) else { return }
+            appleHealthTimelineState = .failed(error.localizedDescription)
+            return
+        }
+
+        guard isCurrentAppleHealthTimelineRequest(requestID),
+              isAppleHealthTimelineEnabled else {
+            return
+        }
+        await loadAppleHealthTimeline(
+            requestID: requestID,
+            now: now,
+            calendar: calendar
+        )
+    }
+
+    func refreshAppleHealthTimelineIfEnabled(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) async {
+        guard isAppleHealthTimelineEnabled else { return }
+        await refreshAppleHealthTimeline(now: now, calendar: calendar)
+    }
+
+    func refreshAppleHealthTimeline(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) async {
+        guard appleHealthDataReader.isHealthDataAvailable else {
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .unavailable
+            return
+        }
+        guard isAppleHealthTimelineEnabled else {
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .disabled
+            return
+        }
+
+        let requestID = beginAppleHealthTimelineRequest()
+        await loadAppleHealthTimeline(
+            requestID: requestID,
+            now: now,
+            calendar: calendar
+        )
+    }
+
+    func hideAppleHealthFromTimeline() {
+        appleHealthTimelineRequestID = UUID()
+        appleHealthTimelinePreferenceStore.isTimelineEnabled = false
+        isAppleHealthTimelineEnabled = false
+        appleHealthTimelineItems = []
+        appleHealthTimelineState = appleHealthDataReader.isHealthDataAvailable
+            ? .disabled
+            : .unavailable
+    }
+
+    func timelinePresentationSeed(
+        for item: AppleHealthTimelineItem
+    ) -> TimelinePresentationSeed {
+        let category = AppStrings.localized(item.categoryLocalizationKey)
+        let source = AppStrings.localized("health.timeline.source")
+        return TimelinePresentationSeed(
+            id: item.id,
+            subject: item.subject,
+            title: AppStrings.localized(item.titleLocalizationKey),
+            path: String(
+                format: AppStrings.localized("health.timeline.pathFormat"),
+                category,
+                source
+            ),
+            iconName: item.iconName,
+            colorHex: item.colorHex,
+            interval: item.interval
+        )
+    }
+
+    private func beginAppleHealthTimelineRequest() -> UUID {
+        let requestID = UUID()
+        appleHealthTimelineRequestID = requestID
+        return requestID
+    }
+
+    private func isCurrentAppleHealthTimelineRequest(_ requestID: UUID) -> Bool {
+        appleHealthTimelineRequestID == requestID
+    }
+
+    private func loadAppleHealthTimeline(
+        requestID: UUID,
+        now: Date,
+        calendar: Calendar
+    ) async {
+        let interval = appleHealthVisibleInterval(now: now, calendar: calendar)
+        guard interval.duration > 0 else {
+            guard isCurrentAppleHealthTimelineRequest(requestID) else { return }
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .noReadableData(
+                interval: interval,
+                refreshedAt: now
+            )
+            return
+        }
+
+        appleHealthTimelineState = .loading(interval)
+        do {
+            let batch = try await appleHealthDataReader.samples(overlapping: interval)
+            guard isCurrentAppleHealthTimelineRequest(requestID),
+                  isAppleHealthTimelineEnabled else {
+                return
+            }
+            let items = AppleHealthTimelineProjectionService().project(
+                batch: batch,
+                visibleInterval: interval
+            )
+            appleHealthTimelineItems = items
+            if items.isEmpty {
+                appleHealthTimelineState = .noReadableData(
+                    interval: interval,
+                    refreshedAt: now
+                )
+            } else {
+                appleHealthTimelineState = .content(
+                    interval: interval,
+                    refreshedAt: now,
+                    itemCount: items.count
+                )
+            }
+        } catch {
+            guard isCurrentAppleHealthTimelineRequest(requestID),
+                  isAppleHealthTimelineEnabled else {
+                return
+            }
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .failed(error.localizedDescription)
+        }
+    }
+
+    private func appleHealthVisibleInterval(
+        now: Date,
+        calendar: Calendar
+    ) -> DateInterval {
+        let day = calendar.dateInterval(of: .day, for: now)
+            ?? DateInterval(
+                start: calendar.startOfDay(for: now),
+                duration: 86_400
+            )
+        let end = min(day.end, max(day.start, now))
+        return DateInterval(start: day.start, end: end)
+    }
+}

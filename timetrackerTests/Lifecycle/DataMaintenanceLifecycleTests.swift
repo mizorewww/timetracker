@@ -63,10 +63,32 @@ struct DataMaintenanceLifecycleTests {
         let credentialStore = ResetTestCredentialStore()
         try credentialStore.writeAPIKey("private-test-key")
         defaults.set(true, forKey: automaticSuggestionsKey)
-        let store = makeTestStore(llmCredentialStore: credentialStore)
+        let healthPreferences = TestAppleHealthTimelinePreferenceStore(
+            isTimelineEnabled: true
+        )
+        let store = makeTestStore(
+            llmCredentialStore: credentialStore,
+            appleHealthTimelinePreferenceStore: healthPreferences
+        )
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
         store.tasksRoute = .detail(taskID: task.id)
+        let healthInterval = DateInterval(
+            start: Date().addingTimeInterval(-600),
+            end: Date()
+        )
+        store.appleHealthTimelineItems = [
+            AppleHealthTimelineItem(
+                id: .appleHealthWorkout(UUID()),
+                subject: .appleHealthWorkout(.walking),
+                interval: healthInterval
+            ),
+        ]
+        store.appleHealthTimelineState = .content(
+            interval: healthInterval,
+            refreshedAt: Date(),
+            itemCount: 1
+        )
 
         store.clearAllData()
 
@@ -80,6 +102,10 @@ struct DataMaintenanceLifecycleTests {
         #expect(defaults.object(forKey: automaticSuggestionsKey) == nil)
         #expect(store.selectedTaskID == nil)
         #expect(store.tasksRoute == nil)
+        #expect(healthPreferences.isTimelineEnabled == false)
+        #expect(store.isAppleHealthTimelineEnabled == false)
+        #expect(store.appleHealthTimelineItems.isEmpty)
+        #expect(store.appleHealthTimelineState == .unavailable)
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<TaskCategory>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).allSatisfy { $0.deletedAt != nil })

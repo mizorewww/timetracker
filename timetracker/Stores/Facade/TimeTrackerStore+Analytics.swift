@@ -1,23 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func timelineSnapshot(
-        segments: [TimeSegment],
-        date: Date,
-        now: Date,
-        calendar: Calendar = .current
-    ) -> AnalyticsTimelineSnapshot {
-        AnalyticsTimelineSnapshotService().snapshot(
-            segments: segments,
-            tasks: tasks,
-            sessions: sessions,
-            taskParentPathByID: taskParentPathByID,
-            date: date,
-            now: now,
-            calendar: calendar
-        )
-    }
-
     func analyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsSnapshot {
         analyticsSnapshot(
             for: range,

@@ -2,7 +2,6 @@ import SwiftUI
 
 struct OverlappingTimelineContent: View {
     let timeline: AnalyticsTimelineSnapshot
-    @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
     var laneEntries: [AnalyticsTimelineEntry] {
         timeline.entries

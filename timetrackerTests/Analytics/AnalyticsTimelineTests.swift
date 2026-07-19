@@ -681,6 +681,7 @@ struct AnalyticsTimelineTests {
             "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
+            "timetracker/SharedUI/Components/TimelineLegendRow.swift",
             "timetracker/SharedUI/Components/TimelineChart.swift",
             "timetracker/SharedUI/Components/TimelineChartLayout.swift",
             "timetracker/SharedUI/Components/TimelineChartGrid.swift",
@@ -688,6 +689,9 @@ struct AnalyticsTimelineTests {
         ]
             .map(sourceText)
             .joined(separator: "\n")
+        let sharedLegendSource = try sourceText(
+            "timetracker/SharedUI/Components/TimelineLegendRow.swift"
+        )
         let analyticsSource = try [
             "timetracker/Models/AnalyticsSummaryReadModels.swift",
             "timetracker/Models/AnalyticsTimelineReadModels.swift",
@@ -705,6 +709,10 @@ struct AnalyticsTimelineTests {
         #expect(viewSource.contains("private var hourly") == false)
         #expect(viewSource.contains("@ObservedObject var store") == false)
         #expect(viewSource.contains("TimelineLayoutEngine.layout(") == false)
+        #expect(viewSource.contains("struct TimelineLegendRow"))
+        #expect(sharedLegendSource.contains("TimeTrackerStore") == false)
+        #expect(sharedLegendSource.contains("@ObservedObject") == false)
+        #expect(sharedLegendSource.contains("TimelineLayoutEngine.layout(") == false)
         #expect(combinedSource.contains("struct HourTaskSlice"))
         #expect(combinedSource.contains("struct AnalyticsTimelineSnapshot"))
         #expect(combinedSource.contains("Color(hex: colorHex)"))

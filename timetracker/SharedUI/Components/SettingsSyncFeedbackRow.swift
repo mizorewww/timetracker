@@ -1,7 +1,29 @@
 import SwiftUI
 
+struct SettingsStatusPresentation {
+    let title: String
+    let message: String
+    let symbolName: String
+    let tint: Color
+    var showsProgress = false
+}
+
 struct SettingsStatusRow: View {
-    let feedback: SyncFeedback
+    let presentation: SettingsStatusPresentation
+
+    init(presentation: SettingsStatusPresentation) {
+        self.presentation = presentation
+    }
+
+    init(feedback: SyncFeedback) {
+        presentation = SettingsStatusPresentation(
+            title: feedback.title,
+            message: feedback.message,
+            symbolName: feedback.state.symbolName,
+            tint: Self.tint(for: feedback.state),
+            showsProgress: feedback.state == .syncing
+        )
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -9,10 +31,10 @@ struct SettingsStatusRow: View {
                 .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(feedback.title)
+                Text(presentation.title)
                     .font(.body.weight(.medium))
                     .foregroundStyle(.primary)
-                Text(feedback.message)
+                Text(presentation.message)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -22,36 +44,36 @@ struct SettingsStatusRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(feedback.title)
-        .accessibilityValue(feedback.message)
+        .accessibilityLabel(presentation.title)
+        .accessibilityValue(presentation.message)
         .settingsRowSeparatorAligned()
     }
 
     @ViewBuilder
     private var statusIcon: some View {
-        if feedback.state == .syncing {
+        if presentation.showsProgress {
             ProgressView()
                 .controlSize(.small)
         } else {
-            Image(systemName: feedback.state.symbolName)
+            Image(systemName: presentation.symbolName)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(presentation.tint)
                 .accessibilityHidden(true)
         }
     }
 
-    private var tint: Color {
-        switch feedback.state {
+    private static func tint(for state: SyncFeedbackState) -> Color {
+        switch state {
         case .available, .recentlySynced:
-            return .green
+            .green
         case .syncing:
-            return .blue
+            .blue
         case .offline, .needsRestart:
-            return .orange
+            .orange
         case .failed, .temporaryStore, .conflict:
-            return .red
+            .red
         case .localOnly:
-            return .secondary
+            .secondary
         }
     }
 }

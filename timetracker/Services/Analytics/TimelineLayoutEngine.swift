@@ -23,10 +23,13 @@ nonisolated enum TimelineLayoutEngine {
         let visibleItems = items
             .compactMap { clippedItem($0, to: dayInterval) }
             .sorted {
-                if $0.startedAt == $1.startedAt {
+                if $0.startedAt != $1.startedAt {
+                    return $0.startedAt < $1.startedAt
+                }
+                if $0.endedAt != $1.endedAt {
                     return $0.endedAt < $1.endedAt
                 }
-                return $0.startedAt < $1.startedAt
+                return $0.id.stableSortKey < $1.id.stableSortKey
             }
 
         let displayInterval = makeDisplayInterval(for: visibleItems, dayInterval: dayInterval)

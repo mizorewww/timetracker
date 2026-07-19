@@ -56,13 +56,13 @@ nonisolated struct AppleHealthSampleBatch: Equatable, Sendable {
         workouts: [AppleHealthWorkoutSample],
         sleep: [AppleHealthSleepSample]
     ) {
-        self.workouts = workouts.sorted(by: Self.workoutPrecedes)
-        self.sleep = sleep.sorted(by: Self.sleepPrecedes)
+        self.workouts = workouts.sorted(by: Self.workoutChronology)
+        self.sleep = sleep.sorted(by: Self.sleepChronology)
     }
 
     static let empty = AppleHealthSampleBatch(workouts: [], sleep: [])
 
-    private static func workoutPrecedes(
+    static func workoutChronology(
         _ lhs: AppleHealthWorkoutSample,
         _ rhs: AppleHealthWorkoutSample
     ) -> Bool {
@@ -76,7 +76,7 @@ nonisolated struct AppleHealthSampleBatch: Equatable, Sendable {
         )
     }
 
-    private static func sleepPrecedes(
+    static func sleepChronology(
         _ lhs: AppleHealthSleepSample,
         _ rhs: AppleHealthSleepSample
     ) -> Bool {
@@ -104,6 +104,84 @@ nonisolated struct AppleHealthSampleBatch: Equatable, Sendable {
     }
 }
 
+nonisolated struct AppleHealthTimelineItem: Identifiable, Equatable, Sendable {
+    let id: TimelineEntryID
+    let subject: TimelineEntrySubject
+    let interval: DateInterval
+
+    var titleLocalizationKey: String {
+        switch subject {
+        case .task:
+            "health.timeline.workout.other"
+        case let .appleHealthWorkout(kind):
+            "health.timeline.workout.\(kind.rawValue)"
+        case .appleHealthSleep:
+            "health.timeline.sleep"
+        }
+    }
+
+    var categoryLocalizationKey: String {
+        switch subject {
+        case .task, .appleHealthWorkout:
+            "health.timeline.exerciseCategory"
+        case .appleHealthSleep:
+            "health.timeline.dailyCategory"
+        }
+    }
+
+    var iconName: String {
+        switch subject {
+        case .task:
+            "figure.mixed.cardio"
+        case let .appleHealthWorkout(kind):
+            switch kind {
+            case .walking: "figure.walk"
+            case .running: "figure.run"
+            case .cycling: "bicycle"
+            case .swimming: "figure.pool.swim"
+            case .strengthTraining: "dumbbell.fill"
+            case .highIntensityIntervalTraining: "bolt.heart.fill"
+            case .yoga: "figure.yoga"
+            case .hiking: "figure.hiking"
+            case .rowing: "figure.rower"
+            case .dance: "figure.dance"
+            case .other: "figure.mixed.cardio"
+            }
+        case .appleHealthSleep:
+            "bed.double.fill"
+        }
+    }
+
+    var colorHex: String {
+        switch subject {
+        case .task, .appleHealthWorkout:
+            "FF3B30"
+        case .appleHealthSleep:
+            "5856D6"
+        }
+    }
+}
+
+nonisolated enum AppleHealthTimelineState: Equatable, Sendable {
+    case disabled
+    case unavailable
+    case ready
+    case requesting
+    case loading(DateInterval)
+    case content(interval: DateInterval, refreshedAt: Date, itemCount: Int)
+    case noReadableData(interval: DateInterval, refreshedAt: Date)
+    case failed(String)
+
+    var isBusy: Bool {
+        switch self {
+        case .requesting, .loading:
+            true
+        case .disabled, .unavailable, .ready, .content, .noReadableData, .failed:
+            false
+        }
+    }
+}
+
 nonisolated enum AppleHealthReadError: LocalizedError, Equatable, Sendable {
     case unavailable
     case requiredTypesUnavailable
@@ -111,9 +189,9 @@ nonisolated enum AppleHealthReadError: LocalizedError, Equatable, Sendable {
     var errorDescription: String? {
         switch self {
         case .unavailable:
-            "Apple Health data is unavailable on this device."
+            NSLocalizedString("health.error.unavailable", comment: "")
         case .requiredTypesUnavailable:
-            "Workout or sleep data is unavailable on this device."
+            NSLocalizedString("health.error.requiredTypesUnavailable", comment: "")
         }
     }
 }

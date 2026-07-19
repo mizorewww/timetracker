@@ -55,11 +55,18 @@ struct TimelineSection: View {
     let openTask: (UUID) -> Void
 
     var body: some View {
+        let now = Date()
+        let timeline = store.timelineSnapshot(
+            segments: segments,
+            date: now,
+            now: now
+        )
+
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(title: AppStrings.todayTimeline)
 
             VStack(spacing: 0) {
-                if segments.isEmpty {
+                if timeline.entries.isEmpty {
                     ContentUnavailableView {
                         Label(AppStrings.noTodaySegments, systemImage: "clock")
                     } description: {
@@ -76,18 +83,30 @@ struct TimelineSection: View {
 
                     Divider()
 
-                    let lastTimelineSegmentID = segments.last?.id
-                    ForEach(segments, id: \.id) { segment in
-                        TimelineRow(
+                    let entries = Array(timeline.entries.reversed())
+                    let segmentByID = segments.latestByID()
+                    let lastEntryID = entries.last?.id
+                    ForEach(entries) { entry in
+                        TodayTimelineEntryRow(
                             store: store,
-                            segment: segment,
+                            entry: entry,
+                            segmentByID: segmentByID,
+                            style: .card,
+                            showsDivider: entry.id != lastEntryID,
                             openTaskDetail: openTask
                         )
-                        if segment.id != lastTimelineSegmentID {
-                            Divider().padding(.leading, 18)
-                        }
                     }
                 }
+
+                #if os(iOS)
+                if store.shouldShowAppleHealthTimelineStatusInline {
+                    if timeline.entries.isEmpty == false {
+                        Divider()
+                    }
+                    AppleHealthTimelineAccessRow(store: store)
+                        .padding(14)
+                }
+                #endif
             }
             .appCard(padding: 0)
         }

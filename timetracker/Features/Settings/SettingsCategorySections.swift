@@ -10,6 +10,10 @@ extension SettingsView {
                 showGrossAndWallTogether: showGrossAndWallTogetherBinding
             )
 
+            #if os(iOS)
+            AppleHealthTimelineSettingsSection(store: store)
+            #endif
+
             CountdownSettingsSection(
                 events: store.countdownEvents,
                 onChangeTitle: { event, title in

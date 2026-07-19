@@ -10,6 +10,7 @@ final class TimeTrackerStore {
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
     let appleHealthDataReader: any AppleHealthDataReading
+    let appleHealthTimelinePreferenceStore: any AppleHealthTimelinePreferenceStoring
     let writeAuthorization: StoreWriteAuthorization
 
     init(
@@ -17,6 +18,7 @@ final class TimeTrackerStore {
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
         appleHealthDataReader: (any AppleHealthDataReading)? = nil,
+        appleHealthTimelinePreferenceStore: (any AppleHealthTimelinePreferenceStoring)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         syncConflictService: SyncConflictService? = nil
     ) {
@@ -24,8 +26,19 @@ final class TimeTrackerStore {
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
         self.checklistVisualSuggestionService =
             checklistVisualSuggestionService ?? LLMChecklistVisualSuggestionService()
-        self.appleHealthDataReader =
+        let resolvedAppleHealthReader =
             appleHealthDataReader ?? AppleHealthDataReaderFactory.platformDefault()
+        let resolvedAppleHealthPreferences =
+            appleHealthTimelinePreferenceStore
+                ?? UserDefaultsAppleHealthTimelinePreferenceStore()
+        self.appleHealthDataReader = resolvedAppleHealthReader
+        self.appleHealthTimelinePreferenceStore = resolvedAppleHealthPreferences
+        isAppleHealthTimelineEnabled = resolvedAppleHealthPreferences.isTimelineEnabled
+        appleHealthTimelineState = if resolvedAppleHealthReader.isHealthDataAvailable {
+            resolvedAppleHealthPreferences.isTimelineEnabled ? .ready : .disabled
+        } else {
+            .unavailable
+        }
         self.writeAuthorization = writeAuthorization
         self.syncConflictService = syncConflictService ?? SyncConflictService()
     }
@@ -114,6 +127,10 @@ final class TimeTrackerStore {
     @ObservationIgnored var checklistVisualSuggestionRetryAfterByItemID: [UUID: Date] = [:]
     @ObservationIgnored var checklistVisualSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
     var preferences = AppPreferences.defaults
+    var isAppleHealthTimelineEnabled: Bool
+    var appleHealthTimelineItems: [AppleHealthTimelineItem] = []
+    var appleHealthTimelineState: AppleHealthTimelineState
+    @ObservationIgnored var appleHealthTimelineRequestID = UUID()
     var persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
     var effectivePersistenceWriteSafety: PersistenceWriteSafety {
         guard writeAuthorization.usesApplicationState else { return .ready }

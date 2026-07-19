@@ -13,6 +13,7 @@ extension TimeTrackerStore {
     func refreshForForeground() async {
         refreshQuietly()
         reconcileActivePomodoro(now: Date())
+        await refreshAppleHealthTimelineIfEnabled()
         await refreshCloudAccountStatus()
     }
 

@@ -1,9 +1,40 @@
 import Foundation
 
+nonisolated enum TimelineEntryID: Hashable, Sendable {
+    case trackedSegment(UUID)
+    case appleHealthWorkout(UUID)
+    case appleHealthSleep([UUID])
+
+    var stableSortKey: String {
+        switch self {
+        case let .trackedSegment(id):
+            "0|\(id.uuidString)"
+        case let .appleHealthWorkout(id):
+            "1|\(id.uuidString)"
+        case let .appleHealthSleep(contributingSampleIDs):
+            "2|\(contributingSampleIDs.map(\.uuidString).joined(separator: "|"))"
+        }
+    }
+}
+
 nonisolated struct TimelineLayoutItem: Identifiable, Equatable, Sendable {
-    let id: UUID
+    let id: TimelineEntryID
     let startedAt: Date
     let endedAt: Date
+
+    init(id: TimelineEntryID, startedAt: Date, endedAt: Date) {
+        self.id = id
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+    }
+
+    init(id: UUID, startedAt: Date, endedAt: Date) {
+        self.init(
+            id: .trackedSegment(id),
+            startedAt: startedAt,
+            endedAt: endedAt
+        )
+    }
 
     var interval: DateInterval {
         DateInterval(start: startedAt, end: endedAt)
@@ -14,7 +45,7 @@ nonisolated struct TimelineLayoutEntry: Identifiable, Equatable, Sendable {
     let item: TimelineLayoutItem
     let lane: Int
 
-    var id: UUID { item.id }
+    var id: TimelineEntryID { item.id }
 }
 
 nonisolated struct TimelineLayoutResult: Equatable, Sendable {

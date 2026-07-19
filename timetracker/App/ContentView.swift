@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import SwiftUI
 
@@ -56,6 +57,7 @@ struct ContentView: View {
             hasFinishedInitialConfiguration = true
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
+            await store.refreshAppleHealthTimelineIfEnabled()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
                 return
@@ -74,15 +76,23 @@ struct ContentView: View {
                 await store.refreshForForeground()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            guard hasFinishedInitialConfiguration, scenePhase == .active else { return }
+            Task { @MainActor in await store.refreshAppleHealthTimelineIfEnabled() }
+        }
         .onChange(of: store.persistenceWriteSafety) { _, safety in
             guard safety == .ready else {
                 hasFinishedInitialConfiguration = false
                 unregisterFromWatchCommands()
                 return
             }
+            guard hasFinishedInitialConfiguration == false else { return }
             hasFinishedInitialConfiguration = true
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
+            Task { @MainActor in
+                await store.refreshAppleHealthTimelineIfEnabled()
+            }
         }
         .onOpenURL { url in
             guard AppDeepLinkRouter().action(for: url) != nil else { return }

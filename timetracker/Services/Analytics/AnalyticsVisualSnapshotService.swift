@@ -97,20 +97,22 @@ nonisolated struct AnalyticsVisualSnapshotService {
         let layout = TimelineLayoutEngine.layout(
             items: segments.map {
                 TimelineLayoutItem(
-                    id: $0.id,
+                    id: .trackedSegment($0.id),
                     startedAt: $0.interval.start,
                     endedAt: $0.interval.end
                 )
             },
             dayInterval: input.period
         )
-        let segmentByID = Dictionary(uniqueKeysWithValues: segments.map { ($0.id, $0) })
+        let segmentByID = Dictionary(
+            uniqueKeysWithValues: segments.map { (TimelineEntryID.trackedSegment($0.id), $0) }
+        )
         let entries = layout.entries.enumerated().compactMap { index, layoutEntry -> AnalyticsTimelineEntry? in
             guard let segment = segmentByID[layoutEntry.id] else { return nil }
             let task = input.taskByID[segment.taskID]
             return AnalyticsTimelineEntry(
-                id: segment.id,
-                taskID: segment.taskID,
+                id: .trackedSegment(segment.id),
+                subject: .task(segment.taskID),
                 title: task?.title
                     ?? input.timelineFallbackTitleByTaskID[segment.taskID]
                     ?? input.deletedTaskTitle,

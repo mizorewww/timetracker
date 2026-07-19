@@ -135,12 +135,39 @@ struct AppleHealthDataReaderTests {
 
     @Test
     func healthSamplesAreNotAddedToCloudSyncedModels() throws {
-        let registry = try sourceText("timetracker/Models/TimeTrackerModelRegistry.swift")
-        let ledger = try sourceText("timetracker/Models/LedgerModels.swift")
+        let persistenceSources = try [
+            "timetracker/Models/TimeTrackerModelRegistry.swift",
+            "timetracker/Models/SchemaModels.swift",
+            "timetracker/Models/LedgerModels.swift",
+            "timetracker/Repositories/RepositoryProtocols.swift",
+            "timetracker/Repositories/SwiftDataTaskRepository.swift",
+            "timetracker/Repositories/SwiftDataTimeTrackingRepository.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+Capture.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+Restore.swift",
+        ].map(sourceText).joined(separator: "\n")
+        let preferenceSource = try sourceText(
+            "timetracker/Models/SyncedPreferences.swift"
+        )
+        let syncedPreferenceKeys = try #require(
+            preferenceSource.slice(
+                from: "enum AppPreferenceKey",
+                to: "enum AppLocalPreferenceKey"
+            )
+        )
+        let localPreferenceKeys = try #require(
+            preferenceSource.slice(
+                from: "enum AppLocalPreferenceKey",
+                to: "struct AppPreferences"
+            )
+        )
 
-        #expect(registry.contains("AppleHealth") == false)
-        #expect(ledger.contains("AppleHealth") == false)
-        #expect(ledger.contains("HealthKit") == false)
+        #expect(persistenceSources.contains("AppleHealth") == false)
+        #expect(persistenceSources.contains("HealthKit") == false)
+        #expect(
+            syncedPreferenceKeys.contains("appleHealthTimelineEnabled") == false
+        )
+        #expect(localPreferenceKeys.contains("appleHealthTimelineEnabled"))
     }
 
     private func entitlements(at url: URL) throws -> [String: Any] {

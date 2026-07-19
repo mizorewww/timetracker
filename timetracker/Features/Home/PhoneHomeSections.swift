@@ -152,8 +152,17 @@ struct PhoneTimelineSection: View {
     let openTask: (UUID) -> Void
 
     var body: some View {
+        let now = Date()
+        let timeline = store.timelineSnapshot(
+            segments: segments,
+            date: now,
+            now: now
+        )
+        let entries = Array(timeline.entries.reversed())
+        let segmentByID = segments.latestByID()
+
         Section {
-            if segments.isEmpty {
+            if timeline.entries.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Label(AppStrings.noTodaySegments, systemImage: "clock")
                         .foregroundStyle(.secondary)
@@ -170,13 +179,20 @@ struct PhoneTimelineSection: View {
                     compactHeight: 340
                 )
 
-                ForEach(segments, id: \.id) { segment in
-                    TimelineRow(
+                ForEach(entries) { entry in
+                    TodayTimelineEntryRow(
                         store: store,
-                        segment: segment,
+                        entry: entry,
+                        segmentByID: segmentByID,
+                        style: .list,
+                        showsDivider: false,
                         openTaskDetail: openTask
                     )
                 }
+            }
+
+            if store.shouldShowAppleHealthTimelineStatusInline {
+                AppleHealthTimelineAccessRow(store: store)
             }
         } header: {
             Text(AppStrings.todayTimeline)

@@ -23,11 +23,14 @@ extension TimeTrackerStore {
         let previousAutomaticSuggestions = defaults.object(
             forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         )
+        let previousAppleHealthTimelineEnabled =
+            appleHealthTimelinePreferenceStore.isTimelineEnabled
         var localSettingsWereCleared = false
         let didClear = perform {
             guard let modelContext else { throw StoreError.notConfigured }
             try llmCredentialStore.writeAPIKey("")
             defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+            appleHealthTimelinePreferenceStore.isTimelineEnabled = false
             localSettingsWereCleared = true
             try SeedData.clearAll(context: modelContext)
         }
@@ -45,10 +48,13 @@ extension TimeTrackerStore {
             } else {
                 defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
             }
+            appleHealthTimelinePreferenceStore.isTimelineEnabled =
+                previousAppleHealthTimelineEnabled
         }
         if didClear {
             selectedTaskID = nil
             tasksRoute = nil
+            hideAppleHealthFromTimeline()
         }
     }
 

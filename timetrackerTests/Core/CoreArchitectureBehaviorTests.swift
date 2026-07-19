@@ -199,6 +199,28 @@ struct CoreArchitectureBehaviorTests {
         #expect(HomeLayoutPolicy(width: 1_400).contentWidth == 1_180)
         #expect(HomeLayoutPolicy(width: 1_100).contentMaxWidth == 1_180)
         #expect(HomeLayoutPolicy(width: 1_100).supportingColumnWidth == 360)
+        let narrowToday = HomeLayoutPolicy(width: 799)
+        let wideToday = HomeLayoutPolicy(width: 800)
+        let widestToday = HomeLayoutPolicy(width: 1_400)
+        #expect(
+            narrowToday.usesSideBySideCurrentState(prefersSingleColumn: false) ==
+                false
+        )
+        #expect(wideToday.usesSideBySideCurrentState(prefersSingleColumn: false))
+        #expect(
+            wideToday.usesSideBySideCurrentState(prefersSingleColumn: true) ==
+                false
+        )
+        #expect(wideToday.currentStatePrimaryColumnWidth == 442)
+        #expect(wideToday.currentStateOverviewColumnWidth == 280)
+        #expect(
+            wideToday.currentStatePrimaryColumnWidth +
+                wideToday.contentSpacing +
+                wideToday.currentStateOverviewColumnWidth ==
+                wideToday.contentWidth
+        )
+        #expect(widestToday.currentStatePrimaryColumnWidth == 620)
+        #expect(widestToday.currentStateOverviewColumnWidth == 538)
         #expect(AnalyticsLayoutPolicy(horizontalSizeClass: nil).showsPageTitleInContent)
         #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
         #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))

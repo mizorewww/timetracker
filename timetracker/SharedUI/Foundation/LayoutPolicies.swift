@@ -48,6 +48,11 @@ struct WidthLayoutPolicy {
 }
 
 struct HomeLayoutPolicy {
+    private static let currentStateTwoColumnMinimumWidth: CGFloat = 744
+    private static let currentStatePrimaryMinimumWidth: CGFloat = 420
+    private static let currentStatePrimaryMaximumWidth: CGFloat = 620
+    private static let currentStateOverviewMinimumWidth: CGFloat = 280
+
     private let width: CGFloat
     private let widthPolicy: WidthLayoutPolicy
 
@@ -72,6 +77,11 @@ struct HomeLayoutPolicy {
         contentWidth >= 1_000
     }
 
+    func usesSideBySideCurrentState(prefersSingleColumn: Bool) -> Bool {
+        !prefersSingleColumn &&
+            contentWidth >= Self.currentStateTwoColumnMinimumWidth
+    }
+
     var contentMaxWidth: CGFloat {
         1_180
     }
@@ -82,6 +92,23 @@ struct HomeLayoutPolicy {
 
     var supportingColumnWidth: CGFloat {
         360
+    }
+
+    var currentStatePrimaryColumnWidth: CGFloat {
+        min(
+            Self.currentStatePrimaryMaximumWidth,
+            max(
+                Self.currentStatePrimaryMinimumWidth,
+                contentWidth - contentSpacing - Self.currentStateOverviewMinimumWidth
+            )
+        )
+    }
+
+    var currentStateOverviewColumnWidth: CGFloat {
+        max(
+            0,
+            contentWidth - contentSpacing - currentStatePrimaryColumnWidth
+        )
     }
 }
 

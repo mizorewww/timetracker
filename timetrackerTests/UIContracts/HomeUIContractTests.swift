@@ -818,19 +818,32 @@ struct HomeUIContractTests {
     func desktopTodayUsesSharedPriorityAndBoundedWideLayout() throws {
         let source = try sourceText("timetracker/Features/Home/HomeViews.swift")
 
-        let nowIndex = try #require(source.range(of: "ActiveTimersSection(")?.lowerBound)
-        let overviewIndex = try #require(source.range(of: "TodayOverviewSection(")?.lowerBound)
+        let currentStateIndex = try #require(
+            source.range(of: "DesktopTodayCurrentStateSections(")?.lowerBound
+        )
         let weeklyIndex = try #require(source.range(of: "HomeWeeklyGrossTimeSection(")?.lowerBound)
         let quickStartIndex = try #require(source.range(of: "QuickStartSection(")?.lowerBound)
         let timelineIndex = try #require(source.range(of: "TimelineSection(")?.lowerBound)
         let forecastIndex = try #require(source.range(of: "TaskForecastSummarySection(")?.lowerBound)
 
-        #expect(nowIndex < overviewIndex)
-        #expect(overviewIndex < weeklyIndex)
+        #expect(currentStateIndex < weeklyIndex)
         #expect(weeklyIndex < quickStartIndex)
         #expect(quickStartIndex < timelineIndex)
         #expect(timelineIndex < forecastIndex)
         #expect(source.contains("TodayHomeContent(store: store, quickStartLimit: 6)"))
+        #expect(source.contains("struct DesktopTodayCurrentStateSections: View"))
+        #expect(
+            source.components(separatedBy: "ActiveTimersSection(").count - 1 == 1
+        )
+        #expect(
+            source.components(separatedBy: "TodayOverviewSection(").count - 1 == 1
+        )
+        #expect(source.contains("usesSideBySideCurrentState("))
+        #expect(source.contains("prefersSingleColumn: dynamicTypeSize.isAccessibilitySize"))
+        #expect(source.contains("HStack(alignment: .top, spacing: layout.contentSpacing)"))
+        #expect(source.contains("layout.currentStatePrimaryColumnWidth"))
+        #expect(source.contains("layout.currentStateOverviewColumnWidth"))
+        #expect(source.contains("maxHeight: .infinity") == false)
         #expect(source.contains("layout.usesTwoColumnContent && content.hasSupportingContent"))
         #expect(source.contains(".frame(width: layout.contentWidth"))
         #expect(source.contains(".padding(.vertical, layout.pagePadding)"))

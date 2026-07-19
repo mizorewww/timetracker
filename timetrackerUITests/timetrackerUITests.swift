@@ -2541,6 +2541,59 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testIPadTodayPlacesNowAndOverviewInOneAdaptiveRow() throws {
+        #if os(macOS)
+        throw XCTSkip("The adaptive Today status row requires an iPad simulator.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        guard app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 5) else {
+            throw XCTSkip("This layout audit only runs on iPad.")
+        }
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let nowHeading = app.staticTexts["Now"].firstMatch
+        let overviewHeading = app.staticTexts["Overview"].firstMatch
+        XCTAssertTrue(nowHeading.waitForExistence(timeout: 5))
+        XCTAssertTrue(overviewHeading.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            nowHeading.frame.minY,
+            overviewHeading.frame.minY,
+            accuracy: 3,
+            "Now and Overview must share one top-aligned row at the normal iPad width."
+        )
+        XCTAssertLessThan(
+            nowHeading.frame.maxX,
+            overviewHeading.frame.minX,
+            "Now must remain in the leading column without overlapping Overview."
+        )
+
+        let stop = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@",
+            "home.timer.stop."
+        )).firstMatch
+        let startAnother = app.buttons["home.startTimer"].firstMatch
+        XCTAssertTrue(stop.waitForExistence(timeout: 5) && stop.isHittable)
+        XCTAssertTrue(
+            startAnother.waitForExistence(timeout: 5) && startAnother.isHittable
+        )
+        XCTAssertGreaterThan(
+            stop.frame.width,
+            stop.frame.height,
+            "The iPad Stop action must preserve its visible text."
+        )
+        XCTAssertTrue(
+            ["Start Another Timer", "Switch Timer"].contains(startAnother.label),
+            "The secondary timer action must keep a clear visible verb."
+        )
+        try capture("ipad-today-now-overview-adaptive-row", app: app)
+        #endif
+    }
+
+    @MainActor
     private func exerciseTodayTimerPicker(
         in app: XCUIApplication,
         overviewCaptureName: String,

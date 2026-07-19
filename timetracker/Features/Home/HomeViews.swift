@@ -54,12 +54,12 @@ private struct DesktopTodayContent: View {
             Text(.app("home.subtitle"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            ActiveTimersSection(
+            DesktopTodayCurrentStateSections(
                 store: store,
                 segments: content.activeSegments,
+                layout: layout,
                 openTask: openTask
             )
-            TodayOverviewSection(store: store)
 
             if layout.usesTwoColumnContent && content.hasSupportingContent {
                 HStack(alignment: .top, spacing: layout.contentSpacing) {
@@ -103,5 +103,50 @@ private struct DesktopTodayContent: View {
             )
             HomeCountdownSection(events: content.countdownEvents)
         }
+    }
+}
+
+private struct DesktopTodayCurrentStateSections: View {
+    let store: TimeTrackerStore
+    let segments: [TimeSegment]
+    let layout: HomeLayoutPolicy
+    let openTask: (UUID) -> Void
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        if layout.usesSideBySideCurrentState(
+            prefersSingleColumn: dynamicTypeSize.isAccessibilitySize
+        ) {
+            HStack(alignment: .top, spacing: layout.contentSpacing) {
+                activeTimers
+                    .frame(
+                        width: layout.currentStatePrimaryColumnWidth,
+                        alignment: .topLeading
+                    )
+                overview
+                    .frame(
+                        width: layout.currentStateOverviewColumnWidth,
+                        alignment: .topLeading
+                    )
+            }
+        } else {
+            VStack(alignment: .leading, spacing: layout.contentSpacing) {
+                activeTimers
+                overview
+            }
+        }
+    }
+
+    private var activeTimers: some View {
+        ActiveTimersSection(
+            store: store,
+            segments: segments,
+            openTask: openTask
+        )
+    }
+
+    private var overview: some View {
+        TodayOverviewSection(store: store)
     }
 }

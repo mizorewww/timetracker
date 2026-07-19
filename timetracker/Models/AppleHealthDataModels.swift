@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum AppleHealthWorkoutKind: String, CaseIterable, Equatable, Sendable {
+nonisolated enum AppleHealthWorkoutKind: String, CaseIterable, Hashable, Sendable {
     case walking
     case running
     case cycling
@@ -113,52 +113,31 @@ nonisolated struct AppleHealthTimelineItem: Identifiable, Equatable, Sendable {
         switch subject {
         case .task:
             "health.timeline.workout.other"
-        case let .appleHealthWorkout(kind):
-            "health.timeline.workout.\(kind.rawValue)"
+        case .appleHealthWorkout:
+            taskRole.map(AppleHealthTaskCatalog.taskDefinition)?
+                .titleLocalizationKey ?? "health.timeline.workout.other"
         case .appleHealthSleep:
             "health.timeline.sleep"
         }
     }
 
     var categoryLocalizationKey: String {
-        switch subject {
-        case .task, .appleHealthWorkout:
-            "health.timeline.exerciseCategory"
-        case .appleHealthSleep:
-            "health.timeline.dailyCategory"
+        guard let taskRole else {
+            return "health.timeline.exerciseCategory"
         }
+        return AppleHealthTaskCatalog.categoryDefinition(
+            for: taskRole.categoryRole
+        ).titleLocalizationKey
     }
 
     var iconName: String {
-        switch subject {
-        case .task:
-            "figure.mixed.cardio"
-        case let .appleHealthWorkout(kind):
-            switch kind {
-            case .walking: "figure.walk"
-            case .running: "figure.run"
-            case .cycling: "bicycle"
-            case .swimming: "figure.pool.swim"
-            case .strengthTraining: "dumbbell.fill"
-            case .highIntensityIntervalTraining: "bolt.heart.fill"
-            case .yoga: "figure.yoga"
-            case .hiking: "figure.hiking"
-            case .rowing: "figure.rower"
-            case .dance: "figure.dance"
-            case .other: "figure.mixed.cardio"
-            }
-        case .appleHealthSleep:
-            "bed.double.fill"
-        }
+        taskRole.map(AppleHealthTaskCatalog.taskDefinition)?
+            .iconName ?? "figure.mixed.cardio"
     }
 
     var colorHex: String {
-        switch subject {
-        case .task, .appleHealthWorkout:
-            "FF3B30"
-        case .appleHealthSleep:
-            "5856D6"
-        }
+        taskRole.map(AppleHealthTaskCatalog.taskDefinition)?
+            .colorHex ?? "FF3B30"
     }
 }
 

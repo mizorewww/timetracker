@@ -21,6 +21,19 @@ struct AppleHealthTimelineSettingsSection: View {
                 SettingsStatusRow(presentation: statusPresentation)
             }
 
+            if let taskSetupError = store.appleHealthTaskCatalogErrorMessage {
+                SettingsStatusRow(
+                    presentation: SettingsStatusPresentation(
+                        title: AppStrings.localized(
+                            "health.settings.taskSetupFailed.title"
+                        ),
+                        message: taskSetupError,
+                        symbolName: "exclamationmark.triangle.fill",
+                        tint: .orange
+                    )
+                )
+            }
+
             if store.isAppleHealthTimelineEnabled,
                store.appleHealthTimelineState.isBusy == false {
                 Button {

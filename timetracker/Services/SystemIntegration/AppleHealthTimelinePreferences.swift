@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 protocol AppleHealthTimelinePreferenceStoring: AnyObject {
     var isTimelineEnabled: Bool { get set }
+    var taskCatalogClearRecoveryTaskIDs: Set<UUID> { get set }
 }
 
 @MainActor
@@ -22,6 +23,26 @@ final class UserDefaultsAppleHealthTimelinePreferenceStore:
             defaults.set(
                 newValue,
                 forKey: AppLocalPreferenceKey.appleHealthTimelineEnabled
+            )
+        }
+    }
+
+    var taskCatalogClearRecoveryTaskIDs: Set<UUID> {
+        get {
+            Set(
+                defaults.stringArray(
+                    forKey:
+                        AppLocalPreferenceKey
+                            .appleHealthTaskCatalogClearRecoveryTaskIDs
+                )?.compactMap(UUID.init(uuidString:)) ?? []
+            )
+        }
+        set {
+            defaults.set(
+                newValue.map(\.uuidString).sorted(),
+                forKey:
+                    AppLocalPreferenceKey
+                        .appleHealthTaskCatalogClearRecoveryTaskIDs
             )
         }
     }

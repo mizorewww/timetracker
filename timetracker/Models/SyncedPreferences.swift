@@ -19,6 +19,8 @@ enum AppPreferenceKey: String, CaseIterable {
 enum AppLocalPreferenceKey {
     static let llmAutomaticSuggestionsEnabled = "LLMAutomaticSuggestionsEnabled"
     static let appleHealthTimelineEnabled = "AppleHealthTimelineEnabled"
+    static let appleHealthTaskCatalogClearRecoveryTaskIDs =
+        "AppleHealthTaskCatalogClearRecoveryIDs"
 }
 
 struct AppPreferences: Equatable {

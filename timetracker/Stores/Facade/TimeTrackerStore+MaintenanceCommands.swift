@@ -25,6 +25,9 @@ extension TimeTrackerStore {
         )
         let previousAppleHealthTimelineEnabled =
             appleHealthTimelinePreferenceStore.isTimelineEnabled
+        let previousAppleHealthTaskCatalogClearRecoveryTaskIDs =
+            appleHealthTimelinePreferenceStore
+                .taskCatalogClearRecoveryTaskIDs
         var localSettingsWereCleared = false
         let didClear = perform {
             guard let modelContext else { throw StoreError.notConfigured }
@@ -32,6 +35,9 @@ extension TimeTrackerStore {
             defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
             appleHealthTimelinePreferenceStore.isTimelineEnabled = false
             localSettingsWereCleared = true
+            appleHealthTimelinePreferenceStore
+                .taskCatalogClearRecoveryTaskIDs =
+                try visibleAppleHealthTaskCatalogTaskIDsForClear()
             try SeedData.clearAll(context: modelContext)
         }
         if !didClear, localSettingsWereCleared {
@@ -50,6 +56,9 @@ extension TimeTrackerStore {
             }
             appleHealthTimelinePreferenceStore.isTimelineEnabled =
                 previousAppleHealthTimelineEnabled
+            appleHealthTimelinePreferenceStore
+                .taskCatalogClearRecoveryTaskIDs =
+                previousAppleHealthTaskCatalogClearRecoveryTaskIDs
         }
         if didClear {
             selectedTaskID = nil

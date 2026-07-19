@@ -14,6 +14,10 @@ extension TimeTrackerStore {
         isAppleHealthTimelineEnabled = true
         let requestID = beginAppleHealthTimelineRequest()
         appleHealthTimelineState = .requesting
+        materializeAppleHealthTaskCatalog(
+            clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
+                .taskCatalogClearRecoveryTaskIDs
+        )
 
         do {
             try await appleHealthDataReader.requestReadAuthorization()
@@ -58,6 +62,10 @@ extension TimeTrackerStore {
         }
 
         let requestID = beginAppleHealthTimelineRequest()
+        materializeAppleHealthTaskCatalog(
+            clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
+                .taskCatalogClearRecoveryTaskIDs
+        )
         await loadAppleHealthTimeline(
             requestID: requestID,
             now: now,
@@ -70,6 +78,7 @@ extension TimeTrackerStore {
         appleHealthTimelinePreferenceStore.isTimelineEnabled = false
         isAppleHealthTimelineEnabled = false
         appleHealthTimelineItems = []
+        appleHealthTaskCatalogErrorMessage = nil
         appleHealthTimelineState = appleHealthDataReader.isHealthDataAvailable
             ? .disabled
             : .unavailable
@@ -78,19 +87,27 @@ extension TimeTrackerStore {
     func timelinePresentationSeed(
         for item: AppleHealthTimelineItem
     ) -> TimelinePresentationSeed {
-        let category = AppStrings.localized(item.categoryLocalizationKey)
+        let generatedTask = item.taskRole.flatMap {
+            task(
+                for: AppleHealthTaskCatalog.taskDefinition(for: $0).id
+            )
+        }
+        let category = generatedTask.flatMap {
+            effectiveCategory(for: $0)?.title
+        } ?? AppStrings.localized(item.categoryLocalizationKey)
         let source = AppStrings.localized("health.timeline.source")
         return TimelinePresentationSeed(
             id: item.id,
             subject: item.subject,
-            title: AppStrings.localized(item.titleLocalizationKey),
+            title: generatedTask?.title ??
+                AppStrings.localized(item.titleLocalizationKey),
             path: String(
                 format: AppStrings.localized("health.timeline.pathFormat"),
                 category,
                 source
             ),
-            iconName: item.iconName,
-            colorHex: item.colorHex,
+            iconName: generatedTask?.iconName ?? item.iconName,
+            colorHex: generatedTask?.colorHex ?? item.colorHex,
             interval: item.interval
         )
     }

@@ -130,6 +130,7 @@ final class TimeTrackerStore {
     var isAppleHealthTimelineEnabled: Bool
     var appleHealthTimelineItems: [AppleHealthTimelineItem] = []
     var appleHealthTimelineState: AppleHealthTimelineState
+    var appleHealthTaskCatalogErrorMessage: String?
     @ObservationIgnored var appleHealthTimelineRequestID = UUID()
     var persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
     var effectivePersistenceWriteSafety: PersistenceWriteSafety {

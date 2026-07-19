@@ -59,6 +59,17 @@ struct DataMaintenanceLifecycleTests {
         context.insert(inboxSuggestion)
         context.insert(inboxReceipt)
         try context.save()
+        let generatedRunning = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        )
+        _ = try StoreScopedAppleHealthTaskCatalogCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "health-clear-test"
+        ).apply(roles: [.workout(.running)])
+        let expectedHealthClearRecoveryTaskIDs: Set<UUID> = [
+            generatedRunning.id,
+        ]
 
         let credentialStore = ResetTestCredentialStore()
         try credentialStore.writeAPIKey("private-test-key")
@@ -103,6 +114,10 @@ struct DataMaintenanceLifecycleTests {
         #expect(store.selectedTaskID == nil)
         #expect(store.tasksRoute == nil)
         #expect(healthPreferences.isTimelineEnabled == false)
+        #expect(
+            healthPreferences.taskCatalogClearRecoveryTaskIDs ==
+                expectedHealthClearRecoveryTaskIDs
+        )
         #expect(store.isAppleHealthTimelineEnabled == false)
         #expect(store.appleHealthTimelineItems.isEmpty)
         #expect(store.appleHealthTimelineState == .unavailable)

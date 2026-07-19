@@ -292,6 +292,7 @@
 "health.timeline.exerciseCategory" = "Exercise";
 "health.timeline.dailyCategory" = "Daily";
 "health.timeline.sleep" = "Sleep";
+"health.task.sleep" = "Sleep";
 "health.timeline.workout.walking" = "Walking";
 "health.timeline.workout.running" = "Running";
 "health.timeline.workout.cycling" = "Cycling";
@@ -315,10 +316,12 @@
 "health.timeline.reviewAccess" = "Review Access and Refresh";
 "health.timeline.failed.title" = "Apple Health could not be read";
 "health.settings.title" = "Apple Health";
-"health.settings.showInTimeline" = "Show Apple Health in Timeline";
+"health.settings.showInTimeline" = "Show Apple Health Timeline & Add Task Templates";
 "health.settings.refresh" = "Refresh Today’s Data";
 "health.settings.openSystemSettings" = "Open System Settings";
-"health.settings.footer" = "Time Tracker reads workouts and sleep only when you choose to show them. They stay as a local Timeline overlay and are not added to your task database or iCloud.";
+"health.settings.footer" = "Workout and sleep records stay on this device and never enter the task database or iCloud. Enabling this feature creates a fixed set of editable task templates independent of your Health records; templates sync like other tasks and remain when this display is turned off.";
+"health.settings.taskSetupFailed.title" = "Health tasks could not be updated";
+"health.taskSetup.error.generatedAssignmentUnavailable" = "The Health task could not be assigned to its category.";
 "health.settings.requesting.message" = "Complete the system access sheet to continue.";
 "health.settings.loading.message" = "Workouts and actual sleep stages are being read for today.";
 "health.settings.items.title" = "%d Apple Health records shown today";

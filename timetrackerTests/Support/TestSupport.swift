@@ -119,6 +119,7 @@ func makeTestStore(
 final class TestAppleHealthTimelinePreferenceStore:
     AppleHealthTimelinePreferenceStoring {
     var isTimelineEnabled: Bool
+    var taskCatalogClearRecoveryTaskIDs: Set<UUID> = []
 
     init(isTimelineEnabled: Bool = false) {
         self.isTimelineEnabled = isTimelineEnabled

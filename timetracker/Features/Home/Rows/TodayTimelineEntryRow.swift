@@ -37,12 +37,33 @@ struct TodayTimelineEntryRow: View {
                 )
             }
         case .appleHealthWorkout, .appleHealthSleep:
-            if style == .card {
-                TimelineLegendRow(entry: entry)
-                    .padding(.horizontal, 18)
-            } else {
-                TimelineLegendRow(entry: entry)
+            appleHealthRow
+        }
+    }
+
+    @ViewBuilder
+    private var appleHealthRow: some View {
+        if let taskID = store.appleHealthGeneratedTaskID(for: entry.subject) {
+            Button {
+                openTaskDetail(taskID)
+            } label: {
+                appleHealthLegend
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+        } else {
+            appleHealthLegend
+        }
+    }
+
+    @ViewBuilder
+    private var appleHealthLegend: some View {
+        if style == .card {
+            TimelineLegendRow(entry: entry)
+                .padding(.horizontal, 18)
+        } else {
+            TimelineLegendRow(entry: entry)
         }
     }
 }

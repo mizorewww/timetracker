@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -372,14 +373,31 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
-    func successfulAccessRequestWithNoReadableSamplesNeverClaimsAuthorizationOrDenial() async {
+    func noReadableSamplesStillCreateTheCompleteStaticTemplateCatalog()
+        async throws {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let context = try makeTestContext()
+        let stateDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "HealthCatalogEmpty-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(
+            at: stateDirectory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: stateDirectory)
+        }
         let reader = StubAppleHealthReader(batch: .empty)
         let preferences = StubAppleHealthTimelinePreferences(isTimelineEnabled: false)
         let store = TimeTrackerStore(
             appleHealthDataReader: reader,
-            appleHealthTimelinePreferenceStore: preferences
+            appleHealthTimelinePreferenceStore: preferences,
+            writeAuthorization: .isolatedTestHarness,
+            syncConflictService: SyncConflictService(
+                stateURL: stateDirectory.appending(path: "state.json")
+            )
         )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.hasCompletedStartupConfiguration = true
 
         await store.showAppleHealthInTimeline(now: now)
 
@@ -389,10 +407,185 @@ struct AppleHealthTimelineTests {
         }
         #expect(store.appleHealthTimelineItems.isEmpty)
         #expect(preferences.isTimelineEnabled)
+        let staticPlan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        #expect(
+            Set(store.tasks.map(\.id)) ==
+                Set(staticPlan.tasks.map(\.id))
+        )
+        #expect(
+            Set(store.taskCategories.map(\.id)) ==
+                Set(staticPlan.categories.map(\.id))
+        )
+        #expect(
+            Set(store.taskCategoryAssignments.map(\.id)) ==
+                Set(staticPlan.tasks.map(\.categoryAssignmentID))
+        )
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func clearRecoveryIdentityReceiptRoundTripsOnlyThroughLocalPreferences()
+        throws {
+        let suiteName = "AppleHealthClearRecovery-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let firstID = try fixedID(28)
+        let secondID = try fixedID(29)
+        let writer = UserDefaultsAppleHealthTimelinePreferenceStore(
+            defaults: defaults
+        )
+
+        writer.taskCatalogClearRecoveryTaskIDs = [secondID, firstID]
+
+        let reader = UserDefaultsAppleHealthTimelinePreferenceStore(
+            defaults: defaults
+        )
+        #expect(
+            reader.taskCatalogClearRecoveryTaskIDs == [firstID, secondID]
+        )
+        reader.taskCatalogClearRecoveryTaskIDs = []
+        #expect(reader.taskCatalogClearRecoveryTaskIDs.isEmpty)
+    }
+
+    @Test @MainActor
+    func enablingCreatesStaticEditableTemplatesWithoutPersistingHealthRecords()
+        async throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let context = try makeTestContext()
+        let stateDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "HealthCatalogFacade-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(
+            at: stateDirectory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: stateDirectory)
+        }
+        let reader = StubAppleHealthReader(
+            batch: AppleHealthSampleBatch(
+                workouts: [
+                    workout(
+                        id: try fixedID(30),
+                        kind: .running,
+                        start: now.timeIntervalSince1970 - 1_800,
+                        end: now.timeIntervalSince1970 - 1_200
+                    ),
+                ],
+                sleep: [
+                    sleep(
+                        id: try fixedID(31),
+                        stage: .asleepCore,
+                        start: now.timeIntervalSince1970 - 3_600,
+                        end: now.timeIntervalSince1970 - 2_400
+                    ),
+                ]
+            )
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: false
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences,
+            writeAuthorization: .isolatedTestHarness,
+            syncConflictService: SyncConflictService(
+                stateURL: stateDirectory.appending(path: "state.json")
+            )
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.hasCompletedStartupConfiguration = true
+
+        await store.showAppleHealthInTimeline(now: now)
+
+        let running = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        )
+        let sleep = AppleHealthTaskCatalog.taskDefinition(for: .sleep)
+        let staticPlan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        #expect(
+            Set(store.tasks.map(\.id)) ==
+                Set(staticPlan.tasks.map(\.id))
+        )
+        #expect(
+            Set(store.taskCategories.map(\.id)) ==
+                Set(staticPlan.categories.map(\.id))
+        )
+        #expect(store.appleHealthTimelineItems.count == 2)
+        #expect(store.appleHealthTaskCatalogErrorMessage == nil)
+        #expect(preferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
+
+        store.hideAppleHealthFromTimeline()
+        #expect(store.task(for: running.id) != nil)
+        #expect(store.task(for: sleep.id) != nil)
+    }
+
+    @Test @MainActor
+    func enabledRefreshRetriesAndConsumesOnlyConfirmedClearRecovery()
+        async throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let context = try makeTestContext()
+        let running = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        )
+        _ = try StoreScopedAppleHealthTaskCatalogCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "health-refresh-recovery"
+        ).apply(roles: [.workout(.running)])
+        try context.performAtomicMutation {
+            try SeedData.clearAllChanges(
+                context: context,
+                includesPreferences: true
+            )
+        }
+        let stateDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "HealthCatalogRefresh-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(
+            at: stateDirectory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: stateDirectory)
+        }
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: true
+        )
+        preferences.taskCatalogClearRecoveryTaskIDs = [running.id]
+        let store = TimeTrackerStore(
+            appleHealthDataReader: StubAppleHealthReader(batch: .empty),
+            appleHealthTimelinePreferenceStore: preferences,
+            writeAuthorization: .isolatedTestHarness,
+            syncConflictService: SyncConflictService(
+                stateURL: stateDirectory.appending(path: "state.json")
+            )
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.hasCompletedStartupConfiguration = true
+
+        await store.refreshAppleHealthTimeline(now: now)
+
+        #expect(store.task(for: running.id) != nil)
+        #expect(preferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+        let assignment = try #require(
+            try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
+                .logicalWinnersByTaskID()[running.id]
+        )
+        #expect(assignment.id == running.categoryAssignmentID)
+        #expect(assignment.categoryID == running.categoryID)
     }
 
     @Test
-    func healthTimelineUIUsesSharedChartAndReadOnlyLegendWithoutPersistentTasks() throws {
+    func healthTimelineUIUsesSharedChartAndRoutesThroughStaticTemplates()
+        throws {
         let home = try sourceText(
             "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
         )
@@ -420,6 +613,8 @@ struct AppleHealthTimelineTests {
         #expect(phone.contains("TodayTimelineEntryRow("))
         #expect(entryRow.contains("TimelineLegendRow(entry: entry)"))
         #expect(entryRow.contains("TimelineRow("))
+        #expect(entryRow.contains("appleHealthGeneratedTaskID"))
+        #expect(entryRow.contains("openTaskDetail(taskID)"))
         #expect(sharedLegend.contains("struct TimelineLegendRow"))
         #expect(healthUI.contains("showAppleHealthInTimeline"))
         #expect(readyBranch.contains("refreshAppleHealthTimeline()"))
@@ -577,6 +772,7 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
 private final class StubAppleHealthTimelinePreferences:
     AppleHealthTimelinePreferenceStoring {
     var isTimelineEnabled: Bool
+    var taskCatalogClearRecoveryTaskIDs: Set<UUID> = []
 
     init(isTimelineEnabled: Bool) {
         self.isTimelineEnabled = isTimelineEnabled

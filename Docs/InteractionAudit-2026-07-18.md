@@ -462,6 +462,45 @@ Status: completed and verified
   deleted. Owned result bundles and DerivedData were deleted after evidence
   extraction; no owned runner or build process remained.
 
+## Checkpoint 15 — three-level Inbox suggestion cards
+
+Status: completed and verified
+
+- The later hands-on feedback tightens Checkpoint 12's ready-suggestion
+  layout. Each card now reads in workflow order: completion circle and Inbox
+  title; Suggested label, generated icon, and target task; then a full-width
+  decision row.
+- Discard and Apply are independent controls anchored to opposite card edges.
+  Compact iPhone width uses neutral × and emphasized ✓ circles; regular iPad
+  width keeps the same component and expands those controls to icon-plus-text.
+  Both controls meet the 44-point touch floor.
+- Only the proposal row follows the title-column inset. The decision row does
+  not inherit that indentation, and ready suggestions no longer use
+  `ViewThatFits` to squeeze the target and actions back onto one line.
+- The proposal is one accessibility element with the localized target
+  description. The generated icon remains the only visual suggestion icon;
+  unavailable targets still disable Apply without hiding Discard.
+- The paid-signing macOS Inbox/shared/localization contracts passed 27/27.
+  The normal-size iPhone 17 Pro and iPad Pro 11-inch Apply path each passed
+  1/1. The first compact-size refinement was correctly rejected when the
+  rendered button frame measured only 42 points; after the frame correction,
+  both buttons measured within the required 44–50 point range. Ready and
+  applied screenshots were exported and visually reviewed under the `final`
+  iPhone and iPad directories in
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/inbox-card-feedback-checkpoint`.
+- The generic iOS build completed with Apple Development signing. The main
+  App, Widget, Live Activity, and Watch app passed strict signature and
+  embedded-binary validation as Team `LT98S43NKA`; APS development, CloudKit,
+  and App Group entitlements remain present.
+- The initial visual-batch iPhone/iPad UDIDs
+  `5EC55BE9-E6C3-4DBA-A292-FFE376D3751D` and
+  `3E62FE14-2635-470B-AEC0-F23FDBF7FDE7`, plus final-batch UDIDs
+  `421047D5-198B-4297-8F00-F54ED2C49B86` and
+  `D0F69314-DC86-4D1D-8AF2-8AAA31F354E7`, were terminated, shut down, and
+  deleted after evidence extraction. Owned result bundles, DerivedData, and
+  logs were deleted; no owned Booted device, app, extension, runner,
+  `xcodebuild`, or `xctest` process remained.
+
 The next Analytics interaction checkpoints are to restore the visible
 Review/Explore information architecture without losing question-led labels,
 then make task and category drill-down destinations unmistakably discoverable.

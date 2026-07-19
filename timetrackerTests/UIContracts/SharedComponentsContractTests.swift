@@ -316,6 +316,11 @@ struct SharedComponentsContractTests {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
         let inboxSuggestionSource = try sourceText("timetracker/Features/Inbox/InboxSuggestionRow.swift")
+        let readySuggestionSource = try #require(
+            inboxSuggestionSource.components(
+                separatedBy: "struct InboxSuggestionFailureBar"
+            ).first
+        )
 
         #expect(actionSource.contains(".lineLimit(2)"))
         #expect(actionSource.contains(".fixedSize(horizontal: false, vertical: true)"))
@@ -327,11 +332,28 @@ struct SharedComponentsContractTests {
         #expect(homeActionSource.contains("home.newTask") == false)
         #expect(inboxSuggestionSource.contains("if isCompact {"))
         #expect(inboxSuggestionSource.contains("ViewThatFits(in: .horizontal)"))
-        #expect(inboxSuggestionSource.contains("compactLayout"))
+        #expect(readySuggestionSource.contains("ViewThatFits(in: .horizontal)") == false)
+        #expect(readySuggestionSource.contains("Text(.app(\"inbox.suggestion.label\"))"))
+        #expect(readySuggestionSource.contains("Spacer(minLength: 8)"))
+        #expect(readySuggestionSource.contains("systemImage: \"xmark\""))
+        #expect(readySuggestionSource.contains("systemImage: \"checkmark\""))
+        #expect(readySuggestionSource.contains(".buttonStyle(.bordered)"))
+        #expect(readySuggestionSource.contains(".buttonStyle(.borderedProminent)"))
+        #expect(readySuggestionSource.contains(".buttonBorderShape(.circle)"))
+        #expect(
+            readySuggestionSource.contains(
+                "width: AppLayout.minimumInteractiveTarget - 14"
+            )
+        )
+        #expect(
+            readySuggestionSource.components(
+                separatedBy: "width: AppLayout.minimumInteractiveTarget,"
+            ).count - 1 == 2
+        )
         #expect(
             inboxSuggestionSource.components(
                 separatedBy: ".frame(minWidth: 160, alignment: .leading)"
-            ).count - 1 == 2
+            ).count - 1 == 1
         )
         #expect(inboxSuggestionSource.contains("InboxSuggestionBackground") == false)
         #expect(inboxSuggestionSource.contains("ChecklistItemIcon("))
@@ -349,8 +371,17 @@ struct SharedComponentsContractTests {
                     "                minHeight: AppLayout.minimumInteractiveTarget"
             )
         )
-        #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.apply\"))"))
-        #expect(inboxSuggestionSource.contains(".accessibilityLabel(AppStrings.localized(\"inbox.suggestion.discard\"))"))
+        #expect(
+            readySuggestionSource.contains(
+                "accessibilityLabel: AppStrings.localized(\"inbox.suggestion.apply\")"
+            )
+        )
+        #expect(
+            readySuggestionSource.contains(
+                "accessibilityLabel: AppStrings.localized(\"inbox.suggestion.discard\")"
+            )
+        )
+        #expect(readySuggestionSource.contains(".accessibilityLabel(accessibilityLabel)"))
     }
 
     @Test

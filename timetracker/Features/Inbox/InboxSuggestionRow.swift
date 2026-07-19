@@ -34,109 +34,152 @@ struct InboxSuggestionBar: View {
     let apply: () -> Void
 
     var body: some View {
-        adaptiveLayout
-            .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
-    }
-
-    @ViewBuilder
-    private var adaptiveLayout: some View {
-        if isCompact {
-            compactLayout
-        } else {
-            ViewThatFits(in: .horizontal) {
-                horizontalLayout
-                compactLayout
-            }
-        }
-    }
-
-    private var horizontalLayout: some View {
-        HStack(spacing: 10) {
-            suggestionLabel
-                .frame(minWidth: 160, alignment: .leading)
-                .layoutPriority(1)
-            Spacer(minLength: 4)
-            actions
-                .fixedSize()
-        }
-    }
-
-    private var compactLayout: some View {
         VStack(alignment: .leading, spacing: 8) {
             suggestionLabel
-            HStack {
-                Spacer(minLength: 0)
-                actions
-            }
+                .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
+            actions
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var suggestionLabel: some View {
-        HStack(spacing: 8) {
-            ChecklistItemIcon(
-                iconName: iconName,
-                colorHex: colorHex,
-                style: .solid
-            )
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(.app("inbox.suggestion.label"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
 
-            VStack(alignment: .leading, spacing: 2) {
-                Label {
-                    Text(
-                        String.localizedStringWithFormat(
-                            AppStrings.localized("inbox.suggestion.targetFormat"),
-                            taskTitle
-                        )
-                    )
+                ChecklistItemIcon(
+                    iconName: iconName,
+                    colorHex: colorHex,
+                    style: .solid
+                )
+
+                Text(taskTitle)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(.blue)
-                }
+                    .layoutPriority(1)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                String.localizedStringWithFormat(
+                    AppStrings.localized("inbox.suggestion.targetFormat"),
+                    taskTitle
+                )
+            )
+            .accessibilityIdentifier("inbox.suggestion.ready.\(itemID.uuidString)")
 
-                if canApply == false {
-                    Text(.app("inbox.suggestion.targetUnavailable"))
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            if canApply == false {
+                Text(.app("inbox.suggestion.targetUnavailable"))
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("inbox.suggestion.ready.\(itemID.uuidString)")
     }
 
     private var actions: some View {
-        HStack(spacing: 4) {
-            Button(action: discard) {
-                CompactTextActionLabel(
-                    title: AppStrings.localized("common.dismiss")
-                )
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .accessibilityLabel(AppStrings.localized("inbox.suggestion.discard"))
-            .accessibilityIdentifier(
-                "inbox.suggestion.discard.\(itemID.uuidString)"
-            )
+        HStack(spacing: 8) {
+            discardButton
+            Spacer(minLength: 8)
+            applyButton
+        }
+        .font(.subheadline)
+    }
 
-            Button(action: apply) {
-                CompactTextActionLabel(
-                    title: AppStrings.localized("inbox.suggestion.apply")
-                )
-            }
-            .buttonStyle(.plain)
+    @ViewBuilder
+    private var discardButton: some View {
+        if isCompact {
+            compactActionButton(
+                systemImage: "xmark",
+                accessibilityLabel: AppStrings.localized("inbox.suggestion.discard"),
+                identifier: "inbox.suggestion.discard.\(itemID.uuidString)",
+                action: discard
+            )
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .frame(
+                width: AppLayout.minimumInteractiveTarget,
+                height: AppLayout.minimumInteractiveTarget
+            )
+        } else {
+            regularActionButton(
+                title: AppStrings.localized("common.dismiss"),
+                systemImage: "xmark",
+                accessibilityLabel: AppStrings.localized("inbox.suggestion.discard"),
+                identifier: "inbox.suggestion.discard.\(itemID.uuidString)",
+                action: discard
+            )
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var applyButton: some View {
+        if isCompact {
+            compactActionButton(
+                systemImage: "checkmark",
+                accessibilityLabel: AppStrings.localized("inbox.suggestion.apply"),
+                identifier: "inbox.suggestion.apply.\(itemID.uuidString)",
+                action: apply
+            )
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.circle)
+            .frame(
+                width: AppLayout.minimumInteractiveTarget,
+                height: AppLayout.minimumInteractiveTarget
+            )
+            .disabled(canApply == false)
+        } else {
+            regularActionButton(
+                title: AppStrings.localized("inbox.suggestion.apply"),
+                systemImage: "checkmark",
+                accessibilityLabel: AppStrings.localized("inbox.suggestion.apply"),
+                identifier: "inbox.suggestion.apply.\(itemID.uuidString)",
+                action: apply
+            )
             .fontWeight(.semibold)
             .foregroundStyle(.blue)
             .disabled(canApply == false)
-            .accessibilityLabel(AppStrings.localized("inbox.suggestion.apply"))
-            .accessibilityIdentifier(
-                "inbox.suggestion.apply.\(itemID.uuidString)"
-            )
         }
-        .font(.subheadline)
+    }
+
+    private func compactActionButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .frame(
+                    width: AppLayout.minimumInteractiveTarget - 14,
+                    height: AppLayout.minimumInteractiveTarget - 14
+                )
+        }
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func regularActionButton(
+        title: String,
+        systemImage: String,
+        accessibilityLabel: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .frame(minHeight: AppLayout.minimumInteractiveTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityIdentifier(identifier)
     }
 }
 

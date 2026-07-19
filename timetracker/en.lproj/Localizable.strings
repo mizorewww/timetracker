@@ -891,6 +891,7 @@
 "inbox.suggestion.missingTarget" = "Unavailable task";
 "inbox.suggestion.targetUnavailable" = "This task is no longer available for new work.";
 "inbox.suggestion.prefix" = "Suggest";
+"inbox.suggestion.label" = "Suggested:";
 "inbox.suggestion.targetFormat" = "Suggested task: %@";
 "inbox.suggestion.editorTitle" = "Inbox Suggestion";
 "inbox.suggestion.editorFooter" = "Choose the task, symbol, and color before adding this inbox item as a checklist item.";

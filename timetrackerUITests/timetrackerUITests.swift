@@ -663,14 +663,19 @@ final class timetrackerUITests: XCTestCase {
                 "inbox.suggestion.apply."
             ))
             .firstMatch
-        let targetLabel = app.staticTexts["Suggested task: Design System"].firstMatch
+        let discard = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.suggestion.discard."
+            ))
+            .firstMatch
 
         XCTAssertTrue(captureField.waitForExistence(timeout: 5))
         XCTAssertTrue(itemField.waitForExistence(timeout: 5))
         XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
-        XCTAssertTrue(targetLabel.waitForExistence(timeout: 3))
+        XCTAssertEqual(suggestion.label, "Suggested task: Design System")
         XCTAssertGreaterThanOrEqual(
-            targetLabel.frame.width,
+            suggestion.frame.width,
             120,
             "The generated task label must not collapse behind the action buttons."
         )
@@ -679,8 +684,33 @@ final class timetrackerUITests: XCTestCase {
                 .waitForExistence(timeout: 3)
         )
         XCTAssertTrue(apply.waitForExistence(timeout: 3) && apply.isHittable)
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
         XCTAssertGreaterThanOrEqual(apply.frame.width, 44)
         XCTAssertGreaterThanOrEqual(apply.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(discard.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(discard.frame.height, 44)
+        XCTAssertEqual(discard.frame.midY, apply.frame.midY, accuracy: 1)
+        if app.frame.width < 600 {
+            XCTAssertLessThanOrEqual(apply.frame.width, 50)
+            XCTAssertLessThanOrEqual(apply.frame.height, 50)
+            XCTAssertLessThanOrEqual(discard.frame.width, 50)
+            XCTAssertLessThanOrEqual(discard.frame.height, 50)
+        }
+        XCTAssertGreaterThan(
+            suggestion.frame.minY,
+            itemField.frame.maxY,
+            "The suggestion must remain on its own row below the inbox title."
+        )
+        XCTAssertGreaterThan(
+            apply.frame.minY,
+            suggestion.frame.maxY,
+            "Suggestion actions must form a separate row below the target."
+        )
+        XCTAssertLessThan(
+            discard.frame.maxX,
+            apply.frame.minX,
+            "Dismiss and apply must anchor to opposite sides of the action row."
+        )
 
         let captureCard = app.cells
             .containing(.textField, identifier: captureField.identifier)

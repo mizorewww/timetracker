@@ -134,6 +134,7 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxSuggestionFailureBar("))
         #expect(inboxSource.contains("store.retryInboxSuggestion(item)"))
         #expect(inboxSource.contains("store.clearInboxSuggestionFailure(item)"))
+        #expect(inboxSource.contains("inbox.suggestion.label"))
         #expect(inboxSource.contains("inbox.suggestion.targetFormat"))
         #expect(inboxSource.contains("InboxSuggestionBackground") == false)
         #expect(inboxSource.contains(".padding(.leading, 44)") == false)
@@ -169,6 +170,11 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("inbox.suggestion.discard.\\(itemID.uuidString)"))
         #expect(inboxSource.contains("inbox.suggestion.retry.\\(itemID.uuidString)"))
         #expect(inboxSource.contains("CompactTextActionLabel("))
+        #expect(inboxSource.contains("compactActionButton("))
+        #expect(inboxSource.contains("regularActionButton("))
+        #expect(inboxSource.contains("systemImage: \"xmark\""))
+        #expect(inboxSource.contains("systemImage: \"checkmark\""))
+        #expect(inboxSource.contains(".buttonStyle(.borderedProminent)"))
         #expect(storeSource.contains("func autoSuggestInboxItemsIfNeeded()"))
         #expect(storeSource.contains("enum InboxSuggestionStateKind"))
         #expect(storeSource.contains("func shouldAutoSuggest("))
@@ -197,6 +203,7 @@ struct InboxUIContractTests {
             "inbox.moveToTask.title",
             "inbox.moveToTask.emptyDescription",
             "inbox.moveToTask.selectionHint",
+            "inbox.suggestion.label",
             "tasks.search.empty.description",
             "pomodoro.taskPicker.selectionHint"
         ]

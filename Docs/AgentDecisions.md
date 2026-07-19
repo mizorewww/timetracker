@@ -1571,6 +1571,24 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：source contract 禁止 Analytics 定义重新出现 `info.circle`，并固定介绍、三个定义、公式与示例的 identifiers 和三语键。付费签名 macOS contracts 45/45；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 定义路径各通过 1/1 并完成截图目视复核。macOS UI runner 两次在进入测试前启用 automation mode 超时，不冒充 UI 通过；完整证据和资源清理记录在 dated Audit。
 
+## AD-123：Inbox 推荐卡片按“原文、目标、决定”分成三行
+
+状态：Accepted
+
+背景：原 Inbox ready suggestion 会按宽度在横排与纵排之间切换，目标任务、生成图标和两个文字动作相互争夺空间。用户需要先辨认 Inbox 原文，再判断推荐去向，最后做接受或放弃；把三件事压在一个自适应横排中既破坏扫读顺序，也让 iPhone 上的动作像一段拥挤文字。
+
+决策：
+
+- 第一行继续复用 `EditableChecklistTextRow`，让完成圆圈与 Inbox 原文同行；更多菜单保持尾部上下文动作。
+- 第二行只表达建议目标：本地化的 Suggested 标签、共享 `ChecklistItemIcon` 生成预览和目标任务名称。只给这一行增加与正文列一致的 leading inset，不能给最后一行继承缩进。
+- 第三行始终占用整张卡片宽度，以 `Spacer` 把 Discard 与 Apply 锚定到左右两端。紧凑宽度使用中性的圆形 × 与强调色圆形 ✓；常规宽度仍使用同一行，只扩展为图标加文字，不重新创建 iPad/Mac 专用卡片。
+- 两个动作是独立按钮且触控目标至少 44 pt；Apply 在目标不可用时禁用，Discard 保持可用且不使用破坏性红色。建议目标合成一个辅助功能元素，生成图标不单独朗读内部符号或颜色值。
+- Ready suggestion 不再使用 `ViewThatFits` 把目标和动作重新压回同一行，也不添加嵌套卡片、分隔线或第二个 sparkle 图标。
+
+后果：视觉顺序与真实工作流一致——先看捕获内容、再看建议去向、最后决定；iPhone 和 iPad 复用同一个组件与语义结构，只由可用宽度改变动作标签。以后新增 Inbox 建议类型也必须先保持这三层信息架构，不能为单个状态再造一套卡片或任务选择控件。
+
+验证：Ready source contract 固定三行结构、左右 action row、× / ✓、44 pt 与三语 Suggested key；付费签名 macOS 定向 contracts 27/27。正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 同一 Apply 路径各 1/1，分别截图确认紧凑符号和常规文字动作；generic iOS 主 App、Widget、Live Activity 与 Watch 自动签名构建和严格 codesign 通过。完整证据与资源清理记录在 dated Audit。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

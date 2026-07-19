@@ -4,6 +4,35 @@ import Testing
 
 struct CoreQuickStartSelectionMutationTests {
     @Test
+    func addingSelectionAppendsOnceAndPreservesPinnedOrder() {
+        let first = UUID()
+        let added = UUID()
+
+        #expect(
+            QuickStartSelectionMutation.adding(added, to: [first]) ==
+                [first, added]
+        )
+        #expect(
+            QuickStartSelectionMutation.adding(added, to: [first, added]) ==
+                [first, added]
+        )
+    }
+
+    @Test
+    func removingSelectionPreservesTheOrderOfEveryOtherPinnedTask() {
+        let first = UUID()
+        let removed = UUID()
+        let last = UUID()
+
+        #expect(
+            QuickStartSelectionMutation.removing(
+                removed,
+                from: [first, removed, last]
+            ) == [first, last]
+        )
+    }
+
+    @Test
     func deletionUsesVisibleIdentityWhenAStaleSelectionPrecedesTheRow() {
         let stale = UUID()
         let visible = UUID()

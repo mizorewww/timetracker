@@ -2,6 +2,15 @@ import Foundation
 import SwiftUI
 
 enum QuickStartSelectionMutation {
+    static func adding(_ id: UUID, to selectedIDs: [UUID]) -> [UUID] {
+        guard !selectedIDs.contains(id) else { return selectedIDs }
+        return selectedIDs + [id]
+    }
+
+    static func removing(_ id: UUID, from selectedIDs: [UUID]) -> [UUID] {
+        selectedIDs.filter { $0 != id }
+    }
+
     static func removingVisibleSelections(
         at offsets: IndexSet,
         visibleIDs: [UUID],
@@ -18,6 +27,7 @@ enum QuickStartSelectionMutation {
 struct QuickStartEditorSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedIDs: [UUID]
     @State private var isDiscardConfirmationPresented = false
     let initialSelectedIDs: [UUID]
@@ -31,7 +41,10 @@ struct QuickStartEditorSheet: View {
     }
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter(store.isTaskAvailableForTracking)
+        let selectedIDSet = Set(selectedIDs)
+        return store.tasks.filter {
+            store.isTaskAvailableForTracking($0) && !selectedIDSet.contains($0.id)
+        }
     }
 
     private var pinnedTasks: [TaskNode] {
@@ -39,15 +52,37 @@ struct QuickStartEditorSheet: View {
             .filter(store.isTaskAvailableForTracking)
     }
 
-    private func isPinned(_ task: TaskNode) -> Bool {
-        selectedIDs.contains(task.id)
+    private func pin(_ task: TaskNode) {
+        withSelectionAnimation {
+            selectedIDs = QuickStartSelectionMutation.adding(task.id, to: selectedIDs)
+        }
     }
 
-    private func togglePinned(_ task: TaskNode) {
-        if let index = selectedIDs.firstIndex(of: task.id) {
-            selectedIDs.remove(at: index)
-        } else {
-            selectedIDs.append(task.id)
+    private func unpin(_ task: TaskNode) {
+        withSelectionAnimation {
+            selectedIDs = QuickStartSelectionMutation.removing(task.id, from: selectedIDs)
+        }
+    }
+
+    private func removePinned(at offsets: IndexSet) {
+        withSelectionAnimation {
+            selectedIDs = QuickStartSelectionMutation.removingVisibleSelections(
+                at: offsets,
+                visibleIDs: pinnedTasks.map(\.id),
+                from: selectedIDs
+            )
+        }
+    }
+
+    private func clearPinned() {
+        withSelectionAnimation {
+            selectedIDs.removeAll()
+        }
+    }
+
+    private func withSelectionAnimation(_ updates: () -> Void) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+            updates()
         }
     }
 
@@ -67,57 +102,74 @@ struct QuickStartEditorSheet: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(Array(pinnedTasks.enumerated()), id: \.element.id) { index, task in
-                            QuickStartPinnedTaskRow(
-                                presentation: store.taskIdentityPresentation(for: task),
-                                order: index + 1
+                            Button {
+                                unpin(task)
+                            } label: {
+                                QuickStartEditorTaskRow(
+                                    presentation: store.taskIdentityPresentation(for: task),
+                                    order: index + 1,
+                                    actionSystemImage: "minus.circle",
+                                    actionTint: Color.primary.opacity(0.45)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(task.title)
+                            .accessibilityValue(selectionValue(isPinned: true, order: index + 1))
+                            .accessibilityHint(
+                                AppStrings.localized("quickStart.selection.unpinHint")
+                            )
+                            .accessibilityAddTraits(.isSelected)
+                            .accessibilityIdentifier(
+                                "quickStart.editor.pinned.\(task.id.uuidString)"
                             )
                         }
-                        .onDelete { offsets in
-                            selectedIDs = QuickStartSelectionMutation.removingVisibleSelections(
-                                at: offsets,
-                                visibleIDs: pinnedTasks.map(\.id),
-                                from: selectedIDs
-                            )
-                        }
+                        .onDelete(perform: removePinned)
                     }
 
                     if !selectedIDs.isEmpty {
-                        Button(role: .destructive) {
-                            selectedIDs.removeAll()
-                        } label: {
+                        Button(role: .destructive, action: clearPinned) {
                             Label(AppStrings.localized("quickStart.clearPinned"), systemImage: "xmark.circle")
                         }
                     }
                 } header: {
                     Text(String(format: AppStrings.localized("quickStart.pinnedHeader"), pinnedTasks.count))
+                        .accessibilityIdentifier("quickStart.editor")
                 } footer: {
                     Text(.app("quickStart.pinnedFooter"))
                 }
 
-                Section(AppStrings.localized("quickStart.allTasks")) {
-                    ForEach(availableTasks, id: \.id) { task in
-                        let pinned = isPinned(task)
-                        Button {
-                            togglePinned(task)
-                        } label: {
-                            QuickStartSelectableTaskRow(
-                                presentation: store.taskIdentityPresentation(for: task),
-                                isPinned: pinned,
-                                order: selectedIDs.firstIndex(of: task.id).map { $0 + 1 },
-                                isDisabled: false
+                Section(AppStrings.localized("quickStart.availableTasks")) {
+                    if availableTasks.isEmpty {
+                        Label(
+                            AppStrings.localized("quickStart.allPinned"),
+                            systemImage: "checkmark.circle"
+                        )
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("quickStart.editor.allPinned")
+                    } else {
+                        ForEach(availableTasks, id: \.id) { task in
+                            Button {
+                                pin(task)
+                            } label: {
+                                QuickStartEditorTaskRow(
+                                    presentation: store.taskIdentityPresentation(for: task),
+                                    order: nil,
+                                    actionSystemImage: "plus.circle.fill",
+                                    actionTint: .accentColor
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(task.title)
+                            .accessibilityValue(
+                                AppStrings.localized("quickStart.selection.notPinned")
+                            )
+                            .accessibilityHint(
+                                AppStrings.localized("quickStart.selection.pinHint")
+                            )
+                            .accessibilityIdentifier(
+                                "quickStart.editor.available.\(task.id.uuidString)"
                             )
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(task.title)
-                        .accessibilityValue(selectionValue(isPinned: pinned, order: selectedIDs.firstIndex(of: task.id).map { $0 + 1 }))
-                        .accessibilityHint(
-                            AppStrings.localized(
-                                pinned
-                                    ? "quickStart.selection.unpinHint"
-                                    : "quickStart.selection.pinHint"
-                            )
-                        )
-                        .accessibilityAddTraits(pinned ? .isSelected : [])
                     }
                 }
             }
@@ -165,67 +217,27 @@ struct QuickStartEditorSheet: View {
     }
 }
 
-private struct QuickStartPinnedTaskRow: View {
+private struct QuickStartEditorTaskRow: View {
     let presentation: TaskIdentityPresentation
-    let order: Int
-
-    var body: some View {
-        let text = presentation.text(for: .standard)
-        HStack(spacing: 12) {
-            TaskIcon(visual: presentation.visual, size: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(text.primary)
-                    .foregroundStyle(.primary)
-                if let secondary = text.secondary {
-                    Text(secondary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
-            Text("#\(order)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct QuickStartSelectableTaskRow: View {
-    let presentation: TaskIdentityPresentation
-    let isPinned: Bool
     let order: Int?
-    let isDisabled: Bool
+    let actionSystemImage: String
+    let actionTint: Color
 
     var body: some View {
-        let text = presentation.text(for: .standard)
         HStack(spacing: 12) {
-            TaskIcon(visual: presentation.visual, size: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(text.primary)
-                    .foregroundStyle(isDisabled ? .secondary : .primary)
-                if let secondary = text.secondary {
-                    Text(secondary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
+            TaskIdentityRow(presentation: presentation)
+                .layoutPriority(1)
             if let order {
                 Text("#\(order)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            Image(systemName: isPinned ? "checkmark.circle.fill" : "plus.circle")
-                .foregroundStyle(isPinned ? .blue : .secondary)
+            Image(systemName: actionSystemImage)
+                .foregroundStyle(actionTint)
                 .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
-        .opacity(isDisabled ? 0.55 : 1)
         .accessibilityElement(children: .combine)
     }
 }

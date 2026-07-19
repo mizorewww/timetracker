@@ -433,9 +433,11 @@
 "quickStart.empty.title" = "No Quick Start Tasks";
 "quickStart.empty.description" = "Pin tasks here or start tracking to build a recent list.";
 "quickStart.pinnedHeader" = "Pinned Tasks %d";
-"quickStart.pinnedFooter" = "Pinned tasks stay at the top of Quick Start. Keep this list short if you want a faster start; recent suggestions below are limited to three tasks.";
+"quickStart.pinnedFooter" = "Pinned tasks stay at the top of Quick Start. Tap a pinned task to remove it, or add an available task below.";
 "quickStart.clearPinned" = "Clear Pinned Tasks";
 "quickStart.allTasks" = "All Tasks";
+"quickStart.availableTasks" = "Available Tasks";
+"quickStart.allPinned" = "All available tasks are pinned.";
 "quickStart.selection.pinnedOrder" = "Pinned, order %d";
 "quickStart.selection.notPinned" = "Not pinned";
 "quickStart.selection.pinHint" = "Adds this task to Quick Start.";

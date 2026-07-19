@@ -12,6 +12,7 @@ struct QuickStartSection: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(AppStrings.quickStart)
                         .font(.headline)
+                        .accessibilityIdentifier("home.quickStart")
                     Text(AppStrings.localized("quickStart.defaultHint"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -44,6 +45,5 @@ struct QuickStartSection: View {
                 )
             }
         }
-        .accessibilityIdentifier("home.quickStart")
     }
 }

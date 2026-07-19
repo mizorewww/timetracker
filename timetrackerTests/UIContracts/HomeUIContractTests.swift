@@ -506,12 +506,31 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("QuickStartTaskButton") == false)
         #expect(homeSource.contains("dynamicTypeSize.isAccessibilitySize ? 360 : 300"))
         #expect(homeSource.contains("private let maxPinnedTasks = 3") == false)
-        #expect(homeSource.contains("QuickStartSelectableTaskRow"))
-        #expect(homeSource.contains("selectedIDs.append(task.id)"))
+        #expect(homeSource.contains("QuickStartEditorTaskRow"))
+        #expect(homeSource.contains("QuickStartPinnedTaskRow") == false)
+        #expect(homeSource.contains("QuickStartSelectableTaskRow") == false)
+        #expect(homeSource.contains("QuickStartSelectionMutation.adding(task.id, to: selectedIDs)"))
+        #expect(homeSource.contains("!selectedIDSet.contains($0.id)"))
         #expect(homeSource.contains("QuickStartSelectionMutation.removingVisibleSelections("))
         #expect(homeSource.contains("visibleIDs: pinnedTasks.map(\\.id)"))
         #expect(homeSource.contains("selectedIDs.remove(atOffsets: offsets)") == false)
         #expect(storeSource.contains("func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3)"))
+    }
+
+    @Test
+    func quickStartEditorMovesRowsBetweenExclusiveAnimatedSections() throws {
+        let source = try sourceText(
+            "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift"
+        )
+
+        #expect(source.contains("@Environment(\\.accessibilityReduceMotion)"))
+        #expect(source.contains("withAnimation(reduceMotion ? nil : .snappy(duration: 0.28))"))
+        #expect(source.contains("quickStart.availableTasks"))
+        #expect(source.contains("TaskIdentityRow(presentation: presentation)"))
+        #expect(source.contains(".accessibilityIdentifier(\"quickStart.editor\")"))
+        #expect(source.contains("quickStart.editor.available."))
+        #expect(source.contains("quickStart.editor.pinned."))
+        #expect(source.contains(".accessibilityAddTraits(.isSelected)"))
     }
 
     @Test

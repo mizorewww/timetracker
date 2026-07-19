@@ -2095,6 +2095,72 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testQuickStartEditorMovesAddedTaskOutOfAvailableTasks() throws {
+        #if os(macOS)
+        throw XCTSkip("The Quick Start editor transition is verified on iOS.")
+        #else
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let edit = app.buttons["home.quickStart.edit"].firstMatch
+        scrollTodayUntilHittable(edit, in: app)
+        XCTAssertTrue(edit.waitForExistence(timeout: 3) && edit.isHittable)
+        let editor = app.descendants(matching: .any)["quickStart.editor"]
+        activate(edit)
+        if !editor.waitForExistence(timeout: 3) {
+            scrollTodayUntilHittable(edit, in: app)
+            XCTAssertTrue(edit.isHittable)
+            activate(edit)
+        }
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+
+        let available = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "quickStart.editor.available."
+            )
+        ).matching(
+            NSPredicate(format: "label == %@", "Design macOS UI")
+        ).firstMatch
+        scrollUntilHittable(available, direction: .up, in: app)
+        XCTAssertTrue(available.waitForExistence(timeout: 5))
+        XCTAssertTrue(available.isHittable)
+        let taskID = available.identifier.replacingOccurrences(
+            of: "quickStart.editor.available.",
+            with: ""
+        )
+        let pinned = app.buttons[
+            "quickStart.editor.pinned.\(taskID)"
+        ].firstMatch
+
+        try capture("quick-start-editor-before-pin", app: app)
+        activate(available)
+
+        XCTAssertTrue(available.waitForNonExistence(timeout: 3))
+        scrollUntilHittable(pinned, direction: .down, in: app)
+        XCTAssertTrue(pinned.waitForExistence(timeout: 3))
+        XCTAssertTrue(pinned.isHittable)
+        XCTAssertTrue(app.staticTexts["Pinned Tasks 3"].waitForExistence(timeout: 3))
+        XCTAssertEqual(pinned.value as? String, "Pinned, order 3")
+        let availableHeader = app.staticTexts["Available Tasks"].firstMatch
+        XCTAssertTrue(availableHeader.waitForExistence(timeout: 3))
+        XCTAssertLessThan(
+            pinned.frame.midY,
+            availableHeader.frame.minY,
+            "The added task must move into the pinned section instead of remaining below."
+        )
+        try capture("quick-start-editor-after-pin", app: app)
+
+        XCTAssertTrue(pinned.isHittable)
+        activate(pinned)
+        XCTAssertTrue(pinned.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Pinned Tasks 2"].waitForExistence(timeout: 3))
+        scrollUntilHittable(available, direction: .up, in: app)
+        XCTAssertTrue(available.waitForExistence(timeout: 3))
+        #endif
+    }
+
+    @MainActor
     func testRunningQuickStartOpensTaskDetailInsteadOfStopping() throws {
         #if os(macOS)
         throw XCTSkip("The phone Quick Start interaction requires an iOS simulator.")

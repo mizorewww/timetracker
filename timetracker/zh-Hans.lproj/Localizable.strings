@@ -433,9 +433,11 @@
 "quickStart.empty.title" = "没有快捷任务";
 "quickStart.empty.description" = "可以先固定任务，或开始计时后自动生成最近任务。";
 "quickStart.pinnedHeader" = "固定任务 %d";
-"quickStart.pinnedFooter" = "固定任务会一直显示在 Quick Start 顶部。建议保持少量固定任务；下方最近建议最多显示 3 个任务。";
+"quickStart.pinnedFooter" = "固定任务会始终显示在 Quick Start 顶部。点按固定任务可将其移除，也可从下方添加可用任务。";
 "quickStart.clearPinned" = "清空固定任务";
 "quickStart.allTasks" = "全部任务";
+"quickStart.availableTasks" = "可添加任务";
+"quickStart.allPinned" = "所有可用任务均已固定。";
 "quickStart.selection.pinnedOrder" = "已固定，顺序 %d";
 "quickStart.selection.notPinned" = "未固定";
 "quickStart.selection.pinHint" = "将此任务添加到快速开始。";

@@ -8,6 +8,9 @@ struct AnalyticsPeriodUIContractTests {
         let detail = try sourceText(
             "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift"
         )
+        let focusRounds = try sourceText(
+            "timetracker/Features/Analytics/Sections/AnalyticsFocusRoundViews.swift"
+        )
         let snapshot = try sourceText(
             "timetracker/Stores/Domains/AnalyticsSnapshotModels.swift"
         )
@@ -36,12 +39,12 @@ struct AnalyticsPeriodUIContractTests {
 
         #expect(snapshot.contains("let completedFocusRoundSegmentIDs: [UUID]"))
         #expect(detail.contains("segmentIDs: snapshot.completedFocusRoundSegmentIDs"))
-        #expect(detail.contains("TimelineRow(store: store, segment: segment)"))
+        #expect(focusRounds.contains("TimelineRow(store: store, segment: segment)"))
         #expect(detail.contains("PomodoroLedgerContent(store: store)") == false)
-        #expect(detail.contains("private static let maximumRenderedRoundCount = 20"))
-        #expect(detail.contains("analytics.focusRounds.showingFormat"))
-        #expect(detail.contains(".accessibilityIdentifier(\"analytics.focusRounds.summary\")"))
-        #expect(detail.contains("analytics.focusRounds.content") == false)
+        #expect(focusRounds.contains("private static let maximumRenderedRoundCount = 20"))
+        #expect(focusRounds.contains("analytics.focusRounds.showingFormat"))
+        #expect(focusRounds.contains(".accessibilityIdentifier(\"analytics.focusRounds.summary\")"))
+        #expect(focusRounds.contains("analytics.focusRounds.content") == false)
         #expect(detail.contains("if range.isCurrentPeriod(referenceDate, liveNow: liveNow)"))
 
         #expect(analyticsStore.contains("endedAt >= period.start"))

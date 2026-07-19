@@ -18,8 +18,8 @@ struct TaskDetailList: View {
                     store: store,
                     task: task
                 )
+                .accessibilityIdentifier("task.detail.identity")
             }
-            .accessibilityIdentifier("task.detail.identity")
 
             TaskDetailActionsView(
                 store: store,

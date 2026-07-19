@@ -501,6 +501,43 @@ Status: completed and verified
   logs were deleted; no owned Booted device, app, extension, runner,
   `xcodebuild`, or `xctest` process remained.
 
+## Checkpoint 16 — durable Task Detail identity
+
+Status: completed and verified
+
+- The Task Detail identity card once again leads with the task title and keeps
+  the parent or Root path as secondary context. The navigation title remains
+  useful chrome, but it is no longer the only place where the current object
+  can be identified.
+- The title uses the primary headline hierarchy and the same ordinary-size
+  two-line policy as the path. Accessibility size can grow vertically. The
+  card does not restore workflow status or duplicate the explicit Stop action
+  with a Running badge.
+- `task.detail.identity` now belongs to the composed identity row rather than
+  its surrounding Section. A direct seeded-route UI test therefore verifies
+  that the visible card itself contains both `Read Apple HIG` and `Study` and
+  remains vertically inside the detail viewport.
+- Paid-signing macOS Task UI/Workspace contracts passed 40/40. An earlier
+  single-method Swift Testing filter actually ran zero tests and is not
+  counted. The normal-size iPhone 17 Pro and iPad Pro 11-inch paths each
+  passed 1/1 with no failures, skips, or runtime warnings.
+- Both screenshots were exported and visually reviewed under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/task-detail-title-feedback-checkpoint`.
+  The task name and parent path are readable on both device classes without
+  collision with Back, Edit, More, sidebar, or bottom chrome.
+- The generic iOS Debug build completed with paid automatic signing; its
+  xcresult contains zero errors, warnings, and analyzer warnings. The only
+  textual build-log warning is the existing Watch metadata extractor skipping
+  a target without an AppIntents framework dependency. The main App, Widget,
+  Live Activity, and Watch app pass strict code-sign and embedded validation
+  as Team `LT98S43NKA`; APS development, CloudKit, and App Group entitlements
+  remain present.
+- Owned simulator UDIDs `8F43B863-2DF4-4D07-80FB-625EC9C7D0EC` and
+  `18F2636E-4F5C-42D2-8720-F020D083805D` were terminated, shut down, and
+  deleted. Owned result bundles, DerivedData, export scratch data, and logs
+  were deleted after evidence extraction; no owned Booted device, app, runner,
+  `xcodebuild`, or `xctest` process remained.
+
 The next Analytics interaction checkpoints are to restore the visible
 Review/Explore information architecture without losing question-led labels,
 then make task and category drill-down destinations unmistakably discoverable.

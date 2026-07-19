@@ -1219,7 +1219,9 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## AD-097：Task Detail 标题只在系统导航栏出现一次
 
-状态：Accepted
+状态：Superseded by AD-124
+
+替代关系：AD-124 替代“系统 navigation title 是任务标题唯一 owner”及 identity row 不显示标题的条款；本决策关于系统返回、正常字号底部余量和不重复运行状态的其余边界继续有效。
 
 背景：任务详情的 inline navigation title 已显示任务名称，但首个 identity card 又以更大的文字重复同一名称。运行中的任务首屏因此把垂直空间花在重复信息上，真正可执行的 Stop / Add Time 及 Forecast 被推低；长标题还会和状态 badge 竞争一行。
 
@@ -1538,7 +1540,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 状态：Accepted
 
-替代关系：本决策替代 AD-050 中任务行必须维护多套视觉 composition 的条款、AD-097 中详情 identity row 显示运行状态的条款，以及 AD-102 中 Quick Start 额外显示 `RunningStatusBadge` 和由 feature-private `QuickStartTimerAction` 拥有控件外观的条款。AD-050 的完整 VoiceOver 投影、AD-053 的选择/停止命令分离、AD-097 的系统标题唯一性和 AD-102 的任务导航/计时动作分离继续有效。
+替代关系：本决策替代 AD-050 中任务行必须维护多套视觉 composition 的条款、AD-097 中详情 identity row 显示运行状态的条款，以及 AD-102 中 Quick Start 额外显示 `RunningStatusBadge` 和由 feature-private `QuickStartTimerAction` 拥有控件外观的条款。AD-050 的完整 VoiceOver 投影、AD-053 的选择/停止命令分离和 AD-102 的任务导航/计时动作分离继续有效；当时保留的 AD-097 系统标题唯一性后来由 AD-124 替代。
 
 背景：Tasks、Sidebar、层级选择器和 Quick Start 分别实现了标题、路径、checklist、运行状态、时长和动作。相同任务因此在一个表面把 Running 做成 badge，在另一个表面又同时出现 Stop；任务列表还维护普通、紧凑和辅助字号三套 row，标题、metadata 和导航符号的优先级会随入口漂移。计时选择器的 Running section 已经说明状态，再叠加 Running badge 和 Stop 是重复表达。
 
@@ -1588,6 +1590,20 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：视觉顺序与真实工作流一致——先看捕获内容、再看建议去向、最后决定；iPhone 和 iPad 复用同一个组件与语义结构，只由可用宽度改变动作标签。以后新增 Inbox 建议类型也必须先保持这三层信息架构，不能为单个状态再造一套卡片或任务选择控件。
 
 验证：Ready source contract 固定三行结构、左右 action row、× / ✓、44 pt 与三语 Suggested key；付费签名 macOS 定向 contracts 27/27。正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 同一 Apply 路径各 1/1，分别截图确认紧凑符号和常规文字动作；generic iOS 主 App、Widget、Live Activity 与 Watch 自动签名构建和严格 codesign 通过。完整证据与资源清理记录在 dated Audit。
+
+## AD-124：Task Detail 身份卡必须直接显示任务名称
+
+状态：Accepted
+
+替代关系：本决策替代 AD-097 的“系统 navigation title 是任务标题唯一 owner”及 identity row 禁止 `Text(task.title)` 条款，也替代 AD-121 对该唯一性的保留。AD-097 的系统返回、底部滚动余量，以及 AD-121 不重复 Running/Stop 的规则不变。
+
+背景：把任务名完全交给 inline navigation title 后，iPhone 的 Back、Edit、More 和 iPad/macOS 的自适应栏位会压缩或弱化唯一的任务身份；详情内容首张卡只剩图标与 `Study` 之类的父级路径，用户会把路径误认为当前对象，甚至直接判断“任务详情没有任务名称”。系统标题属于导航 chrome，不能替代内容区持久可扫读的对象身份。
+
+决策：`TaskDetailIdentityRow` 在共享的 iPhone、iPad 和 macOS 详情内容中直接显示任务标题，使用 primary headline、正常字号最多两行、辅助功能字号自然增长；下一行继续用 secondary subheadline 显示父级路径或 Root。系统 navigation title 继续提供页面导航上下文，但不再是唯一标题 owner。身份卡不得恢复 workflow status 或与动作区 Stop 重复的 Running。`task.detail.identity` 必须标记实际组合后的身份行，使 UI 回归能验证可见卡片本身同时含有任务名和父级路径，而不是误用 navigation bar 或全页面的同名文字。
+
+后果：用户从 Today、Tasks、Sidebar 或深链进入详情时，都能在内容首屏确认“当前任务是什么”和“它属于哪里”；同名子任务仍由父级路径区分。导航栏与身份卡的重复是有意的跨 chrome/content 冗余，不增加第二套路由、任务投影或编辑状态。
+
+验证：Task workspace/source contracts 要求 identity owner 包含标题、headline 和标题/路径两套正常字号换行策略。直接 fixture 路由的正常字号 iPhone 17 Pro 与 iPad Pro 11-inch UI 回归分别 1/1，断言 `task.detail.identity` 同时包含 `Read Apple HIG` 与 `Study`、纵向位于详情 viewport 内，并导出截图目视通过。付费签名 macOS Task UI/Workspace contracts 40/40；一次按单个 Swift Testing 方法名过滤的诊断实际执行 0 项，明确不计作通过。generic iOS 自动签名构建的 xcresult 为 0 error/warning/analyzer warning；Watch metadata extraction 的工具提示不属于源码诊断。主 App、Widget、Live Activity 与 Watch 严格签名通过，资源清理记录在 dated Audit。
 
 ## 2. Agent 工作清单
 

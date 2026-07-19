@@ -533,7 +533,13 @@ struct TaskUIContractTests {
         #expect(detailSource.contains("task.detail.analyticsLoading"))
         #expect(detailSource.contains("task.detail.analysis.range"))
         #expect(detailSource.contains(".contentMargins(.bottom, 16, for: .scrollContent)"))
-        #expect(identitySource.contains("Text(task.title)") == false)
+        #expect(identitySource.contains("Text(task.title)"))
+        #expect(identitySource.contains(".font(.headline)"))
+        #expect(
+            identitySource.components(
+                separatedBy: ".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"
+            ).count - 1 == 2
+        )
         #expect(identitySource.contains("AppStrings.localized(\"task.root\")"))
     }
 

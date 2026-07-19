@@ -16,6 +16,12 @@ struct TaskDetailIdentityRow: View {
 
     private var identityText: some View {
         VStack(alignment: .leading, spacing: 5) {
+            Text(task.title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                .fixedSize(horizontal: false, vertical: true)
+
             Text(store.parentPath(for: task) ?? AppStrings.localized("task.root"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)

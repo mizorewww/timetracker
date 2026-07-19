@@ -359,6 +359,33 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskDetailIdentityCardShowsTaskNameAndParentPath() throws {
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG"
+        )
+        let detail = app.descendants(matching: .any)["task.detail"].firstMatch
+        let identity = app.descendants(matching: .any)[
+            "task.detail.identity"
+        ].firstMatch
+
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        XCTAssertTrue(identity.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            identity.label.localizedCaseInsensitiveContains("Read Apple HIG"),
+            "The visible identity card must include the task name, not only its parent path."
+        )
+        XCTAssertTrue(identity.label.localizedCaseInsensitiveContains("Study"))
+        XCTAssertGreaterThan(identity.frame.width, 0)
+        XCTAssertGreaterThan(identity.frame.height, 0)
+        XCTAssertGreaterThanOrEqual(identity.frame.minY, detail.frame.minY)
+        XCTAssertLessThanOrEqual(identity.frame.maxY, detail.frame.maxY)
+        try capture("task-detail-visible-title", app: app)
+    }
+
+    @MainActor
     func testTaskDetailSystemBackPreservesExpandedTaskTree() throws {
         #if os(macOS)
         throw XCTSkip("This route-preservation screenshot runs on iPhone and iPad simulators.")
@@ -2429,6 +2456,7 @@ final class timetrackerUITests: XCTestCase {
         contentSizeCategory: String? = nil,
         seedsDemoData: Bool = true,
         replacesDemoDataOnLaunch: Bool = false,
+        taskTitle: String? = nil,
         additionalLaunchArguments: [String] = []
     ) -> XCUIApplication {
         let app = XCUIApplication()
@@ -2459,6 +2487,9 @@ final class timetrackerUITests: XCTestCase {
         }
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = route
+        if let taskTitle {
+            app.launchEnvironment["TIMETRACKER_UI_AUDIT_TASK_TITLE"] = taskTitle
+        }
         app.launch()
         app.activate()
         return app

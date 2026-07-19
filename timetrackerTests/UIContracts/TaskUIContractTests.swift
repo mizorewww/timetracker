@@ -979,9 +979,10 @@ struct TaskUIContractTests {
         let editor = try taskEditorFeatureSource()
         let symbols = try sourceText("timetracker/Features/Tasks/Editor/SymbolPickerViews.swift")
 
-        #expect(editor.contains("@State private var parentCandidates: [TaskNode]"))
-        #expect(editor.contains("Self.parentCandidates(for: initialDraft, store: store)"))
-        #expect(editor.contains("parentCandidates = Self.parentCandidates(for: latestDraft, store: store)"))
+        #expect(editor.contains("@State private var session: TaskEditorSession"))
+        #expect(editor.contains("private(set) var parentCandidates: [TaskNode]"))
+        #expect(editor.contains("for: initialDraft"))
+        #expect(editor.contains("for: latestDraft"))
         #expect(editor.contains("draft.checklistItems.indices.sorted") == false)
         #expect(editor.contains("rowPlacements.map") == false)
         #expect(symbols.contains("@State private var filteredSymbols: [String]"))
@@ -992,22 +993,31 @@ struct TaskUIContractTests {
 
     @Test
     func staleTaskEditorOffersExplicitReloadWithoutSilentlyDiscardingTheDraft() throws {
-        let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let editorView = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorViews.swift"
+        )
+        let session = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorSession.swift"
+        )
+        let safety = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorSessionSafety.swift"
+        )
         let store = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift")
 
         #expect(store.contains("func saveTaskDraftResult("))
         #expect(store.contains("return .stale"))
-        #expect(editor.contains("pendingReloadDraft = store.editorDraft(for: latestTask)"))
-        #expect(editor.contains("task.editor.stale.reloadMessage"))
-        #expect(editor.contains("role: .destructive"))
-        #expect(editor.contains("sessionBaseline = latestDraft"))
-        #expect(editor.contains("parentCandidates = Self.parentCandidates(for: latestDraft, store: store)"))
-        #expect(editor.contains("case .stale:"))
+        #expect(editorView.contains(".taskEditorSessionSafety("))
+        #expect(session.contains("pendingReloadDraft = store.editorDraft(for: latestTask)"))
+        #expect(safety.contains("task.editor.stale.reloadMessage"))
+        #expect(safety.contains("role: .destructive"))
+        #expect(session.contains("sessionBaseline = latestDraft"))
+        #expect(session.contains("parentCandidates = Self.parentCandidates("))
+        #expect(session.contains("case .stale:"))
     }
 
     @Test
     func taskEditorKeepsUnavailableCurrentParentsVisibleWhileAllowingRecoveryMoves() throws {
-        let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let editor = try taskEditorFeatureSource()
         let info = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift")
         let hierarchy = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift"
@@ -1028,14 +1038,14 @@ struct TaskUIContractTests {
 
     @Test
     func taskEditorShowsAccessiblePersistenceErrorsBesideFieldsAndBlocksSave() throws {
-        let editor = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let editor = try taskEditorFeatureSource()
         let components = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorComponents.swift")
         let info = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift")
         let notes = try sourceText("timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift")
         let policy = try sourceText("timetracker/Services/Tasks/TaskPersistencePolicy.swift")
 
-        #expect(editor.contains("let validation = TaskEditorValidation("))
-        #expect(editor.contains(".disabled(!canSave(validation))"))
+        #expect(editor.contains("var validation: TaskEditorValidation"))
+        #expect(editor.contains(".disabled(!session.validation.isValid)"))
         #expect(components.contains("struct TaskEditorValidation: Equatable"))
         #expect(components.contains("struct TaskEditorInlineValidationMessage: View"))
         #expect(components.contains(".accessibilityLabel(error.localizedDescription)"))
@@ -1093,6 +1103,9 @@ struct TaskUIContractTests {
     private func taskEditorFeatureSource() throws -> String {
         try [
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSession.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSession+Checklist.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSessionSafety.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",

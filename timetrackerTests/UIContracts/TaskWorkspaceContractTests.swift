@@ -42,17 +42,26 @@ struct TaskWorkspaceContractTests {
 
     @Test
     func theSharedEditorSessionWorksInSheetsAndNavigationDestinations() throws {
-        let editor = try sourceText(
+        let editorView = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift"
         )
+        let editorSession = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorSession.swift"
+        )
+        let editorSafety = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorSessionSafety.swift"
+        )
 
-        #expect(editor.contains("struct TaskEditorSheet: View"))
-        #expect(editor.contains("NavigationStack {\n            TaskEditorPanel("))
-        #expect(editor.contains("struct TaskEditorPanel: View"))
-        #expect(editor.components(separatedBy: "NavigationStack {").count - 1 == 1)
-        #expect(editor.contains(".navigationBarBackButtonHidden(true)"))
-        #expect(editor.contains("pendingReloadDraft = store.editorDraft(for: latestTask)"))
-        #expect(editor.contains("sessionBaseline = latestDraft"))
-        #expect(editor.contains(".editorDiscardConfirmation("))
+        #expect(editorView.contains("struct TaskEditorSheet: View"))
+        #expect(editorView.contains("NavigationStack {\n            TaskEditorPanel("))
+        #expect(editorView.contains("struct TaskEditorPanel: View"))
+        #expect(editorView.contains("@State private var session: TaskEditorSession"))
+        #expect(editorView.components(separatedBy: "NavigationStack {").count - 1 == 1)
+        #expect(editorView.contains(".navigationBarBackButtonHidden(true)"))
+        #expect(editorView.contains("session.save("))
+        #expect(editorView.contains(".taskEditorSessionSafety("))
+        #expect(editorSession.contains("pendingReloadDraft = store.editorDraft(for: latestTask)"))
+        #expect(editorSession.contains("sessionBaseline = latestDraft"))
+        #expect(editorSafety.contains(".editorDiscardConfirmation("))
     }
 }

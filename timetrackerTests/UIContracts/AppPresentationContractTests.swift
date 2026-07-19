@@ -234,7 +234,13 @@ struct AppPresentationContractTests {
 
     @Test
     func editorSheetsDismissOnlyAfterSuccessfulMutation() throws {
-        let task = try sourceText("timetracker/Features/Tasks/Editor/TaskEditorViews.swift")
+        let taskView = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorViews.swift"
+        )
+        let taskSession = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorSession.swift"
+        )
+        let task = [taskView, taskSession].joined(separator: "\n")
         let category = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift"
         )
@@ -250,9 +256,12 @@ struct AppPresentationContractTests {
         )
         let llm = try sourceText("timetracker/Features/Settings/LLMSettingsViews.swift")
 
-        #expect(task.contains("store.saveTaskDraftResult("))
-        #expect(task.contains("case .saved:"))
-        #expect(task.contains("onSaved()"))
+        #expect(taskView.contains("store.saveTaskDraftResult("))
+        #expect(taskView.contains("session.save("))
+        #expect(taskView.contains("using: onSave"))
+        #expect(taskView.contains("onSaved: onSaved"))
+        #expect(taskSession.contains("case .saved:"))
+        #expect(taskSession.contains("onSaved()"))
         #expect(category.contains("if store.saveTaskCategoryDraft(draft)"))
         #expect(manual.contains("if store.saveManualTimeDraft(draft)"))
         #expect(segment.contains("try store.commitSegmentDraft(draft)"))

@@ -243,6 +243,9 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Inbox/InboxItemRow.swift",
             "timetracker/Features/Inbox/InboxSuggestionRow.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSession.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSession+Checklist.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSessionSafety.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",
             "timetracker/Features/Tasks/Editor/TaskPlanEditorSection.swift",
@@ -400,6 +403,10 @@ struct CoreSourceLayoutTests {
         let root = try projectRootURL()
         let editorURL = root.appending(path: "timetracker/Features/Tasks/Editor")
         let focusedFiles = [
+            "TaskEditorViews.swift",
+            "TaskEditorSession.swift",
+            "TaskEditorSession+Checklist.swift",
+            "TaskEditorSessionSafety.swift",
             "TaskEditorComponents.swift",
             "TaskEditorInfoSection.swift",
             "TaskEditorHierarchyRows.swift",

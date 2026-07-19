@@ -347,6 +347,50 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
+    func mutationOutcomePublishesRapidRestartHistoryInvalidation() {
+        let taskID = UUID()
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSinceReferenceDate: 300_000)
+        let stoppedAt = startedAt.addingTimeInterval(120)
+        let predecessor = TimeSegment(
+            sessionID: sessionID,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: startedAt,
+            endedAt: stoppedAt
+        )
+        let tombstone = LedgerSegmentMutationSnapshot(segment: predecessor)
+        let replacement = TimerMutationSegmentSnapshot(
+            segmentID: UUID(),
+            sessionID: sessionID,
+            taskID: taskID
+        )
+        let outcome = StoreScopedTimerCommandOutcome(
+            subjectSegment: replacement,
+            createdSegment: replacement,
+            stoppedSegments: [],
+            tombstonedSegments: [tombstone]
+        )
+
+        #expect(outcome.didMutate)
+        #expect(outcome.referencedTaskIDs == [taskID])
+        #expect(outcome.events.contains(.ledgerChanged(
+            taskID: taskID,
+            dateInterval: StoreInvalidationRange(
+                start: startedAt,
+                end: stoppedAt
+            ),
+            isVisible: false
+        )))
+        #expect(outcome.events.contains(.ledgerChanged(
+            taskID: taskID,
+            dateInterval: nil,
+            isVisible: true
+        )))
+    }
+
+    @Test @MainActor
     func systemActionCannotRestartAnArchivedTaskFromAStaleShortcut() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

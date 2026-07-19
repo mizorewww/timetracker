@@ -28,6 +28,19 @@ nonisolated struct StoreScopedTimerCommandOutcome: Hashable, Sendable {
     let subjectSegment: TimerMutationSegmentSnapshot?
     let createdSegment: TimerMutationSegmentSnapshot?
     let stoppedSegments: [TimerMutationSegmentSnapshot]
+    let tombstonedSegments: [LedgerSegmentMutationSnapshot]
+
+    init(
+        subjectSegment: TimerMutationSegmentSnapshot?,
+        createdSegment: TimerMutationSegmentSnapshot?,
+        stoppedSegments: [TimerMutationSegmentSnapshot],
+        tombstonedSegments: [LedgerSegmentMutationSnapshot] = []
+    ) {
+        self.subjectSegment = subjectSegment
+        self.createdSegment = createdSegment
+        self.stoppedSegments = stoppedSegments
+        self.tombstonedSegments = tombstonedSegments
+    }
 
     var subjectSegmentID: UUID? {
         subjectSegment?.segmentID
@@ -41,11 +54,14 @@ nonisolated struct StoreScopedTimerCommandOutcome: Hashable, Sendable {
         if let createdSegment {
             taskIDs.insert(createdSegment.taskID)
         }
+        taskIDs.formUnion(tombstonedSegments.map(\.taskID))
         return taskIDs
     }
 
     var didMutate: Bool {
-        createdSegment != nil || stoppedSegments.isEmpty == false
+        createdSegment != nil ||
+            stoppedSegments.isEmpty == false ||
+            tombstonedSegments.isEmpty == false
     }
 
     @MainActor
@@ -56,6 +72,9 @@ nonisolated struct StoreScopedTimerCommandOutcome: Hashable, Sendable {
         }
         if let createdSegment {
             events.formUnion(Self.events(for: createdSegment))
+        }
+        for segment in tombstonedSegments {
+            events.insert(Self.historyEvent(for: segment))
         }
         return events
     }
@@ -76,6 +95,21 @@ nonisolated struct StoreScopedTimerCommandOutcome: Hashable, Sendable {
                 taskID: segment.taskID
             ),
         ]
+    }
+
+    @MainActor
+    private static func historyEvent(
+        for segment: LedgerSegmentMutationSnapshot
+    ) -> StoreDomainEvent {
+        let end = max(segment.startedAt, segment.endedAt ?? segment.startedAt)
+        return .ledgerChanged(
+            taskID: segment.taskID,
+            dateInterval: StoreInvalidationRange(
+                start: segment.startedAt,
+                end: end
+            ),
+            isVisible: false
+        )
     }
 }
 
@@ -106,15 +140,18 @@ struct StoreScopedTimerCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String?
+    let nowProvider: () -> Date
 
     init(
         container: ModelContainer,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
-        deviceID: String? = nil
+        deviceID: String? = nil,
+        nowProvider: @escaping () -> Date = Date.init
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
         self.deviceID = deviceID
+        self.nowProvider = nowProvider
     }
 
     func start(
@@ -130,6 +167,7 @@ struct StoreScopedTimerCommandCoordinator {
         )
 
         return try transaction.withFreshContext { context in
+            let mutationDate = nowProvider()
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -143,12 +181,14 @@ struct StoreScopedTimerCommandCoordinator {
 
             let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,
-                deviceID: deviceID
+                deviceID: deviceID,
+                nowProvider: { mutationDate }
             )
             let pomodoroRepository = SwiftDataPomodoroRepository(
                 context: context,
                 timeRepository: timeRepository,
-                deviceID: deviceID
+                deviceID: deviceID,
+                nowProvider: { mutationDate }
             )
             let activeSegments = try timeRepository.activeSegments()
             let activeByID = Dictionary(
@@ -162,13 +202,16 @@ struct StoreScopedTimerCommandCoordinator {
                 sameTaskBehavior: sameTaskBehavior,
                 activeSegments: activeSegments.map(Self.admissionSnapshot)
             )
-            let pomodoroRuns = try pomodoroRepository.runs()
+            let pomodoroRuns = try pomodoroRepository.openRuns(
+                sessionIDs: Set(plan.segmentsToStop.map(\.sessionID))
+            )
             let stoppedSegments = try applyStops(
                 plan.segmentsToStop,
                 activeByID: activeByID,
                 pomodoroRuns: pomodoroRuns,
                 timeRepository: timeRepository,
-                context: context
+                context: context,
+                mutationDate: mutationDate
             )
 
             switch plan.decision {
@@ -186,15 +229,30 @@ struct StoreScopedTimerCommandCoordinator {
                     stoppedSegments: stoppedSegments
                 )
             case .createNew:
-                let segment = try timeRepository.startTask(
-                    taskID: taskID,
-                    source: source
-                )
+                let segment: TimeSegment
+                var tombstonedSegments: [LedgerSegmentMutationSnapshot] = []
+                if sameTaskBehavior == .reuseOldest,
+                   let mutation = try timeRepository.startByCoalescingRapidRestart(
+                       taskID: taskID,
+                       source: source,
+                       hasActiveSegmentForTask: activeSegments.contains {
+                           $0.taskID == taskID
+                       }
+                   ) {
+                    segment = mutation.replacement
+                    tombstonedSegments = [mutation.tombstonedSegment]
+                } else {
+                    segment = try timeRepository.startTask(
+                        taskID: taskID,
+                        source: source
+                    )
+                }
                 let createdSegment = TimerMutationSegmentSnapshot(segment: segment)
                 return StoreScopedTimerCommandOutcome(
                     subjectSegment: createdSegment,
                     createdSegment: createdSegment,
-                    stoppedSegments: stoppedSegments
+                    stoppedSegments: stoppedSegments,
+                    tombstonedSegments: tombstonedSegments
                 )
             }
         }
@@ -212,13 +270,15 @@ struct StoreScopedTimerCommandCoordinator {
         )
 
         return try transaction.withFreshContext { context in
+            let mutationDate = nowProvider()
             guard segmentID == nil || taskID == nil else {
                 return Self.noOpOutcome
             }
 
             let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,
-                deviceID: deviceID
+                deviceID: deviceID,
+                nowProvider: { mutationDate }
             )
             let activeSegments = try timeRepository.activeSegments()
             let admissionSegments = activeSegments.map(Self.admissionSnapshot)
@@ -260,11 +320,17 @@ struct StoreScopedTimerCommandCoordinator {
             let pomodoroRepository = SwiftDataPomodoroRepository(
                 context: context,
                 timeRepository: timeRepository,
-                deviceID: deviceID
+                deviceID: deviceID,
+                nowProvider: { mutationDate }
             )
-            try TimerCommandHandler(deviceID: deviceID).stop(
+            try TimerCommandHandler(
+                deviceID: deviceID,
+                nowProvider: { mutationDate }
+            ).stop(
                 segment: segment,
-                pomodoroRuns: try pomodoroRepository.runs(),
+                pomodoroRuns: try pomodoroRepository.openRuns(
+                    sessionIDs: [segment.sessionID]
+                ),
                 timeRepository: timeRepository,
                 context: context
             )
@@ -282,9 +348,13 @@ struct StoreScopedTimerCommandCoordinator {
         activeByID: [UUID: TimeSegment],
         pomodoroRuns: [PomodoroRun],
         timeRepository: SwiftDataTimeTrackingRepository,
-        context: ModelContext
+        context: ModelContext,
+        mutationDate: Date
     ) throws -> [TimerMutationSegmentSnapshot] {
-        let handler = TimerCommandHandler(deviceID: deviceID)
+        let handler = TimerCommandHandler(
+            deviceID: deviceID,
+            nowProvider: { mutationDate }
+        )
         var stoppedSegments: [TimerMutationSegmentSnapshot] = []
         for stop in stops {
             guard let segment = activeByID[stop.segmentID] else {

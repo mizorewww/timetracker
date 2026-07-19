@@ -191,6 +191,10 @@ struct StoreScopedTimerCommandCoordinatorTests {
         #expect(replacementID != oldSegment.id)
         #expect(staleStop.subjectSegmentID == nil)
         #expect(
+            try freshTimeRepository(container).allSegments()
+                .first { $0.id == oldSegment.id }?.deletedAt == nil
+        )
+        #expect(
             try freshTimeRepository(container).activeSegments().map(\.id)
                 == [replacementID]
         )

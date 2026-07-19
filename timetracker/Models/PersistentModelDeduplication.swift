@@ -18,6 +18,30 @@ protocol ClientMutationTrackedModel: AnyObject {
     var clientMutationID: UUID { get set }
 }
 
+nonisolated enum PersistentLWWMutationDate {
+    /// Returns the preferred wall-clock date when it already wins, otherwise
+    /// advances by one CloudKit-safe millisecond. `Date` values are represented
+    /// as Unix-epoch milliseconds by CloudKit, so `Double.nextUp` is too small
+    /// to remain ordered after a sync round trip.
+    static func strictlyDominating(
+        preferred: Date,
+        observed dates: Date...
+    ) -> Date {
+        strictlyDominating(preferred: preferred, observed: dates)
+    }
+
+    static func strictlyDominating(
+        preferred: Date,
+        observed dates: [Date]
+    ) -> Date {
+        guard let latest = dates.max() else { return preferred }
+        // Two milliseconds leaves one full persisted tick even when converting
+        // between Date's reference epoch and CloudKit's Unix-millisecond value
+        // lands immediately below an integer boundary.
+        return max(preferred, latest.addingTimeInterval(0.002))
+    }
+}
+
 extension Sequence where Element: PersistentUUIDModel {
     func deduplicatedByID() -> [Element] {
         var indexesByID: [UUID: Int] = [:]

@@ -7,23 +7,33 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(sessions.map(\.id))
         for session in existing.values where !snapshotIDs.contains(session.id) {
-            session.deletedAt = now
-            session.updatedAt = now
+            let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: session.updatedAt
+            )
+            session.deletedAt = mutationDate
+            session.updatedAt = mutationDate
             session.deviceID = deviceID
             session.clientMutationID = UUID()
         }
         for record in sessions {
             let source = TimeSessionSource(rawValue: record.sourceRaw) ?? .timer
-            let model = existing[record.id] ?? TimeSession(
+            let existingModel = existing[record.id]
+            let model = existingModel ?? TimeSession(
                 taskID: record.taskID,
                 source: source,
                 deviceID: deviceID,
                 startedAt: record.startedAt
             )
-            if existing[record.id] == nil {
+            if existingModel == nil {
                 context.insert(model)
                 existing[record.id] = model
             }
+            let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: [record.updatedAt] +
+                    [existingModel?.updatedAt].compactMap { $0 }
+            )
             model.id = record.id
             model.taskID = record.taskID
             model.titleSnapshot = record.titleSnapshot
@@ -34,7 +44,7 @@ extension SyncDataSnapshot {
             model.deviceID = deviceID
             model.clientMutationID = UUID()
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = mutationDate
             model.deletedAt = record.deletedAt
         }
     }
@@ -44,13 +54,18 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(segments.map(\.id))
         for segment in existing.values where !snapshotIDs.contains(segment.id) {
-            segment.deletedAt = now
-            segment.updatedAt = now
+            let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: segment.updatedAt
+            )
+            segment.deletedAt = mutationDate
+            segment.updatedAt = mutationDate
             segment.deviceID = deviceID
         }
         for record in segments {
             let source = TimeSessionSource(rawValue: record.sourceRaw) ?? .timer
-            let model = existing[record.id] ?? TimeSegment(
+            let existingModel = existing[record.id]
+            let model = existingModel ?? TimeSegment(
                 sessionID: record.sessionID,
                 taskID: record.taskID,
                 source: source,
@@ -58,10 +73,15 @@ extension SyncDataSnapshot {
                 startedAt: record.startedAt,
                 endedAt: record.endedAt
             )
-            if existing[record.id] == nil {
+            if existingModel == nil {
                 context.insert(model)
                 existing[record.id] = model
             }
+            let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: [record.updatedAt] +
+                    [existingModel?.updatedAt].compactMap { $0 }
+            )
             model.id = record.id
             model.sessionID = record.sessionID
             model.taskID = record.taskID
@@ -70,7 +90,7 @@ extension SyncDataSnapshot {
             model.sourceRaw = record.sourceRaw
             model.deviceID = deviceID
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = mutationDate
             model.deletedAt = record.deletedAt
         }
     }

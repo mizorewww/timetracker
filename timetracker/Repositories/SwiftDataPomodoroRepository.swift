@@ -34,6 +34,25 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         try canonicalRuns(ids: ids).sorted(by: runCreationOrder)
     }
 
+    /// Timer stop commands only need open runs attached to the sessions they
+    /// are actually closing. Fetching the open working set once avoids both a
+    /// user's entire Pomodoro history and one query per stopped session.
+    func openRuns(sessionIDs: Set<UUID>) throws -> [PomodoroRun] {
+        guard sessionIDs.isEmpty == false else { return [] }
+        let descriptor = FetchDescriptor<PomodoroRun>(
+            predicate: #Predicate {
+                $0.endedAt == nil && $0.deletedAt == nil
+            }
+        )
+        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        return try canonicalRuns(ids: candidateIDs)
+            .filter {
+                $0.endedAt == nil &&
+                    $0.sessionID.map(sessionIDs.contains) == true
+            }
+            .sorted(by: runCreationOrder)
+    }
+
     func activeRuns() throws -> [PomodoroRun] {
         let completed = PomodoroState.completed.rawValue
         let cancelled = PomodoroState.cancelled.rawValue

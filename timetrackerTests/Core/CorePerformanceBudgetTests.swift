@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -438,5 +439,91 @@ struct CorePerformanceBudgetTests {
         #expect(incremental.rollup(for: task.id) == rebuilt.rollup(for: task.id))
         #expect(elapsed < 0.25, "Incremental refresh took \(elapsed) seconds")
         #expect(rankingElapsed < 0.1, "Cached frequent-task ranking took \(rankingElapsed) seconds")
+    }
+
+    @Test @MainActor
+    func fiftyThousandStoredSegmentsKeepRapidRestartBounded() throws {
+        let context = try makeTestContext()
+        context.autosaveEnabled = false
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "budget"
+        ).createTask(
+            title: "Stored restart budget",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let firstStart = Date(timeIntervalSinceReferenceDate: 20_000_000)
+        let historyStart = firstStart.addingTimeInterval(-8_000_000)
+        for index in 0..<49_999 {
+            let startedAt = historyStart.addingTimeInterval(
+                Double(index * 60)
+            )
+            context.insert(TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .timer,
+                deviceID: "history",
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(30)
+            ))
+        }
+        try context.save()
+
+        let first = try SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "budget",
+            nowProvider: { firstStart }
+        ).startTask(taskID: task.id, source: .timer)
+        var stoppedAt = firstStart.addingTimeInterval(120)
+        try SwiftDataTimeTrackingRepository(
+            context: ModelContext(context.container),
+            deviceID: "budget",
+            nowProvider: { stoppedAt }
+        ).stopSegment(segmentID: first.id)
+
+        var predecessorID = first.id
+        var restartedAt = stoppedAt.addingTimeInterval(30)
+        var samples: [TimeInterval] = []
+        for _ in 0..<3 {
+            let coordinator = StoreScopedTimerCommandCoordinator(
+                container: context.container,
+                writeAuthorization: .isolatedTestHarness,
+                deviceID: "budget",
+                nowProvider: { restartedAt }
+            )
+            let start = CFAbsoluteTimeGetCurrent()
+            let outcome = try coordinator.start(taskID: task.id)
+            samples.append(CFAbsoluteTimeGetCurrent() - start)
+
+            let replacementID = try #require(outcome.subjectSegmentID)
+            #expect(outcome.tombstonedSegments.map(\.segmentID) == [
+                predecessorID
+            ])
+            let active = try SwiftDataTimeTrackingRepository(
+                context: ModelContext(context.container),
+                deviceID: "budget",
+                nowProvider: { restartedAt }
+            ).activeSegments()
+            #expect(active.map(\.id) == [replacementID])
+            #expect(active.first?.sessionID == first.sessionID)
+
+            stoppedAt = restartedAt.addingTimeInterval(1)
+            _ = try StoreScopedTimerCommandCoordinator(
+                container: context.container,
+                writeAuthorization: .isolatedTestHarness,
+                deviceID: "budget",
+                nowProvider: { stoppedAt }
+            ).stop(segmentID: replacementID)
+            predecessorID = replacementID
+            restartedAt = stoppedAt.addingTimeInterval(30)
+        }
+
+        let median = samples.sorted()[1]
+        #expect(
+            median < 3,
+            "Median store-backed rapid restart took \(median) seconds"
+        )
     }
 }

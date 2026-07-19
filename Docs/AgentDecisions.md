@@ -1668,6 +1668,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：source contract 固定普通任务 UI 与生产 task command/repository 文件不存在 Delete 链，同时保留 `deletedAt`、`task.deleted.path` 和三语 archive/restore 文案。行为回归覆盖任务行/侧边栏共享归档、活动子树阻止、跨 scene route/selection 收敛、Settings 父优先恢复，以及历史 tombstone 在 Analytics、ledger admission、stale draft、同步与维护中的兼容。每个 checkpoint 继续使用付费自动签名测试与构建，并在提交后运行全设备安装脚本。
 
+## AD-128：一分钟内的普通计时重启续接为一个 canonical 时间片
+
+状态：Accepted
+
+背景：用户短暂误触停止后立刻重新开始同一任务时，账本会留下两个相邻时间片，Today 时间线、近期记录和 Analytics 的 segment count 都把一次连续工作显示成两次。只在读侧把两行画成一条又会让编辑、删除、Gross 和同步事实互相矛盾。另一方面，手动补录、日历导入和 Pomodoro 都拥有明确边界或额外业务关系，不能为了表面整洁无条件归并。
+
+决策：
+
+- 只把 `.timer/.shortcut/.watch/.widget/.liveActivity` 视为同一个普通 stopwatch 来源族。第二次 Start 与同一 canonical task 的上一条普通时间片满足 `0 <= gap < 60s` 时，短 gap 视为一次误停并计入连续工作；恰好 60 秒、负 gap、不同任务、手动补录、日历和 Pomodoro 都不续接。
+- 判断发生在 `StoreScopedTimerCommandCoordinator.start` 已取得 store lock 并创建 fresh context 之后，只影响新的本地 Start，不在启动、CloudKit import、Analytics 或 Timeline 读取时回扫历史。
+- gap 内存在任何其它可见正时长时间片时拒绝续接，避免 A → B → A 被错误扩成同时属于 A 的工作。上一条 session 必须可见、任务/起止/source 关系完整、只有这一条可见 segment，且没有可见 `PomodoroRun` 引用；任何异常都保守创建独立 session。
+- 成功续接保留原 singleton `TimeSession` 及其 title snapshot、note、source、createdAt 和 start；旧 closed segment 写入更新后的 tombstone，新建一个不同 UUID 的 active segment，沿用原 session/source 并把 start 向前延伸到最初时间。session 重新打开并旋转 conflict metadata；mutation timestamp 留出完整的 CloudKit 毫秒安全间隔并严格支配已经观察到的 future-skewed duplicate，不能靠相同时间戳下的 device/mutation tie-break 碰运气。`restoreAsLocalWinner` 即使写入空 store，也必须推进 snapshot 自身的时间戳，避免同时间戳旧云副本重投后再次参与 tie-break。
+- 绝不重新打开旧 segment ID。Watch、Widget、Shortcut 或任何仍固化旧 segment ID 的界面/系统入口都会指向 tombstone，因此只能 no-op；当前 Start 返回的新 ID 才能停止续接后的活动计时。`replaceAll` 继续明确创建独立时间片，不触发续接。
+- outcome 对 replacement 发送 visible ledger event，对 predecessor 发送原时间范围的 history event；现有 refresh planner 合并两者并执行 ranged history refresh，跨午夜时也会从 scene index 删除旧 ID。普通 Start/Stop 复用 coordinator 已取的 active snapshot；Pomodoro 关系只单次读取 open working set，再按待停止 session 过滤，不扫描完整历史也不制造 N+1 查询。
+
+后果：正常短暂停止/重启立即在 Today、近期记录和分析中表现为一个 canonical 时间片，经过时间包含不足一分钟的空档；跨普通系统表面启动仍保持同一工作意图。手动事实、导入事实、Pomodoro 轮次和既有远端历史完全不被静默改写；旧 segment tombstone 继续通过现有 snapshot/LWW 协议阻止 iCloud 复活。
+
+验证：纯策略固定 0、59.999、60 和负 gap 以及完整来源矩阵。store-scoped 回归覆盖新 Stop identity、原 session/note/source 保留、旧 ID Stop no-op、新 ID 可停止、gap 内其它任务阻止、重复短重启链、`replaceAll` 排除、Pomodoro-linked session 与 duplicate winner 隔离、future-skewed session/segment LWW、快速重启后 Stop 对旧 active Cloud 副本重投的抵抗、snapshot restore 后 Cloud redelivery，以及跨午夜 history/rollup 收敛；真实内存 SwiftData store 另以 50,000 segment 固定查询预算。系统动作、timer admission 与 repository/source-layout 合同继续一起运行。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

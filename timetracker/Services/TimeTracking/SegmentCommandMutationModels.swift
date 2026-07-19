@@ -17,7 +17,7 @@ enum SegmentMutationError: LocalizedError, Equatable {
     }
 }
 
-struct LedgerSegmentMutationSnapshot: Hashable {
+nonisolated struct LedgerSegmentMutationSnapshot: Hashable, Sendable {
     let segmentID: UUID
     let sessionID: UUID
     let taskID: UUID
@@ -25,6 +25,7 @@ struct LedgerSegmentMutationSnapshot: Hashable {
     let endedAt: Date?
     let deletedAt: Date?
 
+    @MainActor
     init(segment: TimeSegment) {
         segmentID = segment.id
         sessionID = segment.sessionID

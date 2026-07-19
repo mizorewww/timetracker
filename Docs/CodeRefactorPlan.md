@@ -108,7 +108,7 @@ Sync remains the highest semantic-risk subsystem because it combines security-, 
 
 ## Refactor Principles
 
-1. Keep canonical `TimeSegment` as the editable/soft-deletable fact source; caches and summaries remain rebuildable projections.
+1. Keep canonical `TimeSegment` as the editable/soft-deletable fact source; caches and summaries remain rebuildable projections. Ordinary rapid-restart canonicalization is split into `TimerRapidRestartPolicy.swift` and `SwiftDataTimeTrackingRepository+RapidRestart.swift` instead of being duplicated in UI/system entry points or hidden in read-side grouping.
 2. Put durable writes in command handlers.
 3. Put SwiftData reads/writes in repositories.
 4. Put calculations in services.

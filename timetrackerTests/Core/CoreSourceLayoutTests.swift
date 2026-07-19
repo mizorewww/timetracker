@@ -154,7 +154,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Repositories/SwiftDataTaskRepository+Hierarchy.swift",
             "timetracker/Repositories/SwiftDataTimeTrackingRepository.swift",
             "timetracker/Repositories/SwiftDataTimeTrackingRepository+Queries.swift",
+            "timetracker/Repositories/SwiftDataTimeTrackingRepository+RapidRestart.swift",
             "timetracker/Repositories/SwiftDataTimeTrackingRepository+Mutations.swift",
+            "timetracker/Repositories/SwiftDataTimeTrackingRepository+SegmentStop.swift",
+            "timetracker/Services/TimeTracking/TimerRapidRestartPolicy.swift",
             "timetracker/SharedUI/Foundation/LayoutPolicies.swift",
             "timetracker/SharedUI/Foundation/ColorSupport.swift",
             "timetracker/SharedUI/Components/ChecklistControls.swift",
@@ -818,7 +821,9 @@ struct CoreSourceLayoutTests {
             "SwiftDataTimeTrackingRepository.swift",
             "SwiftDataTimeTrackingRepository+Queries.swift",
             "SwiftDataTimeTrackingRepository+Creation.swift",
-            "SwiftDataTimeTrackingRepository+Mutations.swift"
+            "SwiftDataTimeTrackingRepository+RapidRestart.swift",
+            "SwiftDataTimeTrackingRepository+Mutations.swift",
+            "SwiftDataTimeTrackingRepository+SegmentStop.swift"
         ]
 
         for fileName in focusedFiles {
@@ -826,6 +831,44 @@ struct CoreSourceLayoutTests {
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
         }
+    }
+
+    @Test
+    func rapidRestartDoesNotRescanActiveTimersOrPomodoroHistory() throws {
+        let rapidRestart = try sourceText(
+            "timetracker/Repositories/SwiftDataTimeTrackingRepository+RapidRestart.swift"
+        )
+        let coordinator = try sourceText(
+            "timetracker/Services/TimeTracking/StoreScopedTimerCommandCoordinator.swift"
+        )
+        let pomodoroRepository = try sourceText(
+            "timetracker/Repositories/SwiftDataPomodoroRepository.swift"
+        )
+        let openRunsStart = try #require(
+            pomodoroRepository.range(of: "func openRuns(")
+        )
+        let activeRunsStart = try #require(
+            pomodoroRepository.range(
+                of: "func activeRuns()",
+                range: openRunsStart.upperBound..<pomodoroRepository.endIndex
+            )
+        )
+        let openRuns = String(
+            pomodoroRepository[
+                openRunsStart.lowerBound..<activeRunsStart.lowerBound
+            ]
+        )
+
+        #expect(rapidRestart.contains("activeSegments()") == false)
+        #expect(coordinator.contains("pomodoroRepository.runs()") == false)
+        #expect(coordinator.contains("pomodoroRepository.openRuns("))
+        #expect(openRuns.contains("for ") == false)
+        #expect(openRuns.contains(".forEach") == false)
+        #expect(
+            openRuns.components(separatedBy: "context.fetch(").count == 2
+        )
+        #expect(openRuns.contains("canonicalRuns(ids: candidateIDs)"))
+        #expect(openRuns.contains("$0.deletedAt == nil"))
     }
 
     @Test

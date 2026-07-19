@@ -120,7 +120,7 @@ Views should render existing snapshots. They should not calculate analytics, tre
 
 | Feature | Durable model | Write owner | Snapshot owner | Pure services | UI owner |
 | --- | --- | --- | --- | --- | --- |
-| Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
+| Start, stop, and rapid-restart timer | `TimeSession`, `TimeSegment` | `StoreScopedTimerCommandCoordinator`, `TimerCommandHandler`, time-tracking repository | `LedgerStore`, `RollupStore` | `TimerAdmissionPolicy`, `TimerRapidRestartPolicy`, `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
 | Task edit, move, archive, restore | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
 | Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
@@ -164,9 +164,10 @@ Rules:
 2. Route every persisted-time read through `TrackedTimePolicy` with an explicit reference `now`; never derive duration from raw `endedAt` in a view, formatter, cache, or store.
 3. Reject local future writes, but retain and safely clip clock-skewed CloudKit/import/legacy facts.
 4. Keep active timer queries direct and fresh; active timers must never wait for a cache.
-5. Invalidate full overview/task snapshots after relevant facts change, and invalidate only intersecting day buckets from `ledgerChanged` ranges.
-6. Keep rollup full-history totals exact; only forecast pace is bounded to 90 local days.
-7. Preserve the 50,000-segment single-mutation budget and equality with a full rebuild, including time advance and clock rewind.
+5. Coalesce only a new ordinary stopwatch Start with the immediately preceding same-task singleton session when the non-overlapping gap is strictly below 60 seconds and contains no other visible work. Keep a new active segment identity, tombstone the predecessor, and never apply this repair to Manual, Calendar, Pomodoro, `replaceAll`, import, or read paths.
+6. Invalidate full overview/task snapshots after relevant facts change, and invalidate only intersecting day buckets from `ledgerChanged` ranges.
+7. Keep rollup full-history totals exact; only forecast pace is bounded to 90 local days.
+8. Preserve the 50,000-segment single-mutation budget and equality with a full rebuild, including time advance and clock rewind. Ordinary rapid restart must also remain store-query bounded: reuse the coordinator's canonical active snapshot, fetch the open Pomodoro working set once before filtering relevant sessions, never scan full history or issue N+1 session queries, and cover the real SwiftData path with a 50,000-row budget.
 
 ## Schema Evolution Rules
 

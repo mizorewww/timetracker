@@ -634,11 +634,13 @@
 "analytics.summary.emptyTitle" = "No tracked time in this range";
 "analytics.summary.emptyMessage" = "Start a task timer or choose another date range to see meaningful totals.";
 "analytics.summary.periodFootnote" = "Showing %@.";
-"analytics.questions.title" = "Questions";
-"analytics.questions.subtitle" = "Choose a question to see the explanation and supporting details.";
+"analytics.review.title" = "Review";
+"analytics.review.subtitle" = "Check changes and data issues before deciding what to do next.";
+"analytics.categories.title" = "Explore";
+"analytics.categories.subtitle" = "See the charts, breakdowns, and records behind each total.";
 "analytics.question.overview" = "How much time did I spend?";
 "analytics.question.time" = "When was my time most concentrated?";
-"analytics.question.tasks" = "Which task took the most time?";
+"analytics.question.tasks" = "Where did my time go across tasks and categories?";
 "analytics.question.pomodoro" = "How many focus rounds did I finish?";
 "analytics.question.decisions" = "What deserves attention?";
 "analytics.question.quality" = "Can I rely on these totals?";
@@ -647,7 +649,7 @@
 "analytics.question.answer.totalFormat" = "%@ across all task timers";
 "analytics.question.answer.peakFormat" = "Busiest at %02d:00 · %@ tracked";
 "analytics.question.answer.noPeak" = "No tracked time in this range";
-"analytics.question.answer.taskFormat" = "%@ · %@";
+"analytics.question.answer.taskCategoryFormat" = "Top task: %@ · %@. Category distribution is included.";
 "analytics.question.answer.noTask" = "No task time in this range";
 "analytics.question.answer.focusSingularFormat" = "%d round completed";
 "analytics.question.answer.focusFormat" = "%d rounds completed";
@@ -660,7 +662,7 @@
 "analytics.category.overview.subtitle" = "Summed timers, elapsed time, comparisons, and definitions.";
 "analytics.category.time.title" = "Time Patterns";
 "analytics.category.time.subtitle" = "Daily trend, today distribution, and timeline.";
-"analytics.category.tasks.title" = "Task Breakdown";
+"analytics.category.tasks.title" = "Tasks & Categories";
 "analytics.category.tasks.subtitle" = "See which tasks, branches, and categories received time.";
 "analytics.category.pomodoro.title" = "Focus Rounds";
 "analytics.category.pomodoro.subtitle" = "Each row is a completed Pomodoro focus segment in this date range.";

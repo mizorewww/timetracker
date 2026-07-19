@@ -577,9 +577,44 @@ Status: completed and verified
   extraction; no owned Booted device, runner, app, `xcodebuild`, or `xctest`
   process remained.
 
-The next Analytics interaction checkpoints are to restore the visible
-Review/Explore information architecture without losing question-led labels,
-then make task and category drill-down destinations unmistakably discoverable.
+## Checkpoint 18 — restored Analytics IA and category-first discovery
+
+Status: completed and verified
+
+- Checkpoint 10's question-led rows remain, while the landing page again has
+  an explicit Review/Explore information architecture. Review contains
+  Decisions and Quality; Explore contains Time, Tasks, Pomodoro, and Totals &
+  Definitions. Together the two groups cover every Analytics category exactly
+  once.
+- Every landing entry remains a native typed `NavigationLink` and shows the
+  question, the current-range answer, an explicit detail destination, and the
+  system disclosure indicator. The Tasks destination is now named Tasks &
+  Categories and its question and answer both disclose that category
+  distribution is available.
+- Tasks & Categories presents Category Distribution before Task Distribution
+  and Root Task Distribution. The category buckets remain static duration and
+  percentage facts without chevrons, gestures, or a nonexistent drill-down.
+- Paid-signing macOS Analytics/UI contracts passed 46/46 with no failures,
+  skips, or runtime warnings. The normal-size iPhone 17 Pro paths passed 2/2.
+  On iPad Pro 11-inch (M4), the category-first path passed on the initial run;
+  the Review/Explore path was killed before assertions on that cold combined
+  run and is not counted as a pass. After uninstalling the owned App and
+  runner, its isolated warm retry passed 1/1 with no runtime warnings.
+- Six screenshots were exported and visually reviewed under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/analytics-ia-checkpoint/final`.
+  Both device classes show clear section hierarchy and native disclosure;
+  Category Distribution is the first detail section, and the iPhone content
+  remains clear of the system Tab Bar.
+- The generic iOS Debug build completed with paid automatic signing and zero
+  xcresult errors, warnings, or analyzer warnings. Main App, Widget, Live
+  Activity, and Watch pass strict code-sign and embedded validation as Team
+  `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`; the main App
+  retains development APS, CloudKit, and App Group entitlements.
+- Owned simulator UDIDs `B788CFAD-3755-4189-A616-FF30EAAAE1AB` and
+  `E8B037E7-D01D-4366-9044-B6C3BC4F12C6` were terminated, shut down, and
+  deleted. Owned result bundles, DerivedData, logs, and export scratch were
+  removed after evidence extraction; no owned Booted device, App, runner,
+  `xcodebuild`, or `xctest` process remained.
 
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

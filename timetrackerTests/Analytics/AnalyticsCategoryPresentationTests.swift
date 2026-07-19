@@ -5,17 +5,20 @@ import Testing
 
 struct AnalyticsCategoryPresentationTests {
     @Test @MainActor
-    func homeAsksSixQuestionsAndCoversEveryDestinationOnce() {
-        #expect(AnalyticsCategory.questionCategories == [
-            .overview,
-            .time,
-            .tasks,
-            .pomodoro,
-            .decisions,
-            .quality
-        ])
-        #expect(AnalyticsCategory.questionCategories.count == AnalyticsCategory.allCases.count)
-        #expect(Set(AnalyticsCategory.questionCategories) == Set(AnalyticsCategory.allCases))
+    func homePrioritizesReviewThenCoversEveryExploreDestinationOnce() {
+        #expect(AnalyticsCategory.reviewCategories == [.decisions, .quality])
+        #expect(
+            AnalyticsCategory.exploreCategories == [
+                .time,
+                .tasks,
+                .pomodoro,
+                .overview
+            ]
+        )
+        let homeCategories =
+            AnalyticsCategory.reviewCategories + AnalyticsCategory.exploreCategories
+        #expect(homeCategories.count == AnalyticsCategory.allCases.count)
+        #expect(Set(homeCategories) == Set(AnalyticsCategory.allCases))
     }
 
     @Test @MainActor
@@ -23,9 +26,37 @@ struct AnalyticsCategoryPresentationTests {
         let snapshot = makeSnapshot()
         let expected = AppStrings.localized("analytics.question.answer.noRecordedTime")
 
-        for category in AnalyticsCategory.questionCategories {
+        let homeCategories =
+            AnalyticsCategory.reviewCategories + AnalyticsCategory.exploreCategories
+        for category in homeCategories {
             #expect(category.answerPreview(from: snapshot) == expected)
         }
+    }
+
+    @Test @MainActor
+    func taskQuestionNamesTheLeadingTaskAndCategoryDestination() {
+        let topTask = TaskAnalyticsPoint(
+            taskID: UUID(),
+            title: "Read Apple HIG",
+            path: "Study / Read Apple HIG",
+            colorHex: "16A34A",
+            iconName: "book.pages",
+            grossSeconds: 2_400,
+            wallSeconds: 2_400
+        )
+        let snapshot = makeSnapshot(
+            grossSeconds: 3_600,
+            taskBreakdown: [topTask]
+        )
+        let expected = String(
+            format: AppStrings.localized(
+                "analytics.question.answer.taskCategoryFormat"
+            ),
+            "Read Apple HIG",
+            DurationFormatter.compact(2_400)
+        )
+
+        #expect(AnalyticsCategory.tasks.answerPreview(from: snapshot) == expected)
     }
 
     @Test @MainActor
@@ -46,7 +77,8 @@ struct AnalyticsCategoryPresentationTests {
     @MainActor
     private func makeSnapshot(
         grossSeconds: Int = 0,
-        pomodoroCount: Int = 0
+        pomodoroCount: Int = 0,
+        taskBreakdown: [TaskAnalyticsPoint] = []
     ) -> AnalyticsSnapshot {
         let window = AnalyticsComparisonWindow(
             current: DateInterval(start: .distantPast, duration: 1),
@@ -92,7 +124,7 @@ struct AnalyticsCategoryPresentationTests {
             todayActivity: [],
             timeline: .empty,
             completedFocusRoundSegmentIDs: [],
-            taskBreakdown: [],
+            taskBreakdown: taskBreakdown,
             rootBreakdown: [],
             categoryBreakdown: [],
             overlaps: []

@@ -46,6 +46,18 @@ extension AnalyticsCategoryDetailView {
             }
         case .tasks:
             AnalyticsDetailSection(
+                title: AppStrings.localized("analytics.categoryUsage.title"),
+                subtitle: AppStrings.localized("analytics.categoryUsage.subtitle"),
+                headerIdentifier: "analytics.categoryUsage.header"
+            ) {
+                AnalyticsGroupBreakdownContent(
+                    items: snapshot.categoryBreakdown,
+                    totalSeconds: snapshot.categoryBreakdown.reduce(0) {
+                        $0 + $1.grossSeconds
+                    }
+                )
+            }
+            AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.taskUsage.title"),
                 subtitle: AppStrings.localized("analytics.taskUsage.subtitle")
             ) {
@@ -60,16 +72,9 @@ extension AnalyticsCategoryDetailView {
             ) {
                 AnalyticsGroupBreakdownContent(
                     items: snapshot.rootBreakdown,
-                    totalSeconds: snapshot.rootBreakdown.reduce(0) { $0 + $1.grossSeconds }
-                )
-            }
-            AnalyticsDetailSection(
-                title: AppStrings.localized("analytics.categoryUsage.title"),
-                subtitle: AppStrings.localized("analytics.categoryUsage.subtitle")
-            ) {
-                AnalyticsGroupBreakdownContent(
-                    items: snapshot.categoryBreakdown,
-                    totalSeconds: snapshot.categoryBreakdown.reduce(0) { $0 + $1.grossSeconds }
+                    totalSeconds: snapshot.rootBreakdown.reduce(0) {
+                        $0 + $1.grossSeconds
+                    }
                 )
             }
         case .pomodoro:

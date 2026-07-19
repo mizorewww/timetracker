@@ -8,13 +8,12 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
     case decisions
     case quality
 
-    static let questionCategories: [AnalyticsCategory] = [
-        .overview,
+    static let reviewCategories: [AnalyticsCategory] = [.decisions, .quality]
+    static let exploreCategories: [AnalyticsCategory] = [
         .time,
         .tasks,
         .pomodoro,
-        .decisions,
-        .quality
+        .overview
     ]
 
     var id: String { rawValue }
@@ -113,7 +112,9 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
                 return AppStrings.localized("analytics.question.answer.noTask")
             }
             return String(
-                format: AppStrings.localized("analytics.question.answer.taskFormat"),
+                format: AppStrings.localized(
+                    "analytics.question.answer.taskCategoryFormat"
+                ),
                 topTask.title,
                 DurationFormatter.compact(topTask.grossSeconds)
             )

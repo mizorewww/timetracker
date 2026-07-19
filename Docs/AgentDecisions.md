@@ -544,6 +544,8 @@
 
 状态：Accepted
 
+替代关系：本决策的 `Metrics` 用户命名、首页行呈现和对应验证条款由 AD-126 部分替代；Review-first、系统 List、typed navigation 和完整覆盖原则继续有效。
+
 背景：旧首页在摘要后继续以一个“分类”列表平铺概览、时间、任务、番茄钟、决策和质量。首两行重复摘要的 gross/wall 值，真正帮助用户判断下一步的决策与质量信号被埋在下方。
 
 决策：保留系统 `List`、typed `NavigationLink(value:)` 和六个既有详情目的地，但首页分成两个显式顺序：`reviewCategories` 先展示 Decisions/Quality，`exploreCategories` 再展示 Time/Tasks/Pomodoro/Metrics。原 Overview 用户文案改为 Metrics，避免与首页摘要同名。两组必须不重不漏地覆盖 `AnalyticsCategory.allCases`，不引入新的自绘导航或第三方 dashboard 容器。
@@ -1624,6 +1626,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：第一行在普通字号下形成稳定的“圆圈—正文”水平轴，第二行从同一可见圆左缘开始，第三行仍提供左右分离的决定动作。共享 checklist 的多行编辑布局不受 Inbox 专用选择影响，圆圈尺寸或平台点击目标变化时也只有一个几何来源。
 
 验证：冻结暂存范围的付费签名 Inbox/shared contracts 通过 20/20，0 failed/skipped/runtime warning。正常字号 iPhone 17 Pro 首次 runner 在测试方法进入前因等待 AX loaded notification 超时，不计 UI 结果；清除专属模拟器中的 App/runner 后 warm retry 通过 1/1，iPad Pro 11-inch (M4) 首次通过 1/1，两端均由几何断言固定 `midY` 与可见圆 `minX` 并完成 ready/apply 截图目视复核。generic iOS Debug 自动签名构建的 xcresult 为 0 error/warning/analyzer warning；主 App、Widget、Live Activity 与 Watch 通过严格 codesign/embedded validation，Team `LT98S43NKA`，保留 development APS、CloudKit 与 App Group。完整截图和资源清理证据记录在 dated Audit。
+
+## AD-126：Analytics 用“复盘 / 深入查看”说明导航层级
+
+状态：Accepted
+
+替代关系：本决策只替代 AD-041 中 Overview 的 `Metrics` 用户命名和首页行展示规则；AD-041 的系统 `List`、typed `NavigationLink(value:)`、两组顺序及完整覆盖要求继续有效。
+
+背景：问题式 Analytics 首页能说明每个入口回答什么，却在一次扁平化调整中丢失了“先判断下一步，再按主题看证据”的 Review/Explore 层级。用户仍需要猜整行能否点按；Tasks 入口只强调单个 Top Task，也没有提前说明其中包含 Category Distribution。
+
+决策：
+
+- 首页在当前范围摘要后使用两个原生 `Section`：`reviewCategories` 固定为 Decisions、Quality，`exploreCategories` 固定为 Time、Tasks、Pomodoro、Overview。后者的用户目的地名称是 `Totals & Definitions`，不再沿用与详情内容不一致的 `Metrics`。
+- 每个目的地继续是完整行的系统 `NavigationLink`。行内依次显示它回答的问题、当前范围的直接答案，以及强调色的“查看详情：目的地”；系统 disclosure 与文字共同表达可导航性，不增加卡片点击手势、隐藏热区或另一套路由。
+- Tasks 的问题和目的地命名为“任务与分类”，有数据时的直接答案同时说明可以查看分类分布；进入详情后依次显示 Category Distribution、Task Distribution、Root Task Distribution。
+- Category Distribution 的 bucket 当前只是统计分解，不显示 disclosure、按钮色或点击手势。未来只有在存在真实 category 详情目的地和返回路径后，才可以把 bucket 改成可导航元素，不能用假 affordance 冒充尚未实现的 drill-down。
+- 两组合并必须对 `AnalyticsCategory.allCases` 完整且无重复；新增 category 必须显式归组。
+
+后果：首页重新建立“先复盘、再探索”的阅读顺序，并让用户在点击前知道目的地和其中的分类内容。该规则不会改变 Analytics 数值、范围语义或详情数据来源，也不会把只读图表切片误导成按钮。
+
+验证：presentation 测试固定分组顺序、完整覆盖和 Tasks 答案；source contract 固定两个 section identifier、原生 typed navigation、三语键及分类分布优先顺序。正常字号 iPhone 与 iPad UI 回归必须读取两个 section 的标题/说明、检查六行问题/答案/目的地，进入 Tasks & Categories 后确认 Category Distribution 位于首个分析区块并截图；实际签名、截图和资源清理证据写入 dated Audit。
 
 ## 2. Agent 工作清单
 

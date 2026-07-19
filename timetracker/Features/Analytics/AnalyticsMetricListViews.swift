@@ -3,7 +3,20 @@ import SwiftUI
 struct AnalyticsDetailSection<Content: View>: View {
     let title: String
     let subtitle: String?
+    let headerIdentifier: String?
     @ViewBuilder var content: Content
+
+    init(
+        title: String,
+        subtitle: String?,
+        headerIdentifier: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.headerIdentifier = headerIdentifier
+        self.content = content()
+    }
 
     var body: some View {
         Section {
@@ -20,7 +33,12 @@ struct AnalyticsDetailSection<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 6)
         } header: {
-            Text(title)
+            if let headerIdentifier {
+                Text(title)
+                    .accessibilityIdentifier(headerIdentifier)
+            } else {
+                Text(title)
+            }
         }
     }
 }

@@ -1190,40 +1190,40 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAnalyticsQuestionsExposeAnswersAndOpenTimeDetails() throws {
+    func testAnalyticsReviewAndExploreExposeAnswers() throws {
         #if os(macOS)
         throw XCTSkip("The question-led Analytics path requires an iOS simulator.")
         #else
         let app = launchApp(route: "analytics")
         XCTAssertTrue(analyticsIsReady(in: app))
 
+        let periodFilter = app.descendants(matching: .any)[
+            "analytics.periodFilter"
+        ].firstMatch
+        XCTAssertTrue(periodFilter.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.segmentedControls.buttons["Day"].firstMatch.isSelected)
+
+        let reviewHeader = app.descendants(matching: .any)[
+            "analytics.section.review"
+        ].firstMatch
+        let reviewFirstRow = app.descendants(matching: .any)[
+            "analytics.category.decisions"
+        ].firstMatch
+        scrollUntilHittable(reviewFirstRow, direction: .up, in: app)
+        XCTAssertTrue(reviewHeader.waitForExistence(timeout: 5))
+        XCTAssertTrue(reviewFirstRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            reviewHeader.label.localizedCaseInsensitiveContains("Review")
+        )
+        XCTAssertTrue(
+            reviewHeader.label.contains(
+                "Check changes and data issues before deciding what to do next."
+            )
+        )
+
         let expectations: [
             (id: String, question: String, answer: String, destination: String)
         ] = [
-            (
-                "overview",
-                "How much time did I spend?",
-                "across all task timers",
-                "Totals & Definitions"
-            ),
-            (
-                "time",
-                "When was my time most concentrated?",
-                "Busiest at",
-                "Time Patterns"
-            ),
-            (
-                "tasks",
-                "Which task took the most time?",
-                "Read Apple HIG",
-                "Task Breakdown"
-            ),
-            (
-                "pomodoro",
-                "How many focus rounds did I finish?",
-                "completed",
-                "Focus Rounds"
-            ),
             (
                 "decisions",
                 "What deserves attention?",
@@ -1235,62 +1235,111 @@ final class timetrackerUITests: XCTestCase {
                 "Can I rely on these totals?",
                 "overlap",
                 "Tracking Checks"
-            )
+            ),
         ]
 
         for expectation in expectations {
-            let row = app.descendants(matching: .any)[
-                "analytics.category.\(expectation.id)"
-            ].firstMatch
-            scrollUntilHittable(row, direction: .up, in: app)
-            XCTAssertTrue(
-                waitForElement(
-                    row,
-                    timeout: 5,
-                    diagnosticName: "analytics-question-\(expectation.id)",
-                    in: app
-                ) && row.isHittable
-            )
+            verifyAnalyticsCategory(expectation, in: app)
+        }
+        try capture("analytics-review", app: app)
 
-            let label = row.label
-            XCTAssertTrue(
-                label.contains(expectation.question),
-                "\(expectation.id) must state the question it answers. Label: \(label)"
+        let exploreHeader = app.descendants(matching: .any)[
+            "analytics.section.explore"
+        ].firstMatch
+        let exploreFirstRow = app.descendants(matching: .any)[
+            "analytics.category.time"
+        ].firstMatch
+        scrollUntilHittable(exploreFirstRow, direction: .up, in: app)
+        XCTAssertTrue(exploreHeader.waitForExistence(timeout: 5))
+        XCTAssertTrue(exploreFirstRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            exploreHeader.label.localizedCaseInsensitiveContains("Explore")
+        )
+        XCTAssertTrue(
+            exploreHeader.label.contains(
+                "See the charts, breakdowns, and records behind each total."
             )
-            XCTAssertTrue(
-                label.localizedCaseInsensitiveContains(expectation.answer),
-                "\(expectation.id) must expose a direct answer. Label: \(label)"
+        )
+
+        let exploreExpectations: [
+            (id: String, question: String, answer: String, destination: String)
+        ] = [
+            (
+                "time",
+                "When was my time most concentrated?",
+                "Busiest at",
+                "Time Patterns"
+            ),
+            (
+                "tasks",
+                "Where did my time go across tasks and categories?",
+                "category distribution",
+                "Tasks & Categories"
+            ),
+            (
+                "pomodoro",
+                "How many focus rounds did I finish?",
+                "completed",
+                "Focus Rounds"
+            ),
+            (
+                "overview",
+                "How much time did I spend?",
+                "across all task timers",
+                "Totals & Definitions"
             )
-            XCTAssertTrue(
-                label.contains("View details: \(expectation.destination)"),
-                "\(expectation.id) must name its detail destination. Label: \(label)"
-            )
+        ]
+
+        for expectation in exploreExpectations {
+            verifyAnalyticsCategory(expectation, in: app)
         }
 
-        let quality = app.descendants(matching: .any)["analytics.category.quality"].firstMatch
-        scrollUntilFullyVisibleAboveSystemChrome(quality, in: app)
-        XCTAssertTrue(isFullyVisibleAboveSystemChrome(quality, in: app))
-        try capture("iphone-analytics-questions-bottom", app: app)
+        let overview = app.descendants(matching: .any)["analytics.category.overview"].firstMatch
+        scrollUntilFullyVisibleAboveSystemChrome(overview, in: app)
+        XCTAssertTrue(isFullyVisibleAboveSystemChrome(overview, in: app))
+        try capture("analytics-explore", app: app)
+        #endif
+    }
 
-        let periodFilter = app.descendants(matching: .any)["analytics.periodFilter"].firstMatch
-        scrollUntilHittable(periodFilter, direction: .down, in: app)
-        XCTAssertTrue(periodFilter.waitForExistence(timeout: 5) && periodFilter.isHittable)
-        XCTAssertTrue(app.segmentedControls.buttons["Day"].firstMatch.isSelected)
-        try capture("iphone-analytics-questions-top", app: app)
+    @MainActor
+    func testAnalyticsTasksAndCategoriesLeadWithCategoryDistribution() throws {
+        let app = launchApp(route: "analytics")
+        XCTAssertTrue(analyticsIsReady(in: app))
 
-        let time = app.descendants(matching: .any)["analytics.category.time"].firstMatch
-        scrollUntilHittable(time, direction: .down, in: app)
-        XCTAssertTrue(time.waitForExistence(timeout: 5) && time.isHittable)
-        activate(time)
+        let tasksAndCategories = app.descendants(matching: .any)[
+            "analytics.category.tasks"
+        ].firstMatch
+        scrollUntilHittable(tasksAndCategories, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                tasksAndCategories,
+                timeout: 5,
+                diagnosticName: "analytics-tasks-categories",
+                in: app
+            ) && tasksAndCategories.isHittable
+        )
+        XCTAssertTrue(tasksAndCategories.label.contains("tasks and categories"))
+        XCTAssertTrue(
+            tasksAndCategories.label.localizedCaseInsensitiveContains(
+                "category distribution"
+            )
+        )
+        XCTAssertTrue(tasksAndCategories.label.contains("View details: Tasks & Categories"))
+        activate(tasksAndCategories)
 
-        let detail = app.descendants(matching: .any)["analytics.categoryDetail.time"].firstMatch
-        let distribution = app.descendants(matching: .any)[
-            "analytics.hourDistribution.content"
+        let detail = app.descendants(matching: .any)[
+            "analytics.categoryDetail.tasks"
+        ].firstMatch
+        let categorySection = app.descendants(matching: .any)[
+            "analytics.categoryUsage.header"
         ].firstMatch
         XCTAssertTrue(detail.waitForExistence(timeout: 8))
-        XCTAssertTrue(distribution.waitForExistence(timeout: 8))
-        try capture("iphone-analytics-time-details", app: app)
+        XCTAssertTrue(categorySection.waitForExistence(timeout: 8))
+        XCTAssertEqual(categorySection.label, "Category Distribution")
+        #if os(iOS)
+        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(categorySection, in: app))
         #endif
+        try capture("analytics-tasks-categories-category-first", app: app)
     }
 
     @MainActor
@@ -2568,6 +2617,44 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func verifyAnalyticsCategory(
+        _ expectation: (
+            id: String,
+            question: String,
+            answer: String,
+            destination: String
+        ),
+        in app: XCUIApplication
+    ) {
+        let row = app.descendants(matching: .any)[
+            "analytics.category.\(expectation.id)"
+        ].firstMatch
+        scrollUntilHittable(row, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                row,
+                timeout: 5,
+                diagnosticName: "analytics-question-\(expectation.id)",
+                in: app
+            ) && row.isHittable
+        )
+
+        let label = row.label
+        XCTAssertTrue(
+            label.contains(expectation.question),
+            "\(expectation.id) must state the question it answers. Label: \(label)"
+        )
+        XCTAssertTrue(
+            label.localizedCaseInsensitiveContains(expectation.answer),
+            "\(expectation.id) must expose a direct answer. Label: \(label)"
+        )
+        XCTAssertTrue(
+            label.contains("View details: \(expectation.destination)"),
+            "\(expectation.id) must name its detail destination. Label: \(label)"
+        )
+    }
+
+    @MainActor
     private func taskDetailIsReady(in app: XCUIApplication) -> Bool {
         app.descendants(matching: .any)["task.detail"].waitForExistence(timeout: 5)
     }
@@ -2822,7 +2909,16 @@ final class timetrackerUITests: XCTestCase {
         _ element: XCUIElement,
         in app: XCUIApplication
     ) -> Bool {
-        guard element.exists, element.isHittable else { return false }
+        guard element.isHittable else { return false }
+        return isFrameFullyVisibleAboveSystemChrome(element, in: app)
+    }
+
+    @MainActor
+    private func isFrameFullyVisibleAboveSystemChrome(
+        _ element: XCUIElement,
+        in app: XCUIApplication
+    ) -> Bool {
+        guard element.exists else { return false }
 
         let unobscuredBottom = systemChromeTop(in: app)
         return element.frame.minY >= app.frame.minY

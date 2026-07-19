@@ -621,7 +621,11 @@ struct TaskUIContractTests {
         #expect(analyticsSource.contains("NavigationLink(value: category)"))
         #expect(analyticsSource.contains(".navigationDestination(for: AnalyticsCategory.self)"))
         #expect(analyticsSource.contains(".navigationTitle(category.destinationTitle)"))
-        #expect(analyticsSource.contains("AnalyticsCategory.questionCategories"))
+        #expect(analyticsSource.contains("AnalyticsCategory.reviewCategories"))
+        #expect(analyticsSource.contains("AnalyticsCategory.exploreCategories"))
+        #expect(analyticsSource.contains("analytics.section.review"))
+        #expect(analyticsSource.contains("analytics.section.explore"))
+        #expect(analyticsSource.contains("analytics.categoryUsage.header"))
         #expect(analyticsSource.contains("category.questionTitle"))
         #expect(analyticsSource.contains("category.answerPreview(from: snapshot)"))
         #expect(analyticsSource.contains("category.openLabel"))
@@ -639,21 +643,13 @@ struct TaskUIContractTests {
         #expect(englishStrings.contains("\"analytics.question.quality\""))
         #expect(englishStrings.contains("\"analytics.question.openFormat\""))
         #expect(englishStrings.contains("\"analytics.question.answer.noRecordedTime\""))
-        #expect(
-            englishStrings.contains(
-                "\"analytics.questions.subtitle\" = \"Choose a question to see the explanation and supporting details.\""
-            )
-        )
-        #expect(
-            simplifiedStrings.contains(
-                "\"analytics.questions.subtitle\" = \"选择一个问题，查看对应的说明和详细数据。\""
-            )
-        )
-        #expect(
-            traditionalStrings.contains(
-                "\"analytics.questions.subtitle\" = \"選擇一個問題，查看對應的說明和詳細資料。\""
-            )
-        )
+        #expect(englishStrings.contains("\"analytics.question.answer.taskCategoryFormat\""))
+        for strings in [englishStrings, simplifiedStrings, traditionalStrings] {
+            #expect(strings.contains("\"analytics.review.title\""))
+            #expect(strings.contains("\"analytics.review.subtitle\""))
+            #expect(strings.contains("\"analytics.categories.title\""))
+            #expect(strings.contains("\"analytics.categories.subtitle\""))
+        }
         #expect(englishStrings.contains("\"analytics.summary.grossLabel\""))
         #expect(englishStrings.contains("\"analytics.summary.wallLabel\""))
         #expect(englishStrings.contains("\"analytics.summary.emptyTitle\""))
@@ -725,9 +721,30 @@ struct TaskUIContractTests {
         #expect(uiTestSource.contains("testAnalyticsFinalCategoryScrollsAboveSystemChrome"))
         #expect(uiTestSource.contains("analytics.category.overview"))
         #expect(analyticsSource.contains("analytics.category.\\(category.rawValue)"))
-        #expect(analyticsSource.contains("AnalyticsCategory.questionCategories"))
-        #expect(englishStrings.contains("\"analytics.questions.title\""))
-        #expect(englishStrings.contains("\"analytics.questions.subtitle\""))
+        #expect(analyticsSource.contains("AnalyticsCategory.reviewCategories"))
+        #expect(analyticsSource.contains("AnalyticsCategory.exploreCategories"))
+        #expect(
+            uiTestSource.contains(
+                "testAnalyticsTasksAndCategoriesLeadWithCategoryDistribution"
+            )
+        )
+        #expect(
+            uiTestSource.contains(
+                "testAnalyticsReviewAndExploreExposeAnswers"
+            )
+        )
+
+        let categoryUsageIndex = try #require(
+            analyticsSource.range(
+                of: "title: AppStrings.localized(\"analytics.categoryUsage.title\")"
+            )
+        )
+        let taskUsageIndex = try #require(
+            analyticsSource.range(
+                of: "title: AppStrings.localized(\"analytics.taskUsage.title\")"
+            )
+        )
+        #expect(categoryUsageIndex.lowerBound < taskUsageIndex.lowerBound)
 
         let detailSectionSource = try sourceText(
             "timetracker/Features/Analytics/AnalyticsMetricListViews.swift"

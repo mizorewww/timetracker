@@ -634,11 +634,13 @@
 "analytics.summary.emptyTitle" = "这个范围还没有计时";
 "analytics.summary.emptyMessage" = "开始为任务计时，或选择其他日期范围后再查看统计。";
 "analytics.summary.periodFootnote" = "正在显示 %@。";
-"analytics.questions.title" = "想了解什么";
-"analytics.questions.subtitle" = "选择一个问题，查看对应的说明和详细数据。";
+"analytics.review.title" = "复盘";
+"analytics.review.subtitle" = "先看时间变化和数据问题，再决定下一步。";
+"analytics.categories.title" = "深入查看";
+"analytics.categories.subtitle" = "查看每项统计背后的图表、分布和明细记录。";
 "analytics.question.overview" = "这段时间我花了多久？";
 "analytics.question.time" = "我的时间在什么时候最集中？";
-"analytics.question.tasks" = "哪个任务花的时间最多？";
+"analytics.question.tasks" = "时间主要流向哪些任务和分类？";
 "analytics.question.pomodoro" = "我完成了多少轮专注？";
 "analytics.question.decisions" = "什么值得我关注？";
 "analytics.question.quality" = "这些统计可以直接参考吗？";
@@ -647,7 +649,7 @@
 "analytics.question.answer.totalFormat" = "%@，各任务计时相加";
 "analytics.question.answer.peakFormat" = "最集中在 %02d:00 · 记录 %@";
 "analytics.question.answer.noPeak" = "这个范围还没有计时";
-"analytics.question.answer.taskFormat" = "%@ · %@";
+"analytics.question.answer.taskCategoryFormat" = "最耗时任务：%@ · %@。详情包含分类分布。";
 "analytics.question.answer.noTask" = "这个范围还没有任务时间";
 "analytics.question.answer.focusSingularFormat" = "已完成 %d 轮";
 "analytics.question.answer.focusFormat" = "已完成 %d 轮";
@@ -660,7 +662,7 @@
 "analytics.category.overview.subtitle" = "查看累计时间、实际时间、周期对比和口径说明。";
 "analytics.category.time.title" = "时间规律";
 "analytics.category.time.subtitle" = "每日趋势、今天分布和时间轴。";
-"analytics.category.tasks.title" = "任务分布";
+"analytics.category.tasks.title" = "任务与分类";
 "analytics.category.tasks.subtitle" = "查看时间流向了哪些任务、分支和分类。";
 "analytics.category.pomodoro.title" = "专注轮次";
 "analytics.category.pomodoro.subtitle" = "每一行都是此日期范围内完成的一个番茄专注片段。";

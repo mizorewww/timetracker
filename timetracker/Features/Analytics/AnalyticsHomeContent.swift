@@ -38,16 +38,23 @@ struct AnalyticsContent: View {
             }
 
             Section {
-                categoryLinks(AnalyticsCategory.questionCategories)
+                categoryLinks(AnalyticsCategory.reviewCategories)
             } header: {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(AppStrings.localized("analytics.questions.title"))
-                    Text(AppStrings.localized("analytics.questions.subtitle"))
-                        .font(.footnote)
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                AnalyticsHomeSectionHeader(
+                    title: AppStrings.localized("analytics.review.title"),
+                    subtitle: AppStrings.localized("analytics.review.subtitle"),
+                    identifier: "analytics.section.review"
+                )
+            }
+
+            Section {
+                categoryLinks(AnalyticsCategory.exploreCategories)
+            } header: {
+                AnalyticsHomeSectionHeader(
+                    title: AppStrings.localized("analytics.categories.title"),
+                    subtitle: AppStrings.localized("analytics.categories.subtitle"),
+                    identifier: "analytics.section.explore"
+                )
             }
         }
         #if os(iOS)
@@ -76,5 +83,25 @@ struct AnalyticsContent: View {
             }
             .accessibilityIdentifier("analytics.category.\(category.rawValue)")
         }
+    }
+}
+
+private struct AnalyticsHomeSectionHeader: View {
+    let title: String
+    let subtitle: String
+    let identifier: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+            Text(subtitle)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .textCase(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier(identifier)
     }
 }

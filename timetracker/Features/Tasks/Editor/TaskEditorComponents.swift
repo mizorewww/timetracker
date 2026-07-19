@@ -12,6 +12,37 @@ struct TaskEditorForm: View {
 
     var body: some View {
         Form {
+            TaskEditorSections(
+                store: store,
+                draft: $draft,
+                validation: validation,
+                parentCandidates: parentCandidates,
+                focusedChecklistDraftID: focusedChecklistDraftID,
+                orderedChecklistIndices: orderedChecklistIndices,
+                moveChecklistItems: moveChecklistItems,
+                addChecklistItem: addChecklistItem
+            )
+        }
+        .formStyle(.grouped)
+        #if os(iOS)
+        .scrollDismissesKeyboard(.interactively)
+        #endif
+        .accessibilityIdentifier("task.editor")
+    }
+}
+
+struct TaskEditorSections: View {
+    let store: TimeTrackerStore
+    @Binding var draft: TaskEditorDraft
+    let validation: TaskEditorValidation
+    let parentCandidates: [TaskNode]
+    let focusedChecklistDraftID: FocusState<UUID?>.Binding
+    let orderedChecklistIndices: [Int]
+    let moveChecklistItems: (IndexSet, Int) -> Void
+    let addChecklistItem: (Int?) -> Void
+
+    var body: some View {
+        Group {
             TaskInfoEditorSection(
                 store: store,
                 draft: $draft,
@@ -31,11 +62,6 @@ struct TaskEditorForm: View {
                 validationError: validation.notesError
             )
         }
-        .formStyle(.grouped)
-        #if os(iOS)
-        .scrollDismissesKeyboard(.interactively)
-        #endif
-        .accessibilityIdentifier("task.editor")
     }
 }
 

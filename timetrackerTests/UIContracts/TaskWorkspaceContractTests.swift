@@ -45,6 +45,9 @@ struct TaskWorkspaceContractTests {
         let editorView = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift"
         )
+        let editorComponents = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift"
+        )
         let editorSession = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskEditorSession.swift"
         )
@@ -60,6 +63,11 @@ struct TaskWorkspaceContractTests {
         #expect(editorView.contains(".navigationBarBackButtonHidden(true)"))
         #expect(editorView.contains("session.save("))
         #expect(editorView.contains(".taskEditorSessionSafety("))
+        #expect(editorComponents.contains("Form {\n            TaskEditorSections("))
+        #expect(editorComponents.contains("struct TaskEditorSections: View"))
+        #expect(editorComponents.components(
+            separatedBy: "TaskInfoEditorSection("
+        ).count - 1 == 1)
         #expect(editorSession.contains("pendingReloadDraft = store.editorDraft(for: latestTask)"))
         #expect(editorSession.contains("sessionBaseline = latestDraft"))
         #expect(editorSafety.contains(".editorDiscardConfirmation("))

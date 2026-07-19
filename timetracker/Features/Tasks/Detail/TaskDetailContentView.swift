@@ -16,8 +16,7 @@ struct TaskDetailList: View {
             Section {
                 TaskDetailIdentityRow(
                     store: store,
-                    task: task,
-                    isRunning: activeSegment != nil
+                    task: task
                 )
             }
             .accessibilityIdentifier("task.detail.identity")

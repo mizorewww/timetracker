@@ -247,6 +247,9 @@ struct HomeUIContractTests {
         let timerRowSource = try sourceText(
             "timetracker/Features/Home/Rows/HomeTimerRows.swift"
         )
+        let timerActionSource = try sourceText(
+            "timetracker/SharedUI/Components/TaskTimerActionButton.swift"
+        )
 
         #expect(identitySource.contains("struct TaskIdentityText: Equatable, Sendable"))
         #expect(identitySource.contains("struct TaskVisualPresentation: Equatable, Sendable"))
@@ -271,19 +274,21 @@ struct HomeUIContractTests {
         #expect(quickStartSource.contains("home.quickStart.timer."))
         #expect(quickStartSource.contains("performTimerPickerSelection(task)"))
         #expect(quickStartSource.contains("store.stop(segment: activeSegment)"))
-        #expect(timerRowSource.contains("stop.fill"))
+        #expect(timerRowSource.contains("TaskTimerActionButton("))
+        #expect(timerActionSource.contains("stop.fill"))
         #expect(quickStartSource.contains("openTask(task.id)"))
         #expect(quickStartSource.contains("store.openTaskDetail(task.id)") == false)
         #expect(quickStartSource.contains("store.path(for: task)") == false)
         #expect(quickStartSource.contains("Text(path)") == false)
-        #expect(timerRowSource.contains("enum HomeTimerActionLabelStyle"))
-        #expect(timerRowSource.contains("labelStyle == .iconOnly"))
+        #expect(timerActionSource.contains("enum TaskTimerActionLabelStyle"))
+        #expect(timerActionSource.contains("labelStyle == .iconOnly"))
         #expect(timerRowSource.contains("horizontalSizeClass") == false)
         #expect(quickStartSource.contains("actionLabelStyle: .iconOnly"))
         #expect(quickStartSource.contains("actionLabelStyle: .titleAndIcon"))
-        #expect(timerRowSource.contains("AppStrings.localized(\"timer.action.stop\")"))
-        #expect(timerRowSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
-        #expect(timerRowSource.contains(".frame(width: 20, height: 20, alignment: .center)"))
+        #expect(timerActionSource.contains("AppStrings.localized(\"timer.action.stop\")"))
+        #expect(timerActionSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
+        #expect(timerActionSource.contains("width: minimumLabelDimension"))
+        #expect(timerActionSource.contains(".controlSize(platformControlSize)"))
     }
 
     @Test

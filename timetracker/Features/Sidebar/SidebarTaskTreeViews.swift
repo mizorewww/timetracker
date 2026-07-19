@@ -98,30 +98,15 @@ struct SidebarTaskTreeRow: View {
         let childCount = row.childCount
         let isRunning = store.activeSegment(for: task.id) != nil
 
-        return HStack(spacing: 8) {
-            Image(systemName: task.iconName ?? "checkmark.circle")
-                .foregroundStyle(Color(hex: task.colorHex) ?? .blue)
-                .accessibilityHidden(true)
-
-            Text(task.title)
-                .lineLimit(1)
-
-            Spacer(minLength: 4)
-
-            if progress.totalCount > 0 {
-                Text(progress.label)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            if childCount > 0 {
-                Text("\(childCount)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if isRunning {
-                RunningStatusBadge()
-            }
-        }
+        return TaskSummaryRow(
+            presentation: store.taskIdentityPresentation(for: task),
+            context: .hierarchical,
+            iconSize: 24,
+            metadata: TaskSummaryRowMetadata(
+                checklistProgress: progress.totalCount > 0 ? progress : nil,
+                isRunning: isRunning
+            )
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("sidebar.task.\(task.id.uuidString)")
         .accessibilityLabel(task.title)

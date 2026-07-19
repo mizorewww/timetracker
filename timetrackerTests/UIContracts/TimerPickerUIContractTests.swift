@@ -4,15 +4,34 @@ import Testing
 
 struct TimerPickerUIContractTests {
     @Test
-    func runningRowsExposeStatusAndASeparateStopButton() throws {
+    func runningRowsExposeOnlyTheExplicitStopAction() throws {
         let pickerSource = try taskHierarchyPickerSource()
+        let start = try #require(
+            pickerSource.range(of: "func runningRow(")?.lowerBound
+        )
+        let end = try #require(
+            pickerSource.range(
+                of: "@ViewBuilder\n    func stopButton(",
+                range: start..<pickerSource.endIndex
+            )?.lowerBound
+        )
+        let runningRowSource = String(pickerSource[start..<end])
 
         #expect(pickerSource.contains("ForEach(projection.runningItems)"))
         #expect(pickerSource.contains("func runningRow("))
         #expect(pickerSource.contains("timer.taskPicker.running."))
         #expect(pickerSource.contains("store.stop(segment: activeSegment)"))
         #expect(pickerSource.contains("timer.taskPicker.stop."))
+        #expect(pickerSource.contains("timer.taskPicker.runningHeader"))
         #expect(pickerSource.contains("func stopButton("))
+        #expect(pickerSource.contains("stopButton(item)"))
+        #expect(pickerSource.contains("TaskTimerActionButton("))
+        #expect(pickerSource.contains("RunningStatusBadge()") == false)
+        #expect(runningRowSource.contains("TaskSummaryRow("))
+        #expect(runningRowSource.contains("checklistProgress: item.checklistProgress"))
+        #expect(runningRowSource.contains("workedSeconds: item.workedSeconds"))
+        #expect(runningRowSource.contains("isRunning:") == false)
+        #expect(runningRowSource.contains("TaskRunningIndicator") == false)
         #expect(pickerSource.contains(".accessibilityElement(children: .ignore)"))
         #expect(pickerSource.contains("timer.action.stopTaskFormat"))
         #expect(pickerSource.contains("timer.picker.runningTaskFormat"))
@@ -30,6 +49,7 @@ struct TimerPickerUIContractTests {
         #expect(viewSource.contains("if outcome.shouldDismissPicker"))
         #expect(viewSource.contains("timer.taskPicker.select."))
         #expect(viewSource.contains("timer.task.switchHint"))
+        #expect(viewSource.contains("section.items.filter { $0.isRunning == false }"))
         #expect(viewSource.contains("activeSegment == nil ? \"timer.task.startHint\" : \"timer.task.stopHint\"") == false)
         #expect(storeSource.contains("case .alreadyRunning:\n            return .alreadyRunning"))
         #expect(storeSource.contains("case .switchTimer:\n            return startTask(task) ? .switched : .failed"))
@@ -39,27 +59,29 @@ struct TimerPickerUIContractTests {
     @Test
     func normalRowsGiveTaskIdentityPriorityOverCommands() throws {
         let pickerSource = try taskHierarchyPickerSource()
-        let identitySource = try sourceText(
-            "timetracker/SharedUI/Components/TaskIdentityRow.swift"
+        let summarySource = try sourceText(
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
         )
         let projectionSource = try sourceText(
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         )
 
-        #expect(identitySource.contains("HStack(alignment: .top, spacing: 12)"))
-        #expect(pickerSource.contains("VStack(alignment: .leading, spacing: 8)"))
-        #expect(pickerSource.contains("TaskIdentityRow("))
-        #expect(identitySource.contains(".lineLimit(2)"))
-        #expect(identitySource.contains("let text = presentation.text(for: context)"))
-        #expect(identitySource.contains("TaskWorkBlockedStatusBadge()") == false)
-        #expect(identitySource.contains("TaskStatusBadge") == false)
-        #expect(pickerSource.contains("RunningStatusBadge()\n                    .accessibilityHidden(true)"))
+        #expect(summarySource.contains("HStack(alignment: .top, spacing: 12)"))
+        #expect(pickerSource.contains("TaskSummaryRow("))
+        #expect(summarySource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(summarySource.contains("let text = presentation.text(for: context)"))
+        #expect(summarySource.contains("TaskWorkBlockedStatusBadge()") == false)
+        #expect(summarySource.contains("TaskStatusBadge") == false)
+        #expect(pickerSource.contains("accessory: .command("))
+        #expect(pickerSource.contains("checklistProgress: item.checklistProgress"))
+        #expect(pickerSource.contains("workedSeconds: item.workedSeconds"))
+        #expect(pickerSource.contains("RunningStatusBadge()") == false)
         #expect(projectionSource.contains("store.taskIdentityPresentation(for: task)"))
         #expect(pickerSource.contains("sectionKind == .hierarchy ? .hierarchical : .standard"))
         #expect(pickerSource.contains("placement: .navigationBarDrawer(displayMode: .always)"))
         #expect(pickerSource.contains(".listSectionSpacing(18)"))
-        #expect(pickerSource.contains(".symbolRenderingMode(.monochrome)"))
-        #expect(pickerSource.contains(".foregroundStyle(Color.red)"))
+        #expect(pickerSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
+        #expect(pickerSource.contains(".tint(activeSegment == nil ? taskColor : .red)"))
     }
 
     @Test
@@ -93,7 +115,9 @@ struct TimerPickerUIContractTests {
             "timer.picker.startTaskFormat",
             "timer.picker.switchTaskFormat",
             "timer.picker.runningTaskFormat",
-            "timer.picker.runningHint"
+            "timer.picker.runningHint",
+            "timer.action.stopTaskFormat",
+            "timer.task.stopHint"
         ]
 
         for path in localizationPaths {
@@ -109,7 +133,8 @@ struct TimerPickerUIContractTests {
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TaskTimerActionButton.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

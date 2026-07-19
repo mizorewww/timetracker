@@ -105,22 +105,6 @@ struct AnalyticsLayoutPolicy {
     }
 }
 
-struct TaskListLayoutPolicy {
-    private let sizeClassPolicy: SizeClassLayoutPolicy
-
-    init(horizontalSizeClass: UserInterfaceSizeClass?) {
-        sizeClassPolicy = SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
-    }
-
-    var usesCompactRows: Bool {
-        sizeClassPolicy.isCompactPhone
-    }
-
-    func showsNavigationChevron(hasChildren: Bool) -> Bool {
-        usesCompactRows && !hasChildren
-    }
-}
-
 enum TaskTreeDisclosureSlot: Equatable {
     case control
     case reserved

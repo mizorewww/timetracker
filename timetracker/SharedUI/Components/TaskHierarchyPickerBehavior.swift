@@ -93,7 +93,26 @@ extension TaskHierarchyPicker {
     func accessibilityValue(
         for item: TaskHierarchyProjection.Item
     ) -> String {
-        item.identity.fullPath
+        var components = [item.identity.fullPath]
+        if case .singleSelection = mode, item.isRunning {
+            components.append(AppStrings.running)
+        }
+        components.append(
+            String(
+                format: AppStrings.localized("tasks.workedFormat"),
+                DurationFormatter.compact(item.workedSeconds)
+            )
+        )
+        if let progress = item.checklistProgress {
+            components.append(
+                String(
+                    format: AppStrings.localized("checklist.progressFormat"),
+                    progress.completedCount,
+                    progress.totalCount
+                )
+            )
+        }
+        return ListFormatter.localizedString(byJoining: components)
     }
 
     func accessibilityHint(

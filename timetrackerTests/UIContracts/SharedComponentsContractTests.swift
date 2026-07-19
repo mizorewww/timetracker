@@ -211,6 +211,73 @@ struct SharedComponentsContractTests {
     }
 
     @Test
+    func taskSurfacesReuseCanonicalSummaryAndTimerActionComponents() throws {
+        let summary = try sourceText(
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
+        )
+        let timerAction = try sourceText(
+            "timetracker/SharedUI/Components/TaskTimerActionButton.swift"
+        )
+        let identity = try sourceText(
+            "timetracker/SharedUI/Components/TaskIdentityRow.swift"
+        )
+        let tasks = try sourceText(
+            "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift"
+        )
+        let sidebar = try sourceText(
+            "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift"
+        )
+        let picker = try sourceText(
+            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift"
+        )
+        let home = try sourceText(
+            "timetracker/Features/Home/Rows/HomeTimerRows.swift"
+        )
+
+        #expect(tasks.contains("TaskSummaryRow("))
+        #expect(sidebar.contains("TaskSummaryRow("))
+        #expect(picker.contains("TaskSummaryRow("))
+        #expect(identity.contains("TaskSummaryRow("))
+        #expect(identity.contains("TaskIcon(") == false)
+        #expect(summary.contains("CompactChecklistProgressLine("))
+        #expect(summary.contains("TaskRunningIndicator()"))
+        #expect(summary.contains("DurationFormatter.compact(workedSeconds)"))
+        #expect(
+            summary.contains(
+                "HStack(spacing: 8) {\n" +
+                    "                    checklistProgress\n" +
+                    "                    Spacer(minLength: 8)\n" +
+                    "                    trailingFacts"
+            )
+        )
+        #expect(
+            summary.contains(
+                "if metadata.isRunning {\n" +
+                    "                TaskRunningIndicator()\n" +
+                    "            }\n\n" +
+                    "            if let workedSeconds = metadata.workedSeconds"
+            )
+        )
+        #expect(picker.contains("TaskTimerActionButton("))
+        #expect(home.contains("TaskTimerActionButton("))
+        #expect(timerAction.contains("enum TaskTimerActionLabelStyle"))
+        #expect(
+            timerAction.contains(
+                ".frame(minWidth: usesIconOnly ? minimumControlHeight : nil)"
+            )
+        )
+        #expect(timerAction.contains("private var minimumControlHeight: CGFloat"))
+        #expect(timerAction.contains("private var minimumLabelDimension: CGFloat"))
+        #expect(timerAction.contains(".controlSize(platformControlSize)"))
+        #expect(timerAction.contains("private var platformControlSize: ControlSize"))
+        #expect(timerAction.contains("timer.action.stopTaskFormat"))
+        #expect(timerAction.contains("timer.task.stopHint"))
+        #expect(home.contains("HomeTimerTaskAction") == false)
+        #expect(home.contains("HomeTimerActionLabelStyle") == false)
+        #expect(picker.contains("RunningStatusBadge()") == false)
+    }
+
+    @Test
     func splitViewReliesOnTheSystemSidebarToggleInsteadOfDuplicateChrome() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/SplitViewToolbarButtons.swift")
         let ipadSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")

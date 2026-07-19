@@ -4,7 +4,7 @@ import Testing
 
 struct TaskManagementAccessibilityTests {
     @Test
-    func snapshotPreservesEveryVisibleTaskMetadataField() {
+    func snapshotPreservesExtendedMetadataWhenTheVisualRowIsCondensed() {
         let task = TaskNode(title: "Release audit", parentID: nil, deviceID: "test")
         let path = "Work / Release audit"
         let progress = ChecklistProgress(taskID: task.id, totalCount: 3, completedCount: 1)
@@ -25,7 +25,12 @@ struct TaskManagementAccessibilityTests {
             forecastSourceLabel: nil
         )
         let presentation = TaskManagementRowPresentation(
-            path: path,
+            identity: identity(
+                for: task,
+                parentPath: "Work",
+                fullPath: path
+            ),
+            identityContext: .hierarchical,
             progress: progress,
             rollup: rollup,
             workedSeconds: 3_600,
@@ -60,7 +65,12 @@ struct TaskManagementAccessibilityTests {
     func snapshotAvoidsDuplicatePathAndOmitsWorkflowStatus() {
         let task = TaskNode(title: "Ordinary task", parentID: nil, deviceID: "test")
         let presentation = TaskManagementRowPresentation(
-            path: task.title,
+            identity: identity(
+                for: task,
+                parentPath: nil,
+                fullPath: task.title
+            ),
+            identityContext: .hierarchical,
             progress: ChecklistProgress(taskID: task.id, totalCount: 0, completedCount: 0),
             rollup: nil,
             workedSeconds: 0,
@@ -79,5 +89,23 @@ struct TaskManagementAccessibilityTests {
                 DurationFormatter.compact(0)
             )
         ])
+    }
+
+    private func identity(
+        for task: TaskNode,
+        parentPath: String?,
+        fullPath: String
+    ) -> TaskIdentityPresentation {
+        TaskIdentityPresentation(
+            id: task.id,
+            title: task.title,
+            parentPath: parentPath,
+            fullPath: fullPath,
+            visual: TaskVisualPresentation(
+                iconName: task.iconName,
+                colorHex: task.colorHex
+            ),
+            breadcrumb: .root(title: task.title)
+        )
     }
 }

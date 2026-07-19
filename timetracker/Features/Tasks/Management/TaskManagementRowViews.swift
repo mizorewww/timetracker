@@ -7,9 +7,9 @@ struct TaskManagementFlatRow: View {
     var childCount = 0
     var isExpanded = false
     var toggleExpansion: (() -> Void)?
+    var identityContext: TaskIdentityPresentation.Context = .hierarchical
     let openTaskDetail: (TaskNode) -> Void
 #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 #endif
     @State private var isDeleteConfirmationPresented = false
@@ -17,7 +17,8 @@ struct TaskManagementFlatRow: View {
     var body: some View {
         let rollup = store.rollup(for: task.id)
         let presentation = TaskManagementRowPresentation(
-            path: store.path(for: task),
+            identity: store.taskIdentityPresentation(for: task),
+            identityContext: identityContext,
             progress: store.checklistProgress(for: task.id),
             rollup: rollup,
             workedSeconds: rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task),
@@ -37,7 +38,6 @@ struct TaskManagementFlatRow: View {
             disclosureButton
             Button(action: openTask) {
                 TaskManagementRowContent(
-                    task: task,
                     presentation: presentation,
                     showsNavigationChevron: showsNavigationChevron
                 )
@@ -93,8 +93,7 @@ struct TaskManagementFlatRow: View {
 
     private var showsNavigationChevron: Bool {
         #if os(iOS)
-        TaskListLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
-            .showsNavigationChevron(hasChildren: childCount > 0)
+        true
         #else
         false
         #endif

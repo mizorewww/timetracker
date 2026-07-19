@@ -162,9 +162,10 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/DurationLabels.swift",
             "timetracker/SharedUI/Components/EmptyStates.swift",
             "timetracker/SharedUI/Components/ForecastInfoViews.swift",
-            "timetracker/SharedUI/Components/StatusBadges.swift",
             "timetracker/SharedUI/Components/TaskVisuals.swift",
             "timetracker/SharedUI/Components/TaskIdentityRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskTimerActionButton.swift",
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
@@ -442,7 +443,9 @@ struct CoreSourceLayoutTests {
             "TaskHierarchyPickerPresentation.swift",
             "TaskHierarchyPickerSheet.swift",
             "TaskHierarchyProjection.swift",
-            "TaskIdentityRow.swift"
+            "TaskIdentityRow.swift",
+            "TaskSummaryRow.swift",
+            "TaskTimerActionButton.swift"
         ]
 
         for fileName in focusedFiles {

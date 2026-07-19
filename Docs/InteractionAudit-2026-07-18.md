@@ -373,6 +373,62 @@ Status: completed and verified
 - Four visually reviewed screenshots are retained under
   `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/inbox-checkpoint-12-native-cards`.
 
+## Checkpoint 13 — one task-summary and timer-action grammar
+
+Status: completed and verified
+
+- `TaskSummaryRow` now owns the reusable task identity and passive metadata
+  layout. The task title has first priority and uses at most two lines at
+  ordinary text sizes; accessibility sizes may grow without that limit.
+- Hierarchical rows show the title without repeating a parent path already
+  communicated by the tree. Standard rows add the parent path for search and
+  other flat contexts.
+- In a hierarchical row, the second content line places checklist progress on
+  the leading side, flexible space in the middle, and the passive timer icon,
+  worked duration, and navigation or selection accessory on the trailing side.
+  A standard row may insert its parent path before this metadata line. The
+  timer icon communicates state only and never stops work.
+- Tasks, the Sidebar tree, normal and single-selection hierarchy-picker rows,
+  and the compatibility `TaskIdentityRow` wrapper reuse `TaskSummaryRow`.
+  Extended VoiceOver metadata remains in the Tasks accessibility snapshot
+  instead of crowding the ordinary visual row.
+- `TaskTimerActionButton` now owns the shared bordered Start, Switch, and Stop
+  presentation, including destructive role, 44-point iOS/iPadOS and native
+  28-point macOS targets, compact icon-only and wider labelled variants, and
+  task-specific accessibility copy. Today, Quick Start, and the timer picker's
+  Running section reuse it while the domain command continues to own timer
+  admission.
+- A surface never shows Running and Stop for the same fact. The timer picker's
+  Running section and an active task's detail actions show only explicit Stop;
+  Quick Start likewise relies on elapsed time and Stop without another Running
+  badge. Stopping from the picker keeps it open and returns the task to the
+  selectable hierarchy; only a successful Start or Switch dismisses it.
+- Pomodoro and Inbox keep single-selection semantics. A passive timer icon may
+  describe the selected task's current state, but selecting it cannot start or
+  stop the global timer.
+- The final focused macOS contracts passed 92/92. A broader layout diagnostic
+  passed 121/125; its four failures are pre-existing line-budget debts in
+  Task Detail, Analytics, and TaskTree files that this checkpoint did not
+  modify, so they were recorded rather than mixed into this atomic refactor.
+- The normal-size iPhone 17 Pro and iPad Pro 11-inch paths each passed the
+  Tasks summary/long-title case and the timer-picker Stop-only case, for 4/4
+  operation paths. The UI test caught a real 42.25 pt rendered Stop frame
+  despite a nominal 44 pt wrapper; the shared bordered control now uses the
+  platform large control size on iOS/iPadOS, and the rerun verifies every
+  picker Stop target is at least 44 by 44 pt. On iPad, the final test scopes
+  its Stop query to the presented picker so the same-named, dimmed Today
+  control behind the form sheet cannot produce a false failure.
+- Ten screenshots were exported and visually reviewed under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/task-row-checkpoint`.
+  They cover checklist metadata, passive running metadata, a wrapped long
+  title, the Stop-only Running section, and the stopped task returning to
+  search on both device classes.
+- Generic iOS and macOS Debug builds completed with paid automatic signing.
+  The main app, Widget, Live Activity, Watch app, and macOS app pass strict
+  code-sign verification as Team `LT98S43NKA`, Authority
+  `Apple Development: ZEXUAN GAO (PX46M259V3)`. Owned simulator/result/build
+  resource cleanup is recorded with the dated audit evidence.
+
 The next Analytics checkpoint must make Focus Session records and current-task
 forecasts obey, or explicitly opt out of, the selected historical range before
 the detail pages can be considered semantically complete.

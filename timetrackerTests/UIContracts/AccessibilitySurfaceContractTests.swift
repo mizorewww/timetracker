@@ -99,6 +99,32 @@ struct AccessibilitySurfaceContractTests {
     }
 
     @Test
+    func taskTimerSurfacesSeparatePassiveStateFromExplicitStopActions() throws {
+        let summary = try sourceText(
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
+        )
+        let tasks = try [
+            "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
+            "timetracker/Features/Tasks/Management/TaskManagementAccessibility.swift"
+        ].map(sourceText).joined(separator: "\n")
+        let pickerRows = try sourceText(
+            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift"
+        )
+        let timerAction = try sourceText(
+            "timetracker/SharedUI/Components/TaskTimerActionButton.swift"
+        )
+
+        #expect(summary.contains("struct TaskRunningIndicator"))
+        #expect(summary.contains(".accessibilityLabel(AppStrings.running)"))
+        #expect(tasks.contains("components.append(AppStrings.running)"))
+        #expect(tasks.contains("store.stop(") == false)
+        #expect(pickerRows.contains("RunningStatusBadge()") == false)
+        #expect(pickerRows.contains("TaskTimerActionButton("))
+        #expect(timerAction.contains("timer.action.stopTaskFormat"))
+        #expect(timerAction.contains("timer.task.stopHint"))
+    }
+
+    @Test
     func pomodoroSelectionControlsKeepTaskIdentityAndUseARealTaskPicker() throws {
         let source = try sourceText(
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupSelectionViews.swift"

@@ -167,6 +167,70 @@ struct TaskHierarchyPickerTests {
         #expect(runningItem.timerCommand == .alreadyRunning)
     }
 
+    @Test @MainActor
+    func timerModeSeparatesRunningTasksWhileSingleSelectionKeepsThemSelectable() throws {
+        let store = makeTestStore()
+        let task = TaskNode(
+            title: "Sample task",
+            parentID: nil,
+            deviceID: "test"
+        )
+        store.tasks = [task]
+        store.checklistItems = [
+            ChecklistItem(
+                taskID: task.id,
+                title: "First step",
+                isCompleted: true,
+                deviceID: "test"
+            ),
+            ChecklistItem(
+                taskID: task.id,
+                title: "Second step",
+                deviceID: "test"
+            )
+        ]
+        store.activeSegments = [
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .timer,
+                deviceID: "test"
+            )
+        ]
+        let projection = TaskHierarchyProjection(
+            store: store,
+            expandedTaskIDs: [],
+            searchText: ""
+        )
+        let section = try #require(projection.sections.first)
+        let runningItem = try #require(projection.runningItems.first)
+        let timerPicker = TaskHierarchyPicker(
+            store: store,
+            mode: .timer,
+            onDismiss: {}
+        )
+        let selectionPicker = TaskHierarchyPicker(
+            store: store,
+            mode: .singleSelection(selectedTaskID: nil),
+            onDismiss: {}
+        )
+
+        #expect(timerPicker.displayedItems(in: section).isEmpty)
+        #expect(selectionPicker.displayedItems(in: section).map(\.id) == [task.id])
+        #expect(projection.runningItems.map(\.id) == [task.id])
+        #expect(runningItem.checklistProgress?.completedCount == 1)
+        #expect(runningItem.checklistProgress?.totalCount == 2)
+        #expect(runningItem.workedSeconds == 0)
+        #expect(
+            selectionPicker.accessibilityValue(for: runningItem)
+                .contains(AppStrings.running)
+        )
+        #expect(
+            timerPicker.accessibilityValue(for: runningItem)
+                .contains(AppStrings.running) == false
+        )
+    }
+
     @Test
     func timerPomodoroAndInboxUseTheSameHierarchyPickerSurface() throws {
         let host = try sourceText("timetracker/App/AppPresentationHost.swift")
@@ -198,12 +262,19 @@ struct TaskHierarchyPickerTests {
         #expect(inbox.contains("context: .inboxDestination"))
         #expect(sheet.contains(".searchable(") == false)
         #expect(pomodoro.contains(".searchable(") == false)
-        #expect(picker.contains("TaskIdentityRow("))
+        #expect(picker.contains("TaskSummaryRow("))
+        #expect(picker.contains("TaskTimerActionButton("))
+        #expect(picker.contains("checklistProgress: item.checklistProgress"))
+        #expect(picker.contains("workedSeconds: item.workedSeconds"))
+        #expect(picker.contains("components.append(AppStrings.running)"))
+        #expect(picker.contains("RunningStatusBadge()") == false)
         #expect(picker.contains("TaskCategorySectionHeader("))
         #expect(picker.contains("store.performTimerPickerSelection(task)"))
         #expect(picker.contains("store.stop(segment: activeSegment)"))
         #expect(projection.contains("store.taskTreeSections(expandedTaskIDs: expandedTaskIDs)"))
         #expect(projection.contains("store.taskSearchResults(matching: query)"))
+        #expect(projection.contains("store.checklistProgress(for: task.id)"))
+        #expect(projection.contains("store.secondsForTaskTotalRollup(task)"))
         #expect(
             FileManager.default.fileExists(
                 atPath: root.appending(

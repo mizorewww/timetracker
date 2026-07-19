@@ -1840,6 +1840,246 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskRowsSeparateIdentityProgressAndTimerMetadataAtNormalTextSize() throws {
+        #if os(macOS)
+        throw XCTSkip("The task-row geometry is verified on iPhone and iPad.")
+        #else
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        for title in ["Time Tracker App", "Design System"] {
+            let disclosure = app.buttons
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@ AND value == %@",
+                    "tasks.disclosure.",
+                    title
+                ))
+                .firstMatch
+            XCTAssertTrue(
+                waitForElement(
+                    disclosure,
+                    timeout: 5,
+                    diagnosticName: "task-row-disclosure-\(title)",
+                    in: app
+                ) && disclosure.isHittable
+            )
+            activate(disclosure)
+        }
+
+        let checklistRow = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                "Design macOS UI"
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                checklistRow,
+                timeout: 5,
+                diagnosticName: "task-row-checklist-metadata",
+                in: app
+            ) && checklistRow.isHittable
+        )
+        let checklistValue = (checklistRow.value as? String ?? "").lowercased()
+        XCTAssertTrue(checklistValue.contains("2/3"))
+        XCTAssertTrue(checklistValue.contains("worked"))
+        XCTAssertFalse(checklistValue.contains("stop"))
+        try capture("task-row-checklist-metadata", app: app)
+
+        let studyDisclosure = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND value == %@",
+                "tasks.disclosure.",
+                "Study"
+            ))
+            .firstMatch
+        scrollUntilHittable(studyDisclosure, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                studyDisclosure,
+                timeout: 5,
+                diagnosticName: "task-row-study-disclosure",
+                in: app
+            ) && studyDisclosure.isHittable
+        )
+        activate(studyDisclosure)
+
+        let runningRow = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                "Read Apple HIG"
+            ))
+            .firstMatch
+        scrollUntilHittable(runningRow, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                runningRow,
+                timeout: 5,
+                diagnosticName: "task-row-running-metadata",
+                in: app
+            ) && runningRow.isHittable
+        )
+        let runningValue = (runningRow.value as? String ?? "").lowercased()
+        XCTAssertTrue(runningValue.contains("running"))
+        XCTAssertTrue(runningValue.contains("worked"))
+        XCTAssertFalse(runningValue.contains("stop"))
+        try capture("task-row-running-icon-metadata", app: app)
+
+        let addTaskMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addTaskMenu.waitForExistence(timeout: 3) && addTaskMenu.isHittable)
+        activate(addTaskMenu)
+        let addRootTask = app.descendants(matching: .any)["tasks.addRoot"].firstMatch
+        XCTAssertTrue(addRootTask.waitForExistence(timeout: 3) && addRootTask.isHittable)
+        activate(addRootTask)
+
+        let editor = app.descendants(matching: .any)["task.editor"].firstMatch
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(titleField.waitForExistence(timeout: 3) && titleField.isHittable)
+        let longTitle = """
+        Review the complete interaction hierarchy for every task surface \
+        while keeping the task name readable before checklist and timing metadata
+        """
+        titleField.typeText(longTitle)
+        titleField.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+        let save = app.buttons["task.editor.save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        activate(save)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+
+        let longRow = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                longTitle
+            ))
+            .firstMatch
+        scrollUntilHittable(longRow, direction: .up, in: app)
+        XCTAssertTrue(longRow.waitForExistence(timeout: 5) && longRow.isHittable)
+
+        let ordinaryRow = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                "Standalone Task"
+            ))
+            .firstMatch
+        scrollUntilHittable(ordinaryRow, direction: .down, in: app)
+        XCTAssertTrue(ordinaryRow.waitForExistence(timeout: 5) && ordinaryRow.isHittable)
+        let ordinaryRowHeight = ordinaryRow.frame.height
+        scrollUntilHittable(longRow, direction: .up, in: app)
+        XCTAssertGreaterThan(
+            longRow.frame.height,
+            ordinaryRowHeight + 8,
+            "A long task title must wrap instead of competing with metadata."
+        )
+        try capture("task-row-long-title-wrapped", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testTimerPickerRunningRowsExposeStopWithoutDuplicateRunningBadge() throws {
+        #if os(macOS)
+        throw XCTSkip("The compact timer-picker action grammar is verified on iOS.")
+        #else
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let startTimer = app.buttons["home.startTimer"].firstMatch
+        scrollUntilHittable(startTimer, direction: .up, in: app)
+        XCTAssertTrue(startTimer.waitForExistence(timeout: 5) && startTimer.isHittable)
+        activate(startTimer)
+
+        let picker = app.descendants(matching: .any)["timer.taskPicker"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                picker,
+                timeout: 5,
+                diagnosticName: "timer-picker-stop-only",
+                in: app
+            )
+        )
+        let guideStop = picker.buttons["Stop Read Apple HIG"].firstMatch
+        let runningHeader = app.staticTexts[
+            "timer.taskPicker.runningHeader"
+        ].firstMatch
+        XCTAssertTrue(runningHeader.waitForExistence(timeout: 5))
+        XCTAssertTrue(guideStop.waitForExistence(timeout: 5))
+
+        let stopButtons = picker.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@",
+            "timer.taskPicker.stop."
+        ))
+        XCTAssertGreaterThanOrEqual(stopButtons.count, 1)
+        for index in 0..<stopButtons.count {
+            let stop = stopButtons.element(boundBy: index)
+            XCTAssertTrue(stop.isHittable)
+            XCTAssertGreaterThanOrEqual(stop.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(stop.frame.height, 44)
+        }
+        let runningRows = picker.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "timer.taskPicker.running."
+            )
+        )
+        XCTAssertEqual(
+            runningRows.count,
+            stopButtons.count,
+            "Each active task must expose one passive summary and one explicit Stop action."
+        )
+        for index in 0..<runningRows.count {
+            let runningRow = runningRows.element(boundBy: index)
+            let value = (runningRow.value as? String ?? "").lowercased()
+            XCTAssertFalse(
+                value.contains("running"),
+                "The Running Timers section owns status context; row values must not repeat it."
+            )
+        }
+        try capture("timer-picker-stop-without-running-badge", app: app)
+
+        XCTAssertTrue(guideStop.isHittable)
+        activate(guideStop)
+        XCTAssertTrue(guideStop.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(picker.exists)
+
+        let search = app.searchFields[
+            "Search tasks, paths, or notes"
+        ].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        activate(search)
+        search.typeText("Read Apple HIG")
+        let stoppedTask = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "timer.taskPicker.select.",
+                "Read Apple HIG"
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                stoppedTask,
+                timeout: 5,
+                diagnosticName: "timer-picker-stopped-task-selectable",
+                in: app
+            ) && stoppedTask.isHittable
+        )
+        try capture("timer-picker-stopped-task-selectable", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTodayPrimaryTimerActionKeepsVisibleTextAtLargestAccessibilitySize() throws {
         #if os(macOS)
         throw XCTSkip("The Today Accessibility XXXL screenshot requires an iOS simulator.")

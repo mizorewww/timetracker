@@ -77,6 +77,7 @@ struct TasksView: View {
                             store: store,
                             task: task,
                             childCount: store.visibleChildCount(for: task.id),
+                            identityContext: .standard,
                             openTaskDetail: { task in
                                 store.openTaskDetail(task.id)
                             }

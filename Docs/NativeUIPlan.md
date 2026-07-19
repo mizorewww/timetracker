@@ -216,7 +216,7 @@ Keep and refine:
 - `TaskVisuals`
 - `ChecklistControls`
 - `SettingsRows`, `SettingsActionRows`, `SettingsInputRows`, `SettingsPresentationModifiers`, `SettingsSyncFeedbackRow`
-- `StatusBadges`
+- `TaskSummaryRow`, `TaskIdentityRow`, `TaskTimerActionButton`
 - `MetricCards`
 - `SectionHeaders`
 - `TaskProgressViews`

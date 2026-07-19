@@ -1,10 +1,5 @@
 import SwiftUI
 
-enum HomeTimerActionLabelStyle {
-    case iconOnly
-    case titleAndIcon
-}
-
 private struct HomeTimerTaskPathText: View {
     let presentation: TaskBreadcrumbPresentation
 
@@ -33,7 +28,7 @@ struct HomeTimerTaskRow: View {
     let presentation: TaskIdentityPresentation
     let activeSegment: TimeSegment?
     let command: TimerPickerSelectionCommand
-    let actionLabelStyle: HomeTimerActionLabelStyle
+    let actionLabelStyle: TaskTimerActionLabelStyle
     let openTask: () -> Void
     let performTimerAction: () -> Void
     let taskAccessibilityIdentifier: String
@@ -55,7 +50,7 @@ struct HomeTimerTaskRow: View {
         HStack(alignment: .center, spacing: 10) {
             taskButton(showsElapsedTime: true)
 
-            HomeTimerTaskAction(
+            TaskTimerActionButton(
                 taskTitle: presentation.title,
                 taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
                 activeSegment: activeSegment,
@@ -76,7 +71,7 @@ struct HomeTimerTaskRow: View {
                     elapsedTime(for: activeSegment)
                 }
                 Spacer(minLength: 0)
-                HomeTimerTaskAction(
+                TaskTimerActionButton(
                     taskTitle: presentation.title,
                     taskColor: Color(hex: presentation.visual.colorHex) ?? .blue,
                     activeSegment: activeSegment,
@@ -146,79 +141,10 @@ struct HomeTimerTaskRow: View {
     }
 }
 
-private struct HomeTimerTaskAction: View {
-    let taskTitle: String
-    let taskColor: Color
-    let activeSegment: TimeSegment?
-    let command: TimerPickerSelectionCommand
-    let labelStyle: HomeTimerActionLabelStyle
-    let action: () -> Void
-    let accessibilityIdentifier: String
-
-    private var usesIconOnly: Bool {
-        labelStyle == .iconOnly
-    }
-
-    private var actionTitle: String {
-        activeSegment == nil
-            ? command.actionTitle
-            : AppStrings.localized("timer.action.stop")
-    }
-
-    private var actionSystemImage: String {
-        activeSegment == nil ? command.systemImage : "stop.fill"
-    }
-
-    var body: some View {
-        Button(role: activeSegment == nil ? nil : .destructive, action: action) {
-            actionLabel
-        }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(usesIconOnly ? .circle : .capsule)
-        .tint(activeSegment == nil ? taskColor : .red)
-        .frame(width: usesIconOnly ? 44 : nil)
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-        .accessibilityIdentifier(accessibilityIdentifier)
-        .help(accessibilityLabel)
-    }
-
-    @ViewBuilder
-    private var actionLabel: some View {
-        if usesIconOnly {
-            Image(systemName: actionSystemImage)
-                .font(.callout.weight(.semibold))
-                .frame(width: 20, height: 20, alignment: .center)
-        } else {
-            Label(actionTitle, systemImage: actionSystemImage)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .font(.callout.weight(.semibold))
-        }
-    }
-
-    private var accessibilityLabel: String {
-        activeSegment == nil
-            ? command.accessibilityLabel(for: taskTitle)
-            : String.localizedStringWithFormat(
-                AppStrings.localized("timer.action.stopTaskFormat"),
-                taskTitle
-            )
-    }
-
-    private var accessibilityHint: String {
-        activeSegment == nil
-            ? command.accessibilityHint
-            : AppStrings.localized("timer.task.stopHint")
-    }
-}
-
 struct ActiveTimerRow: View {
     let store: TimeTrackerStore
     let segment: TimeSegment
-    let actionLabelStyle: HomeTimerActionLabelStyle
+    let actionLabelStyle: TaskTimerActionLabelStyle
     var openTaskDetail: ((UUID) -> Void)? = nil
 
     private var presentation: TaskIdentityPresentation {

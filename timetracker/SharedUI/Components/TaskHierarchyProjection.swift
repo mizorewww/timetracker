@@ -43,6 +43,8 @@ struct TaskHierarchyProjection: Equatable {
         let isExpanded: Bool
         let isAvailable: Bool
         let isRunning: Bool
+        let checklistProgress: ChecklistProgress?
+        let workedSeconds: Int
         let unavailableReason: String?
         let timerCommand: TimerPickerSelectionCommand
 
@@ -151,6 +153,8 @@ struct TaskHierarchyProjection: Equatable {
     ) -> Item? {
         guard let task = store.task(for: taskID) else { return nil }
         let isAvailable = store.isTaskAvailableForTracking(task)
+        let checklistProgress = store.checklistProgress(for: task.id)
+        let rollup = store.rollup(for: task.id)
         return Item(
             identity: store.taskIdentityPresentation(for: task),
             depth: depth,
@@ -158,6 +162,11 @@ struct TaskHierarchyProjection: Equatable {
             isExpanded: isExpanded,
             isAvailable: isAvailable,
             isRunning: store.activeSegment(for: task.id) != nil,
+            checklistProgress: checklistProgress.totalCount > 0
+                ? checklistProgress
+                : nil,
+            workedSeconds: rollup?.workedSeconds
+                ?? store.secondsForTaskTotalRollup(task),
             unavailableReason: isAvailable
                 ? nil
                 : AppStrings.localized("task.parentUnavailable"),

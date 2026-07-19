@@ -119,7 +119,7 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func compactTaskRowsShowChecklistProgressBar() throws {
+    func taskRowsUseSharedIdentityAndMetadataGrammar() throws {
         let source = try taskManagementFeatureSource()
         let sharedSource = try sourceText("timetracker/SharedUI/Components/TaskProgressViews.swift")
 
@@ -127,8 +127,17 @@ struct TaskUIContractTests {
         #expect(sharedSource.contains("ProgressView(value: progress.fraction)"))
         #expect(sharedSource.contains("checklist.progressFormat"))
         #expect(sharedSource.contains("struct TaskProgressLine"))
-        #expect(source.contains("if presentation.progress.totalCount > 0 {"))
-        #expect(source.contains("progress: presentation.progress"))
+        #expect(source.contains("identity: store.taskIdentityPresentation(for: task)"))
+        #expect(source.contains("TaskSummaryRow("))
+        #expect(source.contains("checklistProgress: presentation.progress.totalCount > 0"))
+        #expect(source.contains("workedSeconds: presentation.workedSeconds"))
+        #expect(source.contains("isRunning: presentation.isRunning"))
+        #expect(source.contains("showsNavigationChevron: showsNavigationChevron"))
+        #expect(source.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(source.contains("TaskRunningIndicator()"))
+        #expect(source.contains("Image(systemName: \"chevron.right\")"))
+        #expect(source.contains("TaskProgressLine(") == false)
+        #expect(source.contains("RunningStatusBadge()") == false)
     }
 
     @Test
@@ -144,7 +153,8 @@ struct TaskUIContractTests {
         #expect(actionSource.contains("store.stop(segment: activeSegment)"))
         #expect(detailSource.contains("task.detail.trackingUnavailable"))
         #expect(detailSource.contains("task.archived.trackingUnavailable"))
-        #expect(identitySource.contains("RunningStatusBadge()"))
+        #expect(identitySource.contains("RunningStatusBadge()") == false)
+        #expect(detailSource.contains("AppStrings.localized(\"timer.action.stop\")"))
         #expect(identitySource.contains("isTaskAvailableForTracking") == false)
         #expect(identitySource.contains("TaskStatusBadge") == false)
     }
@@ -241,10 +251,9 @@ struct TaskUIContractTests {
 
         #expect(rowSource.contains("@Environment(\\.dynamicTypeSize) private var dynamicTypeSize"))
         #expect(rowSource.contains("if dynamicTypeSize.isAccessibilitySize"))
-        #expect(rowSource.contains("TaskManagementAccessibilityBody("))
-        #expect(rowSource.contains("Text(presentation.path)"))
+        #expect(rowSource.contains("TaskManagementAccessibilityBody(") == false)
+        #expect(rowSource.contains("presentation.identity.fullPath"))
         #expect(rowSource.contains("AppStrings.localized(\"tasks.workedFormat\")"))
-        #expect(rowSource.contains("TaskProgressLine(progress: presentation.progress, rollup: presentation.rollup)"))
         #expect(rowSource.contains("projectedDaysDisplayText"))
         #expect(rowSource.contains("AppStrings.localized(\"tasks.childCount\")"))
         #expect(rowSource.contains("TaskManagementRowAccessibilitySnapshot("))
@@ -255,8 +264,10 @@ struct TaskUIContractTests {
         #expect(rowSource.contains("struct TaskManagementRowPresentation"))
         #expect(rowSource.contains("ListFormatter.localizedString(byJoining: valueComponents)"))
         #expect(rowSource.contains("TaskStatusBadge") == false)
-        #expect(rowSource.contains("RunningStatusBadge()"))
-        #expect(rowSource.contains(".lineLimit(nil)"))
+        #expect(rowSource.contains("RunningStatusBadge()") == false)
+        #expect(rowSource.contains("TaskRunningIndicator()"))
+        #expect(rowSource.contains("components.append(AppStrings.running)"))
+        #expect(rowSource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.disclosure.\\(task.id.uuidString)\")"))
 
@@ -402,11 +413,11 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskListShowsRunningStateWithoutWorkflowStatusBadges() throws {
+    func taskListUsesOnePassiveIconOnlyTimerStateWithoutStopAction() throws {
         let tasksSource = try taskManagementFeatureSource()
         let sharedSource = try [
             "timetracker/SharedUI/Components/ChecklistControls.swift",
-            "timetracker/SharedUI/Components/StatusBadges.swift",
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
             "timetracker/SharedUI/Components/TaskVisuals.swift"
         ]
         .map { try sourceText($0) }
@@ -415,11 +426,15 @@ struct TaskUIContractTests {
         #expect(tasksSource.contains("TaskStatusBadge") == false)
         #expect(tasksSource.contains("task.status") == false)
         #expect(tasksSource.contains("store.selectTask(task.id, revealInToday: false)") == false)
-        #expect(tasksSource.contains("RunningStatusBadge()"))
+        #expect(tasksSource.contains("TaskRunningIndicator()"))
+        #expect(tasksSource.contains("RunningStatusBadge()") == false)
+        #expect(tasksSource.contains("timer.action.stop") == false)
+        #expect(tasksSource.contains("store.stop(") == false)
         #expect(tasksSource.contains("TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskStatusBadge") == false)
-        #expect(sharedSource.contains("struct RunningStatusBadge"))
+        #expect(sharedSource.contains("struct TaskRunningIndicator"))
+        #expect(sharedSource.contains("Image(systemName: \"timer\")"))
     }
 
     @Test
@@ -537,13 +552,15 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskRowsKeepWorkflowStatusOutOfMetadataAndTrailingEdge() throws {
+    func taskRowsKeepWorkflowStatusOutOfTheirPassiveMetadataLine() throws {
         let rowSource = try taskManagementFeatureSource()
 
         #expect(rowSource.contains("statusMetadataBadge") == false)
         #expect(rowSource.contains("TaskStatusBadge") == false)
         #expect(rowSource.contains("task.status") == false)
-        #expect(rowSource.contains("RunningStatusBadge()"))
+        #expect(rowSource.contains("TaskRunningIndicator()"))
+        #expect(rowSource.contains("RunningStatusBadge()") == false)
+        #expect(rowSource.contains("timer.action.stop") == false)
     }
 
     @Test
@@ -1015,7 +1032,8 @@ struct TaskUIContractTests {
         try [
             "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
             "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift",
-            "timetracker/Features/Tasks/Management/TaskManagementAccessibility.swift"
+            "timetracker/Features/Tasks/Management/TaskManagementAccessibility.swift",
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

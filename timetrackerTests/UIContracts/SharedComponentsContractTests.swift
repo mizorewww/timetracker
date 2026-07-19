@@ -316,8 +316,13 @@ struct SharedComponentsContractTests {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
         let inboxSuggestionSource = try sourceText("timetracker/Features/Inbox/InboxSuggestionRow.swift")
-        let readySuggestionSource = try #require(
+        let readySuggestionRemainder = try #require(
             inboxSuggestionSource.components(
+                separatedBy: "struct InboxSuggestionBar"
+            ).last
+        )
+        let readySuggestionSource = try #require(
+            readySuggestionRemainder.components(
                 separatedBy: "struct InboxSuggestionFailureBar"
             ).first
         )
@@ -359,9 +364,14 @@ struct SharedComponentsContractTests {
         #expect(inboxSuggestionSource.contains("ChecklistItemIcon("))
         #expect(inboxSuggestionSource.contains("style: .solid"))
         #expect(
-            inboxSuggestionSource.contains(
-                ".padding(.leading, AppLayout.minimumInteractiveTarget + 10)"
+            readySuggestionSource.contains(
+                "InboxItemLayout.completionMarkLeadingInset"
             )
+        )
+        #expect(
+            readySuggestionSource.contains(
+                "AppLayout.minimumInteractiveTarget + 10"
+            ) == false
         )
         #expect(inboxSuggestionSource.contains("CompactTextActionLabel("))
         #expect(actionSource.contains("struct CompactTextActionLabel"))

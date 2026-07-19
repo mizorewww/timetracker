@@ -659,6 +659,7 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("Inset-grouped card geometry is verified on iPhone and iPad.")
         #else
         let app = launchApp(
+            contentSizeCategory: "UICTContentSizeCategoryL",
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: ["--uitesting-inbox-suggestion"]
         )
@@ -676,6 +677,12 @@ final class timetrackerUITests: XCTestCase {
             .matching(NSPredicate(
                 format: "identifier BEGINSWITH %@",
                 "inbox.item."
+            ))
+            .firstMatch
+        let completion = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.item.completion."
             ))
             .firstMatch
         let suggestion = app.descendants(matching: .any)
@@ -699,8 +706,25 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(captureField.waitForExistence(timeout: 5))
         XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+        XCTAssertTrue(completion.waitForExistence(timeout: 5))
         XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
         XCTAssertEqual(suggestion.label, "Suggested task: Design System")
+        XCTAssertEqual(
+            itemField.frame.midY,
+            completion.frame.midY,
+            accuracy: 2,
+            "The Inbox title must be vertically centered with its completion control."
+        )
+        let completionMarkLeadingInset = max(
+            0,
+            (completion.frame.width - 24) / 2
+        )
+        XCTAssertEqual(
+            suggestion.frame.minX,
+            completion.frame.minX + completionMarkLeadingInset,
+            accuracy: 2,
+            "Suggested must share the visible completion circle's leading alignment."
+        )
         XCTAssertGreaterThanOrEqual(
             suggestion.frame.width,
             120,

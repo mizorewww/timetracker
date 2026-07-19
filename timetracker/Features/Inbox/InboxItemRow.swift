@@ -1,5 +1,13 @@
 import SwiftUI
 
+enum InboxItemLayout {
+    static let completionVisualSize: CGFloat = 24
+    static let completionMarkLeadingInset = max(
+        0,
+        (AppLayout.minimumInteractiveTarget - completionVisualSize) / 2
+    )
+}
+
 struct InboxItemRow: View {
     let store: TimeTrackerStore
     let item: InboxItem
@@ -17,8 +25,11 @@ struct InboxItemRow: View {
                     isCompleted: item.isCompleted,
                     placeholder: AppStrings.localized("inbox.itemPlaceholder"),
                     showsIcon: false,
-                    completionVisualSize: 24,
+                    completionVisualSize: InboxItemLayout.completionVisualSize,
                     textStyle: .body,
+                    contentAlignment: .center,
+                    completionAccessibilityIdentifier:
+                        "inbox.item.completion.\(item.id.uuidString)",
                     textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
                     toggle: {
                         performAnimated {

@@ -36,7 +36,10 @@ struct InboxSuggestionBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             suggestionLabel
-                .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
+                .padding(
+                    .leading,
+                    InboxItemLayout.completionMarkLeadingInset
+                )
             actions
         }
         .frame(maxWidth: .infinity, alignment: .leading)

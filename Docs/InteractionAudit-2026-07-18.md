@@ -538,6 +538,45 @@ Status: completed and verified
   were deleted after evidence extraction; no owned Booted device, app, runner,
   `xcodebuild`, or `xctest` process remained.
 
+## Checkpoint 17 — Inbox visible-circle alignment
+
+Status: completed and verified
+
+- This checkpoint supersedes only Checkpoint 15's proposal/title-column inset.
+  The three-row reading order, full-width decision row, compact and regular
+  action variants, 44-point controls, and accessibility projection remain.
+- `EditableChecklistTextRow` keeps top alignment as the shared default, while
+  Inbox opts into center alignment. The normal single-line title and its
+  completion control therefore share a vertical center without creating an
+  Inbox-only editor.
+- The proposal aligns to the visible 24-point completion circle, not the
+  circle's 44-point iOS/iPadOS hit frame. `InboxItemLayout` owns both the
+  visual size and the derived inset, producing 10 points on iPhone/iPad and 2
+  points on macOS. The Discard/Apply row still spans the card content width.
+- Frozen-staging paid-signing Inbox/shared contracts passed 20/20 with no
+  failures, skips, or runtime warnings. The normal-size iPhone 17 Pro and iPad
+  Pro 11-inch (M4) ready/apply paths each passed 1/1. Both runs measured title
+  and completion `midY`, plus Suggested and visible-circle `minX`, within 2
+  points.
+- The iPhone's first runner attempt stopped before entering the test method
+  with `Timed out waiting for AX loaded notification`; it is not counted as a
+  UI result. After removing the owned App and runner from that simulator, the
+  warm retry passed. The iPad entered and passed on its first attempt.
+- Ready and applied screenshots were exported and visually reviewed under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/inbox-alignment-feedback-checkpoint`.
+  Both device classes show the title centered against the circle and the
+  Suggested label beginning on the circle's visible left edge.
+- The frozen generic iOS Debug build completed with paid automatic signing and
+  zero xcresult errors, warnings, or analyzer warnings. Main App, Widget, Live
+  Activity, and Watch pass strict code-sign and embedded validation as Team
+  `LT98S43NKA`; development APS, CloudKit, and App Group entitlements remain.
+- Owned simulator UDIDs `0CCEFC6F-598D-49A8-BE5A-1D6B9AF124E2` and
+  `708BC602-ADE9-463F-8667-4873C8ACF4A9` were terminated, shut down, and
+  deleted. Owned result bundles, DerivedData, logs, failed-run diagnostics,
+  staged-snapshot worktree, and patch scratch were deleted after evidence
+  extraction; no owned Booted device, runner, app, `xcodebuild`, or `xctest`
+  process remained.
+
 The next Analytics interaction checkpoints are to restore the visible
 Review/Explore information architecture without losing question-led labels,
 then make task and category drill-down destinations unmistakably discoverable.

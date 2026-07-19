@@ -202,6 +202,8 @@ struct EditableChecklistTextRow: View {
     var showsIcon = true
     var completionVisualSize: CGFloat = 30
     var textStyle: Font = .subheadline
+    var contentAlignment: VerticalAlignment = .top
+    var completionAccessibilityIdentifier: String?
     var textFieldAccessibilityIdentifier: String?
     let toggle: () -> Void
     let commit: () -> Void
@@ -209,16 +211,8 @@ struct EditableChecklistTextRow: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            ChecklistCompletionButton(
-                isCompleted: isCompleted,
-                colorHex: colorHex,
-                visualSize: completionVisualSize
-            ) {
-                commit()
-                toggle()
-            }
-            .padding(.top, 1)
+        HStack(alignment: contentAlignment, spacing: 10) {
+            completionButton
             if showsIcon {
                 ChecklistItemIcon(iconName: iconName, colorHex: colorHex)
                     .padding(.top, 1)
@@ -234,6 +228,28 @@ struct EditableChecklistTextRow: View {
                 commit()
             }
         }
+    }
+
+    @ViewBuilder
+    private var completionButton: some View {
+        if let completionAccessibilityIdentifier {
+            baseCompletionButton
+                .accessibilityIdentifier(completionAccessibilityIdentifier)
+        } else {
+            baseCompletionButton
+        }
+    }
+
+    private var baseCompletionButton: some View {
+        ChecklistCompletionButton(
+            isCompleted: isCompleted,
+            colorHex: colorHex,
+            visualSize: completionVisualSize
+        ) {
+            commit()
+            toggle()
+        }
+        .padding(.top, 1)
     }
 
     @ViewBuilder

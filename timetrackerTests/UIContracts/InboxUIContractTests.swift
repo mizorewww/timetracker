@@ -41,6 +41,23 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxListRow("))
         #expect(inboxSource.contains("EditableChecklistTextRow("))
         #expect(inboxSource.contains("showsIcon: false"))
+        #expect(inboxSource.contains("contentAlignment: .center"))
+        #expect(
+            inboxSource.contains(
+                "completionVisualSize: InboxItemLayout.completionVisualSize"
+            )
+        )
+        #expect(
+            inboxSource.contains(
+                "(AppLayout.minimumInteractiveTarget - completionVisualSize) / 2"
+            )
+        )
+        #expect(
+            inboxSource.contains(
+                "completionAccessibilityIdentifier:\n" +
+                    "                        \"inbox.item.completion.\\(item.id.uuidString)\""
+            )
+        )
         #expect(inboxSource.components(separatedBy: "Section {").count - 1 >= 4)
         #expect(inboxSource.contains("if !openItems.isEmpty {\n                Section {"))
         #expect(inboxSource.contains("InboxCompletedSection("))
@@ -108,6 +125,19 @@ struct InboxUIContractTests {
     @Test
     func inboxSuggestionsAreAutomaticAndExposeOnlyApplyOrDiscardActions() throws {
         let inboxSource = try inboxFeatureSource()
+        let suggestionSource = try sourceText(
+            "timetracker/Features/Inbox/InboxSuggestionRow.swift"
+        )
+        let readySuggestionRemainder = try #require(
+            suggestionSource.components(
+                separatedBy: "struct InboxSuggestionBar"
+            ).last
+        )
+        let readySuggestionSource = try #require(
+            readySuggestionRemainder.components(
+                separatedBy: "struct InboxSuggestionFailureBar"
+            ).first
+        )
         let checklistSource = try sourceText(
             "timetracker/SharedUI/Components/ChecklistControls.swift"
         )
@@ -139,10 +169,18 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxSuggestionBackground") == false)
         #expect(inboxSource.contains(".padding(.leading, 44)") == false)
         #expect(
-            inboxSource.contains(
-                ".padding(.leading, AppLayout.minimumInteractiveTarget + 10)"
+            readySuggestionSource.contains(
+                "InboxItemLayout.completionMarkLeadingInset"
             )
         )
+        #expect(
+            readySuggestionSource.contains(
+                "AppLayout.minimumInteractiveTarget + 10"
+            ) == false
+        )
+        #expect(checklistSource.contains("var contentAlignment: VerticalAlignment = .top"))
+        #expect(checklistSource.contains("HStack(alignment: contentAlignment, spacing: 10)"))
+        #expect(checklistSource.contains("completionAccessibilityIdentifier"))
         #expect(inboxSource.contains("iconName: suggestion.iconName"))
         #expect(inboxSource.contains("colorHex: suggestion.colorHex"))
         #expect(inboxSource.contains("ChecklistItemIcon("))

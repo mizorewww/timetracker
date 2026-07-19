@@ -1575,7 +1575,9 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## AD-123：Inbox 推荐卡片按“原文、目标、决定”分成三行
 
-状态：Accepted
+状态：Accepted（第二行缩进规则由 AD-125 替代）
+
+替代关系：AD-125 只替代本决策第二条中“Suggested 行与正文列一致缩进”的几何条款；三行信息架构、全宽决定行、动作尺寸与辅助功能边界继续有效。
 
 背景：原 Inbox ready suggestion 会按宽度在横排与纵排之间切换，目标任务、生成图标和两个文字动作相互争夺空间。用户需要先辨认 Inbox 原文，再判断推荐去向，最后做接受或放弃；把三件事压在一个自适应横排中既破坏扫读顺序，也让 iPhone 上的动作像一段拥挤文字。
 
@@ -1604,6 +1606,24 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：用户从 Today、Tasks、Sidebar 或深链进入详情时，都能在内容首屏确认“当前任务是什么”和“它属于哪里”；同名子任务仍由父级路径区分。导航栏与身份卡的重复是有意的跨 chrome/content 冗余，不增加第二套路由、任务投影或编辑状态。
 
 验证：Task workspace/source contracts 要求 identity owner 包含标题、headline 和标题/路径两套正常字号换行策略。直接 fixture 路由的正常字号 iPhone 17 Pro 与 iPad Pro 11-inch UI 回归分别 1/1，断言 `task.detail.identity` 同时包含 `Read Apple HIG` 与 `Study`、纵向位于详情 viewport 内，并导出截图目视通过。付费签名 macOS Task UI/Workspace contracts 40/40；一次按单个 Swift Testing 方法名过滤的诊断实际执行 0 项，明确不计作通过。generic iOS 自动签名构建的 xcresult 为 0 error/warning/analyzer warning；Watch metadata extraction 的工具提示不属于源码诊断。主 App、Widget、Live Activity 与 Watch 严格签名通过，资源清理记录在 dated Audit。
+
+## AD-125：Inbox 原文与建议使用可见完成圆作为对齐基准
+
+状态：Accepted
+
+替代关系：本决策只替代 AD-123 第二条中“Suggested 行与正文列一致缩进”的规则；AD-123 的三行阅读顺序、全宽决定行、紧凑/常规动作变体、44 pt 触控目标和辅助功能语义继续有效。
+
+背景：首轮三行卡片把 Inbox 原文放在 44 pt 完成按钮之后，却让单行文字沿按钮顶部开始，因此文字中心明显高于可见圆圈。Suggested 行又跟随正文列缩进，视觉起点落在圆圈右侧；用户无法把两行快速识别为同一条 Inbox 记录的身份和建议。
+
+决策：
+
+- `EditableChecklistTextRow` 继续是完成按钮与可编辑原文的共享 owner，并保留 `.top` 作为其它多行 checklist 调用方的默认行为。Inbox 显式选择 `.center`，让普通单行原文与完成按钮共享垂直中心，不复制另一套输入行。
+- 对齐基准是 24 pt 的可见完成圆，不是其 44 pt iOS/iPadOS 触控框。`InboxItemLayout` 同时拥有圆圈尺寸和由 `(minimumInteractiveTarget - completionVisualSize) / 2` 导出的 leading inset；Ready Suggested 行复用该 inset，使其左缘与可见圆圈左缘一致。macOS 由同一公式适配较小的系统目标。
+- Discard/Apply 行继续占满卡片内容宽度，不继承 Suggested inset。完成按钮与原文字段各自保留 leaf accessibility identifier，UI 回归直接比较原文/按钮 `midY` 和 Suggested/可见圆 `minX`，不能只检查源码中是否存在某个 padding。
+
+后果：第一行在普通字号下形成稳定的“圆圈—正文”水平轴，第二行从同一可见圆左缘开始，第三行仍提供左右分离的决定动作。共享 checklist 的多行编辑布局不受 Inbox 专用选择影响，圆圈尺寸或平台点击目标变化时也只有一个几何来源。
+
+验证：冻结暂存范围的付费签名 Inbox/shared contracts 通过 20/20，0 failed/skipped/runtime warning。正常字号 iPhone 17 Pro 首次 runner 在测试方法进入前因等待 AX loaded notification 超时，不计 UI 结果；清除专属模拟器中的 App/runner 后 warm retry 通过 1/1，iPad Pro 11-inch (M4) 首次通过 1/1，两端均由几何断言固定 `midY` 与可见圆 `minX` 并完成 ready/apply 截图目视复核。generic iOS Debug 自动签名构建的 xcresult 为 0 error/warning/analyzer warning；主 App、Widget、Live Activity 与 Watch 通过严格 codesign/embedded validation，Team `LT98S43NKA`，保留 development APS、CloudKit 与 App Group。完整截图和资源清理证据记录在 dated Audit。
 
 ## 2. Agent 工作清单
 

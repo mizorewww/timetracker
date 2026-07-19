@@ -131,7 +131,7 @@ Tests:
 
 - Command handler tests for every durable write.
 - Refresh planner tests for each emitted event.
-- Selection coordinator tests for task deletion, selection invalidation, and navigation preservation.
+- Selection coordinator tests for task archive/restore, historical-tombstone invalidation, and navigation preservation.
 
 ## Repository Rules
 

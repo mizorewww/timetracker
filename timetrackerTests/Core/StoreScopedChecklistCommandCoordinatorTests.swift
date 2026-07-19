@@ -60,17 +60,23 @@ struct StoreScopedChecklistCommandCoordinatorTests {
     }
 
     @Test
-    func siblingTaskDeletionPreventsQuickAddFromCreatingOrphans() throws {
+    func siblingTaskTombstonePreventsQuickAddFromCreatingOrphans() throws {
         let context = try makeTestContext()
         let task = try makeTask(in: context, title: "Delete before add")
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        _ = try StoreScopedTaskLifecycleCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
-            deviceID: "sibling"
-        ).delete(taskID: task.id)
+        let siblingContext = ModelContext(context.container)
+        let siblingTask = try #require(
+            try siblingContext.fetch(FetchDescriptor<TaskNode>())
+                .first { $0.id == task.id }
+        )
+        let tombstonedAt = siblingTask.updatedAt.addingTimeInterval(1)
+        siblingTask.deletedAt = tombstonedAt
+        siblingTask.updatedAt = tombstonedAt
+        siblingTask.deviceID = "sibling"
+        siblingTask.clientMutationID = UUID()
+        try siblingContext.save()
 
         #expect(store.addChecklistItem(taskID: task.id, title: "Must not orphan") == false)
         #expect(store.errorMessage == AppStrings.localized("systemAction.error.taskNotFound"))

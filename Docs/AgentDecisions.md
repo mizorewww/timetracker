@@ -1648,6 +1648,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：presentation 测试固定分组顺序、完整覆盖和 Tasks 答案；source contract 固定两个 section identifier、原生 typed navigation、三语键及分类分布优先顺序。正常字号 iPhone 与 iPad UI 回归必须读取两个 section 的标题/说明、检查六行问题/答案/目的地，进入 Tasks & Categories 后确认 Category Distribution 位于首个分析区块并截图；实际签名、截图和资源清理证据写入 dated Audit。
 
+## AD-127：普通任务只保留可恢复的归档，不再提供删除命令
+
+状态：Accepted
+
+替代关系：本决策替代 AD-120 中“保留 Delete 产品动作、Delete 文案与命令入口”的条款，也替代更早决策中普通任务行、详情、菜单或滑动操作必须提供 Delete/soft-delete 的局部规则。`deletedAt` 的同步、迁移、LWW、历史账本和生产 tombstone 保留边界不变。
+
+背景：普通任务同时提供 Archive 和 Delete 时，两者都会把任务从日常界面隐藏，但 Delete 还会静默结束活动计时与番茄流程，并把恢复能力藏在实现层 tombstone 中。用户无法从界面稳定判断应该使用哪个动作；各表面又分别维护确认、路由、计时终止和删除 outcome，形成一条没有现存 UI caller 的重复命令链。与此同时，旧版本与 iCloud 已经存在 `TaskNode.deletedAt`，全量清空后用本机覆盖云端也依赖只含 tombstone 的快照，不能把“移除产品 Delete”误做成“移除 tombstone 协议”。
+
+决策：
+
+- 普通任务只有 Archive/Restore。任务行、侧边栏和详情复用 Archive；Settings 的 Archived Tasks 复用同一任务摘要并按父任务优先恢复。当前产品不显示任务 Delete 文案、确认框、按钮或滑动动作。
+- Archive 不静默停止工作。目标分支仍有 timer 或 Pomodoro 时命令无写入地拒绝，界面说明先停止；成功归档隐藏分支但保留全部账本与番茄历史。
+- 删除 `TimeTrackerStore.deleteSelectedTask`、task lifecycle coordinator `delete`、task handler/use case/repository 的 soft-delete API，以及只服务该链的 outcome/snapshot 类型。其它实体的合法 Delete（时间片、Checklist、Inbox、分类、倒计时、维护重置）不受影响。
+- `TaskNode.deletedAt`、旧 schema、snapshot capture/restore、preflight、LWW/dedup、清空数据、历史 fallback 和生产 purge guard全部保留。旧客户端、CloudKit/import 或权威恢复带来的 tombstone 继续隐藏任务、拒绝新工作并保留历史关系；Restore 只清 archive marker，绝不能清 `deletedAt`。
+- 兼容测试直接构造完整的外部 tombstone（同步推进 `updatedAt`、`deviceID` 与 `clientMutationID`），不得在测试支持层重造递归删除、停止 timer/Pomodoro 或清理 assignment 的产品命令。
+
+后果：任务生命周期只剩一条可解释且可恢复的用户路径，菜单、滑动、Settings 和路由都围绕 Archive/Restore 收敛；旧 iCloud 数据仍不会复活，清空本机后覆盖云端仍能携带删除意图，历史分析与账本也不会失去任务归属。以后若要引入真正的永久删除，必须先定义跨设备确认、历史事实处置和恢复窗口，不能复活旧 soft-delete 链。
+
+验证：source contract 固定普通任务 UI 与生产 task command/repository 文件不存在 Delete 链，同时保留 `deletedAt`、`task.deleted.path` 和三语 archive/restore 文案。行为回归覆盖任务行/侧边栏共享归档、活动子树阻止、跨 scene route/selection 收敛、Settings 父优先恢复，以及历史 tombstone 在 Analytics、ledger admission、stale draft、同步与维护中的兼容。每个 checkpoint 继续使用付费自动签名测试与构建，并在提交后运行全设备安装脚本。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

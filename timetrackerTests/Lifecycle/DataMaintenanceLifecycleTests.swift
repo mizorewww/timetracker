@@ -100,7 +100,7 @@ struct DataMaintenanceLifecycleTests {
     }
 
     @Test @MainActor
-    func optimizeDatabasePreservesLedgerRowsForSoftDeletedTasks() throws {
+    func optimizeDatabasePreservesLedgerRowsForTombstonedTasks() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -116,8 +116,12 @@ struct DataMaintenanceLifecycleTests {
         run.sessionID = segment.sessionID
         run.state = .completed
         context.insert(run)
+        let tombstonedAt = task.updatedAt.addingTimeInterval(1)
+        task.deletedAt = tombstonedAt
+        task.updatedAt = tombstonedAt
+        task.deviceID = "legacy-sync"
+        task.clientMutationID = UUID()
         try context.save()
-        try taskRepository.softDeleteTask(taskID: task.id)
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)

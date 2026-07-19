@@ -147,24 +147,4 @@ extension SwiftDataTaskRepository {
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
-
-    func softDeleteTask(taskID: UUID) throws {
-        let nodes = try allNodes()
-        guard nodes.contains(where: { $0.id == taskID }) else { return }
-        let now = Date()
-        let idsToDelete = descendantIDs(of: taskID, nodes: nodes).union([taskID])
-        for node in nodes where idsToDelete.contains(node.id) {
-            node.deletedAt = now
-            node.updatedAt = now
-            node.deviceID = deviceID
-            node.clientMutationID = UUID()
-        }
-        for assignment in try categoryAssignments() where idsToDelete.contains(assignment.taskID) {
-            assignment.deletedAt = now
-            assignment.updatedAt = now
-            assignment.deviceID = deviceID
-            assignment.clientMutationID = UUID()
-        }
-        try context.saveAfterMutationStep()
-    }
 }

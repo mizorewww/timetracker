@@ -382,36 +382,6 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
-    func softDeletingParentRecursivelySoftDeletesDescendantsButKeepsLedger() throws {
-        let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
-
-        let parent = try taskRepository.createTask(title: "Parent", parentID: nil, colorHex: nil, iconName: nil)
-        let child = try taskRepository.createTask(title: "Child", parentID: parent.id, colorHex: nil, iconName: nil)
-        let grandchild = try taskRepository.createTask(title: "Grandchild", parentID: child.id, colorHex: nil, iconName: nil)
-        let segment = try timeRepository.addManualSegment(
-            taskID: grandchild.id,
-            startedAt: Date().addingTimeInterval(-600),
-            endedAt: Date(),
-            note: nil
-        )
-        for task in [parent, child, grandchild] {
-            task.deviceID = "remote-device"
-        }
-        try context.save()
-
-        try taskRepository.softDeleteTask(taskID: parent.id)
-
-        #expect(try taskRepository.allNodes().isEmpty)
-        let rawNodes = try context.fetch(FetchDescriptor<TaskNode>())
-        #expect(rawNodes.count == 3)
-        #expect(rawNodes.allSatisfy { $0.deletedAt != nil })
-        #expect(rawNodes.allSatisfy { $0.deviceID == "test" })
-        #expect(try timeRepository.allSegments().contains { $0.id == segment.id })
-    }
-
-    @Test @MainActor
     func taskTreeServiceFiltersInvalidParentsAndFlattensVisibleRows() throws {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")

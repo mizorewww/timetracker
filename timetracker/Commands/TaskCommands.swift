@@ -64,36 +64,6 @@ struct TaskDraftCommandHandler {
         try UnarchiveTaskUseCase(repository: repository).execute(taskID: taskID)
     }
 
-    func softDelete(
-        taskID: UUID,
-        affectedTaskIDs: Set<UUID>,
-        activeSegments: [TimeSegment],
-        pomodoroRuns: [PomodoroRun],
-        taskRepository: TaskRepository,
-        timeRepository: TimeTrackingRepository,
-        pomodoroRepository: PomodoroRepository
-    ) throws {
-        // A run can be active while resting even though it has no ledger
-        // segment. Cancel runs first so every Pomodoro is made terminal and its
-        // focus session is closed before its task disappears. Deletion always
-        // preserves history, including very short focus attempts.
-        for run in pomodoroRuns where affectedTaskIDs.contains(run.taskID) && run.isActiveForTaskDeletion {
-            try CancelPomodoroUseCase(repository: pomodoroRepository).execute(
-                runID: run.id,
-                discardRecord: false
-            )
-        }
-
-        // Pomodoro cancellation already closes its session. This second pass is
-        // intentionally idempotent and catches regular timers plus any orphaned
-        // Pomodoro segment whose run is missing.
-        for segment in activeSegments where affectedTaskIDs.contains(segment.taskID) {
-            try StopSegmentUseCase(repository: timeRepository).execute(segmentID: segment.id)
-        }
-
-        try SoftDeleteTaskUseCase(repository: taskRepository).execute(taskID: taskID)
-    }
-
     private func update(taskID: UUID, draft: TaskEditorDraft, title: String, repository: TaskRepository) throws {
         try UpdateTaskUseCase(repository: repository).execute(
             taskID: taskID,
@@ -106,14 +76,5 @@ struct TaskDraftCommandHandler {
             estimatedSeconds: TaskEstimatePolicy.seconds(fromMinutes: draft.estimatedMinutes),
             dueAt: draft.hasDueDate ? draft.dueAt : nil
         )
-    }
-}
-
-private extension PomodoroRun {
-    var isActiveForTaskDeletion: Bool {
-        deletedAt == nil &&
-            endedAt == nil &&
-            state != .completed &&
-            state != .cancelled
     }
 }

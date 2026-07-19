@@ -92,14 +92,6 @@ struct UnarchiveTaskUseCase {
     }
 }
 
-struct SoftDeleteTaskUseCase {
-    let repository: TaskRepository
-
-    func execute(taskID: UUID) throws {
-        try repository.softDeleteTask(taskID: taskID)
-    }
-}
-
 struct CreateTaskUseCase {
     let repository: TaskRepository
 

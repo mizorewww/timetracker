@@ -19,7 +19,6 @@ protocol TaskRepository {
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
     func archiveTask(taskID: UUID) throws
     func unarchiveTask(taskID: UUID) throws
-    func softDeleteTask(taskID: UUID) throws
 }
 
 extension TaskRepository {

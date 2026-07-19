@@ -100,18 +100,18 @@ Current risk: task rows are information-dense, especially on iPhone.
 Plan:
 
 - Keep `List` with flat visible rows from `TaskTreeFlattener`.
-- Use native swipe actions for start, child task, edit, and delete.
+- Use native swipe actions for start, child task, edit, and archive.
 - Use the compact secondary line for parent path or running context, not a workflow status.
 - Put checklist progress on the trailing side only when there is enough width; otherwise show it below the title line.
 - Category headers should be native section headers with subtle dividers, not custom drop targets.
 - Reordering and moving should use reliable native edit/menu flows before drag-and-drop is reintroduced.
-- Treat tasks carrying legacy planned/active/completed raw values as ordinary native rows. Archived branches stay hidden; do not add workflow-status badges or make Archive look like Delete.
+- Treat tasks carrying legacy planned/active/completed raw values as ordinary native rows. Archived branches and historical tombstones stay hidden; do not add workflow-status badges or reintroduce a task Delete action beside Archive/Restore.
 
 Acceptance:
 
 - Every visible task is an independent row for tap, context menu, and swipe actions.
 - Indentation is stable across expand/collapse.
-- Deleting or creating a task preserves the Tasks destination.
+- Archiving or creating a task preserves the Tasks destination.
 - Checklist completion remains editable and never disables timing or descendants. Task rows and detail expose no status picker, status badge, Complete action, or Reopen action.
 
 ### Task Editor

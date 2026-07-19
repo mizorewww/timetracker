@@ -6,23 +6,6 @@ import Testing
 @Suite(.serialized)
 struct CoreRefactorTests {
     @Test @MainActor
-    func deletingSelectedTaskPreservesCurrentDestination() throws {
-        let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Delete in Tasks", parentID: nil, colorHex: nil, iconName: nil)
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-        store.desktopDestination = .tasks
-        store.openTaskDetail(task.id)
-
-        store.deleteSelectedTask(taskID: task.id)
-
-        #expect(store.desktopDestination == .tasks)
-        #expect(store.selectedTaskID == nil)
-        #expect(store.tasksRoute == nil)
-    }
-
-    @Test @MainActor
     func tasksRouteIsSeparateFromPlainTaskSelection() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -55,22 +38,6 @@ struct CoreRefactorTests {
         #expect(store.desktopDestination == .today)
         #expect(store.selectedTaskID == selectedTask.id)
         #expect(store.tasksRoute == nil)
-    }
-
-    @Test @MainActor
-    func taskPageDeleteCanPreserveTasksDestinationEvenAfterSelectionRevealedToday() throws {
-        let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Delete from row", parentID: nil, colorHex: nil, iconName: nil)
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-        store.desktopDestination = .today
-        store.selectTask(task.id)
-
-        store.deleteSelectedTask(taskID: task.id, preservingDestination: .tasks)
-
-        #expect(store.desktopDestination == .tasks)
-        #expect(store.selectedTaskID == nil)
     }
 
     @Test @MainActor

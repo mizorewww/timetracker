@@ -109,57 +109,6 @@ extension TimeTrackerStore {
         }
     }
 
-    @discardableResult
-    func deleteSelectedTask(
-        taskID: UUID? = nil,
-        preservingDestination: DesktopDestination? = nil
-    ) -> Bool {
-        let targetID = taskID ?? selectedTaskID
-        guard let targetID else { return false }
-        let destinationBeforeDelete = preservingDestination ?? desktopDestination
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).delete(taskID: targetID)
-            let wasSelected = selectedTaskID.map {
-                outcome.deletedTaskIDs.contains($0)
-            } ?? false
-            let wasShowingDeletedDetail = tasksRoute.map {
-                outcome.deletedTaskIDs.contains($0.taskID)
-            } ?? false
-            finishStoreScopedMutation(events: outcome.events)
-            if outcome.stoppedSegments.isEmpty,
-               outcome.terminatedPomodoros.isEmpty {
-                refreshStoreScopedTimerReadModels()
-            }
-            if wasSelected {
-                selectedTaskID = activeSegments.first(where: {
-                    outcome.deletedTaskIDs.contains($0.taskID) == false &&
-                        taskByID[$0.taskID] != nil
-                })?.taskID ?? tasks.first(where: {
-                    outcome.deletedTaskIDs.contains($0.id) == false &&
-                        isTaskAvailableForTracking($0)
-                })?.id
-            }
-            if wasShowingDeletedDetail {
-                tasksRoute = nil
-            }
-            desktopDestination = destinationBeforeDelete
-            return true
-        } catch {
-            if error is TaskLifecycleMutationError {
-                refreshStoreScopedTaskLifecycleReadModels()
-            }
-            errorMessage = error.localizedDescription
-            return false
-        }
-    }
-
     private func performStoreScopedTaskArchive(taskID: UUID) -> Bool {
         guard let modelContext else {
             errorMessage = StoreError.notConfigured.localizedDescription

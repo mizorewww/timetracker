@@ -872,6 +872,17 @@ struct TaskUIContractTests {
         let archivedSettingsSource = try sourceText(
             "timetracker/Features/Settings/ArchivedTasksSettingsSection.swift"
         )
+        let taskLifecycleCommandSource = try [
+            "timetracker/Commands/TaskCommands.swift",
+            "timetracker/Commands/UseCases.swift",
+            "timetracker/Repositories/RepositoryProtocols.swift",
+            "timetracker/Repositories/SwiftDataTaskRepository+TaskMutations.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskLifecycleCommandCoordinator.swift",
+            "timetracker/Services/Tasks/TaskLifecycleMutationModels.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift",
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
 
         #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
         #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
@@ -892,6 +903,12 @@ struct TaskUIContractTests {
         #expect(managementSource.contains("task.delete.confirm") == false)
         #expect(sidebarSource.contains("task.delete.confirm") == false)
         #expect(detailSource.contains("task.delete.confirm") == false)
+        #expect(taskLifecycleCommandSource.contains("deleteSelectedTask") == false)
+        #expect(taskLifecycleCommandSource.contains("SoftDeleteTaskUseCase") == false)
+        #expect(taskLifecycleCommandSource.contains("softDeleteTask") == false)
+        #expect(taskLifecycleCommandSource.contains("func delete(taskID:") == false)
+        #expect(taskLifecycleCommandSource.contains("TaskDeletionMutationOutcome") == false)
+        #expect(taskLifecycleCommandSource.contains("isActiveForTaskDeletion") == false)
         #expect(settingsCategorySource.contains("case archivedTasks"))
         #expect(archivedSettingsSource.contains("store.archivedTasks"))
         #expect(archivedSettingsSource.contains("store.hasArchivedAncestor(for: task)"))

@@ -119,6 +119,10 @@ struct LocalizationContractTests {
         #expect(english["task.action.unarchive"] != nil)
         #expect(english["task.action.unarchive.parentFirst"] != nil)
         #expect(english["task.archived.trackingUnavailable"] != nil)
+        #expect(english["task.delete.confirm.title"] == nil)
+        #expect(english["task.delete.confirm.message"] == nil)
+        #expect(english["task.deleted"] != nil)
+        #expect(english["task.deleted.path"] != nil)
         #expect(english["settings.category.archivedTasks.title"] != nil)
         #expect(english["settings.archivedTasks.footer"] != nil)
     }

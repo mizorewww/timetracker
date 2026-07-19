@@ -466,8 +466,6 @@
 "pomodoro.deletePlan.confirm.message" = "此計畫將從所有同步裝置移除。";
 "taskCategory.delete.confirm.title" = "刪除分類？";
 "taskCategory.delete.confirm.message" = "分類中的任務會保留，並變成未分類。";
-"task.delete.confirm.title" = "刪除任務？";
-"task.delete.confirm.message" = "此任務及其子任務會在所有同步裝置上隱藏，其中正在執行的計時與專注會停止；已記錄的時間會保留。";
 "segment.delete.confirm.title" = "刪除時間記錄？";
 "segment.delete.confirm.message" = "此記錄將從總計與分析中移除。";
 "segment.delete.confirm.runningTitle" = "停止計時並刪除記錄？";

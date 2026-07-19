@@ -122,7 +122,7 @@ Views should render existing snapshots. They should not calculate analytics, tre
 | --- | --- | --- | --- | --- | --- |
 | Start and stop timer | `TimeSession`, `TimeSegment` | `TimerCommandHandler`, `LedgerCommandHandler` | `LedgerStore`, `RollupStore` | `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
 | Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
-| Task edit, move, archive, delete | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
+| Task edit, move, archive, restore | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
 | Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
 | Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `ChecklistStore`, `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks/Editor`, `Features/Tasks/Detail` |
 | Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Tasks/Detail` |
@@ -178,7 +178,7 @@ Rules:
 2. If an existing core model truly needs a new persisted field, add a new schema version, make the field optional or give it a stable default, and add a migration/compatibility test before wiring UI.
 3. Old `VersionedSchema` definitions must keep their historical model shape. A new feature must not mutate older schema versions by reusing a changed model shape without a migration strategy.
 4. Never reuse a schema version identifier for a different model shape. If a bad schema reached a build or branch that may have been installed, the next compatible schema must use a new version number.
-5. CloudKit-backed models should keep `id`, timestamps, `deletedAt`, `deviceID`, and `clientMutationID` semantics stable. Soft delete remains the default for user data that can sync.
+5. CloudKit-backed models should keep `id`, timestamps, `deletedAt`, `deviceID`, and `clientMutationID` semantics stable. Synced entities that still expose Delete, authoritative reset, and deduplication use tombstones; ordinary tasks expose Archive/Restore, while `TaskNode.deletedAt` remains compatibility protocol only.
 6. Every schema change must update `TimeTrackerModelRegistry.cloudSyncedUserModelNames` expectations and add a test proving old stores can still open or that the change is isolated in a new extension model.
 
 Current examples: V9 (`1.8.0`) removes the derived `DailySummary` cache from the active schema with a lightweight V8→V9 migration. V10 (`1.9.0`) freezes the V9 Inbox model shape and uses a custom V9→V10 migration to initialize optional opaque suggestion context/revision UUIDs while preserving legacy dismissal state. Real V8 and V9 disk fixtures must continue to open. Removing a reconstructable cache must never remove its source facts, and adding sync identity must not derive it from user text.
@@ -245,7 +245,7 @@ Before merging a feature:
 2. Does every durable write go through a command or repository boundary?
 3. Does the view avoid expensive work in `body`?
 4. Are active timers still derived from open `TimeSegment` rows?
-5. Are soft-deleted tasks and historical ledger rows handled intentionally?
+5. Are historical/imported task tombstones and their ledger rows handled intentionally without reintroducing a product Delete action?
 6. Does iCloud remote import coalesce refresh work?
 7. Are compact iPhone, iPad split view, and macOS sidebar/detail layouts considered separately?
 8. Are all strings localized in English, Simplified Chinese, and Traditional Chinese?

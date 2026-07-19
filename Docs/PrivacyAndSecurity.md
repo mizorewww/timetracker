@@ -128,7 +128,7 @@ App Intents 把系统提供的用户参数传入共享领域命令。Intent 结�
 
 ### Deep links
 
-Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应用只接受最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query，并校验 UUID；无效 URL 在执行或排队前即被拒绝。数据库尚未准备好时，每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过归档、删除或不存在任务的可工作性检查；Checklist 完成不构成工作阻止。
+Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应用只接受最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query，并校验 UUID；无效 URL 在执行或排队前即被拒绝。数据库尚未准备好时，每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过归档、历史 tombstone 或不存在任务的可工作性检查；Checklist 完成不构成工作阻止。
 
 ## 6. JSON 导出
 
@@ -141,9 +141,10 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 
 未来备份格式至少需要版本、校验和、导入预检、冲突策略、staging/回滚和恢复等价性测试。
 
-## 7. 删除与恢复边界
+## 7. 归档、tombstone 与恢复边界
 
-- 删除任务不等同于立即擦除全部关联历史。
+- 普通任务只提供可逆的归档与恢复，不提供单项 Delete；归档不会擦除关联历史，也不会在仍有活动 timer/Pomodoro 时静默停止工作。
+- `TaskNode.deletedAt` 只作为旧客户端、CloudKit/import、权威重置/恢复和 LWW 去重的兼容 tombstone。它不是普通任务界面的删除动作，但必须继续随快照同步，并保留历史账本关系。
 - 普通 Local、iCloud、local-fallback 和 emergency 生产 store 永不物理 purge tombstone。CloudKit 没有每台离线设备的删除确认，过早清理可能让旧设备复活数据；生产 UI 因此不显示永久清理入口。
 - 只有隔离的 Demo/UI Test store 允许在测试中物理清理超过保留期的完整 tombstone graph。可见 orphan 可能只是分阶段 CloudKit import，不能仅因暂时缺少父记录就删除。
 - 清空、替换、重置演示数据和强制 iCloud 操作都可能造成不可逆变化。

@@ -135,7 +135,7 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
-    func committedLocalTaskDeletionClearsOtherSceneSelectionAndRoute() throws {
+    func committedLocalTaskArchiveClearsOtherSceneSelectionAndRoute() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let retainedTask = try repository.createTask(
@@ -144,8 +144,8 @@ struct CoreSystemActionCommandTests {
             colorHex: nil,
             iconName: nil
         )
-        let deletedTask = try repository.createTask(
-            title: "Deleted task",
+        let archivedTask = try repository.createTask(
+            title: "Archived task",
             parentID: nil,
             colorHex: nil,
             iconName: nil
@@ -156,7 +156,7 @@ struct CoreSystemActionCommandTests {
         secondScene.configureRepositoriesIfNeeded(context: ModelContext(context.container))
         try firstScene.refresh()
         try secondScene.refresh()
-        secondScene.openTaskDetail(deletedTask.id)
+        secondScene.openTaskDetail(archivedTask.id)
         firstScene.installStoreMutationObserverIfNeeded()
         secondScene.installStoreMutationObserverIfNeeded()
         defer {
@@ -164,9 +164,11 @@ struct CoreSystemActionCommandTests {
             secondScene.removeStoreMutationObserver()
         }
 
-        #expect(firstScene.deleteSelectedTask(taskID: deletedTask.id))
+        #expect(firstScene.archiveSelectedTask(taskID: archivedTask.id))
 
-        #expect(secondScene.task(for: deletedTask.id) == nil)
+        let synchronizedTask = try #require(secondScene.task(for: archivedTask.id))
+        #expect(synchronizedTask.isArchivedForLifecycle)
+        #expect(secondScene.isTaskVisible(synchronizedTask) == false)
         #expect(secondScene.selectedTaskID == retainedTask.id)
         #expect(secondScene.tasksRoute == nil)
     }

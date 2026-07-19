@@ -29,7 +29,12 @@ struct LedgerTaskAvailabilityTests {
             iconName: nil
         )
 
-        try taskRepository.softDeleteTask(taskID: deletedTask.id)
+        let tombstonedAt = deletedTask.updatedAt.addingTimeInterval(1)
+        deletedTask.deletedAt = tombstonedAt
+        deletedTask.updatedAt = tombstonedAt
+        deletedTask.deviceID = "legacy-sync"
+        deletedTask.clientMutationID = UUID()
+        try context.save()
         try taskRepository.archiveTask(taskID: archivedParent.id)
 
         let repository = SwiftDataTimeTrackingRepository(

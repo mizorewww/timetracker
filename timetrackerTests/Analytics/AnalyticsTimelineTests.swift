@@ -111,7 +111,7 @@ struct AnalyticsTimelineTests {
     }
 
     @Test @MainActor
-    func taskBreakdownKeepsLedgerVisibleAfterTaskSoftDelete() throws {
+    func taskBreakdownKeepsLedgerVisibleAfterTaskTombstone() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -124,7 +124,12 @@ struct AnalyticsTimelineTests {
             endedAt: now.addingTimeInterval(-1_800),
             note: "Billable"
         )
-        try taskRepository.softDeleteTask(taskID: task.id)
+        let tombstonedAt = task.updatedAt.addingTimeInterval(1)
+        task.deletedAt = tombstonedAt
+        task.updatedAt = tombstonedAt
+        task.deviceID = "legacy-sync"
+        task.clientMutationID = UUID()
+        try context.save()
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)

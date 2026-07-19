@@ -348,50 +348,6 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
         #expect(store.errorMessage == AppStrings.localized("task.action.archive.stopFirst"))
     }
 
-    @Test
-    func staleSceneDeletionDiscoversSiblingChildAndStopsItsTimer() throws {
-        let context = try makeTestContext()
-        let parent = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
-            title: "Known parent",
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
-        )
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-        #expect(store.task(for: parent.id) != nil)
-
-        let siblingContext = ModelContext(context.container)
-        let child = try SwiftDataTaskRepository(
-            context: siblingContext,
-            deviceID: "sibling"
-        ).createTask(
-            title: "Late child",
-            parentID: parent.id,
-            colorHex: nil,
-            iconName: nil
-        )
-        let started = try makeTestSystemActionCommandHandler().startTimerMutation(
-            taskID: child.id,
-            container: context.container
-        )
-        let segmentID = try #require(started.subjectSegmentID)
-        #expect(store.task(for: child.id) == nil)
-        #expect(store.activeSegments.isEmpty)
-
-        #expect(store.deleteSelectedTask(taskID: parent.id))
-
-        let freshContext = ModelContext(context.container)
-        let persistedTasks = try freshContext.fetch(FetchDescriptor<TaskNode>())
-        let persistedSegments = try freshContext.fetch(FetchDescriptor<TimeSegment>())
-        #expect(persistedTasks.first { $0.id == parent.id }?.deletedAt != nil)
-        #expect(persistedTasks.first { $0.id == child.id }?.deletedAt != nil)
-        #expect(persistedSegments.first { $0.id == segmentID }?.endedAt != nil)
-        #expect(store.task(for: parent.id) == nil)
-        #expect(store.task(for: child.id) == nil)
-        #expect(store.activeSegments.isEmpty)
-    }
-
     private func freshTaskRepository(
         _ container: ModelContainer
     ) -> SwiftDataTaskRepository {

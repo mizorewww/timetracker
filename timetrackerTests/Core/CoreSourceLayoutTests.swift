@@ -1165,7 +1165,7 @@ struct CoreSourceLayoutTests {
 
         let requiredEntryPoints = [
             "Start/stop timer behavior",
-            "Task create/edit/move/archive/delete",
+            "Task create/edit/move/archive/restore",
             "Checklist UI or persistence",
             "Forecast math",
             "Analytics chart data",

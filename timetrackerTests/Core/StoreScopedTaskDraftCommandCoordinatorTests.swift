@@ -208,7 +208,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
     }
 
     @Test
-    func staleDraftCannotCreateChecklistOrphansAfterSiblingDeletion() throws {
+    func staleDraftCannotCreateChecklistOrphansAfterSiblingTombstone() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(
             title: "Soon deleted",
@@ -221,11 +221,17 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
         draft.checklistItems = [ChecklistEditorDraft(title: "Must not orphan")]
 
-        _ = try StoreScopedTaskLifecycleCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
-            deviceID: "sibling"
-        ).delete(taskID: task.id)
+        let siblingContext = ModelContext(context.container)
+        let siblingTask = try #require(
+            try siblingContext.fetch(FetchDescriptor<TaskNode>())
+                .first { $0.id == task.id }
+        )
+        let tombstonedAt = siblingTask.updatedAt.addingTimeInterval(1)
+        siblingTask.deletedAt = tombstonedAt
+        siblingTask.updatedAt = tombstonedAt
+        siblingTask.deviceID = "sibling"
+        siblingTask.clientMutationID = UUID()
+        try siblingContext.save()
 
         #expect(store.saveTaskDraft(draft) == false)
         let items = try ModelContext(context.container).fetch(FetchDescriptor<ChecklistItem>())

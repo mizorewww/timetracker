@@ -466,8 +466,6 @@
 "pomodoro.deletePlan.confirm.message" = "The plan will be removed from every synced device.";
 "taskCategory.delete.confirm.title" = "Delete Category?";
 "taskCategory.delete.confirm.message" = "Tasks in this category will remain and become uncategorized.";
-"task.delete.confirm.title" = "Delete Task?";
-"task.delete.confirm.message" = "This task and its subtasks will be hidden on every synced device. Running timers and focus sessions in this task group will stop. Tracked history is kept.";
 "segment.delete.confirm.title" = "Delete Time Record?";
 "segment.delete.confirm.message" = "This record will be removed from totals and analytics.";
 "segment.delete.confirm.runningTitle" = "Stop and Delete This Timer?";

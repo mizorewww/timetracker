@@ -94,8 +94,12 @@ struct SegmentRebindSnapshotTests {
         )
         let session = try #require(try repository.sessions().first { $0.id == segment.sessionID })
         task.title = "Title after creation"
+        let tombstonedAt = task.updatedAt.addingTimeInterval(1)
+        task.deletedAt = tombstonedAt
+        task.updatedAt = tombstonedAt
+        task.deviceID = "legacy-sync"
+        task.clientMutationID = UUID()
         try context.save()
-        try taskRepository.softDeleteTask(taskID: task.id)
 
         try repository.updateSegment(
             segmentID: segment.id,
@@ -148,8 +152,12 @@ struct SegmentRebindSnapshotTests {
         session.updatedAt = originalAuditDate
         session.deviceID = "original-session-device"
         session.clientMutationID = originalMutationID
+        let tombstonedAt = deletedTarget.updatedAt.addingTimeInterval(1)
+        deletedTarget.deletedAt = tombstonedAt
+        deletedTarget.updatedAt = tombstonedAt
+        deletedTarget.deviceID = "legacy-sync"
+        deletedTarget.clientMutationID = UUID()
         try context.save()
-        try taskRepository.softDeleteTask(taskID: deletedTarget.id)
 
         for unavailableTaskID in [UUID(), deletedTarget.id] {
             #expect(throws: TimeTrackingRepositoryError.taskUnavailable) {

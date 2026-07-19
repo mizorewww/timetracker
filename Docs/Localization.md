@@ -19,7 +19,7 @@ User-facing copy should be added to the `Localizable.strings` files under each t
 - Keep `InfoPlist.strings` in parity for the main app, Live Activity, Widget, and Watch, and keep the main app's `AppShortcuts.strings` in parity. These resource families currently need an explicit plist/static check in addition to the `Localizable.strings` unit suite.
 - Prefer concise labels that fit on iPhone.
 - Avoid implementation terms in everyday UI. Use ledger terminology only when the user is editing historical records or reading data-management settings.
-- Do not expose or translate legacy task workflow values (`planned`, `active`, `completed`) as product state. Checklist completion copy belongs to checklist items and does not imply that the task is locked. Keep Archive distinct from Delete: Archive hides a branch; Delete retains its soft-deletion/tombstone semantics.
+- Do not expose or translate legacy task workflow values (`planned`, `active`, `completed`) as product state. Checklist completion copy belongs to checklist items and does not imply that the task is locked. The current task product vocabulary is Archive/Restore; deletion copy is reserved for reset, ledger/checklist entities, and historical tombstone fallbacks, never an ordinary task action.
 - Forecast copy must identify whether the source is the user's explicit estimate or checklist evidence. Recent-pace language may describe projected active days but must not imply that history generated the remaining work amount.
 - When adding a key, add it to all three languages in the same change.
 

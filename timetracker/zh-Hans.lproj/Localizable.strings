@@ -466,8 +466,6 @@
 "pomodoro.deletePlan.confirm.message" = "此计划将从所有同步设备移除。";
 "taskCategory.delete.confirm.title" = "删除分类？";
 "taskCategory.delete.confirm.message" = "分类中的任务会保留，并变为未分类。";
-"task.delete.confirm.title" = "删除任务？";
-"task.delete.confirm.message" = "此任务及其子任务会在所有同步设备上隐藏，其中正在运行的计时与专注会停止；已记录的时间会保留。";
 "segment.delete.confirm.title" = "删除时间记录？";
 "segment.delete.confirm.message" = "此记录将从汇总和分析中移除。";
 "segment.delete.confirm.runningTitle" = "停止计时并删除记录？";

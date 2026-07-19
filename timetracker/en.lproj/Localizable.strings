@@ -13,6 +13,10 @@
 "home.switchTimer" = "Switch Timer";
 "home.now.title" = "Now";
 "home.overview.title" = "Overview";
+"home.weeklyGross.title" = "This Week’s Gross Time";
+"home.weeklyGross.footer" = "Daily Gross Time across all tasks; overlapping timers count separately.";
+"home.weeklyGross.empty" = "No tracked time this week";
+"home.weeklyGross.emptyDescription" = "Start a task and its time will appear here by day.";
 "action.startTimer" = "Start Timer";
 "action.newTask" = "New Task";
 "action.addTime" = "Add Time";

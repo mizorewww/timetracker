@@ -25,6 +25,11 @@ struct PhoneHomeView: View {
                     .accessibilityIdentifier("home.overview")
             }
 
+            HomeWeeklyGrossTimeSection(
+                store: store,
+                container: .listSection
+            )
+
             PhoneQuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,

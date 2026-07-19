@@ -18,6 +18,42 @@ enum DurationFormatter {
         )
     }
 
+    nonisolated static func chart(
+        _ seconds: Int,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let safeSeconds = max(0, seconds)
+        guard safeSeconds < 60 else {
+            return compact(safeSeconds, locale: locale)
+        }
+        return Duration.seconds(safeSeconds).formatted(
+            .units(
+                allowed: [.seconds],
+                width: .abbreviated,
+                maximumUnitCount: 1
+            )
+            .locale(locale)
+        )
+    }
+
+    nonisolated static func chartAxis(
+        _ seconds: Int,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let safeSeconds = max(0, seconds)
+        guard safeSeconds % 60 != 0 else {
+            return chart(safeSeconds, locale: locale)
+        }
+        return Duration.seconds(safeSeconds).formatted(
+            .units(
+                allowed: [.minutes, .seconds],
+                width: .abbreviated,
+                maximumUnitCount: 2
+            )
+            .locale(locale)
+        )
+    }
+
     nonisolated static func clock(_ seconds: Int) -> String {
         let safeSeconds = max(0, seconds)
         let hours = safeSeconds / 3600

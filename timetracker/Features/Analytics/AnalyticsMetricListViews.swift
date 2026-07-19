@@ -58,7 +58,7 @@ struct AnalyticsMetricList: View {
                     deltaText(comparison.wallDeltaSeconds)
                 ),
                 systemImage: "clock",
-                tint: .blue,
+                tint: AppColors.wallTime,
                 identifier: "analytics.metric.wall"
             )
             Divider()
@@ -70,7 +70,7 @@ struct AnalyticsMetricList: View {
                     deltaText(comparison.grossDeltaSeconds)
                 ),
                 systemImage: "sum",
-                tint: .green,
+                tint: AppColors.grossTime,
                 identifier: "analytics.metric.gross"
             )
             Divider()

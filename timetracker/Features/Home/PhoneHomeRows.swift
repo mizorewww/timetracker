@@ -12,7 +12,7 @@ struct PhoneTodaySummaryRow: View {
                     title: AppStrings.grossTime,
                     value: DurationFormatter.compact(snapshot.grossSeconds),
                     systemImage: "square.stack.3d.up",
-                    tint: .blue
+                    tint: AppColors.grossTime
                 )
 
                 if store.preferences.showGrossAndWallTogether {
@@ -21,7 +21,7 @@ struct PhoneTodaySummaryRow: View {
                         title: AppStrings.wallTime,
                         value: DurationFormatter.compact(snapshot.wallSeconds),
                         systemImage: "timeline.selection",
-                        tint: .green
+                        tint: AppColors.wallTime
                     )
                 }
             }

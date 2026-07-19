@@ -1687,6 +1687,12 @@ final class timetrackerUITests: XCTestCase {
         let chart = app.descendants(matching: .any)["analytics.dailyTrend.chart"].firstMatch
         XCTAssertTrue(detail.waitForExistence(timeout: 8))
         XCTAssertTrue(chart.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            app.staticTexts["Wall Time"].firstMatch.waitForExistence(timeout: 3)
+        )
+        XCTAssertTrue(
+            app.staticTexts["Gross Time"].firstMatch.waitForExistence(timeout: 3)
+        )
         try capture("iphone-analytics-daily-trend-legend", app: app)
         #endif
     }
@@ -2151,6 +2157,56 @@ final class timetrackerUITests: XCTestCase {
             overviewCaptureName: "today-overview",
             pickerCaptureName: "today-task-picker"
         )
+        #endif
+    }
+
+    @MainActor
+    func testTodayWeeklyGrossTimeChartIsVisible() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today weekly chart screenshot requires an iOS simulator.")
+        #else
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+        let chart = app.otherElements.matching(NSPredicate(
+            format: "label == %@",
+            "This Week’s Gross Time"
+        )).firstMatch
+        let footer = app.staticTexts[
+            "Daily Gross Time across all tasks; overlapping timers count separately."
+        ].firstMatch
+        let home = app.descendants(matching: .any)["home.view"].firstMatch
+
+        for _ in 0..<3 {
+            home.swipeDown()
+        }
+
+        for _ in 0..<8 {
+            if chart.exists {
+                break
+            }
+            home.swipeUp()
+        }
+
+        XCTAssertTrue(
+            chart.waitForExistence(timeout: 5),
+            "Demo data must render the shared weekly Gross Time chart."
+        )
+        XCTAssertTrue(
+            footer.waitForExistence(timeout: 5),
+            "The weekly chart must explain its Gross Time overlap semantics."
+        )
+        scrollUntilFullyVisibleAboveSystemChrome(footer, in: app)
+        XCTAssertGreaterThanOrEqual(chart.frame.height, 150)
+        XCTAssertGreaterThan(chart.frame.width, 240)
+        XCTAssertTrue(
+            isFrameFullyVisibleAboveSystemChrome(chart, in: app),
+            "The complete weekly chart must be visible above system chrome."
+        )
+        XCTAssertTrue(
+            isFrameFullyVisibleAboveSystemChrome(footer, in: app),
+            "The chart explanation must remain readable above system chrome."
+        )
+        try capture("today-weekly-gross-time-chart", app: app)
         #endif
     }
 

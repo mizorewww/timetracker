@@ -13,6 +13,10 @@
 "home.switchTimer" = "切換計時";
 "home.now.title" = "現在";
 "home.overview.title" = "概覽";
+"home.weeklyGross.title" = "本週累計時間";
+"home.weeklyGross.footer" = "按天累計所有任務的計時；重疊計時會分別計算。";
+"home.weeklyGross.empty" = "本週還沒有計時";
+"home.weeklyGross.emptyDescription" = "開始一個任務後，這裡會按天顯示累計時間。";
 "action.startTimer" = "開始計時";
 "action.newTask" = "新增任務";
 "action.addTime" = "補錄時間";

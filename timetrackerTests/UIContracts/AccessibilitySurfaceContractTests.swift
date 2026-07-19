@@ -82,15 +82,18 @@ struct AccessibilitySurfaceContractTests {
     func analyticsAndSidebarVisualsKeepEquivalentVoiceOverSemantics() throws {
         let metrics = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
         let groups = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsGroupBreakdownViews.swift")
-        let trend = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift")
+        let trend = try [
+            "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift",
+            "timetracker/SharedUI/Components/DailyTimeSeriesChart.swift"
+        ].map(sourceText).joined(separator: "\n")
         let sidebar = try sourceText("timetracker/Features/Sidebar/SidebarTaskTreeViews.swift")
 
         #expect(metrics.contains(".accessibilityElement(children: .ignore)"))
         #expect(metrics.contains(".accessibilityLabel(metric.title)"))
         #expect(groups.contains(".accessibilityHidden(true)"))
-        #expect(trend.components(separatedBy: ".accessibilityLabel(point.label)").count - 1 == 2)
-        #expect(trend.contains("DurationFormatter.compact(point.wallSeconds)"))
-        #expect(trend.contains("DurationFormatter.compact(point.grossSeconds)"))
+        #expect(trend.components(separatedBy: ".accessibilityLabel(accessibleDate(point.date))").count - 1 == 3)
+        #expect(trend.contains("DurationFormatter.spoken(point.wallSeconds, locale: locale)"))
+        #expect(trend.contains("DurationFormatter.spoken(point.grossSeconds, locale: locale)"))
         #expect(sidebar.contains(".accessibilityLabel(task.title)"))
         #expect(sidebar.contains("isRunning: isRunning"))
         #expect(sidebar.contains("values.append(AppStrings.running)"))

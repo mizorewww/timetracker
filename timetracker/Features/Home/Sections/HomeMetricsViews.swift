@@ -77,7 +77,7 @@ private struct MetricsPanelContent: View {
             title: AppStrings.grossTime,
             value: DurationFormatter.compact(snapshot.grossSeconds),
             iconName: "square.stack.3d.up",
-            tint: .blue,
+            tint: AppColors.grossTime,
             trendText: grossTrend.text,
             trendColor: grossTrend.color,
             alignment: .leading
@@ -92,7 +92,7 @@ private struct MetricsPanelContent: View {
                 title: AppStrings.wallTime,
                 value: DurationFormatter.compact(snapshot.wallSeconds),
                 iconName: "timeline.selection",
-                tint: .green,
+                tint: AppColors.wallTime,
                 trendText: wallTrend.text,
                 trendColor: wallTrend.color,
                 alignment: .leading
@@ -111,21 +111,5 @@ private struct MetricsPanelContent: View {
         case .unchanged:
             return (AppStrings.localized("home.metric.sameAsYesterday"), .secondary)
         }
-    }
-}
-
-struct MiniBars: View {
-    let values: [Int]
-    let tint: Color
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 3) {
-            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(tint)
-                    .frame(width: 4, height: CGFloat(max(3, value * 2)))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -76,11 +76,294 @@ struct HomeUIContractTests {
     @Test
     func todayMetricsNormalizeAndTraverseSegmentsOnlyOnce() throws {
         let source = try sourceText("timetracker/Features/Home/HomeReadModels.swift")
+        let start = try #require(
+            source.range(of: "func todayMetricsSnapshot")?.lowerBound
+        )
+        let end = try #require(
+            source.range(of: "func weeklyGrossTimeSnapshot")?.lowerBound
+        )
+        let todayMetricsSource = String(source[start..<end])
 
-        #expect(source.components(separatedBy: ".visibleDeduplicatedByID()").count - 1 == 1)
-        #expect(source.components(separatedBy: "for segment in segments").count - 1 == 1)
-        #expect(source.components(separatedBy: "visibleSegments(overlapping:").count - 1 == 1)
-        #expect(source.contains("ledgerSummaryService.secondsInInterval") == false)
+        #expect(todayMetricsSource.components(separatedBy: ".visibleDeduplicatedByID()").count - 1 == 1)
+        #expect(todayMetricsSource.components(separatedBy: "for segment in segments").count - 1 == 1)
+        #expect(todayMetricsSource.components(separatedBy: "visibleSegments(overlapping:").count - 1 == 1)
+        #expect(todayMetricsSource.contains("ledgerSummaryService.secondsInInterval") == false)
+    }
+
+    @Test @MainActor
+    func weeklyGrossTimeUsesCalendarDaysAndGrossOverlapSemantics() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US")
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12
+        )))
+        let week = try #require(
+            calendar.dateInterval(of: .weekOfYear, for: now)
+        )
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let task = try taskRepository.createTask(
+            title: "Weekly",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        func addSegment(start: Date, end: Date) throws {
+            _ = try timeRepository.addManualSegment(
+                taskID: task.id,
+                startedAt: start,
+                endedAt: end,
+                note: nil
+            )
+        }
+
+        try addSegment(
+            start: week.start.addingTimeInterval(-1_800),
+            end: week.start.addingTimeInterval(1_800)
+        )
+        try addSegment(
+            start: week.start.addingTimeInterval(9 * 3_600),
+            end: week.start.addingTimeInterval(10 * 3_600)
+        )
+        try addSegment(
+            start: week.start.addingTimeInterval(9.5 * 3_600),
+            end: week.start.addingTimeInterval(10.5 * 3_600)
+        )
+        let wednesday = try #require(
+            calendar.date(byAdding: .day, value: 2, to: week.start)
+        )
+        try addSegment(
+            start: wednesday.addingTimeInterval(23.5 * 3_600),
+            end: wednesday.addingTimeInterval(24.5 * 3_600)
+        )
+        try addSegment(
+            start: now.addingTimeInterval(-2 * 3_600),
+            end: now.addingTimeInterval(3_600)
+        )
+        let friday = try #require(
+            calendar.date(byAdding: .day, value: 4, to: week.start)
+        )
+        try addSegment(
+            start: friday.addingTimeInterval(10 * 3_600),
+            end: friday.addingTimeInterval(11 * 3_600)
+        )
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        let snapshot = store.weeklyGrossTimeSnapshot(
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshot.interval == week)
+        #expect(snapshot.daily.count == 4)
+        #expect(snapshot.daily.map(\.grossSeconds) == [9_000, 0, 1_800, 9_000])
+        #expect(snapshot.daily.map(\.wallSeconds) == [7_200, 0, 1_800, 9_000])
+        #expect(snapshot.totalGrossSeconds == 19_800)
+        #expect(snapshot.hasTrackedTime)
+        #expect(snapshot.requiresLiveRefresh)
+    }
+
+    @Test @MainActor
+    func weeklyGrossTimeReevaluatesAClosedFutureEndAtEachCutoff() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 8,
+            hour: 10
+        )))
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let task = try taskRepository.createTask(
+            title: "Clock skew",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(3_600),
+            note: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        let first = store.weeklyGrossTimeSnapshot(
+            now: start.addingTimeInterval(600),
+            calendar: calendar
+        )
+        let second = store.weeklyGrossTimeSnapshot(
+            now: start.addingTimeInterval(1_200),
+            calendar: calendar
+        )
+
+        #expect(first.totalGrossSeconds == 600)
+        #expect(second.totalGrossSeconds == 1_200)
+        #expect(first.requiresLiveRefresh)
+        #expect(second.requiresLiveRefresh)
+    }
+
+    @Test @MainActor
+    func weeklyGrossTimeRefreshesAcrossFutureStartAndClockRewindBoundaries() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 8,
+            hour: 10
+        )))
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let task = try taskRepository.createTask(
+            title: "Future import",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(3_600),
+            note: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let beforeDate = start.addingTimeInterval(-600)
+        let duringDate = start.addingTimeInterval(600)
+        let afterDate = start.addingTimeInterval(4_200)
+
+        let before = store.weeklyGrossTimeSnapshot(
+            now: beforeDate,
+            calendar: calendar
+        )
+        let during = store.weeklyGrossTimeSnapshot(
+            now: duringDate,
+            calendar: calendar
+        )
+        let after = store.weeklyGrossTimeSnapshot(
+            now: afterDate,
+            calendar: calendar
+        )
+        let waitingRequest = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: before,
+            now: beforeDate,
+            clockRevision: 0,
+            calendar: calendar
+        )
+        let settledRequest = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: after,
+            now: afterDate,
+            clockRevision: 0,
+            calendar: calendar
+        )
+        let rewoundRequest = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: after,
+            now: beforeDate,
+            clockRevision: 1,
+            calendar: calendar
+        )
+
+        #expect(before.totalGrossSeconds == 0)
+        #expect(before.requiresLiveRefresh)
+        #expect(waitingRequest.evaluationKey.liveRefreshBucket != nil)
+        #expect(during.totalGrossSeconds == 600)
+        #expect(during.requiresLiveRefresh)
+        #expect(after.totalGrossSeconds == 3_600)
+        #expect(after.requiresLiveRefresh == false)
+        #expect(settledRequest.evaluationKey.liveRefreshBucket == nil)
+        #expect(rewoundRequest != settledRequest)
+    }
+
+    @Test
+    func todayAndAnalyticsShareTheDailyTimeSeriesChart() throws {
+        let chartSource = try sourceText(
+            "timetracker/SharedUI/Components/DailyTimeSeriesChart.swift"
+        )
+        let homeSource = try [
+            "timetracker/Features/Home/HomeReadModels.swift",
+            "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeChart.swift",
+            "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeRefresh.swift",
+            "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeViews.swift",
+            "timetracker/Features/Home/HomeViews.swift",
+            "timetracker/Features/Home/PhoneHomeView.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+        let analyticsSource = try sourceText(
+            "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift"
+        )
+        let metricSources = try [
+            "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
+            "timetracker/Features/Home/PhoneHomeRows.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailOverviewViews.swift",
+            "timetracker/Features/Analytics/AnalyticsMetricListViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
+
+        #expect(chartSource.contains("import Charts"))
+        #expect(chartSource.contains("struct DailyTimeSeriesChart: View"))
+        #expect(chartSource.contains("case grossBars"))
+        #expect(chartSource.contains("case wallBarsAndGrossLine"))
+        #expect(chartSource.contains("BarMark("))
+        #expect(chartSource.contains("point.date"))
+        #expect(chartSource.contains("AxisMarks(values: .stride(by: .day))"))
+        #expect(chartSource.contains("endPadding: trailingAxisClearance"))
+        #expect(chartSource.contains(".automatic(includesZero: true)"))
+        #expect(chartSource.contains("DurationFormatter.spoken"))
+        #expect(homeSource.contains("analyticsDomainStore.dailyBreakdown("))
+        #expect(homeSource.contains(".visibleDeduplicatedByID()"))
+        #expect(homeSource.contains("allSegments") == false)
+        #expect(homeSource.components(separatedBy: "HomeWeeklyGrossTimeSection(").count - 1 == 2)
+        #expect(homeSource.contains("mode: .grossBars"))
+        #expect(homeSource.contains("home.weeklyGross.chart"))
+        #expect(homeSource.contains(".accessibilityElement(children: .contain)"))
+        #expect(homeSource.contains("HomeWeeklyGrossTimeRefreshRequest"))
+        #expect(homeSource.contains("AnalyticsEvaluationCacheKey("))
+        #expect(homeSource.contains("let liveRefreshBucket = needsLiveRefresh"))
+        #expect(homeSource.contains("clockRevision"))
+        #expect(analyticsSource.contains("DailyTimeSeriesChart("))
+        #expect(analyticsSource.contains("mode: .wallBarsAndGrossLine"))
+        #expect(analyticsSource.contains("import Charts") == false)
+        #expect(analyticsSource.contains("BarMark(") == false)
+        #expect(metricSources.components(separatedBy: "AppColors.grossTime").count - 1 == 4)
+        #expect(metricSources.components(separatedBy: "AppColors.wallTime").count - 1 == 4)
     }
 
     @Test @MainActor
@@ -464,12 +747,14 @@ struct HomeUIContractTests {
 
         let nowIndex = try #require(homeSource.range(of: "PhoneNowSection(")?.lowerBound)
         let overviewIndex = try #require(homeSource.range(of: "home.overview.title")?.lowerBound)
+        let weeklyIndex = try #require(homeSource.range(of: "HomeWeeklyGrossTimeSection(")?.lowerBound)
         let quickStartIndex = try #require(homeSource.range(of: "PhoneQuickStartSection(")?.lowerBound)
         let timelineIndex = try #require(homeSource.range(of: "PhoneTimelineSection(")?.lowerBound)
         let forecastIndex = try #require(homeSource.range(of: "PhoneForecastSection(")?.lowerBound)
 
         #expect(nowIndex < overviewIndex)
-        #expect(overviewIndex < quickStartIndex)
+        #expect(overviewIndex < weeklyIndex)
+        #expect(weeklyIndex < quickStartIndex)
         #expect(quickStartIndex < timelineIndex)
         #expect(timelineIndex < forecastIndex)
         #expect(homeSource.contains("TodayHomeContent(store: store)"))
@@ -535,12 +820,14 @@ struct HomeUIContractTests {
 
         let nowIndex = try #require(source.range(of: "ActiveTimersSection(")?.lowerBound)
         let overviewIndex = try #require(source.range(of: "TodayOverviewSection(")?.lowerBound)
+        let weeklyIndex = try #require(source.range(of: "HomeWeeklyGrossTimeSection(")?.lowerBound)
         let quickStartIndex = try #require(source.range(of: "QuickStartSection(")?.lowerBound)
         let timelineIndex = try #require(source.range(of: "TimelineSection(")?.lowerBound)
         let forecastIndex = try #require(source.range(of: "TaskForecastSummarySection(")?.lowerBound)
 
         #expect(nowIndex < overviewIndex)
-        #expect(overviewIndex < quickStartIndex)
+        #expect(overviewIndex < weeklyIndex)
+        #expect(weeklyIndex < quickStartIndex)
         #expect(quickStartIndex < timelineIndex)
         #expect(timelineIndex < forecastIndex)
         #expect(source.contains("TodayHomeContent(store: store, quickStartLimit: 6)"))

@@ -1057,7 +1057,12 @@ struct TaskUIContractTests {
         .map(sourceText)
         .joined(separator: "\n")
         let distribution = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
-        let trends = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift")
+        let trends = try [
+            "timetracker/Features/Analytics/Sections/AnalyticsTrendViews.swift",
+            "timetracker/SharedUI/Components/DailyTimeSeriesChart.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let timeline = try [
             "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
             "timetracker/SharedUI/Components/TimelineChart.swift"
@@ -1074,7 +1079,8 @@ struct TaskUIContractTests {
         #expect(trends.contains("point.wallMinutes"))
         #expect(trends.contains("point.grossMinutes"))
         #expect(trends.contains(".chartForegroundStyleScale"))
-        #expect(trends.contains(".chartLegend(position: .bottom"))
+        #expect(trends.contains(".chartLegend("))
+        #expect(trends.contains("position: .bottom"))
         #expect(timeline.contains("horizontalSizeClass == .compact"))
         #expect(timeline.contains("UIDevice.current.userInterfaceIdiom") == false)
     }

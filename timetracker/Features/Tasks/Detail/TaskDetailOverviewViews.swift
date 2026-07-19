@@ -9,13 +9,13 @@ struct TaskDetailOverviewSection: View {
                 title: AppStrings.grossTime,
                 value: DurationFormatter.compact(snapshot.overview.grossSeconds),
                 systemImage: "square.stack.3d.up",
-                tint: .blue
+                tint: AppColors.grossTime
             )
             TaskDetailValueRow(
                 title: AppStrings.wallTime,
                 value: DurationFormatter.compact(snapshot.overview.wallSeconds),
                 systemImage: "timeline.selection",
-                tint: .green
+                tint: AppColors.wallTime
             )
             TaskDetailValueRow(
                 title: AppStrings.localized("task.detail.direct"),

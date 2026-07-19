@@ -77,6 +77,10 @@ private struct DesktopTodayContent: View {
 
     private var primarySections: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
+            HomeWeeklyGrossTimeSection(
+                store: store,
+                container: .card
+            )
             QuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,

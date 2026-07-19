@@ -42,9 +42,14 @@ struct AppSectionHeader: View {
 struct SectionTitle: View {
     let title: String
     var trailing: String?
+    var trailingTint: Color = .blue
 
     var body: some View {
-        AppSectionHeader(title: title, trailing: trailing)
+        AppSectionHeader(
+            title: title,
+            trailing: trailing,
+            trailingTint: trailingTint
+        )
     }
 }
 

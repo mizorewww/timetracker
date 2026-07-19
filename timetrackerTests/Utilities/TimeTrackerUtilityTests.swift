@@ -124,6 +124,11 @@ struct TimeTrackerUtilityTests {
         #expect(DurationFormatter.compact(seconds, locale: Locale(identifier: "zh_Hans")) == "4小时35分钟")
         #expect(DurationFormatter.compact(seconds, locale: Locale(identifier: "zh_Hant")) == "4小時35分鐘")
         #expect(DurationFormatter.compact(40, locale: Locale(identifier: "en_US")) == "0 min")
+        #expect(DurationFormatter.chart(0, locale: Locale(identifier: "en_US")) == "0 sec")
+        #expect(DurationFormatter.chart(40, locale: Locale(identifier: "en_US")) == "40 sec")
+        #expect(DurationFormatter.chart(65, locale: Locale(identifier: "en_US")) == "1 min")
+        #expect(DurationFormatter.chartAxis(90, locale: Locale(identifier: "en_US")) == "1 min, 30 sec")
+        #expect(DurationFormatter.chartAxis(150, locale: Locale(identifier: "en_US")) == "2 min, 30 sec")
         #expect(DurationFormatter.clock(84) == "01:24")
         #expect(
             DurationFormatter.spoken(65, locale: Locale(identifier: "en_US")) ==

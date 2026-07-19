@@ -13,6 +13,10 @@
 "home.switchTimer" = "切换计时";
 "home.now.title" = "现在";
 "home.overview.title" = "概览";
+"home.weeklyGross.title" = "本周累计时间";
+"home.weeklyGross.footer" = "按天累计所有任务的计时；重叠计时会分别计算。";
+"home.weeklyGross.empty" = "本周还没有计时";
+"home.weeklyGross.emptyDescription" = "开始一个任务后，这里会按天显示累计时间。";
 "action.startTimer" = "开始计时";
 "action.newTask" = "新建任务";
 "action.addTime" = "补录时间";

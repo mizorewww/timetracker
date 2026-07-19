@@ -69,6 +69,20 @@ nonisolated struct TodayMetricsSnapshot: Equatable, Sendable {
     let previousWallSeconds: Int
 }
 
+struct WeeklyGrossTimeSnapshot {
+    let interval: DateInterval
+    let daily: [DailyAnalyticsPoint]
+    let requiresLiveRefresh: Bool
+
+    var totalGrossSeconds: Int {
+        daily.reduce(0) { $0 + $1.grossSeconds }
+    }
+
+    var hasTrackedTime: Bool {
+        daily.contains { $0.grossSeconds > 0 }
+    }
+}
+
 nonisolated enum TodayMetricTrend: Equatable, Sendable {
     case noComparison
     case increased(percent: Int)
@@ -152,6 +166,48 @@ extension TimeTrackerStore {
             wallSeconds: wallSeconds(for: todayIntervals),
             previousGrossSeconds: previousGrossSeconds,
             previousWallSeconds: wallSeconds(for: previousIntervals)
+        )
+    }
+
+    func weeklyGrossTimeSnapshot(
+        now: Date,
+        calendar: Calendar = .current
+    ) -> WeeklyGrossTimeSnapshot {
+        let evaluation = AnalyticsRange.week.evaluation(
+            referenceDate: now,
+            liveNow: now,
+            calendar: calendar
+        )
+        let interval = evaluation.interval
+        guard interval.duration > 0 else {
+            return WeeklyGrossTimeSnapshot(
+                interval: interval,
+                daily: [],
+                requiresLiveRefresh: false
+            )
+        }
+
+        let segments = visibleSegments(
+            overlapping: interval,
+            evaluatedAt: interval.end,
+            clockReference: evaluation.clockReference
+        )
+        .visibleDeduplicatedByID()
+        let daily = analyticsDomainStore.dailyBreakdown(
+            segments: segments,
+            range: .week,
+            interval: interval,
+            evaluatedAt: evaluation.cutoff,
+            calendar: calendar
+        )
+        let requiresLiveRefresh = segments.contains { segment in
+            guard segment.startedAt < interval.end else { return false }
+            return segment.endedAt.map { $0 > evaluation.cutoff } ?? true
+        }
+        return WeeklyGrossTimeSnapshot(
+            interval: interval,
+            daily: daily,
+            requiresLiveRefresh: requiresLiveRefresh
         )
     }
 }

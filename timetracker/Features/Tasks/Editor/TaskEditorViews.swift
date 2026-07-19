@@ -191,9 +191,10 @@ struct TaskEditorPanel: View {
     }
 
     private var orderedChecklistIndices: [Int] {
-        let indices = draft.checklistItems.indices
-        return indices.filter { !draft.checklistItems[$0].isCompleted }
-            + indices.filter { draft.checklistItems[$0].isCompleted }
+        ChecklistOrderingService().completionGrouped(
+            Array(draft.checklistItems.indices),
+            isCompleted: { draft.checklistItems[$0].isCompleted }
+        )
     }
 
     private func moveChecklistItems(fromOffsets sourceOffsets: IndexSet, toOffset destination: Int) {

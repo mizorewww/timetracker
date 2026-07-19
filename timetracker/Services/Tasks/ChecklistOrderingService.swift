@@ -6,6 +6,25 @@ struct ChecklistOrderingElement<ID: Hashable>: Equatable {
 }
 
 struct ChecklistOrderingService {
+    func completionGrouped<Element>(
+        _ elements: [Element],
+        isCompleted: (Element) -> Bool
+    ) -> [Element] {
+        var incomplete: [Element] = []
+        var completed: [Element] = []
+        incomplete.reserveCapacity(elements.count)
+        completed.reserveCapacity(elements.count)
+
+        for element in elements {
+            if isCompleted(element) {
+                completed.append(element)
+            } else {
+                incomplete.append(element)
+            }
+        }
+        return incomplete + completed
+    }
+
     func reorderedIDs<ID: Hashable>(
         elements: [ChecklistOrderingElement<ID>],
         sourceOffsets: IndexSet,

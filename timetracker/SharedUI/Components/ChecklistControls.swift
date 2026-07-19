@@ -53,25 +53,32 @@ struct ChecklistCompletionMark: View {
     let isCompleted: Bool
     var colorHex: String = ChecklistVisualSanitizer.defaultColor
     var visualSize: CGFloat = 30
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let sanitizedColor = ChecklistVisualSanitizer.sanitizedColor(colorHex)
         ZStack {
-            if isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: visualSize, weight: .regular))
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(
-                        TaskColorPalette.contrastingForegroundColor(for: sanitizedColor),
-                        Color(hex: sanitizedColor) ?? .green
-                    )
-            } else {
-                Circle()
-                    .strokeBorder(.secondary.opacity(0.55), lineWidth: 1.6)
-            }
+            Circle()
+                .strokeBorder(.secondary.opacity(0.55), lineWidth: 1.6)
+                .opacity(isCompleted ? 0 : 1)
+                .scaleEffect(isCompleted ? 0.76 : 1)
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: visualSize, weight: .regular))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(
+                    TaskColorPalette.contrastingForegroundColor(for: sanitizedColor),
+                    Color(hex: sanitizedColor) ?? .green
+                )
+                .opacity(isCompleted ? 1 : 0)
+                .scaleEffect(isCompleted ? 1 : 0.76)
         }
         .frame(width: visualSize, height: visualSize)
         .contentShape(Circle())
+        .animation(
+            reduceMotion ? nil : .snappy(duration: 0.22),
+            value: isCompleted
+        )
         .accessibilityHidden(true)
     }
 }

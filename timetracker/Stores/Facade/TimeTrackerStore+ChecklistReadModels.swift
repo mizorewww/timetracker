@@ -5,6 +5,13 @@ extension TimeTrackerStore {
         checklistByTaskID[taskID] ?? []
     }
 
+    func checklistItemsForDisplay(for taskID: UUID) -> [ChecklistItem] {
+        ChecklistOrderingService().completionGrouped(
+            checklistItems(for: taskID),
+            isCompleted: \.isCompleted
+        )
+    }
+
     func checklistVisual(for item: ChecklistItem) -> ChecklistItemVisual? {
         checklistVisualByItemID[item.id]
     }

@@ -3,9 +3,14 @@ import SwiftUI
 struct TaskDetailChecklistSection: View {
     let store: TimeTrackerStore
     let task: TaskNode
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var checklistItems: [ChecklistItem] {
-        store.checklistItems(for: task.id)
+        store.checklistItemsForDisplay(for: task.id)
+    }
+
+    private var checklistOrder: [UUID] {
+        checklistItems.map(\.id)
     }
 
     @ViewBuilder
@@ -28,6 +33,10 @@ struct TaskDetailChecklistSection: View {
                     progress: store.checklistProgress(for: task.id).label
                 )
             }
+            .animation(
+                reduceMotion ? nil : .snappy(duration: 0.28),
+                value: checklistOrder
+            )
         }
     }
 }

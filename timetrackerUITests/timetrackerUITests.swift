@@ -535,6 +535,42 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testCompletingChecklistItemMovesItBelowIncompleteWork() throws {
+        #if os(macOS)
+        throw XCTSkip("Checklist movement is visually verified in the compact iPhone layout.")
+        #else
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Design macOS UI"
+        )
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        let incomplete = app.buttons["Polish timeline"].firstMatch
+        let completedFirst = app.buttons["Align task detail"].firstMatch
+        let completedSecond = app.buttons["Tighten sidebar"].firstMatch
+        scrollUntilHittable(incomplete, direction: .up, in: app)
+
+        XCTAssertTrue(incomplete.waitForExistence(timeout: 5) && incomplete.isHittable)
+        XCTAssertTrue(completedFirst.waitForExistence(timeout: 3))
+        XCTAssertTrue(completedSecond.waitForExistence(timeout: 3))
+        XCTAssertLessThan(incomplete.frame.minY, completedFirst.frame.minY)
+        XCTAssertLessThan(completedFirst.frame.minY, completedSecond.frame.minY)
+        try capture("iphone-checklist-incomplete-before-completed", app: app)
+
+        activate(incomplete)
+
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                completedSecond.frame.minY < incomplete.frame.minY
+            },
+            "The newly completed checklist item must move to the bottom."
+        )
+        try capture("iphone-checklist-completed-moved-to-bottom", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTaskDetailSystemBackPreservesExpandedTaskTree() throws {
         #if os(macOS)
         throw XCTSkip("This route-preservation screenshot runs on iPhone and iPad simulators.")

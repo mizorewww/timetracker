@@ -671,6 +671,66 @@ struct PreferencesChecklistForecastTests {
         #expect(service.reorderedIDs(elements: elements, sourceOffsets: IndexSet(integer: 2), destination: 4) == [openA, openB, doneB, doneA])
     }
 
+    @Test
+    func checklistCompletionGroupingPreservesManualOrderWithinEachState() {
+        let service = ChecklistOrderingService()
+        let elements = [
+            ChecklistOrderingElement(id: "Done A", isCompleted: true),
+            ChecklistOrderingElement(id: "Open A", isCompleted: false),
+            ChecklistOrderingElement(id: "Done B", isCompleted: true),
+            ChecklistOrderingElement(id: "Open B", isCompleted: false)
+        ]
+
+        let grouped = service.completionGrouped(
+            elements,
+            isCompleted: \.isCompleted
+        )
+
+        #expect(grouped.map(\.id) == ["Open A", "Open B", "Done A", "Done B"])
+    }
+
+    @Test @MainActor
+    func checklistCompletionGroupingDoesNotRewriteCanonicalOrderOrSiblingMutations() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "test")
+            .createTask(
+                title: "Display grouping",
+                parentID: nil,
+                colorHex: nil,
+                iconName: nil
+            )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        for title in ["A", "B", "C"] {
+            #expect(store.addChecklistItem(taskID: task.id, title: title))
+        }
+
+        let before = store.checklistItems(for: task.id)
+        let itemA = try #require(before.first { $0.title == "A" })
+        let sortOrderByID = Dictionary(uniqueKeysWithValues: before.map {
+            ($0.id, $0.sortOrder)
+        })
+        let siblingMutationIDByID = Dictionary(uniqueKeysWithValues: before
+            .filter { $0.id != itemA.id }
+            .map { ($0.id, $0.clientMutationID) })
+
+        #expect(store.toggleChecklistItem(itemA))
+
+        let completed = store.checklistItems(for: task.id)
+        #expect(completed.map(\.title) == ["A", "B", "C"])
+        #expect(Dictionary(uniqueKeysWithValues: completed.map {
+            ($0.id, $0.sortOrder)
+        }) == sortOrderByID)
+        #expect(Dictionary(uniqueKeysWithValues: completed
+            .filter { $0.id != itemA.id }
+            .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
+        #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["B", "C", "A"])
+
+        let completedA = try #require(completed.first { $0.id == itemA.id })
+        #expect(store.toggleChecklistItem(completedA))
+        #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["A", "B", "C"])
+    }
+
     @Test @MainActor
     func checklistReorderPersistsWithinCompletionGroups() throws {
         let context = try makeTestContext()

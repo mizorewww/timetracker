@@ -7,6 +7,7 @@ struct TaskChecklistEditorSection: View {
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     @State private var isSorting = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Section {
@@ -26,6 +27,10 @@ struct TaskChecklistEditorSection: View {
             Text(.app("editor.checklist.footer"))
         }
         .checklistSortingMode(isSorting)
+        .animation(
+            reduceMotion ? nil : .snappy(duration: 0.28),
+            value: rowPlacements
+        )
     }
 
     @ViewBuilder

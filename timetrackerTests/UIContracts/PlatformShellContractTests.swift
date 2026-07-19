@@ -151,6 +151,21 @@ struct PlatformShellContractTests {
     }
 
     @Test
+    func macSettingsKeepsItsCategorySidebarVisibleWithoutAToggle() throws {
+        let source = try sourceText(
+            "timetracker/Features/Settings/SettingsViews.swift"
+        )
+
+        #expect(source.contains(
+            "NavigationSplitView(columnVisibility: fixedSettingsColumnVisibility)"
+        ))
+        #expect(source.contains("private var fixedSettingsColumnVisibility"))
+        #expect(source.contains("get: { .all }"))
+        #expect(source.contains("set: { _ in }"))
+        #expect(source.contains(".toolbar(removing: .sidebarToggle)"))
+    }
+
+    @Test
     func macCommandsExposeCreationTrackingNavigationAndRefreshShortcuts() throws {
         let source = try sourceText("timetracker/App/TimeTrackerCommands.swift")
 

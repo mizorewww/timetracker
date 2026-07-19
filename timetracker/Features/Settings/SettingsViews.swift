@@ -34,11 +34,13 @@ struct SettingsView: View {
     @ViewBuilder
     private var settingsNavigation: some View {
         #if os(macOS)
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: fixedSettingsColumnVisibility) {
             List(SettingsCategory.allCases, selection: $selectedCategory) { category in
                 SettingsCategoryRow(category: category)
                     .tag(category)
+                    .accessibilityIdentifier("settings.category.\(category.rawValue)")
             }
+            .toolbar(removing: .sidebarToggle)
             .navigationTitle(AppStrings.settings)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
         } detail: {
@@ -61,6 +63,15 @@ struct SettingsView: View {
         .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
         #endif
     }
+
+    #if os(macOS)
+    private var fixedSettingsColumnVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { .all },
+            set: { _ in }
+        )
+    }
+    #endif
 
     private func settingsForm(for category: SettingsCategory) -> some View {
         Form {

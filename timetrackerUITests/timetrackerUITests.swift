@@ -36,6 +36,18 @@ final class timetrackerUITests: XCTestCase {
 
         openSettings(in: app)
         XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 3))
+        #if os(macOS)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.category.general"]
+                .waitForExistence(timeout: 3)
+        )
+        let settingsWindow = app.windows.allElementsBoundByIndex.first { window in
+            window.descendants(matching: .any)["settings.category.general"].exists
+        }
+        XCTAssertNotNil(settingsWindow)
+        XCTAssertFalse(settingsWindow?.buttons["Show Sidebar"].exists == true)
+        XCTAssertFalse(settingsWindow?.buttons["Hide Sidebar"].exists == true)
+        #endif
     }
 
     @MainActor

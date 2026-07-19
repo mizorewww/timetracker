@@ -9,12 +9,14 @@ final class TimeTrackerStore {
     let llmCredentialStore: any LLMCredentialStoring
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
+    let appleHealthDataReader: any AppleHealthDataReading
     let writeAuthorization: StoreWriteAuthorization
 
     init(
         llmCredentialStore: (any LLMCredentialStoring)? = nil,
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
+        appleHealthDataReader: (any AppleHealthDataReading)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         syncConflictService: SyncConflictService? = nil
     ) {
@@ -22,6 +24,8 @@ final class TimeTrackerStore {
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
         self.checklistVisualSuggestionService =
             checklistVisualSuggestionService ?? LLMChecklistVisualSuggestionService()
+        self.appleHealthDataReader =
+            appleHealthDataReader ?? AppleHealthDataReaderFactory.platformDefault()
         self.writeAuthorization = writeAuthorization
         self.syncConflictService = syncConflictService ?? SyncConflictService()
     }

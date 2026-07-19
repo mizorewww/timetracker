@@ -1,2 +1,3 @@
 CFBundleDisplayName = "时间追踪";
 CFBundleName = "时间追踪";
+NSHealthShareUsageDescription = "时间追踪会从“Apple 健康”读取运动和睡眠数据，并显示在时间线上。此数据不会复制到时间追踪数据库或 iCloud。";

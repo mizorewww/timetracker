@@ -1,2 +1,3 @@
 CFBundleDisplayName = "時間追蹤";
 CFBundleName = "時間追蹤";
+NSHealthShareUsageDescription = "時間追蹤會從「Apple 健康」讀取運動與睡眠資料，並顯示在時間軸上。這些資料不會複製到時間追蹤資料庫或 iCloud。";

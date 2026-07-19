@@ -1,2 +1,3 @@
 CFBundleDisplayName = "Time Tracker";
 CFBundleName = "Time Tracker";
+NSHealthShareUsageDescription = "Time Tracker reads workouts and sleep from Apple Health to show them on your timeline. It does not copy this data into the Time Tracker database or iCloud.";

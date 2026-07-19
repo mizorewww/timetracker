@@ -36,7 +36,6 @@ run_xcodebuild() {
     -configuration "$CONFIGURATION" \
     -derivedDataPath "$DERIVED_DATA" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
-    CODE_SIGN_STYLE=Automatic \
     -allowProvisioningUpdates \
     -allowProvisioningDeviceRegistration \
     "$@"

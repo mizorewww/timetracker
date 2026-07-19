@@ -21,6 +21,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Time Tracker reads workouts and sleep from Apple Health to show them on your timeline. It does not copy this data into the Time Tracker database or iCloud.</string>
 	<key>TimeTrackerAutomaticDemoDataMode</key>
 	<string>$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)</string>
 	<key>UIBackgroundModes</key>

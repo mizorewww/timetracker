@@ -1,0 +1,173 @@
+import Foundation
+
+@MainActor
+protocol AppleHealthDataReading: AnyObject {
+    var isHealthDataAvailable: Bool { get }
+
+    /// A successful return means the system processed the request. HealthKit
+    /// intentionally does not reveal whether read permission was granted.
+    func requestReadAuthorization() async throws
+
+    func samples(overlapping interval: DateInterval) async throws -> AppleHealthSampleBatch
+}
+
+@MainActor
+final class UnavailableAppleHealthDataReader: AppleHealthDataReading {
+    let isHealthDataAvailable = false
+
+    func requestReadAuthorization() async throws {
+        throw AppleHealthReadError.unavailable
+    }
+
+    func samples(overlapping interval: DateInterval) async throws -> AppleHealthSampleBatch {
+        _ = interval
+        throw AppleHealthReadError.unavailable
+    }
+}
+
+@MainActor
+enum AppleHealthDataReaderFactory {
+    private static let sharedReader: any AppleHealthDataReading = {
+        #if os(iOS) && canImport(HealthKit)
+        HealthKitAppleHealthDataReader()
+        #else
+        UnavailableAppleHealthDataReader()
+        #endif
+    }()
+
+    static func platformDefault() -> any AppleHealthDataReading {
+        sharedReader
+    }
+}
+
+#if os(iOS) && canImport(HealthKit)
+import HealthKit
+
+@MainActor
+final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
+    private let healthStore: HKHealthStore
+
+    init(healthStore: HKHealthStore = HKHealthStore()) {
+        self.healthStore = healthStore
+    }
+
+    var isHealthDataAvailable: Bool {
+        HKHealthStore.isHealthDataAvailable()
+    }
+
+    func requestReadAuthorization() async throws {
+        guard isHealthDataAvailable else {
+            throw AppleHealthReadError.unavailable
+        }
+        let types = try readTypes()
+        try await healthStore.requestAuthorization(toShare: [], read: types)
+    }
+
+    func samples(overlapping interval: DateInterval) async throws -> AppleHealthSampleBatch {
+        guard isHealthDataAvailable else {
+            throw AppleHealthReadError.unavailable
+        }
+        guard interval.duration > 0 else { return .empty }
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: interval.start,
+            end: interval.end,
+            options: []
+        )
+        let workouts = try await workoutSamples(predicate: predicate)
+        let sleep = try await sleepSamples(predicate: predicate)
+        return AppleHealthSampleBatch(workouts: workouts, sleep: sleep)
+    }
+
+    private func readTypes() throws -> Set<HKObjectType> {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            throw AppleHealthReadError.requiredTypesUnavailable
+        }
+        return [HKObjectType.workoutType(), sleepType]
+    }
+
+    private func workoutSamples(predicate: NSPredicate) async throws -> [AppleHealthWorkoutSample] {
+        let descriptor = HKSampleQueryDescriptor<HKWorkout>(
+            predicates: [.workout(predicate)],
+            sortDescriptors: []
+        )
+        return try await descriptor.result(for: healthStore)
+            .map { workout in
+                AppleHealthWorkoutSample(
+                    id: workout.uuid,
+                    kind: Self.workoutKind(for: workout.workoutActivityType),
+                    startedAt: workout.startDate,
+                    endedAt: workout.endDate,
+                    sourceBundleIdentifier: workout.sourceRevision.source.bundleIdentifier
+                )
+            }
+    }
+
+    private func sleepSamples(predicate: NSPredicate) async throws -> [AppleHealthSleepSample] {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            throw AppleHealthReadError.requiredTypesUnavailable
+        }
+        let descriptor = HKSampleQueryDescriptor<HKCategorySample>(
+            predicates: [.categorySample(type: sleepType, predicate: predicate)],
+            sortDescriptors: []
+        )
+        return try await descriptor.result(for: healthStore)
+            .compactMap { sample in
+                guard let stage = Self.sleepStage(for: sample.value) else { return nil }
+                return AppleHealthSleepSample(
+                    id: sample.uuid,
+                    stage: stage,
+                    startedAt: sample.startDate,
+                    endedAt: sample.endDate,
+                    sourceBundleIdentifier: sample.sourceRevision.source.bundleIdentifier
+                )
+            }
+    }
+
+    static func workoutKind(for activity: HKWorkoutActivityType) -> AppleHealthWorkoutKind {
+        switch activity {
+        case .walking:
+            .walking
+        case .running:
+            .running
+        case .cycling:
+            .cycling
+        case .swimming:
+            .swimming
+        case .traditionalStrengthTraining, .functionalStrengthTraining:
+            .strengthTraining
+        case .highIntensityIntervalTraining:
+            .highIntensityIntervalTraining
+        case .yoga:
+            .yoga
+        case .hiking:
+            .hiking
+        case .rowing:
+            .rowing
+        case .dance, .socialDance, .cardioDance:
+            .dance
+        default:
+            .other
+        }
+    }
+
+    static func sleepStage(for rawValue: Int) -> AppleHealthSleepStage? {
+        switch rawValue {
+        case HKCategoryValueSleepAnalysis.inBed.rawValue:
+            .inBed
+        case HKCategoryValueSleepAnalysis.awake.rawValue:
+            .awake
+        case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
+            .asleepUnspecified
+        case HKCategoryValueSleepAnalysis.asleepCore.rawValue:
+            .asleepCore
+        case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
+            .asleepDeep
+        case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+            .asleepREM
+        default:
+            nil
+        }
+    }
+}
+#endif

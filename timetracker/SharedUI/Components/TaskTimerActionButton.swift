@@ -35,7 +35,7 @@ struct TaskTimerActionButton: View {
         .controlSize(platformControlSize)
         .buttonStyle(.bordered)
         .buttonBorderShape(usesIconOnly ? .circle : .capsule)
-        .tint(activeSegment == nil ? taskColor : .red)
+        .tint(actionColor)
         .frame(
             width: usesIconOnly ? iconControlDimension : nil,
             height: usesIconOnly ? iconControlDimension : nil
@@ -53,6 +53,7 @@ struct TaskTimerActionButton: View {
         if usesIconOnly {
             Image(systemName: actionSystemImage)
                 .font(.callout.weight(.semibold))
+                .foregroundStyle(actionColor)
                 .frame(
                     width: minimumLabelDimension,
                     height: minimumLabelDimension,
@@ -60,11 +61,17 @@ struct TaskTimerActionButton: View {
                 )
         } else {
             Label(actionTitle, systemImage: actionSystemImage)
+                .labelStyle(.titleAndIcon)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
                 .font(.callout.weight(.semibold))
+                .foregroundStyle(actionColor)
                 .frame(minHeight: minimumLabelDimension)
         }
+    }
+
+    private var actionColor: Color {
+        activeSegment == nil ? taskColor : .red
     }
 
     private var accessibilityLabel: String {

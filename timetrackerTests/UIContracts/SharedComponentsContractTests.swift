@@ -80,7 +80,12 @@ struct SharedComponentsContractTests {
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
         ].map(sourceText).joined(separator: "\n")
         let homeTimelineSource = try sourceText("timetracker/Features/Home/Sections/HomeTimelineViews.swift")
-        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
+        let taskDetailSource = try [
+            "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
 
         #expect(sharedSource.contains("struct AppActionLabel"))
         #expect(sharedSource.contains(".lineLimit(2)"))
@@ -95,9 +100,11 @@ struct SharedComponentsContractTests {
         #expect(homeTimelineSource.contains("        .accessibilityIdentifier(\"home.activeTimers\")\n    }\n}\n\nstruct TimelineSection") == false)
         #expect(homeSource.contains("home.switchTimer"))
         #expect(homeSource.contains("home.newTask") == false)
-        #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.startTimer"))
-        #expect(taskDetailSource.contains("AppActionLabel(title: AppStrings.addTime"))
-        #expect(taskDetailSource.contains(".accessibilityIdentifier(\"task.detail.actions\")"))
+        #expect(taskDetailSource.contains("TaskTimerActionButton("))
+        #expect(taskDetailSource.contains("store.performTimerPickerSelection(task)"))
+        #expect(taskDetailSource.contains("presentationRouter.presentManualTime(taskID: task.id"))
+        #expect(taskDetailSource.contains("accessibilityIdentifier: \"task.detail.timer\""))
+        #expect(taskDetailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
     }
 
     @Test
@@ -285,6 +292,8 @@ struct SharedComponentsContractTests {
         #expect(timerAction.contains(iconControlDimensionSource))
         #expect(timerAction.contains(".controlSize(platformControlSize)"))
         #expect(timerAction.contains("private var platformControlSize: ControlSize"))
+        #expect(timerAction.contains(".labelStyle(.titleAndIcon)"))
+        #expect(timerAction.contains(".foregroundStyle(actionColor)"))
         #expect(timerAction.contains("timer.action.stopTaskFormat"))
         #expect(timerAction.contains("timer.task.stopHint"))
         #expect(home.contains("HomeTimerTaskAction") == false)

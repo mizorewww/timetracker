@@ -6,6 +6,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
     let isEditing: Bool
     let beginEditing: (TaskNode) -> Void
     let preservingDestination: TimeTrackerStore.DesktopDestination
+    @Environment(AppPresentationRouter.self) private var presentationRouter
 
     func body(content: Content) -> some View {
         content
@@ -16,20 +17,22 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             .toolbar {
                 if !isEditing, let task = store.task(for: taskID) {
                     ToolbarItemGroup(placement: .primaryAction) {
-                        editButton(task)
+                        if store.isTaskAvailableForTracking(task) {
+                            addTimeButton(task)
+                        }
                         moreMenu(task)
                     }
                 }
             }
     }
 
-    private func editButton(_ task: TaskNode) -> some View {
+    private func addTimeButton(_ task: TaskNode) -> some View {
         Button {
-            beginEditing(task)
+            presentationRouter.presentManualTime(taskID: task.id, using: store)
         } label: {
-            Label(AppStrings.localized("task.detail.editor.expand"), systemImage: "pencil")
+            Label(AppStrings.addTime, systemImage: "calendar.badge.plus")
         }
-        .accessibilityIdentifier("task.detail.edit")
+        .accessibilityIdentifier("task.detail.addTime")
     }
 
     private func moreMenu(_ task: TaskNode) -> some View {

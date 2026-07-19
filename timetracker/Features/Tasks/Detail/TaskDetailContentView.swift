@@ -7,10 +7,6 @@ struct TaskDetailList: View {
     @Binding var range: AnalyticsRange
     let isRefreshing: Bool
 
-    private var activeSegment: TimeSegment? {
-        store.activeSegment(for: task.id)
-    }
-
     var body: some View {
         List {
             Section {
@@ -18,14 +14,9 @@ struct TaskDetailList: View {
                     store: store,
                     task: task
                 )
-                .accessibilityIdentifier("task.detail.identity")
             }
 
-            TaskDetailActionsView(
-                store: store,
-                task: task,
-                activeSegment: activeSegment
-            )
+            TaskDetailTrackingAvailabilitySection(store: store, task: task)
 
             TaskDetailChecklistSection(store: store, task: task)
             TaskDetailForecastSection(store: store, task: task)

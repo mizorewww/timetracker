@@ -520,7 +520,10 @@ final class timetrackerUITests: XCTestCase {
             "task.detail.identity"
         ].firstMatch
 
-        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            detail.waitForExistence(timeout: 15),
+            "The audited detail route must finish loading after a cold simulator launch."
+        )
         XCTAssertTrue(identity.waitForExistence(timeout: 5))
         XCTAssertTrue(
             identity.label.localizedCaseInsensitiveContains("Read Apple HIG"),
@@ -532,6 +535,95 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(identity.frame.minY, detail.frame.minY)
         XCTAssertLessThanOrEqual(identity.frame.maxY, detail.frame.maxY)
         try capture("task-detail-visible-title", app: app)
+    }
+
+    @MainActor
+    func testTaskDetailPromotesTimerAndManualTimeActions() throws {
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG"
+        )
+        let detail = app.descendants(matching: .any)["task.detail"].firstMatch
+        let identity = app.descendants(matching: .any)["task.detail.identity"].firstMatch
+        let timer = app.buttons["task.detail.timer"].firstMatch
+        let addTime = app.buttons["task.detail.addTime"].firstMatch
+        let more = app.descendants(matching: .any)["task.detail.more"].firstMatch
+
+        XCTAssertTrue(
+            detail.waitForExistence(timeout: 15),
+            "The audited detail route must finish loading after a cold simulator launch."
+        )
+        XCTAssertTrue(identity.waitForExistence(timeout: 5))
+        XCTAssertTrue(timer.waitForExistence(timeout: 5) && timer.isHittable)
+        XCTAssertTrue(addTime.waitForExistence(timeout: 5) && addTime.isHittable)
+        XCTAssertTrue(more.waitForExistence(timeout: 5) && more.isHittable)
+        XCTAssertEqual(timer.label, "Stop Read Apple HIG")
+        XCTAssertFalse(app.descendants(matching: .any)["task.detail.actions"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["task.detail.edit"].exists)
+
+        XCTAssertLessThan(identity.frame.maxX, timer.frame.minX)
+        XCTAssertEqual(identity.frame.midY, timer.frame.midY, accuracy: 3)
+        #if os(iOS)
+        let usesIPadShell = app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1)
+        XCTAssertGreaterThanOrEqual(timer.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(timer.frame.height, 44)
+        if usesIPadShell {
+            XCTAssertGreaterThan(
+                timer.frame.width,
+                88,
+                "iPad must keep the visible Start or Stop title instead of collapsing to the phone icon-only control."
+            )
+        }
+        #else
+        XCTAssertGreaterThanOrEqual(timer.frame.width, 28)
+        XCTAssertGreaterThanOrEqual(timer.frame.height, 28)
+        #endif
+        XCTAssertEqual(addTime.frame.midY, more.frame.midY, accuracy: 2)
+        XCTAssertLessThan(addTime.frame.minX, more.frame.minX)
+        XCTAssertLessThanOrEqual(
+            addTime.frame.maxY,
+            identity.frame.minY + 2,
+            "The toolbar action must remain above the identity card, allowing for platform pixel rounding."
+        )
+
+        #if os(macOS)
+        try capture("mac-task-detail-top-actions", app: app)
+        #else
+        try capture(
+            usesIPadShell
+                ? "ipad-task-detail-top-actions"
+                : "iphone-task-detail-top-actions",
+            app: app
+        )
+        #endif
+
+        activate(timer)
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                timer.exists && timer.label == "Start Read Apple HIG"
+            },
+            "Stopping from the identity card must leave the shared Start action in place."
+        )
+
+        activate(addTime)
+        let manualTimeNote = app.descendants(matching: .any)["manualTime.note"].firstMatch
+        XCTAssertTrue(manualTimeNote.waitForExistence(timeout: 5))
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 3) && cancel.isHittable)
+        activate(cancel)
+        XCTAssertTrue(manualTimeNote.waitForNonExistence(timeout: 5))
+
+        XCTAssertTrue(timer.waitForExistence(timeout: 3) && timer.isHittable)
+        activate(timer)
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                timer.exists && timer.label == "Stop Read Apple HIG"
+            },
+            "Starting from the identity card must restore the shared Stop action."
+        )
     }
 
     @MainActor

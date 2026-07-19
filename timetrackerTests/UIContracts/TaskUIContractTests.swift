@@ -133,7 +133,7 @@ struct TaskUIContractTests {
         #expect(source.contains("workedSeconds: presentation.workedSeconds"))
         #expect(source.contains("isRunning: presentation.isRunning"))
         #expect(source.contains("showsNavigationChevron: showsNavigationChevron"))
-        #expect(source.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(source.contains("primaryLineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 2"))
         #expect(source.contains("TaskRunningIndicator()"))
         #expect(source.contains("Image(systemName: \"chevron.right\")"))
         #expect(source.contains("TaskProgressLine(") == false)
@@ -143,7 +143,7 @@ struct TaskUIContractTests {
     @Test
     func taskActionsRespectArchivedAndRunningSubtreeState() throws {
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
-        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
+        let availabilitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift")
         let identitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift")
 
         #expect(actionSource.contains("store.isTaskAvailableForTracking(task)"))
@@ -151,11 +151,14 @@ struct TaskUIContractTests {
         #expect(actionSource.contains("task.action.archive.stopFirst"))
         #expect(actionSource.contains("if let activeSegment"))
         #expect(actionSource.contains("store.stop(segment: activeSegment)"))
-        #expect(detailSource.contains("task.detail.trackingUnavailable"))
-        #expect(detailSource.contains("task.archived.trackingUnavailable"))
+        #expect(availabilitySource.contains("task.detail.trackingUnavailable"))
+        #expect(availabilitySource.contains("task.archived.trackingUnavailable"))
         #expect(identitySource.contains("RunningStatusBadge()") == false)
-        #expect(detailSource.contains("AppStrings.localized(\"timer.action.stop\")"))
-        #expect(identitySource.contains("isTaskAvailableForTracking") == false)
+        #expect(identitySource.contains("TaskTimerActionButton("))
+        #expect(identitySource.contains("store.isTaskAvailableForTracking(task)"))
+        #expect(identitySource.contains("store.stop(segment: activeSegment)"))
+        #expect(identitySource.contains("store.performTimerPickerSelection(task)"))
+        #expect(identitySource.contains("UIDevice.current.userInterfaceIdiom == .phone ? .iconOnly : .titleAndIcon"))
         #expect(identitySource.contains("TaskStatusBadge") == false)
     }
 
@@ -164,7 +167,7 @@ struct TaskUIContractTests {
         let readModels = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift")
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
-        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift")
+        let detailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift")
         let editorSource = try taskEditorFeatureSource()
         let appIntentSource = try sourceText("timetracker/AppIntents/TimeTrackerAppIntents.swift")
         let modelSource = try sourceText("timetracker/Models/TaskModels.swift")
@@ -267,7 +270,7 @@ struct TaskUIContractTests {
         #expect(rowSource.contains("RunningStatusBadge()") == false)
         #expect(rowSource.contains("TaskRunningIndicator()"))
         #expect(rowSource.contains("components.append(AppStrings.running)"))
-        #expect(rowSource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(rowSource.contains("primaryLineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 2"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.disclosure.\\(task.id.uuidString)\")"))
 
@@ -277,12 +280,12 @@ struct TaskUIContractTests {
         #expect(categorySource.contains(".frame(width: 18)") == false)
         #expect(categorySource.contains(".accessibilityIdentifier(\"tasks.category.actions.\\(section.id)\")"))
 
-        #expect(detailSource.contains("private var actionLayout"))
         #expect(detailSource.contains("if dynamicTypeSize.isAccessibilitySize"))
+        #expect(detailSource.contains("TaskTimerActionButton("))
         #expect(detailSource.contains("private struct TaskDetailChecklistHeader"))
         #expect(detailSource.contains("private struct TaskDetailForecastValue"))
         #expect(detailSource.contains(".pickerStyle(.menu)"))
-        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.actions\")"))
+        #expect(detailSource.contains("accessibilityIdentifier: \"task.detail.timer\""))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.identity\")"))
     }
 
@@ -474,7 +477,7 @@ struct TaskUIContractTests {
         #expect(desktopTasksCase.contains("TaskDetailView") == false)
         #expect(iosRootSource.contains("TasksNavigationView(store: store)"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
-        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
+        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
         #expect(detailSource.contains("TaskEditorPanel("))
         #expect(detailSource.contains("editorDraft = store.editorDraft(for: task)"))
         #expect(detailSource.contains("presentationRouter.presentEditTask") == false)
@@ -516,11 +519,11 @@ struct TaskUIContractTests {
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.identity\")"))
-        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.actions\")"))
+        #expect(detailSource.contains("accessibilityIdentifier: \"task.detail.timer\""))
+        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.summary\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.forecast\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.analysis\")"))
-        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
         #expect(rootSource.contains("@State private var editorDraft: TaskEditorDraft?"))
         #expect(rootSource.contains("TaskEditorPanel("))
         #expect(rootSource.contains("TimelineView") == false)
@@ -529,7 +532,7 @@ struct TaskUIContractTests {
         #expect(rootSource.contains("snapshot = resolvedSnapshot"))
         #expect(rootSource.contains("loadedRequest = request"))
         #expect(rootSource.contains("range = selectedRange"))
-        #expect(detailSource.contains("TaskDetailActionsView("))
+        #expect(detailSource.contains("TaskDetailTrackingAvailabilitySection("))
         #expect(detailSource.contains("task.detail.analyticsLoading"))
         #expect(detailSource.contains("task.detail.analysis.range"))
         #expect(detailSource.contains(".contentMargins(.bottom, 16, for: .scrollContent)"))
@@ -551,7 +554,7 @@ struct TaskUIContractTests {
         #expect(detailSource.contains("TaskStatusBadge") == false)
         #expect(detailSource.contains("task.status") == false)
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.identity\")"))
-        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.edit\")"))
+        #expect(detailSource.contains("accessibilityIdentifier: \"task.detail.timer\""))
         #expect(editorSource.contains("TaskStatusPicker(") == false)
         #expect(editorSource.contains("draft.status") == false)
         #expect(editorSource.contains("TaskDetailStatusSelector") == false)
@@ -954,6 +957,8 @@ struct TaskUIContractTests {
         ).first ?? actionSource
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.more\")"))
+        #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
+        #expect(detailSource.contains("presentationRouter.presentManualTime(taskID: task.id"))
         #expect(detailSource.contains("TaskContextMenu("))
         #expect(detailSource.contains("editTask: { beginEditing(task) }"))
         #expect(detailSource.contains("task.delete.confirm") == false)
@@ -1137,7 +1142,7 @@ struct TaskUIContractTests {
         try [
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift",
-            "timetracker/Features/Tasks/Detail/TaskDetailActionsView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailChecklistViews.swift",

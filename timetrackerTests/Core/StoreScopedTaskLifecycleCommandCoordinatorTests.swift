@@ -65,6 +65,188 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     }
 
     @Test
+    func unarchiveClearsEveryLegacyArchiveShapeWithoutRevivingStatusSemantics() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let canonical = try repository.createTask(
+            title: "Canonical archive",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let rawOnly = try repository.createTask(
+            title: "Raw-only archive",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let timestampOnly = try repository.createTask(
+            title: "Timestamp-only archive",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let active = try repository.createTask(
+            title: "Already active",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let deletedArchive = try repository.createTask(
+            title: "Historical deletion",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        canonical.statusRaw = LegacyTaskStatusRaw.archived
+        canonical.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        rawOnly.statusRaw = LegacyTaskStatusRaw.archived
+        rawOnly.archivedAt = nil
+        timestampOnly.statusRaw = LegacyTaskStatusRaw.completed
+        timestampOnly.archivedAt = Date(timeIntervalSinceReferenceDate: 200)
+        deletedArchive.archivedAt = Date(timeIntervalSinceReferenceDate: 300)
+        deletedArchive.deletedAt = Date(timeIntervalSinceReferenceDate: 400)
+        try context.save()
+        let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        )
+
+        #expect(try coordinator.unarchive(taskID: canonical.id).didMutate)
+        #expect(try coordinator.unarchive(taskID: rawOnly.id).didMutate)
+        #expect(try coordinator.unarchive(taskID: timestampOnly.id).didMutate)
+        #expect(try coordinator.unarchive(taskID: active.id).didMutate == false)
+        #expect(throws: TaskLifecycleMutationError.taskNotFound) {
+            try coordinator.unarchive(taskID: deletedArchive.id)
+        }
+
+        let freshRepository = freshTaskRepository(context.container)
+        let restoredCanonical = try #require(try freshRepository.task(id: canonical.id))
+        let restoredRawOnly = try #require(try freshRepository.task(id: rawOnly.id))
+        let restoredTimestampOnly = try #require(try freshRepository.task(id: timestampOnly.id))
+        let verificationContext = ModelContext(context.container)
+        let preservedDeletion = try #require(
+            try verificationContext.fetch(FetchDescriptor<TaskNode>())
+                .first { $0.id == deletedArchive.id }
+        )
+        #expect(restoredCanonical.archivedAt == nil)
+        #expect(restoredCanonical.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(restoredCanonical.isArchivedForLifecycle == false)
+        #expect(restoredRawOnly.archivedAt == nil)
+        #expect(restoredRawOnly.statusRaw == LegacyTaskStatusRaw.active)
+        #expect(restoredTimestampOnly.archivedAt == nil)
+        #expect(restoredTimestampOnly.statusRaw == LegacyTaskStatusRaw.completed)
+        #expect(preservedDeletion.archivedAt == Date(timeIntervalSinceReferenceDate: 300))
+        #expect(preservedDeletion.deletedAt == Date(timeIntervalSinceReferenceDate: 400))
+    }
+
+    @Test
+    func storeUnarchivesNestedExplicitArchivesTopDownWithoutChangingSelection() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let archivedParent = try repository.createTask(
+            title: "Archived parent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let ordinaryChild = try repository.createTask(
+            title: "Ordinary child",
+            parentID: archivedParent.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let explicitlyArchivedChild = try repository.createTask(
+            title: "Explicitly archived child",
+            parentID: archivedParent.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let selected = try repository.createTask(
+            title: "Current selection",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.archiveTask(taskID: explicitlyArchivedChild.id)
+        try repository.archiveTask(taskID: archivedParent.id)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.selectedTaskID = selected.id
+
+        let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        )
+        #expect(throws: TaskLifecycleMutationError.archivedAncestorMustRestoreFirst) {
+            try coordinator.unarchive(taskID: explicitlyArchivedChild.id)
+        }
+
+        #expect(store.unarchiveTask(taskID: archivedParent.id))
+
+        let restored = try #require(try freshTaskRepository(context.container).task(id: archivedParent.id))
+        #expect(restored.isArchivedForLifecycle == false)
+        #expect(store.isTaskVisible(restored))
+        #expect(store.isTaskVisible(ordinaryChild))
+        #expect(store.isTaskVisible(explicitlyArchivedChild) == false)
+        #expect(store.archivedTasks.map(\.id) == [explicitlyArchivedChild.id])
+        #expect(store.selectedTaskID == selected.id)
+
+        #expect(store.unarchiveTask(taskID: explicitlyArchivedChild.id))
+        #expect(store.isTaskVisible(explicitlyArchivedChild))
+        #expect(store.archivedTasks.isEmpty)
+        #expect(store.selectedTaskID == selected.id)
+    }
+
+    @Test
+    func unarchiveRepairsSelfAndTwoTaskCyclesWithoutDeadlockingRecovery() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let selfCycle = try repository.createTask(
+            title: "Self cycle",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let first = try repository.createTask(
+            title: "First",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let second = try repository.createTask(
+            title: "Second",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        selfCycle.parentID = selfCycle.id
+        first.parentID = second.id
+        second.parentID = first.id
+        try context.save()
+        try repository.archiveTask(taskID: selfCycle.id)
+        try repository.archiveTask(taskID: first.id)
+        try repository.archiveTask(taskID: second.id)
+
+        let repairPlan = TaskHierarchyRepairPlan(tasks: [first, second])
+        let cycleBreakerID = try #require(repairPlan.cycleBreakerTaskIDs.first)
+        let blockedTaskID = try #require(
+            [first.id, second.id].first { $0 != cycleBreakerID }
+        )
+        let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        )
+
+        #expect(try coordinator.unarchive(taskID: selfCycle.id).didMutate)
+        #expect(throws: TaskLifecycleMutationError.archivedAncestorMustRestoreFirst) {
+            try coordinator.unarchive(taskID: blockedTaskID)
+        }
+        #expect(try coordinator.unarchive(taskID: cycleBreakerID).didMutate)
+        #expect(try coordinator.unarchive(taskID: blockedTaskID).didMutate)
+    }
+
+    @Test
     func staleSceneCannotArchiveSubtreeStartedBySiblingContext() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

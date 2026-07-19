@@ -131,6 +131,23 @@ extension SwiftDataTaskRepository {
         try context.saveAfterMutationStep()
     }
 
+    func unarchiveTask(taskID: UUID) throws {
+        guard let node = try task(id: taskID),
+              node.deletedAt == nil,
+              node.isArchivedForLifecycle else {
+            return
+        }
+        let now = Date()
+        node.archivedAt = nil
+        if node.statusRaw == LegacyTaskStatusRaw.archived {
+            node.statusRaw = LegacyTaskStatusRaw.active
+        }
+        node.updatedAt = now
+        node.deviceID = deviceID
+        node.clientMutationID = UUID()
+        try context.saveAfterMutationStep()
+    }
+
     func softDeleteTask(taskID: UUID) throws {
         let nodes = try allNodes()
         guard nodes.contains(where: { $0.id == taskID }) else { return }

@@ -5,6 +5,7 @@ struct TaskTreeIndexes {
         orderedTaskIDs: [],
         taskByID: [:],
         childrenByParentID: [:],
+        taskIDsToDisplayAsRoots: [],
         taskPathByID: [:],
         taskParentPathByID: [:],
         taskBreadcrumbByID: [:]
@@ -13,6 +14,7 @@ struct TaskTreeIndexes {
     let orderedTaskIDs: [UUID]
     let taskByID: [UUID: TaskNode]
     let childrenByParentID: [UUID?: [TaskNode]]
+    let taskIDsToDisplayAsRoots: Set<UUID>
     let taskPathByID: [UUID: String]
     let taskParentPathByID: [UUID: String]
     let taskBreadcrumbByID: [UUID: TaskBreadcrumbPresentation]

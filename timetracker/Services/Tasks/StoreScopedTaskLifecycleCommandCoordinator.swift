@@ -85,6 +85,53 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         }
     }
 
+    func unarchive(taskID: UUID) throws -> TaskUnarchiveMutationOutcome {
+        try writeAuthorization.requireUserWritesAllowed()
+        let scope = try TimerStoreScope(container: container)
+        let transaction = StoreScopedTimerMutationTransaction(
+            scope: scope,
+            container: container
+        )
+
+        return try transaction.withFreshContext { context in
+            let taskRepository = SwiftDataTaskRepository(
+                context: context,
+                deviceID: deviceID
+            )
+            let tasks = try taskRepository.allNodes()
+            guard let task = tasks.first(where: { $0.id == taskID }) else {
+                throw TaskLifecycleMutationError.taskNotFound
+            }
+            let relatedTaskIDs = Self.relatedTaskIDs(for: task, tasks: tasks)
+            guard task.deletedAt == nil, task.isArchivedForLifecycle else {
+                return TaskUnarchiveMutationOutcome(
+                    taskID: taskID,
+                    didMutate: false,
+                    relatedTaskIDs: relatedTaskIDs
+                )
+            }
+            let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+            let repairPlan = TaskHierarchyRepairPlan(canonicalTasks: tasks)
+            guard TaskTrackingAvailabilityService().hasArchivedAncestor(
+                of: task,
+                taskByID: taskByID,
+                taskIDsToDisplayAsRoots: repairPlan.taskIDsToDisplayAsRoots
+            ) == false else {
+                throw TaskLifecycleMutationError.archivedAncestorMustRestoreFirst
+            }
+
+            try TaskDraftCommandHandler().unarchive(
+                taskID: taskID,
+                repository: taskRepository
+            )
+            return TaskUnarchiveMutationOutcome(
+                taskID: taskID,
+                didMutate: true,
+                relatedTaskIDs: relatedTaskIDs
+            )
+        }
+    }
+
     func delete(taskID: UUID) throws -> TaskDeletionMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)

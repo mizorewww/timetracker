@@ -12,7 +12,6 @@ struct TaskManagementFlatRow: View {
 #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 #endif
-    @State private var isDeleteConfirmationPresented = false
 
     var body: some View {
         let rollup = store.rollup(for: task.id)
@@ -56,27 +55,13 @@ struct TaskManagementFlatRow: View {
                 store: store,
                 task: task,
                 preservingDestination: .tasks,
-                editTask: { store.openTaskEditor(task.id) },
-                requestDelete: { isDeleteConfirmationPresented = true }
+                editTask: { store.openTaskEditor(task.id) }
             )
-        }
-        .confirmationDialog(
-            AppStrings.localized("task.delete.confirm.title"),
-            isPresented: $isDeleteConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(AppStrings.delete, role: .destructive) {
-                store.deleteSelectedTask(taskID: task.id, preservingDestination: .tasks)
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("task.delete.confirm.message"))
         }
         .taskRowSwipeActions(
             store: store,
             task: task,
-            preservingDestination: .tasks,
-            requestDelete: { isDeleteConfirmationPresented = true }
+            preservingDestination: .tasks
         )
         #if os(iOS)
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }

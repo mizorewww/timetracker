@@ -35,6 +35,17 @@ extension SettingsView {
                 }
             )
 
+        case .archivedTasks:
+            ArchivedTasksSettingsSection(
+                store: store,
+                onUnarchive: { task in
+                    handleSettingsStoreMutation(
+                        store.unarchiveTask(taskID: task.id),
+                        title: AppStrings.localized("task.action.unarchive")
+                    )
+                }
+            )
+
         case .focus:
             PomodoroSettingsSection(plans: pomodoroPlansBinding)
 

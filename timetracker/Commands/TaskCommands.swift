@@ -60,6 +60,10 @@ struct TaskDraftCommandHandler {
         try ArchiveTaskUseCase(repository: repository).execute(taskID: taskID)
     }
 
+    func unarchive(taskID: UUID, repository: TaskRepository) throws {
+        try UnarchiveTaskUseCase(repository: repository).execute(taskID: taskID)
+    }
+
     func softDelete(
         taskID: UUID,
         affectedTaskIDs: Set<UUID>,

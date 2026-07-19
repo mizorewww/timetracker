@@ -80,6 +80,40 @@ struct CoreTasksRouteTests {
     }
 
     @Test @MainActor
+    func archivingAParentClosesItsDescendantDetailRouteAndRestoreReturnsTheBranch() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let parent = try repository.createTask(
+            title: "Parent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let child = try repository.createTask(
+            title: "Child",
+            parentID: parent.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.openTaskDetail(child.id)
+
+        #expect(store.archiveSelectedTask(taskID: parent.id))
+
+        #expect(store.tasksRoute == nil)
+        #expect(store.isTaskDetailRouteValid(child.id) == false)
+        #expect(store.isTaskVisible(parent) == false)
+        #expect(store.isTaskVisible(child) == false)
+        #expect(store.desktopDestination == .tasks)
+
+        #expect(store.unarchiveTask(taskID: parent.id))
+        #expect(store.isTaskDetailRouteValid(child.id))
+        #expect(store.isTaskVisible(parent))
+        #expect(store.isTaskVisible(child))
+    }
+
+    @Test @MainActor
     func deletingAParentClosesItsDescendantDetailRoute() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")

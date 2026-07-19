@@ -44,7 +44,7 @@ extension TimeTrackerStore {
 
     func isTaskDetailRouteValid(_ taskID: UUID) -> Bool {
         guard let task = task(for: taskID) else { return false }
-        return task.deletedAt == nil
+        return isTaskVisible(task)
     }
 
     func ancestorTaskIDs(for taskID: UUID) -> [UUID] {

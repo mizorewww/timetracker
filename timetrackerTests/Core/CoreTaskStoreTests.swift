@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftData
 import Testing
 @testable import timetracker
@@ -141,6 +142,75 @@ struct CoreTaskStoreTests {
             to: availableRoot.id,
             tasks: [completedRoot, completedChild, availableRoot]
         ))
+    }
+
+    @Test @MainActor
+    func archivedSettingsKeepsNestedExplicitArchivesVisibleAndRequiresParentFirst() {
+        let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
+        parent.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let child = TaskNode(title: "Archived child", parentID: parent.id, deviceID: "test")
+        child.archivedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let independent = TaskNode(title: "Independent archive", parentID: nil, deviceID: "test")
+        independent.archivedAt = Date(timeIntervalSinceReferenceDate: 300)
+        let deletedArchive = TaskNode(title: "Historical deletion", parentID: nil, deviceID: "test")
+        deletedArchive.archivedAt = Date(timeIntervalSinceReferenceDate: 400)
+        deletedArchive.deletedAt = Date(timeIntervalSinceReferenceDate: 500)
+        let store = makeTestStore()
+        store.tasks = [parent, child, independent, deletedArchive]
+        store.rebuildTaskIndexes()
+
+        #expect(store.archivedTasks.map(\.id) == [independent.id, child.id, parent.id])
+        #expect(store.hasArchivedAncestor(for: parent) == false)
+        #expect(store.hasArchivedAncestor(for: child))
+        #expect(store.hasArchivedAncestor(for: independent) == false)
+    }
+
+    @Test @MainActor
+    func archivedSettingsLeavesARecoveryEntryForMalformedHierarchyCycles() throws {
+        let selfCycle = TaskNode(title: "Self cycle", parentID: nil, deviceID: "test")
+        selfCycle.parentID = selfCycle.id
+        selfCycle.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+
+        let first = TaskNode(title: "First", parentID: nil, deviceID: "test")
+        let second = TaskNode(title: "Second", parentID: first.id, deviceID: "test")
+        first.parentID = second.id
+        first.archivedAt = Date(timeIntervalSinceReferenceDate: 200)
+        second.archivedAt = Date(timeIntervalSinceReferenceDate: 300)
+
+        let store = makeTestStore()
+        store.tasks = [selfCycle, first, second]
+        store.rebuildTaskIndexes()
+        let repairPlan = TaskHierarchyRepairPlan(tasks: [first, second])
+        let cycleBreakerID = try #require(repairPlan.cycleBreakerTaskIDs.first)
+        let cycleBreaker = try #require(store.task(for: cycleBreakerID))
+        let blockedCycleTask = try #require(
+            [first, second].first { $0.id != cycleBreakerID }
+        )
+
+        #expect(store.hasArchivedAncestor(for: selfCycle) == false)
+        #expect(store.hasArchivedAncestor(for: cycleBreaker) == false)
+        #expect(store.hasArchivedAncestor(for: blockedCycleTask))
+    }
+
+    @Test @MainActor
+    func archivedSettingsObservesReadModelRevisionWhenVisibleTreeIsUnchanged() {
+        let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
+        parent.archivedAt = Date(timeIntervalSinceReferenceDate: 100)
+        let child = TaskNode(title: "Archived child", parentID: parent.id, deviceID: "test")
+        child.archivedAt = Date(timeIntervalSinceReferenceDate: 200)
+        let store = makeTestStore()
+        store.tasks = [parent, child]
+        var didInvalidate = false
+        withObservationTracking {
+            _ = store.archivedTasks.map(\.id)
+        } onChange: {
+            didInvalidate = true
+        }
+
+        store.rebuildTaskIndexes()
+
+        #expect(didInvalidate)
+        #expect(store.archivedTasks.map(\.id) == [child.id, parent.id])
     }
 
     @Test @MainActor
@@ -389,6 +459,7 @@ private final class TaskStoreTestRepository: TaskRepository {
     func updateTask(taskID: UUID, title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws {}
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {}
     func archiveTask(taskID: UUID) throws {}
+    func unarchiveTask(taskID: UUID) throws {}
     func softDeleteTask(taskID: UUID) throws {
         tasksByID.removeValue(forKey: taskID)
     }

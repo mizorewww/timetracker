@@ -24,7 +24,32 @@ extension TimeTrackerStore {
     }
 
     var archivedTasks: [TaskNode] {
-        tasks.filter(\.isArchivedForLifecycle)
+        // SwiftData can merge sibling-context changes into existing @Model
+        // instances without emitting an Observation change for each field.
+        // The value-semantic task revision guarantees archive projections
+        // invalidate even when the visible tree itself does not change.
+        _ = taskReadModelRevision
+        return tasks
+            .filter { $0.deletedAt == nil && $0.isArchivedForLifecycle }
+            .sorted { lhs, rhs in
+                let lhsArchivedAt = lhs.archivedAt ?? .distantPast
+                let rhsArchivedAt = rhs.archivedAt ?? .distantPast
+                if lhsArchivedAt != rhsArchivedAt {
+                    return lhsArchivedAt > rhsArchivedAt
+                }
+                if lhs.title.localizedStandardCompare(rhs.title) != .orderedSame {
+                    return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+    }
+
+    func hasArchivedAncestor(for task: TaskNode) -> Bool {
+        taskTrackingAvailabilityService.hasArchivedAncestor(
+            of: task,
+            taskByID: taskByID,
+            taskIDsToDisplayAsRoots: taskTreeIndexes.taskIDsToDisplayAsRoots
+        )
     }
 
     func task(for id: UUID) -> TaskNode? {
@@ -171,6 +196,7 @@ extension TimeTrackerStore {
         trackableTaskIDs = eligibility.trackableTaskIDs
         rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
+        taskReadModelRevision &+= 1
     }
 
     func rebuildTaskCategoryIndexes() {

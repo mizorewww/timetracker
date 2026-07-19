@@ -18,6 +18,7 @@ protocol TaskRepository {
     func updateTask(taskID: UUID, title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws
     func archiveTask(taskID: UUID) throws
+    func unarchiveTask(taskID: UUID) throws
     func softDeleteTask(taskID: UUID) throws
 }
 

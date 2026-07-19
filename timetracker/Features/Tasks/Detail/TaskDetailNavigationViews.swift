@@ -6,7 +6,6 @@ private struct TaskDetailNavigationModifier: ViewModifier {
     let isEditing: Bool
     let beginEditing: (TaskNode) -> Void
     let preservingDestination: TimeTrackerStore.DesktopDestination
-    @State private var isDeleteConfirmationPresented = false
 
     func body(content: Content) -> some View {
         content
@@ -21,21 +20,6 @@ private struct TaskDetailNavigationModifier: ViewModifier {
                         moreMenu(task)
                     }
                 }
-            }
-            .confirmationDialog(
-                AppStrings.localized("task.delete.confirm.title"),
-                isPresented: $isDeleteConfirmationPresented,
-                titleVisibility: .visible
-            ) {
-                Button(AppStrings.delete, role: .destructive) {
-                    store.deleteSelectedTask(
-                        taskID: taskID,
-                        preservingDestination: preservingDestination
-                    )
-                }
-                Button(AppStrings.cancel, role: .cancel) {}
-            } message: {
-                Text(.app("task.delete.confirm.message"))
             }
     }
 
@@ -54,8 +38,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
                 store: store,
                 task: task,
                 preservingDestination: preservingDestination,
-                editTask: { beginEditing(task) },
-                requestDelete: { isDeleteConfirmationPresented = true }
+                editTask: { beginEditing(task) }
             )
         } label: {
             Label(AppStrings.localized("common.more"), systemImage: "ellipsis.circle")

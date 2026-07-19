@@ -204,6 +204,7 @@ final class TimeTrackerStore {
     var childrenByParentID: [UUID?: [TaskNode]] = [:]
     var taskTreeReadIndex = TaskTreeReadIndex.empty
     @ObservationIgnored var taskTreeReadIndexRevision: UInt64 = 0
+    var taskReadModelRevision: UInt64 = 0
     @ObservationIgnored var taskTreeProjectionCache = TaskTreeProjectionCache()
     var checklistByTaskID: [UUID: [ChecklistItem]] = [:]
     var taskPathByID: [UUID: String] = [:]

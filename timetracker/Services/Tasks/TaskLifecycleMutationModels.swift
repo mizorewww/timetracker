@@ -9,6 +9,7 @@ nonisolated enum TaskDraftSaveResult: Equatable, Sendable {
 enum TaskLifecycleMutationError: LocalizedError, Equatable {
     case taskNotFound
     case activeWorkMustStop
+    case archivedAncestorMustRestoreFirst
     case parentChangeBlocked(TaskParentChangeBlocker)
     case parentUnavailable
     case staleDraft
@@ -19,6 +20,8 @@ enum TaskLifecycleMutationError: LocalizedError, Equatable {
             return AppStrings.localized("systemAction.error.taskNotFound")
         case .activeWorkMustStop:
             return AppStrings.localized("task.action.archive.stopFirst")
+        case .archivedAncestorMustRestoreFirst:
+            return AppStrings.localized("task.action.unarchive.parentFirst")
         case .parentChangeBlocked(let blocker):
             let key = switch blocker {
             case .archived: "task.parent.archivedLocked"
@@ -53,6 +56,22 @@ struct TaskDraftMutationOutcome: Equatable {
 }
 
 struct TaskArchiveMutationOutcome: Equatable {
+    let taskID: UUID
+    let didMutate: Bool
+    let relatedTaskIDs: Set<UUID>
+
+    var events: Set<StoreDomainEvent> {
+        guard didMutate else { return [] }
+        return [
+            .taskChanged(
+                taskID: taskID,
+                affectedAncestorIDs: relatedTaskIDs.subtracting([taskID])
+            ),
+        ]
+    }
+}
+
+struct TaskUnarchiveMutationOutcome: Equatable {
     let taskID: UUID
     let didMutate: Bool
     let relatedTaskIDs: Set<UUID>

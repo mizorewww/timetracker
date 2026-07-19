@@ -92,6 +92,8 @@
 "settings.displayTiming.systemAppearanceFooter" = "时间追踪器跟随系统外观。多个任务同时计时时，实际时间只计算一次，累计时间会把每个任务分别相加。";
 "settings.category.general.title" = "通用";
 "settings.category.general.subtitle" = "计时行为与倒计时事件";
+"settings.category.archivedTasks.title" = "归档任务";
+"settings.category.archivedTasks.subtitle" = "查看并恢复隐藏的任务";
 "settings.category.focus.title" = "专注";
 "settings.category.focus.subtitle" = "番茄计划与间隔";
 "settings.category.dataAndSync.title" = "数据与同步";
@@ -113,6 +115,12 @@
 "settings.countdown.delete.confirm.message" = "此事件将从所有同步设备的“今天”页面移除。";
 "settings.countdown.title.hint" = "编辑名称后，按下回车键或选择“保存”。";
 "settings.countdown.title.save" = "保存事件名称";
+"settings.archivedTasks.title" = "归档任务";
+"settings.archivedTasks.footer" = "归档任务不会出现在任务列表和计时器中，取消归档后才会恢复。如果父任务和子任务都已归档，请先取消归档父任务。";
+"settings.archivedTasks.empty.title" = "没有归档任务";
+"settings.archivedTasks.empty.description" = "归档过的任务会显示在这里。";
+"settings.archivedTasks.unarchive.hint" = "将此任务恢复到任务列表，并允许对其计时。";
+"settings.archivedTasks.parentFirst" = "请先取消归档父任务。";
 "settings.countdown.title.saveHint" = "整理名称并将其保存到同步的倒计时事件。";
 "settings.countdown.title.error.empty" = "请输入事件名称。";
 "settings.countdown.title.error.tooLong" = "事件名称不能超过 4 KB。";
@@ -389,7 +397,9 @@
 "task.action.newSubtask" = "新建子任务";
 "task.action.addManualTime" = "手动补录";
 "task.action.archive" = "归档";
+"task.action.unarchive" = "取消归档";
 "task.action.archive.stopFirst" = "归档前，请先停止此任务或其子任务中的计时。";
+"task.action.unarchive.parentFirst" = "请先取消归档父任务。";
 "task.archived.trackingUnavailable" = "此任务或其上级任务已归档，不能接收新工作。";
 "task.parentUnavailable" = "所选父任务已归档或不再可用。";
 "task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";

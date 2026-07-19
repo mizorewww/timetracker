@@ -6,7 +6,6 @@ struct TaskContextMenu: View {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
     let editTask: () -> Void
-    let requestDelete: () -> Void
 
     private var activeSegment: TimeSegment? {
         store.activeSegment(for: task.id)
@@ -77,11 +76,6 @@ struct TaskContextMenu: View {
             }
         }
 
-        Button(role: .destructive) {
-            requestDelete()
-        } label: {
-            Label(AppStrings.delete, systemImage: "trash")
-        }
     }
 }
 
@@ -96,7 +90,6 @@ struct TaskRowSwipeActions: ViewModifier {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     var labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon
     var preservingDestination: TimeTrackerStore.DesktopDestination?
-    let requestDelete: () -> Void
 
     private var activeSegment: TimeSegment? {
         store.activeSegment(for: task.id)
@@ -104,6 +97,10 @@ struct TaskRowSwipeActions: ViewModifier {
 
     private var isAvailableForTracking: Bool {
         store.isTaskAvailableForTracking(task)
+    }
+
+    private var hasActiveTimerInSubtree: Bool {
+        store.hasActiveTimer(inTaskSubtree: task.id)
     }
 
     func body(content: Content) -> some View {
@@ -146,10 +143,17 @@ struct TaskRowSwipeActions: ViewModifier {
                 }
                 .tint(.gray)
 
-                Button(role: .destructive) {
-                    requestDelete()
-                } label: {
-                    actionLabel(AppStrings.delete, systemImage: "trash")
+                if hasActiveTimerInSubtree == false {
+                    Button {
+                        store.archiveSelectedTask(taskID: task.id)
+                    } label: {
+                        actionLabel(
+                            AppStrings.localized("task.action.archive"),
+                            systemImage: "archivebox"
+                        )
+                    }
+                    .tint(.blue)
+                    .accessibilityIdentifier("task.swipe.archive.\(task.id.uuidString)")
                 }
             }
     }
@@ -171,16 +175,14 @@ extension View {
         store: TimeTrackerStore,
         task: TaskNode,
         labelStyle: TaskRowSwipeLabelStyle = .titleAndIcon,
-        preservingDestination: TimeTrackerStore.DesktopDestination? = nil,
-        requestDelete: @escaping () -> Void
+        preservingDestination: TimeTrackerStore.DesktopDestination? = nil
     ) -> some View {
         modifier(
             TaskRowSwipeActions(
                 store: store,
                 task: task,
                 labelStyle: labelStyle,
-                preservingDestination: preservingDestination,
-                requestDelete: requestDelete
+                preservingDestination: preservingDestination
             )
         )
     }

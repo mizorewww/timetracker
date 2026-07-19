@@ -116,7 +116,11 @@ struct LocalizationContractTests {
         #expect(warning.contains("local LLM API key"))
         #expect(warning.contains("automatic-suggestion consent"))
         #expect(english["task.action.archive.stopFirst"] != nil)
+        #expect(english["task.action.unarchive"] != nil)
+        #expect(english["task.action.unarchive.parentFirst"] != nil)
         #expect(english["task.archived.trackingUnavailable"] != nil)
+        #expect(english["settings.category.archivedTasks.title"] != nil)
+        #expect(english["settings.archivedTasks.footer"] != nil)
     }
 
     @Test

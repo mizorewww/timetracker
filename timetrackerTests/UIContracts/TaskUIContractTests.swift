@@ -861,24 +861,50 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func sidebarAndTaskRowsShareSwipeActions() throws {
+    func sidebarAndTaskRowsShareReversibleArchiveActions() throws {
         let taskRowSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
         let managementSource = try taskManagementFeatureSource()
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarTaskTreeViews.swift")
+        let detailSource = try taskDetailFeatureSource()
+        let settingsCategorySource = try sourceText(
+            "timetracker/Features/Settings/SettingsCategoryViews.swift"
+        )
+        let archivedSettingsSource = try sourceText(
+            "timetracker/Features/Settings/ArchivedTasksSettingsSection.swift"
+        )
 
         #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
         #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
         #expect(taskRowSource.contains("case iconOnly"))
-        #expect(taskRowSource.contains("let requestDelete: () -> Void"))
+        #expect(taskRowSource.contains("task.action.archive"))
+        #expect(taskRowSource.contains("systemImage: \"archivebox\""))
+        #expect(taskRowSource.contains(".tint(.blue)"))
+        #expect(taskRowSource.contains("store.hasActiveTimer(inTaskSubtree: task.id)"))
+        #expect(taskRowSource.contains("if hasActiveTimerInSubtree == false"))
+        #expect(taskRowSource.contains("requestDelete") == false)
+        #expect(taskRowSource.contains("AppStrings.delete") == false)
+        #expect(taskRowSource.contains("systemImage: \"trash\"") == false)
         #expect(taskRowSource.contains("@State private var isDeleteConfirmationPresented") == false)
         #expect(taskRowSource.contains(".confirmationDialog(") == false)
-        #expect(taskRowSource.contains("requestDelete()"))
-        #expect(taskRowSource.contains("Label(AppStrings.delete, systemImage: \"trash\")"))
-        #expect(taskRowSource.contains("task.action.softDelete") == false)
-        #expect(managementSource.contains("requestDelete: { isDeleteConfirmationPresented = true }"))
-        #expect(sidebarSource.contains("requestDelete: { isDeleteConfirmationPresented = true }"))
-        #expect(managementSource.components(separatedBy: ".confirmationDialog(").count - 1 == 1)
-        #expect(sidebarSource.components(separatedBy: ".confirmationDialog(").count - 1 == 1)
+        #expect(managementSource.contains("deleteSelectedTask") == false)
+        #expect(sidebarSource.contains("deleteSelectedTask") == false)
+        #expect(detailSource.contains("deleteSelectedTask") == false)
+        #expect(managementSource.contains("task.delete.confirm") == false)
+        #expect(sidebarSource.contains("task.delete.confirm") == false)
+        #expect(detailSource.contains("task.delete.confirm") == false)
+        #expect(settingsCategorySource.contains("case archivedTasks"))
+        #expect(archivedSettingsSource.contains("store.archivedTasks"))
+        #expect(archivedSettingsSource.contains("store.hasArchivedAncestor(for: task)"))
+        #expect(archivedSettingsSource.contains("TaskSummaryRow("))
+        #expect(archivedSettingsSource.contains("context: .standard"))
+        #expect(archivedSettingsSource.contains("task.action.unarchive"))
+        #expect(archivedSettingsSource.contains("width: actionTargetSize"))
+        #expect(archivedSettingsSource.contains("height: actionTargetSize"))
+        #expect(archivedSettingsSource.contains(".buttonStyle(.borderless)"))
+        #expect(archivedSettingsSource.contains(
+            ".fixedSize(horizontal: false, vertical: true)"
+        ))
+        #expect(archivedSettingsSource.contains("settings.archivedTasks.parentFirst"))
     }
 
     @Test
@@ -913,7 +939,7 @@ struct TaskUIContractTests {
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.more\")"))
         #expect(detailSource.contains("TaskContextMenu("))
         #expect(detailSource.contains("editTask: { beginEditing(task) }"))
-        #expect(detailSource.contains("task.delete.confirm.message"))
+        #expect(detailSource.contains("task.delete.confirm") == false)
         #expect(detailSource.contains("task.detail.back") == false)
         #expect(detailSource.contains("store.closeTaskDetailNavigation()") == false)
         #expect(detailSource.contains("@Environment(\\.dismiss)") == false)
@@ -921,6 +947,8 @@ struct TaskUIContractTests {
         #expect(contextMenuSource.contains("if let activeSegment"))
         #expect(contextMenuSource.contains("store.stop(segment: activeSegment)"))
         #expect(contextMenuSource.contains("Button(action: editTask)"))
+        #expect(contextMenuSource.contains("store.archiveSelectedTask(taskID: task.id)"))
+        #expect(contextMenuSource.contains("AppStrings.delete") == false)
         #expect(contextMenuSource.contains("store.openTaskEditor(task.id)") == false)
     }
 

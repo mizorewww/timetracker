@@ -65,6 +65,7 @@ struct TaskTreeService {
             orderedTaskIDs: tasks.map(\.id),
             taskByID: taskByID,
             childrenByParentID: childrenByParentID,
+            taskIDsToDisplayAsRoots: repairPlan.taskIDsToDisplayAsRoots,
             taskPathByID: pathCache,
             taskParentPathByID: parentPathCache,
             taskBreadcrumbByID: breadcrumbByTaskID

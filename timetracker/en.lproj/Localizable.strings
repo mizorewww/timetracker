@@ -92,6 +92,8 @@
 "settings.displayTiming.systemAppearanceFooter" = "Time Tracker follows the system appearance. When several tasks run at once, actual time counts clock time once while total time adds every task.";
 "settings.category.general.title" = "General";
 "settings.category.general.subtitle" = "Timing behavior and countdown events";
+"settings.category.archivedTasks.title" = "Archived Tasks";
+"settings.category.archivedTasks.subtitle" = "Review and return hidden tasks";
 "settings.category.focus.title" = "Focus";
 "settings.category.focus.subtitle" = "Pomodoro plans and intervals";
 "settings.category.dataAndSync.title" = "Data & Sync";
@@ -113,6 +115,12 @@
 "settings.countdown.delete.confirm.message" = "This event will be removed from Today on every synced device.";
 "settings.countdown.title.hint" = "Edit the name, then press Return or choose Save.";
 "settings.countdown.title.save" = "Save Event Name";
+"settings.archivedTasks.title" = "Archived Tasks";
+"settings.archivedTasks.footer" = "Archived tasks stay out of task lists and timers until you unarchive them. When both a parent and subtask are archived, unarchive the parent first.";
+"settings.archivedTasks.empty.title" = "No Archived Tasks";
+"settings.archivedTasks.empty.description" = "Tasks you archive will appear here.";
+"settings.archivedTasks.unarchive.hint" = "Returns this task to task lists and makes it available for tracking.";
+"settings.archivedTasks.parentFirst" = "Unarchive the parent task first.";
 "settings.countdown.title.saveHint" = "Trims the name and saves it to your synced countdown events.";
 "settings.countdown.title.error.empty" = "Enter an event name.";
 "settings.countdown.title.error.tooLong" = "Use an event name no larger than 4 KB.";
@@ -389,7 +397,9 @@
 "task.action.newSubtask" = "New Subtask";
 "task.action.addManualTime" = "Add Time Manually";
 "task.action.archive" = "Archive";
+"task.action.unarchive" = "Unarchive";
 "task.action.archive.stopFirst" = "Stop timers in this task or its subtasks before archiving.";
+"task.action.unarchive.parentFirst" = "Unarchive the parent task first.";
 "task.archived.trackingUnavailable" = "This task cannot receive new work because it or a parent is archived.";
 "task.parentUnavailable" = "The selected parent is archived or no longer available.";
 "task.editor.staleDraft" = "This task changed elsewhere. Review the latest version, then try again.";

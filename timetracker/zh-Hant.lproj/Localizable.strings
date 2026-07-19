@@ -92,6 +92,8 @@
 "settings.displayTiming.systemAppearanceFooter" = "時間追蹤器會跟隨系統外觀。多個任務同時計時時，實際時間只計算一次，累計時間會把每個任務分別相加。";
 "settings.category.general.title" = "一般";
 "settings.category.general.subtitle" = "計時行為與倒數事件";
+"settings.category.archivedTasks.title" = "封存任務";
+"settings.category.archivedTasks.subtitle" = "查看並恢復隱藏的任務";
 "settings.category.focus.title" = "專注";
 "settings.category.focus.subtitle" = "番茄計畫與間隔";
 "settings.category.dataAndSync.title" = "資料與同步";
@@ -113,6 +115,12 @@
 "settings.countdown.delete.confirm.message" = "此事件將從所有同步裝置的「今天」頁面移除。";
 "settings.countdown.title.hint" = "編輯名稱後，按下 Return 鍵或選擇「儲存」。";
 "settings.countdown.title.save" = "儲存事件名稱";
+"settings.archivedTasks.title" = "封存任務";
+"settings.archivedTasks.footer" = "封存任務不會出現在任務列表和計時器中，取消封存後才會恢復。如果父任務和子任務都已封存，請先取消封存父任務。";
+"settings.archivedTasks.empty.title" = "沒有封存任務";
+"settings.archivedTasks.empty.description" = "封存過的任務會顯示在這裡。";
+"settings.archivedTasks.unarchive.hint" = "將此任務恢復到任務列表，並允許對其計時。";
+"settings.archivedTasks.parentFirst" = "請先取消封存父任務。";
 "settings.countdown.title.saveHint" = "整理名稱並將它儲存到同步的倒數事件。";
 "settings.countdown.title.error.empty" = "請輸入事件名稱。";
 "settings.countdown.title.error.tooLong" = "事件名稱不可超過 4 KB。";
@@ -389,7 +397,9 @@
 "task.action.newSubtask" = "新增子任務";
 "task.action.addManualTime" = "手動補錄";
 "task.action.archive" = "封存";
+"task.action.unarchive" = "取消封存";
 "task.action.archive.stopFirst" = "封存前，請先停止此任務或其子任務中的計時。";
+"task.action.unarchive.parentFirst" = "請先取消封存父任務。";
 "task.archived.trackingUnavailable" = "此任務或其上層任務已封存，不能接收新工作。";
 "task.parentUnavailable" = "所選父任務已封存或不再可用。";
 "task.editor.staleDraft" = "此任務已在其他位置發生變更。請查看最新版本後重試。";

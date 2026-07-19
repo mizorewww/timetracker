@@ -62,6 +62,25 @@ struct TaskTrackingAvailabilityService {
         return nil
     }
 
+    func hasArchivedAncestor(
+        of task: TaskNode,
+        taskByID: [UUID: TaskNode],
+        taskIDsToDisplayAsRoots: Set<UUID>
+    ) -> Bool {
+        var visited = Set<UUID>()
+        var cursor = task
+        while taskIDsToDisplayAsRoots.contains(cursor.id) == false,
+              let currentID = cursor.parentID,
+              visited.insert(currentID).inserted,
+              let parent = taskByID[currentID] {
+            if parent.isArchivedForLifecycle {
+                return true
+            }
+            cursor = parent
+        }
+        return false
+    }
+
     private func descendantClosure(
         startingWith seedIDs: Set<UUID>,
         childIDsByParentID: [UUID?: [UUID]]

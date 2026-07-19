@@ -22,7 +22,6 @@ struct SidebarTaskTreeRow: View {
     let task: TaskNode
     let row: TaskTreeRowModel
     @Binding var expansionState: TaskExpansionState
-    @State private var isDeleteConfirmationPresented = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -40,27 +39,13 @@ struct SidebarTaskTreeRow: View {
             TaskContextMenu(
                 store: store,
                 task: task,
-                editTask: { store.openTaskEditor(task.id) },
-                requestDelete: { isDeleteConfirmationPresented = true }
+                editTask: { store.openTaskEditor(task.id) }
             )
-        }
-        .confirmationDialog(
-            AppStrings.localized("task.delete.confirm.title"),
-            isPresented: $isDeleteConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(AppStrings.delete, role: .destructive) {
-                store.deleteSelectedTask(taskID: task.id)
-            }
-            Button(AppStrings.cancel, role: .cancel) {}
-        } message: {
-            Text(.app("task.delete.confirm.message"))
         }
         .taskRowSwipeActions(
             store: store,
             task: task,
-            labelStyle: .iconOnly,
-            requestDelete: { isDeleteConfirmationPresented = true }
+            labelStyle: .iconOnly
         )
     }
 

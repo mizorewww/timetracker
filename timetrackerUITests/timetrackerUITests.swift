@@ -330,6 +330,143 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskSwipeArchiveAndSettingsUnarchiveRoundTrip() throws {
+        #if os(macOS)
+        throw XCTSkip("The left-swipe archive round trip is exercised on iPhone and iPad.")
+        #else
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true
+        )
+        if app.descendants(matching: .any)["tasks.view"]
+            .waitForExistence(timeout: 3) == false {
+            openSection(
+                "Tasks",
+                tabIdentifier: "phone.tab.tasks",
+                sidebarIdentifier: "sidebar.Tasks",
+                in: app
+            )
+        }
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 8)
+        )
+        let taskTitle = "Archive Round Trip \(UUID().uuidString.prefix(8))"
+        let addTaskMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addTaskMenu.waitForExistence(timeout: 3) && addTaskMenu.isHittable)
+        activate(addTaskMenu)
+        let addRootTask = app.descendants(matching: .any)["tasks.addRoot"].firstMatch
+        XCTAssertTrue(addRootTask.waitForExistence(timeout: 3) && addRootTask.isHittable)
+        activate(addRootTask)
+
+        let editor = app.descendants(matching: .any)["task.editor"].firstMatch
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(titleField.waitForExistence(timeout: 3) && titleField.isHittable)
+        titleField.typeText(taskTitle)
+        titleField.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+        let save = app.buttons["task.editor.save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        activate(save)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+
+        let search = app.searchFields[
+            "Search tasks, paths, or notes"
+        ].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        activate(search)
+        search.typeText(taskTitle)
+        search.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+
+        let task = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                taskTitle
+            ))
+            .firstMatch
+        XCTAssertTrue(task.waitForExistence(timeout: 5) && task.isHittable)
+
+        task.swipeLeft()
+        let archive = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "task.swipe.archive."
+            ))
+            .firstMatch
+        XCTAssertTrue(archive.waitForExistence(timeout: 3) && archive.isHittable)
+        XCTAssertGreaterThanOrEqual(archive.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(archive.frame.height, 44)
+        try capture("iphone-task-swipe-archive", app: app)
+        activate(archive)
+        XCTAssertTrue(task.waitForNonExistence(timeout: 5))
+
+        openSettings(in: app)
+        let archivedCategory = app.buttons[
+            "settings.category.archivedTasks"
+        ].firstMatch
+        XCTAssertTrue(
+            archivedCategory.waitForExistence(timeout: 5) &&
+                archivedCategory.isHittable
+        )
+        activate(archivedCategory)
+
+        let unarchive = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "settings.archivedTasks.unarchive."
+            ))
+            .firstMatch
+        XCTAssertTrue(unarchive.waitForExistence(timeout: 5) && unarchive.isHittable)
+        XCTAssertTrue(unarchive.isEnabled)
+        XCTAssertGreaterThanOrEqual(unarchive.frame.height, 44)
+        XCTAssertTrue(app.staticTexts[taskTitle].waitForExistence(timeout: 3))
+        try capture("iphone-settings-archived-task", app: app)
+
+        activate(unarchive)
+        let errorAlert = app.alerts.firstMatch
+        if errorAlert.waitForExistence(timeout: 1) {
+            let errorText = errorAlert.staticTexts.allElementsBoundByIndex
+                .map(\.label)
+                .joined(separator: " — ")
+            XCTFail("Unarchive presented an error: \(errorText)")
+            return
+        }
+        XCTAssertTrue(unarchive.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts["No Archived Tasks"].waitForExistence(timeout: 3)
+        )
+        try capture("iphone-settings-archived-empty", app: app)
+
+        let settingsBack = app.buttons["BackButton"].firstMatch
+        XCTAssertTrue(
+            settingsBack.waitForExistence(timeout: 3) &&
+                settingsBack.isHittable
+        )
+        activate(settingsBack)
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
+        activate(done)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"]
+                .waitForNonExistence(timeout: 5)
+        )
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        XCTAssertTrue(task.waitForExistence(timeout: 5) && task.isHittable)
+        try capture("iphone-task-restored-from-settings", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTaskListKeepsSearchAndFirstTaskReachableAtLargeTextSizes() throws {
         let app = launchApp(
             contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"

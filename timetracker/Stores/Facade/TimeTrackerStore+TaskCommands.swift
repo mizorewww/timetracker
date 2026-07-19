@@ -84,6 +84,32 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
+    func unarchiveTask(taskID: UUID) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).unarchive(taskID: taskID)
+            if outcome.didMutate {
+                finishStoreScopedMutation(events: outcome.events)
+            } else {
+                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+            }
+            return true
+        } catch {
+            if error is TaskLifecycleMutationError {
+                refreshStoreScopedTaskLifecycleReadModels()
+            }
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
     func deleteSelectedTask(
         taskID: UUID? = nil,
         preservingDestination: DesktopDestination? = nil

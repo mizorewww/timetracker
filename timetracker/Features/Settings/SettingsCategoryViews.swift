@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case general
+    case archivedTasks
     case focus
     case dataAndSync
     case intelligence
@@ -20,6 +21,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "switch.2"
+        case .archivedTasks: "archivebox"
         case .focus: "timer"
         case .dataAndSync: "externaldrive.badge.icloud"
         case .intelligence: "sparkles"
@@ -30,6 +32,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .general: .blue
+        case .archivedTasks: .orange
         case .focus: .orange
         case .dataAndSync: .cyan
         case .intelligence: .purple

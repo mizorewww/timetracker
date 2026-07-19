@@ -19,7 +19,6 @@ struct TimerPickerUIContractTests {
 
         #expect(pickerSource.contains("ForEach(projection.runningItems)"))
         #expect(pickerSource.contains("func runningRow("))
-        #expect(pickerSource.contains("timer.taskPicker.running."))
         #expect(pickerSource.contains("store.stop(segment: activeSegment)"))
         #expect(pickerSource.contains("timer.taskPicker.stop."))
         #expect(pickerSource.contains("timer.taskPicker.runningHeader"))
@@ -27,14 +26,13 @@ struct TimerPickerUIContractTests {
         #expect(pickerSource.contains("stopButton(item)"))
         #expect(pickerSource.contains("TaskTimerActionButton("))
         #expect(pickerSource.contains("RunningStatusBadge()") == false)
-        #expect(runningRowSource.contains("TaskSummaryRow("))
-        #expect(runningRowSource.contains("checklistProgress: item.checklistProgress"))
-        #expect(runningRowSource.contains("workedSeconds: item.workedSeconds"))
+        #expect(runningRowSource.contains("timerTaskSummary(item, context: .standard)"))
         #expect(runningRowSource.contains("isRunning:") == false)
         #expect(runningRowSource.contains("TaskRunningIndicator") == false)
         #expect(pickerSource.contains(".accessibilityElement(children: .ignore)"))
+        #expect(pickerSource.contains("timer.taskPicker.summary."))
+        #expect(pickerSource.contains(".accessibilityValue(accessibilityValue(for: item))"))
         #expect(pickerSource.contains("timer.action.stopTaskFormat"))
-        #expect(pickerSource.contains("timer.picker.runningTaskFormat"))
         #expect(pickerSource.contains("timer.picker.runningHint"))
     }
 
@@ -48,6 +46,9 @@ struct TimerPickerUIContractTests {
         #expect(viewSource.contains("store.performTimerPickerSelection(task)"))
         #expect(viewSource.contains("if outcome.shouldDismissPicker"))
         #expect(viewSource.contains("timer.taskPicker.select."))
+        #expect(viewSource.contains("func timerSelectionRow("))
+        #expect(viewSource.contains("activeSegment: nil"))
+        #expect(viewSource.contains("command: item.timerCommand"))
         #expect(viewSource.contains("timer.task.switchHint"))
         #expect(viewSource.contains("section.items.filter { $0.isRunning == false }"))
         #expect(viewSource.contains("activeSegment == nil ? \"timer.task.startHint\" : \"timer.task.stopHint\"") == false)
@@ -65,6 +66,14 @@ struct TimerPickerUIContractTests {
         let projectionSource = try sourceText(
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         )
+        let iconControlDimensionSource =
+            "private var iconControlDimension: CGFloat {\n" +
+            "        #if os(iOS)\n" +
+            "        54\n" +
+            "        #else\n" +
+            "        28\n" +
+            "        #endif\n" +
+            "    }"
 
         #expect(summarySource.contains("HStack(alignment: .top, spacing: 12)"))
         #expect(pickerSource.contains("TaskSummaryRow("))
@@ -72,7 +81,11 @@ struct TimerPickerUIContractTests {
         #expect(summarySource.contains("let text = presentation.text(for: context)"))
         #expect(summarySource.contains("TaskWorkBlockedStatusBadge()") == false)
         #expect(summarySource.contains("TaskStatusBadge") == false)
-        #expect(pickerSource.contains("accessory: .command("))
+        #expect(summarySource.contains("case command") == false)
+        #expect(pickerSource.contains("accessory: .command(") == false)
+        #expect(pickerSource.contains("TaskTimerActionButton("))
+        #expect(pickerSource.contains("private var pickerActionLabelStyle"))
+        #expect(pickerSource.contains("pickerActionLabelStyle: TaskTimerActionLabelStyle {\n        .iconOnly"))
         #expect(pickerSource.contains("checklistProgress: item.checklistProgress"))
         #expect(pickerSource.contains("workedSeconds: item.workedSeconds"))
         #expect(pickerSource.contains("RunningStatusBadge()") == false)
@@ -82,6 +95,9 @@ struct TimerPickerUIContractTests {
         #expect(pickerSource.contains(".listSectionSpacing(18)"))
         #expect(pickerSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
         #expect(pickerSource.contains(".tint(activeSegment == nil ? taskColor : .red)"))
+        #expect(pickerSource.contains("width: usesIconOnly ? iconControlDimension : nil"))
+        #expect(pickerSource.contains(iconControlDimensionSource))
+        #expect(pickerSource.contains("horizontalSizeClass") == false)
     }
 
     @Test

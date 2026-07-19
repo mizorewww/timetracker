@@ -616,5 +616,51 @@ Status: completed and verified
   removed after evidence extraction; no owned Booted device, App, runner,
   `xcodebuild`, or `xctest` process remained.
 
+## Checkpoint 19 — unified timer-picker action geometry
+
+Status: completed and verified
+
+- Timer-mode rows no longer present Start or Switch as a passive metadata
+  glyph while rendering Stop as a separate control. Every Start, Switch, and
+  Stop now reuses `TaskTimerActionButton` in one fixed trailing icon-only slot:
+  54×54 points on iOS/iPadOS and 28×28 points on macOS.
+- Each row keeps `TaskSummaryRow` as a separate read-only semantic element and
+  the timer command as a native `Button`. Running tasks expose one exact Stop;
+  the task summary is never hidden or nested into that action, so SwiftUI
+  cannot promote Stop into a destructive whole-row target.
+- The UI regression opens the real Today timer action and compares every
+  running Stop with an available Start/Switch on width, height, trailing edge,
+  square geometry, and the iOS 44-point minimum. It then stops `Read Apple
+  HIG`, confirms the picker remains open, and proves that the same task's new
+  Start retains the previous Stop geometry.
+- Discovery runs correctly rejected two regressions before the frozen result:
+  hiding the summary made Stop inherit the whole row's semantic frame, and an
+  iPhone comparison taken while the search keyboard scaled the sheet mixed
+  two screen coordinate spaces. The final test preserves the separate summary
+  and dismisses the keyboard before the state-transition comparison. A later
+  overlong source-contract expression failed to type-check and executed zero
+  tests; it was split without weakening the assertion before the final run.
+- Paid-signing macOS picker/shared/command/source-layout tests passed 30/30
+  with no failures, skips, or runtime warnings. The normal-size iPhone 17 Pro
+  and iPad Pro 11-inch (M4) operation paths each passed 1/1.
+- Four final screenshots were exported and visually reviewed under
+  `/Users/aac6fef/.codex/visualizations/2026/07/18/019f73e0-9f28-7c42-99c7-9ad324848ca0/task-picker-actions-feedback-checkpoint/final`.
+  Both device classes show matching red Stop and colored Start/Switch circles
+  in the same trailing column; after stopping, the same task returns as a
+  normally readable Start row with no whole-row destructive treatment.
+- The frozen generic iOS Debug build succeeded with zero xcresult errors,
+  warnings, or analyzer warnings. Main App, Widget, Live Activity, and Watch
+  passed strict code-sign and embedded validation as Team `LT98S43NKA` /
+  `Apple Development: ZEXUAN GAO (PX46M259V3)`; the main App retains
+  development APS, CloudKit, and App Group entitlements.
+- Owned simulator UDIDs `483CAF61-70B1-448D-98E6-71097A6DC626` and
+  `271303DA-3A53-4BB5-9417-64AED2BFDD7E` were terminated, shut down, and
+  deleted. The first artifact-deletion loop used zsh's reserved `path`
+  variable and did not run; the corrected absolute-`find` retry removed all
+  owned result bundles and DerivedData. Final checks found no TaskPicker
+  device, owned Booted device, App, runner, `xcodebuild`, or `xctest` process.
+- This checkpoint responds only to the task-picker status-indicator feedback;
+  it does not modify or reopen the completed BlossomColorPicker work.
+
 Further checkpoints, completed operation-path evidence, screenshots, and any
 remaining limitations are appended as implementation proceeds.

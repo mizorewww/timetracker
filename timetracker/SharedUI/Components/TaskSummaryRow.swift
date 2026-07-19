@@ -18,14 +18,13 @@ struct TaskSummaryRowMetadata {
 
 enum TaskSummaryRowAccessory {
     case none
-    case command(title: String, systemImage: String)
     case selected
 
     var isVisible: Bool {
         switch self {
         case .none:
             false
-        case .command, .selected:
+        case .selected:
             true
         }
     }
@@ -146,13 +145,6 @@ private struct TaskSummaryMetadataLine: View {
         switch metadata.accessory {
         case .none:
             EmptyView()
-        case let .command(title, systemImage):
-            Image(systemName: systemImage)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(.tint)
-                .frame(minWidth: 24, minHeight: 24)
-                .help(title)
-                .accessibilityHidden(true)
         case .selected:
             Image(systemName: "checkmark")
                 .font(.body.weight(.semibold))

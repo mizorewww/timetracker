@@ -1550,14 +1550,15 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 - `TaskSummaryRow` 是静态任务身份与摘要的共享视觉 owner。它消费 canonical `TaskIdentityPresentation`；标题拥有最高布局优先级，正常字号最多两行，辅助功能字号允许完整生长。
 - `.hierarchical` 只显示标题，由现有树缩进、展开控件和 section 提供上下文；`.standard` 在标题下显示不含自身的父级路径，供搜索和平铺表面区分同名任务。调用方不得重新拆分 path 字符串。
-- 摘要 metadata line 在正常字号按“checklist progress、flexible spacer、被动 `TaskRunningIndicator`、已工作时长、navigation/accessory”排列；在 `.hierarchical` 中它是标题后的第二个内容行，`.standard` 可以先插入父级路径。辅助功能字号可把 checklist 与 trailing facts 纵向拆开。被动 timer 图标只说明事实，不拥有 Stop 命令。命令 glyph、选中 checkmark 和 navigation chevron 都是 accessory，不能替换任务 identity icon。
+- 摘要 metadata line 在正常字号按“checklist progress、flexible spacer、被动 `TaskRunningIndicator`、已工作时长、navigation/accessory”排列；在 `.hierarchical` 中它是标题后的第二个内容行，`.standard` 可以先插入父级路径。辅助功能字号可把 checklist 与 trailing facts 纵向拆开。被动 timer 图标只说明事实，不拥有 Stop 命令。选中 checkmark 和 navigation chevron 可以是 accessory；Start/Switch/Stop 这类命令不能伪装成 metadata glyph，也不能替换任务 identity icon。
 - Tasks management row、Sidebar task tree、层级选择器的普通/单选行和 `TaskIdentityRow` 必须复用 `TaskSummaryRow`。Tasks 的 VoiceOver 仍由 `TaskManagementRowAccessibilitySnapshot` 补足完整路径、预测和子任务数，不要求这些扩展事实常驻挤压正常字号视觉行。
-- `TaskTimerActionButton` 是主应用明确 Start/Switch/Stop 控件的共享视觉 owner，统一 bordered style、destructive role、iOS/iPadOS 44 pt（macOS 28 pt）目标、icon-only/title-and-icon 分支，以及包含目标任务名的 accessibility label/hint。Today/Quick Start 和计时选择器 Running 区域复用它；准入、并行和精确 segment 语义仍由 caller 与 timer command 决定。
+- `TaskTimerActionButton` 是主应用明确 Start/Switch/Stop 控件的共享视觉 owner，统一 bordered style、destructive role、满足 iOS/iPadOS 至少 44 pt 点击目标的尺寸、macOS 原生 28 pt 尺寸、icon-only/title-and-icon 分支，以及包含目标任务名的 accessibility label/hint。Today、Quick Start，以及计时选择器中未运行任务的 Start/Switch 和运行任务的 Stop 全部复用它；准入、并行和精确 segment 语义仍由 caller 与 timer command 决定。
+- 计时选择器固定使用 icon-only 变体，把 Start、Switch 和 Stop 放在同一个尾部操作槽；该槽在 iOS/iPadOS 固定为 54×54 pt，在 macOS 固定为 28×28 pt。每行由独立的只读 `TaskSummaryRow` 与右侧原生 `Button` 组成；摘要保留自己的可访问语义，不能隐藏后让 SwiftUI 把唯一的 Stop 按钮提升成整行破坏性点击目标，也不能把摘要与动作互相嵌套。
 - 只要同一表面已经提供 Stop，就不再重复 Running badge。计时选择器 Running 区域和运行中的任务详情只显示明确 Stop；Quick Start 的 elapsed 与 Stop 同样不再附加 Running。选择器 Stop 后保持打开，任务回到可选层级；只有成功 Start/Switch 才关闭。Pomodoro/Inbox 的 single-selection 行可以显示被动运行图标，但选择本身绝不启动或停止计时。
 
-后果：长标题先于 checklist、状态和时长获得空间；树内与平铺上下文各自保留必要而不重复的信息。Running 作为被动事实只存在于没有停止命令的摘要表面，Stop 作为明确动作只存在于可改变账本的表面，不再同时堆叠。以后新增任务表面必须先选择 identity context、metadata 和独立 action，不得复制另一套 row 或把状态与动作重新合成 toggle。
+后果：长标题先于 checklist、状态和时长获得空间；树内与平铺上下文各自保留必要而不重复的信息。Running 作为被动事实只存在于没有停止命令的摘要表面，Stop 作为明确动作只存在于可改变账本的表面，不再同时堆叠。计时选择器跨运行状态保持相同的图标尺寸、纵向位置、尾缘和点击范围。以后新增任务表面必须先选择 identity context、metadata 和独立 action，不得复制另一套 row 或把状态与动作重新合成 toggle。
 
-验证：共享组件、Task、Home 与 picker source contracts 固定复用边界、两行标题、metadata 顺序、无 `RunningStatusBadge` 和精确 Stop。行为测试固定 timer mode 把运行任务移出可选 rows、single-selection 仍允许选择运行任务。2026-07-19 冻结范围的 macOS contracts 为 92/92；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 各自通过 Tasks 长标题/被动 timer metadata 和 picker Stop-only/停止后继续选择两条路径，共 4/4。generic iOS 与 macOS Debug 自动签名构建及严格 codesign 通过；截图、失败诊断边界和资源清理记录在 dated Audit。
+验证：共享组件、Task、Home 与 picker source contracts 固定复用边界、两行标题、metadata 顺序、无 `RunningStatusBadge` 和精确 Stop。行为测试固定 timer mode 把运行任务移出可选 rows、single-selection 仍允许选择运行任务。2026-07-19 冻结范围的 macOS contracts 为 92/92；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 各自通过 Tasks 长标题/被动 timer metadata 和 picker Stop-only/停止后继续选择两条路径，共 4/4。后续真人反馈收口再以 30/30 macOS 定向回归和 iPhone/iPad 各 1/1 的同屏 Start/Switch/Stop、Stop→Start 尺寸/尾缘断言冻结 54/28 pt 操作槽。generic iOS 与 macOS Debug 自动签名构建及严格 codesign 通过；截图、失败诊断边界和资源清理记录在 dated Audit。
 
 ## AD-122：Analytics 定义由文字本身承担语义
 

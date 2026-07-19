@@ -22,9 +22,6 @@ struct TaskHierarchyPicker: View {
 
     @State var searchText = ""
     @State var expandedTaskIDs: Set<UUID> = []
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    #endif
 
     init(
         store: TimeTrackerStore,

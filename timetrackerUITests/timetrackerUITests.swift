@@ -2167,7 +2167,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTimerPickerRunningRowsExposeStopWithoutDuplicateRunningBadge() throws {
+    func testTimerPickerAlignsRunningAndAvailableTaskActions() throws {
         #if os(macOS)
         throw XCTSkip("The compact timer-picker action grammar is verified on iOS.")
         #else
@@ -2188,44 +2188,65 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
-        let guideStop = picker.buttons["Stop Read Apple HIG"].firstMatch
+        let stopButtons = picker.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@",
+            "timer.taskPicker.stop."
+        ))
+        let guideStop = stopButtons.element(boundBy: 0)
+        let availableAction = picker.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@",
+            "timer.taskPicker.select."
+        )).firstMatch
         let runningHeader = app.staticTexts[
             "timer.taskPicker.runningHeader"
         ].firstMatch
         XCTAssertTrue(runningHeader.waitForExistence(timeout: 5))
         XCTAssertTrue(guideStop.waitForExistence(timeout: 5))
+        XCTAssertEqual(guideStop.label, "Stop Read Apple HIG")
+        XCTAssertTrue(
+            waitForElement(
+                availableAction,
+                timeout: 5,
+                diagnosticName: "timer-picker-available-action",
+                in: app
+            ) && availableAction.isHittable
+        )
 
-        let stopButtons = picker.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH %@",
-            "timer.taskPicker.stop."
-        ))
         XCTAssertGreaterThanOrEqual(stopButtons.count, 1)
         for index in 0..<stopButtons.count {
             let stop = stopButtons.element(boundBy: index)
             XCTAssertTrue(stop.isHittable)
             XCTAssertGreaterThanOrEqual(stop.frame.width, 44)
             XCTAssertGreaterThanOrEqual(stop.frame.height, 44)
-        }
-        let runningRows = picker.descendants(matching: .any).matching(
-            NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "timer.taskPicker.running."
+            XCTAssertEqual(
+                stop.frame.width,
+                availableAction.frame.width,
+                accuracy: 2,
+                "Start/Switch and Stop must use the same icon control width."
             )
-        )
+            XCTAssertEqual(
+                stop.frame.height,
+                availableAction.frame.height,
+                accuracy: 2,
+                "Start/Switch and Stop must use the same icon control height."
+            )
+            XCTAssertEqual(
+                stop.frame.maxX,
+                availableAction.frame.maxX,
+                accuracy: 2,
+                "Every timer action must occupy the same trailing column."
+            )
+        }
+        XCTAssertGreaterThanOrEqual(availableAction.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(availableAction.frame.height, 44)
         XCTAssertEqual(
-            runningRows.count,
-            stopButtons.count,
-            "Each active task must expose one passive summary and one explicit Stop action."
+            availableAction.frame.width,
+            availableAction.frame.height,
+            accuracy: 2,
+            "Picker timer actions must remain centered icon controls on iPhone and iPad."
         )
-        for index in 0..<runningRows.count {
-            let runningRow = runningRows.element(boundBy: index)
-            let value = (runningRow.value as? String ?? "").lowercased()
-            XCTAssertFalse(
-                value.contains("running"),
-                "The Running Timers section owns status context; row values must not repeat it."
-            )
-        }
-        try capture("timer-picker-stop-without-running-badge", app: app)
+        let guideStopFrame = guideStop.frame
+        try capture("timer-picker-aligned-task-actions", app: app)
 
         XCTAssertTrue(guideStop.isHittable)
         activate(guideStop)
@@ -2238,6 +2259,11 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
         activate(search)
         search.typeText("Read Apple HIG")
+        search.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertTrue(
+            app.keyboards.firstMatch.waitForNonExistence(timeout: 3),
+            "Dismiss the search keyboard before comparing screen-space action frames."
+        )
         let stoppedTask = app.buttons
             .matching(NSPredicate(
                 format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
@@ -2252,6 +2278,24 @@ final class timetrackerUITests: XCTestCase {
                 diagnosticName: "timer-picker-stopped-task-selectable",
                 in: app
             ) && stoppedTask.isHittable
+        )
+        XCTAssertEqual(
+            stoppedTask.frame.width,
+            guideStopFrame.width,
+            accuracy: 2,
+            "The same task must keep one action-control width after Stop becomes Start."
+        )
+        XCTAssertEqual(
+            stoppedTask.frame.height,
+            guideStopFrame.height,
+            accuracy: 2,
+            "The same task must keep one action-control height after Stop becomes Start."
+        )
+        XCTAssertEqual(
+            stoppedTask.frame.maxX,
+            guideStopFrame.maxX,
+            accuracy: 2,
+            "The same task action must stay in the trailing column across state changes."
         )
         try capture("timer-picker-stopped-task-selectable", app: app)
         #endif

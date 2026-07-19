@@ -36,7 +36,10 @@ struct TaskTimerActionButton: View {
         .buttonStyle(.bordered)
         .buttonBorderShape(usesIconOnly ? .circle : .capsule)
         .tint(activeSegment == nil ? taskColor : .red)
-        .frame(minWidth: usesIconOnly ? minimumControlHeight : nil)
+        .frame(
+            width: usesIconOnly ? iconControlDimension : nil,
+            height: usesIconOnly ? iconControlDimension : nil
+        )
         .frame(minHeight: minimumControlHeight)
         .contentShape(Rectangle())
         .accessibilityLabel(accessibilityLabel)
@@ -89,9 +92,17 @@ struct TaskTimerActionButton: View {
 
     private var minimumLabelDimension: CGFloat {
         #if os(iOS)
-        24
+        26
         #else
         16
+        #endif
+    }
+
+    private var iconControlDimension: CGFloat {
+        #if os(iOS)
+        54
+        #else
+        28
         #endif
     }
 

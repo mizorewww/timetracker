@@ -233,6 +233,14 @@ struct SharedComponentsContractTests {
         let home = try sourceText(
             "timetracker/Features/Home/Rows/HomeTimerRows.swift"
         )
+        let iconControlDimensionSource =
+            "private var iconControlDimension: CGFloat {\n" +
+            "        #if os(iOS)\n" +
+            "        54\n" +
+            "        #else\n" +
+            "        28\n" +
+            "        #endif\n" +
+            "    }"
 
         #expect(tasks.contains("TaskSummaryRow("))
         #expect(sidebar.contains("TaskSummaryRow("))
@@ -259,15 +267,22 @@ struct SharedComponentsContractTests {
             )
         )
         #expect(picker.contains("TaskTimerActionButton("))
+        #expect(
+            picker.components(separatedBy: "TaskTimerActionButton(").count >= 3
+        )
+        #expect(picker.contains("activeSegment: nil"))
+        #expect(picker.contains("activeSegment: activeSegment"))
+        #expect(picker.contains("pickerActionLabelStyle: TaskTimerActionLabelStyle {\n        .iconOnly"))
         #expect(home.contains("TaskTimerActionButton("))
         #expect(timerAction.contains("enum TaskTimerActionLabelStyle"))
         #expect(
             timerAction.contains(
-                ".frame(minWidth: usesIconOnly ? minimumControlHeight : nil)"
+                "width: usesIconOnly ? iconControlDimension : nil"
             )
         )
         #expect(timerAction.contains("private var minimumControlHeight: CGFloat"))
         #expect(timerAction.contains("private var minimumLabelDimension: CGFloat"))
+        #expect(timerAction.contains(iconControlDimensionSource))
         #expect(timerAction.contains(".controlSize(platformControlSize)"))
         #expect(timerAction.contains("private var platformControlSize: ControlSize"))
         #expect(timerAction.contains("timer.action.stopTaskFormat"))

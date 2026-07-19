@@ -10,14 +10,16 @@ extension TaskHierarchyPicker {
                 disclosureControl(item)
             }
 
-            selectionButton(item, sectionKind: sectionKind)
+            switch mode {
+            case .timer:
+                timerSelectionRow(item, sectionKind: sectionKind)
+            case .singleSelection:
+                selectionButton(item, sectionKind: sectionKind)
+            }
         }
-        .padding(
-            .leading,
-            sectionKind == .hierarchy
-                ? CGFloat(min(item.depth, 6)) * 12
-                : 0
-        )
+        .padding(.leading, sectionKind == .hierarchy
+            ? CGFloat(min(item.depth, 6)) * 12
+            : 0)
     }
 
     @ViewBuilder
@@ -37,9 +39,7 @@ extension TaskHierarchyPicker {
             .frame(width: disclosureTargetSize, height: disclosureTargetSize)
             .contentShape(Rectangle())
             .accessibilityLabel(disclosureLabel(for: item))
-            .accessibilityIdentifier(
-                "taskHierarchy.disclosure.\(item.id.uuidString)"
-            )
+            .accessibilityIdentifier("taskHierarchy.disclosure.\(item.id.uuidString)")
         case .reserved:
             Color.clear
                 .frame(width: disclosureTargetSize, height: disclosureTargetSize)
@@ -67,67 +67,52 @@ extension TaskHierarchyPicker {
         .accessibilityIdentifier(selectionIdentifier(for: item))
     }
 
-    @ViewBuilder
     func selectionLabel(
         _ item: TaskHierarchyProjection.Item,
         sectionKind: TaskHierarchyProjection.Section.Kind
     ) -> some View {
-        switch mode {
-        case .timer:
-            TaskSummaryRow(
-                presentation: item.identity,
-                context: identityContext(for: sectionKind),
-                metadata: TaskSummaryRowMetadata(
-                    checklistProgress: item.checklistProgress,
-                    workedSeconds: item.workedSeconds,
-                    accessory: .command(
-                        title: item.timerCommand.actionTitle,
-                        systemImage: item.timerCommand.systemImage
-                    )
-                )
+        TaskSummaryRow(
+            presentation: item.identity,
+            context: identityContext(for: sectionKind),
+            metadata: TaskSummaryRowMetadata(
+                checklistProgress: item.checklistProgress,
+                workedSeconds: item.workedSeconds,
+                isRunning: item.isRunning,
+                accessory: isSelected(item) ? .selected : .none
             )
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        case .singleSelection:
-            TaskSummaryRow(
-                presentation: item.identity,
-                context: identityContext(for: sectionKind),
-                metadata: TaskSummaryRowMetadata(
-                    checklistProgress: item.checklistProgress,
-                    workedSeconds: item.workedSeconds,
-                    isRunning: item.isRunning,
-                    accessory: isSelected(item) ? .selected : .none
-                )
+        )
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    func timerSelectionRow(
+        _ item: TaskHierarchyProjection.Item,
+        sectionKind: TaskHierarchyProjection.Section.Kind
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            timerTaskSummary(item, context: identityContext(for: sectionKind))
+
+            TaskTimerActionButton(
+                taskTitle: item.identity.title,
+                taskColor: Color(hex: item.identity.visual.colorHex) ?? .blue,
+                activeSegment: nil,
+                command: item.timerCommand,
+                labelStyle: pickerActionLabelStyle,
+                action: { select(item) },
+                accessibilityIdentifier: selectionIdentifier(for: item)
             )
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            .disabled(item.isAvailable == false)
+            .accessibilityValue(accessibilityValue(for: item))
+            .accessibilityHint(accessibilityHint(for: item))
         }
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func runningRow(_ item: TaskHierarchyProjection.Item) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            TaskSummaryRow(
-                presentation: item.identity,
-                context: .standard,
-                metadata: TaskSummaryRowMetadata(
-                    checklistProgress: item.checklistProgress,
-                    workedSeconds: item.workedSeconds
-                )
-            )
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(
-                String(
-                    format: AppStrings.localized("timer.picker.runningTaskFormat"),
-                    item.identity.title
-                )
-            )
-            .accessibilityValue(accessibilityValue(for: item))
-            .accessibilityHint(AppStrings.localized("timer.picker.runningHint"))
-            .accessibilityIdentifier(
-                "timer.taskPicker.running.\(item.id.uuidString)"
-            )
+            timerTaskSummary(item, context: .standard)
 
             stopButton(item)
         }
@@ -144,21 +129,33 @@ extension TaskHierarchyPicker {
                 activeSegment: activeSegment,
                 command: .alreadyRunning,
                 labelStyle: pickerActionLabelStyle,
-                action: {
-                    store.stop(segment: activeSegment)
-                },
-                accessibilityIdentifier:
-                    "timer.taskPicker.stop.\(item.id.uuidString)"
+                action: { store.stop(segment: activeSegment) },
+                accessibilityIdentifier: "timer.taskPicker.stop.\(item.id.uuidString)"
             )
+            .accessibilityValue(accessibilityValue(for: item))
         }
     }
 
+    private func timerTaskSummary(
+        _ item: TaskHierarchyProjection.Item,
+        context: TaskIdentityPresentation.Context
+    ) -> some View {
+        TaskSummaryRow(
+            presentation: item.identity,
+            context: context,
+            metadata: TaskSummaryRowMetadata(
+                checklistProgress: item.checklistProgress,
+                workedSeconds: item.workedSeconds
+            )
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.identity.title)
+        .accessibilityValue(accessibilityValue(for: item))
+        .accessibilityIdentifier("timer.taskPicker.summary.\(item.id.uuidString)")
+    }
+
     private var pickerActionLabelStyle: TaskTimerActionLabelStyle {
-        #if os(iOS)
-        horizontalSizeClass == .compact ? .iconOnly : .titleAndIcon
-        #else
-        .titleAndIcon
-        #endif
+        .iconOnly
     }
 
     private func identityContext(
@@ -167,9 +164,7 @@ extension TaskHierarchyPicker {
         sectionKind == .hierarchy ? .hierarchical : .standard
     }
 
-    private func disclosureLabel(
-        for item: TaskHierarchyProjection.Item
-    ) -> String {
+    private func disclosureLabel(for item: TaskHierarchyProjection.Item) -> String {
         let action = item.isExpanded
             ? AppStrings.localized("task.tree.collapse")
             : AppStrings.localized("task.tree.expand")

@@ -1,6 +1,6 @@
 import Foundation
 
-extension AppleHealthSleepEpisodeService {
+nonisolated extension AppleHealthSleepEpisodeService {
     func deduplicated(
         _ episodes: [AppleHealthSleepEpisode]
     ) -> [AppleHealthSleepEpisode] {

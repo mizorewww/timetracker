@@ -163,7 +163,11 @@ extension TimeTrackerStore {
     }
 
     func taskIdentityPresentation(for task: TaskNode) -> TaskIdentityPresentation {
-        taskTreeIndexes.taskIdentityPresentation(for: task.id) ?? TaskIdentityPresentation(
+        // The identity index is intentionally Observation-ignored. Track its
+        // value-semantic revision so any row consuming a cached presentation
+        // refreshes after sibling-context task edits are merged.
+        _ = taskReadModelRevision
+        return taskTreeIndexes.taskIdentityPresentation(for: task.id) ?? TaskIdentityPresentation(
             id: task.id,
             title: task.title,
             parentPath: nil,

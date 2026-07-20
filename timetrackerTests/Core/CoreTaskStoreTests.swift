@@ -269,6 +269,28 @@ struct CoreTaskStoreTests {
     }
 
     @Test @MainActor
+    func taskIdentityPresentationObservesTaskReadModelRevision() {
+        let task = TaskNode(
+            title: "Quick Start",
+            parentID: nil,
+            deviceID: "test"
+        )
+        let store = makeTestStore()
+        store.tasks = [task]
+        store.preferences.quickStartTaskIDs = [task.id]
+        var didInvalidate = false
+        withObservationTracking {
+            _ = store.taskIdentityPresentation(for: task)
+        } onChange: {
+            didInvalidate = true
+        }
+
+        store.rebuildTaskIndexes()
+
+        #expect(didInvalidate)
+    }
+
+    @Test @MainActor
     func repositoryRejectsCreatingOrMovingTasksIntoAnArchivedSubtree() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")

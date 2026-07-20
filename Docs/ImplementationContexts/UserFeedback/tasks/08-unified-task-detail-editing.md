@@ -9,8 +9,9 @@
 - [x] 已用失败测试锁定自动保存、导航前落盘、验证/冲突恢复和 baseline 重建语义。
 - [x] 已把已验证的自动保存核心接入 canonical task detail，并稳定工具栏。
 - [x] 已让 autosave rebase 原位推进 baseline/持久 ID，并在 checklist 身份不完整时失败为冲突，避免覆盖聚焦输入或漂移身份。
+- [x] 已让所有任务身份展示观察统一的 read-model revision；Today 返回后立即刷新重命名任务，不重建整组视图。
 - [~] 正在迁移受自动保存语义影响的 4 条跨平台 UI 测试。
-- 下一 checkpoint：Mac 解锁后，用显式 owned 设备验证聚焦输入、导航 flush 与稳定工具栏。
+- 下一 checkpoint：完成 iPhone、iPad 与 macOS 的自动保存 UI 矩阵，并核验截图。
 
 ## 反馈边界
 
@@ -81,6 +82,7 @@
 - [x] 自动保存 UI 接入：已有任务移除 Save/Cancel；450ms 防抖、失焦/失活/退出/导航 flush、失败 Retry、冲突恢复、原生返回保护和 checklist 焦点稳定；综合 80/80 测试通过，最后同步细化复测 17/17 通过。
 - [x] 自动保存 rebase 加固：保存回执不再整体替换可见 draft，只原位推进 mutation baseline 与已完整双射的 checklist 持久 ID；映射分歧返回 conflict 且不修改当前输入。TaskEditorSession、autosave controller、workspace contract 共 24 条目标测试通过，相关 task-editor 源码结构检查通过。
 - [x] 导航注册替换加固：旧详情闭包释放时可能触发 token `deinit` 并重入 `unregister`，与 `register` 对同一属性的写访问冲突；延长旧注册生命周期到赋值结束，并以弱引用证明闭包独占 token 确实释放。负向对照移除修复后稳定触发原 `Fatal access conflict`；恢复后 macOS 导航守卫套件 17/17 通过，iPhone Today 原生返回、重开路径不再崩溃。
+- [x] Today 身份刷新加固：`taskIdentityPresentation(for:)` 统一观察 `taskReadModelRevision`，避免在 Today 层传递 revision 或用 `.id` 重建视图；精准 Observation 单测 1/1 通过。iPhone 严格 UI 回归在 30 秒防抖下证明系统返回主动 flush，返回行标题立即更新并可重开持久值（`Task08-iPhone-Today-run11.xcresult`）。
 - [~] 当前 checkpoint：迁移 4 条跨平台 UI 测试到自动保存语义。
 
 ## 当前验收阻塞

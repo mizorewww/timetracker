@@ -165,6 +165,7 @@ extension InboxCommandHandler {
             suggestions: fetchedSuggestions
         )[winner.id],
               canonicalSuggestion.id == suggestion.id,
+              canonicalSuggestion.destinationKind == .checklist,
               InboxSuggestionStateService().displaySuggestion(
                   for: winner,
                   suggestion: canonicalSuggestion

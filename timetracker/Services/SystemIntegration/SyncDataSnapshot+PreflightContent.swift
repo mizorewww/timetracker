@@ -212,6 +212,13 @@ struct SyncSnapshotContentValidator {
         }
 
         for record in snapshot.inboxSuggestions {
+            try text(
+                record.destinationKindRaw,
+                maximum: .compact,
+                table: .inboxSuggestions,
+                id: record.id,
+                field: "destinationKindRaw"
+            )
             try text(record.reason, maximum: .note, table: .inboxSuggestions, id: record.id, field: "reason")
             try text(record.iconName, maximum: .compact, table: .inboxSuggestions, id: record.id, field: "iconName")
             try text(record.colorHex, maximum: .compact, table: .inboxSuggestions, id: record.id, field: "colorHex")

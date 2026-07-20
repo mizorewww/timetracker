@@ -15,6 +15,8 @@ extension InboxCommandHandler {
         suggestion.inboxItemContextID = item.effectiveSuggestionContextID
         suggestion.inboxItemRevisionID = item.effectiveSuggestionRevisionID
         suggestion.taskID = taskID
+        suggestion.destinationKindRaw =
+            InboxSuggestionDestinationKind.checklist.rawValue
         suggestion.generatedAt = now
         suggestion.updatedAt = now
         suggestion.deviceID = deviceID

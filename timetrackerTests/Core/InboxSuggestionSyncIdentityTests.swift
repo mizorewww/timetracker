@@ -181,6 +181,49 @@ struct InboxSuggestionSyncIdentityTests {
     }
 
     @Test @MainActor
+    func snapshotRoundTripPreservesSuggestionDestinationKind() throws {
+        let sourceContext = try makeTestContext()
+        let item = InboxItem(title: "Route to a category", deviceID: "source")
+        let suggestion = makeSuggestion(item: item, taskID: UUID())
+        suggestion.destinationKindRaw = InboxSuggestionDestinationKind.category.rawValue
+        sourceContext.insert(item)
+        sourceContext.insert(suggestion)
+        try sourceContext.save()
+
+        let captured = try SyncDataSnapshot.capture(context: sourceContext)
+        let capturedRecord = try #require(captured.inboxSuggestions.first)
+        #expect(
+            capturedRecord.destinationKindRaw ==
+                InboxSuggestionDestinationKind.category.rawValue
+        )
+
+        let encoded = try JSONEncoder().encode(captured)
+        let encodedJSON = try #require(String(data: encoded, encoding: .utf8))
+        #expect(encodedJSON.contains("\"destinationKindRaw\":\"category\""))
+        let decoded = try JSONDecoder().decode(SyncDataSnapshot.self, from: encoded)
+        try decoded.validateForRestore()
+        #expect(
+            decoded.inboxSuggestions.first?.destinationKindRaw ==
+                InboxSuggestionDestinationKind.category.rawValue
+        )
+
+        let restoredContext = try makeTestContext()
+        try decoded.restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let restored = try #require(
+            try restoredContext.fetch(FetchDescriptor<InboxSuggestion>()).first
+        )
+        #expect(restored.destinationKind == .category)
+        #expect(
+            try SyncDataSnapshot.capture(context: restoredContext)
+                .inboxSuggestions.first?.destinationKindRaw ==
+                InboxSuggestionDestinationKind.category.rawValue
+        )
+    }
+
+    @Test @MainActor
     func titleEditSnapshotAcceptsHistoricalSuggestionTombstone() throws {
         let sourceContext = try makeTestContext()
         let task = TaskNode(title: "Target", parentID: nil, deviceID: "test")
@@ -368,6 +411,92 @@ struct InboxSuggestionSyncIdentityTests {
         #expect(exportedJSON.contains("dismissedSuggestionRevisionID"))
         #expect(exportedJSON.contains("titleHash") == false)
         #expect(exportedJSON.contains("normalizedTitle") == false)
+    }
+
+    @Test @MainActor
+    func legacySnapshotWithoutSuggestionDestinationKindRestoresAsChecklist() throws {
+        let sourceContext = try makeTestContext()
+        let item = InboxItem(title: "Legacy suggestion", deviceID: "legacy")
+        let suggestion = makeSuggestion(item: item, taskID: UUID())
+        suggestion.destinationKindRaw = InboxSuggestionDestinationKind.childTask.rawValue
+        sourceContext.insert(item)
+        sourceContext.insert(suggestion)
+        try sourceContext.save()
+
+        let encoder = JSONEncoder()
+        let capturedData = try encoder.encode(
+            SyncDataSnapshot.capture(context: sourceContext)
+        )
+        var legacyJSON = try #require(
+            JSONSerialization.jsonObject(with: capturedData) as? [String: Any]
+        )
+        var legacySuggestions = try #require(
+            legacyJSON["inboxSuggestions"] as? [[String: Any]]
+        )
+        #expect(legacySuggestions.first?["destinationKindRaw"] as? String == "childTask")
+        for index in legacySuggestions.indices {
+            legacySuggestions[index].removeValue(forKey: "destinationKindRaw")
+        }
+        legacyJSON["inboxSuggestions"] = legacySuggestions
+        let legacyData = try JSONSerialization.data(withJSONObject: legacyJSON)
+
+        let decoded = try JSONDecoder().decode(SyncDataSnapshot.self, from: legacyData)
+        let decodedSuggestion = try #require(decoded.inboxSuggestions.first)
+        #expect(decodedSuggestion.destinationKindRaw == "checklist")
+        try decoded.validateForRestore()
+
+        let restoredContext = try makeTestContext()
+        try decoded.restoreAsLocalWinner(
+            context: restoredContext,
+            now: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let restored = try #require(
+            try restoredContext.fetch(FetchDescriptor<InboxSuggestion>()).first
+        )
+        #expect(restored.destinationKind == .checklist)
+
+        let exportedData = try encoder.encode(
+            SyncDataSnapshot.capture(context: restoredContext)
+        )
+        var exportedJSON = try #require(
+            JSONSerialization.jsonObject(with: exportedData) as? [String: Any]
+        )
+        let exportedSuggestions = try #require(
+            exportedJSON.removeValue(forKey: "inboxSuggestions") as? [[String: Any]]
+        )
+        #expect(exportedSuggestions.first?["destinationKindRaw"] as? String == "checklist")
+    }
+
+    @Test @MainActor
+    func explicitNullSuggestionDestinationKindIsNotTreatedAsLegacyData() throws {
+        let context = try makeTestContext()
+        let item = InboxItem(title: "Malformed suggestion", deviceID: "source")
+        let suggestion = makeSuggestion(item: item, taskID: UUID())
+        context.insert(item)
+        context.insert(suggestion)
+        try context.save()
+
+        let capturedData = try JSONEncoder().encode(
+            SyncDataSnapshot.capture(context: context)
+        )
+        var malformedJSON = try #require(
+            JSONSerialization.jsonObject(with: capturedData) as? [String: Any]
+        )
+        var suggestions = try #require(
+            malformedJSON["inboxSuggestions"] as? [[String: Any]]
+        )
+        suggestions[0]["destinationKindRaw"] = NSNull()
+        malformedJSON["inboxSuggestions"] = suggestions
+        let malformedData = try JSONSerialization.data(
+            withJSONObject: malformedJSON
+        )
+
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(
+                SyncDataSnapshot.self,
+                from: malformedData
+            )
+        }
     }
 
     @Test

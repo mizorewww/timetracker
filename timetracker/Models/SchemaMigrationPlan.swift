@@ -15,7 +15,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV8.self,
             TimeTrackerSchemaV9.self,
             TimeTrackerSchemaV10.self,
-            TimeTrackerSchemaV11.self
+            TimeTrackerSchemaV11.self,
+            TimeTrackerSchemaV12.self
         ]
     }
 
@@ -66,13 +67,16 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                 willMigrate: nil,
                 didMigrate: migrateInboxSuggestionIdentity
             ),
-            .lightweight(fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self)
         ]
     }
 
     private static func migrateInboxSuggestionIdentity(context: ModelContext) throws {
         let items = try context.fetch(FetchDescriptor<InboxItem>())
-        let suggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
+        let suggestions = try context.fetch(
+            FetchDescriptor<TimeTrackerSchemaV10.InboxSuggestion>()
+        )
         let activeSuggestionItemIDs = Set(
             suggestions.lazy.filter { $0.deletedAt == nil }.map(\.inboxItemID)
         )

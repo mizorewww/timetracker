@@ -121,6 +121,38 @@ struct StoreScopedInboxSuggestionCommandCoordinatorTests {
     }
 
     @Test
+    func legacyApplyRejectsANonChecklistDestinationWithoutConsumingIt() throws {
+        let context = try makeTestContext()
+        let task = try createTask(in: context)
+        let item = try insertItem(title: "Keep the destination typed", into: context)
+        let suggestion = try insertSuggestion(
+            for: item,
+            taskID: task.id,
+            into: context
+        )
+        suggestion.destinationKindRaw =
+            InboxSuggestionDestinationKind.category.rawValue
+        try context.save()
+        let baseline = InboxSuggestionApplyBaseline(
+            item: item,
+            suggestion: suggestion
+        )
+
+        #expect(throws: StoreScopedInboxMutationError.inboxChanged) {
+            try coordinator(container: context.container)
+                .applySuggestion(baseline: baseline)
+        }
+
+        let freshContext = ModelContext(context.container)
+        #expect(try freshContext.fetch(FetchDescriptor<ChecklistItem>()).isEmpty)
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt == nil)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
+                .first?.destinationKind == .category
+        )
+    }
+
+    @Test
     func generatedSuggestionSilentlyDropsAfterATitleRevisionChanges() throws {
         let context = try makeTestContext()
         let task = try createTask(in: context)

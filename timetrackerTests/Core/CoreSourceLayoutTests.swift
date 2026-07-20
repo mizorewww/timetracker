@@ -1092,13 +1092,14 @@ struct CoreSourceLayoutTests {
         ]
         .map(sourceText)
         .joined(separator: "\n")
-        let v11Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV11").last ?? ""
+        let v12Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV12").last ?? ""
 
-        #expect(v11Schema.contains("DailySummary.self") == false)
-        #expect(currentRegistry.contains("TimeTrackerSchemaV11"))
+        #expect(v12Schema.contains("DailySummary.self") == false)
+        #expect(currentRegistry.contains("TimeTrackerSchemaV12"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV9.self,\n                toVersion: TimeTrackerSchemaV10.self"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self"))
+        #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self"))
         #expect(legacyModel.contains("Legacy persisted cache retained only"))
         #expect(productionPaths.contains("FetchDescriptor<DailySummary>") == false)
         #expect(productionPaths.contains("-> DailySummary {") == false)

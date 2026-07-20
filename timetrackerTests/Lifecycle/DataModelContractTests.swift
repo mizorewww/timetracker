@@ -223,6 +223,8 @@ struct DataModelContractTests {
         #expect(checklistVisual.suggestionTitleSnapshot == nil)
         #expect(checklistVisual.userEditedAt == nil)
         #expect(inboxSuggestion.deletedAt == nil)
+        #expect(inboxSuggestion.destinationKindRaw == "checklist")
+        #expect(inboxSuggestion.destinationKind == .checklist)
         #expect(category.includesInForecast)
         #expect(categoryAssignment.deletedAt == nil)
     }
@@ -315,7 +317,7 @@ struct DataModelContractTests {
             let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
             #expect(taskIDs == [fixture.taskID])
             #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV11.versionIdentifier)
+            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV12.versionIdentifier)
         }
     }
 

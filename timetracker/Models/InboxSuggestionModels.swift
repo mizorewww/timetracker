@@ -1,6 +1,12 @@
 import Foundation
 import SwiftData
 
+nonisolated enum InboxSuggestionDestinationKind: String, Codable, CaseIterable, Sendable {
+    case childTask
+    case category
+    case checklist
+}
+
 @Model
 final class InboxSuggestion {
     var id: UUID = UUID()
@@ -9,6 +15,7 @@ final class InboxSuggestion {
     var inboxItemContextID: UUID?
     var inboxItemRevisionID: UUID?
     var taskID: UUID = UUID()
+    var destinationKindRaw: String = "checklist"
     var reason: String?
     var iconName: String = "checkmark.circle"
     var colorHex: String = "1677FF"
@@ -26,6 +33,7 @@ final class InboxSuggestion {
         inboxItemContextID: UUID? = nil,
         inboxItemRevisionID: UUID? = nil,
         taskID: UUID,
+        destinationKind: InboxSuggestionDestinationKind = .checklist,
         reason: String? = nil,
         iconName: String = "checkmark.circle",
         colorHex: String = "1677FF",
@@ -39,6 +47,7 @@ final class InboxSuggestion {
         self.inboxItemContextID = inboxItemContextID
         self.inboxItemRevisionID = inboxItemRevisionID
         self.taskID = taskID
+        self.destinationKindRaw = destinationKind.rawValue
         self.reason = reason
         self.iconName = iconName
         self.colorHex = colorHex
@@ -49,5 +58,9 @@ final class InboxSuggestion {
         self.updatedAt = Date()
         self.deviceID = deviceID
         self.clientMutationID = UUID()
+    }
+
+    var destinationKind: InboxSuggestionDestinationKind? {
+        InboxSuggestionDestinationKind(rawValue: destinationKindRaw)
     }
 }

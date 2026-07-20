@@ -92,6 +92,60 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
+    func invalidInboxSuggestionDestinationKindIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let invalidRawValue = "future-destination"
+        let suggestion = InboxSuggestion(
+            inboxItemID: UUID(),
+            taskID: UUID(),
+            titleSnapshot: "Invalid destination",
+            deviceID: "source"
+        )
+        suggestion.destinationKindRaw = invalidRawValue
+        let record = InboxSuggestionRecord(suggestion)
+
+        #expect(throws: SyncDataSnapshotPreflightError.invalidRawValue(
+            table: .inboxSuggestions,
+            id: record.id,
+            field: "destinationKindRaw",
+            value: invalidRawValue
+        )) {
+            try SyncDataSnapshot(inboxSuggestions: [record])
+                .restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
+    func oversizedInboxSuggestionDestinationKindIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let oversizedRawValue = String(
+            repeating: "a",
+            count: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1
+        )
+        let suggestion = InboxSuggestion(
+            inboxItemID: UUID(),
+            taskID: UUID(),
+            titleSnapshot: "Oversized destination",
+            deviceID: "source"
+        )
+        suggestion.destinationKindRaw = oversizedRawValue
+        let record = InboxSuggestionRecord(suggestion)
+
+        #expect(throws: SyncDataSnapshotPreflightError.fieldByteLimitExceeded(
+            table: .inboxSuggestions,
+            id: record.id,
+            field: "destinationKindRaw",
+            actual: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1,
+            maximum: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
+        )) {
+            try SyncDataSnapshot(inboxSuggestions: [record])
+                .restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
     func legacyTaskStatusRawValuesPassPreflightAndRestoreVerbatim() throws {
         let context = try makeTestContext()
         let rawValues = [

@@ -53,6 +53,15 @@ extension SyncDataSnapshot {
                 value: record.stateRaw
             )
         }
+        for record in inboxSuggestions
+        where InboxSuggestionDestinationKind(rawValue: record.destinationKindRaw) == nil {
+            throw SyncDataSnapshotPreflightError.invalidRawValue(
+                table: .inboxSuggestions,
+                id: record.id,
+                field: "destinationKindRaw",
+                value: record.destinationKindRaw
+            )
+        }
     }
 
     private func validatePomodoroValues() throws {

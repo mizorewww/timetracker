@@ -157,6 +157,7 @@ extension SyncDataSnapshot {
             model.inboxItemContextID = contextID
             model.inboxItemRevisionID = revisionID
             model.taskID = record.taskID
+            model.destinationKindRaw = record.destinationKindRaw
             model.reason = record.reason
             model.iconName = record.iconName
             model.colorHex = record.colorHex

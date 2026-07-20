@@ -145,6 +145,7 @@ extension StoreScopedInboxCommandCoordinator {
             )[item.id],
             suggestion.id == baseline.suggestionID,
             suggestion.clientMutationID == baseline.suggestionMutationID,
+            suggestion.destinationKind == .checklist,
             InboxSuggestionStateService().displaySuggestion(
                 for: resolution.readModel,
                 suggestion: suggestion

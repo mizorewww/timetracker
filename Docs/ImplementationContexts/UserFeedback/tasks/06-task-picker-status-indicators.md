@@ -5,8 +5,10 @@
 
 ## 当前阶段
 
-- 已按顺序领取反馈项，尚未修改产品代码。
-- 下一步盘点所有任务选择器，重点比较 Start Another Timer 中正在计时与未计时任务的图标尺寸、位置和语义。
+- 已按顺序领取反馈项并完成静态、HIG、测试与 iPhone 基线截图盘点，尚未修改产品代码。
+- 基线证明 Stop / Start 按钮外框同尺寸、同尾列，但 `stop.fill` / `play.fill`
+  被强制缩进同一方形画布后，可见包络与光学中心仍不同。
+- 下一步先建立可执行动作与被动状态两层共享样式契约并补强测试，再修改产品代码。
 
 ## 实现边界
 
@@ -17,7 +19,7 @@
 
 ## 验收清单
 
-- [ ] 盘点所有任务选择器及其运行状态来源
+- [x] 盘点所有任务选择器及其运行状态来源
 - [ ] 定义并测试共享状态指示的布局与语义契约
 - [ ] 实现 Start Another Timer 及其他同类 picker 的统一样式
 - [ ] 验证 iPhone、iPad、macOS 普通路径并截图
@@ -27,21 +29,46 @@
 
 ## HIG 与依赖决策
 
-- 使用 SF Symbols，并让符号尺寸和字重跟随同一文本样式；通过固定的状态槽位保持行内光学对齐。
+- 可执行的 Start / Switch / Stop 使用同一圆形包络 SF Symbols：
+  `play.circle.fill` / `arrow.left.arrow.right.circle.fill` / `stop.circle.fill`；
+  统一系统字体、字重、image scale、monochrome rendering 和尾部交互槽，不允许逐图标
+  `scaleEffect`、`offset` 或自绘图形。
+- 被动的 Running / Selected 使用较小但相同的紧凑指标：
+  `timer.circle.fill` / `checkmark.circle.fill`，固定尺寸与排列顺序；不得伪装成按钮。
 - 运行状态不能只依赖 tint，图形本身必须可区分。
+- Timer picker 的 running row 已有明确 Stop，不重复添加被动 Running 标记。
+- 数据源已经统一来自 `activeSegments → activeSegmentByTaskID → projection.isRunning`，
+  不增加本地镜像状态。
 - 优先复用 SwiftUI 和项目现有组件；如确需第三方库，先核对维护状态、许可证、
   平台兼容性和至少 1k GitHub stars。
+- 本项只需 Apple SwiftUI 与 SF Symbols，不新增依赖。
 
 ## 子代理编排
 
-- 待分派：picker 调用点与状态来源静态盘点。
-- 待分派：HIG/视觉一致性独立审查。
-- 待分派：现有测试与可观察 UI 契约盘点。
+- 已完成：picker 调用点与状态来源静态盘点；确认两种 timer row 已共享
+  `TaskTimerActionButton`，应在共享组件收敛，不修改业务状态。
+- 已完成：HIG/视觉一致性独立审查；根因是只统一布局 frame、没有统一可见光学包络。
+- 已完成：现有测试与可观察 UI 契约盘点；当前 XCUITest 只比较 Button 外框、跳过
+  macOS，且 Stop 后没有按同一 UUID 和精确动作语义查找。
+
+## 基线证据
+
+- Owned iPhone 17 Pro 上运行
+  `testTimerPickerAlignsRunningAndAvailableTaskActions`：1 test、0 failures。
+- xcresult：`/tmp/TimeTrackerTask06-baseline-iPhone.xcresult`
+- 导出截图：
+  - `build/Task06PickerShots/baseline-iPhone/BA982209-A5DE-4237-93E2-C4E34C84A175.png`
+    （Running Stop 与 available Start 同屏）
+  - `build/Task06PickerShots/baseline-iPhone/52ABA907-0682-4DCA-B47B-66E8ABCF60E4.png`
+    （同一任务 Stop 后重新可 Start）
+- 视觉结论：圆形按钮外框及 trailing column 一致，但 square / triangle 的可见尺寸和
+  光学中心不一致，现有 source-string contract 还错误锁定 `.resizable().scaledToFit()`。
 
 ## 运行资源所有权
 
-- 尚未创建或启动本任务专用模拟器。
+- iPhone 17 Pro（iOS 27.0）：`722B6461-AA16-4F3A-8604-54B80725EF31`
+- 该设备只归本任务的基线和最终 UI 验收批次使用；完成后终止 App、关机并删除。
 
 ## Checkpoint 记录
 
-- 待记录。
+- `d94dfed`：领取当前反馈项，建立 `[~]` 与活动实现记忆链接。

@@ -1,7 +1,7 @@
 import XCTest
 
 final class LiveActivitySystemSurfaceUITests: XCTestCase {
-    private static let auditedDynamicIslandSimulatorModels: Set<String> = [
+    private static let auditedDynamicIslandModels: Set<String> = [
         "iPhone15,2", "iPhone15,3", "iPhone15,4", "iPhone15,5",
         "iPhone16,1", "iPhone16,2",
         "iPhone17,1", "iPhone17,2", "iPhone17,3", "iPhone17,4",
@@ -23,16 +23,14 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         let modelIdentifier = ProcessInfo.processInfo.environment[
             "SIMULATOR_MODEL_IDENTIFIER"
         ] ?? ""
-        guard Self.auditedDynamicIslandSimulatorModels.contains(modelIdentifier) else {
+        #else
+        let modelIdentifier = Self.physicalDeviceModelIdentifier
+        #endif
+        guard Self.auditedDynamicIslandModels.contains(modelIdentifier) else {
             throw XCTSkip(
-                "Run this screenshot test on an audited Dynamic Island iPhone simulator."
+                "Run this screenshot test on an audited Dynamic Island iPhone."
             )
         }
-        #else
-        throw XCTSkip(
-            "This automated screenshot path is simulator-only; verify real devices manually."
-        )
-        #endif
 
         let app = XCUIApplication()
         app.launchArguments = [
@@ -115,5 +113,15 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private static var physicalDeviceModelIdentifier: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        return withUnsafePointer(to: &systemInfo.machine) { pointer in
+            pointer.withMemoryRebound(to: CChar.self, capacity: 1) {
+                String(cString: $0)
+            }
+        }
     }
 }

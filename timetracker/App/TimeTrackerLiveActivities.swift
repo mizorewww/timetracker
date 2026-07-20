@@ -52,10 +52,16 @@ final class LatestDesiredStateReconciler<State: Equatable> {
 
 #if os(iOS) && canImport(ActivityKit)
 import ActivityKit
+import OSLog
 
 @MainActor
 final class LiveActivityCoordinator {
     static let shared = LiveActivityCoordinator()
+
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        category: "LiveActivity"
+    )
 
     private struct Request: Equatable {
         let segmentID: String
@@ -119,6 +125,10 @@ final class LiveActivityCoordinator {
         reconciler.submit(.active(request))
     }
 
+    func waitUntilIdle() async {
+        await reconciler.waitUntilIdle()
+    }
+
     private func reconcile(_ desiredState: DesiredState) async {
         switch desiredState {
         case .inactive:
@@ -133,6 +143,9 @@ final class LiveActivityCoordinator {
 
     private func updateOrStart(_ request: Request) async -> Bool {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            Self.logger.notice(
+                "Skipped Live Activity synchronization because Live Activities are disabled in system settings"
+            )
             return false
         }
 
@@ -164,6 +177,9 @@ final class LiveActivityCoordinator {
                 _ = try Activity.request(attributes: attributes, content: content, pushType: nil)
                 return true
             } catch {
+                Self.logger.error(
+                    "Failed to start Live Activity: \(String(describing: error), privacy: .public)"
+                )
                 return false
             }
         }
@@ -198,9 +214,14 @@ extension TimeTrackerStore {
     func syncLiveActivitiesIfAvailable() {
         LiveActivityCoordinator.shared.sync(activeSegments: activeSegments, tasks: tasks, now: Date())
     }
+
+    func waitForLiveActivityReconciliationIfAvailable() async {
+        await LiveActivityCoordinator.shared.waitUntilIdle()
+    }
 }
 #else
 extension TimeTrackerStore {
     func syncLiveActivitiesIfAvailable() {}
+    func waitForLiveActivityReconciliationIfAvailable() async {}
 }
 #endif

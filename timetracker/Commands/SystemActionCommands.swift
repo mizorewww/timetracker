@@ -59,19 +59,21 @@ struct CommittedMutationSurfaceSynchronizer {
         context: ModelContext,
         events: Set<StoreDomainEvent>,
         now: Date = Date()
-    ) -> Error? {
+    ) async -> Error? {
         do {
             let store = TimeTrackerStore()
             store.configureRepositoriesIfNeeded(context: context)
-            if let error = try store.refreshCommittedMutationSurfaces(
+            let surfaceError = try store.refreshCommittedMutationSurfaces(
                 events: events,
                 widgetCache: widgetCache,
                 now: now
-            ) {
+            )
+            await store.waitForLiveActivityReconciliationIfAvailable()
+            if let surfaceError {
                 Self.logger.error(
-                    "Failed to refresh a committed mutation on system surfaces: \(error.localizedDescription, privacy: .public)"
+                    "Failed to refresh a committed mutation on system surfaces: \(surfaceError.localizedDescription, privacy: .public)"
                 )
-                return error
+                return surfaceError
             }
             return nil
         } catch {
@@ -87,13 +89,13 @@ struct CommittedMutationSurfaceSynchronizer {
 struct SystemActionPostCommitEffects {
     /// Each effect runs after the system action has committed. A best-effort
     /// failure must not turn a durable action into a retryable failure.
-    func apply(context: ModelContext, events: Set<StoreDomainEvent>) {
+    func apply(context: ModelContext, events: Set<StoreDomainEvent>) async {
         guard events.isEmpty == false else { return }
         _ = CommittedMutationSnapshotRecorder().recordLocalMutation(
             context: context,
             events: events
         )
-        _ = CommittedMutationSurfaceSynchronizer().synchronize(
+        _ = await CommittedMutationSurfaceSynchronizer().synchronize(
             context: context,
             events: events
         )

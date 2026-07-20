@@ -16,6 +16,7 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("import AppIntents"))
         #expect(source.contains("struct AddInboxItemIntent: AppIntent"))
         #expect(source.contains("struct StartTimerIntent: AppIntent"))
+        #expect(source.contains("extension StartTimerIntent: LiveActivityIntent"))
         #expect(source.contains("struct StopTimerIntent: AppIntent"))
         #expect(source.contains("var timer: ActiveTimerAppEntity"))
         #expect(source.contains("segmentID: targetID"))
@@ -29,10 +30,15 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("container: SystemActionContextProvider.container"))
         #expect(source.contains("let postCommitContext = SystemActionContextProvider.makeContext()"))
         #expect(source.contains("timetrackerApp.applicationModelContainer"))
-        #expect(source.components(separatedBy: "SystemActionPostCommitEffects().apply(").count - 1 == 3)
+        #expect(
+            source.components(
+                separatedBy: "await SystemActionPostCommitEffects().apply("
+            ).count - 1 == 3
+        )
         #expect(handler.contains("struct SystemActionPostCommitEffects"))
         #expect(handler.contains("CommittedMutationSnapshotRecorder().recordLocalMutation"))
         #expect(handler.contains("CommittedMutationSurfaceSynchronizer().synchronize"))
+        #expect(handler.contains("await store.waitForLiveActivityReconciliationIfAvailable()"))
         #expect(handler.contains("StoreMutationBroadcaster.publish(events: events)"))
         #expect(handler.contains("allowParallelTimers: Bool") == false)
         #expect(coordinator.contains("TimerAdmissionPreferenceResolver\n                .allowParallelTimers(in: context)"))
@@ -645,7 +651,7 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
-    func committedTimerMutationRefreshesAndClearsClosedAppWidgetState() throws {
+    func committedTimerMutationRefreshesAndClearsClosedAppWidgetState() async throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(
@@ -672,13 +678,21 @@ struct CoreSystemActionCommandTests {
                 context: context
             )
         )
-        #expect(synchronizer.synchronize(context: context, events: events) == nil)
+        let runningRefreshError = await synchronizer.synchronize(
+            context: context,
+            events: events
+        )
+        #expect(runningRefreshError == nil)
         let runningSnapshot = try #require(sharedStore.load())
         #expect(runningSnapshot.activeTimers.map(\.id) == [segmentID])
         #expect(runningSnapshot.activeTimers.map(\.title) == ["External timer"])
 
         _ = try makeTestSystemActionCommandHandler().stopTimer(taskID: task.id, context: context)
-        #expect(synchronizer.synchronize(context: context, events: events) == nil)
+        let stoppedRefreshError = await synchronizer.synchronize(
+            context: context,
+            events: events
+        )
+        #expect(stoppedRefreshError == nil)
         let stoppedSnapshot = try #require(sharedStore.load())
         #expect(stoppedSnapshot.activeTimers.isEmpty)
     }

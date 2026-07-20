@@ -18,7 +18,7 @@ struct AddInboxItemIntent: AppIntent {
         )
         if outcome.didMutate {
             let postCommitContext = SystemActionContextProvider.makeContext()
-            SystemActionPostCommitEffects().apply(
+            await SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
                 events: outcome.events
             )
@@ -46,7 +46,7 @@ struct StartTimerIntent: AppIntent {
         let events = outcome.events
         if events.isEmpty == false {
             let postCommitContext = SystemActionContextProvider.makeContext()
-            SystemActionPostCommitEffects().apply(
+            await SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
                 events: events
             )
@@ -54,6 +54,10 @@ struct StartTimerIntent: AppIntent {
         return .result()
     }
 }
+
+#if os(iOS)
+extension StartTimerIntent: LiveActivityIntent {}
+#endif
 
 struct StopTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "Stop Timer"
@@ -73,7 +77,7 @@ struct StopTimerIntent: AppIntent {
         let events = outcome.events
         if outcome.subjectSegmentID == targetID, events.isEmpty == false {
             let postCommitContext = SystemActionContextProvider.makeContext()
-            SystemActionPostCommitEffects().apply(
+            await SystemActionPostCommitEffects().apply(
                 context: postCommitContext,
                 events: events
             )

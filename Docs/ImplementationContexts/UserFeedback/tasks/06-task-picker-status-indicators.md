@@ -12,8 +12,9 @@
   动作均已截图并人工验收。
 - macOS 最终 2/2 语义路径通过；精确搜索结果、真实点击、28 pt 尺寸、trailing
   column 与 action 完全位于 sheet 可视区均已验证。
-- 最终设备矩阵已在 `cde7ffd` 提交；完整 Release 全设备脚本与独立签名/安装核验通过。
-- 下一步释放 owned 模拟器与临时产物，只在唯一任务源标记完成并移除活动链接。
+- 最终设备矩阵已在 `cde7ffd` 提交；完整 Release 全设备脚本与独立签名/安装核验
+  已在 `ddcf6ae` 记录。
+- owned 模拟器、进程与临时产物已经清理；唯一任务源已标记 `[x]`，活动链接待本提交移除。
 
 ## 实现边界
 
@@ -29,8 +30,8 @@
 - [x] 实现 Start Another Timer 及其他同类 picker 的统一样式
 - [x] 验证 iPhone、iPad 普通路径并截图，验证 macOS 语义、尺寸与可视区域
 - [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [~] 核验安装版本与签名，释放 owned 设备、进程和临时产物
-- [ ] 只在 `Docs/userfeedback.md` 标记完成并移除活动软链接
+- [x] 核验安装版本与签名，释放 owned 设备、进程和临时产物
+- [x] 只在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
 ## HIG 与依赖决策
 
@@ -143,3 +144,15 @@
     deep/strict 签名通过；profile 属于 `LT98S43NKA` 且有效至 2027-07-11。当前
     `devicectl` 无可见实体 Watch，因此没有伪报直接 Watch 安装；配对 Watch 按脚本
     约定由 iPhone Watch App 的 Automatic App Install 安装 companion。
+- `ddcf6ae`：记录完整 Release 构建、实体设备安装与签名/entitlements 验证。
+- 最终清理（本提交）：
+  - 终止 App 后关机并删除 owned iPhone
+    `722B6461-AA16-4F3A-8604-54B80725EF31` 与 iPad
+    `D8327867-13CF-4842-B56C-543833B272BA`；未触碰
+    `AnalyticsReview-iPhone17Pro`。
+  - 删除 `/tmp/TimeTrackerTask06*` 与 `build/Task06PickerShots`；截图在删除前均已
+    导出、人工验收并将结论写入本记忆。
+  - 确认无 Booted 设备、owned `xcodebuild`、`xctest`、UI runner、App 扩展、
+    Instruments/trace、Simulator 或 Problem Reporter 残留。
+  - 保留两台实体 iOS 设备和 `/Applications/timetracker.app` 上的 Release 安装；
+    它们是本任务交付物而非临时资源。

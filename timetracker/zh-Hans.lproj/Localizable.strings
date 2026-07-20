@@ -321,8 +321,8 @@
 "health.timeline.unavailable.message" = "此设备无法向时间追踪器提供运动或睡眠数据。";
 "health.timeline.requesting" = "正在查看 Apple 健康访问权限…";
 "health.timeline.loading" = "正在读取今天的 Apple 健康数据…";
-"health.timeline.ready.title" = "Apple 健康已准备显示";
-"health.timeline.ready.message" = "刷新即可读取今天的运动和睡眠，不会再次主动弹出权限请求。";
+"health.timeline.ready.title" = "检查 Apple 健康访问权限";
+"health.timeline.ready.message" = "刷新即可检查访问权限并读取今天的运动和睡眠。";
 "health.timeline.empty.title" = "今天没有可显示的 Apple 健康记录";
 "health.timeline.empty.message" = "该时段可能没有运动或睡眠记录，也可能没有可读取的数据；Apple 不允许 App 区分这两种情况。";
 "health.timeline.reviewAccess" = "检查访问权限并刷新";
@@ -330,7 +330,7 @@
 "health.settings.title" = "Apple 健康";
 "health.settings.showInTimeline" = "在时间线中显示 Apple 健康";
 "health.settings.refresh" = "刷新今天的数据";
-"health.settings.openSystemSettings" = "打开系统设置";
+"health.settings.openSystemSettings" = "打开设置";
 "health.settings.footer" = "运动和睡眠记录只留在本机，绝不会写入任务数据库或 iCloud。对应的可编辑任务标签会像其他任务一样同步，但仅用于同步：请在 Apple 健身中开始运动，也不要手动为睡眠计时。";
 "health.settings.taskSetupFailed.title" = "无法更新健康任务";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "无法将健康任务加入对应分类。";
@@ -339,6 +339,7 @@
 "health.settings.items.title" = "今天显示 %d 条 Apple 健康记录";
 "health.settings.lastRead" = "上次读取于 %@。";
 "health.settings.noData.lastRead" = "没有返回可读取的记录。上次检查于 %@。";
+"health.error.authorizationRequestStatusUnavailable" = "无法检查 Apple 健康访问权限，请重试。";
 "source.calendar" = "日历";
 "source.shortcut" = "快捷指令";
 "source.watch" = "Apple Watch";

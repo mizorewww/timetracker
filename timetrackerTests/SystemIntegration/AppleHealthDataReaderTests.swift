@@ -14,6 +14,9 @@ struct AppleHealthDataReaderTests {
         #expect(reader.isHealthDataAvailable == false)
 
         await #expect(throws: AppleHealthReadError.unavailable) {
+            _ = try await reader.authorizationRequestStatus()
+        }
+        await #expect(throws: AppleHealthReadError.unavailable) {
             try await reader.requestReadAuthorization()
         }
         await #expect(throws: AppleHealthReadError.unavailable) {
@@ -99,6 +102,25 @@ struct AppleHealthDataReaderTests {
         )
         #expect(HealthKitAppleHealthDataReader.sleepStage(for: .max) == nil)
     }
+
+    @Test @MainActor
+    func healthKitAuthorizationRequestStatusMapsWithoutRevealingReadAccess() {
+        #expect(
+            HealthKitAppleHealthDataReader.authorizationRequestStatus(
+                for: .unknown
+            ) == .unknown
+        )
+        #expect(
+            HealthKitAppleHealthDataReader.authorizationRequestStatus(
+                for: .shouldRequest
+            ) == .shouldRequest
+        )
+        #expect(
+            HealthKitAppleHealthDataReader.authorizationRequestStatus(
+                for: .unnecessary
+            ) == .unnecessary
+        )
+    }
     #endif
 
     @Test
@@ -127,6 +149,7 @@ struct AppleHealthDataReaderTests {
         #expect(info.contains("NSHealthShareUsageDescription"))
         #expect(info.contains("NSHealthUpdateUsageDescription") == false)
         #expect(reader.contains("requestAuthorization(toShare: [], read: types)"))
+        #expect(reader.contains("statusForAuthorizationRequest("))
         #expect(reader.contains("HKObjectType.workoutType()"))
         #expect(reader.contains(".sleepAnalysis"))
         #expect(reader.contains("authorizationStatus(for:") == false)

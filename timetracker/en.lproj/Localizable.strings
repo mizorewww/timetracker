@@ -321,8 +321,8 @@
 "health.timeline.unavailable.message" = "This device cannot provide workout or sleep data to Time Tracker.";
 "health.timeline.requesting" = "Reviewing Apple Health access…";
 "health.timeline.loading" = "Reading today’s Apple Health data…";
-"health.timeline.ready.title" = "Apple Health is ready to display";
-"health.timeline.ready.message" = "Refresh to read today’s workouts and sleep without requesting access again.";
+"health.timeline.ready.title" = "Review Apple Health access";
+"health.timeline.ready.message" = "Refresh to review access and read today’s workouts and sleep.";
 "health.timeline.empty.title" = "No Apple Health records to display today";
 "health.timeline.empty.message" = "There may be no workouts or sleep in this period, or read access may not be available. Apple does not let apps distinguish between those cases.";
 "health.timeline.reviewAccess" = "Review Access and Refresh";
@@ -330,7 +330,7 @@
 "health.settings.title" = "Apple Health";
 "health.settings.showInTimeline" = "Show Apple Health in Timeline";
 "health.settings.refresh" = "Refresh Today’s Data";
-"health.settings.openSystemSettings" = "Open System Settings";
+"health.settings.openSystemSettings" = "Open Settings";
 "health.settings.footer" = "Workout and sleep records stay on this device and never enter the task database or iCloud. Their editable task labels sync like other tasks, but are sync-only: start workouts in Apple Fitness, and do not manually time sleep.";
 "health.settings.taskSetupFailed.title" = "Health tasks could not be updated";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "The Health task could not be assigned to its category.";
@@ -339,6 +339,7 @@
 "health.settings.items.title" = "%d Apple Health records shown today";
 "health.settings.lastRead" = "Last read at %@.";
 "health.settings.noData.lastRead" = "No readable records were returned. Last checked at %@.";
+"health.error.authorizationRequestStatusUnavailable" = "Apple Health access could not be checked. Try again.";
 "source.calendar" = "Calendar";
 "source.shortcut" = "Shortcut";
 "source.watch" = "Apple Watch";

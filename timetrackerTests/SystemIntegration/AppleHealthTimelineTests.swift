@@ -617,11 +617,13 @@ struct AppleHealthTimelineTests {
         )
 
         await store.refreshAppleHealthTimelineIfEnabled(now: now, calendar: calendar)
+        #expect(reader.authorizationRequestStatusCount == 0)
         #expect(reader.authorizationRequestCount == 0)
         #expect(reader.sampleRequestIntervals.isEmpty)
 
         await store.showAppleHealthInTimeline(now: now, calendar: calendar)
 
+        #expect(reader.authorizationRequestStatusCount == 0)
         #expect(reader.authorizationRequestCount == 1)
         #expect(reader.sampleRequestIntervals.count == 1)
         let visibleInterval = DateInterval(
@@ -662,7 +664,8 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
-    func enabledRefreshQueriesWithoutRequestingAuthorizationAgain() async throws {
+    func enabledAutomaticRefreshReauthorizesBeforeReadingWhenNoSheetIsNeeded()
+        async throws {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
@@ -693,7 +696,8 @@ struct AppleHealthTimelineTests {
             calendar: calendar
         )
 
-        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.authorizationRequestStatusCount == 1)
+        #expect(reader.authorizationRequestCount == 1)
         #expect(reader.sampleRequestIntervals.count == 1)
         #expect(store.appleHealthTimelineItems.count == 1)
         guard case let .content(_, refreshedAt, itemCount) =
@@ -705,6 +709,82 @@ struct AppleHealthTimelineTests {
         }
         #expect(refreshedAt == now)
         #expect(itemCount == 1)
+    }
+
+    @Test @MainActor
+    func automaticRefreshWaitsForContextBeforePresentingAuthorizationSheet()
+        async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let reader = StubAppleHealthReader(
+            batch: .empty,
+            requestStatus: .shouldRequest
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: true
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences
+        )
+
+        await store.refreshAppleHealthTimelineIfEnabled(now: now)
+
+        #expect(reader.authorizationRequestStatusCount == 1)
+        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.sampleRequestIntervals.isEmpty)
+        #expect(store.appleHealthTimelineState == .ready)
+
+        await store.refreshAppleHealthTimeline(now: now)
+
+        #expect(reader.authorizationRequestStatusCount == 1)
+        #expect(reader.authorizationRequestCount == 1)
+        #expect(reader.sampleRequestIntervals.count == 1)
+        guard case .noReadableData = store.appleHealthTimelineState else {
+            Issue.record(
+                "Expected noReadableData, got \(store.appleHealthTimelineState)"
+            )
+            return
+        }
+    }
+
+    @Test @MainActor
+    func unknownAutomaticAuthorizationStatusClearsStaleHealthContent()
+        async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let reader = StubAppleHealthReader(
+            batch: .empty,
+            requestStatus: .unknown
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: true
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences
+        )
+        store.appleHealthTimelineItems = [
+            AppleHealthTimelineItem(
+                id: .appleHealthWorkout(UUID()),
+                subject: .appleHealthWorkout(.walking),
+                interval: DateInterval(
+                    start: now.addingTimeInterval(-60),
+                    end: now
+                )
+            ),
+        ]
+
+        await store.refreshAppleHealthTimelineIfEnabled(now: now)
+
+        #expect(reader.authorizationRequestStatusCount == 1)
+        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.sampleRequestIntervals.isEmpty)
+        #expect(store.appleHealthTimelineItems.isEmpty)
+        #expect(
+            store.appleHealthTimelineState == .failed(
+                AppleHealthReadError.authorizationRequestStatusUnavailable
+                    .localizedDescription
+            )
+        )
     }
 
     @Test @MainActor
@@ -734,7 +814,8 @@ struct AppleHealthTimelineTests {
         reader.resumeSamples()
         await refresh.value
 
-        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.authorizationRequestStatusCount == 1)
+        #expect(reader.authorizationRequestCount == 1)
         #expect(preferences.isTimelineEnabled == false)
         #expect(store.isAppleHealthTimelineEnabled == false)
         #expect(store.appleHealthTimelineItems.isEmpty)
@@ -1115,9 +1196,12 @@ struct AppleHealthTimelineTests {
 @MainActor
 private final class StubAppleHealthReader: AppleHealthDataReading {
     let isHealthDataAvailable: Bool
+    var authorizationRequestStatusCount = 0
     var authorizationRequestCount = 0
     var sampleRequestIntervals: [DateInterval] = []
     var batch: AppleHealthSampleBatch
+    var requestStatus: AppleHealthAuthorizationRequestStatus
+    var authorizationRequestStatusError: Error?
     var authorizationError: Error?
     var sampleError: Error?
     var suspendsSamples: Bool
@@ -1127,11 +1211,22 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
     init(
         isHealthDataAvailable: Bool = true,
         batch: AppleHealthSampleBatch,
+        requestStatus: AppleHealthAuthorizationRequestStatus = .unnecessary,
         suspendsSamples: Bool = false
     ) {
         self.isHealthDataAvailable = isHealthDataAvailable
         self.batch = batch
+        self.requestStatus = requestStatus
         self.suspendsSamples = suspendsSamples
+    }
+
+    func authorizationRequestStatus() async throws
+        -> AppleHealthAuthorizationRequestStatus {
+        authorizationRequestStatusCount += 1
+        if let authorizationRequestStatusError {
+            throw authorizationRequestStatusError
+        }
+        return requestStatus
     }
 
     func requestReadAuthorization() async throws {

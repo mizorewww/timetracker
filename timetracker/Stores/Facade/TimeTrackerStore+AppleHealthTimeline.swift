@@ -1,5 +1,10 @@
 import Foundation
 
+private enum AppleHealthAuthorizationSheetPolicy {
+    case allow
+    case avoid
+}
+
 extension TimeTrackerStore {
     func showAppleHealthInTimeline(
         now: Date = Date(),
@@ -13,28 +18,15 @@ extension TimeTrackerStore {
         appleHealthTimelinePreferenceStore.isTimelineEnabled = true
         isAppleHealthTimelineEnabled = true
         let requestID = beginAppleHealthTimelineRequest()
-        appleHealthTimelineState = .requesting
         materializeAppleHealthTaskCatalog(
             clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
                 .taskCatalogClearRecoveryTaskIDs
         )
-
-        do {
-            try await appleHealthDataReader.requestReadAuthorization()
-        } catch {
-            guard isCurrentAppleHealthTimelineRequest(requestID) else { return }
-            appleHealthTimelineState = .failed(error.localizedDescription)
-            return
-        }
-
-        guard isCurrentAppleHealthTimelineRequest(requestID),
-              isAppleHealthTimelineEnabled else {
-            return
-        }
-        await loadAppleHealthTimeline(
+        await authorizeAndLoadAppleHealthTimeline(
             requestID: requestID,
             now: now,
-            calendar: calendar
+            calendar: calendar,
+            authorizationSheetPolicy: .allow
         )
     }
 
@@ -43,12 +35,28 @@ extension TimeTrackerStore {
         calendar: Calendar = .current
     ) async {
         guard isAppleHealthTimelineEnabled else { return }
-        await refreshAppleHealthTimeline(now: now, calendar: calendar)
+        await refreshAppleHealthTimeline(
+            now: now,
+            calendar: calendar,
+            authorizationSheetPolicy: .avoid
+        )
     }
 
     func refreshAppleHealthTimeline(
         now: Date = Date(),
         calendar: Calendar = .current
+    ) async {
+        await refreshAppleHealthTimeline(
+            now: now,
+            calendar: calendar,
+            authorizationSheetPolicy: .allow
+        )
+    }
+
+    private func refreshAppleHealthTimeline(
+        now: Date,
+        calendar: Calendar,
+        authorizationSheetPolicy: AppleHealthAuthorizationSheetPolicy
     ) async {
         guard appleHealthDataReader.isHealthDataAvailable else {
             appleHealthTimelineItems = []
@@ -66,10 +74,11 @@ extension TimeTrackerStore {
             clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
                 .taskCatalogClearRecoveryTaskIDs
         )
-        await loadAppleHealthTimeline(
+        await authorizeAndLoadAppleHealthTimeline(
             requestID: requestID,
             now: now,
-            calendar: calendar
+            calendar: calendar,
+            authorizationSheetPolicy: authorizationSheetPolicy
         )
     }
 
@@ -121,6 +130,56 @@ extension TimeTrackerStore {
 
     private func isCurrentAppleHealthTimelineRequest(_ requestID: UUID) -> Bool {
         appleHealthTimelineRequestID == requestID
+    }
+
+    private func authorizeAndLoadAppleHealthTimeline(
+        requestID: UUID,
+        now: Date,
+        calendar: Calendar,
+        authorizationSheetPolicy: AppleHealthAuthorizationSheetPolicy
+    ) async {
+        do {
+            if authorizationSheetPolicy == .avoid {
+                let status = try await appleHealthDataReader
+                    .authorizationRequestStatus()
+                guard isCurrentAppleHealthTimelineRequest(requestID),
+                      isAppleHealthTimelineEnabled else {
+                    return
+                }
+                switch status {
+                case .unnecessary:
+                    break
+                case .shouldRequest:
+                    appleHealthTimelineItems = []
+                    appleHealthTimelineState = .ready
+                    return
+                case .unknown:
+                    throw AppleHealthReadError
+                        .authorizationRequestStatusUnavailable
+                }
+            }
+
+            appleHealthTimelineState = .requesting
+            try await appleHealthDataReader.requestReadAuthorization()
+        } catch {
+            guard isCurrentAppleHealthTimelineRequest(requestID),
+                  isAppleHealthTimelineEnabled else {
+                return
+            }
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .failed(error.localizedDescription)
+            return
+        }
+
+        guard isCurrentAppleHealthTimelineRequest(requestID),
+              isAppleHealthTimelineEnabled else {
+            return
+        }
+        await loadAppleHealthTimeline(
+            requestID: requestID,
+            now: now,
+            calendar: calendar
+        )
     }
 
     private func loadAppleHealthTimeline(

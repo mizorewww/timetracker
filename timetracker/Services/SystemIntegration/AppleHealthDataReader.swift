@@ -1,8 +1,19 @@
 import Foundation
 
+nonisolated enum AppleHealthAuthorizationRequestStatus: Equatable, Sendable {
+    case unknown
+    case shouldRequest
+    case unnecessary
+}
+
 @MainActor
 protocol AppleHealthDataReading: AnyObject {
     var isHealthDataAvailable: Bool { get }
+
+    /// Indicates whether requesting the current read types would present the
+    /// system authorization sheet. This does not reveal any read decision.
+    func authorizationRequestStatus() async throws
+        -> AppleHealthAuthorizationRequestStatus
 
     /// A successful return means the system processed the request. HealthKit
     /// intentionally does not reveal whether read permission was granted.
@@ -14,6 +25,11 @@ protocol AppleHealthDataReading: AnyObject {
 @MainActor
 final class UnavailableAppleHealthDataReader: AppleHealthDataReading {
     let isHealthDataAvailable = false
+
+    func authorizationRequestStatus() async throws
+        -> AppleHealthAuthorizationRequestStatus {
+        throw AppleHealthReadError.unavailable
+    }
 
     func requestReadAuthorization() async throws {
         throw AppleHealthReadError.unavailable
@@ -53,6 +69,18 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
 
     var isHealthDataAvailable: Bool {
         HKHealthStore.isHealthDataAvailable()
+    }
+
+    func authorizationRequestStatus() async throws
+        -> AppleHealthAuthorizationRequestStatus {
+        guard isHealthDataAvailable else {
+            throw AppleHealthReadError.unavailable
+        }
+        let status = try await healthStore.statusForAuthorizationRequest(
+            toShare: [],
+            read: readTypes()
+        )
+        return Self.authorizationRequestStatus(for: status)
     }
 
     func requestReadAuthorization() async throws {
@@ -168,6 +196,21 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
             .asleepREM
         default:
             nil
+        }
+    }
+
+    static func authorizationRequestStatus(
+        for status: HKAuthorizationRequestStatus
+    ) -> AppleHealthAuthorizationRequestStatus {
+        switch status {
+        case .unknown:
+            .unknown
+        case .shouldRequest:
+            .shouldRequest
+        case .unnecessary:
+            .unnecessary
+        @unknown default:
+            .unknown
         }
     }
 }

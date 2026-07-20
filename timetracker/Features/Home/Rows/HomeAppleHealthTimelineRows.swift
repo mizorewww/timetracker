@@ -55,7 +55,9 @@ struct AppleHealthTimelineAccessRow: View {
                 actionStatus(
                     title: AppStrings.localized("health.timeline.ready.title"),
                     message: AppStrings.localized("health.timeline.ready.message"),
-                    actionTitle: AppStrings.refresh,
+                    actionTitle: AppStrings.localized(
+                        "health.timeline.reviewAccess"
+                    ),
                     action: {
                         Task {
                             await store.refreshAppleHealthTimeline()

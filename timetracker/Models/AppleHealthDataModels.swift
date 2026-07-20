@@ -199,12 +199,18 @@ nonisolated enum AppleHealthTimelineState: Equatable, Sendable {
 
 nonisolated enum AppleHealthReadError: LocalizedError, Equatable, Sendable {
     case unavailable
+    case authorizationRequestStatusUnavailable
     case requiredTypesUnavailable
 
     var errorDescription: String? {
         switch self {
         case .unavailable:
             NSLocalizedString("health.error.unavailable", comment: "")
+        case .authorizationRequestStatusUnavailable:
+            NSLocalizedString(
+                "health.error.authorizationRequestStatusUnavailable",
+                comment: ""
+            )
         case .requiredTypesUnavailable:
             NSLocalizedString("health.error.requiredTypesUnavailable", comment: "")
         }

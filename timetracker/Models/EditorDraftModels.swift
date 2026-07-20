@@ -123,6 +123,22 @@ nonisolated struct ChecklistEditorDraft: Codable, Identifiable, Equatable, Senda
         self.colorHex = colorHex
     }
 
+    nonisolated init(
+        id: UUID,
+        existingID: UUID?,
+        title: String,
+        isCompleted: Bool,
+        iconName: String,
+        colorHex: String
+    ) {
+        self.id = id
+        self.existingID = existingID
+        self.title = title
+        self.isCompleted = isCompleted
+        self.iconName = iconName
+        self.colorHex = colorHex
+    }
+
     nonisolated init(item: ChecklistItem, visual: ChecklistItemVisual? = nil) {
         self.id = item.id
         self.existingID = item.id

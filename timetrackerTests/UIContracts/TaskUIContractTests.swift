@@ -111,7 +111,13 @@ struct TaskUIContractTests {
         #expect(rootSource.contains("store.openTaskDetail(taskID)") == false)
         #expect(rootSource.contains("selectedDestination = .tasks") == false)
         #expect(rootSource.contains("case task(UUID)") == false)
-        #expect(todayNavigationSource.contains(".navigationDestination(item: $route)"))
+        #expect(todayNavigationSource.contains(
+            ".navigationDestination(item: protectedRoute)"
+        ))
+        #expect(todayNavigationSource.contains(
+            "taskDetailNavigationGuard.requestNavigation("
+        ))
+        #expect(todayNavigationSource.contains("dismissingActiveDetail: true"))
         #expect(todayNavigationSource.contains("returnDestination: .today"))
         #expect(todayNavigationSource.contains("private var routedTaskShouldRemainPresented: Bool"))
         #expect(todayNavigationSource.contains(".onChange(of: routedTaskShouldRemainPresented)"))
@@ -517,8 +523,13 @@ struct TaskUIContractTests {
         #expect(tasksSource.contains("@State private var detailTaskID") == false)
         #expect(tasksSource.contains(".navigationDestination") == false)
         #expect(navigationSource.components(separatedBy: "NavigationStack").count - 1 == 1)
-        #expect(navigationSource.contains("@Bindable var bindableStore = store"))
-        #expect(navigationSource.contains(".navigationDestination(item: $bindableStore.tasksRoute)"))
+        #expect(navigationSource.contains(
+            ".navigationDestination(item: protectedRoute)"
+        ))
+        #expect(navigationSource.contains(
+            "taskDetailNavigationGuard.requestNavigation("
+        ))
+        #expect(navigationSource.contains("dismissingActiveDetail: true"))
         #expect(navigationSource.contains("private var tasksPath") == false)
         #expect(navigationSource.contains("TaskDetailView("))
         #expect(navigationSource.contains("startsEditing") == false)
@@ -592,7 +603,7 @@ struct TaskUIContractTests {
         #expect(rootSource.contains("TaskEditorPanel(") == false)
         #expect(workspaceSource.contains("@State var session: TaskEditorSession"))
         #expect(workspaceSource.contains("TimelineView") == false)
-        #expect(workspaceSource.contains("canRemainVisible(whileLoading: request)"))
+        #expect(detailSource.contains("canRemainVisible(whileLoading: request)"))
         #expect(detailSource.contains("selectRange("))
         #expect(detailSource.contains("snapshot = resolvedSnapshot"))
         #expect(detailSource.contains("loadedRequest = request"))

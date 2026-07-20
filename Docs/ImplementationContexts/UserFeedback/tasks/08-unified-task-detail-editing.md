@@ -7,8 +7,9 @@
 
 - [x] 已领取当前反馈，并完成快速操作、任务详情/编辑状态、Markdown 备注和保存链路审计。
 - [x] 已用失败测试锁定自动保存、导航前落盘、验证/冲突恢复和 baseline 重建语义。
-- [~] 正在把已验证的自动保存核心接入 canonical task detail，并稳定工具栏。
-- 下一 checkpoint：已有任务详情移除手动 Save/Cancel，接通状态、Retry 与生命周期 flush。
+- [x] 已把已验证的自动保存核心接入 canonical task detail，并稳定工具栏。
+- [~] 正在迁移受自动保存语义影响的 4 条跨平台 UI 测试。
+- 下一 checkpoint：用显式 owned 设备验证自动保存、导航 flush 与稳定工具栏。
 
 ## 反馈边界
 
@@ -42,6 +43,8 @@
 - [x] UI/HIG 与跨平台入口审计：详情/编辑已统一；日常编辑应移除 Save/Cancel，保持 Add Time/More 稳定。
 - [x] 状态、持久化、自动保存与草稿恢复审计：复用原子保存、baseline 冲突检测和恢复稿；已有任务防抖保存，离开前同步 flush。
 - [x] MarkdownView API、依赖质量和测试覆盖审计：4.1.7 精确锁定、MIT、平台兼容；保留链接/高度薄适配层。
+- [x] 独立复核自动保存 UI 接线中的生命周期、导航与恢复竞态。
+- [x] 盘点并规划需要迁移到自动保存语义的跨平台 UI 测试。
 
 ## 已确认的实现决策
 
@@ -49,7 +52,7 @@
 - 自动保存仅适用于已有 canonical task。新建任务继续显式 Create；恢复副本继续显式 Save as New，避免生成空任务或重复副本。
 - 使用原生 Observation、Swift Concurrency 和 SwiftData；不新增自动保存依赖。
 - 有效修改防抖 450ms 保存；受控导航、应用失活和页面退出前同步 flush。验证失败、持久化失败或 stale 时保留草稿并阻止静默离开。
-- 成功保存不弹窗；保存中使用低干扰状态，失败提供 Retry。Add Time 与 More 不因编辑状态换位。
+- 成功与短暂保存过程保持静默，失败提供 Retry。Add Time 与 More 不因编辑状态换位。
 - MarkdownView 保持 4.1.7（revision `84381f59cc52606ffc198fb2fdac8e6a44abe528`）。它虽低于 1k stars，但为用户点名依赖；维护活跃且精确锁定。
 - 不删除 `TaskNotesMarkdownRepresentable`：上游 SwiftUI `MarkdownView` 没有公开 `linkHandler`，该薄适配层负责链接交给 `openURL` 与 List 内自然高度，未自建解析器或渲染器。
 
@@ -72,4 +75,5 @@
 - [x] 领取反馈、建立实现记忆和活动链接：`564dce9`。
 - [x] 完成 UI/HIG、自动保存链路与 MarkdownView 4.1.7 只读审计。
 - [x] 自动保存核心红灯转绿：快速输入合并、导航 flush、验证阻断、失败重试、冲突保留，以及 checklist identity/baseline 重建；macOS 目标 34 项测试通过。
-- [~] 当前 checkpoint：接入任务详情、生命周期 flush、稳定工具栏和保存失败反馈。
+- [x] 自动保存 UI 接入：已有任务移除 Save/Cancel；450ms 防抖、失焦/失活/退出/导航 flush、失败 Retry、冲突恢复、原生返回保护和 checklist 焦点稳定；综合 80/80 测试通过，最后同步细化复测 17/17 通过。
+- [~] 当前 checkpoint：迁移 4 条跨平台 UI 测试到自动保存语义。

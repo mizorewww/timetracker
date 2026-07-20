@@ -11,7 +11,7 @@ private struct TodayTaskNavigationDestinationModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .navigationDestination(item: $route) { route in
+            .navigationDestination(item: protectedRoute) { route in
                 TaskDetailView(
                     store: store,
                     taskID: route.taskID,
@@ -29,6 +29,21 @@ private struct TodayTaskNavigationDestinationModifier: ViewModifier {
             .onChange(of: routedTaskShouldRemainPresented) { _, _ in
                 clearInvalidRoute()
             }
+    }
+
+    private var protectedRoute: Binding<TasksRoute?> {
+        Binding(
+            get: { route },
+            set: { proposedRoute in
+                guard proposedRoute == nil, route != nil else {
+                    route = proposedRoute
+                    return
+                }
+                store.taskDetailNavigationGuard.requestNavigation(
+                    dismissingActiveDetail: true
+                ) {}
+            }
+        )
     }
 
     private func clearInvalidRoute() {

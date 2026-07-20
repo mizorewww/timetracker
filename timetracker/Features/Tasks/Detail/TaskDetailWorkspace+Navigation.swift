@@ -35,29 +35,7 @@ extension TaskDetailWorkspace {
     }
 
     func save() {
-        guard isPresentingRecovery == false else {
-            savePreservedDraftAsNew()
-            return
-        }
-        session.save(
-            using: {
-                store.saveTaskDraftResult(
-                    $0,
-                    returnDestination: returnDestination
-                )
-            },
-            onSaved: { savedTaskID in
-                session.acceptLatestDraft(for: savedTaskID)
-                _ = clearPersistedDraftRecovery()
-                clearInputFocus()
-            },
-            onStale: {
-                draftRecoveryReason = isSourceUnavailable
-                    ? unavailableDraftRecoveryReason
-                    : .sourceChanged
-                clearInputFocus()
-            }
-        )
+        savePreservedDraftAsNew()
     }
 
     func cancelPendingNavigationIfNeeded(isDiscardConfirmationPresented: Bool) {
@@ -131,6 +109,15 @@ extension TaskDetailWorkspace {
         store.taskDetailNavigationGuard.register(
             id: navigationGuardRegistration.id,
             taskID: taskID,
+            prepareForNavigation: {
+                [weak autosaveController, weak session, weak store] in
+                guard let autosaveController, let session else { return }
+                autosaveController.flush(
+                    session: session,
+                    isEnabled: store?.isTaskDetailRouteValid(taskID) == true &&
+                        autosaveController.status != .conflicted
+                )
+            },
             hasUnsavedChanges: { [weak session] in
                 session?.hasUnsavedChanges == true
             },

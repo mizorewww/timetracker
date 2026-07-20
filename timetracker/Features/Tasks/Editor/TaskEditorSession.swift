@@ -36,6 +36,13 @@ final class TaskEditorSession {
         draft != sessionBaseline
     }
 
+    var isPersistenceValid: Bool {
+        guard validation.isValid else { return false }
+        return (try? ChecklistDraftPersistencePolicy.prepare(
+            draft.checklistItems
+        )) != nil
+    }
+
     func requestCancel(whenClean: () -> Void) {
         if hasUnsavedChanges {
             navigationConfirmationRequestID = nil
@@ -89,8 +96,22 @@ final class TaskEditorSession {
         replace(with: store.editorDraft(for: task))
     }
 
-    func synchronizeWithStoreIfClean(taskID: UUID) {
+    func synchronizeWithStoreIfClean(
+        taskID: UUID,
+        sourceBaseline: TaskEditorDraftBaseline?,
+        parentCandidateIDs: [UUID]
+    ) {
         guard hasUnsavedChanges == false else { return }
+        guard sourceBaseline != sessionBaseline.baseline else {
+            guard parentCandidateIDs != parentCandidates.map(\.id) else {
+                return
+            }
+            parentCandidates = Self.parentCandidates(
+                for: draft,
+                store: store
+            )
+            return
+        }
         acceptLatestDraft(for: taskID)
     }
 

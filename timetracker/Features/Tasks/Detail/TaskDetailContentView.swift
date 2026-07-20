@@ -4,6 +4,7 @@ struct TaskDetailList: View {
     let store: TimeTrackerStore
     let task: TaskNode
     let session: TaskEditorSession
+    let autosaveController: TaskDetailAutosaveController
     let focusedTextField: FocusState<TaskEditorTextField?>.Binding
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let snapshot: TaskAnalyticsSnapshot?
@@ -25,6 +26,9 @@ struct TaskDetailList: View {
             }
 
             TaskDetailTrackingAvailabilitySection(store: store, task: task)
+            TaskDetailAutosaveFailureSection(
+                controller: autosaveController
+            )
 
             TaskEditorSections(
                 store: store,

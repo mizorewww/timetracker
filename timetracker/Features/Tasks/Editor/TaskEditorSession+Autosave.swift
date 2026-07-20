@@ -39,12 +39,14 @@ extension TaskEditorSession {
             persistedDraft.checklistItems,
             visibleDraft.checklistItems
         ).map { persistedItem, visibleItem in
-            var item = persistedItem
-            item.title = visibleItem.title
-            item.isCompleted = visibleItem.isCompleted
-            item.iconName = visibleItem.iconName
-            item.colorHex = visibleItem.colorHex
-            return item
+            ChecklistEditorDraft(
+                id: visibleItem.id,
+                existingID: persistedItem.existingID,
+                title: visibleItem.title,
+                isCompleted: visibleItem.isCompleted,
+                iconName: visibleItem.iconName,
+                colorHex: visibleItem.colorHex
+            )
         }
         return rebased
     }

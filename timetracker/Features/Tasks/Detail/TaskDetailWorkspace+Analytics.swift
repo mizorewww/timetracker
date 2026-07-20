@@ -1,6 +1,58 @@
 import Foundation
+import SwiftUI
 
 extension TaskDetailWorkspace {
+    func workspace(for task: TaskNode) -> some View {
+        let evaluationDate = liveNow
+        let request = store.taskAnalyticsSnapshotRequest(
+            for: task,
+            range: range,
+            now: evaluationDate
+        )
+        let refreshPlan = scenePhase == .active
+            ? AnalyticsRefreshPlan.next(
+                liveNow: evaluationDate,
+                followsCurrentPeriod: true,
+                liveRefreshBucket: request.liveRefreshBucket
+            )
+            : nil
+        let canKeepDisplayingSnapshot = loadedRequest.map {
+            $0.canRemainVisible(whileLoading: request)
+        } ?? false
+
+        return TaskDetailList(
+            store: store,
+            task: task,
+            session: session,
+            autosaveController: autosaveController,
+            focusedTextField: $focusedTextField,
+            focusedChecklistDraftID: $focusedChecklistDraftID,
+            snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
+            range: rangeSelection(for: task),
+            isRefreshing: canKeepDisplayingSnapshot && loadedRequest != request
+        )
+        .task(id: request) {
+            guard loadedRequest != request || snapshot == nil else { return }
+            snapshot = store.taskAnalyticsSnapshot(
+                for: request,
+                now: evaluationDate
+            )
+            loadedRequest = request
+        }
+        .task(id: refreshPlan) {
+            await waitForRefresh(refreshPlan)
+        }
+    }
+
+    private func rangeSelection(
+        for task: TaskNode
+    ) -> Binding<AnalyticsRange> {
+        Binding(
+            get: { range },
+            set: { selectRange($0, for: task) }
+        )
+    }
+
     func selectRange(
         _ selectedRange: AnalyticsRange,
         for task: TaskNode

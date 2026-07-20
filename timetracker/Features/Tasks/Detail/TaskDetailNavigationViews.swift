@@ -17,9 +17,11 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .navigationBarBackButtonHidden(session.hasUnsavedChanges)
+            .navigationBarBackButtonHidden(
+                isSourceUnavailable && session.hasUnsavedChanges
+            )
             .toolbar {
-                if session.hasUnsavedChanges {
+                if isSourceUnavailable && session.hasUnsavedChanges {
                     if isAwaitingRecoveryCleanup == false {
                         ToolbarItem(placement: .cancellationAction) {
                             Button(AppStrings.cancel, action: requestDiscard)
@@ -52,11 +54,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
         if isAwaitingRecoveryCleanup {
             return AppStrings.localized("tasks.recovery.finishCleanup")
         }
-        return AppStrings.localized(
-            isSourceUnavailable
-                ? "task.editor.recovery.saveAsNew"
-                : "common.save"
-        )
+        return AppStrings.localized("task.editor.recovery.saveAsNew")
     }
 
     private func addTimeButton(_ task: TaskNode) -> some View {

@@ -14,6 +14,24 @@ struct TaskWorkspaceContractTests {
         let workspaceNavigation = try sourceText(
             "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Navigation.swift"
         )
+        let workspaceAnalytics = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Analytics.swift"
+        )
+        let workspaceAutosave = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Autosave.swift"
+        )
+        let autosaveController = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailAutosaveController.swift"
+        )
+        let autosaveWorkspace = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailAutosaveController+Workspace.swift"
+        )
+        let autosaveModifier = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailAutosaveModifier.swift"
+        )
+        let autosaveViews = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailAutosaveViews.swift"
+        )
         let workspaceRecovery = try sourceText(
             "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Recovery.swift"
         )
@@ -28,6 +46,9 @@ struct TaskWorkspaceContractTests {
         )
         let editorSession = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskEditorSession.swift"
+        )
+        let editorSessionAutosave = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorSession+Autosave.swift"
         )
         let store = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore.swift"
@@ -75,14 +96,38 @@ struct TaskWorkspaceContractTests {
         #expect(detail.contains("TaskEditorPanel(") == false)
         #expect(detail.contains("startsEditing") == false)
         #expect(workspace.contains("@State var session: TaskEditorSession"))
-        #expect(workspace.contains("TaskDetailList("))
-        #expect(workspaceNavigation.contains("store.saveTaskDraftResult("))
-        #expect(workspaceNavigation.contains("session.acceptLatestDraft(for: savedTaskID)"))
-        #expect(workspaceNavigation.contains("onStale: {"))
-        #expect(workspaceNavigation.contains(
+        #expect(workspace.contains("@State var autosaveController: TaskDetailAutosaveController"))
+        #expect(workspaceAnalytics.contains("TaskDetailList("))
+        #expect(workspace.contains(".taskDetailAutosave("))
+        #expect(autosaveWorkspace.contains("store.saveTaskDraftResult("))
+        #expect(autosaveWorkspace.contains("session.acceptAutosavedDraft("))
+        #expect(autosaveWorkspace.contains("case .stale:"))
+        #expect(workspaceAutosave.contains(
             "draftRecoveryReason = isSourceUnavailable"
         ))
-        #expect(workspace.contains("session.synchronizeWithStoreIfClean(taskID: taskID)"))
+        #expect(autosaveController.contains("delay: Duration = .milliseconds(450)"))
+        #expect(autosaveController.contains("pendingTask?.cancel()"))
+        #expect(autosaveController.contains("case validationBlocked"))
+        #expect(autosaveController.contains("case failed(message: String)"))
+        #expect(autosaveController.contains("case conflicted"))
+        #expect(autosaveModifier.contains(".onChange(of: request, initial: true)"))
+        #expect(autosaveModifier.contains(".onChange(of: focusedTextField)"))
+        #expect(autosaveModifier.contains(".onChange(of: focusedChecklistDraftID)"))
+        #expect(autosaveModifier.contains(".onChange(of: scenePhase)"))
+        #expect(autosaveModifier.contains(".onDisappear"))
+        #expect(autosaveModifier.contains("NSApplication.willTerminateNotification"))
+        #expect(autosaveViews.contains("task.detail.autosave.retry"))
+        #expect(workspace.contains("session.synchronizeWithStoreIfClean("))
+        #expect(workspace.contains("sourceBaseline: sourceToken.baseline"))
+        #expect(editorSession.contains(
+            "guard sourceBaseline != sessionBaseline.baseline else"
+        ))
+        #expect(editorSession.contains(
+            "parentCandidates = Self.parentCandidates("
+        ))
+        #expect(editorSession.contains("var isPersistenceValid: Bool"))
+        #expect(workspaceAutosave.contains("isValid: session.isPersistenceValid"))
+        #expect(autosaveWorkspace.contains("isValid: session.isPersistenceValid"))
         #expect(workspace.contains(".taskEditorSessionSafety("))
         #expect(workspace.contains(".taskDetailDraftRecovery("))
         #expect(workspace.contains("draftRecoveryLoadState"))
@@ -112,6 +157,9 @@ struct TaskWorkspaceContractTests {
             "oldValue != hasUnsavedChanges"
         ))
         #expect(editorSession.contains("func restoreRecoveredDraft("))
+        #expect(editorSessionAutosave.contains("func acceptAutosavedDraft("))
+        #expect(editorSessionAutosave.contains("persistedDraft.checklistItems"))
+        #expect(editorSessionAutosave.contains("preserving visibleDraft"))
         #expect(editorSession.contains("sessionBaseline = recoveredDraft") == false)
         #expect(store.contains("let taskDraftRecoveryController: TaskDraftRecoveryController"))
         #expect(workspaceRecovery.contains("try await store.taskDraftRecoveryController.load("))
@@ -144,13 +192,22 @@ struct TaskWorkspaceContractTests {
         #expect(identity.contains(".submitLabel(.done)"))
         #expect(identity.contains("focusedTextField.wrappedValue = nil"))
         #expect(navigation.contains("session.hasUnsavedChanges"))
-        #expect(navigation.contains(".navigationBarBackButtonHidden(session.hasUnsavedChanges)"))
+        #expect(navigation.contains(
+            "isSourceUnavailable && session.hasUnsavedChanges"
+        ))
+        #expect(navigation.contains("TaskDetailAutosaveProgressView(") == false)
+        #expect(navigation.contains("task.detail.addTime"))
+        #expect(navigation.contains("task.detail.more"))
         #expect(navigation.contains("task.context.edit") == false)
         #expect(navigation.contains("presentationRouter.presentEditTask") == false)
         #expect(taskNavigation.contains("startsEditing") == false)
+        #expect(taskNavigation.contains(".navigationDestination(item: protectedRoute)"))
+        #expect(taskNavigation.contains("dismissingActiveDetail: true"))
         #expect(taskNavigation.contains("replaceDetail: store.openTaskDetail"))
         #expect(taskNavigation.contains(".id(route.taskID)"))
         #expect(todayNavigation.contains(".id(route.taskID)"))
+        #expect(todayNavigation.contains(".navigationDestination(item: protectedRoute)"))
+        #expect(todayNavigation.contains("dismissingActiveDetail: true"))
         #expect(actions.contains("store.openTaskEditor") == false)
         #expect(actions.contains("task.context.edit") == false)
         #expect(actions.contains("presentEditTask") == false)
@@ -176,6 +233,7 @@ struct TaskWorkspaceContractTests {
             separatedBy: "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk="
         ).dropFirst().allSatisfy { $0.contains("]\" = NO;") })
         #expect(navigationGuard.contains("registration.hasUnsavedChanges()"))
+        #expect(navigationGuard.contains("registration.prepareForNavigation()"))
         #expect(navigationGuard.contains("registration.requestDiscardConfirmation(requestID)"))
         #expect(navigationGuard.contains("pendingNavigationID = requestID"))
         #expect(navigationGuard.contains("pending.dismissConfirmation()"))
@@ -184,6 +242,8 @@ struct TaskWorkspaceContractTests {
         #expect(workspaceNavigation.contains(
             "requestDiscardConfirmation: { [weak session] requestID in"
         ))
+        #expect(workspaceNavigation.contains("prepareForNavigation: {"))
+        #expect(workspaceNavigation.contains("autosaveController.flush("))
         #expect(workspaceNavigation.contains(
             "session?.requestDiscardConfirmation(for: requestID)"
         ))

@@ -470,6 +470,8 @@
 "task.healthSyncOnly.trackingUnavailable" = "此任务属于 Apple 健康同步分支。它仍可编辑和查看，但不能用于计时、番茄钟、快速开始或手动补录。";
 "task.parentUnavailable" = "所选父任务不能接收新工作。";
 "task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";
+"task.autosave.failed" = "更改尚未保存";
+"task.autosave.retry" = "重试保存";
 "task.recurrence.error.invalidStartDay" = "请选择有效的重复开始日期。";
 "task.recurrence.error.invalidTimeZone" = "请选择有效的重复任务时区。";
 "task.recurrence.error.templateUnavailable" = "此任务不能用作重复任务模板。";

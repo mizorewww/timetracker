@@ -4,10 +4,9 @@ struct TasksNavigationView: View {
     let store: TimeTrackerStore
 
     var body: some View {
-        @Bindable var bindableStore = store
         NavigationStack {
             TasksView(store: store)
-                .navigationDestination(item: $bindableStore.tasksRoute) { route in
+                .navigationDestination(item: protectedRoute) { route in
                     TaskDetailView(
                         store: store,
                         taskID: route.taskID,
@@ -17,5 +16,20 @@ struct TasksNavigationView: View {
                     .id(route.taskID)
                 }
         }
+    }
+
+    private var protectedRoute: Binding<TasksRoute?> {
+        Binding(
+            get: { store.tasksRoute },
+            set: { proposedRoute in
+                guard proposedRoute == nil, store.tasksRoute != nil else {
+                    store.tasksRoute = proposedRoute
+                    return
+                }
+                store.taskDetailNavigationGuard.requestNavigation(
+                    dismissingActiveDetail: true
+                ) {}
+            }
+        )
     }
 }

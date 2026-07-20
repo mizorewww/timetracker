@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import SwiftUI
 struct TaskDetailWorkspace: View {
-    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.scenePhase) var scenePhase
     let store: TimeTrackerStore
     let taskID: UUID
     let returnDestination: TimeTrackerStore.DesktopDestination
@@ -13,6 +13,7 @@ struct TaskDetailWorkspace: View {
     @State var snapshot: TaskAnalyticsSnapshot?
     @State var loadedRequest: TaskAnalyticsSnapshotRequest?
     @State var session: TaskEditorSession
+    @State var autosaveController: TaskDetailAutosaveController
     @State var navigationGuardRegistration = TaskDetailNavigationRegistrationToken()
     @State var draftRecoveryReason: TaskDraftRecoveryReason?
     @State var savedRecoveryCopyTaskID: UUID?
@@ -35,10 +36,14 @@ struct TaskDetailWorkspace: View {
         self.returnDestination = returnDestination
         self.dismissDetail = dismissDetail
         self.replaceDetail = replaceDetail
-        _session = State(
-            initialValue: TaskEditorSession(
+        let session = TaskEditorSession(store: store, initialDraft: initialDraft)
+        _session = State(initialValue: session)
+        _autosaveController = State(
+            initialValue: .workspaceController(
                 store: store,
-                initialDraft: initialDraft
+                session: session,
+                taskID: taskID,
+                returnDestination: returnDestination
             )
         )
     }
@@ -86,14 +91,25 @@ struct TaskDetailWorkspace: View {
             discard: discardChanges,
             reload: reloadLatestDraft
         )
+        .taskDetailAutosave(
+            controller: autosaveController,
+            request: autosaveRequest,
+            focusedTextField: focusedTextField,
+            focusedChecklistDraftID: focusedChecklistDraftID
+        )
         .taskDetailDraftRecovery(
             controller: store.taskDraftRecoveryController,
             sourceTaskID: taskID,
             session: session,
             isReady: draftRecoveryLoadState == .ready
         )
-        .onChange(of: editorSourceToken) {
-            session.synchronizeWithStoreIfClean(taskID: taskID)
+        .onChange(of: editorSourceToken) { _, sourceToken in
+            guard let sourceToken else { return }
+            session.synchronizeWithStoreIfClean(
+                taskID: taskID,
+                sourceBaseline: sourceToken.baseline,
+                parentCandidateIDs: sourceToken.parentCandidateIDs
+            )
         }
         .onChange(of: session.isDiscardConfirmationPresented) { _, isPresented in
             cancelPendingNavigationIfNeeded(
@@ -104,6 +120,7 @@ struct TaskDetailWorkspace: View {
             of: session.hasUnsavedChanges,
             updateNavigationGuardForDraftChanges
         )
+        .onChange(of: autosaveController.status, handleAutosaveStatus)
         .task(id: isSourceUnavailable) {
             prepareRecoveryIfNeeded()
         }
@@ -124,50 +141,6 @@ struct TaskDetailWorkspace: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
             liveNow = Date()
         }
-    }
-
-    private func workspace(for task: TaskNode) -> some View {
-        let evaluationDate = liveNow
-        let request = store.taskAnalyticsSnapshotRequest(
-            for: task,
-            range: range,
-            now: evaluationDate
-        )
-        let refreshPlan = scenePhase == .active
-            ? AnalyticsRefreshPlan.next(
-                liveNow: evaluationDate,
-                followsCurrentPeriod: true,
-                liveRefreshBucket: request.liveRefreshBucket
-            )
-            : nil
-        let canKeepDisplayingSnapshot = loadedRequest.map {
-            $0.canRemainVisible(whileLoading: request)
-        } ?? false
-
-        return TaskDetailList(
-            store: store,
-            task: task,
-            session: session,
-            focusedTextField: $focusedTextField,
-            focusedChecklistDraftID: $focusedChecklistDraftID,
-            snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
-            range: rangeSelection(for: task),
-            isRefreshing: canKeepDisplayingSnapshot && loadedRequest != request
-        )
-        .task(id: request) {
-            guard loadedRequest != request || snapshot == nil else { return }
-            snapshot = store.taskAnalyticsSnapshot(for: request, now: evaluationDate)
-            loadedRequest = request
-        }
-        .task(id: refreshPlan) {
-            await waitForRefresh(refreshPlan)
-        }
-    }
-    private func rangeSelection(for task: TaskNode) -> Binding<AnalyticsRange> {
-        Binding(
-            get: { range },
-            set: { selectRange($0, for: task) }
-        )
     }
 
 }

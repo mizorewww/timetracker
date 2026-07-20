@@ -454,6 +454,9 @@ struct TaskEditorSessionTests {
             ChecklistEditorDraft(title: "New item  ")
         )
         let savedDraft = session.draft
+        let visibleChecklistID = try #require(
+            savedDraft.checklistItems.first?.id
+        )
 
         #expect(
             store.saveTaskDraftResult(savedDraft) ==
@@ -467,6 +470,7 @@ struct TaskEditorSessionTests {
         #expect(session.hasUnsavedChanges == false)
         #expect(session.draft.title == "Visible title  ")
         #expect(session.draft.checklistItems.first?.title == "New item  ")
+        #expect(session.draft.checklistItems.first?.id == visibleChecklistID)
         #expect(session.draft.checklistItems.first?.existingID != nil)
         #expect(
             session.draft.baseline ==
@@ -474,10 +478,43 @@ struct TaskEditorSessionTests {
                     .baseline
         )
 
+        let sourceDraft = store.editorDraft(
+            for: try #require(store.task(for: created.id))
+        )
+        session.synchronizeWithStoreIfClean(
+            taskID: created.id,
+            sourceBaseline: sourceDraft.baseline,
+            parentCandidateIDs: store.validParentTasks(
+                for: created.id
+            ).map(\.id)
+        )
+
+        #expect(session.draft.title == "Visible title  ")
+        #expect(session.draft.checklistItems.first?.id == visibleChecklistID)
+
         session.draft.notes = "A later edit"
         #expect(
             store.saveTaskDraftResult(session.draft) ==
                 .saved(taskID: created.id)
         )
+    }
+
+    @Test
+    func autosaveValidationWaitsForAnEmptyChecklistDraftToBecomePersistable() {
+        let store = makeTestStore()
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        initialDraft.title = "Existing task"
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: initialDraft
+        )
+        let checklistID = session.addChecklistItem()
+
+        #expect(session.isPersistenceValid == false)
+
+        session.draft.checklistItems[0].title = "Persist me"
+
+        #expect(session.isPersistenceValid)
+        #expect(session.draft.checklistItems[0].id == checklistID)
     }
 }

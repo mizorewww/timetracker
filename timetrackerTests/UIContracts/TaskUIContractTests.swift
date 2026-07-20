@@ -156,6 +156,7 @@ struct TaskUIContractTests {
         #expect(actionSource.contains("store.stop(segment: activeSegment)"))
         #expect(availabilitySource.contains("task.detail.trackingUnavailable"))
         #expect(availabilitySource.contains("task.archived.trackingUnavailable"))
+        #expect(availabilitySource.contains("task.healthSyncOnly.trackingUnavailable"))
         #expect(identitySource.contains("RunningStatusBadge()") == false)
         #expect(identitySource.contains("TaskTimerActionButton("))
         #expect(identitySource.contains("store.isTaskAvailableForTracking(task)"))
@@ -163,6 +164,29 @@ struct TaskUIContractTests {
         #expect(identitySource.contains("store.performTimerPickerSelection(task)"))
         #expect(identitySource.contains("UIDevice.current.userInterfaceIdiom == .phone ? .iconOnly : .titleAndIcon"))
         #expect(identitySource.contains("TaskStatusBadge") == false)
+    }
+
+    @Test
+    func healthSyncOnlyTasksUseTheSharedAvailabilityGate() throws {
+        let availability = try sourceText(
+            "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift"
+        )
+        let pickerBehavior = try sourceText(
+            "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift"
+        )
+        let desktopCommands = try sourceText(
+            "timetracker/App/TimeTrackerCommands.swift"
+        )
+
+        #expect(availability.contains("AppleHealthTaskCatalog.syncOnlyTaskIDs"))
+        #expect(availability.contains("visibleTaskIDs.subtracting(syncOnlyTaskIDs)"))
+        #expect(pickerBehavior.contains("$0.isAvailable || $0.id == selectedTaskID"))
+        #expect(desktopCommands.contains("canTrackSelectedTask"))
+        #expect(
+            desktopCommands.contains(
+                "store.isTaskAvailableForTracking(selectedTask)"
+            )
+        )
     }
 
     @Test

@@ -6,7 +6,7 @@ import Testing
 @Suite(.serialized)
 struct LedgerTaskAvailabilityTests {
     @Test @MainActor
-    func newTrackingRejectsMissingDeletedAndArchivedBranchesWithoutCreatingLedgerRows() throws {
+    func newTrackingRejectsUnavailableAndHealthSyncBranchesWithoutCreatingLedgerRows() throws {
         let context = try makeTestContext()
         let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "task-device")
@@ -28,6 +28,21 @@ struct LedgerTaskAvailabilityTests {
             colorHex: nil,
             iconName: nil
         )
+        let healthRoot = TaskNode(
+            title: "Imported running",
+            parentID: nil,
+            deviceID: "health"
+        )
+        healthRoot.id = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        ).id
+        let healthChild = TaskNode(
+            title: "Imported child",
+            parentID: healthRoot.id,
+            deviceID: "health"
+        )
+        context.insert(healthRoot)
+        context.insert(healthChild)
 
         let tombstonedAt = deletedTask.updatedAt.addingTimeInterval(1)
         deletedTask.deletedAt = tombstonedAt
@@ -47,6 +62,8 @@ struct LedgerTaskAvailabilityTests {
             deletedTask.id,
             archivedParent.id,
             archivedChild.id,
+            healthRoot.id,
+            healthChild.id,
         ]
 
         for taskID in unavailableTaskIDs {

@@ -239,6 +239,69 @@ struct TaskHierarchyPickerTests {
         )
     }
 
+    @Test @MainActor
+    func pickersOmitHealthSyncBranchesUnlessPreservingCurrentSelection() throws {
+        let store = makeTestStore()
+        let healthRoot = TaskNode(
+            title: "Imported workout",
+            parentID: nil,
+            deviceID: "health"
+        )
+        healthRoot.id = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        ).id
+        let healthChild = TaskNode(
+            title: "Imported child",
+            parentID: healthRoot.id,
+            deviceID: "health"
+        )
+        let ordinary = TaskNode(
+            title: "Ordinary",
+            parentID: nil,
+            deviceID: "user"
+        )
+        store.tasks = [healthRoot, healthChild, ordinary]
+
+        let projection = TaskHierarchyProjection(
+            store: store,
+            expandedTaskIDs: [healthRoot.id],
+            searchText: ""
+        )
+        let timerPicker = TaskHierarchyPicker(
+            store: store,
+            mode: .timer,
+            onDismiss: {}
+        )
+        let selectionPicker = TaskHierarchyPicker(
+            store: store,
+            mode: .singleSelection(selectedTaskID: nil),
+            onDismiss: {}
+        )
+        let preservingPicker = TaskHierarchyPicker(
+            store: store,
+            mode: .singleSelection(selectedTaskID: healthRoot.id),
+            onDismiss: {}
+        )
+        let allProjectedItems = projection.sections.flatMap(\.items)
+
+        #expect(Set(allProjectedItems.map(\.id)) == Set(store.tasks.map(\.id)))
+        #expect(
+            projection.sections.flatMap(timerPicker.displayedItems).map(\.id)
+                == [ordinary.id]
+        )
+        #expect(
+            projection.sections.flatMap(selectionPicker.displayedItems).map(\.id)
+                == [ordinary.id]
+        )
+        #expect(
+            Set(
+                projection.sections
+                    .flatMap(preservingPicker.displayedItems)
+                    .map(\.id)
+            ) == Set([healthRoot.id, ordinary.id])
+        )
+    }
+
     @Test
     func timerPomodoroAndInboxUseTheSameHierarchyPickerSurface() throws {
         let host = try sourceText("timetracker/App/AppPresentationHost.swift")

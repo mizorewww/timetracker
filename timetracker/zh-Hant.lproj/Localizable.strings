@@ -328,10 +328,10 @@
 "health.timeline.reviewAccess" = "檢查存取權限並重新整理";
 "health.timeline.failed.title" = "無法讀取 Apple 健康";
 "health.settings.title" = "Apple 健康";
-"health.settings.showInTimeline" = "顯示 Apple 健康時間軸並加入任務範本";
+"health.settings.showInTimeline" = "在時間軸中顯示 Apple 健康";
 "health.settings.refresh" = "重新整理今天的資料";
 "health.settings.openSystemSettings" = "開啟系統設定";
-"health.settings.footer" = "運動和睡眠記錄只留在本機，絕不會寫入任務資料庫或 iCloud。開啟此功能會建立一組與健康記錄無關的固定可編輯任務範本；範本會像其他任務一樣同步，關閉顯示後也會保留。";
+"health.settings.footer" = "運動和睡眠記錄只留在本機，絕不會寫入任務資料庫或 iCloud。對應的可編輯任務標籤會像其他任務一樣同步，但僅用於同步：請在 Apple 健身中開始運動，也不要手動為睡眠計時。";
 "health.settings.taskSetupFailed.title" = "無法更新健康任務";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "無法將健康任務加入對應分類。";
 "health.settings.requesting.message" = "請在系統存取面板中完成選擇。";
@@ -462,7 +462,9 @@
 "task.action.archive.stopFirst" = "封存前，請先停止此任務或其子任務中的計時。";
 "task.action.unarchive.parentFirst" = "請先取消封存父任務。";
 "task.archived.trackingUnavailable" = "此任務或其上層任務已封存，不能接收新工作。";
-"task.parentUnavailable" = "所選父任務已封存或不再可用。";
+"task.healthSyncOnly.title" = "Apple 健康同步";
+"task.healthSyncOnly.trackingUnavailable" = "此任務屬於 Apple 健康同步分支。它仍可編輯和查看，但不能用於計時、番茄鐘、快速開始或手動補錄。";
+"task.parentUnavailable" = "所選父任務不能接收新工作。";
 "task.editor.staleDraft" = "此任務已在其他位置發生變更。請查看最新版本後重試。";
 "task.editor.stale.title" = "任務已在其他位置更改";
 "task.editor.stale.reloadMessage" = "要重新載入最新版本嗎？目前編輯器中尚未儲存的變更將被捨棄。";

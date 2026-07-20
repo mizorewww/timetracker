@@ -453,7 +453,7 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
-    func enablingCreatesStaticEditableTemplatesWithoutPersistingHealthRecords()
+    func enablingCreatesSyncOnlyTaskLabelsWithoutPersistingHealthRecords()
         async throws {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let context = try makeTestContext()
@@ -520,6 +520,21 @@ struct AppleHealthTimelineTests {
         #expect(store.appleHealthTimelineItems.count == 2)
         #expect(store.appleHealthTaskCatalogErrorMessage == nil)
         #expect(preferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+        #expect(store.isTaskVisible(try #require(store.task(for: running.id))))
+        #expect(
+            store.isTaskAvailableForTracking(
+                try #require(store.task(for: running.id))
+            ) == false
+        )
+        #expect(store.isTaskVisible(try #require(store.task(for: sleep.id))))
+        #expect(
+            store.isTaskAvailableForTracking(
+                try #require(store.task(for: sleep.id))
+            ) == false
+        )
+        store.preferences.quickStartTaskIDs = [running.id, sleep.id]
+        #expect(TodayHomeContent(store: store).quickStartTasks.isEmpty)
+        #expect(store.startTask(taskID: running.id) == false)
         #expect(try context.fetch(FetchDescriptor<TimeSession>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
 

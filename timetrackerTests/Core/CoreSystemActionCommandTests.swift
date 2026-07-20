@@ -446,6 +446,48 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
+    func systemActionCannotStartHealthSyncTaskOrStopAnotherTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let ordinary = try taskRepository.createTask(
+            title: "Keep running",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let healthTask = TaskNode(
+            title: "Imported workout",
+            parentID: nil,
+            deviceID: "health"
+        )
+        healthTask.id = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        ).id
+        context.insert(healthTask)
+        try context.save()
+
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let active = try timeRepository.startTask(
+            taskID: ordinary.id,
+            source: .timer
+        )
+
+        #expect(throws: SystemActionCommandError.taskNotFound) {
+            try makeTestSystemActionCommandHandler().startTimer(
+                taskID: healthTask.id,
+                context: context
+            )
+        }
+        #expect(try timeRepository.activeSegments().map(\.id) == [active.id])
+    }
+
+    @Test @MainActor
     func systemActionStopTimerClosesActiveSegment() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

@@ -27,13 +27,13 @@ struct TimeTrackerCommands: Commands {
                 store?.startSelectedTask()
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
-            .disabled(store?.selectedTask == nil)
+            .disabled(canTrackSelectedTask == false)
 
             Button(AppStrings.localized("menu.startPomodoro")) {
                 store?.startPomodoroForSelectedTask()
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
-            .disabled(store?.selectedTask == nil)
+            .disabled(canTrackSelectedTask == false)
         }
 
         CommandGroup(after: .sidebar) {
@@ -53,6 +53,13 @@ struct TimeTrackerCommands: Commands {
             .keyboardShortcut("r", modifiers: [.command])
             .disabled(store == nil)
         }
+    }
+
+    private var canTrackSelectedTask: Bool {
+        guard let store, let selectedTask = store.selectedTask else {
+            return false
+        }
+        return store.isTaskAvailableForTracking(selectedTask)
     }
 
     private func destinationButton(

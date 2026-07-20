@@ -169,7 +169,11 @@ struct TaskHierarchyProjection: Equatable {
                 ?? store.secondsForTaskTotalRollup(task),
             unavailableReason: isAvailable
                 ? nil
-                : AppStrings.localized("task.parentUnavailable"),
+                : AppStrings.localized(
+                    store.isTaskVisible(task)
+                        ? "task.healthSyncOnly.trackingUnavailable"
+                        : "task.parentUnavailable"
+                ),
             timerCommand: store.timerPickerSelectionCommand(for: task)
         )
     }

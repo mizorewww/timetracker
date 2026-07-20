@@ -10,11 +10,14 @@ extension TaskHierarchyPicker {
     func displayedItems(
         in section: TaskHierarchyProjection.Section
     ) -> [TaskHierarchyProjection.Item] {
-        switch mode {
+        let modeItems = switch mode {
         case .timer:
             section.items.filter { $0.isRunning == false }
         case .singleSelection:
             section.items
+        }
+        return modeItems.filter {
+            $0.isAvailable || $0.id == selectedTaskID
         }
     }
 

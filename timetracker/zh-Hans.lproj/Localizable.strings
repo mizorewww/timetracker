@@ -328,10 +328,10 @@
 "health.timeline.reviewAccess" = "检查访问权限并刷新";
 "health.timeline.failed.title" = "无法读取 Apple 健康";
 "health.settings.title" = "Apple 健康";
-"health.settings.showInTimeline" = "显示 Apple 健康时间线并添加任务模板";
+"health.settings.showInTimeline" = "在时间线中显示 Apple 健康";
 "health.settings.refresh" = "刷新今天的数据";
 "health.settings.openSystemSettings" = "打开系统设置";
-"health.settings.footer" = "运动和睡眠记录只留在本机，绝不会写入任务数据库或 iCloud。开启此功能会创建一组与健康记录无关的固定可编辑任务模板；模板会像其他任务一样同步，关闭显示后也会保留。";
+"health.settings.footer" = "运动和睡眠记录只留在本机，绝不会写入任务数据库或 iCloud。对应的可编辑任务标签会像其他任务一样同步，但仅用于同步：请在 Apple 健身中开始运动，也不要手动为睡眠计时。";
 "health.settings.taskSetupFailed.title" = "无法更新健康任务";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "无法将健康任务加入对应分类。";
 "health.settings.requesting.message" = "请在系统访问面板中完成选择。";
@@ -462,7 +462,9 @@
 "task.action.archive.stopFirst" = "归档前，请先停止此任务或其子任务中的计时。";
 "task.action.unarchive.parentFirst" = "请先取消归档父任务。";
 "task.archived.trackingUnavailable" = "此任务或其上级任务已归档，不能接收新工作。";
-"task.parentUnavailable" = "所选父任务已归档或不再可用。";
+"task.healthSyncOnly.title" = "Apple 健康同步";
+"task.healthSyncOnly.trackingUnavailable" = "此任务属于 Apple 健康同步分支。它仍可编辑和查看，但不能用于计时、番茄钟、快速开始或手动补录。";
+"task.parentUnavailable" = "所选父任务不能接收新工作。";
 "task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";
 "task.editor.stale.title" = "任务已在其他位置更改";
 "task.editor.stale.reloadMessage" = "要重新载入最新版本吗？当前编辑器中尚未保存的更改将被丢弃。";

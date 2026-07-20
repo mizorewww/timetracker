@@ -72,6 +72,45 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
     }
 
     @Test
+    func healthSyncTaskStartDoesNotStopUnrelatedTimer() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let otherTask = try makeTask("Other", repository: taskRepository)
+        let healthTask = TaskNode(
+            title: "Imported sleep",
+            parentID: nil,
+            deviceID: "health"
+        )
+        healthTask.id = AppleHealthTaskCatalog.taskDefinition(for: .sleep).id
+        context.insert(healthTask)
+        try context.save()
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let otherSegment = try timeRepository.startTask(
+            taskID: otherTask.id,
+            source: .timer
+        )
+
+        #expect(throws: SystemActionCommandError.taskNotFound) {
+            _ = try coordinator(context.container).start(
+                taskID: healthTask.id,
+                focusSeconds: 1_500,
+                breakSeconds: 300,
+                longBreakSeconds: nil,
+                targetRounds: 2
+            )
+        }
+
+        #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
+        #expect(try pomodoroRepository(context).activeRuns().isEmpty)
+    }
+
+    @Test
     func legacyCompletedTaskStartRemainsUsable() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

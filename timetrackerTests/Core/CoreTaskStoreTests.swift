@@ -145,6 +145,61 @@ struct CoreTaskStoreTests {
     }
 
     @Test @MainActor
+    func appleHealthBranchesStayVisibleButCannotReceiveLocalWork() {
+        let runningDefinition = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        )
+        let running = TaskNode(
+            title: "Renamed Health task",
+            parentID: nil,
+            deviceID: "health"
+        )
+        running.id = runningDefinition.id
+        let child = TaskNode(
+            title: "Imported child",
+            parentID: running.id,
+            deviceID: "health"
+        )
+        let grandchild = TaskNode(
+            title: "Imported grandchild",
+            parentID: child.id,
+            deviceID: "health"
+        )
+        let orphanedDuringSync = TaskNode(
+            title: "Child arrived first",
+            parentID: AppleHealthTaskCatalog.taskDefinition(for: .sleep).id,
+            deviceID: "cloud"
+        )
+        let ordinary = TaskNode(
+            title: "Running",
+            parentID: nil,
+            deviceID: "user"
+        )
+        let tasks = [running, child, grandchild, orphanedDuringSync, ordinary]
+
+        let eligibility = TaskTrackingAvailabilityService().eligibility(
+            tasks: tasks
+        )
+
+        #expect(eligibility.visibleTaskIDs == Set(tasks.map(\.id)))
+        #expect(eligibility.trackableTaskIDs == Set([ordinary.id]))
+
+        child.parentID = ordinary.id
+        let movedEligibility = TaskTrackingAvailabilityService().eligibility(
+            tasks: [running, child, grandchild, ordinary]
+        )
+        #expect(movedEligibility.trackableTaskIDs.contains(child.id))
+        #expect(movedEligibility.trackableTaskIDs.contains(grandchild.id))
+        child.parentID = running.id
+
+        let store = makeTestStore()
+        store.tasks = tasks
+        store.preferences.quickStartTaskIDs = [running.id, child.id, ordinary.id]
+        let home = TodayHomeContent(store: store)
+        #expect(home.quickStartTasks.map(\.id) == [ordinary.id])
+    }
+
+    @Test @MainActor
     func archivedSettingsKeepsNestedExplicitArchivesVisibleAndRequiresParentFirst() {
         let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
         parent.archivedAt = Date(timeIntervalSinceReferenceDate: 100)

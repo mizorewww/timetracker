@@ -14,6 +14,14 @@ struct TaskDetailTrackingAvailabilitySection: View {
             } footer: {
                 Text(.app("task.archived.trackingUnavailable"))
             }
+        } else if !store.isTaskAvailableForTracking(task) {
+            Section {
+                Label(AppStrings.localized("task.healthSyncOnly.title"), systemImage: "heart.text.clipboard")
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("task.detail.trackingUnavailable")
+            } footer: {
+                Text(.app("task.healthSyncOnly.trackingUnavailable"))
+            }
         }
     }
 }

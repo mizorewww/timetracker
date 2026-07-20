@@ -328,10 +328,10 @@
 "health.timeline.reviewAccess" = "Review Access and Refresh";
 "health.timeline.failed.title" = "Apple Health could not be read";
 "health.settings.title" = "Apple Health";
-"health.settings.showInTimeline" = "Show Apple Health Timeline & Add Task Templates";
+"health.settings.showInTimeline" = "Show Apple Health in Timeline";
 "health.settings.refresh" = "Refresh Today’s Data";
 "health.settings.openSystemSettings" = "Open System Settings";
-"health.settings.footer" = "Workout and sleep records stay on this device and never enter the task database or iCloud. Enabling this feature creates a fixed set of editable task templates independent of your Health records; templates sync like other tasks and remain when this display is turned off.";
+"health.settings.footer" = "Workout and sleep records stay on this device and never enter the task database or iCloud. Their editable task labels sync like other tasks, but are sync-only: start workouts in Apple Fitness, and do not manually time sleep.";
 "health.settings.taskSetupFailed.title" = "Health tasks could not be updated";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "The Health task could not be assigned to its category.";
 "health.settings.requesting.message" = "Complete the system access sheet to continue.";
@@ -462,7 +462,9 @@
 "task.action.archive.stopFirst" = "Stop timers in this task or its subtasks before archiving.";
 "task.action.unarchive.parentFirst" = "Unarchive the parent task first.";
 "task.archived.trackingUnavailable" = "This task cannot receive new work because it or a parent is archived.";
-"task.parentUnavailable" = "The selected parent is archived or no longer available.";
+"task.healthSyncOnly.title" = "Apple Health Sync";
+"task.healthSyncOnly.trackingUnavailable" = "This task belongs to an Apple Health sync branch. It stays editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable.";
+"task.parentUnavailable" = "The selected parent cannot receive new work.";
 "task.editor.staleDraft" = "This task changed elsewhere. Review the latest version, then try again.";
 "task.editor.stale.title" = "Task Changed Elsewhere";
 "task.editor.stale.reloadMessage" = "Reload the latest version? Your unsaved changes in this editor will be discarded.";

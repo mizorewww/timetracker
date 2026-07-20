@@ -28,6 +28,61 @@ struct CoreTaskDetailNavigationGuardTests {
     }
 
     @Test
+    func dirtyWorkspaceFlushesBeforeDecidingWhetherNavigationNeedsConfirmation() {
+        let guardCoordinator = TaskDetailNavigationGuard()
+        let registrationID = UUID()
+        var isDirty = true
+        var events: [String] = []
+        var didRequestConfirmation = false
+
+        guardCoordinator.register(
+            id: registrationID,
+            taskID: UUID(),
+            prepareForNavigation: {
+                events.append("flush")
+                isDirty = false
+            },
+            hasUnsavedChanges: { isDirty },
+            requestDiscardConfirmation: { _ in
+                didRequestConfirmation = true
+            },
+            dismissDetail: {}
+        )
+        guardCoordinator.requestNavigation {
+            events.append("navigate")
+        }
+
+        #expect(events == ["flush", "navigate"])
+        #expect(didRequestConfirmation == false)
+    }
+
+    @Test
+    func failedFlushKeepsDirtyWorkspaceBehindDiscardProtection() {
+        let guardCoordinator = TaskDetailNavigationGuard()
+        let registrationID = UUID()
+        var didNavigate = false
+        var didRequestConfirmation = false
+
+        guardCoordinator.register(
+            id: registrationID,
+            taskID: UUID(),
+            prepareForNavigation: {},
+            hasUnsavedChanges: { true },
+            requestDiscardConfirmation: { _ in
+                didRequestConfirmation = true
+            },
+            dismissDetail: {}
+        )
+        guardCoordinator.requestNavigation {
+            didNavigate = true
+        }
+
+        #expect(didNavigate == false)
+        #expect(didRequestConfirmation)
+        #expect(guardCoordinator.hasPendingNavigation)
+    }
+
+    @Test
     func dirtyWorkspaceDefersNavigationUntilDiscardCompletes() {
         let guardCoordinator = TaskDetailNavigationGuard()
         let registrationID = UUID()

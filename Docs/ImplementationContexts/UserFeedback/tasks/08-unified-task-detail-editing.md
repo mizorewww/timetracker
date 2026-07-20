@@ -6,8 +6,9 @@
 ## 当前阶段
 
 - [x] 已领取当前反馈，并完成快速操作、任务详情/编辑状态、Markdown 备注和保存链路审计。
-- [~] 正在用失败测试锁定自动保存、导航前落盘、验证/冲突恢复与工具栏语义。
-- 下一 checkpoint：提交失败测试及最小实现边界。
+- [x] 已用失败测试锁定自动保存、导航前落盘、验证/冲突恢复和 baseline 重建语义。
+- [~] 正在把已验证的自动保存核心接入 canonical task detail，并稳定工具栏。
+- 下一 checkpoint：已有任务详情移除手动 Save/Cancel，接通状态、Retry 与生命周期 flush。
 
 ## 反馈边界
 
@@ -22,7 +23,7 @@
 - [x] 盘点所有任务详情、编辑、快速操作和保存入口
 - [x] 核对 MarkdownView 当前依赖、API、平台支持和许可证
 - [x] 形成 iPhone、iPad、macOS 的 HIG 布局与编辑交互决策
-- [ ] 用失败测试锁定入口、统一页面、Markdown 与自动保存语义
+- [x] 用失败测试锁定入口、统一页面、Markdown 与自动保存语义
 - [ ] 实现并分小 checkpoint 提交
 - [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
@@ -70,4 +71,5 @@
 
 - [x] 领取反馈、建立实现记忆和活动链接：`564dce9`。
 - [x] 完成 UI/HIG、自动保存链路与 MarkdownView 4.1.7 只读审计。
-- [~] 当前 checkpoint：先写失败测试，再实现自动保存状态机和详情工具栏。
+- [x] 自动保存核心红灯转绿：快速输入合并、导航 flush、验证阻断、失败重试、冲突保留，以及 checklist identity/baseline 重建；macOS 目标 34 项测试通过。
+- [~] 当前 checkpoint：接入任务详情、生命周期 flush、稳定工具栏和保存失败反馈。

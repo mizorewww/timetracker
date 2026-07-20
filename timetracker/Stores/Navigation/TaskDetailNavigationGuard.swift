@@ -7,6 +7,7 @@ final class TaskDetailNavigationGuard {
     private struct Registration {
         let id: UUID
         let taskID: UUID
+        let prepareForNavigation: () -> Void
         let hasUnsavedChanges: () -> Bool
         let discardChanges: () -> Bool
         let requestDiscardConfirmation: (UUID) -> Void
@@ -34,6 +35,7 @@ final class TaskDetailNavigationGuard {
     func register(
         id: UUID,
         taskID: UUID,
+        prepareForNavigation: @escaping () -> Void = {},
         hasUnsavedChanges: @escaping () -> Bool,
         discardChanges: @escaping () -> Bool = { true },
         requestDiscardConfirmation: @escaping (UUID) -> Void,
@@ -46,6 +48,7 @@ final class TaskDetailNavigationGuard {
         registration = Registration(
             id: id,
             taskID: taskID,
+            prepareForNavigation: prepareForNavigation,
             hasUnsavedChanges: hasUnsavedChanges,
             discardChanges: discardChanges,
             requestDiscardConfirmation: requestDiscardConfirmation,
@@ -81,6 +84,7 @@ final class TaskDetailNavigationGuard {
             navigate()
             return nil
         }
+        registration.prepareForNavigation()
         guard registration.hasUnsavedChanges() else {
             cancelPendingNavigation()
             guard beforeDiscardingChanges() else { return nil }

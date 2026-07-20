@@ -429,4 +429,55 @@ struct TaskEditorSessionTests {
         #expect(session.pendingReloadDraft == nil)
         #expect(session.draft.title == "Preserve this draft")
     }
+
+    @Test
+    func acceptedAutosaveRebasesChecklistIdentityWithoutNormalizingVisibleText() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "autosave-rebase"
+        ).createTask(
+            title: "Original",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let task = try #require(store.task(for: created.id))
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(for: task)
+        )
+        session.draft.title = "Visible title  "
+        session.draft.checklistItems.append(
+            ChecklistEditorDraft(title: "New item  ")
+        )
+        let savedDraft = session.draft
+
+        #expect(
+            store.saveTaskDraftResult(savedDraft) ==
+                .saved(taskID: created.id)
+        )
+        session.acceptAutosavedDraft(
+            savedDraft,
+            for: created.id
+        )
+
+        #expect(session.hasUnsavedChanges == false)
+        #expect(session.draft.title == "Visible title  ")
+        #expect(session.draft.checklistItems.first?.title == "New item  ")
+        #expect(session.draft.checklistItems.first?.existingID != nil)
+        #expect(
+            session.draft.baseline ==
+                store.editorDraft(for: try #require(store.task(for: created.id)))
+                    .baseline
+        )
+
+        session.draft.notes = "A later edit"
+        #expect(
+            store.saveTaskDraftResult(session.draft) ==
+                .saved(taskID: created.id)
+        )
+    }
 }

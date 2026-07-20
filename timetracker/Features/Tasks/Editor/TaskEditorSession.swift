@@ -132,7 +132,7 @@ final class TaskEditorSession {
         pendingReloadDraft = store.editorDraft(for: latestTask)
     }
 
-    private func replace(with latestDraft: TaskEditorDraft) {
+    func replace(with latestDraft: TaskEditorDraft) {
         draft = latestDraft
         sessionBaseline = latestDraft
         parentCandidates = Self.parentCandidates(

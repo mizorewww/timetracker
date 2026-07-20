@@ -33,6 +33,14 @@ extension SyncDataSnapshot {
                 .deduplicatedByID().map(TaskCategoryRecord.init).sortedByID()
             snapshot.taskCategoryAssignments = try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
                 .deduplicatedByID().map(TaskCategoryAssignmentRecord.init).sortedByID()
+            snapshot.taskRecurrenceRules = try context.fetch(FetchDescriptor<TaskRecurrenceRule>())
+                .deduplicatedByID().map(TaskRecurrenceRuleRecord.init).sortedByID()
+            snapshot.taskRecurrenceOccurrences = try context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>())
+                .deduplicatedByID().map(TaskRecurrenceOccurrenceRecord.init).sortedByID()
+            snapshot.taskQuantityGoals = try context.fetch(FetchDescriptor<TaskQuantityGoal>())
+                .deduplicatedByID().map(TaskQuantityGoalRecord.init).sortedByID()
+            snapshot.taskQuantityEntries = try context.fetch(FetchDescriptor<TaskQuantityEntry>())
+                .deduplicatedByID().map(TaskQuantityEntryRecord.init).sortedByID()
         }
         if domains.contains(.ledger) {
             snapshot.sessions = try context.fetch(FetchDescriptor<TimeSession>())
@@ -107,7 +115,11 @@ extension SyncDataSnapshot {
                 )
             }.sortedByID(),
             inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID(),
-            inboxCaptureReceipts: try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).deduplicatedByID().map(InboxCaptureReceiptRecord.init).sortedByID()
+            inboxCaptureReceipts: try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).deduplicatedByID().map(InboxCaptureReceiptRecord.init).sortedByID(),
+            taskRecurrenceRules: try context.fetch(FetchDescriptor<TaskRecurrenceRule>()).deduplicatedByID().map(TaskRecurrenceRuleRecord.init).sortedByID(),
+            taskRecurrenceOccurrences: try context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()).deduplicatedByID().map(TaskRecurrenceOccurrenceRecord.init).sortedByID(),
+            taskQuantityGoals: try context.fetch(FetchDescriptor<TaskQuantityGoal>()).deduplicatedByID().map(TaskQuantityGoalRecord.init).sortedByID(),
+            taskQuantityEntries: try context.fetch(FetchDescriptor<TaskQuantityEntry>()).deduplicatedByID().map(TaskQuantityEntryRecord.init).sortedByID()
         )
     }
 }

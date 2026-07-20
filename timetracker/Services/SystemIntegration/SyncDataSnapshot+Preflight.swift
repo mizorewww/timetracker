@@ -14,6 +14,10 @@ enum SyncSnapshotTable: String, Equatable {
     case inboxItems
     case inboxSuggestions
     case inboxCaptureReceipts
+    case taskRecurrenceRules
+    case taskRecurrenceOccurrences
+    case taskQuantityGoals
+    case taskQuantityEntries
 }
 
 enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
@@ -51,6 +55,25 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
     case inconsistentInboxSuggestionIdentity(id: UUID, inboxItemID: UUID)
     case inconsistentInboxCaptureReceipt(id: UUID, inboxItemID: UUID)
     case inconsistentInboxCaptureCommandKey(commandKey: String)
+    case nonCanonicalIdentity(
+        table: SyncSnapshotTable,
+        id: UUID,
+        expectedID: UUID
+    )
+    case mismatchedReference(
+        table: SyncSnapshotTable,
+        id: UUID,
+        field: String,
+        expectedID: UUID,
+        actualID: UUID?
+    )
+    case inconsistentStringValue(
+        table: SyncSnapshotTable,
+        id: UUID,
+        field: String,
+        expected: String,
+        actual: String
+    )
 
     var errorDescription: String? {
         switch self {
@@ -86,6 +109,13 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
             return "Sync snapshot Inbox capture receipt \(id.uuidString) references missing Inbox item \(inboxItemID.uuidString)."
         case let .inconsistentInboxCaptureCommandKey(commandKey):
             return "Sync snapshot Inbox capture receipts disagree about the committed result for external command key '\(commandKey)'."
+        case let .nonCanonicalIdentity(table, id, expectedID):
+            return "Sync snapshot \(table.rawValue) identifier \(id.uuidString) is not canonical; expected \(expectedID.uuidString)."
+        case let .mismatchedReference(table, id, field, expectedID, actualID):
+            let actual = actualID?.uuidString ?? "nil"
+            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(actual); expected \(expectedID.uuidString)."
+        case let .inconsistentStringValue(table, id, field, expected, actual):
+            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is '\(actual)'; expected \(expected)."
         }
     }
 }
@@ -126,7 +156,11 @@ extension SyncDataSnapshot {
             (.checklistItemVisuals, checklistItemVisuals.count),
             (.inboxItems, inboxItems.count),
             (.inboxSuggestions, inboxSuggestions.count),
-            (.inboxCaptureReceipts, (inboxCaptureReceipts ?? []).count)
+            (.inboxCaptureReceipts, (inboxCaptureReceipts ?? []).count),
+            (.taskRecurrenceRules, (taskRecurrenceRules ?? []).count),
+            (.taskRecurrenceOccurrences, (taskRecurrenceOccurrences ?? []).count),
+            (.taskQuantityGoals, (taskQuantityGoals ?? []).count),
+            (.taskQuantityEntries, (taskQuantityEntries ?? []).count)
         ]
 
         for (table, count) in tableCounts where count > SyncDataSnapshotRestoreLimits.maximumRecordsPerTable {
@@ -160,6 +194,13 @@ extension SyncDataSnapshot {
         try requireUniqueIdentifiers(inboxItems, table: .inboxItems)
         try requireUniqueIdentifiers(inboxSuggestions, table: .inboxSuggestions)
         try requireUniqueIdentifiers(inboxCaptureReceipts ?? [], table: .inboxCaptureReceipts)
+        try requireUniqueIdentifiers(taskRecurrenceRules ?? [], table: .taskRecurrenceRules)
+        try requireUniqueIdentifiers(
+            taskRecurrenceOccurrences ?? [],
+            table: .taskRecurrenceOccurrences
+        )
+        try requireUniqueIdentifiers(taskQuantityGoals ?? [], table: .taskQuantityGoals)
+        try requireUniqueIdentifiers(taskQuantityEntries ?? [], table: .taskQuantityEntries)
     }
 
     private func requireUniqueIdentifiers<Record: SyncSnapshotRecord>(

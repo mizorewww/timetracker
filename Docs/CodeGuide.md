@@ -228,7 +228,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ## 5. 持久化、CloudKit 与迁移
 
-当前 schema 为 V11（版本标识 `1.10.0`），迁移计划覆盖 V1 至 V11。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；V10 通过 V9→V10 custom migration 为 Inbox item/suggestion 初始化不透明 context/revision UUID，并把旧版“已有 generatedAt 且没有 active suggestion”转换为该修订的显式 dismissal；V11 通过 V10→V11 lightweight migration 加入 durable Inbox capture receipt。任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，V9 Inbox 类型保留冻结旧形状；当前 registry 不包含 `DailySummary`。`TaskNode.statusRaw` 继续按 V4 兼容合同 round-trip，不为移除 UI 状态机新增 schema migration。版本升级时：
+当前 schema 为 V13（版本标识 `1.12.0`），迁移计划覆盖 V1 至 V13。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；V10 通过 V9→V10 custom migration 为 Inbox item/suggestion 初始化不透明 context/revision UUID，并把旧版“已有 generatedAt 且没有 active suggestion”转换为该修订的显式 dismissal；V11 加入 durable Inbox capture receipt，V12 持久化 suggestion destination kind。V13 通过 V12→V13 lightweight migration 加入 `TaskRecurrenceRule`、`TaskRecurrenceOccurrence`、`TaskQuantityGoal` 与 `TaskQuantityEntry`。rule、occurrence、generated child task 和 quantity goal 使用冻结 domain 的 deterministic UUIDv8；entry 的 UUID 是调用方必须在重试时复用的 command identity。四张 V13 snapshot table 为兼容旧快照而声明为 optional：缺 key 表示未知，显式 `[]` 才是权威清空；capture、restore、clear/demo cleanup、maintenance 和 conflict fingerprint 必须一起接入。持久层保留分阶段 Cloud import 的可见 orphan，Task Store 只在 task/rule/goal 关系完整后向 UI 发布；scoped refresh 按 task ID 查询并沿 occurrence 扩展到 generated child，禁止每次编辑全量 fetch/materialize 全部 quantity history。任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，旧 Inbox 类型保留冻结形状；当前 registry 不包含 `DailySummary`。`TaskNode.statusRaw` 继续按 V4 兼容合同 round-trip，不为移除 UI 状态机新增 schema migration。版本升级时：
 
 1. 先声明哪些用户数据必须保留。
 2. 为旧 schema 准备真实 store fixture。
@@ -237,7 +237,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 5. 明确失败后的回退边界；不要用空库或内存库静默伪装成功。
 6. 更新 [Versioning](Versioning.md) 与 [AgentDecisions](AgentDecisions.md)。
 
-当前运行时生成的磁盘兼容 fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除迁移与 V9 Inbox suggestion identity/dismissal 迁移；它们会真实关闭旧容器、打开磁盘 store 并核对事实记录，但不是由已发布版本生成且带固定 hash 的不可变历史 artifact。后者仍是明确缺口：应从发布 tag/当时工具链一次性生成无敏感数据的 SQLite bundle，附 schema/app/build、seed、工具链和 SHA-256 manifest，每次复制到唯一临时目录后迁移；不得从当前分支临时生成后冒充历史发布 fixture。
+当前运行时生成的磁盘兼容 fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除迁移、V9 Inbox suggestion identity/dismissal、V11→当前 suggestion destination，以及 V12→V13 task progress 表迁移；它们会真实关闭旧容器、打开磁盘 store 并核对事实记录，但不是由已发布版本生成且带固定 hash 的不可变历史 artifact。后者仍是明确缺口：应从发布 tag/当时工具链一次性生成无敏感数据的 SQLite bundle，附 schema/app/build、seed、工具链和 SHA-256 manifest，每次复制到唯一临时目录后迁移；不得从当前分支临时生成后冒充历史发布 fixture。
 
 legacy `CountdownEventsJSON` 是一次性 `UserDefaults`→SwiftData 迁移，不是可信的当前数据源。`LegacyCountdownMigrationPolicy` 限制 JSON 为 256 KiB UTF-8、源数组最多 256 条、标题最多 4 KiB UTF-8，日期必须有限且处于 `[1900-01-01, 2201-01-01)`。合法 legacy UUID 原样保留；同一 UUID 只接受源顺序中第一条通过所有校验的记录，无 ID 的不同记录不按内容合并。实际导入时只有 `context.save()` 成功后才设置完成 flag 并删除旧 payload；保存失败必须保留两者以便重试。若 SwiftData 已有 Countdown 事实，则不重复导入并直接退役旧 payload。
 

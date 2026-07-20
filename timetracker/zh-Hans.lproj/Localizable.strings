@@ -419,6 +419,7 @@
 "sync.state.conflict.title" = "同步冲突需要选择";
 "sync.state.conflict.message" = "请选择上传本设备数据覆盖 iCloud，还是从 iCloud 下载覆盖本设备。";
 "sync.conflict.summary" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项";
+"sync.conflict.summaryWithTaskProgress" = "%d 个任务，%d 条时间记录，%d 个番茄钟，%d 个清单项，%d 个收件箱项，%d 条重复记录，%d 条任务量记录";
 "sync.conflict.error.localSnapshotMissing" = "找不到已保存的本机快照，无法用本设备覆盖 iCloud。";
 "sync.conflict.error.cloudSnapshotMissing" = "找不到已保存的 iCloud 快照，无法安全地替换本设备数据。";
 "sync.conflict.error.uploadSnapshotMissing" = "没有找到本设备的可见数据，已取消排队覆盖 iCloud。";

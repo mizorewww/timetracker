@@ -174,3 +174,7 @@ extension ChecklistItemVisual: SoftDeletablePersistentUUIDModel, ClientMutationT
 extension InboxItem: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
 extension InboxSuggestion: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
 extension InboxCaptureReceipt: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
+extension TaskRecurrenceRule: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
+extension TaskRecurrenceOccurrence: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
+extension TaskQuantityGoal: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}
+extension TaskQuantityEntry: SoftDeletablePersistentUUIDModel, ClientMutationTrackedModel {}

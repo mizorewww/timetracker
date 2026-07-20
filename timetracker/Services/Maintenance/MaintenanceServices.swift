@@ -33,6 +33,51 @@ struct DatabaseMaintenanceService {
         let expiredTaskIDs = taskPurge.ids
         removedCount += taskPurge.count
 
+        let recurrenceRulePurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TaskRecurrenceRule>(),
+            cutoff: cutoff,
+            additionallyExpired: {
+                expiredTaskIDs.contains($0.templateTaskID)
+            }
+        )
+        let expiredRuleIDs = recurrenceRulePurge.ids
+        removedCount += recurrenceRulePurge.count
+
+        let recurrenceOccurrencePurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TaskRecurrenceOccurrence>(),
+            cutoff: cutoff,
+            additionallyExpired: {
+                expiredRuleIDs.contains($0.ruleID) ||
+                    expiredTaskIDs.contains($0.templateTaskID) ||
+                    expiredTaskIDs.contains($0.generatedTaskID)
+            }
+        )
+        removedCount += recurrenceOccurrencePurge.count
+
+        let quantityGoalPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TaskQuantityGoal>(),
+            cutoff: cutoff,
+            additionallyExpired: {
+                expiredTaskIDs.contains($0.taskID)
+            }
+        )
+        let expiredQuantityGoalIDs = quantityGoalPurge.ids
+        removedCount += quantityGoalPurge.count
+
+        let quantityEntryPurge = try purgeCanonicalModels(
+            context: context,
+            descriptor: FetchDescriptor<TaskQuantityEntry>(),
+            cutoff: cutoff,
+            additionallyExpired: {
+                expiredTaskIDs.contains($0.taskID) ||
+                    expiredQuantityGoalIDs.contains($0.quantityGoalID)
+            }
+        )
+        removedCount += quantityEntryPurge.count
+
         let categoryPurge = try purgeCanonicalModels(
             context: context,
             descriptor: FetchDescriptor<TaskCategory>(),

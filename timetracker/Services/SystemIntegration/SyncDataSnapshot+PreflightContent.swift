@@ -5,6 +5,7 @@ struct SyncSnapshotContentValidator {
 
     mutating func validate(snapshot: SyncDataSnapshot) throws {
         try validateTasks(snapshot)
+        try validateTaskProgress(snapshot)
         try validateLedger(snapshot)
         try validatePlanning(snapshot)
         try validatePreferences(snapshot)
@@ -270,7 +271,7 @@ struct SyncSnapshotContentValidator {
     }
 }
 
-private extension SyncSnapshotContentValidator {
+extension SyncSnapshotContentValidator {
     enum TextLimit {
         case title
         case note

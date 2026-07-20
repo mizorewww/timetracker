@@ -176,4 +176,20 @@ extension TimeTrackerStore {
         )
         analyticsRevision &+= 1
     }
+
+    var taskRecurrenceRules: [TaskRecurrenceRule] {
+        taskDomainStore.recurrenceRules
+    }
+
+    var taskRecurrenceOccurrences: [TaskRecurrenceOccurrence] {
+        taskDomainStore.recurrenceOccurrences
+    }
+
+    var taskQuantityGoals: [TaskQuantityGoal] {
+        taskDomainStore.quantityGoals
+    }
+
+    var taskQuantityEntries: [TaskQuantityEntry] {
+        taskDomainStore.quantityEntries
+    }
 }

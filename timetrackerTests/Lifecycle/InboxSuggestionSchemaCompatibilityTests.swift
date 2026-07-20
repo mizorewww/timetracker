@@ -27,6 +27,7 @@ struct InboxSuggestionSchemaCompatibilityTests {
         let v10Schema = Schema(versionedSchema: TimeTrackerSchemaV10.self)
         let v11Schema = Schema(versionedSchema: TimeTrackerSchemaV11.self)
         let v12Schema = Schema(versionedSchema: TimeTrackerSchemaV12.self)
+        let v13Schema = Schema(versionedSchema: TimeTrackerSchemaV13.self)
         let v10Suggestion = try #require(
             v10Schema.entity(for: TimeTrackerSchemaV10.InboxSuggestion.self)
         )
@@ -34,11 +35,16 @@ struct InboxSuggestionSchemaCompatibilityTests {
             v11Schema.entity(for: TimeTrackerSchemaV11.InboxSuggestion.self)
         )
         let v12Suggestion = try #require(v12Schema.entity(for: InboxSuggestion.self))
+        let v13Suggestion = try #require(v13Schema.entity(for: InboxSuggestion.self))
 
         #expect(Set(v10Suggestion.attributesByName.keys) == expectedLegacyAttributes)
         #expect(Set(v11Suggestion.attributesByName.keys) == expectedLegacyAttributes)
         #expect(
             Set(v12Suggestion.attributesByName.keys)
+                == expectedLegacyAttributes.union(["destinationKindRaw"])
+        )
+        #expect(
+            Set(v13Suggestion.attributesByName.keys)
                 == expectedLegacyAttributes.union(["destinationKindRaw"])
         )
     }
@@ -64,7 +70,7 @@ struct InboxSuggestionSchemaCompatibilityTests {
             #expect(suggestion.destinationKind == .checklist)
             #expect(
                 TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
-                    == TimeTrackerSchemaV12.versionIdentifier
+                    == TimeTrackerSchemaV13.versionIdentifier
             )
         }
     }

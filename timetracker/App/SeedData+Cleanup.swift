@@ -12,12 +12,41 @@ extension SeedData {
     private static func clearDemoDataChanges(context: ModelContext) throws {
         let now = Date()
         let deviceID = DeviceIdentity.current
-        let demoTasks = try context.fetch(FetchDescriptor<TaskNode>()).filter { $0.deviceID == "demo" }
-        let demoTaskIDs = Set(demoTasks.map(\.id))
-        let demoSessions = try context.fetch(FetchDescriptor<TimeSession>()).filter {
-            $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+        let allTasks = try context.fetch(FetchDescriptor<TaskNode>())
+        let seededDemoTaskIDs = Set(
+            allTasks.lazy.filter { $0.deviceID == "demo" }.map(\.id)
+        )
+        let demoRules = try context.fetch(
+            FetchDescriptor<TaskRecurrenceRule>()
+        ).filter {
+            $0.deviceID == "demo" ||
+                seededDemoTaskIDs.contains($0.templateTaskID)
         }
+        let demoRuleIDs = Set(demoRules.map(\.id))
+        let demoOccurrences = try context.fetch(
+            FetchDescriptor<TaskRecurrenceOccurrence>()
+        ).filter {
+            $0.deviceID == "demo" ||
+                demoRuleIDs.contains($0.ruleID) ||
+                seededDemoTaskIDs.contains($0.templateTaskID) ||
+                seededDemoTaskIDs.contains($0.generatedTaskID)
+        }
+        let demoTaskIDs = seededDemoTaskIDs.union(
+            demoOccurrences.map(\.generatedTaskID)
+        )
+        let demoTasks = allTasks.filter { demoTaskIDs.contains($0.id) }
+        let demoSessions = try context.fetch(FetchDescriptor<TimeSession>())
+            .filter {
+                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+            }
         let demoSessionIDs = Set(demoSessions.map(\.id))
+        let demoGoals = try context.fetch(
+            FetchDescriptor<TaskQuantityGoal>()
+        ).filter {
+            $0.deviceID == "demo" ||
+                demoTaskIDs.contains($0.taskID)
+        }
+        let demoGoalIDs = Set(demoGoals.map(\.id))
 
         tombstone(
             try context.fetch(FetchDescriptor<PomodoroRun>()).filter {
@@ -34,6 +63,19 @@ extension SeedData {
             deviceID: deviceID
         )
         tombstone(demoSessions, now: now, deviceID: deviceID)
+        tombstone(demoOccurrences, now: now, deviceID: deviceID)
+        tombstone(
+            try context.fetch(FetchDescriptor<TaskQuantityEntry>())
+                .filter {
+                    $0.deviceID == "demo" ||
+                        demoTaskIDs.contains($0.taskID) ||
+                        demoGoalIDs.contains($0.quantityGoalID)
+                },
+            now: now,
+            deviceID: deviceID
+        )
+        tombstone(demoGoals, now: now, deviceID: deviceID)
+        tombstone(demoRules, now: now, deviceID: deviceID)
         let demoChecklistItems = try context.fetch(FetchDescriptor<ChecklistItem>()).filter { demoTaskIDs.contains($0.taskID) }
         let demoChecklistIDs = Set(demoChecklistItems.map(\.id))
         tombstone(demoChecklistItems, now: now, deviceID: deviceID)
@@ -87,6 +129,10 @@ extension SeedData {
         tombstone(try context.fetch(FetchDescriptor<PomodoroRun>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<TimeSegment>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<TimeSession>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskQuantityEntry>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskQuantityGoal>()), now: now, deviceID: deviceID)
+        tombstone(try context.fetch(FetchDescriptor<TaskRecurrenceRule>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<ChecklistItem>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<ChecklistItemVisual>()), now: now, deviceID: deviceID)
         tombstone(try context.fetch(FetchDescriptor<InboxSuggestion>()), now: now, deviceID: deviceID)
@@ -104,8 +150,12 @@ extension SeedData {
         deviceID: String
     ) where Model: SoftDeletablePersistentUUIDModel {
         for model in models {
-            model.deletedAt = now
-            model.updatedAt = now
+            let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: model.updatedAt
+            )
+            model.deletedAt = mutationDate
+            model.updatedAt = mutationDate
             model.deviceID = deviceID
             (model as? ClientMutationTrackedModel)?.clientMutationID = UUID()
         }

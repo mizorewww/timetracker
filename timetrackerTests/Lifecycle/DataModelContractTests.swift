@@ -197,6 +197,31 @@ struct DataModelContractTests {
         )
         let category = TaskCategory(title: "Work", deviceID: "test")
         let categoryAssignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
+        let recurrenceRule = TaskRecurrenceRule(
+            templateTaskID: task.id,
+            startDayKey: "2026-07-20",
+            timeZoneIdentifier: "Asia/Singapore",
+            deviceID: "test"
+        )
+        let recurrenceOccurrence = TaskRecurrenceOccurrence(
+            ruleID: recurrenceRule.id,
+            templateTaskID: task.id,
+            occurrenceDayKey: "2026-07-20",
+            timeZoneIdentifier: recurrenceRule.timeZoneIdentifier,
+            deviceID: "test"
+        )
+        let quantityGoal = TaskQuantityGoal(
+            taskID: task.id,
+            targetAmount: 50,
+            unitLabel: "push-ups",
+            deviceID: "test"
+        )
+        let quantityEntry = TaskQuantityEntry(
+            id: UUID(),
+            taskID: task.id,
+            amount: 10,
+            deviceID: "test"
+        )
 
         context.insert(task)
         context.insert(category)
@@ -210,6 +235,10 @@ struct DataModelContractTests {
         context.insert(checklistVisual)
         context.insert(inboxItem)
         context.insert(inboxSuggestion)
+        context.insert(recurrenceRule)
+        context.insert(recurrenceOccurrence)
+        context.insert(quantityGoal)
+        context.insert(quantityEntry)
         try context.save()
 
         #expect(task.id.uuidString.isEmpty == false)
@@ -227,6 +256,16 @@ struct DataModelContractTests {
         #expect(inboxSuggestion.destinationKind == .checklist)
         #expect(category.includesInForecast)
         #expect(categoryAssignment.deletedAt == nil)
+        #expect(recurrenceRule.id == TaskProgressIdentity.recurrenceRuleID(templateTaskID: task.id))
+        #expect(recurrenceRule.cadenceRaw == TaskRecurrenceCadence.daily.rawValue)
+        #expect(recurrenceRule.isEnabled)
+        #expect(recurrenceOccurrence.generatedTaskID == TaskProgressIdentity.generatedTaskID(
+            ruleID: recurrenceRule.id,
+            dayKey: recurrenceOccurrence.occurrenceDayKey
+        ))
+        #expect(quantityGoal.id == TaskProgressIdentity.quantityGoalID(taskID: task.id))
+        #expect(quantityEntry.quantityGoalID == quantityGoal.id)
+        #expect(quantityEntry.deletedAt == nil)
     }
 
     @Test @MainActor
@@ -244,7 +283,11 @@ struct DataModelContractTests {
             "ChecklistItemVisual",
             "InboxItem",
             "InboxSuggestion",
-            "InboxCaptureReceipt"
+            "InboxCaptureReceipt",
+            "TaskRecurrenceRule",
+            "TaskRecurrenceOccurrence",
+            "TaskQuantityGoal",
+            "TaskQuantityEntry"
         ]
 
         #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
@@ -252,6 +295,14 @@ struct DataModelContractTests {
         #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
 
         let schema = TimeTrackerModelRegistry.currentSchema
+        #expect(schema.entity(for: TaskRecurrenceRule.self) != nil)
+        #expect(schema.entity(for: TaskRecurrenceOccurrence.self) != nil)
+        #expect(schema.entity(for: TaskQuantityGoal.self) != nil)
+        #expect(schema.entity(for: TaskQuantityEntry.self) != nil)
+        #expect(
+            TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
+                == TimeTrackerSchemaV13.versionIdentifier
+        )
         let configuration = ModelConfiguration(
             "TimeTrackerCloudSyncContract",
             schema: schema,
@@ -287,6 +338,31 @@ struct DataModelContractTests {
             deviceID: "test"
         )
         let preference = SyncedPreference(key: AppPreferenceKey.showGrossAndWallTogether.rawValue, valueJSON: "true", deviceID: "test")
+        let recurrenceRule = TaskRecurrenceRule(
+            templateTaskID: task.id,
+            startDayKey: "2026-07-20",
+            timeZoneIdentifier: "UTC",
+            deviceID: "test"
+        )
+        let recurrenceOccurrence = TaskRecurrenceOccurrence(
+            ruleID: recurrenceRule.id,
+            templateTaskID: task.id,
+            occurrenceDayKey: "2026-07-20",
+            timeZoneIdentifier: recurrenceRule.timeZoneIdentifier,
+            deviceID: "test"
+        )
+        let quantityGoal = TaskQuantityGoal(
+            taskID: task.id,
+            targetAmount: 50,
+            unitLabel: "push-ups",
+            deviceID: "test"
+        )
+        let quantityEntry = TaskQuantityEntry(
+            id: UUID(),
+            taskID: task.id,
+            amount: 25,
+            deviceID: "test"
+        )
 
         context.insert(task)
         context.insert(category)
@@ -297,6 +373,10 @@ struct DataModelContractTests {
         context.insert(inboxSuggestion)
         context.insert(inboxReceipt)
         context.insert(preference)
+        context.insert(recurrenceRule)
+        context.insert(recurrenceOccurrence)
+        context.insert(quantityGoal)
+        context.insert(quantityEntry)
         try context.save()
 
         #expect(try context.fetch(FetchDescriptor<ChecklistItem>()).map(\.title) == ["Cloud checklist"])
@@ -306,6 +386,10 @@ struct DataModelContractTests {
         #expect(try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).map(\.inboxItemID) == [inboxItem.id])
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).map(\.categoryID) == [category.id])
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).map(\.key) == [AppPreferenceKey.showGrossAndWallTogether.rawValue])
+        #expect(try context.fetch(FetchDescriptor<TaskRecurrenceRule>()).map(\.templateTaskID) == [task.id])
+        #expect(try context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()).map(\.ruleID) == [recurrenceRule.id])
+        #expect(try context.fetch(FetchDescriptor<TaskQuantityGoal>()).map(\.targetAmount) == [50])
+        #expect(try context.fetch(FetchDescriptor<TaskQuantityEntry>()).map(\.amount) == [25])
     }
 
     @Test @MainActor
@@ -317,7 +401,7 @@ struct DataModelContractTests {
             let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
             #expect(taskIDs == [fixture.taskID])
             #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV12.versionIdentifier)
+            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV13.versionIdentifier)
         }
     }
 

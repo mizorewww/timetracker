@@ -9,6 +9,14 @@ protocol TaskRepository {
     func tasks(ids: Set<UUID>) throws -> [TaskNode]
     func categories() throws -> [TaskCategory]
     func categoryAssignments() throws -> [TaskCategoryAssignment]
+    func taskRecurrenceRules() throws -> [TaskRecurrenceRule]
+    func taskRecurrenceOccurrences() throws -> [TaskRecurrenceOccurrence]
+    func taskQuantityGoals() throws -> [TaskQuantityGoal]
+    func taskQuantityEntries() throws -> [TaskQuantityEntry]
+    func taskRecurrenceRules(taskIDs: Set<UUID>) throws -> [TaskRecurrenceRule]
+    func taskRecurrenceOccurrences(taskIDs: Set<UUID>) throws -> [TaskRecurrenceOccurrence]
+    func taskQuantityGoals(taskIDs: Set<UUID>) throws -> [TaskQuantityGoal]
+    func taskQuantityEntries(taskIDs: Set<UUID>) throws -> [TaskQuantityEntry]
     func category(id: UUID) throws -> TaskCategory?
     func categoryID(forRootTaskID taskID: UUID) throws -> UUID?
     @discardableResult func createCategory(title: String, colorHex: String?, iconName: String?, includesInForecast: Bool) throws -> TaskCategory
@@ -24,6 +32,40 @@ protocol TaskRepository {
 extension TaskRepository {
     @discardableResult
     func repairInvalidHierarchy() throws -> Set<UUID> { [] }
+
+    func taskRecurrenceRules() throws -> [TaskRecurrenceRule] { [] }
+    func taskRecurrenceOccurrences() throws -> [TaskRecurrenceOccurrence] { [] }
+    func taskQuantityGoals() throws -> [TaskQuantityGoal] { [] }
+    func taskQuantityEntries() throws -> [TaskQuantityEntry] { [] }
+
+    func taskRecurrenceRules(
+        taskIDs: Set<UUID>
+    ) throws -> [TaskRecurrenceRule] {
+        try taskRecurrenceRules().filter {
+            taskIDs.contains($0.templateTaskID)
+        }
+    }
+
+    func taskRecurrenceOccurrences(
+        taskIDs: Set<UUID>
+    ) throws -> [TaskRecurrenceOccurrence] {
+        try taskRecurrenceOccurrences().filter {
+            taskIDs.contains($0.templateTaskID) ||
+                taskIDs.contains($0.generatedTaskID)
+        }
+    }
+
+    func taskQuantityGoals(
+        taskIDs: Set<UUID>
+    ) throws -> [TaskQuantityGoal] {
+        try taskQuantityGoals().filter { taskIDs.contains($0.taskID) }
+    }
+
+    func taskQuantityEntries(
+        taskIDs: Set<UUID>
+    ) throws -> [TaskQuantityEntry] {
+        try taskQuantityEntries().filter { taskIDs.contains($0.taskID) }
+    }
 }
 
 protocol TimeTrackingRepository {

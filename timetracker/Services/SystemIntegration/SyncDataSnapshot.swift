@@ -17,6 +17,12 @@ struct SyncDataSnapshot: Codable, Equatable {
     /// Optional so snapshots written before schema V11 retain their existing
     /// recovery path. New captures always write an array, including `[]`.
     var inboxCaptureReceipts: [InboxCaptureReceiptRecord]?
+    /// Optional tables preserve legacy snapshot semantics: missing means
+    /// unknown pre-V13 state, while an explicit `[]` is authoritative.
+    var taskRecurrenceRules: [TaskRecurrenceRuleRecord]?
+    var taskRecurrenceOccurrences: [TaskRecurrenceOccurrenceRecord]?
+    var taskQuantityGoals: [TaskQuantityGoalRecord]?
+    var taskQuantityEntries: [TaskQuantityEntryRecord]?
 
     mutating func removeExcludedPreferences() -> Bool {
         let originalCount = syncedPreferences.count
@@ -37,19 +43,42 @@ struct SyncDataSnapshot: Codable, Equatable {
         checklistItemVisuals.applyChanges(from: baseline.checklistItemVisuals, to: updated.checklistItemVisuals)
         inboxItems.applyChanges(from: baseline.inboxItems, to: updated.inboxItems)
         inboxSuggestions.applyChanges(from: baseline.inboxSuggestions, to: updated.inboxSuggestions)
-        applyInboxCaptureReceiptChanges(from: baseline, to: updated)
+        inboxCaptureReceipts = Self.applyingOptionalChanges(
+            current: inboxCaptureReceipts,
+            baseline: baseline.inboxCaptureReceipts,
+            updated: updated.inboxCaptureReceipts
+        )
+        taskRecurrenceRules = Self.applyingOptionalChanges(
+            current: taskRecurrenceRules,
+            baseline: baseline.taskRecurrenceRules,
+            updated: updated.taskRecurrenceRules
+        )
+        taskRecurrenceOccurrences = Self.applyingOptionalChanges(
+            current: taskRecurrenceOccurrences,
+            baseline: baseline.taskRecurrenceOccurrences,
+            updated: updated.taskRecurrenceOccurrences
+        )
+        taskQuantityGoals = Self.applyingOptionalChanges(
+            current: taskQuantityGoals,
+            baseline: baseline.taskQuantityGoals,
+            updated: updated.taskQuantityGoals
+        )
+        taskQuantityEntries = Self.applyingOptionalChanges(
+            current: taskQuantityEntries,
+            baseline: baseline.taskQuantityEntries,
+            updated: updated.taskQuantityEntries
+        )
     }
 
-    private mutating func applyInboxCaptureReceiptChanges(from baseline: Self, to updated: Self) {
-        // A missing V11 table is unknown legacy state, not an authoritative empty
-        // table. Only an explicit updated array may change receipt rows.
-        guard let updatedReceipts = updated.inboxCaptureReceipts else { return }
-        var receipts = inboxCaptureReceipts ?? []
-        receipts.applyChanges(
-            from: baseline.inboxCaptureReceipts ?? [],
-            to: updatedReceipts
-        )
-        inboxCaptureReceipts = receipts
+    private static func applyingOptionalChanges<Record>(
+        current: [Record]?,
+        baseline: [Record]?,
+        updated: [Record]?
+    ) -> [Record]? where Record: SyncSnapshotRecord & Equatable {
+        guard let updated else { return current }
+        var result = current ?? []
+        result.applyChanges(from: baseline ?? [], to: updated)
+        return result
     }
 
     var hasProtectableUserContent: Bool {
@@ -65,7 +94,11 @@ struct SyncDataSnapshot: Codable, Equatable {
         !checklistItemVisuals.isEmpty ||
         !inboxItems.isEmpty ||
         !inboxSuggestions.isEmpty ||
-        !(inboxCaptureReceipts ?? []).isEmpty
+        !(inboxCaptureReceipts ?? []).isEmpty ||
+        !(taskRecurrenceRules ?? []).isEmpty ||
+        !(taskRecurrenceOccurrences ?? []).isEmpty ||
+        !(taskQuantityGoals ?? []).isEmpty ||
+        !(taskQuantityEntries ?? []).isEmpty
     }
 
     var hasVisibleUserContent: Bool {
@@ -80,11 +113,46 @@ struct SyncDataSnapshot: Codable, Equatable {
         checklistItems.contains { $0.deletedAt == nil } ||
         checklistItemVisuals.contains { $0.deletedAt == nil } ||
         inboxItems.contains { $0.deletedAt == nil } ||
-        inboxSuggestions.contains { $0.deletedAt == nil }
+        inboxSuggestions.contains { $0.deletedAt == nil } ||
+        (taskRecurrenceRules ?? []).contains { $0.deletedAt == nil } ||
+        (taskRecurrenceOccurrences ?? []).contains { $0.deletedAt == nil } ||
+        (taskQuantityGoals ?? []).contains { $0.deletedAt == nil } ||
+        (taskQuantityEntries ?? []).contains { $0.deletedAt == nil }
     }
 
     var localizedSummary: String {
-        String(
+        if taskRecurrenceRules != nil ||
+            taskRecurrenceOccurrences != nil ||
+            taskQuantityGoals != nil ||
+            taskQuantityEntries != nil {
+            let recurrenceCount =
+                (taskRecurrenceRules ?? []).filter {
+                    $0.deletedAt == nil
+                }.count +
+                (taskRecurrenceOccurrences ?? []).filter {
+                    $0.deletedAt == nil
+                }.count
+            let quantityCount =
+                (taskQuantityGoals ?? []).filter {
+                    $0.deletedAt == nil
+                }.count +
+                (taskQuantityEntries ?? []).filter {
+                    $0.deletedAt == nil
+                }.count
+            return String(
+                format: AppStrings.localized(
+                    "sync.conflict.summaryWithTaskProgress"
+                ),
+                tasks.filter { $0.deletedAt == nil }.count,
+                segments.filter { $0.deletedAt == nil }.count,
+                pomodoroRuns.filter { $0.deletedAt == nil }.count,
+                checklistItems.filter { $0.deletedAt == nil }.count,
+                inboxItems.filter { $0.deletedAt == nil }.count,
+                recurrenceCount,
+                quantityCount
+            )
+        }
+        return String(
             format: AppStrings.localized("sync.conflict.summary"),
             tasks.filter { $0.deletedAt == nil }.count,
             segments.filter { $0.deletedAt == nil }.count,

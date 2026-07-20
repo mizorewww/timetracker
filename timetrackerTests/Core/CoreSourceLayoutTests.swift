@@ -72,6 +72,10 @@ struct CoreSourceLayoutTests {
             "timetracker/Models/SchemaLegacyModels.swift",
             "timetracker/Models/SchemaMigrationPlan.swift",
             "timetracker/Models/TimeTrackerModelRegistry.swift",
+            "timetracker/Models/DeterministicUUID.swift",
+            "timetracker/Models/TaskProgressIdentity.swift",
+            "timetracker/Models/TaskRecurrenceModels.swift",
+            "timetracker/Models/TaskQuantityModels.swift",
             "timetracker/Models/TaskEstimatePolicy.swift",
             "timetracker/Models/EditorDraftModels.swift",
             "timetracker/Models/TaskCategoryEditorDraftModels.swift",
@@ -133,17 +137,22 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+Preflight.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+PreflightContent.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+PreflightSemantics.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+PreflightTaskProgressContent.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+PreflightTaskProgressSemantics.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+PreflightTaskProgressValidation.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+Restore.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreChecklist.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreInbox.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreLedger.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestorePlanning.swift",
+            "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreTaskProgress.swift",
             "timetracker/Services/SystemIntegration/SyncDataSnapshot+RestoreTasks.swift",
             "timetracker/Services/SystemIntegration/SyncSnapshotRecords.swift",
             "timetracker/Services/SystemIntegration/SyncSnapshotChecklistRecords.swift",
             "timetracker/Services/SystemIntegration/SyncSnapshotInboxRecords.swift",
             "timetracker/Services/SystemIntegration/SyncSnapshotLedgerRecords.swift",
             "timetracker/Services/SystemIntegration/SyncSnapshotPlanningRecords.swift",
+            "timetracker/Services/SystemIntegration/SyncSnapshotTaskProgressRecords.swift",
             "timetracker/Services/SystemIntegration/WidgetSnapshotCache.swift",
             "timetracker/Services/SystemIntegration/WatchCommandProcessor.swift",
             "timetracker/Services/SystemIntegration/WatchConnectivityBridge.swift",
@@ -999,12 +1008,17 @@ struct CoreSourceLayoutTests {
             "SyncDataSnapshot+RestoreInbox.swift",
             "SyncDataSnapshot+RestoreLedger.swift",
             "SyncDataSnapshot+RestorePlanning.swift",
+            "SyncDataSnapshot+RestoreTaskProgress.swift",
             "SyncDataSnapshot+RestoreTasks.swift",
+            "SyncDataSnapshot+PreflightTaskProgressContent.swift",
+            "SyncDataSnapshot+PreflightTaskProgressSemantics.swift",
+            "SyncDataSnapshot+PreflightTaskProgressValidation.swift",
             "SyncSnapshotRecords.swift",
             "SyncSnapshotChecklistRecords.swift",
             "SyncSnapshotInboxRecords.swift",
             "SyncSnapshotLedgerRecords.swift",
-            "SyncSnapshotPlanningRecords.swift"
+            "SyncSnapshotPlanningRecords.swift",
+            "SyncSnapshotTaskProgressRecords.swift"
         ]
 
         for fileName in focusedFiles {
@@ -1085,6 +1099,10 @@ struct CoreSourceLayoutTests {
             "SchemaLegacyModels.swift",
             "SchemaMigrationPlan.swift",
             "TimeTrackerModelRegistry.swift",
+            "DeterministicUUID.swift",
+            "TaskProgressIdentity.swift",
+            "TaskRecurrenceModels.swift",
+            "TaskQuantityModels.swift",
             "EditorDraftModels.swift",
             "TaskCategoryEditorDraftModels.swift",
             "AnalyticsPeriodModels.swift",
@@ -1116,13 +1134,16 @@ struct CoreSourceLayoutTests {
         .map(sourceText)
         .joined(separator: "\n")
         let v12Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV12").last ?? ""
+        let v13Schema = schemas.components(separatedBy: "enum TimeTrackerSchemaV13").last ?? ""
 
         #expect(v12Schema.contains("DailySummary.self") == false)
-        #expect(currentRegistry.contains("TimeTrackerSchemaV12"))
+        #expect(v13Schema.contains("DailySummary.self") == false)
+        #expect(currentRegistry.contains("TimeTrackerSchemaV13"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV8.self, toVersion: TimeTrackerSchemaV9.self"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV9.self,\n                toVersion: TimeTrackerSchemaV10.self"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self"))
         #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self"))
+        #expect(migrationPlan.contains("fromVersion: TimeTrackerSchemaV12.self, toVersion: TimeTrackerSchemaV13.self"))
         #expect(legacyModel.contains("Legacy persisted cache retained only"))
         #expect(productionPaths.contains("FetchDescriptor<DailySummary>") == false)
         #expect(productionPaths.contains("-> DailySummary {") == false)

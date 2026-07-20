@@ -419,6 +419,7 @@
 "sync.state.conflict.title" = "同步衝突需要選擇";
 "sync.state.conflict.message" = "請選擇上傳本裝置資料覆蓋 iCloud，還是從 iCloud 下載覆蓋本裝置。";
 "sync.conflict.summary" = "%d 個任務，%d 筆時間記錄，%d 個番茄鐘，%d 個清單項，%d 個收件箱項";
+"sync.conflict.summaryWithTaskProgress" = "%d 個任務，%d 筆時間記錄，%d 個番茄鐘，%d 個清單項，%d 個收件箱項，%d 筆重複記錄，%d 筆任務量記錄";
 "sync.conflict.error.localSnapshotMissing" = "找不到已儲存的本機快照，無法用本裝置覆蓋 iCloud。";
 "sync.conflict.error.cloudSnapshotMissing" = "找不到已儲存的 iCloud 快照，無法安全地取代本裝置資料。";
 "sync.conflict.error.uploadSnapshotMissing" = "沒有找到本裝置的可見資料，已取消排程覆蓋 iCloud。";

@@ -1687,6 +1687,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：纯策略固定 0、59.999、60 和负 gap 以及完整来源矩阵。store-scoped 回归覆盖新 Stop identity、原 session/note/source 保留、旧 ID Stop no-op、新 ID 可停止、gap 内其它任务阻止、重复短重启链、`replaceAll` 排除、Pomodoro-linked session 与 duplicate winner 隔离、future-skewed session/segment LWW、快速重启后 Stop 对旧 active Cloud 副本重投的抵抗、snapshot restore 后 Cloud redelivery，以及跨午夜 history/rollup 收敛；真实内存 SwiftData store 另以 50,000 segment 固定查询预算。系统动作、timer admission 与 repository/source-layout 合同继续一起运行。
 
+## AD-129：重复任务与任务量先建立可恢复、可幂等的 V13 事实层
+
+状态：Accepted
+
+背景：每天完成 50 个俯卧撑同时需要“重复模板”“当天真实任务”“可累计任务量”三种语义。若只在 UI 临时生成 checklist，跨设备会重复创建；若只新增模型却遗漏 conflict snapshot、清空或维护，空本地覆盖 iCloud 时又会遗留或复活历史数据。
+
+决策：
+
+- V13（`1.12.0`）在 V12 上 lightweight-add `TaskRecurrenceRule`、`TaskRecurrenceOccurrence`、`TaskQuantityGoal`、`TaskQuantityEntry`。全部字段有 CloudKit-safe 默认值，不使用 unique attribute 或 required relationship。
+- MVP recurrence cadence 为 daily。一个模板任务只有一个 deterministic rule ID；rule/day 生成 deterministic occurrence receipt 和不同 domain 的 deterministic child Task ID。receipt 冻结 day key、template 与 timezone；停止重复用 `isEnabled`，不改写已生成的真实 Task。
+- 一个任务只有一个 deterministic quantity goal；每次增量是独立 entry，entry UUID 是调用方 command idempotency key，数量完成以后续领域层对可见 entry 求和推导，不能把累计值当 LWW 单字段。rule start/timezone 与已提交 entry payload 在 MVP 中视为不可变身份边界。
+- 四张 snapshot table 为 optional：legacy 缺 key 是 unknown/no-op，显式 `[]` 才能 tombstone 当前行。capture、three-way apply、preflight、restore、fingerprint、conflict summary、clear all、demo cleanup 与永久维护必须同批覆盖；本地 winner 与 clear tombstone 的 mutation time 必须严格支配已观察到的 future-skewed row。
+- preflight 固定 deterministic identity、canonical `yyyy-MM-dd`、有效 timezone、正整数范围和同一快照内可证明的 rule/goal 引用；缺外键允许分阶段 Cloud import。receipt 不冻结 generated Task 当前 parent，用户移动任务或 hierarchy repair 后的快照仍必须可恢复。
+- 持久层保留可见 orphan，维护只级联本批明确物理删除的父 ID；Task Store 只发布 task/rule/goal 关系完整的记录。单任务刷新必须按 task ID 查询、沿 occurrence 扩展 generated child 并局部合并，不能随 quantity entry 历史增长退化成全表 fetch/materialize。
+
+后果：V13 先把 migration、iCloud 冲突、空数据覆盖和删除意图闭环，后续 materializer、累计命令与合并编辑 UI 可以建立在同一事实层上；当前 checkpoint 不宣称 recurrence 已可由用户创建，也不把 template 当作可计时的日常实例。
+
+验证：付费自动签名构建覆盖主 App、Widget、Live Activity 与 Watch；真实 V12 磁盘 store 迁移后保留旧 Task 并可写四表。定向测试覆盖 deterministic UUID anchor、full/task-domain capture、legacy nil 与 explicit empty、三方合并、完整 JSON restore、staged hierarchy repair 自洽、preflight 拒绝、future timestamp clear、demo generated child cleanup、expired graph purge、visible orphan 保留/隐藏、Task Store full/scoped convergence，以及 rapid-restart identity 未漂移。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

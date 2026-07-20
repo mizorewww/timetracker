@@ -235,3 +235,16 @@ enum TimeTrackerSchemaV12: VersionedSchema {
         ]
     }
 }
+
+enum TimeTrackerSchemaV13: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 12, 0)
+
+    static var models: [any PersistentModel.Type] {
+        TimeTrackerSchemaV12.models + [
+            TaskRecurrenceRule.self,
+            TaskRecurrenceOccurrence.self,
+            TaskQuantityGoal.self,
+            TaskQuantityEntry.self
+        ]
+    }
+}

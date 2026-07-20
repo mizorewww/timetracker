@@ -16,7 +16,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV9.self,
             TimeTrackerSchemaV10.self,
             TimeTrackerSchemaV11.self,
-            TimeTrackerSchemaV12.self
+            TimeTrackerSchemaV12.self,
+            TimeTrackerSchemaV13.self
         ]
     }
 
@@ -68,7 +69,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                 didMigrate: migrateInboxSuggestionIdentity
             ),
             .lightweight(fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV12.self, toVersion: TimeTrackerSchemaV13.self)
         ]
     }
 

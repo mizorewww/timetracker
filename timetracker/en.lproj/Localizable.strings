@@ -419,6 +419,7 @@
 "sync.state.conflict.title" = "Sync conflict needs a choice";
 "sync.state.conflict.message" = "Choose whether this device should overwrite iCloud or iCloud should replace this device.";
 "sync.conflict.summary" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items";
+"sync.conflict.summaryWithTaskProgress" = "%d tasks, %d time records, %d pomodoros, %d checklist items, %d inbox items, %d recurrence records, %d quantity records";
 "sync.conflict.error.localSnapshotMissing" = "The saved local snapshot is missing, so this device cannot overwrite iCloud.";
 "sync.conflict.error.cloudSnapshotMissing" = "The saved iCloud snapshot is missing, so the app cannot safely replace this device's data.";
 "sync.conflict.error.uploadSnapshotMissing" = "No visible data was found on this device, so the app did not queue an iCloud overwrite.";

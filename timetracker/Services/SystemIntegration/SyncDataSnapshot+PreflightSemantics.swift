@@ -7,6 +7,7 @@ extension SyncDataSnapshot {
         try validatePreferenceValues()
         try validateSessionRelationships()
         try validateInboxSuggestionRelationships()
+        try validateTaskProgressSemantics()
     }
 
     private func validateRawValues() throws {

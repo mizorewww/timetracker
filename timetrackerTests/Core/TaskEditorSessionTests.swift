@@ -500,6 +500,135 @@ struct TaskEditorSessionTests {
     }
 
     @Test
+    func acceptedAutosavePreservesInputThatArrivesDuringThePreviousCommit() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "autosave-concurrent-input"
+        ).createTask(
+            title: "Original",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let task = try #require(store.task(for: created.id))
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(for: task)
+        )
+
+        session.draft.title = "Saved prefix"
+        let savedItemID = session.addChecklistItem()
+        let savedItemIndex = try #require(
+            session.draft.checklistItems.firstIndex {
+                $0.id == savedItemID
+            }
+        )
+        session.draft.checklistItems[savedItemIndex].title = "Saved item"
+        let savedDraft = session.draft
+
+        session.draft.title = "Saved prefix and later input"
+        session.draft.checklistItems[savedItemIndex].title =
+            "Saved item continued"
+        let laterItemID = session.addChecklistItem()
+        let laterItemIndex = try #require(
+            session.draft.checklistItems.firstIndex {
+                $0.id == laterItemID
+            }
+        )
+        session.draft.checklistItems[laterItemIndex].title = "Later item"
+
+        #expect(
+            store.saveTaskDraftResult(savedDraft) ==
+                .saved(taskID: created.id)
+        )
+        session.acceptAutosavedDraft(savedDraft, for: created.id)
+
+        #expect(session.draft.title == "Saved prefix and later input")
+        #expect(session.draft.checklistItems.map(\.id) == [
+            savedItemID,
+            laterItemID,
+        ])
+        #expect(session.draft.checklistItems.map(\.title) == [
+            "Saved item continued",
+            "Later item",
+        ])
+        #expect(session.draft.checklistItems[0].existingID != nil)
+        #expect(session.draft.checklistItems[1].existingID == nil)
+        #expect(session.sessionBaseline.title == "Saved prefix")
+        #expect(session.sessionBaseline.checklistItems.map(\.id) == [
+            savedItemID
+        ])
+        #expect(session.hasUnsavedChanges)
+
+        let nextDraft = session.draft
+        #expect(
+            store.saveTaskDraftResult(nextDraft) ==
+                .saved(taskID: created.id)
+        )
+        session.acceptAutosavedDraft(nextDraft, for: created.id)
+
+        #expect(session.hasUnsavedChanges == false)
+        #expect(session.draft.checklistItems.map(\.id) == [
+            savedItemID,
+            laterItemID,
+        ])
+        #expect(session.draft.checklistItems.allSatisfy {
+            $0.existingID != nil
+        })
+    }
+
+    @Test
+    func acceptedAutosaveFailsClosedWhenPersistedChecklistIdentityDiverges() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "autosave-checklist-divergence"
+        ).createTask(
+            title: "Original",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let task = try #require(store.task(for: created.id))
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(for: task)
+        )
+        let itemID = session.addChecklistItem()
+        session.draft.checklistItems[0].title = "Saved item"
+        let savedDraft = session.draft
+
+        #expect(
+            store.saveTaskDraftResult(savedDraft) ==
+                .saved(taskID: created.id)
+        )
+        var externallyChangedDraft = store.editorDraft(
+            for: try #require(store.task(for: created.id))
+        )
+        externallyChangedDraft.checklistItems = []
+        #expect(
+            store.saveTaskDraftResult(externallyChangedDraft) ==
+                .saved(taskID: created.id)
+        )
+
+        session.draft.title = "Keep this later input"
+        let draftBeforeAcceptance = session.draft
+        let baselineBeforeAcceptance = session.sessionBaseline
+
+        #expect(session.acceptAutosavedDraft(savedDraft, for: created.id) == false)
+        #expect(session.draft == draftBeforeAcceptance)
+        #expect(session.sessionBaseline == baselineBeforeAcceptance)
+        #expect(session.draft.checklistItems.first?.id == itemID)
+        #expect(session.draft.checklistItems.first?.existingID == nil)
+        #expect(session.hasUnsavedChanges)
+    }
+
+    @Test
     func autosaveValidationWaitsForAnEmptyChecklistDraftToBecomePersistable() {
         let store = makeTestStore()
         var initialDraft = TaskEditorDraft(parentID: nil)

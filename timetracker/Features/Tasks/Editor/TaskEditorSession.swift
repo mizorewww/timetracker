@@ -17,10 +17,7 @@ final class TaskEditorSession {
         self.store = store
         draft = initialDraft
         sessionBaseline = initialDraft
-        parentCandidates = Self.parentCandidates(
-            for: initialDraft,
-            store: store
-        )
+        parentCandidates = Self.parentCandidates(for: initialDraft, store: store)
     }
 
     var validation: TaskEditorValidation {
@@ -121,10 +118,7 @@ final class TaskEditorSession {
               recoveredDraft.baseline != nil,
               recoveredDraft != sessionBaseline else { return }
         draft = recoveredDraft
-        parentCandidates = Self.parentCandidates(
-            for: recoveredDraft,
-            store: store
-        )
+        parentCandidates = Self.parentCandidates(for: recoveredDraft, store: store)
         pendingReloadDraft = nil
     }
 
@@ -156,10 +150,16 @@ final class TaskEditorSession {
     func replace(with latestDraft: TaskEditorDraft) {
         draft = latestDraft
         sessionBaseline = latestDraft
-        parentCandidates = Self.parentCandidates(
-            for: latestDraft,
-            store: store
-        )
+        parentCandidates = Self.parentCandidates(for: latestDraft, store: store)
+        pendingReloadDraft = nil
+    }
+
+    func finishAutosaveRebase(
+        visibleDraft: TaskEditorDraft,
+        savedBaseline: TaskEditorDraft
+    ) {
+        sessionBaseline = savedBaseline
+        parentCandidates = Self.parentCandidates(for: visibleDraft, store: store)
         pendingReloadDraft = nil
     }
 

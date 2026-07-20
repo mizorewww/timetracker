@@ -8,8 +8,9 @@
 - [x] 已领取当前反馈，并完成快速操作、任务详情/编辑状态、Markdown 备注和保存链路审计。
 - [x] 已用失败测试锁定自动保存、导航前落盘、验证/冲突恢复和 baseline 重建语义。
 - [x] 已把已验证的自动保存核心接入 canonical task detail，并稳定工具栏。
+- [x] 已让 autosave rebase 原位推进 baseline/持久 ID，并在 checklist 身份不完整时失败为冲突，避免覆盖聚焦输入或漂移身份。
 - [~] 正在迁移受自动保存语义影响的 4 条跨平台 UI 测试。
-- 下一 checkpoint：用显式 owned 设备验证自动保存、导航 flush 与稳定工具栏。
+- 下一 checkpoint：Mac 解锁后，用显式 owned 设备验证聚焦输入、导航 flush 与稳定工具栏。
 
 ## 反馈边界
 
@@ -76,4 +77,9 @@
 - [x] 完成 UI/HIG、自动保存链路与 MarkdownView 4.1.7 只读审计。
 - [x] 自动保存核心红灯转绿：快速输入合并、导航 flush、验证阻断、失败重试、冲突保留，以及 checklist identity/baseline 重建；macOS 目标 34 项测试通过。
 - [x] 自动保存 UI 接入：已有任务移除 Save/Cancel；450ms 防抖、失焦/失活/退出/导航 flush、失败 Retry、冲突恢复、原生返回保护和 checklist 焦点稳定；综合 80/80 测试通过，最后同步细化复测 17/17 通过。
+- [x] 自动保存 rebase 加固：保存回执不再整体替换可见 draft，只原位推进 mutation baseline 与已完整双射的 checklist 持久 ID；映射分歧返回 conflict 且不修改当前输入。TaskEditorSession、autosave controller、workspace contract 共 24 条目标测试通过，相关 task-editor 源码结构检查通过。
 - [~] 当前 checkpoint：迁移 4 条跨平台 UI 测试到自动保存语义。
+
+## 当前验收阻塞
+
+- 2026-07-21：macOS 已锁屏，Computer Use 无法自动解锁；真实 macOS UI 测试需用户手动解锁后继续。UI 测试源码已随签名测试构建成功编译，尚未把设备 UI 结果标为通过。

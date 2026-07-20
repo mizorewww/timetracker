@@ -9,7 +9,7 @@ nonisolated struct TaskEditorDraftBaseline: Codable, Equatable, Sendable {
 
 nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
     let id: UUID
-    let baseline: TaskEditorDraftBaseline?
+    var baseline: TaskEditorDraftBaseline?
     var taskID: UUID?
     var title: String
     var parentID: UUID?

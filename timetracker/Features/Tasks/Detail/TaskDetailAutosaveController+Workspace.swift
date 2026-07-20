@@ -20,10 +20,12 @@ extension TaskDetailAutosaveController {
                 returnDestination: returnDestination
             ) {
             case .saved(let savedTaskID):
-                session.acceptAutosavedDraft(
+                guard session.acceptAutosavedDraft(
                     draft,
                     for: savedTaskID
-                )
+                ) else {
+                    return .conflicted
+                }
                 removeRecoveryAfterSave(
                     store: store,
                     taskID: taskID

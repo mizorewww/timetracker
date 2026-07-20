@@ -42,7 +42,8 @@ final class TaskDetailNavigationGuard {
         dismissDiscardConfirmation: @escaping (UUID) -> Void = { _ in },
         dismissDetail: @escaping () -> Void
     ) {
-        if registration?.id != id {
+        let previousRegistration = registration
+        if previousRegistration?.id != id {
             cancelPendingNavigation()
         }
         registration = Registration(
@@ -55,6 +56,11 @@ final class TaskDetailNavigationGuard {
             dismissDiscardConfirmation: dismissDiscardConfirmation,
             dismissDetail: dismissDetail
         )
+        // A registration closure can own its workspace token. Keep the old
+        // closure graph alive until the property assignment has ended so the
+        // token's deinit cannot re-enter unregister during Swift's exclusive
+        // access to `registration`.
+        withExtendedLifetime(previousRegistration) {}
     }
 
     func unregister(id: UUID) {

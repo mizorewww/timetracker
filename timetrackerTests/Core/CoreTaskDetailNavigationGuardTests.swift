@@ -274,6 +274,44 @@ struct CoreTaskDetailNavigationGuardTests {
     }
 
     @Test
+    func replacementRegistrationSafelyReleasesClosureOwnedToken() {
+        let guardCoordinator = TaskDetailNavigationGuard()
+        let firstTaskID = UUID()
+        let secondToken = TaskDetailNavigationRegistrationToken()
+        let secondTaskID = UUID()
+        weak var firstTokenReference:
+            TaskDetailNavigationRegistrationToken?
+
+        do {
+            let firstToken = TaskDetailNavigationRegistrationToken()
+            firstTokenReference = firstToken
+            firstToken.attach(to: guardCoordinator)
+            guardCoordinator.register(
+                id: firstToken.id,
+                taskID: firstTaskID,
+                hasUnsavedChanges: { false },
+                requestDiscardConfirmation: { _ in },
+                dismissDetail: { [token = firstToken] in
+                    _ = token.id
+                }
+            )
+        }
+        #expect(firstTokenReference != nil)
+
+        secondToken.attach(to: guardCoordinator)
+        guardCoordinator.register(
+            id: secondToken.id,
+            taskID: secondTaskID,
+            hasUnsavedChanges: { false },
+            requestDiscardConfirmation: { _ in },
+            dismissDetail: {}
+        )
+
+        #expect(firstTokenReference == nil)
+        #expect(guardCoordinator.activeTaskID == secondTaskID)
+    }
+
+    @Test
     func scenePresentedConfirmationDiscardsBeforeNavigating() throws {
         let guardCoordinator = TaskDetailNavigationGuard()
         let registrationID = UUID()

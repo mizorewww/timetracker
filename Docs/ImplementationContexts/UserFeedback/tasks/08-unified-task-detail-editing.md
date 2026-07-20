@@ -70,6 +70,8 @@
 
 - 静态审计阶段不启动模拟器、TestManager 或 Instruments。
 - 后续设备矩阵由 primary agent 分配唯一 UDID 并记录；每个批次完成后清理 owned 资源。
+- 当前 UI 批次 owned iPhone：`947175E8-8402-4408-9F81-DE78BD78EB65`（Task08-iPhone17Pro-20260721）。
+- 当前 UI 批次 owned iPad：`6109B5C2-EE38-4D99-B7E2-6EB031B366A1`（Task08-iPadPro13-20260721）。
 
 ## Checkpoint 记录
 
@@ -78,6 +80,7 @@
 - [x] 自动保存核心红灯转绿：快速输入合并、导航 flush、验证阻断、失败重试、冲突保留，以及 checklist identity/baseline 重建；macOS 目标 34 项测试通过。
 - [x] 自动保存 UI 接入：已有任务移除 Save/Cancel；450ms 防抖、失焦/失活/退出/导航 flush、失败 Retry、冲突恢复、原生返回保护和 checklist 焦点稳定；综合 80/80 测试通过，最后同步细化复测 17/17 通过。
 - [x] 自动保存 rebase 加固：保存回执不再整体替换可见 draft，只原位推进 mutation baseline 与已完整双射的 checklist 持久 ID；映射分歧返回 conflict 且不修改当前输入。TaskEditorSession、autosave controller、workspace contract 共 24 条目标测试通过，相关 task-editor 源码结构检查通过。
+- [x] 导航注册替换加固：旧详情闭包释放时可能触发 token `deinit` 并重入 `unregister`，与 `register` 对同一属性的写访问冲突；延长旧注册生命周期到赋值结束，并以弱引用证明闭包独占 token 确实释放。负向对照移除修复后稳定触发原 `Fatal access conflict`；恢复后 macOS 导航守卫套件 17/17 通过，iPhone Today 原生返回、重开路径不再崩溃。
 - [~] 当前 checkpoint：迁移 4 条跨平台 UI 测试到自动保存语义。
 
 ## 当前验收阻塞

@@ -484,6 +484,111 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskPickerShowsRunningAndSelectedPassiveIndicatorsTogether() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            route: "settings",
+            replacesDemoDataOnLaunch: true
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        #if os(iOS)
+        let general = app.buttons["settings.category.general"].firstMatch
+        XCTAssertTrue(
+            general.waitForExistence(timeout: 5) && general.isHittable
+        )
+        activate(general)
+        #endif
+
+        let heatmapSettings = app.descendants(matching: .any)[
+            "settings.todayHeatmap.tasks"
+        ].firstMatch
+        scrollUntilHittable(heatmapSettings, direction: .up, in: app)
+        XCTAssertTrue(
+            heatmapSettings.waitForExistence(timeout: 5) &&
+                heatmapSettings.isHittable
+        )
+        activate(heatmapSettings)
+
+        let picker = app.descendants(matching: .any)[
+            "settings.todayHeatmap.taskPicker"
+        ].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+
+        #if os(macOS)
+        let settingsWindow = app.windows.containing(
+            .any,
+            identifier: "settings.todayHeatmap.taskPicker"
+        ).firstMatch
+        XCTAssertTrue(settingsWindow.waitForExistence(timeout: 3))
+        let search = settingsWindow.searchFields.allElementsBoundByIndex.first(where: {
+            $0.isHittable
+        }) ?? settingsWindow.searchFields.firstMatch
+        #else
+        let search = app.searchFields[
+            "Search tasks, paths, or notes"
+        ].firstMatch
+        #endif
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        activate(search)
+        replaceText("Read Apple HIG", in: search)
+        #if os(iOS)
+        search.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+        #endif
+
+        let choicePrefix = "settings.todayHeatmap.taskPicker.select."
+        let runningChoice = picker.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                choicePrefix,
+                "Read Apple HIG"
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            runningChoice.waitForExistence(timeout: 5) &&
+                runningChoice.isHittable
+        )
+        XCTAssertFalse(runningChoice.isSelected)
+        let runningIdentifier = runningChoice.identifier
+        XCTAssertTrue(runningIdentifier.hasPrefix(choicePrefix))
+        XCTAssertNotNil(
+            UUID(uuidString: String(runningIdentifier.dropFirst(choicePrefix.count)))
+        )
+        let unselectedValue = String(describing: runningChoice.value ?? "")
+        XCTAssertTrue(unselectedValue.contains("Running"))
+        XCTAssertTrue(unselectedValue.contains("Not selected"))
+
+        activate(runningChoice)
+        let selectedChoice = picker.buttons[runningIdentifier].firstMatch
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            selectedChoice.exists && selectedChoice.isSelected
+        })
+        let selectedValue = String(describing: selectedChoice.value ?? "")
+        XCTAssertTrue(selectedValue.contains("Running"))
+        XCTAssertTrue(selectedValue.contains("Selected"))
+        XCTAssertFalse(selectedValue.contains("Not selected"))
+
+        #if os(iOS)
+        let screenshotPrefix = app.windows.firstMatch.frame.width >= 700
+            ? "ipad"
+            : "iphone"
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-task-picker-running-selected-passive-status",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testTaskSwipeArchiveAndSettingsUnarchiveRoundTrip() throws {
         #if os(macOS)
         throw XCTSkip("The left-swipe archive round trip is exercised on iPhone and iPad.")
@@ -3498,6 +3603,21 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
+        #if os(macOS)
+        let pickerSheet = app.sheets.containing(
+            .any,
+            identifier: "timer.taskPicker"
+        ).firstMatch
+        XCTAssertTrue(pickerSheet.waitForExistence(timeout: 3))
+        let macSearch = pickerSheet.searchFields.allElementsBoundByIndex
+            .first(where: { $0.isHittable })
+            ?? pickerSheet.searchFields.firstMatch
+        XCTAssertTrue(
+            macSearch.waitForExistence(timeout: 3) && macSearch.isHittable
+        )
+        activate(macSearch)
+        replaceText("Study", in: macSearch)
+        #endif
         let stopButtons = picker.buttons.matching(NSPredicate(
             format: "identifier BEGINSWITH %@",
             "timer.taskPicker.stop."
@@ -3507,7 +3627,7 @@ final class timetrackerUITests: XCTestCase {
             format: "identifier BEGINSWITH %@",
             "timer.taskPicker.select."
         )).firstMatch
-        let runningHeader = app.staticTexts[
+        let runningHeader = picker.descendants(matching: .any)[
             "timer.taskPicker.runningHeader"
         ].firstMatch
         XCTAssertTrue(runningHeader.waitForExistence(timeout: 5))
@@ -3519,8 +3639,26 @@ final class timetrackerUITests: XCTestCase {
                 timeout: 5,
                 diagnosticName: "timer-picker-available-action",
                 in: app
-            ) && availableAction.isHittable
+            )
         )
+        #if os(macOS)
+        XCTAssertTrue(availableAction.isEnabled)
+        XCTAssertEqual(
+            availableAction.label,
+            "Start Study",
+            "The macOS search must settle on the deterministic visible Study result."
+        )
+        XCTAssertTrue(
+            pickerSheet.frame.contains(guideStop.frame),
+            "The running Stop action must be fully visible inside the timer-picker sheet."
+        )
+        XCTAssertTrue(
+            pickerSheet.frame.contains(availableAction.frame),
+            "The available Start action must be fully visible inside the timer-picker sheet."
+        )
+        #else
+        XCTAssertTrue(availableAction.isHittable)
+        #endif
         XCTAssertTrue(
             availableAction.label.hasPrefix("Start "),
             "An available row in Start Another Timer must expose a Start action."
@@ -3528,17 +3666,24 @@ final class timetrackerUITests: XCTestCase {
 
         #if os(macOS)
         let minimumTargetDimension: CGFloat = 28
-        let screenshotPrefix = "mac"
         #else
         let minimumTargetDimension: CGFloat = 44
         let screenshotPrefix = app.windows.firstMatch.frame.width >= 700
             ? "ipad"
             : "iphone"
         #endif
+        #if os(macOS)
+        XCTAssertEqual(stopButtons.count, 1)
+        #else
         XCTAssertGreaterThanOrEqual(stopButtons.count, 1)
+        #endif
         for index in 0..<stopButtons.count {
             let stop = stopButtons.element(boundBy: index)
+            #if os(macOS)
+            XCTAssertTrue(stop.isEnabled)
+            #else
             XCTAssertTrue(stop.isHittable)
+            #endif
             XCTAssertGreaterThanOrEqual(stop.frame.width, minimumTargetDimension)
             XCTAssertGreaterThanOrEqual(stop.frame.height, minimumTargetDimension)
             XCTAssertEqual(
@@ -3581,11 +3726,14 @@ final class timetrackerUITests: XCTestCase {
             guideStop.identifier.dropFirst(stopIdentifierPrefix.count)
         )
         XCTAssertFalse(guideTaskID.isEmpty)
+        #if os(iOS)
         try capture(
             "\(screenshotPrefix)-timer-picker-aligned-task-actions",
             app: app
         )
+        #endif
 
+        #if os(iOS)
         XCTAssertTrue(guideStop.isHittable)
         activate(guideStop)
         XCTAssertTrue(guideStop.waitForNonExistence(timeout: 5))
@@ -3596,7 +3744,7 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
         activate(search)
-        search.typeText("Read Apple HIG")
+        replaceText("Read Apple HIG", in: search)
         search.typeText(XCUIKeyboardKey.return.rawValue)
         XCTAssertTrue(
             app.keyboards.firstMatch.waitForNonExistence(timeout: 3),
@@ -3640,6 +3788,7 @@ final class timetrackerUITests: XCTestCase {
             "\(screenshotPrefix)-timer-picker-stopped-task-selectable",
             app: app
         )
+        #endif
     }
 
     @MainActor

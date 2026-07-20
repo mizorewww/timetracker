@@ -21,7 +21,9 @@ struct TaskDetailAutosaveControllerTests {
 
         controller.update(with: request(for: first))
         controller.update(with: request(for: latest))
-        try? await Task.sleep(for: .milliseconds(80))
+        await waitUntil(timeout: .seconds(5)) {
+            controller.status == .saved
+        }
 
         #expect(committedTitles == ["Latest"])
         #expect(controller.status == .saved)
@@ -114,5 +116,17 @@ struct TaskDetailAutosaveControllerTests {
             hasUnsavedChanges: true,
             isValid: isValid
         )
+    }
+
+    private func waitUntil(
+        timeout: Duration,
+        condition: () -> Bool
+    ) async {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while condition() == false, clock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(10))
+            await Task.yield()
+        }
     }
 }

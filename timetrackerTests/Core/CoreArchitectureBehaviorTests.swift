@@ -56,7 +56,9 @@ struct CoreArchitectureBehaviorTests {
     func analyticsLoadsVersionedSnapshotsOutsideTheViewBody() throws {
         let viewSource = try sourceText("timetracker/Features/Analytics/AnalyticsViews.swift")
         let detailSource = try sourceText("timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift")
-        let taskDetailSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let taskDetailSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Analytics.swift"
+        )
         let taskDetailContentSource = try sourceText(
             "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift"
         )

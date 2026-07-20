@@ -3,7 +3,7 @@ import Foundation
 nonisolated enum TimelineEntryID: Hashable, Sendable {
     case trackedSegment(UUID)
     case appleHealthWorkout(UUID)
-    case appleHealthSleep([UUID])
+    case appleHealthSleep(UUID)
 
     var stableSortKey: String {
         switch self {
@@ -11,8 +11,8 @@ nonisolated enum TimelineEntryID: Hashable, Sendable {
             "0|\(id.uuidString)"
         case let .appleHealthWorkout(id):
             "1|\(id.uuidString)"
-        case let .appleHealthSleep(contributingSampleIDs):
-            "2|\(contributingSampleIDs.map(\.uuidString).joined(separator: "|"))"
+        case let .appleHealthSleep(anchorSampleID):
+            "2|\(anchorSampleID.uuidString)"
         }
     }
 }

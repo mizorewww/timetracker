@@ -46,6 +46,27 @@ nonisolated struct AppleHealthSleepSample: Identifiable, Equatable, Sendable {
     let startedAt: Date
     let endedAt: Date
     let sourceBundleIdentifier: String
+    let sourceProductType: String?
+
+    init(
+        id: UUID,
+        stage: AppleHealthSleepStage,
+        startedAt: Date,
+        endedAt: Date,
+        sourceBundleIdentifier: String,
+        sourceProductType: String? = nil
+    ) {
+        self.id = id
+        self.stage = stage
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.sourceBundleIdentifier = sourceBundleIdentifier
+        self.sourceProductType = sourceProductType
+    }
+
+    var sourceIdentityKey: String {
+        "\(sourceBundleIdentifier)|\(sourceProductType ?? "unknown")"
+    }
 }
 
 nonisolated struct AppleHealthSampleBatch: Equatable, Sendable {
@@ -107,7 +128,22 @@ nonisolated struct AppleHealthSampleBatch: Equatable, Sendable {
 nonisolated struct AppleHealthTimelineItem: Identifiable, Equatable, Sendable {
     let id: TimelineEntryID
     let subject: TimelineEntrySubject
+    /// Visual episode envelope. A sleep envelope may contain brief awake gaps.
     let interval: DateInterval
+    /// Measured work/asleep intervals; normalized and contained by `interval`.
+    let durationIntervals: [DateInterval]
+
+    init(
+        id: TimelineEntryID,
+        subject: TimelineEntrySubject,
+        interval: DateInterval,
+        durationIntervals: [DateInterval]? = nil
+    ) {
+        self.id = id
+        self.subject = subject
+        self.interval = interval
+        self.durationIntervals = durationIntervals ?? [interval]
+    }
 
     var titleLocalizationKey: String {
         switch subject {

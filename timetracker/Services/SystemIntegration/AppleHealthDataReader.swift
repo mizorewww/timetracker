@@ -119,7 +119,8 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
                     stage: stage,
                     startedAt: sample.startDate,
                     endedAt: sample.endDate,
-                    sourceBundleIdentifier: sample.sourceRevision.source.bundleIdentifier
+                    sourceBundleIdentifier: sample.sourceRevision.source.bundleIdentifier,
+                    sourceProductType: sample.sourceRevision.productType
                 )
             }
     }

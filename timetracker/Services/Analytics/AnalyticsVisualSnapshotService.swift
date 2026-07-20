@@ -123,7 +123,11 @@ nonisolated struct AnalyticsVisualSnapshotService {
                 endedAt: layoutEntry.item.endedAt,
                 lane: layoutEntry.lane,
                 labelIndex: index,
-                interval: layoutEntry.item.interval
+                interval: layoutEntry.item.interval,
+                durationSeconds: max(
+                    0,
+                    Int(layoutEntry.item.interval.duration)
+                )
             )
         }
         return AnalyticsTimelineSnapshot(

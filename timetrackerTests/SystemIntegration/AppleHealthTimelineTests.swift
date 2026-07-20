@@ -69,23 +69,24 @@ struct AppleHealthTimelineTests {
     }
 
     @Test
-    func projectionMergesActualSleepAcrossSourcesAndIgnoresInBedAndAwake() throws {
+    func projectionBuildsOneEpisodeAcrossSameSourceStagesAndExcludesAwakeDuration()
+        throws {
         let service = AppleHealthTimelineProjectionService()
         let bounds = DateInterval(
             start: Date(timeIntervalSince1970: 0),
-            end: Date(timeIntervalSince1970: 1_000)
+            end: Date(timeIntervalSince1970: 3_000)
         )
         let firstID = try fixedID(1)
         let secondID = try fixedID(2)
         let thirdID = try fixedID(3)
         let separateID = try fixedID(4)
         let samples = [
-            sleep(id: UUID(), stage: .inBed, start: 0, end: 900, source: "phone"),
-            sleep(id: UUID(), stage: .awake, start: 300, end: 400, source: "watch"),
+            sleep(id: UUID(), stage: .inBed, start: 0, end: 1_800, source: "watch"),
+            sleep(id: UUID(), stage: .awake, start: 300, end: 600, source: "watch"),
             sleep(id: firstID, stage: .asleepCore, start: 100, end: 300, source: "watch"),
-            sleep(id: secondID, stage: .asleepDeep, start: 250, end: 500, source: "watch"),
-            sleep(id: thirdID, stage: .asleepREM, start: 500, end: 600, source: "other"),
-            sleep(id: separateID, stage: .asleepUnspecified, start: 700, end: 800, source: "phone"),
+            sleep(id: secondID, stage: .asleepDeep, start: 600, end: 900, source: "watch"),
+            sleep(id: thirdID, stage: .asleepREM, start: 900, end: 1_200, source: "watch"),
+            sleep(id: separateID, stage: .asleepUnspecified, start: 2_400, end: 2_600, source: "watch"),
         ]
 
         let forward = service.project(
@@ -106,28 +107,41 @@ struct AppleHealthTimelineTests {
         #expect(forward.map(\.interval) == [
             DateInterval(
                 start: Date(timeIntervalSince1970: 100),
-                end: Date(timeIntervalSince1970: 600)
+                end: Date(timeIntervalSince1970: 1_200)
             ),
             DateInterval(
-                start: Date(timeIntervalSince1970: 700),
-                end: Date(timeIntervalSince1970: 800)
+                start: Date(timeIntervalSince1970: 2_400),
+                end: Date(timeIntervalSince1970: 2_600)
             ),
         ])
-        #expect(forward.first?.id == .appleHealthSleep([firstID, secondID, thirdID]))
-        #expect(forward.last?.id == .appleHealthSleep([separateID]))
+        #expect(forward.first?.id == .appleHealthSleep(firstID))
+        #expect(forward.last?.id == .appleHealthSleep(separateID))
+        #expect(forward.first?.durationIntervals == [
+            DateInterval(
+                start: Date(timeIntervalSince1970: 100),
+                end: Date(timeIntervalSince1970: 300)
+            ),
+            DateInterval(
+                start: Date(timeIntervalSince1970: 600),
+                end: Date(timeIntervalSince1970: 1_200)
+            ),
+        ])
     }
 
     @Test
-    func projectionClipsCrossMidnightSleepAndDropsNonPositiveOrTouchingIntervals() {
+    func projectionClipsCrossMidnightEpisodeAfterGroupingAndKeepsRawAnchor()
+        throws {
         let service = AppleHealthTimelineProjectionService()
         let bounds = DateInterval(
             start: Date(timeIntervalSince1970: 100),
             end: Date(timeIntervalSince1970: 200)
         )
+        let anchorID = try fixedID(5)
         let samples = [
-            sleep(id: UUID(), stage: .asleepCore, start: 50, end: 150),
-            sleep(id: UUID(), stage: .asleepDeep, start: 180, end: 250),
-            sleep(id: UUID(), stage: .asleepREM, start: 200, end: 250),
+            sleep(id: anchorID, stage: .asleepCore, start: 50, end: 90),
+            sleep(id: UUID(), stage: .awake, start: 90, end: 110),
+            sleep(id: UUID(), stage: .asleepREM, start: 110, end: 180),
+            sleep(id: UUID(), stage: .asleepREM, start: 200, end: 250, source: "other"),
             sleep(id: UUID(), stage: .asleepREM, start: 170, end: 170),
         ]
 
@@ -136,16 +150,319 @@ struct AppleHealthTimelineTests {
             visibleInterval: bounds
         )
 
-        #expect(items.map(\.interval) == [
+        #expect(items.count == 1)
+        #expect(items.first?.id == .appleHealthSleep(anchorID))
+        #expect(items.first?.interval ==
             DateInterval(
                 start: Date(timeIntervalSince1970: 100),
-                end: Date(timeIntervalSince1970: 150)
-            ),
+                end: Date(timeIntervalSince1970: 180)
+            )
+        )
+        #expect(items.first?.durationIntervals == [
             DateInterval(
-                start: Date(timeIntervalSince1970: 180),
-                end: Date(timeIntervalSince1970: 200)
+                start: Date(timeIntervalSince1970: 110),
+                end: Date(timeIntervalSince1970: 180)
             ),
         ])
+    }
+
+    @Test
+    func projectionUsesGapEvidenceButNeverJoinsDifferentSources() throws {
+        let service = AppleHealthTimelineProjectionService()
+        let bounds = DateInterval(
+            start: Date(timeIntervalSince1970: 0),
+            end: Date(timeIntervalSince1970: 4_000)
+        )
+        let firstID = try fixedID(6)
+        let secondID = try fixedID(7)
+        let otherSourceID = try fixedID(8)
+        let items = service.project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    sleep(
+                        id: firstID,
+                        stage: .asleepCore,
+                        start: 0,
+                        end: 600,
+                        source: "health",
+                        productType: "watch"
+                    ),
+                    sleep(
+                        id: UUID(),
+                        stage: .awake,
+                        start: 600,
+                        end: 2_500,
+                        source: "health",
+                        productType: "watch"
+                    ),
+                    sleep(
+                        id: secondID,
+                        stage: .asleepREM,
+                        start: 2_500,
+                        end: 3_000,
+                        source: "health",
+                        productType: "watch"
+                    ),
+                    sleep(
+                        id: otherSourceID,
+                        stage: .asleepUnspecified,
+                        start: 3_000,
+                        end: 3_600,
+                        source: "health",
+                        productType: "phone"
+                    ),
+                ]
+            ),
+            visibleInterval: bounds
+        )
+
+        #expect(items.map(\.id) == [
+            .appleHealthSleep(firstID),
+            .appleHealthSleep(secondID),
+            .appleHealthSleep(otherSourceID),
+        ])
+    }
+
+    @Test
+    func projectionUsesInBedOnlyAsShortGapEvidenceWithoutExpandingBounds()
+        throws {
+        let service = AppleHealthTimelineProjectionService()
+        let firstID = try fixedID(11)
+        let items = service.project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    sleep(id: UUID(), stage: .inBed, start: 0, end: 700),
+                    sleep(id: firstID, stage: .asleepCore, start: 100, end: 200),
+                    sleep(id: try fixedID(12), stage: .asleepREM, start: 500, end: 600),
+                ]
+            ),
+            visibleInterval: DateInterval(
+                start: Date(timeIntervalSince1970: 0),
+                end: Date(timeIntervalSince1970: 1_000)
+            )
+        )
+
+        #expect(items.count == 1)
+        #expect(items.first?.interval == DateInterval(
+            start: Date(timeIntervalSince1970: 100),
+            end: Date(timeIntervalSince1970: 600)
+        ))
+        #expect(items.first?.durationIntervals.map(\.duration) == [100, 100])
+    }
+
+    @Test
+    func projectionHonorsUnlabeledAndInBedGapBoundaries() throws {
+        let service = AppleHealthTimelineProjectionService()
+        let items = service.project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    sleep(id: try fixedID(30), stage: .asleepCore, start: 0, end: 100),
+                    sleep(id: try fixedID(31), stage: .asleepREM, start: 220, end: 300),
+                    sleep(id: try fixedID(32), stage: .asleepCore, start: 421, end: 500),
+                    sleep(id: UUID(), stage: .inBed, start: 500, end: 1_101),
+                    sleep(id: try fixedID(33), stage: .asleepREM, start: 1_101, end: 1_200),
+                ]
+            ),
+            visibleInterval: DateInterval(
+                start: Date(timeIntervalSince1970: 0),
+                end: Date(timeIntervalSince1970: 2_000)
+            )
+        )
+
+        #expect(items.map(\.interval) == [
+            DateInterval(
+                start: Date(timeIntervalSince1970: 0),
+                end: Date(timeIntervalSince1970: 300)
+            ),
+            DateInterval(
+                start: Date(timeIntervalSince1970: 421),
+                end: Date(timeIntervalSince1970: 500)
+            ),
+            DateInterval(
+                start: Date(timeIntervalSince1970: 1_101),
+                end: Date(timeIntervalSince1970: 1_200)
+            ),
+        ])
+    }
+
+    @Test
+    func projectionUnionsOverlappingFractionalAsleepIntervalsBeforeRounding()
+        throws {
+        let service = AppleHealthTimelineProjectionService()
+        let anchorID = try fixedID(34)
+        let item = try #require(
+            service.project(
+                batch: AppleHealthSampleBatch(
+                    workouts: [],
+                    sleep: [
+                        sleep(id: anchorID, stage: .asleepCore, start: 100.2, end: 400.8),
+                        sleep(id: try fixedID(35), stage: .asleepDeep, start: 250.4, end: 500.9),
+                    ]
+                ),
+                visibleInterval: DateInterval(
+                    start: Date(timeIntervalSince1970: 0),
+                    end: Date(timeIntervalSince1970: 1_000)
+                )
+            ).first
+        )
+        let entry = try #require(
+            AnalyticsTimelineSnapshotService().snapshot(
+                seeds: [
+                    TimelinePresentationSeed(
+                        id: item.id,
+                        subject: item.subject,
+                        title: "Sleep",
+                        path: "Daily",
+                        iconName: "bed.double.fill",
+                        colorHex: "5856D6",
+                        interval: item.interval,
+                        durationIntervals: item.durationIntervals
+                    ),
+                ],
+                visibleInterval: DateInterval(
+                    start: Date(timeIntervalSince1970: 0),
+                    end: Date(timeIntervalSince1970: 1_000)
+                )
+            ).entries.first
+        )
+
+        #expect(item.id == .appleHealthSleep(anchorID))
+        #expect(item.durationIntervals.count == 1)
+        #expect(entry.durationSeconds == 400)
+    }
+
+    @Test
+    func projectionCapsAnEpisodeEvenWhenLongSamplesTouch() throws {
+        let service = AppleHealthTimelineProjectionService()
+        let firstID = try fixedID(36)
+        let secondID = try fixedID(37)
+        let items = service.project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    sleep(
+                        id: firstID,
+                        stage: .asleepCore,
+                        start: 0,
+                        end: 17 * 3_600
+                    ),
+                    sleep(
+                        id: secondID,
+                        stage: .asleepREM,
+                        start: 17 * 3_600,
+                        end: 19 * 3_600
+                    ),
+                ]
+            ),
+            visibleInterval: DateInterval(
+                start: Date(timeIntervalSince1970: 0),
+                end: Date(timeIntervalSince1970: 20 * 3_600)
+            )
+        )
+
+        #expect(items.map(\.id) == [
+            .appleHealthSleep(firstID),
+            .appleHealthSleep(secondID),
+        ])
+    }
+
+    @Test
+    func projectionRejectsSingleAsleepSamplesBeyondTheEpisodeLimit() throws {
+        let items = AppleHealthTimelineProjectionService().project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    sleep(
+                        id: try fixedID(38),
+                        stage: .asleepUnspecified,
+                        start: 0,
+                        end: 19 * 3_600
+                    ),
+                ]
+            ),
+            visibleInterval: DateInterval(
+                start: Date(timeIntervalSince1970: 0),
+                end: Date(timeIntervalSince1970: 20 * 3_600)
+            )
+        )
+
+        #expect(items.isEmpty)
+    }
+
+    @Test
+    func projectionKeepsAFullSourceWhenDetailedStagesCoverOnlyHalfTheSleep()
+        throws {
+        let fullID = try fixedID(39)
+        let partialID = try fixedID(40)
+        let items = AppleHealthTimelineProjectionService().project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    sleep(
+                        id: fullID,
+                        stage: .asleepUnspecified,
+                        start: 0,
+                        end: 8 * 3_600,
+                        source: "phone"
+                    ),
+                    sleep(
+                        id: partialID,
+                        stage: .asleepCore,
+                        start: 4 * 3_600,
+                        end: 8 * 3_600,
+                        source: "watch"
+                    ),
+                ]
+            ),
+            visibleInterval: DateInterval(
+                start: Date(timeIntervalSince1970: 0),
+                end: Date(timeIntervalSince1970: 9 * 3_600)
+            )
+        )
+
+        #expect(items.map(\.id) == [
+            .appleHealthSleep(fullID),
+            .appleHealthSleep(partialID),
+        ])
+    }
+
+    @Test
+    func projectionDeduplicatesOverlappingSourcesAndKeepsStableEpisodeID()
+        throws {
+        let service = AppleHealthTimelineProjectionService()
+        let anchorID = try fixedID(13)
+        let initial = [
+            sleep(id: try fixedID(16), stage: .asleepUnspecified, start: 90, end: 620, source: "phone"),
+            sleep(id: anchorID, stage: .asleepCore, start: 100, end: 300, source: "watch"),
+            sleep(id: try fixedID(14), stage: .asleepDeep, start: 300, end: 550, source: "watch"),
+        ]
+        let bounds = DateInterval(
+            start: Date(timeIntervalSince1970: 0),
+            end: Date(timeIntervalSince1970: 1_000)
+        )
+
+        let before = service.project(
+            batch: AppleHealthSampleBatch(workouts: [], sleep: initial),
+            visibleInterval: bounds
+        )
+        let after = service.project(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: initial + [
+                    sleep(id: try fixedID(15), stage: .asleepREM, start: 550, end: 600, source: "watch"),
+                ]
+            ),
+            visibleInterval: bounds
+        )
+
+        #expect(before.count == 1)
+        #expect(after.count == 1)
+        #expect(before.first?.id == .appleHealthSleep(anchorID))
+        #expect(after.first?.id == before.first?.id)
+        #expect(after.first?.durationIntervals.map(\.duration) == [500])
     }
 
     @Test @MainActor
@@ -188,6 +505,49 @@ struct AppleHealthTimelineTests {
         ])
         #expect(snapshot.entries.map(\.lane) == [0, 1])
         #expect(snapshot.laneCount == 2)
+    }
+
+    @Test
+    func timelineSnapshotUsesEpisodeEnvelopeForLayoutButOnlyAsleepIntervalsForDuration()
+        throws {
+        let anchorID = try fixedID(17)
+        let seed = TimelinePresentationSeed(
+            id: .appleHealthSleep(anchorID),
+            subject: .appleHealthSleep,
+            title: "Sleep",
+            path: "Daily",
+            iconName: "bed.double.fill",
+            colorHex: "5856D6",
+            interval: DateInterval(
+                start: Date(timeIntervalSince1970: 100),
+                end: Date(timeIntervalSince1970: 500)
+            ),
+            durationIntervals: [
+                DateInterval(
+                    start: Date(timeIntervalSince1970: 100),
+                    end: Date(timeIntervalSince1970: 200)
+                ),
+                DateInterval(
+                    start: Date(timeIntervalSince1970: 300),
+                    end: Date(timeIntervalSince1970: 500)
+                ),
+            ]
+        )
+
+        let snapshot = AnalyticsTimelineSnapshotService().snapshot(
+            seeds: [seed],
+            visibleInterval: DateInterval(
+                start: Date(timeIntervalSince1970: 150),
+                end: Date(timeIntervalSince1970: 450)
+            )
+        )
+        let entry = try #require(snapshot.entries.first)
+
+        #expect(entry.interval == DateInterval(
+            start: Date(timeIntervalSince1970: 150),
+            end: Date(timeIntervalSince1970: 450)
+        ))
+        #expect(entry.durationSeconds == 200)
     }
 
     @Test
@@ -264,13 +624,22 @@ struct AppleHealthTimelineTests {
 
         #expect(reader.authorizationRequestCount == 1)
         #expect(reader.sampleRequestIntervals.count == 1)
-        #expect(reader.sampleRequestIntervals.first?.start == calendar.startOfDay(for: now))
+        let visibleInterval = DateInterval(
+            start: calendar.startOfDay(for: now),
+            end: now
+        )
+        #expect(
+            reader.sampleRequestIntervals.first?.start
+                == visibleInterval.start.addingTimeInterval(
+                    -AppleHealthSleepEpisodePolicy.queryContextDuration
+                )
+        )
         #expect(reader.sampleRequestIntervals.first?.end == now)
         #expect(preferences.isTimelineEnabled)
         #expect(store.appleHealthTimelineItems.count == 1)
         #expect(
             store.appleHealthTimelineState == .content(
-                interval: try #require(reader.sampleRequestIntervals.first),
+                interval: visibleInterval,
                 refreshedAt: now,
                 itemCount: 1
             )
@@ -610,6 +979,9 @@ struct AppleHealthTimelineTests {
         let sharedLegend = try sourceText(
             "timetracker/SharedUI/Components/TimelineLegendRow.swift"
         )
+        let sharedBars = try sourceText(
+            "timetracker/SharedUI/Components/TimelineChartBars.swift"
+        )
         let healthUI = try sourceText(
             "timetracker/Features/Home/Rows/HomeAppleHealthTimelineRows.swift"
         )
@@ -631,6 +1003,9 @@ struct AppleHealthTimelineTests {
         #expect(entryRow.contains("appleHealthGeneratedTaskID"))
         #expect(entryRow.contains("openTaskDetail(taskID)"))
         #expect(sharedLegend.contains("struct TimelineLegendRow"))
+        #expect(sharedLegend.contains("entry.durationSeconds"))
+        #expect(sharedBars.contains("entry.interval.start"))
+        #expect(sharedBars.contains("entry.interval.end"))
         #expect(healthUI.contains("showAppleHealthInTimeline"))
         #expect(readyBranch.contains("refreshAppleHealthTimeline()"))
         #expect(readyBranch.contains("showAppleHealthInTimeline()") == false)
@@ -712,14 +1087,16 @@ struct AppleHealthTimelineTests {
         stage: AppleHealthSleepStage,
         start: TimeInterval,
         end: TimeInterval,
-        source: String = "test"
+        source: String = "test",
+        productType: String? = nil
     ) -> AppleHealthSleepSample {
         AppleHealthSleepSample(
             id: id,
             stage: stage,
             startedAt: Date(timeIntervalSince1970: start),
             endedAt: Date(timeIntervalSince1970: end),
-            sourceBundleIdentifier: source
+            sourceBundleIdentifier: source,
+            sourceProductType: productType
         )
     }
 

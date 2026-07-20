@@ -108,7 +108,8 @@ extension TimeTrackerStore {
             ),
             iconName: generatedTask?.iconName ?? item.iconName,
             colorHex: generatedTask?.colorHex ?? item.colorHex,
-            interval: item.interval
+            interval: item.interval,
+            durationIntervals: item.durationIntervals
         )
     }
 
@@ -127,37 +128,48 @@ extension TimeTrackerStore {
         now: Date,
         calendar: Calendar
     ) async {
-        let interval = appleHealthVisibleInterval(now: now, calendar: calendar)
-        guard interval.duration > 0 else {
+        let visibleInterval = appleHealthVisibleInterval(
+            now: now,
+            calendar: calendar
+        )
+        guard visibleInterval.duration > 0 else {
             guard isCurrentAppleHealthTimelineRequest(requestID) else { return }
             appleHealthTimelineItems = []
             appleHealthTimelineState = .noReadableData(
-                interval: interval,
+                interval: visibleInterval,
                 refreshedAt: now
             )
             return
         }
 
-        appleHealthTimelineState = .loading(interval)
+        appleHealthTimelineState = .loading(visibleInterval)
+        let queryInterval = DateInterval(
+            start: visibleInterval.start.addingTimeInterval(
+                -AppleHealthSleepEpisodePolicy.queryContextDuration
+            ),
+            end: visibleInterval.end
+        )
         do {
-            let batch = try await appleHealthDataReader.samples(overlapping: interval)
+            let batch = try await appleHealthDataReader.samples(
+                overlapping: queryInterval
+            )
             guard isCurrentAppleHealthTimelineRequest(requestID),
                   isAppleHealthTimelineEnabled else {
                 return
             }
             let items = AppleHealthTimelineProjectionService().project(
                 batch: batch,
-                visibleInterval: interval
+                visibleInterval: visibleInterval
             )
             appleHealthTimelineItems = items
             if items.isEmpty {
                 appleHealthTimelineState = .noReadableData(
-                    interval: interval,
+                    interval: visibleInterval,
                     refreshedAt: now
                 )
             } else {
                 appleHealthTimelineState = .content(
-                    interval: interval,
+                    interval: visibleInterval,
                     refreshedAt: now,
                     itemCount: items.count
                 )

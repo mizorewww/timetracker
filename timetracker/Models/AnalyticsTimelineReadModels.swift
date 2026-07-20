@@ -27,7 +27,30 @@ nonisolated struct TimelinePresentationSeed: Identifiable, Equatable, Sendable {
     let path: String
     let iconName: String
     let colorHex: String
+    /// Visual placement envelope.
     let interval: DateInterval
+    /// Counted intervals, kept separate so clipping does not inflate duration.
+    let durationIntervals: [DateInterval]
+
+    init(
+        id: TimelineEntryID,
+        subject: TimelineEntrySubject,
+        title: String,
+        path: String,
+        iconName: String,
+        colorHex: String,
+        interval: DateInterval,
+        durationIntervals: [DateInterval]? = nil
+    ) {
+        self.id = id
+        self.subject = subject
+        self.title = title
+        self.path = path
+        self.iconName = iconName
+        self.colorHex = colorHex
+        self.interval = interval
+        self.durationIntervals = durationIntervals ?? [interval]
+    }
 }
 
 nonisolated struct AnalyticsTimelineSnapshot: Equatable, Sendable {
@@ -58,10 +81,8 @@ nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
     let lane: Int
     let labelIndex: Int
     let interval: DateInterval
-
-    var durationSeconds: Int {
-        max(0, Int(endedAt.timeIntervalSince(startedAt)))
-    }
+    /// Counted duration after visible-range clipping, not necessarily envelope time.
+    let durationSeconds: Int
 
     var taskID: UUID? {
         subject.taskID

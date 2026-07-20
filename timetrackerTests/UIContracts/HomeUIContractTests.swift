@@ -773,13 +773,17 @@ struct HomeUIContractTests {
         let nowIndex = try #require(homeSource.range(of: "PhoneNowSection(")?.lowerBound)
         let overviewIndex = try #require(homeSource.range(of: "home.overview.title")?.lowerBound)
         let weeklyIndex = try #require(homeSource.range(of: "HomeWeeklyGrossTimeSection(")?.lowerBound)
+        let heatmapIndex = try #require(
+            homeSource.range(of: "HomeActivityHeatmapSection(")?.lowerBound
+        )
         let quickStartIndex = try #require(homeSource.range(of: "PhoneQuickStartSection(")?.lowerBound)
         let timelineIndex = try #require(homeSource.range(of: "PhoneTimelineSection(")?.lowerBound)
         let forecastIndex = try #require(homeSource.range(of: "PhoneForecastSection(")?.lowerBound)
 
         #expect(nowIndex < overviewIndex)
         #expect(overviewIndex < weeklyIndex)
-        #expect(weeklyIndex < quickStartIndex)
+        #expect(weeklyIndex < heatmapIndex)
+        #expect(heatmapIndex < quickStartIndex)
         #expect(quickStartIndex < timelineIndex)
         #expect(timelineIndex < forecastIndex)
         #expect(homeSource.contains("TodayHomeContent(store: store)"))
@@ -848,12 +852,16 @@ struct HomeUIContractTests {
             source.range(of: "DesktopTodayCurrentStateSections(")?.lowerBound
         )
         let weeklyIndex = try #require(source.range(of: "HomeWeeklyGrossTimeSection(")?.lowerBound)
+        let heatmapIndex = try #require(
+            source.range(of: "HomeActivityHeatmapSection(")?.lowerBound
+        )
         let quickStartIndex = try #require(source.range(of: "QuickStartSection(")?.lowerBound)
         let timelineIndex = try #require(source.range(of: "TimelineSection(")?.lowerBound)
         let forecastIndex = try #require(source.range(of: "TaskForecastSummarySection(")?.lowerBound)
 
         #expect(currentStateIndex < weeklyIndex)
-        #expect(weeklyIndex < quickStartIndex)
+        #expect(weeklyIndex < heatmapIndex)
+        #expect(heatmapIndex < quickStartIndex)
         #expect(quickStartIndex < timelineIndex)
         #expect(timelineIndex < forecastIndex)
         #expect(source.contains("TodayHomeContent(store: store, quickStartLimit: 6)"))

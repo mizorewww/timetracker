@@ -1039,3 +1039,9 @@
 "heatmap.picker.clear" = "清除";
 "heatmap.picker.hiddenSelectionCount" = "仍包含 %lld 項未顯示的選擇。";
 "heatmap.picker.removeHidden" = "移除未顯示項";
+"home.heatmap.completionCount" = "已完成 %lld 項";
+"home.heatmap.footer" = "統計所選任務及其子任務中已完成的清單項。每個方格代表一天；完成 4 項及以上時使用最深色。";
+"home.heatmap.less" = "少";
+"home.heatmap.more" = "多";
+"home.heatmap.rangeFormat" = "%@ – %@";
+"home.heatmap.accessibilitySummary" = "共完成 %1$lld 個清單項，分布在 %2$lld 個活躍日。";

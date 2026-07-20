@@ -30,6 +30,11 @@ struct PhoneHomeView: View {
                 container: .listSection
             )
 
+            HomeActivityHeatmapSection(
+                store: store,
+                container: .listSection
+            )
+
             PhoneQuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,

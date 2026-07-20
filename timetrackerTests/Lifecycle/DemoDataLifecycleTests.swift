@@ -141,6 +141,27 @@ struct DemoDataLifecycleTests {
         #expect(projectSource.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = seedIfEmpty;") == false)
     }
 
+    @Test
+    func commandLineDemoModeDoesNotDependOnUserDefaultsArgumentDomain() {
+        let key = AppDemoDataConfiguration.overrideKey
+
+        #expect(
+            AppDemoDataConfiguration.commandLineMode(
+                arguments: ["timetracker", "-\(key)", "replaceOnLaunch"]
+            ) == .replaceOnLaunch
+        )
+        #expect(
+            AppDemoDataConfiguration.commandLineMode(
+                arguments: ["timetracker", "-\(key)=seedIfEmpty"]
+            ) == .seedIfEmpty
+        )
+        #expect(
+            AppDemoDataConfiguration.commandLineMode(
+                arguments: ["timetracker", "-\(key)", "unsupported"]
+            ) == nil
+        )
+    }
+
     @Test @MainActor
     func screenshotDemoModeRebuildsDataOnLaunch() throws {
         prepareAutomaticDemoSeeding(demoMode: .replaceOnLaunch, disabled: true)

@@ -3048,6 +3048,62 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayConfiguredHeatmapShowsCompletionHistory() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today heatmap screenshot is verified on iPhone and iPad.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-today-heatmap"]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        let heatmap = app.descendants(matching: .any)[
+            "home.heatmap"
+        ].firstMatch
+        let grid = app.descendants(matching: .any)[
+            "home.heatmap.grid"
+        ].firstMatch
+        let footer = app.staticTexts.matching(
+            NSPredicate(
+                format: "label == %@",
+                "Completed checklist items in the selected tasks and their subtasks. Each square is one day; 4 or more completions use the darkest shade."
+            )
+        ).firstMatch
+
+        scrollUntilHittable(grid, direction: .up, in: app)
+        XCTAssertTrue(
+            heatmap.waitForExistence(timeout: 8),
+            "Selecting a task in Settings must expose its Today heatmap."
+        )
+        XCTAssertTrue(
+            grid.waitForExistence(timeout: 8) && grid.isHittable,
+            "The shared heatmap grid must be visible on Today."
+        )
+        XCTAssertEqual(grid.label, "Activity Heatmap")
+        XCTAssertEqual(
+            grid.value as? String,
+            "9 checklist completions across 4 active days."
+        )
+        XCTAssertTrue(footer.waitForExistence(timeout: 5))
+        scrollUntilFullyVisibleAboveSystemChrome(footer, in: app)
+        XCTAssertGreaterThan(grid.frame.width, 240)
+        XCTAssertGreaterThan(grid.frame.height, 90)
+        XCTAssertTrue(
+            isFrameFullyVisibleAboveSystemChrome(grid, in: app)
+        )
+        XCTAssertTrue(
+            isFrameFullyVisibleAboveSystemChrome(footer, in: app)
+        )
+        let prefix = app.windows.firstMatch.frame.width >= 700
+            ? "ipad"
+            : "iphone"
+        try capture("\(prefix)-home-today-heatmap", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTaskRowsSeparateIdentityProgressAndTimerMetadataAtNormalTextSize() throws {
         #if os(macOS)
         throw XCTSkip("The task-row geometry is verified on iPhone and iPad.")

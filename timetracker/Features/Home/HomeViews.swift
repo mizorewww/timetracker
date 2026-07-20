@@ -81,6 +81,10 @@ private struct DesktopTodayContent: View {
                 store: store,
                 container: .card
             )
+            HomeActivityHeatmapSection(
+                store: store,
+                container: .card
+            )
             QuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,

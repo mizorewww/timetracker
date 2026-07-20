@@ -1,13 +1,8 @@
 import SwiftUI
 
-enum HomeWeeklyGrossTimeContainer {
-    case card
-    case listSection
-}
-
 struct HomeWeeklyGrossTimeSection: View {
     let store: TimeTrackerStore
-    let container: HomeWeeklyGrossTimeContainer
+    let container: HomeSectionContainer
 
     @Environment(\.calendar) private var calendar
     @Environment(\.scenePhase) private var scenePhase

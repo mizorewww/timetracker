@@ -87,7 +87,13 @@ struct TodayHeatmapUIContractTests {
             "taskPicker.selection.selected",
             "taskPicker.selection.notSelected",
             "taskPicker.selection.countFormat",
-            "taskPicker.selection.limitReachedFormat"
+            "taskPicker.selection.limitReachedFormat",
+            "home.heatmap.completionCount",
+            "home.heatmap.footer",
+            "home.heatmap.less",
+            "home.heatmap.more",
+            "home.heatmap.rangeFormat",
+            "home.heatmap.accessibilitySummary"
         ]
 
         for path in localizationPaths {
@@ -96,5 +102,99 @@ struct TodayHeatmapUIContractTests {
                 #expect(source.contains("\"\(key)\" ="))
             }
         }
+    }
+
+    @Test
+    func todaySurfacesOneSharedHeatmapAcrossPhoneAndWideLayouts() throws {
+        let phone = try sourceText(
+            "timetracker/Features/Home/PhoneHomeView.swift"
+        )
+        let desktop = try sourceText(
+            "timetracker/Features/Home/HomeViews.swift"
+        )
+        let section = try sourceText(
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift"
+        )
+        let grid = try sourceText(
+            "timetracker/SharedUI/Components/ActivityHeatmapGrid.swift"
+        )
+
+        #expect(
+            phone.components(
+                separatedBy: "HomeActivityHeatmapSection("
+            ).count - 1 == 1
+        )
+        #expect(phone.contains("container: .listSection"))
+        #expect(
+            desktop.components(
+                separatedBy: "HomeActivityHeatmapSection("
+            ).count - 1 == 1
+        )
+        #expect(desktop.contains("container: .card"))
+        #expect(section.contains("struct HomeActivityHeatmapSection: View"))
+        #expect(section.contains("let container: HomeSectionContainer"))
+        #expect(section.contains("request.selectedTaskIDs.isEmpty == false"))
+        #expect(section.contains("\"home.heatmap\""))
+        #expect(section.contains("\"home.heatmap.grid\""))
+        #expect(
+            section.components(
+                separatedBy: "home.heatmap.footer"
+            ).count - 1 == 2
+        )
+        #expect(grid.contains("struct ActivityHeatmapGrid: View"))
+        #expect(grid.contains("ScrollView(.horizontal)"))
+        #expect(grid.contains(
+            ".defaultScrollAnchor(.trailing, for: .initialOffset)"
+        ))
+        #expect(grid.contains(
+            ".defaultScrollAnchor(.leading, for: .alignment)"
+        ))
+        #expect(grid.contains(".font(.caption2)"))
+        #expect(grid.contains(".font(.system(size:") == false)
+        #expect(grid.contains("id: \\.offset") == false)
+        #expect(grid.contains("Button(") == false)
+    }
+
+    @Test
+    func heatmapRefreshIdentityTracksDataSelectionAndCalendarBoundaries() throws {
+        let section = try sourceText(
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift"
+        )
+        let service = try sourceText(
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService.swift"
+        )
+        let store = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+TodayActivityHeatmap.swift"
+        )
+
+        for token in [
+            "selectedTaskIDs",
+            "analyticsRevision",
+            "taskReadModelRevision",
+            "localDay",
+            "localWeekStart",
+            "clockRevision"
+        ] {
+            #expect(section.contains(token))
+        }
+        #expect(section.contains(".task(id: request)"))
+        #expect(section.contains(".NSSystemClockDidChange"))
+        #expect(section.contains(".NSSystemTimeZoneDidChange"))
+        #expect(section.contains(".NSCalendarDayChanged"))
+        #expect(store.contains("taskByID: taskByID"))
+        #expect(store.contains("childrenByParentID: childrenByParentID"))
+        #expect(store.contains("tasks: tasks") == false)
+        #expect(
+            service.components(
+                separatedBy:
+                    "for item in checklistItems.visibleDeduplicatedByID()"
+            ).count - 1 == 1
+        )
+        #expect(service.contains("for weekIndex in 0..<Self.weekCount"))
+        #expect(
+            service.components(
+                separatedBy: "checklistItems.visibleDeduplicatedByID()"
+            ).count - 1 == 1
+        )
     }
 }

@@ -1039,3 +1039,9 @@
 "heatmap.picker.clear" = "Clear";
 "heatmap.picker.hiddenSelectionCount" = "%lld hidden selections are still included.";
 "heatmap.picker.removeHidden" = "Remove Hidden";
+"home.heatmap.completionCount" = "%lld completed";
+"home.heatmap.footer" = "Completed checklist items in the selected tasks and their subtasks. Each square is one day; 4 or more completions use the darkest shade.";
+"home.heatmap.less" = "Less";
+"home.heatmap.more" = "More";
+"home.heatmap.rangeFormat" = "%@ – %@";
+"home.heatmap.accessibilitySummary" = "%1$lld checklist completions across %2$lld active days.";

@@ -56,6 +56,17 @@ extension SeedData {
                     deviceID: "demo"
                 )
             )
+            if CommandLine.arguments.contains("--uitesting-today-heatmap") {
+                context.insert(
+                    SyncedPreference(
+                        key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
+                        valueJSON: try PreferenceJSON.encodeChecked([
+                            app.id.uuidString
+                        ]),
+                        deviceID: "demo"
+                    )
+                )
+            }
 
             if CommandLine.arguments.contains("--uitesting-inbox-suggestion") {
                 let childTaskItem = InboxItem(
@@ -136,11 +147,41 @@ extension SeedData {
         analytics.notes = "All analytics aggregate from TimeSegment records; cached summaries are never the source of truth."
         sync.notes = "SwiftData CloudKit private database with deviceID and clientMutationID kept for conflict handling."
 
-        addChecklist(context: context, taskID: macDesign.id, titles: ["Align task detail", "Tighten sidebar", "Polish timeline"], completed: 2)
-        addChecklist(context: context, taskID: iosDesign.id, titles: ["Compact active timer rows", "Fix task editor sheet", "Review phone analytics"], completed: 1)
-        addChecklist(context: context, taskID: ledger.id, titles: ["Schema migration", "Preference import", "Checklist persistence", "CloudKit smoke test"], completed: 3)
-        addChecklist(context: context, taskID: analytics.id, titles: ["Month axis", "Forecast card", "Donut cleanup", "Overlap lanes"], completed: 2)
-        addChecklist(context: context, taskID: sync.id, titles: ["Sync settings", "Restart notice", "Manual sync button"], completed: 1)
+        addChecklist(
+            context: context,
+            taskID: macDesign.id,
+            titles: ["Align task detail", "Tighten sidebar", "Polish timeline"],
+            completed: 2,
+            completionDayOffsets: [0, 0]
+        )
+        addChecklist(
+            context: context,
+            taskID: iosDesign.id,
+            titles: ["Compact active timer rows", "Fix task editor sheet", "Review phone analytics"],
+            completed: 1,
+            completionDayOffsets: [0]
+        )
+        addChecklist(
+            context: context,
+            taskID: ledger.id,
+            titles: ["Schema migration", "Preference import", "Checklist persistence", "CloudKit smoke test"],
+            completed: 3,
+            completionDayOffsets: [0, -1, -1]
+        )
+        addChecklist(
+            context: context,
+            taskID: analytics.id,
+            titles: ["Month axis", "Forecast card", "Donut cleanup", "Overlap lanes"],
+            completed: 2,
+            completionDayOffsets: [-1, -7]
+        )
+        addChecklist(
+            context: context,
+            taskID: sync.id,
+            titles: ["Sync settings", "Restart notice", "Manual sync button"],
+            completed: 1,
+            completionDayOffsets: [-14]
+        )
 
         let focusTasks = [macDesign, iosDesign, ledger, analytics, sync, meeting, review, hig, swift]
         for dayOffset in stride(from: -13, through: 0, by: 1) {
@@ -267,7 +308,15 @@ extension SeedData {
         }
     }
 
-    private static func addChecklist(context: ModelContext, taskID: UUID, titles: [String], completed: Int) {
+    private static func addChecklist(
+        context: ModelContext,
+        taskID: UUID,
+        titles: [String],
+        completed: Int,
+        completionDayOffsets: [Int]
+    ) {
+        let calendar = Calendar.current
+        let completionReference = Date().addingTimeInterval(-60)
         for (index, title) in titles.enumerated() {
             let item = ChecklistItem(
                 taskID: taskID,
@@ -276,6 +325,16 @@ extension SeedData {
                 sortOrder: Double(index + 1) * 10,
                 deviceID: "demo"
             )
+            if item.isCompleted {
+                let dayOffset = completionDayOffsets.indices.contains(index)
+                    ? completionDayOffsets[index]
+                    : 0
+                item.completedAt = calendar.date(
+                    byAdding: .day,
+                    value: dayOffset,
+                    to: completionReference
+                )
+            }
             context.insert(item)
             context.insert(
                 ChecklistItemVisual(

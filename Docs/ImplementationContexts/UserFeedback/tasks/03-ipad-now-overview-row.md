@@ -23,7 +23,8 @@
 
 - `timetracker/Features/Home/HomeViews.swift`
 - `timetracker/SharedUI/Foundation/LayoutPolicies.swift`
-- `timetracker/Features/Home/Sections/HomeActiveTimerViews.swift`
+- `timetracker/Features/Home/Sections/HomeTimelineViews.swift`
+- `timetracker/Features/Home/Rows/HomeTimerRows.swift`
 - `timetracker/Features/Home/Sections/HomeMetricsViews.swift`
 - `timetrackerTests/Core/CoreArchitectureBehaviorTests.swift`
 - `timetrackerTests/UIContracts/HomeUIContractTests.swift`

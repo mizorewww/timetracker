@@ -12,8 +12,8 @@
 - 已完成归档/解除归档严格胜过跨设备未来时间戳副本的领域修复。
 - 已统一产品文案、菜单和 deep link 语义，并通过 macOS 契约/领域测试与带签名 iOS 编译。
 - 已完成 iPhone、iPad、macOS 归档 → Settings 解除归档 → Tasks 恢复的交互与截图矩阵。
-- [~] 正在执行 Release 全设备安装与签名核验；下一 checkpoint 是完成反馈标记和移除活动
-  软链接。
+- 已完成 Release 全设备构建、实体 iPhone/iPad 安装、macOS 安装与独立版本/签名核验。
+- 当前反馈项已完成；最终 checkpoint 只包含本记忆、反馈 `[x]` 和活动软链接移除。
 
 ## 实现边界
 
@@ -34,9 +34,9 @@
 - [x] 修正剩余归档语义、跨平台入口与分布式持久化边界
 - [x] 增补领域、界面契约和跨平台回归测试
 - [x] 验证 iPhone、iPad、macOS 普通路径并适当截图
-- [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
-- [ ] 只在 `Docs/userfeedback.md` 标记完成并移除活动软链接
+- [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [x] 核验安装版本与签名，释放 owned 设备、进程和临时产物
+- [x] 只在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
 ## HIG 与依赖决策
 
@@ -175,6 +175,27 @@
   `cloudActivityIsRecordedOnlyAfterConflictProcessingAndFinalRefresh` 对
   `errorMessage =` 的源码字符串断言，与本次归档代码及新增安全断言无关，未擅自修改。
 
+## Release 安装与签名
+
+- 按用户指定原样运行 `CONFIGURATION=Release scripts/build_install_all.sh`，iOS/Watch 与
+  universal macOS 两次 Release build 均 `BUILD SUCCEEDED`，没有关闭 code signing。
+- iOS 主应用和内嵌 Watch companion 均通过 `codesign --verify --deep --strict`；companion
+  bundle id 为 `me.mezorewww.timetracker.watchkitapp`，并正确声明依赖 iPhone companion。
+- Release 已安装到实体 `iPad Pro M4` 与 `iPhone Air`。随后分别用 `devicectl device info
+  apps` 查询，两台设备均报告 bundle id `me.mezorewww.timetracker`、版本 `1.1.52`
+  (`107`) 且为 Developer App。
+- macOS Release 已替换 `/Applications/timetracker.app`；独立严格签名复核通过，Identifier
+  为 `me.mezorewww.timetracker`，TeamIdentifier 为 `LT98S43NKA`，签名者为
+  `Apple Development: ZEXUAN GAO (PX46M259V3)`，版本同为 `1.1.52` (`107`)。
+- iOS 与 macOS 的 `AppBuildInfo.plist` 都指向应用代码 checkpoint
+  `d7cfe9cc90a473fb4c4844ad0b4fb3fe73b1d278`。构建时 dirty 仅因用户尚未提交的
+  `Docs/userfeedback.md` 内容，不影响应用源码。
+- 没有可见的实体 Apple Watch，因此脚本无法现场核对 Watch provisioning profile 的设备
+  覆盖；内嵌 companion 的结构与签名均已验证，配对 Watch 可在 Automatic App Install 开启
+  后随 iPhone 安装。
+- 收尾检查确认没有 owned `xcodebuild`、`xctest`、UI runner、应用测试进程或 Booted
+  simulator 残留。
+
 ## Checkpoint 记录
 
 - `55cc610`：领取当前反馈项，建立 `[~]`、独立实现记忆与活动软链接。
@@ -182,4 +203,5 @@
 - `4b4785c`：修复 archive/unarchive 在未来时间戳重复副本下的 LWW 不变量。
 - `42b326e`：统一任务归档菜单、Settings 恢复、macOS 命令、Unavailable 文案与
   deep-link 语义，并锁定领域/界面/本地化契约。
-- [~] 当前 checkpoint：三平台端到端 UI 回归、截图验收、共享状态修复与资源清理。
+- `d7cfe9c`：完成三平台端到端 UI 回归、截图验收、macOS 共享状态修复与资源清理。
+- [x] 最终 checkpoint：记录 Release 安装证据、标记反馈完成并移除活动软链接。

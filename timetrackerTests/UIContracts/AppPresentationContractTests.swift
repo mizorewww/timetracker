@@ -36,6 +36,7 @@ struct AppPresentationContractTests {
             ".segmentEditor(",
             ".startTaskPicker",
             ".singleTaskPicker(",
+            ".singleTaskCategoryPicker(",
             ".quickStartEditor(",
             ".settings",
             ".llmConfiguration(",
@@ -187,6 +188,9 @@ struct AppPresentationContractTests {
         ))
         #expect(host.contains("router.replaceWithNewTask("))
         #expect(host.contains("if taskPicker.selectTask(taskID)"))
+        #expect(host.contains(
+            "if categoryPicker.selectCategory(categoryID)"
+        ))
         #expect(homeActions.contains("Task.yield()") == false)
     }
 

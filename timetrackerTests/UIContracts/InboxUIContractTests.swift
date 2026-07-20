@@ -81,11 +81,19 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains(".accessibilityLabel(AppStrings.localized(\"common.more\"))"))
         #expect(inboxSource.contains("inbox.item.menu.\\(item.id.uuidString)"))
         #expect(inboxSource.contains("if item.isCompleted == false"))
-        #expect(inboxSource.contains("systemImage: \"folder\""))
-        #expect(inboxSource.contains("InboxMoveToTaskBaseline(item: item)"))
-        #expect(inboxSource.contains("context: .inboxDestination"))
-        #expect(inboxSource.contains("store.moveInboxItem(\n                baseline: baseline,"))
-        #expect(inboxSource.contains("inbox.moveToTask.\\(item.id.uuidString)"))
+        #expect(inboxSource.contains("systemImage: \"arrow.turn.down.right\""))
+        #expect(inboxSource.contains("systemImage: \"square.grid.2x2\""))
+        #expect(inboxSource.contains("systemImage: \"checklist\""))
+        #expect(inboxSource.contains("InboxManualRouteBaseline(item: item)"))
+        #expect(inboxSource.contains("context: .inboxChildTaskParent"))
+        #expect(inboxSource.contains("context: .inboxTaskDestination"))
+        #expect(inboxSource.contains("context: .inboxChecklistTarget"))
+        #expect(inboxSource.contains("store.routeInboxItemAsChildTask("))
+        #expect(inboxSource.contains("store.routeInboxItemToCategory("))
+        #expect(inboxSource.contains("store.routeInboxItemAsChecklist("))
+        #expect(inboxSource.contains("inbox.route.childTask.\\(item.id.uuidString)"))
+        #expect(inboxSource.contains("inbox.route.categoryTask.\\(item.id.uuidString)"))
+        #expect(inboxSource.contains("inbox.route.checklistItem.\\(item.id.uuidString)"))
         #expect(inboxSource.contains("common.sort"))
         #expect(inboxItemSource.contains("common.sort") == false)
         #expect(inboxSource.contains(".navigationTitle(AppStrings.inbox)"))
@@ -235,12 +243,24 @@ struct InboxUIContractTests {
     }
 
     @Test
-    func inboxMovePickerCopyExistsInEveryMainAppLocale() throws {
+    func inboxRoutePickerCopyExistsInEveryMainAppLocale() throws {
         let requiredKeys = [
-            "inbox.moveToTask",
-            "inbox.moveToTask.title",
-            "inbox.moveToTask.emptyDescription",
-            "inbox.moveToTask.selectionHint",
+            "inbox.route.childTask",
+            "inbox.route.childTask.title",
+            "inbox.route.childTask.emptyDescription",
+            "inbox.route.childTask.selectionHint",
+            "inbox.route.categoryTask",
+            "inbox.route.categoryTask.title",
+            "inbox.route.categoryTask.empty",
+            "inbox.route.categoryTask.emptyDescription",
+            "inbox.route.categoryTask.selectionHint",
+            "inbox.route.checklistItem",
+            "inbox.route.checklistItem.title",
+            "inbox.route.checklistItem.emptyDescription",
+            "inbox.route.checklistItem.selectionHint",
+            "taskCategory.searchPrompt",
+            "taskCategory.search.empty",
+            "taskCategory.search.emptyDescription",
             "inbox.suggestion.label",
             "tasks.search.empty.description",
             "pomodoro.taskPicker.selectionHint"

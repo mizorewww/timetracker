@@ -6,12 +6,6 @@ struct TaskParentPickerOption: Identifiable, Equatable {
     let isAvailable: Bool
 }
 
-struct TaskCategoryPickerOption: Identifiable, Equatable {
-    let id: UUID
-    let title: String
-    let iconName: String
-}
-
 struct TaskInheritedCategoryHint: Equatable {
     let title: String
     let iconName: String

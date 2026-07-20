@@ -2,7 +2,8 @@ import SwiftUI
 
 enum TaskHierarchyPickerSelectionContext: Equatable {
     case pomodoro
-    case inboxDestination
+    case inboxChildTaskParent
+    case inboxChecklistTarget
 }
 
 enum TaskHierarchyPickerMode: Equatable {

@@ -1078,65 +1078,39 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testInboxItemMovesThroughTheSharedTaskHierarchyPicker() throws {
+    func testInboxItemCreatesChildTaskThroughSharedHierarchyPicker() throws {
         #if os(macOS)
         throw XCTSkip("The Inbox task-routing interaction requires an iOS simulator.")
         #else
-        let app = launchApp()
-        openSection(
-            "Inbox",
-            tabIdentifier: "phone.tab.inbox",
-            sidebarIdentifier: "sidebar.Inbox",
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        let menu = createInboxItem(
+            "Prepare release screenshots",
             in: app
-        )
-        XCTAssertTrue(
-            app.descendants(matching: .any)["inbox.view"]
-                .waitForExistence(timeout: 8)
-        )
-
-        let field = app.descendants(matching: .any)["inbox.capture.field"].firstMatch
-        let addButton = app.buttons["inbox.capture.add"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 3) && field.isHittable)
-        XCTAssertTrue(addButton.waitForExistence(timeout: 3) && addButton.isHittable)
-        activate(field)
-        field.typeText("Route release checklist")
-        activate(addButton)
-
-        let menu = app.buttons
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "inbox.item.menu."
-            ))
-            .firstMatch
-        XCTAssertTrue(
-            waitForElement(
-                menu,
-                timeout: 5,
-                diagnosticName: "inbox-route-menu",
-                in: app
-            ) && menu.isHittable
         )
         activate(menu)
 
-        let move = app.buttons
+        let route = app.buttons
             .matching(NSPredicate(
                 format: "identifier BEGINSWITH %@",
-                "inbox.moveToTask."
+                "inbox.route.childTask."
             ))
             .firstMatch
-        XCTAssertTrue(move.waitForExistence(timeout: 3) && move.isHittable)
-        activate(move)
+        XCTAssertTrue(route.waitForExistence(timeout: 3) && route.isHittable)
+        try capture("iphone-inbox-route-menu", app: app)
+        activate(route)
 
-        let picker = app.descendants(matching: .any)["inbox.taskPicker"].firstMatch
+        let picker = app.descendants(matching: .any)[
+            "inbox.childTask.parentPicker"
+        ].firstMatch
         XCTAssertTrue(
             waitForElement(
                 picker,
                 timeout: 5,
-                diagnosticName: "inbox-shared-task-picker",
+                diagnosticName: "inbox-child-task-parent-picker",
                 in: app
             )
         )
-        try capture("iphone-inbox-shared-task-picker", app: app)
+        try capture("iphone-inbox-child-task-parent-picker", app: app)
 
         let search = app.searchFields["Search tasks, paths, or notes"].firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
@@ -1146,7 +1120,7 @@ final class timetrackerUITests: XCTestCase {
         let target = app.buttons
             .matching(NSPredicate(
                 format: "identifier BEGINSWITH %@",
-                "inbox.taskPicker.select."
+                "inbox.childTask.parentPicker.select."
             ))
             .matching(NSPredicate(format: "label == %@", "SwiftData Docs"))
             .firstMatch
@@ -1155,7 +1129,111 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
         XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
-        try capture("iphone-inbox-routed-to-task", app: app)
+        try capture("iphone-inbox-created-child-task", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testInboxItemCreatesTaskThroughSharedCategoryPicker() throws {
+        #if os(macOS)
+        throw XCTSkip("The Inbox category-routing interaction requires an iOS simulator.")
+        #else
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        let menu = createInboxItem("Plan reading weekend", in: app)
+        activate(menu)
+
+        let route = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.route.categoryTask."
+            ))
+            .firstMatch
+        XCTAssertTrue(route.waitForExistence(timeout: 3) && route.isHittable)
+        activate(route)
+
+        let picker = app.descendants(matching: .any)[
+            "inbox.categoryTask.categoryPicker"
+        ].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                picker,
+                timeout: 5,
+                diagnosticName: "inbox-category-task-picker",
+                in: app
+            )
+        )
+        try capture("iphone-inbox-category-task-picker", app: app)
+
+        let search = app.searchFields["Search categories"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        activate(search)
+        search.typeText("Study")
+
+        let target = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.categoryTask.categoryPicker.select."
+            ))
+            .matching(NSPredicate(format: "label == %@", "Study"))
+            .firstMatch
+        XCTAssertTrue(target.waitForExistence(timeout: 3) && target.isHittable)
+        activate(target)
+
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
+        try capture("iphone-inbox-created-category-task", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testInboxItemCreatesChecklistThroughSharedHierarchyPicker() throws {
+        #if os(macOS)
+        throw XCTSkip("The Inbox checklist-routing interaction requires an iOS simulator.")
+        #else
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        let menu = createInboxItem("Route release checklist", in: app)
+        activate(menu)
+
+        let route = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.route.checklistItem."
+            ))
+            .firstMatch
+        XCTAssertTrue(route.waitForExistence(timeout: 3) && route.isHittable)
+        activate(route)
+
+        let picker = app.descendants(matching: .any)[
+            "inbox.checklistItem.taskPicker"
+        ].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                picker,
+                timeout: 5,
+                diagnosticName: "inbox-checklist-task-picker",
+                in: app
+            )
+        )
+        try capture("iphone-inbox-checklist-task-picker", app: app)
+
+        let search = app.searchFields["Search tasks, paths, or notes"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
+        activate(search)
+        search.typeText("SwiftData Docs")
+
+        let target = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.checklistItem.taskPicker.select."
+            ))
+            .matching(NSPredicate(format: "label == %@", "SwiftData Docs"))
+            .firstMatch
+        XCTAssertTrue(target.waitForExistence(timeout: 3) && target.isHittable)
+        activate(target)
+
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
+        try capture("iphone-inbox-created-checklist-item", app: app)
         #endif
     }
 
@@ -3380,6 +3458,51 @@ final class timetrackerUITests: XCTestCase {
         #else
         try capture("ipad-sidebar-running-task-spacing", app: app)
         #endif
+    }
+
+    @MainActor
+    private func createInboxItem(
+        _ title: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        openSection(
+            "Inbox",
+            tabIdentifier: "phone.tab.inbox",
+            sidebarIdentifier: "sidebar.Inbox",
+            in: app
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["inbox.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        let field = app.descendants(matching: .any)[
+            "inbox.capture.field"
+        ].firstMatch
+        let addButton = app.buttons["inbox.capture.add"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 3) && field.isHittable)
+        XCTAssertTrue(
+            addButton.waitForExistence(timeout: 3) && addButton.isHittable
+        )
+        activate(field)
+        field.typeText(title)
+        activate(addButton)
+
+        let menu = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.item.menu."
+            ))
+            .firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                menu,
+                timeout: 5,
+                diagnosticName: "inbox-route-menu",
+                in: app
+            ) && menu.isHittable
+        )
+        return menu
     }
 
     @MainActor

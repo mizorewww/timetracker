@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct StoreScopedInboxMoveCommandCoordinatorTests {
     @Test
-    func moveUsesFreshOrderingAndPublishesInboxAndChecklistChanges() throws {
+    func checklistRouteUsesFreshOrderingAndPublishesInboxAndChecklistChanges() throws {
         let context = try makeTestContext()
         let parent = try createTask(title: "Project", in: context)
         let task = try createTask(
@@ -35,7 +35,7 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
             taskID: task.id,
             into: context
         )
-        let baseline = InboxMoveToTaskBaseline(item: item)
+        let baseline = InboxManualRouteBaseline(item: item)
 
         let siblingContext = ModelContext(context.container)
         siblingContext.insert(
@@ -48,14 +48,22 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         )
         try siblingContext.save()
 
-        let outcome = try coordinator(container: context.container).moveToTask(
+        let outcome = try coordinator(container: context.container).route(
             baseline: baseline,
-            taskID: task.id
+            destination: .checklist(taskID: task.id)
         )
+        guard case let .checklist(
+            checklistItemID,
+            destinationTaskID,
+            affectedAncestorIDs
+        ) = outcome.creation else {
+            Issue.record("Expected a checklist route")
+            return
+        }
 
         #expect(outcome.didMutate)
-        #expect(outcome.taskID == task.id)
-        #expect(outcome.affectedAncestorIDs == [parent.id])
+        #expect(destinationTaskID == task.id)
+        #expect(affectedAncestorIDs == [parent.id])
         #expect(outcome.events.contains(.inboxChanged(itemIDs: [item.id])))
         #expect(outcome.events.contains(
             .checklistChanged(
@@ -67,7 +75,7 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         let freshContext = ModelContext(context.container)
         let checklistItem = try #require(
             try freshContext.fetch(FetchDescriptor<ChecklistItem>())
-                .first { $0.id == outcome.checklistItemID }
+                .first { $0.id == checklistItemID }
         )
         #expect(checklistItem.title == "Prepare release notes")
         #expect(checklistItem.sortOrder == 50)
@@ -93,17 +101,23 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
     }
 
     @Test
-    func aConsumedBaselineCannotCreateADuplicateChecklistItem() throws {
+    func aConsumedBaselineCannotCreateAnotherDestination() throws {
         let context = try makeTestContext()
         let task = try createTask(title: "Target", in: context)
         let item = try insertItem(title: "Route once", into: context)
-        let baseline = InboxMoveToTaskBaseline(item: item)
+        let baseline = InboxManualRouteBaseline(item: item)
         let coordinator = coordinator(container: context.container)
 
-        _ = try coordinator.moveToTask(baseline: baseline, taskID: task.id)
+        _ = try coordinator.route(
+            baseline: baseline,
+            destination: .checklist(taskID: task.id)
+        )
 
         #expect(throws: StoreScopedInboxMutationError.inboxChanged) {
-            try coordinator.moveToTask(baseline: baseline, taskID: task.id)
+            try coordinator.route(
+                baseline: baseline,
+                destination: .childTask(parentTaskID: task.id)
+            )
         }
         #expect(
             try ModelContext(context.container)
@@ -117,7 +131,7 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         let itemContext = try makeTestContext()
         let itemTask = try createTask(title: "Target", in: itemContext)
         let item = try insertItem(title: "Original", into: itemContext)
-        let itemBaseline = InboxMoveToTaskBaseline(item: item)
+        let itemBaseline = InboxManualRouteBaseline(item: item)
         let siblingContext = ModelContext(itemContext.container)
         let siblingItem = try #require(
             try inboxItem(id: item.id, in: siblingContext)
@@ -130,16 +144,16 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         )
 
         #expect(throws: StoreScopedInboxMutationError.inboxChanged) {
-            try coordinator(container: itemContext.container).moveToTask(
+            try coordinator(container: itemContext.container).route(
                 baseline: itemBaseline,
-                taskID: itemTask.id
+                destination: .childTask(parentTaskID: itemTask.id)
             )
         }
 
         let taskContext = try makeTestContext()
         let unavailableTask = try createTask(title: "Closing", in: taskContext)
         let untouchedItem = try insertItem(title: "Keep me", into: taskContext)
-        let taskBaseline = InboxMoveToTaskBaseline(item: untouchedItem)
+        let taskBaseline = InboxManualRouteBaseline(item: untouchedItem)
         let taskSiblingContext = ModelContext(taskContext.container)
         try SwiftDataTaskRepository(
             context: taskSiblingContext,
@@ -147,9 +161,9 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         ).archiveTask(taskID: unavailableTask.id)
 
         #expect(throws: StoreScopedInboxMutationError.taskUnavailable) {
-            try coordinator(container: taskContext.container).moveToTask(
+            try coordinator(container: taskContext.container).route(
                 baseline: taskBaseline,
-                taskID: unavailableTask.id
+                destination: .checklist(taskID: unavailableTask.id)
             )
         }
         #expect(
@@ -180,12 +194,12 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
             count: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1
         )
         try context.save()
-        let baseline = InboxMoveToTaskBaseline(item: item)
+        let baseline = InboxManualRouteBaseline(item: item)
 
         #expect(throws: InboxPersistenceValidationError.self) {
-            try coordinator(container: context.container).moveToTask(
+            try coordinator(container: context.container).route(
                 baseline: baseline,
-                taskID: task.id
+                destination: .checklist(taskID: task.id)
             )
         }
 
@@ -208,11 +222,14 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         let context = try makeTestContext()
         let task = try createTask(title: "Target", in: context)
         let item = try insertItem(title: "Already routed", into: context)
-        let baseline = InboxMoveToTaskBaseline(item: item)
+        let baseline = InboxManualRouteBaseline(item: item)
         let requestedIdentity = item.suggestionIdentity
         let coordinator = coordinator(container: context.container)
 
-        _ = try coordinator.moveToTask(baseline: baseline, taskID: task.id)
+        _ = try coordinator.route(
+            baseline: baseline,
+            destination: .checklist(taskID: task.id)
+        )
         let outcome = try coordinator.storeGeneratedSuggestion(
             itemID: item.id,
             requestedTitle: item.title,
@@ -231,6 +248,156 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
             try ModelContext(context.container)
                 .fetch(FetchDescriptor<InboxSuggestion>())
                 .isEmpty
+        )
+    }
+
+    @Test
+    func childTaskRouteCreatesAChildAndInvalidatesItsAncestors() throws {
+        let context = try makeTestContext()
+        let root = try createTask(title: "Project", in: context)
+        let parent = try createTask(
+            title: "Release",
+            parentID: root.id,
+            in: context
+        )
+        let item = try insertItem(
+            title: "  Prepare screenshots  ",
+            into: context
+        )
+        item.notes = "Keep the release context"
+        try context.save()
+
+        let outcome = try coordinator(container: context.container).route(
+            baseline: InboxManualRouteBaseline(item: item),
+            destination: .childTask(parentTaskID: parent.id)
+        )
+        guard case let .task(taskID, affectedAncestorIDs) = outcome.creation else {
+            Issue.record("Expected a child-task route")
+            return
+        }
+
+        #expect(affectedAncestorIDs == [root.id, parent.id])
+        #expect(outcome.events.contains(.taskChanged(
+            taskID: taskID,
+            affectedAncestorIDs: [root.id, parent.id]
+        )))
+        let freshContext = ModelContext(context.container)
+        let createdTask = try #require(
+            try SwiftDataTaskRepository(
+                context: freshContext,
+                deviceID: "test"
+            ).task(id: taskID)
+        )
+        #expect(createdTask.title == "Prepare screenshots")
+        #expect(createdTask.notes == "Keep the release context")
+        #expect(createdTask.parentID == parent.id)
+        #expect(createdTask.depth == parent.depth + 1)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<ChecklistItem>()).isEmpty
+        )
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt != nil)
+    }
+
+    @Test
+    func categoryRouteCreatesARootTaskAssignedToTheSelectedCategory() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let category = try repository.createCategory(
+            title: "Personal",
+            colorHex: "16A34A",
+            iconName: "person"
+        )
+        let item = try insertItem(title: "Plan weekend", into: context)
+
+        let outcome = try coordinator(container: context.container).route(
+            baseline: InboxManualRouteBaseline(item: item),
+            destination: .category(categoryID: category.id)
+        )
+        guard case let .task(taskID, affectedAncestorIDs) = outcome.creation else {
+            Issue.record("Expected a category-task route")
+            return
+        }
+
+        #expect(affectedAncestorIDs.isEmpty)
+        #expect(outcome.events.contains(.taskChanged(
+            taskID: taskID,
+            affectedAncestorIDs: []
+        )))
+        let freshContext = ModelContext(context.container)
+        let freshRepository = SwiftDataTaskRepository(
+            context: freshContext,
+            deviceID: "test"
+        )
+        let createdTask = try #require(try freshRepository.task(id: taskID))
+        #expect(createdTask.title == "Plan weekend")
+        #expect(createdTask.parentID == nil)
+        #expect(try freshRepository.categoryID(forRootTaskID: taskID) == category.id)
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt != nil)
+    }
+
+    @Test
+    func categoryRouteRejectsADeletedCategoryWithoutConsumingTheInboxItem() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let category = try repository.createCategory(title: "Temporary")
+        let item = try insertItem(title: "Keep me", into: context)
+        let baseline = InboxManualRouteBaseline(item: item)
+        let siblingContext = ModelContext(context.container)
+        try SwiftDataTaskRepository(
+            context: siblingContext,
+            deviceID: "sibling"
+        ).softDeleteCategory(categoryID: category.id)
+
+        #expect(throws: StoreScopedInboxMutationError.categoryUnavailable) {
+            try coordinator(container: context.container).route(
+                baseline: baseline,
+                destination: .category(categoryID: category.id)
+            )
+        }
+
+        let freshContext = ModelContext(context.container)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<TaskNode>()).isEmpty
+        )
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt == nil)
+    }
+
+    @Test
+    func failedInboxCleanupRollsBackAChildTaskCreation() throws {
+        let context = try makeTestContext()
+        let parent = try createTask(title: "Target", in: context)
+        let item = try insertItem(title: "Stay atomic", into: context)
+        let invalidSuggestion = try insertSuggestion(
+            for: item,
+            taskID: parent.id,
+            into: context
+        )
+        invalidSuggestion.modelID = String(
+            repeating: "m",
+            count: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1
+        )
+        try context.save()
+
+        #expect(throws: InboxPersistenceValidationError.self) {
+            try coordinator(container: context.container).route(
+                baseline: InboxManualRouteBaseline(item: item),
+                destination: .childTask(parentTaskID: parent.id)
+            )
+        }
+
+        let freshContext = ModelContext(context.container)
+        let tasks = try freshContext.fetch(FetchDescriptor<TaskNode>())
+        #expect(tasks.map(\.id) == [parent.id])
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt == nil)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
+                .first { $0.id == invalidSuggestion.id }?.deletedAt == nil
         )
     }
 

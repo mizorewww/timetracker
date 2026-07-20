@@ -119,7 +119,8 @@ struct TaskInfoEditorSection: View {
             TaskCategoryPickerOption(
                 id: $0.id,
                 title: $0.title,
-                iconName: $0.iconName ?? "square.grid.2x2"
+                iconName: $0.iconName ?? "square.grid.2x2",
+                colorHex: $0.colorHex
             )
         }
     }

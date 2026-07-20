@@ -106,31 +106,37 @@ extension TaskHierarchyPickerSelectionContext {
         switch self {
         case .pomodoro:
             AppStrings.localized("pomodoro.chooseTask")
-        case .inboxDestination:
-            AppStrings.localized("inbox.moveToTask.title")
+        case .inboxChildTaskParent:
+            AppStrings.localized("inbox.route.childTask.title")
+        case .inboxChecklistTarget:
+            AppStrings.localized("inbox.route.checklistItem.title")
         }
     }
     var accessibilityIdentifier: String {
         switch self {
         case .pomodoro:
             "pomodoro.taskPicker"
-        case .inboxDestination:
-            "inbox.taskPicker"
+        case .inboxChildTaskParent:
+            "inbox.childTask.parentPicker"
+        case .inboxChecklistTarget:
+            "inbox.checklistItem.taskPicker"
         }
     }
     var selectionHint: String {
         switch self {
         case .pomodoro:
             AppStrings.localized("pomodoro.taskPicker.selectionHint")
-        case .inboxDestination:
-            AppStrings.localized("inbox.moveToTask.selectionHint")
+        case .inboxChildTaskParent:
+            AppStrings.localized("inbox.route.childTask.selectionHint")
+        case .inboxChecklistTarget:
+            AppStrings.localized("inbox.route.checklistItem.selectionHint")
         }
     }
     var emptyStateTitle: String {
         switch self {
         case .pomodoro:
             AppStrings.localized("pomodoro.noTasks.title")
-        case .inboxDestination:
+        case .inboxChildTaskParent, .inboxChecklistTarget:
             AppStrings.localized("tasks.empty.title")
         }
     }
@@ -139,8 +145,10 @@ extension TaskHierarchyPickerSelectionContext {
         switch self {
         case .pomodoro:
             AppStrings.localized("pomodoro.noTasks.description")
-        case .inboxDestination:
-            AppStrings.localized("inbox.moveToTask.emptyDescription")
+        case .inboxChildTaskParent:
+            AppStrings.localized("inbox.route.childTask.emptyDescription")
+        case .inboxChecklistTarget:
+            AppStrings.localized("inbox.route.checklistItem.emptyDescription")
         }
     }
 }

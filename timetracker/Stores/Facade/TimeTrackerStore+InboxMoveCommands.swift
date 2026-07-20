@@ -2,27 +2,51 @@ import Foundation
 
 extension TimeTrackerStore {
     @discardableResult
-    func moveInboxItem(_ item: InboxItem, toTaskID taskID: UUID) -> Bool {
-        moveInboxItem(
-            baseline: InboxMoveToTaskBaseline(item: item),
-            toTaskID: taskID
+    func routeInboxItemAsChildTask(
+        baseline: InboxManualRouteBaseline,
+        parentTaskID: UUID
+    ) -> Bool {
+        routeInboxItem(
+            baseline: baseline,
+            destination: .childTask(parentTaskID: parentTaskID)
         )
     }
 
     @discardableResult
-    func moveInboxItem(
-        baseline: InboxMoveToTaskBaseline,
-        toTaskID taskID: UUID
+    func routeInboxItemToCategory(
+        baseline: InboxManualRouteBaseline,
+        categoryID: UUID
+    ) -> Bool {
+        routeInboxItem(
+            baseline: baseline,
+            destination: .category(categoryID: categoryID)
+        )
+    }
+
+    @discardableResult
+    func routeInboxItemAsChecklist(
+        baseline: InboxManualRouteBaseline,
+        taskID: UUID
+    ) -> Bool {
+        routeInboxItem(
+            baseline: baseline,
+            destination: .checklist(taskID: taskID)
+        )
+    }
+
+    private func routeInboxItem(
+        baseline: InboxManualRouteBaseline,
+        destination: InboxManualRouteDestination
     ) -> Bool {
         let outcome = performStoreScopedInboxMutation(
             refreshScopes: [.inbox, .tasks, .checklist],
-            eventsForOutcome: { (outcome: InboxChecklistRouteOutcome) in
+            eventsForOutcome: { (outcome: InboxManualRouteOutcome) in
                 outcome.events
             }
         ) { coordinator in
-            try coordinator.moveToTask(
+            try coordinator.route(
                 baseline: baseline,
-                taskID: taskID
+                destination: destination
             )
         }
         if outcome?.didMutate == true {

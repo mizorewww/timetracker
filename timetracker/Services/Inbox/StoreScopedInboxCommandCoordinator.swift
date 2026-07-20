@@ -24,6 +24,7 @@ struct InboxOrderMutationBaseline: Equatable, Sendable {
 enum StoreScopedInboxMutationError: LocalizedError, Equatable {
     case inboxChanged
     case taskUnavailable
+    case categoryUnavailable
     case externalCommandPayloadChanged
     case externalCommandKeyConflict
 
@@ -33,6 +34,8 @@ enum StoreScopedInboxMutationError: LocalizedError, Equatable {
             AppStrings.localized("inbox.error.changed")
         case .taskUnavailable:
             AppStrings.localized("inbox.suggestion.error.noValidTask")
+        case .categoryUnavailable:
+            AppStrings.localized("taskCategory.error.unavailable")
         case .externalCommandPayloadChanged:
             "An external Inbox capture command key was reused with different content."
         case .externalCommandKeyConflict:

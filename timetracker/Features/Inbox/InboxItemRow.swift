@@ -72,16 +72,40 @@ struct InboxItemRow: View {
             }
 
             if item.isCompleted == false {
-                Button(action: presentMoveToTaskPicker) {
+                Divider()
+
+                Button(action: presentChildTaskParentPicker) {
                     Label(
-                        AppStrings.localized("inbox.moveToTask"),
-                        systemImage: "folder"
+                        AppStrings.localized("inbox.route.childTask"),
+                        systemImage: "arrow.turn.down.right"
                     )
                 }
                 .accessibilityIdentifier(
-                    "inbox.moveToTask.\(item.id.uuidString)"
+                    "inbox.route.childTask.\(item.id.uuidString)"
+                )
+
+                Button(action: presentCategoryPicker) {
+                    Label(
+                        AppStrings.localized("inbox.route.categoryTask"),
+                        systemImage: "square.grid.2x2"
+                    )
+                }
+                .accessibilityIdentifier(
+                    "inbox.route.categoryTask.\(item.id.uuidString)"
+                )
+
+                Button(action: presentChecklistTaskPicker) {
+                    Label(
+                        AppStrings.localized("inbox.route.checklistItem"),
+                        systemImage: "checklist"
+                    )
+                }
+                .accessibilityIdentifier(
+                    "inbox.route.checklistItem.\(item.id.uuidString)"
                 )
             }
+
+            Divider()
 
             Button(role: .destructive) {
                 requestDelete()
@@ -100,15 +124,41 @@ struct InboxItemRow: View {
         )
     }
 
-    private func presentMoveToTaskPicker() {
-        let baseline = InboxMoveToTaskBaseline(item: item)
+    private func presentChildTaskParentPicker() {
+        let baseline = InboxManualRouteBaseline(item: item)
         presentationRouter.presentSingleTaskPicker(
             selectedTaskID: nil,
-            context: .inboxDestination
-        ) { taskID in
-            store.moveInboxItem(
+            context: .inboxChildTaskParent
+        ) { parentTaskID in
+            store.routeInboxItemAsChildTask(
                 baseline: baseline,
-                toTaskID: taskID
+                parentTaskID: parentTaskID
+            )
+        }
+    }
+
+    private func presentCategoryPicker() {
+        let baseline = InboxManualRouteBaseline(item: item)
+        presentationRouter.presentSingleTaskCategoryPicker(
+            selectedCategoryID: nil,
+            context: .inboxTaskDestination
+        ) { categoryID in
+            store.routeInboxItemToCategory(
+                baseline: baseline,
+                categoryID: categoryID
+            )
+        }
+    }
+
+    private func presentChecklistTaskPicker() {
+        let baseline = InboxManualRouteBaseline(item: item)
+        presentationRouter.presentSingleTaskPicker(
+            selectedTaskID: nil,
+            context: .inboxChecklistTarget
+        ) { taskID in
+            store.routeInboxItemAsChecklist(
+                baseline: baseline,
+                taskID: taskID
             )
         }
     }

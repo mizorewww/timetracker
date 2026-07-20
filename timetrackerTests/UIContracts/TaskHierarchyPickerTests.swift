@@ -21,12 +21,20 @@ struct TaskHierarchyPickerTests {
                 .accessibilityIdentifier == "pomodoro.taskPicker"
         )
         #expect(
-            TaskHierarchyPickerSelectionContext.inboxDestination
-                .accessibilityIdentifier == "inbox.taskPicker"
+            TaskHierarchyPickerSelectionContext.inboxChildTaskParent
+                .accessibilityIdentifier == "inbox.childTask.parentPicker"
+        )
+        #expect(
+            TaskHierarchyPickerSelectionContext.inboxChecklistTarget
+                .accessibilityIdentifier == "inbox.checklistItem.taskPicker"
         )
         #expect(
             TaskHierarchyPickerSelectionContext.pomodoro.navigationTitle !=
-                TaskHierarchyPickerSelectionContext.inboxDestination.navigationTitle
+                TaskHierarchyPickerSelectionContext.inboxChildTaskParent.navigationTitle
+        )
+        #expect(
+            TaskHierarchyPickerSelectionContext.inboxChildTaskParent.navigationTitle !=
+                TaskHierarchyPickerSelectionContext.inboxChecklistTarget.navigationTitle
         )
     }
 
@@ -259,7 +267,8 @@ struct TaskHierarchyPickerTests {
         #expect(host.contains("mode: .timer"))
         #expect(host.contains("mode: .singleSelection("))
         #expect(pomodoro.contains("presentPomodoroTaskPicker("))
-        #expect(inbox.contains("context: .inboxDestination"))
+        #expect(inbox.contains("context: .inboxChildTaskParent"))
+        #expect(inbox.contains("context: .inboxChecklistTarget"))
         #expect(sheet.contains(".searchable(") == false)
         #expect(pomodoro.contains(".searchable(") == false)
         #expect(picker.contains("TaskSummaryRow("))

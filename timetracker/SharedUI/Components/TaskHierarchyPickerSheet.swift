@@ -41,6 +41,7 @@ struct TaskHierarchyPickerSheet: View {
                 ? [.large]
                 : [.medium, .large]
         )
+        .presentationDragIndicator(.visible)
         #else
         .frame(minWidth: 420, minHeight: 520)
         #endif

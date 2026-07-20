@@ -139,7 +139,7 @@ struct CoreAppPresentationRouterTests {
 
         #expect(router.presentSingleTaskPicker(
             selectedTaskID: nil,
-            context: .inboxDestination,
+            context: .inboxChecklistTarget,
             selectTask: { _ in false }
         ))
 
@@ -148,8 +148,29 @@ struct CoreAppPresentationRouterTests {
             Issue.record("Inbox did not use the generic task-picker route.")
             return
         }
-        #expect(picker.context == .inboxDestination)
+        #expect(picker.context == .inboxChecklistTarget)
         #expect(picker.selectTask(attemptedTaskID) == false)
+        #expect(router.sheet?.id == presentation.id)
+    }
+
+    @Test @MainActor
+    func categoryPickerPreservesContextAndReportsRejectedSelections() throws {
+        let router = AppPresentationRouter()
+        let attemptedCategoryID = UUID()
+
+        #expect(router.presentSingleTaskCategoryPicker(
+            selectedCategoryID: nil,
+            context: .inboxTaskDestination,
+            selectCategory: { _ in false }
+        ))
+
+        let presentation = try #require(router.sheet)
+        guard case let .singleTaskCategoryPicker(picker) = presentation.content else {
+            Issue.record("Inbox did not use the typed category-picker route.")
+            return
+        }
+        #expect(picker.context == .inboxTaskDestination)
+        #expect(picker.selectCategory(attemptedCategoryID) == false)
         #expect(router.sheet?.id == presentation.id)
     }
 

@@ -13,6 +13,7 @@ struct AppPresentation: Identifiable {
         case segmentEditor(SegmentEditorDraft)
         case startTaskPicker
         case singleTaskPicker(SingleTaskPickerPresentation)
+        case singleTaskCategoryPicker(SingleTaskCategoryPickerPresentation)
         case quickStartEditor(selectedIDs: [UUID])
         case settings
         case llmConfiguration(LLMConfigurationDraft)
@@ -33,6 +34,12 @@ struct SingleTaskPickerPresentation {
     let selectedTaskID: UUID?
     let context: TaskHierarchyPickerSelectionContext
     let selectTask: (UUID) -> Bool
+}
+
+struct SingleTaskCategoryPickerPresentation {
+    let selectedCategoryID: UUID?
+    let context: TaskCategoryPickerSelectionContext
+    let selectCategory: (UUID) -> Bool
 }
 
 struct RecoveredTaskDraftPresentation {
@@ -171,6 +178,21 @@ extension AppPresentationRouter {
             context: context,
             selectTask: selectTask
         )))
+    }
+
+    @discardableResult
+    func presentSingleTaskCategoryPicker(
+        selectedCategoryID: UUID?,
+        context: TaskCategoryPickerSelectionContext,
+        selectCategory: @escaping (UUID) -> Bool
+    ) -> Bool {
+        present(.singleTaskCategoryPicker(
+            SingleTaskCategoryPickerPresentation(
+                selectedCategoryID: selectedCategoryID,
+                context: context,
+                selectCategory: selectCategory
+            )
+        ))
     }
 
     @discardableResult

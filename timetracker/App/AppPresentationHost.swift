@@ -76,6 +76,20 @@ private struct AppPresentationSheet: View {
                     }
                 }
             )
+        case let .singleTaskCategoryPicker(categoryPicker):
+            TaskCategoryPickerSheet(
+                store: store,
+                selectedCategoryID: categoryPicker.selectedCategoryID,
+                context: categoryPicker.context,
+                onDismiss: {
+                    router.dismiss(presentationID: presentation.id)
+                },
+                onSelect: { categoryID in
+                    if categoryPicker.selectCategory(categoryID) {
+                        router.dismiss(presentationID: presentation.id)
+                    }
+                }
+            )
         case let .quickStartEditor(selectedIDs):
             QuickStartEditorSheet(
                 store: store,

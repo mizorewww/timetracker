@@ -65,6 +65,84 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     }
 
     @Test
+    func archiveStrictlyDominatesFutureDatedTaskDuplicates() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Older active duplicate",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let futureUpdatedAt = Date().addingTimeInterval(7 * 24 * 60 * 60)
+        task.updatedAt = futureUpdatedAt.addingTimeInterval(-1)
+
+        let futureDuplicate = TaskNode(
+            title: "Future active duplicate",
+            parentID: nil,
+            deviceID: "future-device"
+        )
+        futureDuplicate.id = task.id
+        futureDuplicate.updatedAt = futureUpdatedAt
+        context.insert(futureDuplicate)
+        try context.save()
+
+        let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        ).archive(taskID: task.id)
+
+        #expect(outcome.didMutate)
+        let winner = try #require(
+            try freshTaskRepository(context.container).task(id: task.id)
+        )
+        #expect(winner.updatedAt > futureUpdatedAt)
+        #expect(winner.deletedAt == nil)
+        #expect(winner.isArchivedForLifecycle)
+    }
+
+    @Test
+    func unarchiveStrictlyDominatesFutureDatedTaskDuplicates() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try repository.createTask(
+            title: "Older archived duplicate",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let futureUpdatedAt = Date().addingTimeInterval(7 * 24 * 60 * 60)
+        task.statusRaw = LegacyTaskStatusRaw.archived
+        task.archivedAt = futureUpdatedAt.addingTimeInterval(-2)
+        task.updatedAt = futureUpdatedAt.addingTimeInterval(-1)
+
+        let futureDuplicate = TaskNode(
+            title: "Future archived duplicate",
+            parentID: nil,
+            deviceID: "future-device"
+        )
+        futureDuplicate.id = task.id
+        futureDuplicate.statusRaw = LegacyTaskStatusRaw.archived
+        futureDuplicate.archivedAt = futureUpdatedAt.addingTimeInterval(-2)
+        futureDuplicate.updatedAt = futureUpdatedAt
+        context.insert(futureDuplicate)
+        try context.save()
+
+        let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        ).unarchive(taskID: task.id)
+
+        #expect(outcome.didMutate)
+        let winner = try #require(
+            try freshTaskRepository(context.container).task(id: task.id)
+        )
+        #expect(winner.updatedAt > futureUpdatedAt)
+        #expect(winner.deletedAt == nil)
+        #expect(winner.isArchivedForLifecycle == false)
+    }
+
+    @Test
     func unarchiveClearsEveryLegacyArchiveShapeWithoutRevivingStatusSemantics() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")

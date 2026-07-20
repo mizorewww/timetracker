@@ -121,30 +121,56 @@ extension SwiftDataTaskRepository {
     }
 
     func archiveTask(taskID: UUID) throws {
-        guard let node = try task(id: taskID) else { return }
+        guard let target = try lifecycleMutationTarget(taskID: taskID) else {
+            return
+        }
         let now = Date()
+        let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+            preferred: now,
+            observed: target.observedUpdatedDates
+        )
+        let node = target.node
         node.statusRaw = LegacyTaskStatusRaw.archived
         node.archivedAt = node.archivedAt ?? now
-        node.updatedAt = now
+        node.updatedAt = mutationDate
         node.deviceID = deviceID
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()
     }
 
     func unarchiveTask(taskID: UUID) throws {
-        guard let node = try task(id: taskID),
-              node.deletedAt == nil,
-              node.isArchivedForLifecycle else {
+        guard let target = try lifecycleMutationTarget(taskID: taskID),
+              target.node.isArchivedForLifecycle else {
             return
         }
         let now = Date()
+        let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+            preferred: now,
+            observed: target.observedUpdatedDates
+        )
+        let node = target.node
         node.archivedAt = nil
         if node.statusRaw == LegacyTaskStatusRaw.archived {
             node.statusRaw = LegacyTaskStatusRaw.active
         }
-        node.updatedAt = now
+        node.updatedAt = mutationDate
         node.deviceID = deviceID
         node.clientMutationID = UUID()
         try context.saveAfterMutationStep()
+    }
+
+    private func lifecycleMutationTarget(
+        taskID: UUID
+    ) throws -> (node: TaskNode, observedUpdatedDates: [Date])? {
+        let requestedTaskID = taskID
+        let descriptor = FetchDescriptor<TaskNode>(
+            predicate: #Predicate { $0.id == requestedTaskID }
+        )
+        let candidates = try context.fetch(descriptor)
+        guard let node = candidates.deduplicatedByID().first,
+              node.deletedAt == nil else {
+            return nil
+        }
+        return (node, candidates.map(\.updatedAt))
     }
 }

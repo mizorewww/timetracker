@@ -8,8 +8,9 @@
 - 已完成领域、持久化、同步、界面、HIG、测试和依赖的静态审计。
 - 已确认历史提交 `8a22f8b` 与 `bfe3756` 移除了任务删除界面和领域命令，当前没有新的
   用户任务删除入口可删。
-- [~] 正在用失败契约测试锁定剩余语义缺口；下一 checkpoint 是统一产品文案、菜单与
-  归档持久化不变量。
+- 已用失败测试复现菜单、设置、文案、deep link 与未来时间戳 LWW 缺口。
+- 已完成归档/解除归档严格胜过跨设备未来时间戳副本的领域修复。
+- [~] 正在统一产品文案、菜单和 deep link 语义；下一 checkpoint 是产品 UI 与契约绿测。
 
 ## 实现边界
 
@@ -87,7 +88,8 @@
 4. 三套本地化仍把旧墓碑历史称为 Deleted Task，并把归档描述成 hidden/return；应统一为
    Archive / Unarchive / Unavailable Task，底层 key 可保留以兼容调用点。
 5. 归档/解除归档写入使用普通 `Date()`；面对来自其他设备的未来 `updatedAt` 或重复 UUID
-   行，LWW 可能让本次动作输给旧副本。应使用现有严格占优 mutation date 并增补时钟偏移测试。
+   行，LWW 可能让本次动作输给旧副本。已改为从全部同 UUID 物理副本选择 winner，并使用
+   现有 `PersistentLWWMutationDate.strictlyDominating`；绝不写入或清除 `deletedAt`。
 6. 归档任务 deep link 目前可能返回 handled，却因任务不可见而没有打开详情；应明确拒绝，
    且不改变 destination、selection 或草稿。
 7. 现有 UI round trip 直接跳过 macOS，并把 iPad 截图写成 `iphone-*`；应改成稳定 demo
@@ -125,7 +127,17 @@
 - 两次均使用 Apple Development 签名，没有关闭 code signing。
 - 基线证明历史实现可编译、现有归档链路成立；它不覆盖上面列出的剩余语义缺口。
 
+## 红绿测试记录
+
+- 红测：`TaskUIContractTests`、`LocalizationContractTests`、
+  `PlatformShellContractTests` 与 `CoreDeepLinkRoutingTests` 按预期在菜单、Unarchive、
+  macOS 命令、Unavailable 文案和 archived deep link 上失败；其他同批测试通过。
+- 领域红测：旧实现下，archive 与 unarchive 都会输给未来 7 天的同 UUID 副本。
+- 领域绿测：完整 `StoreScopedTaskLifecycleCommandCoordinatorTests` 12 passed、0 failed；
+  新增测试同时验证严格占优时间、archive 状态和 `deletedAt == nil`。
+
 ## Checkpoint 记录
 
 - `55cc610`：领取当前反馈项，建立 `[~]`、独立实现记忆与活动软链接。
-- 本 checkpoint：完成 archive-only 全面静态审计、基线验证、HIG/依赖决策与实现边界。
+- `ab5af0d`：完成 archive-only 全面静态审计、基线验证、HIG/依赖决策与实现边界。
+- 本 checkpoint：修复 archive/unarchive 在未来时间戳重复副本下的 LWW 不变量。

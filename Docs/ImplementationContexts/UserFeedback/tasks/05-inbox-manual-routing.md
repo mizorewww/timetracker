@@ -5,9 +5,9 @@
 
 ## 当前阶段
 
-- 审计 Inbox 条目、category、task、checklist 的数据模型和现有 LLM 建议落地路径。
-- 优先复用同一个归类 command，确保人工选择与建议操作拥有一致的验证、持久化和错误行为。
-- 在审计前不预设具体呈现形式；根据现有界面层级选择符合各平台惯例的短流程。
+- 三条人工入口、共享 picker、领域 command 和 LLM 共用落地核心已经完成静态审计。
+- 已修复 picker 打开期间 AI 建议、纯排序或同逻辑 CloudKit winner 替换导致人工选择被误拒绝的竞态。
+- 正在补齐领域边界证据；下一阶段是 iPhone、iPad、macOS 普通路径与截图验收。
 
 ## 实现边界
 
@@ -19,9 +19,9 @@
 
 ## 验收清单
 
-- [ ] 盘点模型关系、持久化约束、LLM 建议 command 与 Inbox UI
-- [ ] 建立人工归类 command 的领域测试和失败回滚测试
-- [ ] 实现三种人工归类入口并复用既有选择组件
+- [x] 盘点模型关系、持久化约束、LLM 建议 command 与 Inbox UI
+- [x] 建立人工归类 command 的领域测试和失败回滚测试
+- [x] 实现三种人工归类入口并复用既有选择组件
 - [ ] 验证 iPhone、iPad、macOS 普通交互路径并截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
@@ -35,6 +35,11 @@
 
 ## 子代理编排
 
-- 待分派：Inbox/LLM 建议落地与持久化路径审计。
-- 待分派：现有任务/category/checklist 选择器与跨平台 UI 审计。
-- 待分派：测试覆盖、边界条件与回归风险审计。
+- 已完成：领域审计确认三条人工路径与 LLM 复用 `createRouteDestination`，并定位逻辑 identity 竞态。
+- 已完成：UI/HIG 审计确认继续使用行内 `Menu`、场景级单一 sheet 和两个现有共享 picker。
+- 已完成：测试审计确认三路行为、重复消费、目标失效与原子回滚基础覆盖；补充分类 assignment 回滚和 picker 资格语义。
+
+## Checkpoint 记录
+
+- `41babb9`：修正 `parentEligibleTaskIDs` 的过期 UI 契约，单测 1/1。
+- `a357333`：保留人工归类意图；新增 AI 落地、纯排序、逻辑 winner 替换三个竞态测试，manual-route suite 12/12。

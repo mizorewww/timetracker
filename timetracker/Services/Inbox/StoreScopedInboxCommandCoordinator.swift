@@ -33,7 +33,7 @@ enum StoreScopedInboxMutationError: LocalizedError, Equatable {
         case .inboxChanged:
             AppStrings.localized("inbox.error.changed")
         case .taskUnavailable:
-            AppStrings.localized("inbox.suggestion.error.noValidTask")
+            AppStrings.localized("inbox.route.error.taskUnavailable")
         case .categoryUnavailable:
             AppStrings.localized("taskCategory.error.unavailable")
         case .externalCommandPayloadChanged:

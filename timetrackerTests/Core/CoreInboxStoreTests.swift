@@ -501,7 +501,7 @@ struct CoreInboxStoreTests {
                 .fetch(FetchDescriptor<ChecklistItem>())
                 .isEmpty
         )
-        #expect(store.errorMessage == AppStrings.localized("inbox.suggestion.error.noValidTask"))
+        #expect(store.errorMessage == AppStrings.localized("inbox.route.error.taskUnavailable"))
     }
 
     @Test @MainActor

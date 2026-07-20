@@ -184,6 +184,10 @@ struct TaskRecurrenceWorkEligibilityTests {
             selectedTaskID: nil,
             context: .inboxChildTaskParent
         ).selectionEligibleTaskIDs(in: store)
+        let inboxChecklistIDs = TaskHierarchyPickerMode.singleSelection(
+            selectedTaskID: nil,
+            context: .inboxChecklistTarget
+        ).selectionEligibleTaskIDs(in: store)
         let heatmapIDs = TaskHierarchyPickerMode.multipleSelection(
             selectedTaskIDs: [],
             context: .todayHeatmap
@@ -192,6 +196,7 @@ struct TaskRecurrenceWorkEligibilityTests {
         #expect(timerIDs.contains(template.id) == false)
         #expect(pomodoroIDs.contains(template.id) == false)
         #expect(inboxIDs.contains(template.id))
+        #expect(inboxChecklistIDs.contains(template.id))
         #expect(heatmapIDs.contains(template.id))
 
         let collapsed = TaskHierarchyProjection(

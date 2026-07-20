@@ -891,6 +891,7 @@
 "inbox.persistence.field.reason" = "suggestion reason";
 "inbox.persistence.field.symbol" = "suggestion symbol";
 "inbox.error.changed" = "This inbox changed elsewhere. Review the latest version, then try again.";
+"inbox.route.error.taskUnavailable" = "This task is no longer available. Choose another task.";
 "inbox.persistence.field.color" = "suggestion color";
 "inbox.persistence.field.model" = "suggestion model";
 "inbox.persistence.field.titleSnapshot" = "suggestion title";

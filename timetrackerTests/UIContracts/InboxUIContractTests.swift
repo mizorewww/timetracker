@@ -290,6 +290,7 @@ struct InboxUIContractTests {
             "inbox.route.checklistItem.title",
             "inbox.route.checklistItem.emptyDescription",
             "inbox.route.checklistItem.selectionHint",
+            "inbox.route.error.taskUnavailable",
             "taskCategory.searchPrompt",
             "taskCategory.search.empty",
             "taskCategory.search.emptyDescription",

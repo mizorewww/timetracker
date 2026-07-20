@@ -293,6 +293,73 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
     }
 
     @Test
+    func manualRouteStillRejectsCompletionOrDeletionWhileChoosing() throws {
+        let completedContext = try makeTestContext()
+        let completedTarget = try createTask(
+            title: "Completed target",
+            in: completedContext
+        )
+        let completedItem = try insertItem(
+            title: "Completed elsewhere",
+            into: completedContext
+        )
+        let completedBaseline = InboxManualRouteBaseline(item: completedItem)
+        let completionContext = ModelContext(completedContext.container)
+        let freshCompletedItem = try #require(
+            try inboxItem(id: completedItem.id, in: completionContext)
+        )
+        try InboxCommandHandler().toggle(
+            freshCompletedItem,
+            context: completionContext,
+            deviceID: "sibling"
+        )
+
+        #expect(throws: StoreScopedInboxMutationError.inboxChanged) {
+            try coordinator(container: completedContext.container).route(
+                baseline: completedBaseline,
+                destination: .checklist(taskID: completedTarget.id)
+            )
+        }
+        #expect(
+            try ModelContext(completedContext.container)
+                .fetch(FetchDescriptor<ChecklistItem>())
+                .isEmpty
+        )
+
+        let deletedContext = try makeTestContext()
+        let deletedTarget = try createTask(
+            title: "Deleted target",
+            in: deletedContext
+        )
+        let deletedItem = try insertItem(
+            title: "Deleted elsewhere",
+            into: deletedContext
+        )
+        let deletedBaseline = InboxManualRouteBaseline(item: deletedItem)
+        let deletionContext = ModelContext(deletedContext.container)
+        let freshDeletedItem = try #require(
+            try inboxItem(id: deletedItem.id, in: deletionContext)
+        )
+        try InboxCommandHandler().softDelete(
+            freshDeletedItem,
+            context: deletionContext,
+            deviceID: "sibling"
+        )
+
+        #expect(throws: StoreScopedInboxMutationError.inboxChanged) {
+            try coordinator(container: deletedContext.container).route(
+                baseline: deletedBaseline,
+                destination: .childTask(parentTaskID: deletedTarget.id)
+            )
+        }
+        #expect(
+            try ModelContext(deletedContext.container)
+                .fetch(FetchDescriptor<TaskNode>())
+                .map(\.id) == [deletedTarget.id]
+        )
+    }
+
+    @Test
     func invalidSuggestionMetadataRollsBackTheWholeMove() throws {
         let context = try makeTestContext()
         let task = try createTask(title: "Target", in: context)
@@ -322,6 +389,46 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
         )
         #expect(
             try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty
+        )
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt == nil)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
+                .first { $0.id == invalidSuggestion.id }?.deletedAt == nil
+        )
+    }
+
+    @Test
+    func failedInboxCleanupRollsBackCategoryTaskAndAssignmentCreation() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let category = try repository.createCategory(title: "Destination")
+        let item = try insertItem(title: "Stay atomic", into: context)
+        let invalidSuggestion = try insertSuggestion(
+            for: item,
+            taskID: UUID(),
+            into: context
+        )
+        invalidSuggestion.modelID = String(
+            repeating: "m",
+            count: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1
+        )
+        try context.save()
+
+        #expect(throws: InboxPersistenceValidationError.self) {
+            try coordinator(container: context.container).route(
+                baseline: InboxManualRouteBaseline(item: item),
+                destination: .category(categoryID: category.id)
+            )
+        }
+
+        let freshContext = ModelContext(context.container)
+        #expect(try freshContext.fetch(FetchDescriptor<TaskNode>()).isEmpty)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<TaskCategoryAssignment>())
+                .isEmpty
         )
         #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt == nil)
         #expect(

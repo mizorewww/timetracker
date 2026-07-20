@@ -10,8 +10,9 @@
 - [x] 已把已验证的自动保存核心接入 canonical task detail，并稳定工具栏。
 - [x] 已让 autosave rebase 原位推进 baseline/持久 ID，并在 checklist 身份不完整时失败为冲突，避免覆盖聚焦输入或漂移身份。
 - [x] 已让所有任务身份展示观察统一的 read-model revision；Today 返回后立即刷新重命名任务，不重建整组视图。
-- [~] 正在迁移受自动保存语义影响的 4 条跨平台 UI 测试。
-- 下一 checkpoint：完成 iPhone、iPad 与 macOS 的自动保存 UI 矩阵，并核验截图。
+- [x] 已把受自动保存语义影响的 4 条 UI 测试迁移为真实保存、导航 flush、返回刷新和重开验证；iPhone/iPad 矩阵通过。
+- [~] 正在把 Markdown 备注改为默认预览、按需展开编辑的交互。
+- 下一 checkpoint：完成 Notes 的原生 Edit/Done 交互、契约测试和设备截图。
 
 ## 反馈边界
 
@@ -71,8 +72,8 @@
 
 - 静态审计阶段不启动模拟器、TestManager 或 Instruments。
 - 后续设备矩阵由 primary agent 分配唯一 UDID 并记录；每个批次完成后清理 owned 资源。
-- 当前 UI 批次 owned iPhone：`947175E8-8402-4408-9F81-DE78BD78EB65`（Task08-iPhone17Pro-20260721）。
-- 当前 UI 批次 owned iPad：`6109B5C2-EE38-4D99-B7E2-6EB031B366A1`（Task08-iPadPro13-20260721）。
+- 自动保存 UI 批次 owned iPhone `947175E8-8402-4408-9F81-DE78BD78EB65` 与 iPad `6109B5C2-EE38-4D99-B7E2-6EB031B366A1` 均已终止 app、关机并删除。
+- 当前没有 Task 08 owned simulator；`AnalyticsReview-iPhone17Pro` 属于其他工作，不触碰。
 
 ## Checkpoint 记录
 
@@ -83,7 +84,8 @@
 - [x] 自动保存 rebase 加固：保存回执不再整体替换可见 draft，只原位推进 mutation baseline 与已完整双射的 checklist 持久 ID；映射分歧返回 conflict 且不修改当前输入。TaskEditorSession、autosave controller、workspace contract 共 24 条目标测试通过，相关 task-editor 源码结构检查通过。
 - [x] 导航注册替换加固：旧详情闭包释放时可能触发 token `deinit` 并重入 `unregister`，与 `register` 对同一属性的写访问冲突；延长旧注册生命周期到赋值结束，并以弱引用证明闭包独占 token 确实释放。负向对照移除修复后稳定触发原 `Fatal access conflict`；恢复后 macOS 导航守卫套件 17/17 通过，iPhone Today 原生返回、重开路径不再崩溃。
 - [x] Today 身份刷新加固：`taskIdentityPresentation(for:)` 统一观察 `taskReadModelRevision`，避免在 Today 层传递 revision 或用 `.id` 重建视图；精准 Observation 单测 1/1 通过。iPhone 严格 UI 回归在 30 秒防抖下证明系统返回主动 flush，返回行标题立即更新并可重开持久值（`Task08-iPhone-Today-run11.xcresult`）。
-- [~] 当前 checkpoint：迁移 4 条跨平台 UI 测试到自动保存语义。
+- [x] 自动保存 UI 迁移：4 条旧 Save/Discard 测试改为聚焦中连续 autosave、30 秒测试防抖下的 sidebar/tab/system Back 主动 flush、列表身份刷新与重开持久值；仅 DEBUG+`--uitesting` 可覆盖防抖，生产仍固定 450ms。iPhone `Task08-iPhone-AutosaveMatrix-final.xcresult` 为 3 passed/1 platform skip，iPad `Task08-iPad-AutosaveMatrix-final.xcresult` 为 3 passed/1 platform skip，均 0 failures；iPhone/iPad 截图核验无操作遮挡，owned 设备已删除。
+- [~] 当前 checkpoint：Markdown 备注默认预览并可展开编辑。
 
 ## 当前验收阻塞
 

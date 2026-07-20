@@ -904,7 +904,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTaskDetailDiscardsInlineChangesWithoutLeavingTheWorkspace() throws {
+    func testTaskDetailAutosavesInlineChangesWithStableActions() throws {
         let app = launchApp(
             route: "task-detail",
             contentSizeCategory: "UICTContentSizeCategoryL",
@@ -917,77 +917,120 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         let cancel = app.buttons["task.editor.cancel"].firstMatch
         let save = app.buttons["task.editor.save"].firstMatch
+        let addTime = app.descendants(matching: .any)[
+            "task.detail.addTime"
+        ].firstMatch
+        let more = app.descendants(matching: .any)[
+            "task.detail.more"
+        ].firstMatch
+        let timer = app.buttons["task.detail.timer"].firstMatch
+        let firstSavedTitle = "Read Apple HIG Focused"
+        let updatedTitle = "\(firstSavedTitle) Autosaved"
 
-        XCTAssertTrue(detail.waitForExistence(timeout: 15))
+        ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
+        XCTAssertTrue(detail.waitForExistence(timeout: 5))
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
         XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
-        activate(titleField)
-        titleField.typeText(" Draft")
+        XCTAssertTrue(addTime.waitForExistence(timeout: 5) && addTime.isHittable)
+        XCTAssertTrue(more.waitForExistence(timeout: 5) && more.isHittable)
+        XCTAssertTrue(timer.waitForExistence(timeout: 5) && timer.isHittable)
+        XCTAssertFalse(cancel.exists)
+        XCTAssertFalse(save.exists)
+        enterTaskTitle(
+            firstSavedTitle,
+            appending: " Focused",
+            in: titleField
+        )
 
-        XCTAssertTrue(cancel.waitForExistence(timeout: 3) && cancel.isHittable)
-        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
-        XCTAssertFalse(app.descendants(matching: .any)["task.detail.addTime"].exists)
-        XCTAssertFalse(app.descendants(matching: .any)["task.detail.more"].exists)
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                timer.exists &&
+                    timer.label.localizedCaseInsensitiveContains(firstSavedTitle)
+            },
+            "The first edit must autosave while the title field remains focused."
+        )
+        XCTAssertEqual(
+            titleField.value as? String ?? titleField.label,
+            firstSavedTitle
+        )
+        titleField.typeText(" Autosaved")
+        XCTAssertEqual(
+            titleField.value as? String ?? titleField.label,
+            updatedTitle,
+            "Input typed after the first autosave must keep its leading space."
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                timer.exists &&
+                    timer.label.localizedCaseInsensitiveContains(updatedTitle)
+            },
+            "The follow-up input must autosave without an explicit Save."
+        )
+        XCTAssertFalse(cancel.exists)
+        XCTAssertFalse(save.exists)
+        XCTAssertTrue(addTime.exists && addTime.isHittable)
+        XCTAssertTrue(more.exists && more.isHittable)
         XCTAssertFalse(app.descendants(matching: .any)["task.context.edit"].exists)
+        submitTaskTitleIfKeyboardIsVisible(titleField, in: app)
 
-        activate(cancel)
-        let discard = discardDialogButton(
-            identifier: "editor.discard.confirm",
-            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
             in: app
         )
-        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
-        activate(discard)
-
-        XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(detail.waitForExistence(timeout: 5))
-        XCTAssertTrue(cancel.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(save.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(
-            app.descendants(matching: .any)["task.detail.addTime"]
-                .firstMatch.waitForExistence(timeout: 5)
+        XCTAssertTrue(detail.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(homeIsReady(in: app))
+        openTaskDetailFromTasks(named: updatedTitle, in: app)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let persistedTitleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(persistedTitleField.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            persistedTitleField.value as? String ?? persistedTitleField.label,
+            updatedTitle
         )
-        XCTAssertTrue(
-            app.descendants(matching: .any)["task.detail.more"]
-                .firstMatch.waitForExistence(timeout: 5)
+        try capture(
+            "\(screenshotPrefix)-task-detail-inline-autosaved",
+            app: app
         )
-        let restoredTitle = titleField.value as? String ?? titleField.label
-        XCTAssertTrue(restoredTitle.localizedCaseInsensitiveContains("Read Apple HIG"))
-        XCTAssertFalse(restoredTitle.localizedCaseInsensitiveContains("Draft"))
-        try capture("task-detail-inline-discard-restored", app: app)
     }
 
     @MainActor
-    func testTaskDetailSidebarNavigationRequiresDiscardConfirmation() throws {
+    func testTaskDetailSidebarNavigationFlushesAutosave() throws {
         let app = launchApp(
             route: "task-detail",
             replacesDemoDataOnLaunch: true,
-            taskTitle: "Read Apple HIG"
+            taskTitle: "Read Apple HIG",
+            autosaveDelayMilliseconds: 30_000
         )
-        XCTAssertTrue(taskDetailIsReady(in: app))
+        ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
 
-        #if os(macOS)
-        let hasVisibleSidebar = app.outlines
-            .descendants(matching: .cell)
-            .containing(.staticText, identifier: "sidebar.Today")
-            .firstMatch
-            .waitForExistence(timeout: 3)
-        #else
-        let hasVisibleSidebar = app.descendants(matching: .any)[
-            "ipad.splitNavigation"
-        ].waitForExistence(timeout: 3)
-        #endif
-        guard hasVisibleSidebar else {
+        #if os(iOS)
+        guard app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 5) else {
             throw XCTSkip("Sidebar navigation is available on iPad and macOS.")
         }
+        #endif
 
         let titleField = app.descendants(matching: .any)[
             "task.editor.title.field"
         ].firstMatch
+        let updatedTitle = "Read Apple HIG Sidebar Autosaved"
         XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
-        activate(titleField)
-        titleField.typeText(" Dirty")
-        XCTAssertTrue(
-            app.buttons["task.editor.save"].firstMatch.waitForExistence(timeout: 3)
+        enterTaskTitle(
+            updatedTitle,
+            appending: " Sidebar Autosaved",
+            in: titleField
+        )
+        XCTAssertFalse(app.buttons["task.editor.save"].firstMatch.exists)
+        let timer = app.buttons["task.detail.timer"].firstMatch
+        XCTAssertTrue(timer.waitForExistence(timeout: 3))
+        XCTAssertFalse(
+            timer.label.localizedCaseInsensitiveContains(updatedTitle),
+            "The long UI-test debounce must leave navigation to flush this edit."
         )
 
         openSection(
@@ -997,56 +1040,70 @@ final class timetrackerUITests: XCTestCase {
             in: app
         )
 
-        let discard = discardDialogButton(
-            identifier: "editor.discard.confirm",
-            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
-            in: app
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail"]
+                .firstMatch.waitForNonExistence(timeout: 5)
         )
-        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
-        XCTAssertTrue(taskDetailIsReady(in: app))
-        try capture("task-detail-sidebar-navigation-protected", app: app)
-
-        activate(discard)
-        XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["editor.discard.confirm"].exists)
         XCTAssertTrue(homeIsReady(in: app))
-        XCTAssertFalse(app.descendants(matching: .any)["task.detail"].exists)
-        try capture("task-detail-sidebar-navigation-after-discard", app: app)
+
+        openTaskDetailFromTasks(named: updatedTitle, in: app)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let persistedTitleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(persistedTitleField.waitForExistence(timeout: 5))
+        let persistedTitle = persistedTitleField.value as? String ??
+            persistedTitleField.label
+        XCTAssertEqual(persistedTitle, updatedTitle)
+        try capture(
+            "\(screenshotPrefix)-task-detail-sidebar-autosave-restored",
+            app: app
+        )
     }
 
     @MainActor
-    func testTaskDetailPhoneTabNavigationRequiresDiscardConfirmation() throws {
+    func testTaskDetailPhoneTabNavigationKeepsAutosavedChanges() throws {
         #if os(macOS)
         throw XCTSkip("Phone tab navigation is available on iPhone.")
         #else
         let app = launchApp(
             route: "task-detail",
             replacesDemoDataOnLaunch: true,
-            taskTitle: "Read Apple HIG"
+            taskTitle: "Read Apple HIG",
+            autosaveDelayMilliseconds: 30_000
         )
 
-        guard app.descendants(matching: .any)["phone.tabView"]
-            .waitForExistence(timeout: 1) else {
+        ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
+        if app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 2) {
             throw XCTSkip("Phone tab navigation is available on iPhone.")
         }
-        if taskDetailIsReady(in: app) == false {
-            openDemoTaskDetailFromTasks(in: app)
-        }
-        XCTAssertTrue(taskDetailIsReady(in: app))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["phone.tabView"]
+                .waitForExistence(timeout: 5),
+            "The compact iPhone shell must expose its tab view after launch."
+        )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
 
-        let titleField = app.descendants(matching: .any)[
-            "task.editor.title.field"
+        let dueDateToggle = app.descendants(matching: .any)[
+            "task.editor.due.toggle"
         ].firstMatch
-        XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
-        activate(titleField)
-        titleField.typeText(" Dirty")
-        if app.keyboards.firstMatch.waitForExistence(timeout: 1) {
-            titleField.typeText(XCUIKeyboardKey.return.rawValue)
-        }
-        let stagedTitle = titleField.value as? String
-        XCTAssertNotEqual(stagedTitle, "Read Apple HIG")
+        scrollUntilHittable(dueDateToggle, direction: .up, in: app)
         XCTAssertTrue(
-            app.buttons["task.editor.save"].firstMatch.waitForExistence(timeout: 3)
+            dueDateToggle.waitForExistence(timeout: 5) &&
+                dueDateToggle.isHittable
         )
+        XCTAssertEqual(dueDateToggle.value as? String, "0")
+        dueDateToggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)
+        ).tap()
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                dueDateToggle.value as? String == "1"
+            }
+        )
+        XCTAssertFalse(app.buttons["task.editor.save"].firstMatch.exists)
 
         openSection(
             "Today",
@@ -1055,43 +1112,32 @@ final class timetrackerUITests: XCTestCase {
             in: app
         )
 
-        let discard = discardDialogButton(
-            identifier: "editor.discard.confirm",
-            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
-            in: app
-        )
-        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
-        XCTAssertTrue(taskDetailIsReady(in: app))
-        try capture("task-detail-phone-tab-navigation-protected", app: app)
-
-        let keepEditing = app.buttons["editor.discard.cancel"].firstMatch
-        if keepEditing.waitForExistence(timeout: 1), keepEditing.isHittable {
-            activate(keepEditing)
-            XCTAssertTrue(keepEditing.waitForNonExistence(timeout: 5))
-        } else {
-            app.coordinate(
-                withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)
-            ).tap()
-            XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
-        }
-        XCTAssertTrue(taskDetailIsReady(in: app))
         XCTAssertTrue(
-            app.descendants(matching: .any)["phone.tab.tasks"].firstMatch.isSelected
+            app.descendants(matching: .any)["task.detail"]
+                .firstMatch.waitForNonExistence(timeout: 5)
         )
-        XCTAssertEqual(titleField.value as? String, stagedTitle)
-
-        openSection(
-            "Today",
-            tabIdentifier: "phone.tab.today",
-            sidebarIdentifier: "sidebar.Today",
-            in: app
-        )
-        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
-        activate(discard)
-        XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["editor.discard.confirm"].exists)
         XCTAssertTrue(homeIsReady(in: app))
-        XCTAssertFalse(app.descendants(matching: .any)["task.detail"].exists)
-        try capture("task-detail-phone-tab-navigation-after-discard", app: app)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["phone.tab.today"].firstMatch.isSelected
+        )
+
+        openTaskDetailFromTasks(named: "Read Apple HIG", in: app)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let persistedDueDateToggle = app.descendants(matching: .any)[
+            "task.editor.due.toggle"
+        ].firstMatch
+        scrollUntilHittable(persistedDueDateToggle, direction: .up, in: app)
+        XCTAssertTrue(persistedDueDateToggle.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            persistedDueDateToggle.value as? String,
+            "1",
+            "Phone tab navigation must flush the pending due-date change."
+        )
+        try capture(
+            "\(screenshotPrefix)-task-detail-phone-tab-autosave-restored",
+            app: app
+        )
         #endif
     }
 
@@ -3254,9 +3300,13 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTodayQuickStartTaskReturnsToToday() throws {
-        let app = launchApp()
+    func testTodayQuickStartSystemBackFlushesAutosave() throws {
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            autosaveDelayMilliseconds: 30_000
+        )
         XCTAssertTrue(homeIsReady(in: app))
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
 
         let child = app.buttons.matching(
             NSPredicate(
@@ -3275,6 +3325,8 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             ) && child.isHittable
         )
+        let childIdentifier = child.identifier
+        XCTAssertFalse(childIdentifier.isEmpty)
 
         #if os(iOS)
         let usesIPadShell = app.descendants(matching: .any)["ipad.splitNavigation"]
@@ -3284,29 +3336,48 @@ final class timetrackerUITests: XCTestCase {
         activate(child)
         XCTAssertTrue(taskDetailIsReady(in: app))
         XCTAssertTrue(app.staticTexts["Design System"].waitForExistence(timeout: 3))
-        try capture("today-quick-start-task-detail", app: app)
+        try capture(
+            "\(screenshotPrefix)-today-quick-start-task-detail",
+            app: app
+        )
 
         let titleField = app.descendants(matching: .any)[
             "task.editor.title.field"
         ].firstMatch
+        let updatedTitle = "Design System Updated"
         XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
-        activate(titleField)
-        titleField.typeText(" Updated")
-        let save = app.buttons["task.editor.save"].firstMatch
-        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        enterTaskTitle(
+            updatedTitle,
+            appending: " Updated",
+            in: titleField
+        )
+        XCTAssertFalse(app.buttons["task.editor.save"].firstMatch.exists)
+        XCTAssertFalse(app.buttons["task.editor.cancel"].firstMatch.exists)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail.addTime"]
+                .firstMatch.waitForExistence(timeout: 3)
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail.more"]
+                .firstMatch.waitForExistence(timeout: 3)
+        )
+        let timer = app.buttons["task.detail.timer"].firstMatch
+        XCTAssertTrue(timer.waitForExistence(timeout: 3))
+        XCTAssertFalse(
+            timer.label.localizedCaseInsensitiveContains(updatedTitle),
+            "The long UI-test debounce must leave system Back to flush this edit."
+        )
         XCTAssertFalse(app.descendants(matching: .any)["task.context.edit"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
-        try capture("today-quick-start-inline-edit", app: app)
-        activate(save)
-        XCTAssertTrue(save.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(taskDetailIsReady(in: app))
-        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
+        try capture(
+            "\(screenshotPrefix)-today-quick-start-inline-edit",
+            app: app
+        )
 
-        #if os(macOS)
-        let todayBack = app.buttons["Back"].firstMatch
-        #else
-        let todayBack = app.navigationBars.buttons["Today"].firstMatch
-        #endif
+        let todayBack = taskDetailBackButton(
+            to: "Today",
+            in: app
+        )
         XCTAssertTrue(
             waitForElement(
                 todayBack,
@@ -3318,6 +3389,10 @@ final class timetrackerUITests: XCTestCase {
         )
         activate(todayBack)
 
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail"]
+                .firstMatch.waitForNonExistence(timeout: 5)
+        )
         XCTAssertTrue(homeIsReady(in: app))
         #if os(iOS)
         if usesIPadShell == false {
@@ -3328,7 +3403,40 @@ final class timetrackerUITests: XCTestCase {
         }
         #endif
         XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
-        try capture("today-quick-start-returned-to-today", app: app)
+        let updatedChild = app.buttons[childIdentifier].firstMatch
+        XCTAssertTrue(updatedChild.waitForExistence(timeout: 5))
+        scrollTodayUntilHittable(updatedChild, in: app)
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                updatedChild.exists &&
+                    updatedChild.isHittable &&
+                    updatedChild.label == updatedTitle
+            },
+            """
+            Returning from a task detail must refresh the Today row.
+            Actual label: \(updatedChild.label)
+            """
+        )
+        XCTAssertFalse(app.buttons["editor.discard.confirm"].exists)
+        try capture(
+            "\(screenshotPrefix)-today-quick-start-autosave-returned",
+            app: app
+        )
+
+        activate(updatedChild)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let persistedTitleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(persistedTitleField.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            persistedTitleField.value as? String ?? persistedTitleField.label,
+            updatedTitle
+        )
+        try capture(
+            "\(screenshotPrefix)-today-quick-start-autosave-reopened",
+            app: app
+        )
     }
 
     @MainActor
@@ -4381,11 +4489,20 @@ final class timetrackerUITests: XCTestCase {
         "mac"
         #else
         let environment = ProcessInfo.processInfo.environment
-        if environment["SIMULATOR_MODEL_IDENTIFIER"]?.hasPrefix("iPad") == true ||
-            environment["SIMULATOR_DEVICE_NAME"]?.localizedCaseInsensitiveContains("iPad") == true {
+        let modelIdentifier = environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let deviceName = environment["SIMULATOR_DEVICE_NAME"]
+        if modelIdentifier?.hasPrefix("iPad") == true ||
+            deviceName?.localizedCaseInsensitiveContains("iPad") == true {
             return "ipad"
         }
-        return app.windows.firstMatch.frame.width >= 700 ? "ipad" : "iphone"
+        if modelIdentifier?.hasPrefix("iPhone") == true ||
+            deviceName?.localizedCaseInsensitiveContains("iPhone") == true {
+            return "iphone"
+        }
+        let windowFrame = app.windows.firstMatch.frame
+        return min(windowFrame.width, windowFrame.height) >= 700
+            ? "ipad"
+            : "iphone"
         #endif
     }
 
@@ -4396,7 +4513,8 @@ final class timetrackerUITests: XCTestCase {
         seedsDemoData: Bool = true,
         replacesDemoDataOnLaunch: Bool = false,
         taskTitle: String? = nil,
-        additionalLaunchArguments: [String] = []
+        additionalLaunchArguments: [String] = [],
+        autosaveDelayMilliseconds: Int? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
         let demoDataMode: String
@@ -4428,6 +4546,11 @@ final class timetrackerUITests: XCTestCase {
         app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = route
         if let taskTitle {
             app.launchEnvironment["TIMETRACKER_UI_AUDIT_TASK_TITLE"] = taskTitle
+        }
+        if let autosaveDelayMilliseconds {
+            app.launchEnvironment[
+                "TIMETRACKER_UI_AUTOSAVE_DELAY_MILLISECONDS"
+            ] = String(autosaveDelayMilliseconds)
         }
         app.launch()
         app.activate()
@@ -4611,24 +4734,80 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    private func openDemoTaskDetailFromTasks(in app: XCUIApplication) {
+    private func taskDetailBackButton(
+        to destinationTitle: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        #if os(macOS)
+        app.windows
+            .containing(.any, identifier: "task.detail")
+            .firstMatch
+            .buttons["Back"]
+            .firstMatch
+        #else
+        app.navigationBars.buttons[destinationTitle].firstMatch
+        #endif
+    }
+
+    @MainActor
+    private func openTaskDetailFromTasks(
+        named title: String,
+        parentTitle: String = "Study",
+        in app: XCUIApplication
+    ) {
         openSection(
             "Tasks",
             tabIdentifier: "phone.tab.tasks",
             sidebarIdentifier: "sidebar.Tasks",
             in: app
         )
+        let tasksView = app.descendants(matching: .any)["tasks.view"]
+        let searchField = app.descendants(matching: .any)[
+            "tasks.search.field"
+        ].firstMatch
+        let anyTaskRow = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "tasks.row."
+            ))
+            .firstMatch
+        let tasksRootIsInteractive = {
+            tasksView.exists &&
+                (
+                    tasksView.isHittable ||
+                        searchField.isHittable ||
+                        anyTaskRow.isHittable
+                )
+        }
+        if waitUntil(timeout: 2, condition: tasksRootIsInteractive) == false {
+            let detail = app.descendants(matching: .any)["task.detail"]
+                .firstMatch
+            XCTAssertTrue(
+                detail.waitForExistence(timeout: 3),
+                "Returning to Tasks may restore its retained detail stack."
+            )
+            let tasksBack = taskDetailBackButton(
+                to: "Tasks",
+                in: app
+            )
+            XCTAssertTrue(
+                tasksBack.waitForExistence(timeout: 5) && tasksBack.isHittable,
+                "The retained task detail must expose the system Tasks back action."
+            )
+            activate(tasksBack)
+            XCTAssertTrue(detail.waitForNonExistence(timeout: 5))
+        }
         XCTAssertTrue(
-            app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 5)
+            waitUntil(timeout: 5, condition: tasksRootIsInteractive),
+            "The Tasks root must be visible and interactive before reopening a task."
         )
 
-        let searchField = app.textFields["tasks.search.field"].firstMatch
         if searchField.waitForExistence(timeout: 3), searchField.isHittable {
             activate(searchField)
-            searchField.typeText("Read Apple HIG")
+            replaceText(title, in: searchField)
             let matchingTask = app.buttons
                 .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
-                .matching(NSPredicate(format: "label == %@", "Read Apple HIG"))
+                .matching(NSPredicate(format: "label == %@", title))
                 .firstMatch
             XCTAssertTrue(
                 matchingTask.waitForExistence(timeout: 5) && matchingTask.isHittable
@@ -4637,19 +4816,41 @@ final class timetrackerUITests: XCTestCase {
             return
         }
 
-        let studyDisclosure = app.buttons
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
-            .matching(NSPredicate(format: "value == %@", "Study"))
-            .firstMatch
-        XCTAssertTrue(studyDisclosure.waitForExistence(timeout: 5) && studyDisclosure.isHittable)
-        activate(studyDisclosure)
+        let task = taskRow(named: title, in: app)
+        if task.waitForExistence(timeout: 1) {
+            scrollUntilHittable(task, direction: .up, in: app)
+            XCTAssertTrue(task.isHittable)
+            activate(task)
+            return
+        }
 
-        let task = app.buttons
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
-            .matching(NSPredicate(format: "label == %@", "Read Apple HIG"))
+        let parentDisclosure = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
+            .matching(NSPredicate(format: "value == %@", parentTitle))
             .firstMatch
+        scrollUntilHittable(parentDisclosure, direction: .up, in: app)
+        XCTAssertTrue(
+            parentDisclosure.waitForExistence(timeout: 5) &&
+                parentDisclosure.isHittable
+        )
+        activate(parentDisclosure)
+
+        scrollUntilHittable(task, direction: .up, in: app)
         XCTAssertTrue(task.waitForExistence(timeout: 5) && task.isHittable)
         activate(task)
+    }
+
+    @MainActor
+    private func ensureTaskDetailIsReady(
+        named title: String,
+        in app: XCUIApplication
+    ) {
+        guard taskDetailIsReady(in: app) == false else { return }
+        openTaskDetailFromTasks(named: title, in: app)
+        XCTAssertTrue(
+            taskDetailIsReady(in: app),
+            "The requested task detail must be available after route fallback."
+        )
     }
 
     @MainActor
@@ -4866,6 +5067,41 @@ final class timetrackerUITests: XCTestCase {
         element.click()
         #else
         element.tap()
+        #endif
+    }
+
+    @MainActor
+    private func enterTaskTitle(
+        _ title: String,
+        appending suffix: String,
+        in field: XCUIElement
+    ) {
+        #if os(macOS)
+        activate(field)
+        replaceText(title, in: field)
+        #else
+        field.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)
+        ).tap()
+        field.typeText(suffix)
+        #endif
+        XCTAssertEqual(field.value as? String ?? field.label, title)
+    }
+
+    @MainActor
+    private func submitTaskTitleIfKeyboardIsVisible(
+        _ field: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        #if os(iOS)
+        let keyboard = app.keyboards.firstMatch
+        if keyboard.waitForExistence(timeout: 1) {
+            field.typeText(XCUIKeyboardKey.return.rawValue)
+            XCTAssertTrue(
+                keyboard.waitForNonExistence(timeout: 3),
+                "Submitting the title must release the keyboard before navigation."
+            )
+        }
         #endif
     }
 

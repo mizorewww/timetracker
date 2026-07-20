@@ -12,7 +12,11 @@ struct TaskPlanEditorSection: View {
                 )
             }
 
-            Toggle(AppStrings.localized("editor.task.setDue"), isOn: $draft.hasDueDate)
+            Toggle(
+                AppStrings.localized("editor.task.setDue"),
+                isOn: $draft.hasDueDate
+            )
+            .accessibilityIdentifier("task.editor.due.toggle")
             if draft.hasDueDate {
                 DatePicker(
                     AppStrings.localized("editor.task.due"),

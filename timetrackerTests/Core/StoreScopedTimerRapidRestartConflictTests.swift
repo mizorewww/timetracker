@@ -7,6 +7,138 @@ import Testing
 @MainActor
 struct StoreScopedTimerRapidRestartConflictTests {
     @Test
+    func concurrentReplicaRestartsCollapseToOneLWWIdentity() throws {
+        let fixture = try stoppedTimerFixture(
+            title: "Concurrent replicas",
+            base: Date(timeIntervalSinceReferenceDate: 11_000_000)
+        )
+        let baseline = try SyncDataSnapshot.capture(
+            context: ModelContext(fixture.container)
+        )
+        let left = try makeTestContext()
+        let right = try makeTestContext()
+        try baseline.restoreAsLocalWinner(
+            context: left,
+            now: fixture.stoppedAt
+        )
+        try baseline.restoreAsLocalWinner(
+            context: right,
+            now: fixture.stoppedAt
+        )
+
+        let leftOutcome = try coordinator(
+            left.container,
+            now: fixture.restartedAt,
+            deviceID: "left"
+        ).start(taskID: fixture.task.id)
+        let rightOutcome = try coordinator(
+            right.container,
+            now: fixture.restartedAt,
+            deviceID: "right"
+        ).start(taskID: fixture.task.id)
+        let replacementID = try #require(leftOutcome.subjectSegmentID)
+        #expect(rightOutcome.subjectSegmentID == replacementID)
+        #expect(
+            replacementID == TimerRapidRestartPolicy().replacementSegmentID(
+                predecessorSegmentID: fixture.segment.id
+            )
+        )
+
+        let leftSnapshot = try SyncDataSnapshot.capture(context: left)
+        let rightSnapshot = try SyncDataSnapshot.capture(context: right)
+        let merged = try makeTestContext()
+        try leftSnapshot.restoreAsLocalWinner(
+            context: merged,
+            now: fixture.restartedAt
+        )
+        insertPhysicalLedgerReplica(
+            rightSnapshot,
+            into: merged,
+            deviceID: "right-cloud"
+        )
+        try merged.save()
+
+        let rawSegments = try merged.fetch(FetchDescriptor<TimeSegment>())
+        #expect(rawSegments.filter { $0.id == replacementID }.count == 2)
+        let mergedRepository = repository(
+            ModelContext(merged.container),
+            now: fixture.restartedAt
+        )
+        #expect(try mergedRepository.activeSegments().map(\.id) == [
+            replacementID
+        ])
+        #expect(try mergedRepository.allSegments().map(\.id) == [
+            replacementID
+        ])
+
+        let stoppedAt = fixture.restartedAt.addingTimeInterval(10)
+        let stopOutcome = try coordinator(
+            merged.container,
+            now: stoppedAt,
+            deviceID: "stop"
+        ).stop(taskID: fixture.task.id)
+        #expect(stopOutcome.subjectSegmentID == replacementID)
+        let stoppedRepository = repository(
+            ModelContext(merged.container),
+            now: stoppedAt
+        )
+        #expect(try stoppedRepository.activeSegments().isEmpty)
+        #expect(
+            try stoppedRepository.allSegments().first?.endedAt == stoppedAt
+        )
+    }
+
+    @Test
+    func existingDerivedIdentityFallsBackWithoutOverwritingItsTombstone() throws {
+        let fixture = try stoppedTimerFixture(
+            title: "Existing derived identity",
+            base: Date(timeIntervalSinceReferenceDate: 12_000_000)
+        )
+        let derivedID = TimerRapidRestartPolicy().replacementSegmentID(
+            predecessorSegmentID: fixture.segment.id
+        )
+        let collisionDate = fixture.stoppedAt.addingTimeInterval(1)
+        let existing = TimeSegment(
+            sessionID: UUID(),
+            taskID: fixture.task.id,
+            source: .timer,
+            deviceID: "cloud",
+            startedAt: fixture.segment.startedAt,
+            endedAt: fixture.stoppedAt
+        )
+        existing.id = derivedID
+        existing.deletedAt = collisionDate
+        existing.updatedAt = collisionDate
+        fixture.context.insert(existing)
+        try fixture.context.save()
+
+        let outcome = try coordinator(
+            fixture.container,
+            now: fixture.restartedAt,
+            deviceID: "restart"
+        ).start(taskID: fixture.task.id)
+
+        let newID = try #require(outcome.subjectSegmentID)
+        #expect(newID != derivedID)
+        #expect(outcome.tombstonedSegments.isEmpty)
+        let rawSegments = try ModelContext(fixture.container)
+            .fetch(FetchDescriptor<TimeSegment>())
+        let existingWinner = try #require(
+            rawSegments.deduplicatedByID().first { $0.id == derivedID }
+        )
+        #expect(existingWinner.deletedAt == collisionDate)
+        let repository = timeRepository(
+            fixture.container,
+            now: fixture.restartedAt
+        )
+        #expect(try repository.activeSegments().map(\.id) == [newID])
+        #expect(Set(try repository.allSegments().map(\.id)) == [
+            fixture.segment.id,
+            newID,
+        ])
+    }
+
+    @Test
     func canonicalPomodoroWinnerMovedToAnotherSessionDoesNotBlockRestart() throws {
         let fixture = try stoppedTimerFixture(
             title: "Moved Pomodoro",
@@ -490,6 +622,44 @@ struct StoreScopedTimerRapidRestartConflictTests {
             deviceID: deviceID,
             nowProvider: { now }
         )
+    }
+
+    private func insertPhysicalLedgerReplica(
+        _ snapshot: SyncDataSnapshot,
+        into context: ModelContext,
+        deviceID: String
+    ) {
+        for record in snapshot.sessions {
+            let session = TimeSession(
+                taskID: record.taskID,
+                source: TimeSessionSource(rawValue: record.sourceRaw) ?? .timer,
+                deviceID: deviceID,
+                startedAt: record.startedAt,
+                titleSnapshot: record.titleSnapshot
+            )
+            session.id = record.id
+            session.endedAt = record.endedAt
+            session.note = record.note
+            session.createdAt = record.createdAt
+            session.updatedAt = record.updatedAt
+            session.deletedAt = record.deletedAt
+            context.insert(session)
+        }
+        for record in snapshot.segments {
+            let segment = TimeSegment(
+                sessionID: record.sessionID,
+                taskID: record.taskID,
+                source: TimeSessionSource(rawValue: record.sourceRaw) ?? .timer,
+                deviceID: deviceID,
+                startedAt: record.startedAt,
+                endedAt: record.endedAt
+            )
+            segment.id = record.id
+            segment.createdAt = record.createdAt
+            segment.updatedAt = record.updatedAt
+            segment.deletedAt = record.deletedAt
+            context.insert(segment)
+        }
     }
 
     private func insertClosedSessionDuplicate(

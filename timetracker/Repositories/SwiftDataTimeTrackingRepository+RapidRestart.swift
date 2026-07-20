@@ -52,6 +52,19 @@ extension SwiftDataTimeTrackingRepository {
               let predecessorEnd = predecessor.endedAt else {
             return nil
         }
+        let replacementID = policy.replacementSegmentID(
+            predecessorSegmentID: predecessor.id
+        )
+        let targetReplacementID = replacementID
+        let replacementDescriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.id == targetReplacementID }
+        )
+        // A stable identity may already exist after partial CloudKit delivery
+        // or an older restart generation. Never overwrite that independent LWW
+        // history; fall back to a new ordinary session instead.
+        guard try context.fetch(replacementDescriptor).isEmpty else {
+            return nil
+        }
 
         let interveningSegments = try segments(
             from: predecessorEnd,
@@ -90,6 +103,7 @@ extension SwiftDataTimeTrackingRepository {
                 deviceID: deviceID,
                 startedAt: predecessor.startedAt
             )
+            replacement.id = replacementID
             replacement.createdAt = mutationDate
             replacement.updatedAt = mutationDate
 

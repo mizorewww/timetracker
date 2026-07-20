@@ -124,6 +124,35 @@ struct TimerRapidRestartPolicyTests {
         )
     }
 
+    @Test
+    func replacementIdentityIsStableAcrossDevicesAndDistinctPerPredecessor() throws {
+        let predecessor = try #require(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000001")
+        )
+        let otherPredecessor = try #require(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000002")
+        )
+        let expected = try #require(
+            UUID(uuidString: "7C7FDFD2-6E5D-8737-80DA-9C85E6A3A884")
+        )
+
+        #expect(
+            policy.replacementSegmentID(predecessorSegmentID: predecessor)
+                == expected
+        )
+        #expect(
+            TimerRapidRestartPolicy().replacementSegmentID(
+                predecessorSegmentID: predecessor
+            ) == expected
+        )
+        #expect(
+            policy.replacementSegmentID(
+                predecessorSegmentID: otherPredecessor
+            ) != expected
+        )
+        #expect(expected != predecessor)
+    }
+
     private func shouldCoalesce(
         previousEnd: Date,
         nextStart: Date

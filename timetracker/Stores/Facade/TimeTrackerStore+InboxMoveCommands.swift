@@ -49,8 +49,9 @@ extension TimeTrackerStore {
                 destination: destination
             )
         }
-        if outcome?.didMutate == true {
+        if let outcome, outcome.didMutate {
             inboxSuggestionFailureByItemID[baseline.itemID] = nil
+            inboxSuggestionFailureByItemID[outcome.inboxItemID] = nil
             return true
         }
         return false

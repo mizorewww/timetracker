@@ -2,13 +2,13 @@ import Foundation
 import SwiftData
 
 struct InboxManualRouteBaseline: Equatable, Sendable {
+    /// The row that presented the picker. This is retained only for clearing
+    /// row-scoped UI state after a successful logical move.
     let itemID: UUID
-    let itemMutationID: UUID
     let itemIdentity: InboxSuggestionIdentity
 
     init(item: InboxItem) {
         itemID = item.id
-        itemMutationID = item.clientMutationID
         itemIdentity = item.suggestionIdentity
     }
 }
@@ -110,9 +110,7 @@ extension StoreScopedInboxCommandCoordinator {
             }
 
             let item = resolution.winner
-            guard item.id == baseline.itemID,
-                  item.clientMutationID == baseline.itemMutationID,
-                  item.suggestionIdentity == baseline.itemIdentity,
+            guard item.suggestionIdentity == baseline.itemIdentity,
                   item.isCompleted == false else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }

@@ -127,6 +127,119 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
     }
 
     @Test
+    func manualRouteRemainsValidWhenSuggestionArrivesWhileChoosing() throws {
+        let context = try makeTestContext()
+        let task = try createTask(title: "Target", in: context)
+        let item = try insertItem(title: "Prefer my choice", into: context)
+        let baseline = InboxManualRouteBaseline(item: item)
+        let coordinator = coordinator(container: context.container)
+
+        let suggestionOutcome = try coordinator.storeGeneratedSuggestion(
+            itemID: item.id,
+            requestedTitle: item.title,
+            requestedIdentity: item.suggestionIdentity,
+            result: LLMInboxSuggestionResult(
+                destination: .childTask(parentTaskID: task.id),
+                reason: "Background suggestion",
+                iconName: "sparkles",
+                colorHex: "1677FF",
+                modelID: "test"
+            )
+        )
+        #expect(suggestionOutcome.didMutate)
+
+        let outcome = try coordinator.route(
+            baseline: baseline,
+            destination: .checklist(taskID: task.id)
+        )
+        guard case let .checklist(checklistItemID, destinationTaskID, _) =
+            outcome.creation else {
+            Issue.record("Expected the manual checklist route to win")
+            return
+        }
+
+        #expect(destinationTaskID == task.id)
+        let freshContext = ModelContext(context.container)
+        #expect(
+            try freshContext.fetch(FetchDescriptor<ChecklistItem>())
+                .contains { $0.id == checklistItemID }
+        )
+        #expect(
+            try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
+                .allSatisfy { $0.deletedAt != nil }
+        )
+    }
+
+    @Test
+    func manualRouteRemainsValidAfterPureReorderWhileChoosing() throws {
+        let context = try makeTestContext()
+        let task = try createTask(title: "Target", in: context)
+        let item = try insertItem(title: "Keep this choice", into: context)
+        let otherItem = try insertItem(title: "Move around it", into: context)
+        let routeBaseline = InboxManualRouteBaseline(item: item)
+        let orderBaseline = InboxOrderMutationBaseline(items: [item, otherItem])
+        let coordinator = coordinator(container: context.container)
+
+        let reorderOutcome = try coordinator.reorder(
+            baseline: orderBaseline,
+            orderedItemIDs: orderBaseline.orderedItemIDs.reversed()
+        )
+        #expect(reorderOutcome.didMutate)
+
+        let routeOutcome = try coordinator.route(
+            baseline: routeBaseline,
+            destination: .checklist(taskID: task.id)
+        )
+        #expect(routeOutcome.didMutate)
+        #expect(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<ChecklistItem>())
+                .count == 1
+        )
+    }
+
+    @Test
+    func manualRouteFollowsTheCurrentLogicalWinnerWhileChoosing() throws {
+        let context = try makeTestContext()
+        let parent = try createTask(title: "Target", in: context)
+        let item = try insertItem(title: "Synced choice", into: context)
+        let baseline = InboxManualRouteBaseline(item: item)
+        let replacement = InboxItem(
+            title: item.title,
+            deviceID: "newer-device"
+        )
+        replacement.suggestionContextID = item.effectiveSuggestionContextID
+        replacement.suggestionRevisionID = item.effectiveSuggestionRevisionID
+        replacement.notes = "Use the current synced winner"
+        replacement.updatedAt = item.updatedAt.addingTimeInterval(60)
+        context.insert(replacement)
+        try context.save()
+
+        let outcome = try coordinator(container: context.container).route(
+            baseline: baseline,
+            destination: .childTask(parentTaskID: parent.id)
+        )
+        guard case let .task(taskID, _) = outcome.creation else {
+            Issue.record("Expected a child-task route")
+            return
+        }
+
+        #expect(outcome.inboxItemID == replacement.id)
+        let freshContext = ModelContext(context.container)
+        let createdTask = try #require(
+            try SwiftDataTaskRepository(
+                context: freshContext,
+                deviceID: "test"
+            ).task(id: taskID)
+        )
+        #expect(createdTask.notes == "Use the current synced winner")
+        #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt != nil)
+        #expect(
+            try inboxItem(id: replacement.id, in: freshContext)?.deletedAt != nil
+        )
+    }
+
+    @Test
     func moveRejectsAnItemOrTaskThatChangedWhileChoosing() throws {
         let itemContext = try makeTestContext()
         let itemTask = try createTask(title: "Target", in: itemContext)

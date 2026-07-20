@@ -5,8 +5,9 @@
 
 ## 当前阶段
 
-- [~] 已领取当前反馈，正在审计快速操作、任务详情/编辑状态、Markdown 备注和保存链路。
-- 下一 checkpoint：形成调用图、HIG/依赖决策、失败测试与最小实现边界。
+- [x] 已领取当前反馈，并完成快速操作、任务详情/编辑状态、Markdown 备注和保存链路审计。
+- [~] 正在用失败测试锁定自动保存、导航前落盘、验证/冲突恢复与工具栏语义。
+- 下一 checkpoint：提交失败测试及最小实现边界。
 
 ## 反馈边界
 
@@ -18,9 +19,9 @@
 
 ## 验收清单
 
-- [ ] 盘点所有任务详情、编辑、快速操作和保存入口
-- [ ] 核对 MarkdownView 当前依赖、API、平台支持和许可证
-- [ ] 形成 iPhone、iPad、macOS 的 HIG 布局与编辑交互决策
+- [x] 盘点所有任务详情、编辑、快速操作和保存入口
+- [x] 核对 MarkdownView 当前依赖、API、平台支持和许可证
+- [x] 形成 iPhone、iPad、macOS 的 HIG 布局与编辑交互决策
 - [ ] 用失败测试锁定入口、统一页面、Markdown 与自动保存语义
 - [ ] 实现并分小 checkpoint 提交
 - [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
@@ -37,9 +38,28 @@
 
 ## 子代理编排
 
-- [ ] UI/HIG 与跨平台入口审计
-- [ ] 状态、持久化、自动保存与草稿恢复审计
-- [ ] MarkdownView API、依赖质量和测试覆盖审计
+- [x] UI/HIG 与跨平台入口审计：详情/编辑已统一；日常编辑应移除 Save/Cancel，保持 Add Time/More 稳定。
+- [x] 状态、持久化、自动保存与草稿恢复审计：复用原子保存、baseline 冲突检测和恢复稿；已有任务防抖保存，离开前同步 flush。
+- [x] MarkdownView API、依赖质量和测试覆盖审计：4.1.7 精确锁定、MIT、平台兼容；保留链接/高度薄适配层。
+
+## 已确认的实现决策
+
+- 反馈中的独立任务 Edit 入口和详情/编辑合并已由现有 canonical `TaskDetailWorkspace` 覆盖；不改 Home 的“快速开始”固定任务配置。
+- 自动保存仅适用于已有 canonical task。新建任务继续显式 Create；恢复副本继续显式 Save as New，避免生成空任务或重复副本。
+- 使用原生 Observation、Swift Concurrency 和 SwiftData；不新增自动保存依赖。
+- 有效修改防抖 450ms 保存；受控导航、应用失活和页面退出前同步 flush。验证失败、持久化失败或 stale 时保留草稿并阻止静默离开。
+- 成功保存不弹窗；保存中使用低干扰状态，失败提供 Retry。Add Time 与 More 不因编辑状态换位。
+- MarkdownView 保持 4.1.7（revision `84381f59cc52606ffc198fb2fdac8e6a44abe528`）。它虽低于 1k stars，但为用户点名依赖；维护活跃且精确锁定。
+- 不删除 `TaskNotesMarkdownRepresentable`：上游 SwiftUI `MarkdownView` 没有公开 `linkHandler`，该薄适配层负责链接交给 `openURL` 与 List 内自然高度，未自建解析器或渲染器。
+
+## 失败测试边界
+
+- 快速连续输入只提交最后版本；取消的旧防抖不能晚到覆盖。
+- 无效草稿不写库；恢复有效后自动排程。
+- 导航前先 flush；成功继续，失败/冲突/无效时留在详情并保留恢复稿。
+- 保存成功推进 mutation baseline，不重置焦点；失败与 stale 不丢当前草稿。
+- 已有任务详情不再出现手动 Save/Cancel，Add Time/More 始终可用；新建和恢复流程仍保留各自显式提交动作。
+- Markdown source/preview、链接桥接、精确依赖 pin 与三平台布局保持。
 
 ## 运行资源所有权
 
@@ -48,4 +68,6 @@
 
 ## Checkpoint 记录
 
-- [~] 当前 checkpoint：领取反馈、建立实现记忆和活动链接。
+- [x] 领取反馈、建立实现记忆和活动链接：`564dce9`。
+- [x] 完成 UI/HIG、自动保存链路与 MarkdownView 4.1.7 只读审计。
+- [~] 当前 checkpoint：先写失败测试，再实现自动保存状态机和详情工具栏。

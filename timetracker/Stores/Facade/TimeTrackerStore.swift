@@ -48,6 +48,7 @@ final class TimeTrackerStore {
     deinit {
         pomodoroReconciliationTask?.cancel()
         scheduledSyncRefreshTask?.cancel()
+        appleHealthTimelineLoadTask?.cancel()
         for request in inboxSuggestionTasksByItemID.values {
             request.task.cancel()
         }
@@ -134,6 +135,8 @@ final class TimeTrackerStore {
     var appleHealthTimelineState: AppleHealthTimelineState
     var appleHealthTaskCatalogErrorMessage: String?
     @ObservationIgnored var appleHealthTimelineRequestID = UUID()
+    @ObservationIgnored var appleHealthTimelineLoadTask:
+        Task<AppleHealthSampleBatch, Error>?
     var persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
     var effectivePersistenceWriteSafety: PersistenceWriteSafety {
         guard writeAuthorization.usesApplicationState else { return .ready }

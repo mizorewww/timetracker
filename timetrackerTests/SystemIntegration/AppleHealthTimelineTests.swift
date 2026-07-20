@@ -788,7 +788,7 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
-    func hidingTimelineDiscardsAnInFlightSampleResult() async {
+    func hidingTimelineCancelsAnInFlightSampleRequest() async {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let reader = StubAppleHealthReader(
             batch: .empty,
@@ -811,15 +811,91 @@ struct AppleHealthTimelineTests {
         #expect(reader.sampleRequestIntervals.count == 1)
 
         store.hideAppleHealthFromTimeline()
-        reader.resumeSamples()
         await refresh.value
 
         #expect(reader.authorizationRequestStatusCount == 1)
         #expect(reader.authorizationRequestCount == 1)
+        #expect(reader.sampleCancellationCount == 1)
         #expect(preferences.isTimelineEnabled == false)
         #expect(store.isAppleHealthTimelineEnabled == false)
         #expect(store.appleHealthTimelineItems.isEmpty)
         #expect(store.appleHealthTimelineState == .disabled)
+    }
+
+    @Test @MainActor
+    func newerRefreshCancelsOlderHealthQueryAndKeepsTheNewestResult()
+        async throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let reader = StubAppleHealthReader(
+            batch: AppleHealthSampleBatch(
+                workouts: [
+                    workout(
+                        id: try fixedID(41),
+                        kind: .running,
+                        start: now.timeIntervalSince1970 - 600,
+                        end: now.timeIntervalSince1970 - 300
+                    ),
+                ],
+                sleep: []
+            ),
+            suspendsSamples: true
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: true
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences
+        )
+        let olderRefresh = Task { @MainActor in
+            await store.refreshAppleHealthTimelineIfEnabled(now: now)
+        }
+        for _ in 0..<20 where reader.sampleRequestIntervals.isEmpty {
+            await Task.yield()
+        }
+        #expect(reader.sampleRequestIntervals.count == 1)
+
+        await store.refreshAppleHealthTimelineIfEnabled(now: now)
+        await olderRefresh.value
+
+        #expect(reader.authorizationRequestStatusCount == 2)
+        #expect(reader.authorizationRequestCount == 2)
+        #expect(reader.sampleRequestIntervals.count == 2)
+        #expect(reader.sampleCancellationCount == 1)
+        #expect(
+            store.appleHealthTimelineItems.map(\.subject) == [
+                .appleHealthWorkout(.running),
+            ]
+        )
+        guard case let .content(_, _, itemCount) =
+            store.appleHealthTimelineState else {
+            Issue.record(
+                "Expected content, got \(store.appleHealthTimelineState)"
+            )
+            return
+        }
+        #expect(itemCount == 1)
+    }
+
+    @Test @MainActor
+    func cancelledAuthorizationReturnsToReviewStateWithoutQuerying() async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let reader = StubAppleHealthReader(batch: .empty)
+        reader.authorizationError = CancellationError()
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: true
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences
+        )
+
+        await store.refreshAppleHealthTimeline(now: now)
+
+        #expect(reader.authorizationRequestCount == 1)
+        #expect(reader.sampleRequestIntervals.isEmpty)
+        #expect(store.appleHealthTimelineItems.isEmpty)
+        #expect(store.appleHealthTimelineState == .ready)
     }
 
     @Test @MainActor
@@ -1204,9 +1280,9 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
     var authorizationRequestStatusError: Error?
     var authorizationError: Error?
     var sampleError: Error?
-    var suspendsSamples: Bool
-    private var sampleContinuation:
-        CheckedContinuation<AppleHealthSampleBatch, Never>?
+    var suspendedSampleRequestsRemaining: Int
+    var suspendedSampleRequestIDs: Set<UUID> = []
+    var sampleCancellationCount = 0
 
     init(
         isHealthDataAvailable: Bool = true,
@@ -1217,7 +1293,7 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
         self.isHealthDataAvailable = isHealthDataAvailable
         self.batch = batch
         self.requestStatus = requestStatus
-        self.suspendsSamples = suspendsSamples
+        suspendedSampleRequestsRemaining = suspendsSamples ? 1 : 0
     }
 
     func authorizationRequestStatus() async throws
@@ -1241,17 +1317,22 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
         if let sampleError {
             throw sampleError
         }
-        if suspendsSamples {
-            return await withCheckedContinuation { continuation in
-                sampleContinuation = continuation
+        if suspendedSampleRequestsRemaining > 0 {
+            suspendedSampleRequestsRemaining -= 1
+            let requestID = UUID()
+            suspendedSampleRequestIDs.insert(requestID)
+            do {
+                while suspendedSampleRequestIDs.contains(requestID) {
+                    try Task.checkCancellation()
+                    await Task.yield()
+                }
+            } catch {
+                suspendedSampleRequestIDs.remove(requestID)
+                sampleCancellationCount += 1
+                throw error
             }
         }
         return batch
-    }
-
-    func resumeSamples() {
-        sampleContinuation?.resume(returning: batch)
-        sampleContinuation = nil
     }
 }
 

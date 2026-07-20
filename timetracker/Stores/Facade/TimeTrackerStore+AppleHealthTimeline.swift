@@ -83,7 +83,7 @@ extension TimeTrackerStore {
     }
 
     func hideAppleHealthFromTimeline() {
-        appleHealthTimelineRequestID = UUID()
+        invalidateAppleHealthTimelineRequest()
         appleHealthTimelinePreferenceStore.isTimelineEnabled = false
         isAppleHealthTimelineEnabled = false
         appleHealthTimelineItems = []
@@ -123,9 +123,17 @@ extension TimeTrackerStore {
     }
 
     private func beginAppleHealthTimelineRequest() -> UUID {
+        appleHealthTimelineLoadTask?.cancel()
+        appleHealthTimelineLoadTask = nil
         let requestID = UUID()
         appleHealthTimelineRequestID = requestID
         return requestID
+    }
+
+    private func invalidateAppleHealthTimelineRequest() {
+        appleHealthTimelineLoadTask?.cancel()
+        appleHealthTimelineLoadTask = nil
+        appleHealthTimelineRequestID = UUID()
     }
 
     private func isCurrentAppleHealthTimelineRequest(_ requestID: UUID) -> Bool {
@@ -161,6 +169,14 @@ extension TimeTrackerStore {
 
             appleHealthTimelineState = .requesting
             try await appleHealthDataReader.requestReadAuthorization()
+        } catch is CancellationError {
+            guard isCurrentAppleHealthTimelineRequest(requestID),
+                  isAppleHealthTimelineEnabled else {
+                return
+            }
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .ready
+            return
         } catch {
             guard isCurrentAppleHealthTimelineRequest(requestID),
                   isAppleHealthTimelineEnabled else {
@@ -209,13 +225,26 @@ extension TimeTrackerStore {
             end: visibleInterval.end
         )
         do {
-            let batch = try await appleHealthDataReader.samples(
-                overlapping: queryInterval
-            )
+            let reader = appleHealthDataReader
+            let loadTask = Task { @MainActor in
+                try Task.checkCancellation()
+                let batch = try await reader.samples(
+                    overlapping: queryInterval
+                )
+                try Task.checkCancellation()
+                return batch
+            }
+            appleHealthTimelineLoadTask = loadTask
+            let batch = try await withTaskCancellationHandler {
+                try await loadTask.value
+            } onCancel: {
+                loadTask.cancel()
+            }
             guard isCurrentAppleHealthTimelineRequest(requestID),
                   isAppleHealthTimelineEnabled else {
                 return
             }
+            appleHealthTimelineLoadTask = nil
             let items = AppleHealthTimelineProjectionService().project(
                 batch: batch,
                 visibleInterval: visibleInterval
@@ -233,11 +262,20 @@ extension TimeTrackerStore {
                     itemCount: items.count
                 )
             }
+        } catch is CancellationError {
+            guard isCurrentAppleHealthTimelineRequest(requestID),
+                  isAppleHealthTimelineEnabled else {
+                return
+            }
+            appleHealthTimelineLoadTask = nil
+            appleHealthTimelineItems = []
+            appleHealthTimelineState = .ready
         } catch {
             guard isCurrentAppleHealthTimelineRequest(requestID),
                   isAppleHealthTimelineEnabled else {
                 return
             }
+            appleHealthTimelineLoadTask = nil
             appleHealthTimelineItems = []
             appleHealthTimelineState = .failed(error.localizedDescription)
         }

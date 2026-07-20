@@ -76,10 +76,12 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
         guard isHealthDataAvailable else {
             throw AppleHealthReadError.unavailable
         }
+        try Task.checkCancellation()
         let status = try await healthStore.statusForAuthorizationRequest(
             toShare: [],
             read: readTypes()
         )
+        try Task.checkCancellation()
         return Self.authorizationRequestStatus(for: status)
     }
 
@@ -87,8 +89,10 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
         guard isHealthDataAvailable else {
             throw AppleHealthReadError.unavailable
         }
+        try Task.checkCancellation()
         let types = try readTypes()
         try await healthStore.requestAuthorization(toShare: [], read: types)
+        try Task.checkCancellation()
     }
 
     func samples(overlapping interval: DateInterval) async throws -> AppleHealthSampleBatch {
@@ -96,6 +100,7 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
             throw AppleHealthReadError.unavailable
         }
         guard interval.duration > 0 else { return .empty }
+        try Task.checkCancellation()
 
         let predicate = HKQuery.predicateForSamples(
             withStart: interval.start,
@@ -103,7 +108,9 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
             options: []
         )
         let workouts = try await workoutSamples(predicate: predicate)
+        try Task.checkCancellation()
         let sleep = try await sleepSamples(predicate: predicate)
+        try Task.checkCancellation()
         return AppleHealthSampleBatch(workouts: workouts, sleep: sleep)
     }
 

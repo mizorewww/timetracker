@@ -306,7 +306,8 @@ struct LLMSettingsTests {
 
         let request = try service.suggestionRequest(
             inboxTitle: "Polish spacing",
-            candidates: [candidate],
+            taskCandidates: [candidate],
+            categoryCandidates: [],
             endpoint: " https://api.openai.com/v1 ",
             apiKey: " test-key ",
             modelID: "gpt-test"
@@ -323,12 +324,13 @@ struct LLMSettingsTests {
         let taskID = UUID()
         let result = try LLMInboxSuggestionService.sanitize(
             payload: InboxSuggestionPayload(
-                taskID: taskID.uuidString,
+                destinationKind: InboxSuggestionDestinationKind.checklist.rawValue,
+                destinationID: taskID.uuidString,
                 reason: "  related to design ",
                 iconName: "not.a.real.symbol",
                 colorHex: "BADBAD"
             ),
-            candidates: [
+            taskCandidates: [
                 LLMTaskCandidate(
                     id: taskID,
                     title: "Design",
@@ -337,10 +339,11 @@ struct LLMSettingsTests {
                     colorHex: "16A34A"
                 )
             ],
+            categoryCandidates: [],
             modelID: "gpt-test"
         )
 
-        #expect(result.taskID == taskID)
+        #expect(result.destination == .checklist(taskID: taskID))
         #expect(result.reason == "related to design")
         #expect(result.iconName == ChecklistVisualSanitizer.defaultIcon)
         #expect(result.colorHex == "16A34A")
@@ -362,12 +365,14 @@ struct LLMSettingsTests {
         do {
             _ = try LLMInboxSuggestionService.sanitize(
                 payload: InboxSuggestionPayload(
-                    taskID: UUID().uuidString,
+                    destinationKind: InboxSuggestionDestinationKind.checklist.rawValue,
+                    destinationID: UUID().uuidString,
                     reason: "wrong task",
                     iconName: "book",
                     colorHex: "16A34A"
                 ),
-                candidates: candidates,
+                taskCandidates: candidates,
+                categoryCandidates: [],
                 modelID: "gpt-test"
             )
             Issue.record("Expected unknown task ID to be rejected")
@@ -378,12 +383,14 @@ struct LLMSettingsTests {
         do {
             _ = try LLMInboxSuggestionService.sanitize(
                 payload: InboxSuggestionPayload(
-                    taskID: "not-a-uuid",
+                    destinationKind: InboxSuggestionDestinationKind.checklist.rawValue,
+                    destinationID: "not-a-uuid",
                     reason: "bad task ID",
                     iconName: "book",
                     colorHex: "16A34A"
                 ),
-                candidates: candidates,
+                taskCandidates: candidates,
+                categoryCandidates: [],
                 modelID: "gpt-test"
             )
             Issue.record("Expected malformed task ID to be rejected")
@@ -417,7 +424,7 @@ struct LLMSettingsTests {
         do {
             _ = try await service.suggest(
                 inboxTitle: "Read HIG",
-                candidates: [
+                taskCandidates: [
                     LLMTaskCandidate(
                         id: taskID,
                         title: "Study",
@@ -426,6 +433,7 @@ struct LLMSettingsTests {
                         colorHex: "16A34A"
                     )
                 ],
+                categoryCandidates: [],
                 endpoint: "https://example.test/v1",
                 apiKey: "key",
                 modelID: "gpt-test"
@@ -445,7 +453,7 @@ struct LLMSettingsTests {
               "choices": [
                 {
                   "message": {
-                    "content": "{\\"taskID\\":\\"\(taskID.uuidString)\\"}"
+                    "content": "{\\"destinationID\\":\\"\(taskID.uuidString)\\"}"
                   }
                 }
               ]
@@ -465,7 +473,7 @@ struct LLMSettingsTests {
         do {
             _ = try await service.suggest(
                 inboxTitle: "Read HIG",
-                candidates: [
+                taskCandidates: [
                     LLMTaskCandidate(
                         id: taskID,
                         title: "Study",
@@ -474,6 +482,7 @@ struct LLMSettingsTests {
                         colorHex: "16A34A"
                     )
                 ],
+                categoryCandidates: [],
                 endpoint: "https://example.test/v1",
                 apiKey: "key",
                 modelID: "gpt-test"
@@ -494,7 +503,7 @@ struct LLMSettingsTests {
               "choices": [
                 {
                   "message": {
-                    "content": "{\\"taskID\\":\\"\(taskID.uuidString)\\",\\"reason\\":\\"same project\\",\\"iconName\\":\\"book\\",\\"colorHex\\":\\"16A34A\\"}"
+                    "content": "{\\"destinationKind\\":\\"checklist\\",\\"destinationID\\":\\"\(taskID.uuidString)\\",\\"reason\\":\\"same project\\",\\"iconName\\":\\"book\\",\\"colorHex\\":\\"16A34A\\"}"
                   }
                 }
               ]
@@ -513,7 +522,7 @@ struct LLMSettingsTests {
 
         let result = try await service.suggest(
             inboxTitle: "Read HIG",
-            candidates: [
+            taskCandidates: [
                 LLMTaskCandidate(
                     id: taskID,
                     title: "Study",
@@ -522,12 +531,13 @@ struct LLMSettingsTests {
                     colorHex: "16A34A"
                 )
             ],
+            categoryCandidates: [],
             endpoint: "https://example.test/v1",
             apiKey: "key",
             modelID: "gpt-test"
         )
 
-        #expect(result.taskID == taskID)
+        #expect(result.destination == .checklist(taskID: taskID))
         #expect(result.iconName == "book")
         #expect(result.colorHex == "16A34A")
         #expect(result.reason == "same project")

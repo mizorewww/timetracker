@@ -44,7 +44,7 @@ struct SharedComponentsContractTests {
 
     @Test
     func ipadSplitViewUsesTheNativeAdaptiveSidebarControl() throws {
-        let ipadSource = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let ipadSource = try sourceText("timetracker/App/RootViews/iPadRootView.swift")
 
         #expect(ipadSource.contains("preferredCompactColumn: $preferredCompactColumn"))
         #expect(ipadSource.contains("preferredCompactColumn = .detail"))
@@ -436,7 +436,7 @@ struct SharedComponentsContractTests {
         )
         #expect(
             readySuggestionSource.contains(
-                "accessibilityLabel: AppStrings.localized(\"inbox.suggestion.apply\")"
+                "accessibilityLabel: destination.applyTitle"
             )
         )
         #expect(

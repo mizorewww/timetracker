@@ -5,7 +5,7 @@ extension InboxCommandHandler {
     func update(
         _ suggestion: InboxSuggestion,
         item: InboxItem,
-        taskID: UUID,
+        destination: InboxManualRouteDestination,
         text: PreparedInboxSuggestionText,
         now: Date,
         deviceID: String
@@ -14,9 +14,8 @@ extension InboxCommandHandler {
         suggestion.inboxItemID = item.id
         suggestion.inboxItemContextID = item.effectiveSuggestionContextID
         suggestion.inboxItemRevisionID = item.effectiveSuggestionRevisionID
-        suggestion.taskID = taskID
-        suggestion.destinationKindRaw =
-            InboxSuggestionDestinationKind.checklist.rawValue
+        suggestion.taskID = destination.persistenceTargetID
+        suggestion.destinationKindRaw = destination.suggestionDestinationKind.rawValue
         suggestion.generatedAt = now
         suggestion.updatedAt = now
         suggestion.deviceID = deviceID

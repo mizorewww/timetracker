@@ -188,16 +188,18 @@ struct InboxItemRow: View {
             )
             .transition(suggestionTransition)
         } else if let suggestion {
-            let targetTask = store.task(for: suggestion.taskID)
+            let applyBaseline = InboxSuggestionApplyBaseline(
+                item: item,
+                suggestion: suggestion
+            )
             InboxSuggestionBar(
                 itemID: item.id,
-                taskTitle: targetTask?.title ??
-                    AppStrings.localized("inbox.suggestion.missingTarget"),
+                destination: store.inboxSuggestionDestinationPresentation(
+                    for: suggestion
+                ),
                 iconName: suggestion.iconName,
                 colorHex: suggestion.colorHex,
                 isCompact: isCompact,
-                canApply: targetTask != nil &&
-                    store.trackableTaskIDs.contains(suggestion.taskID),
                 discard: {
                     performAnimated {
                         store.discardInboxSuggestion(item)
@@ -205,7 +207,7 @@ struct InboxItemRow: View {
                 },
                 apply: {
                     performAnimated {
-                        store.applyInboxSuggestion(item)
+                        store.applyInboxSuggestion(baseline: applyBaseline)
                     }
                 }
             )

@@ -1238,7 +1238,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testInboxNativeCardsShowAndApplyTheGeneratedVisualSuggestion() throws {
+    func testInboxNativeCardsExplainAndApplyAllGeneratedDestinations() throws {
         #if os(macOS)
         throw XCTSkip("Inset-grouped card geometry is verified on iPhone and iPad.")
         #else
@@ -1257,115 +1257,259 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(inbox.waitForExistence(timeout: 8))
 
         let captureField = app.textFields["inbox.capture.field"].firstMatch
-        let itemField = app.textFields
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "inbox.item."
-            ))
-            .firstMatch
-        let completion = app.buttons
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "inbox.item.completion."
-            ))
-            .firstMatch
-        let suggestion = app.descendants(matching: .any)
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "inbox.suggestion.ready."
-            ))
-            .firstMatch
-        let apply = app.buttons
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "inbox.suggestion.apply."
-            ))
-            .firstMatch
-        let discard = app.buttons
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "inbox.suggestion.discard."
-            ))
-            .firstMatch
 
         XCTAssertTrue(captureField.waitForExistence(timeout: 5))
-        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
-        XCTAssertTrue(completion.waitForExistence(timeout: 5))
-        XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
-        XCTAssertEqual(suggestion.label, "Suggested task: Design System")
-        XCTAssertEqual(
-            itemField.frame.midY,
-            completion.frame.midY,
-            accuracy: 2,
-            "The Inbox title must be vertically centered with its completion control."
-        )
-        let completionMarkLeadingInset = max(
-            0,
-            (completion.frame.width - 24) / 2
-        )
-        XCTAssertEqual(
-            suggestion.frame.minX,
-            completion.frame.minX + completionMarkLeadingInset,
-            accuracy: 2,
-            "Suggested must share the visible completion circle's leading alignment."
-        )
-        XCTAssertGreaterThanOrEqual(
-            suggestion.frame.width,
-            120,
-            "The generated task label must not collapse behind the action buttons."
-        )
         XCTAssertTrue(
             app.buttons["inbox.completed.disclosure"].firstMatch
                 .waitForExistence(timeout: 3)
-        )
-        XCTAssertTrue(apply.waitForExistence(timeout: 3) && apply.isHittable)
-        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
-        XCTAssertGreaterThanOrEqual(apply.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(apply.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(discard.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(discard.frame.height, 44)
-        XCTAssertEqual(discard.frame.midY, apply.frame.midY, accuracy: 1)
-        if app.frame.width < 600 {
-            XCTAssertLessThanOrEqual(apply.frame.width, 50)
-            XCTAssertLessThanOrEqual(apply.frame.height, 50)
-            XCTAssertLessThanOrEqual(discard.frame.width, 50)
-            XCTAssertLessThanOrEqual(discard.frame.height, 50)
-        }
-        XCTAssertGreaterThan(
-            suggestion.frame.minY,
-            itemField.frame.maxY,
-            "The suggestion must remain on its own row below the inbox title."
-        )
-        XCTAssertGreaterThan(
-            apply.frame.minY,
-            suggestion.frame.maxY,
-            "Suggestion actions must form a separate row below the target."
-        )
-        XCTAssertLessThan(
-            discard.frame.maxX,
-            apply.frame.minX,
-            "Dismiss and apply must anchor to opposite sides of the action row."
         )
 
         let captureCard = app.cells
             .containing(.textField, identifier: captureField.identifier)
             .firstMatch
-        let itemCard = app.cells
-            .containing(.textField, identifier: itemField.identifier)
-            .firstMatch
         XCTAssertTrue(captureCard.exists)
-        XCTAssertTrue(itemCard.exists)
         let windowFrame = app.windows.firstMatch.frame
         XCTAssertGreaterThan(captureCard.frame.minX, windowFrame.minX + 12)
         XCTAssertLessThan(captureCard.frame.maxX, windowFrame.maxX - 12)
-        XCTAssertGreaterThan(itemCard.frame.minX, windowFrame.minX + 12)
-        XCTAssertLessThan(itemCard.frame.maxX, windowFrame.maxX - 12)
-        try capture("inbox-native-cards-ready-suggestion", app: app)
 
-        activate(apply)
-        XCTAssertTrue(suggestion.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(itemCard.waitForNonExistence(timeout: 5))
-        try capture("inbox-native-cards-suggestion-applied", app: app)
+        let destinations = [
+            (
+                kind: "childTask",
+                itemTitle: "Prepare the design review brief",
+                summary: "Create as a subtask of Design System",
+                applyTitle: "Create Subtask",
+                screenshotName: "inbox-ai-child-task"
+            ),
+            (
+                kind: "category",
+                itemTitle: "Schedule the client kickoff",
+                summary: "Create in Work",
+                applyTitle: "Create Task",
+                screenshotName: "inbox-ai-category-task"
+            ),
+            (
+                kind: "checklist",
+                itemTitle: "Confirm the review attendees",
+                summary: "Add to Design System checklist",
+                applyTitle: "Add Checklist Item",
+                screenshotName: "inbox-ai-checklist-item"
+            )
+        ]
+
+        for (index, destination) in destinations.enumerated() {
+            let suggestion = app.descendants(matching: .any)
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "inbox.suggestion.ready.\(destination.kind)."
+                ))
+                .firstMatch
+            let apply = app.buttons
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "inbox.suggestion.apply.\(destination.kind)."
+                ))
+                .firstMatch
+            let itemField = app.textFields
+                .matching(NSPredicate(
+                    format: "value == %@",
+                    destination.itemTitle
+                ))
+                .firstMatch
+
+            XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
+            XCTAssertEqual(suggestion.label, destination.summary)
+            XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+            let itemID = try XCTUnwrap(
+                suggestion.identifier.split(separator: ".").last.map(String.init)
+            )
+            let completion = app.buttons[
+                "inbox.item.completion.\(itemID)"
+            ].firstMatch
+            let discard = app.buttons[
+                "inbox.suggestion.discard.\(itemID)"
+            ].firstMatch
+            scrollUntilHittable(apply, direction: .up, in: app)
+            XCTAssertTrue(completion.waitForExistence(timeout: 3))
+            XCTAssertTrue(apply.isHittable)
+            XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+            XCTAssertEqual(apply.label, destination.applyTitle)
+            XCTAssertGreaterThanOrEqual(apply.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(apply.frame.height, 44)
+            XCTAssertGreaterThanOrEqual(discard.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(discard.frame.height, 44)
+            XCTAssertEqual(discard.frame.midY, apply.frame.midY, accuracy: 1)
+            if app.frame.width < 600 {
+                XCTAssertLessThanOrEqual(apply.frame.width, 50)
+                XCTAssertLessThanOrEqual(apply.frame.height, 50)
+                XCTAssertLessThanOrEqual(discard.frame.width, 50)
+                XCTAssertLessThanOrEqual(discard.frame.height, 50)
+            }
+
+            let itemCard = app.cells
+                .containing(.textField, identifier: itemField.identifier)
+                .firstMatch
+            XCTAssertTrue(itemCard.exists)
+            XCTAssertGreaterThan(itemCard.frame.minX, windowFrame.minX + 12)
+            XCTAssertLessThan(itemCard.frame.maxX, windowFrame.maxX - 12)
+
+            if index == 0 {
+                XCTAssertEqual(
+                    itemField.frame.midY,
+                    completion.frame.midY,
+                    accuracy: 2,
+                    "The Inbox title must align with its completion control."
+                )
+                let completionMarkLeadingInset = max(
+                    0,
+                    (completion.frame.width - 24) / 2
+                )
+                XCTAssertEqual(
+                    suggestion.frame.minX,
+                    completion.frame.minX + completionMarkLeadingInset,
+                    accuracy: 2,
+                    "The suggestion must align with the visible completion mark."
+                )
+            }
+            XCTAssertGreaterThan(
+                suggestion.frame.minY,
+                itemField.frame.maxY,
+                "The suggestion must remain below the Inbox title."
+            )
+            XCTAssertGreaterThan(
+                apply.frame.minY,
+                suggestion.frame.maxY,
+                "Actions must remain below the destination summary."
+            )
+            XCTAssertLessThan(
+                discard.frame.maxX,
+                apply.frame.minX,
+                "Dismiss and apply must stay on opposite sides."
+            )
+
+            try capture("\(destination.screenshotName)-ready", app: app)
+        }
+        #endif
+    }
+
+    @MainActor
+    func testInboxChildTaskSuggestionCreatesUnderItsParent() throws {
+        #if os(macOS)
+        throw XCTSkip("The Inbox route is verified on iPhone and iPad.")
+        #else
+        let app = launchSeededInboxSuggestions()
+        applySeededInboxSuggestion(
+            kind: "childTask",
+            itemTitle: "Prepare the design review brief",
+            summary: "Create as a subtask of Design System",
+            in: app
+        )
+
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        expandTask(named: "Time Tracker App", in: app)
+        expandTask(named: "Design System", in: app)
+        let createdTask = taskRow(
+            named: "Prepare the design review brief",
+            in: app
+        )
+        XCTAssertTrue(createdTask.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            (createdTask.value as? String ?? "")
+                .localizedCaseInsensitiveContains("Design System")
+        )
+        activate(createdTask)
+
+        let parent = app.descendants(matching: .any)[
+            "task.editor.parent"
+        ].firstMatch
+        scrollUntilHittable(parent, direction: .up, in: app)
+        XCTAssertTrue(parent.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            (parent.value as? String ?? parent.label)
+                .localizedCaseInsensitiveContains("Design System")
+        )
+        try capture("inbox-ai-child-task-created-under-parent", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testInboxCategorySuggestionCreatesARootTaskInThatCategory() throws {
+        #if os(macOS)
+        throw XCTSkip("The Inbox route is verified on iPhone and iPad.")
+        #else
+        let app = launchSeededInboxSuggestions()
+        applySeededInboxSuggestion(
+            kind: "category",
+            itemTitle: "Schedule the client kickoff",
+            summary: "Create in Work",
+            in: app
+        )
+
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let createdTask = taskRow(
+            named: "Schedule the client kickoff",
+            in: app
+        )
+        scrollUntilHittable(createdTask, direction: .up, in: app)
+        XCTAssertTrue(createdTask.waitForExistence(timeout: 5) && createdTask.isHittable)
+        activate(createdTask)
+
+        let category = app.descendants(matching: .any)[
+            "task.editor.category"
+        ].firstMatch
+        scrollUntilHittable(category, direction: .up, in: app)
+        XCTAssertTrue(category.waitForExistence(timeout: 5))
+        XCTAssertEqual(category.value as? String ?? category.label, "Work")
+        try capture("inbox-ai-category-root-task-created", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testInboxChecklistSuggestionCreatesAnItemInTheTargetTask() throws {
+        #if os(macOS)
+        throw XCTSkip("The Inbox route is verified on iPhone and iPad.")
+        #else
+        let app = launchSeededInboxSuggestions()
+        applySeededInboxSuggestion(
+            kind: "checklist",
+            itemTitle: "Confirm the review attendees",
+            summary: "Add to Design System checklist",
+            in: app
+        )
+
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        expandTask(named: "Time Tracker App", in: app)
+        let targetTask = taskRow(named: "Design System", in: app)
+        XCTAssertTrue(targetTask.waitForExistence(timeout: 5) && targetTask.isHittable)
+        activate(targetTask)
+
+        let checklistItem = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "task.editor.checklist.completion.",
+                "Confirm the review attendees"
+            ))
+            .firstMatch
+        scrollUntilHittable(checklistItem, direction: .up, in: app)
+        XCTAssertTrue(
+            checklistItem.waitForExistence(timeout: 5) &&
+                checklistItem.isHittable
+        )
+        try capture("inbox-ai-checklist-item-created", app: app)
         #endif
     }
 
@@ -3634,6 +3778,91 @@ final class timetrackerUITests: XCTestCase {
             label.contains("View details: \(expectation.destination)"),
             "\(expectation.id) must name its detail destination. Label: \(label)"
         )
+    }
+
+    @MainActor
+    private func launchSeededInboxSuggestions() -> XCUIApplication {
+        let app = launchApp(
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-inbox-suggestion"]
+        )
+        openSection(
+            "Inbox",
+            tabIdentifier: "phone.tab.inbox",
+            sidebarIdentifier: "sidebar.Inbox",
+            in: app
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["inbox.view"]
+                .waitForExistence(timeout: 8)
+        )
+        return app
+    }
+
+    @MainActor
+    private func applySeededInboxSuggestion(
+        kind: String,
+        itemTitle: String,
+        summary: String,
+        in app: XCUIApplication
+    ) {
+        let suggestion = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.suggestion.ready.\(kind)."
+            ))
+            .firstMatch
+        let apply = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "inbox.suggestion.apply.\(kind)."
+            ))
+            .firstMatch
+        let itemField = app.textFields
+            .matching(NSPredicate(format: "value == %@", itemTitle))
+            .firstMatch
+
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
+        XCTAssertEqual(suggestion.label, summary)
+        XCTAssertTrue(itemField.waitForExistence(timeout: 5))
+        scrollUntilHittable(apply, direction: .up, in: app)
+        XCTAssertTrue(apply.isHittable)
+        activate(apply)
+        XCTAssertTrue(suggestion.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(itemField.waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func expandTask(
+        named title: String,
+        in app: XCUIApplication
+    ) {
+        let disclosure = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND value == %@",
+                "tasks.disclosure.",
+                title
+            ))
+            .firstMatch
+        scrollUntilHittable(disclosure, direction: .up, in: app)
+        XCTAssertTrue(
+            disclosure.waitForExistence(timeout: 5) && disclosure.isHittable
+        )
+        activate(disclosure)
+    }
+
+    private func taskRow(
+        named title: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                title
+            ))
+            .firstMatch
     }
 
     @MainActor

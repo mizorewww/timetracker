@@ -358,7 +358,7 @@ struct InboxSuggestionIdentityTests {
         try handler.upsertSuggestion(
             item: rebuilt,
             result: LLMInboxSuggestionResult(
-                taskID: task.id,
+                destination: .checklist(taskID: task.id),
                 reason: "Same project",
                 iconName: "checkmark.circle",
                 colorHex: "1677FF",

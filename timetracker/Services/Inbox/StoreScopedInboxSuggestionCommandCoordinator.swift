@@ -17,25 +17,6 @@ struct InboxSuggestionApplyBaseline: Equatable, Sendable {
     }
 }
 
-struct InboxChecklistRouteOutcome: Equatable {
-    let inboxItemID: UUID
-    let checklistItemID: UUID
-    let taskID: UUID
-    let affectedAncestorIDs: Set<UUID>
-    let didMutate: Bool
-
-    var events: Set<StoreDomainEvent> {
-        guard didMutate else { return [] }
-        return [
-            .inboxChanged(itemIDs: [inboxItemID]),
-            .checklistChanged(
-                taskID: taskID,
-                affectedAncestorIDs: affectedAncestorIDs
-            ),
-        ]
-    }
-}
-
 extension StoreScopedInboxCommandCoordinator {
     func saveSuggestionDraft(
         baseline: InboxItemMutationBaseline,
@@ -100,7 +81,10 @@ extension StoreScopedInboxCommandCoordinator {
                   ) else {
                 return InboxMutationOutcome(affectedItemIDs: [item.id], didMutate: false)
             }
-            guard try isTrackableTask(result.taskID, context: context) else {
+            guard try isRouteDestinationAvailable(
+                result.destination,
+                context: context
+            ) else {
                 return InboxMutationOutcome(affectedItemIDs: [item.id], didMutate: false)
             }
 
@@ -121,7 +105,7 @@ extension StoreScopedInboxCommandCoordinator {
 
     func applySuggestion(
         baseline: InboxSuggestionApplyBaseline
-    ) throws -> InboxChecklistRouteOutcome {
+    ) throws -> InboxManualRouteOutcome {
         try withFreshLockedContext { context in
             guard let resolution = try visibleLogicalResolution(
                 contextID: baseline.itemIdentity.contextID,
@@ -145,7 +129,7 @@ extension StoreScopedInboxCommandCoordinator {
             )[item.id],
             suggestion.id == baseline.suggestionID,
             suggestion.clientMutationID == baseline.suggestionMutationID,
-            suggestion.destinationKind == .checklist,
+            let destination = suggestion.manualRouteDestination,
             InboxSuggestionStateService().displaySuggestion(
                 for: resolution.readModel,
                 suggestion: suggestion
@@ -153,34 +137,38 @@ extension StoreScopedInboxCommandCoordinator {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
 
-            let tasks = try trackableTasks(context: context)
-            guard tasks.trackableIDs.contains(suggestion.taskID) else {
-                throw StoreScopedInboxMutationError.taskUnavailable
-            }
-            let existingChecklistItems = try visibleChecklistItems(
-                taskID: suggestion.taskID,
-                context: context
+            let appliedAt = nowProvider()
+            let preparedItem = try InboxPersistencePolicy.prepareItem(
+                title: item.title,
+                notes: item.notes,
+                suggestionReason: item.suggestionReason
+            )
+            let preparedSuggestion = try InboxPersistencePolicy.prepareSuggestion(
+                reason: suggestion.reason,
+                iconName: suggestion.iconName,
+                colorHex: suggestion.colorHex,
+                modelID: suggestion.modelID,
+                titleSnapshot: suggestion.titleSnapshot
             )
             let mutationIDBeforeApply = item.clientMutationID
-            let checklistItem = try handler.applySuggestion(
-                item: item,
-                suggestion: suggestion,
-                existingChecklistItems: existingChecklistItems,
+            let creation = try createRouteDestination(
+                destination,
+                content: .suggested(
+                    item: preparedItem,
+                    suggestion: preparedSuggestion,
+                    appliedAt: appliedAt
+                ),
+                context: context
+            )
+            try handler.softDelete(
+                item,
                 context: context,
-                now: nowProvider(),
+                now: appliedAt,
                 deviceID: deviceID
             )
-            let affectedAncestorIDs = Set(
-                StoreSelectionCoordinator().ancestorTaskIDs(
-                    for: suggestion.taskID,
-                    taskByID: tasks.byID
-                )
-            )
-            return InboxChecklistRouteOutcome(
+            return InboxManualRouteOutcome(
                 inboxItemID: item.id,
-                checklistItemID: checklistItem.id,
-                taskID: suggestion.taskID,
-                affectedAncestorIDs: affectedAncestorIDs,
+                creation: creation,
                 didMutate: item.clientMutationID != mutationIDBeforeApply
             )
         }
@@ -200,8 +188,21 @@ extension StoreScopedInboxCommandCoordinator {
             .first { $0.winner.effectiveSuggestionContextID == contextID }
     }
 
-    private func isTrackableTask(_ taskID: UUID, context: ModelContext) throws -> Bool {
-        try trackableTasks(context: context).trackableIDs.contains(taskID)
+    private func isRouteDestinationAvailable(
+        _ destination: InboxManualRouteDestination,
+        context: ModelContext
+    ) throws -> Bool {
+        switch destination {
+        case let .childTask(parentTaskID):
+            try trackableTasks(context: context).trackableIDs.contains(parentTaskID)
+        case let .category(categoryID):
+            try SwiftDataTaskRepository(
+                context: context,
+                deviceID: deviceID
+            ).category(id: categoryID) != nil
+        case let .checklist(taskID):
+            try trackableTasks(context: context).trackableIDs.contains(taskID)
+        }
     }
 
     private func requireTrackableTask(_ taskID: UUID, context: ModelContext) throws {

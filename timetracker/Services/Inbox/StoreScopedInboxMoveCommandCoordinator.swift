@@ -13,7 +13,7 @@ struct InboxManualRouteBaseline: Equatable, Sendable {
     }
 }
 
-enum InboxManualRouteDestination: Equatable, Sendable {
+nonisolated enum InboxManualRouteDestination: Equatable, Sendable {
     case childTask(parentTaskID: UUID)
     case category(categoryID: UUID)
     case checklist(taskID: UUID)
@@ -54,6 +54,48 @@ struct InboxManualRouteOutcome: Equatable {
     }
 }
 
+struct InboxChecklistRouteProvenance {
+    let titleSnapshot: String
+    let modelID: String?
+    let generatedAt: Date
+}
+
+struct InboxRouteCreationContent {
+    let title: String
+    let notes: String?
+    let iconName: String?
+    let colorHex: String?
+    let checklistProvenance: InboxChecklistRouteProvenance?
+
+    static func manual(item: PreparedInboxItemText) -> Self {
+        Self(
+            title: item.title,
+            notes: item.notes,
+            iconName: nil,
+            colorHex: nil,
+            checklistProvenance: nil
+        )
+    }
+
+    static func suggested(
+        item: PreparedInboxItemText,
+        suggestion: PreparedInboxSuggestionText,
+        appliedAt: Date
+    ) -> Self {
+        Self(
+            title: item.title,
+            notes: item.notes,
+            iconName: suggestion.iconName,
+            colorHex: suggestion.colorHex,
+            checklistProvenance: InboxChecklistRouteProvenance(
+                titleSnapshot: item.title,
+                modelID: suggestion.modelID,
+                generatedAt: appliedAt
+            )
+        )
+    }
+}
+
 extension StoreScopedInboxCommandCoordinator {
     func route(
         baseline: InboxManualRouteBaseline,
@@ -75,17 +117,22 @@ extension StoreScopedInboxCommandCoordinator {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
 
-            let mutationIDBeforeMove = item.clientMutationID
-            let creation = try createDestination(
-                destination,
+            let appliedAt = nowProvider()
+            let preparedItem = try InboxPersistencePolicy.prepareItem(
                 title: item.title,
                 notes: item.notes,
+                suggestionReason: item.suggestionReason
+            )
+            let mutationIDBeforeMove = item.clientMutationID
+            let creation = try createRouteDestination(
+                destination,
+                content: .manual(item: preparedItem),
                 context: context
             )
             try InboxCommandHandler().softDelete(
                 item,
                 context: context,
-                now: nowProvider(),
+                now: appliedAt,
                 deviceID: deviceID
             )
             return InboxManualRouteOutcome(
@@ -96,10 +143,9 @@ extension StoreScopedInboxCommandCoordinator {
         }
     }
 
-    private func createDestination(
+    func createRouteDestination(
         _ destination: InboxManualRouteDestination,
-        title: String,
-        notes: String?,
+        content: InboxRouteCreationContent,
         context: ModelContext
     ) throws -> InboxManualRouteCreation {
         switch destination {
@@ -113,19 +159,19 @@ extension StoreScopedInboxCommandCoordinator {
                 deviceID: deviceID
             )
             let task = try repository.createTask(
-                title: title,
+                title: content.title,
                 parentID: parentTaskID,
-                colorHex: nil,
-                iconName: nil
+                colorHex: content.colorHex,
+                iconName: content.iconName
             )
             try repository.updateTask(
                 taskID: task.id,
                 title: task.title,
                 parentID: parentTaskID,
                 categoryID: nil,
-                colorHex: nil,
-                iconName: nil,
-                notes: notes,
+                colorHex: content.colorHex,
+                iconName: content.iconName,
+                notes: content.notes,
                 estimatedSeconds: nil,
                 dueAt: nil
             )
@@ -150,20 +196,20 @@ extension StoreScopedInboxCommandCoordinator {
                 throw StoreScopedInboxMutationError.categoryUnavailable
             }
             let task = try repository.createTask(
-                title: title,
+                title: content.title,
                 parentID: nil,
                 categoryID: categoryID,
-                colorHex: nil,
-                iconName: nil
+                colorHex: content.colorHex,
+                iconName: content.iconName
             )
             try repository.updateTask(
                 taskID: task.id,
                 title: task.title,
                 parentID: nil,
                 categoryID: categoryID,
-                colorHex: nil,
-                iconName: nil,
-                notes: notes,
+                colorHex: content.colorHex,
+                iconName: content.iconName,
+                notes: content.notes,
                 estimatedSeconds: nil,
                 dueAt: nil
             )
@@ -178,15 +224,25 @@ extension StoreScopedInboxCommandCoordinator {
                 taskID: taskID,
                 context: context
             )
-            guard let checklistItem = try ChecklistCommandHandler().add(
+            let checklistItem = ChecklistItem(
                 taskID: taskID,
-                title: title,
-                existingItems: existingChecklistItems,
-                context: context,
+                title: content.title,
+                isCompleted: false,
+                sortOrder: (existingChecklistItems.map(\.sortOrder).max() ?? 0) + 10,
                 deviceID: deviceID
-            ) else {
-                throw StoreScopedInboxMutationError.inboxChanged
-            }
+            )
+            context.insert(checklistItem)
+            context.insert(
+                ChecklistItemVisual(
+                    checklistItemID: checklistItem.id,
+                    iconName: ChecklistVisualSanitizer.sanitizedIcon(content.iconName),
+                    colorHex: ChecklistVisualSanitizer.sanitizedColor(content.colorHex),
+                    suggestionTitleSnapshot: content.checklistProvenance?.titleSnapshot,
+                    suggestionModelID: content.checklistProvenance?.modelID,
+                    suggestionGeneratedAt: content.checklistProvenance?.generatedAt,
+                    deviceID: deviceID
+                )
+            )
             let ancestorIDs = Set(
                 StoreSelectionCoordinator().ancestorTaskIDs(
                     for: taskID,

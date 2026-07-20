@@ -193,7 +193,7 @@ struct InboxPersistencePolicyTests {
             try handler.upsertSuggestion(
                 item: item,
                 result: LLMInboxSuggestionResult(
-                    taskID: UUID(),
+                    destination: .checklist(taskID: UUID()),
                     reason: "Replacement reason",
                     iconName: "book",
                     colorHex: "16A34A",

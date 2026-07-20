@@ -410,11 +410,11 @@ private actor ControlledLLMTransport {
         switch payload {
         case let .inbox(taskID):
             content = """
-            {"taskID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
+            {"destinationKind":"checklist","destinationID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
             """
         case let .failureThenInbox(taskID):
             content = """
-            {"taskID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
+            {"destinationKind":"checklist","destinationID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
             """
         case .checklist:
             content = """

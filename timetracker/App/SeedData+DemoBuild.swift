@@ -58,30 +58,73 @@ extension SeedData {
             )
 
             if CommandLine.arguments.contains("--uitesting-inbox-suggestion") {
-                let inboxItem = InboxItem(
-                    title: "Plan the next design review",
+                let childTaskItem = InboxItem(
+                    title: "Prepare the design review brief",
                     sortOrder: 10,
+                    deviceID: "demo"
+                )
+                let categoryTaskItem = InboxItem(
+                    title: "Schedule the client kickoff",
+                    sortOrder: 20,
+                    deviceID: "demo"
+                )
+                let checklistItem = InboxItem(
+                    title: "Confirm the review attendees",
+                    sortOrder: 30,
                     deviceID: "demo"
                 )
                 let completedInboxItem = InboxItem(
                     title: "Archive the previous review notes",
                     isCompleted: true,
-                    sortOrder: 20,
+                    sortOrder: 40,
                     deviceID: "demo"
                 )
-                context.insert(inboxItem)
+                context.insert(childTaskItem)
+                context.insert(categoryTaskItem)
+                context.insert(checklistItem)
                 context.insert(completedInboxItem)
                 context.insert(
                     InboxSuggestion(
-                        inboxItemID: inboxItem.id,
-                        inboxItemContextID: inboxItem.suggestionContextID,
-                        inboxItemRevisionID: inboxItem.suggestionRevisionID,
+                        inboxItemID: childTaskItem.id,
+                        inboxItemContextID: childTaskItem.suggestionContextID,
+                        inboxItemRevisionID: childTaskItem.suggestionRevisionID,
                         taskID: design.id,
+                        destinationKind: .childTask,
                         reason: "This belongs with the design-system work.",
                         iconName: "sun.max",
                         colorHex: "FFD60A",
                         modelID: "ui-test",
-                        titleSnapshot: inboxItem.title,
+                        titleSnapshot: childTaskItem.title,
+                        deviceID: "demo"
+                    )
+                )
+                context.insert(
+                    InboxSuggestion(
+                        inboxItemID: categoryTaskItem.id,
+                        inboxItemContextID: categoryTaskItem.suggestionContextID,
+                        inboxItemRevisionID: categoryTaskItem.suggestionRevisionID,
+                        taskID: workCategory.id,
+                        destinationKind: .category,
+                        reason: "This is a new piece of client work.",
+                        iconName: "person.2",
+                        colorHex: "F97316",
+                        modelID: "ui-test",
+                        titleSnapshot: categoryTaskItem.title,
+                        deviceID: "demo"
+                    )
+                )
+                context.insert(
+                    InboxSuggestion(
+                        inboxItemID: checklistItem.id,
+                        inboxItemContextID: checklistItem.suggestionContextID,
+                        inboxItemRevisionID: checklistItem.suggestionRevisionID,
+                        taskID: design.id,
+                        destinationKind: .checklist,
+                        reason: "This is one step in the design review.",
+                        iconName: "person.crop.circle.badge.checkmark",
+                        colorHex: "1677FF",
+                        modelID: "ui-test",
+                        titleSnapshot: checklistItem.title,
                         deviceID: "demo"
                     )
                 )

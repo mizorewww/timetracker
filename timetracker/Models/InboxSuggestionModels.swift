@@ -63,4 +63,52 @@ final class InboxSuggestion {
     var destinationKind: InboxSuggestionDestinationKind? {
         InboxSuggestionDestinationKind(rawValue: destinationKindRaw)
     }
+
+    var manualRouteDestination: InboxManualRouteDestination? {
+        switch destinationKind {
+        case .childTask:
+            .childTask(parentTaskID: taskID)
+        case .category:
+            .category(categoryID: taskID)
+        case .checklist:
+            .checklist(taskID: taskID)
+        case nil:
+            nil
+        }
+    }
+}
+
+extension InboxManualRouteDestination {
+    var persistenceTargetID: UUID {
+        switch self {
+        case let .childTask(parentTaskID):
+            parentTaskID
+        case let .category(categoryID):
+            categoryID
+        case let .checklist(taskID):
+            taskID
+        }
+    }
+
+    var suggestionDestinationKind: InboxSuggestionDestinationKind {
+        switch self {
+        case .childTask:
+            .childTask
+        case .category:
+            .category
+        case .checklist:
+            .checklist
+        }
+    }
+
+    var legacySuggestedTaskID: UUID? {
+        switch self {
+        case let .childTask(parentTaskID):
+            parentTaskID
+        case .category:
+            nil
+        case let .checklist(taskID):
+            taskID
+        }
+    }
 }

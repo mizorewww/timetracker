@@ -193,6 +193,19 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskHierarchyPickersExposeTheirCurrentSelection() throws {
+        let source = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift"
+        )
+
+        #expect(source.contains(".accessibilityIdentifier(\"task.editor.parent\")"))
+        #expect(source.contains(".accessibilityIdentifier(\"task.editor.category\")"))
+        #expect(source.components(separatedBy: ".accessibilityValue(accessibilitySelectionValue)").count - 1 == 2)
+        #expect(source.contains("return AppStrings.localized(\"editor.task.rootLevel\")"))
+        #expect(source.contains("return AppStrings.localized(\"taskCategory.none\")"))
+    }
+
+    @Test
     func trackedTimeAssignmentPickersHideArchivedBranchesWithoutBreakingHistoryEdits() throws {
         let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
         let segmentSource = try segmentEditorFeatureSource()
@@ -1052,6 +1065,8 @@ struct TaskUIContractTests {
         #expect(hierarchy.contains("task.parent.currentUnavailableFormat"))
         #expect(hierarchy.contains("task.parent.unavailableFormat"))
         #expect(hierarchy.contains("task.parent.currentMissing"))
+        #expect(hierarchy.contains(".accessibilityIdentifier(\"task.editor.parent\")"))
+        #expect(hierarchy.contains(".accessibilityIdentifier(\"task.editor.category\")"))
         #expect(hierarchy.contains("String(repeating: \"  \"") == false)
         #expect(info.contains("!store.isTaskAvailableForTracking(originalTask)") == false)
         #expect(readModels.contains("func parentChangeBlocker(for task: TaskNode)"))

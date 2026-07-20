@@ -235,7 +235,7 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
             requestedTitle: item.title,
             requestedIdentity: requestedIdentity,
             result: LLMInboxSuggestionResult(
-                taskID: task.id,
+                destination: .checklist(taskID: task.id),
                 reason: "Arrived too late",
                 iconName: "sparkles",
                 colorHex: "1677FF",

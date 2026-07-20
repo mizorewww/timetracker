@@ -25,11 +25,10 @@ struct InboxGeneratingSuggestionBar: View {
 
 struct InboxSuggestionBar: View {
     let itemID: UUID
-    let taskTitle: String
+    let destination: InboxSuggestionDestinationPresentation
     let iconName: String
     let colorHex: String
     let isCompact: Bool
-    let canApply: Bool
     let discard: () -> Void
     let apply: () -> Void
 
@@ -59,7 +58,7 @@ struct InboxSuggestionBar: View {
                     style: .solid
                 )
 
-                Text(taskTitle)
+                Text(destination.summary)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
@@ -67,15 +66,13 @@ struct InboxSuggestionBar: View {
                     .layoutPriority(1)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(
-                String.localizedStringWithFormat(
-                    AppStrings.localized("inbox.suggestion.targetFormat"),
-                    taskTitle
-                )
+            .accessibilityLabel(destination.summary)
+            .accessibilityIdentifier(
+                "inbox.suggestion.ready.\(destination.automationIdentifier)." +
+                    itemID.uuidString
             )
-            .accessibilityIdentifier("inbox.suggestion.ready.\(itemID.uuidString)")
 
-            if canApply == false {
+            if destination.isAvailable == false {
                 Text(.app("inbox.suggestion.targetUnavailable"))
                     .font(.caption)
                     .foregroundStyle(.orange)
@@ -125,8 +122,8 @@ struct InboxSuggestionBar: View {
         if isCompact {
             compactActionButton(
                 systemImage: "checkmark",
-                accessibilityLabel: AppStrings.localized("inbox.suggestion.apply"),
-                identifier: "inbox.suggestion.apply.\(itemID.uuidString)",
+                accessibilityLabel: destination.applyTitle,
+                identifier: applyIdentifier,
                 action: apply
             )
             .buttonStyle(.borderedProminent)
@@ -135,18 +132,18 @@ struct InboxSuggestionBar: View {
                 width: AppLayout.minimumInteractiveTarget,
                 height: AppLayout.minimumInteractiveTarget
             )
-            .disabled(canApply == false)
+            .disabled(destination.isAvailable == false)
         } else {
             regularActionButton(
-                title: AppStrings.localized("inbox.suggestion.apply"),
+                title: destination.applyTitle,
                 systemImage: "checkmark",
-                accessibilityLabel: AppStrings.localized("inbox.suggestion.apply"),
-                identifier: "inbox.suggestion.apply.\(itemID.uuidString)",
+                accessibilityLabel: destination.applyTitle,
+                identifier: applyIdentifier,
                 action: apply
             )
             .fontWeight(.semibold)
             .foregroundStyle(.blue)
-            .disabled(canApply == false)
+            .disabled(destination.isAvailable == false)
         }
     }
 
@@ -166,6 +163,11 @@ struct InboxSuggestionBar: View {
         }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier(identifier)
+    }
+
+    private var applyIdentifier: String {
+        "inbox.suggestion.apply.\(destination.automationIdentifier)." +
+            itemID.uuidString
     }
 
     private func regularActionButton(

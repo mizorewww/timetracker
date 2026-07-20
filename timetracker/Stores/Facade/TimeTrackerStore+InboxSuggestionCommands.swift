@@ -19,27 +19,17 @@ extension TimeTrackerStore {
         return outcome?.didMutate == true
     }
 
-    func applyInboxSuggestion(_ item: InboxItem) {
-        guard let suggestion = inboxSuggestion(for: item),
-              trackableTaskIDs.contains(suggestion.taskID) else {
-            fail(.invalidInboxSuggestion)
-            return
-        }
+    func applyInboxSuggestion(baseline: InboxSuggestionApplyBaseline) {
         let outcome = performStoreScopedInboxMutation(
             refreshScopes: [.inbox, .tasks, .checklist],
-            eventsForOutcome: { (outcome: InboxChecklistRouteOutcome) in outcome.events }
+            eventsForOutcome: { (outcome: InboxManualRouteOutcome) in outcome.events }
         ) { coordinator in
-            try coordinator.applySuggestion(
-                baseline: InboxSuggestionApplyBaseline(
-                    item: item,
-                    suggestion: suggestion
-                )
-            )
+            try coordinator.applySuggestion(baseline: baseline)
         }
         if outcome?.didMutate == true {
-            inboxSuggestionFailureByItemID[item.id] = nil
+            inboxSuggestionFailureByItemID[baseline.itemID] = nil
         } else if outcome == nil {
-            inboxSuggestionFailureByItemID[item.id] = errorMessage
+            inboxSuggestionFailureByItemID[baseline.itemID] = errorMessage
         }
     }
 }

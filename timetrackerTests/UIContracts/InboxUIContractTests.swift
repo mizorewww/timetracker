@@ -67,7 +67,7 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains(".swipeActions(edge: .leading"))
         #expect(inboxSource.contains(".swipeActions(edge: .trailing"))
         #expect(inboxSource.contains(".environment(\\.editMode"))
-        #expect(inboxSource.contains("Label(AppStrings.localized(\"inbox.suggestion.apply\"), systemImage: \"checkmark\")"))
+        #expect(inboxSource.contains("Label(action.destination.applyTitle, systemImage: \"checkmark\")"))
         #expect(inboxSource.contains("Label(AppStrings.localized(\"inbox.suggestion.discard\"), systemImage: \"xmark\")"))
         #expect(inboxSource.contains("Label(AppStrings.delete, systemImage: \"trash\")"))
         #expect(inboxSource.contains("isDeleteConfirmationPresented"))
@@ -159,13 +159,21 @@ struct InboxUIContractTests {
         .joined(separator: "\n")
         let refreshSource = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")
         let llmSource = try sourceText("timetracker/Services/LLM/LLMInboxSuggestionService.swift")
+        let commandSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestionCommands.swift"
+        )
 
         #expect(inboxSource.contains("store.suggestInboxItem(item)") == false)
         #expect(inboxSource.contains("store.presentInboxSuggestionEditor(item)") == false)
-        #expect(inboxSource.contains("store.applyInboxSuggestion(item)"))
+        #expect(inboxSource.contains("let applyBaseline = InboxSuggestionApplyBaseline("))
+        #expect(inboxSource.contains("store.applyInboxSuggestion(baseline: applyBaseline)"))
+        #expect(inboxSource.contains("store.applyInboxSuggestion(baseline: action.baseline)"))
+        #expect(inboxSource.contains("private var applicableSuggestionAction:"))
+        #expect(inboxSource.contains("store.applyInboxSuggestion(item)") == false)
+        #expect(commandSource.contains("func applyInboxSuggestion(baseline: InboxSuggestionApplyBaseline)"))
+        #expect(commandSource.contains("inboxSuggestion(for: item)") == false)
         #expect(inboxSource.contains("store.discardInboxSuggestion(item)"))
         #expect(inboxSource.contains("store.deleteInboxItem(item)"))
-        #expect(inboxSource.contains("private var canApplySuggestion: Bool"))
         #expect(inboxSource.contains("private var canDiscardSuggestion: Bool"))
         #expect(inboxSource.contains("inbox.suggestion.generating"))
         #expect(inboxSource.contains("InboxSuggestionBar("))
@@ -173,7 +181,14 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("store.retryInboxSuggestion(item)"))
         #expect(inboxSource.contains("store.clearInboxSuggestionFailure(item)"))
         #expect(inboxSource.contains("inbox.suggestion.label"))
-        #expect(inboxSource.contains("inbox.suggestion.targetFormat"))
+        #expect(inboxSource.contains("inbox.suggestion.destination.childTaskFormat"))
+        #expect(inboxSource.contains("inbox.suggestion.destination.categoryFormat"))
+        #expect(inboxSource.contains("inbox.suggestion.destination.checklistFormat"))
+        #expect(inboxSource.contains("automationIdentifier: String"))
+        #expect(inboxSource.contains("kind?.rawValue ?? \"invalid\""))
+        #expect(inboxSource.contains("Text(destination.summary)"))
+        #expect(inboxSource.contains(".accessibilityLabel(destination.summary)"))
+        #expect(inboxSource.contains(".disabled(destination.isAvailable == false)"))
         #expect(inboxSource.contains("InboxSuggestionBackground") == false)
         #expect(inboxSource.contains(".padding(.leading, 44)") == false)
         #expect(
@@ -204,15 +219,28 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("inbox.suggestion.targetUnavailable"))
         #expect(inboxSource.contains("inbox.suggestion.missingTarget"))
         #expect(inboxSource.contains("} else if let suggestion {"))
-        #expect(inboxSource.contains("let targetTask = store.task(for: suggestion.taskID)"))
-        #expect(inboxSource.contains("store.trackableTaskIDs.contains(suggestion.taskID)"))
+        #expect(inboxSource.contains("inboxSuggestionDestinationPresentation("))
+        #expect(inboxSource.contains("suggestion.manualRouteDestination"))
+        #expect(inboxSource.contains("case let .childTask(parentTaskID):"))
+        #expect(inboxSource.contains("case let .category(categoryID):"))
+        #expect(inboxSource.contains("case let .checklist(taskID):"))
+        #expect(inboxSource.contains("trackableTaskIDs.contains(parentTaskID)"))
+        #expect(inboxSource.contains("trackableTaskIDs.contains(taskID)"))
         #expect(inboxSource.contains("@Environment(\\.accessibilityReduceMotion)"))
         #expect(inboxSource.contains(".snappy(duration: 0.22)"))
         #expect(inboxSource.contains("reduceMotion\n            ? .opacity"))
         #expect(inboxSource.contains("inbox.suggestion.generating.\\(itemID.uuidString)"))
-        #expect(inboxSource.contains("inbox.suggestion.ready.\\(itemID.uuidString)"))
+        #expect(
+            inboxSource.contains(
+                "inbox.suggestion.ready.\\(destination.automationIdentifier)."
+            )
+        )
         #expect(inboxSource.contains("inbox.suggestion.failure.\\(itemID.uuidString)"))
-        #expect(inboxSource.contains("inbox.suggestion.apply.\\(itemID.uuidString)"))
+        #expect(
+            inboxSource.contains(
+                "inbox.suggestion.apply.\\(destination.automationIdentifier)."
+            )
+        )
         #expect(inboxSource.contains("inbox.suggestion.discard.\\(itemID.uuidString)"))
         #expect(inboxSource.contains("inbox.suggestion.retry.\\(itemID.uuidString)"))
         #expect(inboxSource.contains("CompactTextActionLabel("))
@@ -235,11 +263,15 @@ struct InboxUIContractTests {
 
     @Test
     func inboxSuggestionEmphasisUsesModernTextInterpolation() throws {
-        let source = try sourceText("timetracker/Features/Inbox/InboxSuggestionRow.swift")
+        let source = try sourceText(
+            "timetracker/Features/Inbox/InboxSuggestionDestinationPresentation.swift"
+        )
 
-        #expect(source.contains("inbox.suggestion.targetFormat"))
         #expect(source.contains("String.localizedStringWithFormat("))
-        #expect(source.contains("+ Text(taskTitle)") == false)
+        #expect(source.contains("inbox.suggestion.destination.childTaskFormat"))
+        #expect(source.contains("inbox.suggestion.destination.categoryFormat"))
+        #expect(source.contains("inbox.suggestion.destination.checklistFormat"))
+        #expect(source.contains("+ Text(targetTitle)") == false)
     }
 
     @Test
@@ -262,8 +294,22 @@ struct InboxUIContractTests {
             "taskCategory.search.empty",
             "taskCategory.search.emptyDescription",
             "inbox.suggestion.label",
+            "inbox.suggestion.apply.childTask",
+            "inbox.suggestion.apply.category",
+            "inbox.suggestion.apply.checklist",
+            "inbox.suggestion.apply.unavailable",
+            "inbox.suggestion.destination.childTaskFormat",
+            "inbox.suggestion.destination.categoryFormat",
+            "inbox.suggestion.destination.checklistFormat",
+            "inbox.suggestion.destination.invalidFormat",
             "tasks.search.empty.description",
             "pomodoro.taskPicker.selectionHint"
+        ]
+        let formatKeys = [
+            "inbox.suggestion.destination.childTaskFormat",
+            "inbox.suggestion.destination.categoryFormat",
+            "inbox.suggestion.destination.checklistFormat",
+            "inbox.suggestion.destination.invalidFormat"
         ]
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {
@@ -272,6 +318,16 @@ struct InboxUIContractTests {
             )
             for key in requiredKeys {
                 #expect(source.contains("\"\(key)\" ="))
+            }
+            for key in formatKeys {
+                let line = try #require(
+                    source.split(separator: "\n").first {
+                        $0.hasPrefix("\"\(key)\" =")
+                    }
+                )
+                #expect(
+                    String(line).components(separatedBy: "%@").count - 1 == 1
+                )
             }
         }
     }
@@ -283,6 +339,7 @@ struct InboxUIContractTests {
             "timetracker/Features/Inbox/InboxListView.swift",
             "timetracker/Features/Inbox/InboxCaptureRow.swift",
             "timetracker/Features/Inbox/InboxItemRow.swift",
+            "timetracker/Features/Inbox/InboxSuggestionDestinationPresentation.swift",
             "timetracker/Features/Inbox/InboxSuggestionRow.swift"
         ]
         .map { try sourceText($0) }

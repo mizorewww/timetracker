@@ -256,7 +256,7 @@ struct InboxMutationIdentityTests {
         try handler.upsertSuggestion(
             item: item,
             result: LLMInboxSuggestionResult(
-                taskID: replacementTaskID,
+                destination: .checklist(taskID: replacementTaskID),
                 reason: "Updated route",
                 iconName: "folder",
                 colorHex: "16A34A",
@@ -298,7 +298,7 @@ struct InboxMutationIdentityTests {
         try handler.upsertSuggestion(
             item: newItem,
             result: LLMInboxSuggestionResult(
-                taskID: UUID(),
+                destination: .checklist(taskID: UUID()),
                 reason: "New route",
                 iconName: "tray",
                 colorHex: "1677FF",

@@ -17,6 +17,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Facade/TimeTrackerStore+ChecklistReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestions.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestionCandidates.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestionCommands.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxMoveCommands.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+ChecklistVisualSuggestions.swift",
@@ -251,6 +252,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Inbox/InboxListView.swift",
             "timetracker/Features/Inbox/InboxCaptureRow.swift",
             "timetracker/Features/Inbox/InboxItemRow.swift",
+            "timetracker/Features/Inbox/InboxSuggestionDestinationPresentation.swift",
             "timetracker/Features/Inbox/InboxSuggestionRow.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorViews.swift",
             "timetracker/Features/Tasks/Editor/RecoveredTaskEditorSheet.swift",
@@ -1187,7 +1189,8 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Facade/TimeTrackerStore+PomodoroReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+ChecklistReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+InboxReadModels.swift",
-            "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestions.swift"
+            "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestions.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+InboxSuggestionCandidates.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

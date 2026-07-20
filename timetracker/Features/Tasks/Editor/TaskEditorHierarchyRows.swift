@@ -31,6 +31,8 @@ struct TaskParentPickerRow: View {
             }
         }
         .disabled(changeBlocker != nil)
+        .accessibilityIdentifier("task.editor.parent")
+        .accessibilityValue(accessibilitySelectionValue)
     }
 
     private var missingCurrentParentID: UUID? {
@@ -39,6 +41,16 @@ struct TaskParentPickerRow: View {
             return nil
         }
         return selection
+    }
+
+    private var accessibilitySelectionValue: String {
+        guard let selection else {
+            return AppStrings.localized("editor.task.rootLevel")
+        }
+        guard let option = options.first(where: { $0.id == selection }) else {
+            return AppStrings.localized("task.parent.currentMissing")
+        }
+        return title(for: option)
     }
 
     private func title(for option: TaskParentPickerOption) -> String {
@@ -66,6 +78,16 @@ struct TaskCategoryPickerRow: View {
                     .tag(Optional(option.id))
             }
         }
+        .accessibilityIdentifier("task.editor.category")
+        .accessibilityValue(accessibilitySelectionValue)
+    }
+
+    private var accessibilitySelectionValue: String {
+        guard let selection,
+              let option = options.first(where: { $0.id == selection }) else {
+            return AppStrings.localized("taskCategory.none")
+        }
+        return option.title
     }
 }
 

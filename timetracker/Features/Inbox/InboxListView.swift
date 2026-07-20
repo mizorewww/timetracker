@@ -15,13 +15,13 @@ struct InboxListRow: View {
             requestDelete: requestDelete
         )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            if canApplySuggestion {
+            if let action = applicableSuggestionAction {
                 Button {
                     performAnimated {
-                        store.applyInboxSuggestion(item)
+                        store.applyInboxSuggestion(baseline: action.baseline)
                     }
                 } label: {
-                    Label(AppStrings.localized("inbox.suggestion.apply"), systemImage: "checkmark")
+                    Label(action.destination.applyTitle, systemImage: "checkmark")
                 }
                 .tint(.blue)
             }
@@ -70,13 +70,22 @@ struct InboxListRow: View {
         isDeleteConfirmationPresented = true
     }
 
-    private var canApplySuggestion: Bool {
+    private var applicableSuggestionAction: ApplicableSuggestionAction? {
         guard !item.isCompleted,
-              let suggestion = store.inboxSuggestion(for: item),
-              store.trackableTaskIDs.contains(suggestion.taskID) else {
-            return false
+              let suggestion = store.inboxSuggestion(for: item) else {
+            return nil
         }
-        return true
+        let destination = store.inboxSuggestionDestinationPresentation(
+            for: suggestion
+        )
+        guard destination.isAvailable else { return nil }
+        return ApplicableSuggestionAction(
+            destination: destination,
+            baseline: InboxSuggestionApplyBaseline(
+                item: item,
+                suggestion: suggestion
+            )
+        )
     }
 
     private var canDiscardSuggestion: Bool {
@@ -87,4 +96,9 @@ struct InboxListRow: View {
                 store.inboxSuggestionFailureMessage(for: item) != nil
             )
     }
+}
+
+private struct ApplicableSuggestionAction {
+    let destination: InboxSuggestionDestinationPresentation
+    let baseline: InboxSuggestionApplyBaseline
 }

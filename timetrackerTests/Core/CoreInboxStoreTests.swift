@@ -460,7 +460,8 @@ struct CoreInboxStoreTests {
     }
 
     @Test @MainActor
-    func staleSuggestionCannotWriteIntoAChildOfAnArchivedTask() {
+    func staleSuggestionCannotWriteIntoAChildOfAnArchivedTask() throws {
+        let context = try makeTestContext()
         let parent = TaskNode(title: "Archived parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Hidden child", parentID: parent.id, deviceID: "test")
         parent.statusRaw = LegacyTaskStatusRaw.archived
@@ -474,15 +475,32 @@ struct CoreInboxStoreTests {
             titleSnapshot: item.title,
             deviceID: "test"
         )
+        context.insert(parent)
+        context.insert(child)
+        context.insert(item)
+        context.insert(suggestion)
+        try context.save()
+
         let store = makeTestStore()
+        store.configureRepositoriesIfNeeded(context: context)
         store.tasks = [parent, child]
         store.inboxItems = [item]
         store.inboxSuggestions = [suggestion]
 
-        store.applyInboxSuggestion(item)
+        store.applyInboxSuggestion(
+            baseline: InboxSuggestionApplyBaseline(
+                item: item,
+                suggestion: suggestion
+            )
+        )
 
         #expect(item.deletedAt == nil)
         #expect(store.checklistItems.isEmpty)
+        #expect(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<ChecklistItem>())
+                .isEmpty
+        )
         #expect(store.errorMessage == AppStrings.localized("inbox.suggestion.error.noValidTask"))
     }
 

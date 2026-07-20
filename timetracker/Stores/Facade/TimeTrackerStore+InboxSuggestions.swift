@@ -5,7 +5,7 @@ extension TimeTrackerStore {
 
     func autoSuggestInboxItemsIfNeeded() {
         guard canAutoSuggestInboxItems else { return }
-        let candidates = llmTaskCandidates()
+        let candidates = llmInboxSuggestionCandidates()
         guard !candidates.isEmpty else { return }
         let availableSlots = max(
             0,
@@ -42,12 +42,16 @@ extension TimeTrackerStore {
             return
         }
 
-        startInboxSuggestion(item, candidates: llmTaskCandidates(), showsErrors: showsErrors)
+        startInboxSuggestion(
+            item,
+            candidates: llmInboxSuggestionCandidates(),
+            showsErrors: showsErrors
+        )
     }
 
     private func startInboxSuggestion(
         _ item: InboxItem,
-        candidates: [LLMTaskCandidate],
+        candidates: LLMInboxSuggestionCandidates,
         showsErrors: Bool
     ) {
         guard !inboxSuggestionInFlightIDs.contains(item.id),
@@ -70,7 +74,8 @@ extension TimeTrackerStore {
             do {
                 let result = try await service.suggest(
                     inboxTitle: requestedTitle,
-                    candidates: candidates,
+                    taskCandidates: candidates.tasks,
+                    categoryCandidates: candidates.categories,
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID
@@ -168,50 +173,6 @@ extension TimeTrackerStore {
             inboxSuggestionInFlightIDs.remove(itemID)
             request.task.cancel()
         }
-    }
-
-    func llmTaskCandidates() -> [LLMTaskCandidate] {
-        let availableTasks = tasks.filter(isTaskAvailableForTracking)
-        var pinnedIDs = Set<UUID>()
-        let pinnedTasks: [TaskNode] = preferences.quickStartTaskIDs.compactMap { taskID -> TaskNode? in
-            guard pinnedIDs.insert(taskID).inserted,
-                  let task = taskByID[taskID],
-                  isTaskAvailableForTracking(task) else {
-                return nil
-            }
-            return task
-        }
-        let frequentTasks = frequentRecentTasks(
-            excluding: pinnedIDs,
-            limit: LLMSuggestionInputPolicy.maximumCandidateCount
-        )
-        let priorityIDs = Set((pinnedTasks + frequentTasks).map(\.id))
-        let remainingTasks = availableTasks
-            .filter { !priorityIDs.contains($0.id) }
-            .sorted { lhs, rhs in
-                let lhsPath = taskPath(for: lhs)
-                let rhsPath = taskPath(for: rhs)
-                let lhsKey = lhsPath.lowercased()
-                let rhsKey = rhsPath.lowercased()
-                if lhsKey != rhsKey { return lhsKey < rhsKey }
-                if lhsPath != rhsPath { return lhsPath < rhsPath }
-                return lhs.id.uuidString < rhs.id.uuidString
-            }
-        let candidateWindow = (pinnedTasks + frequentTasks + remainingTasks)
-            .prefix(LLMSuggestionInputPolicy.maximumCandidateCount)
-
-        return LLMSuggestionInputPolicy.boundedCandidates(
-            candidateWindow
-                .map { task in
-                    LLMTaskCandidate(
-                        id: task.id,
-                        title: task.title,
-                        path: taskPath(for: task),
-                        iconName: ChecklistVisualSanitizer.sanitizedIcon(task.iconName),
-                        colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex)
-                    )
-                }
-        )
     }
 
     private var canAutoSuggestInboxItems: Bool {

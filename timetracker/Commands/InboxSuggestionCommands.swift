@@ -82,7 +82,7 @@ extension InboxCommandHandler {
                 update(
                     active,
                     item: winner,
-                    taskID: result.taskID,
+                    destination: result.destination,
                     text: preparedResult,
                     now: now,
                     deviceID: deviceID
@@ -93,7 +93,8 @@ extension InboxCommandHandler {
                         inboxItemID: winner.id,
                         inboxItemContextID: winner.effectiveSuggestionContextID,
                         inboxItemRevisionID: winner.effectiveSuggestionRevisionID,
-                        taskID: result.taskID,
+                        taskID: result.destination.persistenceTargetID,
+                        destinationKind: result.destination.suggestionDestinationKind,
                         reason: preparedResult.reason,
                         iconName: preparedResult.iconName,
                         colorHex: preparedResult.colorHex,
@@ -107,7 +108,7 @@ extension InboxCommandHandler {
 
             tombstone(duplicateMutations, now: now, deviceID: deviceID)
 
-            winner.suggestedTaskID = result.taskID
+            winner.suggestedTaskID = result.destination.legacySuggestedTaskID
             winner.suggestionGeneratedAt = now
             winner.dismissedSuggestionRevisionID = nil
             winner.updatedAt = now
@@ -130,7 +131,7 @@ extension InboxCommandHandler {
     ) throws {
         guard let taskID = draft.taskID else { return }
         let result = LLMInboxSuggestionResult(
-            taskID: taskID,
+            destination: .checklist(taskID: taskID),
             reason: draft.reason,
             iconName: draft.iconName,
             colorHex: draft.colorHex,

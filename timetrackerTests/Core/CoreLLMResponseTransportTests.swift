@@ -172,7 +172,8 @@ struct CoreLLMResponseTransportTests {
         await Self.expectResponseTooLarge {
             _ = try await service.suggest(
                 inboxTitle: "Polish spacing",
-                candidates: [candidate],
+                taskCandidates: [candidate],
+                categoryCandidates: [],
                 endpoint: "https://example.test/v1",
                 apiKey: "key",
                 modelID: "model"

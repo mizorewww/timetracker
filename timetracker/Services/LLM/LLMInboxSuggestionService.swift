@@ -31,8 +31,15 @@ nonisolated struct LLMTaskCandidate: Codable, Equatable, Sendable {
     let colorHex: String
 }
 
+nonisolated struct LLMCategoryCandidate: Codable, Equatable, Sendable {
+    let id: UUID
+    let title: String
+    let iconName: String
+    let colorHex: String
+}
+
 nonisolated struct LLMInboxSuggestionResult: Equatable, Sendable {
-    let taskID: UUID
+    let destination: InboxManualRouteDestination
     let reason: String
     let iconName: String
     let colorHex: String
@@ -48,20 +55,22 @@ struct LLMInboxSuggestionService {
 
     func suggest(
         inboxTitle: String,
-        candidates: [LLMTaskCandidate],
+        taskCandidates: [LLMTaskCandidate],
+        categoryCandidates: [LLMCategoryCandidate],
         endpoint: String,
         apiKey: String,
         modelID: String
     ) async throws -> LLMInboxSuggestionResult {
         let input = LLMSuggestionInputPolicy.prepare(
             inboxTitle: inboxTitle,
-            candidates: candidates,
+            taskCandidates: taskCandidates,
+            categoryCandidates: categoryCandidates,
             modelID: modelID
         )
         guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
         }
-        guard !input.candidates.isEmpty else {
+        guard !input.taskCandidates.isEmpty || !input.categoryCandidates.isEmpty else {
             throw LLMInboxSuggestionServiceError.noTaskCandidates
         }
 
@@ -89,7 +98,8 @@ struct LLMInboxSuggestionService {
             let payload = try JSONDecoder().decode(InboxSuggestionPayload.self, from: contentData)
             return try Self.sanitize(
                 payload: payload,
-                candidates: input.candidates,
+                taskCandidates: input.taskCandidates,
+                categoryCandidates: input.categoryCandidates,
                 modelID: input.modelID
             )
         } catch let error as LLMInboxSuggestionServiceError {
@@ -101,20 +111,22 @@ struct LLMInboxSuggestionService {
 
     func suggestionRequest(
         inboxTitle: String,
-        candidates: [LLMTaskCandidate],
+        taskCandidates: [LLMTaskCandidate],
+        categoryCandidates: [LLMCategoryCandidate],
         endpoint: String,
         apiKey: String,
         modelID: String
     ) throws -> URLRequest {
         let input = LLMSuggestionInputPolicy.prepare(
             inboxTitle: inboxTitle,
-            candidates: candidates,
+            taskCandidates: taskCandidates,
+            categoryCandidates: categoryCandidates,
             modelID: modelID
         )
         guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
         }
-        guard !input.candidates.isEmpty else {
+        guard !input.taskCandidates.isEmpty || !input.categoryCandidates.isEmpty else {
             throw LLMInboxSuggestionServiceError.noTaskCandidates
         }
         return try suggestionRequest(input: input, endpoint: endpoint, apiKey: apiKey)
@@ -150,7 +162,7 @@ struct LLMInboxSuggestionService {
                     .init(
                         role: "system",
                         content: """
-                        You classify inbox checklist items into one existing task. Return only JSON with keys taskID, reason, iconName, colorHex. Use one of the provided task IDs exactly. Use a valid SF Symbol from the allowedSymbols list and a color from allowedColors exactly.
+                        Route each inbox item to exactly one existing destination. Return only JSON with keys destinationKind, destinationID, reason, iconName, colorHex. destinationKind must be childTask, category, or checklist. For childTask and checklist, destinationID must exactly match an ID from tasks. For category, destinationID must exactly match an ID from categories. childTask creates a new child task, category creates a new root task in that category, and checklist creates a checklist item in that task. Use a valid SF Symbol from allowedSymbols and a color from allowedColors exactly.
                         """
                     ),
                     .init(
@@ -190,26 +202,62 @@ struct LLMInboxSuggestionService {
 
     static func sanitize(
         payload: InboxSuggestionPayload,
-        candidates: [LLMTaskCandidate],
+        taskCandidates: [LLMTaskCandidate],
+        categoryCandidates: [LLMCategoryCandidate],
         modelID: String
     ) throws -> LLMInboxSuggestionResult {
-        let boundedCandidates = LLMSuggestionInputPolicy.boundedCandidates(candidates)
-        let candidateByID = boundedCandidates.reduce(into: [UUID: LLMTaskCandidate]()) { result, candidate in
+        let boundedCandidates = LLMSuggestionInputPolicy.boundedDestinationCandidates(
+            tasks: taskCandidates,
+            categories: categoryCandidates
+        )
+        let taskCandidateByID = boundedCandidates.tasks.reduce(
+            into: [UUID: LLMTaskCandidate]()
+        ) { result, candidate in
             result[candidate.id] = candidate
         }
-        guard let taskID = LLMSuggestionInputPolicy.sanitizedTaskID(payload.taskID),
-              let candidate = candidateByID[taskID] else {
+        let categoryCandidateByID = boundedCandidates.categories.reduce(
+            into: [UUID: LLMCategoryCandidate]()
+        ) { result, candidate in
+            result[candidate.id] = candidate
+        }
+        guard let kind = InboxSuggestionDestinationKind(rawValue: payload.destinationKind),
+              let destinationID = LLMSuggestionInputPolicy.sanitizedDestinationID(
+                  payload.destinationID
+              ) else {
             throw LLMInboxSuggestionServiceError.noValidTask
+        }
+
+        let destination: InboxManualRouteDestination
+        let fallbackColor: String
+        switch kind {
+        case .childTask:
+            guard let candidate = taskCandidateByID[destinationID] else {
+                throw LLMInboxSuggestionServiceError.noValidTask
+            }
+            destination = .childTask(parentTaskID: destinationID)
+            fallbackColor = candidate.colorHex
+        case .category:
+            guard let candidate = categoryCandidateByID[destinationID] else {
+                throw LLMInboxSuggestionServiceError.noValidTask
+            }
+            destination = .category(categoryID: destinationID)
+            fallbackColor = candidate.colorHex
+        case .checklist:
+            guard let candidate = taskCandidateByID[destinationID] else {
+                throw LLMInboxSuggestionServiceError.noValidTask
+            }
+            destination = .checklist(taskID: destinationID)
+            fallbackColor = candidate.colorHex
         }
 
         let iconName = LLMSuggestionInputPolicy.sanitizedSuggestedIcon(payload.iconName)
         let colorHex = LLMSuggestionInputPolicy.sanitizedSuggestedColor(
             payload.colorHex,
-            fallback: candidate.colorHex
+            fallback: fallbackColor
         )
         let reason = LLMSuggestionInputPolicy.sanitizedReason(payload.reason)
         return LLMInboxSuggestionResult(
-            taskID: taskID,
+            destination: destination,
             reason: reason,
             iconName: iconName,
             colorHex: colorHex,
@@ -225,7 +273,8 @@ struct LLMInboxSuggestionService {
             inboxTitle: input.inboxTitle,
             allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
             allowedColors: TaskColorPalette.hexValues,
-            tasks: input.candidates
+            tasks: input.taskCandidates,
+            categories: input.categoryCandidates
         )
         let data = try JSONEncoder().encode(payload)
         guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
@@ -237,7 +286,8 @@ struct LLMInboxSuggestionService {
 }
 
 struct InboxSuggestionPayload: Codable, Equatable {
-    let taskID: String
+    let destinationKind: String
+    let destinationID: String
     let reason: String
     let iconName: String
     let colorHex: String
@@ -248,4 +298,5 @@ private struct PromptPayload: Encodable {
     let allowedSymbols: [String]
     let allowedColors: [String]
     let tasks: [LLMTaskCandidate]
+    let categories: [LLMCategoryCandidate]
 }

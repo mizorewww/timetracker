@@ -34,6 +34,9 @@ struct TaskDetailList: View {
                 focusedTextField: focusedTextField,
                 focusedChecklistDraftID: focusedChecklistDraftID,
                 orderedChecklistIndices: session.orderedChecklistIndices,
+                toggleChecklistItem: { id in
+                    session.toggleChecklistItem(id: id)
+                },
                 moveChecklistItems: { sourceOffsets, destination in
                     session.moveChecklistItems(
                         fromOffsets: sourceOffsets,

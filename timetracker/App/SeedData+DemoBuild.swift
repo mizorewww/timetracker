@@ -150,9 +150,10 @@ extension SeedData {
         addChecklist(
             context: context,
             taskID: macDesign.id,
-            titles: ["Align task detail", "Tighten sidebar", "Polish timeline"],
+            titles: ["Polish timeline", "Align task detail", "Tighten sidebar"],
             completed: 2,
-            completionDayOffsets: [0, 0]
+            completionDayOffsets: [0, 0],
+            completedIndices: [1, 2]
         )
         addChecklist(
             context: context,
@@ -313,22 +314,27 @@ extension SeedData {
         taskID: UUID,
         titles: [String],
         completed: Int,
-        completionDayOffsets: [Int]
+        completionDayOffsets: [Int],
+        completedIndices: Set<Int>? = nil
     ) {
         let calendar = Calendar.current
         let completionReference = Date().addingTimeInterval(-60)
+        let resolvedCompletedIndices = completedIndices ?? Set(0..<completed)
+        var completionIndex = 0
         for (index, title) in titles.enumerated() {
+            let isCompleted = resolvedCompletedIndices.contains(index)
             let item = ChecklistItem(
                 taskID: taskID,
                 title: title,
-                isCompleted: index < completed,
+                isCompleted: isCompleted,
                 sortOrder: Double(index + 1) * 10,
                 deviceID: "demo"
             )
             if item.isCompleted {
-                let dayOffset = completionDayOffsets.indices.contains(index)
-                    ? completionDayOffsets[index]
+                let dayOffset = completionDayOffsets.indices.contains(completionIndex)
+                    ? completionDayOffsets[completionIndex]
                     : 0
+                completionIndex += 1
                 item.completedAt = calendar.date(
                     byAdding: .day,
                     value: dayOffset,
@@ -339,8 +345,8 @@ extension SeedData {
             context.insert(
                 ChecklistItemVisual(
                     checklistItemID: item.id,
-                    iconName: index < completed ? "checkmark.circle" : "circle.dashed",
-                    colorHex: index < completed ? "16A34A" : "1677FF",
+                    iconName: isCompleted ? "checkmark.circle" : "circle.dashed",
+                    colorHex: isCompleted ? "16A34A" : "1677FF",
                     deviceID: "demo"
                 )
             )

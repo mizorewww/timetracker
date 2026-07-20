@@ -4,6 +4,7 @@ struct TaskChecklistEditorSection: View {
     @Binding var checklistItems: [ChecklistEditorDraft]
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
+    let toggleChecklistItem: (UUID) -> Void
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     @State private var isSorting = false
@@ -49,6 +50,9 @@ struct TaskChecklistEditorSection: View {
                 moveUp: { moveChecklistItem(visualIndex: placement.visualIndex, direction: -1) },
                 moveDown: { moveChecklistItem(visualIndex: placement.visualIndex, direction: 1) },
                 delete: { deleteChecklistItem(at: placement.sourceIndex) },
+                toggleCompletion: {
+                    toggleChecklistItem(placement.id)
+                },
                 focus: focusedChecklistDraftID,
                 submit: { addChecklistItem(placement.visualIndex) }
             )

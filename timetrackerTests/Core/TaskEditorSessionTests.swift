@@ -92,6 +92,160 @@ struct TaskEditorSessionTests {
     }
 
     @Test
+    func newlyCompletedChecklistItemMovesAfterEveryCompletedItem() {
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        let newlyCompleted = ChecklistEditorDraft(title: "Finish me")
+        let completedFirst = ChecklistEditorDraft(
+            title: "Completed first",
+            isCompleted: true
+        )
+        let completedSecond = ChecklistEditorDraft(
+            title: "Completed second",
+            isCompleted: true
+        )
+        initialDraft.checklistItems = [
+            newlyCompleted,
+            completedFirst,
+            completedSecond,
+        ]
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: initialDraft
+        )
+
+        session.toggleChecklistItem(id: newlyCompleted.id)
+
+        #expect(session.draft.checklistItems.map(\.id) == [
+            completedFirst.id,
+            completedSecond.id,
+            newlyCompleted.id,
+        ])
+        #expect(session.draft.checklistItems.map(\.isCompleted) == [
+            true,
+            true,
+            true,
+        ])
+    }
+
+    @Test
+    func reopeningChecklistItemMovesItBeforeCompletedHistory() {
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        let completedFirst = ChecklistEditorDraft(
+            title: "Completed first",
+            isCompleted: true
+        )
+        let reopened = ChecklistEditorDraft(
+            title: "Reopen me",
+            isCompleted: true
+        )
+        let completedLast = ChecklistEditorDraft(
+            title: "Completed last",
+            isCompleted: true
+        )
+        initialDraft.checklistItems = [
+            completedFirst,
+            reopened,
+            completedLast,
+        ]
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: initialDraft
+        )
+
+        session.toggleChecklistItem(id: reopened.id)
+
+        #expect(session.draft.checklistItems.map(\.id) == [
+            reopened.id,
+            completedFirst.id,
+            completedLast.id,
+        ])
+        #expect(session.draft.checklistItems[0].isCompleted == false)
+    }
+
+    @Test
+    func rapidChecklistToggleUsesStableIdentityAfterReordering() {
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        let item = ChecklistEditorDraft(title: "Toggle twice")
+        let completed = ChecklistEditorDraft(
+            title: "Completed",
+            isCompleted: true
+        )
+        initialDraft.checklistItems = [item, completed]
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: initialDraft
+        )
+
+        session.toggleChecklistItem(id: item.id)
+        session.toggleChecklistItem(id: item.id)
+
+        #expect(session.draft.checklistItems.map(\.id) == [
+            item.id,
+            completed.id,
+        ])
+        #expect(session.draft.checklistItems[0].isCompleted == false)
+    }
+
+    @Test
+    func completedChecklistOrderPersistsAcrossSaveAndReload() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "checklist-order"
+        ).createTask(
+            title: "Persistent checklist",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try ChecklistDraftService().save(
+            drafts: [
+                ChecklistEditorDraft(title: "Finish me"),
+                ChecklistEditorDraft(
+                    title: "Completed first",
+                    isCompleted: true
+                ),
+                ChecklistEditorDraft(
+                    title: "Completed second",
+                    isCompleted: true
+                ),
+            ],
+            taskID: task.id,
+            context: context,
+            deviceID: "checklist-order"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let storedTask = try #require(store.task(for: task.id))
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(for: storedTask)
+        )
+        let newlyCompletedID = try #require(
+            session.draft.checklistItems.first {
+                $0.title == "Finish me"
+            }?.id
+        )
+
+        session.toggleChecklistItem(id: newlyCompletedID)
+
+        #expect(store.saveTaskDraft(session.draft))
+        let relaunchedStore = makeTestStore()
+        relaunchedStore.configureIfNeeded(
+            context: ModelContext(context.container)
+        )
+        #expect(relaunchedStore.checklistItems(for: task.id).map(\.title) == [
+            "Completed first",
+            "Completed second",
+            "Finish me",
+        ])
+        #expect(
+            relaunchedStore.checklistItems(for: task.id).map(\.isCompleted) ==
+                [true, true, true]
+        )
+    }
+
+    @Test
     func staleSaveOffersTheLatestDraftWithoutDiscardingTheCurrentDraft() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(

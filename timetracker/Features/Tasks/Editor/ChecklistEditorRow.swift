@@ -8,14 +8,17 @@ struct ChecklistEditorRow: View {
     let moveUp: () -> Void
     let moveDown: () -> Void
     let delete: () -> Void
+    let toggleCompletion: () -> Void
     let focus: FocusState<UUID?>.Binding
     let submit: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            ChecklistCompletionButton(isCompleted: item.isCompleted, colorHex: item.colorHex) {
-                item.isCompleted.toggle()
-            }
+            ChecklistCompletionButton(
+                isCompleted: item.isCompleted,
+                colorHex: item.colorHex,
+                action: toggleCompletion
+            )
             .padding(.top, 2)
             .accessibilityLabel(
                 item.title.isEmpty

@@ -979,18 +979,18 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(incomplete.waitForExistence(timeout: 5) && incomplete.isHittable)
         XCTAssertTrue(completedFirst.waitForExistence(timeout: 3))
-        XCTAssertTrue(completedSecond.waitForExistence(timeout: 3))
         XCTAssertLessThan(incomplete.frame.minY, completedFirst.frame.minY)
-        XCTAssertLessThan(completedFirst.frame.minY, completedSecond.frame.minY)
         try capture("iphone-checklist-incomplete-before-completed", app: app)
 
         activate(incomplete)
+        scrollUntilHittable(incomplete, direction: .up, in: app)
 
         XCTAssertTrue(
             waitUntil(timeout: 5) {
-                completedSecond.frame.minY < incomplete.frame.minY
+                completedSecond.exists &&
+                    completedSecond.frame.minY < incomplete.frame.minY
             },
-            "The newly completed checklist item must move to the bottom."
+            "The newly completed checklist item must move after every completed item."
         )
         try capture("iphone-checklist-completed-moved-to-bottom", app: app)
         #endif

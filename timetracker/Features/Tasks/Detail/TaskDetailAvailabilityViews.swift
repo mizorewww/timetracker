@@ -151,6 +151,9 @@ struct TaskDetailRecoveryList: View {
                     focusedTextField: focusedTextField,
                     focusedChecklistDraftID: focusedChecklistDraftID,
                     orderedChecklistIndices: session.orderedChecklistIndices,
+                    toggleChecklistItem: { id in
+                        session.toggleChecklistItem(id: id)
+                    },
                     moveChecklistItems: session.moveChecklistItems,
                     addChecklistItem: addChecklistItem,
                     showsTitleField: true,

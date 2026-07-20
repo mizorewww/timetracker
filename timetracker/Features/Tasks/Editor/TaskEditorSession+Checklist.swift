@@ -8,6 +8,25 @@ extension TaskEditorSession {
         )
     }
 
+    func toggleChecklistItem(id: UUID) {
+        guard let sourceIndex = draft.checklistItems.firstIndex(where: {
+            $0.id == id
+        }) else {
+            return
+        }
+
+        var item = draft.checklistItems.remove(at: sourceIndex)
+        item.isCompleted.toggle()
+        if item.isCompleted {
+            draft.checklistItems.append(item)
+        } else {
+            let insertionIndex = draft.checklistItems.firstIndex(where: {
+                $0.isCompleted
+            }) ?? draft.checklistItems.endIndex
+            draft.checklistItems.insert(item, at: insertionIndex)
+        }
+    }
+
     func moveChecklistItems(
         fromOffsets sourceOffsets: IndexSet,
         toOffset destination: Int

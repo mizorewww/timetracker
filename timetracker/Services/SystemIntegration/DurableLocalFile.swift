@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum DurableLocalFileFaultPoint: String, Sendable {
     case beforeDirectoryCreation
     case afterDirectoryCreationBeforeParentSync
+    case beforeManagedRead
     case afterAtomicWriteBeforeFileSync
     case afterFileSyncBeforeDirectorySync
     case afterRemovalBeforeDirectorySync

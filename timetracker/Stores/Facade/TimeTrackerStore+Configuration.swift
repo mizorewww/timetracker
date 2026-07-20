@@ -2,6 +2,16 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
+    static func defaultSyncConflictService() -> SyncConflictService {
+        guard CommandLine.arguments.contains("--uitesting") else {
+            return SyncConflictService()
+        }
+        let stateURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("TimeTrackerUITests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(SyncConflictService.stateFileName)
+        return SyncConflictService(stateURL: stateURL)
+    }
+
     func configureIfNeeded(context: ModelContext) {
         guard hasCompletedStartupConfiguration == false else { return }
         guard isConfiguringStartup == false else {

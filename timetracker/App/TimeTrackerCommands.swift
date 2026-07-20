@@ -60,8 +60,13 @@ struct TimeTrackerCommands: Commands {
         key: KeyEquivalent
     ) -> some View {
         Button(destination.title) {
-            store?.closeTaskDetailNavigation()
-            store?.desktopDestination = destination
+            guard let store else { return }
+            store.taskDetailNavigationGuard.requestNavigation(
+                dismissingActiveDetail: true
+            ) { [weak store] in
+                store?.closeTaskDetailNavigation()
+                store?.desktopDestination = destination
+            }
         }
         .keyboardShortcut(key, modifiers: [.command])
         .disabled(store == nil)

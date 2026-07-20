@@ -39,8 +39,7 @@ struct SidebarTaskTreeRow: View {
         .contextMenu {
             TaskContextMenu(
                 store: store,
-                task: task,
-                editTask: { store.openTaskEditor(task.id) }
+                task: task
             )
         }
         .taskRowSwipeActions(

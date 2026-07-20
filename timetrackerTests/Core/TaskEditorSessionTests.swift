@@ -28,10 +28,33 @@ struct TaskEditorSessionTests {
         }
         #expect(cleanCancellationCount == 1)
         #expect(session.isDiscardConfirmationPresented)
+        #expect(session.navigationConfirmationRequestID == nil)
 
         session.discardChanges()
         #expect(session.draft == initialDraft)
         #expect(session.hasUnsavedChanges == false)
+    }
+
+    @Test
+    func navigationConfirmationOwnershipRejectsStaleDismissals() {
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: TaskEditorDraft(parentID: nil)
+        )
+        let firstRequestID = UUID()
+        let replacementRequestID = UUID()
+
+        session.requestDiscardConfirmation(for: firstRequestID)
+        session.requestDiscardConfirmation(for: replacementRequestID)
+        session.dismissDiscardConfirmation(for: firstRequestID)
+
+        #expect(session.navigationConfirmationRequestID == replacementRequestID)
+        #expect(session.isDiscardConfirmationPresented)
+
+        session.dismissDiscardConfirmation(for: replacementRequestID)
+
+        #expect(session.navigationConfirmationRequestID == nil)
+        #expect(session.isDiscardConfirmationPresented == false)
     }
 
     @Test
@@ -114,7 +137,7 @@ struct TaskEditorSessionTests {
 
         session.save(
             using: { store.saveTaskDraftResult($0) },
-            onSaved: { didSave = true }
+            onSaved: { _ in didSave = true }
         )
 
         #expect(didSave == false)
@@ -136,21 +159,120 @@ struct TaskEditorSessionTests {
             initialDraft: initialDraft
         )
         var savedCount = 0
+        let savedTaskID = UUID()
 
         session.save(
-            using: { _ in .saved },
-            onSaved: { savedCount += 1 }
+            using: { _ in .saved(taskID: savedTaskID) },
+            onSaved: { taskID in
+                #expect(taskID == savedTaskID)
+                savedCount += 1
+            }
         )
         #expect(savedCount == 1)
 
         session.draft.title = "Keep editing"
         session.save(
             using: { _ in .failed(message: "Could not save") },
-            onSaved: { savedCount += 1 }
+            onSaved: { _ in savedCount += 1 }
         )
 
         #expect(savedCount == 1)
         #expect(session.draft.title == "Keep editing")
         #expect(store.errorMessage == "Could not save")
+    }
+
+    @Test
+    func recoveryCopyPreservesContentButUsesFreshTaskAndChecklistIdentities() {
+        var draft = TaskEditorDraft(parentID: UUID())
+        draft.taskID = UUID()
+        draft.title = "Recovered"
+        draft.notes = "Keep this"
+        draft.estimatedMinutes = 25
+        draft.hasDueDate = true
+        draft.dueAt = Date(timeIntervalSince1970: 1_234)
+        let checklist = ChecklistEditorDraft(
+            title: "Preserve item",
+            isCompleted: true,
+            iconName: "star",
+            colorHex: "FF9500"
+        )
+        draft.checklistItems = [checklist]
+        let recoveredParentID = UUID()
+
+        let copy = draft.copyAsNew(
+            parentID: recoveredParentID,
+            categoryID: nil
+        )
+
+        #expect(copy.baseline == nil)
+        #expect(copy.taskID == nil)
+        #expect(copy.parentID == recoveredParentID)
+        #expect(copy.title == draft.title)
+        #expect(copy.notes == draft.notes)
+        #expect(copy.estimatedMinutes == draft.estimatedMinutes)
+        #expect(copy.hasDueDate == draft.hasDueDate)
+        #expect(copy.dueAt == draft.dueAt)
+        #expect(copy.checklistItems.count == 1)
+        #expect(copy.checklistItems[0].id != checklist.id)
+        #expect(copy.checklistItems[0].existingID == nil)
+        #expect(copy.checklistItems[0].title == checklist.title)
+        #expect(copy.checklistItems[0].isCompleted)
+        #expect(copy.checklistItems[0].iconName == checklist.iconName)
+        #expect(copy.checklistItems[0].colorHex == checklist.colorHex)
+    }
+
+    @Test
+    func restoredDiskDraftKeepsTheCurrentStoreDraftAsItsSessionBaseline() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "draft-restore"
+        ).createTask(
+            title: "Persisted",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let task = try #require(store.task(for: created.id))
+        let current = store.editorDraft(for: task)
+        var recovered = current
+        recovered.title = "Recovered edit"
+        recovered.notes = "Still unsaved"
+        let session = TaskEditorSession(store: store, initialDraft: current)
+
+        session.restoreRecoveredDraft(recovered)
+
+        #expect(session.draft == recovered)
+        #expect(session.sessionBaseline == current)
+        #expect(session.hasUnsavedChanges)
+        #expect(session.parentCandidates.map(\.id) ==
+            store.validParentTasks(for: created.id).map(\.id))
+    }
+
+    @Test
+    func existingTaskWorkspaceCanPreserveAStaleDraftWithoutOpeningReloadAlert() {
+        let store = makeTestStore()
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: TaskEditorDraft(parentID: nil)
+        )
+        session.draft.title = "Preserve this draft"
+        var didPreserveStaleDraft = false
+
+        session.save(
+            using: { _ in .stale },
+            onSaved: { _ in
+                Issue.record("A stale draft must not report a successful save")
+            },
+            onStale: {
+                didPreserveStaleDraft = true
+            }
+        )
+
+        #expect(didPreserveStaleDraft)
+        #expect(session.pendingReloadDraft == nil)
+        #expect(session.draft.title == "Preserve this draft")
     }
 }

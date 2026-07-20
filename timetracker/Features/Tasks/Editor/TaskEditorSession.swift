@@ -11,6 +11,7 @@ final class TaskEditorSession {
     private(set) var parentCandidates: [TaskNode]
     var pendingReloadDraft: TaskEditorDraft?
     var isDiscardConfirmationPresented = false
+    private(set) var navigationConfirmationRequestID: UUID?
 
     init(store: TimeTrackerStore, initialDraft: TaskEditorDraft) {
         self.store = store
@@ -37,21 +38,47 @@ final class TaskEditorSession {
 
     func requestCancel(whenClean: () -> Void) {
         if hasUnsavedChanges {
+            navigationConfirmationRequestID = nil
             isDiscardConfirmationPresented = true
         } else {
             whenClean()
         }
     }
 
+    func requestDiscardConfirmation(for navigationRequestID: UUID) {
+        navigationConfirmationRequestID = navigationRequestID
+        isDiscardConfirmationPresented = true
+    }
+
+    func dismissDiscardConfirmation(for navigationRequestID: UUID) {
+        guard navigationConfirmationRequestID == navigationRequestID else {
+            return
+        }
+        navigationConfirmationRequestID = nil
+        isDiscardConfirmationPresented = false
+    }
+
+    func clearNavigationConfirmationRequest(_ navigationRequestID: UUID) {
+        guard navigationConfirmationRequestID == navigationRequestID else {
+            return
+        }
+        navigationConfirmationRequestID = nil
+    }
+
     func save(
         using saveDraft: (TaskEditorDraft) -> TaskDraftSaveResult,
-        onSaved: () -> Void
+        onSaved: (UUID) -> Void,
+        onStale: (() -> Void)? = nil
     ) {
         switch saveDraft(draft) {
-        case .saved:
-            onSaved()
+        case .saved(let taskID):
+            onSaved(taskID)
         case .stale:
-            prepareLatestDraft()
+            if let onStale {
+                onStale()
+            } else {
+                prepareLatestDraft()
+            }
         case .failed(let message):
             store.errorMessage = message
         }
@@ -65,6 +92,19 @@ final class TaskEditorSession {
     func synchronizeWithStoreIfClean(taskID: UUID) {
         guard hasUnsavedChanges == false else { return }
         acceptLatestDraft(for: taskID)
+    }
+
+    func restoreRecoveredDraft(_ recoveredDraft: TaskEditorDraft) {
+        guard let sourceTaskID = sessionBaseline.taskID,
+              recoveredDraft.taskID == sourceTaskID,
+              recoveredDraft.baseline != nil,
+              recoveredDraft != sessionBaseline else { return }
+        draft = recoveredDraft
+        parentCandidates = Self.parentCandidates(
+            for: recoveredDraft,
+            store: store
+        )
+        pendingReloadDraft = nil
     }
 
     func discardChanges() {

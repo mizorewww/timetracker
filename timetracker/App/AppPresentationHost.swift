@@ -35,6 +35,11 @@ private struct AppPresentationSheet: View {
                 initialDraft: draft,
                 returnDestination: returnDestination
             )
+        case let .recoveredTaskEditor(recoveredDraft):
+            RecoveredTaskEditorSheet(
+                store: store,
+                presentation: recoveredDraft
+            )
         case let .taskCategoryEditor(draft):
             TaskCategoryEditorSheet(store: store, initialDraft: draft)
         case let .manualTime(draft):

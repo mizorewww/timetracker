@@ -79,7 +79,8 @@ extension TimeTrackerStore {
             self.selectedTaskID = preferredTaskIDForSelection()
         }
 
-        if let detailTaskID = tasksRoute?.taskID, isTaskDetailRouteValid(detailTaskID) == false {
+        if let detailTaskID = tasksRoute?.taskID,
+           shouldRetainTaskDetailRoute(detailTaskID) == false {
             tasksRoute = nil
         }
     }

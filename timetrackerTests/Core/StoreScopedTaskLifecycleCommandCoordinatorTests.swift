@@ -141,6 +141,88 @@ struct StoreScopedTaskLifecycleCommandCoordinatorTests {
     }
 
     @Test
+    func recoveryRestoresAnArchivedHierarchyAsOneCommandOutcome() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let root = try repository.createTask(
+            title: "Root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let child = try repository.createTask(
+            title: "Child",
+            parentID: root.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        let leaf = try repository.createTask(
+            title: "Leaf",
+            parentID: child.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.archiveTask(taskID: leaf.id)
+        try repository.archiveTask(taskID: child.id)
+        try repository.archiveTask(taskID: root.id)
+
+        let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        ).restoreArchivedHierarchy(taskID: leaf.id)
+
+        #expect(outcome.restoredTaskIDs == [root.id, child.id, leaf.id])
+        #expect(outcome.events.count == 3)
+        let freshRepository = freshTaskRepository(context.container)
+        #expect(
+            try [root.id, child.id, leaf.id].allSatisfy { taskID in
+                try freshRepository.task(id: taskID)?
+                    .isArchivedForLifecycle == false
+            }
+        )
+    }
+
+    @Test
+    func recoveryDoesNotPartiallyRestoreWhenAnAncestorIsMissing() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let root = try repository.createTask(
+            title: "Deleted root",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let child = try repository.createTask(
+            title: "Preserved child",
+            parentID: root.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.archiveTask(taskID: child.id)
+        root.deletedAt = Date()
+        try context.save()
+
+        let coordinator = StoreScopedTaskLifecycleCommandCoordinator(
+            container: context.container,
+            deviceID: "test"
+        )
+        #expect(throws: TaskLifecycleMutationError.parentUnavailable) {
+            try coordinator.restoreArchivedHierarchy(taskID: child.id)
+        }
+
+        let preservedChild = try #require(
+            try freshTaskRepository(context.container).task(id: child.id)
+        )
+        #expect(preservedChild.isArchivedForLifecycle)
+    }
+
+    @Test
     func storeUnarchivesNestedExplicitArchivesTopDownWithoutChangingSelection() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")

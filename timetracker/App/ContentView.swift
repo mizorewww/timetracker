@@ -100,7 +100,7 @@ struct ContentView: View {
                 pendingDeepLinks.enqueue(url)
                 return
             }
-            routeOrQueueDeepLink(url)
+            deepLinkCoordinator.enqueueAndDrain(url)
         }
         .onDisappear {
             pendingDeepLinks.removeAll()
@@ -117,23 +117,21 @@ struct ContentView: View {
             guard presentationID == nil else { return }
             drainPendingDeepLinks()
         }
+        .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
+            guard hasPendingNavigation == false else { return }
+            drainPendingDeepLinks()
+        }
     }
-
     private func drainPendingDeepLinks() {
         guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else { return }
-        for url in pendingDeepLinks.drain() {
-            routeOrQueueDeepLink(url)
-        }
+        deepLinkCoordinator.drain()
     }
-
-    private func routeOrQueueDeepLink(_ url: URL) {
-        let disposition = store.handleDeepLink(
-            url,
-            presentationRouter: presentationRouter
+    private var deepLinkCoordinator: AppSceneDeepLinkCoordinator {
+        AppSceneDeepLinkCoordinator(
+            store: store,
+            presentationRouter: presentationRouter,
+            pendingDeepLinks: pendingDeepLinks
         )
-        if disposition == .deferred {
-            pendingDeepLinks.enqueue(url)
-        }
     }
 
     private func registerForWatchCommandsIfNeeded() {
@@ -182,8 +180,13 @@ struct ContentView: View {
            dismissedSyncConflictID != conflict.id {
             SyncConflictNotice(
                 onReview: {
-                    dismissedSyncConflictID = conflict.id
-                    store.desktopDestination = .settings
+                    store.taskDetailNavigationGuard.requestNavigation(
+                        dismissingActiveDetail: true
+                    ) {
+                        dismissedSyncConflictID = conflict.id
+                        store.closeTaskDetailNavigation()
+                        store.desktopDestination = .settings
+                    }
                 },
                 onDismiss: {
                     dismissedSyncConflictID = conflict.id
@@ -191,5 +194,4 @@ struct ContentView: View {
             )
         }
     }
-
 }

@@ -319,6 +319,99 @@ struct CoreDurableLocalFileTests {
         }
     }
 
+    @Test
+    func boundedReadReturnsOnlyRegularManagedFiles() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let file = DurableLocalFile()
+        let url = fixture.root.appendingPathComponent("payload.json")
+        let payload = Data("managed read".utf8)
+        try file.write(
+            payload,
+            to: url,
+            durableRootURL: fixture.root
+        )
+
+        #expect(
+            try file.read(
+                upTo: payload.count,
+                from: url,
+                durableRootURL: fixture.root
+            ) == payload
+        )
+        #expect(
+            try file.read(
+                upTo: payload.count,
+                from: fixture.root.appendingPathComponent("missing.json"),
+                durableRootURL: fixture.root
+            ) == nil
+        )
+        #expect(throws: DurableLocalFileReadError.self) {
+            try file.read(
+                upTo: payload.count - 1,
+                from: url,
+                durableRootURL: fixture.root
+            )
+        }
+    }
+
+    @Test
+    func managedReadsAndDirectoryListingsRejectSymbolicLinks() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let file = DurableLocalFile()
+        let physicalDirectory = fixture.root.appendingPathComponent(
+            "physical",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: physicalDirectory,
+            withIntermediateDirectories: true
+        )
+        let physicalFile = physicalDirectory.appendingPathComponent("payload.json")
+        try Data("outside".utf8).write(to: physicalFile)
+        let leafAlias = fixture.root.appendingPathComponent("leaf.json")
+        try FileManager.default.createSymbolicLink(
+            at: leafAlias,
+            withDestinationURL: physicalFile
+        )
+        let directoryAlias = fixture.root.appendingPathComponent(
+            "directory-alias",
+            isDirectory: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: directoryAlias,
+            withDestinationURL: physicalDirectory
+        )
+
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try file.read(
+                upTo: 1_024,
+                from: leafAlias,
+                durableRootURL: fixture.root
+            )
+        }
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try file.read(
+                upTo: 1_024,
+                from: directoryAlias.appendingPathComponent("payload.json"),
+                durableRootURL: fixture.root
+            )
+        }
+        #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
+            try file.managedDirectoryContents(
+                at: directoryAlias,
+                durableRootURL: fixture.root
+            )
+        }
+        #expect(
+            try file.managedDirectoryContents(
+                at: physicalDirectory,
+                durableRootURL: fixture.root
+            ).map(\.lastPathComponent) == ["payload.json"]
+        )
+    }
+
     #if os(iOS)
     @Test
     func managedPathChainPreservesThePhysicalSystemAncestor() throws {

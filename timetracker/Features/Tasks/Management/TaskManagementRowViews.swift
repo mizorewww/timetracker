@@ -54,8 +54,7 @@ struct TaskManagementFlatRow: View {
             TaskContextMenu(
                 store: store,
                 task: task,
-                preservingDestination: .tasks,
-                editTask: { store.openTaskEditor(task.id) }
+                preservingDestination: .tasks
             )
         }
         .taskRowSwipeActions(

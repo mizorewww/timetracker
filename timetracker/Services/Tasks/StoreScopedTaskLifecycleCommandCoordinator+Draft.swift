@@ -4,7 +4,8 @@ import SwiftData
 extension StoreScopedTaskLifecycleCommandCoordinator {
     func save(
         draft: TaskEditorDraft,
-        sanitizedTitle: String
+        sanitizedTitle: String,
+        proposedTaskID: UUID? = nil
     ) throws -> TaskDraftMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let scope = try TimerStoreScope(container: container)
@@ -20,6 +21,23 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 deviceID: resolvedDeviceID
             )
             let tasksBeforeSave = try taskRepository.allNodes()
+            if draft.taskID == nil,
+               let proposedTaskID,
+               let savedTask = tasksBeforeSave.first(where: {
+                   $0.id == proposedTaskID
+               }) {
+                return TaskDraftMutationOutcome(
+                    savedTaskID: savedTask.id,
+                    relatedTaskIDs: Self.relatedTaskIDs(
+                        for: savedTask,
+                        tasks: tasksBeforeSave
+                    ),
+                    checklistAncestorIDs: Self.ancestorTaskIDs(
+                        for: savedTask,
+                        tasks: tasksBeforeSave
+                    )
+                )
+            }
             let existingTask: TaskNode?
             if let taskID = draft.taskID {
                 guard let task = tasksBeforeSave.first(where: { $0.id == taskID }) else {
@@ -44,19 +62,32 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             let ancestorsBeforeSave = existingTask.map {
                 Self.ancestorTaskIDs(for: $0, tasks: tasksBeforeSave)
             } ?? []
-            let savedTaskID = try TaskDraftCommandHandler().save(
-                draft: draft,
-                sanitizedTitle: sanitizedTitle,
-                taskRepository: taskRepository,
-                saveChecklistDrafts: { drafts, taskID in
-                    try ChecklistDraftService().save(
-                        drafts: drafts,
-                        taskID: taskID,
-                        context: context,
-                        deviceID: resolvedDeviceID
-                    )
-                }
-            )
+            let saveChecklistDrafts:
+                ([ChecklistEditorDraft], UUID) throws -> Void = { drafts, taskID in
+                try ChecklistDraftService().save(
+                    drafts: drafts,
+                    taskID: taskID,
+                    context: context,
+                    deviceID: resolvedDeviceID
+                )
+            }
+            let savedTaskID: UUID
+            if let proposedTaskID {
+                savedTaskID = try TaskDraftCommandHandler().saveNew(
+                    draft: draft,
+                    proposedTaskID: proposedTaskID,
+                    sanitizedTitle: sanitizedTitle,
+                    taskRepository: taskRepository,
+                    saveChecklistDrafts: saveChecklistDrafts
+                )
+            } else {
+                savedTaskID = try TaskDraftCommandHandler().save(
+                    draft: draft,
+                    sanitizedTitle: sanitizedTitle,
+                    taskRepository: taskRepository,
+                    saveChecklistDrafts: saveChecklistDrafts
+                )
+            }
 
             let tasksAfterSave = try taskRepository.allNodes()
             guard let savedTask = tasksAfterSave.first(where: { $0.id == savedTaskID }) else {

@@ -30,6 +30,7 @@ struct AppPresentationContractTests {
         #expect(host.contains(".sheet(isPresented:") == false)
         for route in [
             ".taskEditor(",
+            ".recoveredTaskEditor(",
             ".taskCategoryEditor(",
             ".manualTime(",
             ".segmentEditor(",
@@ -53,10 +54,70 @@ struct AppPresentationContractTests {
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
-            "timetracker/Features/Settings/SettingsViews.swift"
+            "timetracker/Features/Settings/SettingsViews.swift",
+            "timetracker/Features/Tasks/Management/TaskRecoveryDraftsSection.swift"
         ].map(sourceText).joined(separator: "\n")
 
         #expect(featureSources.contains(".sheet(") == false)
+    }
+
+    @Test
+    func orphanedTaskDraftsReuseTheSceneEditorPresentation() throws {
+        let router = try sourceText(
+            "timetracker/App/AppPresentationRouter+TaskDraftRecovery.swift"
+        )
+        let host = try sourceText("timetracker/App/AppPresentationHost.swift")
+        let editor = try sourceText(
+            "timetracker/Features/Tasks/Editor/RecoveredTaskEditorSheet.swift"
+        )
+        let cleanup = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskDraftRecoveryCleanupSection.swift"
+        )
+        let section = try sourceText(
+            "timetracker/Features/Tasks/Management/TaskRecoveryDraftsSection.swift"
+        )
+        let tasks = try sourceText(
+            "timetracker/Features/Tasks/Management/TasksViews.swift"
+        )
+
+        #expect(tasks.contains("TaskRecoveryDraftsSection(store: store)"))
+        #expect(section.contains(".recoverableRecords()"))
+        #expect(section.contains(
+            "store.isTaskDetailRouteValid($0.sourceTaskID) == false"
+        ))
+        #expect(section.contains(
+            "presentationRouter.presentRecoveredTaskDraft("
+        ))
+        #expect(section.contains(".sheet(") == false)
+        #expect(section.contains(".confirmationDialog("))
+        #expect(router.contains("record.draft.copyAsNew("))
+        #expect(router.contains("store.isTaskDetailRouteValid($0)"))
+        #expect(router.contains(
+            "savedTaskID: store.task(for: record.draft.id)?.id"
+        ))
+        #expect(host.contains("RecoveredTaskEditorSheet("))
+        #expect(editor.contains(
+            "isInteractionDisabled: isDiscarding"
+        ))
+        #expect(editor.contains(
+            "guard savedTaskID == nil, isDiscarding == false"
+        ))
+        #expect(editor.contains(
+            "task.editor.recovery.discarding"
+        ))
+        #expect(editor.contains("TaskEditorPanel("))
+        #expect(editor.contains("store.saveRecoveredTaskDraftResult("))
+        #expect(editor.contains(
+            "proposedTaskID: presentation.proposedTaskID"
+        ))
+        #expect(editor.contains(
+            ".removeInBackground(for: presentation.sourceTaskID)"
+        ))
+        #expect(editor.contains("task.editor.recovery.more"))
+        #expect(cleanup.contains("tasks.recovery.cleanupLater"))
+        #expect(section.contains("tasks.recovery.more"))
+        #expect(section.contains(".removeInBackground(for: sourceTaskID)"))
+        #expect(section.contains("restoreArchivedHierarchyForRecovery("))
     }
 
     @Test
@@ -101,6 +162,9 @@ struct AppPresentationContractTests {
     @Test
     func presentationTriggersUseTheSceneRouterAndPickerReplacementIsAtomic() throws {
         let content = try sourceText("timetracker/App/ContentView.swift")
+        let deepLinks = try sourceText(
+            "timetracker/App/AppSceneDeepLinkCoordinator.swift"
+        )
         let homeActions = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
         let phoneHome = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
         let quickStart = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
@@ -110,8 +174,9 @@ struct AppPresentationContractTests {
         ].map(sourceText).joined(separator: "\n")
         let host = try sourceText("timetracker/App/AppPresentationHost.swift")
 
-        #expect(content.contains("store.handleDeepLink("))
-        #expect(content.contains("presentationRouter: presentationRouter"))
+        #expect(content.contains("AppSceneDeepLinkCoordinator("))
+        #expect(deepLinks.contains("store.handleDeepLink("))
+        #expect(deepLinks.contains("presentationRouter: presentationRouter"))
         #expect(homeActions.contains("presentationRouter.presentStartTaskPicker()"))
         #expect(phoneHome.contains("presentationRouter.presentStartTaskPicker()"))
         #expect(phoneHome.contains("presentationRouter.presentQuickStartEditor(using: store)"))
@@ -175,13 +240,18 @@ struct AppPresentationContractTests {
     @Test
     func deepLinksDeferBehindAModalAndResumeWhenTheSheetClears() throws {
         let content = try sourceText("timetracker/App/ContentView.swift")
+        let sceneCoordinator = try sourceText(
+            "timetracker/App/AppSceneDeepLinkCoordinator.swift"
+        )
         let deepLinks = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+DeepLinks.swift"
         )
 
-        #expect(content.contains("if disposition == .deferred"))
-        #expect(content.contains("pendingDeepLinks.enqueue(url)"))
+        #expect(sceneCoordinator.contains("if disposition == .deferred"))
+        #expect(sceneCoordinator.contains("pendingDeepLinks.enqueue(url)"))
+        #expect(sceneCoordinator.contains("pendingDeepLinks.restoreToFront(deferredURLs)"))
         #expect(content.contains(".onChange(of: presentationRouter.sheet?.id)"))
+        #expect(content.contains("hasPendingNavigation"))
         #expect(content.contains("drainPendingDeepLinks()"))
         #expect(deepLinks.contains("return .deferred"))
         #expect(deepLinks.contains("return .handled"))
@@ -259,9 +329,9 @@ struct AppPresentationContractTests {
         #expect(taskView.contains("store.saveTaskDraftResult("))
         #expect(taskView.contains("session.save("))
         #expect(taskView.contains("using: onSave"))
-        #expect(taskView.contains("onSaved: onSaved"))
-        #expect(taskSession.contains("case .saved:"))
-        #expect(taskSession.contains("onSaved()"))
+        #expect(taskView.contains("onSaved: { _ in onSaved() }"))
+        #expect(taskSession.contains("case .saved(let taskID):"))
+        #expect(taskSession.contains("onSaved(taskID)"))
         #expect(category.contains("if store.saveTaskCategoryDraft(draft)"))
         #expect(manual.contains("if store.saveManualTimeDraft(draft)"))
         #expect(segment.contains("try store.commitSegmentDraft(draft)"))

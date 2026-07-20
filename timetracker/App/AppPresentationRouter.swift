@@ -7,6 +7,7 @@ struct AppPresentation: Identifiable {
             draft: TaskEditorDraft,
             returnDestination: TimeTrackerStore.DesktopDestination
         )
+        case recoveredTaskEditor(RecoveredTaskDraftPresentation)
         case taskCategoryEditor(TaskCategoryEditorDraft)
         case manualTime(ManualTimeDraft)
         case segmentEditor(SegmentEditorDraft)
@@ -32,6 +33,14 @@ struct SingleTaskPickerPresentation {
     let selectedTaskID: UUID?
     let context: TaskHierarchyPickerSelectionContext
     let selectTask: (UUID) -> Bool
+}
+
+struct RecoveredTaskDraftPresentation {
+    let sourceTaskID: UUID
+    let proposedTaskID: UUID
+    let savedTaskID: UUID?
+    let draft: TaskEditorDraft
+    let returnDestination: TimeTrackerStore.DesktopDestination
 }
 
 @MainActor

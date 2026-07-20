@@ -18,8 +18,9 @@ struct PlatformShellContractTests {
 
     @Test
     func ipadSplitViewPreservesSelectionAndLetsTheSystemAdaptColumns() throws {
-        let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
-        let ipadRoot = try #require(source.slice(from: "struct iPadRootView", to: "#endif"))
+        let ipadRoot = try sourceText(
+            "timetracker/App/RootViews/iPadRootView.swift"
+        )
 
         #expect(ipadRoot.contains("preferredCompactColumn: $preferredCompactColumn"))
         #expect(ipadRoot.contains("SidebarView(store: store) {"))

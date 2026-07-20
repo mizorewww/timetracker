@@ -31,7 +31,9 @@ struct TaskEditorSheet: View {
 struct TaskEditorPanel: View {
     let store: TimeTrackerStore
     @State private var session: TaskEditorSession
+    @FocusState private var focusedTextField: TaskEditorTextField?
     @FocusState private var focusedChecklistDraftID: UUID?
+    let isInteractionDisabled: Bool
     let onCancel: () -> Void
     let onSave: (TaskEditorDraft) -> TaskDraftSaveResult
     let onSaved: () -> Void
@@ -39,11 +41,13 @@ struct TaskEditorPanel: View {
     init(
         store: TimeTrackerStore,
         initialDraft: TaskEditorDraft,
+        isInteractionDisabled: Bool = false,
         onCancel: @escaping () -> Void,
         onSave: @escaping (TaskEditorDraft) -> TaskDraftSaveResult,
         onSaved: @escaping () -> Void
     ) {
         self.store = store
+        self.isInteractionDisabled = isInteractionDisabled
         self.onCancel = onCancel
         self.onSave = onSave
         self.onSaved = onSaved
@@ -63,6 +67,7 @@ struct TaskEditorPanel: View {
             draft: $session.draft,
             validation: session.validation,
             parentCandidates: session.parentCandidates,
+            focusedTextField: $focusedTextField,
             focusedChecklistDraftID: $focusedChecklistDraftID,
             orderedChecklistIndices: session.orderedChecklistIndices,
             moveChecklistItems: { sourceOffsets, destination in
@@ -77,6 +82,7 @@ struct TaskEditorPanel: View {
                 )
             }
         )
+        .disabled(isInteractionDisabled)
         .navigationTitle(
             session.draft.taskID == nil
                 ? AppStrings.localized("editor.task.newTitle")
@@ -89,21 +95,26 @@ struct TaskEditorPanel: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppStrings.cancel) {
+                    clearInputFocus()
                     session.requestCancel(whenClean: onCancel)
                 }
                 .keyboardShortcut(.cancelAction)
+                .disabled(isInteractionDisabled)
                 .accessibilityIdentifier("task.editor.cancel")
             }
 
             ToolbarItem(placement: .confirmationAction) {
                 Button(AppStrings.localized("common.save")) {
+                    clearInputFocus()
                     session.save(
                         using: onSave,
-                        onSaved: onSaved
+                        onSaved: { _ in onSaved() }
                     )
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(!session.validation.isValid)
+                .disabled(
+                    isInteractionDisabled || !session.validation.isValid
+                )
                 .accessibilityIdentifier("task.editor.save")
             }
         }
@@ -112,8 +123,13 @@ struct TaskEditorPanel: View {
             discard: onCancel,
             reload: {
                 session.reloadLatestDraft()
-                focusedChecklistDraftID = nil
+                clearInputFocus()
             }
         )
+    }
+
+    private func clearInputFocus() {
+        focusedTextField = nil
+        focusedChecklistDraftID = nil
     }
 }

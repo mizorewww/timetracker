@@ -404,7 +404,7 @@ struct CoreDeepLinkRoutingTests {
 
     @Test @MainActor
     func pendingDeepLinksAreValidatedDeduplicatedBoundedAndDrained() throws {
-        var queue = PendingDeepLinkQueue(capacity: 2)
+        let queue = PendingDeepLinkQueue(capacity: 2)
         let inbox = try #require(URL(string: "timetracker://open/inbox"))
         let duplicateInbox = try #require(URL(string: "TIMETRACKER://OPEN/inbox"))
         let tasks = try #require(URL(string: "timetracker://open/tasks"))
@@ -425,6 +425,79 @@ struct CoreDeepLinkRoutingTests {
         #expect(queue.urls == [tasks, analytics])
         let drainedURLs = queue.drain()
         #expect(drainedURLs == [tasks, analytics])
+        #expect(queue.urls.isEmpty)
+    }
+
+    @Test @MainActor
+    func dirtyWorkspaceKeepsADeferredDeepLinkBatchUntilNavigationCompletes() throws {
+        let store = makeTestStore()
+        let registrationID = UUID()
+        var isDirty = true
+        var didRequestConfirmation = false
+        var didDismissDetail = false
+        store.taskDetailNavigationGuard.register(
+            id: registrationID,
+            taskID: UUID(),
+            hasUnsavedChanges: { isDirty },
+            requestDiscardConfirmation: { _ in didRequestConfirmation = true },
+            dismissDetail: { didDismissDetail = true }
+        )
+
+        let queue = PendingDeepLinkQueue()
+        let inbox = try #require(URL(string: "timetracker://open/inbox"))
+        let analytics = try #require(URL(string: "timetracker://open/analytics"))
+        #expect(queue.enqueue(inbox))
+        #expect(queue.enqueue(analytics))
+        let coordinator = AppSceneDeepLinkCoordinator(
+            store: store,
+            presentationRouter: AppPresentationRouter(),
+            pendingDeepLinks: queue
+        )
+
+        coordinator.drain()
+        #expect(didRequestConfirmation)
+        #expect(didDismissDetail == false)
+        #expect(queue.urls.isEmpty)
+
+        store.taskDetailNavigationGuard.cancelPendingNavigation(id: registrationID)
+        #expect(queue.urls.isEmpty)
+
+        #expect(queue.enqueue(inbox))
+        #expect(queue.enqueue(analytics))
+        coordinator.drain()
+        isDirty = false
+        store.taskDetailNavigationGuard.completePendingNavigation(id: registrationID)
+        #expect(didDismissDetail)
+        #expect(store.desktopDestination == .analytics)
+        #expect(queue.urls.isEmpty)
+    }
+
+    @Test @MainActor
+    func rejectedDeepLinkDoesNotAskADirtyWorkspaceToDiscard() throws {
+        let store = makeTestStore()
+        let registrationID = UUID()
+        var didRequestConfirmation = false
+        store.taskDetailNavigationGuard.register(
+            id: registrationID,
+            taskID: UUID(),
+            hasUnsavedChanges: { true },
+            requestDiscardConfirmation: { _ in didRequestConfirmation = true },
+            dismissDetail: {}
+        )
+        let queue = PendingDeepLinkQueue()
+        let missingTask = try #require(
+            URL(string: "timetracker://task/\(UUID().uuidString)")
+        )
+        #expect(queue.enqueue(missingTask))
+
+        AppSceneDeepLinkCoordinator(
+            store: store,
+            presentationRouter: AppPresentationRouter(),
+            pendingDeepLinks: queue
+        ).drain()
+
+        #expect(didRequestConfirmation == false)
+        #expect(store.taskDetailNavigationGuard.hasPendingNavigation == false)
         #expect(queue.urls.isEmpty)
     }
 
@@ -554,7 +627,7 @@ struct CoreDeepLinkRoutingTests {
     func deferredDeepLinksRemainQueuedUntilTheCurrentPresentationDismisses() throws {
         let store = makeTestStore()
         let presentationRouter = AppPresentationRouter()
-        var queue = PendingDeepLinkQueue()
+        let queue = PendingDeepLinkQueue()
         let newTask = try #require(URL(string: "timetracker://task/new"))
         let startPicker = try #require(URL(string: "timetracker://timer/start"))
         let enqueuedNewTask = queue.enqueue(newTask)
@@ -595,12 +668,17 @@ struct CoreDeepLinkRoutingTests {
     func appAndWidgetDeclareDeepLinkIntegrationPoints() throws {
         let info = try sourceText("timetracker/Info.plist")
         let contentView = try sourceText("timetracker/App/ContentView.swift")
+        let sceneCoordinator = try sourceText(
+            "timetracker/App/AppSceneDeepLinkCoordinator.swift"
+        )
         let widget = try sourceText("timetrackerWidgetExtension/WidgetSupport.swift")
 
         #expect(info.contains("<string>timetracker</string>"))
         #expect(contentView.contains(".onOpenURL"))
         #expect(contentView.contains("PendingDeepLinkQueue"))
-        #expect(contentView.contains("store.handleDeepLink"))
+        #expect(contentView.contains("AppSceneDeepLinkCoordinator"))
+        #expect(sceneCoordinator.contains("store.handleDeepLink"))
+        #expect(sceneCoordinator.contains("routesAfterSystemAction: false"))
         #expect(widget.contains("timetracker://timer/start"))
         #expect(widget.contains("source=widget"))
         #expect(widget.contains("timetracker://open/today"))

@@ -21,30 +21,43 @@ extension TimeTrackerStore {
         desktopDestination = .tasks
     }
 
-    func openTaskEditor(_ taskID: UUID) {
-        guard let route = prepareTaskDetailRoute(taskID, startsEditing: true) else { return }
-        tasksRoute = route
-        desktopDestination = .tasks
-    }
-
-    func prepareTaskDetailRoute(
-        _ taskID: UUID,
-        startsEditing: Bool = false
-    ) -> TasksRoute? {
+    func prepareTaskDetailRoute(_ taskID: UUID) -> TasksRoute? {
         guard isTaskDetailRouteValid(taskID) else { return nil }
         selectTask(taskID, revealInToday: false)
-        return startsEditing
-            ? .editor(taskID: taskID)
-            : .detail(taskID: taskID)
+        return .detail(taskID: taskID)
     }
 
     func closeTaskDetailNavigation() {
         tasksRoute = nil
     }
 
+    func archiveTaskProtectingUnsavedChanges(_ taskID: UUID) {
+        let activeTaskID = taskDetailNavigationGuard.activeTaskID
+        let archiveInvalidatesActiveDetail = activeTaskID.map {
+            $0 == taskID || ancestorTaskIDs(for: $0).contains(taskID)
+        } ?? false
+
+        guard archiveInvalidatesActiveDetail else {
+            archiveSelectedTask(taskID: taskID)
+            return
+        }
+
+        taskDetailNavigationGuard.requestNavigation(
+            dismissingActiveDetail: true,
+            beforeDiscardingChanges: { [weak self] in
+                self?.archiveSelectedTask(taskID: taskID) == true
+            }
+        ) {}
+    }
+
     func isTaskDetailRouteValid(_ taskID: UUID) -> Bool {
         guard let task = task(for: taskID) else { return false }
         return isTaskVisible(task)
+    }
+
+    func shouldRetainTaskDetailRoute(_ taskID: UUID) -> Bool {
+        isTaskDetailRouteValid(taskID) ||
+            taskDetailNavigationGuard.protectsUnsavedChanges(for: taskID)
     }
 
     func ancestorTaskIDs(for taskID: UUID) -> [UUID] {

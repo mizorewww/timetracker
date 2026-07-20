@@ -17,6 +17,14 @@ struct ChecklistEditorRow: View {
                 item.isCompleted.toggle()
             }
             .padding(.top, 2)
+            .accessibilityLabel(
+                item.title.isEmpty
+                    ? AppStrings.localized("editor.checklist.completionControl")
+                    : item.title
+            )
+            .accessibilityIdentifier(
+                "task.editor.checklist.completion.\(item.id.uuidString)"
+            )
 
             SymbolColorPickerButton(
                 symbolName: $item.iconName,
@@ -44,6 +52,9 @@ struct ChecklistEditorRow: View {
                 .onSubmit(submit)
                 .labelsHidden()
                 .accessibilityLabel(AppStrings.localized("editor.checklist.itemPlaceholder"))
+                .accessibilityIdentifier(
+                    "task.editor.checklist.title.\(item.id.uuidString)"
+                )
                 .onChange(of: item.title) { _, newValue in
                     guard newValue.contains(where: \.isNewline) else { return }
                     item.title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)

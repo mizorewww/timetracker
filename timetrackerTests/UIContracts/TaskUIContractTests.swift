@@ -96,9 +96,10 @@ struct TaskUIContractTests {
 
         #expect(rootSource.contains("@State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today"))
         #expect(rootSource.contains("@State private var todayTaskRoute: TasksRoute?"))
-        #expect(rootSource.contains("TabView(selection: $selectedDestination)"))
+        #expect(rootSource.contains("TabView(selection: selectedDestinationBinding)"))
         #expect(rootSource.contains(".onChange(of: store.desktopDestination)"))
-        #expect(rootSource.contains(".onChange(of: selectedDestination)"))
+        #expect(rootSource.contains("private var selectedDestinationBinding: Binding<TimeTrackerStore.DesktopDestination>"))
+        #expect(rootSource.contains("store.taskDetailNavigationGuard.requestNavigation"))
         #expect(rootSource.contains("private func synchronize(with destination: TimeTrackerStore.DesktopDestination)"))
         #expect(rootSource.contains("Tab(value: .analytics)"))
         #expect(rootSource.contains("Tab(value: .tasks)"))
@@ -112,8 +113,10 @@ struct TaskUIContractTests {
         #expect(rootSource.contains("case task(UUID)") == false)
         #expect(todayNavigationSource.contains(".navigationDestination(item: $route)"))
         #expect(todayNavigationSource.contains("returnDestination: .today"))
-        #expect(todayNavigationSource.contains("private var routedTaskIsValid: Bool"))
-        #expect(todayNavigationSource.contains(".onChange(of: routedTaskIsValid)"))
+        #expect(todayNavigationSource.contains("private var routedTaskShouldRemainPresented: Bool"))
+        #expect(todayNavigationSource.contains(".onChange(of: routedTaskShouldRemainPresented)"))
+        #expect(todayNavigationSource.contains("store.shouldRetainTaskDetailRoute(taskID)"))
+        #expect(todayNavigationSource.contains("self.route = store.prepareTaskDetailRoute(taskID)"))
         #expect(todayNavigationSource.contains("clearInvalidRoute()"))
         #expect(todayNavigationSource.contains("store.taskTreeReadIndexRevision") == false)
     }
@@ -282,7 +285,7 @@ struct TaskUIContractTests {
 
         #expect(detailSource.contains("if dynamicTypeSize.isAccessibilitySize"))
         #expect(detailSource.contains("TaskTimerActionButton("))
-        #expect(detailSource.contains("private struct TaskDetailChecklistHeader"))
+        #expect(detailSource.contains("TaskEditorSections("))
         #expect(detailSource.contains("private struct TaskDetailForecastValue"))
         #expect(detailSource.contains(".pickerStyle(.menu)"))
         #expect(detailSource.contains("accessibilityIdentifier: \"task.detail.timer\""))
@@ -384,6 +387,9 @@ struct TaskUIContractTests {
         let task = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift"
         )
+        let taskSections = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorComponents.swift"
+        )
         let category = try sourceText(
             "timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift"
         )
@@ -396,13 +402,19 @@ struct TaskUIContractTests {
 
         #expect(task.contains("SymbolColorPickerRow("))
         #expect(task.contains("pickerAccessibilityIdentifier: \"symbol.picker.open.task\""))
-        #expect(task.contains("isTitleFocused = false"))
+        #expect(task.contains("onOpen: dismissInputFocus"))
+        #expect(taskSections.contains("focusedTextField.wrappedValue = nil"))
+        #expect(taskSections.contains("focusedChecklistDraftID.wrappedValue = nil"))
         #expect(category.contains("SymbolColorPickerRow("))
         #expect(category.contains("pickerAccessibilityIdentifier: \"symbol.picker.open.category\""))
         #expect(category.contains("isTitleFocused = false"))
         #expect(checklist.contains("SymbolColorPickerButton("))
         #expect(checklist.contains("symbol.picker.open.checklist."))
         #expect(checklist.contains("focus.wrappedValue = nil"))
+        #expect(checklist.contains(".accessibilityLabel("))
+        #expect(checklist.contains("item.title.isEmpty"))
+        #expect(checklist.contains("task.editor.checklist.completion."))
+        #expect(checklist.contains("task.editor.checklist.title."))
         #expect(pomodoro.contains("SymbolColorPickerButton("))
         #expect(pomodoro.contains("symbol.picker.open.pomodoro."))
         #expect(task.contains("SymbolAndColorPicker(") == false)
@@ -441,7 +453,7 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskRowsOpenOneWorkspaceAndEditActionsUseTheSameDestination() throws {
+    func taskRowsOpenOneWorkspaceWithoutSeparateQuickEditActions() throws {
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let navigationSource = try sourceText("timetracker/Features/Tasks/Management/TasksNavigationView.swift")
         let rowSource = try taskManagementFeatureSource()
@@ -463,14 +475,15 @@ struct TaskUIContractTests {
         #expect(navigationSource.contains(".navigationDestination(item: $bindableStore.tasksRoute)"))
         #expect(navigationSource.contains("private var tasksPath") == false)
         #expect(navigationSource.contains("TaskDetailView("))
-        #expect(navigationSource.contains("startsEditing: route.startsEditing"))
+        #expect(navigationSource.contains("startsEditing") == false)
         #expect(rowSource.contains("Button(action: openTask)"))
         #expect(rowSource.contains(".accessibilityIdentifier(\"tasks.row.\\(task.id.uuidString)\")"))
         #expect(rowSource.contains("store.selectTask(task.id, revealInToday: false)") == false)
         #expect(rowSource.contains("openTaskDetail(task)"))
         #expect(rowSource.contains("openTaskDetail?(task)") == false)
         #expect(rowSource.contains("presentEditTask") == false)
-        #expect(actionSource.contains("store.openTaskEditor(task.id)"))
+        #expect(actionSource.contains("store.openTaskEditor") == false)
+        #expect(actionSource.contains("task.context.edit") == false)
         #expect(actionSource.contains("presentEditTask") == false)
         #expect(desktopTasksCase.contains("TasksNavigationView(store: store)"))
         #expect(desktopTasksCase.contains("NavigationStack") == false)
@@ -478,8 +491,9 @@ struct TaskUIContractTests {
         #expect(iosRootSource.contains("TasksNavigationView(store: store)"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
-        #expect(detailSource.contains("TaskEditorPanel("))
-        #expect(detailSource.contains("editorDraft = store.editorDraft(for: task)"))
+        #expect(detailSource.contains("TaskDetailWorkspace("))
+        #expect(detailSource.contains("TaskEditorSections("))
+        #expect(detailSource.contains("TaskEditorPanel(") == false)
         #expect(detailSource.contains("presentationRouter.presentEditTask") == false)
     }
 
@@ -515,6 +529,9 @@ struct TaskUIContractTests {
     func taskWorkspaceKeepsEvidenceAndEditingInOneDestination() throws {
         let detailSource = try taskDetailFeatureSource()
         let rootSource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailView.swift")
+        let workspaceSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace.swift"
+        )
         let identitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift")
 
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail\")"))
@@ -524,24 +541,27 @@ struct TaskUIContractTests {
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.summary\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.forecast\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.analysis\")"))
-        #expect(rootSource.contains("@State private var editorDraft: TaskEditorDraft?"))
-        #expect(rootSource.contains("TaskEditorPanel("))
-        #expect(rootSource.contains("TimelineView") == false)
-        #expect(rootSource.contains("canRemainVisible(whileLoading: request)"))
-        #expect(rootSource.contains("selectRange("))
-        #expect(rootSource.contains("snapshot = resolvedSnapshot"))
-        #expect(rootSource.contains("loadedRequest = request"))
-        #expect(rootSource.contains("range = selectedRange"))
+        #expect(rootSource.contains("TaskDetailWorkspace("))
+        #expect(rootSource.contains(".id(taskID)"))
+        #expect(rootSource.contains("TaskEditorPanel(") == false)
+        #expect(workspaceSource.contains("@State var session: TaskEditorSession"))
+        #expect(workspaceSource.contains("TimelineView") == false)
+        #expect(workspaceSource.contains("canRemainVisible(whileLoading: request)"))
+        #expect(detailSource.contains("selectRange("))
+        #expect(detailSource.contains("snapshot = resolvedSnapshot"))
+        #expect(detailSource.contains("loadedRequest = request"))
+        #expect(detailSource.contains("range = selectedRange"))
         #expect(detailSource.contains("TaskDetailTrackingAvailabilitySection("))
         #expect(detailSource.contains("task.detail.analyticsLoading"))
         #expect(detailSource.contains("task.detail.analysis.range"))
         #expect(detailSource.contains(".contentMargins(.bottom, 16, for: .scrollContent)"))
-        #expect(identitySource.contains("Text(task.title)"))
+        #expect(identitySource.contains("TextField("))
+        #expect(identitySource.contains("text: $draft.title"))
         #expect(identitySource.contains(".font(.headline)"))
         #expect(
             identitySource.components(
                 separatedBy: ".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"
-            ).count - 1 == 2
+            ).count - 1 == 1
         )
         #expect(identitySource.contains("AppStrings.localized(\"task.root\")"))
     }
@@ -960,7 +980,8 @@ struct TaskUIContractTests {
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
         #expect(detailSource.contains("presentationRouter.presentManualTime(taskID: task.id"))
         #expect(detailSource.contains("TaskContextMenu("))
-        #expect(detailSource.contains("editTask: { beginEditing(task) }"))
+        #expect(detailSource.contains("editTask:") == false)
+        #expect(detailSource.contains("task.context.edit") == false)
         #expect(detailSource.contains("task.delete.confirm") == false)
         #expect(detailSource.contains("task.detail.back") == false)
         #expect(detailSource.contains("store.closeTaskDetailNavigation()") == false)
@@ -968,8 +989,8 @@ struct TaskUIContractTests {
         #expect(detailSource.contains("dismiss()") == false)
         #expect(contextMenuSource.contains("if let activeSegment"))
         #expect(contextMenuSource.contains("store.stop(segment: activeSegment)"))
-        #expect(contextMenuSource.contains("Button(action: editTask)"))
-        #expect(contextMenuSource.contains("store.archiveSelectedTask(taskID: task.id)"))
+        #expect(contextMenuSource.contains("Button(action: editTask)") == false)
+        #expect(contextMenuSource.contains("store.archiveTaskProtectingUnsavedChanges(task.id)"))
         #expect(contextMenuSource.contains("AppStrings.delete") == false)
         #expect(contextMenuSource.contains("store.openTaskEditor(task.id)") == false)
     }
@@ -1045,7 +1066,9 @@ struct TaskUIContractTests {
         let policy = try sourceText("timetracker/Services/Tasks/TaskPersistencePolicy.swift")
 
         #expect(editor.contains("var validation: TaskEditorValidation"))
-        #expect(editor.contains(".disabled(!session.validation.isValid)"))
+        #expect(editor.contains(
+            "isInteractionDisabled || !session.validation.isValid"
+        ))
         #expect(components.contains("struct TaskEditorValidation: Equatable"))
         #expect(components.contains("struct TaskEditorInlineValidationMessage: View"))
         #expect(components.contains(".accessibilityLabel(error.localizedDescription)"))
@@ -1154,11 +1177,12 @@ struct TaskUIContractTests {
     private func taskDetailFeatureSource() throws -> String {
         try [
             "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Analytics.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
-            "timetracker/Features/Tasks/Detail/TaskDetailChecklistViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailOverviewViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailAnalyticsViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailRecordViews.swift"

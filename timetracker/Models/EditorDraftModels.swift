@@ -1,14 +1,14 @@
 import Foundation
 
-struct TaskEditorDraftBaseline: Equatable {
+nonisolated struct TaskEditorDraftBaseline: Codable, Equatable, Sendable {
     let taskMutationID: UUID
     let checklistItemMutationIDs: [UUID: UUID]
     let checklistVisualMutationIDs: [UUID: UUID]
     let categoryAssignmentMutationID: UUID?
 }
 
-struct TaskEditorDraft: Identifiable, Equatable {
-    let id = UUID()
+nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
+    let id: UUID
     let baseline: TaskEditorDraftBaseline?
     var taskID: UUID?
     var title: String
@@ -23,6 +23,7 @@ struct TaskEditorDraft: Identifiable, Equatable {
     var checklistItems: [ChecklistEditorDraft]
 
     init(parentID: UUID?, categoryID: UUID? = nil) {
+        self.id = UUID()
         self.baseline = nil
         self.taskID = nil
         self.title = ""
@@ -37,6 +38,7 @@ struct TaskEditorDraft: Identifiable, Equatable {
         self.checklistItems = []
     }
 
+    @MainActor
     init(
         task: TaskNode,
         categoryID: UUID? = nil,
@@ -44,6 +46,7 @@ struct TaskEditorDraft: Identifiable, Equatable {
         checklistItems: [ChecklistItem],
         visualByChecklistID: [UUID: ChecklistItemVisual] = [:]
     ) {
+        self.id = UUID()
         let checklistItemMutationIDs = checklistItems.reduce(into: [UUID: UUID]()) {
             $0[$1.id] = $1.clientMutationID
         }
@@ -70,9 +73,35 @@ struct TaskEditorDraft: Identifiable, Equatable {
             ChecklistEditorDraft(item: item, visual: visualByChecklistID[item.id])
         }
     }
+
+    func copyAsNew(
+        parentID: UUID?,
+        categoryID: UUID?
+    ) -> TaskEditorDraft {
+        var copy = TaskEditorDraft(
+            parentID: parentID,
+            categoryID: categoryID
+        )
+        copy.title = title
+        copy.colorHex = colorHex
+        copy.iconName = iconName
+        copy.notes = notes
+        copy.estimatedMinutes = estimatedMinutes
+        copy.hasDueDate = hasDueDate
+        copy.dueAt = dueAt
+        copy.checklistItems = checklistItems.map {
+            ChecklistEditorDraft(
+                title: $0.title,
+                isCompleted: $0.isCompleted,
+                iconName: $0.iconName,
+                colorHex: $0.colorHex
+            )
+        }
+        return copy
+    }
 }
 
-struct ChecklistEditorDraft: Identifiable, Equatable {
+nonisolated struct ChecklistEditorDraft: Codable, Identifiable, Equatable, Sendable {
     let id: UUID
     var existingID: UUID?
     var title: String

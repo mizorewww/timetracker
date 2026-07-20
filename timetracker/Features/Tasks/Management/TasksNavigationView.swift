@@ -11,8 +11,10 @@ struct TasksNavigationView: View {
                     TaskDetailView(
                         store: store,
                         taskID: route.taskID,
-                        startsEditing: route.startsEditing
+                        dismissDetail: store.closeTaskDetailNavigation,
+                        replaceDetail: store.openTaskDetail
                     )
+                    .id(route.taskID)
                 }
         }
     }

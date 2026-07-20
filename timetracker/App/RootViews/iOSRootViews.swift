@@ -43,9 +43,11 @@ struct PhoneRootView<SyncConflictContent: View>: View {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
     @State private var todayTaskRoute: TasksRoute?
+    @State private var isTabDiscardConfirmationPresented = false
+    @State private var tabNavigationConfirmationRequestID: UUID?
 
     var body: some View {
-        TabView(selection: $selectedDestination) {
+        TabView(selection: selectedDestinationBinding) {
             Tab(value: .today) {
                 NavigationStack {
                     PhoneHomeView(
@@ -98,6 +100,11 @@ struct PhoneRootView<SyncConflictContent: View>: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .phoneTabNavigationSafety(
+            isPresented: $isTabDiscardConfirmationPresented,
+            requestID: $tabNavigationConfirmationRequestID,
+            navigationGuard: store.taskDetailNavigationGuard
+        )
         .safeAreaInset(edge: .top, spacing: 0) {
             syncConflictContent
                 .padding(8)
@@ -109,16 +116,38 @@ struct PhoneRootView<SyncConflictContent: View>: View {
         .onChange(of: store.desktopDestination) { _, destination in
             synchronize(with: destination)
         }
-        .onChange(of: selectedDestination) { _, destination in
-            guard destination != .settings,
-                  store.desktopDestination != destination else { return }
-            store.desktopDestination = destination
-        }
         .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
             guard presentationID == nil,
                   store.desktopDestination == .settings else { return }
             synchronize(with: .settings)
         }
+    }
+
+    private var selectedDestinationBinding: Binding<TimeTrackerStore.DesktopDestination> {
+        Binding(
+            get: { selectedDestination },
+            set: { destination in
+                guard destination != .settings,
+                      destination != selectedDestination else { return }
+                let requestID = store.taskDetailNavigationGuard.requestNavigation(
+                    presentingConfirmationInSource: false,
+                    dismissPresentedConfirmation: dismissTabNavigationConfirmation
+                ) {
+                    selectedDestination = destination
+                    store.desktopDestination = destination
+                }
+                if let requestID {
+                    tabNavigationConfirmationRequestID = requestID
+                    isTabDiscardConfirmationPresented = true
+                }
+            }
+        )
+    }
+
+    private func dismissTabNavigationConfirmation(requestID: UUID) {
+        guard tabNavigationConfirmationRequestID == requestID else { return }
+        tabNavigationConfirmationRequestID = nil
+        isTabDiscardConfirmationPresented = false
     }
 
     private func openSettings() {
@@ -147,34 +176,4 @@ struct PhoneRootView<SyncConflictContent: View>: View {
     }
 }
 
-struct iPadRootView: View {
-    let store: TimeTrackerStore
-    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
-    @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
-    private let layout = SplitColumnLayoutPolicy.iPad
-
-    var body: some View {
-        NavigationSplitView(
-            columnVisibility: $columnVisibility,
-            preferredCompactColumn: $preferredCompactColumn
-        ) {
-            SidebarView(store: store) {
-                preferredCompactColumn = .detail
-            }
-                .navigationSplitViewColumnWidth(
-                    min: layout.sidebar.min,
-                    ideal: layout.sidebar.ideal,
-                    max: layout.sidebar.max ?? layout.sidebar.ideal
-                )
-        } detail: {
-            DesktopContentView(store: store)
-                .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
-        }
-        .navigationSplitViewStyle(.balanced)
-        .accessibilityIdentifier("ipad.splitNavigation")
-        .onChange(of: store.desktopDestination) { _, _ in
-            preferredCompactColumn = .detail
-        }
-    }
-}
 #endif

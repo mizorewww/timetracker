@@ -160,18 +160,18 @@ private enum TimerStopParameter {
 ///
 /// Entries are deduplicated by semantic action, oldest-first capped, and only
 /// accepted after the same strict validation used for immediate routing.
-struct PendingDeepLinkQueue {
+final class PendingDeepLinkQueue {
     static let defaultCapacity = 16
 
     private(set) var urls: [URL] = []
     let capacity: Int
 
-    init(capacity: Int = Self.defaultCapacity) {
+    init(capacity: Int = PendingDeepLinkQueue.defaultCapacity) {
         self.capacity = max(1, capacity)
     }
 
     @discardableResult
-    mutating func enqueue(
+    func enqueue(
         _ url: URL,
         router: AppDeepLinkRouter = AppDeepLinkRouter()
     ) -> Bool {
@@ -185,13 +185,28 @@ struct PendingDeepLinkQueue {
         return true
     }
 
-    mutating func drain() -> [URL] {
+    func drain() -> [URL] {
         let pendingURLs = urls
         urls.removeAll(keepingCapacity: true)
         return pendingURLs
     }
 
-    mutating func removeAll() {
+    func restoreToFront(
+        _ restoredURLs: [URL],
+        router: AppDeepLinkRouter = AppDeepLinkRouter()
+    ) {
+        var restoredActions: [AppDeepLinkAction] = []
+        var mergedURLs: [URL] = []
+        for url in restoredURLs + urls {
+            guard let action = router.action(for: url),
+                  restoredActions.contains(action) == false else { continue }
+            restoredActions.append(action)
+            mergedURLs.append(url)
+        }
+        urls = Array(mergedURLs.prefix(capacity))
+    }
+
+    func removeAll() {
         urls.removeAll(keepingCapacity: false)
     }
 }

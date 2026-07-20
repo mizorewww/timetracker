@@ -1,7 +1,7 @@
 import Foundation
 
 nonisolated enum TaskDraftSaveResult: Equatable, Sendable {
-    case saved
+    case saved(taskID: UUID)
     case stale
     case failed(message: String)
 }
@@ -84,5 +84,26 @@ struct TaskUnarchiveMutationOutcome: Equatable {
                 affectedAncestorIDs: relatedTaskIDs.subtracting([taskID])
             ),
         ]
+    }
+}
+
+struct TaskHierarchyRestoreMutationOutcome: Equatable {
+    let taskID: UUID
+    let restoredTaskIDs: Set<UUID>
+    let relatedTaskIDs: Set<UUID>
+
+    var didMutate: Bool {
+        restoredTaskIDs.isEmpty == false
+    }
+
+    var events: Set<StoreDomainEvent> {
+        Set(restoredTaskIDs.map { restoredTaskID in
+            .taskChanged(
+                taskID: restoredTaskID,
+                affectedAncestorIDs: relatedTaskIDs.subtracting(
+                    [restoredTaskID]
+                )
+            )
+        })
     }
 }

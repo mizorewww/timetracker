@@ -5,7 +5,6 @@ struct TaskContextMenu: View {
     let task: TaskNode
     @Environment(AppPresentationRouter.self) private var presentationRouter
     var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
-    let editTask: () -> Void
 
     private var activeSegment: TimeSegment? {
         store.activeSegment(for: task.id)
@@ -56,11 +55,6 @@ struct TaskContextMenu: View {
             Divider()
         }
 
-        Button(action: editTask) {
-            Label(AppStrings.edit, systemImage: "pencil")
-        }
-        .accessibilityIdentifier("task.context.edit")
-
         if store.isTaskVisible(task) {
             if hasActiveTimerInSubtree {
                 Button {} label: {
@@ -69,7 +63,7 @@ struct TaskContextMenu: View {
                 .disabled(true)
             } else {
                 Button {
-                    store.archiveSelectedTask(taskID: task.id)
+                    store.archiveTaskProtectingUnsavedChanges(task.id)
                 } label: {
                     Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
                 }
@@ -136,16 +130,9 @@ struct TaskRowSwipeActions: ViewModifier {
                 }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button {
-                    store.openTaskEditor(task.id)
-                } label: {
-                    actionLabel(AppStrings.edit, systemImage: "pencil")
-                }
-                .tint(.gray)
-
                 if hasActiveTimerInSubtree == false {
                     Button {
-                        store.archiveSelectedTask(taskID: task.id)
+                        store.archiveTaskProtectingUnsavedChanges(task.id)
                     } label: {
                         actionLabel(
                             AppStrings.localized("task.action.archive"),

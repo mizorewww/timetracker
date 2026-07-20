@@ -4,9 +4,9 @@ private struct TodayTaskNavigationDestinationModifier: ViewModifier {
     let store: TimeTrackerStore
     @Binding var route: TasksRoute?
 
-    private var routedTaskIsValid: Bool {
+    private var routedTaskShouldRemainPresented: Bool {
         guard let taskID = route?.taskID else { return true }
-        return store.isTaskDetailRouteValid(taskID)
+        return store.shouldRetainTaskDetailRoute(taskID)
     }
 
     func body(content: Content) -> some View {
@@ -15,18 +15,24 @@ private struct TodayTaskNavigationDestinationModifier: ViewModifier {
                 TaskDetailView(
                     store: store,
                     taskID: route.taskID,
-                    startsEditing: route.startsEditing,
-                    returnDestination: .today
+                    returnDestination: .today,
+                    dismissDetail: {
+                        self.route = nil
+                    },
+                    replaceDetail: { taskID in
+                        self.route = store.prepareTaskDetailRoute(taskID)
+                    }
                 )
+                .id(route.taskID)
             }
             .onAppear(perform: clearInvalidRoute)
-            .onChange(of: routedTaskIsValid) { _, _ in
+            .onChange(of: routedTaskShouldRemainPresented) { _, _ in
                 clearInvalidRoute()
             }
     }
 
     private func clearInvalidRoute() {
-        guard routedTaskIsValid == false else { return }
+        guard routedTaskShouldRemainPresented == false else { return }
         route = nil
     }
 }

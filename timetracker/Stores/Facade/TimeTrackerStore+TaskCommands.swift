@@ -37,6 +37,37 @@ extension TimeTrackerStore {
         _ draft: TaskEditorDraft,
         returnDestination: DesktopDestination? = nil
     ) -> TaskDraftSaveResult {
+        saveTaskDraftResult(
+            draft,
+            proposedTaskID: nil,
+            returnDestination: returnDestination
+        )
+    }
+
+    func saveRecoveredTaskDraftResult(
+        _ draft: TaskEditorDraft,
+        proposedTaskID: UUID,
+        returnDestination: DesktopDestination? = nil
+    ) -> TaskDraftSaveResult {
+        guard draft.taskID == nil, draft.baseline == nil else {
+            return .failed(
+                message: AppStrings.localized(
+                    "task.editor.recovery.invalidCopy"
+                )
+            )
+        }
+        return saveTaskDraftResult(
+            draft,
+            proposedTaskID: proposedTaskID,
+            returnDestination: returnDestination
+        )
+    }
+
+    private func saveTaskDraftResult(
+        _ draft: TaskEditorDraft,
+        proposedTaskID: UUID?,
+        returnDestination: DesktopDestination?
+    ) -> TaskDraftSaveResult {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
             return .failed(message: AppStrings.localized("task.nameRequired"))
@@ -48,14 +79,18 @@ extension TimeTrackerStore {
             let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
                 container: modelContext.container,
                 writeAuthorization: writeAuthorization
-            ).save(draft: draft, sanitizedTitle: sanitizedTitle)
+            ).save(
+                draft: draft,
+                sanitizedTitle: sanitizedTitle,
+                proposedTaskID: proposedTaskID
+            )
             finishStoreScopedMutation(events: outcome.events)
             refreshStoreScopedTimerReadModels()
             selectedTaskID = outcome.savedTaskID
             if let returnDestination {
                 desktopDestination = returnDestination
             }
-            return .saved
+            return .saved(taskID: outcome.savedTaskID)
         } catch {
             var refreshFailureMessage: String?
             if error is TaskLifecycleMutationError {

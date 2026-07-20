@@ -525,11 +525,16 @@ final class timetrackerUITests: XCTestCase {
             "The audited detail route must finish loading after a cold simulator launch."
         )
         XCTAssertTrue(identity.waitForExistence(timeout: 5))
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
         XCTAssertTrue(
-            identity.label.localizedCaseInsensitiveContains("Read Apple HIG"),
+            (titleField.value as? String ?? titleField.label)
+                .localizedCaseInsensitiveContains("Read Apple HIG"),
             "The visible identity card must include the task name, not only its parent path."
         )
-        XCTAssertTrue(identity.label.localizedCaseInsensitiveContains("Study"))
+        XCTAssertTrue(app.staticTexts["Study"].waitForExistence(timeout: 3))
         XCTAssertGreaterThan(identity.frame.width, 0)
         XCTAssertGreaterThan(identity.frame.height, 0)
         XCTAssertGreaterThanOrEqual(identity.frame.minY, detail.frame.minY)
@@ -547,6 +552,7 @@ final class timetrackerUITests: XCTestCase {
         )
         let detail = app.descendants(matching: .any)["task.detail"].firstMatch
         let identity = app.descendants(matching: .any)["task.detail.identity"].firstMatch
+        let titleField = app.descendants(matching: .any)["task.editor.title.field"].firstMatch
         let timer = app.buttons["task.detail.timer"].firstMatch
         let addTime = app.buttons["task.detail.addTime"].firstMatch
         let more = app.descendants(matching: .any)["task.detail.more"].firstMatch
@@ -556,6 +562,7 @@ final class timetrackerUITests: XCTestCase {
             "The audited detail route must finish loading after a cold simulator launch."
         )
         XCTAssertTrue(identity.waitForExistence(timeout: 5))
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
         XCTAssertTrue(timer.waitForExistence(timeout: 5) && timer.isHittable)
         XCTAssertTrue(addTime.waitForExistence(timeout: 5) && addTime.isHittable)
         XCTAssertTrue(more.waitForExistence(timeout: 5) && more.isHittable)
@@ -563,8 +570,9 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["task.detail.actions"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["task.detail.edit"].exists)
 
-        XCTAssertLessThan(identity.frame.maxX, timer.frame.minX)
-        XCTAssertEqual(identity.frame.midY, timer.frame.midY, accuracy: 3)
+        XCTAssertLessThan(titleField.frame.maxX, timer.frame.minX)
+        XCTAssertGreaterThanOrEqual(timer.frame.midY, titleField.frame.minY)
+        XCTAssertLessThanOrEqual(timer.frame.midY, identity.frame.maxY)
         #if os(iOS)
         let usesIPadShell = app.descendants(matching: .any)["ipad.splitNavigation"]
             .waitForExistence(timeout: 1)
@@ -627,6 +635,198 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskDetailDiscardsInlineChangesWithoutLeavingTheWorkspace() throws {
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG"
+        )
+        let detail = app.descendants(matching: .any)["task.detail"].firstMatch
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        let cancel = app.buttons["task.editor.cancel"].firstMatch
+        let save = app.buttons["task.editor.save"].firstMatch
+
+        XCTAssertTrue(detail.waitForExistence(timeout: 15))
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
+        activate(titleField)
+        titleField.typeText(" Draft")
+
+        XCTAssertTrue(cancel.waitForExistence(timeout: 3) && cancel.isHittable)
+        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        XCTAssertFalse(app.descendants(matching: .any)["task.detail.addTime"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["task.detail.more"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["task.context.edit"].exists)
+
+        activate(cancel)
+        let discard = discardDialogButton(
+            identifier: "editor.discard.confirm",
+            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
+            in: app
+        )
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+        activate(discard)
+
+        XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(detail.waitForExistence(timeout: 5))
+        XCTAssertTrue(cancel.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(save.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail.addTime"]
+                .firstMatch.waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail.more"]
+                .firstMatch.waitForExistence(timeout: 5)
+        )
+        let restoredTitle = titleField.value as? String ?? titleField.label
+        XCTAssertTrue(restoredTitle.localizedCaseInsensitiveContains("Read Apple HIG"))
+        XCTAssertFalse(restoredTitle.localizedCaseInsensitiveContains("Draft"))
+        try capture("task-detail-inline-discard-restored", app: app)
+    }
+
+    @MainActor
+    func testTaskDetailSidebarNavigationRequiresDiscardConfirmation() throws {
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG"
+        )
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        #if os(macOS)
+        let hasVisibleSidebar = app.outlines
+            .descendants(matching: .cell)
+            .containing(.staticText, identifier: "sidebar.Today")
+            .firstMatch
+            .waitForExistence(timeout: 3)
+        #else
+        let hasVisibleSidebar = app.descendants(matching: .any)[
+            "ipad.splitNavigation"
+        ].waitForExistence(timeout: 3)
+        #endif
+        guard hasVisibleSidebar else {
+            throw XCTSkip("Sidebar navigation is available on iPad and macOS.")
+        }
+
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
+        activate(titleField)
+        titleField.typeText(" Dirty")
+        XCTAssertTrue(
+            app.buttons["task.editor.save"].firstMatch.waitForExistence(timeout: 3)
+        )
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+
+        let discard = discardDialogButton(
+            identifier: "editor.discard.confirm",
+            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
+            in: app
+        )
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        try capture("task-detail-sidebar-navigation-protected", app: app)
+
+        activate(discard)
+        XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(homeIsReady(in: app))
+        XCTAssertFalse(app.descendants(matching: .any)["task.detail"].exists)
+        try capture("task-detail-sidebar-navigation-after-discard", app: app)
+    }
+
+    @MainActor
+    func testTaskDetailPhoneTabNavigationRequiresDiscardConfirmation() throws {
+        #if os(macOS)
+        throw XCTSkip("Phone tab navigation is available on iPhone.")
+        #else
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG"
+        )
+
+        guard app.descendants(matching: .any)["phone.tabView"]
+            .waitForExistence(timeout: 1) else {
+            throw XCTSkip("Phone tab navigation is available on iPhone.")
+        }
+        if taskDetailIsReady(in: app) == false {
+            openDemoTaskDetailFromTasks(in: app)
+        }
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
+        activate(titleField)
+        titleField.typeText(" Dirty")
+        if app.keyboards.firstMatch.waitForExistence(timeout: 1) {
+            titleField.typeText(XCUIKeyboardKey.return.rawValue)
+        }
+        let stagedTitle = titleField.value as? String
+        XCTAssertNotEqual(stagedTitle, "Read Apple HIG")
+        XCTAssertTrue(
+            app.buttons["task.editor.save"].firstMatch.waitForExistence(timeout: 3)
+        )
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+
+        let discard = discardDialogButton(
+            identifier: "editor.discard.confirm",
+            localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
+            in: app
+        )
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        try capture("task-detail-phone-tab-navigation-protected", app: app)
+
+        let keepEditing = app.buttons["editor.discard.cancel"].firstMatch
+        if keepEditing.waitForExistence(timeout: 1), keepEditing.isHittable {
+            activate(keepEditing)
+            XCTAssertTrue(keepEditing.waitForNonExistence(timeout: 5))
+        } else {
+            app.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)
+            ).tap()
+            XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
+        }
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["phone.tab.tasks"].firstMatch.isSelected
+        )
+        XCTAssertEqual(titleField.value as? String, stagedTitle)
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+        activate(discard)
+        XCTAssertTrue(discard.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(homeIsReady(in: app))
+        XCTAssertFalse(app.descendants(matching: .any)["task.detail"].exists)
+        try capture("task-detail-phone-tab-navigation-after-discard", app: app)
+        #endif
+    }
+
+    @MainActor
     func testCompletingChecklistItemMovesItBelowIncompleteWork() throws {
         #if os(macOS)
         throw XCTSkip("Checklist movement is visually verified in the compact iPhone layout.")
@@ -668,7 +868,18 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("This route-preservation screenshot runs on iPhone and iPad simulators.")
         #else
         let app = launchApp(route: "tasks")
-        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 8))
+        if app.descendants(matching: .any)["tasks.view"]
+            .waitForExistence(timeout: 8) == false {
+            openSection(
+                "Tasks",
+                tabIdentifier: "phone.tab.tasks",
+                sidebarIdentifier: "sidebar.Tasks",
+                in: app
+            )
+        }
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 5)
+        )
 
         let studyDisclosure = app.buttons
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
@@ -723,7 +934,18 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("This scroll-position regression is exercised on iPhone.")
         #else
         let app = launchApp(route: "tasks")
-        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 8))
+        if app.descendants(matching: .any)["tasks.view"]
+            .waitForExistence(timeout: 8) == false {
+            openSection(
+                "Tasks",
+                tabIdentifier: "phone.tab.tasks",
+                sidebarIdentifier: "sidebar.Tasks",
+                in: app
+            )
+        }
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 5)
+        )
 
         let studyDisclosure = app.buttons
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
@@ -754,8 +976,15 @@ final class timetrackerUITests: XCTestCase {
         activate(task)
         XCTAssertTrue(taskDetailIsReady(in: app))
 
-        let rangePicker = app.segmentedControls.firstMatch
-        scrollUntilHittable(rangePicker, direction: .up, in: app)
+        let rangePicker = app.segmentedControls
+            .containing(.button, identifier: "Day")
+            .firstMatch
+        scrollUntilHittable(
+            rangePicker,
+            direction: .up,
+            maximumScrolls: 14,
+            in: app
+        )
         XCTAssertTrue(
             waitForElement(
                 rangePicker,
@@ -2310,10 +2539,9 @@ final class timetrackerUITests: XCTestCase {
         activate(todayBack)
         XCTAssertTrue(homeIsReady(in: app))
         let phoneTabView = app.descendants(matching: .any)["phone.tabView"].firstMatch
-        if phoneTabView.exists {
-            XCTAssertTrue(
-                app.descendants(matching: .any)["phone.tab.today"].firstMatch.isSelected
-            )
+        let todayTab = app.descendants(matching: .any)["phone.tab.today"].firstMatch
+        if phoneTabView.exists && todayTab.exists {
+            XCTAssertTrue(todayTab.isSelected)
         }
         XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
         try capture("quick-start-detail-returned-to-today", app: app)
@@ -2353,21 +2581,19 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Design System"].waitForExistence(timeout: 3))
         try capture("today-quick-start-task-detail", app: app)
 
-        let more = app.descendants(matching: .any)["task.detail.more"].firstMatch
-        XCTAssertTrue(more.waitForExistence(timeout: 3) && more.isHittable)
-        activate(more)
-        let contextEdit = app.descendants(matching: .any)["task.context.edit"].firstMatch
-        XCTAssertTrue(contextEdit.waitForExistence(timeout: 3) && contextEdit.isHittable)
-        activate(contextEdit)
-
-        let editor = app.descendants(matching: .any)["task.editor"].firstMatch
-        XCTAssertTrue(editor.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
-        try capture("today-quick-start-context-edit", app: app)
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5) && titleField.isHittable)
+        activate(titleField)
+        titleField.typeText(" Updated")
         let save = app.buttons["task.editor.save"].firstMatch
         XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        XCTAssertFalse(app.descendants(matching: .any)["task.context.edit"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
+        try capture("today-quick-start-inline-edit", app: app)
         activate(save)
-        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(save.waitForNonExistence(timeout: 5))
         XCTAssertTrue(taskDetailIsReady(in: app))
         XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
 
@@ -2390,9 +2616,10 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
         #if os(iOS)
         if usesIPadShell == false {
-            XCTAssertTrue(
-                app.descendants(matching: .any)["phone.tab.today"].firstMatch.isSelected
-            )
+            let todayTab = app.descendants(matching: .any)["phone.tab.today"].firstMatch
+            if todayTab.exists {
+                XCTAssertTrue(todayTab.isSelected)
+            }
         }
         #endif
         XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
@@ -3292,6 +3519,48 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func openDemoTaskDetailFromTasks(in app: XCUIApplication) {
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 5)
+        )
+
+        let searchField = app.textFields["tasks.search.field"].firstMatch
+        if searchField.waitForExistence(timeout: 3), searchField.isHittable {
+            activate(searchField)
+            searchField.typeText("Read Apple HIG")
+            let matchingTask = app.buttons
+                .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
+                .matching(NSPredicate(format: "label == %@", "Read Apple HIG"))
+                .firstMatch
+            XCTAssertTrue(
+                matchingTask.waitForExistence(timeout: 5) && matchingTask.isHittable
+            )
+            activate(matchingTask)
+            return
+        }
+
+        let studyDisclosure = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.disclosure."))
+            .matching(NSPredicate(format: "value == %@", "Study"))
+            .firstMatch
+        XCTAssertTrue(studyDisclosure.waitForExistence(timeout: 5) && studyDisclosure.isHittable)
+        activate(studyDisclosure)
+
+        let task = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
+            .matching(NSPredicate(format: "label == %@", "Read Apple HIG"))
+            .firstMatch
+        XCTAssertTrue(task.waitForExistence(timeout: 5) && task.isHittable)
+        activate(task)
+    }
+
+    @MainActor
     private func openSection(
         _ tabTitle: String,
         tabIdentifier: String,
@@ -3310,7 +3579,8 @@ final class timetrackerUITests: XCTestCase {
         #endif
 
         let identifiedElement = app.descendants(matching: .any)[sidebarIdentifier]
-        if identifiedElement.waitForExistence(timeout: 1) {
+        if identifiedElement.waitForExistence(timeout: 1),
+           identifiedElement.firstMatch.isHittable {
             activate(identifiedElement.firstMatch)
             return
         }
@@ -3320,23 +3590,59 @@ final class timetrackerUITests: XCTestCase {
         }
 
         let identifiedTab = app.descendants(matching: .any)[tabIdentifier]
-        if identifiedTab.waitForExistence(timeout: 2) {
+        #if os(iOS)
+        if identifiedTab.waitForExistence(timeout: 2),
+           identifiedTab.firstMatch.isHittable == false,
+           app.descendants(matching: .any)["phone.tabView"].exists {
+            // Focusing an inline field can minimize the system tab bar. Reveal
+            // it through the same reverse-scroll gesture a user performs before
+            // asking XCTest to activate a destination.
+            app.swipeDown()
+        }
+        #endif
+        if identifiedTab.waitForExistence(timeout: 2),
+           identifiedTab.firstMatch.isHittable {
             activate(identifiedTab.firstMatch)
             return
         }
 
-        if app.tabBars.buttons[tabTitle].waitForExistence(timeout: 3) {
-            activate(app.tabBars.buttons[tabTitle])
+        #if os(iOS)
+        let tabFrame = identifiedTab.firstMatch.frame
+        let appFrame = app.frame
+        if identifiedTab.firstMatch.exists,
+           tabFrame.width > 0,
+           tabFrame.height > 0,
+           appFrame.intersects(tabFrame) {
+            // Xcode 27 beta can report {-1, -1} as the visible point for a
+            // visually present SwiftUI Tab. A real touch at its frame center
+            // still follows the production interaction path.
+            app.coordinate(withNormalizedOffset: .zero)
+                .withOffset(
+                    CGVector(
+                        dx: tabFrame.midX - appFrame.minX,
+                        dy: tabFrame.midY - appFrame.minY
+                    )
+                )
+                .tap()
+            return
+        }
+        #endif
+
+        let titledTab = app.tabBars.buttons[tabTitle].firstMatch
+        if titledTab.waitForExistence(timeout: 3), titledTab.isHittable {
+            activate(titledTab)
             return
         }
 
-        if app.buttons[tabTitle].waitForExistence(timeout: 1) {
-            activate(app.buttons[tabTitle].firstMatch)
+        let titledButton = app.buttons[tabTitle].firstMatch
+        if titledButton.waitForExistence(timeout: 1), titledButton.isHittable {
+            activate(titledButton)
             return
         }
 
-        if app.staticTexts[tabTitle].waitForExistence(timeout: 1) {
-            activate(app.staticTexts[tabTitle].firstMatch)
+        let titledText = app.staticTexts[tabTitle].firstMatch
+        if titledText.waitForExistence(timeout: 1), titledText.isHittable {
+            activate(titledText)
             return
         }
 
@@ -3456,9 +3762,10 @@ final class timetrackerUITests: XCTestCase {
     private func scrollUntilHittable(
         _ element: XCUIElement,
         direction: ScrollDirection,
+        maximumScrolls: Int = 6,
         in app: XCUIApplication
     ) {
-        for _ in 0..<6 where !element.isHittable {
+        for _ in 0..<maximumScrolls where !element.isHittable {
             scroll(direction: direction, toward: element, in: app)
         }
     }

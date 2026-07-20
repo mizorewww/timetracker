@@ -15,6 +15,8 @@ struct TasksView: View {
         let matchingTasks = query.isEmpty ? [] : store.taskSearchResults(matching: query)
 
         List {
+            TaskRecoveryDraftsSection(store: store)
+
             #if os(iOS)
             if usesInlineSearchField {
                 Section {

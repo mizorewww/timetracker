@@ -3,31 +3,52 @@ import SwiftUI
 struct TaskDetailList: View {
     let store: TimeTrackerStore
     let task: TaskNode
+    let session: TaskEditorSession
+    let focusedTextField: FocusState<TaskEditorTextField?>.Binding
+    let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let snapshot: TaskAnalyticsSnapshot?
     @Binding var range: AnalyticsRange
     let isRefreshing: Bool
 
     var body: some View {
+        @Bindable var session = session
+
         List {
             Section {
                 TaskDetailIdentityRow(
                     store: store,
-                    task: task
+                    task: task,
+                    draft: $session.draft,
+                    validation: session.validation,
+                    focusedTextField: focusedTextField
                 )
             }
 
             TaskDetailTrackingAvailabilitySection(store: store, task: task)
 
-            TaskDetailChecklistSection(store: store, task: task)
+            TaskEditorSections(
+                store: store,
+                draft: $session.draft,
+                validation: session.validation,
+                parentCandidates: session.parentCandidates,
+                focusedTextField: focusedTextField,
+                focusedChecklistDraftID: focusedChecklistDraftID,
+                orderedChecklistIndices: session.orderedChecklistIndices,
+                moveChecklistItems: { sourceOffsets, destination in
+                    session.moveChecklistItems(
+                        fromOffsets: sourceOffsets,
+                        toOffset: destination
+                    )
+                },
+                addChecklistItem: { visualIndex in
+                    focusedChecklistDraftID.wrappedValue = session.addChecklistItem(
+                        afterVisualIndex: visualIndex
+                    )
+                },
+                showsTitleField: false,
+                notesStartInPreview: true
+            )
             TaskDetailForecastSection(store: store, task: task)
-
-            if let notes = task.notes?.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            ), !notes.isEmpty {
-                Section(AppStrings.localized("editor.task.notes")) {
-                    TaskNotesMarkdownPreview(markdown: notes)
-                }
-            }
 
             if let snapshot {
                 TaskDetailOverviewSection(snapshot: snapshot)
@@ -51,6 +72,7 @@ struct TaskDetailList: View {
         }
         #if os(iOS)
         .listStyle(.insetGrouped)
+        .scrollDismissesKeyboard(.interactively)
         #else
         .listStyle(.inset)
         #endif

@@ -12,6 +12,7 @@ final class TimeTrackerStore {
     let appleHealthDataReader: any AppleHealthDataReading
     let appleHealthTimelinePreferenceStore: any AppleHealthTimelinePreferenceStoring
     let writeAuthorization: StoreWriteAuthorization
+    let taskDraftRecoveryController: TaskDraftRecoveryController
 
     init(
         llmCredentialStore: (any LLMCredentialStoring)? = nil,
@@ -20,7 +21,8 @@ final class TimeTrackerStore {
         appleHealthDataReader: (any AppleHealthDataReading)? = nil,
         appleHealthTimelinePreferenceStore: (any AppleHealthTimelinePreferenceStoring)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
-        syncConflictService: SyncConflictService? = nil
+        syncConflictService: SyncConflictService? = nil,
+        taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil
     ) {
         self.llmCredentialStore = llmCredentialStore ?? KeychainLLMCredentialStore()
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
@@ -40,7 +42,8 @@ final class TimeTrackerStore {
             .unavailable
         }
         self.writeAuthorization = writeAuthorization
-        self.syncConflictService = syncConflictService ?? SyncConflictService()
+        self.syncConflictService = syncConflictService ?? Self.defaultSyncConflictService()
+        self.taskDraftRecoveryController = TaskDraftRecoveryController(store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore())
     }
 
     deinit {
@@ -145,6 +148,7 @@ final class TimeTrackerStore {
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today
     var tasksRoute: TasksRoute?
+    @ObservationIgnored let taskDetailNavigationGuard = TaskDetailNavigationGuard()
     var selectedTaskPulseID: UUID?
     var selectedTaskPulseToken = UUID()
     var cloudAccountCheck: CloudAccountCheckOutcome?

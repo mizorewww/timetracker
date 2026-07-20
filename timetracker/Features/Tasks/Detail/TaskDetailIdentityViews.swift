@@ -7,6 +7,9 @@ import UIKit
 struct TaskDetailIdentityRow: View {
     let store: TimeTrackerStore
     let task: TaskNode
+    @Binding var draft: TaskEditorDraft
+    let validation: TaskEditorValidation
+    let focusedTextField: FocusState<TaskEditorTextField?>.Binding
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -42,30 +45,60 @@ struct TaskDetailIdentityRow: View {
 
     private var identitySummary: some View {
         HStack(alignment: .top, spacing: 14) {
-            TaskIcon(task: task, size: 44)
+            TaskIcon(
+                visual: TaskVisualPresentation(
+                    iconName: draft.iconName,
+                    colorHex: draft.colorHex
+                ),
+                size: 44
+            )
             identityText
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .layoutPriority(1)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("task.detail.identity")
     }
 
     private var identityText: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(task.title)
+            TextField(
+                AppStrings.localized("editor.task.name"),
+                text: $draft.title
+            )
                 .font(.headline)
+                .textFieldStyle(.roundedBorder)
+                .focused(focusedTextField, equals: .title)
+                .contentShape(Rectangle())
                 .foregroundStyle(.primary)
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-                .fixedSize(horizontal: false, vertical: true)
+                .submitLabel(.done)
+                .onSubmit {
+                    focusedTextField.wrappedValue = nil
+                }
+                .accessibilityHint(validation.titleError?.localizedDescription ?? "")
+                .accessibilityIdentifier("task.editor.title.field")
 
-            Text(store.parentPath(for: task) ?? AppStrings.localized("task.root"))
+            Text(parentPath)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("task.detail.identity")
+
+            if let titleError = validation.titleError {
+                TaskEditorInlineValidationMessage(
+                    error: titleError,
+                    accessibilityIdentifier: "task.editor.title.error"
+                )
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var parentPath: String {
+        guard let parentID = draft.parentID,
+              let parent = store.task(for: parentID) else {
+            return AppStrings.localized("task.root")
+        }
+        return store.taskIdentityPresentation(for: parent).fullPath
     }
 
     @ViewBuilder

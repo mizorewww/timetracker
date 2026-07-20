@@ -5,7 +5,9 @@ struct TaskInfoEditorSection: View {
     @Binding var draft: TaskEditorDraft
     let validation: TaskEditorValidation
     let parentCandidates: [TaskNode]
-    @FocusState private var isTitleFocused: Bool
+    var showsTitleField = true
+    let focusedTextField: FocusState<TaskEditorTextField?>.Binding
+    let dismissInputFocus: () -> Void
     @State private var hasEditedTitle = false
     @State private var hasRequestedInitialTitleFocus = false
 
@@ -16,20 +18,22 @@ struct TaskInfoEditorSection: View {
         }
 
         Section {
-            VStack(alignment: .leading, spacing: 6) {
-                TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
-                    .focused($isTitleFocused)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        isTitleFocused = false
+            if showsTitleField {
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField(AppStrings.localized("editor.task.name"), text: $draft.title)
+                        .focused(focusedTextField, equals: .title)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            focusedTextField.wrappedValue = nil
+                        }
+                        .accessibilityHint(visibleTitleError?.localizedDescription ?? "")
+                        .accessibilityIdentifier("task.editor.title.field")
+                    if let visibleTitleError {
+                        TaskEditorInlineValidationMessage(
+                            error: visibleTitleError,
+                            accessibilityIdentifier: "task.editor.title.error"
+                        )
                     }
-                    .accessibilityHint(visibleTitleError?.localizedDescription ?? "")
-                    .accessibilityIdentifier("task.editor.title.field")
-                if let visibleTitleError {
-                    TaskEditorInlineValidationMessage(
-                        error: visibleTitleError,
-                        accessibilityIdentifier: "task.editor.title.error"
-                    )
                 }
             }
             TaskParentPickerRow(
@@ -46,9 +50,7 @@ struct TaskInfoEditorSection: View {
             VStack(alignment: .leading, spacing: 6) {
                 SymbolColorPickerRow(
                     pickerAccessibilityIdentifier: "symbol.picker.open.task",
-                    onOpen: {
-                        isTitleFocused = false
-                    },
+                    onOpen: dismissInputFocus,
                     symbolName: $draft.iconName,
                     colorHex: $draft.colorHex
                 )
@@ -78,10 +80,11 @@ struct TaskInfoEditorSection: View {
             }
         }
         .task {
-            guard draft.taskID == nil,
+            guard showsTitleField,
+                  draft.taskID == nil,
                   hasRequestedInitialTitleFocus == false else { return }
             hasRequestedInitialTitleFocus = true
-            isTitleFocused = true
+            focusedTextField.wrappedValue = .title
         }
         .onChange(of: draft.title) {
             hasEditedTitle = true

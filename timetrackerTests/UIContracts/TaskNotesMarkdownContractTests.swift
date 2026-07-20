@@ -14,14 +14,16 @@ struct TaskNotesMarkdownContractTests {
             "timetracker/Features/Tasks/Editor/TaskNotesEditorSection.swift"
         )
 
-        #expect(detail.contains("TaskNotesMarkdownPreview(markdown: notes)"))
+        #expect(detail.contains("notesStartInPreview: true"))
         #expect(preview.contains("import MarkdownView"))
         #expect(preview.contains("view.linkHandler ="))
         #expect(preview.contains("openURL(url)"))
         #expect(preview.contains("view.boundingSize(for: width)"))
         #expect(preview.contains("MarkdownTheme()"))
         #expect(editor.contains("TextEditor(text: $notes)"))
-        #expect(editor.contains("MarkdownView") == false)
+        #expect(editor.contains("TaskNotesMarkdownPreview(markdown: notes)"))
+        #expect(editor.contains("task.editor.notes.mode"))
+        #expect(editor.contains("task.notes.preview"))
     }
 
     @Test

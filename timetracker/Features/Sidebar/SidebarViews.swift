@@ -65,14 +65,18 @@ struct SidebarView: View {
             selectionFromStore
         } set: { newValue in
             guard let newValue, newValue != selectionFromStore else { return }
-            switch newValue {
-            case let .destination(destination):
-                store.closeTaskDetailNavigation()
-                store.desktopDestination = destination
-            case let .task(taskID):
-                store.openTaskDetail(taskID)
+            store.taskDetailNavigationGuard.requestNavigation(
+                dismissingActiveDetail: true
+            ) {
+                switch newValue {
+                case let .destination(destination):
+                    store.closeTaskDetailNavigation()
+                    store.desktopDestination = destination
+                case let .task(taskID):
+                    store.openTaskDetail(taskID)
+                }
+                onNavigate()
             }
-            onNavigate()
         }
     }
 

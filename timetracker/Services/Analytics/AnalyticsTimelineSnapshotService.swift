@@ -50,14 +50,14 @@ struct AnalyticsTimelineSnapshotService {
             }
             let task = taskByID[segment.taskID]
             let fallbackTitle = sessionsByTaskID[segment.taskID]?.first?.titleSnapshot
-                ?? AppStrings.localized("task.deleted")
+                ?? AppStrings.localized("task.unavailable")
             return TimelinePresentationSeed(
                 id: .trackedSegment(segment.id),
                 subject: .task(segment.taskID),
                 title: task?.title ?? fallbackTitle,
                 path: task.map {
                     taskParentPathByID[$0.id] ?? AppStrings.rootTask
-                } ?? AppStrings.localized("task.deleted.path"),
+                } ?? AppStrings.localized("task.unavailable.path"),
                 iconName: task?.iconName ?? "checkmark.circle",
                 colorHex: task?.colorHex ?? "0A84FF",
                 interval: interval

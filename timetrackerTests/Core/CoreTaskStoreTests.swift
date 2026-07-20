@@ -118,7 +118,7 @@ struct CoreTaskStoreTests {
 
         let availabilityService = TaskTrackingAvailabilityService()
         #expect(availabilityService.parentChangeBlocker(for: archivedRoot) == .archived)
-        #expect(availabilityService.parentChangeBlocker(for: deletedRoot) == .deleted)
+        #expect(availabilityService.parentChangeBlocker(for: deletedRoot) == .unavailable)
         #expect(availabilityService.parentChangeBlocker(for: completedRoot) == nil)
         #expect(availabilityService.parentChangeBlocker(for: completedChild) == nil)
 

@@ -43,6 +43,7 @@ struct ArchivedTasksSettingsSection: View {
         }
         .padding(.vertical, 4)
         .settingsRowSeparatorAligned()
+        .accessibilityIdentifier("settings.archivedTasks.empty")
     }
 }
 
@@ -73,16 +74,13 @@ private struct ArchivedTaskSettingsRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(action: unarchive) {
-                Image(systemName: "arrow.uturn.backward")
-                    .frame(
-                        width: actionTargetSize,
-                        height: actionTargetSize
-                    )
+                Label(AppStrings.localized("task.action.unarchive"), systemImage: "archivebox")
+                    .fixedSize()
+                    .frame(minHeight: actionTargetSize)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.bordered)
             .disabled(canUnarchive == false)
-            .accessibilityLabel(Text(.app("task.action.unarchive")))
             .accessibilityIdentifier(
                 "settings.archivedTasks.unarchive.\(presentation.id.uuidString)"
             )

@@ -21,10 +21,10 @@ extension AnalyticsStore {
                 taskID: taskID,
                 title: task?.title
                     ?? fallbackTitleByTaskID[taskID]
-                    ?? AppStrings.localized("task.deleted"),
+                    ?? AppStrings.localized("task.unavailable"),
                 path: task.map {
                     taskPathByID[$0.id] ?? $0.title
-                } ?? AppStrings.localized("task.deleted.path"),
+                } ?? AppStrings.localized("task.unavailable.path"),
                 colorHex: task?.colorHex,
                 iconName: task?.iconName,
                 grossSeconds: gross,

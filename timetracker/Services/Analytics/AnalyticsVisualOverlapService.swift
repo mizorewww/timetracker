@@ -13,7 +13,7 @@ nonisolated struct AnalyticsVisualOverlapService {
                 id: taskID,
                 title: input.taskByID[taskID]?.title
                     ?? input.overlapFallbackTitleByTaskID[taskID]
-                    ?? input.deletedTaskTitle
+                    ?? input.unavailableTaskTitle
             )
         }
         let rawWindows = sweepOverlapWindows(segments, participantsByTaskID: participantsByTaskID)

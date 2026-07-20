@@ -37,7 +37,7 @@ struct SidebarTaskTreeRow: View {
             pulseToken: store.selectedTaskPulseToken
         )
         .contextMenu {
-            TaskContextMenu(
+            TaskMenuContent(
                 store: store,
                 task: task
             )

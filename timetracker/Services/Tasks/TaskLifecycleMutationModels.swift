@@ -25,7 +25,7 @@ enum TaskLifecycleMutationError: LocalizedError, Equatable {
         case .parentChangeBlocked(let blocker):
             let key = switch blocker {
             case .archived: "task.parent.archivedLocked"
-            case .deleted: "task.parent.deletedLocked"
+            case .unavailable: "task.parent.unavailableLocked"
             }
             return AppStrings.localized(key)
         case .parentUnavailable:

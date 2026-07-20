@@ -70,10 +70,11 @@ private struct TaskDetailNavigationModifier: ViewModifier {
 
     private func moreMenu(_ task: TaskNode) -> some View {
         Menu {
-            TaskContextMenu(
+            TaskMenuContent(
                 store: store,
                 task: task,
-                preservingDestination: preservingDestination
+                preservingDestination: preservingDestination,
+                surface: .pullDown
             )
         } label: {
             Label(AppStrings.localized("common.more"), systemImage: "ellipsis.circle")

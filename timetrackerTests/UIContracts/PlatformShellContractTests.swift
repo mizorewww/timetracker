@@ -167,16 +167,21 @@ struct PlatformShellContractTests {
     }
 
     @Test
-    func macCommandsExposeCreationTrackingNavigationAndRefreshShortcuts() throws {
+    func macCommandsExposeCreationTaskLifecycleNavigationAndRefresh() throws {
         let source = try sourceText("timetracker/App/TimeTrackerCommands.swift")
 
         #expect(source.contains("CommandGroup(replacing: .newItem)"))
+        #expect(source.contains("CommandMenu(AppStrings.localized(\"menu.task\"))"))
+        #expect(source.contains("Button(AppStrings.localized(\"menu.archiveSelectedTask\"))"))
+        #expect(source.contains("store.archiveTaskProtectingUnsavedChanges(selectedTask.id)"))
+        #expect(source.contains("private var canArchiveSelectedTask: Bool"))
+        #expect(source.contains("store.isTaskVisible(selectedTask)"))
+        #expect(source.contains("store.hasActiveTimer(inTaskSubtree: selectedTask.id)"))
         #expect(source.contains("CommandGroup(after: .sidebar)"))
         #expect(source.contains("destinationButton(.today, key: \"1\")"))
         #expect(source.contains("destinationButton(.analytics, key: \"5\")"))
         #expect(source.contains("store?.closeTaskDetailNavigation()"))
         #expect(source.contains(".keyboardShortcut(\"r\", modifiers: [.command])"))
-        #expect(source.contains(".disabled(store?.selectedTask == nil)"))
     }
 
     @Test

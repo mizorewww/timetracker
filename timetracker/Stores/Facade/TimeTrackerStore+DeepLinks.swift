@@ -72,7 +72,7 @@ extension TimeTrackerStore {
             desktopDestination = .tasks
             return .handled
         case .openTask(let taskID):
-            guard let task = task(for: taskID), task.deletedAt == nil else {
+            guard isTaskDetailRouteValid(taskID) else {
                 return .rejected
             }
             openTaskDetail(taskID)

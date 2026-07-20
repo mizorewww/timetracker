@@ -20,9 +20,9 @@ struct TimeTrackerCommands: Commands {
             }
             .keyboardShortcut("m", modifiers: [.command, .shift])
             .disabled(store == nil || presentationRouter?.canPresent != true)
+        }
 
-            Divider()
-
+        CommandMenu(AppStrings.localized("menu.task")) {
             Button(AppStrings.localized("menu.startSelectedTask")) {
                 store?.startSelectedTask()
             }
@@ -34,6 +34,16 @@ struct TimeTrackerCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
             .disabled(canTrackSelectedTask == false)
+
+            Divider()
+
+            Button(AppStrings.localized("menu.archiveSelectedTask")) {
+                guard let store, let selectedTask = store.selectedTask else {
+                    return
+                }
+                store.archiveTaskProtectingUnsavedChanges(selectedTask.id)
+            }
+            .disabled(canArchiveSelectedTask == false)
         }
 
         CommandGroup(after: .sidebar) {
@@ -60,6 +70,14 @@ struct TimeTrackerCommands: Commands {
             return false
         }
         return store.isTaskAvailableForTracking(selectedTask)
+    }
+
+    private var canArchiveSelectedTask: Bool {
+        guard let store, let selectedTask = store.selectedTask else {
+            return false
+        }
+        return store.isTaskVisible(selectedTask) &&
+            store.hasActiveTimer(inTaskSubtree: selectedTask.id) == false
     }
 
     private func destinationButton(

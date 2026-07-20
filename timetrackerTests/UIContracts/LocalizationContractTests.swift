@@ -121,10 +121,58 @@ struct LocalizationContractTests {
         #expect(english["task.archived.trackingUnavailable"] != nil)
         #expect(english["task.delete.confirm.title"] == nil)
         #expect(english["task.delete.confirm.message"] == nil)
-        #expect(english["task.deleted"] != nil)
-        #expect(english["task.deleted.path"] != nil)
+        #expect(english["task.deleted"] == nil)
+        #expect(english["task.deleted.path"] == nil)
+        #expect(english["task.unavailable"] == "Unavailable Task")
+        #expect(english["task.unavailable.path"] == "History / Unavailable Task")
         #expect(english["settings.category.archivedTasks.title"] != nil)
         #expect(english["settings.archivedTasks.footer"] != nil)
+    }
+
+    @Test
+    func taskLifecycleCopyUsesArchiveUnarchiveAndUnavailableSemantics() throws {
+        let root = try projectRootURL()
+        let expected: [String: [String: String]] = [
+            "en": [
+                "menu.task": "Task",
+                "menu.archiveSelectedTask": "Archive Selected Task",
+                "settings.category.archivedTasks.subtitle": "View and unarchive tasks",
+                "task.unavailable": "Unavailable Task",
+                "task.unavailable.path": "History / Unavailable Task",
+                "task.parent.unavailableLocked": "An unavailable task cannot be moved.",
+            ],
+            "zh-Hans": [
+                "menu.task": "任务",
+                "menu.archiveSelectedTask": "归档所选任务",
+                "settings.category.archivedTasks.subtitle": "查看并取消归档任务",
+                "task.unavailable": "不可用任务",
+                "task.unavailable.path": "历史账本 / 不可用任务",
+                "task.parent.unavailableLocked": "不可用任务无法移动。",
+            ],
+            "zh-Hant": [
+                "menu.task": "任務",
+                "menu.archiveSelectedTask": "封存所選任務",
+                "settings.category.archivedTasks.subtitle": "查看並取消封存任務",
+                "task.unavailable": "不可用任務",
+                "task.unavailable.path": "歷史帳本 / 不可用任務",
+                "task.parent.unavailableLocked": "不可用任務無法移動。",
+            ],
+        ]
+
+        for (locale, expectedValues) in expected {
+            let path = root.appending(
+                path: "timetracker/\(locale).lproj/Localizable.strings"
+            ).path
+            let strings = try #require(
+                NSDictionary(contentsOfFile: path) as? [String: String]
+            )
+            for (key, value) in expectedValues {
+                #expect(strings[key] == value, "Unexpected \(locale) value for \(key)")
+            }
+            #expect(strings["task.deleted"] == nil)
+            #expect(strings["task.deleted.path"] == nil)
+            #expect(strings["task.parent.deletedLocked"] == nil)
+        }
     }
 
     @Test

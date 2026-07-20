@@ -7,7 +7,7 @@ struct TaskWorkEligibility: Equatable {
 
 nonisolated enum TaskParentChangeBlocker: Equatable {
     case archived
-    case deleted
+    case unavailable
 }
 
 /// Resolves visibility and work eligibility for an entire hierarchy in linear
@@ -79,7 +79,7 @@ struct TaskTrackingAvailabilityService {
     /// lifecycle still accepts edits.
     func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
         if task.deletedAt != nil {
-            return .deleted
+            return .unavailable
         }
         if task.isArchivedForLifecycle {
             return .archived

@@ -486,6 +486,86 @@ struct CoreDeepLinkRoutingTests {
     }
 
     @Test @MainActor
+    func archivedTaskDeepLinkIsRejectedWithoutMutatingNavigation() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let visibleTask = try repository.createTask(
+            title: "Visible selection",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let archivedTask = try repository.createTask(
+            title: "Archived destination",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.archiveTask(taskID: archivedTask.id)
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.openTaskDetail(visibleTask.id)
+        let originalDestination = store.desktopDestination
+        let originalSelection = store.selectedTaskID
+        let originalRoute = store.tasksRoute
+        let url = try #require(
+            URL(string: "timetracker://task/\(archivedTask.id.uuidString)")
+        )
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: AppPresentationRouter())
+                == .rejected
+        )
+        #expect(store.desktopDestination == originalDestination)
+        #expect(store.selectedTaskID == originalSelection)
+        #expect(store.tasksRoute == originalRoute)
+    }
+
+    @Test @MainActor
+    func taskBelowArchivedAncestorDeepLinkIsRejectedWithoutMutatingNavigation() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let visibleTask = try repository.createTask(
+            title: "Visible selection",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let archivedParent = try repository.createTask(
+            title: "Archived parent",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let hiddenChild = try repository.createTask(
+            title: "Transitively hidden child",
+            parentID: archivedParent.id,
+            colorHex: nil,
+            iconName: nil
+        )
+        try repository.archiveTask(taskID: archivedParent.id)
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.openTaskDetail(visibleTask.id)
+        let originalDestination = store.desktopDestination
+        let originalSelection = store.selectedTaskID
+        let originalRoute = store.tasksRoute
+        let url = try #require(
+            URL(string: "timetracker://task/\(hiddenChild.id.uuidString)")
+        )
+
+        #expect(
+            store.handleDeepLink(url, presentationRouter: AppPresentationRouter())
+                == .rejected
+        )
+        #expect(store.desktopDestination == originalDestination)
+        #expect(store.selectedTaskID == originalSelection)
+        #expect(store.tasksRoute == originalRoute)
+    }
+
+    @Test @MainActor
     func pendingDeepLinksAreValidatedDeduplicatedBoundedAndDrained() throws {
         let queue = PendingDeepLinkQueue(capacity: 2)
         let inbox = try #require(URL(string: "timetracker://open/inbox"))

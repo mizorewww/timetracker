@@ -47,9 +47,7 @@ struct AppSceneDeepLinkCoordinator {
                 )
                 return disposition == .handled ? .routeToToday : nil
             case .openTask(let taskID):
-                guard let task = store.task(for: taskID),
-                      task.deletedAt == nil,
-                      store.isTaskDetailRouteValid(taskID) else {
+                guard store.isTaskDetailRouteValid(taskID) else {
                     return nil
                 }
                 return .deepLink(url)

@@ -27,9 +27,9 @@ extension AnalyticsStore {
                     taskID: segment.taskID,
                     title: task?.title
                         ?? sessionByID[segment.sessionID]?.titleSnapshot
-                        ?? AppStrings.localized("task.deleted"),
+                        ?? AppStrings.localized("task.unavailable"),
                     path: task.flatMap { taskPathByID[$0.id] }
-                        ?? AppStrings.localized("task.deleted.path"),
+                        ?? AppStrings.localized("task.unavailable.path"),
                     startedAt: segment.startedAt,
                     endedAt: segment.endedAt,
                     durationSeconds: TrackedTimePolicy.elapsedSeconds(

@@ -137,7 +137,7 @@ struct AnalyticsTimelineTests {
 
         #expect(breakdown.count == 1)
         #expect(breakdown.first?.title == "Client Research")
-        #expect(breakdown.first?.path == AppStrings.localized("task.deleted.path"))
+        #expect(breakdown.first?.path == AppStrings.localized("task.unavailable.path"))
         #expect(breakdown.first?.grossSeconds == 1_800)
     }
 

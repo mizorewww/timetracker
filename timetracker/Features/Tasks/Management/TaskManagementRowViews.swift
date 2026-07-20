@@ -51,7 +51,7 @@ struct TaskManagementFlatRow: View {
         }
         .padding(.leading, CGFloat(min(treeDepth, 6)) * 12)
         .contextMenu {
-            TaskContextMenu(
+            TaskMenuContent(
                 store: store,
                 task: task,
                 preservingDestination: .tasks

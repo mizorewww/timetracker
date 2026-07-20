@@ -96,6 +96,8 @@
 "quickStart.edit" = "Edit Quick Start";
 "menu.startSelectedTask" = "Start Selected Task";
 "menu.startPomodoro" = "Start Pomodoro";
+"menu.task" = "Task";
+"menu.archiveSelectedTask" = "Archive Selected Task";
 "menu.refreshData" = "Refresh Data";
 "settings.appearance" = "Appearance";
 "settings.appearance.system" = "System";
@@ -109,7 +111,7 @@
 "settings.category.general.title" = "General";
 "settings.category.general.subtitle" = "Timing behavior and countdown events";
 "settings.category.archivedTasks.title" = "Archived Tasks";
-"settings.category.archivedTasks.subtitle" = "Review and return hidden tasks";
+"settings.category.archivedTasks.subtitle" = "View and unarchive tasks";
 "settings.category.focus.title" = "Focus";
 "settings.category.focus.subtitle" = "Pomodoro plans and intervals";
 "settings.category.dataAndSync.title" = "Data & Sync";
@@ -346,8 +348,8 @@
 "source.widget" = "Widget";
 "source.liveActivity" = "Live Activity";
 "status.archived" = "Archived";
-"task.deleted" = "Deleted Task";
-"task.deleted.path" = "History / Deleted Task";
+"task.unavailable" = "Unavailable Task";
+"task.unavailable.path" = "History / Unavailable Task";
 "task.newEvent" = "New Event";
 "task.nameRequired" = "Task name is required.";
 "task.selectRequired" = "Choose a task.";
@@ -507,7 +509,7 @@
 "tasks.recovery.finishCleanup" = "Finish Cleanup";
 "tasks.recovery.cleanupLater" = "Clean Up Later";
 "task.parent.archivedLocked" = "Restore this archived task before moving it.";
-"task.parent.deletedLocked" = "A deleted task cannot be moved.";
+"task.parent.unavailableLocked" = "An unavailable task cannot be moved.";
 "task.parent.currentUnavailableFormat" = "%@ — Current, unavailable";
 "task.parent.unavailableFormat" = "%@ — Unavailable";
 "task.parent.currentMissing" = "Current Parent — Unavailable";

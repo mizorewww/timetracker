@@ -34,7 +34,7 @@ struct WidgetSnapshotCache {
                 id: segment.id,
                 taskID: segment.taskID,
                 title: WidgetSnapshotLimits.boundedUTF8Prefix(
-                    task?.title ?? AppStrings.localized("task.deleted"),
+                    task?.title ?? AppStrings.localized("task.unavailable"),
                     maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
                 ),
                 path: WidgetSnapshotLimits.boundedUTF8Prefix(

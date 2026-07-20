@@ -15,7 +15,7 @@ extension AnalyticsStore {
         return taskIDs.reduce(into: [UUID: OverlapAnalyticsParticipant]()) { result, taskID in
             let title = taskByID[taskID]?.title
                 ?? fallbackTitleByTaskID[taskID]
-                ?? AppStrings.localized("task.deleted")
+                ?? AppStrings.localized("task.unavailable")
             result[taskID] = OverlapAnalyticsParticipant(id: taskID, title: title)
         }
     }

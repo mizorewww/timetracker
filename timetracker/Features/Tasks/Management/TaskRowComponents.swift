@@ -1,10 +1,16 @@
 import SwiftUI
 
-struct TaskContextMenu: View {
+enum TaskMenuSurface {
+    case contextual
+    case pullDown
+}
+
+struct TaskMenuContent: View {
     let store: TimeTrackerStore
     let task: TaskNode
     @Environment(AppPresentationRouter.self) private var presentationRouter
     var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
+    var surface: TaskMenuSurface = .contextual
 
     private var activeSegment: TimeSegment? {
         store.activeSegment(for: task.id)
@@ -20,6 +26,20 @@ struct TaskContextMenu: View {
 
     private var hasActiveTimerInSubtree: Bool {
         store.hasActiveTimer(inTaskSubtree: task.id)
+    }
+
+    private var showsPrimaryActions: Bool {
+        activeSegment != nil ||
+            isAvailableForTracking ||
+            isEligibleAsParent
+    }
+
+    private var showsArchiveAction: Bool {
+        guard store.isTaskVisible(task) else { return false }
+        if hasActiveTimerInSubtree {
+            return surface == .pullDown
+        }
+        return true
     }
 
     var body: some View {
@@ -57,27 +77,23 @@ struct TaskContextMenu: View {
             }
         }
 
-        if activeSegment != nil ||
-            isAvailableForTracking ||
-            isEligibleAsParent {
+        if showsPrimaryActions && showsArchiveAction {
             Divider()
         }
 
-        if store.isTaskVisible(task) {
-            if hasActiveTimerInSubtree {
-                Button {} label: {
-                    Label(AppStrings.localized("task.action.archive.stopFirst"), systemImage: "archivebox")
-                }
-                .disabled(true)
-            } else {
-                Button {
-                    store.archiveTaskProtectingUnsavedChanges(task.id)
-                } label: {
-                    Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
-                }
-            }
+        if showsArchiveAction {
+            archiveButton
+                .disabled(hasActiveTimerInSubtree)
         }
+    }
 
+    private var archiveButton: some View {
+        Button {
+            store.archiveTaskProtectingUnsavedChanges(task.id)
+        } label: {
+            Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
+        }
+        .accessibilityIdentifier("task.action.archive.\(task.id.uuidString)")
     }
 }
 

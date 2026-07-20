@@ -24,7 +24,7 @@ struct HourTaskActivityService {
             let slices = secondsByHourAndTaskID[hour].compactMap { taskID, seconds -> HourTaskSlice? in
                 guard seconds > 0 else { return nil }
                 let task = taskByID[taskID]
-                let fallbackTitle = sessionsByTaskID[taskID]?.first?.titleSnapshot ?? AppStrings.localized("task.deleted")
+                let fallbackTitle = sessionsByTaskID[taskID]?.first?.titleSnapshot ?? AppStrings.localized("task.unavailable")
                 return HourTaskSlice(
                     taskID: taskID,
                     title: task?.title ?? fallbackTitle,

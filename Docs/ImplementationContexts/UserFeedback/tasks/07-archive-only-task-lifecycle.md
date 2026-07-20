@@ -10,7 +10,9 @@
   用户任务删除入口可删。
 - 已用失败测试复现菜单、设置、文案、deep link 与未来时间戳 LWW 缺口。
 - 已完成归档/解除归档严格胜过跨设备未来时间戳副本的领域修复。
-- [~] 正在统一产品文案、菜单和 deep link 语义；下一 checkpoint 是产品 UI 与契约绿测。
+- 已统一产品文案、菜单和 deep link 语义，并通过 macOS 契约/领域测试与带签名 iOS 编译。
+- [~] 正在执行 iPhone、iPad、macOS 交互与截图矩阵；下一 checkpoint 是 UI 回归脚本和
+  三平台验收。
 
 ## 实现边界
 
@@ -28,8 +30,8 @@
 - [x] 确认归档专用领域 API 已存在，任务硬删除功能代码已经移除
 - [x] 确认设置中已有归档入口、列表与父级优先的解除归档
 - [x] 确认 Task 页面左滑已是归档，详情 More 已提供非手势入口
-- [~] 修正剩余归档语义、跨平台入口与分布式持久化边界
-- [ ] 增补领域、界面契约和跨平台回归测试
+- [x] 修正剩余归档语义、跨平台入口与分布式持久化边界
+- [~] 增补领域、界面契约和跨平台回归测试
 - [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
@@ -81,17 +83,19 @@
 ### 仍需修正的真实缺口
 
 1. Task context menu 在活动计时子树上显示一条 disabled 长错误句；应在 context menu 隐藏，
-   在详情 More 中保留简短 disabled `Archive`。
+   在详情 More 中保留简短 disabled `Archive`。已完成，并避免隐藏动作后留下尾部分隔线。
 2. Settings 的 Unarchive 是 `arrow.uturn.backward` 纯图标按钮；应显示明确的
-   `Label("Unarchive", …)` 并保留 iOS 44pt / macOS 28pt 最小目标。
-3. macOS 菜单栏没有“归档所选任务”；应增加无快捷键、按选择与活动子树状态置灰的原生命令。
+   `Label("Unarchive", …)` 并保留 iOS 44pt / macOS 28pt 最小目标。已完成。
+3. macOS 菜单栏没有“归档所选任务”；已增加无快捷键、按选择与活动子树状态置灰的
+   `Task > Archive Selected Task`。
 4. 三套本地化仍把旧墓碑历史称为 Deleted Task，并把归档描述成 hidden/return；应统一为
-   Archive / Unarchive / Unavailable Task，底层 key 可保留以兼容调用点。
+   Archive / Unarchive / Unavailable Task。已移除旧本地化 key，并把相关代码标识也改成
+   unavailable，底层 `deletedAt` 墓碑字段保持不变。
 5. 归档/解除归档写入使用普通 `Date()`；面对来自其他设备的未来 `updatedAt` 或重复 UUID
    行，LWW 可能让本次动作输给旧副本。已改为从全部同 UUID 物理副本选择 winner，并使用
    现有 `PersistentLWWMutationDate.strictlyDominating`；绝不写入或清除 `deletedAt`。
 6. 归档任务 deep link 目前可能返回 handled，却因任务不可见而没有打开详情；应明确拒绝，
-   且不改变 destination、selection 或草稿。
+   且不改变 destination、selection 或草稿。已改为复用可见详情路由校验并增补回归测试。
 7. 现有 UI round trip 直接跳过 macOS，并把 iPad 截图写成 `iphone-*`；应改成稳定 demo
    任务和三平台独立命名。
 
@@ -135,9 +139,18 @@
 - 领域红测：旧实现下，archive 与 unarchive 都会输给未来 7 天的同 UUID 副本。
 - 领域绿测：完整 `StoreScopedTaskLifecycleCommandCoordinatorTests` 12 passed、0 failed；
   新增测试同时验证严格占优时间、archive 状态和 `deletedAt == nil`。
+- 产品绿测：Task UI、Localization、Platform Shell、Deep Link、Core Task、Analytics Timeline
+  与 Task Lifecycle 共 134 passed、0 failed；修正菜单分隔线后完整 `TaskUIContractTests`
+  再次 40 passed、0 failed；补充归档父级的后代路由用例后完整
+  `CoreDeepLinkRoutingTests` 29 passed、0 failed。
+- 带 Apple Development 签名的 generic iOS Debug build 成功；bundle id
+  `me.mezorewww.timetracker`，签名者 `ZEXUAN GAO`，使用
+  `TimeTracker HealthKit Development` provisioning profile。
 
 ## Checkpoint 记录
 
 - `55cc610`：领取当前反馈项，建立 `[~]`、独立实现记忆与活动软链接。
 - `ab5af0d`：完成 archive-only 全面静态审计、基线验证、HIG/依赖决策与实现边界。
-- 本 checkpoint：修复 archive/unarchive 在未来时间戳重复副本下的 LWW 不变量。
+- `4b4785c`：修复 archive/unarchive 在未来时间戳重复副本下的 LWW 不变量。
+- 本 checkpoint：统一任务归档菜单、Settings 恢复、macOS 命令、Unavailable 文案与
+  deep-link 语义，并锁定领域/界面/本地化契约。

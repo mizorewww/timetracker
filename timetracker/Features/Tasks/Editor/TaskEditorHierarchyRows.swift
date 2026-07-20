@@ -126,8 +126,8 @@ struct TaskHierarchyEditorHints: View {
         switch parentChangeBlocker {
         case .archived:
             "task.parent.archivedLocked"
-        case .deleted:
-            "task.parent.deletedLocked"
+        case .unavailable:
+            "task.parent.unavailableLocked"
         case nil:
             nil
         }

@@ -96,6 +96,8 @@
 "quickStart.edit" = "编辑快速开始";
 "menu.startSelectedTask" = "开始所选任务计时";
 "menu.startPomodoro" = "开始番茄钟";
+"menu.task" = "任务";
+"menu.archiveSelectedTask" = "归档所选任务";
 "menu.refreshData" = "刷新数据";
 "settings.appearance" = "外观";
 "settings.appearance.system" = "跟随系统";
@@ -109,7 +111,7 @@
 "settings.category.general.title" = "通用";
 "settings.category.general.subtitle" = "计时行为与倒计时事件";
 "settings.category.archivedTasks.title" = "归档任务";
-"settings.category.archivedTasks.subtitle" = "查看并恢复隐藏的任务";
+"settings.category.archivedTasks.subtitle" = "查看并取消归档任务";
 "settings.category.focus.title" = "专注";
 "settings.category.focus.subtitle" = "番茄计划与间隔";
 "settings.category.dataAndSync.title" = "数据与同步";
@@ -346,8 +348,8 @@
 "source.widget" = "小组件";
 "source.liveActivity" = "实时活动";
 "status.archived" = "已归档";
-"task.deleted" = "已删除任务";
-"task.deleted.path" = "历史账本 / 已删除任务";
+"task.unavailable" = "不可用任务";
+"task.unavailable.path" = "历史账本 / 不可用任务";
 "task.newEvent" = "新事件";
 "task.nameRequired" = "任务名称不能为空。";
 "task.selectRequired" = "请选择任务。";
@@ -507,7 +509,7 @@
 "tasks.recovery.finishCleanup" = "完成清理";
 "tasks.recovery.cleanupLater" = "稍后清理";
 "task.parent.archivedLocked" = "此任务已归档，恢复后才能移动。";
-"task.parent.deletedLocked" = "已删除的任务不能移动。";
+"task.parent.unavailableLocked" = "不可用任务无法移动。";
 "task.parent.currentUnavailableFormat" = "%@（当前不可用）";
 "task.parent.unavailableFormat" = "%@（不可用）";
 "task.parent.currentMissing" = "当前父任务（不可用）";

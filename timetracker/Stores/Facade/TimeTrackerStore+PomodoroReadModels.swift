@@ -57,7 +57,7 @@ extension TimeTrackerStore {
     }
 
     func taskTitle(for run: PomodoroRun) -> String {
-        task(for: run.taskID)?.title ?? AppStrings.localized("task.deleted")
+        task(for: run.taskID)?.title ?? AppStrings.localized("task.unavailable")
     }
 
     func pomodoroRemainingSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {

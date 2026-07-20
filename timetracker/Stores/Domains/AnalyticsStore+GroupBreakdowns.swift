@@ -46,9 +46,9 @@ extension AnalyticsStore {
             let root = task.flatMap { rootTask(for: $0, taskByID: taskByID) }
             let title = root?.title
                 ?? sessionsByTaskID[first.segment.taskID]?.first?.titleSnapshot
-                ?? AppStrings.localized("task.deleted")
+                ?? AppStrings.localized("task.unavailable")
             let path = root.flatMap { taskPathByID[$0.id] }
-                ?? AppStrings.localized("task.deleted.path")
+                ?? AppStrings.localized("task.unavailable.path")
             return groupPoint(
                 id: "root-\(groupID)",
                 kind: .rootTask,

@@ -74,11 +74,11 @@ extension TimeTrackerStore {
     }
 
     func displayTitle(for segment: TimeSegment) -> String {
-        task(for: segment.taskID)?.title ?? AppStrings.localized("task.deleted")
+        task(for: segment.taskID)?.title ?? AppStrings.localized("task.unavailable")
     }
 
     func displayPath(for segment: TimeSegment) -> String {
-        guard taskByID[segment.taskID] != nil else { return AppStrings.localized("task.deleted.path") }
+        guard taskByID[segment.taskID] != nil else { return AppStrings.localized("task.unavailable.path") }
         return taskParentPathByID[segment.taskID] ?? ""
     }
 

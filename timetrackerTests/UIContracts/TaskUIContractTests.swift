@@ -154,7 +154,8 @@ struct TaskUIContractTests {
 
         #expect(actionSource.contains("store.isTaskAvailableForTracking(task)"))
         #expect(actionSource.contains("store.hasActiveTimer(inTaskSubtree: task.id)"))
-        #expect(actionSource.contains("task.action.archive.stopFirst"))
+        #expect(actionSource.contains("task.action.archive.stopFirst") == false)
+        #expect(actionSource.contains("return surface == .pullDown"))
         #expect(actionSource.contains("if let activeSegment"))
         #expect(actionSource.contains("store.stop(segment: activeSegment)"))
         #expect(availabilitySource.contains("task.detail.trackingUnavailable"))
@@ -943,13 +944,19 @@ struct TaskUIContractTests {
         let archivedSettingsSource = try sourceText(
             "timetracker/Features/Settings/ArchivedTasksSettingsSection.swift"
         )
+        let macCommandSource = try sourceText(
+            "timetracker/App/TimeTrackerCommands.swift"
+        )
         let taskLifecycleCommandSource = try [
+            "timetracker/App/TimeTrackerCommands.swift",
+            "timetracker/AppIntents/TimeTrackerAppIntents.swift",
             "timetracker/Commands/TaskCommands.swift",
             "timetracker/Commands/UseCases.swift",
             "timetracker/Repositories/RepositoryProtocols.swift",
             "timetracker/Repositories/SwiftDataTaskRepository+TaskMutations.swift",
             "timetracker/Services/Tasks/StoreScopedTaskLifecycleCommandCoordinator.swift",
             "timetracker/Services/Tasks/TaskLifecycleMutationModels.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+DeepLinks.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift",
         ]
         .map(sourceText)
@@ -958,6 +965,14 @@ struct TaskUIContractTests {
         #expect(taskRowSource.contains("struct TaskRowSwipeActions"))
         #expect(taskRowSource.contains("enum TaskRowSwipeLabelStyle"))
         #expect(taskRowSource.contains("case iconOnly"))
+        #expect(taskRowSource.contains("enum TaskMenuSurface"))
+        #expect(taskRowSource.contains("case contextual"))
+        #expect(taskRowSource.contains("case pullDown"))
+        #expect(taskRowSource.contains("struct TaskMenuContent"))
+        #expect(taskRowSource.contains("surface: TaskMenuSurface = .contextual"))
+        #expect(taskRowSource.contains("return surface == .pullDown"))
+        #expect(taskRowSource.contains("if showsPrimaryActions && showsArchiveAction"))
+        #expect(taskRowSource.contains("task.action.archive.stopFirst") == false)
         #expect(taskRowSource.contains("task.action.archive"))
         #expect(taskRowSource.contains("systemImage: \"archivebox\""))
         #expect(taskRowSource.contains(".tint(.blue)"))
@@ -974,6 +989,8 @@ struct TaskUIContractTests {
         #expect(managementSource.contains("task.delete.confirm") == false)
         #expect(sidebarSource.contains("task.delete.confirm") == false)
         #expect(detailSource.contains("task.delete.confirm") == false)
+        #expect(detailSource.contains("TaskMenuContent("))
+        #expect(detailSource.contains("surface: .pullDown"))
         #expect(taskLifecycleCommandSource.contains("deleteSelectedTask") == false)
         #expect(taskLifecycleCommandSource.contains("SoftDeleteTaskUseCase") == false)
         #expect(taskLifecycleCommandSource.contains("softDeleteTask") == false)
@@ -986,13 +1003,28 @@ struct TaskUIContractTests {
         #expect(archivedSettingsSource.contains("TaskSummaryRow("))
         #expect(archivedSettingsSource.contains("context: .standard"))
         #expect(archivedSettingsSource.contains("task.action.unarchive"))
-        #expect(archivedSettingsSource.contains("width: actionTargetSize"))
-        #expect(archivedSettingsSource.contains("height: actionTargetSize"))
-        #expect(archivedSettingsSource.contains(".buttonStyle(.borderless)"))
+        #expect(archivedSettingsSource.contains(
+            "Label(AppStrings.localized(\"task.action.unarchive\"), systemImage: \"archivebox\")"
+        ))
+        #expect(archivedSettingsSource.contains("minHeight: actionTargetSize"))
+        #expect(archivedSettingsSource.contains("width: actionTargetSize") == false)
+        #expect(archivedSettingsSource.contains(".buttonStyle(.bordered)"))
+        #expect(archivedSettingsSource.contains(".buttonStyle(.borderless)") == false)
         #expect(archivedSettingsSource.contains(
             ".fixedSize(horizontal: false, vertical: true)"
         ))
         #expect(archivedSettingsSource.contains("settings.archivedTasks.parentFirst"))
+        #expect(macCommandSource.contains(
+            "CommandMenu(AppStrings.localized(\"menu.task\"))"
+        ))
+        #expect(macCommandSource.contains(
+            "Button(AppStrings.localized(\"menu.archiveSelectedTask\"))"
+        ))
+        #expect(macCommandSource.contains(
+            "store.archiveTaskProtectingUnsavedChanges(selectedTask.id)"
+        ))
+        #expect(macCommandSource.contains("private var canArchiveSelectedTask: Bool"))
+        #expect(macCommandSource.contains("store.hasActiveTimer(inTaskSubtree: selectedTask.id)"))
     }
 
     @Test
@@ -1027,7 +1059,8 @@ struct TaskUIContractTests {
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.more\")"))
         #expect(detailSource.contains(".accessibilityIdentifier(\"task.detail.addTime\")"))
         #expect(detailSource.contains("presentationRouter.presentManualTime(taskID: task.id"))
-        #expect(detailSource.contains("TaskContextMenu("))
+        #expect(detailSource.contains("TaskMenuContent("))
+        #expect(detailSource.contains("surface: .pullDown"))
         #expect(detailSource.contains("editTask:") == false)
         #expect(detailSource.contains("task.context.edit") == false)
         #expect(detailSource.contains("task.delete.confirm") == false)

@@ -73,7 +73,7 @@ nonisolated struct AnalyticsVisualSnapshotService {
                     taskID: taskID,
                     title: task?.title
                         ?? input.timelineFallbackTitleByTaskID[taskID]
-                        ?? input.deletedTaskTitle,
+                        ?? input.unavailableTaskTitle,
                     symbolName: task?.iconName ?? "checkmark.circle",
                     colorHex: task?.colorHex ?? "0A84FF",
                     seconds: seconds
@@ -115,8 +115,8 @@ nonisolated struct AnalyticsVisualSnapshotService {
                 subject: .task(segment.taskID),
                 title: task?.title
                     ?? input.timelineFallbackTitleByTaskID[segment.taskID]
-                    ?? input.deletedTaskTitle,
-                path: task?.path ?? input.deletedTaskPath,
+                    ?? input.unavailableTaskTitle,
+                path: task?.path ?? input.unavailableTaskPath,
                 iconName: task?.iconName ?? "checkmark.circle",
                 colorHex: task?.colorHex ?? "0A84FF",
                 startedAt: layoutEntry.item.startedAt,

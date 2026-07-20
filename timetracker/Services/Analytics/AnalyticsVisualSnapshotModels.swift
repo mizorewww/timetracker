@@ -12,8 +12,8 @@ nonisolated struct AnalyticsVisualSnapshotInput: Sendable {
     let taskByID: [UUID: AnalyticsVisualTask]
     let timelineFallbackTitleByTaskID: [UUID: String]
     let overlapFallbackTitleByTaskID: [UUID: String]
-    let deletedTaskTitle: String
-    let deletedTaskPath: String
+    let unavailableTaskTitle: String
+    let unavailableTaskPath: String
 
     @MainActor
     init(
@@ -46,8 +46,8 @@ nonisolated struct AnalyticsVisualSnapshotInput: Sendable {
         overlapFallbackTitleByTaskID = AnalyticsSelectionPolicy.latestSessionTitleByTaskID(
             sessions: sessions
         )
-        deletedTaskTitle = AppStrings.localized("task.deleted")
-        deletedTaskPath = AppStrings.localized("task.deleted.path")
+        unavailableTaskTitle = AppStrings.localized("task.unavailable")
+        unavailableTaskPath = AppStrings.localized("task.unavailable.path")
     }
 }
 

@@ -10,6 +10,26 @@ nonisolated enum TaskRecurrencePolicy {
 }
 
 nonisolated enum TaskRecurrenceDayKey {
+    static func value(
+        for date: Date,
+        timeZone: TimeZone
+    ) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = timeZone
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: date
+        )
+        return String(
+            format: "%04d-%02d-%02d",
+            locale: Locale(identifier: "en_US_POSIX"),
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
+    }
+
     static func isCanonical(_ value: String) -> Bool {
         guard value.utf8.count == 10,
               value.utf8.allSatisfy({
@@ -50,6 +70,15 @@ nonisolated enum TaskRecurrenceDayKey {
         return resolved.year == year &&
             resolved.month == month &&
             resolved.day == day
+    }
+
+    static func generatedTaskSortOrder(for value: String) -> Double {
+        guard let numeric = Double(
+            value.replacingOccurrences(of: "-", with: "")
+        ) else {
+            return 0
+        }
+        return -numeric
     }
 }
 

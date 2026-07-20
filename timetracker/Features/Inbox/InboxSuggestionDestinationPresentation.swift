@@ -73,7 +73,7 @@ extension TimeTrackerStore {
                 kind: .childTask,
                 targetTitle: target?.title ?? fallbackTitle,
                 isAvailable: target != nil &&
-                    trackableTaskIDs.contains(parentTaskID)
+                    parentEligibleTaskIDs.contains(parentTaskID)
             )
         case let .category(categoryID):
             let target = taskCategory(for: categoryID)
@@ -88,7 +88,7 @@ extension TimeTrackerStore {
                 kind: .checklist,
                 targetTitle: target?.title ?? fallbackTitle,
                 isAvailable: target != nil &&
-                    trackableTaskIDs.contains(taskID)
+                    parentEligibleTaskIDs.contains(taskID)
             )
         }
     }

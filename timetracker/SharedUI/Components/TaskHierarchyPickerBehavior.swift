@@ -17,7 +17,12 @@ extension TaskHierarchyPicker {
             section.items
         }
         return modeItems.filter {
-            $0.isAvailable || selectedTaskIDs.contains($0.id)
+            $0.isAvailable ||
+                selectedTaskIDs.contains($0.id) ||
+                (
+                    section.kind == .hierarchy &&
+                        $0.hasAvailableDescendant
+                )
         }
     }
 
@@ -35,13 +40,15 @@ extension TaskHierarchyPicker {
         guard let task = store.task(for: item.id) else { return }
         switch mode {
         case .timer:
-            guard store.isTaskAvailableForTracking(task) else { return }
+            guard mode.selectionEligibleTaskIDs(in: store)
+                .contains(task.id) else { return }
             let outcome = store.performTimerPickerSelection(task)
             if outcome.shouldDismissPicker {
                 onDismiss()
             }
         case .singleSelection:
-            guard store.isTaskAvailableForTracking(task) else { return }
+            guard mode.selectionEligibleTaskIDs(in: store)
+                .contains(task.id) else { return }
             onSelect(item.id)
         case .multipleSelection:
             guard isSelectionDisabled(for: item) == false else { return }
@@ -189,5 +196,30 @@ extension TaskHierarchyPicker {
         case let .multipleSelection(_, context, _):
             return context.selectionHint
         }
+    }
+}
+
+extension TaskHierarchyPickerMode {
+    func selectionEligibleTaskIDs(
+        in store: TimeTrackerStore
+    ) -> Set<UUID> {
+        switch self {
+        case .timer:
+            store.trackableTaskIDs
+        case let .singleSelection(_, context):
+            context.usesDirectWorkEligibility
+                ? store.trackableTaskIDs
+                : store.parentEligibleTaskIDs
+        case let .multipleSelection(_, context, _):
+            context.usesDirectWorkEligibility
+                ? store.trackableTaskIDs
+                : store.parentEligibleTaskIDs
+        }
+    }
+}
+
+private extension TaskHierarchyPickerSelectionContext {
+    var usesDirectWorkEligibility: Bool {
+        self == .pomodoro
     }
 }

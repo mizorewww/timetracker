@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-19
+校对日期：2026-07-20
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -11,6 +11,7 @@
 | --- | --- | --- | --- |
 | 任务、分类、收件箱、清单 | SwiftData | 用户的 CloudKit；启用 AI 时的部分字段发送到配置的 LLM 服务 | JSON |
 | 时间片、番茄记录 | SwiftData | 用户的 CloudKit；Watch/Live Activity 使用必要状态投影 | JSON |
+| 重复任务规则、每日生成回执、任务量目标与增量记录 | SwiftData | 用户的 CloudKit | JSON；旧快照缺少该表表示未知，显式空数组才表示清空 |
 | 普通设置 | SwiftData / UserDefaults | 部分偏好通过 CloudKit 同步；iCloud enablement 仅限当前设备 | JSON 中的可同步偏好，不含设备本地开关 |
 | 随机设备标识 | UserDefaults | 作为同步记录 metadata 进入 CloudKit | 可能随业务记录导出；不包含主机名或账户名 |
 | LLM API 密钥 | 本机 Keychain | 配置的 LLM endpoint 的 Authorization header | 不导出 |
@@ -25,7 +26,7 @@
 
 业务实体存放在 SwiftData store。启用 iCloud 后，同一业务模型可由 CloudKit 同步。应用可能在持久容器无法建立时进入诊断或临时内存模式；内存模式的数据在进程结束后消失。
 
-当前 V10 schema 不再持久化或同步 `DailySummary` 派生缓存。V8→V9 lightweight migration 会删除这份可重建 cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。V9→V10 为 Inbox AI dismissal 增加可同步的不透明 context/revision UUID。它们是随机值或 legacy record UUID，不包含标题、规范化标题或标题哈希；每条记录只保存固定数量字段。Legacy 类型只用于读取旧 store，不应重新进入当前导出或 CloudKit registry。
+当前 schema 是 V13。V8→V9 lightweight migration 删除可重建的 `DailySummary` cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。V9→V10 为 Inbox AI dismissal 增加可同步的不透明 context/revision UUID，V11 加入 durable Inbox capture receipts，V12 持久化 suggestion destination kind，V13 lightweight-adds 重复规则、每日生成回执、任务量目标与增量记录。Inbox identity 是随机值或 legacy record UUID，不包含标题、规范化标题或标题哈希；每条记录只保存固定数量字段。V13 的 deterministic recurrence/goal identities 只由 UUID、规则日键和冻结时区等领域标识计算，不含用户文本。Legacy 类型只用于读取旧 store，不应重新进入当前导出或 CloudKit registry。
 
 LLM API 密钥使用 Keychain generic password：
 

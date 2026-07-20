@@ -2,7 +2,7 @@
 
 Status: current implementation
 
-Reviewed: 2026-07-19
+Reviewed: 2026-07-20
 
 Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag.
 
@@ -23,7 +23,7 @@ Views may format and present state, but durable business actions should go throu
 
 ## Domain Model
 
-`TaskNode` represents a task tree node. All tasks can contain child tasks and all tasks can be timed. `parentID` is the hierarchy authority; `depth` is repairable metadata; `path` is the stable canonical locator `/<task UUID>`, not a persisted ancestor chain or user-facing title path. `TaskTreeService` derives display paths from current titles and caps them at six components. Startup, task refresh, and sync restore repair missing parents/cycles deterministically before rendering. Moving a task prevents cycles and updates only metadata that actually changed.
+`TaskNode` represents a task tree node. Tasks can contain child tasks; ordinary visible tasks can be timed, while recurrence templates are organization-only containers whose generated daily children own real work. `parentID` is the hierarchy authority; `depth` is repairable metadata; `path` is the stable canonical locator `/<task UUID>`, not a persisted ancestor chain or user-facing title path. `TaskTreeService` derives display paths from current titles and caps them at six components. Startup, task refresh, and sync restore repair missing parents/cycles deterministically before rendering. Moving a task prevents cycles and updates only metadata that actually changed.
 
 Tasks no longer have a product-facing workflow status. `TaskNode.statusRaw` remains only because V4-era schemas, existing local/CloudKit records, and sync snapshots already contain it. Restore and compatibility boundaries continue accepting `planned`, `active`, `completed`, and `archived` without a migration or bulk CloudKit rewrite. The first three values are inert compatibility bytes; only the historical `archived` value participates in archive compatibility.
 
@@ -40,6 +40,8 @@ Ordinary stopwatch restarts use one narrow canonicalization rule. When the same 
 `SyncedPreference` stores sync-eligible user-facing settings as JSON values in SwiftData so they travel through the same iCloud-backed store as tasks and timers. The iCloud enablement flag is different: it is a device-local `UserDefaults` startup configuration because the model container must know whether to start in CloudKit mode before SwiftData can fetch cloud values. It is excluded from `SyncedPreference`, conflict snapshots, and export/restore boundaries, and changes take effect on the next launch.
 
 `ChecklistItem` belongs to a `TaskNode`, but it is not a task. Checklist items are the product-level completion and progress signal and can provide forecast evidence; completing them never locks the task or blocks later work. Timers, manual entries, pomodoros, widgets, and Live Activities still attach time to the task itself.
+
+`TaskRecurrenceRule` turns one task into a daily template in a frozen rule timezone. `StoreScopedTaskRecurrenceCommandCoordinator` materializes at most the current local day, never backfills missed dates, and permanently skips days while a rule or template branch is unavailable. The deterministic `TaskRecurrenceOccurrence` is both the idempotency claim and the link to a deterministic generated child task. Physical claims, tombstones, and staged partial CloudKit rows veto background reconstruction, while replay preserves user edits to an existing child. A template remains a legal parent/content task but is excluded from Timer, Pomodoro, manual-segment, and App Intent direct-work admission; its generated child is the work-bearing task. `TaskQuantityGoal` is copied as configuration to a new child, but quantity entries are not copied between days.
 
 `InboxItem` owns an opaque suggestion context UUID plus a title-revision UUID. The context survives a physical SwiftData row rebuild, while a real title edit rotates only the revision. Dismissing a suggestion records that revision, so another synced copy of the same logical item cannot resurrect it; separately created items remain distinct even when their titles match. These identifiers are random or legacy-record UUIDs, never hashes or normalized projections of user text. Logical deletion/restoration and content fields follow last-write-wins with tombstones winning ties; dismissal is a separate field-level OR only for the exact context/revision. Thus an older marker survives sync without rolling back newer notes, completion metadata or ordering, and never crosses a title revision. `InboxCaptureReceipt` is deliberately separate: only a caller-provided external `(origin, UUID)` key can replay one capture; title, timestamp and model IDs never act as a receipt. The item and receipt commit in one store transaction, and V11 snapshot/restore preserves that acknowledgement. Multiple active receipts for one external key must describe the same payload and Inbox item; a disagreement is an explicit sync conflict, never a time-ordered replay choice.
 
@@ -235,7 +237,7 @@ Task tree display is derived UI state. The durable hierarchy remains `TaskNode.p
 
 ## Feature Status
 
-The current app includes local SwiftData persistence, iCloud-backed user preferences, task creation/editing, task checklists, reversible task archive/restore, legacy tombstone compatibility, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, local task forecasting, analytics overview, JSON export, isolated demo-data management, production-safe tombstone retention, iCloud configuration, App Intents, Live Activity, Widget code, and a Watch companion. Permanent tombstone maintenance exists only for isolated Demo/UI Test stores.
+The current app includes local SwiftData persistence, iCloud-backed user preferences, task creation/editing, task checklists, reversible task archive/restore, legacy tombstone compatibility, nested task browsing, multi-segment timers, manual time entry, pomodoro-ledger synchronization, Today timeline, local task forecasting, analytics overview, JSON export, isolated demo-data management, production-safe tombstone retention, iCloud configuration, App Intents, Live Activity, Widget code, and a Watch companion. It also includes the V13 daily-recurrence runtime: rule commands, current-day materialization, lifecycle scheduling, direct-work separation, and iCloud-safe idempotency. The user-facing recurrence creation flow and quantity-entry UI are not yet implemented, so the product feature is not complete. Permanent tombstone maintenance exists only for isolated Demo/UI Test stores.
 
 Future work should preserve the ledger contract: every timer, pomodoro, manual entry, widget action, Live Activity action, or Watch command must ultimately create or update `TimeSession` and `TimeSegment` records through shared use cases.
 

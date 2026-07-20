@@ -42,6 +42,7 @@ struct TaskHierarchyProjection: Equatable {
         let childCount: Int
         let isExpanded: Bool
         let isAvailable: Bool
+        let hasAvailableDescendant: Bool
         let isRunning: Bool
         let checklistProgress: ChecklistProgress?
         let workedSeconds: Int
@@ -60,12 +61,25 @@ struct TaskHierarchyProjection: Equatable {
     init(
         store: TimeTrackerStore,
         expandedTaskIDs: Set<UUID>,
-        searchText: String
+        searchText: String,
+        availableTaskIDs: Set<UUID>? = nil
     ) {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let availableTaskIDs =
+            availableTaskIDs ?? store.trackableTaskIDs
+        let availableAncestorTaskIDs = availableTaskIDs.reduce(
+            into: Set<UUID>()
+        ) { result, taskID in
+            result.formUnion(store.ancestorTaskIDs(for: taskID))
+        }
         isSearching = query.isEmpty == false
         hasVisibleTasks = store.visibleTaskCount > 0
-        runningItems = Self.runningItems(store: store, matching: query)
+        runningItems = Self.runningItems(
+            store: store,
+            matching: query,
+            availableTaskIDs: availableTaskIDs,
+            availableAncestorTaskIDs: availableAncestorTaskIDs
+        )
 
         if query.isEmpty {
             sections = store.taskTreeSections(expandedTaskIDs: expandedTaskIDs).compactMap { section in
@@ -75,7 +89,10 @@ struct TaskHierarchyProjection: Equatable {
                         taskID: row.taskID,
                         depth: row.depth,
                         childCount: row.childCount,
-                        isExpanded: row.isExpanded
+                        isExpanded: row.isExpanded,
+                        availableTaskIDs: availableTaskIDs,
+                        availableAncestorTaskIDs:
+                            availableAncestorTaskIDs
                     )
                 }
                 guard items.isEmpty == false else { return nil }
@@ -97,7 +114,10 @@ struct TaskHierarchyProjection: Equatable {
                     taskID: task.id,
                     depth: 0,
                     childCount: store.visibleChildCount(for: task.id),
-                    isExpanded: false
+                    isExpanded: false,
+                    availableTaskIDs: availableTaskIDs,
+                    availableAncestorTaskIDs:
+                        availableAncestorTaskIDs
                 )
             }
             sections = items.isEmpty
@@ -119,7 +139,9 @@ struct TaskHierarchyProjection: Equatable {
 
     private static func runningItems(
         store: TimeTrackerStore,
-        matching query: String
+        matching query: String,
+        availableTaskIDs: Set<UUID>,
+        availableAncestorTaskIDs: Set<UUID>
     ) -> [Item] {
         var seenTaskIDs = Set<UUID>()
         return store.activeSegments.compactMap { segment in
@@ -139,7 +161,9 @@ struct TaskHierarchyProjection: Equatable {
                 taskID: task.id,
                 depth: 0,
                 childCount: store.visibleChildCount(for: task.id),
-                isExpanded: false
+                isExpanded: false,
+                availableTaskIDs: availableTaskIDs,
+                availableAncestorTaskIDs: availableAncestorTaskIDs
             )
         }
     }
@@ -149,10 +173,12 @@ struct TaskHierarchyProjection: Equatable {
         taskID: UUID,
         depth: Int,
         childCount: Int,
-        isExpanded: Bool
+        isExpanded: Bool,
+        availableTaskIDs: Set<UUID>,
+        availableAncestorTaskIDs: Set<UUID>
     ) -> Item? {
         guard let task = store.task(for: taskID) else { return nil }
-        let isAvailable = store.isTaskAvailableForTracking(task)
+        let isAvailable = availableTaskIDs.contains(taskID)
         let checklistProgress = store.checklistProgress(for: task.id)
         let rollup = store.rollup(for: task.id)
         return Item(
@@ -161,6 +187,8 @@ struct TaskHierarchyProjection: Equatable {
             childCount: childCount,
             isExpanded: isExpanded,
             isAvailable: isAvailable,
+            hasAvailableDescendant:
+                availableAncestorTaskIDs.contains(taskID),
             isRunning: store.activeSegment(for: task.id) != nil,
             checklistProgress: checklistProgress.totalCount > 0
                 ? checklistProgress
@@ -170,9 +198,13 @@ struct TaskHierarchyProjection: Equatable {
             unavailableReason: isAvailable
                 ? nil
                 : AppStrings.localized(
-                    store.isTaskVisible(task)
-                        ? "task.healthSyncOnly.trackingUnavailable"
-                        : "task.parentUnavailable"
+                    store.isTaskRecurrenceTemplate(task)
+                        ? "task.recurrence.template.trackingUnavailable"
+                        : (
+                            store.isTaskVisible(task)
+                                ? "task.healthSyncOnly.trackingUnavailable"
+                                : "task.parentUnavailable"
+                        )
                 ),
             timerCommand: store.timerPickerSelectionCommand(for: task)
         )

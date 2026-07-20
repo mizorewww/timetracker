@@ -467,6 +467,15 @@
 "task.healthSyncOnly.trackingUnavailable" = "此任务属于 Apple 健康同步分支。它仍可编辑和查看，但不能用于计时、番茄钟、快速开始或手动补录。";
 "task.parentUnavailable" = "所选父任务不能接收新工作。";
 "task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";
+"task.recurrence.error.invalidStartDay" = "请选择有效的重复开始日期。";
+"task.recurrence.error.invalidTimeZone" = "请选择有效的重复任务时区。";
+"task.recurrence.error.templateUnavailable" = "此任务不能用作重复任务模板。";
+"task.recurrence.error.templateHasActiveWork" = "将此任务设为重复任务前，请先停止正在进行的计时或番茄钟。";
+"task.recurrence.error.ruleUnavailable" = "此重复规则已不可用。";
+"task.recurrence.error.ruleChanged" = "此重复规则已在其他位置发生变化。请查看最新版本后重试。";
+"task.recurrence.error.immutableConfiguration" = "已有重复规则不能更改开始日期或时区。";
+"task.recurrence.template.title" = "重复任务模板";
+"task.recurrence.template.trackingUnavailable" = "此任务用于定义重复工作。请在今天自动生成的任务上记录时间。";
 "task.editor.stale.title" = "任务已在其他位置更改";
 "task.editor.stale.reloadMessage" = "要重新载入最新版本吗？当前编辑器中尚未保存的更改将被丢弃。";
 "task.editor.stale.reload" = "重新载入最新版本";

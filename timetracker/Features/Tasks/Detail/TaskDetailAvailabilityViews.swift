@@ -1,31 +1,5 @@
 import SwiftUI
 
-struct TaskDetailTrackingAvailabilitySection: View {
-    let store: TimeTrackerStore
-    let task: TaskNode
-
-    @ViewBuilder
-    var body: some View {
-        if !store.isTaskVisible(task) {
-            Section {
-                Label(AppStrings.localized("status.archived"), systemImage: "archivebox")
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("task.detail.trackingUnavailable")
-            } footer: {
-                Text(.app("task.archived.trackingUnavailable"))
-            }
-        } else if !store.isTaskAvailableForTracking(task) {
-            Section {
-                Label(AppStrings.localized("task.healthSyncOnly.title"), systemImage: "heart.text.clipboard")
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("task.detail.trackingUnavailable")
-            } footer: {
-                Text(.app("task.healthSyncOnly.trackingUnavailable"))
-            }
-        }
-    }
-}
-
 struct TaskDetailDraftRecoverySection: View {
     let validation: TaskEditorValidation
     let reason: TaskDraftRecoveryReason

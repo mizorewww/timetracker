@@ -48,7 +48,8 @@ struct TaskHierarchyPicker: View {
         let projection = TaskHierarchyProjection(
             store: store,
             expandedTaskIDs: expandedTaskIDs,
-            searchText: searchText
+            searchText: searchText,
+            availableTaskIDs: mode.selectionEligibleTaskIDs(in: store)
         )
         let sections = displayedSections(in: projection)
 

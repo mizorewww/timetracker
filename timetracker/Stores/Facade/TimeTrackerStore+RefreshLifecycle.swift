@@ -12,6 +12,7 @@ extension TimeTrackerStore {
 
     func refreshForForeground() async {
         refreshQuietly()
+        materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
         await refreshAppleHealthTimelineIfEnabled()
         await refreshCloudAccountStatus()

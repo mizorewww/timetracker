@@ -9,13 +9,13 @@ extension TimeTrackerStore {
             LLMSuggestionInputPolicy.maximumCandidateCount
         )
         guard candidateLimit > 0 else { return [] }
-        let availableTasks = tasks.filter(isTaskAvailableForTracking)
+        let availableTasks = tasks.filter(isTaskEligibleAsParent)
         var pinnedIDs = Set<UUID>()
         let pinnedTasks: [TaskNode] = preferences.quickStartTaskIDs.compactMap {
             taskID -> TaskNode? in
             guard pinnedIDs.insert(taskID).inserted,
                   let task = taskByID[taskID],
-                  isTaskAvailableForTracking(task) else {
+                  isTaskEligibleAsParent(task) else {
                 return nil
             }
             return task

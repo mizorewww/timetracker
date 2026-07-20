@@ -59,7 +59,7 @@ extension TimeTrackerStore {
     private func checklistVisualSuggestionRequest(for item: ChecklistItem) -> ChecklistVisualSuggestionRequest? {
         guard !checklistVisualSuggestionInFlightIDs.contains(item.id),
               let task = taskByID[item.taskID],
-              isTaskAvailableForTracking(task) else {
+              isTaskEligibleAsParent(task) else {
             return nil
         }
         let policy = ChecklistVisualSuggestionPolicy()
@@ -115,7 +115,7 @@ extension TimeTrackerStore {
                           let task = self.taskByID[item.taskID] else {
                         return false
                     }
-                    return self.isTaskAvailableForTracking(task)
+                    return self.isTaskEligibleAsParent(task)
                 }
                 .map(\.id)
         )

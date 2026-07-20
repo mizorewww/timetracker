@@ -146,7 +146,10 @@ struct TaskUIContractTests {
     @Test
     func taskActionsRespectArchivedAndRunningSubtreeState() throws {
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")
-        let availabilitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift")
+        let availabilitySource = try [
+            "timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailTrackingAvailabilitySection.swift",
+        ].map(sourceText).joined(separator: "\n")
         let identitySource = try sourceText("timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift")
 
         #expect(actionSource.contains("store.isTaskAvailableForTracking(task)"))
@@ -180,7 +183,9 @@ struct TaskUIContractTests {
 
         #expect(availability.contains("AppleHealthTaskCatalog.syncOnlyTaskIDs"))
         #expect(availability.contains("visibleTaskIDs.subtracting(syncOnlyTaskIDs)"))
-        #expect(pickerBehavior.contains("$0.isAvailable || $0.id == selectedTaskID"))
+        #expect(pickerBehavior.contains("mode.selectionEligibleTaskIDs(in: store)"))
+        #expect(pickerBehavior.contains("selectedTaskIDs.contains($0.id)"))
+        #expect(pickerBehavior.contains("$0.hasAvailableDescendant"))
         #expect(desktopCommands.contains("canTrackSelectedTask"))
         #expect(
             desktopCommands.contains(
@@ -200,7 +205,8 @@ struct TaskUIContractTests {
         let modelSource = try sourceText("timetracker/Models/TaskModels.swift")
 
         #expect(readModels.contains("visibleTaskIDs = eligibility.visibleTaskIDs"))
-        #expect(readModels.contains("trackableTaskIDs = eligibility.trackableTaskIDs"))
+        #expect(readModels.contains("parentEligibleTaskIDs = eligibility.trackableTaskIDs"))
+        #expect(readModels.contains("directWorkTaskIDs("))
         #expect(readModels.contains("taskTreeReadIndex.visibleChildIDsByParentID"))
         #expect(tasksSource.contains("store.visibleTaskCount == 0"))
         #expect(tasksSource.contains("store.taskSearchResults(matching: query)"))
@@ -213,7 +219,8 @@ struct TaskUIContractTests {
         #expect(modelSource.contains("enum TaskStatus") == false)
         #expect(modelSource.contains("var status:") == false)
         #expect(modelSource.contains("LegacyTaskStatusRaw"))
-        #expect(appIntentSource.contains(".trackableTaskIDs(tasks: tasks)"))
+        #expect(appIntentSource.contains(".directWorkTaskIDs("))
+        #expect(appIntentSource.contains(".indexes(tasks: tasks)"))
     }
 
     @Test

@@ -10,6 +10,8 @@ struct CoreSourceLayoutTests {
             "timetracker/Stores/Facade/TimeTrackerStore.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+ReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+TaskReadModels.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+TaskAvailability.swift",
+            "timetracker/Stores/Facade/TimeTrackerStore+TaskRecurrenceCommands.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+TaskRanking.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+LedgerReadModels.swift",
             "timetracker/Stores/Facade/TimeTrackerStore+LedgerRecentRecords.swift",
@@ -164,6 +166,11 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Tasks/TaskDraftRecoveryStore.swift",
             "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift",
             "timetracker/Services/Tasks/StoreScopedTaskCategoryCommandCoordinator.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator+RuleMutations.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator+Materialization.swift",
+            "timetracker/Services/Tasks/TaskRecurrenceMutationModels.swift",
+            "timetracker/Services/Tasks/TaskRecurrencePersistenceState.swift",
             "timetracker/Services/Tasks/TaskHierarchyRepairPlan.swift",
             "timetracker/Services/Tasks/TaskTreeFlattener.swift",
             "timetracker/Services/Tasks/TaskTreeModels.swift",
@@ -178,6 +185,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Repositories/SwiftDataTaskRepository+Categories.swift",
             "timetracker/Repositories/SwiftDataTaskRepository+TaskMutations.swift",
             "timetracker/Repositories/SwiftDataTaskRepository+Hierarchy.swift",
+            "timetracker/Repositories/SwiftDataTaskRepository+Recurrence.swift",
             "timetracker/Repositories/SwiftDataTimeTrackingRepository.swift",
             "timetracker/Repositories/SwiftDataTimeTrackingRepository+Queries.swift",
             "timetracker/Repositories/SwiftDataTimeTrackingRepository+RapidRestart.swift",
@@ -243,6 +251,7 @@ struct CoreSourceLayoutTests {
             "timetracker/App/AppDeepLinkRouter.swift",
             "timetracker/App/AppPresentationRouter+TaskDraftRecovery.swift",
             "timetracker/App/AppSceneDeepLinkCoordinator.swift",
+            "timetracker/App/TaskRecurrenceLifecycleModifier.swift",
             "timetracker/App/LiveActivityProjection.swift",
             "timetracker/App/WatchCommandRouter.swift",
             "timetracker/App/RootViews/DesktopRootViews.swift",
@@ -299,6 +308,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Detail/TaskNotesMarkdownPreview.swift",
             "timetracker/Features/Tasks/Detail/TaskNotesMarkdownRepresentable.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailAvailabilityViews.swift",
+            "timetracker/Features/Tasks/Detail/TaskDetailTrackingAvailabilitySection.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailNavigationViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift",
             "timetracker/Features/Tasks/Detail/TaskDetailOverviewViews.swift",
@@ -487,6 +497,7 @@ struct CoreSourceLayoutTests {
             "TaskNotesMarkdownPreview.swift",
             "TaskNotesMarkdownRepresentable.swift",
             "TaskDetailAvailabilityViews.swift",
+            "TaskDetailTrackingAvailabilitySection.swift",
             "TaskDetailNavigationViews.swift",
             "TaskDetailIdentityViews.swift",
             "TaskDetailOverviewViews.swift",
@@ -858,13 +869,45 @@ struct CoreSourceLayoutTests {
             "SwiftDataTaskRepository+Queries.swift",
             "SwiftDataTaskRepository+Categories.swift",
             "SwiftDataTaskRepository+TaskMutations.swift",
-            "SwiftDataTaskRepository+Hierarchy.swift"
+            "SwiftDataTaskRepository+Hierarchy.swift",
+            "SwiftDataTaskRepository+Recurrence.swift"
         ]
 
         for fileName in focusedFiles {
             let file = repositoryURL.appending(path: fileName)
             let lineCount = try String(contentsOf: file, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).count
             #expect(lineCount <= 180, "\(fileName) has \(lineCount) lines")
+        }
+    }
+
+    @Test
+    func taskRecurrenceServiceFilesStaySplitByResponsibility()
+        throws {
+        let root = try projectRootURL()
+        let taskServicesURL = root.appending(
+            path: "timetracker/Services/Tasks"
+        )
+        let focusedFiles = [
+            "StoreScopedTaskRecurrenceCommandCoordinator.swift",
+            "StoreScopedTaskRecurrenceCommandCoordinator+RuleMutations.swift",
+            "StoreScopedTaskRecurrenceCommandCoordinator+Materialization.swift",
+            "TaskRecurrenceMutationModels.swift",
+            "TaskRecurrencePersistenceState.swift",
+        ]
+
+        for fileName in focusedFiles {
+            let file = taskServicesURL.appending(path: fileName)
+            let lineCount = try String(
+                contentsOf: file,
+                encoding: .utf8
+            ).split(
+                separator: "\n",
+                omittingEmptySubsequences: false
+            ).count
+            #expect(
+                lineCount <= 180,
+                "\(fileName) has \(lineCount) lines"
+            )
         }
     }
 
@@ -1164,6 +1207,7 @@ struct CoreSourceLayoutTests {
             "AppSceneDeepLinkCoordinator.swift",
             "AppPresentationRouter+TaskDraftRecovery.swift",
             "ContentView.swift",
+            "TaskRecurrenceLifecycleModifier.swift",
             "RootViews/DesktopRootViews.swift",
             "RootViews/PhoneTabNavigationSafety.swift",
             "RootViews/iPadRootView.swift",
@@ -1326,6 +1370,7 @@ struct CoreSourceLayoutTests {
             "Widget extension UI",
             "Watch app UI",
             "Live Activity display",
+            "Daily task recurrence materialization",
             "Localization"
         ]
 

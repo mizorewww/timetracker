@@ -14,6 +14,10 @@ struct TaskContextMenu: View {
         store.isTaskAvailableForTracking(task)
     }
 
+    private var isEligibleAsParent: Bool {
+        store.isTaskEligibleAsParent(task)
+    }
+
     private var hasActiveTimerInSubtree: Bool {
         store.hasActiveTimer(inTaskSubtree: task.id)
     }
@@ -33,7 +37,7 @@ struct TaskContextMenu: View {
             }
         }
 
-        if isAvailableForTracking {
+        if isEligibleAsParent {
             Button {
                 presentationRouter.presentNewTask(
                     using: store,
@@ -43,7 +47,9 @@ struct TaskContextMenu: View {
             } label: {
                 Label(AppStrings.localized("task.action.newSubtask"), systemImage: "plus")
             }
+        }
 
+        if isAvailableForTracking {
             Button {
                 presentationRouter.presentManualTime(taskID: task.id, using: store)
             } label: {
@@ -51,7 +57,9 @@ struct TaskContextMenu: View {
             }
         }
 
-        if activeSegment != nil || isAvailableForTracking {
+        if activeSegment != nil ||
+            isAvailableForTracking ||
+            isEligibleAsParent {
             Divider()
         }
 
@@ -93,6 +101,10 @@ struct TaskRowSwipeActions: ViewModifier {
         store.isTaskAvailableForTracking(task)
     }
 
+    private var isEligibleAsParent: Bool {
+        store.isTaskEligibleAsParent(task)
+    }
+
     private var hasActiveTimerInSubtree: Bool {
         store.hasActiveTimer(inTaskSubtree: task.id)
     }
@@ -116,7 +128,7 @@ struct TaskRowSwipeActions: ViewModifier {
                     .tint(.blue)
                 }
 
-                if isAvailableForTracking {
+                if isEligibleAsParent {
                     Button {
                         presentationRouter.presentNewTask(
                             using: store,

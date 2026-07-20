@@ -130,7 +130,7 @@ struct TaskInfoEditorSection: View {
             TaskParentPickerOption(
                 id: task.id,
                 title: store.taskIdentityPresentation(for: task).fullPath,
-                isAvailable: store.isTaskAvailableForTracking(task)
+                isAvailable: store.isTaskEligibleAsParent(task)
             )
         }
     }

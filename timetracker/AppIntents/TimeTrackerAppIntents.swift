@@ -229,11 +229,19 @@ struct TaskNodeEntityQuery: EntityStringQuery {
     @MainActor
     private func fetchTaskEntities() throws -> [TaskNodeAppEntity] {
         let context = SystemActionContextProvider.makeContext()
-        let tasks = try SwiftDataTaskRepository(context: context)
-            .allNodes()
-        let trackableTaskIDs = TaskTrackingAvailabilityService().trackableTaskIDs(tasks: tasks)
+        let repository = SwiftDataTaskRepository(context: context)
+        let tasks = try repository.allNodes()
+        let trackableTaskIDs = TaskTrackingAvailabilityService()
+            .directWorkTaskIDs(
+                tasks: tasks,
+                recurrenceRules: try repository.taskRecurrenceRules(),
+                recurrenceOccurrences:
+                    try repository.taskRecurrenceOccurrences()
+            )
         let trackableTasks = tasks.filter { trackableTaskIDs.contains($0.id) }
-        let parentPathByID = TaskTreeService().indexes(tasks: trackableTasks).taskParentPathByID
+        let parentPathByID = TaskTreeService()
+            .indexes(tasks: tasks)
+            .taskParentPathByID
         return trackableTasks.map { task in
             TaskNodeAppEntity(
                 id: task.id.uuidString,

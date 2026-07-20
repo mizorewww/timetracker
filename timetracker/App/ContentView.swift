@@ -1,7 +1,6 @@
 import Foundation
 import SwiftData
 import SwiftUI
-
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -57,6 +56,7 @@ struct ContentView: View {
             hasFinishedInitialConfiguration = true
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
+            store.materializeCurrentDailyTaskRecurrences()
             await store.refreshAppleHealthTimelineIfEnabled()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
@@ -78,7 +78,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             guard hasFinishedInitialConfiguration, scenePhase == .active else { return }
-            Task { @MainActor in await store.refreshAppleHealthTimelineIfEnabled() }
+            Task { @MainActor in
+                await store.refreshAppleHealthTimelineIfEnabled()
+            }
         }
         .onChange(of: store.persistenceWriteSafety) { _, safety in
             guard safety == .ready else {
@@ -91,9 +93,11 @@ struct ContentView: View {
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
             Task { @MainActor in
+                store.materializeCurrentDailyTaskRecurrences()
                 await store.refreshAppleHealthTimelineIfEnabled()
             }
         }
+        .taskRecurrenceLifecycle(store: store, isConfigured: hasFinishedInitialConfiguration)
         .onOpenURL { url in
             guard AppDeepLinkRouter().action(for: url) != nil else { return }
             guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else {
@@ -133,7 +137,6 @@ struct ContentView: View {
             pendingDeepLinks: pendingDeepLinks
         )
     }
-
     private func registerForWatchCommandsIfNeeded() {
         #if os(iOS) && canImport(WatchConnectivity)
         guard watchCommandRegistrationID == nil else { return }
@@ -143,7 +146,6 @@ struct ContentView: View {
         )
         #endif
     }
-
     private func updateWatchCommandRoute(for phase: ScenePhase) {
         #if os(iOS) && canImport(WatchConnectivity)
         guard let watchCommandRegistrationID else { return }

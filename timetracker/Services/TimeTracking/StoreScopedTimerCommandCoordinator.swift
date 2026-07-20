@@ -174,7 +174,12 @@ struct StoreScopedTimerCommandCoordinator {
             )
             let tasks = try taskRepository.allNodes()
             guard TaskTrackingAvailabilityService()
-                .trackableTaskIDs(tasks: tasks)
+                .directWorkTaskIDs(
+                    tasks: tasks,
+                    recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                    recurrenceOccurrences:
+                        try taskRepository.taskRecurrenceOccurrences()
+                )
                 .contains(taskID) else {
                 throw SystemActionCommandError.taskNotFound
             }

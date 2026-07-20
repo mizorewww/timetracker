@@ -233,7 +233,8 @@ extension AppPresentationRouter {
         preservingDestination: TimeTrackerStore.DesktopDestination?,
         categoryID: UUID?
     ) -> AppPresentation.Content? {
-        if let parentID, store.trackableTaskIDs.contains(parentID) == false {
+        if let parentID,
+           store.parentEligibleTaskIDs.contains(parentID) == false {
             store.errorMessage = AppStrings.localized("task.parentUnavailable")
             return nil
         }

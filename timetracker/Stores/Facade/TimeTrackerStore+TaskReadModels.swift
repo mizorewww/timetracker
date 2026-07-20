@@ -102,14 +102,6 @@ extension TimeTrackerStore {
         taskTrackingAvailabilityService.parentChangeBlocker(for: task)
     }
 
-    func isTaskAvailableForTracking(_ task: TaskNode) -> Bool {
-        trackableTaskIDs.contains(task.id)
-    }
-
-    func isTaskVisible(_ task: TaskNode) -> Bool {
-        visibleTaskIDs.contains(task.id)
-    }
-
     func preferredTaskIDForSelection() -> UUID? {
         activeSegments.first(where: { taskByID[$0.taskID] != nil })?.taskID ??
             tasks.first(where: isTaskAvailableForTracking)?.id
@@ -193,7 +185,12 @@ extension TimeTrackerStore {
         taskParentPathByID = indexes.taskParentPathByID
         let eligibility = taskTrackingAvailabilityService.eligibility(tasks: tasks)
         visibleTaskIDs = eligibility.visibleTaskIDs
-        trackableTaskIDs = eligibility.trackableTaskIDs
+        parentEligibleTaskIDs = eligibility.trackableTaskIDs
+        trackableTaskIDs = taskTrackingAvailabilityService.directWorkTaskIDs(
+            tasks: tasks,
+            recurrenceRules: taskRecurrenceRules,
+            recurrenceOccurrences: taskRecurrenceOccurrences
+        )
         rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
         taskReadModelRevision &+= 1

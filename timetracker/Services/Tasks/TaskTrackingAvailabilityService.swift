@@ -52,10 +52,27 @@ struct TaskTrackingAvailabilityService {
         eligibility(tasks: tasks).trackableTaskIDs
     }
 
-    /// Compatibility name for system surfaces that already interpret
-    /// "available" as "can accept new time/work".
-    func availableTaskIDs(tasks: [TaskNode]) -> Set<UUID> {
-        trackableTaskIDs(tasks: tasks)
+    /// Tasks that can receive newly recorded time. A recurrence template is a
+    /// hierarchy container and blueprint; only its generated occurrences are
+    /// concrete work for Timer, Pomodoro, manual time, and system surfaces.
+    func directWorkTaskIDs(
+        tasks: [TaskNode],
+        recurrenceRules: [TaskRecurrenceRule],
+        recurrenceOccurrences: [TaskRecurrenceOccurrence]
+    ) -> Set<UUID> {
+        let ruleTemplateTaskIDs = Set(
+            recurrenceRules.visibleDeduplicatedByID().map(\.templateTaskID)
+        )
+        // A visible occurrence can arrive before its rule during a staged
+        // CloudKit merge. Treat that partial graph as a recurrence claim too.
+        let occurrenceTemplateTaskIDs = Set(
+            recurrenceOccurrences.visibleDeduplicatedByID()
+                .map(\.templateTaskID)
+        )
+        return trackableTaskIDs(tasks: tasks)
+            .subtracting(
+                ruleTemplateTaskIDs.union(occurrenceTemplateTaskIDs)
+            )
     }
 
     /// A task can leave an unavailable ancestor branch as long as its own

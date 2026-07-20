@@ -51,7 +51,12 @@ struct StoreScopedPomodoroCommandCoordinator {
             )
             let tasks = try taskRepository.allNodes()
             guard TaskTrackingAvailabilityService()
-                .trackableTaskIDs(tasks: tasks)
+                .directWorkTaskIDs(
+                    tasks: tasks,
+                    recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                    recurrenceOccurrences:
+                        try taskRepository.taskRecurrenceOccurrences()
+                )
                 .contains(taskID) else {
                 throw SystemActionCommandError.taskNotFound
             }
@@ -154,12 +159,18 @@ struct StoreScopedPomodoroCommandCoordinator {
                 throw StoreScopedPomodoroCommandInvariantError.breakSessionStillOpen
             }
 
-            let tasks = try SwiftDataTaskRepository(
+            let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: resolvedDeviceID
-            ).allNodes()
+            )
+            let tasks = try taskRepository.allNodes()
             guard TaskTrackingAvailabilityService()
-                .trackableTaskIDs(tasks: tasks)
+                .directWorkTaskIDs(
+                    tasks: tasks,
+                    recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                    recurrenceOccurrences:
+                        try taskRepository.taskRecurrenceOccurrences()
+                )
                 .contains(run.taskID) else {
                 return .rejected(.taskUnavailable(run.taskID))
             }

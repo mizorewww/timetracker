@@ -467,6 +467,15 @@
 "task.healthSyncOnly.trackingUnavailable" = "This task belongs to an Apple Health sync branch. It stays editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable.";
 "task.parentUnavailable" = "The selected parent cannot receive new work.";
 "task.editor.staleDraft" = "This task changed elsewhere. Review the latest version, then try again.";
+"task.recurrence.error.invalidStartDay" = "Choose a valid recurrence start date.";
+"task.recurrence.error.invalidTimeZone" = "Choose a valid recurrence time zone.";
+"task.recurrence.error.templateUnavailable" = "This task cannot be used as a recurrence template.";
+"task.recurrence.error.templateHasActiveWork" = "Stop this task’s active timer or Pomodoro before making it recurring.";
+"task.recurrence.error.ruleUnavailable" = "This recurrence rule is no longer available.";
+"task.recurrence.error.ruleChanged" = "This recurrence rule changed elsewhere. Review the latest version, then try again.";
+"task.recurrence.error.immutableConfiguration" = "An existing recurrence cannot change its start date or time zone.";
+"task.recurrence.template.title" = "Recurring Task Template";
+"task.recurrence.template.trackingUnavailable" = "This task defines the recurring work. Record time on today’s generated task instead.";
 "task.editor.stale.title" = "Task Changed Elsewhere";
 "task.editor.stale.reloadMessage" = "Reload the latest version? Your unsaved changes in this editor will be discarded.";
 "task.editor.stale.reload" = "Reload Latest";

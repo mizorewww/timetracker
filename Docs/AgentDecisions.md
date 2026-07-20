@@ -1706,6 +1706,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名构建覆盖主 App、Widget、Live Activity 与 Watch；真实 V12 磁盘 store 迁移后保留旧 Task 并可写四表。定向测试覆盖 deterministic UUID anchor、full/task-domain capture、legacy nil 与 explicit empty、三方合并、完整 JSON restore、staged hierarchy repair 自洽、preflight 拒绝、future timestamp clear、demo generated child cleanup、expired graph purge、visible orphan 保留/隐藏、Task Store full/scoped convergence，以及 rapid-restart identity 未漂移。
 
+## AD-130：重复任务模板与当天工作实例使用两套任务资格
+
+状态：Accepted
+
+背景：V13 事实层能描述重复规则和当天实例，但若模板与实例都能直接计时，同一件“每天完成”的工作会同时落到蓝图和真实日期两处；若简单把模板从统一 `trackableTaskIDs` 中删除，父任务编辑、Inbox、任务菜单、Heatmap 和层级 picker 又会错误隐藏它。后台物化还必须面对跨设备分阶段到达、墓碑、暂停和设备时钟变化，不能把缺行一律解释成“需要修复”。
+
+决策：
+
+- 任务资格拆成 direct-work 与 parent/content。Timer、Pomodoro、手工时间、break resume 和 App Intent 只接受 direct-work；重复模板始终不可直接工作。父任务选择、任务菜单、Inbox、清单建议与 Heatmap 接受 parent/content 模板。计时 picker 可以显示不可选择的模板祖先，以便用户看到其可选择的当天子任务。
+- daily rule 在创建时冻结时区和开始日期。`TaskRecurrenceDayKey` 使用该时区计算 canonical day；materializer 只尝试当前日，绝不回填过去。规则暂停、模板或祖先归档期间错过的日期永久跳过，恢复后只生成恢复当天。
+- 规则、occurrence、generated task 与 quantity goal 使用冻结 deterministic identities。非 canonical rule ID 拒绝进入启停或物化路径。新建规则前若模板仍有活动 timer/Pomodoro，命令无写入地拒绝，避免既有工作悬挂到蓝图。
+- 规则命令与 materializer 在现有 store-specific lock 的 fresh context 和单次 atomic mutation 中执行。首次创建任一步失败都回滚完整子图；幂等重放只补系统拥有的结构，不覆盖用户已经修改的生成任务。
+- 任何可证明相同逻辑日的物理 occurrence claim、generated task/goal 行、墓碑或 staged partial CloudKit 行都会阻止后台重新创建。occurrence 先于 rule 到达时也足以把模板排除出 direct-work，避免同步窗口期间把工作写到模板。
+- App 启动、scene active、任务读模型 revision、系统时钟变化和下一条规则午夜边界触发物化。时钟变化先立即尝试当前日再重排；归档后解除归档会因 revision 变化重新启动调度。
+
+后果：重复模板继续承担组织、说明和父级语义，但每天只有一个真实实例承担计时与任务量。多设备重试和生命周期触发不会制造重复，用户编辑不会被后台覆盖，分阶段同步与墓碑不会被“修复”成复活数据。当前决策只完成运行时；没有创建规则与任务量录入 UI 前，用户反馈项仍保持未完成。
+
+验证：纯日键和 store-scoped 回归覆盖未来开始日、当前日无回填、暂停重放、归档间隔、时钟偏移、非 canonical 规则、活动工作拒绝、每个原子 checkpoint 回滚、用户编辑保留、墓碑和 staged partial graph。入口回归覆盖 Timer/Pomodoro/manual/App Intent direct-work 拒绝、parent/content 保留和 picker 祖先容器。实现沟通与边界记录在 `Docs/ImplementationContexts/2026-07-20-daily-recurrence-runtime.md`。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

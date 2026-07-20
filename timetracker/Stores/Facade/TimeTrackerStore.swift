@@ -2,7 +2,6 @@ import CoreData
 import Foundation
 import Observation
 import SwiftData
-
 @MainActor
 @Observable
 final class TimeTrackerStore {
@@ -236,6 +235,7 @@ final class TimeTrackerStore {
     var taskPathByID: [UUID: String] = [:]
     var taskParentPathByID: [UUID: String] = [:]
     var visibleTaskIDs: Set<UUID> = []
+    var parentEligibleTaskIDs: Set<UUID> = []
     var trackableTaskIDs: Set<UUID> = []
     var activeSegmentByTaskID: [UUID: TimeSegment] = [:]
     var sortedTodaySegments: [TimeSegment] = []

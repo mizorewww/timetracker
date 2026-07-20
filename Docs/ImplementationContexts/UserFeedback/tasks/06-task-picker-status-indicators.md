@@ -12,7 +12,8 @@
   动作均已截图并人工验收。
 - macOS 最终 2/2 语义路径通过；精确搜索结果、真实点击、28 pt 尺寸、trailing
   column 与 action 完全位于 sheet 可视区均已验证。
-- 下一步提交最终设备矩阵 checkpoint，然后运行完整 Release 全设备安装。
+- 最终设备矩阵已在 `cde7ffd` 提交；完整 Release 全设备脚本与独立签名/安装核验通过。
+- 下一步释放 owned 模拟器与临时产物，只在唯一任务源标记完成并移除活动链接。
 
 ## 实现边界
 
@@ -27,8 +28,8 @@
 - [x] 定义并测试共享状态指示的布局与语义契约
 - [x] 实现 Start Another Timer 及其他同类 picker 的统一样式
 - [x] 验证 iPhone、iPad 普通路径并截图，验证 macOS 语义、尺寸与可视区域
-- [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
+- [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [~] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 只在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
 ## HIG 与依赖决策
@@ -124,3 +125,21 @@
     `Image creation failed`，`app.screenshot()` 又错误捕获 Codex；因此未伪造 macOS
     截图，也未擅自操作系统浮层。macOS 以真实点击、accessibility 语义、28 pt 尺寸、
     trailing column 与 sheet 可视区域断言验收；视觉证据由 iPhone/iPad 承担。
+- `cde7ffd`：提交最终 iPhone / iPad / macOS 设备矩阵与诚实的受限证据说明。
+- Release 安装 checkpoint（本提交）：
+  - 严格运行 `CONFIGURATION=Release scripts/build_install_all.sh`，退出码 0；
+    iOS/iPadOS（含嵌入 Watch）与 macOS 均 `BUILD SUCCEEDED`。
+  - 构建信息：commit `cde7ffdf2f4abab2e443acfbc61487f23e2ac339`、
+    `GitDirty = false`、`Time Tracker 1.1.52 (107)`。
+  - 实体 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 与 iPhone Air
+    `FBA36694-D841-56D4-8ED6-21942873B21B` 均由 `devicectl` 独立确认已安装
+    `me.mezorewww.timetracker` 1.1.52 (107)，且为可访问容器的 Developer App。
+  - `/Applications/timetracker.app` 已安装并独立通过
+    `codesign --verify --deep --strict`；iOS、嵌入 Watch 与 macOS 包均为
+    `Apple Development: ZEXUAN GAO (PX46M259V3)`、Team `LT98S43NKA`。
+  - iOS entitlements 保留 HealthKit、CloudKit、App Group 与 push environment；
+    macOS 保留 CloudKit、App Group、sandbox、network client 和只读文件选择。
+  - 嵌入 Watch companion 为 `me.mezorewww.timetracker.watchkitapp` 1.1.52 (107)，
+    deep/strict 签名通过；profile 属于 `LT98S43NKA` 且有效至 2027-07-11。当前
+    `devicectl` 无可见实体 Watch，因此没有伪报直接 Watch 安装；配对 Watch 按脚本
+    约定由 iPhone Watch App 的 Automatic App Install 安装 companion。

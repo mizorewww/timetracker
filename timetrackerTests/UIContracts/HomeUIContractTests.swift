@@ -180,6 +180,210 @@ struct HomeUIContractTests {
     }
 
     @Test @MainActor
+    func weeklyGrossTimeAdvancesAnOpenTimerAndKeepsMinuteRefreshAlive() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 8,
+            hour: 10
+        )))
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test",
+            nowProvider: { start }
+        )
+        let task = try taskRepository.createTask(
+            title: "Open timer",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let segment = try timeRepository.startTask(
+            taskID: task.id,
+            source: .timer
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let firstDate = start.addingTimeInterval(600)
+        let secondDate = start.addingTimeInterval(1_200)
+
+        let first = store.weeklyGrossTimeSnapshot(
+            now: firstDate,
+            calendar: calendar
+        )
+        let second = store.weeklyGrossTimeSnapshot(
+            now: secondDate,
+            calendar: calendar
+        )
+        let firstRequest = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: first,
+            now: firstDate,
+            clockRevision: 0,
+            calendar: calendar
+        )
+        let secondRequest = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: second,
+            now: secondDate,
+            clockRevision: 0,
+            calendar: calendar
+        )
+
+        #expect(segment.endedAt == nil)
+        #expect(first.totalGrossSeconds == 600)
+        #expect(second.totalGrossSeconds == 1_200)
+        #expect(first.requiresLiveRefresh)
+        #expect(second.requiresLiveRefresh)
+        #expect(firstRequest.evaluationKey.liveRefreshBucket != nil)
+        #expect(secondRequest.evaluationKey.liveRefreshBucket != nil)
+        #expect(
+            firstRequest.evaluationKey.liveRefreshBucket !=
+                secondRequest.evaluationKey.liveRefreshBucket
+        )
+    }
+
+    @Test @MainActor
+    func weeklyGrossTimeEmptySnapshotDoesNotRequireLiveRefresh() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US")
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12
+        )))
+        let week = try #require(
+            calendar.dateInterval(of: .weekOfYear, for: now)
+        )
+        let expectedDates = try (0..<4).map { offset in
+            try #require(
+                calendar.date(byAdding: .day, value: offset, to: week.start)
+            )
+        }
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        let snapshot = store.weeklyGrossTimeSnapshot(
+            now: now,
+            calendar: calendar
+        )
+        let request = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: snapshot,
+            now: now,
+            clockRevision: 0,
+            calendar: calendar
+        )
+
+        #expect(snapshot.interval == week)
+        #expect(snapshot.daily.map(\.date) == expectedDates)
+        #expect(snapshot.daily.allSatisfy { $0.grossSeconds == 0 })
+        #expect(snapshot.daily.allSatisfy { $0.wallSeconds == 0 })
+        #expect(snapshot.totalGrossSeconds == 0)
+        #expect(snapshot.hasTrackedTime == false)
+        #expect(snapshot.requiresLiveRefresh == false)
+        #expect(request.evaluationKey.liveRefreshBucket == nil)
+    }
+
+    @Test @MainActor
+    func weeklyGrossTimeHonorsSundayFirstCalendarAcrossDSTDayBoundaries() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US")
+        calendar.timeZone = try #require(
+            TimeZone(identifier: "America/Los_Angeles")
+        )
+        calendar.firstWeekday = 1
+        calendar.minimumDaysInFirstWeek = 1
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 10,
+            hour: 12
+        )))
+        let week = try #require(
+            calendar.dateInterval(of: .weekOfYear, for: now)
+        )
+        let sunday = week.start
+        let monday = try #require(
+            calendar.date(byAdding: .day, value: 1, to: sunday)
+        )
+        let tuesday = try #require(
+            calendar.date(byAdding: .day, value: 2, to: sunday)
+        )
+        let sundayDay = try #require(
+            calendar.dateInterval(of: .day, for: sunday)
+        )
+        let segmentStart = try #require(
+            calendar.date(byAdding: .minute, value: 30, to: sunday)
+        )
+        let segmentEnd = try #require(
+            calendar.date(byAdding: .minute, value: 30, to: monday)
+        )
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let timeRepository = SwiftDataTimeTrackingRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let task = try taskRepository.createTask(
+            title: "DST week",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        _ = try timeRepository.addManualSegment(
+            taskID: task.id,
+            startedAt: segmentStart,
+            endedAt: segmentEnd,
+            note: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        let snapshot = store.weeklyGrossTimeSnapshot(
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(
+            calendar.dateComponents(
+                [.year, .month, .day, .weekday, .hour],
+                from: week.start
+            ) == DateComponents(
+                year: 2026,
+                month: 3,
+                day: 8,
+                hour: 0,
+                weekday: 1
+            )
+        )
+        #expect(week.duration == 167 * 3_600)
+        #expect(sundayDay.duration == 23 * 3_600)
+        #expect(snapshot.interval == week)
+        #expect(snapshot.daily.map(\.date) == [sunday, monday, tuesday])
+        #expect(snapshot.daily.map(\.grossSeconds) == [81_000, 1_800, 0])
+        #expect(snapshot.daily.map(\.wallSeconds) == [81_000, 1_800, 0])
+        #expect(snapshot.totalGrossSeconds == 82_800)
+        #expect(snapshot.hasTrackedTime)
+        #expect(snapshot.requiresLiveRefresh == false)
+    }
+
+    @Test @MainActor
     func weeklyGrossTimeReevaluatesAClosedFutureEndAtEachCutoff() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
@@ -277,6 +481,10 @@ struct HomeUIContractTests {
             now: afterDate,
             calendar: calendar
         )
+        let rewound = store.weeklyGrossTimeSnapshot(
+            now: beforeDate,
+            calendar: calendar
+        )
         let waitingRequest = HomeWeeklyGrossTimeRefreshRequest(
             store: store,
             snapshot: before,
@@ -306,6 +514,8 @@ struct HomeUIContractTests {
         #expect(during.requiresLiveRefresh)
         #expect(after.totalGrossSeconds == 3_600)
         #expect(after.requiresLiveRefresh == false)
+        #expect(rewound.totalGrossSeconds == 0)
+        #expect(rewound.requiresLiveRefresh)
         #expect(settledRequest.evaluationKey.liveRefreshBucket == nil)
         #expect(rewoundRequest != settledRequest)
     }

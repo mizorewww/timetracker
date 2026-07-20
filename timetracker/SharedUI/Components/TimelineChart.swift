@@ -61,6 +61,7 @@ extension TimelineChart {
                 horizontalHourGrid(width: proxy.size.width, height: proxy.size.height)
                 ForEach(axisCompression.omittedGaps) { gap in
                     horizontalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
+                        .zIndex(1)
                 }
                 let lanes = TimelineChartLayout.horizontalLanes(
                     height: proxy.size.height,

@@ -44,10 +44,15 @@ final class UnavailableAppleHealthDataReader: AppleHealthDataReading {
 @MainActor
 enum AppleHealthDataReaderFactory {
     private static let sharedReader: any AppleHealthDataReading = {
+        #if DEBUG && os(iOS)
+        if let reader = UITestAppleHealthDataReader.makeIfRequested() {
+            return reader
+        }
+        #endif
         #if os(iOS) && canImport(HealthKit)
-        HealthKitAppleHealthDataReader()
+        return HealthKitAppleHealthDataReader()
         #else
-        UnavailableAppleHealthDataReader()
+        return UnavailableAppleHealthDataReader()
         #endif
     }()
 

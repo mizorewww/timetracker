@@ -77,6 +77,84 @@ struct AppleHealthDataReaderTests {
         #expect(first === second)
     }
 
+    #if DEBUG && os(iOS)
+    @Test @MainActor
+    func uiFixtureRequiresBothArgumentsAndUsesIsolatedPreferences() throws {
+        #expect(
+            UITestAppleHealthDataReader.makeIfRequested(
+                arguments: ["--uitesting-apple-health"]
+            ) == nil
+        )
+        #expect(
+            UITestAppleHealthDataReader.makeIfRequested(
+                arguments: ["--uitesting"]
+            ) == nil
+        )
+        let arguments = ["--uitesting", "--uitesting-apple-health"]
+        _ = try #require(
+            UITestAppleHealthDataReader.makeIfRequested(arguments: arguments)
+        )
+        let preferences = try #require(
+            UITestAppleHealthDataReader.preferenceStoreIfRequested(
+                arguments: arguments
+            )
+        )
+        preferences.isTimelineEnabled = true
+        let freshPreferences = try #require(
+            UITestAppleHealthDataReader.preferenceStoreIfRequested(
+                arguments: arguments
+            )
+        )
+
+        #expect(freshPreferences.isTimelineEnabled == false)
+        #expect(freshPreferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+    }
+
+    @Test @MainActor
+    func uiFixtureKeepsWorkoutAndSleepVisibleBeforeNoon() async throws {
+        let reader = try #require(
+            UITestAppleHealthDataReader.makeIfRequested(
+                arguments: ["--uitesting", "--uitesting-apple-health"]
+            )
+        )
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: Date())
+
+        for elapsed in [1.0, 60.0, 6 * 3_600.0] {
+            let visibleEnd = dayStart.addingTimeInterval(elapsed)
+            let visibleInterval = DateInterval(
+                start: dayStart,
+                end: visibleEnd
+            )
+            let queryInterval = DateInterval(
+                start: dayStart.addingTimeInterval(
+                    -AppleHealthSleepEpisodePolicy.queryContextDuration
+                ),
+                end: visibleEnd
+            )
+            let batch = try await reader.samples(overlapping: queryInterval)
+            let items = AppleHealthTimelineProjectionService().project(
+                batch: batch,
+                visibleInterval: visibleInterval
+            )
+
+            #expect(items.count == 2)
+            #expect(items.contains { $0.subject == .appleHealthSleep })
+            #expect(
+                items.contains {
+                    $0.subject == .appleHealthWorkout(.running)
+                }
+            )
+            #expect(
+                items.allSatisfy {
+                    $0.interval.start >= visibleInterval.start &&
+                        $0.interval.end <= visibleInterval.end
+                }
+            )
+        }
+    }
+    #endif
+
     #if os(iOS) && canImport(HealthKit)
     @Test @MainActor
     func healthKitActivityTypesMapToProductKinds() {

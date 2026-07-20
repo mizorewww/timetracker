@@ -31,7 +31,7 @@ final class TimeTrackerStore {
             appleHealthDataReader ?? AppleHealthDataReaderFactory.platformDefault()
         let resolvedAppleHealthPreferences =
             appleHealthTimelinePreferenceStore
-                ?? UserDefaultsAppleHealthTimelinePreferenceStore()
+                ?? Self.defaultAppleHealthTimelinePreferenceStore()
         self.appleHealthDataReader = resolvedAppleHealthReader
         self.appleHealthTimelinePreferenceStore = resolvedAppleHealthPreferences
         isAppleHealthTimelineEnabled = resolvedAppleHealthPreferences.isTimelineEnabled
@@ -43,6 +43,17 @@ final class TimeTrackerStore {
         self.writeAuthorization = writeAuthorization
         self.syncConflictService = syncConflictService ?? Self.defaultSyncConflictService()
         self.taskDraftRecoveryController = TaskDraftRecoveryController(store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore())
+    }
+
+    private static func defaultAppleHealthTimelinePreferenceStore()
+        -> any AppleHealthTimelinePreferenceStoring {
+        #if DEBUG && os(iOS)
+        if let fixture =
+            UITestAppleHealthDataReader.preferenceStoreIfRequested() {
+            return fixture
+        }
+        #endif
+        return UserDefaultsAppleHealthTimelinePreferenceStore()
     }
 
     deinit {

@@ -2524,6 +2524,73 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAppleHealthWorkoutAndSleepAppearInTodayTimeline() throws {
+        #if os(macOS)
+        throw XCTSkip("Apple Health timeline content requires iOS.")
+        #else
+        let app = launchApp(
+            seedsDemoData: false,
+            additionalLaunchArguments: [
+                "--uitesting-apple-health",
+                "-AppleHealthTimelineEnabled",
+                "NO"
+            ]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let timelineAccess = app.buttons[
+            "Show Apple Health in Timeline"
+        ].firstMatch
+        for _ in 0..<8 {
+            if timelineAccess.exists, timelineAccess.isHittable {
+                break
+            }
+            dragContentUp(by: app.frame.height * 0.25, in: app)
+        }
+        XCTAssertTrue(
+            timelineAccess.waitForExistence(timeout: 5) &&
+                timelineAccess.isHittable
+        )
+        activate(timelineAccess)
+
+        let healthEntry = { (title: String) in
+            app.descendants(matching: .any)
+                .matching(
+                    NSPredicate(
+                        format: "label CONTAINS[c] %@ AND label CONTAINS[c] %@",
+                        title,
+                        "Apple Health"
+                    )
+                )
+                .firstMatch
+        }
+        let sleep = healthEntry("Sleep")
+        let running = healthEntry("Running")
+        for _ in 0..<8 {
+            if sleep.exists, sleep.isHittable {
+                break
+            }
+            dragContentUp(by: app.frame.height * 0.25, in: app)
+        }
+        scrollUntilFullyVisibleAboveSystemChrome(sleep, in: app)
+        XCTAssertTrue(
+            sleep.waitForExistence(timeout: 8) &&
+                isFrameFullyVisibleAboveSystemChrome(sleep, in: app)
+        )
+        XCTAssertTrue(
+            running.waitForExistence(timeout: 5) &&
+                isFrameFullyVisibleAboveSystemChrome(running, in: app)
+        )
+
+        let prefix = app.frame.width >= 700 ? "ipad" : "iphone"
+        try capture(
+            "\(prefix)-home-apple-health-workout-sleep",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsTodayDistributionUsesSharedScale() throws {
         #if os(macOS)
         throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")

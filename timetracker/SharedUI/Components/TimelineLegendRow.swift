@@ -51,15 +51,31 @@ struct TimelineLegendRow: View {
     }
 
     private var metrics: some View {
-        HStack(spacing: 12) {
-            Text(shortRange)
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-            Text(DurationFormatter.compact(entry.durationSeconds))
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        VStack(alignment: .trailing, spacing: 2) {
+            rangeText
+            durationText
         }
+    }
+
+    private var rangeText: some View {
+        Text(shortRange)
+            .font(.subheadline.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .fixedSize(
+                horizontal: dynamicTypeSize.isAccessibilitySize == false,
+                vertical: false
+            )
+    }
+
+    private var durationText: some View {
+        Text(DurationFormatter.compact(entry.durationSeconds))
+            .font(.subheadline.weight(.semibold).monospacedDigit())
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .fixedSize(
+                horizontal: dynamicTypeSize.isAccessibilitySize == false,
+                vertical: false
+            )
     }
 
     private var shortRange: String {

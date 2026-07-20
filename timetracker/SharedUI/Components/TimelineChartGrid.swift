@@ -84,8 +84,9 @@ extension TimelineChart {
                 style: StrokeStyle(lineWidth: 1, dash: [4, 4])
             )
             .frame(width: 1, height: max(28, height - 28))
-            .overlay(alignment: .center) {
+            .overlay(alignment: .bottom) {
                 omittedGapLabel(gap)
+                    .padding(.bottom, 2)
             }
             .offset(x: min(max(0, x), width - 1), y: 4)
     }

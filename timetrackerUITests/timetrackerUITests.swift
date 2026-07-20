@@ -589,14 +589,12 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTaskSwipeArchiveAndSettingsUnarchiveRoundTrip() throws {
-        #if os(macOS)
-        throw XCTSkip("The left-swipe archive round trip is exercised on iPhone and iPad.")
-        #else
+    func testTaskArchiveAndSettingsUnarchiveRoundTrip() throws {
         let app = launchApp(
             route: "tasks",
             replacesDemoDataOnLaunch: true
         )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
         if app.descendants(matching: .any)["tasks.view"]
             .waitForExistence(timeout: 3) == false {
             openSection(
@@ -610,37 +608,7 @@ final class timetrackerUITests: XCTestCase {
             app.descendants(matching: .any)["tasks.view"]
                 .waitForExistence(timeout: 8)
         )
-        let taskTitle = "Archive Round Trip \(UUID().uuidString.prefix(8))"
-        let addTaskMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
-        XCTAssertTrue(addTaskMenu.waitForExistence(timeout: 3) && addTaskMenu.isHittable)
-        activate(addTaskMenu)
-        let addRootTask = app.descendants(matching: .any)["tasks.addRoot"].firstMatch
-        XCTAssertTrue(addRootTask.waitForExistence(timeout: 3) && addRootTask.isHittable)
-        activate(addRootTask)
-
-        let editor = app.descendants(matching: .any)["task.editor"].firstMatch
-        let titleField = app.descendants(matching: .any)[
-            "task.editor.title.field"
-        ].firstMatch
-        XCTAssertTrue(editor.waitForExistence(timeout: 5))
-        XCTAssertTrue(titleField.waitForExistence(timeout: 3) && titleField.isHittable)
-        titleField.typeText(taskTitle)
-        titleField.typeText(XCUIKeyboardKey.return.rawValue)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
-        let save = app.buttons["task.editor.save"].firstMatch
-        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
-        activate(save)
-        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
-
-        let search = app.searchFields[
-            "Search tasks, paths, or notes"
-        ].firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
-        activate(search)
-        search.typeText(taskTitle)
-        search.typeText(XCUIKeyboardKey.return.rawValue)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
-
+        let taskTitle = "Standalone Task"
         let task = app.buttons
             .matching(NSPredicate(
                 format: "identifier BEGINSWITH %@ AND label == %@",
@@ -648,8 +616,33 @@ final class timetrackerUITests: XCTestCase {
                 taskTitle
             ))
             .firstMatch
+        scrollUntilHittable(task, direction: .up, in: app)
         XCTAssertTrue(task.waitForExistence(timeout: 5) && task.isHittable)
 
+        #if os(macOS)
+        XCTAssertGreaterThanOrEqual(task.frame.height, 28)
+        task.rightClick()
+        let contextArchive = app.menuItems["Archive"].firstMatch
+        XCTAssertTrue(
+            contextArchive.waitForExistence(timeout: 3) &&
+                contextArchive.isHittable
+        )
+        try capture("\(screenshotPrefix)-task-context-menu-archive", app: app)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+
+        activate(task)
+        let taskMenu = app.menuBars.menuBarItems["Task"].firstMatch
+        XCTAssertTrue(taskMenu.waitForExistence(timeout: 3) && taskMenu.isHittable)
+        activate(taskMenu)
+        let archiveSelected = app.menuItems["Archive Selected Task"].firstMatch
+        XCTAssertTrue(
+            archiveSelected.waitForExistence(timeout: 3) &&
+                archiveSelected.isHittable
+        )
+        try capture("\(screenshotPrefix)-task-menu-archive-selected", app: app)
+        activate(archiveSelected)
+        #else
+        XCTAssertGreaterThanOrEqual(task.frame.height, 44)
         task.swipeLeft()
         let archive = app.buttons
             .matching(NSPredicate(
@@ -660,12 +653,13 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(archive.waitForExistence(timeout: 3) && archive.isHittable)
         XCTAssertGreaterThanOrEqual(archive.frame.width, 44)
         XCTAssertGreaterThanOrEqual(archive.frame.height, 44)
-        try capture("iphone-task-swipe-archive", app: app)
+        try capture("\(screenshotPrefix)-task-swipe-archive", app: app)
         activate(archive)
+        #endif
         XCTAssertTrue(task.waitForNonExistence(timeout: 5))
 
         openSettings(in: app)
-        let archivedCategory = app.buttons[
+        let archivedCategory = app.descendants(matching: .any)[
             "settings.category.archivedTasks"
         ].firstMatch
         XCTAssertTrue(
@@ -682,9 +676,15 @@ final class timetrackerUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(unarchive.waitForExistence(timeout: 5) && unarchive.isHittable)
         XCTAssertTrue(unarchive.isEnabled)
+        #if os(macOS)
+        XCTAssertGreaterThanOrEqual(unarchive.frame.width, 28)
+        XCTAssertGreaterThanOrEqual(unarchive.frame.height, 28)
+        #else
+        XCTAssertGreaterThanOrEqual(unarchive.frame.width, 44)
         XCTAssertGreaterThanOrEqual(unarchive.frame.height, 44)
+        #endif
         XCTAssertTrue(app.staticTexts[taskTitle].waitForExistence(timeout: 3))
-        try capture("iphone-settings-archived-task", app: app)
+        try capture("\(screenshotPrefix)-settings-archived-task", app: app)
 
         activate(unarchive)
         let errorAlert = app.alerts.firstMatch
@@ -699,30 +699,52 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             app.staticTexts["No Archived Tasks"].waitForExistence(timeout: 3)
         )
-        try capture("iphone-settings-archived-empty", app: app)
+        try capture("\(screenshotPrefix)-settings-archived-empty", app: app)
 
+        #if os(macOS)
+        guard let settingsWindow = app.windows.allElementsBoundByIndex.first(where: {
+            $0.descendants(matching: .any)["settings.category.archivedTasks"].exists
+        }) else {
+            XCTFail("Could not find the macOS Settings window")
+            return
+        }
+        settingsWindow.typeKey("w", modifierFlags: .command)
+        XCTAssertTrue(archivedCategory.waitForNonExistence(timeout: 5))
+        app.activate()
+        #else
         let settingsBack = app.buttons["BackButton"].firstMatch
         XCTAssertTrue(
             settingsBack.waitForExistence(timeout: 3) &&
                 settingsBack.isHittable
         )
         activate(settingsBack)
-        let done = app.buttons["Done"].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
-        activate(done)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["settings.view"]
-                .waitForNonExistence(timeout: 5)
-        )
+        if screenshotPrefix == "iphone" {
+            let done = app.buttons["Done"].firstMatch
+            XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
+            activate(done)
+            XCTAssertTrue(
+                app.descendants(matching: .any)["settings.view"]
+                    .waitForNonExistence(timeout: 5)
+            )
+        }
+        #endif
         openSection(
             "Tasks",
             tabIdentifier: "phone.tab.tasks",
             sidebarIdentifier: "sidebar.Tasks",
             in: app
         )
-        XCTAssertTrue(task.waitForExistence(timeout: 5) && task.isHittable)
-        try capture("iphone-task-restored-from-settings", app: app)
-        #endif
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 5)
+        )
+        let restoredTask = taskRow(named: taskTitle, in: app)
+        scrollUntilHittable(restoredTask, direction: .up, in: app)
+        XCTAssertTrue(
+            restoredTask.waitForExistence(timeout: 5) &&
+                restoredTask.isHittable
+        )
+        try capture("\(screenshotPrefix)-task-restored-from-settings", app: app)
     }
 
     @MainActor
@@ -1330,7 +1352,7 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("The Inbox task-routing interaction requires an iOS simulator.")
         #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        let screenshotPrefix = inboxScreenshotPrefix(in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
         let createdItem = createInboxItem(
             "Prepare release screenshots",
             in: app
@@ -1396,7 +1418,7 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("The Inbox category-routing interaction requires an iOS simulator.")
         #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        let screenshotPrefix = inboxScreenshotPrefix(in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
         let createdItem = createInboxItem("Plan reading weekend", in: app)
         let menu = createdItem.menu
         activate(menu)
@@ -1458,7 +1480,7 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("The Inbox checklist-routing interaction requires an iOS simulator.")
         #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        let screenshotPrefix = inboxScreenshotPrefix(in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
         let createdItem = createInboxItem("Route release checklist", in: app)
         let menu = createdItem.menu
         activate(menu)
@@ -4354,7 +4376,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    private func inboxScreenshotPrefix(in app: XCUIApplication) -> String {
+    private func platformScreenshotPrefix(in app: XCUIApplication) -> String {
         #if os(macOS)
         "mac"
         #else
@@ -4661,9 +4683,9 @@ final class timetrackerUITests: XCTestCase {
 
         let identifiedTab = app.descendants(matching: .any)[tabIdentifier]
         #if os(iOS)
-        if identifiedTab.waitForExistence(timeout: 2),
-           identifiedTab.firstMatch.isHittable == false,
-           app.descendants(matching: .any)["phone.tabView"].exists {
+        let identifiedTabExists = identifiedTab.waitForExistence(timeout: 2)
+        if app.descendants(matching: .any)["phone.tabView"].exists &&
+            (!identifiedTabExists || !identifiedTab.firstMatch.isHittable) {
             // Focusing an inline field can minimize the system tab bar. Reveal
             // it through the same reverse-scroll gesture a user performs before
             // asking XCTest to activate a destination.
@@ -4677,24 +4699,25 @@ final class timetrackerUITests: XCTestCase {
         }
 
         #if os(iOS)
-        let tabFrame = identifiedTab.firstMatch.frame
-        let appFrame = app.frame
-        if identifiedTab.firstMatch.exists,
-           tabFrame.width > 0,
-           tabFrame.height > 0,
-           appFrame.intersects(tabFrame) {
-            // Xcode 27 beta can report {-1, -1} as the visible point for a
-            // visually present SwiftUI Tab. A real touch at its frame center
-            // still follows the production interaction path.
-            app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(
-                    CGVector(
-                        dx: tabFrame.midX - appFrame.minX,
-                        dy: tabFrame.midY - appFrame.minY
+        if identifiedTab.firstMatch.exists {
+            let tabFrame = identifiedTab.firstMatch.frame
+            let appFrame = app.frame
+            if tabFrame.width > 0,
+               tabFrame.height > 0,
+               appFrame.intersects(tabFrame) {
+                // Xcode 27 beta can report {-1, -1} as the visible point for a
+                // visually present SwiftUI Tab. A real touch at its frame center
+                // still follows the production interaction path.
+                app.coordinate(withNormalizedOffset: .zero)
+                    .withOffset(
+                        CGVector(
+                            dx: tabFrame.midX - appFrame.minX,
+                            dy: tabFrame.midY - appFrame.minY
+                        )
                     )
-                )
-                .tap()
-            return
+                    .tap()
+                return
+            }
         }
         #endif
 
@@ -4759,6 +4782,16 @@ final class timetrackerUITests: XCTestCase {
             activate(sidebarSettings.firstMatch)
             return
         }
+
+        #if os(iOS)
+        if app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1) {
+            XCTAssertTrue(
+                openCollapsedSidebarDestination("sidebar.Settings", in: app)
+            )
+            return
+        }
+        #endif
 
         #if os(macOS)
         let appMenu = app.menuBars.menuBarItems["Time Tracker"]

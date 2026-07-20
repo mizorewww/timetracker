@@ -11,8 +11,9 @@
 - 已用失败测试复现菜单、设置、文案、deep link 与未来时间戳 LWW 缺口。
 - 已完成归档/解除归档严格胜过跨设备未来时间戳副本的领域修复。
 - 已统一产品文案、菜单和 deep link 语义，并通过 macOS 契约/领域测试与带签名 iOS 编译。
-- [~] 正在执行 iPhone、iPad、macOS 交互与截图矩阵；下一 checkpoint 是 UI 回归脚本和
-  三平台验收。
+- 已完成 iPhone、iPad、macOS 归档 → Settings 解除归档 → Tasks 恢复的交互与截图矩阵。
+- [~] 正在执行 Release 全设备安装与签名核验；下一 checkpoint 是完成反馈标记和移除活动
+  软链接。
 
 ## 实现边界
 
@@ -31,8 +32,8 @@
 - [x] 确认设置中已有归档入口、列表与父级优先的解除归档
 - [x] 确认 Task 页面左滑已是归档，详情 More 已提供非手势入口
 - [x] 修正剩余归档语义、跨平台入口与分布式持久化边界
-- [~] 增补领域、界面契约和跨平台回归测试
-- [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
+- [x] 增补领域、界面契约和跨平台回归测试
+- [x] 验证 iPhone、iPad、macOS 普通路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 只在 `Docs/userfeedback.md` 标记完成并移除活动软链接
@@ -118,10 +119,15 @@
 
 ## 运行资源所有权
 
-- 当前仅进行静态审计，不占用模拟器、TestManager 或 Instruments。
-- 设备矩阵开始前，在此记录每台 owned 模拟器的名称与 UDID；批次结束后逐一清理。
+- iPhone 端到端批次专属设备：`TimeTracker-Task07-iPhone17Pro`
+  (`D2A5E5B9-C28E-4BB6-8EB3-956A29AAAAD6`)，iOS 27.0。
+- iPad 端到端批次专属设备：`TimeTracker-Task07-iPadPro11`
+  (`592369B4-6E4F-4550-AD20-F54AB21ECC8B`)，iOS 27.0。
+- 两台设备只归当前 primary agent 所有；批次结束后已分别 terminate app、shutdown、delete，
+  并确认没有对应 TestManager、UI runner、应用进程或 Booted 设备残留。
+- 批次打开的 Simulator 与 Problem Reporter 已退出；未终止其他 agent 所有的设备或进程。
 - 基线 macOS 测试使用独立 `/tmp/TimeTrackerTask07*` DerivedData/result bundle；测试完成后无
-  残留 `xcodebuild`/`xctest`，临时产物已移除，未启动模拟器。
+  残留 `xcodebuild`/`xctest`，保留本任务 result bundle 与截图作为验收证据。
 
 ## 基线验证
 
@@ -147,10 +153,33 @@
   `me.mezorewww.timetracker`，签名者 `ZEXUAN GAO`，使用
   `TimeTracker HealthKit Development` provisioning profile。
 
+## 三平台 UI 验收
+
+- iPhone：左滑展示蓝色系统 Archive 动作；归档后任务从列表消失；Settings 的归档列表展示
+  `archivebox` 与可见的 `Unarchive` 按钮；解除归档后任务恢复。结果：
+  `/tmp/TimeTrackerTask07UI-iPhone.xcresult`。
+- iPad：同一普通路径通过，Settings 使用 split navigation 返回而不是不存在的 Done；截图
+  前缀正确为 `ipad`。结果：`/tmp/TimeTrackerTask07UI-iPad-Final.xcresult`。
+- macOS：右键菜单展示 Archive，菜单栏 `Task > Archive Selected Task` 可用；Settings
+  展示可见 Unarchive；解除归档后主窗口任务恢复。结果：
+  `/tmp/TimeTrackerTask07UI-Mac.xcresult`。
+- 已逐张目视检查三平台关键截图：滑动动作、context menu、菜单栏命令、归档列表空/非空及
+  恢复状态均符合 HIG；iOS 交互目标至少 44pt，macOS 至少 28pt。
+- macOS 首次回归暴露 UI test fallback 主窗口与 Settings 使用不同 Store/container，导致
+  归档状态不一致。已让正常窗口、Settings 与 fallback 共享唯一的
+  `applicationStore`/`applicationModelContainer`。不在 Settings scene 额外执行全量刷新，
+  以免绕过 Cloud recovery 的只读刷新安全边界。
+- 最终相关源码契约 51 passed、0 failed。包含共享 Store/container、Settings 不执行
+  `refreshQuietly()`、可见 Unarchive 与三平台归档 UI 契约。
+- 扩大运行三组契约时为 57 passed、1 failed；唯一失败是既有
+  `cloudActivityIsRecordedOnlyAfterConflictProcessingAndFinalRefresh` 对
+  `errorMessage =` 的源码字符串断言，与本次归档代码及新增安全断言无关，未擅自修改。
+
 ## Checkpoint 记录
 
 - `55cc610`：领取当前反馈项，建立 `[~]`、独立实现记忆与活动软链接。
 - `ab5af0d`：完成 archive-only 全面静态审计、基线验证、HIG/依赖决策与实现边界。
 - `4b4785c`：修复 archive/unarchive 在未来时间戳重复副本下的 LWW 不变量。
-- 本 checkpoint：统一任务归档菜单、Settings 恢复、macOS 命令、Unavailable 文案与
+- `42b326e`：统一任务归档菜单、Settings 恢复、macOS 命令、Unavailable 文案与
   deep-link 语义，并锁定领域/界面/本地化契约。
+- [~] 当前 checkpoint：三平台端到端 UI 回归、截图验收、共享状态修复与资源清理。

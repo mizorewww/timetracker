@@ -36,27 +36,22 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         }
         guard !hasVisibleContentWindow else { return }
 
-        do {
-            let container = try timetrackerApp.makeUITestModelContainer()
-            let rootView = ContentView()
-                .frame(minWidth: 680, minHeight: 500)
-                .modelContainer(container)
-            let hostingController = NSHostingController(rootView: rootView)
-            let window = NSWindow(
-                contentRect: NSRect(x: 220, y: 160, width: 1180, height: 760),
-                styleMask: [.titled, .closable, .miniaturizable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "Time Tracker"
-            window.contentViewController = hostingController
-            window.setFrameAutosaveName("TimeTrackerUITestWindow")
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            uiTestWindow = window
-        } catch {
-            assertionFailure("Could not create UI test fallback window: \(error)")
-        }
+        let rootView = ContentView(store: timetrackerApp.applicationStore)
+            .frame(minWidth: 680, minHeight: 500)
+            .modelContainer(timetrackerApp.applicationModelContainer)
+        let hostingController = NSHostingController(rootView: rootView)
+        let window = NSWindow(
+            contentRect: NSRect(x: 220, y: 160, width: 1180, height: 760),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Time Tracker"
+        window.contentViewController = hostingController
+        window.setFrameAutosaveName("TimeTrackerUITestWindow")
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        uiTestWindow = window
     }
 }
 #endif

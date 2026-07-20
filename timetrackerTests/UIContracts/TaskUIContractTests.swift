@@ -1006,9 +1006,13 @@ struct TaskUIContractTests {
         #expect(archivedSettingsSource.contains(
             "Label(AppStrings.localized(\"task.action.unarchive\"), systemImage: \"archivebox\")"
         ))
+        #expect(archivedSettingsSource.contains(".labelStyle(.titleAndIcon)"))
         #expect(archivedSettingsSource.contains("minHeight: actionTargetSize"))
         #expect(archivedSettingsSource.contains("width: actionTargetSize") == false)
         #expect(archivedSettingsSource.contains(".buttonStyle(.bordered)"))
+        #expect(archivedSettingsSource.contains(
+            ".fixedSize(horizontal: true, vertical: true)"
+        ))
         #expect(archivedSettingsSource.contains(".buttonStyle(.borderless)") == false)
         #expect(archivedSettingsSource.contains(
             ".fixedSize(horizontal: false, vertical: true)"

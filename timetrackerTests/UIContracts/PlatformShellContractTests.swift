@@ -136,7 +136,18 @@ struct PlatformShellContractTests {
         #expect(appSource.contains(".frame(minWidth: 680, minHeight: 500)"))
         #expect(appSource.contains("Window(AppStrings.localized(\"app.name\"), id: \"main\")"))
         #expect(appSource.components(separatedBy: "WindowGroup {").count - 1 == 1)
+        #expect(appSource.contains("static let applicationStore = TimeTrackerStore()"))
+        #expect(appSource.contains(
+            "@State private var store = timetrackerApp.applicationStore"
+        ))
         #expect(appDelegateSource.contains(".frame(minWidth: 680, minHeight: 500)"))
+        #expect(appDelegateSource.contains(
+            "ContentView(store: timetrackerApp.applicationStore)"
+        ))
+        #expect(appDelegateSource.contains(
+            ".modelContainer(timetrackerApp.applicationModelContainer)"
+        ))
+        #expect(appDelegateSource.contains("makeUITestModelContainer()") == false)
         #expect(appSource.contains(".windowToolbarStyle(.unified)"))
         #expect(appSource.contains("SidebarCommands()"))
         #expect(rootSource.contains("NavigationSplitView(columnVisibility: $columnVisibility)"))

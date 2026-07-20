@@ -75,11 +75,13 @@ private struct ArchivedTaskSettingsRow: View {
 
             Button(action: unarchive) {
                 Label(AppStrings.localized("task.action.unarchive"), systemImage: "archivebox")
-                    .fixedSize()
+                    .labelStyle(.titleAndIcon)
+                    .fixedSize(horizontal: true, vertical: true)
                     .frame(minHeight: actionTargetSize)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: true)
             .disabled(canUnarchive == false)
             .accessibilityIdentifier(
                 "settings.archivedTasks.unarchive.\(presentation.id.uuidString)"

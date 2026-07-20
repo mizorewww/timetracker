@@ -288,6 +288,7 @@ struct SettingsSyncSafetyContractTests {
         #expect(recoveryConfiguration.contains("try refresh()") == false)
         #expect(contentSource.contains("store.effectivePersistenceWriteSafety"))
         #expect(settingsSceneSource.contains("store.effectivePersistenceWriteSafety"))
+        #expect(settingsSceneSource.contains("store.refreshQuietly()") == false)
 
         let downloadIntent = try #require(
             recoveryServiceSource.range(of: "AppCloudSync.requestCloudDownloadReset()")

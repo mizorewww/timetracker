@@ -11,8 +11,9 @@ import SwiftUI
 @main
 struct timetrackerApp: App {
     #if os(macOS)
+    static let applicationStore = TimeTrackerStore()
     @NSApplicationDelegateAdaptor(TimeTrackerAppDelegate.self) private var appDelegate
-    @State private var store = TimeTrackerStore()
+    @State private var store = timetrackerApp.applicationStore
     #endif
 
     static let applicationModelContainer = timetrackerApp.makeModelContainer()

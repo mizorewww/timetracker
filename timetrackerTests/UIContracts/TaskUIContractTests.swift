@@ -470,6 +470,7 @@ struct TaskUIContractTests {
         let sharedSource = try [
             "timetracker/SharedUI/Components/ChecklistControls.swift",
             "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryMetadataViews.swift",
             "timetracker/SharedUI/Components/TaskVisuals.swift"
         ]
         .map { try sourceText($0) }
@@ -1207,7 +1208,8 @@ struct TaskUIContractTests {
             "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
             "timetracker/Features/Tasks/Management/TaskManagementRowContent.swift",
             "timetracker/Features/Tasks/Management/TaskManagementAccessibility.swift",
-            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryMetadataViews.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

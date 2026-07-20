@@ -113,7 +113,8 @@ struct FocusUIContractTests {
         let sharedPicker = try [
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TimerPickerPresentation.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

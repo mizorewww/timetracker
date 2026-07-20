@@ -77,7 +77,8 @@ struct SharedComponentsContractTests {
         let homeSource = try [
             "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TimerPickerPresentation.swift"
         ].map(sourceText).joined(separator: "\n")
         let homeTimelineSource = try sourceText("timetracker/Features/Home/Sections/HomeTimelineViews.swift")
         let taskDetailSource = try [
@@ -219,9 +220,12 @@ struct SharedComponentsContractTests {
 
     @Test
     func taskSurfacesReuseCanonicalSummaryAndTimerActionComponents() throws {
-        let summary = try sourceText(
-            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
-        )
+        let summary = try [
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryMetadataViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let timerAction = try sourceText(
             "timetracker/SharedUI/Components/TaskTimerActionButton.swift"
         )
@@ -289,6 +293,9 @@ struct SharedComponentsContractTests {
         )
         #expect(timerAction.contains("private var minimumControlHeight: CGFloat"))
         #expect(timerAction.contains("private var minimumLabelDimension: CGFloat"))
+        #expect(timerAction.contains("private var iconGlyphCanvasDimension: CGFloat"))
+        #expect(timerAction.contains(".resizable()"))
+        #expect(timerAction.contains(".scaledToFit()"))
         #expect(timerAction.contains(iconControlDimensionSource))
         #expect(timerAction.contains(".controlSize(platformControlSize)"))
         #expect(timerAction.contains("private var platformControlSize: ControlSize"))
@@ -303,9 +310,12 @@ struct SharedComponentsContractTests {
 
     @Test
     func sidebarUsesTheSharedInlineTaskSummaryWithoutStatusDrivenRowHeight() throws {
-        let summary = try sourceText(
-            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
-        )
+        let summary = try [
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryMetadataViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let sidebar = try sourceText(
             "timetracker/Features/Sidebar/SidebarTaskTreeViews.swift"
         )

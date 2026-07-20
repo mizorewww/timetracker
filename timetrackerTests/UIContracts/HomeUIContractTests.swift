@@ -426,7 +426,12 @@ struct HomeUIContractTests {
 
     @Test @MainActor
     func ipadIdiomUsesSystemSplitViewAcrossWindowWidths() throws {
-        let source = try sourceText("timetracker/App/RootViews/iOSRootViews.swift")
+        let source = try [
+            "timetracker/App/RootViews/iOSRootViews.swift",
+            "timetracker/App/RootViews/iPadRootView.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         #expect(SplitColumnLayoutPolicy.iPad.sidebar == ColumnWidth(min: 240, ideal: 260, max: 300))
         #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
         #expect(source.contains("UIDevice.current.userInterfaceIdiom"))
@@ -743,6 +748,7 @@ struct HomeUIContractTests {
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TimerPickerPresentation.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift",
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         ]
@@ -810,7 +816,8 @@ struct HomeUIContractTests {
         )
         let timerPickerRowSource = try [
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift"
+            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TimerPickerPresentation.swift"
         ]
         .map(sourceText)
         .joined(separator: "\n")

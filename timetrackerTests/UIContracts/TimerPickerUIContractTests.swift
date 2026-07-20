@@ -60,9 +60,12 @@ struct TimerPickerUIContractTests {
     @Test
     func normalRowsGiveTaskIdentityPriorityOverCommands() throws {
         let pickerSource = try taskHierarchyPickerSource()
-        let summarySource = try sourceText(
-            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
-        )
+        let summarySource = try [
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryMetadataViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let projectionSource = try sourceText(
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         )
@@ -77,7 +80,11 @@ struct TimerPickerUIContractTests {
 
         #expect(summarySource.contains("HStack(alignment: .top, spacing: 12)"))
         #expect(pickerSource.contains("TaskSummaryRow("))
-        #expect(summarySource.contains(".lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)"))
+        #expect(
+            summarySource.contains(
+                "primaryLineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 2"
+            )
+        )
         #expect(summarySource.contains("let text = presentation.text(for: context)"))
         #expect(summarySource.contains("TaskWorkBlockedStatusBadge()") == false)
         #expect(summarySource.contains("TaskStatusBadge") == false)
@@ -94,7 +101,14 @@ struct TimerPickerUIContractTests {
         #expect(pickerSource.contains("placement: .navigationBarDrawer(displayMode: .always)"))
         #expect(pickerSource.contains(".listSectionSpacing(18)"))
         #expect(pickerSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
-        #expect(pickerSource.contains(".tint(activeSegment == nil ? taskColor : .red)"))
+        #expect(pickerSource.contains(".tint(actionColor)"))
+        #expect(pickerSource.contains(".resizable()"))
+        #expect(pickerSource.contains(".scaledToFit()"))
+        #expect(pickerSource.contains("private var iconGlyphCanvasDimension: CGFloat"))
+        #expect(pickerSource.contains("width: iconGlyphCanvasDimension"))
+        #expect(pickerSource.contains("height: iconGlyphCanvasDimension"))
+        #expect(pickerSource.contains(".scaleEffect(") == false)
+        #expect(pickerSource.contains(".offset(") == false)
         #expect(pickerSource.contains("width: usesIconOnly ? iconControlDimension : nil"))
         #expect(pickerSource.contains(iconControlDimensionSource))
         #expect(pickerSource.contains("horizontalSizeClass") == false)
@@ -150,6 +164,7 @@ struct TimerPickerUIContractTests {
             "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerBehavior.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
+            "timetracker/SharedUI/Components/TimerPickerPresentation.swift",
             "timetracker/SharedUI/Components/TaskTimerActionButton.swift"
         ]
         .map(sourceText)

@@ -52,8 +52,13 @@ struct TaskTimerActionButton: View {
     private var actionLabel: some View {
         if usesIconOnly {
             Image(systemName: actionSystemImage)
-                .font(.callout.weight(.semibold))
+                .resizable()
+                .scaledToFit()
                 .foregroundStyle(actionColor)
+                .frame(
+                    width: iconGlyphCanvasDimension,
+                    height: iconGlyphCanvasDimension
+                )
                 .frame(
                     width: minimumLabelDimension,
                     height: minimumLabelDimension,
@@ -102,6 +107,14 @@ struct TaskTimerActionButton: View {
         26
         #else
         16
+        #endif
+    }
+
+    private var iconGlyphCanvasDimension: CGFloat {
+        #if os(iOS)
+        18
+        #else
+        12
         #endif
     }
 

@@ -105,9 +105,12 @@ struct AccessibilitySurfaceContractTests {
 
     @Test
     func taskTimerSurfacesSeparatePassiveStateFromExplicitStopActions() throws {
-        let summary = try sourceText(
-            "timetracker/SharedUI/Components/TaskSummaryRow.swift"
-        )
+        let summary = try [
+            "timetracker/SharedUI/Components/TaskSummaryRow.swift",
+            "timetracker/SharedUI/Components/TaskSummaryMetadataViews.swift"
+        ]
+        .map(sourceText)
+        .joined(separator: "\n")
         let tasks = try [
             "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
             "timetracker/Features/Tasks/Management/TaskManagementAccessibility.swift"

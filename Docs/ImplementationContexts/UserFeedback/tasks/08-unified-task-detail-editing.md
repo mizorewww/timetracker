@@ -12,8 +12,8 @@
 - [x] 已让所有任务身份展示观察统一的 read-model revision；Today 返回后立即刷新重命名任务，不重建整组视图。
 - [x] 已把受自动保存语义影响的 4 条 UI 测试迁移为真实保存、导航 flush、返回刷新和重开验证；iPhone/iPad 矩阵通过。
 - [x] 已把详情与恢复页的 Markdown 备注改为默认预览、原生 Edit/Done 按需展开编辑；iPhone/iPad 编辑、保存和截图验收通过。
-- [~] 正在做 Task 08 最终回归加固、最终代码的 Release 全设备重装与完成态收尾。
-- 下一 checkpoint：提交最终回归加固，重新运行 Release 全设备安装；macOS 解锁后补齐可执行 UI 验收，再由 Codex 标记反馈完成。
+- [~] 最终代码已完成 Release 全设备重装与签名核验；正在等待 macOS 手动解锁后执行最后一条真实 UI 验收。
+- 下一 checkpoint：macOS 解锁后运行 Markdown 展开编辑 UI 测试并截图；通过后由 Codex 标记反馈完成并移除活动链接。
 
 ## 反馈边界
 
@@ -31,8 +31,8 @@
 - [x] 用失败测试锁定入口、统一页面、Markdown 与自动保存语义
 - [x] 实现并分小 checkpoint 提交
 - [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
-- [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
+- [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [x] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
 ## 实现约束
@@ -77,6 +77,7 @@
 - 自动保存 UI 批次 owned iPhone `947175E8-8402-4408-9F81-DE78BD78EB65` 与 iPad `6109B5C2-EE38-4D99-B7E2-6EB031B366A1` 均已终止 app、关机并删除。
 - Markdown UI 批次 owned iPhone `DB305452-21C4-499D-9697-ECFC7E8EB642` 与 iPad `24FAE1A7-E5D2-47F2-B746-96B195EDEA9E` 均已确认 app 退出、关机并删除。
 - 两次 macOS 完整单测批次均未创建模拟器；第二次重跑在无关的旧 Cloud/Core Data 同步测试达到 512 个阻塞线程后，由 primary agent 中断自有 `xcodebuild` 和测试宿主，临时 `sample` 文件已删除。
+- 最终 macOS UI 尝试未创建模拟器；签名 Runner 因锁屏认证在执行测试方法前拒绝初始化。Runner、`xcodebuild` 与 App 均已退出，专用 DerivedData 已删除，失败证据保留在 `Task08-Final-MacUI.xcresult`。
 - 当前没有 Task 08 owned simulator；`AnalyticsReview-iPhone17Pro` 属于其他工作，不触碰。
 
 ## Checkpoint 记录
@@ -92,8 +93,9 @@
 - [x] Markdown 展开编辑：用语义化 `TaskNotesInteractionStyle` 区分普通编辑器与详情/恢复预览；空备注也保持预览，原生 Edit 展开 `TextEditor` 并聚焦，Done 先清焦点触发 autosave flush 再回到 MarkdownView 渲染。普通编辑器保留源码/预览 segmented picker；三语言补齐专用可访问名称。macOS 契约/工作区/本地化共 13/13 通过；iPhone `Task08-Markdown-iPhone-run5.xcresult` 与 iPad `Task08-Markdown-iPad-run1.xcresult` 各 1/1 通过，均验证 60 秒防抖尚未触发时由原生返回即时保存并重开核对原始 Markdown；六张截图已人工核验。
 - [x] 最终回归加固：首次 macOS 全量回归 `Task08-Final-MacTests.xcresult` 为 1434/1446 通过；12 项失败中，3 项属于 Task 08：分析源码契约仍指向已拆分的旧文件、编辑草稿文件超过结构预算、快速 autosave 测试依赖固定 80ms 时序。契约已指向 `TaskDetailWorkspace+Analytics.swift`，`ChecklistEditorDraft` 已拆分为独立语义文件，autosave 测试改为等待保存状态；相关架构、源码布局、autosave、编辑会话和工作区契约共 24/24 通过。其余失败均为任务开始前的既有测试债务。第二次全量重跑越过本次修复后，在无关的 `CoreSyncConflictTests/automaticCloudReenablePreservesRemoteDataUntilUserChooses()` 发生 Core Data 队列死锁而中断，未冒充完整通过。
 - [x] 基于 `42c6c0f` 的 Release 安装预检：精确命令成功构建并签名 iOS/iPadOS、嵌入式 Watch companion 与通用 macOS App，安装到 iPhone Air、iPad Pro M4 和 `/Applications/timetracker.app`；三份签名均通过严格校验。因其后有上述回归加固源码变更，最终代码仍须重新执行同一命令。
-- [~] 当前 checkpoint：提交 Task 08 最终回归加固，基于最终提交重跑 Release 全设备安装，完成反馈标记与活动链接清理。
+- [x] 最终 Release 全设备安装：在提交 `94d9e3dc8edb422daaf51099ae294a9555f5a7c9` 上精确运行 `CONFIGURATION=Release scripts/build_install_all.sh` 并成功退出。iPhone Air 与 iPad Pro M4 均安装 Developer App `1.1.52 (107)`；iOS 主程序、嵌入式 Watch companion 与 `/Applications/timetracker.app` 均通过 `codesign --verify --deep --strict`，签名为 Apple Development `ZEXUAN GAO (PX46M259V3)`、Team `LT98S43NKA`。macOS 产物为 x86_64/arm64 universal；没有可见物理 Watch，因此只验证了 companion 构建、签名和主从 bundle 关系，未声称实体 Watch 已安装。
+- [~] 当前 checkpoint：等待 macOS 手动解锁，完成真实 UI 测试与截图后标记反馈完成。
 
 ## 当前验收阻塞
 
-- 2026-07-21：macOS 已锁屏，Computer Use 无法自动解锁；真实 macOS UI 测试需用户手动解锁后继续。UI 测试源码已随签名测试构建成功编译，尚未把设备 UI 结果标为通过。
+- 2026-07-21：macOS 已锁屏，Computer Use 无法自动解锁。专用测试 `testTaskDetailMarkdownPreviewExpandsToAutosavingEditor` 已成功编译并签名，但 `Task08-Final-MacUI.xcresult` 记录 Runner 在执行测试方法前以 `Authentication canceled. System authentication is running.` 初始化失败；真实 macOS UI 测试与截图需用户手动解锁后继续，尚未把设备 UI 结果标为通过。

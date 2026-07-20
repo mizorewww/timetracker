@@ -186,7 +186,9 @@ struct TaskWorkspaceContractTests {
         ))
         #expect(content.contains("TaskEditorSections("))
         #expect(content.contains("showsTitleField: false"))
-        #expect(content.contains("notesStartInPreview: true"))
+        #expect(content.contains(
+            "notesInteractionStyle: .expandablePreview"
+        ))
         #expect(identity.contains("text: $draft.title"))
         #expect(identity.contains("axis: .vertical") == false)
         #expect(identity.contains(".submitLabel(.done)"))

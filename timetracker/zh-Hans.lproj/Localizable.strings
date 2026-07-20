@@ -522,6 +522,8 @@
 "task.field.today" = "今日";
 "task.field.week" = "本周";
 "task.notes.empty" = "没有备注";
+"task.notes.edit" = "编辑备注";
+"task.notes.doneEditing" = "完成备注编辑";
 "task.notes.preview" = "预览";
 "task.records.empty" = "还没有记录";
 "timer.action.stop" = "停止";

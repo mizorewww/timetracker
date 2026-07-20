@@ -131,7 +131,7 @@ struct TaskDetailRecoveryList: View {
                     moveChecklistItems: session.moveChecklistItems,
                     addChecklistItem: addChecklistItem,
                     showsTitleField: true,
-                    notesStartInPreview: true
+                    notesInteractionStyle: .expandablePreview
                 )
             }
         }

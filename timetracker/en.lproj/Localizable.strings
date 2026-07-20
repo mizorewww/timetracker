@@ -522,6 +522,8 @@
 "task.field.today" = "Today";
 "task.field.week" = "This Week";
 "task.notes.empty" = "No notes";
+"task.notes.edit" = "Edit Notes";
+"task.notes.doneEditing" = "Done Editing Notes";
 "task.notes.preview" = "Preview";
 "task.records.empty" = "No records yet";
 "timer.action.stop" = "Stop";

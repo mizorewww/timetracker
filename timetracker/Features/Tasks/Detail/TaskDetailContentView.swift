@@ -53,7 +53,7 @@ struct TaskDetailList: View {
                     )
                 },
                 showsTitleField: false,
-                notesStartInPreview: true
+                notesInteractionStyle: .expandablePreview
             )
             TaskDetailForecastSection(store: store, task: task)
 

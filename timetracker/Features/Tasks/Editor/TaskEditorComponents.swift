@@ -17,7 +17,7 @@ struct TaskEditorForm: View {
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     var showsTitleField = true
-    var notesStartInPreview = false
+    var notesInteractionStyle: TaskNotesInteractionStyle = .editor
 
     var body: some View {
         Form {
@@ -33,7 +33,7 @@ struct TaskEditorForm: View {
                 moveChecklistItems: moveChecklistItems,
                 addChecklistItem: addChecklistItem,
                 showsTitleField: showsTitleField,
-                notesStartInPreview: notesStartInPreview
+                notesInteractionStyle: notesInteractionStyle
             )
         }
         .formStyle(.grouped)
@@ -56,7 +56,7 @@ struct TaskEditorSections: View {
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     var showsTitleField = true
-    var notesStartInPreview = false
+    var notesInteractionStyle: TaskNotesInteractionStyle = .editor
 
     var body: some View {
         Group {
@@ -84,7 +84,7 @@ struct TaskEditorSections: View {
             TaskNotesEditorSection(
                 notes: $draft.notes,
                 validationError: validation.notesError,
-                startsInPreview: notesStartInPreview,
+                interactionStyle: notesInteractionStyle,
                 focusedTextField: focusedTextField
             )
         }

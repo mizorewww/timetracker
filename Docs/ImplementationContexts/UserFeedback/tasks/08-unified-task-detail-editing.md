@@ -11,8 +11,9 @@
 - [x] 已让 autosave rebase 原位推进 baseline/持久 ID，并在 checklist 身份不完整时失败为冲突，避免覆盖聚焦输入或漂移身份。
 - [x] 已让所有任务身份展示观察统一的 read-model revision；Today 返回后立即刷新重命名任务，不重建整组视图。
 - [x] 已把受自动保存语义影响的 4 条 UI 测试迁移为真实保存、导航 flush、返回刷新和重开验证；iPhone/iPad 矩阵通过。
-- [~] 正在把 Markdown 备注改为默认预览、按需展开编辑的交互。
-- 下一 checkpoint：完成 Notes 的原生 Edit/Done 交互、契约测试和设备截图。
+- [x] 已把详情与恢复页的 Markdown 备注改为默认预览、原生 Edit/Done 按需展开编辑；iPhone/iPad 编辑、保存和截图验收通过。
+- [~] 正在做 Task 08 最终跨平台回归、Release 全设备安装与完成态收尾。
+- 下一 checkpoint：补齐可执行的 macOS UI 验收，运行 Release 全设备安装，清理资源并由 Codex 标记反馈完成。
 
 ## 反馈边界
 
@@ -28,7 +29,7 @@
 - [x] 核对 MarkdownView 当前依赖、API、平台支持和许可证
 - [x] 形成 iPhone、iPad、macOS 的 HIG 布局与编辑交互决策
 - [x] 用失败测试锁定入口、统一页面、Markdown 与自动保存语义
-- [ ] 实现并分小 checkpoint 提交
+- [x] 实现并分小 checkpoint 提交
 - [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
@@ -48,6 +49,7 @@
 - [x] MarkdownView API、依赖质量和测试覆盖审计：4.1.7 精确锁定、MIT、平台兼容；保留链接/高度薄适配层。
 - [x] 独立复核自动保存 UI 接线中的生命周期、导航与恢复竞态。
 - [x] 盘点并规划需要迁移到自动保存语义的跨平台 UI 测试。
+- [x] 独立复核 Markdown 交互风格的全部调用点、焦点 flush 顺序、旧布尔参数清除和 UI 覆盖边界。
 
 ## 已确认的实现决策
 
@@ -73,6 +75,7 @@
 - 静态审计阶段不启动模拟器、TestManager 或 Instruments。
 - 后续设备矩阵由 primary agent 分配唯一 UDID 并记录；每个批次完成后清理 owned 资源。
 - 自动保存 UI 批次 owned iPhone `947175E8-8402-4408-9F81-DE78BD78EB65` 与 iPad `6109B5C2-EE38-4D99-B7E2-6EB031B366A1` 均已终止 app、关机并删除。
+- Markdown UI 批次 owned iPhone `DB305452-21C4-499D-9697-ECFC7E8EB642` 与 iPad `24FAE1A7-E5D2-47F2-B746-96B195EDEA9E` 均已确认 app 退出、关机并删除。
 - 当前没有 Task 08 owned simulator；`AnalyticsReview-iPhone17Pro` 属于其他工作，不触碰。
 
 ## Checkpoint 记录
@@ -85,7 +88,8 @@
 - [x] 导航注册替换加固：旧详情闭包释放时可能触发 token `deinit` 并重入 `unregister`，与 `register` 对同一属性的写访问冲突；延长旧注册生命周期到赋值结束，并以弱引用证明闭包独占 token 确实释放。负向对照移除修复后稳定触发原 `Fatal access conflict`；恢复后 macOS 导航守卫套件 17/17 通过，iPhone Today 原生返回、重开路径不再崩溃。
 - [x] Today 身份刷新加固：`taskIdentityPresentation(for:)` 统一观察 `taskReadModelRevision`，避免在 Today 层传递 revision 或用 `.id` 重建视图；精准 Observation 单测 1/1 通过。iPhone 严格 UI 回归在 30 秒防抖下证明系统返回主动 flush，返回行标题立即更新并可重开持久值（`Task08-iPhone-Today-run11.xcresult`）。
 - [x] 自动保存 UI 迁移：4 条旧 Save/Discard 测试改为聚焦中连续 autosave、30 秒测试防抖下的 sidebar/tab/system Back 主动 flush、列表身份刷新与重开持久值；仅 DEBUG+`--uitesting` 可覆盖防抖，生产仍固定 450ms。iPhone `Task08-iPhone-AutosaveMatrix-final.xcresult` 为 3 passed/1 platform skip，iPad `Task08-iPad-AutosaveMatrix-final.xcresult` 为 3 passed/1 platform skip，均 0 failures；iPhone/iPad 截图核验无操作遮挡，owned 设备已删除。
-- [~] 当前 checkpoint：Markdown 备注默认预览并可展开编辑。
+- [x] Markdown 展开编辑：用语义化 `TaskNotesInteractionStyle` 区分普通编辑器与详情/恢复预览；空备注也保持预览，原生 Edit 展开 `TextEditor` 并聚焦，Done 先清焦点触发 autosave flush 再回到 MarkdownView 渲染。普通编辑器保留源码/预览 segmented picker；三语言补齐专用可访问名称。macOS 契约/工作区/本地化共 13/13 通过；iPhone `Task08-Markdown-iPhone-run5.xcresult` 与 iPad `Task08-Markdown-iPad-run1.xcresult` 各 1/1 通过，均验证 60 秒防抖尚未触发时由原生返回即时保存并重开核对原始 Markdown；六张截图已人工核验。
+- [~] 当前 checkpoint：Task 08 最终回归、Release 全设备安装、反馈完成标记与活动链接清理。
 
 ## 当前验收阻塞
 

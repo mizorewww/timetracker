@@ -1,25 +1,31 @@
 import SwiftUI
 
+enum TaskNotesInteractionStyle: Hashable {
+    case editor
+    case expandablePreview
+}
+
 struct TaskNotesEditorSection: View {
     @Binding var notes: String
     let validationError: TaskPersistenceValidationError?
+    let interactionStyle: TaskNotesInteractionStyle
     let focusedTextField: FocusState<TaskEditorTextField?>.Binding
     @State private var mode: TaskNotesEditorMode
 
     init(
         notes: Binding<String>,
         validationError: TaskPersistenceValidationError?,
-        startsInPreview: Bool = false,
+        interactionStyle: TaskNotesInteractionStyle = .editor,
         focusedTextField: FocusState<TaskEditorTextField?>.Binding
     ) {
         _notes = notes
         self.validationError = validationError
+        self.interactionStyle = interactionStyle
         self.focusedTextField = focusedTextField
-        let hasNotes = notes.wrappedValue.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        ).isEmpty == false
         _mode = State(
-            initialValue: startsInPreview && hasNotes ? .preview : .source
+            initialValue: interactionStyle == .expandablePreview
+                ? .preview
+                : .source
         )
     }
 
@@ -38,17 +44,46 @@ struct TaskNotesEditorSection: View {
             HStack {
                 Text(.app("editor.task.notes"))
                 Spacer()
-                Picker(
-                    AppStrings.localized("editor.task.notes"),
-                    selection: $mode
-                ) {
-                    Text(AppStrings.edit).tag(TaskNotesEditorMode.source)
-                    Text(.app("task.notes.preview")).tag(TaskNotesEditorMode.preview)
+                modeControl
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var modeControl: some View {
+        switch interactionStyle {
+        case .editor:
+            Picker(
+                AppStrings.localized("editor.task.notes"),
+                selection: $mode
+            ) {
+                Text(AppStrings.edit).tag(TaskNotesEditorMode.source)
+                Text(.app("task.notes.preview")).tag(TaskNotesEditorMode.preview)
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .fixedSize()
+            .accessibilityIdentifier("task.editor.notes.mode")
+            .onChange(of: mode) { _, newMode in
+                guard newMode == .preview else { return }
+                focusedTextField.wrappedValue = nil
+            }
+        case .expandablePreview:
+            switch mode {
+            case .source:
+                Button(AppStrings.done, action: finishEditing)
+                    .accessibilityLabel(
+                        AppStrings.localized("task.notes.doneEditing")
+                    )
+                    .accessibilityIdentifier("task.editor.notes.done")
+            case .preview:
+                Button(AppStrings.edit) {
+                    mode = .source
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
-                .accessibilityIdentifier("task.editor.notes.mode")
+                .accessibilityLabel(
+                    AppStrings.localized("task.notes.edit")
+                )
+                .accessibilityIdentifier("task.editor.notes.edit")
             }
         }
     }
@@ -63,6 +98,10 @@ struct TaskNotesEditorSection: View {
                 .accessibilityLabel(AppStrings.localized("editor.task.notes"))
                 .accessibilityHint(validationError?.localizedDescription ?? "")
                 .accessibilityIdentifier("task.editor.notes.field")
+                .task {
+                    guard interactionStyle == .expandablePreview else { return }
+                    focusedTextField.wrappedValue = .notes
+                }
         case .preview:
             if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Label(
@@ -70,10 +109,16 @@ struct TaskNotesEditorSection: View {
                     systemImage: "note.text"
                 )
                 .foregroundStyle(.secondary)
+                .accessibilityIdentifier("task.editor.notes.empty")
             } else {
                 TaskNotesMarkdownPreview(markdown: notes)
             }
         }
+    }
+
+    private func finishEditing() {
+        focusedTextField.wrappedValue = nil
+        mode = .preview
     }
 }
 

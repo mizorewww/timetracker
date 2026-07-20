@@ -998,6 +998,118 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskDetailMarkdownPreviewExpandsToAutosavingEditor() throws {
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG",
+            autosaveDelayMilliseconds: 60_000
+        )
+        ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        let emptyPreview = app.descendants(matching: .any)[
+            "task.editor.notes.empty"
+        ].firstMatch
+        let editNotes = app.buttons["task.editor.notes.edit"].firstMatch
+        let notesField = app.descendants(matching: .any)[
+            "task.editor.notes.field"
+        ].firstMatch
+        let segmentedMode = app.descendants(matching: .any)[
+            "task.editor.notes.mode"
+        ].firstMatch
+        let markdown = "**Markdown autosave**"
+
+        scrollUntilHittable(editNotes, direction: .up, in: app)
+        XCTAssertTrue(
+            editNotes.waitForExistence(timeout: 5) && editNotes.isHittable
+        )
+        XCTAssertTrue(emptyPreview.waitForExistence(timeout: 3))
+        XCTAssertFalse(notesField.exists)
+        XCTAssertFalse(segmentedMode.exists)
+        try capture(
+            "\(screenshotPrefix)-task-detail-notes-empty-preview",
+            app: app
+        )
+
+        activate(editNotes)
+        XCTAssertTrue(
+            notesField.waitForExistence(timeout: 5) && notesField.isHittable
+        )
+        #if os(iOS)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3))
+        #else
+        activate(notesField)
+        #endif
+        replaceText(markdown, in: notesField)
+        XCTAssertEqual(notesField.value as? String ?? notesField.label, markdown)
+
+        let doneNotes = app.buttons["task.editor.notes.done"].firstMatch
+        scrollUntilHittable(doneNotes, direction: .down, in: app)
+        XCTAssertTrue(
+            doneNotes.waitForExistence(timeout: 5) && doneNotes.isHittable
+        )
+        try capture(
+            "\(screenshotPrefix)-task-detail-notes-expanded-editor",
+            app: app
+        )
+        activate(doneNotes)
+
+        XCTAssertTrue(notesField.waitForNonExistence(timeout: 5))
+        #if os(iOS)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+        #endif
+        let markdownPreview = app.descendants(matching: .any)[
+            "task.detail.notes.markdown"
+        ].firstMatch
+        XCTAssertTrue(markdownPreview.waitForExistence(timeout: 5))
+        XCTAssertTrue(editNotes.waitForExistence(timeout: 3))
+        XCTAssertFalse(doneNotes.exists)
+        try capture(
+            "\(screenshotPrefix)-task-detail-notes-markdown-preview",
+            app: app
+        )
+
+        let tasksBack = taskDetailBackButton(
+            to: "Tasks",
+            in: app
+        )
+        XCTAssertTrue(
+            tasksBack.waitForExistence(timeout: 5) && tasksBack.isHittable
+        )
+        activate(tasksBack)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 5)
+        )
+        openTaskDetailFromTasks(named: "Read Apple HIG", in: app)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        let persistedEditNotes = app.buttons[
+            "task.editor.notes.edit"
+        ].firstMatch
+        scrollUntilHittable(persistedEditNotes, direction: .up, in: app)
+        XCTAssertTrue(
+            persistedEditNotes.waitForExistence(timeout: 5) &&
+                persistedEditNotes.isHittable
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail.notes.markdown"]
+                .firstMatch.waitForExistence(timeout: 5)
+        )
+        activate(persistedEditNotes)
+
+        let persistedNotesField = app.descendants(matching: .any)[
+            "task.editor.notes.field"
+        ].firstMatch
+        XCTAssertTrue(persistedNotesField.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            persistedNotesField.value as? String ??
+                persistedNotesField.label,
+            markdown
+        )
+    }
+
+    @MainActor
     func testTaskDetailSidebarNavigationFlushesAutosave() throws {
         let app = launchApp(
             route: "task-detail",

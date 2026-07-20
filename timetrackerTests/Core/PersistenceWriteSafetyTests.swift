@@ -61,6 +61,7 @@ struct PersistenceWriteSafetyTests {
     @Test @MainActor
     func standaloneRepositorySaveFailureRollsBackPendingChanges() throws {
         let directory = try makeStoreDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
         let storeURL = directory.appending(path: "persistence.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         let taskID = UUID()
@@ -113,6 +114,103 @@ struct PersistenceWriteSafetyTests {
         #expect(restored.deviceID == "remote-device")
         #expect(restored.clientMutationID == originalMutationID)
         #expect(context.hasChanges == false)
+    }
+
+    @Test @MainActor
+    func rapidRestartSaveFailureRollsBackTheWholeCanonicalization() throws {
+        let directory = try makeStoreDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appending(path: "persistence.store")
+        let schema = TimeTrackerModelRegistry.currentSchema
+        let taskID = UUID()
+        let sessionID = UUID()
+        let predecessorID = UUID()
+        let startedAt = Date(timeIntervalSinceReferenceDate: 75_000)
+        let stoppedAt = startedAt.addingTimeInterval(120)
+        let restartedAt = stoppedAt.addingTimeInterval(30)
+
+        try initializeWritableStore(at: storeURL, schema: schema) { context in
+            let task = TaskNode(
+                title: "Rollback rapid restart",
+                parentID: nil,
+                deviceID: "seed",
+                colorHex: nil,
+                iconName: nil
+            )
+            task.id = taskID
+            task.createdAt = startedAt
+            task.updatedAt = startedAt
+
+            let session = TimeSession(
+                taskID: taskID,
+                source: .timer,
+                deviceID: "seed",
+                startedAt: startedAt,
+                titleSnapshot: task.title
+            )
+            session.id = sessionID
+            session.endedAt = stoppedAt
+            session.createdAt = startedAt
+            session.updatedAt = stoppedAt
+
+            let predecessor = TimeSegment(
+                sessionID: sessionID,
+                taskID: taskID,
+                source: .timer,
+                deviceID: "seed",
+                startedAt: startedAt,
+                endedAt: stoppedAt
+            )
+            predecessor.id = predecessorID
+            predecessor.createdAt = startedAt
+            predecessor.updatedAt = stoppedAt
+
+            context.insert(task)
+            context.insert(session)
+            context.insert(predecessor)
+        }
+
+        let readOnlyContainer = try makeReadOnlyContainer(
+            at: storeURL,
+            schema: schema
+        )
+        let coordinator = StoreScopedTimerCommandCoordinator(
+            container: readOnlyContainer,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "restart",
+            nowProvider: { restartedAt }
+        )
+
+        #expect(throws: (any Error).self) {
+            try coordinator.start(taskID: taskID, source: .watch)
+        }
+
+        let verificationContext = ModelContext(readOnlyContainer)
+        let sessions = try verificationContext.fetch(
+            FetchDescriptor<TimeSession>()
+        )
+        let segments = try verificationContext.fetch(
+            FetchDescriptor<TimeSegment>()
+        )
+        let session = try #require(
+            sessions.deduplicatedByID().first { $0.id == sessionID }
+        )
+        let predecessor = try #require(
+            segments.deduplicatedByID().first { $0.id == predecessorID }
+        )
+        let replacementID = TimerRapidRestartPolicy().replacementSegmentID(
+            predecessorSegmentID: predecessorID
+        )
+
+        #expect(sessions.count == 1)
+        #expect(segments.count == 1)
+        #expect(session.endedAt == stoppedAt)
+        #expect(session.updatedAt == stoppedAt)
+        #expect(predecessor.endedAt == stoppedAt)
+        #expect(predecessor.deletedAt == nil)
+        #expect(predecessor.updatedAt == stoppedAt)
+        #expect(segments.contains { $0.id == replacementID } == false)
+        #expect(verificationContext.hasChanges == false)
     }
 
     @MainActor

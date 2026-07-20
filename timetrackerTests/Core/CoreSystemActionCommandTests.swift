@@ -277,6 +277,74 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
+    func shortcutRapidRestartCoalescesThroughSystemActionCommands() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Shortcut rapid restart",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let handler = makeTestSystemActionCommandHandler()
+        let first = try handler.startTimerMutation(
+            taskID: task.id,
+            source: .shortcut,
+            container: context.container
+        )
+        let predecessorID = try #require(first.subjectSegmentID)
+        let fixtureContext = ModelContext(context.container)
+        let predecessor = try #require(
+            try fixtureContext.fetch(FetchDescriptor<TimeSegment>())
+                .first { $0.id == predecessorID }
+        )
+        let session = try #require(
+            try fixtureContext.fetch(FetchDescriptor<TimeSession>())
+                .first { $0.id == predecessor.sessionID }
+        )
+        let sessionID = session.id
+        let backdatedStart = Date().addingTimeInterval(-120)
+        predecessor.startedAt = backdatedStart
+        session.startedAt = backdatedStart
+        try fixtureContext.save()
+
+        let stopped = try handler.stopTimerMutation(
+            segmentID: predecessorID,
+            container: context.container
+        )
+        let restarted = try handler.startTimerMutation(
+            taskID: task.id,
+            source: .shortcut,
+            container: context.container
+        )
+
+        let replacementID = try #require(restarted.subjectSegmentID)
+        #expect(stopped.subjectSegmentID == predecessorID)
+        #expect(
+            replacementID == TimerRapidRestartPolicy()
+                .replacementSegmentID(predecessorSegmentID: predecessorID)
+        )
+        #expect(restarted.tombstonedSegments.map(\.segmentID) == [predecessorID])
+        let verificationContext = ModelContext(context.container)
+        let rawSegments = try verificationContext.fetch(
+            FetchDescriptor<TimeSegment>()
+        )
+        let visibleSegments = try SwiftDataTimeTrackingRepository(
+            context: verificationContext,
+            deviceID: "test"
+        ).allSegments()
+        #expect(rawSegments.count == 2)
+        #expect(rawSegments.first { $0.id == predecessorID }?.deletedAt != nil)
+        #expect(visibleSegments.map(\.id) == [replacementID])
+        #expect(visibleSegments.first?.sessionID == sessionID)
+        #expect(visibleSegments.first?.startedAt == backdatedStart)
+        #expect(visibleSegments.first?.source == .shortcut)
+        #expect(visibleSegments.first?.endedAt == nil)
+    }
+
+    @Test @MainActor
     func systemActionExistingTimerStillReconcilesUnexpectedParallelTimers() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

@@ -1386,6 +1386,101 @@ struct CoreWatchCommandTests {
     }
 
     @Test @MainActor
+    func watchRapidRestartCoalescesThroughCommandProcessor() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Watch rapid restart",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let processor = makeTestWatchCommandProcessor(
+            receiptStore: InMemoryWatchCommandReceiptStore()
+        )
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_100)
+        let start = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: issuedAt,
+            deviceID: "watch-test"
+        )
+        guard case let .started(predecessorID) = try processor.process(
+            start,
+            context: context,
+            now: issuedAt
+        ) else {
+            Issue.record("The initial Watch timer did not start")
+            return
+        }
+        let fixtureContext = ModelContext(context.container)
+        let predecessor = try #require(
+            try fixtureContext.fetch(FetchDescriptor<TimeSegment>())
+                .first { $0.id == predecessorID }
+        )
+        let session = try #require(
+            try fixtureContext.fetch(FetchDescriptor<TimeSession>())
+                .first { $0.id == predecessor.sessionID }
+        )
+        let sessionID = session.id
+        let backdatedStart = issuedAt.addingTimeInterval(-120)
+        predecessor.startedAt = backdatedStart
+        session.startedAt = backdatedStart
+        try fixtureContext.save()
+
+        let stop = WatchTimerCommand(
+            id: UUID(),
+            type: .stopSegment,
+            taskID: nil,
+            segmentID: predecessorID,
+            issuedAt: issuedAt.addingTimeInterval(1),
+            deviceID: "watch-test"
+        )
+        let stopped = try processor.process(
+            stop,
+            context: context,
+            now: stop.issuedAt
+        )
+        let restart = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: issuedAt.addingTimeInterval(2),
+            deviceID: "watch-test"
+        )
+        let restarted = try processor.process(
+            restart,
+            context: context,
+            now: restart.issuedAt
+        )
+
+        let replacementID = TimerRapidRestartPolicy()
+            .replacementSegmentID(predecessorSegmentID: predecessorID)
+        #expect(stopped == .stopped(predecessorID))
+        #expect(restarted == .started(replacementID))
+        let verificationContext = ModelContext(context.container)
+        let rawSegments = try verificationContext.fetch(
+            FetchDescriptor<TimeSegment>()
+        )
+        let visibleSegments = try SwiftDataTimeTrackingRepository(
+            context: verificationContext,
+            deviceID: "test"
+        ).allSegments()
+        #expect(rawSegments.count == 2)
+        #expect(rawSegments.first { $0.id == predecessorID }?.deletedAt != nil)
+        #expect(visibleSegments.map(\.id) == [replacementID])
+        #expect(visibleSegments.first?.sessionID == sessionID)
+        #expect(visibleSegments.first?.startedAt == backdatedStart)
+        #expect(visibleSegments.first?.source == .watch)
+        #expect(visibleSegments.first?.endedAt == nil)
+    }
+
+    @Test @MainActor
     func watchStartReReadsTheExclusiveTimerSettingInsideTheStoreTransaction() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

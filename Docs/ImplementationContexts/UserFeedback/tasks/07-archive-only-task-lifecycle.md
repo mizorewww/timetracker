@@ -5,8 +5,11 @@
 
 ## 当前阶段
 
-- 已领取唯一 `[~]` 反馈项，正在建立实现边界并全面盘点任务删除与归档路径。
-- 尚未修改产品代码；下一 checkpoint 是完成领域、界面、测试与迁移语义审计。
+- 已完成领域、持久化、同步、界面、HIG、测试和依赖的静态审计。
+- 已确认历史提交 `8a22f8b` 与 `bfe3756` 移除了任务删除界面和领域命令，当前没有新的
+  用户任务删除入口可删。
+- [~] 正在用失败契约测试锁定剩余语义缺口；下一 checkpoint 是统一产品文案、菜单与
+  归档持久化不变量。
 
 ## 实现边界
 
@@ -20,10 +23,11 @@
 
 ## 验收清单
 
-- [ ] 盘点所有任务删除、归档、解除归档调用点与数据不变量
-- [ ] 建立归档专用领域 API，并移除任务硬删除功能代码
-- [ ] 在设置中实现已归档任务入口、列表与解除归档
-- [ ] 将 Task 页面左滑删除替换为归档，并提供非手势入口
+- [x] 盘点所有任务删除、归档、解除归档调用点与数据不变量
+- [x] 确认归档专用领域 API 已存在，任务硬删除功能代码已经移除
+- [x] 确认设置中已有归档入口、列表与父级优先的解除归档
+- [x] 确认 Task 页面左滑已是归档，详情 More 已提供非手势入口
+- [~] 修正剩余归档语义、跨平台入口与分布式持久化边界
 - [ ] 增补领域、界面契约和跨平台回归测试
 - [ ] 验证 iPhone、iPad、macOS 普通路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
@@ -38,20 +42,90 @@
 - 使用系统 `List`、`swipeActions`、`Menu`、`NavigationStack`/`NavigationSplitView`
   与现有数据层，不自绘系统组件。
 - 任务生命周期规则放在可测试的模型或服务层；SwiftUI 视图只调用命名明确的归档动作。
-- 初步判断本项不需要第三方依赖。若审计发现成熟库能显著降低同步或迁移风险，先核对
-  官方资料、维护状态、许可证、平台兼容性以及至少 1k GitHub stars，再记录采用理由。
+- context menu 隐藏不可用动作；详情 More 这类普通菜单可以保留简短的 disabled
+  `Archive`，但不把错误说明写成动作标题。
+- macOS 的任务动作必须有菜单栏入口；归档命令没有默认系统快捷键，因此不擅自分配按键。
+- 本项不增加第三方依赖。已核对 Apple SwiftData/SwiftUI 官方资料，以及成熟候选
+  Swift Composable Architecture（约 14.7k stars）和 SwiftUIX（约 8k stars）；
+  它们不能降低这个现有领域命令的同步或迁移风险，引入反而扩大架构和回归面。实现继续使用
+  系统 `SwiftData`、`List.swipeActions`、`Menu`、`contextMenu`、Swift Testing/XCTest。
+
+## 静态审计结论
+
+### 产品级调用图
+
+- 归档：Task 行/侧栏/详情菜单 → `archiveTaskProtectingUnsavedChanges` →
+  `archiveSelectedTask` → `StoreScopedTaskLifecycleCommandCoordinator.archive` →
+  `TaskDraftCommandHandler.archive` → `TaskRepository.archiveTask`。
+- 解除归档：Settings 已归档列表 → `unarchiveTask` →
+  `StoreScopedTaskLifecycleCommandCoordinator.unarchive` →
+  `TaskDraftCommandHandler.unarchive` → `TaskRepository.unarchiveTask`。
+- coordinator 在同一 store lock 下用 fresh context 重新读取整棵子树，同时检查普通计时和
+  Pomodoro；归档只写选中节点，后代通过父级归档传递隐藏；解除归档要求父级优先。
+- 当前 Task UI、repository、use case、coordinator、store facade、macOS Commands、
+  App Intent 与 deep-link 命令中均不存在 `deleteTask`、`softDeleteTask`、
+  `deleteSelectedTask` 或任务 trash/destructive 入口。
+
+### 必须保留的内部墓碑
+
+- `TaskNode.deletedAt` 与 `TaskRecord.deletedAt` 是旧 schema、CloudKit LWW 去重、快照覆盖恢复、
+  Reset All、Demo 清理和 90 天后物理清理的兼容状态，不是产品生命周期动作。
+- 墓碑必须先参与 UUID 去重再被可见查询过滤；提前删除字段或生产环境物理清理会让离线设备的
+  旧副本复活。
+- `SyncDataSnapshot+RestoreTasks` 用墓碑表达“目标快照中已不存在”的记录；全局 Reset 与
+  CloudKit 灾难恢复也必须保留。
+- 时间段、清单项、Inbox、倒计时、Pomodoro、Task Category、AI 未落库草稿和恢复 JSON
+  的删除/移除属于其他实体或系统维护，不在当前任务范围，不能因名称相似而删除。
+
+### 仍需修正的真实缺口
+
+1. Task context menu 在活动计时子树上显示一条 disabled 长错误句；应在 context menu 隐藏，
+   在详情 More 中保留简短 disabled `Archive`。
+2. Settings 的 Unarchive 是 `arrow.uturn.backward` 纯图标按钮；应显示明确的
+   `Label("Unarchive", …)` 并保留 iOS 44pt / macOS 28pt 最小目标。
+3. macOS 菜单栏没有“归档所选任务”；应增加无快捷键、按选择与活动子树状态置灰的原生命令。
+4. 三套本地化仍把旧墓碑历史称为 Deleted Task，并把归档描述成 hidden/return；应统一为
+   Archive / Unarchive / Unavailable Task，底层 key 可保留以兼容调用点。
+5. 归档/解除归档写入使用普通 `Date()`；面对来自其他设备的未来 `updatedAt` 或重复 UUID
+   行，LWW 可能让本次动作输给旧副本。应使用现有严格占优 mutation date 并增补时钟偏移测试。
+6. 归档任务 deep link 目前可能返回 handled，却因任务不可见而没有打开详情；应明确拒绝，
+   且不改变 destination、selection 或草稿。
+7. 现有 UI round trip 直接跳过 macOS，并把 iPad 截图写成 `iphone-*`；应改成稳定 demo
+   任务和三平台独立命名。
+
+### 明确不在本 checkpoint 扩大的事项
+
+- 不重构整个 macOS Settings 信息架构；这不是当前 archive-only 功能的阻断项。
+- 不新增 schema 或删除 `deletedAt`。
+- 不给归档命令自创键盘快捷键。
+- 不处理 `Docs/userfeedback.md` 中当前 `[~]` 之后的任务。
 
 ## 子代理编排
 
-- 待分派：任务领域与持久化层的删除/归档路径静态审计。
-- 待分派：iOS、iPadOS、macOS 设置与 Task 页面交互入口静态审计。
-- 待分派：现有测试、迁移、同步兼容性与库选择独立复审。
+- [x] 领域与持久化审计：确认产品删除管线已移除，枚举墓碑/CloudKit/恢复的保留边界，并发现
+  archive/unarchive 的未来时间戳 LWW 风险。
+- [x] UI/HIG 审计：确认左滑、详情与 Settings 已有主链路，发现 context menu、可见
+  Unarchive、macOS 菜单和历史文案缺口。
+- [x] 测试/迁移/依赖复审：确认不需要 schema bump 或第三方库，发现 deep link、
+  maintenance 不变量与跨平台 UI 覆盖缺口。
+- 三个子代理均只读，未编辑、构建、占用模拟器或提交。
 
 ## 运行资源所有权
 
 - 当前仅进行静态审计，不占用模拟器、TestManager 或 Instruments。
 - 设备矩阵开始前，在此记录每台 owned 模拟器的名称与 UDID；批次结束后逐一清理。
+- 基线 macOS 测试使用独立 `/tmp/TimeTrackerTask07*` DerivedData/result bundle；测试完成后无
+  残留 `xcodebuild`/`xctest`，临时产物已移除，未启动模拟器。
+
+## 基线验证
+
+- `StoreScopedTaskLifecycleCommandCoordinatorTests` + `LocalizationContractTests`：
+  17 passed，0 failed。
+- 完整 `TaskUIContractTests`：40 passed，0 failed。
+- 两次均使用 Apple Development 签名，没有关闭 code signing。
+- 基线证明历史实现可编译、现有归档链路成立；它不覆盖上面列出的剩余语义缺口。
 
 ## Checkpoint 记录
 
-- 本 checkpoint：领取当前反馈项，建立 `[~]`、独立实现记忆与活动软链接。
+- `55cc610`：领取当前反馈项，建立 `[~]`、独立实现记忆与活动软链接。
+- 本 checkpoint：完成 archive-only 全面静态审计、基线验证、HIG/依赖决策与实现边界。

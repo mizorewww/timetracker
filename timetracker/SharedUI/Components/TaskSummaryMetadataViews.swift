@@ -46,9 +46,7 @@ struct TaskSummaryMetadataLine: View {
 
     private var trailingFacts: some View {
         HStack(spacing: 8) {
-            if metadata.isRunning {
-                TaskRunningIndicator()
-            }
+            passiveStatusGroup
 
             if let workedSeconds = metadata.workedSeconds {
                 Text(DurationFormatter.compact(workedSeconds))
@@ -63,31 +61,92 @@ struct TaskSummaryMetadataLine: View {
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
-
-            accessory
         }
     }
 
     @ViewBuilder
-    private var accessory: some View {
-        switch metadata.accessory {
-        case .none:
-            EmptyView()
-        case .selected:
-            Image(systemName: "checkmark")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.tint)
-                .frame(minWidth: 24, minHeight: 24)
-                .accessibilityHidden(true)
+    private var passiveStatusGroup: some View {
+        let statuses = TaskPickerPassiveStatus.activeStates(
+            isRunning: metadata.isRunning,
+            isSelected: metadata.accessory.isSelected
+        )
+        if statuses.isEmpty == false {
+            TaskPickerPassiveStatusGroup(statuses: statuses)
         }
+    }
+}
+
+enum TaskPickerPassiveStatus: CaseIterable, Hashable {
+    case running
+    case selected
+
+    var systemImage: String {
+        switch self {
+        case .running:
+            "timer.circle.fill"
+        case .selected:
+            "checkmark.circle.fill"
+        }
+    }
+
+    static func activeStates(
+        isRunning: Bool,
+        isSelected: Bool
+    ) -> [TaskPickerPassiveStatus] {
+        var states: [TaskPickerPassiveStatus] = []
+        if isRunning {
+            states.append(.running)
+        }
+        if isSelected {
+            states.append(.selected)
+        }
+        return states
+    }
+}
+
+private struct TaskPickerPassiveStatusGroup: View {
+    let statuses: [TaskPickerPassiveStatus]
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(statuses, id: \.self) { status in
+                switch status {
+                case .running:
+                    TaskRunningIndicator()
+                case .selected:
+                    TaskSelectedIndicator()
+                }
+            }
+        }
+    }
+}
+
+private struct TaskPickerPassiveStatusIcon: View {
+    let status: TaskPickerPassiveStatus
+
+    var body: some View {
+        Image(systemName: status.systemImage)
+            .symbolRenderingMode(.monochrome)
+            .font(.caption.weight(.semibold))
+            .imageScale(.medium)
+            .foregroundStyle(status == .running ? Color.green : Color.accentColor)
+            .frame(
+                width: TaskPickerIndicatorMetrics.passiveSlotDimension,
+                height: TaskPickerIndicatorMetrics.passiveSlotDimension
+            )
     }
 }
 
 struct TaskRunningIndicator: View {
     var body: some View {
-        Image(systemName: "timer")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.green)
+        TaskPickerPassiveStatusIcon(status: .running)
             .accessibilityLabel(AppStrings.running)
+    }
+}
+
+private struct TaskSelectedIndicator: View {
+    var body: some View {
+        TaskPickerPassiveStatusIcon(status: .selected)
+            .accessibilityHidden(true)
     }
 }

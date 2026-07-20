@@ -244,15 +244,6 @@ struct SharedComponentsContractTests {
         let home = try sourceText(
             "timetracker/Features/Home/Rows/HomeTimerRows.swift"
         )
-        let iconControlDimensionSource =
-            "private var iconControlDimension: CGFloat {\n" +
-            "        #if os(iOS)\n" +
-            "        54\n" +
-            "        #else\n" +
-            "        28\n" +
-            "        #endif\n" +
-            "    }"
-
         #expect(tasks.contains("TaskSummaryRow("))
         #expect(sidebar.contains("TaskSummaryRow("))
         #expect(picker.contains("TaskSummaryRow("))
@@ -269,14 +260,9 @@ struct SharedComponentsContractTests {
                     "                        trailingFacts"
             )
         )
-        #expect(
-            summary.contains(
-                "if metadata.isRunning {\n" +
-                    "                TaskRunningIndicator()\n" +
-                    "            }\n\n" +
-                    "            if let workedSeconds = metadata.workedSeconds"
-            )
-        )
+        #expect(summary.contains("TaskPickerPassiveStatus.activeStates("))
+        #expect(summary.contains("isRunning: metadata.isRunning"))
+        #expect(summary.contains("isSelected: metadata.accessory.isSelected"))
         #expect(picker.contains("TaskTimerActionButton("))
         #expect(
             picker.components(separatedBy: "TaskTimerActionButton(").count >= 3
@@ -286,17 +272,15 @@ struct SharedComponentsContractTests {
         #expect(picker.contains("pickerActionLabelStyle: TaskTimerActionLabelStyle {\n        .iconOnly"))
         #expect(home.contains("TaskTimerActionButton("))
         #expect(timerAction.contains("enum TaskTimerActionLabelStyle"))
-        #expect(
-            timerAction.contains(
-                "width: usesIconOnly ? iconControlDimension : nil"
-            )
-        )
         #expect(timerAction.contains("private var minimumControlHeight: CGFloat"))
         #expect(timerAction.contains("private var minimumLabelDimension: CGFloat"))
-        #expect(timerAction.contains("private var iconGlyphCanvasDimension: CGFloat"))
-        #expect(timerAction.contains(".resizable()"))
-        #expect(timerAction.contains(".scaledToFit()"))
-        #expect(timerAction.contains(iconControlDimensionSource))
+        #expect(timerAction.contains("TaskPickerIndicatorMetrics.actionControlDimension"))
+        #expect(timerAction.contains(".symbolRenderingMode(.monochrome)"))
+        #expect(timerAction.contains(".imageScale(.large)"))
+        #expect(timerAction.contains(".resizable()") == false)
+        #expect(timerAction.contains(".scaledToFit()") == false)
+        #expect(timerAction.contains(".buttonStyle(TaskPickerIconButtonStyle())"))
+        #expect(timerAction.contains("configuration.isPressed"))
         #expect(timerAction.contains(".controlSize(platformControlSize)"))
         #expect(timerAction.contains("private var platformControlSize: ControlSize"))
         #expect(timerAction.contains(".labelStyle(.titleAndIcon)"))

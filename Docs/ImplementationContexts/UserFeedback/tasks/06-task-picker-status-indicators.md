@@ -8,7 +8,8 @@
 - 已按顺序领取反馈项并完成静态、HIG、测试与 iPhone 基线截图盘点，尚未修改产品代码。
 - 基线证明 Stop / Start 按钮外框同尺寸、同尾列，但 `stop.fill` / `play.fill`
   被强制缩进同一方形画布后，可见包络与光学中心仍不同。
-- 下一步先建立可执行动作与被动状态两层共享样式契约并补强测试，再修改产品代码。
+- 已实现可执行动作与被动状态两层共享样式，并通过纯契约与 iPhone 真实 UI 验证。
+- 下一步补强同一 UUID 的 Stop → Start 语义测试，并完成 iPad/macOS 矩阵。
 
 ## 实现边界
 
@@ -20,8 +21,8 @@
 ## 验收清单
 
 - [x] 盘点所有任务选择器及其运行状态来源
-- [ ] 定义并测试共享状态指示的布局与语义契约
-- [ ] 实现 Start Another Timer 及其他同类 picker 的统一样式
+- [x] 定义并测试共享状态指示的布局与语义契约
+- [x] 实现 Start Another Timer 及其他同类 picker 的统一样式
 - [ ] 验证 iPhone、iPad、macOS 普通路径并截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
@@ -72,3 +73,14 @@
 ## Checkpoint 记录
 
 - `d94dfed`：领取当前反馈项，建立 `[~]` 与活动实现记忆链接。
+- `7636b03`：完成调用点、状态数据流、HIG、测试与 iPhone 基线截图审计。
+- 共享样式 checkpoint（待提交）：
+  - Red：新增共享类型契约后，测试按预期因类型尚不存在而编译失败。
+  - Green：最终共享契约 21/21 通过；现有真实 UI test 1/1 通过。
+  - HIG 独立复审发现 plain icon button 缺少明确按压反馈；已加入共享
+    `TaskPickerIconButtonStyle`，统一 disabled/pressed opacity，不逐符号缩放或偏移。
+  - macOS arm64 Debug 原生构建成功，并由付费开发者身份与 provisioning profile 签名。
+  - 初版截图：
+    `build/Task06PickerShots/initial-implementation-iPhone/C1A5D97A-5009-4A46-AC9A-698AA4C9F15D.png`。
+  - 视觉结论：Stop / Start 使用相同圆形外包络、相同 centerX 和尾列，图形不再依赖
+    方形画布的逐形状缩放。

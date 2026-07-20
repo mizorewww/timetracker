@@ -5,6 +5,75 @@ enum TaskTimerActionLabelStyle {
     case titleAndIcon
 }
 
+enum TaskTimerActionKind: CaseIterable, Equatable {
+    case start
+    case switchTimer
+    case alreadyRunning
+    case stop
+
+    var compactSystemImage: String {
+        switch self {
+        case .start:
+            "play.circle.fill"
+        case .switchTimer:
+            "arrow.left.arrow.right.circle.fill"
+        case .alreadyRunning:
+            "checkmark.circle.fill"
+        case .stop:
+            "stop.circle.fill"
+        }
+    }
+
+    var labeledSystemImage: String {
+        switch self {
+        case .start:
+            "play.fill"
+        case .switchTimer:
+            "arrow.left.arrow.right"
+        case .alreadyRunning:
+            "checkmark"
+        case .stop:
+            "stop.fill"
+        }
+    }
+}
+
+enum TaskPickerIndicatorMetrics {
+    static var actionControlDimension: CGFloat {
+        #if os(iOS)
+        54
+        #else
+        28
+        #endif
+    }
+
+    static var passiveSlotDimension: CGFloat {
+        #if os(iOS)
+        20
+        #else
+        16
+        #endif
+    }
+}
+
+private struct TaskPickerIconButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(opacity(isPressed: configuration.isPressed))
+            .animation(
+                .easeOut(duration: 0.12),
+                value: configuration.isPressed
+            )
+    }
+
+    private func opacity(isPressed: Bool) -> Double {
+        guard isEnabled else { return 0.45 }
+        return isPressed ? 0.55 : 1
+    }
+}
+
 struct TaskTimerActionButton: View {
     let taskTitle: String
     let taskColor: Color
@@ -24,59 +93,70 @@ struct TaskTimerActionButton: View {
             : AppStrings.localized("timer.action.stop")
     }
 
-    private var actionSystemImage: String {
-        activeSegment == nil ? command.systemImage : "stop.fill"
+    private var actionKind: TaskTimerActionKind {
+        guard activeSegment == nil else { return .stop }
+        switch command {
+        case .start:
+            return .start
+        case .switchTimer:
+            return .switchTimer
+        case .alreadyRunning:
+            return .alreadyRunning
+        }
     }
 
+    @ViewBuilder
     var body: some View {
-        Button(role: activeSegment == nil ? nil : .destructive, action: action) {
-            actionLabel
+        if usesIconOnly {
+            configuredButton {
+                Image(systemName: actionKind.compactSystemImage)
+                    .symbolRenderingMode(.monochrome)
+                    .font(.title2.weight(.semibold))
+                    .imageScale(.large)
+                    .foregroundStyle(actionColor)
+                    .frame(
+                        width: TaskPickerIndicatorMetrics.actionControlDimension,
+                        height: TaskPickerIndicatorMetrics.actionControlDimension
+                    )
+                    .contentShape(Circle())
+                    .accessibilityHidden(true)
+            }
+            .buttonStyle(TaskPickerIconButtonStyle())
+        } else {
+            configuredButton {
+                Label(actionTitle, systemImage: actionKind.labeledSystemImage)
+                    .labelStyle(.titleAndIcon)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(actionColor)
+                    .frame(minHeight: minimumLabelDimension)
+            }
+            .controlSize(platformControlSize)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .tint(actionColor)
+            .frame(minHeight: minimumControlHeight)
         }
-        .controlSize(platformControlSize)
-        .buttonStyle(.bordered)
-        .buttonBorderShape(usesIconOnly ? .circle : .capsule)
-        .tint(actionColor)
-        .frame(
-            width: usesIconOnly ? iconControlDimension : nil,
-            height: usesIconOnly ? iconControlDimension : nil
+    }
+
+    private func configuredButton<Label: View>(
+        @ViewBuilder label: () -> Label
+    ) -> some View {
+        Button(
+            role: activeSegment == nil ? nil : .destructive,
+            action: action,
+            label: label
         )
-        .frame(minHeight: minimumControlHeight)
-        .contentShape(Rectangle())
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier(accessibilityIdentifier)
         .help(accessibilityLabel)
     }
 
-    @ViewBuilder
-    private var actionLabel: some View {
-        if usesIconOnly {
-            Image(systemName: actionSystemImage)
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(actionColor)
-                .frame(
-                    width: iconGlyphCanvasDimension,
-                    height: iconGlyphCanvasDimension
-                )
-                .frame(
-                    width: minimumLabelDimension,
-                    height: minimumLabelDimension,
-                    alignment: .center
-                )
-        } else {
-            Label(actionTitle, systemImage: actionSystemImage)
-                .labelStyle(.titleAndIcon)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(actionColor)
-                .frame(minHeight: minimumLabelDimension)
-        }
-    }
-
     private var actionColor: Color {
-        activeSegment == nil ? taskColor : .red
+        guard activeSegment == nil else { return .red }
+        return usesIconOnly ? .accentColor : taskColor
     }
 
     private var accessibilityLabel: String {
@@ -107,22 +187,6 @@ struct TaskTimerActionButton: View {
         26
         #else
         16
-        #endif
-    }
-
-    private var iconGlyphCanvasDimension: CGFloat {
-        #if os(iOS)
-        18
-        #else
-        12
-        #endif
-    }
-
-    private var iconControlDimension: CGFloat {
-        #if os(iOS)
-        54
-        #else
-        28
         #endif
     }
 

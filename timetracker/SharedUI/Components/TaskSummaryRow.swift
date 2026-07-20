@@ -20,13 +20,17 @@ enum TaskSummaryRowAccessory {
     case none
     case selected
 
-    var isVisible: Bool {
+    var isSelected: Bool {
         switch self {
         case .none:
             false
         case .selected:
             true
         }
+    }
+
+    var isVisible: Bool {
+        isSelected
     }
 }
 

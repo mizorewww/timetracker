@@ -69,14 +69,6 @@ struct TimerPickerUIContractTests {
         let projectionSource = try sourceText(
             "timetracker/SharedUI/Components/TaskHierarchyProjection.swift"
         )
-        let iconControlDimensionSource =
-            "private var iconControlDimension: CGFloat {\n" +
-            "        #if os(iOS)\n" +
-            "        54\n" +
-            "        #else\n" +
-            "        28\n" +
-            "        #endif\n" +
-            "    }"
 
         #expect(summarySource.contains("HStack(alignment: .top, spacing: 12)"))
         #expect(pickerSource.contains("TaskSummaryRow("))
@@ -100,18 +92,66 @@ struct TimerPickerUIContractTests {
         #expect(pickerSource.contains("sectionKind == .hierarchy ? .hierarchical : .standard"))
         #expect(pickerSource.contains("placement: .navigationBarDrawer(displayMode: .always)"))
         #expect(pickerSource.contains(".listSectionSpacing(18)"))
-        #expect(pickerSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
-        #expect(pickerSource.contains(".tint(actionColor)"))
-        #expect(pickerSource.contains(".resizable()"))
-        #expect(pickerSource.contains(".scaledToFit()"))
-        #expect(pickerSource.contains("private var iconGlyphCanvasDimension: CGFloat"))
-        #expect(pickerSource.contains("width: iconGlyphCanvasDimension"))
-        #expect(pickerSource.contains("height: iconGlyphCanvasDimension"))
+        #expect(pickerSource.contains("TaskTimerActionKind"))
+        #expect(pickerSource.contains("\"play.circle.fill\""))
+        #expect(pickerSource.contains("\"arrow.left.arrow.right.circle.fill\""))
+        #expect(pickerSource.contains("\"stop.circle.fill\""))
+        #expect(pickerSource.contains(".symbolRenderingMode(.monochrome)"))
+        #expect(pickerSource.contains(".imageScale(.large)"))
+        #expect(pickerSource.contains("TaskPickerIconButtonStyle"))
+        #expect(pickerSource.contains("configuration.isPressed"))
+        #expect(pickerSource.contains(".resizable()") == false)
+        #expect(pickerSource.contains(".scaledToFit()") == false)
         #expect(pickerSource.contains(".scaleEffect(") == false)
         #expect(pickerSource.contains(".offset(") == false)
-        #expect(pickerSource.contains("width: usesIconOnly ? iconControlDimension : nil"))
-        #expect(pickerSource.contains(iconControlDimensionSource))
+        #expect(pickerSource.contains("TaskPickerIndicatorMetrics.actionControlDimension"))
+        #expect(summarySource.contains("TaskPickerPassiveStatus"))
+        #expect(summarySource.contains("\"timer.circle.fill\""))
+        #expect(summarySource.contains("\"checkmark.circle.fill\""))
         #expect(pickerSource.contains("horizontalSizeClass") == false)
+    }
+
+    @Test
+    func pickerIndicatorsShareSystemCircleEnvelopesAndStableSlots() {
+        #expect(
+            TaskTimerActionKind.allCases.map(\.compactSystemImage) == [
+                "play.circle.fill",
+                "arrow.left.arrow.right.circle.fill",
+                "checkmark.circle.fill",
+                "stop.circle.fill"
+            ]
+        )
+        #expect(
+            TaskTimerActionKind.allCases.allSatisfy {
+                $0.compactSystemImage.hasSuffix(".circle.fill")
+            }
+        )
+        #expect(
+            TaskPickerPassiveStatus.allCases.map(\.systemImage) == [
+                "timer.circle.fill",
+                "checkmark.circle.fill"
+            ]
+        )
+        #expect(
+            TaskPickerPassiveStatus.activeStates(
+                isRunning: true,
+                isSelected: true
+            ) == [.running, .selected]
+        )
+        #expect(
+            TaskPickerPassiveStatus.activeStates(
+                isRunning: false,
+                isSelected: false
+            ).isEmpty
+        )
+
+        #if os(iOS)
+        #expect(TaskPickerIndicatorMetrics.actionControlDimension == 54)
+        #expect(TaskPickerIndicatorMetrics.passiveSlotDimension == 20)
+        #else
+        #expect(TaskPickerIndicatorMetrics.actionControlDimension == 28)
+        #expect(TaskPickerIndicatorMetrics.passiveSlotDimension == 16)
+        #endif
     }
 
     @Test

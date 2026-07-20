@@ -494,7 +494,7 @@ struct TaskUIContractTests {
         #expect(sharedSource.contains("struct TaskKindBadge") == false)
         #expect(sharedSource.contains("struct TaskStatusBadge") == false)
         #expect(sharedSource.contains("struct TaskRunningIndicator"))
-        #expect(sharedSource.contains("Image(systemName: \"timer\")"))
+        #expect(sharedSource.contains("\"timer.circle.fill\""))
     }
 
     @Test

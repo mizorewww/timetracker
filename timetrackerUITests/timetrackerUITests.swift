@@ -1,9 +1,17 @@
 import XCTest
+#if os(macOS)
+import AppKit
+#endif
 
 final class timetrackerUITests: XCTestCase {
     private enum ScrollDirection {
         case up
         case down
+    }
+
+    private struct InboxUITestItem {
+        let menu: XCUIElement
+        let titleField: XCUIElement
     }
 
     override func setUpWithError() throws {
@@ -1217,10 +1225,12 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("The Inbox task-routing interaction requires an iOS simulator.")
         #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        let menu = createInboxItem(
+        let screenshotPrefix = inboxScreenshotPrefix(in: app)
+        let createdItem = createInboxItem(
             "Prepare release screenshots",
             in: app
         )
+        let menu = createdItem.menu
         activate(menu)
 
         let route = app.buttons
@@ -1230,7 +1240,7 @@ final class timetrackerUITests: XCTestCase {
             ))
             .firstMatch
         XCTAssertTrue(route.waitForExistence(timeout: 3) && route.isHittable)
-        try capture("iphone-inbox-route-menu", app: app)
+        try capture("\(screenshotPrefix)-inbox-route-menu", app: app)
         activate(route)
 
         let picker = app.descendants(matching: .any)[
@@ -1244,7 +1254,6 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
-        try capture("iphone-inbox-child-task-parent-picker", app: app)
 
         let search = app.searchFields["Search tasks, paths, or notes"].firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
@@ -1259,11 +1268,20 @@ final class timetrackerUITests: XCTestCase {
             .matching(NSPredicate(format: "label == %@", "SwiftData Docs"))
             .firstMatch
         XCTAssertTrue(target.waitForExistence(timeout: 3) && target.isHittable)
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-inbox-child-task-parent-picker",
+            app: app
+        )
         activate(target)
 
         XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
         XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
-        try capture("iphone-inbox-created-child-task", app: app)
+        XCTAssertTrue(createdItem.titleField.waitForNonExistence(timeout: 5))
+        try capture(
+            "\(screenshotPrefix)-inbox-created-child-task",
+            app: app
+        )
         #endif
     }
 
@@ -1273,7 +1291,9 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("The Inbox category-routing interaction requires an iOS simulator.")
         #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        let menu = createInboxItem("Plan reading weekend", in: app)
+        let screenshotPrefix = inboxScreenshotPrefix(in: app)
+        let createdItem = createInboxItem("Plan reading weekend", in: app)
+        let menu = createdItem.menu
         activate(menu)
 
         let route = app.buttons
@@ -1296,7 +1316,6 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
-        try capture("iphone-inbox-category-task-picker", app: app)
 
         let search = app.searchFields["Search categories"].firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
@@ -1311,11 +1330,20 @@ final class timetrackerUITests: XCTestCase {
             .matching(NSPredicate(format: "label == %@", "Study"))
             .firstMatch
         XCTAssertTrue(target.waitForExistence(timeout: 3) && target.isHittable)
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-inbox-category-task-picker",
+            app: app
+        )
         activate(target)
 
         XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
         XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
-        try capture("iphone-inbox-created-category-task", app: app)
+        XCTAssertTrue(createdItem.titleField.waitForNonExistence(timeout: 5))
+        try capture(
+            "\(screenshotPrefix)-inbox-created-category-task",
+            app: app
+        )
         #endif
     }
 
@@ -1325,7 +1353,9 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("The Inbox checklist-routing interaction requires an iOS simulator.")
         #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        let menu = createInboxItem("Route release checklist", in: app)
+        let screenshotPrefix = inboxScreenshotPrefix(in: app)
+        let createdItem = createInboxItem("Route release checklist", in: app)
+        let menu = createdItem.menu
         activate(menu)
 
         let route = app.buttons
@@ -1348,7 +1378,6 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
-        try capture("iphone-inbox-checklist-task-picker", app: app)
 
         let search = app.searchFields["Search tasks, paths, or notes"].firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 3) && search.isHittable)
@@ -1363,11 +1392,137 @@ final class timetrackerUITests: XCTestCase {
             .matching(NSPredicate(format: "label == %@", "SwiftData Docs"))
             .firstMatch
         XCTAssertTrue(target.waitForExistence(timeout: 3) && target.isHittable)
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-inbox-checklist-task-picker",
+            app: app
+        )
         activate(target)
 
         XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
         XCTAssertTrue(menu.waitForNonExistence(timeout: 5))
-        try capture("iphone-inbox-created-checklist-item", app: app)
+        XCTAssertTrue(createdItem.titleField.waitForNonExistence(timeout: 5))
+        try capture(
+            "\(screenshotPrefix)-inbox-created-checklist-item",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
+    func testMacInboxItemsSupportAllManualRoutes() throws {
+        #if os(macOS)
+        let app = launchApp(
+            route: "inbox",
+            replacesDemoDataOnLaunch: true
+        )
+
+        let childItem = createInboxItem(
+            "Prepare release screenshots",
+            in: app
+        )
+        let childMenu = childItem.menu
+        activate(childMenu)
+
+        let childRoute = inboxRouteAction(
+            identifierPrefix: "inbox.route.childTask.",
+            macLabel: "Create as Subtask…",
+            in: app
+        )
+        let categoryRoute = inboxRouteAction(
+            identifierPrefix: "inbox.route.categoryTask.",
+            macLabel: "Create in Category…",
+            in: app
+        )
+        let checklistRoute = inboxRouteAction(
+            identifierPrefix: "inbox.route.checklistItem.",
+            macLabel: "Add as Checklist Item…",
+            in: app
+        )
+        XCTAssertTrue(
+            childRoute.waitForExistence(timeout: 3) &&
+            childRoute.isHittable
+        )
+        XCTAssertTrue(
+            categoryRoute.waitForExistence(timeout: 3) &&
+            categoryRoute.isHittable
+        )
+        XCTAssertTrue(
+            checklistRoute.waitForExistence(timeout: 3) &&
+            checklistRoute.isHittable
+        )
+        try capture("mac-inbox-manual-route-menu", app: app)
+        activate(childRoute)
+        try completeInboxPickerRoute(
+            pickerIdentifier: "inbox.childTask.parentPicker",
+            searchPrompt: "Search tasks, paths, or notes",
+            searchTerm: "SwiftData Docs",
+            choiceIdentifierPrefix: "inbox.childTask.parentPicker.select.",
+            choiceLabel: "SwiftData Docs",
+            screenshotName: "mac-inbox-child-task-picker",
+            in: app
+        )
+        XCTAssertTrue(childMenu.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(childItem.titleField.waitForNonExistence(timeout: 5))
+
+        let categoryItem = createInboxItem(
+            "Plan reading weekend",
+            in: app
+        )
+        let categoryMenu = categoryItem.menu
+        activate(categoryMenu)
+        let secondCategoryRoute = inboxRouteAction(
+            identifierPrefix: "inbox.route.categoryTask.",
+            macLabel: "Create in Category…",
+            in: app
+        )
+        XCTAssertTrue(
+            secondCategoryRoute.waitForExistence(timeout: 3) &&
+            secondCategoryRoute.isHittable
+        )
+        activate(secondCategoryRoute)
+        try completeInboxPickerRoute(
+            pickerIdentifier: "inbox.categoryTask.categoryPicker",
+            searchPrompt: "Search categories",
+            searchTerm: "Study",
+            choiceIdentifierPrefix: "inbox.categoryTask.categoryPicker.select.",
+            choiceLabel: "Study",
+            screenshotName: "mac-inbox-category-picker",
+            in: app
+        )
+        XCTAssertTrue(categoryMenu.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(categoryItem.titleField.waitForNonExistence(timeout: 5))
+
+        let checklistItem = createInboxItem(
+            "Route release checklist",
+            in: app
+        )
+        let checklistMenu = checklistItem.menu
+        activate(checklistMenu)
+        let secondChecklistRoute = inboxRouteAction(
+            identifierPrefix: "inbox.route.checklistItem.",
+            macLabel: "Add as Checklist Item…",
+            in: app
+        )
+        XCTAssertTrue(
+            secondChecklistRoute.waitForExistence(timeout: 3) &&
+            secondChecklistRoute.isHittable
+        )
+        activate(secondChecklistRoute)
+        try completeInboxPickerRoute(
+            pickerIdentifier: "inbox.checklistItem.taskPicker",
+            searchPrompt: "Search tasks, paths, or notes",
+            searchTerm: "SwiftData Docs",
+            choiceIdentifierPrefix: "inbox.checklistItem.taskPicker.select.",
+            choiceLabel: "SwiftData Docs",
+            screenshotName: "mac-inbox-checklist-picker",
+            in: app
+        )
+        XCTAssertTrue(checklistMenu.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(checklistItem.titleField.waitForNonExistence(timeout: 5))
+        try capture("mac-inbox-manual-routes-completed", app: app)
+        #else
+        throw XCTSkip("The macOS Inbox routing smoke test requires macOS.")
         #endif
     }
 
@@ -3865,7 +4020,7 @@ final class timetrackerUITests: XCTestCase {
     private func createInboxItem(
         _ title: String,
         in app: XCUIApplication
-    ) -> XCUIElement {
+    ) -> InboxUITestItem {
         openSection(
             "Inbox",
             tabIdentifier: "phone.tab.inbox",
@@ -3881,15 +4036,17 @@ final class timetrackerUITests: XCTestCase {
             "inbox.capture.field"
         ].firstMatch
         let addButton = app.buttons["inbox.capture.add"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 3) && field.isHittable)
-        XCTAssertTrue(
-            addButton.waitForExistence(timeout: 3) && addButton.isHittable
-        )
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            field.exists && field.isHittable
+        })
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            addButton.exists && addButton.isHittable
+        })
         activate(field)
-        field.typeText(title)
+        replaceText(title, in: field)
         activate(addButton)
 
-        let menu = app.buttons
+        let menu = app.descendants(matching: .any)
             .matching(NSPredicate(
                 format: "identifier BEGINSWITH %@",
                 "inbox.item.menu."
@@ -3903,7 +4060,129 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             ) && menu.isHittable
         )
-        return menu
+
+        let menuIdentifierPrefix = "inbox.item.menu."
+        XCTAssertTrue(menu.identifier.hasPrefix(menuIdentifierPrefix))
+        let itemIdentifier = String(
+            menu.identifier.dropFirst(menuIdentifierPrefix.count)
+        )
+        let titleField = app.textFields[
+            "inbox.item.\(itemIdentifier)"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 3))
+        XCTAssertEqual(titleField.value as? String, title)
+        return InboxUITestItem(menu: menu, titleField: titleField)
+    }
+
+    @MainActor
+    private func completeInboxPickerRoute(
+        pickerIdentifier: String,
+        searchPrompt: String,
+        searchTerm: String,
+        choiceIdentifierPrefix: String,
+        choiceLabel: String,
+        screenshotName: String,
+        in app: XCUIApplication
+    ) throws {
+        let picker = app.descendants(matching: .any)[
+            pickerIdentifier
+        ].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                picker,
+                timeout: 5,
+                diagnosticName: screenshotName,
+                in: app
+            )
+        )
+
+        let pickerSheet = app.sheets
+            .containing(.any, identifier: pickerIdentifier)
+            .firstMatch
+        XCTAssertTrue(pickerSheet.waitForExistence(timeout: 3))
+        let search = inboxSearchField(
+            prompt: searchPrompt,
+            in: pickerSheet
+        )
+        XCTAssertTrue(search.exists && search.isHittable)
+        activate(search)
+        replaceText(searchTerm, in: search)
+
+        let identifiedChoice = picker.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                choiceIdentifierPrefix
+            ))
+            .matching(NSPredicate(format: "label == %@", choiceLabel))
+            .firstMatch
+        let choice: XCUIElement
+        if identifiedChoice.waitForExistence(timeout: 3) {
+            choice = identifiedChoice
+        } else {
+            #if os(macOS)
+            choice = picker.buttons[choiceLabel].firstMatch
+            #else
+            choice = identifiedChoice
+            #endif
+        }
+        XCTAssertTrue(
+            choice.waitForExistence(timeout: 3) &&
+            choice.isHittable
+        )
+        waitForScreenshotTransition()
+        try capture(screenshotName, app: app)
+        activate(choice)
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func inboxRouteAction(
+        identifierPrefix: String,
+        macLabel: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        #if os(macOS)
+        let nativeMenuItem = app.menuItems[macLabel].firstMatch
+        if nativeMenuItem.waitForExistence(timeout: 2) {
+            return nativeMenuItem
+        }
+        #endif
+
+        return app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                identifierPrefix
+            ))
+            .firstMatch
+    }
+
+    @MainActor
+    private func inboxSearchField(
+        prompt: String,
+        in picker: XCUIElement
+    ) -> XCUIElement {
+        let promptedField = picker.searchFields[prompt].firstMatch
+        if promptedField.waitForExistence(timeout: 2) {
+            return promptedField
+        }
+
+        return picker.searchFields.allElementsBoundByIndex.first(where: {
+            $0.isHittable
+        }) ?? picker.searchFields.firstMatch
+    }
+
+    @MainActor
+    private func inboxScreenshotPrefix(in app: XCUIApplication) -> String {
+        #if os(macOS)
+        "mac"
+        #else
+        let environment = ProcessInfo.processInfo.environment
+        if environment["SIMULATOR_MODEL_IDENTIFIER"]?.hasPrefix("iPad") == true ||
+            environment["SIMULATOR_DEVICE_NAME"]?.localizedCaseInsensitiveContains("iPad") == true {
+            return "ipad"
+        }
+        return app.windows.firstMatch.frame.width >= 700 ? "ipad" : "iphone"
+        #endif
     }
 
     @MainActor
@@ -4328,6 +4607,14 @@ final class timetrackerUITests: XCTestCase {
         #else
         let screenshot = app.screenshot()
         #endif
+        try recordScreenshot(screenshot, name: name)
+    }
+
+    @MainActor
+    private func recordScreenshot(
+        _ screenshot: XCUIScreenshot,
+        name: String
+    ) throws {
         let attachment = XCTAttachment(screenshot: screenshot)
         attachment.name = name
         attachment.lifetime = .keepAlways
@@ -4364,6 +4651,43 @@ final class timetrackerUITests: XCTestCase {
         element.click()
         #else
         element.tap()
+        #endif
+    }
+
+    @MainActor
+    private func replaceText(
+        _ text: String,
+        in element: XCUIElement
+    ) {
+        #if os(macOS)
+        let pasteboard = NSPasteboard.general
+        let preservedItems = pasteboard.pasteboardItems?.map { item in
+            item.types.reduce(
+                into: [NSPasteboard.PasteboardType: Data]()
+            ) { contents, type in
+                contents[type] = item.data(forType: type)
+            }
+        } ?? []
+        defer {
+            pasteboard.clearContents()
+            let restoredItems = preservedItems.map { contents in
+                let item = NSPasteboardItem()
+                for (type, data) in contents {
+                    item.setData(data, forType: type)
+                }
+                return item
+            }
+            if restoredItems.isEmpty == false {
+                pasteboard.writeObjects(restoredItems)
+            }
+        }
+
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        element.typeKey("a", modifierFlags: .command)
+        element.typeKey("v", modifierFlags: .command)
+        #else
+        element.typeText(text)
         #endif
     }
 
@@ -4567,5 +4891,13 @@ final class timetrackerUITests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
         return condition()
+    }
+
+    @MainActor
+    private func waitForScreenshotTransition() {
+        // Search results can become hittable before the platform search-field
+        // expansion finishes. This delay stabilizes evidence only; assertions
+        // continue to synchronize on semantic UI state.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
     }
 }

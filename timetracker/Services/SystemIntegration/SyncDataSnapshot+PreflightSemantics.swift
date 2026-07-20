@@ -142,7 +142,9 @@ extension SyncDataSnapshot {
                     isValid = decodes([PomodoroPlan].self, from: data)
                 case .allowParallelTimers, .showGrossAndWallTogether:
                     isValid = decodes(Bool.self, from: data)
-                case .quickStartTaskIDs, .llmAvailableModelIDs:
+                case .quickStartTaskIDs,
+                     .todayHeatmapTaskIDs,
+                     .llmAvailableModelIDs:
                     isValid = decodes([String].self, from: data)
                 }
             } else {

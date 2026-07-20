@@ -342,6 +342,140 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayHeatmapSettingsReuseHierarchyPickerAndPersistSelection() throws {
+        #if os(macOS)
+        throw XCTSkip("The Today Heatmap navigation path is verified on iPhone and iPad.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = launchApp(
+            route: "settings",
+            replacesDemoDataOnLaunch: true
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"]
+                .waitForExistence(timeout: 8)
+        )
+        let screenshotPrefix = app.windows.firstMatch.frame.width >= 700
+            ? "ipad"
+            : "iphone"
+
+        let general = app.buttons["settings.category.general"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                general,
+                timeout: 5,
+                diagnosticName: "heatmap-settings-general",
+                in: app
+            ) && general.isHittable
+        )
+        activate(general)
+
+        let heatmapSettings = app.descendants(matching: .any)[
+            "settings.todayHeatmap.tasks"
+        ].firstMatch
+        scrollUntilHittable(heatmapSettings, direction: .up, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                heatmapSettings,
+                timeout: 5,
+                diagnosticName: "heatmap-settings-row",
+                in: app
+            ) && heatmapSettings.isHittable
+        )
+        XCTAssertEqual(heatmapSettings.value as? String, "Off")
+        try capture("\(screenshotPrefix)-settings-today-heatmap-off", app: app)
+        activate(heatmapSettings)
+
+        let picker = app.descendants(matching: .any)[
+            "settings.todayHeatmap.taskPicker"
+        ].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                picker,
+                timeout: 5,
+                diagnosticName: "heatmap-task-picker",
+                in: app
+            )
+        )
+        let choicePrefix = "settings.todayHeatmap.taskPicker.select."
+        let choices = ["Time Tracker App", "Client Work"].map { title in
+            app.buttons.matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                choicePrefix,
+                title
+            )).firstMatch
+        }
+        XCTAssertTrue(choices.allSatisfy {
+            $0.waitForExistence(timeout: 3) && $0.isHittable
+        })
+        try capture(
+            "\(screenshotPrefix)-settings-today-heatmap-picker",
+            app: app
+        )
+
+        for choice in choices {
+            activate(choice)
+            XCTAssertTrue(waitUntil(timeout: 3) {
+                choice.isSelected
+            })
+        }
+        try capture(
+            "\(screenshotPrefix)-settings-today-heatmap-selected",
+            app: app
+        )
+
+        let backToGeneral = app.navigationBars["Heatmap Tasks"]
+            .buttons["General"]
+            .firstMatch
+        XCTAssertTrue(backToGeneral.waitForExistence(timeout: 3))
+        activate(backToGeneral)
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            heatmapSettings.value as? String == "2 Selections"
+        })
+        try capture(
+            "\(screenshotPrefix)-settings-today-heatmap-summary",
+            app: app
+        )
+
+        activate(heatmapSettings)
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        for choice in choices {
+            XCTAssertTrue(waitUntil(timeout: 3) {
+                choice.isSelected
+            })
+        }
+
+        let firstChoice = choices[0]
+        activate(firstChoice)
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            firstChoice.isSelected == false
+        })
+
+        let clear = app.buttons[
+            "settings.todayHeatmap.taskPicker.clear"
+        ].firstMatch
+        XCTAssertTrue(clear.waitForExistence(timeout: 3) && clear.isHittable)
+        activate(clear)
+        let secondChoice = choices[1]
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            secondChoice.isSelected == false && clear.isEnabled == false
+        })
+        try capture(
+            "\(screenshotPrefix)-settings-today-heatmap-cleared",
+            app: app
+        )
+
+        XCTAssertTrue(backToGeneral.waitForExistence(timeout: 3))
+        activate(backToGeneral)
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            heatmapSettings.value as? String == "Off"
+        })
+        #endif
+    }
+
+    @MainActor
     func testTaskSwipeArchiveAndSettingsUnarchiveRoundTrip() throws {
         #if os(macOS)
         throw XCTSkip("The left-swipe archive round trip is exercised on iPhone and iPad.")

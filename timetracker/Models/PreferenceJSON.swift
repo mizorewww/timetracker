@@ -92,6 +92,12 @@ enum PreferenceJSON {
                 value.compactMap(UUID.init(uuidString:))
             )
             return try encodeChecked(identifiers.map(\.uuidString))
+        case .todayHeatmapTaskIDs:
+            let value = try decodeChecked([String].self, from: valueJSON)
+            let identifiers = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(
+                value.compactMap(UUID.init(uuidString:))
+            )
+            return try encodeChecked(identifiers.map(\.uuidString))
         case .llmEndpoint:
             let value = try decodeChecked(String.self, from: valueJSON)
             return try encodeChecked(AppPreferenceValueSanitizer.llmEndpoint(value))

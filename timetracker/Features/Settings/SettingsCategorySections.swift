@@ -10,6 +10,16 @@ extension SettingsView {
                 showGrossAndWallTogether: showGrossAndWallTogetherBinding
             )
 
+            TodayHeatmapSettingsSection(
+                store: store,
+                onChangeSelection: { taskIDs in
+                    handleSettingsStoreMutation(
+                        store.setTodayHeatmapTaskIDs(taskIDs),
+                        title: AppStrings.localized("heatmap.settings.title")
+                    )
+                }
+            )
+
             #if os(iOS)
             AppleHealthTimelineSettingsSection(store: store)
             #endif

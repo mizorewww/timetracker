@@ -9,11 +9,11 @@ struct CoreQuickStartSelectionMutationTests {
         let added = UUID()
 
         #expect(
-            QuickStartSelectionMutation.adding(added, to: [first]) ==
+            OrderedTaskIDSelectionMutation.adding(added, to: [first]) ==
                 [first, added]
         )
         #expect(
-            QuickStartSelectionMutation.adding(added, to: [first, added]) ==
+            OrderedTaskIDSelectionMutation.adding(added, to: [first, added]) ==
                 [first, added]
         )
     }
@@ -25,7 +25,7 @@ struct CoreQuickStartSelectionMutationTests {
         let last = UUID()
 
         #expect(
-            QuickStartSelectionMutation.removing(
+            OrderedTaskIDSelectionMutation.removing(
                 removed,
                 from: [first, removed, last]
             ) == [first, last]
@@ -37,7 +37,7 @@ struct CoreQuickStartSelectionMutationTests {
         let stale = UUID()
         let visible = UUID()
 
-        let result = QuickStartSelectionMutation.removingVisibleSelections(
+        let result = OrderedTaskIDSelectionMutation.removingVisibleSelections(
             at: IndexSet(integer: 0),
             visibleIDs: [visible],
             from: [stale, visible]
@@ -52,7 +52,7 @@ struct CoreQuickStartSelectionMutationTests {
         let stale = UUID()
         let last = UUID()
 
-        let result = QuickStartSelectionMutation.removingVisibleSelections(
+        let result = OrderedTaskIDSelectionMutation.removingVisibleSelections(
             at: IndexSet(integer: 1),
             visibleIDs: [first, last],
             from: [first, stale, last]
@@ -68,12 +68,38 @@ struct CoreQuickStartSelectionMutationTests {
         let middle = UUID()
         let last = UUID()
 
-        let result = QuickStartSelectionMutation.removingVisibleSelections(
+        let result = OrderedTaskIDSelectionMutation.removingVisibleSelections(
             at: IndexSet([0, 2]),
             visibleIDs: [first, middle, last],
             from: [first, stale, middle, last]
         )
 
         #expect(result == [stale, middle])
+    }
+
+    @Test
+    func toggleAndBulkRemovalReuseTheSameOrderedSelectionSemantics() {
+        let first = UUID()
+        let second = UUID()
+        let added = UUID()
+
+        #expect(
+            OrderedTaskIDSelectionMutation.toggling(
+                added,
+                in: [first, second]
+            ) == [first, second, added]
+        )
+        #expect(
+            OrderedTaskIDSelectionMutation.toggling(
+                first,
+                in: [first, second]
+            ) == [second]
+        )
+        #expect(
+            OrderedTaskIDSelectionMutation.removing(
+                [first, added],
+                from: [first, second, added]
+            ) == [second]
+        )
     }
 }

@@ -10,6 +10,7 @@ enum AppPreferenceKey: String, CaseIterable {
     case allowParallelTimers = "AllowParallelTimers"
     case showGrossAndWallTogether = "ShowGrossAndWallTogether"
     case quickStartTaskIDs = "QuickStartTaskIDs"
+    case todayHeatmapTaskIDs = "TodayHeatmapTaskIDs"
     case llmEndpoint = "LLMEndpoint"
     case llmSelectedModel = "LLMSelectedModel"
     case llmAvailableModelIDs = "LLMAvailableModelIDs"
@@ -34,6 +35,7 @@ struct AppPreferences: Equatable {
     var showGrossAndWallTogether = true
     var cloudSyncEnabled = AppCloudSync.isEnabled
     var quickStartTaskIDs: [UUID] = []
+    var todayHeatmapTaskIDs: [UUID] = []
     var llmEndpoint = "https://api.openai.com/v1"
     var llmAPIKey = ""
     var llmSelectedModel = ""
@@ -81,6 +83,11 @@ struct AppPreferences: Equatable {
         case .quickStartTaskIDs:
             let strings = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
             quickStartTaskIDs = AppPreferenceValueSanitizer.quickStartTaskIDs(
+                strings.compactMap(UUID.init(uuidString:))
+            )
+        case .todayHeatmapTaskIDs:
+            let strings = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
+            todayHeatmapTaskIDs = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(
                 strings.compactMap(UUID.init(uuidString:))
             )
         case .llmEndpoint:
@@ -134,6 +141,10 @@ struct AppPreferences: Equatable {
         case .quickStartTaskIDs:
             return PreferenceJSON.encode(
                 AppPreferenceValueSanitizer.quickStartTaskIDs(quickStartTaskIDs).map(\.uuidString)
+            )
+        case .todayHeatmapTaskIDs:
+            return PreferenceJSON.encode(
+                AppPreferenceValueSanitizer.todayHeatmapTaskIDs(todayHeatmapTaskIDs).map(\.uuidString)
             )
         case .llmEndpoint:
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(llmEndpoint))

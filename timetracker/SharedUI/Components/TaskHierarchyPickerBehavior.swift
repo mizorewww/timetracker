@@ -13,11 +13,11 @@ extension TaskHierarchyPicker {
         let modeItems = switch mode {
         case .timer:
             section.items.filter { $0.isRunning == false }
-        case .singleSelection:
+        case .singleSelection, .multipleSelection:
             section.items
         }
         return modeItems.filter {
-            $0.isAvailable || $0.id == selectedTaskID
+            $0.isAvailable || selectedTaskIDs.contains($0.id)
         }
     }
 
@@ -32,17 +32,19 @@ extension TaskHierarchyPicker {
     }
 
     func select(_ item: TaskHierarchyProjection.Item) {
-        guard let task = store.task(for: item.id),
-              store.isTaskAvailableForTracking(task) else {
-            return
-        }
+        guard let task = store.task(for: item.id) else { return }
         switch mode {
         case .timer:
+            guard store.isTaskAvailableForTracking(task) else { return }
             let outcome = store.performTimerPickerSelection(task)
             if outcome.shouldDismissPicker {
                 onDismiss()
             }
         case .singleSelection:
+            guard store.isTaskAvailableForTracking(task) else { return }
+            onSelect(item.id)
+        case .multipleSelection:
+            guard isSelectionDisabled(for: item) == false else { return }
             onSelect(item.id)
         }
     }
@@ -55,20 +57,51 @@ extension TaskHierarchyPicker {
         }
     }
 
-    func revealSelectedTask() {
-        guard let selectedTaskID else { return }
-        expandedTaskIDs.formUnion(store.ancestorTaskIDs(for: selectedTaskID))
+    func revealSelectedTasks(_ taskIDs: Set<UUID>) {
+        for selectedTaskID in taskIDs {
+            expandedTaskIDs.formUnion(store.ancestorTaskIDs(for: selectedTaskID))
+        }
     }
 
     func isSelected(_ item: TaskHierarchyProjection.Item) -> Bool {
-        selectedTaskID == item.id
+        selectedTaskIDs.contains(item.id)
     }
 
-    var selectedTaskID: UUID? {
-        guard case let .singleSelection(selectedTaskID, _) = mode else {
-            return nil
+    var selectedTaskIDs: Set<UUID> {
+        switch mode {
+        case .timer:
+            []
+        case let .singleSelection(selectedTaskID, _):
+            selectedTaskID.map { [$0] } ?? []
+        case let .multipleSelection(selectedTaskIDs, _, _):
+            selectedTaskIDs
         }
-        return selectedTaskID
+    }
+
+    func isSelectionLimitReached(
+        for item: TaskHierarchyProjection.Item
+    ) -> Bool {
+        guard case let .multipleSelection(
+            selectedTaskIDs,
+            _,
+            maximumSelectionCount
+        ) = mode,
+        let maximumSelectionCount else {
+            return false
+        }
+        return selectedTaskIDs.count >= maximumSelectionCount &&
+            selectedTaskIDs.contains(item.id) == false
+    }
+
+    func isSelectionDisabled(
+        for item: TaskHierarchyProjection.Item
+    ) -> Bool {
+        if item.isAvailable == false {
+            guard case .multipleSelection = mode, isSelected(item) else {
+                return true
+            }
+        }
+        return isSelectionLimitReached(for: item)
     }
 
     func selectionIdentifier(
@@ -79,6 +112,8 @@ extension TaskHierarchyPicker {
             "timer.taskPicker.select.\(item.id.uuidString)"
         case let .singleSelection(_, context):
             "\(context.accessibilityIdentifier).select.\(item.id.uuidString)"
+        case let .multipleSelection(_, context, _):
+            "\(context.accessibilityIdentifier).select.\(item.id.uuidString)"
         }
     }
 
@@ -88,7 +123,7 @@ extension TaskHierarchyPicker {
         switch mode {
         case .timer:
             item.timerCommand.accessibilityLabel(for: item.identity.title)
-        case .singleSelection:
+        case .singleSelection, .multipleSelection:
             item.identity.title
         }
     }
@@ -97,8 +132,19 @@ extension TaskHierarchyPicker {
         for item: TaskHierarchyProjection.Item
     ) -> String {
         var components = [item.identity.fullPath]
-        if case .singleSelection = mode, item.isRunning {
+        if case .timer = mode {
+            // Timer rows expose their action instead of repeating passive state.
+        } else if item.isRunning {
             components.append(AppStrings.running)
+        }
+        if case .multipleSelection = mode {
+            components.append(
+                AppStrings.localized(
+                    isSelected(item)
+                        ? "taskPicker.selection.selected"
+                        : "taskPicker.selection.notSelected"
+                )
+            )
         }
         components.append(
             String(
@@ -121,13 +167,26 @@ extension TaskHierarchyPicker {
     func accessibilityHint(
         for item: TaskHierarchyProjection.Item
     ) -> String {
-        if let unavailableReason = item.unavailableReason {
+        if let unavailableReason = item.unavailableReason,
+           isSelectionDisabled(for: item) {
             return unavailableReason
+        }
+        if isSelectionLimitReached(for: item),
+           case let .multipleSelection(_, _, maximumSelectionCount) = mode,
+           let maximumSelectionCount {
+            return String(
+                format: AppStrings.localized(
+                    "taskPicker.selection.limitReachedFormat"
+                ),
+                maximumSelectionCount
+            )
         }
         switch mode {
         case .timer:
             return item.timerCommand.accessibilityHint
         case let .singleSelection(_, context):
+            return context.selectionHint
+        case let .multipleSelection(_, context, _):
             return context.selectionHint
         }
     }

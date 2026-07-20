@@ -22,6 +22,7 @@ enum AppPreferenceValueSanitizer {
     static let maximumPomodoroPlanCount = 24
     static let maximumPomodoroPlanNameLength = 80
     static let maximumQuickStartTaskCount = 24
+    static let maximumTodayHeatmapTaskCount = 64
     nonisolated static let maximumLLMModelCount = 256
     nonisolated static let maximumLLMModelIDByteCount = 256
     static let maximumLLMEndpointLength = 2_048
@@ -59,12 +60,23 @@ enum AppPreferenceValueSanitizer {
     }
 
     static func quickStartTaskIDs(_ values: [UUID]) -> [UUID] {
+        orderedTaskIDs(values, maximumCount: maximumQuickStartTaskCount)
+    }
+
+    static func todayHeatmapTaskIDs(_ values: [UUID]) -> [UUID] {
+        orderedTaskIDs(values, maximumCount: maximumTodayHeatmapTaskCount)
+    }
+
+    private static func orderedTaskIDs(
+        _ values: [UUID],
+        maximumCount: Int
+    ) -> [UUID] {
         var seen = Set<UUID>()
         var result: [UUID] = []
-        result.reserveCapacity(min(values.count, maximumQuickStartTaskCount))
+        result.reserveCapacity(min(values.count, maximumCount))
         for value in values where seen.insert(value).inserted {
             result.append(value)
-            if result.count == maximumQuickStartTaskCount { break }
+            if result.count == maximumCount { break }
         }
         return result
     }

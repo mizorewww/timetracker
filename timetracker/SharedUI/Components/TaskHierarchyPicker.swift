@@ -4,6 +4,7 @@ enum TaskHierarchyPickerSelectionContext: Equatable {
     case pomodoro
     case inboxChildTaskParent
     case inboxChecklistTarget
+    case todayHeatmap
 }
 
 enum TaskHierarchyPickerMode: Equatable {
@@ -11,6 +12,11 @@ enum TaskHierarchyPickerMode: Equatable {
     case singleSelection(
         selectedTaskID: UUID?,
         context: TaskHierarchyPickerSelectionContext = .pomodoro
+    )
+    case multipleSelection(
+        selectedTaskIDs: Set<UUID>,
+        context: TaskHierarchyPickerSelectionContext = .todayHeatmap,
+        maximumSelectionCount: Int? = nil
     )
 }
 
@@ -69,13 +75,12 @@ struct TaskHierarchyPicker: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button(AppStrings.cancel, action: onDismiss)
-            }
+        .onAppear {
+            revealSelectedTasks(selectedTaskIDs)
         }
-        .onAppear(perform: revealSelectedTask)
-        .onChange(of: selectedTaskID) { _, _ in revealSelectedTask() }
+        .onChange(of: selectedTaskIDs) { previous, current in
+            revealSelectedTasks(current.subtracting(previous))
+        }
     }
 
     private func pickerList(
@@ -103,8 +108,8 @@ struct TaskHierarchyPicker: View {
                 } header: {
                     sectionHeader(section)
                 } footer: {
-                    if case .timer = mode, section.id == sections.last?.id {
-                        Text(store.timerPickerMode.footer)
+                    if section.id == sections.last?.id {
+                        pickerFooter
                     }
                 }
             }
@@ -116,6 +121,26 @@ struct TaskHierarchyPicker: View {
         .listStyle(.inset)
         #endif
         .scrollContentBackground(.hidden)
+    }
+
+    @ViewBuilder
+    private var pickerFooter: some View {
+        switch mode {
+        case .timer:
+            Text(store.timerPickerMode.footer)
+        case .singleSelection:
+            EmptyView()
+        case let .multipleSelection(selectedTaskIDs, _, maximumSelectionCount):
+            if let maximumSelectionCount {
+                Text(
+                    String(
+                        format: AppStrings.localized("taskPicker.selection.countFormat"),
+                        selectedTaskIDs.count,
+                        maximumSelectionCount
+                    )
+                )
+            }
+        }
     }
 
     @ViewBuilder

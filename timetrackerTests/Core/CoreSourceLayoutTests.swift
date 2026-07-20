@@ -192,6 +192,7 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
             "timetracker/SharedUI/Components/TimerPickerPresentation.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerSheet.swift",
+            "timetracker/SharedUI/Components/OrderedTaskIDSelectionMutation.swift",
             "timetracker/SharedUI/Components/TaskProgressViews.swift",
             "timetracker/SharedUI/Components/SectionHeaders.swift",
             "timetracker/SharedUI/Components/ActionControls.swift",
@@ -299,6 +300,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Settings/LLMSettingsViews.swift",
             "timetracker/Features/Settings/LLMSettingsSection.swift",
             "timetracker/Features/Settings/DisplayTimingSettingsSection.swift",
+            "timetracker/Features/Settings/TodayHeatmapSettingsSection.swift",
             "timetracker/Features/Settings/AppleHealthTimelineSettingsSection.swift",
             "timetracker/Features/Settings/PomodoroSettingsSection.swift",
             "timetracker/Features/Settings/PomodoroPickerViews.swift",
@@ -496,6 +498,7 @@ struct CoreSourceLayoutTests {
             "TaskHierarchyPickerBehavior.swift",
             "TaskHierarchyPickerPresentation.swift",
             "TaskHierarchyPickerSheet.swift",
+            "OrderedTaskIDSelectionMutation.swift",
             "TaskHierarchyProjection.swift",
             "TaskIdentityRow.swift",
             "TaskSummaryRow.swift",
@@ -519,6 +522,7 @@ struct CoreSourceLayoutTests {
         let settingsURL = root.appending(path: "timetracker/Features/Settings")
         let focusedFiles = [
             "DisplayTimingSettingsSection.swift",
+            "TodayHeatmapSettingsSection.swift",
             "AppleHealthTimelineSettingsSection.swift",
             "PomodoroSettingsSection.swift",
             "PomodoroPickerViews.swift",

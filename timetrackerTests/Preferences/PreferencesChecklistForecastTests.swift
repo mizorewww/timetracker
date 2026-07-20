@@ -70,6 +70,7 @@ struct PreferencesChecklistForecastTests {
             )
         }
         let quickStartValues = (0..<40).map { _ in UUID() }
+        let heatmapValues = (0..<80).map { _ in UUID() }
         let modelValues = (0..<300).map { " model-\($0) " } + ["model-1", "   "]
         let preferences = AppPreferences(syncedPreferences: [
             SyncedPreference(
@@ -91,6 +92,13 @@ struct PreferencesChecklistForecastTests {
                 key: AppPreferenceKey.quickStartTaskIDs.rawValue,
                 valueJSON: PreferenceJSON.encode(
                     (quickStartValues + [quickStartValues[0]]).map(\.uuidString) + ["not-a-uuid"]
+                ),
+                deviceID: "remote"
+            ),
+            SyncedPreference(
+                key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
+                valueJSON: PreferenceJSON.encode(
+                    (heatmapValues + [heatmapValues[0]]).map(\.uuidString) + ["not-a-uuid"]
                 ),
                 deviceID: "remote"
             ),
@@ -121,6 +129,9 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.quickStartTaskIDs == Array(
             quickStartValues.prefix(AppPreferenceValueSanitizer.maximumQuickStartTaskCount)
         ))
+        #expect(preferences.todayHeatmapTaskIDs == Array(
+            heatmapValues.prefix(AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount)
+        ))
         #expect(preferences.llmEndpoint.count <= AppPreferenceValueSanitizer.maximumLLMEndpointLength)
         #expect(preferences.llmEndpoint.hasPrefix("https://example.test/"))
         #expect(preferences.llmAvailableModelIDs.count == AppPreferenceValueSanitizer.maximumLLMModelCount)
@@ -132,6 +143,36 @@ struct PreferencesChecklistForecastTests {
             count: PreferenceJSON.maximumPayloadByteCount + 1
         ) + "\""
         #expect(PreferenceJSON.decode(String.self, from: oversizedJSON, default: "fallback") == "fallback")
+    }
+
+    @Test @MainActor
+    func heatmapPreferenceJSONCanonicalizesInvalidDuplicateAndOversizedSelections() throws {
+        let taskIDs = (0..<(AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount + 2))
+            .map { _ in UUID() }
+        let rawValues = [
+            taskIDs[0].uuidString.lowercased(),
+            "not-a-uuid",
+            taskIDs[0].uuidString
+        ] + taskIDs.dropFirst().map(\.uuidString)
+
+        let canonicalJSON = try PreferenceJSON.canonicalValueJSON(
+            for: .todayHeatmapTaskIDs,
+            from: PreferenceJSON.encode(rawValues)
+        )
+        let canonicalValues = try PreferenceJSON.decodeChecked(
+            [String].self,
+            from: canonicalJSON
+        )
+
+        #expect(
+            canonicalValues ==
+                Array(
+                    taskIDs.prefix(
+                        AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount
+                    )
+                )
+                .map(\.uuidString)
+        )
     }
 
     @Test @MainActor
@@ -266,7 +307,7 @@ struct PreferencesChecklistForecastTests {
         var preferences = AppPreferences(syncedPreferences: stored)
         preferences.llmAPIKey = try credentialStore.readAPIKey() ?? ""
 
-        #expect(stored.count == AppPreferenceKey.allCases.count - 1)
+        #expect(stored.count == AppPreferenceKey.allCases.count - 2)
         #expect(stored.allSatisfy { SyncedPreferenceService.shouldSyncKey($0.key) })
         #expect(preferences.preferredColorScheme == "dark")
         #expect(preferences.pomodoroDefaultMode == PomodoroPreset.deep.rawValue)
@@ -277,6 +318,7 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.showGrossAndWallTogether == false)
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
+        #expect(preferences.todayHeatmapTaskIDs.isEmpty)
         #expect(preferences.llmEndpoint == "https://example.test/v1")
         #expect(preferences.llmAPIKey == "test-key")
         #expect(preferences.llmSelectedModel == "gpt-test")
@@ -428,6 +470,7 @@ struct PreferencesChecklistForecastTests {
         let store = makeTestStore(llmCredentialStore: credentialStore)
         store.configureIfNeeded(context: context)
         let pinnedID = UUID()
+        let heatmapTaskIDs = [UUID(), UUID()]
 
         store.setDefaultFocusMinutes(45)
         store.setDefaultBreakMinutes(12)
@@ -436,6 +479,7 @@ struct PreferencesChecklistForecastTests {
         store.setShowGrossAndWallTogether(false)
         store.setCloudSyncEnabled(false)
         store.setQuickStartTaskIDs([pinnedID])
+        store.setTodayHeatmapTaskIDs(heatmapTaskIDs)
         store.setPomodoroPlans([
             PomodoroPlan(
                 name: "Writing",
@@ -463,6 +507,7 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.showGrossAndWallTogether == false)
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
+        #expect(preferences.todayHeatmapTaskIDs == heatmapTaskIDs)
         #expect(preferences.pomodoroPlans.count == 1)
         #expect(preferences.pomodoroPlans.first?.name == "Writing")
         #expect(preferences.pomodoroPlans.first?.focusMinutes == 30)

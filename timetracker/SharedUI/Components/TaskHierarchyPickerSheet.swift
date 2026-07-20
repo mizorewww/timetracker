@@ -34,6 +34,11 @@ struct TaskHierarchyPickerSheet: View {
                 onSelect: onSelect,
                 onCreateTask: onCreateTask
             )
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel, action: onDismiss)
+                }
+            }
         }
         #if os(iOS)
         .presentationDetents(

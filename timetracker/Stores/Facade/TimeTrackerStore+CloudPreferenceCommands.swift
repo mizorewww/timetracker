@@ -38,4 +38,13 @@ extension TimeTrackerStore {
             valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString))
         )
     }
+
+    @discardableResult
+    func setTodayHeatmapTaskIDs(_ ids: [UUID]) -> Bool {
+        let normalized = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(ids)
+        return setPreference(
+            .todayHeatmapTaskIDs,
+            valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString))
+        )
+    }
 }

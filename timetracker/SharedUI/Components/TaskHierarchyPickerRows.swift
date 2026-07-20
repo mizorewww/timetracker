@@ -13,7 +13,7 @@ extension TaskHierarchyPicker {
             switch mode {
             case .timer:
                 timerSelectionRow(item, sectionKind: sectionKind)
-            case .singleSelection:
+            case .singleSelection, .multipleSelection:
                 selectionButton(item, sectionKind: sectionKind)
             }
         }
@@ -59,7 +59,7 @@ extension TaskHierarchyPicker {
             selectionLabel(item, sectionKind: sectionKind)
         }
         .buttonStyle(.plain)
-        .disabled(item.isAvailable == false)
+        .disabled(isSelectionDisabled(for: item))
         .accessibilityLabel(accessibilityLabel(for: item))
         .accessibilityValue(accessibilityValue(for: item))
         .accessibilityHint(accessibilityHint(for: item))

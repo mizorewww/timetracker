@@ -1,28 +1,4 @@
-import Foundation
 import SwiftUI
-
-enum QuickStartSelectionMutation {
-    static func adding(_ id: UUID, to selectedIDs: [UUID]) -> [UUID] {
-        guard !selectedIDs.contains(id) else { return selectedIDs }
-        return selectedIDs + [id]
-    }
-
-    static func removing(_ id: UUID, from selectedIDs: [UUID]) -> [UUID] {
-        selectedIDs.filter { $0 != id }
-    }
-
-    static func removingVisibleSelections(
-        at offsets: IndexSet,
-        visibleIDs: [UUID],
-        from selectedIDs: [UUID]
-    ) -> [UUID] {
-        let removedIDs = Set(offsets.compactMap { offset in
-            visibleIDs.indices.contains(offset) ? visibleIDs[offset] : nil
-        })
-        guard !removedIDs.isEmpty else { return selectedIDs }
-        return selectedIDs.filter { !removedIDs.contains($0) }
-    }
-}
 
 struct QuickStartEditorSheet: View {
     let store: TimeTrackerStore
@@ -54,19 +30,25 @@ struct QuickStartEditorSheet: View {
 
     private func pin(_ task: TaskNode) {
         withSelectionAnimation {
-            selectedIDs = QuickStartSelectionMutation.adding(task.id, to: selectedIDs)
+            selectedIDs = OrderedTaskIDSelectionMutation.adding(
+                task.id,
+                to: selectedIDs
+            )
         }
     }
 
     private func unpin(_ task: TaskNode) {
         withSelectionAnimation {
-            selectedIDs = QuickStartSelectionMutation.removing(task.id, from: selectedIDs)
+            selectedIDs = OrderedTaskIDSelectionMutation.removing(
+                task.id,
+                from: selectedIDs
+            )
         }
     }
 
     private func removePinned(at offsets: IndexSet) {
         withSelectionAnimation {
-            selectedIDs = QuickStartSelectionMutation.removingVisibleSelections(
+            selectedIDs = OrderedTaskIDSelectionMutation.removingVisibleSelections(
                 at: offsets,
                 visibleIDs: pinnedTasks.map(\.id),
                 from: selectedIDs

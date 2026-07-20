@@ -52,6 +52,8 @@ extension TaskHierarchyPicker {
             store.timerPickerMode.title
         case let .singleSelection(_, context):
             context.navigationTitle
+        case let .multipleSelection(_, context, _):
+            context.navigationTitle
         }
     }
 
@@ -60,6 +62,8 @@ extension TaskHierarchyPicker {
         case .timer:
             "timer.taskPicker"
         case let .singleSelection(_, context):
+            context.accessibilityIdentifier
+        case let .multipleSelection(_, context, _):
             context.accessibilityIdentifier
         }
     }
@@ -75,6 +79,8 @@ extension TaskHierarchyPicker {
             return AppStrings.localized("tasks.empty.title")
         case let .singleSelection(_, context):
             return context.emptyStateTitle
+        case let .multipleSelection(_, context, _):
+            return context.emptyStateTitle
         }
     }
 
@@ -88,6 +94,8 @@ extension TaskHierarchyPicker {
         case .timer:
             return AppStrings.localized("tasks.empty.description")
         case let .singleSelection(_, context):
+            return context.emptyStateDescription
+        case let .multipleSelection(_, context, _):
             return context.emptyStateDescription
         }
     }
@@ -110,6 +118,8 @@ extension TaskHierarchyPickerSelectionContext {
             AppStrings.localized("inbox.route.childTask.title")
         case .inboxChecklistTarget:
             AppStrings.localized("inbox.route.checklistItem.title")
+        case .todayHeatmap:
+            AppStrings.localized("heatmap.picker.title")
         }
     }
     var accessibilityIdentifier: String {
@@ -120,6 +130,8 @@ extension TaskHierarchyPickerSelectionContext {
             "inbox.childTask.parentPicker"
         case .inboxChecklistTarget:
             "inbox.checklistItem.taskPicker"
+        case .todayHeatmap:
+            "settings.todayHeatmap.taskPicker"
         }
     }
     var selectionHint: String {
@@ -130,13 +142,15 @@ extension TaskHierarchyPickerSelectionContext {
             AppStrings.localized("inbox.route.childTask.selectionHint")
         case .inboxChecklistTarget:
             AppStrings.localized("inbox.route.checklistItem.selectionHint")
+        case .todayHeatmap:
+            AppStrings.localized("heatmap.picker.selectionHint")
         }
     }
     var emptyStateTitle: String {
         switch self {
         case .pomodoro:
             AppStrings.localized("pomodoro.noTasks.title")
-        case .inboxChildTaskParent, .inboxChecklistTarget:
+        case .inboxChildTaskParent, .inboxChecklistTarget, .todayHeatmap:
             AppStrings.localized("tasks.empty.title")
         }
     }
@@ -149,6 +163,8 @@ extension TaskHierarchyPickerSelectionContext {
             AppStrings.localized("inbox.route.childTask.emptyDescription")
         case .inboxChecklistTarget:
             AppStrings.localized("inbox.route.checklistItem.emptyDescription")
+        case .todayHeatmap:
+            AppStrings.localized("heatmap.picker.emptyDescription")
         }
     }
 }

@@ -9,7 +9,8 @@
 - 基线证明 Stop / Start 按钮外框同尺寸、同尾列，但 `stop.fill` / `play.fill`
   被强制缩进同一方形画布后，可见包络与光学中心仍不同。
 - 已实现可执行动作与被动状态两层共享样式，并通过纯契约与 iPhone 真实 UI 验证。
-- 下一步补强同一 UUID 的 Stop → Start 语义测试，并完成 iPad/macOS 矩阵。
+- 已补强同一 UUID 的 Stop → Start 语义测试；iPhone 1/1 通过且两张截图人工验收通过。
+- 下一步验证 iPad/macOS，并补齐 Running + Selected 被动状态同屏截图。
 
 ## 实现边界
 
@@ -74,7 +75,7 @@
 
 - `d94dfed`：领取当前反馈项，建立 `[~]` 与活动实现记忆链接。
 - `7636b03`：完成调用点、状态数据流、HIG、测试与 iPhone 基线截图审计。
-- 共享样式 checkpoint（待提交）：
+- `563f1da`：统一任务选择器可执行动作与被动状态指示样式。
   - Red：新增共享类型契约后，测试按预期因类型尚不存在而编译失败。
   - Green：最终共享契约 21/21 通过；现有真实 UI test 1/1 通过。
   - HIG 独立复审发现 plain icon button 缺少明确按压反馈；已加入共享
@@ -84,3 +85,14 @@
     `build/Task06PickerShots/initial-implementation-iPhone/C1A5D97A-5009-4A46-AC9A-698AA4C9F15D.png`。
   - 视觉结论：Stop / Start 使用相同圆形外包络、相同 centerX 和尾列，图形不再依赖
     方形画布的逐形状缩放。
+- UI 语义加固 checkpoint（待提交）：
+  - 移除 macOS 跳过，统一验证 iOS 至少 44×44 pt、macOS 至少 28×28 pt。
+  - 从 Stop accessibility identifier 提取任务 UUID，停止后精确查找同一 UUID 的
+    Start action，并验证标签为 `Start Read Apple HIG`。
+  - Owned iPhone 17 Pro 上 1/1 通过：
+    `/tmp/TimeTrackerTask06-ui-hardened-iPhone.xcresult`。
+  - 人工验收截图：
+    - `build/Task06PickerShots/hardened-iPhone/11862468-4AEA-4B4F-A7EC-091C45DB9A17.png`
+    - `build/Task06PickerShots/hardened-iPhone/20C7017C-977A-4D0F-B1B6-A7D765D49887.png`
+  - 视觉结论：Running Stop 与 available Start 圆形可见包络、尺寸、中心和尾列一致；
+    Stop 后同一行恢复为相同尺寸和位置的 Start。

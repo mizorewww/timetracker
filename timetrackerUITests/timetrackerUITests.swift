@@ -3476,15 +3476,17 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testTimerPickerAlignsRunningAndAvailableTaskActions() throws {
-        #if os(macOS)
-        throw XCTSkip("The compact timer-picker action grammar is verified on iOS.")
-        #else
         let app = launchApp(replacesDemoDataOnLaunch: true)
         XCTAssertTrue(homeIsReady(in: app))
 
         let startTimer = app.buttons["home.startTimer"].firstMatch
         scrollUntilHittable(startTimer, direction: .up, in: app)
         XCTAssertTrue(startTimer.waitForExistence(timeout: 5) && startTimer.isHittable)
+        XCTAssertEqual(
+            startTimer.label,
+            "Start Another Timer",
+            "This regression must exercise the parallel-timer picker."
+        )
         activate(startTimer)
 
         let picker = app.descendants(matching: .any)["timer.taskPicker"].firstMatch
@@ -3519,13 +3521,26 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             ) && availableAction.isHittable
         )
+        XCTAssertTrue(
+            availableAction.label.hasPrefix("Start "),
+            "An available row in Start Another Timer must expose a Start action."
+        )
 
+        #if os(macOS)
+        let minimumTargetDimension: CGFloat = 28
+        let screenshotPrefix = "mac"
+        #else
+        let minimumTargetDimension: CGFloat = 44
+        let screenshotPrefix = app.windows.firstMatch.frame.width >= 700
+            ? "ipad"
+            : "iphone"
+        #endif
         XCTAssertGreaterThanOrEqual(stopButtons.count, 1)
         for index in 0..<stopButtons.count {
             let stop = stopButtons.element(boundBy: index)
             XCTAssertTrue(stop.isHittable)
-            XCTAssertGreaterThanOrEqual(stop.frame.width, 44)
-            XCTAssertGreaterThanOrEqual(stop.frame.height, 44)
+            XCTAssertGreaterThanOrEqual(stop.frame.width, minimumTargetDimension)
+            XCTAssertGreaterThanOrEqual(stop.frame.height, minimumTargetDimension)
             XCTAssertEqual(
                 stop.frame.width,
                 availableAction.frame.width,
@@ -3545,16 +3560,31 @@ final class timetrackerUITests: XCTestCase {
                 "Every timer action must occupy the same trailing column."
             )
         }
-        XCTAssertGreaterThanOrEqual(availableAction.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(availableAction.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(
+            availableAction.frame.width,
+            minimumTargetDimension
+        )
+        XCTAssertGreaterThanOrEqual(
+            availableAction.frame.height,
+            minimumTargetDimension
+        )
         XCTAssertEqual(
             availableAction.frame.width,
             availableAction.frame.height,
             accuracy: 2,
-            "Picker timer actions must remain centered icon controls on iPhone and iPad."
+            "Picker timer actions must remain centered icon controls on every platform."
         )
         let guideStopFrame = guideStop.frame
-        try capture("timer-picker-aligned-task-actions", app: app)
+        let stopIdentifierPrefix = "timer.taskPicker.stop."
+        XCTAssertTrue(guideStop.identifier.hasPrefix(stopIdentifierPrefix))
+        let guideTaskID = String(
+            guideStop.identifier.dropFirst(stopIdentifierPrefix.count)
+        )
+        XCTAssertFalse(guideTaskID.isEmpty)
+        try capture(
+            "\(screenshotPrefix)-timer-picker-aligned-task-actions",
+            app: app
+        )
 
         XCTAssertTrue(guideStop.isHittable)
         activate(guideStop)
@@ -3572,13 +3602,9 @@ final class timetrackerUITests: XCTestCase {
             app.keyboards.firstMatch.waitForNonExistence(timeout: 3),
             "Dismiss the search keyboard before comparing screen-space action frames."
         )
-        let stoppedTask = app.buttons
-            .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
-                "timer.taskPicker.select.",
-                "Read Apple HIG"
-            ))
-            .firstMatch
+        let stoppedTask = app.buttons[
+            "timer.taskPicker.select.\(guideTaskID)"
+        ].firstMatch
         XCTAssertTrue(
             waitForElement(
                 stoppedTask,
@@ -3586,6 +3612,11 @@ final class timetrackerUITests: XCTestCase {
                 diagnosticName: "timer-picker-stopped-task-selectable",
                 in: app
             ) && stoppedTask.isHittable
+        )
+        XCTAssertEqual(
+            stoppedTask.label,
+            "Start Read Apple HIG",
+            "The exact task UUID must change from Stop to Start after stopping."
         )
         XCTAssertEqual(
             stoppedTask.frame.width,
@@ -3605,8 +3636,10 @@ final class timetrackerUITests: XCTestCase {
             accuracy: 2,
             "The same task action must stay in the trailing column across state changes."
         )
-        try capture("timer-picker-stopped-task-selectable", app: app)
-        #endif
+        try capture(
+            "\(screenshotPrefix)-timer-picker-stopped-task-selectable",
+            app: app
+        )
     }
 
     @MainActor

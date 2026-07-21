@@ -143,6 +143,40 @@ struct SystemSurfaceInteractionContractTests {
             #expect(liveActivity.contains("\"live.timer.additionalFormat\"") == false)
         }
     }
+
+    @Test
+    func liveActivitySettingsExposeARealRegistrationGateAndRecoveryActions() throws {
+        let section = try sourceText(
+            "timetracker/Features/Settings/LiveActivitySettingsSection.swift"
+        )
+        let settings = try sourceText(
+            "timetracker/Features/Settings/SettingsCategorySections.swift"
+        )
+        let systemTest = try sourceText(
+            "timetrackerUITests/LiveActivitySystemSurfaceUITests.swift"
+        )
+
+        #expect(settings.contains("LiveActivitySettingsSection(store: store)"))
+        #expect(section.contains("SettingsStatusRow(presentation: statusPresentation)"))
+        #expect(section.contains("case .active:"))
+        #expect(section.contains("case .unavailable(let failure):"))
+        #expect(section.contains("UIApplication.openSettingsURLString"))
+        #expect(section.contains("coordinator.retryLatestDesiredState()"))
+        #expect(section.contains("store.syncLiveActivitiesIfAvailable()"))
+        #expect(section.contains("settings.liveActivity.status."))
+        #expect(systemTest.contains("settings.liveActivity.status.active"))
+
+        for locale in ["en", "zh-Hans", "zh-Hant"] {
+            let strings = try sourceText(
+                "timetracker/\(locale).lproj/Localizable.strings"
+            )
+            #expect(strings.contains("\"liveActivity.settings.title\""))
+            #expect(strings.contains("\"liveActivity.settings.status.active.title\""))
+            #expect(strings.contains("\"liveActivity.settings.status.denied.title\""))
+            #expect(strings.contains("\"liveActivity.settings.status.backgroundStart.title\""))
+            #expect(strings.contains("\"liveActivity.settings.openSystemSettings\""))
+        }
+    }
 }
 
 private func liveActivityTimerSources() throws -> String {

@@ -10,6 +10,10 @@ extension SettingsView {
                 showGrossAndWallTogether: showGrossAndWallTogetherBinding
             )
 
+            #if os(iOS)
+            LiveActivitySettingsSection(store: store)
+            #endif
+
             TodayHeatmapSettingsSection(
                 store: store,
                 onChangeSelection: { taskIDs in

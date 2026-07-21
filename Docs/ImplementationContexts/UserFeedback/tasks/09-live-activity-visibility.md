@@ -9,8 +9,9 @@
 - [x] 已审计 ActivityKit 能力、系统资格条件、请求/更新/结束生命周期与展示 UI。
 - [x] 已完成错误分类、可观察运行状态与保留目标重试基础 checkpoint。
 - [x] 已把 ActivityKit 运行边界改造成可注入、可验证的生命周期客户端。
-- [~] 正在实现 Settings 诊断状态与系统表面 UI 测试就绪门槛。
-- 下一 checkpoint：显示真实注册/关闭/后台重试/配置故障状态，并让 UI 测试等待 ActivityKit 请求完成。
+- [x] 已实现 Settings 诊断状态与系统表面 UI 测试就绪门槛。
+- [~] 正在让 Settings 与恢复逻辑跟随 ActivityKit 的真实生命周期，而非只依赖请求成功。
+- 下一 checkpoint：识别 ended/dismissed/stale registration，在仍有运行计时器时安全重建，并覆盖 8 小时系统生命周期条件。
 
 ## 反馈边界
 
@@ -24,7 +25,7 @@
 - [x] 盘点请求、更新、结束、恢复和系统授权/资格判断
 - [x] 用失败测试或可复现诊断锁定根因
 - [~] 依照 Apple HIG 与 SwiftUI/ActivityKit 最佳实践实施最小修复
-- [ ] 验证 iPhone 锁屏、支持灵动岛的机型与降级路径并适当截图
+- [~] 验证 iPhone 锁屏、支持灵动岛的机型与降级路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
@@ -43,7 +44,8 @@
 
 ## 运行资源所有权
 
-- 领取阶段不启动模拟器、TestManager 或 Instruments。
+- Settings 系统表面批次 owned iPhone 17 Pro 模拟器：`EAE5FCDF-60EE-4C0F-915E-762AC1ADCC15`；验证后已关闭并删除。
+- 物理 iPhone Air 批次只终止本任务明确启动的 App/Live Activity extension 进程，不触碰设备上的其他 Live Activity。
 - 后续每个设备批次记录唯一 UDID；批次结束后终止 App、关闭并删除 owned 设备，清理 Runner、构建和 trace 进程。
 - 不触碰不属于 Task 09 的模拟器或进程。
 
@@ -58,4 +60,10 @@
 - [x] ActivityKit 客户端：原生 adapter 独占 `ActivityAuthorizationInfo`、注册列表与 request/update/end；Coordinator 可注入 fake，释放时取消授权观察。
 - [x] 生命周期测试：物理 iPhone Air 上 10/10 通过，覆盖 12 类授权错误、关闭→恢复一次重试、后台失败显式重试、停止不复活、授权/停止与暂停 update 竞态、匹配快路和观察取消。
 - [x] 资源清理：测试宿主已终止；无 owned `xcodebuild`、`xctest`、App Runner 或 Booted 模拟器残留。
-- [~] 当前 checkpoint：Settings 诊断状态、可操作恢复提示与 UI 测试就绪门槛。
+- [x] Settings 诊断：General 显示 ready/synchronizing/registered 与 denied/unsupported/background/capacity/configuration/payload/system 分类；提供系统设置或显式重试操作，并明确注册不等于系统保证展示。
+- [x] 失败证据：旧系统表面测试在物理 iPhone Air 通过 ActivityKit 注册门禁后，因找不到 compact 标题失败；录屏证明设备已有另一条 Live Activity，iOS 把 Time Tracker 降级为右侧 minimal 计时胶囊，计时从 `32:15` 增长到 `32:17`，属于测试假阴性而非未显示。
+- [x] 系统表面测试：关闭 Settings 后重新确认计时器仍运行，等待主屏转场，保存 compact/minimal 截图；依次尝试可用岛区域并展开 Time Tracker，失败时先保留截图与 SpringBoard 层级。
+- [x] 截图验证：owned iPhone 17 Pro 模拟器上注册状态、App 恢复、compact 与 expanded 四张截图目视通过；expanded 显示 `Read Apple HIG` 与持续计时。
+- [x] 验证：iPhone 17 Pro 模拟器系统表面 UI 测试通过；`SystemSurfaceInteractionContractTests` 8/8、`LocalizationContractTests` 8/8 通过；曾由 macOS 门禁发现 iOS-only helper 条件编译遗漏，修复后复测通过。
+- [x] 资源清理：owned 模拟器已关闭删除；物理测试 App/appex 与所有 owned `xcodebuild`、`xctest`、Runner 已释放，未触碰 AnalyticsReview 模拟器或设备上的其他活动。
+- [~] 当前 checkpoint：观察真实 ActivityState，处理系统结束/移除后的恢复与长计时条件。

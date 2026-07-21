@@ -167,12 +167,16 @@ struct TodayHeatmapUIContractTests {
         let desktop = try sourceText(
             "timetracker/Features/Home/HomeViews.swift"
         )
-        let section = try sourceText(
-            "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift"
-        )
-        let grid = try sourceText(
-            "timetracker/SharedUI/Components/ActivityHeatmapGrid.swift"
-        )
+        let section = try [
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift",
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapCard.swift"
+        ].map { try sourceText($0) }.joined(separator: "\n")
+        let grid = try [
+            "timetracker/SharedUI/Components/ActivityHeatmapGrid.swift",
+            "timetracker/SharedUI/Components/ActivityHeatmapChart.swift",
+            "timetracker/SharedUI/Components/ActivityHeatmapPalette.swift",
+            "timetracker/SharedUI/Components/ActivityHeatmapValueFormatter.swift"
+        ].map { try sourceText($0) }.joined(separator: "\n")
         let seed = try sourceText(
             "timetracker/App/SeedData+DemoBuild.swift"
         )
@@ -207,6 +211,9 @@ struct TodayHeatmapUIContractTests {
         ))
         #expect(seed.contains("app.id.uuidString,"))
         #expect(seed.contains("client.id.uuidString"))
+        #expect(seed.contains("title: \"Daily Push-ups\""))
+        #expect(seed.contains("TaskQuantityGoal("))
+        #expect(seed.contains("quantityTask.id.uuidString"))
         #expect(grid.contains("struct ActivityHeatmapGrid: View"))
         #expect(grid.contains("import Charts"))
         #expect(grid.contains("Chart(cells)"))
@@ -233,9 +240,12 @@ struct TodayHeatmapUIContractTests {
         let section = try sourceText(
             "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift"
         )
-        let service = try sourceText(
-            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService.swift"
-        )
+        let service = try [
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService.swift",
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService+Indexing.swift",
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService+MetricValues.swift",
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService+CalendarProjection.swift"
+        ].map { try sourceText($0) }.joined(separator: "\n")
         let store = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+TodayActivityHeatmap.swift"
         )
@@ -246,6 +256,7 @@ struct TodayHeatmapUIContractTests {
             "taskReadModelRevision",
             "localDay",
             "localWeekStart",
+            "liveRefreshBucket",
             "clockRevision"
         ] {
             #expect(section.contains(token))
@@ -254,6 +265,10 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains(".NSSystemClockDidChange"))
         #expect(section.contains(".NSSystemTimeZoneDidChange"))
         #expect(section.contains(".NSCalendarDayChanged"))
+        #expect(section.contains("TimelineView(.periodic(from: .now, by: 60))"))
+        #expect(section.contains("store.activeSegments.isEmpty"))
+        #expect(section.contains("Int(now.timeIntervalSinceReferenceDate / 60)"))
+        #expect(section.contains("now: context.date"))
         #expect(store.contains("taskByID: taskByID"))
         #expect(store.contains("childrenByParentID: childrenByParentID"))
         #expect(store.contains("segments: allSegments"))

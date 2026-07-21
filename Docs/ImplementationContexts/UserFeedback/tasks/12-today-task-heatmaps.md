@@ -11,7 +11,8 @@
 - [x] 实现持久化配置、每日聚合与任务详情默认关闭的追踪开关。
 - [x] 实现并验证每任务配色与 Today 独立 Heatmap。
 - [x] 完成 owned iPhone/iPad 模拟器交互、截图验收与批次资源清理。
-- [~] 完成最终相关回归、Release 全设备安装与临时产物清理。
+- [x] 补齐运行中计时刷新、数量父子语义、确定性冷启动验收与最终相关回归。
+- [~] 执行 Release 全设备安装并清理本任务临时产物。
 - [ ] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -45,8 +46,8 @@
 - [x] 复用 BlossomColor 主题色并生成清晰的从浅到深强度层级
 - [x] 普通时长、Checklist 完成数量和仓库已存在的任务量数据有确定、可测试的日聚合语义
 - [x] 空数据、归档任务、删除/恢复数据、时区和跨日边界行为明确
-- [~] iPhone/iPad/macOS 普通布局与深浅色不截断；iPhone/iPad simulator-only 截图已验收
-- [~] 聚焦测试已通过；相关回归待最终批次
+- [x] iPhone/iPad/macOS 普通布局与深浅色不截断；清单/时长/数量均已完成 simulator-only 截图验收
+- [x] 聚焦测试与相关回归已完成；全量测试中的本任务相关失败已修复并隔离复验
 - [ ] `CONFIGURATION=Release scripts/build_install_all.sh` 成功并核验版本/签名
 - [ ] 清理 owned 模拟器、进程和临时产物
 
@@ -55,6 +56,7 @@
 - [x] 数据模型、迁移、每日聚合和阈值语义审计
 - [x] Today、设置、任务详情与 BlossomColor 复用入口审计
 - [x] 测试架构、Swift Charts/可复用库与模拟器验收路径审计
+- [x] 数量任务父子聚合 fixture、真实 Today 卡片与 simulator-only 截图补强
 
 ## 审计结论与锁定决策
 
@@ -89,6 +91,11 @@
   SwiftData store 写入后销毁并重建 `ModelContainer` 的单元测试验证。
 - UI 验收只使用本任务 owned iPhone/iPad 模拟器；物理设备只执行最终 Release 安装，不启动、
   不操作、不截图。
+- 运行中的未结束计时会随 `now` 增长，因此 Today 使用 60 秒 `TimelineView` 时钟；刷新 identity
+  只在存在活动计时时携带分钟 bucket，空闲时不重新生成快照。行为测试同时锁定“运行中跨分钟增加
+  60 秒”和“空闲跨分钟 request 不变”。
+- UI 测试不再通过失败后重启掩盖 fixture 冷启动竞态；`ContentView` 在 store 完成初始配置后暴露
+  确定性 ready 标识，Heatmap UI 测试必须等待它再断言数据。
 
 ## 运行资源所有权
 
@@ -98,6 +105,12 @@
   3 个 simulator-only UI 测试通过并导出 10 张 XCTest PNG；已终止 App、shutdown 并 delete。
 - `Task12-Heatmap-UI-iPadPro13`：`AFF6A870-C4D2-40A8-B257-0BBC0975A7C0`，
   同组 3 个 simulator-only UI 测试通过并导出 10 张 XCTest PNG；已终止 App、shutdown 并 delete。
+- `Task12-Final-Heatmap-iPhone17Pro`：`EC28B07C-E1F2-4588-BFF0-4C3B3B4B17E5`，
+  最终 3 个 simulator-only UI 场景全部通过并导出 11 张 XCTest PNG；逐张原始分辨率检查后已终止
+  App、shutdown 并 delete。首次详情测试遇到 Xcode 启动超时，重启该 owned 模拟器后隔离复跑通过。
+- `Task12-Final-Heatmap-iPadPro13`：`4CD94C78-938E-491F-BA5A-30A28EA86EF9`，
+  最终 3/3 simulator-only UI 测试通过并导出 11 张 XCTest PNG；逐张原始分辨率检查后已终止 App、
+  shutdown 并 delete。
 - 不触碰 `AnalyticsReview-iPhone17Pro` 或其他非本任务资源。
 
 ## Checkpoint 记录
@@ -112,4 +125,11 @@
   开启色阶、Today 同步、清单/时长独立蓝橙色板、层级选择器和选择摘要；两个 owned 模拟器及
   相关进程均已清理。持久化另以真实磁盘 SwiftData 容器重开测试通过；最终 macOS 聚焦批次
   14/14 通过。
-- [~] 当前 checkpoint：最终聚焦/相关回归与 Release 全设备安装。
+- [~] 当前 checkpoint：服务/UI 已按职责预算拆分；运行中计时只在活动时按分钟刷新；数量任务按父任务
+  及同单位后代聚合，真实 Today fixture 同时覆盖 Checklist、时长和数量三张独立卡片；UI 测试通过
+  `ContentView` ready 标识等待确定性冷启动。macOS 最终聚焦测试 19/19 通过，相关隔离复验 2/2 通过。
+  受限并发的 macOS 全量回归执行 1458 个测试，11 个失败中与本任务相关的 `ContentView` 行数预算已
+  修复并隔离通过；归档时间戳失败隔离通过，另 9 个为设置同步或既有源码预算/契约失败，均不在当前
+  唯一反馈范围。最终 owned iPhone 三个 UI 场景合计 3/3、iPad 3/3 通过，共 22 张 simulator-only
+  截图完成原始分辨率验收；两个模拟器已删除，未残留 owned app、xcodebuild、xctest 或 Booted 设备。
+  下一步只执行规定的 Release 全设备安装并清理本任务临时测试产物。

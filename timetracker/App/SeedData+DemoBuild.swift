@@ -57,12 +57,81 @@ extension SeedData {
                 )
             )
             if CommandLine.arguments.contains("--uitesting-today-heatmap") {
+                let quantityTask = try taskRepository.createTask(
+                    title: "Daily Push-ups",
+                    parentID: nil,
+                    categoryID: studyCategory.id,
+                    colorHex: "7C3AED",
+                    iconName: "figure.strengthtraining.traditional"
+                )
+                let quantityChild = try taskRepository.createTask(
+                    title: "Morning Set",
+                    parentID: quantityTask.id,
+                    colorHex: "A855F7",
+                    iconName: "figure.strengthtraining.traditional"
+                )
+                let quantityGoals = [
+                    TaskQuantityGoal(
+                        taskID: quantityTask.id,
+                        targetAmount: 50,
+                        unitLabel: "reps",
+                        deviceID: "demo"
+                    ),
+                    TaskQuantityGoal(
+                        taskID: quantityChild.id,
+                        targetAmount: 25,
+                        unitLabel: " RePs ",
+                        deviceID: "demo"
+                    ),
+                ]
+                quantityGoals.forEach(context.insert)
+                let yesterday = calendar.date(
+                    byAdding: .day,
+                    value: -1,
+                    to: startOfToday
+                ) ?? startOfToday.addingTimeInterval(-86_400)
+                let quantityEntries = [
+                    TaskQuantityEntry(
+                        id: UUID(),
+                        taskID: quantityTask.id,
+                        amount: 20,
+                        recordedAt: yesterday,
+                        createdAt: yesterday,
+                        deviceID: "demo"
+                    ),
+                    TaskQuantityEntry(
+                        id: UUID(),
+                        taskID: quantityChild.id,
+                        amount: 10,
+                        recordedAt: yesterday,
+                        createdAt: yesterday,
+                        deviceID: "demo"
+                    ),
+                    TaskQuantityEntry(
+                        id: UUID(),
+                        taskID: quantityTask.id,
+                        amount: 30,
+                        recordedAt: startOfToday,
+                        createdAt: startOfToday,
+                        deviceID: "demo"
+                    ),
+                    TaskQuantityEntry(
+                        id: UUID(),
+                        taskID: quantityChild.id,
+                        amount: 15,
+                        recordedAt: startOfToday,
+                        createdAt: startOfToday,
+                        deviceID: "demo"
+                    ),
+                ]
+                quantityEntries.forEach(context.insert)
                 context.insert(
                     SyncedPreference(
                         key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
                         valueJSON: try PreferenceJSON.encodeChecked([
                             app.id.uuidString,
-                            client.id.uuidString
+                            client.id.uuidString,
+                            quantityTask.id.uuidString
                         ]),
                         deviceID: "demo"
                     )

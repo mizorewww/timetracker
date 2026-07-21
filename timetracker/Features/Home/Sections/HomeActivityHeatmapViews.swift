@@ -6,6 +6,7 @@ struct HomeActivityHeatmapRefreshRequest: Hashable {
     let taskReadModelRevision: UInt64
     let localDay: Date
     let localWeekStart: Date
+    let liveRefreshBucket: Int?
     let clockRevision: UInt
 
     @MainActor
@@ -23,6 +24,9 @@ struct HomeActivityHeatmapRefreshRequest: Hashable {
             of: .weekOfYear,
             for: now
         )?.start ?? localDay
+        liveRefreshBucket = store.activeSegments.isEmpty
+            ? nil
+            : Int(now.timeIntervalSinceReferenceDate / 60)
         self.clockRevision = clockRevision
     }
 }
@@ -42,36 +46,38 @@ struct HomeActivityHeatmapSection: View {
     @State private var loadedHeatmaps: LoadedHomeActivityHeatmaps?
 
     var body: some View {
-        let request = HomeActivityHeatmapRefreshRequest(
-            store: store,
-            now: Date(),
-            calendar: calendar,
-            clockRevision: clockRevision
-        )
-        Group {
-            if request.selectedTaskIDs.isEmpty == false {
-                if let loadedHeatmaps,
-                   loadedHeatmaps.request == request {
-                    section(loadedHeatmaps.snapshots)
-                } else {
-                    loadingSection
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let request = HomeActivityHeatmapRefreshRequest(
+                store: store,
+                now: context.date,
+                calendar: calendar,
+                clockRevision: clockRevision
+            )
+            Group {
+                if request.selectedTaskIDs.isEmpty == false {
+                    if let loadedHeatmaps,
+                       loadedHeatmaps.request == request {
+                        section(loadedHeatmaps.snapshots)
+                    } else {
+                        loadingSection
+                    }
                 }
             }
-        }
-        .task(id: request) {
-            guard request.selectedTaskIDs.isEmpty == false else {
-                loadedHeatmaps = nil
-                return
+            .task(id: request) {
+                guard request.selectedTaskIDs.isEmpty == false else {
+                    loadedHeatmaps = nil
+                    return
+                }
+                let snapshots = store.todayTaskActivityHeatmapSnapshots(
+                    now: context.date,
+                    calendar: calendar
+                )
+                guard Task<Never, Never>.isCancelled == false else { return }
+                loadedHeatmaps = LoadedHomeActivityHeatmaps(
+                    request: request,
+                    snapshots: snapshots
+                )
             }
-            let snapshots = store.todayTaskActivityHeatmapSnapshots(
-                now: Date(),
-                calendar: calendar
-            )
-            guard Task<Never, Never>.isCancelled == false else { return }
-            loadedHeatmaps = LoadedHomeActivityHeatmaps(
-                request: request,
-                snapshots: snapshots
-            )
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
@@ -182,139 +188,5 @@ struct HomeActivityHeatmapSection: View {
 
     private func refreshClock() {
         clockRevision &+= 1
-    }
-}
-
-private struct TaskActivityHeatmapCard: View {
-    let snapshot: TaskActivityHeatmapSnapshot
-
-    @Environment(\.locale) private var locale
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            ActivityHeatmapGrid(
-                snapshot: snapshot,
-                accessibilitySummary: accessibilitySummary
-            )
-            .accessibilityIdentifier(
-                "home.heatmap.grid.\(snapshot.taskID.uuidString)"
-            )
-            Text(snapshot.hasActivity ? metricExplanation : noActivityExplanation)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(
-            "home.heatmap.\(snapshot.taskID.uuidString)"
-        )
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: 10) {
-            TaskIcon(
-                visual: TaskVisualPresentation(
-                    iconName: snapshot.iconName,
-                    colorHex: snapshot.colorHex
-                ),
-                size: 30
-            )
-            VStack(alignment: .leading, spacing: 2) {
-                Text(snapshot.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                Text(metricTitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text(headerValue)
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-                .foregroundStyle(Color(hex: snapshot.colorHex) ?? .blue)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .allowsTightening(true)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
-    private var metricTitle: String {
-        switch snapshot.metric {
-        case .trackedDuration:
-            AppStrings.localized("home.heatmap.metric.duration")
-        case .checklistCompletions:
-            AppStrings.localized("home.heatmap.metric.checklist")
-        case let .quantity(unitLabel):
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.metric.quantityFormat"),
-                unitLabel
-            )
-        }
-    }
-
-    private var totalValue: String {
-        ActivityHeatmapValueFormatter.compact(
-            snapshot.totalValue,
-            metric: snapshot.metric,
-            locale: locale
-        )
-    }
-
-    private var headerValue: String {
-        switch snapshot.metric {
-        case .quantity:
-            snapshot.totalValue.formatted(.number.locale(locale))
-        case .trackedDuration, .checklistCompletions:
-            totalValue
-        }
-    }
-
-    private var maximumDailyValue: String {
-        ActivityHeatmapValueFormatter.compact(
-            snapshot.maximumDailyValue,
-            metric: snapshot.metric,
-            locale: locale
-        )
-    }
-
-    private var metricExplanation: String {
-        switch snapshot.metric {
-        case .trackedDuration:
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.footer.durationFormat"),
-                maximumDailyValue
-            )
-        case .checklistCompletions:
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.footer.checklistFormat"),
-                maximumDailyValue
-            )
-        case .quantity:
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.footer.quantityFormat"),
-                maximumDailyValue
-            )
-        }
-    }
-
-    private var noActivityExplanation: String {
-        String.localizedStringWithFormat(
-            AppStrings.localized("home.heatmap.footer.noActivityFormat"),
-            metricTitle
-        )
-    }
-
-    private var accessibilitySummary: String {
-        String.localizedStringWithFormat(
-            AppStrings.localized("home.heatmap.accessibilitySummaryFormat"),
-            metricTitle,
-            totalValue,
-            Int64(snapshot.activeDayCount),
-            maximumDailyValue
-        )
     }
 }

@@ -36,6 +36,7 @@ struct ContentView: View {
                 PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
             }
         }
+        .accessibilityIdentifier(hasFinishedInitialConfiguration ? "app.initialConfiguration.ready" : "app.initialConfiguration.pending")
         .environment(presentationRouter)
         .environment(feedbackRouter)
         .appPresentationHost(
@@ -163,7 +164,6 @@ struct ContentView: View {
         self.watchCommandRegistrationID = nil
         #endif
     }
-
     private func relayStoreError(_ message: String?) {
         guard let message, !message.isEmpty else { return }
         feedbackRouter.present(

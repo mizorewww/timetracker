@@ -380,7 +380,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func quantityUsesDeclaredGoalInsteadOfObservedMaximum() throws {
+    func quantityAggregatesMatchingUnitSubtasksAgainstDeclaredGoals() throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -393,15 +393,53 @@ struct TodayActivityHeatmapTests {
         let yesterday = try #require(
             calendar.date(byAdding: .day, value: -1, to: today)
         )
+        let tomorrow = try #require(
+            calendar.date(byAdding: .day, value: 1, to: today)
+        )
         let quantityTask = task("Push-ups", colorHex: "16A34A")
-        let goal = quantityGoal(
+        let matchingChild = task(
+            "Morning set",
+            parentID: quantityTask.id
+        )
+        let differentUnitChild = task(
+            "Workout sets",
+            parentID: quantityTask.id
+        )
+        let deletedChild = task(
+            "Deleted set",
+            parentID: quantityTask.id
+        )
+        deletedChild.deletedAt = now.addingTimeInterval(-60)
+        let rootGoal = quantityGoal(
             taskID: quantityTask.id,
-            targetAmount: 50,
+            targetAmount: 100,
             unitLabel: "reps"
         )
-        let snapshots = TodayActivityHeatmapSnapshotService().taskSnapshots(
+        let matchingChildGoal = quantityGoal(
+            taskID: matchingChild.id,
+            targetAmount: 50,
+            unitLabel: " RePs "
+        )
+        let differentUnitGoal = quantityGoal(
+            taskID: differentUnitChild.id,
+            targetAmount: 10,
+            unitLabel: "sets"
+        )
+        let deletedChildGoal = quantityGoal(
+            taskID: deletedChild.id,
+            targetAmount: 100,
+            unitLabel: "reps"
+        )
+        let service = TodayActivityHeatmapSnapshotService()
+        let tasks = [
+            quantityTask,
+            matchingChild,
+            differentUnitChild,
+            deletedChild,
+        ]
+        let snapshots = service.taskSnapshots(
             selectedTaskIDs: [quantityTask.id],
-            tasks: [quantityTask],
+            tasks: tasks,
             segments: [
                 segment(
                     taskID: quantityTask.id,
@@ -415,7 +453,12 @@ struct TodayActivityHeatmapTests {
                     completedAt: today.addingTimeInterval(60)
                 ),
             ],
-            quantityGoals: [goal],
+            quantityGoals: [
+                rootGoal,
+                matchingChildGoal,
+                differentUnitGoal,
+                deletedChildGoal,
+            ],
             quantityEntries: [
                 quantityEntry(
                     taskID: quantityTask.id,
@@ -428,6 +471,26 @@ struct TodayActivityHeatmapTests {
                     recordedAt: today.addingTimeInterval(60)
                 ),
                 quantityEntry(
+                    taskID: matchingChild.id,
+                    amount: 10,
+                    recordedAt: yesterday.addingTimeInterval(120)
+                ),
+                quantityEntry(
+                    taskID: matchingChild.id,
+                    amount: 30,
+                    recordedAt: today.addingTimeInterval(120)
+                ),
+                quantityEntry(
+                    taskID: differentUnitChild.id,
+                    amount: 9,
+                    recordedAt: today.addingTimeInterval(180)
+                ),
+                quantityEntry(
+                    taskID: deletedChild.id,
+                    amount: 100,
+                    recordedAt: today.addingTimeInterval(240)
+                ),
+                quantityEntry(
                     taskID: quantityTask.id,
                     amount: 5,
                     recordedAt: now.addingTimeInterval(3_600)
@@ -438,14 +501,31 @@ struct TodayActivityHeatmapTests {
         )
         let snapshot = try #require(snapshots.first)
 
+        #expect(
+            service.contributingTaskIDs(
+                selectedTaskIDs: [quantityTask.id],
+                tasks: tasks
+            ) == Set([
+                quantityTask.id,
+                matchingChild.id,
+                differentUnitChild.id,
+            ])
+        )
         #expect(snapshot.metric == .quantity(unitLabel: "reps"))
-        #expect(snapshot.totalValue == 85)
-        #expect(snapshot.maximumDailyValue == 60)
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 25)
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.referenceValue == 50)
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.intensity == .medium)
-        #expect(day(today, in: snapshot, calendar: calendar)?.value == 60)
-        #expect(day(today, in: snapshot, calendar: calendar)?.intensity == .maximum)
+        #expect(snapshot.totalValue == 125)
+        #expect(snapshot.maximumDailyValue == 90)
+        #expect(snapshot.activeDayCount == 2)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 35)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.referenceValue == 150)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.intensity == .low)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 90)
+        #expect(day(today, in: snapshot, calendar: calendar)?.referenceValue == 150)
+        #expect(day(today, in: snapshot, calendar: calendar)?.intensity == .high)
+        #expect(day(tomorrow, in: snapshot, calendar: calendar)?.value == 0)
+        #expect(
+            day(tomorrow, in: snapshot, calendar: calendar)?.intensity
+                == ActivityHeatmapIntensity.none
+        )
     }
 
     @Test @MainActor

@@ -817,25 +817,15 @@ final class timetrackerUITests: XCTestCase {
         throw XCTSkip("Task-detail Heatmap screenshots are verified on iPhone and iPad simulators.")
         #else
         let taskTitle = "Read Apple HIG"
-        var app = launchApp(
+        let app = launchApp(
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: ["--uitesting-today-heatmap"]
         )
+        XCTAssertTrue(initialConfigurationIsReady(in: app))
         XCTAssertTrue(homeIsReady(in: app))
-        var configuredHeatmaps = app.descendants(matching: .any)[
+        let configuredHeatmaps = app.descendants(matching: .any)[
             "home.heatmaps"
         ].firstMatch
-        if configuredHeatmaps.waitForExistence(timeout: 8) == false {
-            app.terminate()
-            app = launchApp(
-                replacesDemoDataOnLaunch: true,
-                additionalLaunchArguments: ["--uitesting-today-heatmap"]
-            )
-            XCTAssertTrue(homeIsReady(in: app))
-            configuredHeatmaps = app.descendants(matching: .any)[
-                "home.heatmaps"
-            ].firstMatch
-        }
         XCTAssertTrue(configuredHeatmaps.waitForExistence(timeout: 8))
         openSection(
             "Tasks",
@@ -3720,6 +3710,7 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: ["--uitesting-today-heatmap"]
         )
+        XCTAssertTrue(initialConfigurationIsReady(in: app))
         XCTAssertTrue(homeIsReady(in: app))
         let heatmaps = app.descendants(matching: .any)[
             "home.heatmaps"
@@ -3736,6 +3727,12 @@ final class timetrackerUITests: XCTestCase {
                 "Client Work activity Heatmap"
             )
         ).firstMatch
+        let quantityGrid = app.otherElements.matching(
+            NSPredicate(
+                format: "label == %@",
+                "Daily Push-ups activity Heatmap"
+            )
+        ).firstMatch
         let checklistFooter = app.staticTexts[
             "Daily completed checklist items for this task and its subtasks. Shades are relative to the busiest day (4 completed)."
         ].firstMatch
@@ -3745,6 +3742,9 @@ final class timetrackerUITests: XCTestCase {
                 "Daily gross tracked time for this task and its subtasks."
             )
         ).firstMatch
+        let quantityFooter = app.staticTexts[
+            "Daily quantity for this task and matching-unit subtasks. Shades show progress toward each task’s declared goal; peak 45 reps."
+        ].firstMatch
 
         scrollUntilHittable(checklistGrid, direction: .up, in: app)
         XCTAssertTrue(
@@ -3790,6 +3790,25 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(durationFooter, in: app))
         XCTAssertNotEqual(checklistGrid.value as? String, durationGrid.value as? String)
         try capture("\(prefix)-home-today-heatmap-duration", app: app)
+
+        scrollUntilHittable(quantityGrid, direction: .up, in: app)
+        XCTAssertTrue(
+            quantityGrid.waitForExistence(timeout: 8),
+            "The quantity task must have a third independent Heatmap."
+        )
+        XCTAssertEqual(
+            quantityGrid.value as? String,
+            "Quantity · reps. Total 75 reps across 2 active days; busiest day 45 reps."
+        )
+        XCTAssertTrue(quantityFooter.waitForExistence(timeout: 5))
+        scrollUntilFullyVisibleAboveSystemChrome(quantityFooter, in: app)
+        XCTAssertGreaterThan(quantityGrid.frame.width, 240)
+        XCTAssertGreaterThan(quantityGrid.frame.height, 90)
+        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(quantityGrid, in: app))
+        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(quantityFooter, in: app))
+        XCTAssertNotEqual(checklistGrid.value as? String, quantityGrid.value as? String)
+        XCTAssertNotEqual(durationGrid.value as? String, quantityGrid.value as? String)
+        try capture("\(prefix)-home-today-heatmap-quantity", app: app)
         #endif
     }
 
@@ -4824,6 +4843,15 @@ final class timetrackerUITests: XCTestCase {
             return true
         }
         return app.buttons["home.startTimer"].waitForExistence(timeout: 2)
+    }
+
+    @MainActor
+    private func initialConfigurationIsReady(
+        in app: XCUIApplication
+    ) -> Bool {
+        app.descendants(matching: .any)[
+            "app.initialConfiguration.ready"
+        ].firstMatch.waitForExistence(timeout: 20)
     }
 
     @MainActor

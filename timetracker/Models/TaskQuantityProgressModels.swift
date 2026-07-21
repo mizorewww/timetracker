@@ -79,3 +79,9 @@ nonisolated struct TaskQuantityProgressSnapshot: Equatable, Sendable {
         return min(max(Double(totalAmount) / Double(targetAmount), 0), 1)
     }
 }
+
+nonisolated enum TaskQuantityProgressReadState: Equatable, Sendable {
+    case none
+    case incomplete
+    case available(TaskQuantityProgressSnapshot)
+}

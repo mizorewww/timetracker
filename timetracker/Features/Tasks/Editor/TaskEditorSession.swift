@@ -48,6 +48,24 @@ final class TaskEditorSession {
            draft.confirmsQuantityProgressReset == false {
             return false
         }
+        if let taskID = draft.taskID {
+            if case .incomplete = store.taskQuantityProgressReadState(
+                for: taskID,
+                expectedGoalMutationID:
+                    draft.baseline?.quantityGoalMutationID
+            ) {
+                return false
+            }
+            if draft.dailyRecurrence != nil,
+               store.isGeneratedRecurrenceTask(taskID: taskID) {
+                return false
+            }
+            if draft.baseline?.recurrenceRuleMutationID == nil,
+               draft.dailyRecurrence != nil,
+               store.taskHasActiveWork(taskID: taskID) {
+                return false
+            }
+        }
         return (try? ChecklistDraftPersistencePolicy.prepare(
             draft.checklistItems
         )) != nil

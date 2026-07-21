@@ -122,4 +122,16 @@
   - macOS 签名聚焦测试 18 项、相关 recurrence/draft/snapshot/preflight/heatmap/localization/layout
     回归 68 项通过；`plutil` 与 `git diff --check` 通过。未启动模拟器或物理设备。依赖仅使用
     Foundation、SwiftData 与仓库现有基础设施，没有新增第三方库。
-- [~] 当前 checkpoint：接入共享编辑器与任务详情的数量配置、进度记录和历史编辑 UI。
+- [x] 共享编辑器数量与每日重复配置：
+  - 新建与现有任务共用原生 SwiftUI `Toggle`、`LabeledContent` 和 `TextField`；目标/单位加入共享
+    FocusState，保存、取消和滚动收键盘路径保持一致。
+  - 有数量记录后锁定单位但仍允许调整目标；不完整同步图禁用修改并显示行内错误，不能把 nil 误判为
+    “零条记录”。
+  - 关闭已有 quantity goal 必须经过破坏性确认；恢复文件刻意丢弃的一次性权限可以由用户重新确认，
+    新建 goal 无法伪造清空权限。
+  - 当天生成任务隐藏重复开关并指回父模板；普通任务正有 Timer/Pomodoro 时先要求停止，已有模板仍可
+    暂停/恢复。
+  - 英文、简中、繁中已补齐；31 项 quantity/editor/UI contract 测试与 48 项 editor/draft/recovery
+    回归通过，三语 plist、focused source layout 与 diff 检查通过。只运行签名 macOS 测试宿主，未启动
+    模拟器或物理设备；没有新增第三方库。
+- [~] 当前 checkpoint：接入任务详情的数量汇总、进度记录和历史编辑 UI。

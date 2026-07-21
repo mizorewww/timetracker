@@ -36,6 +36,16 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
         #expect(progress.fractionCompleted == 0.4)
         #expect(progress.isComplete == false)
         #expect(progress.entryCount == 1)
+        #expect(
+            store.taskQuantityProgressReadState(for: fixture.task.id) ==
+                .available(progress)
+        )
+        #expect(
+            store.taskQuantityProgressReadState(
+                for: fixture.task.id,
+                expectedGoalMutationID: UUID()
+            ) == .incomplete
+        )
         let persisted = try #require(
             try quantityEntries(in: context.container).first
         )
@@ -44,6 +54,33 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
         #expect(persisted.taskID == fixture.task.id)
         #expect(persisted.quantityGoalID == fixture.goal.id)
         #expect(persisted.amount == 20)
+    }
+
+    @Test
+    func storeReadStateDistinguishesNoGoalFromIncompleteBaseline()
+        throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "seed"
+        ).createTask(
+            title: "Plain task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        #expect(
+            store.taskQuantityProgressReadState(for: task.id) == .none
+        )
+        #expect(
+            store.taskQuantityProgressReadState(
+                for: task.id,
+                expectedGoalMutationID: UUID()
+            ) == .incomplete
+        )
     }
 
     @Test
@@ -528,6 +565,11 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
         )
         #expect(
             conflictStore.taskQuantityProgress(for: conflicted.task.id) == nil
+        )
+        #expect(
+            conflictStore.taskQuantityProgressReadState(
+                for: conflicted.task.id
+            ) == .incomplete
         )
         #expect(
             throws: TaskQuantityEntryMutationError

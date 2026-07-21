@@ -3,6 +3,8 @@ import SwiftUI
 enum TaskEditorTextField: Hashable {
     case title
     case notes
+    case quantityTarget
+    case quantityUnit
 }
 
 struct TaskEditorForm: View {
@@ -73,6 +75,17 @@ struct TaskEditorSections: View {
                 }
             )
             TaskPlanEditorSection(draft: $draft)
+            TaskQuantityEditorSection(
+                store: store,
+                draft: $draft,
+                focusedTextField: focusedTextField
+            )
+            TaskRecurrenceEditorSection(
+                draft: $draft,
+                isGeneratedTask: isGeneratedRecurrenceTask,
+                isCreationBlockedByActiveWork:
+                    isRecurrenceCreationBlockedByActiveWork
+            )
             TaskChecklistEditorSection(
                 checklistItems: $draft.checklistItems,
                 focusedChecklistDraftID: focusedChecklistDraftID,
@@ -88,6 +101,19 @@ struct TaskEditorSections: View {
                 focusedTextField: focusedTextField
             )
         }
+    }
+
+    private var isGeneratedRecurrenceTask: Bool {
+        guard let taskID = draft.taskID else { return false }
+        return store.isGeneratedRecurrenceTask(taskID: taskID)
+    }
+
+    private var isRecurrenceCreationBlockedByActiveWork: Bool {
+        guard draft.baseline?.recurrenceRuleMutationID == nil,
+              let taskID = draft.taskID else {
+            return false
+        }
+        return store.taskHasActiveWork(taskID: taskID)
     }
 }
 
@@ -119,12 +145,25 @@ struct TaskEditorInlineValidationMessage: View {
     let accessibilityIdentifier: String
 
     var body: some View {
-        Label(error.localizedDescription, systemImage: "exclamationmark.circle.fill")
+        TaskEditorInlineErrorMessage(
+            message: error.localizedDescription,
+            accessibilityIdentifier: accessibilityIdentifier
+        )
+        .accessibilityLabel(error.localizedDescription)
+    }
+}
+
+struct TaskEditorInlineErrorMessage: View {
+    let message: String
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        Label(message, systemImage: "exclamationmark.circle.fill")
             .font(.footnote)
             .foregroundStyle(.red)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(error.localizedDescription)
+            .accessibilityLabel(message)
             .accessibilityAddTraits(.isStaticText)
             .accessibilityIdentifier(accessibilityIdentifier)
     }

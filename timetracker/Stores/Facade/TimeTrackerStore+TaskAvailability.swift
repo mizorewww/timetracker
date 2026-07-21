@@ -20,4 +20,16 @@ extension TimeTrackerStore {
             $0.deletedAt == nil && $0.templateTaskID == task.id
         }
     }
+
+    func isGeneratedRecurrenceTask(taskID: UUID) -> Bool {
+        _ = taskReadModelRevision
+        return taskRecurrenceOccurrences.contains {
+            $0.deletedAt == nil && $0.generatedTaskID == taskID
+        }
+    }
+
+    func taskHasActiveWork(taskID: UUID) -> Bool {
+        activeSegment(for: taskID) != nil ||
+            activePomodoroRun(for: taskID) != nil
+    }
 }

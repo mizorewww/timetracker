@@ -70,7 +70,9 @@ import OSLog
 @MainActor
 @Observable
 final class LiveActivityCoordinator {
-    static let shared = LiveActivityCoordinator()
+    static let shared = LiveActivityCoordinator(
+        client: ActivityKitLiveActivitySystemClient()
+    )
 
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
@@ -92,20 +94,23 @@ final class LiveActivityCoordinator {
 
     @ObservationIgnored private var lastRequest: Request?
     @ObservationIgnored private let projectionService = LiveActivityProjectionService()
-    @ObservationIgnored private let authorizationInfo: ActivityAuthorizationInfo
+    @ObservationIgnored private let client: any LiveActivitySystemClient
     @ObservationIgnored private var authorizationObservationTask: Task<Void, Never>?
     @ObservationIgnored private lazy var reconciler = LatestDesiredStateReconciler<DesiredState> { [weak self] state in
         guard let self else { return }
         await reconcile(state)
     }
 
-    private init() {
-        let authorizationInfo = ActivityAuthorizationInfo()
-        self.authorizationInfo = authorizationInfo
-        status = authorizationInfo.areActivitiesEnabled
+    init(client: any LiveActivitySystemClient) {
+        self.client = client
+        status = client.areActivitiesEnabled
             ? .ready
             : .unavailable(.denied)
         observeAuthorizationChanges()
+    }
+
+    deinit {
+        authorizationObservationTask?.cancel()
     }
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
@@ -122,9 +127,9 @@ final class LiveActivityCoordinator {
             let hasWork = lastRequest != nil
                 || reconciler.isReconciling
                 || hasRetainedActiveState
-                || !Activity<TimeTrackingActivityAttributes>.activities.isEmpty
+                || !client.activities.isEmpty
             guard hasWork else {
-                status = authorizationInfo.areActivitiesEnabled
+                status = client.areActivitiesEnabled
                     ? .ready
                     : .unavailable(.denied)
                 return
@@ -154,12 +159,12 @@ final class LiveActivityCoordinator {
             taskID: primary.taskID.uuidString,
             state: state
         )
-        let hasMatchingActivity = Activity<TimeTrackingActivityAttributes>.activities.contains {
-            $0.attributes.segmentID == request.segmentID
+        let hasMatchingActivity = client.activities.contains {
+            $0.segmentID == request.segmentID
         }
 
         guard request != lastRequest || !hasMatchingActivity || reconciler.isReconciling else {
-            status = authorizationInfo.areActivitiesEnabled
+            status = client.areActivitiesEnabled
                 ? .active
                 : .unavailable(.denied)
             return
@@ -173,7 +178,7 @@ final class LiveActivityCoordinator {
 
     func retryLatestDesiredState() {
         guard reconciler.desiredState != nil else {
-            status = authorizationInfo.areActivitiesEnabled
+            status = client.areActivitiesEnabled
                 ? .ready
                 : .unavailable(.denied)
             return
@@ -188,13 +193,13 @@ final class LiveActivityCoordinator {
         case .inactive:
             await endAllActivities()
             lastRequest = nil
-            status = authorizationInfo.areActivitiesEnabled
+            status = client.areActivitiesEnabled
                 ? .ready
                 : .unavailable(.denied)
         case .active(let request):
             if await updateOrStart(request) {
                 lastRequest = request
-                status = authorizationInfo.areActivitiesEnabled
+                status = client.areActivitiesEnabled
                     ? .active
                     : .unavailable(.denied)
             }
@@ -202,7 +207,7 @@ final class LiveActivityCoordinator {
     }
 
     private func updateOrStart(_ request: Request) async -> Bool {
-        guard authorizationInfo.areActivitiesEnabled else {
+        guard client.areActivitiesEnabled else {
             status = .unavailable(.denied)
             Self.logger.notice(
                 "Skipped Live Activity synchronization because Live Activities are disabled in system settings"
@@ -218,24 +223,24 @@ final class LiveActivityCoordinator {
             state: request.state,
             staleDate: LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)
         )
-        let activities = Activity<TimeTrackingActivityAttributes>.activities
+        let activities = client.activities
 
         if let existing = activities.first(where: {
-            $0.attributes.segmentID == request.segmentID
+            $0.segmentID == request.segmentID
         }) {
-            await existing.update(content)
+            await client.update(activityID: existing.id, content: content)
 
             for stale in activities where stale.id != existing.id {
-                await stale.end(content, dismissalPolicy: .immediate)
+                await client.end(activityID: stale.id, content: content)
             }
             return true
         } else {
             for stale in activities {
-                await stale.end(content, dismissalPolicy: .immediate)
+                await client.end(activityID: stale.id, content: content)
             }
 
             do {
-                _ = try Activity.request(attributes: attributes, content: content, pushType: nil)
+                _ = try client.request(attributes: attributes, content: content)
                 return true
             } catch {
                 status = .unavailable(LiveActivityFailure(error))
@@ -248,7 +253,7 @@ final class LiveActivityCoordinator {
     }
 
     private func observeAuthorizationChanges() {
-        let updates = authorizationInfo.activityEnablementUpdates
+        let updates = client.activityEnablementUpdates()
         authorizationObservationTask = Task { @MainActor [weak self] in
             for await areActivitiesEnabled in updates {
                 guard let self else { return }
@@ -265,7 +270,7 @@ final class LiveActivityCoordinator {
         guard status == .unavailable(.denied) else { return }
 
         status = .ready
-        if reconciler.desiredState != nil {
+        if case .active? = reconciler.desiredState {
             retryLatestDesiredState()
         }
     }
@@ -283,13 +288,13 @@ final class LiveActivityCoordinator {
             ),
             staleDate: nil
         )
-        for activity in Activity<TimeTrackingActivityAttributes>.activities {
-            await activity.end(content, dismissalPolicy: .immediate)
+        for activity in client.activities {
+            await client.end(activityID: activity.id, content: content)
         }
     }
 }
 
-private extension LiveActivityFailure {
+extension LiveActivityFailure {
     init(_ error: Error) {
         guard let authorizationError = error as? ActivityAuthorizationError else {
             self = .system

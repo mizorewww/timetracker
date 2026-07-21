@@ -8,8 +8,9 @@
 - [x] 已按文档顺序领取 Live Activity / 灵动岛不可见反馈。
 - [x] 已审计 ActivityKit 能力、系统资格条件、请求/更新/结束生命周期与展示 UI。
 - [x] 已完成错误分类、可观察运行状态与保留目标重试基础 checkpoint。
-- [~] 正在把 ActivityKit 运行边界改造成可注入、可验证的生命周期客户端。
-- 下一 checkpoint：用注入测试覆盖授权关闭/恢复、后台请求失败、停止后不得复活及状态竞态。
+- [x] 已把 ActivityKit 运行边界改造成可注入、可验证的生命周期客户端。
+- [~] 正在实现 Settings 诊断状态与系统表面 UI 测试就绪门槛。
+- 下一 checkpoint：显示真实注册/关闭/后台重试/配置故障状态，并让 UI 测试等待 ActivityKit 请求完成。
 
 ## 反馈边界
 
@@ -21,8 +22,8 @@
 
 - [x] 盘点 ActivityKit 配置、entitlement、Info.plist、扩展与 App Group/数据通路
 - [x] 盘点请求、更新、结束、恢复和系统授权/资格判断
-- [~] 用失败测试或可复现诊断锁定根因
-- [ ] 依照 Apple HIG 与 SwiftUI/ActivityKit 最佳实践实施最小修复
+- [x] 用失败测试或可复现诊断锁定根因
+- [~] 依照 Apple HIG 与 SwiftUI/ActivityKit 最佳实践实施最小修复
 - [ ] 验证 iPhone 锁屏、支持灵动岛的机型与降级路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
@@ -53,4 +54,8 @@
 - [x] 恢复基础：新增平台中立的失败/恢复/状态模型；监听 ActivityKit 授权变化；保留失败目标并支持强制重放；多次在途重试合并为一次，更新目标优先。
 - [x] 生命周期防护：无活动计时器时把保留的 `.active` 视作待清理工作，避免授权恢复后复活已停止计时；发布 `.active` 前重新检查授权。
 - [x] 验证：macOS focused `LiveActivityRecoveryTests` 4/4 通过；正式签名配置下 generic iOS Debug build 通过；未启动模拟器。
-- [~] 当前 checkpoint：注入 ActivityKit 客户端并覆盖授权、失败和停止生命周期。
+- [x] 注入边界失败证据：iOS build-for-testing 首次因缺少 `LiveActivitySystemClient` / `LiveActivityRegistration` 以 exit 65 失败。
+- [x] ActivityKit 客户端：原生 adapter 独占 `ActivityAuthorizationInfo`、注册列表与 request/update/end；Coordinator 可注入 fake，释放时取消授权观察。
+- [x] 生命周期测试：物理 iPhone Air 上 10/10 通过，覆盖 12 类授权错误、关闭→恢复一次重试、后台失败显式重试、停止不复活、授权/停止与暂停 update 竞态、匹配快路和观察取消。
+- [x] 资源清理：测试宿主已终止；无 owned `xcodebuild`、`xctest`、App Runner 或 Booted 模拟器残留。
+- [~] 当前 checkpoint：Settings 诊断状态、可操作恢复提示与 UI 测试就绪门槛。

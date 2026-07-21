@@ -12,8 +12,8 @@
 - [x] 实现并验证每任务配色与 Today 独立 Heatmap。
 - [x] 完成 owned iPhone/iPad 模拟器交互、截图验收与批次资源清理。
 - [x] 补齐运行中计时刷新、数量父子语义、确定性冷启动验收与最终相关回归。
-- [~] 执行 Release 全设备安装并清理本任务临时产物。
-- [ ] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
+- [x] 执行 Release 全设备安装并清理本任务临时产物。
+- [x] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -48,8 +48,8 @@
 - [x] 空数据、归档任务、删除/恢复数据、时区和跨日边界行为明确
 - [x] iPhone/iPad/macOS 普通布局与深浅色不截断；清单/时长/数量均已完成 simulator-only 截图验收
 - [x] 聚焦测试与相关回归已完成；全量测试中的本任务相关失败已修复并隔离复验
-- [ ] `CONFIGURATION=Release scripts/build_install_all.sh` 成功并核验版本/签名
-- [ ] 清理 owned 模拟器、进程和临时产物
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh` 成功并核验版本/签名
+- [x] 清理 owned 模拟器、进程和临时产物
 
 ## 子代理编排
 
@@ -125,11 +125,20 @@
   开启色阶、Today 同步、清单/时长独立蓝橙色板、层级选择器和选择摘要；两个 owned 模拟器及
   相关进程均已清理。持久化另以真实磁盘 SwiftData 容器重开测试通过；最终 macOS 聚焦批次
   14/14 通过。
-- [~] 当前 checkpoint：服务/UI 已按职责预算拆分；运行中计时只在活动时按分钟刷新；数量任务按父任务
+- [x] `2d30d30`：服务/UI 已按职责预算拆分；运行中计时只在活动时按分钟刷新；数量任务按父任务
   及同单位后代聚合，真实 Today fixture 同时覆盖 Checklist、时长和数量三张独立卡片；UI 测试通过
   `ContentView` ready 标识等待确定性冷启动。macOS 最终聚焦测试 19/19 通过，相关隔离复验 2/2 通过。
   受限并发的 macOS 全量回归执行 1458 个测试，11 个失败中与本任务相关的 `ContentView` 行数预算已
   修复并隔离通过；归档时间戳失败隔离通过，另 9 个为设置同步或既有源码预算/契约失败，均不在当前
   唯一反馈范围。最终 owned iPhone 三个 UI 场景合计 3/3、iPad 3/3 通过，共 22 张 simulator-only
   截图完成原始分辨率验收；两个模拟器已删除，未残留 owned app、xcodebuild、xctest 或 Booted 设备。
-  下一步只执行规定的 Release 全设备安装并清理本任务临时测试产物。
+- [x] 最终 Release 安装：精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并以退出码 0
+  完成。iOS/iPadOS Release 构建、嵌入 Watch companion、codesign 与 Designated Requirement 验证
+  通过，应用在不启动的前提下安装到 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 和
+  iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B`；macOS Release 已复制到
+  `/Applications/timetracker.app` 并验签通过。iOS 与 macOS 均核验为 `1.1.52 (107)`、bundle ID
+  `me.mezorewww.timetracker`、Team `LT98S43NKA`。没有可见物理 Apple Watch，因此脚本按设计只验证
+  embedded companion，实际 Watch 安装交由配对设备的 Automatic App Install。
+- [x] 已删除本任务全部 `/private/tmp` xcresult、截图导出、失败诊断、sample，以及 2.1GB
+  `build/Install/DerivedData`；再次核验无 Task12 owned 模拟器、Booted 设备或相关测试/构建进程。
+  `Docs/userfeedback.md` 末尾三条 Apple Health 用户追加反馈保持未改内容，未混入实现 checkpoint。

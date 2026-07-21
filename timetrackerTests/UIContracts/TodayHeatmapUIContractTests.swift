@@ -79,12 +79,6 @@ struct TodayHeatmapUIContractTests {
         let preferences = try sourceText(
             "timetracker/Models/SyncedPreferences.swift"
         )
-        let seed = try sourceText(
-            "timetracker/App/SeedData+DemoBuild.swift"
-        )
-        let uiTests = try sourceText(
-            "timetrackerUITests/timetrackerUITests.swift"
-        )
 
         #expect(detail.contains("TaskDetailHeatmapTrackingSection("))
         #expect(section.contains("Toggle(isOn: trackingBinding)"))
@@ -97,11 +91,6 @@ struct TodayHeatmapUIContractTests {
         #expect(commands.contains("OrderedTaskIDSelectionMutation.adding("))
         #expect(commands.contains("OrderedTaskIDSelectionMutation.removing("))
         #expect(preferences.contains("var todayHeatmapTaskIDs: [UUID] = []"))
-        #expect(seed.contains("--uitesting-today-heatmap-off"))
-        #expect(seed.contains("PreferenceJSON.encodeChecked([String]())"))
-        #expect(uiTests.contains(
-            "additionalLaunchArguments: [\"--uitesting-today-heatmap-off\"]"
-        ))
     }
 
     @Test

@@ -10,7 +10,8 @@
 - [x] 明确普通计时任务、Checklist 和现有任务量数据的每日强度语义与迁移默认值。
 - [x] 实现持久化配置、每日聚合与任务详情默认关闭的追踪开关。
 - [x] 实现并验证每任务配色与 Today 独立 Heatmap。
-- [~] 完成 owned 模拟器交互/截图验收、相关回归、Release 全设备安装与资源清理。
+- [x] 完成 owned iPhone/iPad 模拟器交互、截图验收与批次资源清理。
+- [~] 完成最终相关回归、Release 全设备安装与临时产物清理。
 - [ ] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -38,14 +39,14 @@
 
 ## 验收清单
 
-- [ ] 从设置选择/取消选择 Heatmap 任务，重启后保持
-- [ ] 任务详情开关默认关闭，并与设置选择保持单一语义
-- [ ] 每个已选择任务在 Today 显示独立、可辨识的 GitHub 风格年度/周期 Heatmap
-- [ ] 复用 BlossomColor 主题色并生成清晰的从浅到深强度层级
-- [ ] 普通时长、Checklist 完成数量和仓库已存在的任务量数据有确定、可测试的日聚合语义
-- [ ] 空数据、归档任务、删除/恢复数据、时区和跨日边界行为明确
-- [ ] iPhone/iPad/macOS 普通布局与深浅色不截断；适当 simulator-only 截图
-- [ ] 聚焦测试与相关回归测试通过
+- [x] 从设置选择/取消选择 Heatmap 任务，真实磁盘容器重开后保持
+- [x] 任务详情开关默认关闭，并与设置选择保持单一语义
+- [x] 每个已选择任务在 Today 显示独立、可辨识的 GitHub 风格年度/周期 Heatmap
+- [x] 复用 BlossomColor 主题色并生成清晰的从浅到深强度层级
+- [x] 普通时长、Checklist 完成数量和仓库已存在的任务量数据有确定、可测试的日聚合语义
+- [x] 空数据、归档任务、删除/恢复数据、时区和跨日边界行为明确
+- [~] iPhone/iPad/macOS 普通布局与深浅色不截断；iPhone/iPad simulator-only 截图已验收
+- [~] 聚焦测试已通过；相关回归待最终批次
 - [ ] `CONFIGURATION=Release scripts/build_install_all.sh` 成功并核验版本/签名
 - [ ] 清理 owned 模拟器、进程和临时产物
 
@@ -82,8 +83,10 @@
 - UI 复审后的收口：最多 64 个图表在宽屏卡片布局中使用 `LazyVStack`；不足一分钟的时长用秒显示，
   不再出现有颜色却显示 `0 min`；任务量总值在标题中只显示本地化数字、完整单位保留在副标题和
   可访问性摘要；简繁中文使用“累计计时时长/累計計時時長”，不泄漏英文 Gross。
-- Task Detail 的默认关闭 UI 测试使用专用空选择 fixture，避免其他测试遗留 preference 影响结果；
-  同一测试启用后重启不再替换数据，以验证真实持久化。
+- Task Detail 的默认关闭 UI 测试使用标准确定性 fixture 中未选择的第三个任务，并沿真实的
+  Today -> Tasks -> 搜索 -> 详情路径验证默认关闭、开启后色阶出现、返回 Today 后立即显示。
+  UI 测试专用容器按设计是内存型，不能伪装成跨进程持久化证据；真正的持久化由临时磁盘
+  SwiftData store 写入后销毁并重建 `ModelContainer` 的单元测试验证。
 - UI 验收只使用本任务 owned iPhone/iPad 模拟器；物理设备只执行最终 Release 安装，不启动、
   不操作、不截图。
 
@@ -91,6 +94,10 @@
 
 - `Task12-Heatmap-iPhone17Pro`：`2FD5F08C-F779-49B6-854D-8B58881971C1`，
   iOS 13 个聚焦测试通过后已终止 App、shutdown 并 delete；名称/UDID 均不再存在。
+- `Task12-Heatmap-UI-iPhone17Pro`：`C293811F-C2C3-4A22-B0DF-A466C66328EE`，
+  3 个 simulator-only UI 测试通过并导出 10 张 XCTest PNG；已终止 App、shutdown 并 delete。
+- `Task12-Heatmap-UI-iPadPro13`：`AFF6A870-C4D2-40A8-B257-0BBC0975A7C0`，
+  同组 3 个 simulator-only UI 测试通过并导出 10 张 XCTest PNG；已终止 App、shutdown 并 delete。
 - 不触碰 `AnalyticsReview-iPhone17Pro` 或其他非本任务资源。
 
 ## Checkpoint 记录
@@ -101,4 +108,8 @@
 - [x] `0ddec3f`：Swift Charts 每任务卡片、Blossom 主题色、详情预览、本地化及确定性 UI fixture；
   owned iPhone 模拟器 13 个聚焦测试通过；UI 复审收口后 macOS 13 个聚焦测试再次通过，
   模拟器批次已完整清理。
-- [~] 当前 checkpoint：owned iPhone/iPad 模拟器交互与截图验收；只使用 simulator，完成批次即清理。
+- [x] owned iPhone/iPad 模拟器交互与截图验收：两个平台各 3/3 UI 测试通过；逐张检查默认关闭、
+  开启色阶、Today 同步、清单/时长独立蓝橙色板、层级选择器和选择摘要；两个 owned 模拟器及
+  相关进程均已清理。持久化另以真实磁盘 SwiftData 容器重开测试通过；最终 macOS 聚焦批次
+  14/14 通过。
+- [~] 当前 checkpoint：最终聚焦/相关回归与 Release 全设备安装。

@@ -812,17 +812,48 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTaskDetailHeatmapTrackingDefaultsOffAndPersistsToToday() throws {
+    func testTaskDetailHeatmapTrackingDefaultsOffAndSyncsToToday() throws {
         #if os(macOS)
         throw XCTSkip("Task-detail Heatmap screenshots are verified on iPhone and iPad simulators.")
         #else
-        let taskTitle = "Time Tracker App"
+        let taskTitle = "Read Apple HIG"
         var app = launchApp(
-            route: "task-detail",
             replacesDemoDataOnLaunch: true,
-            taskTitle: taskTitle,
-            additionalLaunchArguments: ["--uitesting-today-heatmap-off"]
+            additionalLaunchArguments: ["--uitesting-today-heatmap"]
         )
+        XCTAssertTrue(homeIsReady(in: app))
+        var configuredHeatmaps = app.descendants(matching: .any)[
+            "home.heatmaps"
+        ].firstMatch
+        if configuredHeatmaps.waitForExistence(timeout: 8) == false {
+            app.terminate()
+            app = launchApp(
+                replacesDemoDataOnLaunch: true,
+                additionalLaunchArguments: ["--uitesting-today-heatmap"]
+            )
+            XCTAssertTrue(homeIsReady(in: app))
+            configuredHeatmaps = app.descendants(matching: .any)[
+                "home.heatmaps"
+            ].firstMatch
+        }
+        XCTAssertTrue(configuredHeatmaps.waitForExistence(timeout: 8))
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let tasksView = app.descendants(matching: .any)["tasks.view"].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 8))
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(
+            searchField.waitForExistence(timeout: 5) && searchField.isHittable
+        )
+        activate(searchField)
+        replaceText(taskTitle, in: searchField)
+        let task = taskRow(named: taskTitle, in: app)
+        XCTAssertTrue(task.waitForExistence(timeout: 8) && task.isHittable)
+        activate(task)
         XCTAssertTrue(taskDetailIsReady(in: app))
         let toggle = app.switches["task.detail.heatmapTracking"].firstMatch
         scrollUntilHittable(toggle, direction: .up, in: app)
@@ -833,7 +864,9 @@ final class timetrackerUITests: XCTestCase {
             : "iphone"
         try capture("\(prefix)-task-detail-heatmap-off", app: app)
 
-        activate(toggle)
+        toggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
+        ).tap()
         XCTAssertTrue(waitUntil(timeout: 5) {
             toggle.value as? String == "1"
         })
@@ -842,22 +875,6 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(palette.waitForExistence(timeout: 5))
         try capture("\(prefix)-task-detail-heatmap-on", app: app)
-
-        app.terminate()
-        app = launchApp(
-            route: "task-detail",
-            taskTitle: taskTitle
-        )
-        XCTAssertTrue(taskDetailIsReady(in: app))
-        let persistedToggle = app.switches[
-            "task.detail.heatmapTracking"
-        ].firstMatch
-        scrollUntilHittable(persistedToggle, direction: .up, in: app)
-        XCTAssertTrue(
-            persistedToggle.waitForExistence(timeout: 5) &&
-                persistedToggle.isHittable
-        )
-        XCTAssertEqual(persistedToggle.value as? String, "1")
 
         openSection(
             "Today",
@@ -869,12 +886,12 @@ final class timetrackerUITests: XCTestCase {
         let grid = app.otherElements.matching(
             NSPredicate(
                 format: "label == %@",
-                "Time Tracker App activity Heatmap"
+                "Read Apple HIG activity Heatmap"
             )
         ).firstMatch
         scrollUntilHittable(grid, direction: .up, in: app)
         XCTAssertTrue(grid.waitForExistence(timeout: 8))
-        try capture("\(prefix)-task-detail-heatmap-persisted-today", app: app)
+        try capture("\(prefix)-task-detail-heatmap-enabled-today", app: app)
         #endif
     }
 

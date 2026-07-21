@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import timetracker
 
@@ -447,6 +448,32 @@ struct TodayActivityHeatmapTests {
         #expect(day(today, in: snapshot, calendar: calendar)?.intensity == .maximum)
     }
 
+    @Test @MainActor
+    func heatmapSelectionPersistsAcrossContainerReopen() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "TodayHeatmapPersistenceTests-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appending(path: "heatmap.store")
+        let selectedTaskIDs = [UUID(), UUID()]
+
+        try writeHeatmapSelection(selectedTaskIDs, to: storeURL)
+
+        let reopenedContainer = try heatmapPersistenceContainer(at: storeURL)
+        let reopenedContext = ModelContext(reopenedContainer)
+        let stored = try reopenedContext.fetch(
+            FetchDescriptor<SyncedPreference>()
+        )
+        let preferences = AppPreferences(syncedPreferences: stored)
+
+        #expect(preferences.todayHeatmapTaskIDs == selectedTaskIDs)
+    }
+
     @MainActor
     private func task(
         _ title: String,
@@ -567,5 +594,38 @@ struct TodayActivityHeatmapTests {
             .lazy
             .flatMap(\.days)
             .first { calendar.isDate($0.date, inSameDayAs: date) }
+    }
+
+    @MainActor
+    private func writeHeatmapSelection(
+        _ taskIDs: [UUID],
+        to storeURL: URL
+    ) throws {
+        let container = try heatmapPersistenceContainer(at: storeURL)
+        try StoreScopedPreferenceCommandCoordinator(
+            container: container,
+            writeAuthorization: .isolatedTestHarness
+        ).set(
+            key: .todayHeatmapTaskIDs,
+            valueJSON: PreferenceJSON.encode(taskIDs.map(\.uuidString))
+        )
+    }
+
+    @MainActor
+    private func heatmapPersistenceContainer(
+        at storeURL: URL
+    ) throws -> ModelContainer {
+        let schema = TimeTrackerModelRegistry.currentSchema
+        let configuration = ModelConfiguration(
+            "TodayHeatmapPersistenceTests",
+            schema: schema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        return try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
     }
 }

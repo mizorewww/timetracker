@@ -53,12 +53,14 @@ import SwiftUI
             view.setContentHuggingPriority(.defaultLow, for: .horizontal)
             view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             context.coordinator.configureLinks(on: view)
+            configureAccessibility(on: view)
             return view
         }
 
         func updateNSView(_ view: MarkdownTextView, context: Context) {
             context.coordinator.measuredHeight = $measuredHeight
             context.coordinator.onOpenURL = onOpenURL
+            configureAccessibility(on: view)
             context.coordinator.update(view: view, markdown: markdown, theme: theme)
         }
 
@@ -75,6 +77,13 @@ import SwiftUI
                 measuredHeight: $measuredHeight,
                 onOpenURL: onOpenURL
             )
+        }
+
+        private func configureAccessibility(on view: MarkdownTextView) {
+            view.setAccessibilityElement(true)
+            view.setAccessibilityRole(.staticText)
+            view.setAccessibilityIdentifier("task.detail.notes.markdown")
+            view.setAccessibilityValue(markdown)
         }
     }
 #endif

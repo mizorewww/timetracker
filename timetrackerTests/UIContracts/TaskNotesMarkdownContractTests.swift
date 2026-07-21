@@ -42,6 +42,15 @@ struct TaskNotesMarkdownContractTests {
         #expect(preview.contains("openURL(url)"))
         #expect(preview.contains("view.boundingSize(for: width)"))
         #expect(preview.contains("MarkdownTheme()"))
+        let representable = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskNotesMarkdownRepresentable.swift"
+        )
+        #expect(representable.contains("view.setAccessibilityElement(true)"))
+        #expect(representable.contains("view.setAccessibilityRole(.staticText)"))
+        #expect(representable.contains(
+            "view.setAccessibilityIdentifier(\"task.detail.notes.markdown\")"
+        ))
+        #expect(representable.contains("view.setAccessibilityValue(markdown)"))
         #expect(editor.contains("TextEditor(text: $notes)"))
         #expect(editor.contains("TaskNotesMarkdownPreview(markdown: notes)"))
         #expect(editor.contains("enum TaskNotesInteractionStyle"))

@@ -278,7 +278,7 @@ final class LiveActivityCoordinator {
         )
         let content = ActivityContent(
             state: request.state,
-            staleDate: LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)
+            staleDate: nil
         )
         let activities = client.activities
 

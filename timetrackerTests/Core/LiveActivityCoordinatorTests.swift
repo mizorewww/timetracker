@@ -295,6 +295,25 @@ struct LiveActivityCoordinatorTests {
     }
 
     @Test
+    func longRunningTimerKeepsItsOriginalStartWithoutAStaleDeadline() async {
+        let client = FakeLiveActivitySystemClient(activitiesEnabled: true)
+        let coordinator = LiveActivityCoordinator(client: client)
+        let scenario = makeScenario()
+        scenario.segment.startedAt = scenario.now.addingTimeInterval(-16 * 60 * 60)
+
+        coordinator.sync(
+            activeSegments: [scenario.segment],
+            tasks: [scenario.task],
+            now: scenario.now
+        )
+        await coordinator.waitUntilIdle()
+
+        let content = client.requestedContents.last
+        #expect(content?.state.startedAt == scenario.segment.startedAt)
+        #expect(content?.staleDate == nil)
+    }
+
+    @Test
     func pendingActivityAppliesTheLatestTaskContentAfterBecomingActive() async {
         let client = FakeLiveActivitySystemClient(activitiesEnabled: true)
         client.requestLifecycleState = .pending

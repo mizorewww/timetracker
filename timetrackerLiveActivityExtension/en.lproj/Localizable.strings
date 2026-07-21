@@ -2,4 +2,4 @@
 "live.timer.elapsed" = "Elapsed";
 "live.timer.open" = "Open Time Tracker";
 "live.timer.stale" = "Update delayed";
-"live.timer.staleHint" = "Elapsed time is frozen at the last confirmed update.";
+"live.timer.staleHint" = "Timer details may be delayed; elapsed time continues from the original start.";

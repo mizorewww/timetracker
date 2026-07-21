@@ -2,4 +2,4 @@
 "live.timer.elapsed" = "已計時";
 "live.timer.open" = "打開 Time Tracker";
 "live.timer.stale" = "更新延遲";
-"live.timer.staleHint" = "已用時間已停在最後確認的更新時間。";
+"live.timer.staleHint" = "計時詳情可能延遲；已用時間仍從原始開始時間繼續計算。";

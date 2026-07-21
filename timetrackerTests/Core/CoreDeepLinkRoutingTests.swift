@@ -101,28 +101,6 @@ struct CoreDeepLinkRoutingTests {
         #expect(selected?.id == lowerID)
     }
 
-    @Test
-    func liveActivityTimingPolicyFreezesElapsedTimeAtItsStaleBoundary() {
-        let startedAt = Date(timeIntervalSinceReferenceDate: 10_000)
-
-        #expect(
-            LiveActivityTimingPolicy.staleDate(for: startedAt)
-                == startedAt.addingTimeInterval(8 * 60 * 60)
-        )
-        #expect(
-            LiveActivityTimingPolicy.elapsedPresentation(
-                startedAt: startedAt,
-                isStale: false
-            ) == .live(startedAt: startedAt)
-        )
-        #expect(
-            LiveActivityTimingPolicy.elapsedPresentation(
-                startedAt: startedAt,
-                isStale: true
-            ) == .frozen(seconds: 8 * 60 * 60)
-        )
-    }
-
     @Test @MainActor
     func timerDeepLinksResolveFreshStoreStateInsteadOfFacadeCaches() throws {
         let context = try makeTestContext()
@@ -870,14 +848,17 @@ struct CoreDeepLinkRoutingTests {
     @Test
     func liveActivityMatchesImmutableTaskAttributesAndExposesAccessibleFreshness() throws {
         let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
+        let systemClient = try sourceText("timetracker/App/LiveActivitySystemClient.swift")
         let activity = try [
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift",
             "timetrackerLiveActivityExtension/LiveActivityTimerViews.swift",
             "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
         ].map(sourceText).joined(separator: "\n")
 
-        #expect(coordinator.contains("$0.attributes.segmentID == request.segmentID"))
-        #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
+        #expect(systemClient.contains("segmentID: $0.attributes.segmentID"))
+        #expect(coordinator.contains("$0.segmentID == request.segmentID"))
+        #expect(coordinator.contains("staleDate: nil"))
+        #expect(!coordinator.contains("LiveActivityTimingPolicy.staleDate"))
         #expect(!coordinator.contains("lastSignature"))
         #expect(activity.contains("context.isStale"))
         #expect(activity.contains("LiveActivityTimerRow("))

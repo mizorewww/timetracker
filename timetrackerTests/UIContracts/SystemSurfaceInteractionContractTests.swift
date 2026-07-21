@@ -33,22 +33,24 @@ struct SystemSurfaceInteractionContractTests {
     }
 
     @Test
-    func staleLiveActivityUsesFrozenElapsedPresentation() throws {
+    func liveActivityUsesAnUnboundedStopwatchWithoutAStaleDeadline() throws {
         let shared = try sourceText("SharedLiveActivity/TimeTrackingActivityAttributes.swift")
         let coordinator = try sourceText("timetracker/App/TimeTrackerLiveActivities.swift")
         let timer = try liveActivityTimerSources()
         let bundle = try sourceText("timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift")
 
-        #expect(shared.contains("case frozen(seconds: Int)"))
-        #expect(shared.contains("static let staleAfter: TimeInterval = 8 * 60 * 60"))
-        #expect(coordinator.contains("LiveActivityTimingPolicy.staleDate(for: request.state.startedAt)"))
-        #expect(timer.contains("LiveActivityTimingPolicy.elapsedPresentation("))
-        #expect(timer.contains("timerInterval: startedAt...LiveActivityTimingPolicy.staleDate(for: startedAt)"))
-        #expect(timer.contains("countsDown: false"))
-        #expect(timer.contains("Text(LiveActivityElapsedFormatter.clock(seconds))"))
+        #expect(!shared.contains("LiveActivityElapsedPresentation"))
+        #expect(!shared.contains("staleAfter"))
+        #expect(coordinator.contains("staleDate: nil"))
+        #expect(!coordinator.contains("LiveActivityTimingPolicy.staleDate"))
+        #expect(timer.contains("format: .stopwatch("))
+        #expect(timer.contains("startingAt: startedAt"))
+        #expect(timer.contains("maxPrecision: .seconds(1)"))
+        #expect(!timer.contains("timerInterval:"))
+        #expect(!timer.contains("LiveActivityElapsedFormatter.clock(seconds)"))
         #expect(bundle.contains("CompactTimerText("))
         #expect(bundle.contains("isStale: context.isStale"))
-        #expect(timer.contains(".accessibilityValue(elapsedAccessibilityValue)"))
+        #expect(timer.contains(".accessibilityValue(stopwatchText)"))
     }
 
     @Test

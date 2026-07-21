@@ -13,7 +13,7 @@ struct TimerText: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            elapsedText
+            stopwatchText
                 .font(
                     style == .lockScreen
                         ? .title3.monospacedDigit().weight(.semibold)
@@ -38,43 +38,21 @@ struct TimerText: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: isStale ? "live.timer.stale" : "live.timer.elapsed"))
-        .accessibilityValue(elapsedAccessibilityValue)
+        .accessibilityValue(stopwatchText)
         .accessibilityHint(
             isStale ? String(localized: "live.timer.staleHint") : ""
         )
     }
 
-    @ViewBuilder
-    private var elapsedText: some View {
-        switch elapsedPresentation {
-        case let .live(startedAt):
-            liveElapsedText(startedAt: startedAt)
-        case let .frozen(seconds):
-            Text(LiveActivityElapsedFormatter.clock(seconds))
-        }
-    }
-
-    private func liveElapsedText(startedAt: Date) -> Text {
+    private var stopwatchText: Text {
         Text(
-            timerInterval: startedAt...LiveActivityTimingPolicy.staleDate(for: startedAt),
-            countsDown: false,
-            showsHours: true
-        )
-    }
-
-    private var elapsedAccessibilityValue: Text {
-        switch elapsedPresentation {
-        case let .live(startedAt):
-            liveElapsedText(startedAt: startedAt)
-        case let .frozen(seconds):
-            Text(LiveActivityElapsedFormatter.clock(seconds))
-        }
-    }
-
-    private var elapsedPresentation: LiveActivityElapsedPresentation {
-        LiveActivityTimingPolicy.elapsedPresentation(
-            startedAt: startedAt,
-            isStale: isStale
+            .currentDate,
+            format: .stopwatch(
+                startingAt: startedAt,
+                showsHours: true,
+                maxFieldCount: 3,
+                maxPrecision: .seconds(1)
+            )
         )
     }
 }
@@ -84,41 +62,22 @@ struct CompactTimerText: View {
     let isStale: Bool
 
     var body: some View {
-        elapsedText
-            .accessibilityValue(elapsedAccessibilityValue)
+        stopwatchText
+            .accessibilityValue(stopwatchText)
+            .accessibilityHint(
+                isStale ? String(localized: "live.timer.staleHint") : ""
+            )
     }
 
-    @ViewBuilder
-    private var elapsedText: some View {
-        switch elapsedPresentation {
-        case let .live(startedAt):
-            liveElapsedText(startedAt: startedAt)
-        case let .frozen(seconds):
-            Text(LiveActivityElapsedFormatter.clock(seconds))
-        }
-    }
-
-    private func liveElapsedText(startedAt: Date) -> Text {
+    private var stopwatchText: Text {
         Text(
-            timerInterval: startedAt...LiveActivityTimingPolicy.staleDate(for: startedAt),
-            countsDown: false,
-            showsHours: true
-        )
-    }
-
-    private var elapsedAccessibilityValue: Text {
-        switch elapsedPresentation {
-        case let .live(startedAt):
-            liveElapsedText(startedAt: startedAt)
-        case let .frozen(seconds):
-            Text(LiveActivityElapsedFormatter.clock(seconds))
-        }
-    }
-
-    private var elapsedPresentation: LiveActivityElapsedPresentation {
-        LiveActivityTimingPolicy.elapsedPresentation(
-            startedAt: startedAt,
-            isStale: isStale
+            .currentDate,
+            format: .stopwatch(
+                startingAt: startedAt,
+                showsHours: true,
+                maxFieldCount: 3,
+                maxPrecision: .seconds(1)
+            )
         )
     }
 }

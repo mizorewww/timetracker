@@ -51,11 +51,3 @@ private func linearSRGB(_ component: Double) -> Double {
 enum LiveActivityDeepLinks {
     static let today = URL(string: "timetracker://open/today")!
 }
-
-enum LiveActivityElapsedFormatter {
-    nonisolated static func clock(_ seconds: Int) -> String {
-        Duration.seconds(max(0, seconds)).formatted(
-            .time(pattern: .hourMinuteSecond).locale(.autoupdatingCurrent)
-        )
-    }
-}

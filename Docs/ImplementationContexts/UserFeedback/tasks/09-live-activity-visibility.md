@@ -12,8 +12,9 @@
 - [x] 已实现 Settings 诊断状态与系统表面 UI 测试就绪门槛。
 - [x] Settings 与恢复逻辑已跟随 ActivityKit 的真实生命周期，而非只依赖请求成功。
 - [x] 已解除把内容 freshness、累计计时上限与单实例 8 小时生命周期错误绑定的问题。
-- [~] 正在以 simulator-only 截图验收锁屏与灵动岛的长计时持续展示。
-- 下一 checkpoint：在 owned iPhone 17 Pro 模拟器显示超过 8 小时的锁屏、compact/minimal 与 expanded 计时，并保存验收截图。
+- [x] 已以 simulator-only 截图验收锁屏与灵动岛的长计时持续展示。
+- [~] 正在执行最终 Release 全设备安装、签名和版本验证。
+- 下一 checkpoint：运行用户指定的 `CONFIGURATION=Release scripts/build_install_all.sh`，核对产物与安装版本并清理临时资源。
 
 ## 反馈边界
 
@@ -26,9 +27,9 @@
 - [x] 盘点 ActivityKit 配置、entitlement、Info.plist、扩展与 App Group/数据通路
 - [x] 盘点请求、更新、结束、恢复和系统授权/资格判断
 - [x] 用失败测试或可复现诊断锁定根因
-- [~] 依照 Apple HIG 与 SwiftUI/ActivityKit 最佳实践实施最小修复
-- [~] 验证 iPhone 锁屏、支持灵动岛的机型与降级路径并适当截图
-- [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [x] 依照 Apple HIG 与 SwiftUI/ActivityKit 最佳实践实施最小修复
+- [x] 验证 iPhone 锁屏、支持灵动岛的机型与降级路径并适当截图
+- [~] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
@@ -47,11 +48,12 @@
 ## 运行资源所有权
 
 - Settings 系统表面批次 owned iPhone 17 Pro 模拟器：`EAE5FCDF-60EE-4C0F-915E-762AC1ADCC15`；验证后已关闭并删除。
-- 用户已明确要求后续截图与验收只使用 owned 模拟器；不再连接、安装或截图物理机，除非用户另行明确要求。
+- 用户已明确要求截图验收只使用 owned 模拟器；物理设备不用于截图，最终安装验证与截图验收分开处理。
 - 先前物理机证据不再作为最终截图验收依据，对应临时截图会随 Task 09 构建产物清理。
 - ActivityState 最终验证 owned iPhone 17 Pro 模拟器：`2424D763-9F34-4DFE-841D-5E83DC707588`；验证后已关闭并删除。
 - 被 Xcode 测试基础设施污染的 owned 模拟器 `05EBE8E7-0A22-49C3-8EDD-D8AA65293B22` 及其隐式 clone 已关闭并删除。
 - 长计时验证 owned iPhone 17 Pro 模拟器：`8668643E-2BB3-422F-9007-2A3653ABE790`；验证后已关闭并删除。
+- 长计时系统表面截图 owned iPhone 17 Pro 模拟器：`251D2146-99C6-4C1F-9033-590D9AF58DAB`；验证后已关闭并删除。
 - 后续每个设备批次记录唯一 UDID；批次结束后终止 App、关闭并删除 owned 设备，清理 Runner、构建和 trace 进程。
 - 不触碰不属于 Task 09 的模拟器或进程。
 
@@ -85,4 +87,9 @@
 - [x] 失败证据：反转后的 unbounded Stopwatch 源契约在旧实现上失败；单方法过滤 0 项与两次 TestManager 启动故障均未冒充产品红灯。
 - [x] 验证：16 小时行为与生命周期/系统表面 33/33、Deep Link/本地化 36/36、macOS 源契约 8/8 通过；generic iOS Debug build-for-testing 通过。
 - [x] 资源清理：owned 长计时模拟器、App/Widget、TestManager diagnostics、Runner 与构建进程均已释放；没有 Booted owned 设备。
-- [~] 当前 checkpoint：仅使用 owned 模拟器完成锁屏与灵动岛长计时截图验收。
+- [x] 截图夹具：仅在专用 UI 测试参数下把 `Read Apple HIG` 计时起点设为 16 小时前，并先断言 App 内计时已超过 8 小时；普通 demo 与 Release 不受影响。
+- [x] Simulator-only UI 验证：同一 owned iPhone 17 Pro 上系统表面测试连续 3 次 1/1 通过；最终稳定批次显示 App `16:00:18`、Dynamic Island compact `16:00:24`、expanded `16:00:30`。
+- [x] 锁屏验证：Device Hub 选择同一显式 simulator UDID，完成系统两阶段 Live Activities 授权后重新注册；锁屏显示 `Read Apple HIG`、完整路径与 `16:01` 小时级累计时间。`simctl io screenshot` 在该 Xcode 27 beta 未合成系统活动层，最终使用 Device Hub 自带 Screenshot 保存完整锁屏证据。
+- [x] 截图证据：`build/Task09SimulatorScreenshot/FinalScreenshots/`；对应 `Test3.xcresult` 附件均记录设备名与 UDID，四张最终图片已目视检查，无裁切、重叠或 stale 标记。
+- [x] 资源清理：owned 模拟器已关闭删除，Device Hub 已退出；无 owned `xcodebuild`、`xctest`、UI Runner、App、诊断或 Booted 设备残留，未触碰 AnalyticsReview 模拟器。
+- [~] 当前 checkpoint：执行 Release 全设备安装、签名与版本验证。

@@ -35,6 +35,7 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
+            "--uitesting-live-activity-long-timer",
             "-ApplePersistenceIgnoreState", "YES",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
@@ -51,11 +52,16 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         )
         let elapsed = app.descendants(matching: .any)
             .matching(NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "home.timer.elapsed."
+                format: "identifier BEGINSWITH %@ AND (label BEGINSWITH %@ OR value BEGINSWITH %@)",
+                "home.timer.elapsed.",
+                "16:",
+                "16:"
             ))
             .firstMatch
-        XCTAssertTrue(elapsed.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            elapsed.waitForExistence(timeout: 5),
+            "The screenshot fixture must prove that elapsed time remains live beyond eight hours."
+        )
         let expectedTaskTitle = "Read Apple HIG"
         let primaryTask = app.buttons.matching(NSPredicate(
             format: "identifier BEGINSWITH %@ AND label == %@ AND value == %@",

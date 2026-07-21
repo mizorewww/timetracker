@@ -248,11 +248,16 @@ extension SeedData {
             start: now.addingTimeInterval(-84 * 60),
             note: "Current focus"
         )
+        let liveActivityStart = CommandLine.arguments.contains(
+            "--uitesting-live-activity-long-timer"
+        )
+            ? now.addingTimeInterval(-16 * 60 * 60)
+            : now.addingTimeInterval(-32 * 60)
         try addActiveSegment(
             context: context,
             taskID: hig.id,
             source: .timer,
-            start: now.addingTimeInterval(-32 * 60),
+            start: liveActivityStart,
             note: "Parallel reading"
         )
 

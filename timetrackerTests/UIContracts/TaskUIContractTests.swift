@@ -130,6 +130,9 @@ struct TaskUIContractTests {
     @Test
     func taskRowsUseSharedIdentityAndMetadataGrammar() throws {
         let source = try taskManagementFeatureSource()
+        let tasksSource = try sourceText(
+            "timetracker/Features/Tasks/Management/TasksViews.swift"
+        )
         let sharedSource = try sourceText("timetracker/SharedUI/Components/TaskProgressViews.swift")
 
         #expect(source.contains("CompactChecklistProgressLine("))
@@ -138,10 +141,19 @@ struct TaskUIContractTests {
         #expect(sharedSource.contains("struct TaskProgressLine"))
         #expect(source.contains("identity: store.taskIdentityPresentation(for: task)"))
         #expect(source.contains("TaskSummaryRow("))
-        #expect(source.contains("checklistProgress: presentation.progress.totalCount > 0"))
+        #expect(source.contains("presentation.progress.totalCount > 0"))
         #expect(source.contains("workedSeconds: presentation.workedSeconds"))
         #expect(source.contains("isRunning: presentation.isRunning"))
         #expect(source.contains("showsNavigationChevron: showsNavigationChevron"))
+        #expect(tasksSource.contains("TaskManagementRowSupplementProjection("))
+        #expect(source.contains("recurrenceRole: supplement.recurrenceRole"))
+        #expect(source.contains("quantityProgress: supplement.quantityProgress"))
+        #expect(source.contains("store.taskQuantityProgress(for:") == false)
+        #expect(source.contains("tasks.row.recurrence."))
+        #expect(source.contains("role.identifierComponent"))
+        #expect(source.contains("tasks.row.quantity."))
+        #expect(source.contains("components.append(recurrenceRole.title)"))
+        #expect(source.contains("components.append(quantityProgress)"))
         #expect(source.contains("primaryLineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 2"))
         #expect(source.contains("TaskRunningIndicator()"))
         #expect(source.contains("Image(systemName: \"chevron.right\")"))
@@ -1121,6 +1133,8 @@ struct TaskUIContractTests {
         #expect(editor.contains("for: latestDraft"))
         #expect(editor.contains("draft.checklistItems.indices.sorted") == false)
         #expect(editor.contains("rowPlacements.map") == false)
+        #expect(editor.contains("ToolbarItemGroup(placement: .keyboard)"))
+        #expect(editor.contains("task.editor.keyboard.done"))
         #expect(symbols.contains("@State private var filteredSymbols: [String]"))
         #expect(symbols.contains(".onChange(of: searchText, initial: true)"))
         #expect(symbols.contains("ContentUnavailableView.search(text: searchText)"))

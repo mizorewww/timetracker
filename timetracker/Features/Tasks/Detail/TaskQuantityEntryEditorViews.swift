@@ -111,6 +111,13 @@ struct TaskQuantityEntryEditorSheet: View {
                             "task.detail.quantity.save"
                         )
                 }
+                #if os(iOS)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(AppStrings.done) { isAmountFocused = false }
+                        .accessibilityIdentifier("task.detail.quantity.keyboard.done")
+                }
+                #endif
             }
         }
         .platformSheetFrame(width: 480, height: 500)

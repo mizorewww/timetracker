@@ -51,6 +51,18 @@ extension TimeTrackerStore {
         }
     }
 
+    func visibleTaskQuantityProgressByTaskID()
+        -> [UUID: TaskQuantityProgressSnapshot] {
+        _ = taskReadModelRevision
+        return TaskQuantityProgressService().snapshotIndex(
+            taskIDs: visibleTaskIDs,
+            goals: taskQuantityGoals,
+            entries: taskQuantityEntries,
+            recordingAllowedTaskIDs: trackableTaskIDs,
+            incompleteTaskIDs: taskIDsWithIncompleteQuantityProgress
+        )
+    }
+
     func taskQuantityDetail(
         for taskID: UUID
     ) -> TaskQuantityDetailReadModel {
@@ -129,31 +141,11 @@ extension TimeTrackerStore {
         guard let occurrence = occurrences.first else {
             return isTemplate ? .template : .ordinary
         }
-        let expectedOccurrenceID = TaskProgressIdentity
-            .recurrenceOccurrenceID(
-                ruleID: occurrence.ruleID,
-                dayKey: occurrence.occurrenceDayKey
-            )
-        let expectedGeneratedTaskID = TaskProgressIdentity.generatedTaskID(
-            ruleID: occurrence.ruleID,
-            dayKey: occurrence.occurrenceDayKey
-        )
-        guard occurrence.id == expectedOccurrenceID,
-              occurrence.generatedTaskID == expectedGeneratedTaskID,
-              let localDate = TaskRecurrenceDayKey.date(
-                  from: occurrence.occurrenceDayKey,
-                  timeZoneIdentifier: occurrence.timeZoneIdentifier
-              ) else {
+        guard let snapshot = TaskRecurrenceOccurrenceSnapshot(
+            occurrence: occurrence
+        ) else {
             return nil
         }
-        return .generated(
-            TaskRecurrenceOccurrenceSnapshot(
-                id: occurrence.id,
-                templateTaskID: occurrence.templateTaskID,
-                dayKey: occurrence.occurrenceDayKey,
-                timeZoneIdentifier: occurrence.timeZoneIdentifier,
-                localDate: localDate
-            )
-        )
+        return .generated(snapshot)
     }
 }

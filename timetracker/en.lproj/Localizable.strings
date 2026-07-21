@@ -553,10 +553,17 @@
 "task.recurrence.editor.frequency" = "Frequency";
 "task.recurrence.editor.everyDay" = "Every Day";
 "task.recurrence.editor.generatedTask" = "Generated Daily Task";
+"task.recurrence.editor.offFooter" = "Turn on Repeat Daily to create today’s child task.";
 "task.recurrence.editor.footer" = "Time Tracker creates only today’s child task. Record work on the generated task.";
+"task.recurrence.editor.quantityFooterFormat" = "Today’s generated child task copies the %1$lld %2$@ goal. Record progress on that task.";
 "task.recurrence.editor.pausedFooter" = "Repeating is paused. Existing generated tasks are kept; resuming creates only today’s task.";
 "task.recurrence.editor.generatedFooter" = "Configure repeating on this task’s recurring template.";
 "task.recurrence.editor.activeWorkFooter" = "Stop this task’s active timer or Pomodoro before turning on repeating.";
+"task.recurrence.row.template" = "Daily Template";
+"task.recurrence.row.generated" = "Generated Task";
+"task.recurrence.row.today" = "Today’s Task";
+"task.recurrence.row.generatedDateFormat" = "Generated · %1$@";
+"task.quantity.row.progressFormat" = "%1$lld / %2$lld %3$@";
 "task.recurrence.template.title" = "Recurring Task Template";
 "task.recurrence.template.trackingUnavailable" = "This task defines the recurring work. Record time on today’s generated task instead.";
 "task.editor.stale.title" = "Task Changed Elsewhere";

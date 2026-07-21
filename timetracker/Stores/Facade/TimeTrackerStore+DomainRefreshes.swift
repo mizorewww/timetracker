@@ -197,9 +197,17 @@ extension TimeTrackerStore {
         taskDomainStore.incompleteQuantityProgressTaskIDs
     }
 
+    var incompleteRecurrenceTemplateTaskIDs: Set<UUID> {
+        taskDomainStore.incompleteRecurrenceTemplateTaskIDs
+    }
+
+    var incompleteRecurrenceGeneratedTaskIDs: Set<UUID> {
+        taskDomainStore.incompleteRecurrenceGeneratedTaskIDs
+    }
+
     var taskIDsWithIncompleteRecurrence: Set<UUID> {
-        taskDomainStore.incompleteRecurrenceTemplateTaskIDs.union(
-            taskDomainStore.incompleteRecurrenceGeneratedTaskIDs
+        incompleteRecurrenceTemplateTaskIDs.union(
+            incompleteRecurrenceGeneratedTaskIDs
         )
     }
 }

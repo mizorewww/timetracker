@@ -121,6 +121,16 @@ struct TaskEditorPanel: View {
                 )
                 .accessibilityIdentifier("task.editor.save")
             }
+
+            #if os(iOS)
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(AppStrings.done) {
+                    clearInputFocus()
+                }
+                .accessibilityIdentifier("task.editor.keyboard.done")
+            }
+            #endif
         }
         .taskEditorSessionSafety(
             session: session,

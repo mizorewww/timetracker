@@ -8,8 +8,8 @@
 - [x] 领取反馈并建立活动链接。
 - [x] 完整读取 Apple HIG 与 SwiftUI 强制技能，审计现有 recurrence/quantity 模型和 UI。
 - [x] 锁定“每天 50 个俯卧撑”父任务自动生成每日任务量子任务的产品语义。
-- [ ] 分小 checkpoint 实现创建、编辑、物化、完成记录与持久化。
-- [ ] 完成相关回归、owned 模拟器交互和 simulator-only 截图验收。
+- [x] 分小 checkpoint 实现创建、编辑、物化、完成记录与持久化。
+- [x] 完成相关回归、owned 模拟器交互和 simulator-only 截图验收。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
 ## 唯一反馈边界
@@ -93,7 +93,9 @@
 - 聚焦单元测试：policy 边界、draft/recovery/stale、原子创建与注入失败回滚、暂停恢复、数量累计/超额/
   清空、父拒绝记录与子接受记录。
 - UI 测试：真实创建入口；简单数量任务；每日 50 个俯卧撑；非法输入 Save 禁用；重启同日幂等。
-- simulator-only 截图：紧凑 iPhone + 常规 iPad，各覆盖创建配置、保存后父子与日期、记录 20 后进度。
+- simulator-only 截图：紧凑 iPhone 覆盖创建配置、保存后父子与日期、记录 20 后进度；常规 iPad
+  覆盖保存后的父子列表、模板详情和记录 20 后进度。iPad 编辑器因 iOS 27 浮动数字键盘会残留视觉
+  伪影，不把带键盘的画面冒充最终截图。
 
 ## Checkpoint 记录
 
@@ -147,5 +149,162 @@
     `@State` / `@FocusState` 保持 private。
   - 86 项 quantity/detail/recurrence/task UI/localization/layout 聚焦测试通过，generic iOS Simulator Debug
     编译通过；未启动模拟器或物理设备。没有新增第三方库。
-- [~] 当前 checkpoint：补任务列表中的模板/生成角色与数量进度、修正重复开关页脚状态，并加入真实创建
-  路径的 iPhone/iPad 模拟器验收。
+- [x] 任务列表角色、数量进度、重复页脚与真实创建路径验收：
+  - 列表先构造一次 `TaskManagementRowSupplementProjection`，批量生成 recurrence role 与 quantity
+    progress，再把 value supplement 传给每一行；不再由每个普通/重复任务行各自扫描全部 goal/entry 历史。
+  - quantity 批量索引先在全局执行 LWW 去重，再按 taskID / deterministic goalID 双向 claim 建桶；跨任务
+    goal/entry、winner tombstone 与 incomplete participant 均 fail-closed，不会让旧 loser 在局部桶中复活。
+  - recurrence role 保留 incomplete template/generated 的泛化身份；合法 occurrence 依据其保存的时区将
+    当日显示为 `Today’s Task`，历史 occurrence 显示本地化日期。canonical occurrence 校验与日期格式集中到
+    `TaskRecurrenceOccurrenceSnapshot`，列表和详情共用。
+  - 列表和 VoiceOver 同时展示 `Daily Template` / `Today’s Task` / 历史生成日期及 `20 / 50 reps`；移除会
+    覆盖子控件 identifier 的 Section 容器标识。重复开关 footer 明确覆盖 off、paused、enabled、quantity、
+    generated 与 active-work-blocked；任务编辑器和数量记录 Sheet 都有原生数字键盘 `Done`。
+  - macOS 签名聚焦测试 20 项通过，新增 3 项批量投影/LWW 测试与 1 项 footer policy 测试；三语 key 对齐、
+    `plutil`、diff 检查通过，generic iOS Simulator `build-for-testing` 成功。source-layout 与 primary-UI
+    layout 通过；全目录 layout 仍只报告未由本任务修改的既存超限文件：`TimeTrackerStore.swift` 264/250、
+    `TimeTrackerStore+AppleHealthTimeline.swift` 297/250、`TaskEditorSession.swift` 210/180、
+    `TaskDetailAnalyticsViews.swift` 189/180。本 checkpoint 自有受限文件均在预算内。
+  - 一次额外的 generic iphoneos 诊断命令强制覆盖 `CODE_SIGN_STYLE=Automatic`，与项目已手动指定的
+    `TimeTracker HealthKit Development` profile 冲突而在 provisioning 阶段失败；没有修改签名设置，也不是
+    编译错误。最终设备签名只由下一 checkpoint 的仓库精确 Release 安装脚本验证。
+  - 最终冻结代码重新在 owned iPhone 17 Pro 与 iPad Pro 13-inch (M5) 模拟器各通过完整真实创建流程；
+    iPhone 4 张、iPad 3 张 simulator-only 截图逐张检查。两份 iOS 27 xcresult 各保留 1 条精确发生在 XCTest
+    `Synthesize event` 点击 quantity target 时的 `Invalid frame dimension` runtime warning；功能断言与截图
+    均正常。所有 owned App/runner/diagnose/模拟器已停止并删除，仅非 owned AnalyticsReview 设备保持 Shutdown。
+  - 仅复用 Foundation、SwiftUI、SwiftData、XCTest 与仓库现有组件；没有新增第三方依赖。
+- [~] 最终 checkpoint：冻结 Task 13 相关回归，执行精确
+  `CONFIGURATION=Release scripts/build_install_all.sh`；物理设备只安装，不启动、不操作、不截图。成功后由
+  Codex 将唯一反馈项标为 `[x]`、移除 active link 并提交完成状态。
+
+### owned 验收资源记录
+
+- iPhone 17 Pro（第三次 UI 测试尝试）：`B5698361-0F4B-417C-9CA9-ED4D1C8E5C44`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-third.xcresult`，待定位后创建全新的 owned 模拟器重试。
+- iPhone 17 Pro（第四次 UI 测试尝试）：`9E946C5E-6D22-4298-8442-48EA8B996594`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-fourth.xcresult`。
+- iPhone 17 Pro（第五次 UI 测试尝试）：`5E12F9FD-8C96-4240-A6BC-9E1F7A51E840`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-fifth.xcresult`。
+- iPhone 17 Pro（第六次 UI 测试尝试）：`F8718A8B-5777-4BD2-9550-7DB15332CA75`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-sixth.xcresult`。
+- iPhone 17 Pro（第七次 UI 测试尝试）：`5E0E8DB5-EE08-4840-B21C-833674061F13`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-seventh.xcresult`。
+- iPhone 17 Pro（第八次 UI 测试尝试）：`5EAA2DC4-8263-4393-83F6-EA6EAF7E06DC`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-eighth.xcresult`。
+- iPhone 17 Pro（第九次 UI 测试尝试）：`FC1D7E0B-085E-4116-9EC0-9D34D0CF0023`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-ninth.xcresult`。
+- iPhone 17 Pro（第十次 UI 测试尝试）：`1032C0B6-4C30-4EAE-9CD8-5C4AFE22D604`；测试失败后已
+  terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-tenth.xcresult`。
+- iPhone 17 Pro（第十一次 UI 测试尝试）：`8852B680-E86D-429C-BE03-6613C2AD295E`；测试失败后
+  已 terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-eleventh.xcresult`。
+- iPhone 17 Pro（第十二次 UI 测试尝试）：`8E811EF3-8B47-48EE-9306-FFE5E774F7FB`；测试失败后
+  已 terminate App 与 runner、shutdown、delete，并确认列表和进程无残留。失败证据保存在
+  `build/Task13SimulatorValidation/iPhone-twelfth.xcresult`。
+- iPhone 17 Pro（第十三次 UI 测试尝试）：`BADA72F0-33B5-403E-B1BF-E129C3A272D2`；模拟器返回
+  `NSPOSIXErrorDomain Code=3`，App 未取得进程句柄，属于启动基础设施失败；随后已 terminate、shutdown、
+  delete，并确认列表和进程无残留。证据保存在 `build/Task13SimulatorValidation/iPhone-thirteenth.xcresult`。
+- iPhone 17 Pro（第十四次 UI 测试尝试）：`6FA6F57F-6764-436B-B9B4-B05ECC02CBAF`；测试已正确
+  创建父模板与当天子任务，并进入子任务数量详情；XCTest 将 SwiftUI 的“记录进度”标识错误限定为
+  `.buttons`，误判不存在后把列表滚到底，最终在第 2393 行失败。录屏第 78 秒确认初始详情已显示
+  `0 / 50 reps`、计划日期与“Record Progress”。随后已 terminate App/runner、shutdown、delete，
+  并确认列表和进程无残留。证据保存在 `build/Task13SimulatorValidation/iPhone-fourteenth.xcresult`
+  与 `build/Task13SimulatorValidation/iPhone-fourteenth-generated-detail-78s.png`。
+- iPhone 17 Pro（第十五次 UI 测试尝试）：`2E914FF6-D262-49C0-BBE6-4FAB1FB2C349`；确认 iOS 27
+  连 `.any["task.detail.quantity.record"]` 也未暴露该 SwiftUI 标识，因此在重复滚动前主动中止测试，
+  改用屏幕与 VoiceOver 同时可见的按钮标签 `Record Progress` 定位。App 与 runner 已停止，模拟器已
+  shutdown、delete，并确认设备列表及进程无残留；证据保存在
+  `build/Task13SimulatorValidation/iPhone-fifteenth.xcresult`。
+- iPhone 17 Pro（第十六次 UI 测试尝试）：`9F44A70E-5CA6-417B-878C-69DA301139C6`；按钮标签
+  `Record Progress` 可正常定位，且 XCTest 随后把该按钮报告为 `task.detail.quantity`，证明 Section 的
+  容器 identifier 覆盖了内部按钮与 ProgressView identifier；测试在第 2392 行验证 progress 时失败。
+  已移除冲突的容器 identifier，并增加源码契约防回归。App 与 runner 已停止，模拟器已 shutdown、
+  delete，并确认设备列表及进程无残留；证据保存在
+  `build/Task13SimulatorValidation/iPhone-sixteenth.xcresult`。
+- iPhone 17 Pro（第十七次 UI 测试尝试）：`6511DD9E-D024-4F1A-8C95-75BC9FA5ED1F`；完整真实
+  创建流程通过（1 test、0 failure、94.003 秒）：创建 `Pushups`、设置 `50 reps` 与每日重复、验证父模板/
+  今日子任务角色和 `0 / 50 reps`、确认模板不能记录、在今日子任务记录 20 并验证 `20 / 50 reps` 与历史。
+  `xcresult` 位于 `build/Task13SimulatorValidation/iPhone-seventeenth.xcresult`，四张 simulator-only 截图已
+  导出到 `build/Task13SimulatorValidation/iPhone-seventeenth-export` 并逐张目视检查。测试结束后已 terminate
+  App/runner，停止 Xcode beta 自动启动的 owned `simctl diagnose`，shutdown、delete 模拟器，并确认设备列表
+  与进程无 owned 残留。结果中有一条 `Invalid frame dimension (negative or non-finite).` runtime warning；活动树
+  将其精确定位到 XCTest 对 `task.editor.quantity.target` 执行 `Synthesize event` 的点击时刻。该渲染路径中的
+  产品 `.frame` 参数均为有限常量或受下限保护，功能与截图无异常；iPad 批次继续交叉验证该模拟器自动化告警。
+- iPad Pro 13-inch (M5) 12GB（第一次 UI 测试尝试）：`B3470365-B9A5-4FF7-812A-49DADE7EB25F`；
+  数量目标已正确切换并输入 50，但第 2278 行用 identifier 的 `.firstMatch` 取到了非 hittable 的重复 `Done`
+  元素，而录屏末帧确认用户可见的键盘工具栏 `Done` 正常显示；测试因此在进入重复配置前失败。该批次也把同一
+  runtime warning 定位到 XCTest 点击 quantity target 的 `Synthesize event`，跨 iPhone/iPad 完全一致，确认是
+  iOS 27 模拟器自动化点击层信号而不是业务布局结果。证据位于
+  `build/Task13SimulatorValidation/iPad-first.xcresult` 与 `iPad-first-export`。App/runner 已停止，模拟器已
+  shutdown、delete，并确认仅剩非 owned 的 `AnalyticsReview-iPhone17Pro`（Shutdown），无 owned 进程残留。
+- iPad Pro 13-inch (M5) 12GB（第二次 UI 测试尝试）：`349B5532-4C64-40BD-BB9B-41047E816401`；
+  identifier 与可见英文标签都返回同一个 XCTest 判定为 non-hittable、但录屏中实际可见的键盘工具栏 `Done`，
+  因此第 2280 行仍在测试定位层失败。证据位于 `build/Task13SimulatorValidation/iPad-second.xcresult`；
+  Xcode beta 自动启动的 owned `simctl diagnose` 已终止，App/runner 已停止，模拟器已 shutdown、delete，并确认
+  无 owned 设备或进程残留。下一次改为在元素存在且 frame 有限时直接合成其中心坐标点击，绕过 iOS 27 的
+  `isHittable` 误报；iPhone 继续使用正常 hittable 路径。
+- iPad Pro 13-inch (M5) 12GB（第三次 UI 测试尝试）：`731ACB33-6C17-4CEB-A587-71EEBED71A19`；
+  通过有限 frame 中心坐标成功点击键盘 `Done` 并关闭数字键盘；随后 XCTest 点击单位字段后仍把
+  `hasKeyboardFocus` 留在 target 字段，`typeText("reps")` 因此在测试层失败。失败层级明确显示单位 TextField
+  frame 为 `{{297.5, 344.5}, {476.5, 22.0}}`，产品布局有限且正常；下一次先输入单位并提交，再输入目标和关闭
+  数字键盘，避免 iOS 27 模拟器在数字/字母键盘切换后保留错误焦点。证据位于
+  `build/Task13SimulatorValidation/iPad-third.xcresult`。App/runner 已停止，模拟器已 shutdown、delete，并
+  确认无 owned 设备或进程残留。
+- iPad Pro 13-inch (M5) 12GB（第四次 UI 测试尝试）：`7208BCF9-F9D8-4F49-9693-527A5244B47C`；
+  测试先输入单位仍未取得焦点。录屏与失败层级交叉确认：XCTest 把 unit field 的 y=366.5 报为 hittable，
+  但模态 `New Task` 导航栏覆盖 y=378...432，合成点击实际落在遮挡层，产品字段并未收到点击；这是测试的
+  可见性判定缺陷，不是字段失效。证据位于 `build/Task13SimulatorValidation/iPad-fourth.xcresult`、导出的
+  UI hierarchy 与 `iPad-fourth-unit-tap.png`。下一次同时校验 hittable 和字段位于模态导航栏下方的几何条件，
+  必要时小幅向下拖动表单再点击。App/runner 已停止，模拟器已 shutdown、delete，并确认无 owned 设备或
+  进程残留。
+- iPad Pro 13-inch (M5) 12GB（第五次 UI 测试尝试）：`81D78840-CF49-46C2-AF5C-1BEDBAD3466D`；
+  模态导航栏下方几何校验生效，成功输入 `reps`/50、创建并保存父模板与今日子任务、检查列表角色、模板详情
+  和生成任务详情，并在记录 Sheet 输入 20。随后第 2444 行发现真实 iPad 可用性问题：浮动数字键盘覆盖记录
+  Sheet 右上角 Save，而该 Sheet 没有收键盘的 Done 工具栏；截图
+  `build/Task13SimulatorValidation/iPad-fifth-save-progress.png` 清楚显示遮挡。下一次给该数字字段补原生键盘
+  `Done`，测试先收键盘再保存。已有三张目标截图位于 `iPad-fifth-export`，但因整条流程未通过不作为最终验收。
+  App/runner 已停止，模拟器已 shutdown、delete，并确认无 owned 设备或进程残留。
+- iPad Pro 13-inch (M5)（第六次 UI 测试尝试）：`7F3CBA07-D96F-4049-92CF-8BDC1BEAB472`；新增的
+  数量录入键盘 `Done` 已成功露出 Save，但 iOS 27 XCTest 在浮动键盘消失后仍保留不可见的全局
+  `Keyboard` 容器，第 2439 行用 `waitForNonExistence` 因测试层假阴性失败。产品流程已走到保存前；随后
+  改为验证真正的用户结果——Save 重新可见且可点击。证据位于
+  `build/Task13SimulatorValidation/iPad-sixth.xcresult`。App/runner 与 owned `simctl diagnose` 已停止，
+  模拟器已 shutdown、delete，并确认无 owned 残留。
+- iPad Pro 13-inch (M5)（第七次 UI 测试尝试）：`1786A5FB-24F9-47E6-B1A0-292E121A2CA0`；完整流程
+  通过（1 test、0 failure、147.192 秒），但逐张目视检查导出截图时发现 XCTest 快速 `typeText` 只留下
+  标题 `Pu`，编辑器截图还包含 iPad 的浮动数字键盘。因此该批次只证明功能路径通过，不作为最终视觉证据；
+  标题输入改为逐字符确认，iPad 最终截图只保留保存后的干净界面。证据位于
+  `build/Task13SimulatorValidation/iPad-seventh.xcresult` 与 `iPad-seventh-export`。App/runner 与 owned
+  `simctl diagnose` 已停止，模拟器已 shutdown、delete，并确认无 owned 残留。
+- iPad Pro 13-inch (M5)（第八次 UI 测试尝试）：`452E283F-5AAE-4510-A7B8-C19B0EB701BA`；逐字符标题
+  输入已确认得到完整 `Pushups`，但测试仍以 iOS 27 的全局 `Keyboard` 容器消失作为断言，在第 2307 行
+  重现测试层假阴性。移除该错误断言后保留实际可操作性检查；同一 owned 模拟器卸载 App 清空数据后用于
+  最终重试。失败证据位于 `build/Task13SimulatorValidation/iPad-eighth.xcresult`，owned diagnose 已停止。
+- iPad Pro 13-inch (M5)（第九次、最终 UI 验收）：`452E283F-5AAE-4510-A7B8-C19B0EB701BA`；完整真实创建
+  流程通过（1 test、0 failure、127.959 秒）：逐字符确认 `Pushups`，设置 `50 reps` 和每日重复，验证
+  `Daily Template` / `Today’s Task` 与 `0 / 50 reps`，确认模板不能记录，在当天子任务记录 20，并验证
+  `20 / 50 reps`、剩余 30 与历史。`xcresult` 位于
+  `build/Task13SimulatorValidation/iPad-ninth.xcresult`；三张保存后 simulator-only 截图已导出到
+  `build/Task13SimulatorValidation/iPad-ninth-export` 并逐张目视检查，标题和布局均正确。结果保留一条与
+  iPhone 相同、精确发生在 XCTest 点击 quantity target 时的 `Invalid frame dimension` 模拟器 runtime
+  warning，产品截图与功能路径无异常。App/runner 与 owned `simctl diagnose` 已停止，模拟器已 shutdown、
+  delete；当前仅有非 owned `AnalyticsReview-iPhone17Pro` 且为 Shutdown，无 owned 设备或进程残留。
+- iPhone 17 Pro（投影重构后最终重验）：`3A56C61D-29A1-44B8-8B08-3E04640388E2`；冻结代码完整流程通过
+  （1 test、0 failure、108.076 秒）。`xcresult` 位于
+  `build/Task13SimulatorValidation/iPhone-current.xcresult`；四张截图位于 `iPhone-current-export`，已逐张
+  检查编辑器 50 reps + daily、父子角色与 0/50、模板只读、当天子任务 20/50 和历史。App/runner 已结束，
+  模拟器 shutdown、delete，无 owned 残留。
+- iPad Pro 13-inch (M5) 12GB（投影重构后最终重验）：
+  `57AD8308-F4AC-4D69-9790-E84B0EB5167A`；冻结代码完整流程通过（1 test、0 failure、147.656 秒）。
+  `xcresult` 位于 `build/Task13SimulatorValidation/iPad-current.xcresult`；三张保存后截图位于
+  `iPad-current-export`，已逐张检查父子角色与 0/50、模板只读和当天子任务 20/50。Xcode 自动启动且明确
+  携带该 UDID 的 owned `simctl diagnose` 在测试完成后收尾卡住，已单独终止；App/runner 已结束，模拟器
+  shutdown、delete。仅非 owned AnalyticsReview 设备保持 Shutdown，无 owned 残留。

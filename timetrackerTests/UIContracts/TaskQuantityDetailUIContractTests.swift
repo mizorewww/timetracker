@@ -16,6 +16,9 @@ struct TaskQuantityDetailUIContractTests {
         let readModels = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+TaskQuantityReadModels.swift"
         )
+        let progressModels = try sourceText(
+            "timetracker/Models/TaskQuantityProgressModels.swift"
+        )
 
         #expect(content.contains("store.taskQuantityDetail(for: task.id)"))
         #expect(content.contains("taskQuantityEntries(for:") == false)
@@ -23,13 +26,19 @@ struct TaskQuantityDetailUIContractTests {
         #expect(quantity.contains("ProgressView") == false)
         #expect(components.contains("ProgressView(value:"))
         #expect(quantity.contains("task.detail.quantity.record"))
+        #expect(
+            quantity.contains(
+                ".accessibilityIdentifier(\"task.detail.quantity\")"
+            ) == false
+        )
         #expect(quantity.contains("task.detail.quantity.template"))
         #expect(quantity.contains("task.detail.quantity.occurrence"))
         #expect(quantity.contains("task.detail.quantity.entry."))
         #expect(quantity.contains("if detail.progress.isRecordingAllowed"))
         #expect(quantity.contains("showsNavigationChevron: false"))
         #expect(readModels.contains("validatedSnapshot("))
-        #expect(readModels.contains("TaskRecurrenceDayKey.date("))
+        #expect(readModels.contains("TaskRecurrenceOccurrenceSnapshot("))
+        #expect(progressModels.contains("TaskRecurrenceDayKey.date("))
         #expect(
             readModels.contains(
                 "taskIDsWithIncompleteRecurrence.contains(taskID)"
@@ -57,6 +66,8 @@ struct TaskQuantityDetailUIContractTests {
         #expect(views.contains("DatePicker("))
         #expect(views.contains(".confirmationDialog("))
         #expect(views.contains("task.detail.quantity.amount"))
+        #expect(views.contains("ToolbarItemGroup(placement: .keyboard)"))
+        #expect(views.contains("task.detail.quantity.keyboard.done"))
         #expect(views.contains("task.detail.quantity.delete.confirm"))
         #expect(views.contains("@State private var draft"))
         #expect(views.contains("@FocusState private var isAmountFocused"))

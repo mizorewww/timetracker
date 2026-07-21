@@ -13,6 +13,9 @@ struct TasksView: View {
     var body: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let matchingTasks = query.isEmpty ? [] : store.taskSearchResults(matching: query)
+        let rowSupplements = TaskManagementRowSupplementProjection(
+            store: store
+        )
 
         List {
             TaskRecoveryDraftsSection(store: store)
@@ -52,6 +55,9 @@ struct TasksView: View {
                             TaskManagementTreeRow(
                                 store: store,
                                 row: row,
+                                supplement: rowSupplements.supplement(
+                                    for: row.taskID
+                                ),
                                 toggleExpansion: {
                                     expansionState.toggle(row.taskID)
                                 },
@@ -78,6 +84,9 @@ struct TasksView: View {
                         TaskManagementFlatRow(
                             store: store,
                             task: task,
+                            supplement: rowSupplements.supplement(
+                                for: task.id
+                            ),
                             childCount: store.visibleChildCount(for: task.id),
                             identityContext: .standard,
                             openTaskDetail: { task in
@@ -226,6 +235,7 @@ private struct TasksSearchPresentation: ViewModifier {
 private struct TaskManagementTreeRow: View {
     let store: TimeTrackerStore
     let row: TaskTreeRowModel
+    let supplement: TaskManagementRowSupplement
     let toggleExpansion: () -> Void
     let openTaskDetail: (TaskNode) -> Void
 
@@ -235,6 +245,7 @@ private struct TaskManagementTreeRow: View {
                 TaskManagementFlatRow(
                     store: store,
                     task: task,
+                    supplement: supplement,
                     treeDepth: row.depth,
                     childCount: row.childCount,
                     isExpanded: row.isExpanded,

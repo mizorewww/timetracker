@@ -553,10 +553,17 @@
 "task.recurrence.editor.frequency" = "频率";
 "task.recurrence.editor.everyDay" = "每天";
 "task.recurrence.editor.generatedTask" = "当天生成的任务";
+"task.recurrence.editor.offFooter" = "开启每天重复后，将生成今天的子任务。";
 "task.recurrence.editor.footer" = "Time Tracker 只生成今天的子任务；请在生成的子任务上记录工作。";
+"task.recurrence.editor.quantityFooterFormat" = "今天生成的子任务会复制 %1$lld %2$@的目标；请在该子任务上记录进度。";
 "task.recurrence.editor.pausedFooter" = "重复已暂停。已有子任务会保留；恢复后只生成今天的任务。";
 "task.recurrence.editor.generatedFooter" = "请在此任务的重复任务模板上配置重复规则。";
 "task.recurrence.editor.activeWorkFooter" = "开启重复前，请先停止此任务正在进行的计时或番茄钟。";
+"task.recurrence.row.template" = "每日模板";
+"task.recurrence.row.generated" = "生成的任务";
+"task.recurrence.row.today" = "今日任务";
+"task.recurrence.row.generatedDateFormat" = "生成 · %1$@";
+"task.quantity.row.progressFormat" = "%1$lld / %2$lld %3$@";
 "task.recurrence.template.title" = "重复任务模板";
 "task.recurrence.template.trackingUnavailable" = "此任务用于定义重复工作。请在今天自动生成的任务上记录时间。";
 "task.editor.stale.title" = "任务已在其他位置更改";

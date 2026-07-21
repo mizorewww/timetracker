@@ -50,7 +50,6 @@ struct TaskDetailQuantitySections: View {
         } header: {
             Text(.app("task.quantity.detail.section"))
         }
-        .accessibilityIdentifier("task.detail.quantity")
     }
 
     @ViewBuilder
@@ -114,22 +113,6 @@ struct TaskDetailQuantitySections: View {
     private func occurrenceDateText(
         _ occurrence: TaskRecurrenceOccurrenceSnapshot
     ) -> String {
-        guard let timeZone = TimeZone(
-            identifier: occurrence.timeZoneIdentifier
-        ) else {
-            return occurrence.dayKey
-        }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
-        return occurrence.localDate.formatted(
-            Date.FormatStyle(
-                locale: .autoupdatingCurrent,
-                calendar: calendar,
-                timeZone: timeZone
-            )
-            .year()
-            .month(.abbreviated)
-            .day()
-        )
+        occurrence.formattedDateText()
     }
 }

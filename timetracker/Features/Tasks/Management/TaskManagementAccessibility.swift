@@ -16,6 +16,12 @@ struct TaskManagementRowAccessibilitySnapshot {
             .localizedCaseInsensitiveCompare(task.title) != .orderedSame {
             components.append(presentation.identity.fullPath)
         }
+        if let recurrenceRole = presentation.recurrenceRole {
+            components.append(recurrenceRole.title)
+        }
+        if let quantityProgress = presentation.quantityProgressText {
+            components.append(quantityProgress)
+        }
         if presentation.isRunning {
             components.append(AppStrings.running)
         }

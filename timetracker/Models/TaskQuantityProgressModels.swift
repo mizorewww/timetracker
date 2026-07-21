@@ -128,6 +128,66 @@ nonisolated struct TaskRecurrenceOccurrenceSnapshot:
     let dayKey: String
     let timeZoneIdentifier: String
     let localDate: Date
+
+    @MainActor
+    init?(occurrence: TaskRecurrenceOccurrence) {
+        let expectedOccurrenceID = TaskProgressIdentity
+            .recurrenceOccurrenceID(
+                ruleID: occurrence.ruleID,
+                dayKey: occurrence.occurrenceDayKey
+            )
+        let expectedGeneratedTaskID = TaskProgressIdentity.generatedTaskID(
+            ruleID: occurrence.ruleID,
+            dayKey: occurrence.occurrenceDayKey
+        )
+        guard occurrence.id == expectedOccurrenceID,
+              occurrence.generatedTaskID == expectedGeneratedTaskID,
+              let localDate = TaskRecurrenceDayKey.date(
+                  from: occurrence.occurrenceDayKey,
+                  timeZoneIdentifier: occurrence.timeZoneIdentifier
+              ) else {
+            return nil
+        }
+        id = occurrence.id
+        templateTaskID = occurrence.templateTaskID
+        dayKey = occurrence.occurrenceDayKey
+        timeZoneIdentifier = occurrence.timeZoneIdentifier
+        self.localDate = localDate
+    }
+
+    init(
+        id: UUID,
+        templateTaskID: UUID,
+        dayKey: String,
+        timeZoneIdentifier: String,
+        localDate: Date
+    ) {
+        self.id = id
+        self.templateTaskID = templateTaskID
+        self.dayKey = dayKey
+        self.timeZoneIdentifier = timeZoneIdentifier
+        self.localDate = localDate
+    }
+
+    func formattedDateText(
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else {
+            return dayKey
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return localDate.formatted(
+            Date.FormatStyle(
+                locale: locale,
+                calendar: calendar,
+                timeZone: timeZone
+            )
+            .year()
+            .month(.abbreviated)
+            .day()
+        )
+    }
 }
 
 nonisolated enum TaskQuantityRecurrenceRole: Equatable, Sendable {

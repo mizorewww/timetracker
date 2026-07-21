@@ -2199,6 +2199,268 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testRecurringQuantityTaskCreationAndProgress() throws {
+        #if os(macOS)
+        throw XCTSkip(
+            "Recurring quantity interaction is verified on owned iPhone and iPad simulators."
+        )
+        #else
+        let enteredTaskTitle = "Pushups"
+        let app = launchApp(route: "tasks", seedsDemoData: false)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 15)
+        )
+
+        let addTaskMenu = app.descendants(matching: .any)[
+            "tasks.add"
+        ].firstMatch
+        XCTAssertTrue(
+            addTaskMenu.waitForExistence(timeout: 5) &&
+                addTaskMenu.isHittable
+        )
+        activate(addTaskMenu)
+        let addRootTask = app.descendants(matching: .any)[
+            "tasks.addRoot"
+        ].firstMatch
+        XCTAssertTrue(
+            addRootTask.waitForExistence(timeout: 3) &&
+                addRootTask.isHittable
+        )
+        activate(addRootTask)
+
+        let editor = app.descendants(matching: .any)[
+            "task.editor"
+        ].firstMatch
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            titleField.waitForExistence(timeout: 3) &&
+                titleField.isHittable
+        )
+        activate(titleField)
+        replaceTextCharacterByCharacter(enteredTaskTitle, in: titleField)
+        submitTaskTitleIfKeyboardIsVisible(titleField, in: app)
+        let taskTitle = try XCTUnwrap(titleField.value as? String)
+        XCTAssertEqual(taskTitle, enteredTaskTitle)
+
+        let quantityToggle = app.descendants(matching: .any)[
+            "task.editor.quantity.toggle"
+        ].firstMatch
+        scrollUntilHittable(quantityToggle, direction: .up, in: app)
+        XCTAssertTrue(
+            quantityToggle.waitForExistence(timeout: 3) &&
+                quantityToggle.isHittable,
+            "Quantity toggle must be visible after dismissing the title keyboard."
+        )
+        quantityToggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)
+        ).tap()
+
+        let targetField = app.descendants(matching: .any)[
+            "task.editor.quantity.target"
+        ].firstMatch
+        let unitField = app.descendants(matching: .any)[
+            "task.editor.quantity.unit"
+        ].firstMatch
+        scrollUntilHittable(unitField, direction: .up, in: app)
+        XCTAssertTrue(unitField.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            scrollUntilFullyVisibleBelowNavigationBar(
+                unitField,
+                navigationBarTitle: "New Task",
+                in: app
+            )
+        )
+        unitField.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)
+        ).tap()
+        unitField.typeText("reps")
+        unitField.typeText(XCUIKeyboardKey.return.rawValue)
+        XCTAssertTrue(
+            app.keyboards.firstMatch.waitForNonExistence(timeout: 3)
+        )
+
+        scrollUntilHittable(targetField, direction: .up, in: app)
+        XCTAssertTrue(targetField.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            scrollUntilFullyVisibleBelowNavigationBar(
+                targetField,
+                navigationBarTitle: "New Task",
+                in: app
+            )
+        )
+        replaceNumericText("50", in: targetField)
+        XCTAssertEqual(targetField.value as? String, "50")
+        let keyboardDone = hittableButton(
+            identifier: "task.editor.keyboard.done",
+            localizedLabels: ["Done"],
+            in: app
+        )
+        guard activateVisibleButton(
+            keyboardDone,
+            diagnosticName: "task editor keyboard Done"
+        ) else { return }
+
+        let recurrenceToggle = app.descendants(matching: .any)[
+            "task.editor.recurrence.daily"
+        ].firstMatch
+        scrollUntilHittable(recurrenceToggle, direction: .up, in: app)
+        XCTAssertTrue(
+            recurrenceToggle.waitForExistence(timeout: 3) &&
+                recurrenceToggle.isHittable,
+            "Daily recurrence toggle must be visible below the quantity editor."
+        )
+        recurrenceToggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)
+        ).tap()
+        let quantityFooter = app.staticTexts[
+            "Today’s generated child task copies the 50 reps goal. Record progress on that task."
+        ].firstMatch
+        scrollUntilHittable(quantityFooter, direction: .up, in: app)
+        XCTAssertTrue(quantityFooter.waitForExistence(timeout: 3))
+        if screenshotPrefix == "iphone" {
+            try capture(
+                "\(screenshotPrefix)-recurring-quantity-editor",
+                app: app
+            )
+        }
+
+        let save = app.buttons["task.editor.save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        activate(save)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 8))
+
+        expandTask(named: taskTitle, in: app)
+        let templateRow = recurringTaskRow(
+            named: taskTitle,
+            role: "Daily Template",
+            in: app
+        )
+        let generatedRow = recurringTaskRow(
+            named: taskTitle,
+            role: "Today’s Task",
+            in: app
+        )
+        scrollUntilHittable(generatedRow, direction: .up, in: app)
+        XCTAssertTrue(
+            templateRow.waitForExistence(timeout: 5) &&
+                generatedRow.waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(
+            (templateRow.value as? String ?? "").contains("0 / 50 reps")
+        )
+        XCTAssertTrue(
+            (generatedRow.value as? String ?? "").contains("0 / 50 reps")
+        )
+        try capture(
+            "\(screenshotPrefix)-recurring-quantity-task-tree",
+            app: app
+        )
+
+        scrollUntilHittable(templateRow, direction: .down, in: app)
+        XCTAssertTrue(templateRow.isHittable)
+        activate(templateRow)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let templateContext = app.staticTexts[
+            "This is the recurring template. Record progress on today’s generated task."
+        ].firstMatch
+        XCTAssertTrue(
+            templateContext.waitForExistence(timeout: 5) &&
+                templateContext.isHittable
+        )
+        XCTAssertFalse(
+            app.buttons["task.detail.quantity.record"].firstMatch.exists
+        )
+        try capture(
+            "\(screenshotPrefix)-recurring-quantity-template",
+            app: app
+        )
+
+        let back = taskDetailBackButton(to: "Tasks", in: app)
+        XCTAssertTrue(back.waitForExistence(timeout: 5) && back.isHittable)
+        activate(back)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail"]
+                .waitForNonExistence(timeout: 5)
+        )
+
+        let currentGeneratedRow = recurringTaskRow(
+            named: taskTitle,
+            role: "Today’s Task",
+            in: app
+        )
+        scrollUntilHittable(currentGeneratedRow, direction: .up, in: app)
+        XCTAssertTrue(
+            currentGeneratedRow.waitForExistence(timeout: 5) &&
+                currentGeneratedRow.isHittable
+        )
+        activate(currentGeneratedRow)
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let occurrence = app.descendants(matching: .any)[
+            "task.detail.quantity.occurrence"
+        ].firstMatch
+        let progress = app.descendants(matching: .any)[
+            "task.detail.quantity.progress"
+        ].firstMatch
+        let record = app.buttons[
+            "task.detail.quantity.record"
+        ].firstMatch
+        gentlyScrollUntilHittable(record, direction: .up, in: app)
+        XCTAssertTrue(occurrence.waitForExistence(timeout: 5))
+        XCTAssertTrue(progress.waitForExistence(timeout: 5))
+        XCTAssertTrue(record.waitForExistence(timeout: 5) && record.isHittable)
+        activate(record)
+
+        let amountField = app.descendants(matching: .any)[
+            "task.detail.quantity.amount"
+        ].firstMatch
+        XCTAssertTrue(
+            amountField.waitForExistence(timeout: 5) &&
+                amountField.isHittable
+        )
+        replaceNumericText("20", in: amountField)
+        XCTAssertEqual(amountField.value as? String, "20")
+        let progressKeyboardDone = hittableButton(
+            identifier: "task.detail.quantity.keyboard.done",
+            localizedLabels: ["Done"],
+            in: app
+        )
+        guard activateVisibleButton(
+            progressKeyboardDone,
+            diagnosticName: "quantity progress keyboard Done"
+        ) else { return }
+        let saveProgress = app.buttons[
+            "task.detail.quantity.save"
+        ].firstMatch
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            saveProgress.exists && saveProgress.isHittable
+        })
+        activate(saveProgress)
+        XCTAssertTrue(amountField.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            let value = progress.value as? String ?? ""
+            return value.contains("20") && value.contains("50")
+        })
+        let history = app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "task.detail.quantity.entry."
+            ))
+            .firstMatch
+        gentlyScrollUntilHittable(history, direction: .up, in: app)
+        XCTAssertTrue(history.waitForExistence(timeout: 5))
+        try capture(
+            "\(screenshotPrefix)-recurring-quantity-progress-20-of-50",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testAITaskPlanDraftReviewAtomicCreateAndInstructionsEditor() throws {
         #if os(macOS)
         throw XCTSkip("Task-plan review geometry is verified on iPhone and iPad.")
@@ -2250,7 +2512,7 @@ final class timetrackerUITests: XCTestCase {
         let cancelPlan = app.buttons["aiTaskPlan.cancel"].firstMatch
         XCTAssertTrue(cancelPlan.waitForExistence(timeout: 3) && cancelPlan.isHittable)
         activate(cancelPlan)
-        let discardRequest = discardDialogButton(
+        let discardRequest = hittableButton(
             identifier: "editor.discard.confirm",
             localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
             in: app
@@ -2277,7 +2539,7 @@ final class timetrackerUITests: XCTestCase {
         try capture("ai-task-plan-preview", app: app)
 
         activate(editRequest)
-        let discardDraft = discardDialogButton(
+        let discardDraft = hittableButton(
             identifier: "editor.discard.confirm",
             localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],
             in: app
@@ -4989,6 +5251,24 @@ final class timetrackerUITests: XCTestCase {
             .firstMatch
     }
 
+    private func recurringTaskRow(
+        named title: String,
+        role: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.row.",
+                title
+            ))
+            .matching(NSPredicate(
+                format: "value CONTAINS[c] %@",
+                role
+            ))
+            .firstMatch
+    }
+
     @MainActor
     private func taskDetailIsReady(in app: XCUIApplication) -> Bool {
         app.descendants(matching: .any)["task.detail"].waitForExistence(timeout: 5)
@@ -5332,6 +5612,33 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func activateVisibleButton(
+        _ button: XCUIElement,
+        diagnosticName: String
+    ) -> Bool {
+        guard button.waitForExistence(timeout: 3) else {
+            XCTFail("Missing \(diagnosticName) button.")
+            return false
+        }
+        if button.isHittable {
+            activate(button)
+            return true
+        }
+
+        let frame = button.frame
+        guard frame.isNull == false,
+              frame.isInfinite == false,
+              frame.isEmpty == false else {
+            XCTFail("The visible \(diagnosticName) button needs a finite frame.")
+            return false
+        }
+        button.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+        ).tap()
+        return true
+    }
+
+    @MainActor
     private func enterTaskTitle(
         _ title: String,
         appending suffix: String,
@@ -5404,6 +5711,38 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func replaceNumericText(
+        _ text: String,
+        in element: XCUIElement
+    ) {
+        #if os(macOS)
+        activate(element)
+        replaceText(text, in: element)
+        #else
+        activate(element)
+        element.typeKey("a", modifierFlags: .command)
+        element.typeText(text)
+        #endif
+    }
+
+    @MainActor
+    private func replaceTextCharacterByCharacter(
+        _ text: String,
+        in element: XCUIElement
+    ) {
+        activate(element)
+        element.typeKey("a", modifierFlags: .command)
+        var expected = ""
+        for character in text {
+            expected.append(character)
+            element.typeText(String(character))
+            XCTAssertTrue(waitUntil(timeout: 1) {
+                (element.value as? String) == expected
+            })
+        }
+    }
+
+    @MainActor
     private func scrollUntilHittable(
         _ element: XCUIElement,
         direction: ScrollDirection,
@@ -5413,6 +5752,35 @@ final class timetrackerUITests: XCTestCase {
         for _ in 0..<maximumScrolls where !element.isHittable {
             scroll(direction: direction, toward: element, in: app)
         }
+    }
+
+    @MainActor
+    private func gentlyScrollUntilHittable(
+        _ element: XCUIElement,
+        direction: ScrollDirection,
+        maximumScrolls: Int = 14,
+        in app: XCUIApplication
+    ) {
+        #if os(macOS)
+        scrollUntilHittable(
+            element,
+            direction: direction,
+            maximumScrolls: maximumScrolls,
+            in: app
+        )
+        #else
+        let startY: CGFloat = direction == .up ? 0.68 : 0.34
+        let endY: CGFloat = direction == .up ? 0.56 : 0.46
+        for _ in 0..<maximumScrolls where !element.isHittable {
+            let start = app.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: startY)
+            )
+            let end = app.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: endY)
+            )
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
+        #endif
     }
 
     @MainActor
@@ -5489,6 +5857,45 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func scrollUntilFullyVisibleBelowNavigationBar(
+        _ element: XCUIElement,
+        navigationBarTitle: String,
+        in app: XCUIApplication
+    ) -> Bool {
+        #if os(macOS)
+        return element.isHittable
+        #else
+        let navigationBar = app.navigationBars[navigationBarTitle].firstMatch
+        guard navigationBar.waitForExistence(timeout: 2) else {
+            return element.isHittable
+        }
+
+        for _ in 0..<5 {
+            if element.isHittable,
+               element.frame.minY >= navigationBar.frame.maxY + 8 {
+                return true
+            }
+
+            if element.exists,
+               element.frame.minY < navigationBar.frame.maxY + 8 {
+                let start = app.coordinate(
+                    withNormalizedOffset: CGVector(dx: 0.5, dy: 0.40)
+                )
+                let end = app.coordinate(
+                    withNormalizedOffset: CGVector(dx: 0.5, dy: 0.46)
+                )
+                start.press(forDuration: 0.05, thenDragTo: end)
+            } else {
+                scroll(direction: .up, toward: element, in: app)
+            }
+        }
+
+        return element.isHittable
+            && element.frame.minY >= navigationBar.frame.maxY + 8
+        #endif
+    }
+
+    @MainActor
     private func isFullyVisibleAboveSystemChrome(
         _ element: XCUIElement,
         in app: XCUIApplication
@@ -5531,7 +5938,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    private func discardDialogButton(
+    private func hittableButton(
         identifier: String,
         localizedLabels: [String],
         in app: XCUIApplication

@@ -91,6 +91,132 @@ struct TaskManagementAccessibilityTests {
         ])
     }
 
+    @Test
+    func snapshotDistinguishesRecurringQuantityRows() {
+        let task = TaskNode(
+            title: "Daily Push-ups",
+            parentID: nil,
+            deviceID: "test"
+        )
+        let quantity = TaskQuantityProgressSnapshot(
+            taskID: task.id,
+            goalBaseline: TaskQuantityGoalMutationBaseline(
+                goalID: TaskProgressIdentity.quantityGoalID(
+                    taskID: task.id
+                ),
+                taskID: task.id,
+                clientMutationID: UUID()
+            ),
+            targetAmount: 50,
+            unitLabel: "reps",
+            totalAmount: 20,
+            entryCount: 1,
+            entryRevision: UUID(),
+            isRecordingAllowed: true
+        )
+        let presentation = TaskManagementRowPresentation(
+            identity: identity(
+                for: task,
+                parentPath: "Fitness",
+                fullPath: "Fitness / Daily Push-ups"
+            ),
+            identityContext: .hierarchical,
+            progress: ChecklistProgress(
+                taskID: task.id,
+                totalCount: 0,
+                completedCount: 0
+            ),
+            rollup: nil,
+            workedSeconds: 0,
+            childCount: 0,
+            isRunning: false,
+            recurrenceRole: .generated(nil),
+            quantityProgress: quantity
+        )
+
+        let snapshot = TaskManagementRowAccessibilitySnapshot(
+            task: task,
+            presentation: presentation
+        )
+
+        #expect(
+            Array(snapshot.valueComponents.prefix(3)) == [
+                "Fitness / Daily Push-ups",
+                AppStrings.localized("task.recurrence.row.generated"),
+                String.localizedStringWithFormat(
+                    AppStrings.localized(
+                        "task.quantity.row.progressFormat"
+                    ),
+                    Int64(20),
+                    Int64(50),
+                    "reps"
+                )
+            ]
+        )
+    }
+
+    @Test
+    func generatedRoleDistinguishesTodayFromHistoricalOccurrences()
+        throws {
+        let timeZone = try #require(
+            TimeZone(identifier: "Asia/Singapore")
+        )
+        let today = try #require(
+            TaskRecurrenceDayKey.date(
+                from: "2026-07-21",
+                timeZone: timeZone
+            )
+        )
+        let historicalDate = try #require(
+            TaskRecurrenceDayKey.date(
+                from: "2026-07-20",
+                timeZone: timeZone
+            )
+        )
+        let occurrence = TaskRecurrenceOccurrenceSnapshot(
+            id: UUID(),
+            templateTaskID: UUID(),
+            dayKey: "2026-07-20",
+            timeZoneIdentifier: timeZone.identifier,
+            localDate: historicalDate
+        )
+        let role = TaskManagementRecurrenceRole.generated(occurrence)
+
+        #expect(
+            role.title(relativeTo: historicalDate) ==
+                AppStrings.localized("task.recurrence.row.today")
+        )
+        #expect(
+            role.title(relativeTo: today) ==
+                String.localizedStringWithFormat(
+                    AppStrings.localized(
+                        "task.recurrence.row.generatedDateFormat"
+                    ),
+                    occurrence.formattedDateText()
+                )
+        )
+    }
+
+    @Test
+    @MainActor
+    func recurrenceRoleIndexPreservesIncompleteParticipants() {
+        let templateTaskID = UUID()
+        let generatedTaskID = UUID()
+
+        let index = TaskManagementRecurrenceRole.index(
+            rules: [],
+            occurrences: [],
+            incompleteTemplateTaskIDs: [templateTaskID],
+            incompleteGeneratedTaskIDs: [templateTaskID, generatedTaskID]
+        )
+
+        #expect(index[templateTaskID] == .template)
+        #expect(
+            index[generatedTaskID] ==
+                TaskManagementRecurrenceRole.generated(nil)
+        )
+    }
+
     private func identity(
         for task: TaskNode,
         parentPath: String?,

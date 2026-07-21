@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskManagementFlatRow: View {
     let store: TimeTrackerStore
     let task: TaskNode
+    let supplement: TaskManagementRowSupplement
     var treeDepth: Int = 0
     var childCount = 0
     var isExpanded = false
@@ -22,7 +23,9 @@ struct TaskManagementFlatRow: View {
             rollup: rollup,
             workedSeconds: rollup?.workedSeconds ?? store.secondsForTaskTotalRollup(task),
             childCount: childCount,
-            isRunning: store.activeSegment(for: task.id) != nil
+            isRunning: store.activeSegment(for: task.id) != nil,
+            recurrenceRole: supplement.recurrenceRole,
+            quantityProgress: supplement.quantityProgress
         )
         rowContent(presentation: presentation)
     }

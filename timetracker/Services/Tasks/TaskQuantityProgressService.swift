@@ -97,6 +97,54 @@ struct TaskQuantityProgressService {
         )
     }
 
+    func snapshotIndex(
+        taskIDs: Set<UUID>,
+        goals: [TaskQuantityGoal],
+        entries: [TaskQuantityEntry],
+        recordingAllowedTaskIDs: Set<UUID>,
+        incompleteTaskIDs: Set<UUID>
+    ) -> [UUID: TaskQuantityProgressSnapshot] {
+        let goalWinners = goals.deduplicatedByID()
+        let entryWinners = entries.deduplicatedByID()
+        let goalsByTaskID = Dictionary(
+            grouping: goalWinners,
+            by: \.taskID
+        )
+        let goalsByID = Dictionary(grouping: goalWinners, by: \.id)
+        let entriesByTaskID = Dictionary(
+            grouping: entryWinners,
+            by: \.taskID
+        )
+        let entriesByGoalID = Dictionary(
+            grouping: entryWinners,
+            by: \.quantityGoalID
+        )
+
+        return taskIDs.reduce(into: [:]) { result, taskID in
+            guard incompleteTaskIDs.contains(taskID) == false else {
+                return
+            }
+            let expectedGoalID = TaskProgressIdentity.quantityGoalID(
+                taskID: taskID
+            )
+            let scopedGoals = (goalsByTaskID[taskID] ?? []) +
+                (goalsByID[expectedGoalID] ?? [])
+            let scopedEntries = (entriesByTaskID[taskID] ?? []) +
+                (entriesByGoalID[expectedGoalID] ?? [])
+            guard scopedGoals.isEmpty == false ||
+                    scopedEntries.isEmpty == false else {
+                return
+            }
+            result[taskID] = snapshot(
+                taskID: taskID,
+                goals: scopedGoals,
+                entries: scopedEntries,
+                isRecordingAllowed:
+                    recordingAllowedTaskIDs.contains(taskID)
+            )
+        }
+    }
+
     func goalIsCanonical(_ goal: TaskQuantityGoal) -> Bool {
         guard TaskQuantityPolicy.valueRange.contains(goal.targetAmount),
               PersistentDatePolicy.contains(goal.createdAt),

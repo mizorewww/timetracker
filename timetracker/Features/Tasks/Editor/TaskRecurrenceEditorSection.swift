@@ -52,20 +52,45 @@ struct TaskRecurrenceEditorSection: View {
         } header: {
             Text(.app("task.recurrence.editor.section"))
         } footer: {
-            Text(.app(footerKey))
+            Text(footerText)
         }
     }
 
-    private var footerKey: String {
-        if isGeneratedTask {
-            return "task.recurrence.editor.generatedFooter"
+    private var footerText: String {
+        switch TaskRecurrenceEditorFooterPolicy.state(
+            isGeneratedTask: isGeneratedTask,
+            isCreationBlockedByActiveWork:
+                isCreationBlockedByActiveWork,
+            dailyRecurrence: draft.dailyRecurrence,
+            quantityGoal: draft.quantityGoal
+        ) {
+        case .generated:
+            return AppStrings.localized(
+                "task.recurrence.editor.generatedFooter"
+            )
+        case .activeWorkBlocked:
+            return AppStrings.localized(
+                "task.recurrence.editor.activeWorkFooter"
+            )
+        case .off:
+            return AppStrings.localized(
+                "task.recurrence.editor.offFooter"
+            )
+        case .paused:
+            return AppStrings.localized(
+                "task.recurrence.editor.pausedFooter"
+            )
+        case .enabled:
+            return AppStrings.localized("task.recurrence.editor.footer")
+        case let .enabledWithQuantity(targetAmount, unitLabel):
+            return String.localizedStringWithFormat(
+                AppStrings.localized(
+                    "task.recurrence.editor.quantityFooterFormat"
+                ),
+                Int64(targetAmount),
+                unitLabel
+            )
         }
-        if isCreationBlockedByActiveWork {
-            return "task.recurrence.editor.activeWorkFooter"
-        }
-        return draft.dailyRecurrence?.isEnabled == false
-            ? "task.recurrence.editor.pausedFooter"
-            : "task.recurrence.editor.footer"
     }
 
     private var dailyRecurrenceBinding: Binding<Bool> {
@@ -76,5 +101,33 @@ struct TaskRecurrenceEditorSection: View {
             updated.setDailyRecurrenceEnabled(isEnabled)
             draft = updated
         }
+    }
+}
+
+nonisolated enum TaskRecurrenceEditorFooterState: Equatable, Sendable {
+    case generated
+    case activeWorkBlocked
+    case off
+    case paused
+    case enabled
+    case enabledWithQuantity(targetAmount: Int, unitLabel: String)
+}
+
+nonisolated enum TaskRecurrenceEditorFooterPolicy {
+    static func state(
+        isGeneratedTask: Bool,
+        isCreationBlockedByActiveWork: Bool,
+        dailyRecurrence: TaskDailyRecurrenceDraft?,
+        quantityGoal: TaskQuantityGoalDraft?
+    ) -> TaskRecurrenceEditorFooterState {
+        if isGeneratedTask { return .generated }
+        if isCreationBlockedByActiveWork { return .activeWorkBlocked }
+        guard let dailyRecurrence else { return .off }
+        guard dailyRecurrence.isEnabled else { return .paused }
+        guard let quantityGoal else { return .enabled }
+        return .enabledWithQuantity(
+            targetAmount: quantityGoal.targetAmount,
+            unitLabel: quantityGoal.unitLabel
+        )
     }
 }

@@ -8,8 +8,8 @@
 - [x] 领取反馈、读取 Apple HIG / SwiftUI 强制技能并建立活动链接。
 - [x] 审计现有 Quick Start 编辑状态、持久化命令、候选过滤、动画与测试。
 - [x] 确认并定向验证仓库现有的固定列表迁移和候选区移除实现，无需重复修改产品代码。
-- [~] 使用 owned iPhone / iPad 模拟器完成普通路径与截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
+- [x] 使用 owned iPhone / iPad 模拟器完成普通路径与截图验收。
+- [~] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -75,6 +75,9 @@
 
 ## 模拟器验收计划
 
+- 已完成并删除的 owned batch（只由 Task 14 操作）：
+  - iPhone 17 Pro / iOS 27.0：`1AEFADFB-21A9-4417-9A59-FDB23C925068`
+  - iPad Pro 13-inch (M5, 16GB) / iOS 27.0：`FA6B27A1-DA49-4675-9588-E70FC3489AF6`
 - 在 fresh owned iPhone 17 Pro 与 iPad Pro 13-inch 上各运行
   `testQuickStartEditorMovesAddedTaskOutOfAvailableTasks`；每台使用显式 UDID、关闭并行测试、独立
   xcresult 和截图目录。
@@ -84,3 +87,20 @@
   `matchedGeometryEffect`、自制 drag/drop 或第三方重排库。
 - 每批完成后终止 App/runner，shutdown + delete 两个 owned 模拟器，并确认未触碰既存的
   `AnalyticsReview-iPhone17Pro`。
+
+## 模拟器验收结果
+
+- iPhone 17 Pro：精确 E2E 1 test passed、0 failure（测试体 56.182 秒）。断言同一任务 UUID 从
+  Available 消失、进入 Pinned 第 3 位并位于 Available header 上方，取消固定后又返回 Available。
+- iPad Pro 13-inch：同一精确 E2E 1 test passed、0 failure（测试体 61.062 秒），验证宽屏 sheet 与
+  iPhone 使用同一互斥迁移语义。
+- 两个平台各导出点击前/后 2 张 simulator-only 截图并以原始分辨率逐张检查：添加后
+  `Design macOS UI` 明确出现在上方 `Pinned Tasks 3`，下方候选区不再含该行；列表层级、加减按钮、
+  标题和 sheet 尺寸均无截断或重复。
+- 最终证据保存在 `build/Task14SimulatorValidation/iPhone.xcresult`、`iPad.xcresult` 以及
+  `build/Task14SimulatorValidation/FinalScreenshots/`；对应日志和 attachment manifest 同目录保留。
+- XCTest tearDown 已终止 App；随后显式 terminate App/runner、shutdown + delete 两个 owned UDID。
+  复核 simulator 列表只剩既存且仍为 Shutdown 的 `AnalyticsReview-iPhone17Pro`，没有 owned
+  `xcodebuild`、`xctest`、UI runner、Simulator、Problem Reporter 或 Booted 设备残留。
+- 目视结果支持继续使用原生 SwiftUI List 动画；没有理由引入 `matchedGeometryEffect`、拖动重排或
+  第三方依赖。物理设备在此阶段完全未启动、未操作、未截图。

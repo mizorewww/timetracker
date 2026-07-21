@@ -18,17 +18,6 @@ nonisolated enum ActivityHeatmapIntensity: Int, CaseIterable, Equatable, Sendabl
         self = ActivityHeatmapIntensity(rawValue: Int(level)) ?? .maximum
     }
 
-    /// Compatibility for the original checklist-only heatmap while Today is
-    /// migrated to task-specific snapshots.
-    init(completionCount: Int) {
-        self = switch max(0, completionCount) {
-        case 0: .none
-        case 1: .low
-        case 2: .medium
-        case 3: .high
-        default: .maximum
-        }
-    }
 }
 
 nonisolated enum ActivityHeatmapMetric: Equatable, Sendable {
@@ -47,8 +36,6 @@ nonisolated struct ActivityHeatmapDay: Identifiable, Equatable, Sendable {
 
     var id: Date { date }
 
-    /// Compatibility for the original checklist-only presentation.
-    var completionCount: Int { value }
 }
 
 nonisolated struct ActivityHeatmapWeek: Identifiable, Equatable, Sendable {
@@ -56,18 +43,6 @@ nonisolated struct ActivityHeatmapWeek: Identifiable, Equatable, Sendable {
     let days: [ActivityHeatmapDay]
 
     var id: Date { startDate }
-}
-
-nonisolated struct ActivityHeatmapSnapshot: Equatable, Sendable {
-    let interval: DateInterval
-    let today: Date
-    let weeks: [ActivityHeatmapWeek]
-    let totalCompletionCount: Int
-    let activeDayCount: Int
-
-    var hasActivity: Bool {
-        totalCompletionCount > 0
-    }
 }
 
 nonisolated struct TaskActivityHeatmapSnapshot: Identifiable, Equatable, Sendable {

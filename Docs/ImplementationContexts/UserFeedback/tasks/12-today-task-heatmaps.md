@@ -8,8 +8,9 @@
 - [x] 领取 Heatmap 反馈并建立活动链接。
 - [x] 审计任务模型、计时/Checklist 聚合、Today、设置、任务详情与 BlossomColor 组件。
 - [x] 明确普通计时任务、Checklist 和现有任务量数据的每日强度语义与迁移默认值。
-- [~] 实现持久化配置、每日聚合、每任务配色与 Today Heatmap。
-- [ ] 完成测试、owned 模拟器截图验收、Release 全设备安装与资源清理。
+- [x] 实现持久化配置、每日聚合与任务详情默认关闭的追踪开关。
+- [~] 实现并验证每任务配色与 Today 独立 Heatmap。
+- [ ] 完成 owned 模拟器截图验收、Release 全设备安装与资源清理。
 - [ ] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -78,15 +79,25 @@
 - UI 使用 Apple 原生 Swift Charts `RectangleMark`，保留系统坐标与图表可访问性；不继续扩写手绘网格。
   调研到的原生 Swift Heatmap 专用包均远低于 1k stars，通用高星图表库又没有日历 Heatmap 且会
   引入 UIKit/适配成本，因此不新增第三方依赖。
+- UI 复审后的收口：最多 64 个图表在宽屏卡片布局中使用 `LazyVStack`；不足一分钟的时长用秒显示，
+  不再出现有颜色却显示 `0 min`；任务量总值在标题中只显示本地化数字、完整单位保留在副标题和
+  可访问性摘要；简繁中文使用“累计计时时长/累計計時時長”，不泄漏英文 Gross。
+- Task Detail 的默认关闭 UI 测试使用专用空选择 fixture，避免其他测试遗留 preference 影响结果；
+  同一测试启用后重启不再替换数据，以验证真实持久化。
 - UI 验收只使用本任务 owned iPhone/iPad 模拟器；物理设备只执行最终 Release 安装，不启动、
   不操作、不截图。
 
 ## 运行资源所有权
 
-- 尚未创建 Task 12 owned 模拟器或测试进程。
+- `Task12-Heatmap-iPhone17Pro`：`2FD5F08C-F779-49B6-854D-8B58881971C1`，
+  iOS 13 个聚焦测试通过后已终止 App、shutdown 并 delete；名称/UDID 均不再存在。
 - 不触碰 `AnalyticsReview-iPhone17Pro` 或其他非本任务资源。
 
 ## Checkpoint 记录
 
 - [x] `82b9bb3`：领取反馈、建立实现记忆与活动链接。
-- [~] 当前 checkpoint：实现并验证每任务聚合模型、动态阈值和详情开关。
+- [x] `5568ab8`：记录模型、UI、依赖与测试审计结论。
+- [x] `8c7485b`：实现并验证每任务聚合模型、动态阈值和详情开关。
+- [~] 当前 checkpoint：Swift Charts 每任务卡片、Blossom 主题色、详情预览与本地化；
+  owned iPhone 模拟器 13 个聚焦测试通过；UI 复审收口后 macOS 13 个聚焦测试再次通过，
+  模拟器批次已完整清理。下一步提交该 checkpoint，再做 simulator-only UI 截图验收。

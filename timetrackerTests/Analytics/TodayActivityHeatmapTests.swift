@@ -20,17 +20,6 @@ struct TodayActivityHeatmapTests {
         #expect(ActivityHeatmapIntensity(value: 1, referenceValue: 0) == .none)
     }
 
-    @Test
-    func fixedIntensityThresholdsStayComparableAcrossWeeks() {
-        #expect(ActivityHeatmapIntensity(completionCount: -1) == .none)
-        #expect(ActivityHeatmapIntensity(completionCount: 0) == .none)
-        #expect(ActivityHeatmapIntensity(completionCount: 1) == .low)
-        #expect(ActivityHeatmapIntensity(completionCount: 2) == .medium)
-        #expect(ActivityHeatmapIntensity(completionCount: 3) == .high)
-        #expect(ActivityHeatmapIntensity(completionCount: 4) == .maximum)
-        #expect(ActivityHeatmapIntensity(completionCount: 100) == .maximum)
-    }
-
     @Test @MainActor
     func selectedBranchesCountChecklistCompletionsOnceAndRetainArchivedHistory() throws {
         let calendar = try testCalendar()
@@ -94,7 +83,7 @@ struct TodayActivityHeatmapTests {
         ]
         let service = TodayActivityHeatmapSnapshotService()
         let tasks = [root, child, grandchild, unrelated, deleted]
-        let snapshot = service.snapshot(
+        let snapshots = service.taskSnapshots(
             selectedTaskIDs: [
                 root.id,
                 child.id,
@@ -103,10 +92,14 @@ struct TodayActivityHeatmapTests {
                 orphanID,
             ],
             tasks: tasks,
+            segments: [],
             checklistItems: items,
+            quantityGoals: [],
+            quantityEntries: [],
             now: now,
             calendar: calendar
         )
+        let snapshot = try #require(snapshots.first)
 
         #expect(
             service.contributingTaskIDs(
@@ -114,12 +107,13 @@ struct TodayActivityHeatmapTests {
                 tasks: tasks
             ) == Set([root.id, child.id, grandchild.id])
         )
-        #expect(snapshot.totalCompletionCount == 4)
+        #expect(snapshots.map(\.taskID) == [root.id, child.id])
+        #expect(snapshot.totalValue == 4)
         #expect(snapshot.activeDayCount == 2)
-        #expect(day(today, in: snapshot, calendar: calendar)?.completionCount == 3)
-        #expect(day(today, in: snapshot, calendar: calendar)?.intensity == .high)
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.completionCount == 1)
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.intensity == .low)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 3)
+        #expect(day(today, in: snapshot, calendar: calendar)?.intensity == .maximum)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 1)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.intensity == .medium)
     }
 
     @Test @MainActor
@@ -143,37 +137,46 @@ struct TodayActivityHeatmapTests {
         )
         let service = TodayActivityHeatmapSnapshotService()
 
-        var snapshot = service.snapshot(
+        var snapshot = try #require(service.taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
+            segments: [],
             checklistItems: [item],
+            quantityGoals: [],
+            quantityEntries: [],
             now: now,
             calendar: calendar
-        )
-        #expect(day(today, in: snapshot, calendar: calendar)?.completionCount == 1)
+        ).first)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 1)
 
         item.isCompleted = false
         item.completedAt = nil
-        snapshot = service.snapshot(
+        snapshot = try #require(service.taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
+            segments: [],
             checklistItems: [item],
+            quantityGoals: [],
+            quantityEntries: [],
             now: now,
             calendar: calendar
-        )
-        #expect(snapshot.totalCompletionCount == 0)
+        ).first)
+        #expect(snapshot.totalValue == 0)
 
         item.isCompleted = true
         item.completedAt = yesterday.addingTimeInterval(60)
-        snapshot = service.snapshot(
+        snapshot = try #require(service.taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
+            segments: [],
             checklistItems: [item],
+            quantityGoals: [],
+            quantityEntries: [],
             now: now,
             calendar: calendar
-        )
-        #expect(day(today, in: snapshot, calendar: calendar)?.completionCount == 0)
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.completionCount == 1)
+        ).first)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 0)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 1)
     }
 
     @Test @MainActor
@@ -191,12 +194,17 @@ struct TodayActivityHeatmapTests {
             calendar: calendar
         )
         let root = task("Root")
-        let snapshot = TodayActivityHeatmapSnapshotService().snapshot(
+        let snapshot = try #require(
+            TodayActivityHeatmapSnapshotService().taskSnapshots(
             selectedTaskIDs: [root.id, UUID()],
             tasks: [root],
+            segments: [],
             checklistItems: [],
+            quantityGoals: [],
+            quantityEntries: [],
             now: now,
             calendar: calendar
+            ).first
         )
 
         #expect(snapshot.weeks.count == 53)
@@ -237,7 +245,7 @@ struct TodayActivityHeatmapTests {
             }
         )
         #expect(cells.contains { $0.date == dayAfter })
-        #expect(snapshot.totalCompletionCount == 0)
+        #expect(snapshot.totalValue == 0)
     }
 
     @Test @MainActor
@@ -548,17 +556,6 @@ struct TodayActivityHeatmapTests {
                 )
             )
         )
-    }
-
-    private func day(
-        _ date: Date,
-        in snapshot: ActivityHeatmapSnapshot,
-        calendar: Calendar
-    ) -> ActivityHeatmapDay? {
-        snapshot.weeks
-            .lazy
-            .flatMap(\.days)
-            .first { calendar.isDate($0.date, inSameDayAs: date) }
     }
 
     private func day(

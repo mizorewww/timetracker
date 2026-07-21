@@ -812,6 +812,73 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskDetailHeatmapTrackingDefaultsOffAndPersistsToToday() throws {
+        #if os(macOS)
+        throw XCTSkip("Task-detail Heatmap screenshots are verified on iPhone and iPad simulators.")
+        #else
+        let taskTitle = "Time Tracker App"
+        var app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: taskTitle,
+            additionalLaunchArguments: ["--uitesting-today-heatmap-off"]
+        )
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let toggle = app.switches["task.detail.heatmapTracking"].firstMatch
+        scrollUntilHittable(toggle, direction: .up, in: app)
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5) && toggle.isHittable)
+        XCTAssertEqual(toggle.value as? String, "0")
+        let prefix = app.windows.firstMatch.frame.width >= 700
+            ? "ipad"
+            : "iphone"
+        try capture("\(prefix)-task-detail-heatmap-off", app: app)
+
+        activate(toggle)
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            toggle.value as? String == "1"
+        })
+        let palette = app.descendants(matching: .any)[
+            "task.detail.heatmapPalette"
+        ].firstMatch
+        XCTAssertTrue(palette.waitForExistence(timeout: 5))
+        try capture("\(prefix)-task-detail-heatmap-on", app: app)
+
+        app.terminate()
+        app = launchApp(
+            route: "task-detail",
+            taskTitle: taskTitle
+        )
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let persistedToggle = app.switches[
+            "task.detail.heatmapTracking"
+        ].firstMatch
+        scrollUntilHittable(persistedToggle, direction: .up, in: app)
+        XCTAssertTrue(
+            persistedToggle.waitForExistence(timeout: 5) &&
+                persistedToggle.isHittable
+        )
+        XCTAssertEqual(persistedToggle.value as? String, "1")
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        let grid = app.otherElements.matching(
+            NSPredicate(
+                format: "label == %@",
+                "Time Tracker App activity Heatmap"
+            )
+        ).firstMatch
+        scrollUntilHittable(grid, direction: .up, in: app)
+        XCTAssertTrue(grid.waitForExistence(timeout: 8))
+        try capture("\(prefix)-task-detail-heatmap-persisted-today", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTaskDetailPromotesTimerAndManualTimeActions() throws {
         let app = launchApp(
             route: "task-detail",
@@ -3626,7 +3693,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTodayConfiguredHeatmapShowsCompletionHistory() throws {
+    func testTodayConfiguredHeatmapsStayIndependentByTaskAndMetric() throws {
         #if os(macOS)
         throw XCTSkip("The Today heatmap screenshot is verified on iPhone and iPad.")
         #else
@@ -3637,47 +3704,75 @@ final class timetrackerUITests: XCTestCase {
             additionalLaunchArguments: ["--uitesting-today-heatmap"]
         )
         XCTAssertTrue(homeIsReady(in: app))
-        let heatmap = app.descendants(matching: .any)[
-            "home.heatmap"
+        let heatmaps = app.descendants(matching: .any)[
+            "home.heatmaps"
         ].firstMatch
-        let grid = app.descendants(matching: .any)[
-            "home.heatmap.grid"
-        ].firstMatch
-        let footer = app.staticTexts.matching(
+        let checklistGrid = app.otherElements.matching(
             NSPredicate(
                 format: "label == %@",
-                "Completed checklist items in the selected tasks and their subtasks. Each square is one day; 4 or more completions use the darkest shade."
+                "Time Tracker App activity Heatmap"
+            )
+        ).firstMatch
+        let durationGrid = app.otherElements.matching(
+            NSPredicate(
+                format: "label == %@",
+                "Client Work activity Heatmap"
+            )
+        ).firstMatch
+        let checklistFooter = app.staticTexts[
+            "Daily completed checklist items for this task and its subtasks. Shades are relative to the busiest day (4 completed)."
+        ].firstMatch
+        let durationFooter = app.staticTexts.matching(
+            NSPredicate(
+                format: "label BEGINSWITH %@",
+                "Daily gross tracked time for this task and its subtasks."
             )
         ).firstMatch
 
-        scrollUntilHittable(grid, direction: .up, in: app)
+        scrollUntilHittable(checklistGrid, direction: .up, in: app)
         XCTAssertTrue(
-            heatmap.waitForExistence(timeout: 8),
-            "Selecting a task in Settings must expose its Today heatmap."
+            heatmaps.waitForExistence(timeout: 8),
+            "Selecting tasks must expose the task-specific Today Heatmaps."
         )
         XCTAssertTrue(
-            grid.waitForExistence(timeout: 8) && grid.isHittable,
-            "The shared heatmap grid must be visible on Today."
+            checklistGrid.waitForExistence(timeout: 8),
+            "The checklist task must have its own Heatmap."
         )
-        XCTAssertEqual(grid.label, "Activity Heatmap")
         XCTAssertEqual(
-            grid.value as? String,
-            "9 checklist completions across 4 active days."
+            checklistGrid.value as? String,
+            "Checklist Completions. Total 9 completed across 4 active days; busiest day 4 completed."
         )
-        XCTAssertTrue(footer.waitForExistence(timeout: 5))
-        scrollUntilFullyVisibleAboveSystemChrome(footer, in: app)
-        XCTAssertGreaterThan(grid.frame.width, 240)
-        XCTAssertGreaterThan(grid.frame.height, 90)
+        XCTAssertTrue(checklistFooter.waitForExistence(timeout: 5))
+        scrollUntilFullyVisibleAboveSystemChrome(checklistFooter, in: app)
+        XCTAssertGreaterThan(checklistGrid.frame.width, 240)
+        XCTAssertGreaterThan(checklistGrid.frame.height, 90)
         XCTAssertTrue(
-            isFrameFullyVisibleAboveSystemChrome(grid, in: app)
+            isFrameFullyVisibleAboveSystemChrome(checklistGrid, in: app)
         )
         XCTAssertTrue(
-            isFrameFullyVisibleAboveSystemChrome(footer, in: app)
+            isFrameFullyVisibleAboveSystemChrome(checklistFooter, in: app)
         )
         let prefix = app.windows.firstMatch.frame.width >= 700
             ? "ipad"
             : "iphone"
-        try capture("\(prefix)-home-today-heatmap", app: app)
+        try capture("\(prefix)-home-today-heatmap-checklist", app: app)
+
+        scrollUntilHittable(durationGrid, direction: .up, in: app)
+        XCTAssertTrue(
+            durationGrid.waitForExistence(timeout: 8),
+            "The duration task must have a separate Heatmap."
+        )
+        let durationSummary = durationGrid.value as? String ?? ""
+        XCTAssertTrue(durationSummary.contains("Tracked Time"))
+        XCTAssertTrue(durationSummary.contains("active days"))
+        XCTAssertTrue(durationFooter.waitForExistence(timeout: 5))
+        scrollUntilFullyVisibleAboveSystemChrome(durationFooter, in: app)
+        XCTAssertGreaterThan(durationGrid.frame.width, 240)
+        XCTAssertGreaterThan(durationGrid.frame.height, 90)
+        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(durationGrid, in: app))
+        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(durationFooter, in: app))
+        XCTAssertNotEqual(checklistGrid.value as? String, durationGrid.value as? String)
+        try capture("\(prefix)-home-today-heatmap-duration", app: app)
         #endif
     }
 

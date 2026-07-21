@@ -79,16 +79,29 @@ struct TodayHeatmapUIContractTests {
         let preferences = try sourceText(
             "timetracker/Models/SyncedPreferences.swift"
         )
+        let seed = try sourceText(
+            "timetracker/App/SeedData+DemoBuild.swift"
+        )
+        let uiTests = try sourceText(
+            "timetrackerUITests/timetrackerUITests.swift"
+        )
 
         #expect(detail.contains("TaskDetailHeatmapTrackingSection("))
         #expect(section.contains("Toggle(isOn: trackingBinding)"))
         #expect(section.contains("preferences.todayHeatmapTaskIDs.contains(task.id)"))
         #expect(section.contains("store.setTodayHeatmapTrackingEnabled("))
         #expect(section.contains("task.detail.heatmapTracking"))
+        #expect(section.contains("ActivityHeatmapPalettePreview("))
+        #expect(section.contains("task.detail.heatmapPalette"))
         #expect(commands.contains("func setTodayHeatmapTrackingEnabled("))
         #expect(commands.contains("OrderedTaskIDSelectionMutation.adding("))
         #expect(commands.contains("OrderedTaskIDSelectionMutation.removing("))
         #expect(preferences.contains("var todayHeatmapTaskIDs: [UUID] = []"))
+        #expect(seed.contains("--uitesting-today-heatmap-off"))
+        #expect(seed.contains("PreferenceJSON.encodeChecked([String]())"))
+        #expect(uiTests.contains(
+            "additionalLaunchArguments: [\"--uitesting-today-heatmap-off\"]"
+        ))
     }
 
     @Test
@@ -108,6 +121,7 @@ struct TodayHeatmapUIContractTests {
             "task.detail.heatmap.toggle",
             "task.detail.heatmap.footer",
             "task.detail.heatmap.limitReached",
+            "task.detail.heatmap.palette",
             "heatmap.picker.title",
             "heatmap.picker.selectionHint",
             "heatmap.picker.emptyDescription",
@@ -118,12 +132,26 @@ struct TodayHeatmapUIContractTests {
             "taskPicker.selection.notSelected",
             "taskPicker.selection.countFormat",
             "taskPicker.selection.limitReachedFormat",
-            "home.heatmap.completionCount",
-            "home.heatmap.footer",
+            "home.heatmap.title",
+            "home.heatmap.taskCount",
+            "home.heatmap.section.footer",
+            "home.heatmap.chart.accessibilityLabel",
+            "home.heatmap.chart.week",
+            "home.heatmap.chart.weekday",
+            "home.heatmap.palette.accessibilityLabel",
+            "home.heatmap.checklistValueFormat",
+            "home.heatmap.quantityValueFormat",
+            "home.heatmap.metric.duration",
+            "home.heatmap.metric.checklist",
+            "home.heatmap.metric.quantityFormat",
+            "home.heatmap.footer.durationFormat",
+            "home.heatmap.footer.checklistFormat",
+            "home.heatmap.footer.quantityFormat",
+            "home.heatmap.footer.noActivityFormat",
+            "home.heatmap.accessibilitySummaryFormat",
             "home.heatmap.less",
             "home.heatmap.more",
-            "home.heatmap.rangeFormat",
-            "home.heatmap.accessibilitySummary"
+            "home.heatmap.rangeFormat"
         ]
 
         for path in localizationPaths {
@@ -131,11 +159,19 @@ struct TodayHeatmapUIContractTests {
             for key in keys {
                 #expect(source.contains("\"\(key)\" ="))
             }
+            if path.contains("zh-") {
+                #expect(source.contains(
+                    "\"home.heatmap.footer.durationFormat\" = \"此任务及其子任务每天的 Gross"
+                ) == false)
+                #expect(source.contains(
+                    "\"home.heatmap.footer.durationFormat\" = \"此任務及其子任務每天的 Gross"
+                ) == false)
+            }
         }
     }
 
     @Test
-    func todaySurfacesOneSharedHeatmapAcrossPhoneAndWideLayouts() throws {
+    func todaySurfacesIndependentSwiftChartsHeatmapsAcrossLayouts() throws {
         let phone = try sourceText(
             "timetracker/Features/Home/PhoneHomeView.swift"
         )
@@ -147,6 +183,9 @@ struct TodayHeatmapUIContractTests {
         )
         let grid = try sourceText(
             "timetracker/SharedUI/Components/ActivityHeatmapGrid.swift"
+        )
+        let seed = try sourceText(
+            "timetracker/App/SeedData+DemoBuild.swift"
         )
 
         #expect(
@@ -164,14 +203,25 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains("struct HomeActivityHeatmapSection: View"))
         #expect(section.contains("let container: HomeSectionContainer"))
         #expect(section.contains("request.selectedTaskIDs.isEmpty == false"))
-        #expect(section.contains("\"home.heatmap\""))
-        #expect(section.contains("\"home.heatmap.grid\""))
-        #expect(
-            section.components(
-                separatedBy: "home.heatmap.footer"
-            ).count - 1 == 2
-        )
+        #expect(section.contains("[TaskActivityHeatmapSnapshot]"))
+        #expect(section.contains("ForEach(snapshots)"))
+        #expect(section.contains("LazyVStack(spacing: 10)"))
+        #expect(section.contains("TaskActivityHeatmapCard(snapshot: snapshot)"))
+        #expect(section.contains("home.heatmap.\\(snapshot.taskID.uuidString)"))
+        #expect(section.contains("home.heatmap.grid.\\(snapshot.taskID.uuidString)"))
+        #expect(section.contains("snapshot.colorHex"))
+        #expect(section.contains("case .trackedDuration:"))
+        #expect(section.contains("case .checklistCompletions:"))
+        #expect(section.contains("case .quantity:"))
+        #expect(section.contains(
+            "snapshot.totalValue.formatted(.number.locale(locale))"
+        ))
+        #expect(seed.contains("app.id.uuidString,"))
+        #expect(seed.contains("client.id.uuidString"))
         #expect(grid.contains("struct ActivityHeatmapGrid: View"))
+        #expect(grid.contains("import Charts"))
+        #expect(grid.contains("Chart(cells)"))
+        #expect(grid.contains("RectangleMark("))
         #expect(grid.contains("ScrollView(.horizontal)"))
         #expect(grid.contains(
             ".defaultScrollAnchor(.trailing, for: .initialOffset)"
@@ -183,6 +233,10 @@ struct TodayHeatmapUIContractTests {
         #expect(grid.contains(".font(.system(size:") == false)
         #expect(grid.contains("id: \\.offset") == false)
         #expect(grid.contains("Button(") == false)
+        #expect(grid.contains("AppColors.grossTime") == false)
+        #expect(grid.contains("Color(hex: colorHex)"))
+        #expect(grid.contains("DurationFormatter.chart(value, locale: locale)"))
+        #expect(grid.contains(".accessibilityValue("))
     }
 
     @Test
@@ -213,6 +267,9 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains(".NSCalendarDayChanged"))
         #expect(store.contains("taskByID: taskByID"))
         #expect(store.contains("childrenByParentID: childrenByParentID"))
+        #expect(store.contains("segments: allSegments"))
+        #expect(store.contains("quantityGoals: taskQuantityGoals"))
+        #expect(store.contains("quantityEntries: taskQuantityEntries"))
         #expect(store.contains("tasks: tasks") == false)
         #expect(service.contains("let indexes = activityIndexes("))
         #expect(service.contains("func taskSnapshots("))
@@ -223,7 +280,7 @@ struct TodayHeatmapUIContractTests {
         #expect(
             service.components(
                 separatedBy: "checklistItems.visibleDeduplicatedByID()"
-            ).count - 1 == 2
+            ).count - 1 == 1
         )
     }
 }

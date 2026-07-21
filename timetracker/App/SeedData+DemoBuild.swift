@@ -56,12 +56,21 @@ extension SeedData {
                     deviceID: "demo"
                 )
             )
-            if CommandLine.arguments.contains("--uitesting-today-heatmap") {
+            if CommandLine.arguments.contains("--uitesting-today-heatmap-off") {
+                context.insert(
+                    SyncedPreference(
+                        key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
+                        valueJSON: try PreferenceJSON.encodeChecked([String]()),
+                        deviceID: "demo"
+                    )
+                )
+            } else if CommandLine.arguments.contains("--uitesting-today-heatmap") {
                 context.insert(
                     SyncedPreference(
                         key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
                         valueJSON: try PreferenceJSON.encodeChecked([
-                            app.id.uuidString
+                            app.id.uuidString,
+                            client.id.uuidString
                         ]),
                         deviceID: "demo"
                     )

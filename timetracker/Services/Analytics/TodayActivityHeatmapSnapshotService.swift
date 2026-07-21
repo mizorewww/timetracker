@@ -94,64 +94,6 @@ struct TodayActivityHeatmapSnapshotService {
         }
     }
 
-    /// Compatibility for the original checklist-only Today presentation while
-    /// it is migrated to `taskSnapshots`.
-    func snapshot(
-        selectedTaskIDs: [UUID],
-        tasks: [TaskNode],
-        checklistItems: [ChecklistItem],
-        now: Date,
-        calendar: Calendar = .current
-    ) -> ActivityHeatmapSnapshot {
-        let indexes = TaskTreeService().indexes(tasks: tasks)
-        return snapshot(
-            selectedTaskIDs: selectedTaskIDs,
-            taskByID: indexes.taskByID,
-            childrenByParentID: indexes.childrenByParentID,
-            checklistItems: checklistItems,
-            now: now,
-            calendar: calendar
-        )
-    }
-
-    func snapshot(
-        selectedTaskIDs: [UUID],
-        taskByID: [UUID: TaskNode],
-        childrenByParentID: [UUID?: [TaskNode]],
-        checklistItems: [ChecklistItem],
-        now: Date,
-        calendar: Calendar = .current
-    ) -> ActivityHeatmapSnapshot {
-        let dateRange = dateRange(now: now, calendar: calendar)
-        let contributingTaskIDs = contributingTaskIDs(
-            selectedTaskIDs: selectedTaskIDs,
-            taskByID: taskByID,
-            childrenByParentID: childrenByParentID
-        )
-        let countsByDay = completionCountsByDay(
-            contributingTaskIDs: contributingTaskIDs,
-            checklistItems: checklistItems,
-            interval: dateRange.interval,
-            now: now,
-            calendar: calendar
-        )
-        let weeks = weeks(
-            valuesByDay: countsByDay,
-            referencesByDay: [:],
-            defaultReferenceValue: 4,
-            dateRange: dateRange,
-            calendar: calendar
-        )
-
-        return ActivityHeatmapSnapshot(
-            interval: dateRange.interval,
-            today: dateRange.today,
-            weeks: weeks,
-            totalCompletionCount: countsByDay.values.reduce(0, +),
-            activeDayCount: countsByDay.values.lazy.filter { $0 > 0 }.count
-        )
-    }
-
     func contributingTaskIDs(
         selectedTaskIDs: [UUID],
         tasks: [TaskNode]
@@ -390,29 +332,6 @@ struct TodayActivityHeatmapSnapshotService {
             interval: DateInterval(start: intervalStart, end: intervalEnd),
             today: today
         )
-    }
-
-    private func completionCountsByDay(
-        contributingTaskIDs: Set<UUID>,
-        checklistItems: [ChecklistItem],
-        interval: DateInterval,
-        now: Date,
-        calendar: Calendar
-    ) -> [Date: Int] {
-        guard contributingTaskIDs.isEmpty == false else { return [:] }
-        var result: [Date: Int] = [:]
-        for item in checklistItems.visibleDeduplicatedByID() {
-            guard contributingTaskIDs.contains(item.taskID),
-                  item.isCompleted,
-                  let completedAt = item.completedAt,
-                  completedAt <= now else {
-                continue
-            }
-            let day = calendar.startOfDay(for: completedAt)
-            guard interval.contains(day) else { continue }
-            result[day, default: 0] += 1
-        }
-        return result
     }
 
     private func normalizedUnit(_ value: String) -> String {

@@ -10,7 +10,7 @@
 - [x] 实现并验证完成/取消完成时的状态反馈和稳定排序。
 - [x] 在 owned 模拟器完成普通路径与 simulator-only 截图验收。
 - [x] 执行 Release 全设备安装、签名/版本核验与资源清理。
-- [~] 由 Codex 在唯一任务来源标记完成并移除活动链接。
+- [x] 由 Codex 在唯一任务来源标记完成并移除活动链接。
 
 ## 反馈边界
 
@@ -28,7 +28,7 @@
 - [x] 在 owned iPhone/iPad 模拟器验证普通交互并适当截图
 - [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [x] 核验安装版本与签名，清理 owned 设备、进程和临时产物
-- [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动链接
+- [x] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动链接
 
 ## 实现约束
 
@@ -90,4 +90,5 @@
   1.1.52 (107)，Team `LT98S43NKA`，`codesign --verify` 通过。当前没有可见物理
   Apple Watch，因此只核验了已签名嵌入 companion；配对 Watch 的实际安装仍由系统的
   Automatic App Install 决定。
-- [~] 当前 checkpoint：在唯一任务来源标记完成并移除活动链接。
+- [x] `Docs/userfeedback.md` 中本任务已由 Codex 标记为 `[x]`，活动链接已移除；后续
+  Heatmap 反馈仍为 `[ ]`，尚未领取。

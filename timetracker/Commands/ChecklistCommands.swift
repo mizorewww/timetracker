@@ -41,6 +41,7 @@ struct ChecklistCommandHandler {
 
     func toggle(
         _ item: ChecklistItem,
+        existingItems: [ChecklistItem],
         context: ModelContext,
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
@@ -48,6 +49,7 @@ struct ChecklistCommandHandler {
         try setCompletion(
             item,
             isCompleted: !item.isCompleted,
+            existingItems: existingItems,
             context: context,
             now: now,
             deviceID: deviceID
@@ -57,11 +59,18 @@ struct ChecklistCommandHandler {
     func setCompletion(
         _ item: ChecklistItem,
         isCompleted: Bool,
+        existingItems: [ChecklistItem],
         context: ModelContext,
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
         guard item.isCompleted != isCompleted else { return }
+        if let lastSiblingSortOrder = existingItems.lazy
+            .filter({ $0.id != item.id && $0.taskID == item.taskID })
+            .map(\.sortOrder)
+            .max() {
+            item.sortOrder = lastSiblingSortOrder + 10
+        }
         item.isCompleted = isCompleted
         item.completedAt = isCompleted ? now : nil
         item.updatedAt = now

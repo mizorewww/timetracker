@@ -23,13 +23,25 @@ struct CoreCommandHandlerTests {
         #expect(first.title == "First")
         #expect(second.sortOrder > first.sortOrder)
 
-        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 1_000))
+        try handler.toggle(
+            first,
+            existingItems: [first, second],
+            context: context,
+            now: Date(timeIntervalSince1970: 1_000)
+        )
         #expect(first.isCompleted)
         #expect(first.completedAt == Date(timeIntervalSince1970: 1_000))
+        #expect(first.sortOrder > second.sortOrder)
 
-        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 2_000))
+        try handler.toggle(
+            first,
+            existingItems: [first, second],
+            context: context,
+            now: Date(timeIntervalSince1970: 2_000)
+        )
         #expect(first.isCompleted == false)
         #expect(first.completedAt == nil)
+        #expect(first.sortOrder > second.sortOrder)
     }
 
     @Test @MainActor
@@ -63,6 +75,7 @@ struct CoreCommandHandlerTests {
         try context.save()
         try handler.toggle(
             first,
+            existingItems: [first, second],
             context: context,
             now: Date(timeIntervalSinceReferenceDate: 1_000),
             deviceID: "local-device"

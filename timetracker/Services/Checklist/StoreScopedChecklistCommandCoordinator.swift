@@ -118,6 +118,7 @@ struct StoreScopedChecklistCommandCoordinator {
             try ChecklistCommandHandler().setCompletion(
                 item,
                 isCompleted: isCompleted,
+                existingItems: items,
                 context: context,
                 now: nowProvider(),
                 deviceID: deviceID

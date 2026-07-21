@@ -735,7 +735,7 @@ struct PreferencesChecklistForecastTests {
     }
 
     @Test @MainActor
-    func checklistCompletionGroupingDoesNotRewriteCanonicalOrderOrSiblingMutations() throws {
+    func checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test")
             .createTask(
@@ -749,12 +749,16 @@ struct PreferencesChecklistForecastTests {
         for title in ["A", "B", "C"] {
             #expect(store.addChecklistItem(taskID: task.id, title: title))
         }
+        let initiallyCompleted = try #require(
+            store.checklistItems(for: task.id).first { $0.title == "C" }
+        )
+        #expect(store.toggleChecklistItem(initiallyCompleted))
 
         let before = store.checklistItems(for: task.id)
         let itemA = try #require(before.first { $0.title == "A" })
-        let sortOrderByID = Dictionary(uniqueKeysWithValues: before.map {
-            ($0.id, $0.sortOrder)
-        })
+        let siblingSortOrderByID = Dictionary(uniqueKeysWithValues: before
+            .filter { $0.id != itemA.id }
+            .map { ($0.id, $0.sortOrder) })
         let siblingMutationIDByID = Dictionary(uniqueKeysWithValues: before
             .filter { $0.id != itemA.id }
             .map { ($0.id, $0.clientMutationID) })
@@ -762,18 +766,25 @@ struct PreferencesChecklistForecastTests {
         #expect(store.toggleChecklistItem(itemA))
 
         let completed = store.checklistItems(for: task.id)
-        #expect(completed.map(\.title) == ["A", "B", "C"])
-        #expect(Dictionary(uniqueKeysWithValues: completed.map {
-            ($0.id, $0.sortOrder)
-        }) == sortOrderByID)
+        #expect(completed.map(\.title) == ["B", "C", "A"])
+        #expect(Dictionary(uniqueKeysWithValues: completed
+            .filter { $0.id != itemA.id }
+            .map { ($0.id, $0.sortOrder) }) == siblingSortOrderByID)
         #expect(Dictionary(uniqueKeysWithValues: completed
             .filter { $0.id != itemA.id }
             .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
         #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["B", "C", "A"])
-
         let completedA = try #require(completed.first { $0.id == itemA.id })
+        #expect(
+            completedA.sortOrder >
+                (completed.filter { $0.id != itemA.id }.map(\.sortOrder).max() ?? 0)
+        )
+
         #expect(store.toggleChecklistItem(completedA))
-        #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["A", "B", "C"])
+        #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["B", "A", "C"])
+        #expect(Dictionary(uniqueKeysWithValues: store.checklistItems(for: task.id)
+            .filter { $0.id != itemA.id }
+            .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
     }
 
     @Test @MainActor

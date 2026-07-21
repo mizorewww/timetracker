@@ -5,10 +5,10 @@
 
 ## 当前阶段
 
-- [~] 领取“勾选 checklist 加动画，完成内容自动移动到最下面”的反馈并建立活动链接。
-- [ ] 审计所有 checklist 展示入口、完成命令、持久化排序与现有测试。
-- [ ] 实现并验证完成/取消完成时的状态反馈和稳定排序。
-- [ ] 在 owned 模拟器完成普通路径与 simulator-only 截图验收。
+- [x] 领取“勾选 checklist 加动画，完成内容自动移动到最下面”的反馈并建立活动链接。
+- [x] 审计所有 checklist 展示入口、完成命令、持久化排序与现有测试。
+- [x] 实现并验证完成/取消完成时的状态反馈和稳定排序。
+- [~] 在 owned 模拟器完成普通路径与 simulator-only 截图验收。
 - [ ] 执行 Release 全设备安装、签名/版本核验与资源清理。
 - [ ] 由 Codex 在唯一任务来源标记完成并移除活动链接。
 
@@ -21,10 +21,10 @@
 
 ## 验收清单
 
-- [ ] 定位 checklist 行、完成动作、排序字段与所有展示入口
-- [ ] 明确完成、取消完成、连续快速点击及跨刷新后的顺序语义
-- [ ] 使用原生 SwiftUI 动画与稳定 `ForEach` identity 完成实现
-- [ ] 覆盖排序/持久化语义的单元或契约测试
+- [x] 定位 checklist 行、完成动作、排序字段与所有展示入口
+- [x] 明确完成、取消完成、连续快速点击及跨刷新后的顺序语义
+- [x] 使用原生 SwiftUI 动画与稳定 `ForEach` identity 完成实现
+- [x] 覆盖排序/持久化语义的单元或契约测试
 - [ ] 在 owned iPhone/iPad 模拟器验证普通交互并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，清理 owned 设备、进程和临时产物
@@ -40,9 +40,24 @@
 
 ## 子代理编排
 
-- [ ] 数据模型、命令、持久化排序语义独立审计。
-- [ ] SwiftUI checklist 展示入口、动画边界与跨平台一致性独立审计。
-- [ ] 现有测试覆盖、可复用测试夹具与模拟器验收路径独立审计。
+- [x] 数据模型、命令、持久化排序语义独立审计。
+- [x] SwiftUI checklist 展示入口、动画边界与跨平台一致性独立审计。
+- [x] 现有测试覆盖、可复用测试夹具与模拟器验收路径独立审计。
+
+## 审计与实现结论
+
+- 新建/编辑、正常任务详情、草稿恢复详情都汇聚到
+  `TaskChecklistEditorSection` 与共享 `ChecklistCompletionButton`；AI 只读预览和
+  Inbox 编辑行不属于本反馈的可勾选任务 checklist 入口。
+- UI 已采用持久 UUID 作为 `ForEach` identity；完成图标以 0.22 秒 snappy
+  opacity/scale 反馈，行位置以 0.28 秒 snappy 动画变化，两者均尊重 Reduce Motion。
+- 编辑会话原本已把完成项追加到完成组末尾、把重新打开项放到未完成组末尾；本次
+  修正直接 Store 命令路径，使其也只移动目标项的 `sortOrder` 到目标组末尾，不再出现
+  编辑页与直接命令对“最下面”的不同解释，也不会修改 sibling mutation revision。
+- 不采用 `completedAt` 作为展示顺序：该字段是真实完成时间，而且会覆盖现有完成组
+  手动排序。排序继续复用现有 `ChecklistOrderingService` 与 canonical `sortOrder`。
+- owned simulator checkpoint 将补充完成状态的 accessibility value 断言、route
+  fallback，并按运行设备生成 `iphone-` / `ipad-` 截图名，避免双设备截图误标或互相覆盖。
 
 ## 运行资源所有权
 
@@ -51,4 +66,7 @@
 
 ## Checkpoint 记录
 
-- [~] 当前 checkpoint：领取反馈、建立实现记忆与活动链接。
+- [x] `c53235e`：领取反馈、建立实现记忆与活动链接。
+- [x] 聚焦实现验证：macOS arm64 上运行命令、会话、排序、协调器和 UI 契约测试，
+  `/tmp/TimeTrackerTask11FocusedTests4.xcresult` 为 100/100 通过、0 失败、0 跳过。
+- [~] 当前 checkpoint：在 owned iPhone/iPad Simulator 运行精准 UI 测试并检查截图。

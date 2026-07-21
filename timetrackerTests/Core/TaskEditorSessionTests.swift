@@ -165,12 +165,19 @@ struct TaskEditorSessionTests {
     @Test
     func rapidChecklistToggleUsesStableIdentityAfterReordering() {
         var initialDraft = TaskEditorDraft(parentID: nil)
+        let openFirst = ChecklistEditorDraft(title: "Open first")
         let item = ChecklistEditorDraft(title: "Toggle twice")
+        let openLast = ChecklistEditorDraft(title: "Open last")
         let completed = ChecklistEditorDraft(
             title: "Completed",
             isCompleted: true
         )
-        initialDraft.checklistItems = [item, completed]
+        initialDraft.checklistItems = [
+            openFirst,
+            item,
+            openLast,
+            completed,
+        ]
         let session = TaskEditorSession(
             store: makeTestStore(),
             initialDraft: initialDraft
@@ -180,10 +187,12 @@ struct TaskEditorSessionTests {
         session.toggleChecklistItem(id: item.id)
 
         #expect(session.draft.checklistItems.map(\.id) == [
+            openFirst.id,
+            openLast.id,
             item.id,
             completed.id,
         ])
-        #expect(session.draft.checklistItems[0].isCompleted == false)
+        #expect(session.draft.checklistItems[2].isCompleted == false)
     }
 
     @Test

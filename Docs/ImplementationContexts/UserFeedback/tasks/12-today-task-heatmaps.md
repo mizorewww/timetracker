@@ -9,8 +9,8 @@
 - [x] 审计任务模型、计时/Checklist 聚合、Today、设置、任务详情与 BlossomColor 组件。
 - [x] 明确普通计时任务、Checklist 和现有任务量数据的每日强度语义与迁移默认值。
 - [x] 实现持久化配置、每日聚合与任务详情默认关闭的追踪开关。
-- [~] 实现并验证每任务配色与 Today 独立 Heatmap。
-- [ ] 完成 owned 模拟器截图验收、Release 全设备安装与资源清理。
+- [x] 实现并验证每任务配色与 Today 独立 Heatmap。
+- [~] 完成 owned 模拟器交互/截图验收、相关回归、Release 全设备安装与资源清理。
 - [ ] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -98,6 +98,7 @@
 - [x] `82b9bb3`：领取反馈、建立实现记忆与活动链接。
 - [x] `5568ab8`：记录模型、UI、依赖与测试审计结论。
 - [x] `8c7485b`：实现并验证每任务聚合模型、动态阈值和详情开关。
-- [~] 当前 checkpoint：Swift Charts 每任务卡片、Blossom 主题色、详情预览与本地化；
+- [x] `0ddec3f`：Swift Charts 每任务卡片、Blossom 主题色、详情预览、本地化及确定性 UI fixture；
   owned iPhone 模拟器 13 个聚焦测试通过；UI 复审收口后 macOS 13 个聚焦测试再次通过，
-  模拟器批次已完整清理。下一步提交该 checkpoint，再做 simulator-only UI 截图验收。
+  模拟器批次已完整清理。
+- [~] 当前 checkpoint：owned iPhone/iPad 模拟器交互与截图验收；只使用 simulator，完成批次即清理。

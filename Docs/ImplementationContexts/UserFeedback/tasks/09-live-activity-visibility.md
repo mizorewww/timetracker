@@ -13,8 +13,9 @@
 - [x] Settings 与恢复逻辑已跟随 ActivityKit 的真实生命周期，而非只依赖请求成功。
 - [x] 已解除把内容 freshness、累计计时上限与单实例 8 小时生命周期错误绑定的问题。
 - [x] 已以 simulator-only 截图验收锁屏与灵动岛的长计时持续展示。
-- [~] 正在执行最终 Release 全设备安装、签名和版本验证。
-- 下一 checkpoint：运行用户指定的 `CONFIGURATION=Release scripts/build_install_all.sh`，核对产物与安装版本并清理临时资源。
+- [x] 已执行最终 Release 全设备安装、签名和版本验证。
+- [x] 已由 Codex 在反馈文档标记完成并移除活动软链接。
+- Task 09 完成；后续任务必须重新从 `Docs/userfeedback.md` 按顺序领取。
 
 ## 反馈边界
 
@@ -29,9 +30,9 @@
 - [x] 用失败测试或可复现诊断锁定根因
 - [x] 依照 Apple HIG 与 SwiftUI/ActivityKit 最佳实践实施最小修复
 - [x] 验证 iPhone 锁屏、支持灵动岛的机型与降级路径并适当截图
-- [~] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
-- [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
+- [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [x] 核验安装版本与签名，释放 owned 设备、进程和临时产物
+- [x] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
 ## 初始实现约束
 
@@ -92,4 +93,9 @@
 - [x] 锁屏验证：Device Hub 选择同一显式 simulator UDID，完成系统两阶段 Live Activities 授权后重新注册；锁屏显示 `Read Apple HIG`、完整路径与 `16:01` 小时级累计时间。`simctl io screenshot` 在该 Xcode 27 beta 未合成系统活动层，最终使用 Device Hub 自带 Screenshot 保存完整锁屏证据。
 - [x] 截图证据：`build/Task09SimulatorScreenshot/FinalScreenshots/`；对应 `Test3.xcresult` 附件均记录设备名与 UDID，四张最终图片已目视检查，无裁切、重叠或 stale 标记。
 - [x] 资源清理：owned 模拟器已关闭删除，Device Hub 已退出；无 owned `xcodebuild`、`xctest`、UI Runner、App、诊断或 Booted 设备残留，未触碰 AnalyticsReview 模拟器。
-- [~] 当前 checkpoint：执行 Release 全设备安装、签名与版本验证。
+- [x] Release 安装：精确命令 `CONFIGURATION=Release scripts/build_install_all.sh` exit 0；正式 `iphoneos` App 含 Watch companion，并向脚本发现的 iPad Pro M4 与 iPhone Air 完成安装；macOS App 已替换到 `/Applications/timetracker.app`。
+- [x] 版本与签名：iOS、embedded Watch 与 macOS 均为 `1.1.52 (107)`；bundle IDs 分别为 `me.mezorewww.timetracker`、`me.mezorewww.timetracker.watchkitapp` 与 `me.mezorewww.timetracker`；三者均通过 strict/deep codesign，Team ID `LT98S43NKA`，Apple Development 签名有效。
+- [x] 安装后核验：iPad Pro M4 返回已安装 `1.1.52 (107)`；iPhone Air 在脚本成功后进入不可申请 usage assertion 状态，无法再次读取应用列表，但脚本对任一设备安装失败都会非零退出，因此未把该附加查询失败误报成安装成功证据。
+- [x] macOS Build Info：`main@08adbb1d0ce1`，构建时间 `2026-07-21T06:16:12Z`；`GitDirty=true` 仅因保留用户未暂存的反馈新增行。
+- [x] 最终清理：Release DerivedData 与三轮截图测试的 DerivedData、xcresult、导出附件已删除，约 3.4 GB 临时数据释放；仅保留四张最终 simulator 截图（约 10 MB）。无 owned 模拟器、`xcodebuild`、`xctest`、Runner、Device Hub 或诊断进程残留。
+- [x] 当前 checkpoint：Task 09 完成。

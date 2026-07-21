@@ -107,4 +107,19 @@
     one-shot、创建/更新/恢复回滚与三语错误文案均已覆盖。
   - macOS 签名单元测试 60 项通过；未启动模拟器或物理设备。依赖仅用 Foundation、CryptoKit、
     SwiftData 与 SwiftUI，没有新增第三方库。
-- [~] 当前 checkpoint：实现 store-scoped quantity entry 命令与进度聚合。
+- [x] store-scoped quantity entry 命令与进度聚合：
+  - 新增原子 record/update/delete 命令；基于 fresh context 校验任务、祖先、重复模板、goal/entry
+    baseline、幂等 identity 与 LWW mutation，注入失败完整回滚。
+  - 普通任务量任务和已物化的每日子任务允许记录；重复父模板、暂停模板、归档/删除分支与
+    Apple Health sync-only 任务拒绝记录；历史 entry 即使任务之后归档仍可删除。
+  - 进度完全由有效 entry 派生，安全累计并保留超额，remaining 下限为 0、fraction 限制为 0...1，
+    不写回旧 `statusRaw`。
+  - 同步恢复与本地写入共享 1900-01-01（含）到 2201-01-01（不含）的持久化日期契约；三语错误
+    文案已补齐。
+  - `TaskStore` 对不完整 quantity graph fail-closed；任务局部刷新会完整重读 quantity 小图，避免
+    noncanonical goal 跨任务关系在局部刷新后丢失错误信号。该路径存在双 O(N) 性能债，但当前以
+    正确性优先。
+  - macOS 签名聚焦测试 18 项、相关 recurrence/draft/snapshot/preflight/heatmap/localization/layout
+    回归 68 项通过；`plutil` 与 `git diff --check` 通过。未启动模拟器或物理设备。依赖仅使用
+    Foundation、SwiftData 与仓库现有基础设施，没有新增第三方库。
+- [~] 当前 checkpoint：接入共享编辑器与任务详情的数量配置、进度记录和历史编辑 UI。

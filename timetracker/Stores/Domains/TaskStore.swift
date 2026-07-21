@@ -8,6 +8,7 @@ struct TaskStore {
     private(set) var recurrenceOccurrences: [TaskRecurrenceOccurrence] = []
     private(set) var quantityGoals: [TaskQuantityGoal] = []
     private(set) var quantityEntries: [TaskQuantityEntry] = []
+    private(set) var incompleteQuantityProgressTaskIDs = Set<UUID>()
 
     mutating func refresh(repository: TaskRepository) throws {
         tasks = try repository.allNodes().deduplicatedByID()
@@ -85,12 +86,11 @@ struct TaskStore {
         let fetchedOccurrences = try repository.taskRecurrenceOccurrences(
             taskIDs: queryTaskIDs
         )
-        let fetchedGoals = try repository.taskQuantityGoals(
-            taskIDs: queryTaskIDs
-        )
-        let fetchedEntries = try repository.taskQuantityEntries(
-            taskIDs: queryTaskIDs
-        )
+        // Quantity records form one relational graph. A malformed entry can
+        // connect otherwise unrelated tasks through a non-canonical goal ID,
+        // so a task-scoped fetch cannot safely prove the graph complete.
+        let fetchedGoals = try repository.taskQuantityGoals()
+        let fetchedEntries = try repository.taskQuantityEntries()
         recurrenceRules = (
             recurrenceRules.filter {
                 replacingTaskIDs.contains($0.templateTaskID) == false
@@ -104,20 +104,13 @@ struct TaskStore {
             } +
             fetchedOccurrences
         ).deduplicatedByID()
-        quantityGoals = (
-            quantityGoals.filter {
-                replacingTaskIDs.contains($0.taskID) == false
-            } + fetchedGoals
-        ).deduplicatedByID()
-        quantityEntries = (
-            quantityEntries.filter {
-                replacingTaskIDs.contains($0.taskID) == false
-            } + fetchedEntries
-        ).deduplicatedByID()
+        quantityGoals = fetchedGoals.deduplicatedByID()
+        quantityEntries = fetchedEntries.deduplicatedByID()
         hideIncompleteTaskProgressRelationships()
     }
 
     private mutating func hideIncompleteTaskProgressRelationships() {
+        incompleteQuantityProgressTaskIDs = []
         let taskIDs = Set(tasks.map(\.id))
         recurrenceRules.removeAll {
             taskIDs.contains($0.templateTaskID) == false
@@ -136,6 +129,21 @@ struct TaskStore {
         let goalByID = Dictionary(
             uniqueKeysWithValues: quantityGoals.map { ($0.id, $0) }
         )
+        for entry in quantityEntries {
+            let goal = goalByID[entry.quantityGoalID]
+            guard taskIDs.contains(entry.taskID) == false ||
+                    goal?.taskID != entry.taskID else {
+                continue
+            }
+            var participantIDs = Set<UUID>()
+            if taskIDs.contains(entry.taskID) {
+                participantIDs.insert(entry.taskID)
+            }
+            if let goal, taskIDs.contains(goal.taskID) {
+                participantIDs.insert(goal.taskID)
+            }
+            incompleteQuantityProgressTaskIDs.formUnion(participantIDs)
+        }
         quantityEntries.removeAll {
             taskIDs.contains($0.taskID) == false ||
                 goalByID[$0.quantityGoalID]?.taskID != $0.taskID

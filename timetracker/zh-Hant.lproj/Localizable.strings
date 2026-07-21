@@ -513,6 +513,14 @@
 "task.quantity.error.unitChangeRequiresReset" = "已有進度時不能更改單位。請先關閉任務量，並確認清除已有進度。";
 "task.quantity.error.removalRequiresConfirmation" = "請確認關閉任務量並清除已有進度。";
 "task.quantity.error.incompleteGraph" = "任務量進度仍在同步。請等待最新資料到達後重試。";
+"task.quantity.entry.error.invalidAmount" = "請輸入 1 到 1,000,000 之間的數量。";
+"task.quantity.entry.error.invalidDate" = "請選擇有效的進度記錄日期。";
+"task.quantity.entry.error.taskUnavailable" = "此任務目前不能記錄任務量進度。";
+"task.quantity.entry.error.recurrenceTemplate" = "請在今天自動產生的任務上記錄進度，不要記錄到重複任務範本。";
+"task.quantity.entry.error.goalUnavailable" = "此任務已不再包含任務量目標。";
+"task.quantity.entry.error.goalChanged" = "此任務量目標已在其他位置變更。請查看最新目標後再試一次。";
+"task.quantity.entry.error.unavailable" = "此進度記錄已不可用。";
+"task.quantity.entry.error.changed" = "此進度記錄已在其他位置變更。請查看最新版本後再試一次。";
 "task.recurrence.template.title" = "重複任務範本";
 "task.recurrence.template.trackingUnavailable" = "此任務用於定義重複工作。請在今天自動產生的任務上記錄時間。";
 "task.editor.stale.title" = "任務已在其他位置更改";

@@ -128,8 +128,9 @@ enum SyncDataSnapshotRestoreLimits {
     static let maximumCompactFieldByteCount = 256
     static let maximumPreferenceValueByteCount = 256 * 1_024
     static let maximumTotalTextByteCount = 32 * 1_024 * 1_024
-    static let minimumDate = Date(timeIntervalSince1970: -2_208_988_800)
-    static let maximumDateExclusive = Date(timeIntervalSince1970: 7_289_654_400)
+    static let minimumDate = PersistentDatePolicy.minimumDate
+    static let maximumDateExclusive =
+        PersistentDatePolicy.maximumDateExclusive
 }
 
 extension SyncDataSnapshot {

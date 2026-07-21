@@ -192,4 +192,8 @@ extension TimeTrackerStore {
     var taskQuantityEntries: [TaskQuantityEntry] {
         taskDomainStore.quantityEntries
     }
+
+    var taskIDsWithIncompleteQuantityProgress: Set<UUID> {
+        taskDomainStore.incompleteQuantityProgressTaskIDs
+    }
 }

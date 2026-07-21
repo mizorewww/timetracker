@@ -513,6 +513,14 @@
 "task.quantity.error.unitChangeRequiresReset" = "已有进度时不能更改单位。请先关闭任务量，并确认清空已有进度。";
 "task.quantity.error.removalRequiresConfirmation" = "请确认关闭任务量并清空已有进度。";
 "task.quantity.error.incompleteGraph" = "任务量进度仍在同步。请等待最新数据到达后重试。";
+"task.quantity.entry.error.invalidAmount" = "请输入 1 到 1,000,000 之间的数量。";
+"task.quantity.entry.error.invalidDate" = "请选择有效的进度记录日期。";
+"task.quantity.entry.error.taskUnavailable" = "此任务目前不能记录任务量进度。";
+"task.quantity.entry.error.recurrenceTemplate" = "请在今天自动生成的任务上记录进度，不要记录到重复任务模板。";
+"task.quantity.entry.error.goalUnavailable" = "此任务已不再包含任务量目标。";
+"task.quantity.entry.error.goalChanged" = "此任务量目标已在其他位置更改。请查看最新目标后重试。";
+"task.quantity.entry.error.unavailable" = "此进度记录已不可用。";
+"task.quantity.entry.error.changed" = "此进度记录已在其他位置更改。请查看最新版本后重试。";
 "task.recurrence.template.title" = "重复任务模板";
 "task.recurrence.template.trackingUnavailable" = "此任务用于定义重复工作。请在今天自动生成的任务上记录时间。";
 "task.editor.stale.title" = "任务已在其他位置更改";

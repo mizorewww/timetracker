@@ -9,8 +9,8 @@
 - [x] 已审计任务详情、统一编辑状态、顶部任务卡片和现有动作入口。
 - [x] 已确认历史实现满足动作重排/复用，并加固陈旧 Stop 动作竞态与卡片边界回归测试。
 - [x] 使用 owned 模拟器验证普通交互路径并进行 simulator-only 截图验收。
-- [~] 执行 Release 全设备安装、签名与版本核验，清理构建资源。
-- [ ] 由 Codex 在反馈文档标记完成并移除活动软链接。
+- [x] 执行 Release 全设备安装、签名与版本核验，清理构建资源。
+- [~] 由 Codex 在反馈文档标记完成并移除活动软链接。
 
 ## 反馈边界
 
@@ -25,8 +25,8 @@
 - [x] 依照 Apple HIG 与 SwiftUI 最佳实践完成最小重排/复用
 - [x] 覆盖布局、动作路由和状态变化的自动化回归测试
 - [x] 在 owned 模拟器验证 iPhone/iPad 普通路径并适当截图
-- [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
+- [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [x] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
 
 ## 初始实现约束
@@ -66,4 +66,8 @@
 - [x] 截图人工验收：两张图均只来自 owned 模拟器；Stop 位于首张任务卡片，Add Time 位于原 Edit 的顶部工具栏区域，无裁切、重叠或异常间距。
 - [x] 修正后聚焦验证：macOS `TaskUIContractTests`、`SharedComponentsContractTests`、`TaskWorkspaceContractTests` 共 59/59 通过，无失败或跳过。
 - [x] 模拟器清理：两个 owned UDID 均已关闭并删除，无 owned `xcodebuild`、`xctest`、Runner、诊断进程或 Booted 设备残留；`AnalyticsReview-iPhone17Pro` 保持 Shutdown 且未触碰。
-- [~] 当前 checkpoint：提交会传播 identifier 的撤销、动作快照契约与模拟器验收记忆；随后运行规定的 Release 全设备安装。
+- [x] 规定安装命令：`CONFIGURATION=Release scripts/build_install_all.sh` 完整退出 0；iOS/iPadOS 与 macOS Release 均构建成功，macOS 成品已替换到 `/Applications/timetracker.app`。
+- [x] 物理设备安装核验：iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与 iPhone Air（`FBA36694-D841-56D4-8ED6-21942873B21B`）均安装 `me.mezorewww.timetracker` 1.1.52 (107)，`devicectl` 报告为 Developer App；只安装，未启动、未操作 UI、未截图。
+- [x] Release 签名核验：iOS 主 App、内嵌 `me.mezorewww.timetracker.watchkitapp` 与 `/Applications/timetracker.app` 均为 1.1.52 (107)、Team `LT98S43NKA`，`codesign --verify --deep --strict` 全部通过。
+- [x] Release 资源清理：验证后删除 `build/Install`（约 2.1 GB）及其 DerivedData；保留两张 simulator-only 最终验收图。脚本会话已退出，未创建或占用额外模拟器。
+- [~] 当前 checkpoint：提交 Release 安装/签名/清理证据；随后由 Codex 标记反馈完成并移除活动链接。

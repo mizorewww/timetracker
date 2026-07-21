@@ -85,6 +85,11 @@ final class LiveActivityCoordinator {
         let state: TimeTrackingActivityAttributes.ContentState
     }
 
+    private struct SynchronizationResult {
+        let registration: LiveActivityRegistration
+        let didApplyRequest: Bool
+    }
+
     private enum DesiredState: Equatable {
         case inactive
         case active(Request)
@@ -96,6 +101,10 @@ final class LiveActivityCoordinator {
     @ObservationIgnored private let projectionService = LiveActivityProjectionService()
     @ObservationIgnored private let client: any LiveActivitySystemClient
     @ObservationIgnored private var authorizationObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var activityStateObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var observedActivityID: String?
+    @ObservationIgnored private var observedSegmentID: String?
+    @ObservationIgnored private var dismissedSegmentID: String?
     @ObservationIgnored private lazy var reconciler = LatestDesiredStateReconciler<DesiredState> { [weak self] state in
         guard let self else { return }
         await reconcile(state)
@@ -111,6 +120,7 @@ final class LiveActivityCoordinator {
 
     deinit {
         authorizationObservationTask?.cancel()
+        activityStateObservationTask?.cancel()
     }
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
@@ -118,6 +128,7 @@ final class LiveActivityCoordinator {
             from: activeSegments,
             now: now
         ) else {
+            dismissedSegmentID = nil
             let hasRetainedActiveState: Bool
             if case .active? = reconciler.desiredState {
                 hasRetainedActiveState = true
@@ -137,6 +148,7 @@ final class LiveActivityCoordinator {
 
             lastRequest = nil
             reconciler.submit(.inactive)
+            cancelActivityStateObservation()
             return
         }
 
@@ -159,14 +171,39 @@ final class LiveActivityCoordinator {
             taskID: primary.taskID.uuidString,
             state: state
         )
-        let hasMatchingActivity = client.activities.contains {
+        if dismissedSegmentID != nil,
+           dismissedSegmentID != request.segmentID {
+            dismissedSegmentID = nil
+        }
+        if dismissedSegmentID == request.segmentID {
+            lastRequest = request
+            status = .unavailable(.removed)
+            return
+        }
+        let matchingActivities = client.activities.filter {
             $0.segmentID == request.segmentID
         }
+        let matchingActivity = matchingActivities.first {
+            !$0.state.isTerminal
+        } ?? matchingActivities.first
+        if matchingActivity?.state == .dismissed {
+            dismissedSegmentID = request.segmentID
+            lastRequest = request
+            cancelActivityStateObservation()
+            status = .unavailable(.removed)
+            reconciler.submit(.active(request))
+            return
+        }
 
-        guard request != lastRequest || !hasMatchingActivity || reconciler.isReconciling else {
-            status = client.areActivitiesEnabled
-                ? .active
-                : .unavailable(.denied)
+        guard request != lastRequest
+                || matchingActivity?.state == .stale
+                || matchingActivity?.state.isTerminal == true
+                || matchingActivity == nil
+                || reconciler.isReconciling else {
+            if let matchingActivity {
+                observeActivityState(of: matchingActivity)
+                publishStatus(for: matchingActivity.state)
+            }
             return
         }
         reconciler.submit(.active(request))
@@ -177,11 +214,22 @@ final class LiveActivityCoordinator {
     }
 
     func retryLatestDesiredState() {
+        retryRetainedDesiredState(clearingRemovalSuppression: true)
+    }
+
+    private func retryRetainedDesiredState(
+        clearingRemovalSuppression: Bool
+    ) {
         guard reconciler.desiredState != nil else {
             status = client.areActivitiesEnabled
                 ? .ready
                 : .unavailable(.denied)
             return
+        }
+        if clearingRemovalSuppression,
+           case .active(let request)? = reconciler.desiredState,
+           dismissedSegmentID == request.segmentID {
+            dismissedSegmentID = nil
         }
         status = .synchronizing
         reconciler.retryDesiredState()
@@ -192,27 +240,36 @@ final class LiveActivityCoordinator {
         switch desiredState {
         case .inactive:
             await endAllActivities()
+            guard reconciler.desiredState == desiredState else { return }
             lastRequest = nil
             status = client.areActivitiesEnabled
                 ? .ready
                 : .unavailable(.denied)
         case .active(let request):
-            if await updateOrStart(request) {
-                lastRequest = request
-                status = client.areActivitiesEnabled
-                    ? .active
-                    : .unavailable(.denied)
+            if let result = await updateOrStart(request) {
+                guard reconciler.desiredState == desiredState else { return }
+                if result.didApplyRequest {
+                    lastRequest = request
+                }
+                observeActivityState(of: result.registration)
+                publishStatus(for: result.registration.state)
             }
         }
     }
 
-    private func updateOrStart(_ request: Request) async -> Bool {
+    private func updateOrStart(
+        _ request: Request
+    ) async -> SynchronizationResult? {
+        guard dismissedSegmentID != request.segmentID else {
+            status = .unavailable(.removed)
+            return nil
+        }
         guard client.areActivitiesEnabled else {
             status = .unavailable(.denied)
             Self.logger.notice(
                 "Skipped Live Activity synchronization because Live Activities are disabled in system settings"
             )
-            return false
+            return nil
         }
 
         let attributes = TimeTrackingActivityAttributes(
@@ -226,29 +283,86 @@ final class LiveActivityCoordinator {
         let activities = client.activities
 
         if let existing = activities.first(where: {
-            $0.segmentID == request.segmentID
+            $0.segmentID == request.segmentID && !$0.state.isTerminal
         }) {
-            await client.update(activityID: existing.id, content: content)
-
-            for stale in activities where stale.id != existing.id {
-                await client.end(activityID: stale.id, content: content)
-            }
-            return true
-        } else {
-            for stale in activities {
-                await client.end(activityID: stale.id, content: content)
-            }
-
-            do {
-                _ = try client.request(attributes: attributes, content: content)
-                return true
-            } catch {
-                status = .unavailable(LiveActivityFailure(error))
-                Self.logger.error(
-                    "Failed to start Live Activity: \(String(describing: error), privacy: .public)"
+            let current: LiveActivityRegistration?
+            let didApplyRequest: Bool
+            switch existing.state {
+            case .pending:
+                current = existing
+                didApplyRequest = request == lastRequest
+            case .active, .stale:
+                current = await client.update(
+                    activityID: existing.id,
+                    content: content
                 )
-                return false
+                didApplyRequest = true
+                guard dismissedSegmentID != request.segmentID else {
+                    status = .unavailable(.removed)
+                    return nil
+                }
+            case .ended, .dismissed:
+                current = nil
+                didApplyRequest = false
             }
+
+            if current?.state == .dismissed {
+                dismissedSegmentID = request.segmentID
+                status = .unavailable(.removed)
+                return nil
+            }
+            if let current, current.state.isTerminal == false,
+               current.state != .stale {
+                for stale in activities where stale.id != current.id {
+                    await client.end(activityID: stale.id, content: content)
+                    guard dismissedSegmentID != request.segmentID else {
+                        status = .unavailable(.removed)
+                        return nil
+                    }
+                }
+                return SynchronizationResult(
+                    registration: current,
+                    didApplyRequest: didApplyRequest
+                )
+            }
+        }
+
+        for stale in activities {
+            await client.end(activityID: stale.id, content: content)
+            guard dismissedSegmentID != request.segmentID else {
+                status = .unavailable(.removed)
+                return nil
+            }
+        }
+
+        guard dismissedSegmentID != request.segmentID else {
+            status = .unavailable(.removed)
+            return nil
+        }
+        do {
+            let registration = try client.request(
+                attributes: attributes,
+                content: content
+            )
+            if registration.state == .dismissed {
+                dismissedSegmentID = request.segmentID
+                status = .unavailable(.removed)
+                return nil
+            }
+            guard registration.state.isTerminal == false else {
+                status = .unavailable(.system)
+                return nil
+            }
+            return SynchronizationResult(
+                registration: registration,
+                didApplyRequest: true
+            )
+        } catch {
+            status = .unavailable(LiveActivityFailure(error))
+            Self.logger.error(
+                "Failed to start Live Activity: \(String(describing: error), privacy: .public)"
+            )
+            return nil
         }
     }
 
@@ -271,7 +385,85 @@ final class LiveActivityCoordinator {
 
         status = .ready
         if case .active? = reconciler.desiredState {
-            retryLatestDesiredState()
+            retryRetainedDesiredState(clearingRemovalSuppression: false)
+        }
+    }
+
+    private func observeActivityState(
+        of registration: LiveActivityRegistration
+    ) {
+        guard observedActivityID != registration.id else { return }
+        activityStateObservationTask?.cancel()
+        observedActivityID = registration.id
+        observedSegmentID = registration.segmentID
+        let updates = client.activityStateUpdates(for: registration.id)
+        activityStateObservationTask = Task { @MainActor [weak self] in
+            for await state in updates {
+                guard let self else { return }
+                handleActivityStateChange(
+                    state,
+                    activityID: registration.id,
+                    segmentID: registration.segmentID
+                )
+            }
+        }
+    }
+
+    private func cancelActivityStateObservation() {
+        activityStateObservationTask?.cancel()
+        activityStateObservationTask = nil
+        observedActivityID = nil
+        observedSegmentID = nil
+    }
+
+    private func handleActivityStateChange(
+        _ state: LiveActivityLifecycleState,
+        activityID: String,
+        segmentID: String
+    ) {
+        guard observedActivityID == activityID,
+              observedSegmentID == segmentID,
+              case .active(let request)? = reconciler.desiredState,
+              request.segmentID == segmentID else {
+            return
+        }
+
+        switch state {
+        case .active:
+            if request != lastRequest {
+                status = .synchronizing
+                reconciler.retryDesiredState()
+            } else {
+                publishStatus(for: state)
+            }
+        case .pending:
+            status = .synchronizing
+        case .stale:
+            status = .synchronizing
+            reconciler.retryDesiredState()
+        case .ended:
+            cancelActivityStateObservation()
+            status = .synchronizing
+            reconciler.retryDesiredState()
+        case .dismissed:
+            cancelActivityStateObservation()
+            dismissedSegmentID = segmentID
+            status = .unavailable(.removed)
+        }
+    }
+
+    private func publishStatus(for state: LiveActivityLifecycleState) {
+        guard client.areActivitiesEnabled else {
+            status = .unavailable(.denied)
+            return
+        }
+        switch state {
+        case .active:
+            status = .active
+        case .pending, .stale:
+            status = .synchronizing
+        case .ended, .dismissed:
+            status = .unavailable(.system)
         }
     }
 

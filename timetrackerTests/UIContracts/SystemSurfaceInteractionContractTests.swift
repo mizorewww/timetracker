@@ -174,6 +174,7 @@ struct SystemSurfaceInteractionContractTests {
             #expect(strings.contains("\"liveActivity.settings.status.active.title\""))
             #expect(strings.contains("\"liveActivity.settings.status.denied.title\""))
             #expect(strings.contains("\"liveActivity.settings.status.backgroundStart.title\""))
+            #expect(strings.contains("\"liveActivity.settings.status.removed.title\""))
             #expect(strings.contains("\"liveActivity.settings.openSystemSettings\""))
         }
     }

@@ -128,6 +128,8 @@
 "liveActivity.settings.status.configuration.message" = "請重新安裝 Time Tracker；若仍失敗，目前版本的即時動態延伸功能或簽署需要修復。";
 "liveActivity.settings.status.payloadTooLarge.title" = "無法註冊計時詳情";
 "liveActivity.settings.status.payloadTooLarge.message" = "即時動態資料超出系統限制。";
+"liveActivity.settings.status.removed.title" = "即時動態已被移除";
+"liveActivity.settings.status.removed.message" = "計時器仍在執行。如需再次註冊即時動態，請點按重試。";
 "liveActivity.settings.status.system.title" = "無法啟動即時動態";
 "liveActivity.settings.status.system.message" = "ActivityKit 傳回暫時性系統錯誤。保持 Time Tracker 開啟後重試。";
 "liveActivity.settings.openSystemSettings" = "開啟 iOS 設定";

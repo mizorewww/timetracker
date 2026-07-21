@@ -128,6 +128,8 @@
 "liveActivity.settings.status.configuration.message" = "Reinstall Time Tracker. If this persists, the current build’s Live Activity extension or signing needs repair.";
 "liveActivity.settings.status.payloadTooLarge.title" = "Timer details could not be registered";
 "liveActivity.settings.status.payloadTooLarge.message" = "The Live Activity data exceeded the system limit.";
+"liveActivity.settings.status.removed.title" = "Live Activity was removed";
+"liveActivity.settings.status.removed.message" = "The timer is still running. Retry if you want to register its Live Activity again.";
 "liveActivity.settings.status.system.title" = "Live Activity could not start";
 "liveActivity.settings.status.system.message" = "ActivityKit returned a temporary system error. Keep Time Tracker open, then retry.";
 "liveActivity.settings.openSystemSettings" = "Open iOS Settings";

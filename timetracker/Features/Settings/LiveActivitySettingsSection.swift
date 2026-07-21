@@ -126,6 +126,9 @@ struct LiveActivitySettingsSection: View {
         case .payloadTooLarge:
             symbolName = "doc.badge.ellipsis"
             tint = .red
+        case .removed:
+            symbolName = "xmark.circle.fill"
+            tint = .orange
         case .system:
             symbolName = "exclamationmark.triangle.fill"
             tint = .red
@@ -161,6 +164,7 @@ struct LiveActivitySettingsSection: View {
         case .capacity: "capacity"
         case .configuration: "configuration"
         case .payloadTooLarge: "payloadTooLarge"
+        case .removed: "removed"
         case .system: "system"
         }
     }

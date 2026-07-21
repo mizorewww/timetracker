@@ -14,6 +14,7 @@ nonisolated enum LiveActivityFailure: Equatable, Sendable {
     case capacity
     case configuration
     case payloadTooLarge
+    case removed
     case system
 
     var recovery: LiveActivityRecovery {
@@ -22,7 +23,7 @@ nonisolated enum LiveActivityFailure: Equatable, Sendable {
             .openSettings
         case .backgroundStart:
             .retryWhenForeground
-        case .capacity, .system:
+        case .capacity, .removed, .system:
             .retry
         case .unsupported, .configuration, .payloadTooLarge:
             .none

@@ -10,8 +10,9 @@
 - [x] 已完成错误分类、可观察运行状态与保留目标重试基础 checkpoint。
 - [x] 已把 ActivityKit 运行边界改造成可注入、可验证的生命周期客户端。
 - [x] 已实现 Settings 诊断状态与系统表面 UI 测试就绪门槛。
-- [~] 正在让 Settings 与恢复逻辑跟随 ActivityKit 的真实生命周期，而非只依赖请求成功。
-- 下一 checkpoint：识别 ended/dismissed/stale registration，在仍有运行计时器时安全重建，并覆盖 8 小时系统生命周期条件。
+- [x] Settings 与恢复逻辑已跟随 ActivityKit 的真实生命周期，而非只依赖请求成功。
+- [~] 正在解除把内容 freshness、累计计时上限与单实例 8 小时生命周期错误绑定的问题。
+- 下一 checkpoint：以原生 SwiftUI Stopwatch 持续显示原始 segment 累计时间，移除 8 小时冻结与错误 staleDate。
 
 ## 反馈边界
 
@@ -45,7 +46,10 @@
 ## 运行资源所有权
 
 - Settings 系统表面批次 owned iPhone 17 Pro 模拟器：`EAE5FCDF-60EE-4C0F-915E-762AC1ADCC15`；验证后已关闭并删除。
-- 物理 iPhone Air 批次只终止本任务明确启动的 App/Live Activity extension 进程，不触碰设备上的其他 Live Activity。
+- 用户已明确要求后续截图与验收只使用 owned 模拟器；不再连接、安装或截图物理机，除非用户另行明确要求。
+- 先前物理机证据不再作为最终截图验收依据，对应临时截图会随 Task 09 构建产物清理。
+- ActivityState 最终验证 owned iPhone 17 Pro 模拟器：`2424D763-9F34-4DFE-841D-5E83DC707588`；验证后已关闭并删除。
+- 被 Xcode 测试基础设施污染的 owned 模拟器 `05EBE8E7-0A22-49C3-8EDD-D8AA65293B22` 及其隐式 clone 已关闭并删除。
 - 后续每个设备批次记录唯一 UDID；批次结束后终止 App、关闭并删除 owned 设备，清理 Runner、构建和 trace 进程。
 - 不触碰不属于 Task 09 的模拟器或进程。
 
@@ -66,4 +70,11 @@
 - [x] 截图验证：owned iPhone 17 Pro 模拟器上注册状态、App 恢复、compact 与 expanded 四张截图目视通过；expanded 显示 `Read Apple HIG` 与持续计时。
 - [x] 验证：iPhone 17 Pro 模拟器系统表面 UI 测试通过；`SystemSurfaceInteractionContractTests` 8/8、`LocalizationContractTests` 8/8 通过；曾由 macOS 门禁发现 iOS-only helper 条件编译遗漏，修复后复测通过。
 - [x] 资源清理：owned 模拟器已关闭删除；物理测试 App/appex 与所有 owned `xcodebuild`、`xctest`、Runner 已释放，未触碰 AnalyticsReview 模拟器或设备上的其他活动。
-- [~] 当前 checkpoint：观察真实 ActivityState，处理系统结束/移除后的恢复与长计时条件。
+- [x] ActivityState 适配：逐项映射 pending/active/stale/ended/dismissed；生产 client 缓存同一 `Activity` 实例后订阅状态流，避免按 ID 二次查找把移除误判为结束。
+- [x] Coordinator 生命周期：只有真实 `.active` 才发布 registered；pending 保持同步；stale 串行更新；系统 ended 在计时仍运行时重建；用户 dismissed 等待 Settings 显式重试。
+- [x] 竞态防护：停止计时立即取消 observer；挂起 update、授权切换和迟到 terminal 事件不能复活计时；自动授权恢复不会越过用户移除抑制。
+- [x] Pending 内容修复：区分已实际应用与最新期望 request；pending 期间标题、路径或颜色变化会在 Activity 变为 active 后重放，不再永久显示旧内容。
+- [x] Settings 新增三语“实时活动已被移除”诊断与重试恢复；计时器本身继续运行。
+- [x] 验证：fresh owned iPhone 17 Pro 模拟器上生命周期/恢复 28/28、系统表面/本地化契约 16/16 通过；generic iOS Debug build-for-testing 通过（仅有仓库既有 Swift 6 警告）。
+- [x] 资源清理：两台 owned 生命周期模拟器及隐式 clone 均已删除；无 owned `xcodebuild`、`xctest`、Runner、diagnostics 或 Booted 设备残留。
+- [~] 当前 checkpoint：修复 8 小时后计时冻结与 staleDate 语义，保持原始 segment 开始时间并使用系统 Stopwatch。

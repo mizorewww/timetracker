@@ -128,6 +128,8 @@
 "liveActivity.settings.status.configuration.message" = "请重新安装 Time Tracker；若仍失败，当前构建的实时活动扩展或签名需要修复。";
 "liveActivity.settings.status.payloadTooLarge.title" = "无法注册计时详情";
 "liveActivity.settings.status.payloadTooLarge.message" = "实时活动数据超出系统限制。";
+"liveActivity.settings.status.removed.title" = "实时活动已被移除";
+"liveActivity.settings.status.removed.message" = "计时器仍在运行。如需再次注册实时活动，请点按重试。";
 "liveActivity.settings.status.system.title" = "无法启动实时活动";
 "liveActivity.settings.status.system.message" = "ActivityKit 返回了临时系统错误。保持 Time Tracker 打开后重试。";
 "liveActivity.settings.openSystemSettings" = "打开 iOS 设置";

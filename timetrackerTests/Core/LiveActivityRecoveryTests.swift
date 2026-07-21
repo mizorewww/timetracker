@@ -9,6 +9,7 @@ struct LiveActivityRecoveryTests {
         #expect(LiveActivityFailure.denied.recovery == .openSettings)
         #expect(LiveActivityFailure.backgroundStart.recovery == .retryWhenForeground)
         #expect(LiveActivityFailure.capacity.recovery == .retry)
+        #expect(LiveActivityFailure.removed.recovery == .retry)
         #expect(LiveActivityFailure.system.recovery == .retry)
         #expect(LiveActivityFailure.unsupported.recovery == .none)
         #expect(LiveActivityFailure.configuration.recovery == .none)

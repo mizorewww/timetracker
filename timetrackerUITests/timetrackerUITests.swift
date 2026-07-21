@@ -1263,7 +1263,8 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             taskTitle: "Design macOS UI"
         )
-        XCTAssertTrue(taskDetailIsReady(in: app))
+        ensureTaskDetailIsReady(named: "Design macOS UI", in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
 
         let incomplete = app.buttons["Polish timeline"].firstMatch
         let completedFirst = app.buttons["Align task detail"].firstMatch
@@ -1271,21 +1272,29 @@ final class timetrackerUITests: XCTestCase {
         scrollUntilHittable(incomplete, direction: .up, in: app)
 
         XCTAssertTrue(incomplete.waitForExistence(timeout: 5) && incomplete.isHittable)
+        XCTAssertEqual(incomplete.value as? String, "Not completed")
         XCTAssertTrue(completedFirst.waitForExistence(timeout: 3))
         XCTAssertLessThan(incomplete.frame.minY, completedFirst.frame.minY)
-        try capture("iphone-checklist-incomplete-before-completed", app: app)
+        try capture(
+            "\(screenshotPrefix)-checklist-incomplete-before-completed",
+            app: app
+        )
 
         activate(incomplete)
         scrollUntilHittable(incomplete, direction: .up, in: app)
 
         XCTAssertTrue(
             waitUntil(timeout: 5) {
-                completedSecond.exists &&
+                incomplete.value as? String == "Completed" &&
+                    completedSecond.exists &&
                     completedSecond.frame.minY < incomplete.frame.minY
             },
-            "The newly completed checklist item must move after every completed item."
+            "The newly completed checklist item must update its state and move after every completed item."
         )
-        try capture("iphone-checklist-completed-moved-to-bottom", app: app)
+        try capture(
+            "\(screenshotPrefix)-checklist-completed-moved-to-bottom",
+            app: app
+        )
         #endif
     }
 

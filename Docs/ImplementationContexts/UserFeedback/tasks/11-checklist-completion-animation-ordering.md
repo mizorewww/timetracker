@@ -8,8 +8,8 @@
 - [x] 领取“勾选 checklist 加动画，完成内容自动移动到最下面”的反馈并建立活动链接。
 - [x] 审计所有 checklist 展示入口、完成命令、持久化排序与现有测试。
 - [x] 实现并验证完成/取消完成时的状态反馈和稳定排序。
-- [~] 在 owned 模拟器完成普通路径与 simulator-only 截图验收。
-- [ ] 执行 Release 全设备安装、签名/版本核验与资源清理。
+- [x] 在 owned 模拟器完成普通路径与 simulator-only 截图验收。
+- [~] 执行 Release 全设备安装、签名/版本核验与资源清理。
 - [ ] 由 Codex 在唯一任务来源标记完成并移除活动链接。
 
 ## 反馈边界
@@ -25,7 +25,7 @@
 - [x] 明确完成、取消完成、连续快速点击及跨刷新后的顺序语义
 - [x] 使用原生 SwiftUI 动画与稳定 `ForEach` identity 完成实现
 - [x] 覆盖排序/持久化语义的单元或契约测试
-- [ ] 在 owned iPhone/iPad 模拟器验证普通交互并适当截图
+- [x] 在 owned iPhone/iPad 模拟器验证普通交互并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，清理 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动链接
@@ -56,17 +56,28 @@
   编辑页与直接命令对“最下面”的不同解释，也不会修改 sibling mutation revision。
 - 不采用 `completedAt` 作为展示顺序：该字段是真实完成时间，而且会覆盖现有完成组
   手动排序。排序继续复用现有 `ChecklistOrderingService` 与 canonical `sortOrder`。
-- owned simulator checkpoint 将补充完成状态的 accessibility value 断言、route
-  fallback，并按运行设备生成 `iphone-` / `ipad-` 截图名，避免双设备截图误标或互相覆盖。
+- UI 测试补充完成状态的 accessibility value 断言、route fallback，并按运行设备生成
+  `iphone-` / `ipad-` 截图名，避免双设备截图误标或互相覆盖。
 
 ## 运行资源所有权
 
-- 尚未创建 Task 11 owned 模拟器。
+- owned iPhone 17 Pro `Task11-iPhone17Pro-20260721`
+  (`9C9066F5-F884-42E6-962F-15574C2D3AF8`) 已关闭并删除。
+- owned iPad Pro 11-inch (M4) `Task11-iPadPro11M4-20260721`
+  (`6EDBE64F-ADE3-43A5-A507-4837198A56DB`) 已关闭并删除。
+- 两套 DerivedData、xcresult、导出附件和 `/tmp/TimeTrackerTask11FocusedTests*` 已删除；
+  仅保留 `build/Task11SimulatorValidation/FinalScreenshots/` 的四张 simulator 截图
+  （约 1.2 MB）。无 owned Booted 设备或测试进程残留。
 - 不触碰 `AnalyticsReview-iPhone17Pro` 或其他未由 Task 11 创建的设备/进程。
 
 ## Checkpoint 记录
 
 - [x] `c53235e`：领取反馈、建立实现记忆与活动链接。
+- [x] `de181a2`：统一编辑会话与直接命令的完成组末尾语义，并加强排序、快速双切、
+  稳定 identity 和 Reduce Motion 契约。
 - [x] 聚焦实现验证：macOS arm64 上运行命令、会话、排序、协调器和 UI 契约测试，
   `/tmp/TimeTrackerTask11FocusedTests4.xcresult` 为 100/100 通过、0 失败、0 跳过。
-- [~] 当前 checkpoint：在 owned iPhone/iPad Simulator 运行精准 UI 测试并检查截图。
+- [x] owned iPhone 17 Pro 与 iPad Pro 11-inch (M4) 分别运行
+  `testCompletingChecklistItemMovesItBelowIncompleteWork`，均为 1/1 通过、0 失败、0 跳过；
+  前后四张 simulator-only 截图已人工检查，状态值和最终几何顺序正确。
+- [~] 当前 checkpoint：执行规定的 Release 全设备安装并核验签名/版本。

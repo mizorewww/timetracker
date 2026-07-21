@@ -505,6 +505,14 @@
 "task.recurrence.error.ruleUnavailable" = "此重複規則已不可用。";
 "task.recurrence.error.ruleChanged" = "此重複規則已在其他位置發生變更。請查看最新版本後重試。";
 "task.recurrence.error.immutableConfiguration" = "已有重複規則不能更改開始日期或時區。";
+"task.recurrence.error.existingRuleMustBePreserved" = "此任務已有重複規則。請重新載入最新版本後再編輯。";
+"task.quantity.error.invalidTarget" = "目標數量必須介於 1 到 1,000,000 之間。";
+"task.quantity.error.unitRequired" = "請輸入任務量單位。";
+"task.quantity.error.unitControlCharacter" = "任務量單位不能包含控制字元。";
+"task.quantity.error.unitTooLong" = "任務量單位佔用 %1$lld 位元組，最多允許 %2$lld 位元組。";
+"task.quantity.error.unitChangeRequiresReset" = "已有進度時不能更改單位。請先關閉任務量，並確認清除已有進度。";
+"task.quantity.error.removalRequiresConfirmation" = "請確認關閉任務量並清除已有進度。";
+"task.quantity.error.incompleteGraph" = "任務量進度仍在同步。請等待最新資料到達後重試。";
 "task.recurrence.template.title" = "重複任務範本";
 "task.recurrence.template.trackingUnavailable" = "此任務用於定義重複工作。請在今天自動產生的任務上記錄時間。";
 "task.editor.stale.title" = "任務已在其他位置更改";

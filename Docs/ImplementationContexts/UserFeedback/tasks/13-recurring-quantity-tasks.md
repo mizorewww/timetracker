@@ -60,6 +60,8 @@
 - 已创建规则的开始日期和时区保持底层 immutable 约束；编辑器只允许暂停/恢复。暂停期间不补任务，
   恢复时只生成当天。
 - 关闭数量目标会同时软删除当前有效 entries，重新开启从零开始，避免旧进度意外复现。
+- 关闭数量目标属于破坏性操作：保存命令必须收到一次性明确确认；确认不会写入 recovery payload，
+  autosave 成功后立即消费，重新开启后再次关闭必须重新确认。
 - 已有进度时单位不可静默改写；提供明确的清空进度路径后再改单位。目标值可以调整，超额累计保留。
 - 生成子任务持久化标题继续与模板一致；通过 occurrence day read model 在界面显示本地化日期，避免多天
   同名子任务无法辨认。
@@ -81,6 +83,10 @@
 - 非法目标/单位/日期/时区必须在首个持久化步骤前失败，不能留下半图。
 - 父模板修改目标只影响未来新实例；历史子任务和用户修改不得被 materialization replay 覆盖。
 - App 在 iOS 被系统挂起时不承诺午夜后台准点执行；返回前台后生成当日实例。
+- 数量 entry 的并发 baseline 使用固定大小、顺序无关的确定性 revision，不把全部 entry UUID 写进恢复文件；
+  只有会清空 entry 的删除/复活路径比较该 revision，纯标题或目标值编辑不被并发记录阻塞。
+- 已删除 goal 的显式重新开启复用同一确定性 ID，并以用户此次恢复操作覆盖旧 tombstone；若编辑器打开后
+  出现新的有效 entry，则 revision 校验先失败，不会静默清除迟到进度。
 
 ## 验收矩阵
 
@@ -92,4 +98,13 @@
 ## Checkpoint 记录
 
 - [x] `5460714`：领取反馈并建立实现记忆与活动链接。
-- [~] 当前 checkpoint：实现 draft/baseline 与原子保存完整任务图。
+- [x] draft/baseline 与原子完整任务图：
+  - `TaskEditorDraft`、恢复编码和 stale baseline 已接入 quantity goal、daily recurrence 与固定大小
+    quantity-entry revision；旧 schema-1 恢复 JSON 继续可读。
+  - 新建可在一次事务中保存父任务、模板 goal、rule、当天子任务、子 goal 与 occurrence；任意 checkpoint
+    注入失败均整图回滚；proposed task ID 重试保持单一完整图。
+  - 简单任务量、暂停规则持久化、并发 goal/rule/entry、partial claim、单位规范化、删除确认、恢复确认
+    one-shot、创建/更新/恢复回滚与三语错误文案均已覆盖。
+  - macOS 签名单元测试 60 项通过；未启动模拟器或物理设备。依赖仅用 Foundation、CryptoKit、
+    SwiftData 与 SwiftUI，没有新增第三方库。
+- [~] 当前 checkpoint：实现 store-scoped quantity entry 命令与进度聚合。

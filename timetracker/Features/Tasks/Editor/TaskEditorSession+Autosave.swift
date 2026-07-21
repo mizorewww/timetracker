@@ -35,6 +35,7 @@ extension TaskEditorSession {
     ) {
         draft.baseline = visibleDraft.baseline
         draft.taskID = visibleDraft.taskID
+        draft.confirmsQuantityProgressReset = false
         let persistedChecklistIDs = visibleDraft.checklistItems.reduce(
             into: [UUID: UUID]()
         ) { result, item in
@@ -61,6 +62,7 @@ extension TaskEditorSession {
         var rebased = visibleDraft
         rebased.baseline = persistedDraft.baseline
         rebased.taskID = persistedDraft.taskID
+        rebased.confirmsQuantityProgressReset = false
         rebased.checklistItems = visibleDraft.checklistItems.map { visibleItem in
             ChecklistEditorDraft(
                 id: visibleItem.id,

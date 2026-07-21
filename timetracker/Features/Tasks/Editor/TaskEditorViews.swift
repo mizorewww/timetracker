@@ -116,7 +116,8 @@ struct TaskEditorPanel: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(
-                    isInteractionDisabled || !session.validation.isValid
+                    isInteractionDisabled ||
+                        !session.isPersistenceValid
                 )
                 .accessibilityIdentifier("task.editor.save")
             }

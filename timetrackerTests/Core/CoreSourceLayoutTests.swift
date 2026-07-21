@@ -81,6 +81,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Models/TaskEstimatePolicy.swift",
             "timetracker/Models/ChecklistEditorDraft.swift",
             "timetracker/Models/EditorDraftModels.swift",
+            "timetracker/Models/TaskProgressEditorDraftModels.swift",
             "timetracker/Models/TaskCategoryEditorDraftModels.swift",
             "timetracker/Models/ActivityHeatmapModels.swift",
             "timetracker/Models/AnalyticsPeriodModels.swift",
@@ -170,12 +171,19 @@ struct CoreSourceLayoutTests {
             "timetracker/Services/Tasks/TaskDraftRecoveryStore+Enumeration.swift",
             "timetracker/Services/Tasks/TaskDraftRecoveryStore.swift",
             "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskLifecycleCommandCoordinator+DraftProgressBaseline.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskLifecycleCommandCoordinator+DraftValidation.swift",
             "timetracker/Services/Tasks/StoreScopedTaskCategoryCommandCoordinator.swift",
             "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator.swift",
             "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator+RuleMutations.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator+InContextRuleMutations.swift",
+            "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator+InContextRuleSupport.swift",
             "timetracker/Services/Tasks/StoreScopedTaskRecurrenceCommandCoordinator+Materialization.swift",
             "timetracker/Services/Tasks/TaskRecurrenceMutationModels.swift",
             "timetracker/Services/Tasks/TaskRecurrencePersistenceState.swift",
+            "timetracker/Services/Tasks/TaskDraftProgressMutationService.swift",
+            "timetracker/Services/Tasks/TaskDraftProgressMutationService+Quantity.swift",
+            "timetracker/Services/Tasks/TaskProgressDraftPersistencePolicy.swift",
             "timetracker/Services/Tasks/TaskHierarchyRepairPlan.swift",
             "timetracker/Services/Tasks/TaskTreeFlattener.swift",
             "timetracker/Services/Tasks/TaskTreeModels.swift",
@@ -296,6 +304,7 @@ struct CoreSourceLayoutTests {
             "timetracker/Features/Tasks/Editor/TaskEditorSession.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorSession+Autosave.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorSession+Checklist.swift",
+            "timetracker/Features/Tasks/Editor/TaskEditorSession+Progress.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorSessionSafety.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift",
             "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift",
@@ -473,6 +482,7 @@ struct CoreSourceLayoutTests {
             "TaskEditorSession.swift",
             "TaskEditorSession+Autosave.swift",
             "TaskEditorSession+Checklist.swift",
+            "TaskEditorSession+Progress.swift",
             "TaskEditorSessionSafety.swift",
             "TaskEditorComponents.swift",
             "TaskEditorInfoSection.swift",
@@ -919,9 +929,43 @@ struct CoreSourceLayoutTests {
         let focusedFiles = [
             "StoreScopedTaskRecurrenceCommandCoordinator.swift",
             "StoreScopedTaskRecurrenceCommandCoordinator+RuleMutations.swift",
+            "StoreScopedTaskRecurrenceCommandCoordinator+InContextRuleMutations.swift",
+            "StoreScopedTaskRecurrenceCommandCoordinator+InContextRuleSupport.swift",
             "StoreScopedTaskRecurrenceCommandCoordinator+Materialization.swift",
             "TaskRecurrenceMutationModels.swift",
             "TaskRecurrencePersistenceState.swift",
+        ]
+
+        for fileName in focusedFiles {
+            let file = taskServicesURL.appending(path: fileName)
+            let lineCount = try String(
+                contentsOf: file,
+                encoding: .utf8
+            ).split(
+                separator: "\n",
+                omittingEmptySubsequences: false
+            ).count
+            #expect(
+                lineCount <= 180,
+                "\(fileName) has \(lineCount) lines"
+            )
+        }
+    }
+
+    @Test
+    func taskDraftProgressServiceFilesStaySplitByResponsibility()
+        throws {
+        let root = try projectRootURL()
+        let taskServicesURL = root.appending(
+            path: "timetracker/Services/Tasks"
+        )
+        let focusedFiles = [
+            "StoreScopedTaskLifecycleCommandCoordinator+Draft.swift",
+            "StoreScopedTaskLifecycleCommandCoordinator+DraftValidation.swift",
+            "StoreScopedTaskLifecycleCommandCoordinator+DraftProgressBaseline.swift",
+            "TaskDraftProgressMutationService.swift",
+            "TaskDraftProgressMutationService+Quantity.swift",
+            "TaskProgressDraftPersistencePolicy.swift",
         ]
 
         for fileName in focusedFiles {

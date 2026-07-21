@@ -505,6 +505,14 @@
 "task.recurrence.error.ruleUnavailable" = "此重复规则已不可用。";
 "task.recurrence.error.ruleChanged" = "此重复规则已在其他位置发生变化。请查看最新版本后重试。";
 "task.recurrence.error.immutableConfiguration" = "已有重复规则不能更改开始日期或时区。";
+"task.recurrence.error.existingRuleMustBePreserved" = "此任务已有重复规则。请重新载入最新版本后再编辑。";
+"task.quantity.error.invalidTarget" = "目标数量必须在 1 到 1,000,000 之间。";
+"task.quantity.error.unitRequired" = "请输入任务量单位。";
+"task.quantity.error.unitControlCharacter" = "任务量单位不能包含控制字符。";
+"task.quantity.error.unitTooLong" = "任务量单位占用 %1$lld 字节，最多允许 %2$lld 字节。";
+"task.quantity.error.unitChangeRequiresReset" = "已有进度时不能更改单位。请先关闭任务量，并确认清空已有进度。";
+"task.quantity.error.removalRequiresConfirmation" = "请确认关闭任务量并清空已有进度。";
+"task.quantity.error.incompleteGraph" = "任务量进度仍在同步。请等待最新数据到达后重试。";
 "task.recurrence.template.title" = "重复任务模板";
 "task.recurrence.template.trackingUnavailable" = "此任务用于定义重复工作。请在今天自动生成的任务上记录时间。";
 "task.editor.stale.title" = "任务已在其他位置更改";

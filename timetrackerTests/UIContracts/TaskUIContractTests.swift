@@ -1184,7 +1184,7 @@ struct TaskUIContractTests {
 
         #expect(editor.contains("var validation: TaskEditorValidation"))
         #expect(editor.contains(
-            "isInteractionDisabled || !session.validation.isValid"
+            "isInteractionDisabled ||\n                        !session.isPersistenceValid"
         ))
         #expect(components.contains("struct TaskEditorValidation: Equatable"))
         #expect(components.contains("struct TaskEditorInlineValidationMessage: View"))

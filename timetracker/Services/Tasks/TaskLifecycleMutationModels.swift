@@ -40,9 +40,10 @@ struct TaskDraftMutationOutcome: Equatable {
     let savedTaskID: UUID
     let relatedTaskIDs: Set<UUID>
     let checklistAncestorIDs: Set<UUID>
+    let recurrenceOutcome: TaskRecurrenceMutationOutcome
 
     var events: Set<StoreDomainEvent> {
-        [
+        Set<StoreDomainEvent>([
             .taskChanged(
                 taskID: savedTaskID,
                 affectedAncestorIDs: relatedTaskIDs.subtracting([savedTaskID])
@@ -51,8 +52,14 @@ struct TaskDraftMutationOutcome: Equatable {
                 taskID: savedTaskID,
                 affectedAncestorIDs: checklistAncestorIDs
             ),
-        ]
+        ]).union(recurrenceOutcome.events)
     }
+}
+
+enum TaskDraftMutationCheckpoint: Equatable {
+    case taskAndChecklistSaved(UUID)
+    case quantityGoalChanged(UUID)
+    case recurrence(TaskRecurrenceMutationCheckpoint)
 }
 
 struct TaskArchiveMutationOutcome: Equatable {

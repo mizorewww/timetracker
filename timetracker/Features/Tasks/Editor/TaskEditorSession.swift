@@ -35,6 +35,19 @@ final class TaskEditorSession {
 
     var isPersistenceValid: Bool {
         guard validation.isValid else { return false }
+        guard (try? TaskProgressDraftPersistencePolicy.prepare(
+            quantityGoal: draft.quantityGoal,
+            dailyRecurrence: draft.dailyRecurrence,
+            confirmsQuantityProgressReset:
+                draft.confirmsQuantityProgressReset
+        )) != nil else {
+            return false
+        }
+        if draft.baseline?.quantityGoalMutationID != nil,
+           draft.quantityGoal == nil,
+           draft.confirmsQuantityProgressReset == false {
+            return false
+        }
         return (try? ChecklistDraftPersistencePolicy.prepare(
             draft.checklistItems
         )) != nil

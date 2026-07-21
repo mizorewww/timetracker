@@ -9,15 +9,20 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String?
+    let didReachDraftCheckpoint:
+        (TaskDraftMutationCheckpoint) throws -> Void
 
     init(
         container: ModelContainer,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
-        deviceID: String? = nil
+        deviceID: String? = nil,
+        didReachDraftCheckpoint: @escaping
+            (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
         self.deviceID = deviceID
+        self.didReachDraftCheckpoint = didReachDraftCheckpoint
     }
 
     func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {

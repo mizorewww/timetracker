@@ -5,9 +5,17 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
     func save(
         draft: TaskEditorDraft,
         sanitizedTitle: String,
-        proposedTaskID: UUID? = nil
+        proposedTaskID: UUID? = nil,
+        now: Date = Date()
     ) throws -> TaskDraftMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
+        let preparedProgress = try TaskProgressDraftPersistencePolicy
+            .prepare(
+                quantityGoal: draft.quantityGoal,
+                dailyRecurrence: draft.dailyRecurrence,
+                confirmsQuantityProgressReset:
+                    draft.confirmsQuantityProgressReset
+            )
         let scope = try TimerStoreScope(container: container)
         let transaction = StoreScopedTimerMutationTransaction(
             scope: scope,
@@ -35,7 +43,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                     checklistAncestorIDs: Self.ancestorTaskIDs(
                         for: savedTask,
                         tasks: tasksBeforeSave
-                    )
+                    ),
+                    recurrenceOutcome: .noChanges
                 )
             }
             let existingTask: TaskNode?
@@ -88,6 +97,21 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                     saveChecklistDrafts: saveChecklistDrafts
                 )
             }
+            try didReachDraftCheckpoint(
+                .taskAndChecklistSaved(savedTaskID)
+            )
+
+            let recurrenceOutcome = try TaskDraftProgressMutationService(
+                context: context,
+                container: container,
+                writeAuthorization: writeAuthorization,
+                deviceID: resolvedDeviceID,
+                didReachCheckpoint: didReachDraftCheckpoint
+            ).apply(
+                preparedProgress,
+                to: savedTaskID,
+                now: now
+            )
 
             let tasksAfterSave = try taskRepository.allNodes()
             guard let savedTask = tasksAfterSave.first(where: { $0.id == savedTaskID }) else {
@@ -100,7 +124,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 ),
                 checklistAncestorIDs: ancestorsBeforeSave.union(
                     Self.ancestorTaskIDs(for: savedTask, tasks: tasksAfterSave)
-                )
+                ),
+                recurrenceOutcome: recurrenceOutcome
             )
         }
     }
@@ -122,94 +147,4 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         return ancestors
     }
 
-    private static func validateDraft(
-        _ draft: TaskEditorDraft,
-        existingTask: TaskNode?,
-        tasks: [TaskNode],
-        taskRepository: SwiftDataTaskRepository,
-        context: ModelContext
-    ) throws {
-        if let existingTask {
-            guard let baseline = draft.baseline,
-                  baseline.taskMutationID == existingTask.clientMutationID,
-                  try baselineMatchesCurrentRelatedModels(
-                    baseline,
-                    taskID: existingTask.id,
-                    taskRepository: taskRepository,
-                    context: context
-                  ) else {
-                throw TaskLifecycleMutationError.staleDraft
-            }
-        }
-
-        let parentIsChanging = existingTask?.parentID != draft.parentID
-        if let existingTask, parentIsChanging,
-           let blocker = TaskTrackingAvailabilityService().parentChangeBlocker(for: existingTask) {
-            throw TaskLifecycleMutationError.parentChangeBlocked(blocker)
-        }
-        if let parentID = draft.parentID,
-           parentIsChanging,
-           TaskTrackingAvailabilityService()
-            .trackableTaskIDs(tasks: tasks)
-            .contains(parentID) == false {
-            throw TaskLifecycleMutationError.parentUnavailable
-        }
-
-        if draft.parentID == nil,
-           let categoryID = draft.categoryID,
-           try taskRepository.category(id: categoryID) == nil {
-            throw TaskLifecycleMutationError.staleDraft
-        }
-    }
-
-    private static func baselineMatchesCurrentRelatedModels(
-        _ baseline: TaskEditorDraftBaseline,
-        taskID: UUID,
-        taskRepository: SwiftDataTaskRepository,
-        context: ModelContext
-    ) throws -> Bool {
-        let requestedTaskID = taskID
-        let checklistItems = try context.fetch(
-            FetchDescriptor<ChecklistItem>(
-                predicate: #Predicate { $0.taskID == requestedTaskID }
-            )
-        ).visibleDeduplicatedByID()
-        let checklistItemMutationIDs = checklistItems.reduce(into: [UUID: UUID]()) {
-            $0[$1.id] = $1.clientMutationID
-        }
-        guard checklistItemMutationIDs == baseline.checklistItemMutationIDs else {
-            return false
-        }
-
-        let checklistItemIDs = Array(checklistItemMutationIDs.keys)
-        let visualMutationIDs: [UUID: UUID]
-        if checklistItemIDs.isEmpty {
-            visualMutationIDs = [:]
-        } else {
-            visualMutationIDs = try context.fetch(
-                FetchDescriptor<ChecklistItemVisual>(
-                    predicate: #Predicate {
-                        checklistItemIDs.contains($0.checklistItemID)
-                    }
-                )
-            )
-            .deduplicatedByID()
-            .logicalWinnersByChecklistItemID()
-            .reduce(into: [:]) { result, pair in
-                guard pair.value.deletedAt == nil else { return }
-                result[pair.key] = pair.value.clientMutationID
-            }
-        }
-        guard visualMutationIDs == baseline.checklistVisualMutationIDs else {
-            return false
-        }
-
-        let categoryAssignment = try taskRepository
-            .categoryAssignments()
-            .logicalWinnersByTaskID()[taskID]
-        let categoryAssignmentMutationID = categoryAssignment?.deletedAt == nil
-            ? categoryAssignment?.clientMutationID
-            : nil
-        return categoryAssignmentMutationID == baseline.categoryAssignmentMutationID
-    }
 }

@@ -505,6 +505,14 @@
 "task.recurrence.error.ruleUnavailable" = "This recurrence rule is no longer available.";
 "task.recurrence.error.ruleChanged" = "This recurrence rule changed elsewhere. Review the latest version, then try again.";
 "task.recurrence.error.immutableConfiguration" = "An existing recurrence cannot change its start date or time zone.";
+"task.recurrence.error.existingRuleMustBePreserved" = "This task already has a recurrence. Reload the latest version before editing it.";
+"task.quantity.error.invalidTarget" = "Enter a target from 1 through 1,000,000.";
+"task.quantity.error.unitRequired" = "Enter a unit for this quantity goal.";
+"task.quantity.error.unitControlCharacter" = "The quantity unit cannot contain control characters.";
+"task.quantity.error.unitTooLong" = "The quantity unit uses %1$lld bytes; the limit is %2$lld bytes.";
+"task.quantity.error.unitChangeRequiresReset" = "This unit cannot change while the task has progress. Turn off the quantity goal and confirm clearing its progress first.";
+"task.quantity.error.removalRequiresConfirmation" = "Confirm that you want to turn off the quantity goal and clear its progress.";
+"task.quantity.error.incompleteGraph" = "Quantity progress is still syncing. Try again after the latest data arrives.";
 "task.recurrence.template.title" = "Recurring Task Template";
 "task.recurrence.template.trackingUnavailable" = "This task defines the recurring work. Record time on today’s generated task instead.";
 "task.editor.stale.title" = "Task Changed Elsewhere";

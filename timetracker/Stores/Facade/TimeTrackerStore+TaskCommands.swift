@@ -8,7 +8,16 @@ extension TimeTrackerStore {
             categoryID: taskCategoryIDByRootTaskID[task.id],
             categoryAssignment: taskCategoryAssignmentByRootTaskID[task.id],
             checklistItems: checklistItems(for: task.id),
-            visualByChecklistID: checklistVisualByItemID
+            visualByChecklistID: checklistVisualByItemID,
+            quantityGoal: taskQuantityGoals.first {
+                $0.taskID == task.id
+            },
+            recurrenceRule: taskRecurrenceRules.first {
+                $0.templateTaskID == task.id
+            },
+            quantityEntries: taskQuantityEntries.filter {
+                $0.taskID == task.id
+            }
         )
     }
 

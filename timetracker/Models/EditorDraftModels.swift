@@ -5,6 +5,27 @@ nonisolated struct TaskEditorDraftBaseline: Codable, Equatable, Sendable {
     let checklistItemMutationIDs: [UUID: UUID]
     let checklistVisualMutationIDs: [UUID: UUID]
     let categoryAssignmentMutationID: UUID?
+    let quantityGoalMutationID: UUID?
+    let recurrenceRuleMutationID: UUID?
+    let quantityEntryRevision: UUID?
+
+    init(
+        taskMutationID: UUID,
+        checklistItemMutationIDs: [UUID: UUID],
+        checklistVisualMutationIDs: [UUID: UUID],
+        categoryAssignmentMutationID: UUID?,
+        quantityGoalMutationID: UUID? = nil,
+        recurrenceRuleMutationID: UUID? = nil,
+        quantityEntryRevision: UUID? = nil
+    ) {
+        self.taskMutationID = taskMutationID
+        self.checklistItemMutationIDs = checklistItemMutationIDs
+        self.checklistVisualMutationIDs = checklistVisualMutationIDs
+        self.categoryAssignmentMutationID = categoryAssignmentMutationID
+        self.quantityGoalMutationID = quantityGoalMutationID
+        self.recurrenceRuleMutationID = recurrenceRuleMutationID
+        self.quantityEntryRevision = quantityEntryRevision
+    }
 }
 
 nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
@@ -21,6 +42,29 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
     var hasDueDate: Bool
     var dueAt: Date
     var checklistItems: [ChecklistEditorDraft]
+    var quantityGoal: TaskQuantityGoalDraft?
+    var confirmsQuantityProgressReset = false
+    var dailyRecurrence: TaskDailyRecurrenceDraft?
+
+    // A destructive confirmation is one-shot authority. Recovery payloads
+    // preserve the draft content but deliberately never persist this flag.
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case baseline
+        case taskID
+        case title
+        case parentID
+        case categoryID
+        case colorHex
+        case iconName
+        case notes
+        case estimatedMinutes
+        case hasDueDate
+        case dueAt
+        case checklistItems
+        case quantityGoal
+        case dailyRecurrence
+    }
 
     init(parentID: UUID?, categoryID: UUID? = nil) {
         self.id = UUID()
@@ -36,6 +80,9 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
         self.hasDueDate = false
         self.dueAt = Date()
         self.checklistItems = []
+        self.quantityGoal = nil
+        self.confirmsQuantityProgressReset = false
+        self.dailyRecurrence = nil
     }
 
     @MainActor
@@ -44,7 +91,10 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
         categoryID: UUID? = nil,
         categoryAssignment: TaskCategoryAssignment? = nil,
         checklistItems: [ChecklistItem],
-        visualByChecklistID: [UUID: ChecklistItemVisual] = [:]
+        visualByChecklistID: [UUID: ChecklistItemVisual] = [:],
+        quantityGoal: TaskQuantityGoal? = nil,
+        recurrenceRule: TaskRecurrenceRule? = nil,
+        quantityEntries: [TaskQuantityEntry] = []
     ) {
         self.id = UUID()
         let checklistItemMutationIDs = checklistItems.reduce(into: [UUID: UUID]()) {
@@ -57,7 +107,13 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
                 guard checklistItemMutationIDs[$1.key] != nil else { return }
                 $0[$1.key] = $1.value.clientMutationID
             },
-            categoryAssignmentMutationID: categoryAssignment?.clientMutationID
+            categoryAssignmentMutationID: categoryAssignment?.clientMutationID,
+            quantityGoalMutationID: quantityGoal?.clientMutationID,
+            recurrenceRuleMutationID: recurrenceRule?.clientMutationID,
+            quantityEntryRevision: TaskQuantityEntryRevision.value(
+                taskID: task.id,
+                entries: quantityEntries
+            )
         )
         self.taskID = task.id
         self.title = task.title
@@ -72,6 +128,11 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
         self.checklistItems = checklistItems.map { item in
             ChecklistEditorDraft(item: item, visual: visualByChecklistID[item.id])
         }
+        self.quantityGoal = quantityGoal.map(TaskQuantityGoalDraft.init)
+        self.confirmsQuantityProgressReset = false
+        self.dailyRecurrence = recurrenceRule.map(
+            TaskDailyRecurrenceDraft.init
+        )
     }
 
     func copyAsNew(
@@ -89,6 +150,9 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
         copy.estimatedMinutes = estimatedMinutes
         copy.hasDueDate = hasDueDate
         copy.dueAt = dueAt
+        copy.quantityGoal = quantityGoal
+        copy.confirmsQuantityProgressReset = false
+        copy.dailyRecurrence = dailyRecurrence
         copy.checklistItems = checklistItems.map {
             ChecklistEditorDraft(
                 title: $0.title,

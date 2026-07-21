@@ -42,6 +42,8 @@ nonisolated enum TaskDraftRecoveryCodec {
             lhs.estimatedMinutes == rhs.estimatedMinutes &&
             lhs.hasDueDate == rhs.hasDueDate &&
             (lhs.hasDueDate == false || lhs.dueAt == rhs.dueAt) &&
+            lhs.quantityGoal == rhs.quantityGoal &&
+            lhs.dailyRecurrence == rhs.dailyRecurrence &&
             hasSameChecklistContent(
                 lhs.checklistItems,
                 rhs.checklistItems

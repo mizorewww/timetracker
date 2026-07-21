@@ -638,6 +638,70 @@ struct TaskEditorSessionTests {
     }
 
     @Test
+    func autosaveConsumesQuantityResetConfirmationExactlyOnce()
+        throws {
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        var newDraft = TaskEditorDraft(parentID: nil)
+        newDraft.title = "Push-ups"
+        newDraft.quantityGoal = TaskQuantityGoalDraft(
+            targetAmount: 50,
+            unitLabel: "reps"
+        )
+        let taskID: UUID
+        switch store.saveTaskDraftResult(newDraft) {
+        case .saved(let savedTaskID):
+            taskID = savedTaskID
+        case .stale, .failed:
+            Issue.record("Quantity task creation should succeed")
+            return
+        }
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(
+                for: try #require(store.task(for: taskID))
+            )
+        )
+        session.draft.quantityGoal = nil
+        session.draft.confirmsQuantityProgressReset = true
+        let removalDraft = session.draft
+
+        #expect(
+            store.saveTaskDraftResult(removalDraft) ==
+                .saved(taskID: taskID)
+        )
+        #expect(session.acceptAutosavedDraft(removalDraft, for: taskID))
+        #expect(session.draft.confirmsQuantityProgressReset == false)
+        #expect(
+            session.sessionBaseline.confirmsQuantityProgressReset ==
+                false
+        )
+
+        session.draft.quantityGoal = TaskQuantityGoalDraft(
+            targetAmount: 75,
+            unitLabel: "reps"
+        )
+        let restoredDraft = session.draft
+        #expect(
+            store.saveTaskDraftResult(restoredDraft) ==
+                .saved(taskID: taskID)
+        )
+        #expect(session.acceptAutosavedDraft(restoredDraft, for: taskID))
+        #expect(session.draft.confirmsQuantityProgressReset == false)
+
+        session.draft.quantityGoal = nil
+        #expect(session.isPersistenceValid == false)
+        #expect(
+            store.saveTaskDraftResult(session.draft) == .failed(
+                message: TaskProgressDraftMutationError
+                    .quantityGoalRemovalRequiresConfirmation
+                    .localizedDescription
+            )
+        )
+    }
+
+    @Test
     func autosaveValidationWaitsForAnEmptyChecklistDraftToBecomePersistable() {
         let store = makeTestStore()
         var initialDraft = TaskEditorDraft(parentID: nil)
@@ -654,5 +718,97 @@ struct TaskEditorSessionTests {
 
         #expect(session.isPersistenceValid)
         #expect(session.draft.checklistItems[0].id == checklistID)
+    }
+
+    @Test
+    func persistenceValidationIncludesQuantityAndRecurrenceDrafts() {
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        initialDraft.title = "Push-ups"
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: initialDraft
+        )
+
+        session.draft.quantityGoal = TaskQuantityGoalDraft(
+            targetAmount: 0,
+            unitLabel: "reps"
+        )
+        #expect(session.isPersistenceValid == false)
+
+        session.draft.quantityGoal = TaskQuantityGoalDraft(
+            targetAmount: 50,
+            unitLabel: "reps"
+        )
+        #expect(session.isPersistenceValid)
+
+        session.draft.dailyRecurrence = TaskDailyRecurrenceDraft(
+            startDayKey: "2026-02-30",
+            timeZoneIdentifier: "Asia/Singapore"
+        )
+        #expect(session.isPersistenceValid == false)
+
+        session.draft.dailyRecurrence = TaskDailyRecurrenceDraft(
+            startDayKey: "2026-07-21",
+            timeZoneIdentifier: "Asia/Singapore"
+        )
+        #expect(session.isPersistenceValid)
+    }
+
+    @Test
+    func quantityRemovalRequiresConfirmationBeforeAutosave() {
+        var draft = TaskEditorDraft(parentID: nil)
+        draft.title = "Existing quantity task"
+        draft.baseline = TaskEditorDraftBaseline(
+            taskMutationID: UUID(),
+            checklistItemMutationIDs: [:],
+            checklistVisualMutationIDs: [:],
+            categoryAssignmentMutationID: nil,
+            quantityGoalMutationID: UUID()
+        )
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: draft
+        )
+
+        #expect(session.isPersistenceValid == false)
+
+        session.draft.confirmsQuantityProgressReset = true
+
+        #expect(session.isPersistenceValid)
+    }
+
+    @Test
+    func reEnablingQuantityGoalConsumesAnUnusedRemovalConfirmation() {
+        var draft = TaskEditorDraft(parentID: nil)
+        draft.title = "Existing quantity task"
+        draft.baseline = TaskEditorDraftBaseline(
+            taskMutationID: UUID(),
+            checklistItemMutationIDs: [:],
+            checklistVisualMutationIDs: [:],
+            categoryAssignmentMutationID: nil,
+            quantityGoalMutationID: UUID()
+        )
+        draft.quantityGoal = TaskQuantityGoalDraft(
+            targetAmount: 50,
+            unitLabel: "reps"
+        )
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: draft
+        )
+
+        session.confirmQuantityGoalRemoval()
+        #expect(session.draft.confirmsQuantityProgressReset)
+
+        session.setQuantityGoal(
+            TaskQuantityGoalDraft(
+                targetAmount: 50,
+                unitLabel: "reps"
+            )
+        )
+        session.setQuantityGoal(nil)
+
+        #expect(session.draft.confirmsQuantityProgressReset == false)
+        #expect(session.isPersistenceValid == false)
     }
 }

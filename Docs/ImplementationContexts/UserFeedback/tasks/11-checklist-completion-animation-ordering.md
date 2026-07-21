@@ -9,8 +9,8 @@
 - [x] 审计所有 checklist 展示入口、完成命令、持久化排序与现有测试。
 - [x] 实现并验证完成/取消完成时的状态反馈和稳定排序。
 - [x] 在 owned 模拟器完成普通路径与 simulator-only 截图验收。
-- [~] 执行 Release 全设备安装、签名/版本核验与资源清理。
-- [ ] 由 Codex 在唯一任务来源标记完成并移除活动链接。
+- [x] 执行 Release 全设备安装、签名/版本核验与资源清理。
+- [~] 由 Codex 在唯一任务来源标记完成并移除活动链接。
 
 ## 反馈边界
 
@@ -26,8 +26,8 @@
 - [x] 使用原生 SwiftUI 动画与稳定 `ForEach` identity 完成实现
 - [x] 覆盖排序/持久化语义的单元或契约测试
 - [x] 在 owned iPhone/iPad 模拟器验证普通交互并适当截图
-- [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
-- [ ] 核验安装版本与签名，清理 owned 设备、进程和临时产物
+- [x] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
+- [x] 核验安装版本与签名，清理 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动链接
 
 ## 实现约束
@@ -68,6 +68,8 @@
 - 两套 DerivedData、xcresult、导出附件和 `/tmp/TimeTrackerTask11FocusedTests*` 已删除；
   仅保留 `build/Task11SimulatorValidation/FinalScreenshots/` 的四张 simulator 截图
   （约 1.2 MB）。无 owned Booted 设备或测试进程残留。
+- `build/Install/` Release 临时构建目录已删除；没有 `xcodebuild`、`xctest`、UI runner
+  或 Instruments 进程残留。
 - 不触碰 `AnalyticsReview-iPhone17Pro` 或其他未由 Task 11 创建的设备/进程。
 
 ## Checkpoint 记录
@@ -80,4 +82,12 @@
 - [x] owned iPhone 17 Pro 与 iPad Pro 11-inch (M4) 分别运行
   `testCompletingChecklistItemMovesItBelowIncompleteWork`，均为 1/1 通过、0 失败、0 跳过；
   前后四张 simulator-only 截图已人工检查，状态值和最终几何顺序正确。
-- [~] 当前 checkpoint：执行规定的 Release 全设备安装并核验签名/版本。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh` 退出码为 0；Release 1.1.52 (107)
+  已安装到 iPhone Air (`FBA36694-D841-56D4-8ED6-21942873B21B`) 与 iPad Pro M4
+  (`748D0137-ADC3-58AF-855C-1E98B3125F93`)，macOS App 已复制到
+  `/Applications/timetracker.app`。物理设备仅安装，未启动、未操作 UI、未截图。
+- [x] iOS 主 App、Live Activity、Widget、嵌入 Watch companion 与 macOS App 均为
+  1.1.52 (107)，Team `LT98S43NKA`，`codesign --verify` 通过。当前没有可见物理
+  Apple Watch，因此只核验了已签名嵌入 companion；配对 Watch 的实际安装仍由系统的
+  Automatic App Install 决定。
+- [~] 当前 checkpoint：在唯一任务来源标记完成并移除活动链接。

@@ -14,7 +14,9 @@ extension TimeTrackerStore {
     }
 
     func isTaskRecurrenceTemplate(_ task: TaskNode) -> Bool {
-        taskRecurrenceRules.contains {
+        _ = taskReadModelRevision
+        return taskDomainStore.incompleteRecurrenceTemplateTaskIDs
+            .contains(task.id) || taskRecurrenceRules.contains {
             $0.deletedAt == nil && $0.templateTaskID == task.id
         } || taskRecurrenceOccurrences.contains {
             $0.deletedAt == nil && $0.templateTaskID == task.id
@@ -23,7 +25,8 @@ extension TimeTrackerStore {
 
     func isGeneratedRecurrenceTask(taskID: UUID) -> Bool {
         _ = taskReadModelRevision
-        return taskRecurrenceOccurrences.contains {
+        return taskDomainStore.incompleteRecurrenceGeneratedTaskIDs
+            .contains(taskID) || taskRecurrenceOccurrences.contains {
             $0.deletedAt == nil && $0.generatedTaskID == taskID
         }
     }

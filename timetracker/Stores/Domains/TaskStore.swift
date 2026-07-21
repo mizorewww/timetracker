@@ -8,6 +8,8 @@ struct TaskStore {
     private(set) var recurrenceOccurrences: [TaskRecurrenceOccurrence] = []
     private(set) var quantityGoals: [TaskQuantityGoal] = []
     private(set) var quantityEntries: [TaskQuantityEntry] = []
+    private(set) var incompleteRecurrenceTemplateTaskIDs = Set<UUID>()
+    private(set) var incompleteRecurrenceGeneratedTaskIDs = Set<UUID>()
     private(set) var incompleteQuantityProgressTaskIDs = Set<UUID>()
 
     mutating func refresh(repository: TaskRepository) throws {
@@ -110,8 +112,32 @@ struct TaskStore {
     }
 
     private mutating func hideIncompleteTaskProgressRelationships() {
+        incompleteRecurrenceTemplateTaskIDs = []
+        incompleteRecurrenceGeneratedTaskIDs = []
         incompleteQuantityProgressTaskIDs = []
         let taskIDs = Set(tasks.map(\.id))
+        let visibleRuleByID = recurrenceRules
+            .filter { $0.deletedAt == nil }
+            .latestByID()
+        for occurrence in recurrenceOccurrences where
+            occurrence.deletedAt == nil {
+            let relationshipIsComplete =
+                visibleRuleByID[occurrence.ruleID]?.templateTaskID ==
+                    occurrence.templateTaskID &&
+                taskIDs.contains(occurrence.templateTaskID) &&
+                taskIDs.contains(occurrence.generatedTaskID)
+            guard relationshipIsComplete == false else { continue }
+            if taskIDs.contains(occurrence.templateTaskID) {
+                incompleteRecurrenceTemplateTaskIDs.insert(
+                    occurrence.templateTaskID
+                )
+            }
+            if taskIDs.contains(occurrence.generatedTaskID) {
+                incompleteRecurrenceGeneratedTaskIDs.insert(
+                    occurrence.generatedTaskID
+                )
+            }
+        }
         recurrenceRules.removeAll {
             taskIDs.contains($0.templateTaskID) == false
         }

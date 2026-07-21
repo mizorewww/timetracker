@@ -93,6 +93,66 @@ struct TaskRecurrenceDayKeyTests {
         )
     }
 
+    @Test
+    func canonicalDayKeyParsesAtMidnightInItsStoredTimeZone() throws {
+        let dayKey = "2026-07-21"
+        let kiritimatiTimeZone = try #require(
+            TimeZone(identifier: "Pacific/Kiritimati")
+        )
+        let adakTimeZone = try #require(
+            TimeZone(identifier: "America/Adak")
+        )
+        let kiritimati = try #require(
+            TaskRecurrenceDayKey.date(
+                from: dayKey,
+                timeZone: kiritimatiTimeZone
+            )
+        )
+        let adak = try #require(
+            TaskRecurrenceDayKey.date(
+                from: dayKey,
+                timeZone: adakTimeZone
+            )
+        )
+        let expectedKiritimati = try utcDate(
+            year: 2026,
+            month: 7,
+            day: 20,
+            hour: 10
+        )
+        let expectedAdak = try utcDate(
+            year: 2026,
+            month: 7,
+            day: 21,
+            hour: 9
+        )
+
+        #expect(kiritimati == expectedKiritimati)
+        #expect(adak == expectedAdak)
+    }
+
+    @Test
+    func dateParsingRejectsInvalidDayKeysAndTimeZones() {
+        #expect(
+            TaskRecurrenceDayKey.date(
+                from: "2026-02-30",
+                timeZoneIdentifier: "Pacific/Kiritimati"
+            ) == nil
+        )
+        #expect(
+            TaskRecurrenceDayKey.date(
+                from: "2026-7-21",
+                timeZoneIdentifier: "America/Adak"
+            ) == nil
+        )
+        #expect(
+            TaskRecurrenceDayKey.date(
+                from: "2026-07-21",
+                timeZoneIdentifier: "Mars/Olympus_Mons"
+            ) == nil
+        )
+    }
+
     private func utcDate(
         year: Int,
         month: Int,

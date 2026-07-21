@@ -194,7 +194,7 @@ extension TimeTrackerStore {
             tasks: tasks,
             recurrenceRules: taskRecurrenceRules,
             recurrenceOccurrences: taskRecurrenceOccurrences
-        )
+        ).subtracting(taskIDsWithIncompleteRecurrence)
         rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
         taskReadModelRevision &+= 1

@@ -72,6 +72,45 @@ nonisolated enum TaskRecurrenceDayKey {
             resolved.day == day
     }
 
+    static func date(
+        from value: String,
+        timeZoneIdentifier: String
+    ) -> Date? {
+        guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else {
+            return nil
+        }
+        return date(from: value, timeZone: timeZone)
+    }
+
+    static func date(
+        from value: String,
+        timeZone: TimeZone
+    ) -> Date? {
+        guard isCanonical(value) else { return nil }
+        let parts = value.split(separator: "-")
+        guard let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else {
+            return nil
+        }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = timeZone
+        let components = DateComponents(
+            calendar: calendar,
+            timeZone: timeZone,
+            year: year,
+            month: month,
+            day: day
+        )
+        guard let date = calendar.date(from: components),
+              self.value(for: date, timeZone: timeZone) == value else {
+            return nil
+        }
+        return date
+    }
+
     static func generatedTaskSortOrder(for value: String) -> Double {
         guard let numeric = Double(
             value.replacingOccurrences(of: "-", with: "")

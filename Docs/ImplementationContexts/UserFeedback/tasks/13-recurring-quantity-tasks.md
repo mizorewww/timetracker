@@ -134,4 +134,18 @@
   - 英文、简中、繁中已补齐；31 项 quantity/editor/UI contract 测试与 48 项 editor/draft/recovery
     回归通过，三语 plist、focused source layout 与 diff 检查通过。只运行签名 macOS 测试宿主，未启动
     模拟器或物理设备；没有新增第三方库。
-- [~] 当前 checkpoint：接入任务详情的数量汇总、进度记录和历史编辑 UI。
+- [x] 任务详情数量汇总、进度记录和历史编辑：
+  - 详情只读取同一次 canonical 校验生成的 value snapshot；进度与历史不会分别读取 SwiftData 对象，
+    tombstone 被过滤，历史按记录时间和稳定 UUID 排序。
+  - 普通任务与生成子任务可新增、编辑、删除数量记录；Sheet 捕获打开瞬间的 goal/entry baseline 和稳定
+    operation ID，失败保留现场，保存前先 flush 详情草稿并清理焦点。
+  - 父模板显示说明但不提供新增入口；已有记录的普通任务迁移为模板后，历史仍可查看但不伪装成可编辑。
+    occurrence-only CloudKit 分阶段图会记录 incomplete recurrence claim，父/子均 fail-closed，不会短暂露出
+    可录入入口。
+  - 生成子任务按规则保存的时区解析并显示 occurrence 日期；Kiritimati、Adak 与非法日期/时区均有测试。
+  - 英文、简中、繁中本地化和原生 `ProgressView`、`Form`、`TextField`、`DatePicker` 已接入；视图自有
+    `@State` / `@FocusState` 保持 private。
+  - 86 项 quantity/detail/recurrence/task UI/localization/layout 聚焦测试通过，generic iOS Simulator Debug
+    编译通过；未启动模拟器或物理设备。没有新增第三方库。
+- [~] 当前 checkpoint：补任务列表中的模板/生成角色与数量进度、修正重复开关页脚状态，并加入真实创建
+  路径的 iPhone/iPad 模拟器验收。

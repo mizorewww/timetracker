@@ -10,6 +10,8 @@ struct TaskDetailList: View {
     let snapshot: TaskAnalyticsSnapshot?
     @Binding var range: AnalyticsRange
     let isRefreshing: Bool
+    @State private var quantityEditorRoute:
+        TaskQuantityEntryEditorRoute?
 
     var body: some View {
         @Bindable var session = session
@@ -26,6 +28,13 @@ struct TaskDetailList: View {
             }
 
             TaskDetailTrackingAvailabilitySection(store: store, task: task)
+            TaskDetailQuantitySections(
+                readModel: store.taskQuantityDetail(for: task.id),
+                addEntry: { _ in presentQuantityEntryEditor() },
+                editEntry: { _, entry in
+                    presentQuantityEntryEditor(entryID: entry.id)
+                }
+            )
             TaskDetailHeatmapTrackingSection(
                 store: store,
                 task: task,
@@ -92,5 +101,62 @@ struct TaskDetailList: View {
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .accessibilityIdentifier("task.detail")
+        .sheet(item: $quantityEditorRoute) { route in
+            TaskQuantityEntryEditorSheet(store: store, route: route)
+        }
+    }
+
+    private func presentQuantityEntryEditor(entryID: UUID? = nil) {
+        guard autosaveController.flush(
+            session: session,
+            isEnabled: true
+        ) else {
+            return
+        }
+        focusedTextField.wrappedValue = nil
+        focusedChecklistDraftID.wrappedValue = nil
+
+        switch store.taskQuantityDetail(for: task.id) {
+        case .none:
+            store.errorMessage = TaskQuantityEntryMutationError
+                .quantityGoalUnavailable.localizedDescription
+        case .incomplete:
+            store.errorMessage = TaskQuantityEntryMutationError
+                .incompleteQuantityGraph.localizedDescription
+        case .available(let detail):
+            if let entryID {
+                guard let entry = detail.entries.first(where: {
+                    $0.id == entryID
+                }) else {
+                    store.errorMessage = TaskQuantityEntryMutationError
+                        .entryUnavailable.localizedDescription
+                    return
+                }
+                quantityEditorRoute = .edit(
+                    detail: detail,
+                    entry: entry
+                )
+                return
+            }
+            guard detail.progress.isRecordingAllowed else {
+                store.errorMessage = recordingUnavailableMessage(
+                    role: detail.recurrenceRole
+                )
+                return
+            }
+            quantityEditorRoute = .add(detail: detail)
+        }
+    }
+
+    private func recordingUnavailableMessage(
+        role: TaskQuantityRecurrenceRole
+    ) -> String {
+        if case .template = role {
+            return TaskQuantityEntryMutationError
+                .recurrenceTemplateRequiresGeneratedTask
+                .localizedDescription
+        }
+        return TaskQuantityEntryMutationError.taskUnavailable
+            .localizedDescription
     }
 }

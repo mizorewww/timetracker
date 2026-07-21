@@ -842,6 +842,114 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
     }
 
     @Test
+    func capturedGoalBaselineRejectsRecordAfterFacadeRefresh() throws {
+        let context = try makeTestContext()
+        let fixture = try makeQuantityTask(
+            in: context,
+            title: "Open record sheet",
+            target: 10,
+            unit: "pages"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let capturedGoalBaseline = try #require(
+            store.taskQuantityProgress(for: fixture.task.id)?.goalBaseline
+        )
+        let sibling = ModelContext(context.container)
+        let goal = try #require(
+            try sibling.fetch(FetchDescriptor<TaskQuantityGoal>())
+                .latestByID()[fixture.goal.id]
+        )
+        goal.targetAmount = 20
+        goal.updatedAt = referenceDate(500)
+        goal.clientMutationID = UUID()
+        try sibling.save()
+        try store.refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+        #expect(
+            store.taskQuantityProgress(for: fixture.task.id)?.targetAmount ==
+                20
+        )
+
+        #expect(
+            store.recordTaskQuantity(
+                taskID: fixture.task.id,
+                goalBaseline: capturedGoalBaseline,
+                amount: 2,
+                entryID: UUID(),
+                recordedAt: referenceDate(100)
+            ) == false
+        )
+
+        #expect(
+            store.errorMessage == TaskQuantityEntryMutationError
+                .quantityGoalChanged.localizedDescription
+        )
+        #expect(try quantityEntries(in: context.container).isEmpty)
+    }
+
+    @Test
+    func capturedGoalBaselineRejectsUpdateAfterFacadeRefresh() throws {
+        let context = try makeTestContext()
+        let fixture = try makeQuantityTask(
+            in: context,
+            title: "Open update sheet",
+            target: 10,
+            unit: "pages"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let capturedGoalBaseline = try #require(
+            store.taskQuantityProgress(for: fixture.task.id)?.goalBaseline
+        )
+        #expect(
+            store.recordTaskQuantity(
+                taskID: fixture.task.id,
+                goalBaseline: capturedGoalBaseline,
+                amount: 2,
+                entryID: UUID(),
+                recordedAt: referenceDate(100)
+            )
+        )
+        let entryBaseline = TaskQuantityEntryMutationBaseline(
+            entry: try #require(
+                try quantityEntries(in: context.container).first
+            )
+        )
+        let sibling = ModelContext(context.container)
+        let goal = try #require(
+            try sibling.fetch(FetchDescriptor<TaskQuantityGoal>())
+                .latestByID()[fixture.goal.id]
+        )
+        goal.targetAmount = 20
+        goal.updatedAt = referenceDate(500)
+        goal.clientMutationID = UUID()
+        try sibling.save()
+        try store.refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+        #expect(
+            store.taskQuantityProgress(for: fixture.task.id)?.targetAmount ==
+                20
+        )
+
+        #expect(
+            store.updateTaskQuantityEntry(
+                baseline: entryBaseline,
+                goalBaseline: capturedGoalBaseline,
+                amount: 8,
+                recordedAt: referenceDate(200),
+                operationID: UUID()
+            ) == false
+        )
+
+        #expect(
+            store.errorMessage == TaskQuantityEntryMutationError
+                .quantityGoalChanged.localizedDescription
+        )
+        #expect(
+            try quantityEntries(in: context.container).first?.amount == 2
+        )
+    }
+
+    @Test
     func staleFacadeFailureConvergesArchivedAncestorAvailability() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(

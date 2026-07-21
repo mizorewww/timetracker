@@ -18,18 +18,9 @@ extension TimeTrackerStore {
             return .available(snapshot)
         }
 
-        let expectedGoalID = TaskProgressIdentity.quantityGoalID(
-            taskID: taskID
-        )
-        let hasVisibleClaim = taskQuantityGoals.contains {
-            $0.deletedAt == nil &&
-                ($0.taskID == taskID || $0.id == expectedGoalID)
-        } || taskQuantityEntries.contains {
-            $0.deletedAt == nil &&
-                ($0.taskID == taskID ||
-                    $0.quantityGoalID == expectedGoalID)
-        }
-        return hasVisibleClaim ? .incomplete : .none
+        return hasVisibleQuantityClaim(taskID: taskID)
+            ? .incomplete
+            : .none
     }
 
     func taskQuantityProgressReadState(
@@ -60,6 +51,41 @@ extension TimeTrackerStore {
         }
     }
 
+    func taskQuantityDetail(
+        for taskID: UUID
+    ) -> TaskQuantityDetailReadModel {
+        _ = taskReadModelRevision
+        guard taskIDsWithIncompleteQuantityProgress.contains(taskID) == false
+        else {
+            return .incomplete
+        }
+        guard let validated = TaskQuantityProgressService()
+            .validatedSnapshot(
+                taskID: taskID,
+                goals: taskQuantityGoals,
+                entries: taskQuantityEntries,
+                isRecordingAllowed: trackableTaskIDs.contains(taskID)
+            ) else {
+            return hasVisibleQuantityClaim(taskID: taskID)
+                ? .incomplete
+                : .none
+        }
+        guard taskIDsWithIncompleteRecurrence.contains(taskID) == false
+        else {
+            return .incomplete
+        }
+        guard let role = taskQuantityRecurrenceRole(taskID: taskID) else {
+            return .incomplete
+        }
+        return .available(
+            TaskQuantityDetailSnapshot(
+                progress: validated.progress,
+                entries: validated.entries,
+                recurrenceRole: role
+            )
+        )
+    }
+
     func taskQuantityEntries(for taskID: UUID) -> [TaskQuantityEntry] {
         _ = taskReadModelRevision
         return taskQuantityEntries.filter { $0.taskID == taskID }
@@ -69,5 +95,65 @@ extension TimeTrackerStore {
         for taskID: UUID
     ) -> TaskQuantityGoalMutationBaseline? {
         taskQuantityProgress(for: taskID)?.goalBaseline
+    }
+
+    private func hasVisibleQuantityClaim(taskID: UUID) -> Bool {
+        let expectedGoalID = TaskProgressIdentity.quantityGoalID(
+            taskID: taskID
+        )
+        return taskQuantityGoals.contains {
+            $0.deletedAt == nil &&
+                ($0.taskID == taskID || $0.id == expectedGoalID)
+        } || taskQuantityEntries.contains {
+            $0.deletedAt == nil &&
+                ($0.taskID == taskID ||
+                    $0.quantityGoalID == expectedGoalID)
+        }
+    }
+
+    private func taskQuantityRecurrenceRole(
+        taskID: UUID
+    ) -> TaskQuantityRecurrenceRole? {
+        let occurrences = taskRecurrenceOccurrences.filter {
+            $0.deletedAt == nil && $0.generatedTaskID == taskID
+        }
+        let isTemplate = taskRecurrenceRules.contains {
+            $0.deletedAt == nil && $0.templateTaskID == taskID
+        } || taskRecurrenceOccurrences.contains {
+            $0.deletedAt == nil && $0.templateTaskID == taskID
+        }
+        guard occurrences.count <= 1,
+              occurrences.isEmpty || isTemplate == false else {
+            return nil
+        }
+        guard let occurrence = occurrences.first else {
+            return isTemplate ? .template : .ordinary
+        }
+        let expectedOccurrenceID = TaskProgressIdentity
+            .recurrenceOccurrenceID(
+                ruleID: occurrence.ruleID,
+                dayKey: occurrence.occurrenceDayKey
+            )
+        let expectedGeneratedTaskID = TaskProgressIdentity.generatedTaskID(
+            ruleID: occurrence.ruleID,
+            dayKey: occurrence.occurrenceDayKey
+        )
+        guard occurrence.id == expectedOccurrenceID,
+              occurrence.generatedTaskID == expectedGeneratedTaskID,
+              let localDate = TaskRecurrenceDayKey.date(
+                  from: occurrence.occurrenceDayKey,
+                  timeZoneIdentifier: occurrence.timeZoneIdentifier
+              ) else {
+            return nil
+        }
+        return .generated(
+            TaskRecurrenceOccurrenceSnapshot(
+                id: occurrence.id,
+                templateTaskID: occurrence.templateTaskID,
+                dayKey: occurrence.occurrenceDayKey,
+                timeZoneIdentifier: occurrence.timeZoneIdentifier,
+                localDate: localDate
+            )
+        )
     }
 }

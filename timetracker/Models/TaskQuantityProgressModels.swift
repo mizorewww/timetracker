@@ -85,3 +85,65 @@ nonisolated enum TaskQuantityProgressReadState: Equatable, Sendable {
     case incomplete
     case available(TaskQuantityProgressSnapshot)
 }
+
+nonisolated struct TaskQuantityEntrySnapshot:
+    Identifiable,
+    Equatable,
+    Sendable
+{
+    let id: UUID
+    let baseline: TaskQuantityEntryMutationBaseline
+    let amount: Int
+    let recordedAt: Date
+
+    init(
+        id: UUID,
+        baseline: TaskQuantityEntryMutationBaseline,
+        amount: Int,
+        recordedAt: Date
+    ) {
+        self.id = id
+        self.baseline = baseline
+        self.amount = amount
+        self.recordedAt = recordedAt
+    }
+
+    @MainActor
+    init(entry: TaskQuantityEntry) {
+        self.init(
+            id: entry.id,
+            baseline: TaskQuantityEntryMutationBaseline(entry: entry),
+            amount: entry.amount,
+            recordedAt: entry.recordedAt
+        )
+    }
+}
+
+nonisolated struct TaskRecurrenceOccurrenceSnapshot:
+    Equatable,
+    Sendable
+{
+    let id: UUID
+    let templateTaskID: UUID
+    let dayKey: String
+    let timeZoneIdentifier: String
+    let localDate: Date
+}
+
+nonisolated enum TaskQuantityRecurrenceRole: Equatable, Sendable {
+    case ordinary
+    case template
+    case generated(TaskRecurrenceOccurrenceSnapshot)
+}
+
+nonisolated struct TaskQuantityDetailSnapshot: Equatable, Sendable {
+    let progress: TaskQuantityProgressSnapshot
+    let entries: [TaskQuantityEntrySnapshot]
+    let recurrenceRole: TaskQuantityRecurrenceRole
+}
+
+nonisolated enum TaskQuantityDetailReadModel: Equatable, Sendable {
+    case none
+    case incomplete
+    case available(TaskQuantityDetailSnapshot)
+}

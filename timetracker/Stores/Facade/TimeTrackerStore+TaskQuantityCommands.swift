@@ -15,6 +15,23 @@ extension TimeTrackerStore {
             )
             return false
         }
+        return recordTaskQuantity(
+            taskID: taskID,
+            goalBaseline: goalBaseline,
+            amount: amount,
+            entryID: entryID,
+            recordedAt: recordedAt
+        )
+    }
+
+    @discardableResult
+    func recordTaskQuantity(
+        taskID: UUID,
+        goalBaseline: TaskQuantityGoalMutationBaseline,
+        amount: Int,
+        entryID: UUID,
+        recordedAt: Date = Date()
+    ) -> Bool {
         return performTaskQuantityCommand { coordinator in
             try coordinator.record(
                 command: TaskQuantityEntryRecordCommand(
@@ -43,6 +60,23 @@ extension TimeTrackerStore {
             )
             return false
         }
+        return updateTaskQuantityEntry(
+            baseline: baseline,
+            goalBaseline: goalBaseline,
+            amount: amount,
+            recordedAt: recordedAt,
+            operationID: operationID
+        )
+    }
+
+    @discardableResult
+    func updateTaskQuantityEntry(
+        baseline: TaskQuantityEntryMutationBaseline,
+        goalBaseline: TaskQuantityGoalMutationBaseline,
+        amount: Int,
+        recordedAt: Date,
+        operationID: UUID
+    ) -> Bool {
         return performTaskQuantityCommand { coordinator in
             try coordinator.update(
                 command: TaskQuantityEntryUpdateCommand(

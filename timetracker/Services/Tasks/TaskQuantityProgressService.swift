@@ -2,12 +2,31 @@ import Foundation
 
 @MainActor
 struct TaskQuantityProgressService {
+    struct ValidatedSnapshot {
+        let progress: TaskQuantityProgressSnapshot
+        let entries: [TaskQuantityEntrySnapshot]
+    }
+
     func snapshot(
         taskID: UUID,
         goals: [TaskQuantityGoal],
         entries: [TaskQuantityEntry],
         isRecordingAllowed: Bool
     ) -> TaskQuantityProgressSnapshot? {
+        validatedSnapshot(
+            taskID: taskID,
+            goals: goals,
+            entries: entries,
+            isRecordingAllowed: isRecordingAllowed
+        )?.progress
+    }
+
+    func validatedSnapshot(
+        taskID: UUID,
+        goals: [TaskQuantityGoal],
+        entries: [TaskQuantityEntry],
+        isRecordingAllowed: Bool
+    ) -> ValidatedSnapshot? {
         let expectedGoalID = TaskProgressIdentity.quantityGoalID(
             taskID: taskID
         )
@@ -51,7 +70,7 @@ struct TaskQuantityProgressService {
             total = overflow ? Int64.max : next
         }
 
-        return TaskQuantityProgressSnapshot(
+        let progress = TaskQuantityProgressSnapshot(
             taskID: taskID,
             goalBaseline: TaskQuantityGoalMutationBaseline(goal: goal),
             targetAmount: Int64(goal.targetAmount),
@@ -63,6 +82,18 @@ struct TaskQuantityProgressService {
                 entries: entryWinners
             ),
             isRecordingAllowed: isRecordingAllowed
+        )
+        let entrySnapshots = connectedVisibleEntries
+            .map(TaskQuantityEntrySnapshot.init)
+            .sorted {
+                if $0.recordedAt != $1.recordedAt {
+                    return $0.recordedAt > $1.recordedAt
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+        return ValidatedSnapshot(
+            progress: progress,
+            entries: entrySnapshots
         )
     }
 

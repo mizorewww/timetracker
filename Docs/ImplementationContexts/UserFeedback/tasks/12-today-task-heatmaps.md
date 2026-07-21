@@ -5,10 +5,10 @@
 
 ## 当前阶段
 
-- [~] 领取 Heatmap 反馈并建立活动链接。
-- [ ] 审计任务模型、计时/Checklist 聚合、Today、设置、任务详情与 BlossomColor 组件。
-- [ ] 明确普通计时任务、Checklist 和未来任务量任务的每日强度语义与迁移默认值。
-- [ ] 实现持久化配置、每日聚合、每任务配色与 Today Heatmap。
+- [x] 领取 Heatmap 反馈并建立活动链接。
+- [x] 审计任务模型、计时/Checklist 聚合、Today、设置、任务详情与 BlossomColor 组件。
+- [x] 明确普通计时任务、Checklist 和现有任务量数据的每日强度语义与迁移默认值。
+- [~] 实现持久化配置、每日聚合、每任务配色与 Today Heatmap。
 - [ ] 完成测试、owned 模拟器截图验收、Release 全设备安装与资源清理。
 - [ ] 由 Codex 在唯一任务来源标记父项和全部子项完成并移除活动链接。
 
@@ -50,9 +50,36 @@
 
 ## 子代理编排
 
-- [ ] 数据模型、迁移、每日聚合和阈值语义审计
-- [ ] Today、设置、任务详情与 BlossomColor 复用入口审计
-- [ ] 测试架构、Swift Charts/可复用库与模拟器验收路径审计
+- [x] 数据模型、迁移、每日聚合和阈值语义审计
+- [x] Today、设置、任务详情与 BlossomColor 复用入口审计
+- [x] 测试架构、Swift Charts/可复用库与模拟器验收路径审计
+
+## 审计结论与锁定决策
+
+- 现有实现仍将全部选择合成一张 Heatmap，只读取 Checklist，并写死 1/2/3/4 阈值和
+  `AppColors.grossTime`；它仅作为可迁移的基础，不满足本项反馈。
+- 不新增 SwiftData 模型或 V14 schema。默认关闭、任务顺序、设置多选和详情 Toggle 全部继续以
+  已同步的 `AppPreferences.todayHeatmapTaskIDs` 为唯一真相，并统一调用
+  `setTodayHeatmapTaskIDs`，避免双数据源。
+- 每个被选择任务生成独立 snapshot；该图包含任务本身和未删除后代。父子同时被选择时分别显示，
+  但单张图内按持久 ID 去重。归档选择保留历史，真正删除、孤儿和未来记录不计。
+- 每任务主题色直接使用已由 `BlossomColorPicker` 编辑和同步的 `TaskNode.colorHex`，四档强度色
+  从该主题色派生，不另存一份会漂移的 Heatmap 色。
+- 数据源自动且互斥：分支内存在有效任务量目标时使用任务量；否则存在 Checklist 时使用完成数；
+  否则使用 gross 计时时长。当前项只消费已有 V13 任务量数据，不提前实现下一条任务量/重复任务 UI。
+- 时长通过 `TrackedTimePolicy` 裁剪到现在和 53 周窗口，再用
+  `TimeAggregationService.secondsByDay` 按 Calendar 日界线拆分；跨日和 DST 不使用固定 24 小时。
+- Checklist 采用仓库现有语义：只计当前仍完成且有 `completedAt <= now` 的 canonical 可见项目；
+  取消、删除或重新完成会撤销/移动历史贡献。
+- 时长与 Checklist 的正值档位按窗口内最大每日值 `M` 归一化：0 为空，正值按
+  `ceil(4 * value / M)` 落入四档。任务量按当日累计量 / 有效目标量落入同样四档并封顶，避免少量
+  记录因自身成为观察最大值而错误显示最深色。
+- 日期使用调用方当前 Calendar 和半开日区间；系统日历/时区变化时现有 Today 刷新机制会重新分桶。
+- UI 使用 Apple 原生 Swift Charts `RectangleMark`，保留系统坐标与图表可访问性；不继续扩写手绘网格。
+  调研到的原生 Swift Heatmap 专用包均远低于 1k stars，通用高星图表库又没有日历 Heatmap 且会
+  引入 UIKit/适配成本，因此不新增第三方依赖。
+- UI 验收只使用本任务 owned iPhone/iPad 模拟器；物理设备只执行最终 Release 安装，不启动、
+  不操作、不截图。
 
 ## 运行资源所有权
 
@@ -61,4 +88,5 @@
 
 ## Checkpoint 记录
 
-- [~] 当前 checkpoint：领取反馈、建立实现记忆与活动链接。
+- [x] `82b9bb3`：领取反馈、建立实现记忆与活动链接。
+- [~] 当前 checkpoint：实现并验证每任务聚合模型、动态阈值和详情开关。

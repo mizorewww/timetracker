@@ -9,7 +9,7 @@
 - [x] 审计现有 Quick Start 编辑状态、持久化命令、候选过滤、动画与测试。
 - [x] 确认并定向验证仓库现有的固定列表迁移和候选区移除实现，无需重复修改产品代码。
 - [x] 使用 owned iPhone / iPad 模拟器完成普通路径与截图验收。
-- [~] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -104,3 +104,22 @@
   `xcodebuild`、`xctest`、UI runner、Simulator、Problem Reporter 或 Booted 设备残留。
 - 目视结果支持继续使用原生 SwiftUI List 动画；没有理由引入 `matchedGeometryEffect`、拖动重排或
   第三方依赖。物理设备在此阶段完全未启动、未操作、未截图。
+
+## Release 安装与收尾
+
+- 在 simulator batch 已完全释放后，严格原样运行
+  `CONFIGURATION=Release scripts/build_install_all.sh`，命令成功退出 0。
+- Release iOS App 与内嵌 Watch companion 构建成功，并通过 `codesign --verify --deep --strict`；
+  iOS 主 App、Watch companion 与 macOS App 都是 Apple Development
+  `ZEXUAN GAO (PX46M259V3)`、Team `LT98S43NKA`，版本均为 `1.1.52 (107)`。
+- iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 与 iPhone Air
+  `FBA36694-D841-56D4-8ED6-21942873B21B` 均安装成功；随后用只读 `devicectl device info apps`
+  确认两台设备的 Developer App 都是 `me.mezorewww.timetracker`、`1.1.52 (107)`。
+- macOS Release 已复制到 `/Applications/timetracker.app`，严格签名验证通过，主可执行文件为
+  `x86_64 arm64` universal binary。
+- 没有可见物理 Apple Watch，因此只声明 companion 已构建、签名并嵌入 iOS App，不声称已向实体
+  Watch 安装。物理 iPhone/iPad 只执行安装与只读 App 查询，没有启动、操作 UI 或截图。
+- Release 产物的 build info 显示 `dirty=true`，原因是 `Docs/userfeedback.md` 中用户自有的 8 行新增
+  反馈仍按要求保留在 working tree；产品源码、Task 14 记忆与先前 checkpoint 都已提交。
+- 收尾复核没有 `xcodebuild`、`xctest`、UI runner、安装脚本进程或 Booted 模拟器；根目录
+  `README.md` 仍不存在。Task 14 active link 随本次最终文档提交移除，唯一反馈由 Codex 标为 `[x]`。

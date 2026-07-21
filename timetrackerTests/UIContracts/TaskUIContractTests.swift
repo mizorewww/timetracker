@@ -177,14 +177,11 @@ struct TaskUIContractTests {
     }
 
     @Test
-    func taskDetailTimerCapturesItsVisibleActionAndExposesTheIdentityCardBoundary() throws {
+    func taskDetailTimerCapturesItsVisibleActionSnapshot() throws {
         let identitySource = try sourceText(
             "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift"
         )
 
-        #expect(identitySource.contains(
-            ".accessibilityIdentifier(\"task.detail.identityCard\")"
-        ))
         #expect(identitySource.contains("let activeSegment = activeSegment"))
         #expect(identitySource.contains(
             "performTimerAction(activeSegment: activeSegment)"

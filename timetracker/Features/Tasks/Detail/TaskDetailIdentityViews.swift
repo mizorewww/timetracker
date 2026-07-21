@@ -28,7 +28,6 @@ struct TaskDetailIdentityRow: View {
             identitySummary
             timerAction
         }
-        .accessibilityIdentifier("task.detail.identityCard")
     }
 
     private var accessibilityContent: some View {
@@ -42,7 +41,6 @@ struct TaskDetailIdentityRow: View {
                 }
             }
         }
-        .accessibilityIdentifier("task.detail.identityCard")
     }
 
     private var identitySummary: some View {

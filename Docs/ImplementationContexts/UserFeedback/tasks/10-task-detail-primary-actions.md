@@ -8,8 +8,8 @@
 - [x] 已按文档顺序领取“Stop 复用顶部任务卡片、Add Time 替换原 Edit 位置”的反馈。
 - [x] 已审计任务详情、统一编辑状态、顶部任务卡片和现有动作入口。
 - [x] 已确认历史实现满足动作重排/复用，并加固陈旧 Stop 动作竞态与卡片边界回归测试。
-- [~] 使用 owned 模拟器验证普通交互路径并进行 simulator-only 截图验收。
-- [ ] 执行 Release 全设备安装、签名与版本核验，清理 owned 资源。
+- [x] 使用 owned 模拟器验证普通交互路径并进行 simulator-only 截图验收。
+- [~] 执行 Release 全设备安装、签名与版本核验，清理构建资源。
 - [ ] 由 Codex 在反馈文档标记完成并移除活动软链接。
 
 ## 反馈边界
@@ -24,7 +24,7 @@
 - [x] 明确运行中、暂停、未运行等状态下的动作可见性与行为
 - [x] 依照 Apple HIG 与 SwiftUI 最佳实践完成最小重排/复用
 - [x] 覆盖布局、动作路由和状态变化的自动化回归测试
-- [ ] 在 owned 模拟器验证 iPhone/iPad 普通路径并适当截图
+- [x] 在 owned 模拟器验证 iPhone/iPad 普通路径并适当截图
 - [ ] 运行 `CONFIGURATION=Release scripts/build_install_all.sh`
 - [ ] 核验安装版本与签名，释放 owned 设备、进程和临时产物
 - [ ] 由 Codex 在 `Docs/userfeedback.md` 标记完成并移除活动软链接
@@ -40,10 +40,12 @@
 
 - [x] 任务详情与任务卡片复用边界静态审计：正确复用边界是 `TaskTimerActionButton`；只读 Home 行不可包裹详情 `TextField`。
 - [x] 回归测试、状态矩阵与验收路径独立审计：现有精准 UI 用例可在 owned iPhone/iPad 上直接验收。
+- [x] 第二次 iPhone 失败独立诊断：launch request 参数正确但进程异常进入生产 CloudKit store，demo fixture 缺失；擦除 owned Simulator 后同用例及 iPad 均通过，未把基础设施瞬态误判为详情 UI 回归。
 
 ## 运行资源所有权
 
-- 尚未创建 Task 10 owned 模拟器。
+- Task 10 owned iPhone 17 Pro：`CFB636E3-65F0-4278-9D33-CC3318E51ADC`，验证后已关闭并删除。
+- Task 10 owned iPad Pro 11-inch (M4)：`21F8B762-CFFE-451E-A823-A7CFE7687404`，验证后已关闭并删除。
 - 不触碰 `AnalyticsReview-iPhone17Pro` 或其他不属于 Task 10 的设备/进程。
 - 每个验证批次记录 UDID，结束后终止 App、关闭并删除 owned 设备，清理 Runner、构建与诊断进程。
 
@@ -54,7 +56,14 @@
 - [x] 复用边界：详情顶部含可编辑标题、焦点与校验，不能直接复用把只读身份包进导航 `Button` 的 `HomeTimerTaskRow`；共享 `TaskTimerActionButton` 才是正确组件边界。
 - [x] 动作状态矩阵：当前任务运行时始终保留 Stop；可追踪未运行任务显示 Start/Switch；不可追踪且无活动段时隐藏计时与 Add Time；草稿恢复 toolbar 只显示恢复动作。
 - [x] 竞态加固：详情计时按钮捕获当次渲染的 `activeSegment` 快照，陈旧 Stop 的第二次触发只尝试停止原 segment，不会因为重新读取为空而意外启动。
-- [x] 测试边界：新增 `task.detail.identityCard`，UI 测试直接断言计时按钮完整位于首张卡片内；source contract 固定可见动作快照语义。
+- [x] 测试边界：source contract 固定可见动作快照语义；沿用现有 UI 几何断言证明计时按钮与标题位于首张卡片、Add Time 位于其上方 toolbar。
 - [x] 聚焦验证：macOS `TaskUIContractTests`、`SharedComponentsContractTests`、`TaskWorkspaceContractTests` 共 59/59 通过，无失败或跳过；未启动模拟器。
 - [x] 参考实现：Apple HIG Buttons/Toolbars 与 SwiftUI `Button`/`ToolbarItem`；未新增第三方依赖。
-- [~] 当前 checkpoint：准备提交动作快照与卡片边界加固。
+- [x] 首轮 iPhone UI 失败证据：精准用例真实执行 1 项，在新增 container identifier 覆盖既有子元素 identifier 后失败；属于测试辅助语义回归，未冒充产品布局失败。
+- [x] 第二轮 iPhone UI 启动失败证据：精准用例真实执行 1 项；XCTest 日志证明已传入 `--uitesting`、`replaceOnLaunch`、`task-detail` 和目标任务标题，但进程异常进入生产 CloudKit store，最终 UI hierarchy 停在无 demo 数据的 Today。失败发生在 fixture bootstrap/路由启动阶段，尚未进入本任务布局断言；日志显示启动前 PID 为 0，因此不臆测为旧进程复用。
+- [x] iPhone 模拟器验收：擦除 owned iPhone 后精准用例 `testTaskDetailPromotesTimerAndManualTimeActions` 真实执行 1 项、1/1 通过；验证 Stop→Start→Stop、Add Time sheet、顶部卡片几何与 44×44pt 目标。截图：`build/Task10SimulatorValidation/FinalScreenshots/iphone-task-detail-top-actions.png`。
+- [x] iPad 模拟器验收：owned iPad 上同一精准用例真实执行 1 项、1/1 通过；额外验证 iPad Stop 保留可见文字。截图：`build/Task10SimulatorValidation/FinalScreenshots/ipad-task-detail-top-actions.png`。
+- [x] 截图人工验收：两张图均只来自 owned 模拟器；Stop 位于首张任务卡片，Add Time 位于原 Edit 的顶部工具栏区域，无裁切、重叠或异常间距。
+- [x] 修正后聚焦验证：macOS `TaskUIContractTests`、`SharedComponentsContractTests`、`TaskWorkspaceContractTests` 共 59/59 通过，无失败或跳过。
+- [x] 模拟器清理：两个 owned UDID 均已关闭并删除，无 owned `xcodebuild`、`xctest`、Runner、诊断进程或 Booted 设备残留；`AnalyticsReview-iPhone17Pro` 保持 Shutdown 且未触碰。
+- [~] 当前 checkpoint：提交会传播 identifier 的撤销、动作快照契约与模拟器验收记忆；随后运行规定的 Release 全设备安装。

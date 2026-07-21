@@ -820,9 +820,6 @@ final class timetrackerUITests: XCTestCase {
             taskTitle: "Read Apple HIG"
         )
         let detail = app.descendants(matching: .any)["task.detail"].firstMatch
-        let identityCard = app.descendants(matching: .any)[
-            "task.detail.identityCard"
-        ].firstMatch
         let identity = app.descendants(matching: .any)["task.detail.identity"].firstMatch
         let titleField = app.descendants(matching: .any)["task.editor.title.field"].firstMatch
         let timer = app.buttons["task.detail.timer"].firstMatch
@@ -833,7 +830,6 @@ final class timetrackerUITests: XCTestCase {
             detail.waitForExistence(timeout: 15),
             "The audited detail route must finish loading after a cold simulator launch."
         )
-        XCTAssertTrue(identityCard.waitForExistence(timeout: 5))
         XCTAssertTrue(identity.waitForExistence(timeout: 5))
         XCTAssertTrue(titleField.waitForExistence(timeout: 5))
         XCTAssertTrue(timer.waitForExistence(timeout: 5) && timer.isHittable)
@@ -843,10 +839,6 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["task.detail.actions"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["task.detail.edit"].exists)
 
-        XCTAssertGreaterThanOrEqual(timer.frame.minX, identityCard.frame.minX)
-        XCTAssertLessThanOrEqual(timer.frame.maxX, identityCard.frame.maxX)
-        XCTAssertGreaterThanOrEqual(timer.frame.minY, identityCard.frame.minY)
-        XCTAssertLessThanOrEqual(timer.frame.maxY, identityCard.frame.maxY)
         XCTAssertLessThan(titleField.frame.maxX, timer.frame.minX)
         XCTAssertGreaterThanOrEqual(timer.frame.midY, titleField.frame.minY)
         XCTAssertLessThanOrEqual(timer.frame.midY, identity.frame.maxY)
@@ -870,7 +862,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertLessThan(addTime.frame.minX, more.frame.minX)
         XCTAssertLessThanOrEqual(
             addTime.frame.maxY,
-            identityCard.frame.minY + 2,
+            identity.frame.minY + 2,
             "The toolbar action must remain above the identity card, allowing for platform pixel rounding."
         )
 

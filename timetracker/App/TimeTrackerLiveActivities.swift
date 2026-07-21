@@ -27,16 +27,28 @@ final class LatestDesiredStateReconciler<State: Equatable> {
         }
         desiredState = state
         desiredRevision &+= 1
-        guard reconciliationTask == nil else { return }
-        reconciliationTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            await drain()
-        }
+        startReconciliationIfNeeded()
     }
 
     func waitUntilIdle() async {
         while let reconciliationTask {
             await reconciliationTask.value
+        }
+    }
+
+    /// Replays the retained desired state after a recoverable system-surface
+    /// failure without requiring the timer mutation to happen again.
+    func retryDesiredState() {
+        guard desiredState != nil else { return }
+        desiredRevision &+= 1
+        startReconciliationIfNeeded()
+    }
+
+    private func startReconciliationIfNeeded() {
+        guard reconciliationTask == nil else { return }
+        reconciliationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await drain()
         }
     }
 
@@ -52,9 +64,11 @@ final class LatestDesiredStateReconciler<State: Equatable> {
 
 #if os(iOS) && canImport(ActivityKit)
 import ActivityKit
+import Observation
 import OSLog
 
 @MainActor
+@Observable
 final class LiveActivityCoordinator {
     static let shared = LiveActivityCoordinator()
 
@@ -74,11 +88,24 @@ final class LiveActivityCoordinator {
         case active(Request)
     }
 
-    private var lastRequest: Request?
-    private let projectionService = LiveActivityProjectionService()
-    private lazy var reconciler = LatestDesiredStateReconciler<DesiredState> { [weak self] state in
+    private(set) var status: LiveActivityStatus
+
+    @ObservationIgnored private var lastRequest: Request?
+    @ObservationIgnored private let projectionService = LiveActivityProjectionService()
+    @ObservationIgnored private let authorizationInfo: ActivityAuthorizationInfo
+    @ObservationIgnored private var authorizationObservationTask: Task<Void, Never>?
+    @ObservationIgnored private lazy var reconciler = LatestDesiredStateReconciler<DesiredState> { [weak self] state in
         guard let self else { return }
         await reconcile(state)
+    }
+
+    private init() {
+        let authorizationInfo = ActivityAuthorizationInfo()
+        self.authorizationInfo = authorizationInfo
+        status = authorizationInfo.areActivitiesEnabled
+            ? .ready
+            : .unavailable(.denied)
+        observeAuthorizationChanges()
     }
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
@@ -86,10 +113,22 @@ final class LiveActivityCoordinator {
             from: activeSegments,
             now: now
         ) else {
+            let hasRetainedActiveState: Bool
+            if case .active? = reconciler.desiredState {
+                hasRetainedActiveState = true
+            } else {
+                hasRetainedActiveState = false
+            }
             let hasWork = lastRequest != nil
                 || reconciler.isReconciling
+                || hasRetainedActiveState
                 || !Activity<TimeTrackingActivityAttributes>.activities.isEmpty
-            guard hasWork else { return }
+            guard hasWork else {
+                status = authorizationInfo.areActivitiesEnabled
+                    ? .ready
+                    : .unavailable(.denied)
+                return
+            }
 
             lastRequest = nil
             reconciler.submit(.inactive)
@@ -120,6 +159,9 @@ final class LiveActivityCoordinator {
         }
 
         guard request != lastRequest || !hasMatchingActivity || reconciler.isReconciling else {
+            status = authorizationInfo.areActivitiesEnabled
+                ? .active
+                : .unavailable(.denied)
             return
         }
         reconciler.submit(.active(request))
@@ -129,20 +171,39 @@ final class LiveActivityCoordinator {
         await reconciler.waitUntilIdle()
     }
 
+    func retryLatestDesiredState() {
+        guard reconciler.desiredState != nil else {
+            status = authorizationInfo.areActivitiesEnabled
+                ? .ready
+                : .unavailable(.denied)
+            return
+        }
+        status = .synchronizing
+        reconciler.retryDesiredState()
+    }
+
     private func reconcile(_ desiredState: DesiredState) async {
+        status = .synchronizing
         switch desiredState {
         case .inactive:
             await endAllActivities()
             lastRequest = nil
+            status = authorizationInfo.areActivitiesEnabled
+                ? .ready
+                : .unavailable(.denied)
         case .active(let request):
             if await updateOrStart(request) {
                 lastRequest = request
+                status = authorizationInfo.areActivitiesEnabled
+                    ? .active
+                    : .unavailable(.denied)
             }
         }
     }
 
     private func updateOrStart(_ request: Request) async -> Bool {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+        guard authorizationInfo.areActivitiesEnabled else {
+            status = .unavailable(.denied)
             Self.logger.notice(
                 "Skipped Live Activity synchronization because Live Activities are disabled in system settings"
             )
@@ -177,11 +238,35 @@ final class LiveActivityCoordinator {
                 _ = try Activity.request(attributes: attributes, content: content, pushType: nil)
                 return true
             } catch {
+                status = .unavailable(LiveActivityFailure(error))
                 Self.logger.error(
                     "Failed to start Live Activity: \(String(describing: error), privacy: .public)"
                 )
                 return false
             }
+        }
+    }
+
+    private func observeAuthorizationChanges() {
+        let updates = authorizationInfo.activityEnablementUpdates
+        authorizationObservationTask = Task { @MainActor [weak self] in
+            for await areActivitiesEnabled in updates {
+                guard let self else { return }
+                handleAuthorizationChange(areActivitiesEnabled)
+            }
+        }
+    }
+
+    private func handleAuthorizationChange(_ areActivitiesEnabled: Bool) {
+        guard areActivitiesEnabled else {
+            status = .unavailable(.denied)
+            return
+        }
+        guard status == .unavailable(.denied) else { return }
+
+        status = .ready
+        if reconciler.desiredState != nil {
+            retryLatestDesiredState()
         }
     }
 
@@ -200,6 +285,39 @@ final class LiveActivityCoordinator {
         )
         for activity in Activity<TimeTrackingActivityAttributes>.activities {
             await activity.end(content, dismissalPolicy: .immediate)
+        }
+    }
+}
+
+private extension LiveActivityFailure {
+    init(_ error: Error) {
+        guard let authorizationError = error as? ActivityAuthorizationError else {
+            self = .system
+            return
+        }
+
+        switch authorizationError {
+        case .attributesTooLarge:
+            self = .payloadTooLarge
+        case .unsupported:
+            self = .unsupported
+        case .denied:
+            self = .denied
+        case .globalMaximumExceeded, .targetMaximumExceeded:
+            self = .capacity
+        case .visibility:
+            self = .backgroundStart
+        case .unsupportedTarget,
+             .missingProcessIdentifier,
+             .unentitled,
+             .malformedActivityIdentifier:
+            self = .configuration
+        case .persistenceFailure:
+            self = .system
+        case .reconnectNotPermitted:
+            self = .configuration
+        @unknown default:
+            self = .system
         }
     }
 }

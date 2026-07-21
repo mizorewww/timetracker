@@ -1073,6 +1073,10 @@
 "heatmap.settings.off" = "Off";
 "heatmap.settings.taskCount" = "%lld Selections";
 "heatmap.settings.footer" = "Choose the tasks shown in Today. Each task includes its subtasks, and overlapping selections count once. Clear every selection to hide the heatmap.";
+"task.detail.heatmap.title" = "Activity Heatmap";
+"task.detail.heatmap.toggle" = "Show This Task in Today";
+"task.detail.heatmap.footer" = "Off by default. The task color selected with the Blossom color picker becomes this Heatmap’s theme, and subtasks contribute to its daily activity.";
+"task.detail.heatmap.limitReached" = "The Heatmap task limit has been reached. Deselect a task in Settings before enabling this one.";
 "heatmap.picker.title" = "Heatmap Tasks";
 "heatmap.picker.selectionHint" = "Toggles whether this task and its subtasks contribute to the Today heatmap.";
 "heatmap.picker.emptyDescription" = "Create a task before configuring the Today heatmap.";

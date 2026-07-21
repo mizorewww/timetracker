@@ -26,6 +26,7 @@ struct TaskDetailList: View {
             }
 
             TaskDetailTrackingAvailabilitySection(store: store, task: task)
+            TaskDetailHeatmapTrackingSection(store: store, task: task)
             TaskDetailAutosaveFailureSection(
                 controller: autosaveController
             )

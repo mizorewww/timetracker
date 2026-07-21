@@ -66,6 +66,32 @@ struct TodayHeatmapUIContractTests {
     }
 
     @Test
+    func taskDetailUsesTheSameDefaultOffHeatmapPreference() throws {
+        let detail = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift"
+        )
+        let section = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailHeatmapTrackingSection.swift"
+        )
+        let commands = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+CloudPreferenceCommands.swift"
+        )
+        let preferences = try sourceText(
+            "timetracker/Models/SyncedPreferences.swift"
+        )
+
+        #expect(detail.contains("TaskDetailHeatmapTrackingSection("))
+        #expect(section.contains("Toggle(isOn: trackingBinding)"))
+        #expect(section.contains("preferences.todayHeatmapTaskIDs.contains(task.id)"))
+        #expect(section.contains("store.setTodayHeatmapTrackingEnabled("))
+        #expect(section.contains("task.detail.heatmapTracking"))
+        #expect(commands.contains("func setTodayHeatmapTrackingEnabled("))
+        #expect(commands.contains("OrderedTaskIDSelectionMutation.adding("))
+        #expect(commands.contains("OrderedTaskIDSelectionMutation.removing("))
+        #expect(preferences.contains("var todayHeatmapTaskIDs: [UUID] = []"))
+    }
+
+    @Test
     func heatmapConfigurationCopyExistsInEveryLocale() throws {
         let localizationPaths = [
             "timetracker/en.lproj/Localizable.strings",
@@ -78,6 +104,10 @@ struct TodayHeatmapUIContractTests {
             "heatmap.settings.off",
             "heatmap.settings.taskCount",
             "heatmap.settings.footer",
+            "task.detail.heatmap.title",
+            "task.detail.heatmap.toggle",
+            "task.detail.heatmap.footer",
+            "task.detail.heatmap.limitReached",
             "heatmap.picker.title",
             "heatmap.picker.selectionHint",
             "heatmap.picker.emptyDescription",
@@ -184,17 +214,16 @@ struct TodayHeatmapUIContractTests {
         #expect(store.contains("taskByID: taskByID"))
         #expect(store.contains("childrenByParentID: childrenByParentID"))
         #expect(store.contains("tasks: tasks") == false)
-        #expect(
-            service.components(
-                separatedBy:
-                    "for item in checklistItems.visibleDeduplicatedByID()"
-            ).count - 1 == 1
-        )
+        #expect(service.contains("let indexes = activityIndexes("))
+        #expect(service.contains("func taskSnapshots("))
+        #expect(service.contains("segments.visibleDeduplicatedByID()"))
+        #expect(service.contains("quantityGoals.visibleDeduplicatedByID()"))
+        #expect(service.contains("quantityEntries.visibleDeduplicatedByID()"))
         #expect(service.contains("for weekIndex in 0..<Self.weekCount"))
         #expect(
             service.components(
                 separatedBy: "checklistItems.visibleDeduplicatedByID()"
-            ).count - 1 == 1
+            ).count - 1 == 2
         )
     }
 }

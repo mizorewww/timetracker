@@ -47,4 +47,20 @@ extension TimeTrackerStore {
             valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString))
         )
     }
+
+    @discardableResult
+    func setTodayHeatmapTrackingEnabled(
+        _ isEnabled: Bool,
+        for taskID: UUID
+    ) -> Bool {
+        let current = preferences.todayHeatmapTaskIDs
+        let updated = isEnabled
+            ? OrderedTaskIDSelectionMutation.adding(taskID, to: current)
+            : OrderedTaskIDSelectionMutation.removing(taskID, from: current)
+        guard !isEnabled || updated.count <=
+                AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount else {
+            return false
+        }
+        return setTodayHeatmapTaskIDs(updated)
+    }
 }

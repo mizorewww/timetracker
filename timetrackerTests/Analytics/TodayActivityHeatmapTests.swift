@@ -5,6 +5,22 @@ import Testing
 @Suite(.serialized)
 struct TodayActivityHeatmapTests {
     @Test
+    func dynamicIntensityUsesFourQuartilesOfItsReference() {
+        #expect(ActivityHeatmapIntensity(value: -1, referenceValue: 100) == .none)
+        #expect(ActivityHeatmapIntensity(value: 0, referenceValue: 100) == .none)
+        #expect(ActivityHeatmapIntensity(value: 1, referenceValue: 100) == .low)
+        #expect(ActivityHeatmapIntensity(value: 25, referenceValue: 100) == .low)
+        #expect(ActivityHeatmapIntensity(value: 26, referenceValue: 100) == .medium)
+        #expect(ActivityHeatmapIntensity(value: 50, referenceValue: 100) == .medium)
+        #expect(ActivityHeatmapIntensity(value: 51, referenceValue: 100) == .high)
+        #expect(ActivityHeatmapIntensity(value: 75, referenceValue: 100) == .high)
+        #expect(ActivityHeatmapIntensity(value: 76, referenceValue: 100) == .maximum)
+        #expect(ActivityHeatmapIntensity(value: 100, referenceValue: 100) == .maximum)
+        #expect(ActivityHeatmapIntensity(value: 200, referenceValue: 100) == .maximum)
+        #expect(ActivityHeatmapIntensity(value: 1, referenceValue: 0) == .none)
+    }
+
+    @Test
     func fixedIntensityThresholdsStayComparableAcrossWeeks() {
         #expect(ActivityHeatmapIntensity(completionCount: -1) == .none)
         #expect(ActivityHeatmapIntensity(completionCount: 0) == .none)
@@ -224,14 +240,261 @@ struct TodayActivityHeatmapTests {
         #expect(snapshot.totalCompletionCount == 0)
     }
 
+    @Test @MainActor
+    func selectedTasksProduceIndependentChecklistAndDurationSnapshots() throws {
+        let calendar = try testCalendar()
+        let now = try testDate(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12,
+            calendar: calendar
+        )
+        let today = calendar.startOfDay(for: now)
+        let yesterday = try #require(
+            calendar.date(byAdding: .day, value: -1, to: today)
+        )
+        let checklistRoot = task("Checklist Root", colorHex: "7C3AED")
+        let checklistChild = task("Checklist Child", parentID: checklistRoot.id)
+        let durationRoot = task("Duration Root", colorHex: "F97316")
+        let service = TodayActivityHeatmapSnapshotService()
+        let snapshots = service.taskSnapshots(
+            selectedTaskIDs: [durationRoot.id, checklistRoot.id, durationRoot.id],
+            tasks: [checklistRoot, checklistChild, durationRoot],
+            segments: [
+                segment(
+                    taskID: durationRoot.id,
+                    start: yesterday.addingTimeInterval(9 * 3_600),
+                    end: yesterday.addingTimeInterval(10 * 3_600)
+                ),
+                segment(
+                    taskID: durationRoot.id,
+                    start: today.addingTimeInterval(8 * 3_600),
+                    end: today.addingTimeInterval(10 * 3_600)
+                ),
+            ],
+            checklistItems: [
+                checklist(
+                    taskID: checklistChild.id,
+                    completedAt: yesterday.addingTimeInterval(60)
+                ),
+                checklist(
+                    taskID: checklistChild.id,
+                    completedAt: today.addingTimeInterval(60)
+                ),
+                checklist(
+                    taskID: checklistChild.id,
+                    completedAt: today.addingTimeInterval(120)
+                ),
+            ],
+            quantityGoals: [],
+            quantityEntries: [],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(snapshots.map(\.taskID) == [durationRoot.id, checklistRoot.id])
+        let duration = try #require(snapshots.first)
+        #expect(duration.metric == .trackedDuration)
+        #expect(duration.colorHex == "F97316")
+        #expect(duration.totalValue == 3 * 3_600)
+        #expect(duration.maximumDailyValue == 2 * 3_600)
+        #expect(duration.activeDayCount == 2)
+        #expect(day(yesterday, in: duration, calendar: calendar)?.value == 3_600)
+        #expect(day(yesterday, in: duration, calendar: calendar)?.intensity == .medium)
+        #expect(day(today, in: duration, calendar: calendar)?.value == 2 * 3_600)
+        #expect(day(today, in: duration, calendar: calendar)?.intensity == .maximum)
+
+        let checklistSnapshot = try #require(snapshots.last)
+        #expect(checklistSnapshot.metric == .checklistCompletions)
+        #expect(checklistSnapshot.colorHex == "7C3AED")
+        #expect(checklistSnapshot.totalValue == 3)
+        #expect(checklistSnapshot.maximumDailyValue == 2)
+        #expect(day(yesterday, in: checklistSnapshot, calendar: calendar)?.value == 1)
+        #expect(day(yesterday, in: checklistSnapshot, calendar: calendar)?.intensity == .medium)
+        #expect(day(today, in: checklistSnapshot, calendar: calendar)?.value == 2)
+        #expect(day(today, in: checklistSnapshot, calendar: calendar)?.intensity == .maximum)
+    }
+
+    @Test @MainActor
+    func durationSplitsAtCalendarMidnightAndClipsActiveAndFutureSegments() throws {
+        var calendar = try testCalendar(
+            timeZone: TimeZone(identifier: "America/Los_Angeles")
+        )
+        calendar.firstWeekday = 2
+        let now = try testDate(
+            year: 2026,
+            month: 3,
+            day: 8,
+            hour: 4,
+            calendar: calendar
+        )
+        let today = calendar.startOfDay(for: now)
+        let yesterday = try #require(
+            calendar.date(byAdding: .day, value: -1, to: today)
+        )
+        let root = task("Duration")
+        let snapshots = TodayActivityHeatmapSnapshotService().taskSnapshots(
+            selectedTaskIDs: [root.id],
+            tasks: [root],
+            segments: [
+                segment(
+                    taskID: root.id,
+                    start: yesterday.addingTimeInterval(23 * 3_600),
+                    end: today.addingTimeInterval(2 * 3_600)
+                ),
+                segment(
+                    taskID: root.id,
+                    start: now.addingTimeInterval(-3_600),
+                    end: nil
+                ),
+                segment(
+                    taskID: root.id,
+                    start: now.addingTimeInterval(3_600),
+                    end: now.addingTimeInterval(7_200)
+                ),
+            ],
+            checklistItems: [],
+            quantityGoals: [],
+            quantityEntries: [],
+            now: now,
+            calendar: calendar
+        )
+        let snapshot = try #require(snapshots.first)
+
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 3_600)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 3 * 3_600)
+        #expect(snapshot.totalValue == 4 * 3_600)
+        #expect(snapshot.weeks.flatMap(\.days).filter(\.isFuture).allSatisfy {
+            $0.value == 0 && $0.intensity == .none
+        })
+    }
+
+    @Test @MainActor
+    func quantityUsesDeclaredGoalInsteadOfObservedMaximum() throws {
+        let calendar = try testCalendar()
+        let now = try testDate(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12,
+            calendar: calendar
+        )
+        let today = calendar.startOfDay(for: now)
+        let yesterday = try #require(
+            calendar.date(byAdding: .day, value: -1, to: today)
+        )
+        let quantityTask = task("Push-ups", colorHex: "16A34A")
+        let goal = quantityGoal(
+            taskID: quantityTask.id,
+            targetAmount: 50,
+            unitLabel: "reps"
+        )
+        let snapshots = TodayActivityHeatmapSnapshotService().taskSnapshots(
+            selectedTaskIDs: [quantityTask.id],
+            tasks: [quantityTask],
+            segments: [
+                segment(
+                    taskID: quantityTask.id,
+                    start: today,
+                    end: today.addingTimeInterval(10_000)
+                ),
+            ],
+            checklistItems: [
+                checklist(
+                    taskID: quantityTask.id,
+                    completedAt: today.addingTimeInterval(60)
+                ),
+            ],
+            quantityGoals: [goal],
+            quantityEntries: [
+                quantityEntry(
+                    taskID: quantityTask.id,
+                    amount: 25,
+                    recordedAt: yesterday.addingTimeInterval(60)
+                ),
+                quantityEntry(
+                    taskID: quantityTask.id,
+                    amount: 60,
+                    recordedAt: today.addingTimeInterval(60)
+                ),
+                quantityEntry(
+                    taskID: quantityTask.id,
+                    amount: 5,
+                    recordedAt: now.addingTimeInterval(3_600)
+                ),
+            ],
+            now: now,
+            calendar: calendar
+        )
+        let snapshot = try #require(snapshots.first)
+
+        #expect(snapshot.metric == .quantity(unitLabel: "reps"))
+        #expect(snapshot.totalValue == 85)
+        #expect(snapshot.maximumDailyValue == 60)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 25)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.referenceValue == 50)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.intensity == .medium)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 60)
+        #expect(day(today, in: snapshot, calendar: calendar)?.intensity == .maximum)
+    }
+
     @MainActor
     private func task(
         _ title: String,
-        parentID: UUID? = nil
+        parentID: UUID? = nil,
+        colorHex: String? = nil
     ) -> TaskNode {
         TaskNode(
             title: title,
             parentID: parentID,
+            deviceID: "test",
+            colorHex: colorHex
+        )
+    }
+
+    @MainActor
+    private func segment(
+        taskID: UUID,
+        start: Date,
+        end: Date?
+    ) -> TimeSegment {
+        TimeSegment(
+            sessionID: UUID(),
+            taskID: taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: start,
+            endedAt: end
+        )
+    }
+
+    @MainActor
+    private func quantityGoal(
+        taskID: UUID,
+        targetAmount: Int,
+        unitLabel: String
+    ) -> TaskQuantityGoal {
+        TaskQuantityGoal(
+            taskID: taskID,
+            targetAmount: targetAmount,
+            unitLabel: unitLabel,
+            deviceID: "test"
+        )
+    }
+
+    @MainActor
+    private func quantityEntry(
+        taskID: UUID,
+        amount: Int,
+        recordedAt: Date
+    ) -> TaskQuantityEntry {
+        TaskQuantityEntry(
+            id: UUID(),
+            taskID: taskID,
+            amount: amount,
+            recordedAt: recordedAt,
+            createdAt: recordedAt,
             deviceID: "test"
         )
     }
@@ -290,6 +553,17 @@ struct TodayActivityHeatmapTests {
     private func day(
         _ date: Date,
         in snapshot: ActivityHeatmapSnapshot,
+        calendar: Calendar
+    ) -> ActivityHeatmapDay? {
+        snapshot.weeks
+            .lazy
+            .flatMap(\.days)
+            .first { calendar.isDate($0.date, inSameDayAs: date) }
+    }
+
+    private func day(
+        _ date: Date,
+        in snapshot: TaskActivityHeatmapSnapshot,
         calendar: Calendar
     ) -> ActivityHeatmapDay? {
         snapshot.weeks

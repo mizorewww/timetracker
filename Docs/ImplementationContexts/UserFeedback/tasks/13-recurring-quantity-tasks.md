@@ -1,7 +1,7 @@
 # 13：重复任务与简单任务量任务实现记忆
 
 > 本文件只保存实现、验证和子代理编排记忆，不是任务来源。范围与完成状态必须重新读取
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中唯一的 `[~]` 项。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应反馈项；该项现已完成并标记为 `[x]`。
 
 ## 当前阶段
 
@@ -10,7 +10,7 @@
 - [x] 锁定“每天 50 个俯卧撑”父任务自动生成每日任务量子任务的产品语义。
 - [x] 分小 checkpoint 实现创建、编辑、物化、完成记录与持久化。
 - [x] 完成相关回归、owned 模拟器交互和 simulator-only 截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -173,9 +173,18 @@
     `Synthesize event` 点击 quantity target 时的 `Invalid frame dimension` runtime warning；功能断言与截图
     均正常。所有 owned App/runner/diagnose/模拟器已停止并删除，仅非 owned AnalyticsReview 设备保持 Shutdown。
   - 仅复用 Foundation、SwiftUI、SwiftData、XCTest 与仓库现有组件；没有新增第三方依赖。
-- [~] 最终 checkpoint：冻结 Task 13 相关回归，执行精确
-  `CONFIGURATION=Release scripts/build_install_all.sh`；物理设备只安装，不启动、不操作、不截图。成功后由
-  Codex 将唯一反馈项标为 `[x]`、移除 active link 并提交完成状态。
+- [x] 最终 checkpoint：
+  - 冻结代码的 recurrence、quantity、draft、snapshot、preflight、lifecycle、UI 与 localization 回归共
+    22 个 suite、129 项测试通过，0 failure。
+  - 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，退出码 0；iOS 主 App、内嵌 Watch
+    companion 与 macOS App 的 Release 签名构建成功，产物签名均通过验证。
+  - iOS App 已安装到 iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与 iPhone Air
+    （`FBA36694-D841-56D4-8ED6-21942873B21B`）；macOS App 已复制到 `/Applications/timetracker.app`。
+    未连接可见的物理 Apple Watch，因此脚本无法验证 Watch 上的实际安装；已验证签名的 companion 嵌入
+    iOS App，配对手表开启 Automatic App Install 后由系统安装。
+  - 物理设备只完成安装，未启动、未操作、未截图；没有 owned `xcodebuild`、`xctest`、安装进程或 Booted
+    模拟器残留。根目录 `README.md` 保持不存在，反馈文件末尾用户追加内容保持未暂存。
+  - Codex 已将唯一反馈项标为 `[x]`，并移除 active link；本实现记忆作为已完成记录保留。
 
 ### owned 验收资源记录
 

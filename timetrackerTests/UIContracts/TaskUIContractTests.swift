@@ -177,6 +177,25 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskDetailTimerCapturesItsVisibleActionAndExposesTheIdentityCardBoundary() throws {
+        let identitySource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift"
+        )
+
+        #expect(identitySource.contains(
+            ".accessibilityIdentifier(\"task.detail.identityCard\")"
+        ))
+        #expect(identitySource.contains("let activeSegment = activeSegment"))
+        #expect(identitySource.contains(
+            "performTimerAction(activeSegment: activeSegment)"
+        ))
+        #expect(identitySource.contains(
+            "private func performTimerAction(activeSegment: TimeSegment?)"
+        ))
+        #expect(identitySource.contains("action: performTimerAction") == false)
+    }
+
+    @Test
     func healthSyncOnlyTasksUseTheSharedAvailabilityGate() throws {
         let availability = try sourceText(
             "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift"

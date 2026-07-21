@@ -28,6 +28,7 @@ struct TaskDetailIdentityRow: View {
             identitySummary
             timerAction
         }
+        .accessibilityIdentifier("task.detail.identityCard")
     }
 
     private var accessibilityContent: some View {
@@ -41,6 +42,7 @@ struct TaskDetailIdentityRow: View {
                 }
             }
         }
+        .accessibilityIdentifier("task.detail.identityCard")
     }
 
     private var identitySummary: some View {
@@ -104,13 +106,16 @@ struct TaskDetailIdentityRow: View {
     @ViewBuilder
     private var timerAction: some View {
         if showsTimerAction {
+            let activeSegment = activeSegment
             TaskTimerActionButton(
                 taskTitle: task.title,
                 taskColor: Color(hex: task.colorHex) ?? .blue,
                 activeSegment: activeSegment,
                 command: store.timerPickerSelectionCommand(for: task),
                 labelStyle: timerActionLabelStyle,
-                action: performTimerAction,
+                action: {
+                    performTimerAction(activeSegment: activeSegment)
+                },
                 accessibilityIdentifier: "task.detail.timer"
             )
         }
@@ -132,7 +137,7 @@ struct TaskDetailIdentityRow: View {
         #endif
     }
 
-    private func performTimerAction() {
+    private func performTimerAction(activeSegment: TimeSegment?) {
         if let activeSegment {
             store.stop(segment: activeSegment)
         } else {

@@ -2,26 +2,52 @@ import SwiftUI
 
 struct TaskDetailRecordsSection: View {
     let records: [TaskRecentRecordPoint]
+    let source: TaskAnalyticsSnapshot.Source
 
     var body: some View {
         Section {
             if records.isEmpty {
-                EmptyStateRow(title: AppStrings.localized("task.records.empty"), icon: "clock")
+                EmptyStateRow(
+                    title: AppStrings.localized(
+                        source == .appleHealth
+                            ? "task.detail.appleHealth.history.empty"
+                            : "task.records.empty"
+                    ),
+                    icon: "clock"
+                )
+                .accessibilityIdentifier("task.detail.history.empty")
             } else {
                 ForEach(records) { record in
-                    TaskDetailRecentRecordRow(record: record)
+                    TaskDetailRecentRecordRow(
+                        record: record,
+                        source: source
+                    )
                 }
             }
         } header: {
-            Text(AppStrings.localized("task.detail.recentSessions"))
+            Text(
+                AppStrings.localized(
+                    source == .appleHealth
+                        ? "task.detail.appleHealth.history.title"
+                        : "task.detail.recentSessions"
+                )
+            )
+            .accessibilityIdentifier("task.detail.history.header")
         } footer: {
-            Text(.app("task.detail.recentSubtitle"))
+            Text(
+                .app(
+                    source == .appleHealth
+                        ? "task.detail.appleHealth.history.subtitle"
+                        : "task.detail.recentSubtitle"
+                )
+            )
         }
     }
 }
 
 private struct TaskDetailRecentRecordRow: View {
     let record: TaskRecentRecordPoint
+    let source: TaskAnalyticsSnapshot.Source
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -42,6 +68,9 @@ private struct TaskDetailRecentRecordRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(
+            "task.detail.history.\(record.id.namespacedKey)"
+        )
     }
 
     private var recordIdentity: some View {
@@ -65,7 +94,14 @@ private struct TaskDetailRecentRecordRow: View {
     private var recordTiming: some View {
         let display = trackedTimeDisplay
         return VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
-            Text(DurationFormatter.compact(display.elapsedSeconds))
+            Text(
+                DurationFormatter.compact(
+                    record.displayDurationSeconds(
+                        source: source,
+                        now: Date()
+                    )
+                )
+            )
                 .font(.subheadline.monospacedDigit())
             Text(timeRangeText(display: display))
                 .font(.caption.monospacedDigit())

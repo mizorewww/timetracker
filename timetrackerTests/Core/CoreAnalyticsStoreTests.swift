@@ -713,8 +713,14 @@ struct CoreAnalyticsStoreTests {
             taskPathByID: [task.id: task.title],
             now: now
         )
-        #expect(records.first { $0.id == spanningNow.id }?.durationSeconds == 3_600)
-        #expect(records.first { $0.id == futureOnly.id }?.durationSeconds == 0)
+        #expect(
+            records.first { $0.id == .trackedSegment(spanningNow.id) }?
+                .durationSeconds == 3_600
+        )
+        #expect(
+            records.first { $0.id == .trackedSegment(futureOnly.id) }?
+                .durationSeconds == 0
+        )
     }
 
     @Test @MainActor
@@ -2203,7 +2209,11 @@ struct CoreAnalyticsStoreTests {
         )
 
         #expect(snapshot.overview.grossSeconds == 3_600)
-        #expect(snapshot.recentRecords.map(\.id) == [historicalSegment.id])
+        #expect(
+            snapshot.recentRecords.map(\.id) == [
+                .trackedSegment(historicalSegment.id),
+            ]
+        )
         #expect(snapshot.recentRecords.first?.durationSeconds == 600)
     }
 }

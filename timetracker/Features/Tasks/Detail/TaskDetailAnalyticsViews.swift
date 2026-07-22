@@ -4,33 +4,98 @@ struct TaskDetailAnalysisSection: View {
     @Binding var range: AnalyticsRange
     let snapshot: TaskAnalyticsSnapshot
     let isRefreshing: Bool
+    let retryAppleHealth: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Section {
             rangePicker
 
-            if snapshot.overview.grossSeconds == 0 {
-                EmptyStateRow(title: AppStrings.localized("task.detail.emptyRange"), icon: "chart.bar")
+            if snapshot.overview.grossSeconds == 0,
+               snapshot.source == .appleHealth {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(
+                        AppStrings.localized(
+                            "task.detail.appleHealth.empty.title"
+                        ),
+                        systemImage: "heart.text.square"
+                    )
+                    .font(.subheadline.weight(.medium))
+                    .accessibilityIdentifier(
+                        "task.detail.appleHealth.empty"
+                    )
+
+                    Text(.app("task.detail.appleHealth.empty.message"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier(
+                            "task.detail.appleHealth.empty.message"
+                        )
+                }
+                .padding(.vertical, 3)
+
+                TaskDetailAppleHealthRetryButton(
+                    action: retryAppleHealth
+                )
+            } else if snapshot.overview.grossSeconds == 0 {
+                EmptyStateRow(
+                    title: AppStrings.localized("task.detail.emptyRange"),
+                    icon: "chart.bar"
+                )
+                .accessibilityIdentifier("task.detail.analysis.empty")
+            } else if snapshot.source == .appleHealth {
+                DailyTimeSeriesChart(
+                    points: snapshot.daily,
+                    mode: .wallBarsAndGrossLine,
+                    accessibilityTitle: AppStrings.localized(
+                        "task.detail.appleHealth.history.chart"
+                    )
+                )
+                .frame(height: 260)
+                .accessibilityIdentifier("task.detail.history.chart")
+                .accessibilityValue(snapshot.range.rawValue)
+
+                TaskDetailValueRow(
+                    title: AppStrings.localized("analytics.rhythm.averageSegment"),
+                    value: DurationFormatter.compact(
+                        snapshot.rhythm.averageSegmentSeconds
+                    ),
+                    systemImage: "timer",
+                    tint: .blue,
+                    accessibilityIdentifier: "task.detail.analysis.average"
+                )
+                TaskDetailValueRow(
+                    title: AppStrings.localized("analytics.rhythm.longest"),
+                    value: DurationFormatter.compact(
+                        snapshot.rhythm.longestContinuousSeconds
+                    ),
+                    systemImage: "arrow.left.and.right",
+                    tint: .indigo,
+                    accessibilityIdentifier: "task.detail.analysis.longest"
+                )
             } else {
                 TaskDetailContributionBar(snapshot: snapshot)
                 TaskDetailValueRow(
                     title: AppStrings.localized("analytics.rhythm.averageSegment"),
                     value: DurationFormatter.compact(snapshot.rhythm.averageSegmentSeconds),
                     systemImage: "timer",
-                    tint: .blue
+                    tint: .blue,
+                    accessibilityIdentifier: "task.detail.analysis.average"
                 )
                 TaskDetailValueRow(
                     title: AppStrings.localized("analytics.rhythm.longest"),
                     value: DurationFormatter.compact(snapshot.rhythm.longestContinuousSeconds),
                     systemImage: "arrow.left.and.right",
-                    tint: .indigo
+                    tint: .indigo,
+                    accessibilityIdentifier: "task.detail.analysis.longest"
                 )
                 TaskDetailValueRow(
                     title: AppStrings.localized("analytics.quality.switches"),
                     value: "\(snapshot.quality.switchCount)",
                     systemImage: "arrow.triangle.swap",
-                    tint: .orange
+                    tint: .orange,
+                    accessibilityIdentifier: "task.detail.analysis.switches"
                 )
 
                 ForEach(snapshot.childBreakdown) { item in
@@ -43,18 +108,28 @@ struct TaskDetailAnalysisSection: View {
         } header: {
             HStack(spacing: 8) {
                 Text(AppStrings.localized("task.detail.analysis"))
+                    .accessibilityIdentifier("task.detail.analysis")
                 if isRefreshing {
                     Spacer()
                     ProgressView()
                         .controlSize(.small)
                         .accessibilityLabel(AppStrings.localized("analytics.loading"))
-                        .accessibilityIdentifier("task.detail.analyticsRefreshing")
+                        .accessibilityIdentifier(
+                            snapshot.source == .appleHealth
+                                ? "task.detail.appleHealth.refreshing"
+                                : "task.detail.analyticsRefreshing"
+                        )
                 }
             }
         } footer: {
-            Text(.app("task.detail.analysisSubtitle"))
+            Text(
+                .app(
+                    snapshot.source == .appleHealth
+                        ? "task.detail.appleHealth.analysisSubtitle"
+                        : "task.detail.analysisSubtitle"
+                )
+            )
         }
-        .accessibilityIdentifier("task.detail.analysis")
     }
 
     @ViewBuilder

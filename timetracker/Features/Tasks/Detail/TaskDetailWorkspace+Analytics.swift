@@ -1,13 +1,56 @@
 import Foundation
 import SwiftUI
 
+enum TaskDetailAnalyticsLoadState: Equatable {
+    case loading
+    case content
+    case empty
+    case unavailable
+    case failed
+}
+
 extension TaskDetailWorkspace {
     func workspace(for task: TaskNode) -> some View {
+        TaskDetailAnalyticsWorkspace(
+            store: store,
+            task: task,
+            session: session,
+            autosaveController: autosaveController,
+            focusedTextField: $focusedTextField,
+            focusedChecklistDraftID: $focusedChecklistDraftID
+        )
+    }
+}
+
+private struct TaskDetailAnalyticsWorkspace: View {
+    @Environment(\.scenePhase) private var scenePhase
+
+    let store: TimeTrackerStore
+    let task: TaskNode
+    let session: TaskEditorSession
+    let autosaveController: TaskDetailAutosaveController
+    let focusedTextField: FocusState<TaskEditorTextField?>.Binding
+    let focusedChecklistDraftID: FocusState<UUID?>.Binding
+
+    @State private var range: AnalyticsRange = .week
+    @State private var liveNow = Date()
+    @State private var snapshot: TaskAnalyticsSnapshot?
+    @State private var loadedRequest: TaskAnalyticsSnapshotRequest?
+    @State private var loadState: TaskDetailAnalyticsLoadState = .loading
+    @State private var retryID = UUID()
+    @State private var authorizationRetryID: UUID?
+    @State private var activeLoadID: UUID?
+
+    var body: some View {
         let evaluationDate = liveNow
         let request = store.taskAnalyticsSnapshotRequest(
             for: task,
             range: range,
             now: evaluationDate
+        )
+        let loadRequest = TaskDetailAnalyticsLoadRequest(
+            request: request,
+            retryID: retryID
         )
         let refreshPlan = scenePhase == .active
             ? AnalyticsRefreshPlan.next(
@@ -19,44 +62,65 @@ extension TaskDetailWorkspace {
         let canKeepDisplayingSnapshot = loadedRequest.map {
             $0.canRemainVisible(whileLoading: request)
         } ?? false
+        let visibleSnapshot = loadedRequest == request || canKeepDisplayingSnapshot
+            ? snapshot
+            : nil
 
-        return TaskDetailList(
+        TaskDetailList(
             store: store,
             task: task,
             session: session,
             autosaveController: autosaveController,
-            focusedTextField: $focusedTextField,
-            focusedChecklistDraftID: $focusedChecklistDraftID,
-            snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
-            range: rangeSelection(for: task),
-            isRefreshing: canKeepDisplayingSnapshot && loadedRequest != request
+            focusedTextField: focusedTextField,
+            focusedChecklistDraftID: focusedChecklistDraftID,
+            snapshot: visibleSnapshot,
+            analyticsState: loadState,
+            isAppleHealthTask: isAppleHealthTask,
+            range: rangeSelection,
+            isRefreshing: loadState == .loading && visibleSnapshot != nil,
+            retryAnalytics: retry
         )
-        .task(id: request) {
-            guard loadedRequest != request || snapshot == nil else { return }
-            snapshot = store.taskAnalyticsSnapshot(
+        .task(id: loadRequest) {
+            await loadSnapshot(
                 for: request,
-                now: evaluationDate
+                loadRequest: loadRequest,
+                evaluationDate: evaluationDate
             )
-            loadedRequest = request
         }
         .task(id: refreshPlan) {
             await waitForRefresh(refreshPlan)
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                recordUITestAppleHealthBackgroundTransition()
+            }
+            guard phase == .active else { return }
+            liveNow = Date()
+            refreshAfterSceneActivation()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            liveNow = Date()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
+            liveNow = Date()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            liveNow = Date()
+        }
     }
 
-    private func rangeSelection(
-        for task: TaskNode
-    ) -> Binding<AnalyticsRange> {
+    private var isAppleHealthTask: Bool {
+        AppleHealthTaskCatalog.taskRole(for: task.id) != nil
+    }
+
+    private var rangeSelection: Binding<AnalyticsRange> {
         Binding(
             get: { range },
-            set: { selectRange($0, for: task) }
+            set: selectRange
         )
     }
 
-    func selectRange(
-        _ selectedRange: AnalyticsRange,
-        for task: TaskNode
-    ) {
+    private func selectRange(_ selectedRange: AnalyticsRange) {
         guard selectedRange != range else { return }
         let evaluationDate = Date()
         let request = store.taskAnalyticsSnapshotRequest(
@@ -64,25 +128,135 @@ extension TaskDetailWorkspace {
             range: selectedRange,
             now: evaluationDate
         )
-        guard let resolvedSnapshot = store.taskAnalyticsSnapshot(
-            for: request,
-            now: evaluationDate
-        ) else {
-            snapshot = nil
-            loadedRequest = nil
-            range = selectedRange
-            return
-        }
 
-        // Publish matching evidence before changing the Picker selection so the
-        // List never passes through a structurally different loading state.
-        snapshot = resolvedSnapshot
-        loadedRequest = request
+        if isAppleHealthTask == false,
+           let resolvedSnapshot = store.taskAnalyticsSnapshot(
+               for: request,
+               now: evaluationDate
+           ) {
+            // Keep the existing tracked-task transition atomic. Apple Health
+            // evidence stays on the cancellable asynchronous path below.
+            snapshot = resolvedSnapshot
+            loadedRequest = request
+            loadState = .content
+        }
         range = selectedRange
         liveNow = evaluationDate
     }
 
-    func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {
+    private func retry() {
+        #if DEBUG && os(iOS)
+        (store.appleHealthDataReader as? UITestAppleHealthDataReader)?
+            .resolveExplicitRetryGate()
+        #endif
+        let newRetryID = UUID()
+        authorizationRetryID = newRetryID
+        retryID = newRetryID
+    }
+
+    private func refreshAfterSceneActivation() {
+        guard isAppleHealthTask, loadedRequest != nil else { return }
+        // Returning from Settings or Health can change readable evidence even
+        // when the selected day/week/month request identity is unchanged.
+        // Refresh without presenting the authorization sheet automatically.
+        #if DEBUG && os(iOS)
+        (store.appleHealthDataReader as? UITestAppleHealthDataReader)?
+            .resolveSceneReactivationGate()
+        #endif
+        authorizationRetryID = nil
+        retryID = UUID()
+    }
+
+    private func recordUITestAppleHealthBackgroundTransition() {
+        #if DEBUG && os(iOS)
+        (store.appleHealthDataReader as? UITestAppleHealthDataReader)?
+            .recordBackgroundTransition()
+        #endif
+    }
+
+    @MainActor
+    private func loadSnapshot(
+        for request: TaskAnalyticsSnapshotRequest,
+        loadRequest: TaskDetailAnalyticsLoadRequest,
+        evaluationDate: Date
+    ) async {
+        let loadID = UUID()
+        activeLoadID = loadID
+
+        let canKeepDisplayingSnapshot = loadedRequest.map {
+            $0.canRemainVisible(whileLoading: request)
+        } ?? false
+        if canKeepDisplayingSnapshot == false, loadedRequest != request {
+            snapshot = nil
+        }
+        loadState = .loading
+
+        let allowsAuthorizationRequest = loadedRequest == nil
+            || authorizationRetryID == loadRequest.retryID
+        if authorizationRetryID == loadRequest.retryID {
+            authorizationRetryID = nil
+        }
+
+        do {
+            let resolvedSnapshot = try await store.loadTaskAnalyticsSnapshot(
+                for: request,
+                now: evaluationDate,
+                calendar: .current,
+                allowsAuthorizationRequest: allowsAuthorizationRequest
+            )
+            guard Task.isCancelled == false,
+                  activeLoadID == loadID,
+                  currentLoadRequest == loadRequest else {
+                return
+            }
+
+            loadedRequest = request
+            snapshot = resolvedSnapshot
+            guard let resolvedSnapshot else {
+                loadState = .failed
+                return
+            }
+            loadState = resolvedSnapshot.source == .appleHealth
+                && resolvedSnapshot.overview.grossSeconds == 0
+                && resolvedSnapshot.recentRecords.isEmpty
+                ? .empty
+                : .content
+        } catch is CancellationError {
+            return
+        } catch let error as AppleHealthReadError where error == .unavailable {
+            guard Task.isCancelled == false,
+                  activeLoadID == loadID,
+                  currentLoadRequest == loadRequest else {
+                return
+            }
+            loadedRequest = request
+            snapshot = canKeepDisplayingSnapshot ? snapshot : nil
+            loadState = .unavailable
+        } catch {
+            guard Task.isCancelled == false,
+                  activeLoadID == loadID,
+                  currentLoadRequest == loadRequest else {
+                return
+            }
+            loadedRequest = request
+            snapshot = canKeepDisplayingSnapshot ? snapshot : nil
+            loadState = .failed
+        }
+    }
+
+    private var currentLoadRequest: TaskDetailAnalyticsLoadRequest {
+        TaskDetailAnalyticsLoadRequest(
+            request: store.taskAnalyticsSnapshotRequest(
+                for: task,
+                range: range,
+                now: liveNow
+            ),
+            retryID: retryID
+        )
+    }
+
+    @MainActor
+    private func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {
         guard let plan else { return }
         let delay = max(0, plan.deadline.timeIntervalSinceNow)
         do {
@@ -93,4 +267,9 @@ extension TaskDetailWorkspace {
         guard Task.isCancelled == false else { return }
         liveNow = Date()
     }
+}
+
+private struct TaskDetailAnalyticsLoadRequest: Hashable {
+    let request: TaskAnalyticsSnapshotRequest
+    let retryID: UUID
 }

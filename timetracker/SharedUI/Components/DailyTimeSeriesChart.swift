@@ -6,6 +6,21 @@ enum DailyTimeSeriesChartMode {
     case wallBarsAndGrossLine
 }
 
+nonisolated enum DailyTimeSeriesXAxisPolicy {
+    static func labelIndices(
+        pointCount: Int,
+        maximumLabelCount: Int
+    ) -> [Int] {
+        guard pointCount > 0, maximumLabelCount > 0 else { return [] }
+        let labelCount = min(pointCount, maximumLabelCount)
+        guard labelCount > 1 else { return [0] }
+
+        return (0..<labelCount).map { position in
+            position * (pointCount - 1) / (labelCount - 1)
+        }
+    }
+}
+
 struct DailyTimeSeriesChart: View {
     let points: [DailyAnalyticsPoint]
     let mode: DailyTimeSeriesChartMode
@@ -87,7 +102,14 @@ struct DailyTimeSeriesChart: View {
                         )
                     }
                 } else {
-                    AxisMarks()
+                    AxisMarks(values: comparisonXAxisDates) { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                Text(comparisonXAxisLabel(for: date))
+                            }
+                        }
+                    }
                 }
             }
             .chartYScale(domain: .automatic(includesZero: true))
@@ -115,9 +137,11 @@ struct DailyTimeSeriesChart: View {
                 BarMark(
                     x: .value(
                         AppStrings.localized("analytics.chart.day"),
-                        point.label
+                        point.date,
+                        unit: .day
                     ),
-                    y: .value(AppStrings.wallTime, point.wallMinutes)
+                    y: .value(AppStrings.wallTime, point.wallMinutes),
+                    width: .ratio(0.62)
                 )
                 .foregroundStyle(
                     by: .value(
@@ -133,7 +157,8 @@ struct DailyTimeSeriesChart: View {
                 LineMark(
                     x: .value(
                         AppStrings.localized("analytics.chart.day"),
-                        point.label
+                        point.date,
+                        unit: .day
                     ),
                     y: .value(AppStrings.grossTime, point.grossMinutes)
                 )
@@ -173,5 +198,19 @@ struct DailyTimeSeriesChart: View {
 
     private var trailingAxisClearance: CGFloat {
         horizontalSizeClass == .compact ? 8 : 48
+    }
+
+    private var comparisonXAxisDates: [Date] {
+        DailyTimeSeriesXAxisPolicy.labelIndices(
+            pointCount: points.count,
+            maximumLabelCount: horizontalSizeClass == .compact ? 5 : 8
+        )
+        .map { points[$0].date }
+    }
+
+    private func comparisonXAxisLabel(for date: Date) -> String {
+        points.first(where: { $0.date == date })?.label ?? date.formatted(
+            .dateTime.day().locale(locale)
+        )
     }
 }

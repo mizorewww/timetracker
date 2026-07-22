@@ -5,6 +5,30 @@ nonisolated enum TimelineEntryID: Hashable, Sendable {
     case appleHealthWorkout(UUID)
     case appleHealthSleep(UUID)
 
+    var namespace: String {
+        switch self {
+        case .trackedSegment:
+            "trackedSegment"
+        case .appleHealthWorkout:
+            "appleHealthWorkout"
+        case .appleHealthSleep:
+            "appleHealthSleep"
+        }
+    }
+
+    var uuid: UUID {
+        switch self {
+        case let .trackedSegment(id),
+             let .appleHealthWorkout(id),
+             let .appleHealthSleep(id):
+            id
+        }
+    }
+
+    var namespacedKey: String {
+        "\(namespace).\(uuid.uuidString)"
+    }
+
     var stableSortKey: String {
         switch self {
         case let .trackedSegment(id):

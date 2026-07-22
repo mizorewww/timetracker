@@ -652,6 +652,98 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func appleHealthTaskDetailUsesCancellableEvidenceStatesAndStableHistoryTargets() throws {
+        let detailSource = try taskDetailFeatureSource()
+        let workspaceSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailWorkspace+Analytics.swift"
+        )
+        let overviewSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailOverviewViews.swift"
+        )
+        let analysisSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailAnalyticsViews.swift"
+        )
+        let recordsSource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailRecordViews.swift"
+        )
+        let englishStrings = try sourceText(
+            "timetracker/en.lproj/Localizable.strings"
+        )
+        let simplifiedStrings = try sourceText(
+            "timetracker/zh-Hans.lproj/Localizable.strings"
+        )
+        let traditionalStrings = try sourceText(
+            "timetracker/zh-Hant.lproj/Localizable.strings"
+        )
+
+        #expect(workspaceSource.contains("enum TaskDetailAnalyticsLoadState"))
+        #expect(workspaceSource.contains("case loading"))
+        #expect(workspaceSource.contains("case content"))
+        #expect(workspaceSource.contains("case empty"))
+        #expect(workspaceSource.contains("case unavailable"))
+        #expect(workspaceSource.contains("case failed"))
+        #expect(workspaceSource.contains(".task(id: loadRequest)"))
+        #expect(workspaceSource.contains("await store.loadTaskAnalyticsSnapshot("))
+        #expect(workspaceSource.contains("allowsAuthorizationRequest:"))
+        #expect(workspaceSource.contains("catch is CancellationError"))
+        #expect(workspaceSource.contains("activeLoadID == loadID"))
+        #expect(workspaceSource.contains("currentLoadRequest == loadRequest"))
+        #expect(workspaceSource.contains("authorizationRetryID"))
+        #expect(workspaceSource.contains("retryID = newRetryID"))
+        #expect(workspaceSource.contains("refreshAfterSceneActivation()"))
+        #expect(workspaceSource.contains("authorizationRetryID = nil"))
+        #expect(workspaceSource.contains("error.localizedDescription") == false)
+
+        for identifier in [
+            "task.detail.appleHealth.loading",
+            "task.detail.appleHealth.refreshing",
+            "task.detail.appleHealth.unavailable",
+            "task.detail.appleHealth.empty",
+            "task.detail.appleHealth.empty.message",
+            "task.detail.appleHealth.failed",
+            "task.detail.appleHealth.retry",
+            "task.detail.summary.gross",
+            "task.detail.summary.wall",
+            "task.detail.history.chart",
+            "task.detail.history.header"
+        ] {
+            #expect(detailSource.contains(identifier))
+        }
+        #expect(detailSource.contains("TaskDetailAppleHealthRetryButton"))
+        #expect(detailSource.contains("Button(action: action)"))
+        #expect(detailSource.contains(".frame(minHeight: 44)"))
+        #expect(overviewSource.contains("if snapshot.source == .tracked"))
+        #expect(analysisSource.contains("snapshot.source == .appleHealth"))
+        #expect(analysisSource.contains("DailyTimeSeriesChart("))
+        #expect(analysisSource.contains("mode: .wallBarsAndGrossLine"))
+        #expect(
+            analysisSource.contains(
+                ".accessibilityValue(snapshot.range.rawValue)"
+            )
+        )
+        #expect(
+            recordsSource.contains(
+                "task.detail.history.\\(record.id.namespacedKey)"
+            )
+        )
+        #expect(recordsSource.contains("record.displayDurationSeconds("))
+
+        for strings in [englishStrings, simplifiedStrings, traditionalStrings] {
+            #expect(strings.contains("\"task.detail.appleHealth.loading\""))
+            #expect(strings.contains("\"task.detail.appleHealth.empty.message\""))
+            #expect(strings.contains("\"task.detail.appleHealth.unavailable.message\""))
+            #expect(strings.contains("\"task.detail.appleHealth.failed.message\""))
+            #expect(strings.contains("\"task.detail.appleHealth.history.title\""))
+            #expect(strings.contains("\"task.detail.appleHealth.history.subtitle\""))
+        }
+        #expect(
+            englishStrings.contains(
+                "There may be no records in this range, or read access may not be available."
+            )
+        )
+    }
+
+    @Test
     func taskWorkspaceOmitsWorkflowStatusFromIdentityAndEditor() throws {
         let detailSource = try taskDetailFeatureSource()
         let editorSource = try taskEditorFeatureSource()

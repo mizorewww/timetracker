@@ -49,7 +49,16 @@ nonisolated enum AppleHealthTaskCatalog {
     static let allRoles: Set<AppleHealthTaskRole> = Set(
         AppleHealthWorkoutKind.allCases.map(AppleHealthTaskRole.workout)
     ).union([.sleep])
-    static let syncOnlyTaskIDs = Set(allRoles.map { taskDefinition(for: $0).id })
+    private static let taskRoleByID = Dictionary(
+        uniqueKeysWithValues: allRoles.map { role in
+            (taskDefinition(for: role).id, role)
+        }
+    )
+    static let syncOnlyTaskIDs = Set(taskRoleByID.keys)
+
+    static func taskRole(for taskID: UUID) -> AppleHealthTaskRole? {
+        taskRoleByID[taskID]
+    }
 
     static func plan(
         for roles: Set<AppleHealthTaskRole>

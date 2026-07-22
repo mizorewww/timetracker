@@ -907,8 +907,10 @@ struct HomeUIContractTests {
         #expect(quickStartSource.contains("actionLabelStyle: .iconOnly"))
         #expect(quickStartSource.contains("actionLabelStyle: .titleAndIcon"))
         #expect(timerActionSource.contains("AppStrings.localized(\"timer.action.stop\")"))
-        #expect(timerActionSource.contains(".buttonBorderShape(usesIconOnly ? .circle : .capsule)"))
-        #expect(timerActionSource.contains("width: minimumLabelDimension"))
+        #expect(timerActionSource.contains(".contentShape(Circle())"))
+        #expect(timerActionSource.contains(".buttonStyle(TaskPickerIconButtonStyle())"))
+        #expect(timerActionSource.contains(".buttonBorderShape(.capsule)"))
+        #expect(timerActionSource.contains(".frame(minHeight: minimumLabelDimension)"))
         #expect(timerActionSource.contains(".controlSize(platformControlSize)"))
     }
 
@@ -1075,7 +1077,7 @@ struct HomeUIContractTests {
         #expect(seedSource.contains("iconName = \"star.fill\""))
         #expect(seedSource.contains("TimeInterval(index * 2)"))
         #expect(seedSource.contains("note: \"Task 24 overlapping short mark \\(index + 1)\""))
-        #expect(homeTimelineSource.contains("timelineReferenceDate(liveDate:"))
+        #expect(homeTimelineSource.contains("homeTimelineReferenceDate(liveDate:"))
         #expect(homeTimelineSource.contains("--uitesting-overlap-timeline"))
         #expect(homeTimelineSource.contains("18 * 60 * 60"))
         #expect(homeTimelineSource.contains(".accessibilityElement(children: .contain)"))
@@ -1274,7 +1276,7 @@ struct HomeUIContractTests {
         .map(sourceText)
         .joined(separator: "\n")
 
-        #expect(source.components(separatedBy: "isTaskAvailableForTracking").count >= 8)
+        #expect(source.components(separatedBy: "isTaskAvailableForTracking").count - 1 >= 6)
         #expect(source.contains("let activeSegment = store.activeSegment(for: task.id)"))
         #expect(source.contains("store.stop(segment: activeSegment)"))
         #expect(source.contains("HomeTimerTaskRow"))

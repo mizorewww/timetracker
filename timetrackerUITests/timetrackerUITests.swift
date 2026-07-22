@@ -4157,6 +4157,349 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAppleHealthHistoryLoadsAcrossRangesAndIPadOrientations()
+        throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            route: "task-detail",
+            seedsDemoData: true,
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Running",
+            additionalLaunchArguments: [
+                "--uitesting-apple-health-history",
+                "-AppleHealthTimelineEnabled",
+                "NO",
+            ]
+        )
+
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        ensureTaskDetailIsReady(named: "Running", in: app)
+        let unavailable = app.descendants(matching: .any)[
+            "task.detail.appleHealth.unavailable"
+        ].firstMatch
+        scrollUntilHittable(
+            unavailable,
+            direction: .up,
+            maximumScrolls: 16,
+            in: app
+        )
+        XCTAssertTrue(
+            unavailable.waitForExistence(timeout: 8) &&
+                unavailable.isHittable
+        )
+        #else
+        ensureTaskDetailIsReady(named: "Running", in: app)
+        assertNoAppleHealthAuthorizationSheet(in: app)
+
+        let syncOnlyNotice = app.descendants(matching: .any)[
+            "task.detail.trackingUnavailable"
+        ].firstMatch
+        XCTAssertTrue(
+            syncOnlyNotice.waitForExistence(timeout: 5),
+            "The Apple Health task must explain that it is sync-only."
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.detail.timer"].exists
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.detail.addTime"].exists
+        )
+
+        let loading = app.descendants(matching: .any)[
+            "task.detail.appleHealth.loading"
+        ].firstMatch
+        let failed = app.descendants(matching: .any)[
+            "task.detail.appleHealth.failed"
+        ].firstMatch
+        let weekChart = assertAppleHealthHistoryContent(in: app)
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            loading.exists == false && failed.exists == false
+        })
+
+        let rangePicker = taskDetailRangePicker(in: app)
+        scrollUntilHittable(
+            rangePicker,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            rangePicker.waitForExistence(timeout: 5) &&
+                rangePicker.isHittable
+        )
+        let week = rangePicker.buttons["Week"].firstMatch
+        XCTAssertTrue(
+            week.waitForExistence(timeout: 3) &&
+                week.isHittable && week.isSelected
+        )
+        scrollUntilHittable(
+            weekChart,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        scrollUntilFullyVisibleAboveSystemChrome(weekChart, in: app)
+        XCTAssertTrue(
+            isFullyVisibleAboveSystemChrome(weekChart, in: app)
+        )
+
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-task-detail-apple-health-history-week",
+            app: app
+        )
+
+        let pickerForMonth = taskDetailRangePicker(in: app)
+        scrollUntilHittable(
+            pickerForMonth,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            pickerForMonth.waitForExistence(timeout: 5) &&
+                pickerForMonth.isHittable
+        )
+        let month = pickerForMonth.buttons["Month"].firstMatch
+        XCTAssertTrue(
+            month.waitForExistence(timeout: 3) && month.isHittable
+        )
+        activate(month)
+        let monthChart = assertAppleHealthHistoryContent(
+            in: app,
+            expectedLoadedRange: "Month"
+        )
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            loading.exists == false && failed.exists == false
+        })
+        let refreshedPicker = taskDetailRangePicker(in: app)
+        scrollUntilHittable(
+            refreshedPicker,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            refreshedPicker.waitForExistence(timeout: 5) &&
+                refreshedPicker.isHittable
+        )
+        let refreshedMonth = refreshedPicker.buttons["Month"].firstMatch
+        XCTAssertTrue(
+            refreshedMonth.waitForExistence(timeout: 3) &&
+                refreshedMonth.isSelected
+        )
+        scrollUntilHittable(
+            monthChart,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        scrollUntilFullyVisibleAboveSystemChrome(monthChart, in: app)
+        XCTAssertTrue(
+            isFullyVisibleAboveSystemChrome(monthChart, in: app)
+        )
+        waitForScreenshotTransition()
+
+        if screenshotPrefix == "ipad" {
+            try capture(
+                "ipad-task-detail-apple-health-history-month-portrait",
+                app: app
+            )
+
+            XCUIDevice.shared.orientation = .landscapeLeft
+            XCTAssertTrue(waitUntil(timeout: 5) {
+                let frame = app.windows.firstMatch.frame
+                return frame.width > frame.height
+            })
+            let landscapeChart = app.descendants(matching: .any)[
+                "task.detail.history.chart"
+            ].firstMatch
+            scrollUntilHittable(
+                landscapeChart,
+                direction: .up,
+                maximumScrolls: 20,
+                in: app
+            )
+            scrollUntilFullyVisibleAboveSystemChrome(
+                landscapeChart,
+                in: app
+            )
+            XCTAssertTrue(
+                landscapeChart.waitForExistence(timeout: 5) &&
+                    isFullyVisibleAboveSystemChrome(
+                        landscapeChart,
+                        in: app
+                    )
+            )
+            waitForScreenshotTransition()
+            try capture(
+                "ipad-task-detail-apple-health-history-month-landscape",
+                app: app
+            )
+        } else {
+            try capture(
+                "iphone-task-detail-apple-health-history-month",
+                app: app
+            )
+        }
+        #endif
+    }
+
+    @MainActor
+    func testAppleHealthHistoryFailureUsesNativeRetryThenShowsContent()
+        throws {
+        #if os(macOS)
+        throw XCTSkip("The injected Apple Health reader is iOS-only.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = launchApp(
+            route: "task-detail",
+            seedsDemoData: true,
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Running",
+            additionalLaunchArguments: [
+                "--uitesting-apple-health-history",
+                "--uitesting-apple-health-fail-once",
+                "-AppleHealthTimelineEnabled",
+                "NO",
+            ]
+        )
+        ensureTaskDetailIsReady(named: "Running", in: app)
+        assertNoAppleHealthAuthorizationSheet(in: app)
+
+        let failed = app.descendants(matching: .any)[
+            "task.detail.appleHealth.failed"
+        ].firstMatch
+        scrollUntilHittable(
+            failed,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            failed.waitForExistence(timeout: 8) && failed.isHittable
+        )
+
+        let retry = app.buttons[
+            "task.detail.appleHealth.retry"
+        ].firstMatch
+        scrollUntilHittable(
+            retry,
+            direction: .up,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            retry.waitForExistence(timeout: 5) &&
+                retry.isHittable && retry.isEnabled
+        )
+        activate(retry)
+
+        let loading = app.descendants(matching: .any)[
+            "task.detail.appleHealth.loading"
+        ].firstMatch
+        let chart = assertAppleHealthHistoryContent(in: app)
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            failed.exists == false && loading.exists == false
+        })
+        scrollUntilHittable(
+            chart,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)
+        XCTAssertTrue(isFullyVisibleAboveSystemChrome(chart, in: app))
+        waitForScreenshotTransition()
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-task-detail-apple-health-retry",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
+    func testAppleHealthHistoryRefreshesAfterSceneReactivation() throws {
+        #if os(macOS)
+        throw XCTSkip("The injected Apple Health reader is iOS-only.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = launchApp(
+            route: "task-detail",
+            seedsDemoData: true,
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Running",
+            additionalLaunchArguments: [
+                "--uitesting-apple-health-history",
+                "--uitesting-apple-health-empty-once",
+                "-AppleHealthTimelineEnabled",
+                "NO",
+            ]
+        )
+        ensureTaskDetailIsReady(named: "Running", in: app)
+        assertNoAppleHealthAuthorizationSheet(in: app)
+
+        let empty = app.descendants(matching: .any)[
+            "task.detail.appleHealth.empty"
+        ].firstMatch
+        scrollUntilHittable(
+            empty,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            empty.waitForExistence(timeout: 8) && empty.isHittable
+        )
+
+        let emptyMessage = app.descendants(matching: .any)[
+            "task.detail.appleHealth.empty.message"
+        ].firstMatch
+        XCTAssertTrue(emptyMessage.waitForExistence(timeout: 5))
+        XCTAssertFalse(emptyMessage.label.lowercased().contains("denied"))
+        XCTAssertFalse(
+            emptyMessage.label.lowercased().contains("permission denied")
+        )
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-task-detail-apple-health-empty",
+            app: app
+        )
+
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            switch app.state {
+            case .runningBackground, .runningBackgroundSuspended:
+                true
+            default:
+                false
+            }
+        })
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
+
+        let chart = assertAppleHealthHistoryContent(in: app)
+        XCTAssertTrue(empty.waitForNonExistence(timeout: 5))
+        scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)
+        XCTAssertTrue(isFullyVisibleAboveSystemChrome(chart, in: app))
+        waitForScreenshotTransition()
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-task-detail-apple-health-reactivated",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsTodayDistributionUsesSharedScale() throws {
         #if os(macOS)
         throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")
@@ -6223,6 +6566,112 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func taskDetailRangePicker(
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        app.segmentedControls
+            .containing(.button, identifier: "Week")
+            .firstMatch
+    }
+
+    @MainActor
+    @discardableResult
+    private func assertAppleHealthHistoryContent(
+        in app: XCUIApplication,
+        expectedLoadedRange: String = "Week"
+    ) -> XCUIElement {
+        let gross = app.descendants(matching: .any)[
+            "task.detail.summary.gross"
+        ].firstMatch
+        scrollUntilHittable(
+            gross,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            gross.waitForExistence(timeout: 8) && gross.isHittable
+        )
+        assertDurationIsNonZero(gross, name: "gross")
+
+        let wall = app.descendants(matching: .any)[
+            "task.detail.summary.wall"
+        ].firstMatch
+        scrollUntilHittable(
+            wall,
+            direction: .up,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            wall.waitForExistence(timeout: 5) && wall.isHittable
+        )
+        assertDurationIsNonZero(wall, name: "wall")
+
+        let chart = app.descendants(matching: .any)[
+            "task.detail.history.chart"
+        ].firstMatch
+        scrollUntilHittable(
+            chart,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            chart.waitForExistence(timeout: 8) && chart.isHittable
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                let loadedChart = app.descendants(matching: .any)[
+                    "task.detail.history.chart"
+                ].firstMatch
+                return loadedChart.exists &&
+                    (loadedChart.value as? String) == expectedLoadedRange
+            },
+            "The chart must represent the requested \(expectedLoadedRange) snapshot."
+        )
+
+        let fixedHealthRecord = app.descendants(matching: .any)[
+            "task.detail.history.appleHealthWorkout." +
+                "D0410000-0000-4000-8000-000000000001"
+        ].firstMatch
+        scrollUntilHittable(
+            fixedHealthRecord,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            fixedHealthRecord.waitForExistence(timeout: 8) &&
+                fixedHealthRecord.isHittable
+        )
+
+        scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)
+        XCTAssertTrue(isFullyVisibleAboveSystemChrome(chart, in: app))
+        return chart
+    }
+
+    @MainActor
+    private func assertDurationIsNonZero(
+        _ element: XCUIElement,
+        name: String
+    ) {
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                let presentation = [
+                    element.label,
+                    element.value.map { String(describing: $0) } ?? "",
+                ].joined(separator: " ")
+                return presentation.range(
+                    of: "[1-9][0-9]*",
+                    options: .regularExpression
+                ) != nil
+            },
+            "Apple Health \(name) duration must be non-zero."
+        )
+    }
+
+    @MainActor
     private func launchApp(
         route: String = "today",
         contentSizeCategory: String? = nil,
@@ -6252,7 +6701,9 @@ final class timetrackerUITests: XCTestCase {
             seedsDemoData ? "NO" : "YES"
         ]
         app.launchArguments.append(contentsOf: additionalLaunchArguments)
-        if additionalLaunchArguments.contains("--uitesting-apple-health") {
+        if additionalLaunchArguments.contains(where: {
+            $0.hasPrefix("--uitesting-apple-health")
+        }) {
             app.launchEnvironment[
                 "TIMETRACKER_UI_TEST_APPLE_HEALTH"
             ] = "1"
@@ -6275,7 +6726,24 @@ final class timetrackerUITests: XCTestCase {
         }
         app.launch()
         app.activate()
+        if additionalLaunchArguments.contains(where: {
+            $0.hasPrefix("--uitesting-apple-health")
+        }) {
+            assertNoAppleHealthAuthorizationSheet(in: app)
+        }
         return app
+    }
+
+    @MainActor
+    private func assertNoAppleHealthAuthorizationSheet(
+        in app: XCUIApplication
+    ) {
+        let allow = app.buttons["UIA.Health.Allow.Button"].firstMatch
+        let deny = app.buttons["UIA.Health.DoNotAllow.Button"].firstMatch
+        XCTAssertFalse(
+            allow.waitForExistence(timeout: 1) || deny.exists,
+            "The deterministic Apple Health fixture must never present HealthKit authorization UI."
+        )
     }
 
     @MainActor
@@ -7554,9 +8022,13 @@ final class timetrackerUITests: XCTestCase {
             let unobscuredBottom = systemChromeTop(in: app)
             let frame = element.frame
 
-            if element.exists,
-               frame.minY < unobscuredBottom,
-               frame.maxY > unobscuredBottom - 8 {
+            if element.exists, frame.minY < app.frame.minY + 8 {
+                dragContentDown(
+                    by: app.frame.minY + 28 - frame.minY,
+                    in: app
+                )
+            } else if element.exists,
+                      frame.maxY > unobscuredBottom - 8 {
                 dragContentUp(
                     by: frame.maxY - unobscuredBottom + 20,
                     in: app
@@ -7646,6 +8118,16 @@ final class timetrackerUITests: XCTestCase {
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
         let end = app.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72 - normalizedDistance)
+        )
+        start.press(forDuration: 0.05, thenDragTo: end)
+    }
+
+    @MainActor
+    private func dragContentDown(by distance: CGFloat, in app: XCUIApplication) {
+        let normalizedDistance = min(max(distance / app.frame.height, 0.06), 0.25)
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.28))
+        let end = app.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.28 + normalizedDistance)
         )
         start.press(forDuration: 0.05, thenDragTo: end)
     }

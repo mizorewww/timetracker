@@ -4,33 +4,41 @@ struct TaskDetailOverviewSection: View {
     let snapshot: TaskAnalyticsSnapshot
 
     var body: some View {
-        Section(AppStrings.localized("analytics.summary.title")) {
+        Section {
             TaskDetailValueRow(
                 title: AppStrings.grossTime,
                 value: DurationFormatter.compact(snapshot.overview.grossSeconds),
                 systemImage: "square.stack.3d.up",
-                tint: AppColors.grossTime
+                tint: AppColors.grossTime,
+                accessibilityIdentifier: "task.detail.summary.gross"
             )
             TaskDetailValueRow(
                 title: AppStrings.wallTime,
                 value: DurationFormatter.compact(snapshot.overview.wallSeconds),
                 systemImage: "timeline.selection",
-                tint: AppColors.wallTime
+                tint: AppColors.wallTime,
+                accessibilityIdentifier: "task.detail.summary.wall"
             )
-            TaskDetailValueRow(
-                title: AppStrings.localized("task.detail.direct"),
-                value: DurationFormatter.compact(snapshot.directSeconds),
-                systemImage: "smallcircle.filled.circle",
-                tint: .indigo
-            )
-            TaskDetailValueRow(
-                title: AppStrings.localized("task.detail.children"),
-                value: DurationFormatter.compact(snapshot.descendantSeconds),
-                systemImage: "point.3.connected.trianglepath.dotted",
-                tint: .teal
-            )
+            if snapshot.source == .tracked {
+                TaskDetailValueRow(
+                    title: AppStrings.localized("task.detail.direct"),
+                    value: DurationFormatter.compact(snapshot.directSeconds),
+                    systemImage: "smallcircle.filled.circle",
+                    tint: .indigo,
+                    accessibilityIdentifier: "task.detail.summary.direct"
+                )
+                TaskDetailValueRow(
+                    title: AppStrings.localized("task.detail.children"),
+                    value: DurationFormatter.compact(snapshot.descendantSeconds),
+                    systemImage: "point.3.connected.trianglepath.dotted",
+                    tint: .teal,
+                    accessibilityIdentifier: "task.detail.summary.children"
+                )
+            }
+        } header: {
+            Text(AppStrings.localized("analytics.summary.title"))
+                .accessibilityIdentifier("task.detail.summary")
         }
-        .accessibilityIdentifier("task.detail.summary")
     }
 }
 
@@ -39,6 +47,7 @@ struct TaskDetailValueRow: View {
     let value: String
     let systemImage: String
     let tint: Color
+    let accessibilityIdentifier: String
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -68,6 +77,7 @@ struct TaskDetailValueRow: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 

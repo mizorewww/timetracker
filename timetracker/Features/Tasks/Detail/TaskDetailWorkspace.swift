@@ -1,17 +1,11 @@
-import Combine
 import Foundation
 import SwiftUI
 struct TaskDetailWorkspace: View {
-    @Environment(\.scenePhase) var scenePhase
     let store: TimeTrackerStore
     let taskID: UUID
     let returnDestination: TimeTrackerStore.DesktopDestination
     let dismissDetail: () -> Void
     let replaceDetail: (UUID) -> Void
-    @State var range: AnalyticsRange = .week
-    @State var liveNow = Date()
-    @State var snapshot: TaskAnalyticsSnapshot?
-    @State var loadedRequest: TaskAnalyticsSnapshotRequest?
     @State var session: TaskEditorSession
     @State var autosaveController: TaskDetailAutosaveController
     @State var navigationGuardRegistration = TaskDetailNavigationRegistrationToken()
@@ -128,19 +122,6 @@ struct TaskDetailWorkspace: View {
             await loadPersistedDraftRecovery()
         }
         .onAppear(perform: registerNavigationGuard)
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
-            liveNow = Date()
-        }
     }
 
 }

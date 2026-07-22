@@ -7,8 +7,8 @@
 
 - [x] 领取反馈，复现并审计彩色任务条无法包住图标、记录列表仍使用圆点的问题。
 - [x] 对照 Apple HIG、SwiftUI 布局语义与成熟图表实现，确定图标最小 footprint 和密集时间段降级策略。
-- [~] 实现共享跨平台布局与记录图标，并补充纯布局/契约测试。
-- [ ] 使用 owned iPhone/iPad simulator 与 XCTest 自动化 macOS window 做截图验收并清理资源。
+- [x] 实现共享跨平台布局与记录图标，并补充纯布局/契约测试。
+- [~] 使用 owned iPhone/iPad simulator 与 XCTest 自动化 macOS window 做截图验收并清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -28,8 +28,9 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：静态根因、现有组件/依赖与成熟方案审计。
-- [~] Checkpoint B：任务条最小 icon footprint、记录图标与自动化回归。
-- [ ] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
+- [x] Checkpoint B：任务条最小 icon footprint、记录图标与纯布局/契约回归。
+- [~] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
+- [ ] Checkpoint D：精确 Release 安装、状态标记与收口。
 
 ## Checkpoint A 静态证据
 
@@ -64,3 +65,13 @@
 ## 资源所有权
 
 - 当前未创建 simulator；任何 UI batch 开始前必须记录专属名称与 UDID，完成后 shutdown/delete。
+
+## Checkpoint B 实现与验证
+
+- `TimelineChartLayout` 以 `12pt` 图标 + 四边 `4pt` padding 推导统一 `20pt` 最小 footprint；水平/垂直的时间 extent 均使用该值。
+- compact vertical 的 10-lane 最小内容宽度为 `380pt`，视口不足时由 SwiftUI 原生水平 `ScrollView` 承载；`verticalLanes` 在该宽度下每 lane 至少 `20pt`、间距保持 `8pt`。
+- `TimelineChartBars` 明确约束实际 SF Symbol 为 `12×12pt`，外层 footprint 为 `20×20pt`；测试模式保留 bar 容器并暴露实际 icon 子元素 frame。
+- Timeline 三种正常/大字布局均复用 `TaskIcon(visual:size: 24)`，按钮 identifier 同时编码 sanitizer 后的 SF Symbol，原有两个 `Circle()` 已移除。
+- 精确回归通过：`AnalyticsTimelineTests` 全部 35 项以及本任务拥有的两项 `HomeUIContractTests`，合计 37 项；命令退出码 `0`、`** TEST SUCCEEDED **`。
+- 首次运行完整 `HomeUIContractTests` 时另有三项与本任务无关的既有契约失败（timer button 源码形状断言两处、tracking entrypoint 计数一处）；本任务拥有的旧 `.ignore` 断言已同步为 `.contain` 并在精确回归中通过，未擅自修改无关失败。
+- 本 checkpoint 未创建 simulator、未打开或手工移动窗口；无 owned UI 资源需要清理。

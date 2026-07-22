@@ -18,7 +18,19 @@ struct TimelineChart: View {
                     minimumHeight: compactHeight,
                     gapLabelCount: axisCompression.omittedGaps.count
                 ) {
-                    verticalTimeline
+                    GeometryReader { viewport in
+                        ScrollView(.horizontal) {
+                            verticalTimeline
+                                .frame(
+                                    width: max(
+                                        viewport.size.width,
+                                        verticalMinimumContentWidth
+                                    ),
+                                    height: viewport.size.height
+                                )
+                        }
+                        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                    }
                 }
             } else {
                 TimelineChartHorizontalSizingLayout(
@@ -52,6 +64,21 @@ struct TimelineChart: View {
         #else
         false
         #endif
+    }
+
+    private var verticalMinimumContentWidth: CGFloat {
+        let height = TimelineChartLayout.verticalTimelineHeight(
+            minimumHeight: compactHeight,
+            gapLabelCount: axisCompression.omittedGaps.count
+        )
+        let laneCount = TimelineChartLayout.verticalBars(
+            entries: laneEntries,
+            compression: axisCompression,
+            height: height
+        ).laneCount
+        return TimelineChartLayout.verticalMinimumContentWidth(
+            laneCount: laneCount
+        )
     }
 
 }

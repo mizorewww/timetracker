@@ -67,7 +67,10 @@ nonisolated struct TimelineChartVerticalGapLabelLayout: Equatable, Sendable {
 }
 
 nonisolated enum TimelineChartLayout {
-    static let horizontalMinimumBarExtent: CGFloat = 18
+    static let barIconExtent: CGFloat = 12
+    static let barIconPadding: CGFloat = 4
+    static let minimumBarFootprint = barIconExtent + 2 * barIconPadding
+    static let horizontalMinimumBarExtent = minimumBarFootprint
     static let horizontalMinimumBarSpacing: CGFloat = 6
     static let horizontalPreferredLaneExtent: CGFloat = 24
     static let horizontalPreferredLaneSpacing: CGFloat = 10
@@ -79,8 +82,10 @@ nonisolated enum TimelineChartLayout {
     static let horizontalGapLabelRowSpacing: CGFloat = 4
     static let verticalAxisLabelWidth: CGFloat = 96
     static let verticalTrailingInset: CGFloat = 12
-    static let verticalMinimumBarExtent: CGFloat = 20
+    static let verticalMinimumBarExtent = minimumBarFootprint
     static let verticalMinimumBarSpacing: CGFloat = 6
+    static let verticalMinimumLaneExtent = minimumBarFootprint
+    static let verticalPreferredLaneSpacing: CGFloat = 8
     static let verticalGapLabelHeight: CGFloat = 32
     static let verticalGapLabelMinimumSpacing: CGFloat = 4
     static let verticalGapLabelBoundaryInset: CGFloat = 18
@@ -116,8 +121,21 @@ nonisolated enum TimelineChartLayout {
             plotExtent: max(1, safeWidth - plotOrigin - trailingInset),
             laneCount: laneCount,
             preferredLaneExtent: 38,
-            preferredSpacing: 8
+            preferredSpacing: verticalPreferredLaneSpacing
         )
+    }
+
+    static func verticalMinimumContentWidth(
+        laneCount: Int,
+        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
+        trailingInset: CGFloat = verticalTrailingInset
+    ) -> CGFloat {
+        let count = max(1, laneCount)
+        let gapCount = max(0, count - 1)
+        return finiteNonnegative(axisLabelWidth) +
+            finiteNonnegative(trailingInset) +
+            CGFloat(count) * verticalMinimumLaneExtent +
+            CGFloat(gapCount) * verticalPreferredLaneSpacing
     }
 
     static func horizontalGapAnnotationHeight(rowCount: Int) -> CGFloat {

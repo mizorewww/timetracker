@@ -910,8 +910,9 @@ struct HomeUIContractTests {
         #expect(gridSource.contains("minimumScaleFactor(0.7)") == false)
         #expect(barsSource.contains("lanes.offset(for: placement.lane)"))
         #expect(homeSource.contains("TodayTimelineChart("))
-        #expect(barsSource.contains(".accessibilityElement(children: .ignore)"))
+        #expect(barsSource.contains(".accessibilityElement(children: .contain)"))
         #expect(barsSource.contains(".accessibilityLabel(entry.title)"))
+        #expect(barsSource.contains(".accessibilityLabel(\"\\(entry.title) icon\")"))
         #expect(analyticsSource.contains("TimelineChart("))
         #expect(analyticsSource.contains("horizontalTimeline") == false)
         #expect(analyticsSource.contains("verticalTimeline") == false)
@@ -974,6 +975,21 @@ struct HomeUIContractTests {
         #expect(uiTestSource.contains("ipad-home-overlap-timeline-landscape"))
         #expect(uiTestSource.contains("mac-home-overlap-timeline"))
         #expect(uiTestSource.contains("The Task 23 fixture is phone-only."))
+    }
+
+    @Test
+    func timelineRecordsUseTaskIconsInsteadOfColorDots() throws {
+        let source = try sourceText(
+            "timetracker/Features/Home/Rows/HomeTimelineRows.swift"
+        )
+
+        #expect(
+            source.components(
+                separatedBy: "TaskIcon(visual: taskVisual, size: 24)"
+            ).count - 1 == 3
+        )
+        #expect(source.contains("timeline.record.\\(taskVisual.symbolName)."))
+        #expect(source.contains("Circle()") == false)
     }
 
     @Test

@@ -569,12 +569,12 @@ struct AnalyticsTimelineTests {
             layout.placements.first { $0.id == .trackedSegment(thirdID) }
         )
 
-        #expect(layout.axisLength == 702)
+        #expect(layout.axisLength == 700)
         #expect(layout.laneCount == 2)
         #expect(first.lane == 0)
         #expect(second.lane == 1)
         #expect(third.lane == 0)
-        #expect(first.axisExtent == 18)
+        #expect(first.axisExtent == 20)
         #expect(second.axisOrigin - first.axisEnd < 6)
         #expect(third.axisOrigin - first.axisEnd > 6)
         #expect(
@@ -612,8 +612,8 @@ struct AnalyticsTimelineTests {
             width: 0
         )
 
-        #expect(layout.axisLength == 102)
-        #expect(placement.axisExtent == 18)
+        #expect(layout.axisLength == 100)
+        #expect(placement.axisExtent == 20)
         #expect(placement.axisEnd <= 120)
         #expect(placement.axisEnd > layout.axisLength)
         #expect(zero.axisLength == 0)
@@ -670,6 +670,42 @@ struct AnalyticsTimelineTests {
         #expect(startFrame.maxY <= axisLabelTop)
         #expect(endFrame.minY >= plotHeight)
         #expect(endFrame.maxY <= axisLabelTop)
+    }
+
+    @Test
+    func timelineBarsReserveIconAndPaddingAcrossBothAxes() {
+        let expectedFootprint =
+            TimelineChartLayout.barIconExtent +
+            2 * TimelineChartLayout.barIconPadding
+        let denseLaneCount = 10
+        let minimumWidth = TimelineChartLayout.verticalMinimumContentWidth(
+            laneCount: denseLaneCount
+        )
+        let denseLanes = TimelineChartLayout.verticalLanes(
+            width: minimumWidth,
+            laneCount: denseLaneCount
+        )
+        let horizontalLanes = TimelineChartLayout.horizontalLanes(
+            height: TimelineChartLayout.horizontalTimelineHeight(
+                laneCount: denseLaneCount,
+                gapLabelRowCount: 0
+            ),
+            laneCount: denseLaneCount,
+            gapLabelRowCount: 0
+        )
+
+        #expect(expectedFootprint == 20)
+        #expect(TimelineChartLayout.minimumBarFootprint == expectedFootprint)
+        #expect(TimelineChartLayout.horizontalMinimumBarExtent >= expectedFootprint)
+        #expect(TimelineChartLayout.verticalMinimumBarExtent >= expectedFootprint)
+        #expect(minimumWidth == 380)
+        #expect(denseLanes.laneExtent >= expectedFootprint)
+        #expect(denseLanes.laneSpacing == TimelineChartLayout.verticalPreferredLaneSpacing)
+        #expect(
+            denseLanes.origin + denseLanes.groupExtent <=
+                minimumWidth - TimelineChartLayout.verticalTrailingInset
+        )
+        #expect(horizontalLanes.laneExtent >= expectedFootprint)
     }
 
     @Test

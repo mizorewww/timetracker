@@ -10,18 +10,14 @@ extension TimelineChart {
             .fill(Color(hex: entry.colorHex) ?? .blue)
             .frame(width: placement.axisExtent, height: lanes.laneExtent)
             .overlay {
-                Image(systemName: entry.iconName)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(
-                        TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
-                    )
+                barIcon(for: entry)
             }
             .offset(
                 x: placement.axisOrigin,
                 y: lanes.offset(for: placement.lane)
             )
             .help("\(entry.title) \(shortRange(entry))")
-            .accessibilityElement(children: .ignore)
+            .accessibilityElement(children: .contain)
             .accessibilityLabel(entry.title)
             .accessibilityHidden(!exposesUITestingMarks)
     }
@@ -37,18 +33,34 @@ extension TimelineChart {
             .fill(Color(hex: entry.colorHex) ?? .blue)
             .frame(width: lanes.laneExtent, height: placement.axisExtent)
             .overlay(alignment: .top) {
-                Image(systemName: entry.iconName)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(
-                        TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
-                    )
-                    .padding(.top, 4)
+                barIcon(for: entry)
             }
             .offset(x: x, y: placement.axisOrigin)
             .help("\(entry.title) \(shortRange(entry))")
-            .accessibilityElement(children: .ignore)
+            .accessibilityElement(children: .contain)
             .accessibilityLabel(entry.title)
             .accessibilityHidden(!exposesUITestingMarks)
+    }
+
+    private func barIcon(
+        for entry: AnalyticsTimelineEntry
+    ) -> some View {
+        Image(systemName: entry.iconName)
+            .resizable()
+            .scaledToFit()
+            .frame(
+                width: TimelineChartLayout.barIconExtent,
+                height: TimelineChartLayout.barIconExtent
+            )
+            .accessibilityLabel("\(entry.title) icon")
+            .accessibilityHidden(!exposesUITestingMarks)
+            .frame(
+                width: TimelineChartLayout.minimumBarFootprint,
+                height: TimelineChartLayout.minimumBarFootprint
+            )
+            .foregroundStyle(
+                TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
+            )
     }
 
     private func shortRange(_ entry: AnalyticsTimelineEntry) -> String {

@@ -21,6 +21,14 @@ struct TimelineRow: View {
         }
     }
 
+    private var taskVisual: TaskVisualPresentation {
+        let task = store.task(for: segment.taskID)
+        return TaskVisualPresentation(
+            iconName: task?.iconName,
+            colorHex: task?.colorHex
+        )
+    }
+
     var body: some View {
         HStack(spacing: 4) {
             taskButton(at: Date())
@@ -86,30 +94,37 @@ struct TimelineRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(
+            "timeline.record.\(taskVisual.symbolName).\(segment.id.uuidString)"
+        )
         .accessibilityHint(AppStrings.localized("tasks.openDetail"))
     }
 
     private func accessibilityContent(display: TrackedTimeDisplaySnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(store.displayTitle(for: segment))
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .top, spacing: 10) {
+            TaskIcon(visual: taskVisual, size: 24)
 
-            Text(timeRangeText(display: display))
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(store.displayTitle(for: segment))
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
-                    tagBadge
-                    Spacer(minLength: 8)
-                    durationText
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    tagBadge
-                    durationText
+                Text(timeRangeText(display: display))
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        tagBadge
+                        Spacer(minLength: 8)
+                        durationText
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        tagBadge
+                        durationText
+                    }
                 }
             }
         }
@@ -162,9 +177,7 @@ struct TimelineRow: View {
 
     private func regularContent(display: TrackedTimeDisplaySnapshot) -> some View {
         HStack(spacing: 12) {
-            Circle()
-                .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
-                .frame(width: 9, height: 9)
+            TaskIcon(visual: taskVisual, size: 24)
 
             Text(timeRangeText(display: display))
                 .font(.subheadline.monospacedDigit())
@@ -184,25 +197,26 @@ struct TimelineRow: View {
     }
 
     private func compactContent(display: TrackedTimeDisplaySnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Circle()
-                    .fill(Color(hex: store.task(for: segment.taskID)?.colorHex) ?? .blue)
-                    .frame(width: 8, height: 8)
-                Text(timeRangeText(display: display))
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Spacer()
-                durationText
-            }
+        HStack(alignment: .center, spacing: 10) {
+            TaskIcon(visual: taskVisual, size: 24)
 
-            HStack(alignment: .center, spacing: 10) {
-                Text(store.displayTitle(for: segment))
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                Spacer(minLength: 8)
-                tagBadge
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(timeRangeText(display: display))
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Spacer()
+                    durationText
+                }
+
+                HStack(alignment: .center, spacing: 10) {
+                    Text(store.displayTitle(for: segment))
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    tagBadge
+                }
             }
         }
     }

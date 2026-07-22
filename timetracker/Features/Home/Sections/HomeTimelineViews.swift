@@ -128,10 +128,19 @@ struct TodayTimelineChart: View {
                     date: referenceDate,
                     now: referenceDate
                 ),
-                compactHeight: compactHeight
+                compactHeight: compactHeight,
+                exposesUITestingMarks: exposesUITestingMarks
             )
         }
-        .accessibilityIdentifier("home.timeline.graph")
+    }
+
+    private var exposesUITestingMarks: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("--uitesting-short-timeline") ||
+            CommandLine.arguments.contains("--uitesting-overlap-timeline")
+        #else
+        false
+        #endif
     }
 
     private func timelineReferenceDate(liveDate: Date) -> Date {

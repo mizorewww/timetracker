@@ -3625,15 +3625,24 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
 
         scroll(direction: .up, toward: timeline, in: app)
-        let chartMarks = app.images.matching(identifier: "home.timeline.graph")
+        let chartMarks = app.otherElements.matching(
+            NSPredicate(
+                format: "label IN %@",
+                [
+                    "Timeline Short Blue",
+                    "Timeline Short Orange",
+                    "Timeline Terminal Green"
+                ]
+            )
+        )
         let blue = chartMarks.matching(
-            NSPredicate(format: "label == %@", "Flash")
+            NSPredicate(format: "label == %@", "Timeline Short Blue")
         ).firstMatch
         let orange = chartMarks.matching(
-            NSPredicate(format: "label == %@", "Flame")
+            NSPredicate(format: "label == %@", "Timeline Short Orange")
         ).firstMatch
         let terminal = chartMarks.matching(
-            NSPredicate(format: "label == %@", "Down")
+            NSPredicate(format: "label == %@", "Timeline Terminal Green")
         ).firstMatch
         XCTAssertTrue(blue.waitForExistence(timeout: 5))
         XCTAssertTrue(orange.waitForExistence(timeout: 5))
@@ -3676,7 +3685,6 @@ final class timetrackerUITests: XCTestCase {
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
         scrollTodayUntilHittable(timeline, in: app)
         XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
-        scroll(direction: .up, toward: timeline, in: app)
 
         #if os(macOS)
         XCTAssertTrue(
@@ -3690,9 +3698,7 @@ final class timetrackerUITests: XCTestCase {
         waitForScreenshotTransition()
         try capture("mac-home-overlap-timeline", app: app)
         #else
-        let usesIPadShell = app.descendants(matching: .any)[
-            "ipad.splitNavigation"
-        ].waitForExistence(timeout: 2)
+        let usesIPadShell = platformScreenshotPrefix(in: app) == "ipad"
         try assertOverlappingTimelineMarks(
             in: app,
             usesHorizontalTimeAxis: usesIPadShell
@@ -3715,11 +3721,11 @@ final class timetrackerUITests: XCTestCase {
                 landscapeTimeline.waitForExistence(timeout: 5) &&
                     landscapeTimeline.isHittable
             )
-            scroll(direction: .up, toward: landscapeTimeline, in: app)
             try assertOverlappingTimelineMarks(
                 in: app,
                 usesHorizontalTimeAxis: true
             )
+            scroll(direction: .up, toward: landscapeTimeline, in: app)
             waitForScreenshotTransition()
             try capture("ipad-home-overlap-timeline-landscape", app: app)
         } else {
@@ -5778,7 +5784,11 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication,
         usesHorizontalTimeAxis: Bool
     ) throws {
-        let query = app.images.matching(identifier: "home.timeline.graph")
+        let expectedTitles = ["Timeline Overlap Context"] +
+            (1...10).map { String(format: "Timeline Burst %02d", $0) }
+        let query = app.otherElements.matching(
+            NSPredicate(format: "label IN %@", expectedTitles)
+        )
         XCTAssertTrue(
             waitUntil(timeout: 5) { query.count >= 11 },
             "The isolated fixture must render one context mark and ten burst marks."

@@ -51,4 +51,7 @@
 
 ## 资源所有权
 
-- 尚未创建 Task 24 simulator。Checkpoint B1/B2 只运行 macOS unit/contract test，相关测试宿主和临时构建产物均已释放。
+- Checkpoint B1/B2 只运行 macOS unit/contract test，相关测试宿主和临时构建产物均已释放。
+- [x] owned iPhone batch：`Task24-iPhone17Pro-20260722`，UDID `789C9A9A-74C3-44C6-A739-C6BCFD1E4FA7`，iPhone 17 Pro / iOS 27.0。唯一 Task 24 UI 用例 1/1 通过；原始 XCTest attachment 显示 11 个 mark、10 个短任务在 Y 时间重叠时沿 X 清晰分轨，`2 hr skipped` 位于独立横向标注线上且不与任务相交。app/runner 已由 XCTest 终止，随后 shutdown/delete owned UDID；`build/Task24UIPhone`、xcresult 与导出截图已删除，确认没有该 UDID、Booted device 或相关进程残留。
+- [x] owned iPad batch：`Task24-iPadPro11-20260722`，UDID `21206DEE-45A6-4936-9223-9FFFCDCC8EFC`，iPad Pro 11-inch (M5, 16GB) / iOS 27.0。同一 Task 24 UI 用例最终 1/1 通过；portrait 与 landscape 均自动读取 11 个实际 bar，并证明 10 个相互时间重叠的短任务占据 10 条独立 Y 轨道。原始 XCTest 截图分别完整展示 plot 与滚动后的 annotation band，`2 hr skipped` 在两种方向下都没有进入任务区域。首轮失败仅由多余滚动把 chart accessibility 容器移出树、以及父级 `home.timeline` 覆盖子 identifier 引起；测试改为先断言后滚动，并使用仅在两项专用 Debug fixture 开启的 bar 语义标签，Release 继续隐藏装饰图。XCTest 已终止 app/runner；随后 shutdown/delete owned UDID，删除 `build/Task24UIIPad`、6 份 retry xcresult、失败录像/层级与最终截图，确认没有该 UDID、Booted device 或相关进程残留。
+- [x] 观测口相关 3 项精确 Timeline contract 在签名 macOS 测试中通过。额外尝试的完整 `HomeUIContractTests` 仍报告既有 `quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions` 与 `trackingEntrypointsShareAvailabilityAndRunningStateSemantics` 失败；它们不读取本 checkpoint 修改的 Timeline 文件，未伪报为通过。临时 `build/Task24UIHooks`、测试宿主与相关进程已清理。

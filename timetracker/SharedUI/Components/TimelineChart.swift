@@ -8,6 +8,7 @@ import SwiftUI
 struct TimelineChart: View {
     let timeline: AnalyticsTimelineSnapshot
     var compactHeight: CGFloat = 360
+    var exposesUITestingMarks = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
@@ -24,7 +25,7 @@ struct TimelineChart: View {
                 }
             }
         }
-        .accessibilityHidden(true)
+        .accessibilityHidden(!exposesUITestingMarks)
     }
 
     var displayInterval: DateInterval {

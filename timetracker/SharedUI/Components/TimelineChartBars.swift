@@ -21,6 +21,9 @@ extension TimelineChart {
                 y: lanes.offset(for: placement.lane)
             )
             .help("\(entry.title) \(shortRange(entry))")
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(entry.title)
+            .accessibilityHidden(!exposesUITestingMarks)
     }
 
     func verticalBar(
@@ -43,6 +46,9 @@ extension TimelineChart {
             }
             .offset(x: x, y: placement.axisOrigin)
             .help("\(entry.title) \(shortRange(entry))")
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(entry.title)
+            .accessibilityHidden(!exposesUITestingMarks)
     }
 
     private func shortRange(_ entry: AnalyticsTimelineEntry) -> String {

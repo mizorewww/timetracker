@@ -1,1 +1,0 @@
-../../tasks/26-timeline-bar-icon-footprint.md

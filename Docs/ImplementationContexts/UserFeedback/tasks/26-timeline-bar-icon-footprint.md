@@ -1,7 +1,7 @@
 # 26：Timeline 任务条图标 footprint 与记录图标实现记忆
 
 > 本文件只用于主代理与子代理的实现、验证和编排记忆，不是任务来源。唯一范围与状态必须重新读取
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 子条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 子条目。
 
 ## 当前阶段
 
@@ -9,7 +9,7 @@
 - [x] 对照 Apple HIG、SwiftUI 布局语义与成熟图表实现，确定图标最小 footprint 和密集时间段降级策略。
 - [x] 实现共享跨平台布局与记录图标，并补充纯布局/契约测试。
 - [x] 使用 owned iPhone/iPad simulator 与 XCTest 自动化 macOS window 做截图验收并清理资源。
-- [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,7 +30,7 @@
 - [x] Checkpoint A：静态根因、现有组件/依赖与成熟方案审计。
 - [x] Checkpoint B：任务条最小 icon footprint、记录图标与纯布局/契约回归。
 - [x] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
-- [ ] Checkpoint D：精确 Release 安装、状态标记与收口。
+- [x] Checkpoint D：精确 Release 安装、状态标记与收口。
 
 ## Checkpoint A 静态证据
 
@@ -89,3 +89,13 @@
 - Checkpoint C 两项源码契约精确执行并通过，`2 passed / 0 failed / 0 skipped`；一次漏写 Swift Testing 方法名 `()` 的选择器空跑未计入验证，已用正确标识重跑。
 - 三平台截图均显示彩色条至少保留 `20pt` 图标 footprint；记录行中 `rectangle.3.group`、`star.fill`、`bolt.fill` 为真实任务 SF Symbol。
 - 已 terminate app（两台设备均确认当时无残留实例）、shutdown 并删除 owned iPhone `A76C44CB-C7D6-424F-A1AB-E8FB27AE842E` 与 owned iPad `3D78D87A-A727-4E51-867E-AD6296441B9D`；复核无 `Task26`/Booted device、owned `xcodebuild`/`xctest`/UI runner/App/扩展进程，也没有本批 Simulator 或 Problem Reporter UI 残留。
+
+## Checkpoint D Release 与收口
+
+- 精确命令 `CONFIGURATION=Release scripts/build_install_all.sh` 退出码 `0`；保留付费开发团队 `LT98S43NKA`、自动 provisioning 更新与正式 code signing，未使用任何禁用签名参数。
+- iOS/iPadOS Release `BUILD SUCCEEDED`，主 App、Widget、Live Activity 与嵌入 Watch companion 均通过 embedded binary/codesign validation；脚本成功安装到物理 `iPad Pro M4` 与 `iPhone Air`，未启动、未操作、未截图。
+- `devicectl device info apps` 只读核验两台设备均安装 `me.mezorewww.timetracker`，版本 `1.1.52 (107)`。
+- macOS universal Release `BUILD SUCCEEDED` 并安装到 `/Applications/timetracker.app`；只读核验 bundle ID `me.mezorewww.timetracker`、版本 `1.1.52 (107)`、`TeamIdentifier=LT98S43NKA`，`codesign --verify --deep --strict` 通过。
+- 当前没有可见物理 Apple Watch，故脚本无法验证实体 Watch profile 覆盖；嵌入 companion 本身签名有效，并将由配对 iPhone 的 Automatic App Install 安装。
+- 已删除 `build/Install`，复核无 owned build/test/App 进程、无 Booted/Task26 simulator、无本批 Simulator/Problem Reporter UI；根目录 `README.md` 仍不存在。
+- 本任务没有新增第三方依赖；继续复用 SwiftUI、SF Symbols、XCTest/XCUITest、现有 `TaskIcon` 与 Apple `swift-collections` lane allocator。

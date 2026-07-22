@@ -55,7 +55,7 @@ struct TimelineSection: View {
     let openTask: (UUID) -> Void
 
     var body: some View {
-        let now = Date()
+        let now = homeTimelineReferenceDate(liveDate: Date())
         let timeline = store.timelineSnapshot(
             segments: segments,
             date: now,
@@ -122,7 +122,7 @@ struct TodayTimelineChart: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            let referenceDate = timelineReferenceDate(liveDate: context.date)
+            let referenceDate = homeTimelineReferenceDate(liveDate: context.date)
             TimelineChart(
                 timeline: store.timelineSnapshot(
                     segments: segments,
@@ -144,19 +144,25 @@ struct TodayTimelineChart: View {
         false
         #endif
     }
+}
 
-    private func timelineReferenceDate(liveDate: Date) -> Date {
-        #if DEBUG
-        let usesFixedReferenceDate =
-            CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
-            CommandLine.arguments.contains("--uitesting-gap-label-collision")
-        guard usesFixedReferenceDate else {
-            return liveDate
-        }
-        return Calendar.current.startOfDay(for: liveDate)
-            .addingTimeInterval(18 * 60 * 60)
-        #else
+var homeTimelineUsesFixedUITestReferenceDate: Bool {
+    #if DEBUG
+    CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
+        CommandLine.arguments.contains("--uitesting-gap-label-collision")
+    #else
+    false
+    #endif
+}
+
+func homeTimelineReferenceDate(liveDate: Date) -> Date {
+    #if DEBUG
+    guard homeTimelineUsesFixedUITestReferenceDate else {
         return liveDate
-        #endif
     }
+    return Calendar.current.startOfDay(for: liveDate)
+        .addingTimeInterval(18 * 60 * 60)
+    #else
+    return liveDate
+    #endif
 }

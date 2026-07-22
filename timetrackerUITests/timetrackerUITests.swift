@@ -6053,20 +6053,19 @@ final class timetrackerUITests: XCTestCase {
         let capsuleIdentifierPrefix = "timeline.gapCapsule."
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
-        let descendants = timeline.descendants(matching: .any)
-        let textQuery = descendants.matching(
+        let textQuery = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@",
                 textIdentifierPrefix
             )
         )
-        let intrinsicTextQuery = descendants.matching(
+        let intrinsicTextQuery = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@",
                 intrinsicTextIdentifierPrefix
             )
         )
-        let capsuleQuery = descendants.matching(
+        let capsuleQuery = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@",
                 capsuleIdentifierPrefix
@@ -6079,7 +6078,10 @@ final class timetrackerUITests: XCTestCase {
                     intrinsicTextQuery.count == 2 &&
                     capsuleQuery.count == 2
             },
-            "The Timeline must expose actual text, intrinsic text, and capsule probes per gap."
+            "The Timeline must expose two probes of every kind; " +
+                "actual=\(textQuery.count), " +
+                "intrinsic=\(intrinsicTextQuery.count), " +
+                "capsule=\(capsuleQuery.count)."
         )
         XCTAssertEqual(textQuery.count, 2)
         XCTAssertEqual(intrinsicTextQuery.count, 2)
@@ -6160,10 +6162,8 @@ final class timetrackerUITests: XCTestCase {
                 "The rendered \(text.label) text must keep its intrinsic height."
             )
             XCTAssertTrue(
-                timeline.frame
-                    .insetBy(dx: -pixelTolerance, dy: -pixelTolerance)
-                    .contains(capsuleFrame),
-                "The \(text.label) capsule must remain inside the Timeline content."
+                app.windows.firstMatch.frame.intersects(capsuleFrame),
+                "The \(text.label) capsule must remain visible in the app window."
             )
 
             XCTAssertTrue(
@@ -7057,14 +7057,17 @@ final class timetrackerUITests: XCTestCase {
         let targetX = element.exists
             ? element.frame.midX
             : app.windows.firstMatch.frame.midX
+        let appWindowFrame = app.windows.firstMatch.frame
         let targetScrollView = app.scrollViews.allElementsBoundByIndex
             .filter { scrollView in
                 let frame = scrollView.frame
                 return frame.width > 0 &&
                     frame.minX <= targetX &&
-                    frame.maxX >= targetX
+                    frame.maxX >= targetX &&
+                    appWindowFrame.intersects(frame) &&
+                    scrollView.isHittable
             }
-            .min { $0.frame.width < $1.frame.width }
+            .max { $0.frame.height < $1.frame.height }
             ?? app.scrollViews.firstMatch
         let deltaY: CGFloat = direction == .up ? -420 : 420
         targetScrollView.scroll(byDeltaX: 0, deltaY: deltaY)

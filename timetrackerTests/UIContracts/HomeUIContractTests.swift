@@ -1028,6 +1028,12 @@ struct HomeUIContractTests {
         let homeTimelineSource = try sourceText(
             "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
         )
+        let phoneTimelineSource = try sourceText(
+            "timetracker/Features/Home/PhoneHomeSections.swift"
+        )
+        let homeReadModelsSource = try sourceText(
+            "timetracker/Features/Home/HomeReadModels.swift"
+        )
 
         #expect(seedSource.contains("--uitesting-gap-label-collision"))
         #expect(seedSource.contains("addGapLabelCollisionTimelineUITestFixture("))
@@ -1041,6 +1047,26 @@ struct HomeUIContractTests {
         #expect(seedSource.contains("duration: 130 * 60"))
         #expect(homeTimelineSource.contains("--uitesting-gap-label-collision"))
         #expect(
+            homeTimelineSource.contains(
+                "let now = homeTimelineReferenceDate(liveDate: Date())"
+            )
+        )
+        #expect(
+            phoneTimelineSource.contains(
+                "let now = homeTimelineReferenceDate(liveDate: Date())"
+            )
+        )
+        #expect(
+            homeReadModelsSource.contains(
+                "timelineSegments = store.timelineSegments("
+            )
+        )
+        #expect(
+            homeReadModelsSource.contains(
+                "for: referenceDate,\n                now: referenceDate"
+            )
+        )
+        #expect(
             uiTestSource.contains(
                 "testMultipleTimelineGapLabelsAvoidCollisionAcrossPlatforms"
             )
@@ -1049,7 +1075,8 @@ struct HomeUIContractTests {
         #expect(uiTestSource.contains("timeline.gapText."))
         #expect(uiTestSource.contains("timeline.gapIntrinsicText."))
         #expect(uiTestSource.contains("timeline.gapCapsule."))
-        #expect(uiTestSource.contains("let descendants = timeline.descendants"))
+        #expect(uiTestSource.contains("let textQuery = app.descendants"))
+        #expect(uiTestSource.contains("frame.intersects(capsuleFrame)"))
         #expect(uiTestSource.contains("capsuleFrame") && uiTestSource.contains("textFrame"))
         #expect(
             uiTestSource.contains(

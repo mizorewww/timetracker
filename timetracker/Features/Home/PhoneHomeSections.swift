@@ -152,7 +152,7 @@ struct PhoneTimelineSection: View {
     let openTask: (UUID) -> Void
 
     var body: some View {
-        let now = Date()
+        let now = homeTimelineReferenceDate(liveDate: Date())
         let timeline = store.timelineSnapshot(
             segments: segments,
             date: now,

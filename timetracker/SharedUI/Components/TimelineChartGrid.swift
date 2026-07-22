@@ -208,21 +208,31 @@ extension TimelineChart {
                     )
                 }
                 .overlay {
-                    Text(text)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(Color.clear)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: true)
-                        .accessibilityElement()
-                        .accessibilityLabel(text)
-                        .accessibilityIdentifier(
-                            "timeline.gapIntrinsicText.\(gap.id)"
-                        )
-                        .allowsHitTesting(false)
+                    intrinsicGapTextGeometryProbe(gap, text: text)
                 }
         } else {
             label
         }
+    }
+
+    private func intrinsicGapTextGeometryProbe(
+        _ gap: TimelineOmittedGap,
+        text: String
+    ) -> some View {
+        ZStack {
+            Text(text)
+                .font(.caption2.weight(.medium))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: true)
+                .hidden()
+
+            gapGeometryProbe(
+                identifier: "timeline.gapIntrinsicText.\(gap.id)",
+                label: text
+            )
+        }
+        .fixedSize(horizontal: true, vertical: true)
+        .accessibilityElement(children: .contain)
     }
 
     private func omittedGapTextContent(_ text: String) -> some View {

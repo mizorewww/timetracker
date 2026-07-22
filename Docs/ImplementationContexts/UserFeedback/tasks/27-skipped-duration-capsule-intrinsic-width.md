@@ -79,3 +79,13 @@
 - 第一轮移动端冷构建在用例执行前主动中止；owned iPhone `B335D372-1EB5-4C68-85AE-04A6A290657D` 与 iPad `1696AE29-B41F-4326-A6BA-9C1545583268` 已终止 App、关机、删除，未留下 Booted device/TestManager/xcodebuild。
 - 加固后 macOS arm64 Debug 签名构建通过，本任务 4/4 定向纯测试再次通过；下一步从头执行脚本化 UI 矩阵。
 - 复核另指出极端 Dynamic Type 下纵向 32pt 高度模型可进一步扩展；按仓库明确的普通字号验收优先级，本项只处理用户反馈中的胶囊宽度，不扩张为极端字号专项。
+
+### Checkpoint C 自动化稳定性修复与 macOS 验收
+
+- 全程使用 XCTest/XCUITest 自动运行，没有手动移动窗口、操作物理设备或截图。macOS 窗口由既有坐标脚本放置，测试结束自动终止 App。
+- 跨午夜运行首先得到三类 probe 均为 0；测试自动导出的 accessibility tree 证明 Timeline 处于空状态，而不是 predicate 失败。根因是 fixture 在当天 09:00—18:00，00:xx 启动时主页数据读取层已按真实时间过滤掉这些记录。
+- `TodayHomeContent`、macOS/iPadOS `TimelineSection`、iPhone `PhoneTimelineSection` 与 `TodayTimelineChart` 现仅在 DEBUG 且指定 overlap/gap fixture 参数时共享当天 18:00 参考时间；正常构建和其他启动路径继续使用原有实时数据。
+- 图表加入原生横向 `ScrollView` 后，旧 macOS 自动滚动器一度选中屏幕外的内层横向容器。滚动选择器现只接受窗口内、可命中的候选，并按高度选择纵向外层容器，避免任何手动滚动补救。
+- 三类 probe 改为应用级唯一前缀查询；iPhone 的 `home.timeline` 是 Section 标题而非图表祖先，因此可见性使用 app window 相交，核心正确性继续由 actual Text 等于独立 intrinsic Text、Capsule 包含全文、padding 正且对称、长文案带来等量增宽来证明。
+- macOS 脚本验收通过：2 个 actual Text、2 个独立 intrinsic Text 与 2 个 Capsule probe 全部配对通过；自动截图清楚显示 `1 hr, 5 min skipped` 与 `2 hr, 35 min skipped` 均完整、胶囊宽度不同且互不覆盖。
+- macOS arm64 Debug 签名构建与本任务 4/4 定向纯测试在上述修复后再次通过。下一步只使用新建 owned iPhone/iPad simulator 执行 portrait/landscape 脚本矩阵。

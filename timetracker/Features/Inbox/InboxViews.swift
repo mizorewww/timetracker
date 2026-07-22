@@ -85,14 +85,17 @@ struct InboxView: View {
                         InboxListRow(
                             store: store,
                             item: item,
-                            isCompact: isCompact
+                            isCompact: isCompact,
+                            toggleCompletion: {
+                                toggleCompletion(item)
+                            }
                         )
                     }
                     .onMove(perform: moveInboxItems)
                 }
             }
 
-            if openItems.isEmpty {
+            if openItems.isEmpty && completedItems.isEmpty {
                 Section {
                     emptyState
                         .frame(maxWidth: .infinity)
@@ -106,7 +109,8 @@ struct InboxView: View {
                     store: store,
                     items: completedItems,
                     isCompact: isCompact,
-                    isExpanded: $showsCompleted
+                    isExpanded: $showsCompleted,
+                    toggleCompletion: toggleCompletion
                 )
             }
         }
@@ -147,6 +151,13 @@ struct InboxView: View {
 
     private func moveInboxItems(from sourceOffsets: IndexSet, to destination: Int) {
         store.reorderInboxItems(sourceOffsets: sourceOffsets, destination: destination)
+    }
+
+    private func toggleCompletion(_ item: InboxItem) {
+        if item.isCompleted == false {
+            showsCompleted = true
+        }
+        store.toggleInboxItem(item)
     }
 
     @discardableResult

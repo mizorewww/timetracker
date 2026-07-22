@@ -5,6 +5,7 @@ struct InboxCompletedSection: View {
     let items: [InboxItem]
     let isCompact: Bool
     @Binding var isExpanded: Bool
+    let toggleCompletion: (InboxItem) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -14,7 +15,10 @@ struct InboxCompletedSection: View {
                     InboxListRow(
                         store: store,
                         item: item,
-                        isCompact: isCompact
+                        isCompact: isCompact,
+                        toggleCompletion: {
+                            toggleCompletion(item)
+                        }
                     )
                     .moveDisabled(true)
                 }

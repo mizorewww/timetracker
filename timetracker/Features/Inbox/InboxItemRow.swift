@@ -12,6 +12,7 @@ struct InboxItemRow: View {
     let store: TimeTrackerStore
     let item: InboxItem
     let isCompact: Bool
+    let toggleCompletion: () -> Void
     let requestDelete: () -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -33,7 +34,7 @@ struct InboxItemRow: View {
                     textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
                     toggle: {
                         performAnimated {
-                            store.toggleInboxItem(item)
+                            toggleCompletion()
                         }
                     },
                     commit: commitTitleIfNeeded
@@ -60,7 +61,7 @@ struct InboxItemRow: View {
         Menu {
             Button {
                 performAnimated {
-                    store.toggleInboxItem(item)
+                    toggleCompletion()
                 }
             } label: {
                 Label(

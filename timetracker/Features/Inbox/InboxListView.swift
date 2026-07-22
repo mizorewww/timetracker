@@ -4,6 +4,7 @@ struct InboxListRow: View {
     let store: TimeTrackerStore
     let item: InboxItem
     let isCompact: Bool
+    let toggleCompletion: () -> Void
     @State private var isDeleteConfirmationPresented = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -12,6 +13,7 @@ struct InboxListRow: View {
             store: store,
             item: item,
             isCompact: isCompact,
+            toggleCompletion: toggleCompletion,
             requestDelete: requestDelete
         )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {

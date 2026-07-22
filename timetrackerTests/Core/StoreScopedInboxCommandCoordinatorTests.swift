@@ -7,6 +7,59 @@ import Testing
 @MainActor
 struct StoreScopedInboxCommandCoordinatorTests {
     @Test
+    func freshBaselinesCanCompleteAndReopenTheSameItem() throws {
+        let context = try makeTestContext()
+        let items = try seedOpenItems(in: context.container)
+        let item = try #require(items.first)
+        let commandCoordinator = coordinator(container: context.container)
+
+        let completedOutcome = try commandCoordinator.toggle(
+            baseline: InboxItemMutationBaseline(item: item)
+        )
+        let completed = try #require(
+            try allVisibleItems(in: context.container)
+                .first(where: { $0.id == item.id })
+        )
+
+        #expect(completedOutcome.didMutate)
+        #expect(completed.isCompleted)
+        #expect(completed.completedAt != nil)
+        #expect(try openItems(in: context.container).map(\.id) == [items[1].id])
+
+        let reopenedOutcome = try commandCoordinator.toggle(
+            baseline: InboxItemMutationBaseline(item: completed)
+        )
+        let reopened = try #require(
+            try allVisibleItems(in: context.container)
+                .first(where: { $0.id == item.id })
+        )
+
+        #expect(reopenedOutcome.didMutate)
+        #expect(reopened.isCompleted == false)
+        #expect(reopened.completedAt == nil)
+        #expect(try openItems(in: context.container).map(\.id) == items.map(\.id))
+    }
+
+    @Test
+    func facadeCanCommitACompletedTitleAndReopenFromTheSameRowReference() throws {
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.addInboxItem(title: "Original"))
+        let openItem = try #require(store.openInboxItems.first)
+
+        store.toggleInboxItem(openItem)
+        let completedItem = try #require(store.completedInboxItems.first)
+        store.updateInboxItemTitle(completedItem, title: "Edited while completed")
+        store.toggleInboxItem(completedItem)
+
+        #expect(store.errorMessage == nil)
+        #expect(store.completedInboxItems.isEmpty)
+        #expect(store.openInboxItems.map(\.title) == ["Edited while completed"])
+        #expect(store.openInboxItems.first?.completedAt == nil)
+    }
+
+    @Test
     func freshReorderPersistsOneCanonicalOrder() throws {
         let context = try makeTestContext()
         let items = try seedOpenItems(in: context.container)

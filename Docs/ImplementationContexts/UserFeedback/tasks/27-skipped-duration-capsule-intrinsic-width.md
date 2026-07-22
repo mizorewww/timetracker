@@ -8,8 +8,8 @@
 - [x] 领取反馈，定位 `xxx min elapsed/skipped` 胶囊的固定宽度来源及所有平台复用点。
 - [x] 对照 Apple HIG、SwiftUI intrinsic sizing 与现有成熟组件确定自适应宽度契约。
 - [x] 实现胶囊抱住完整文字并补充布局/契约回归。
-- [~] 使用 owned simulator 与 XCTest 自动化 macOS window 做跨平台截图验收并清理资源。
-- [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 使用 owned simulator 与 XCTest 自动化 macOS window 做跨平台截图验收并清理资源。
+- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -28,8 +28,8 @@
 
 - [x] Checkpoint A：静态根因、复用点、局部化宽度与成熟方案审计。
 - [x] Checkpoint B：intrinsic capsule 实现与纯布局/契约回归。
-- [~] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
-- [ ] Checkpoint D：精确 Release 安装、状态标记与收口。
+- [x] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
+- [~] Checkpoint D：精确 Release 安装、状态标记与收口。
 
 ## Checkpoint A 审计结论
 
@@ -89,3 +89,11 @@
 - 三类 probe 改为应用级唯一前缀查询；iPhone 的 `home.timeline` 是 Section 标题而非图表祖先，因此可见性使用 app window 相交，核心正确性继续由 actual Text 等于独立 intrinsic Text、Capsule 包含全文、padding 正且对称、长文案带来等量增宽来证明。
 - macOS 脚本验收通过：2 个 actual Text、2 个独立 intrinsic Text 与 2 个 Capsule probe 全部配对通过；自动截图清楚显示 `1 hr, 5 min skipped` 与 `2 hr, 35 min skipped` 均完整、胶囊宽度不同且互不覆盖。
 - macOS arm64 Debug 签名构建与本任务 4/4 定向纯测试在上述修复后再次通过。下一步只使用新建 owned iPhone/iPad simulator 执行 portrait/landscape 脚本矩阵。
+
+### Checkpoint C 移动端脚本矩阵与资源清理
+
+- 新建并记录两个本轮专属 iOS 27 simulator：iPhone 16 Pro `4EF8923F-D630-4D1F-8727-99652BDA77EA`、iPad Pro 11-inch `79F31D44-1F5E-4464-A7EF-6BDD76D40426`；两条 XCUITest 使用独立 DerivedData 与 xcresult 并行运行。
+- iPhone portrait 通过 1/1；iPad portrait/landscape 通过 1/1。测试脚本自行启动、滚动、旋转、执行 actual/intrinsic/capsule 几何断言、保存截图并终止 App，没有手动操作窗口或设备。
+- 三张自动导出的截图均确认 `1 hr, 5 min skipped` 与 `2 hr, 35 min skipped` 全文可见；长文案胶囊明显更宽，两枚胶囊没有截断、碰撞或覆盖 Timeline 内容。
+- 验收后已终止 App，关机并删除上述两个 owned simulator；Simulator 与 Problem Reporter 已退出。复核无 owned device、Booted simulator、`xcodebuild`、`xctest`、UI runner、App 或 Instruments/xctrace 残留进程。
+- 未新增第三方库；本检查点继续使用系统 XCTest、XCUITest、SwiftUI 与 `xcresulttool`。下一步只执行精确 Release 全设备安装、签名/安装只读核验与反馈收口。

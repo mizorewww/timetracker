@@ -46,4 +46,6 @@
 
 ## 资源所有权
 
-- 当前未创建 simulator，未启动 app、测试宿主或 Instruments。
+- Task 25 iPhone 17 Pro simulator：`D6759E45-FE6C-4BB1-8FAD-BDF341594468`（iOS 27.0；owned，仅用于本任务 UI 批次）。
+- Task 25 iPad Pro 11-inch (M5) simulator：`02B4E95F-C009-43B5-AA48-C96DEA0F92CD`（iOS 27.0；owned，仅用于本任务 UI 批次）。
+- macOS UI 批次不创建 simulator；全部批次结束后必须终止 app/runner，删除以上两个设备并清理 DerivedData、xcresult 与导出截图。

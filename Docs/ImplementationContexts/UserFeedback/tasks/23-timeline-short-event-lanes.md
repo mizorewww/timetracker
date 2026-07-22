@@ -34,8 +34,11 @@
   - 视觉投影只替换 compact vertical 路径；iPad/macOS 的 horizontal 时间轨道与领域 snapshot 语义保持不变。几何是纯值且稳定排序，不存入 `@State`，避免旋转/resize 产生 stale layout 或闪烁。
   - Apple HIG 要求图表 mark、轴和说明保持清晰层级，并给重要内容足够空间；SwiftUI 专项规范要求由实际容器尺寸驱动布局、把可测试逻辑移出 View body、保持稳定 identity。参考：<https://developer.apple.com/design/human-interface-guidelines/charts>、<https://developer.apple.com/design/human-interface-guidelines/layout>、<https://developer.apple.com/documentation/swiftui/custom-layout>。
   - 依赖审计：CalendarKit（约 2.7k stars）验证了日历事件在绘制层按 frame 分组的成熟方向，但它是 UIKit/Mac Catalyst 整套 day calendar，接入会替换现有 SwiftUI、自定义压缩轴、Health 混合数据与相邻精确记录列表；HorizonCalendar（约 3.1k）和 FSCalendar（约 10.6k）是日期网格而非本时间轨道；KVKCalendar 约 801 stars，低于约束。均不采用。参考：<https://github.com/richardtop/CalendarKit>、<https://github.com/airbnb/HorizonCalendar>、<https://github.com/WenchaoD/FSCalendar>、<https://github.com/kvyatkovskys/KVKCalendar>。
-  - 不新增第三方库：复用 SwiftUI、现有 Timeline compression/read model 和已有 heap-backed lane allocator；为几十行投影引入整套日历框架会扩大包体、桥接与回归面且不能解决自定义语义。Apple 官方 `swift-collections` Heap（约 4.4k stars）只在未来替换现有私有 heap 时才有收益，本 checkpoint 不复制第二套 heap。
+  - 最终依赖决策采用 Apple 官方 `swift-collections` 1.6.0 的 `HeapModule`（审计时约 4,459 stars，持续维护）：把领域时间轨道和后续屏幕投影轨道共用的稳定 interval partition 提取为 `TimelineLaneAllocator`，同时删除项目内手写 `MinHeap`，不保留重复实现。整套 CalendarKit/HorizonCalendar/FSCalendar 仍不引入，因为它们不能替代本项目的压缩轴与混合数据语义。
 - [~] Checkpoint B：实现轨道几何与单元/契约回归。
+  - [x] B1：主 target 显式链接 `HeapModule`；共享分配器接受时间或投影 point interval，按 start/end/stable ID 稳定排序，使用两个最小堆以 `O(n log k)` 复用编号最小的可用轨道；`TimelineLayoutEngine` 已迁移且保留严格 `> 60s` 的原领域行为。
+  - [x] B1 验证：`plutil` 通过；macOS arm64、付费开发签名下运行 `AnalyticsTimelineTests` 与 `CorePerformanceBudgetTests`，33/33 通过、0 failure、0 skip；50,000 段性能预算与大规模 Timeline 布局预算均通过。该批次没有 simulator，测试 app/runner 已退出，临时 DerivedData 在提交前删除。
+  - [~] B2：实现 compact vertical 的 projected-mark 几何、向下锚定、视觉碰撞分轨与 elapsed/omitted-gap 注释 gutter。
 - [ ] Checkpoint C：owned simulator 截图验收与精确 Release 安装收口。
 
 ## 资源所有权

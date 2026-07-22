@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		F10000000000000000000001 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* MarkdownView */; };
 		F20000000000000000000001 /* BlossomColorPicker in Frameworks */ = {isa = PBXBuildFile; productRef = F20000000000000000000003 /* BlossomColorPicker */; };
+		F30000000000000000000001 /* HeapModule in Frameworks */ = {isa = PBXBuildFile; productRef = F30000000000000000000003 /* HeapModule */; };
 		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E40100000000000000000001 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
 		E40100000000000000000002 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
@@ -174,6 +175,7 @@
 			files = (
 				F20000000000000000000001 /* BlossomColorPicker in Frameworks */,
 				F10000000000000000000001 /* MarkdownView in Frameworks */,
+				F30000000000000000000001 /* HeapModule in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,6 +277,7 @@
 			packageProductDependencies = (
 				F20000000000000000000003 /* BlossomColorPicker */,
 				F10000000000000000000003 /* MarkdownView */,
+				F30000000000000000000003 /* HeapModule */,
 			);
 			productName = timetracker;
 			productReference = D41D8E8E2F9CC4B50024913B /* timetracker.app */;
@@ -438,6 +441,7 @@
 			packageReferences = (
 				F20000000000000000000002 /* XCRemoteSwiftPackageReference "BlossomColorPicker" */,
 				F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */,
+				F30000000000000000000002 /* XCRemoteSwiftPackageReference "swift-collections" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D41D8E8F2F9CC4B50024913B /* Products */;
@@ -1223,6 +1227,14 @@
 				version = 4.1.7;
 			};
 		};
+		F30000000000000000000002 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections";
+			requirement = {
+				kind = exactVersion;
+				version = 1.6.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1235,6 +1247,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */;
 			productName = MarkdownView;
+		};
+		F30000000000000000000003 /* HeapModule */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F30000000000000000000002 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = HeapModule;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

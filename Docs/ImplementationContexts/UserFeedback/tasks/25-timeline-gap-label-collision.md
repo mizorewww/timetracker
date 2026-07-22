@@ -7,7 +7,7 @@
 
 - [x] 领取反馈，复现并审计 iPhone 多个 `xxx min elapsed` 标注互相遮挡的根因。
 - [x] 对照 Apple HIG、SwiftUI 布局语义和成熟实现，确定跨平台标注避让策略。
-- [ ] 实现纯布局修复与覆盖密集 gap 的单元/契约测试。
+- [~] 实现纯布局修复与覆盖密集 gap 的单元/契约测试。
 - [ ] 使用明确登记的 owned simulator 与本机 macOS 窗口做全平台 UI/截图验收并清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
@@ -33,7 +33,12 @@
   - [x] Apple Charts 的 `AxisValueLabelCollisionResolution.greedy` 证明“无法容纳时稳定降密度”是平台认可的轴标签策略，但它不适用于这里的自定义 annotation；`AnnotationOverflowResolution.fit` 只解决边界溢出。HIG Charts 要求辅助标注不与主数据竞争，HIG Layout 要覆盖旋转和 iPad 可变窗口，SwiftUI `Layout` 适合让 compact chart 根据真实 footprint 自适应尺寸。参考：<https://developer.apple.com/documentation/charts/axisvaluelabelcollisionresolution>、<https://developer.apple.com/documentation/swiftui/layout>、<https://developer.apple.com/design/human-interface-guidelines/charts>、<https://developer.apple.com/design/human-interface-guidelines/layout>。
   - [x] 成熟实现：Apache ECharts（审计时 66,868 stars、2026-07-15 仍有提交）采用 `moveOverlap: shiftY`，先稳定前推再回收边界空间，仍无法容纳才 `hideOverlap`；这与固定矩形时间标签最匹配。`d3-force`（1,991 stars）的迭代圆形碰撞会抖动且偏离精确时间锚点；ChartsOrg/Charts（28,004 stars）是整套并行 renderer，引入只为一维布局不合比例。参考：<https://github.com/apache/echarts/blob/74e9e09a0b5687fdd34319121ac73b3022d1483c/src/label/labelLayoutHelper.ts#L305-L590>、<https://github.com/d3/d3-force>、<https://github.com/ChartsOrg/Charts>。
   - [x] 依赖决策：不新增库；继续复用仓库锁定的 Apple `swift-collections` 1.6.0（审计时 4,459 stars）。新增 vertical placement/layout 纯 helper：按理想 Y 与稳定 id 排序，前向避让并向上回收，保持顺序和 4pt 间距；compact chart 优先增高到可容纳全部 32pt 标签，硬约束 fallback 才确定性降密度，所有 gap 虚线始终保留。hour ticks 必须使用同一最终 frame 避让。
-- [ ] Checkpoint B：共享标注布局、密集 gap fixture 与自动化回归。
+- [~] Checkpoint B：共享标注布局、密集 gap fixture 与自动化回归。
+  - [x] B1：新增稳定的 vertical placement/layout：预留首尾各 18pt，保持 32pt 标签高度与 4pt 间距；按理想 Y/稳定 id 排序，用受容量上界约束的前向 placement 把尾部空间向上回收，时间顺序不反转。极端硬约束下确定性均匀降密度但保留所有 dashed gap line；正常 compact path 将 `compactHeight` 作为最小值，按完整 footprint 自动增高，因此保留全部标签。
+  - [x] B1：`verticalTimeline`、capsule、短引导线和 `verticalAxisTicks` 共用最终 placement frame；标签不再各自 clamp，也不扩大 96pt gutter 挤压任务轨道。horizontal 路径继续使用 Task 24 的多行 allocator；专用测试语义提供稳定 `timeline.gap.*` identifier，生产图仍由父层保持装饰性隐藏。
+  - [x] B1：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主两次运行完整 `AnalyticsTimelineTests`，每次均为 36 项通过、0 失败；新增用例先证明旧的两个 32pt frame 在 300pt 轴上相交，再证明最终 frame 确定、反序输入一致、完整留在首尾安全区且间距至少 4pt，并覆盖 100pt 硬约束的确定性降密度与 12 个 gap 的 compact Timeline 容量扩展。
+  - [x] B1：本批次未创建 simulator。测试宿主已退出，`build/Task25Geometry*` 与全部 xcresult 已删除，确认没有引用这些路径的 `xcodebuild`、`xctest`、UI runner 或 app 进程，且没有 Booted simulator。
+  - [~] B2：新增隔离的双 gap fixture、跨平台 UI 断言与截图入口。
 - [ ] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
 
 ## 资源所有权

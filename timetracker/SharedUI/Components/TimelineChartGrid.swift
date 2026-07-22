@@ -119,6 +119,9 @@ extension TimelineChart {
         return omittedGapLabel(gap)
             .frame(width: frame.width, height: frame.height)
             .offset(x: frame.minX, y: frame.minY)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(omittedGapText(gap))
+            .accessibilityIdentifier("timeline.gap.\(gap.id)")
     }
     func verticalGapLine(
         _ gap: TimelineOmittedGap,
@@ -148,21 +151,39 @@ extension TimelineChart {
 
     func verticalGapLabel(
         _ gap: TimelineOmittedGap,
-        axisLength: CGFloat
+        placement: TimelineChartVerticalGapLabelPlacement
     ) -> some View {
-        let y = axisLength * CGFloat(
-            axisCompression.ratio(
-                forCompressedOffset: gap.compressedMidpointOffset
-            )
-        )
         let frame = TimelineChartLayout.verticalGapLabelFrame(
-            position: y,
-            axisLength: axisLength
+            placement: placement
         )
 
         return verticalOmittedGapLabel(gap)
             .frame(width: frame.width, height: frame.height)
             .offset(x: frame.minX, y: frame.minY)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(omittedGapText(gap))
+            .accessibilityIdentifier("timeline.gap.\(gap.id)")
+    }
+
+    func verticalGapConnector(
+        placement: TimelineChartVerticalGapLabelPlacement,
+        axisLength: CGFloat
+    ) -> some View {
+        let frame = TimelineChartLayout.verticalGapLabelFrame(
+            placement: placement
+        )
+        return VerticalGapConnector(
+            start: CGPoint(x: frame.maxX, y: frame.midY),
+            end: CGPoint(
+                x: TimelineChartLayout.verticalAxisLabelWidth,
+                y: min(max(0, placement.anchorPosition), axisLength)
+            )
+        )
+        .stroke(Color.secondary.opacity(0.32), lineWidth: 1)
+        .frame(
+            width: TimelineChartLayout.verticalAxisLabelWidth,
+            height: axisLength
+        )
     }
 
     private func omittedGapLabel(_ gap: TimelineOmittedGap) -> some View {
@@ -212,6 +233,18 @@ extension TimelineChart {
 
     private func hourLabel(_ date: Date) -> String {
         TimeDisplayFormatter.hourMinute(date)
+    }
+}
+
+private struct VerticalGapConnector: Shape {
+    let start: CGPoint
+    let end: CGPoint
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: start)
+        path.addLine(to: end)
+        return path
     }
 }
 

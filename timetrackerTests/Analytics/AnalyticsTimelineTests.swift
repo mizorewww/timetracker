@@ -747,6 +747,108 @@ struct AnalyticsTimelineTests {
     }
 
     @Test
+    func compactVerticalGapAnnotationsResolveDenseCollisionsDeterministically() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let first = DateInterval(start: start, duration: 3 * 60 * 60)
+        let middle = DateInterval(
+            start: start.addingTimeInterval(5 * 60 * 60),
+            duration: 10 * 60
+        )
+        let last = DateInterval(
+            start: start.addingTimeInterval(7 * 60 * 60 + 10 * 60),
+            duration: 110 * 60
+        )
+        let display = DateInterval(start: first.start, end: last.end)
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: [first, middle, last]
+        )
+        let axisLength: CGFloat = 300
+        let rawFrames = compression.omittedGaps.map { gap in
+            TimelineChartLayout.verticalGapLabelFrame(
+                position: axisLength * CGFloat(
+                    compression.ratio(
+                        forCompressedOffset: gap.compressedMidpointOffset
+                    )
+                ),
+                axisLength: axisLength
+            )
+        }
+        let layout = TimelineChartLayout.verticalGapLabels(
+            gaps: compression.omittedGaps,
+            compression: compression,
+            axisLength: axisLength
+        )
+        let frames = layout.placements.map {
+            TimelineChartLayout.verticalGapLabelFrame(placement: $0)
+        }
+
+        #expect(compression.omittedGaps.count == 2)
+        #expect(rawFrames[0].intersects(rawFrames[1]))
+        #expect(layout.placements.count == 2)
+        #expect(layout.hiddenCount == 0)
+        #expect(
+            TimelineChartLayout.verticalGapLabels(
+                gaps: Array(compression.omittedGaps.reversed()),
+                compression: compression,
+                axisLength: axisLength
+            ) == layout
+        )
+        #expect(frames[0].intersects(frames[1]) == false)
+        #expect(
+            frames[1].minY - frames[0].maxY >=
+                TimelineChartLayout.verticalGapLabelMinimumSpacing
+        )
+        #expect(frames.allSatisfy { frame in
+            frame.minY >= TimelineChartLayout.verticalGapLabelBoundaryInset &&
+                frame.maxY <= axisLength - TimelineChartLayout.verticalGapLabelBoundaryInset
+        })
+        #expect(
+            layout.placements[0].anchorPosition <
+                layout.placements[1].anchorPosition
+        )
+
+        let constrained = TimelineChartLayout.verticalGapLabels(
+            gaps: compression.omittedGaps,
+            compression: compression,
+            axisLength: 100
+        )
+        let constrainedFrame = try #require(
+            constrained.placements.first.map {
+                TimelineChartLayout.verticalGapLabelFrame(placement: $0)
+            }
+        )
+        #expect(constrained.placements.count == 1)
+        #expect(constrained.hiddenCount == 1)
+        #expect(constrainedFrame.height == TimelineChartLayout.verticalGapLabelHeight)
+        #expect(constrainedFrame.minY >= TimelineChartLayout.verticalGapLabelBoundaryInset)
+        #expect(constrainedFrame.maxY <= 100 - TimelineChartLayout.verticalGapLabelBoundaryInset)
+    }
+
+    @Test
+    func compactVerticalGapAnnotationCapacityExpandsTimeline() {
+        let count = 12
+        let height = TimelineChartLayout.verticalTimelineHeight(
+            minimumHeight: 320,
+            gapLabelCount: count
+        )
+        let axisLength = height - TimelineChartLayout.verticalMinimumBarExtent
+        let requiredFootprint =
+            2 * TimelineChartLayout.verticalGapLabelBoundaryInset +
+            CGFloat(count) * TimelineChartLayout.verticalGapLabelHeight +
+            CGFloat(count - 1) * TimelineChartLayout.verticalGapLabelMinimumSpacing
+
+        #expect(height > 320)
+        #expect(axisLength >= requiredFootprint)
+        #expect(
+            TimelineChartLayout.verticalTimelineHeight(
+                minimumHeight: 320,
+                gapLabelCount: 0
+            ) == 320
+        )
+    }
+
+    @Test
     func compactVerticalTimelineAssignsLanesFromRenderedFootprints() throws {
         let start = Date(timeIntervalSince1970: 0)
         let display = DateInterval(start: start, duration: 60 * 60)

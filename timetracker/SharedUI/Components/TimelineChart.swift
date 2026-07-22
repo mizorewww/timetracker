@@ -14,8 +14,12 @@ struct TimelineChart: View {
     var body: some View {
         Group {
             if usesVerticalLayout {
-                verticalTimeline
-                    .frame(height: compactHeight)
+                TimelineChartVerticalSizingLayout(
+                    minimumHeight: compactHeight,
+                    gapLabelCount: axisCompression.omittedGaps.count
+                ) {
+                    verticalTimeline
+                }
             } else {
                 TimelineChartHorizontalSizingLayout(
                     entries: laneEntries,
@@ -127,6 +131,14 @@ extension TimelineChart {
             let entryByID = Dictionary(
                 uniqueKeysWithValues: laneEntries.map { ($0.id, $0) }
             )
+            let gapByID = Dictionary(
+                uniqueKeysWithValues: axisCompression.omittedGaps.map { ($0.id, $0) }
+            )
+            let gapLabelLayout = TimelineChartLayout.verticalGapLabels(
+                gaps: axisCompression.omittedGaps,
+                compression: axisCompression,
+                axisLength: barLayout.axisLength
+            )
             let lanes = TimelineChartLayout.verticalLanes(
                 width: proxy.size.width,
                 laneCount: barLayout.laneCount
@@ -144,6 +156,12 @@ extension TimelineChart {
                         axisLength: barLayout.axisLength
                     )
                 }
+                ForEach(gapLabelLayout.placements) { placement in
+                    verticalGapConnector(
+                        placement: placement,
+                        axisLength: barLayout.axisLength
+                    )
+                }
                 ForEach(barLayout.placements) { placement in
                     if let entry = entryByID[placement.id] {
                         verticalBar(
@@ -153,15 +171,55 @@ extension TimelineChart {
                         )
                     }
                 }
-                ForEach(axisCompression.omittedGaps) { gap in
-                    verticalGapLabel(
-                        gap,
-                        axisLength: barLayout.axisLength
-                    )
-                    .zIndex(1)
+                ForEach(gapLabelLayout.placements) { placement in
+                    if let gap = gapByID[placement.id] {
+                        verticalGapLabel(
+                            gap,
+                            placement: placement
+                        )
+                        .zIndex(1)
+                    }
                 }
             }
         }
+    }
+}
+
+private struct TimelineChartVerticalSizingLayout: Layout {
+    let minimumHeight: CGFloat
+    let gapLabelCount: Int
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        guard subviews.isEmpty == false else { return .zero }
+        let width = proposal.width.flatMap { $0.isFinite ? max(0, $0) : nil } ?? 320
+        return CGSize(
+            width: width,
+            height: TimelineChartLayout.verticalTimelineHeight(
+                minimumHeight: minimumHeight,
+                gapLabelCount: gapLabelCount
+            )
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard let subview = subviews.first else { return }
+        subview.place(
+            at: bounds.origin,
+            anchor: .topLeading,
+            proposal: ProposedViewSize(
+                width: bounds.width,
+                height: bounds.height
+            )
+        )
     }
 }
 

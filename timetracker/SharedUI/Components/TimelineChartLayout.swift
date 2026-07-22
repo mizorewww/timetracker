@@ -54,6 +54,18 @@ nonisolated struct TimelineChartHorizontalGapLabelLayout: Equatable, Sendable {
     let rowCount: Int
 }
 
+nonisolated struct TimelineChartVerticalGapLabelPlacement: Identifiable, Equatable, Sendable {
+    let id: String
+    let anchorPosition: CGFloat
+    let axisOrigin: CGFloat
+    let axisExtent: CGFloat
+}
+
+nonisolated struct TimelineChartVerticalGapLabelLayout: Equatable, Sendable {
+    let placements: [TimelineChartVerticalGapLabelPlacement]
+    let hiddenCount: Int
+}
+
 nonisolated enum TimelineChartLayout {
     static let horizontalMinimumBarExtent: CGFloat = 18
     static let horizontalMinimumBarSpacing: CGFloat = 6
@@ -70,6 +82,8 @@ nonisolated enum TimelineChartLayout {
     static let verticalMinimumBarExtent: CGFloat = 20
     static let verticalMinimumBarSpacing: CGFloat = 6
     static let verticalGapLabelHeight: CGFloat = 32
+    static let verticalGapLabelMinimumSpacing: CGFloat = 4
+    static let verticalGapLabelBoundaryInset: CGFloat = 18
 
     static func horizontalLanes(
         height: CGFloat,
@@ -153,6 +167,22 @@ nonisolated enum TimelineChartLayout {
             groupExtent + 20 + horizontalAnnotationHeight(
                 gapLabelRowCount: gapLabelRowCount
             )
+        )
+    }
+
+    static func verticalTimelineHeight(
+        minimumHeight: CGFloat,
+        gapLabelCount: Int
+    ) -> CGFloat {
+        let count = max(0, gapLabelCount)
+        guard count > 0 else { return finiteNonnegative(minimumHeight) }
+        let labelFootprint =
+            2 * verticalGapLabelBoundaryInset +
+            CGFloat(count) * verticalGapLabelHeight +
+            CGFloat(count - 1) * verticalGapLabelMinimumSpacing
+        return max(
+            finiteNonnegative(minimumHeight),
+            verticalMinimumBarExtent + labelFootprint
         )
     }
 
@@ -286,6 +316,113 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
+    static func verticalGapLabels(
+        gaps: [TimelineOmittedGap],
+        compression: TimelineAxisCompression,
+        axisLength: CGFloat,
+        labelHeight: CGFloat = verticalGapLabelHeight,
+        minimumSpacing: CGFloat = verticalGapLabelMinimumSpacing,
+        boundaryInset: CGFloat = verticalGapLabelBoundaryInset
+    ) -> TimelineChartVerticalGapLabelLayout {
+        let length = finiteNonnegative(axisLength)
+        let height = finiteNonnegative(labelHeight)
+        let spacing = finiteNonnegative(minimumSpacing)
+        let inset = min(finiteNonnegative(boundaryInset), length / 2)
+        let availableStart = inset
+        let availableEnd = max(availableStart, length - inset)
+        let availableExtent = availableEnd - availableStart
+
+        guard gaps.isEmpty == false,
+              height > 0,
+              availableExtent >= height else {
+            return TimelineChartVerticalGapLabelLayout(
+                placements: [],
+                hiddenCount: gaps.count
+            )
+        }
+
+        let candidates = gaps.map { gap in
+            let rawPosition = length * CGFloat(
+                compression.ratio(
+                    forCompressedOffset: gap.compressedMidpointOffset
+                )
+            )
+            let position = rawPosition.isFinite
+                ? min(max(0, rawPosition), length)
+                : 0
+            let origin = min(
+                max(availableStart, position - height / 2),
+                availableEnd - height
+            )
+            return VerticalGapLabelCandidate(
+                id: gap.id,
+                anchorPosition: position,
+                desiredOrigin: origin
+            )
+        }
+        .sorted {
+            if $0.desiredOrigin != $1.desiredOrigin {
+                return $0.desiredOrigin < $1.desiredOrigin
+            }
+            if $0.anchorPosition != $1.anchorPosition {
+                return $0.anchorPosition < $1.anchorPosition
+            }
+            return $0.id < $1.id
+        }
+
+        let capacity = max(
+            1,
+            Int(floor((availableExtent + spacing) / (height + spacing)))
+        )
+        let visibleCandidates = evenlySpacedCandidates(
+            candidates,
+            maximumCount: capacity
+        )
+        var placements: [TimelineChartVerticalGapLabelPlacement] = []
+        placements.reserveCapacity(visibleCandidates.count)
+
+        for (index, candidate) in visibleCandidates.enumerated() {
+            let lowerBound = placements.last.map {
+                $0.axisOrigin + $0.axisExtent + spacing
+            } ?? availableStart
+            let remainingCount = visibleCandidates.count - index - 1
+            let upperBound = availableEnd - height -
+                CGFloat(remainingCount) * (height + spacing)
+            let origin = min(
+                max(candidate.desiredOrigin, lowerBound),
+                max(lowerBound, upperBound)
+            )
+            placements.append(
+                TimelineChartVerticalGapLabelPlacement(
+                    id: candidate.id,
+                    anchorPosition: candidate.anchorPosition,
+                    axisOrigin: origin,
+                    axisExtent: height
+                )
+            )
+        }
+
+        return TimelineChartVerticalGapLabelLayout(
+            placements: placements,
+            hiddenCount: max(0, gaps.count - placements.count)
+        )
+    }
+
+    static func verticalGapLabelFrame(
+        placement: TimelineChartVerticalGapLabelPlacement,
+        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
+        horizontalInset: CGFloat = 6
+    ) -> CGRect {
+        let gutterWidth = finiteNonnegative(axisLabelWidth)
+        let inset = min(finiteNonnegative(horizontalInset), gutterWidth / 2)
+        return CGRect(
+            x: inset,
+            y: finiteNonnegative(placement.axisOrigin),
+            width: max(0, gutterWidth - 2 * inset),
+            height: finiteNonnegative(placement.axisExtent)
+        )
+    }
+
     static func verticalGapLabelFrame(
         position: CGFloat,
         axisLength: CGFloat,
@@ -323,15 +460,12 @@ nonisolated enum TimelineChartLayout {
         let length = finiteNonnegative(axisLength)
         let labelHeight = min(finiteNonnegative(tickLabelHeight), length)
         let clearance = finiteNonnegative(collisionClearance)
-        let gapFrames = compression.omittedGaps.map { gap in
-            verticalGapLabelFrame(
-                position: length * CGFloat(
-                    compression.ratio(
-                        forCompressedOffset: gap.compressedMidpointOffset
-                    )
-                ),
-                axisLength: length
-            )
+        let gapFrames = verticalGapLabels(
+            gaps: compression.omittedGaps,
+            compression: compression,
+            axisLength: length
+        ).placements.map { placement in
+            verticalGapLabelFrame(placement: placement)
         }
 
         return axisTicks(
@@ -544,6 +678,27 @@ nonisolated enum TimelineChartLayout {
         return axisLength * CGFloat(ratio)
     }
 
+    private static func evenlySpacedCandidates(
+        _ candidates: [VerticalGapLabelCandidate],
+        maximumCount: Int
+    ) -> [VerticalGapLabelCandidate] {
+        let count = max(0, maximumCount)
+        guard count > 0, candidates.isEmpty == false else { return [] }
+        guard candidates.count > count else { return candidates }
+        guard count > 1 else { return [candidates[(candidates.count - 1) / 2]] }
+
+        let lastIndex = candidates.count - 1
+        var selected: [VerticalGapLabelCandidate] = []
+        selected.reserveCapacity(count)
+        for index in 0..<count {
+            let sourceIndex = Int(
+                (Double(index) * Double(lastIndex) / Double(count - 1)).rounded()
+            )
+            selected.append(candidates[sourceIndex])
+        }
+        return selected
+    }
+
     private static func finiteNonnegative(_ value: CGFloat) -> CGFloat {
         value.isFinite ? max(0, value) : 0
     }
@@ -583,6 +738,12 @@ private nonisolated struct HorizontalGapLabelCandidate {
     var end: CGFloat {
         origin + extent
     }
+}
+
+private nonisolated struct VerticalGapLabelCandidate {
+    let id: String
+    let anchorPosition: CGFloat
+    let desiredOrigin: CGFloat
 }
 
 private nonisolated struct ProjectedBar {

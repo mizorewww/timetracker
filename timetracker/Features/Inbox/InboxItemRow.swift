@@ -33,9 +33,7 @@ struct InboxItemRow: View {
                         "inbox.item.completion.\(item.id.uuidString)",
                     textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
                     toggle: {
-                        performAnimated {
-                            toggleCompletion()
-                        }
+                        toggleCompletion()
                     },
                     commit: commitTitleIfNeeded
                 )
@@ -60,9 +58,7 @@ struct InboxItemRow: View {
     private var itemMenu: some View {
         Menu {
             Button {
-                performAnimated {
-                    toggleCompletion()
-                }
+                toggleCompletion()
             } label: {
                 Label(
                     item.isCompleted

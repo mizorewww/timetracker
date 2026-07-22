@@ -10,6 +10,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     private struct InboxUITestItem {
+        let id: String
         let menu: XCUIElement
         let titleField: XCUIElement
     }
@@ -1901,6 +1902,81 @@ final class timetrackerUITests: XCTestCase {
         #else
         throw XCTSkip("The macOS Inbox routing smoke test requires macOS.")
         #endif
+    }
+
+    @MainActor
+    func testInboxCompletedItemStaysReachableAndCanBeReopened() throws {
+        let app = launchApp(
+            route: "inbox",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-inbox-suggestion"]
+        )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        openSection(
+            "Inbox",
+            tabIdentifier: "phone.tab.inbox",
+            sidebarIdentifier: "sidebar.Inbox",
+            in: app
+        )
+        let seededTitle = "Prepare the design review brief"
+        let initialTitleField = app.textFields
+            .matching(NSPredicate(format: "value == %@", seededTitle))
+            .firstMatch
+        XCTAssertTrue(initialTitleField.waitForExistence(timeout: 8))
+        let titleIdentifierPrefix = "inbox.item."
+        XCTAssertTrue(initialTitleField.identifier.hasPrefix(titleIdentifierPrefix))
+        let itemID = String(
+            initialTitleField.identifier.dropFirst(titleIdentifierPrefix.count)
+        )
+        let completionIdentifier = "inbox.item.completion.\(itemID)"
+        let titleIdentifier = "\(titleIdentifierPrefix)\(itemID)"
+        let completion = app.buttons[completionIdentifier].firstMatch
+
+        XCTAssertTrue(
+            initialTitleField.waitForExistence(timeout: 5) &&
+                initialTitleField.isHittable &&
+                completion.waitForExistence(timeout: 5) &&
+                completion.isHittable
+        )
+        XCTAssertEqual(completion.value as? String, "Not completed")
+        activate(completion)
+
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            initialTitleField.exists && initialTitleField.isHittable &&
+                completion.exists && completion.isHittable &&
+                completion.value as? String == "Completed"
+        })
+        try capture("\(screenshotPrefix)-inbox-completed-reachable", app: app)
+
+        let completedTitleFields = app.textFields.matching(identifier: titleIdentifier)
+        let completedCompletions = app.buttons.matching(identifier: completionIdentifier)
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            completedTitleFields.count == 1 &&
+                completedCompletions.count == 1 &&
+                completedTitleFields.firstMatch.isHittable &&
+                completedCompletions.firstMatch.isHittable &&
+                completedCompletions.firstMatch.value as? String == "Completed"
+        })
+        let completedTarget = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND value == %@",
+                completionIdentifier,
+                "Completed"
+            )
+        ).firstMatch
+        XCTAssertTrue(completedTarget.waitForExistence(timeout: 3) && completedTarget.isHittable)
+        activate(completedTarget)
+
+        let reopenedTitleFields = app.textFields.matching(identifier: titleIdentifier)
+        let reopenedCompletions = app.buttons.matching(identifier: completionIdentifier)
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            reopenedTitleFields.count == 1 &&
+                reopenedCompletions.count == 1 &&
+                reopenedTitleFields.firstMatch.isHittable &&
+                reopenedCompletions.firstMatch.isHittable &&
+                reopenedCompletions.firstMatch.value as? String == "Not completed"
+        })
+        try capture("\(screenshotPrefix)-inbox-reopened", app: app)
     }
 
     @MainActor
@@ -5353,7 +5429,11 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(titleField.waitForExistence(timeout: 3))
         XCTAssertEqual(titleField.value as? String, title)
-        return InboxUITestItem(menu: menu, titleField: titleField)
+        return InboxUITestItem(
+            id: itemIdentifier,
+            menu: menu,
+            titleField: titleField
+        )
     }
 
     @MainActor

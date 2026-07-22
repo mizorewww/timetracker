@@ -6,6 +6,7 @@ struct InboxView: View {
     @State private var addFocusToken = 0
     @State private var isSorting = false
     @State private var showsCompleted = false
+    @State private var completionPresentationRevision = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if os(iOS)
@@ -87,7 +88,7 @@ struct InboxView: View {
                             item: item,
                             isCompact: isCompact,
                             toggleCompletion: {
-                                toggleCompletion(item)
+                                toggleCompletion(item.id)
                             }
                         )
                     }
@@ -114,6 +115,7 @@ struct InboxView: View {
                 )
             }
         }
+        .id(completionPresentationRevision)
     }
 
     @ViewBuilder
@@ -153,11 +155,15 @@ struct InboxView: View {
         store.reorderInboxItems(sourceOffsets: sourceOffsets, destination: destination)
     }
 
-    private func toggleCompletion(_ item: InboxItem) {
-        if item.isCompleted == false {
+    private func toggleCompletion(_ itemID: UUID) {
+        guard let currentItem = store.inboxItems.first(where: { $0.id == itemID }) else {
+            return
+        }
+        if currentItem.isCompleted == false {
             showsCompleted = true
         }
-        store.toggleInboxItem(item)
+        store.toggleInboxItem(currentItem)
+        completionPresentationRevision += 1
     }
 
     @discardableResult

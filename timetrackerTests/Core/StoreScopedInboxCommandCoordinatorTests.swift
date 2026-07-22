@@ -60,6 +60,23 @@ struct StoreScopedInboxCommandCoordinatorTests {
     }
 
     @Test
+    func facadeCanReopenUsingTheReferenceCapturedBeforeCompletion() throws {
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.addInboxItem(title: "Original"))
+        let retainedRowItem = try #require(store.openInboxItems.first)
+
+        store.toggleInboxItem(retainedRowItem)
+        store.toggleInboxItem(retainedRowItem)
+
+        #expect(store.errorMessage == nil)
+        #expect(store.completedInboxItems.isEmpty)
+        #expect(store.openInboxItems.map(\.title) == ["Original"])
+        #expect(store.openInboxItems.first?.completedAt == nil)
+    }
+
+    @Test
     func freshReorderPersistsOneCanonicalOrder() throws {
         let context = try makeTestContext()
         let items = try seedOpenItems(in: context.container)

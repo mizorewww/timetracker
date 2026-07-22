@@ -63,9 +63,27 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxCompletedSection("))
         #expect(inboxSource.contains("inbox.completed.disclosure"))
         #expect(inboxSource.contains("if openItems.isEmpty && completedItems.isEmpty"))
-        #expect(inboxSource.contains("if item.isCompleted == false {\n            showsCompleted = true"))
+        #expect(inboxSource.contains("private func toggleCompletion(_ itemID: UUID)"))
+        #expect(
+            inboxSource.contains(
+                "store.inboxItems.first(where: { $0.id == itemID })"
+            )
+        )
+        #expect(
+            inboxSource.contains(
+                "if currentItem.isCompleted == false {\n            showsCompleted = true"
+            )
+        )
+        #expect(inboxSource.contains("store.toggleInboxItem(currentItem)"))
+        #expect(inboxSource.contains(".id(completionPresentationRevision)"))
+        #expect(inboxSource.contains("completionPresentationRevision += 1"))
         #expect(inboxSource.contains("toggleCompletion: toggleCompletion"))
         #expect(inboxItemSource.contains("store.toggleInboxItem(item)") == false)
+        #expect(
+            inboxItemSource.contains(
+                "performAnimated {\n                            toggleCompletion()"
+            ) == false
+        )
         #expect(inboxSource.contains(".onMove(perform: moveInboxItems)"))
         #expect(inboxSource.contains(".swipeActions(edge: .leading"))
         #expect(inboxSource.contains(".swipeActions(edge: .trailing"))

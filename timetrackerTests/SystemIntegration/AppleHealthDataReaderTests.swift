@@ -168,16 +168,24 @@ struct AppleHealthDataReaderTests {
 
     @Test @MainActor
     func healthKitSleepValuesMapWithoutInventingUnknownStages() {
-        #expect(
-            HealthKitAppleHealthDataReader.sleepStage(
-                for: HKCategoryValueSleepAnalysis.asleepCore.rawValue
-            ) == .asleepCore
-        )
-        #expect(
-            HealthKitAppleHealthDataReader.sleepStage(
-                for: HKCategoryValueSleepAnalysis.awake.rawValue
-            ) == .awake
-        )
+        let mappings: [
+            (HKCategoryValueSleepAnalysis, AppleHealthSleepStage)
+        ] = [
+            (.inBed, .inBed),
+            (.awake, .awake),
+            (.asleepUnspecified, .asleepUnspecified),
+            (.asleepCore, .asleepCore),
+            (.asleepDeep, .asleepDeep),
+            (.asleepREM, .asleepREM),
+        ]
+
+        for (healthKitValue, expectedStage) in mappings {
+            #expect(
+                HealthKitAppleHealthDataReader.sleepStage(
+                    for: healthKitValue.rawValue
+                ) == expectedStage
+            )
+        }
         #expect(HealthKitAppleHealthDataReader.sleepStage(for: .max) == nil)
     }
 

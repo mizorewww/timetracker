@@ -664,6 +664,104 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
+    func enabledRefreshMergesCrossMidnightSleepBeforeVisibleRangeClipping()
+        async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let dayStart = try #require(
+            calendar.date(
+                from: DateComponents(year: 2026, month: 7, day: 22)
+            )
+        )
+        let now = dayStart.addingTimeInterval(3_600)
+        let coreID = try fixedID(41)
+        let reader = StubAppleHealthReader(
+            batch: AppleHealthSampleBatch(
+                workouts: [],
+                sleep: [
+                    AppleHealthSleepSample(
+                        id: coreID,
+                        stage: .asleepCore,
+                        startedAt: dayStart.addingTimeInterval(-1_800),
+                        endedAt: dayStart.addingTimeInterval(-120),
+                        sourceBundleIdentifier: "test.sleep",
+                        sourceProductType: "watch"
+                    ),
+                    AppleHealthSleepSample(
+                        id: try fixedID(42),
+                        stage: .awake,
+                        startedAt: dayStart.addingTimeInterval(-120),
+                        endedAt: dayStart.addingTimeInterval(300),
+                        sourceBundleIdentifier: "test.sleep",
+                        sourceProductType: "watch"
+                    ),
+                    AppleHealthSleepSample(
+                        id: try fixedID(43),
+                        stage: .asleepREM,
+                        startedAt: dayStart.addingTimeInterval(300),
+                        endedAt: dayStart.addingTimeInterval(2_400),
+                        sourceBundleIdentifier: "test.sleep",
+                        sourceProductType: "watch"
+                    ),
+                ]
+            )
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore:
+                StubAppleHealthTimelinePreferences(isTimelineEnabled: true)
+        )
+
+        await store.refreshAppleHealthTimelineIfEnabled(
+            now: now,
+            calendar: calendar
+        )
+
+        let visibleInterval = DateInterval(start: dayStart, end: now)
+        #expect(reader.sampleRequestIntervals == [
+            DateInterval(
+                start: dayStart.addingTimeInterval(
+                    -AppleHealthSleepEpisodePolicy.queryContextDuration
+                ),
+                end: now
+            ),
+        ])
+        let item = try #require(store.appleHealthTimelineItems.first)
+        #expect(store.appleHealthTimelineItems.count == 1)
+        #expect(item.id == .appleHealthSleep(coreID))
+        #expect(item.interval == DateInterval(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(2_400)
+        ))
+        #expect(item.durationIntervals == [
+            DateInterval(
+                start: dayStart.addingTimeInterval(300),
+                end: dayStart.addingTimeInterval(2_400)
+            ),
+        ])
+        #expect(
+            store.appleHealthTimelineState == .content(
+                interval: visibleInterval,
+                refreshedAt: now,
+                itemCount: 1
+            )
+        )
+
+        let timeline = store.timelineSnapshot(
+            segments: [],
+            date: now,
+            now: now,
+            calendar: calendar
+        )
+        let entry = try #require(timeline.entries.first)
+        #expect(timeline.entries.count == 1)
+        #expect(entry.subject == .appleHealthSleep)
+        #expect(entry.startedAt == dayStart)
+        #expect(entry.endedAt == dayStart.addingTimeInterval(2_400))
+        #expect(entry.durationSeconds == 2_100)
+    }
+
+    @Test @MainActor
     func enabledAutomaticRefreshReauthorizesBeforeReadingWhenNoSheetIsNeeded()
         async throws {
         let now = Date(timeIntervalSince1970: 1_700_000_000)

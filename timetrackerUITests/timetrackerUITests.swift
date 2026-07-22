@@ -3347,7 +3347,7 @@ final class timetrackerUITests: XCTestCase {
         )
         activate(timelineAccess)
 
-        let healthEntry = { (title: String) in
+        let healthEntries = { (title: String) in
             app.descendants(matching: .any)
                 .matching(
                     NSPredicate(
@@ -3356,10 +3356,10 @@ final class timetrackerUITests: XCTestCase {
                         "Apple Health"
                     )
                 )
-                .firstMatch
         }
-        let sleep = healthEntry("Sleep")
-        let running = healthEntry("Running")
+        let sleepEntries = healthEntries("Sleep")
+        let sleep = sleepEntries.firstMatch
+        let running = healthEntries("Running").firstMatch
         for _ in 0..<8 {
             if sleep.exists, sleep.isHittable {
                 break
@@ -3370,6 +3370,11 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             sleep.waitForExistence(timeout: 8) &&
                 isFrameFullyVisibleAboveSystemChrome(sleep, in: app)
+        )
+        XCTAssertEqual(
+            sleepEntries.count,
+            1,
+            "Core, awake, deep, and REM samples must form one sleep episode."
         )
         XCTAssertTrue(
             running.waitForExistence(timeout: 5) &&

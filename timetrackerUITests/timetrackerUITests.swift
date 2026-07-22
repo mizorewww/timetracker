@@ -5908,7 +5908,11 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication
     ) throws {
         let query = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label == %@", "2 hr skipped")
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "timeline.gap.",
+                "2 hr skipped"
+            )
         )
         XCTAssertTrue(
             waitUntil(timeout: 5) { query.count >= 2 },

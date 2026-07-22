@@ -33,7 +33,7 @@
   - [x] Apple Charts 的 `AxisValueLabelCollisionResolution.greedy` 证明“无法容纳时稳定降密度”是平台认可的轴标签策略，但它不适用于这里的自定义 annotation；`AnnotationOverflowResolution.fit` 只解决边界溢出。HIG Charts 要求辅助标注不与主数据竞争，HIG Layout 要覆盖旋转和 iPad 可变窗口，SwiftUI `Layout` 适合让 compact chart 根据真实 footprint 自适应尺寸。参考：<https://developer.apple.com/documentation/charts/axisvaluelabelcollisionresolution>、<https://developer.apple.com/documentation/swiftui/layout>、<https://developer.apple.com/design/human-interface-guidelines/charts>、<https://developer.apple.com/design/human-interface-guidelines/layout>。
   - [x] 成熟实现：Apache ECharts（审计时 66,868 stars、2026-07-15 仍有提交）采用 `moveOverlap: shiftY`，先稳定前推再回收边界空间，仍无法容纳才 `hideOverlap`；这与固定矩形时间标签最匹配。`d3-force`（1,991 stars）的迭代圆形碰撞会抖动且偏离精确时间锚点；ChartsOrg/Charts（28,004 stars）是整套并行 renderer，引入只为一维布局不合比例。参考：<https://github.com/apache/echarts/blob/74e9e09a0b5687fdd34319121ac73b3022d1483c/src/label/labelLayoutHelper.ts#L305-L590>、<https://github.com/d3/d3-force>、<https://github.com/ChartsOrg/Charts>。
   - [x] 依赖决策：不新增库；继续复用仓库锁定的 Apple `swift-collections` 1.6.0（审计时 4,459 stars）。新增 vertical placement/layout 纯 helper：按理想 Y 与稳定 id 排序，前向避让并向上回收，保持顺序和 4pt 间距；compact chart 优先增高到可容纳全部 32pt 标签，硬约束 fallback 才确定性降密度，所有 gap 虚线始终保留。hour ticks 必须使用同一最终 frame 避让。
-- [~] Checkpoint B：共享标注布局、密集 gap fixture 与自动化回归。
+- [x] Checkpoint B：共享标注布局、密集 gap fixture 与自动化回归。
   - [x] B1：新增稳定的 vertical placement/layout：预留首尾各 18pt，保持 32pt 标签高度与 4pt 间距；按理想 Y/稳定 id 排序，用受容量上界约束的前向 placement 把尾部空间向上回收，时间顺序不反转。极端硬约束下确定性均匀降密度但保留所有 dashed gap line；正常 compact path 将 `compactHeight` 作为最小值，按完整 footprint 自动增高，因此保留全部标签。
   - [x] B1：`verticalTimeline`、capsule、短引导线和 `verticalAxisTicks` 共用最终 placement frame；标签不再各自 clamp，也不扩大 96pt gutter 挤压任务轨道。horizontal 路径继续使用 Task 24 的多行 allocator；专用测试语义提供稳定 `timeline.gap.*` identifier，生产图仍由父层保持装饰性隐藏。
   - [x] B1：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主两次运行完整 `AnalyticsTimelineTests`，每次均为 36 项通过、0 失败；新增用例先证明旧的两个 32pt frame 在 300pt 轴上相交，再证明最终 frame 确定、反序输入一致、完整留在首尾安全区且间距至少 4pt，并覆盖 100pt 硬约束的确定性降密度与 12 个 gap 的 compact Timeline 容量扩展。
@@ -42,10 +42,11 @@
   - [x] B2：新增一条共享 iPhone/iPad/macOS UI 回归入口；它对可见 AX frame 去重，要求两个标注的横向 footprint 确实重叠、最终矩形不相交且保留至少 3pt 的像素取整后间距。iPad 同一测试覆盖 portrait 与 landscape，并分别产出截图；所有截图入口都仅面向 simulator/macOS。
   - [x] B2：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主运行完整 `HomeUIContractTests`。新增 `multipleGapTimelineFixtureCoversCompactAndHorizontalCollisionLayouts` 通过；测试组仍因任务开始前已存在的 `quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions`（报告两次）与 `trackingEntrypointsShareAvailabilityAndRunningStateSemantics` 失败而以 65 退出，未把它误记为全绿。编译及本任务契约验证成功。
   - [x] B2：本批次没有创建 simulator；`build/Task25Fixture`、对应 xcresult、测试宿主及派生进程均已清理，确认没有 Booted simulator。
-- [ ] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
+- [~] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
 
 ## 资源所有权
 
-- Task 25 iPhone 17 Pro simulator：`D6759E45-FE6C-4BB1-8FAD-BDF341594468`（iOS 27.0；owned，仅用于本任务 UI 批次）。
+- [x] owned iPhone batch：`Task25-iPhone-17-Pro`，UDID `D6759E45-FE6C-4BB1-8FAD-BDF341594468`，iPhone 17 Pro / iOS 27.0。顺序复跑后唯一 Task 25 用例 1/1 通过；自动断言确认两个 `2 hr skipped` 的真实 label frame 横向 footprint 重叠但最终不相交并保持间距。原始 XCTest 截图显示两个胶囊在左侧纵轴清晰分开，第二项以短 connector 保留真实时间锚点，三段任务条、图标、虚线和刻度均正常。首次双 simulator 并发只产生 CoreSimulator app launch timeout；首次顺序产品断言又暴露纯 `label` 查询会同时命中两个祖先语义 frame，最终查询收窄到生产已有的 `timeline.gap.*` identifier，避免把容器误计为标签。XCTest 已终止 app/runner，owned UDID 已 shutdown/delete，`build/Task25UIPhone*`、xcresult、失败录像与导出截图均已删除，确认没有该 UDID 或相关进程残留。
 - Task 25 iPad Pro 11-inch (M5) simulator：`02B4E95F-C009-43B5-AA48-C96DEA0F92CD`（iOS 27.0；owned，仅用于本任务 UI 批次）。
-- macOS UI 批次不创建 simulator；全部批次结束后必须终止 app/runner，删除以上两个设备并清理 DerivedData、xcresult 与导出截图。
+- [x] macOS UI batch：唯一 Task 25 用例 1/1 通过。AX 几何自动证明两个 `2 hr skipped` 横向 footprint 重叠但最终 frame 不相交并保持间距；原始 XCTest attachment 是有效前台 App 截图，两个胶囊位于独立标注行且清晰可读，三段任务条、图标、刻度和记录列表正常。XCTest 已终止 app/runner；`build/Task25UIMac`、xcresult 与导出截图均已删除，确认没有相关进程。
+- 全部 simulator 批次结束后必须删除以上两个 owned 设备，并确认无 Booted device、DerivedData、xcresult 或导出截图残留。

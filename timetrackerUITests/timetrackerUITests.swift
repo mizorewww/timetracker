@@ -49,12 +49,21 @@ final class timetrackerUITests: XCTestCase {
             app.descendants(matching: .any)["settings.category.general"]
                 .waitForExistence(timeout: 3)
         )
-        let settingsWindow = app.windows.allElementsBoundByIndex.first { window in
-            window.descendants(matching: .any)["settings.category.general"].exists
-        }
-        XCTAssertNotNil(settingsWindow)
-        XCTAssertFalse(settingsWindow?.buttons["Show Sidebar"].exists == true)
-        XCTAssertFalse(settingsWindow?.buttons["Hide Sidebar"].exists == true)
+        let settingsWindow = try XCTUnwrap(
+            app.windows.allElementsBoundByIndex.first { window in
+                window.descendants(matching: .any)["settings.category.general"].exists
+            }
+        )
+        let generalCategory = settingsWindow.descendants(matching: .any)
+            .matching(identifier: "settings.category.general")
+            .firstMatch
+        XCTAssertTrue(generalCategory.exists && generalCategory.isHittable)
+        XCTAssertFalse(settingsWindow.buttons["Show Sidebar"].exists)
+        XCTAssertFalse(settingsWindow.buttons["Hide Sidebar"].exists)
+        try recordScreenshot(
+            settingsWindow.screenshot(),
+            name: "mac-settings-fixed-sidebar"
+        )
         #endif
     }
 

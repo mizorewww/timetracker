@@ -6,9 +6,9 @@
 ## 当前阶段
 
 - [x] 读取唯一反馈、Apple HIG 与 SwiftUI 强制技能并建立 active link。
-- [ ] 审计 macOS Settings 的 scene、导航容器、column visibility 与 toolbar/sidebar toggle 来源。
-- [ ] 实现 macOS 设置侧边栏固定展开并移除展开状态切换按钮。
-- [ ] 完成定向测试、owned macOS 普通路径截图验收与资源清理。
+- [x] 审计 macOS Settings 的 scene、导航容器、column visibility 与 toolbar/sidebar toggle 来源。
+- [x] 确认并保留仓库既有原生 SwiftUI 产品修复，无需制造重复产品 diff。
+- [x] 完成定向测试、owned macOS 普通路径窗口截图验收与资源清理。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
 
 ## 唯一反馈边界
@@ -38,10 +38,44 @@
 
 ## 依赖与互联网库审计
 
-- 待查询 Apple 官方 SwiftUI 文档与成熟候选库。原生 Settings/NavigationSplitView 能完整覆盖时不新增依赖；
-  非用户指定 GitHub 库一般必须达到 1k stars 且仍需证明它优于原生 API。
+- Apple 官方 `NavigationSplitViewVisibility` 文档确认 `.all` 显示全部列：
+  https://developer.apple.com/documentation/swiftui/navigationsplitviewvisibility
+- Apple 官方 `ToolbarDefaultItemKind` 文档明确 `sidebarToggle` 是 `NavigationSplitView` 自动添加、可传给
+  `toolbar(removing:)` 删除的默认项：
+  https://developer.apple.com/documentation/swiftui/toolbardefaultitemkind
+- Apple 官方 `Settings` 文档确认 SwiftUI Settings scene 管理标准 macOS Settings 菜单、快捷键与窗口生命周期：
+  https://developer.apple.com/documentation/swiftui/settings
+- 审计成熟候选 SwiftUI Introspect（Swift Package Index：6,523 stars、持续维护、无包依赖）。本任务已经
+  有完整原生 API；引入它会把稳定声明式行为变成 AppKit 视图层级 introspection，扩大 OS 版本耦合，故拒绝。
+- 本任务使用的库：Apple SwiftUI、XCTest、Swift Testing；项目依赖图不变。
+
+## 产品与平台审计
+
+- 产品修复已由既有 checkpoint `7fc736a`（`fix: keep mac settings sidebar visible`）实现并完整保留：
+  `NavigationSplitView(columnVisibility: fixedSettingsColumnVisibility)` 始终读取 `.all`，忽略系统隐藏写回；
+  `.toolbar(removing: .sidebarToggle)` 精确删除系统自动切换按钮。
+- 修复严格位于 `#if os(macOS)` 的 Settings 分支。iOS Settings 继续使用列表导航；iPad 主导航保持自适应；
+  macOS 主窗口仍使用可变 sidebar visibility 与 `SidebarCommands()`，只有 Settings 被用户要求固定。
+- Settings scene 仍由 SwiftUI `Settings` 托管，Command-Comma 与标准菜单入口不变。Settings 窗口最小宽度
+  640 pt，分类栏宽度为 180...240 pt，固定双列不会把 detail 压到不可用尺寸。
+- 自定义 `SidebarRevealButton` 没有被 Settings 引用；本问题来源是 `NavigationSplitView` 默认 toolbar item，
+  不需要删除或改变共享组件。
 
 ## 验证与资源所有权
 
-- 待为本任务记录 owned 会话/模拟器标识、截图路径、结果包与清理结果。
+- 精确执行 Swift Testing 源码契约
+  `PlatformShellContractTests/macSettingsKeepsItsCategorySidebarVisibleWithoutAToggle()`：1 test / 1 suite
+  passed，结果包 `build/Task16MacSettingsValidation/Contract.xcresult`；付费 Apple Development 签名保持开启。
+- UI 普通路径从 macOS App 菜单打开 Settings，在目标 Settings 窗口内验证
+  `settings.category.general` 同时存在且可交互，并断言 `Show Sidebar` / `Hide Sidebar` 按钮均不存在。
+- 首轮 UI 运行 1/1 通过，但 `app.screenshot()` 包含无关桌面；未将其作为最终视觉证据。回归改用
+  `XCTUnwrap` 锁定 Settings window 并调用 `settingsWindow.screenshot()`，避免捕获其他 App 或桌面内容。
+- 增加可交互断言后的首轮编译暴露了错误的 query 链式写法，测试没有启动；已改用 XCTest 明确的
+  `matching(identifier:)` 查询并以全新 result bundle 重跑，不把该失败运行计作验收。
+- 最终 `build/Task16MacSettingsValidation/MacUI4.xcresult`：1 passed、0 failed、0 skipped；窗口级附件位于
+  `build/Task16MacSettingsValidation/ExportedAttachments4/C1D3AC32-2DCA-4D56-B367-AFB56F8F4E87.png`，人工核验
+  分类栏完整固定展开、General 可交互，标题栏没有侧边栏切换按钮。
+- 测试 teardown 已终止目标 App；复核无 owned `xcodebuild`、`xctest`、UI runner、App/extension 或
+  Instruments 进程，且没有 Booted 模拟器。既有 `AnalyticsReview-iPhone17Pro` 保持 Shutdown 且未触碰。
+- 根目录 `README.md` 仍不存在；用户在 `Docs/userfeedback.md` 的未暂存新增内容未进入本 checkpoint。
 - 最终必须记录 exact Release 命令、签名、两台连接设备的只读安装版本、embedded Watch 与 macOS 安装。

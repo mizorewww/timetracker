@@ -1,1 +1,0 @@
-../../tasks/16-macos-settings-fixed-sidebar.md

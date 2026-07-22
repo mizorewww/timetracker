@@ -9,7 +9,7 @@
 - [x] 审计 macOS Settings 的 scene、导航容器、column visibility 与 toolbar/sidebar toggle 来源。
 - [x] 确认并保留仓库既有原生 SwiftUI 产品修复，无需制造重复产品 diff。
 - [x] 完成定向测试、owned macOS 普通路径窗口截图验收与资源清理。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -78,4 +78,16 @@
 - 测试 teardown 已终止目标 App；复核无 owned `xcodebuild`、`xctest`、UI runner、App/extension 或
   Instruments 进程，且没有 Booted 模拟器。既有 `AnalyticsReview-iPhone17Pro` 保持 Shutdown 且未触碰。
 - 根目录 `README.md` 仍不存在；用户在 `Docs/userfeedback.md` 的未暂存新增内容未进入本 checkpoint。
-- 最终必须记录 exact Release 命令、签名、两台连接设备的只读安装版本、embedded Watch 与 macOS 安装。
+
+## Release 全设备安装
+
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，iOS/iPadOS（含 embedded Watch）与 macOS
+  Release 构建均成功，保留付费 Apple Development team `LT98S43NKA` 的签名与 provisioning 更新能力。
+- 脚本将移动端包安装到两台连接设备，将 macOS 包复制到 `/Applications/timetracker.app`；没有设置
+  `LAUNCH_AFTER_INSTALL=1`，因此没有在物理 iPhone/iPad 上启动、操作或截图。
+- 只读 `devicectl` 核验：iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与 iPhone Air
+  （`FBA36694-D841-56D4-8ED6-21942873B21B`）均安装 `me.mezorewww.timetracker` `1.1.52 (107)`。
+- embedded Watch 包 `me.mezorewww.timetracker.watchkitapp` 为 `1.1.52 (107)`；iOS 主包、Watch 包及
+  `/Applications/timetracker.app` 均通过 `codesign --verify --deep --strict`。
+- 安装后确认无 owned `xcodebuild`、`xctest`、UI runner、timetracker App 或 extension 进程，无 Booted
+  模拟器；既有 `AnalyticsReview-iPhone17Pro` 保持 Shutdown 且未触碰。

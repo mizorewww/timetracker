@@ -8,7 +8,7 @@
 - [x] 领取反馈，审计 Apple Health catalog 创建、Tasks 查询/过滤与计时选择器排除路径。
 - [x] 明确缺失发生在 bootstrap、read model 还是 UI 分组，并选择最小一致修复。
 - [x] 实现 Health 特殊任务自动出现在 Tasks，同时维持仅同步、不可计时、不可被计时选择器选择。
-- [~] 完成相关单元/契约回归和 owned simulator 普通路径截图验收，清理资源。
+- [x] 完成相关单元/契约回归和 owned simulator 普通路径截图验收，清理资源。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -37,7 +37,12 @@
   - UI 回归改为不点击“Show Apple Health in Timeline”，直接进入 Tasks 验证 Running 与 Sleep 自动可见；原 sync-only 详情、Quick Start 排除和普通 task 正控制继续保留。
   - macOS `AppleHealthTimelineTests` `29/29` 通过；catalog、Tasks、Timer picker、Ledger、Pomodoro、Watch、系统动作、quantity 与 UI contract 的 11-suite 回归 `183/183` 通过，均保留签名。
 - [~] Checkpoint C：owned iPhone/iPad simulator UI/截图、精确 Release 安装、状态与资源收口。
+  - iPhone 17 Pro（iOS 27.0）定向 UI 测试 `1/1` 通过；iPad Pro 11-inch (M5)（iPadOS 27.0）首次运行只在系统迁移后的 app launch 超时，测试逻辑未执行，迁移完成后原命令重跑 `1/1` 通过。
+  - 两端均导出并人工检查 3 张截图：Timeline 关闭时 Health tasks 自动出现在 Tasks、Running 详情显示 Apple Health Sync 且没有计时/手动入口、Quick Start 仅列普通可计时任务；普通字号下布局、层级与系统控件符合本任务 HIG 验收范围。
+  - 两台 owned simulator 的 app 已停止，设备均已 shutdown/delete；无 `TT-Task21`、Booted device、owned `xcodebuild`、UI runner、Simulator 或 Problem Reporter 进程，DerivedData、xcresult 与截图临时目录均已删除。
 
 ## 资源所有权
 
-- 尚未创建 simulator、启动设备流程或生成 trace。
+- owned iPhone：`TT-Task21-iPhone-20260722-1609`，UDID `7A8483D8-4355-40A9-B75C-A55B695D6C61`。
+- owned iPad：`TT-Task21-iPad-20260722-1609`，UDID `27B788CD-87C6-42EC-B48E-AF927B15B768`。
+- 两台设备只用于 Task21 普通字号 UI test / screenshot；本批次已经终止 app、shutdown、delete，并核验无 owned 进程或 Booted device。

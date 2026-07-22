@@ -3670,32 +3670,6 @@ final class timetrackerUITests: XCTestCase {
             "A1200000-0000-4000-8000-000000000012",
         ]
 
-        let timelineAccess = app.buttons[
-            "Show Apple Health in Timeline"
-        ].firstMatch
-        for _ in 0..<8 {
-            if timelineAccess.exists, timelineAccess.isHittable {
-                break
-            }
-            dragContentUp(by: app.frame.height * 0.25, in: app)
-        }
-        XCTAssertTrue(
-            timelineAccess.waitForExistence(timeout: 5) &&
-                timelineAccess.isHittable
-        )
-        activate(timelineAccess)
-
-        let importedSleep = app.buttons
-            .matching(
-                NSPredicate(
-                    format: "label CONTAINS[c] %@ AND label CONTAINS[c] %@",
-                    "Sleep",
-                    "Apple Health"
-                )
-            )
-            .firstMatch
-        XCTAssertTrue(importedSleep.waitForExistence(timeout: 8))
-
         let tasksTab = app.descendants(matching: .any)[
             "phone.tab.tasks"
         ].firstMatch
@@ -3712,6 +3686,9 @@ final class timetrackerUITests: XCTestCase {
         let running = app.buttons[
             "tasks.row.A1200000-0000-4000-8000-000000000002"
         ].firstMatch
+        let sleep = app.buttons[
+            "tasks.row.A1200000-0000-4000-8000-000000000012"
+        ].firstMatch
         scrollUntilHittable(
             running,
             direction: .up,
@@ -3720,6 +3697,10 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(
             running.waitForExistence(timeout: 8) && running.isHittable
+        )
+        try capture(
+            "\(screenshotPrefix)-apple-health-auto-visible-tasks",
+            app: app
         )
         activate(running)
 
@@ -3759,6 +3740,16 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["tasks.view"]
                 .waitForExistence(timeout: 5)
+        )
+        scrollUntilHittable(
+            sleep,
+            direction: .up,
+            maximumScrolls: 16,
+            in: app
+        )
+        XCTAssertTrue(
+            sleep.waitForExistence(timeout: 8) && sleep.isHittable,
+            "Sleep must appear in Tasks while Apple Health Timeline remains disabled."
         )
 
         let todayTab = app.descendants(matching: .any)[

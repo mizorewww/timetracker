@@ -62,6 +62,7 @@ extension TimeTrackerStore {
         let endpoint = preferences.llmEndpoint
         let apiKey = preferences.llmAPIKey
         let modelID = preferences.llmSelectedModel
+        let instructions = preferences.llmInboxSuggestionInstructions
         let itemID = item.id
         let requestedTitle = item.title
         let requestedIdentity = item.suggestionIdentity
@@ -76,6 +77,7 @@ extension TimeTrackerStore {
                     inboxTitle: requestedTitle,
                     taskCandidates: candidates.tasks,
                     categoryCandidates: candidates.categories,
+                    instructions: instructions,
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID
@@ -90,6 +92,7 @@ extension TimeTrackerStore {
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID,
+                    instructions: instructions,
                     showsErrors: showsErrors
                 )
             } catch {
@@ -102,6 +105,7 @@ extension TimeTrackerStore {
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID,
+                    instructions: instructions,
                     showsErrors: showsErrors,
                     wasCancelled: Task.isCancelled || error is CancellationError
                 )
@@ -206,5 +210,12 @@ extension TimeTrackerStore {
             apiKey.trimmingCharacters(in: .whitespacesAndNewlines) &&
             preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines) ==
             modelID.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func matchesCurrentLLMPrompt(
+        _ instructions: String,
+        kind: LLMPromptKind
+    ) -> Bool {
+        preferences.llmInstructions(for: kind) == instructions
     }
 }

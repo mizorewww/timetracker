@@ -23,6 +23,10 @@ extension TimeTrackerStore {
                   apiKey: request.apiKey,
                   modelID: request.modelID
               ),
+              matchesCurrentLLMPrompt(
+                  request.instructions,
+                  kind: .checklistVisual
+              ),
               preferences.llmAutomaticSuggestionsEnabled,
               let modelContext else {
             return
@@ -76,7 +80,8 @@ extension TimeTrackerStore {
             endpoint: request.endpoint,
             apiKey: request.apiKey,
             modelID: request.modelID
-        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+        ), matchesCurrentLLMPrompt(request.instructions, kind: .checklistVisual),
+           showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
         }
         if showsErrors {
@@ -117,6 +122,7 @@ struct ChecklistVisualSuggestionRequest {
     let baseline: ChecklistVisualSuggestionBaseline
     let taskTitle: String
     let taskPath: String
+    let instructions: String
     let endpoint: String
     let apiKey: String
     let modelID: String
@@ -124,6 +130,7 @@ struct ChecklistVisualSuggestionRequest {
     var fingerprint: String {
         [
             title,
+            instructions,
             endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
             modelID.trimmingCharacters(in: .whitespacesAndNewlines),
             String(apiKey.hashValue)

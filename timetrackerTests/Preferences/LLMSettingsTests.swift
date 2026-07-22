@@ -104,6 +104,20 @@ struct LLMSettingsTests {
         )
     }
 
+    @Test
+    func everyPromptKindFallsBackToItsOwnDistinctDefault() throws {
+        let defaults = try LLMPromptKind.allCases.map { kind in
+            let resolved = try AppPreferenceValueSanitizer.llmPromptInstructions(
+                " \n\t ",
+                for: kind
+            )
+            #expect(resolved == kind.defaultInstructions)
+            return resolved
+        }
+
+        #expect(Set(defaults).count == LLMPromptKind.allCases.count)
+    }
+
     @Test @MainActor
     func taskPlanInstructionsRoundTripAsANonSensitiveSyncedPreference() throws {
         let instructions = "Use one category per durable area.\n\tPrefer small tasks."
@@ -125,6 +139,44 @@ struct LLMSettingsTests {
         #expect(
             preferences.valueJSON(for: .llmTaskPlanInstructions) ==
                 PreferenceJSON.encode(instructions)
+        )
+    }
+
+    @Test @MainActor
+    func inboxAndChecklistInstructionsRoundTripAsIndependentSyncedPreferences() throws {
+        let inboxInstructions = "Prefer the narrowest existing destination."
+        let checklistInstructions = "Prefer calm colors and familiar symbols."
+        let values: [(AppPreferenceKey, String)] = [
+            (.llmInboxSuggestionInstructions, inboxInstructions),
+            (.llmChecklistVisualInstructions, checklistInstructions),
+        ]
+        let stored = try values.map { key, value in
+            SyncedPreference(
+                key: key.rawValue,
+                valueJSON: try PreferenceJSON.canonicalValueJSON(
+                    for: key,
+                    from: PreferenceJSON.encode(value)
+                ),
+                deviceID: "test"
+            )
+        }
+        let preferences = AppPreferences(syncedPreferences: stored)
+
+        #expect(preferences.llmInboxSuggestionInstructions == inboxInstructions)
+        #expect(preferences.llmChecklistVisualInstructions == checklistInstructions)
+        #expect(preferences.llmTaskPlanInstructions == LLMPromptKind.taskPlan.defaultInstructions)
+        for preference in stored {
+            #expect(SyncedPreferenceService.shouldSyncKey(preference.key))
+            #expect(!SyncedPreferenceService.isSensitiveKey(preference.key))
+            #expect(!SyncedPreferenceService.isDeviceLocalKey(preference.key))
+        }
+        #expect(
+            preferences.valueJSON(for: .llmInboxSuggestionInstructions) ==
+                PreferenceJSON.encode(inboxInstructions)
+        )
+        #expect(
+            preferences.valueJSON(for: .llmChecklistVisualInstructions) ==
+                PreferenceJSON.encode(checklistInstructions)
         )
     }
 

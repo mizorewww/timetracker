@@ -29,6 +29,7 @@ extension TimeTrackerStore {
                     checklistTitle: request.title,
                     taskTitle: request.taskTitle,
                     taskPath: request.taskPath,
+                    instructions: request.instructions,
                     endpoint: request.endpoint,
                     apiKey: request.apiKey,
                     modelID: request.modelID
@@ -76,6 +77,7 @@ extension TimeTrackerStore {
             ),
             taskTitle: task.title,
             taskPath: taskPath(for: task),
+            instructions: preferences.llmChecklistVisualInstructions,
             endpoint: preferences.llmEndpoint,
             apiKey: preferences.llmAPIKey,
             modelID: preferences.llmSelectedModel

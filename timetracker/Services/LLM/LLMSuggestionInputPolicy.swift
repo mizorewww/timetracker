@@ -42,7 +42,11 @@ nonisolated enum LLMSuggestionInputPolicy {
     static let maximumModelIDByteCount = 256
     static let maximumReasonByteCount = 512
     static let maximumPromptByteCount = 24 * 1_024
-    static let maximumRequestBodyByteCount = 32 * 1_024
+    // The prompt is embedded as a JSON string in the outer request. A valid
+    // prompt made entirely of quotes or backslashes can nearly double during
+    // that second encoding pass, so keep a bounded envelope with enough room
+    // for the full prompt plus the fixed system message and request metadata.
+    static let maximumRequestBodyByteCount = 64 * 1_024
     static let maximumEndpointByteCount = 4 * 1_024
     static let maximumAPIKeyByteCount = 8 * 1_024
     static let maximumTaskIDByteCount = 64

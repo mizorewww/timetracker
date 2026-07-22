@@ -43,6 +43,8 @@ extension TimeTrackerStore {
         let previousEndpoint = preferences.llmEndpoint
         let previousAPIKey = preferences.llmAPIKey
         let previousModelID = preferences.llmSelectedModel
+        let previousInboxInstructions = preferences.llmInboxSuggestionInstructions
+        let previousChecklistInstructions = preferences.llmChecklistVisualInstructions
         let automaticSuggestionsWereEnabled = preferences.llmAutomaticSuggestionsEnabled
         preferenceDomainStore.refresh(
             syncedPreferences: try fetchSyncedPreferences(),
@@ -53,16 +55,25 @@ extension TimeTrackerStore {
         )
         syncedPreferences = preferenceDomainStore.syncedPreferences
         preferences = preferenceDomainStore.preferences
-        if !matchesCurrentLLMConfiguration(
+        let configurationChanged = !matchesCurrentLLMConfiguration(
             endpoint: previousEndpoint,
             apiKey: previousAPIKey,
             modelID: previousModelID
-        ) {
+        )
+        if configurationChanged {
             cancelAllInboxSuggestionRequests()
             cancelAllChecklistVisualSuggestionRequests()
-        } else if automaticSuggestionsWereEnabled && !preferences.llmAutomaticSuggestionsEnabled {
-            cancelAutomaticInboxSuggestionRequests()
-            cancelAllChecklistVisualSuggestionRequests()
+        } else {
+            if previousInboxInstructions != preferences.llmInboxSuggestionInstructions {
+                cancelAllInboxSuggestionRequests()
+            }
+            if previousChecklistInstructions != preferences.llmChecklistVisualInstructions {
+                cancelAllChecklistVisualSuggestionRequests()
+            }
+            if automaticSuggestionsWereEnabled && !preferences.llmAutomaticSuggestionsEnabled {
+                cancelAutomaticInboxSuggestionRequests()
+                cancelAllChecklistVisualSuggestionRequests()
+            }
         }
     }
 

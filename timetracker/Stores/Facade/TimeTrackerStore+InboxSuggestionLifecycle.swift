@@ -10,6 +10,7 @@ extension TimeTrackerStore {
         endpoint: String,
         apiKey: String,
         modelID: String,
+        instructions: String,
         showsErrors: Bool
     ) {
         guard isCurrentInboxSuggestionRequest(itemID: itemID, requestID: requestID) else { return }
@@ -19,7 +20,8 @@ extension TimeTrackerStore {
             endpoint: endpoint,
             apiKey: apiKey,
             modelID: modelID
-        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+        ), matchesCurrentLLMPrompt(instructions, kind: .inboxRouting),
+           showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
         }
 
@@ -52,6 +54,7 @@ extension TimeTrackerStore {
         endpoint: String,
         apiKey: String,
         modelID: String,
+        instructions: String,
         showsErrors: Bool,
         wasCancelled: Bool
     ) {
@@ -71,7 +74,8 @@ extension TimeTrackerStore {
             endpoint: endpoint,
             apiKey: apiKey,
             modelID: modelID
-        ), showsErrors || preferences.llmAutomaticSuggestionsEnabled,
+        ), matchesCurrentLLMPrompt(instructions, kind: .inboxRouting),
+           showsErrors || preferences.llmAutomaticSuggestionsEnabled,
               let item = inboxItems.first(where: { $0.id == itemID }),
               inboxSuggestionStateService.canStoreGeneratedSuggestion(
                   readModel: inboxItemReadModel(for: item),

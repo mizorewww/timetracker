@@ -57,6 +57,7 @@ struct LLMInboxSuggestionService {
         inboxTitle: String,
         taskCandidates: [LLMTaskCandidate],
         categoryCandidates: [LLMCategoryCandidate],
+        instructions: String = LLMPromptKind.inboxRouting.defaultInstructions,
         endpoint: String,
         apiKey: String,
         modelID: String
@@ -76,6 +77,7 @@ struct LLMInboxSuggestionService {
 
         let request = try suggestionRequest(
             input: input,
+            instructions: instructions,
             endpoint: endpoint,
             apiKey: apiKey
         )
@@ -113,6 +115,7 @@ struct LLMInboxSuggestionService {
         inboxTitle: String,
         taskCandidates: [LLMTaskCandidate],
         categoryCandidates: [LLMCategoryCandidate],
+        instructions: String = LLMPromptKind.inboxRouting.defaultInstructions,
         endpoint: String,
         apiKey: String,
         modelID: String
@@ -129,11 +132,17 @@ struct LLMInboxSuggestionService {
         guard !input.taskCandidates.isEmpty || !input.categoryCandidates.isEmpty else {
             throw LLMInboxSuggestionServiceError.noTaskCandidates
         }
-        return try suggestionRequest(input: input, endpoint: endpoint, apiKey: apiKey)
+        return try suggestionRequest(
+            input: input,
+            instructions: instructions,
+            endpoint: endpoint,
+            apiKey: apiKey
+        )
     }
 
     private func suggestionRequest(
         input: LLMInboxSuggestionPreparedInput,
+        instructions: String,
         endpoint: String,
         apiKey: String
     ) throws -> URLRequest {
@@ -148,6 +157,8 @@ struct LLMInboxSuggestionService {
         guard let url = Self.chatCompletionsURL(endpoint: trimmedEndpoint) else {
             throw LLMModelServiceError.invalidEndpoint
         }
+        let preparedInstructions = try AppPreferenceValueSanitizer
+            .llmInboxSuggestionInstructions(instructions)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -161,13 +172,14 @@ struct LLMInboxSuggestionService {
                 messages: [
                     .init(
                         role: "system",
-                        content: """
-                        Route each inbox item to exactly one existing destination. Return only JSON with keys destinationKind, destinationID, reason, iconName, colorHex. destinationKind must be childTask, category, or checklist. For childTask and checklist, destinationID must exactly match an ID from tasks. For category, destinationID must exactly match an ID from categories. childTask creates a new child task, category creates a new root task in that category, and checklist creates a checklist item in that task. Use a valid SF Symbol from allowedSymbols and a color from allowedColors exactly.
-                        """
+                        content: Self.responseContract
                     ),
                     .init(
                         role: "user",
-                        content: try prompt(input: input)
+                        content: try prompt(
+                            input: input,
+                            instructions: preparedInstructions
+                        )
                     )
                 ],
                 temperature: 0.2,
@@ -268,8 +280,12 @@ struct LLMInboxSuggestionService {
         )
     }
 
-    private func prompt(input: LLMInboxSuggestionPreparedInput) throws -> String {
+    private func prompt(
+        input: LLMInboxSuggestionPreparedInput,
+        instructions: String
+    ) throws -> String {
         let payload = PromptPayload(
+            instructions: instructions,
             inboxTitle: input.inboxTitle,
             allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
             allowedColors: TaskColorPalette.hexValues,
@@ -285,6 +301,18 @@ struct LLMInboxSuggestionService {
     }
 }
 
+private extension LLMInboxSuggestionService {
+    static let responseContract = """
+    Return only JSON with keys destinationKind, destinationID, reason, iconName, \
+    colorHex. destinationKind must be childTask, category, or checklist. For \
+    childTask and checklist, destinationID must exactly match an ID from tasks. \
+    For category, destinationID must exactly match an ID from categories. Use \
+    childTask to create a new child task, category to create a new root task in \
+    that category, and checklist to create a checklist item in that task. Use an \
+    SF Symbol from allowedSymbols and a color from allowedColors exactly.
+    """
+}
+
 struct InboxSuggestionPayload: Codable, Equatable {
     let destinationKind: String
     let destinationID: String
@@ -294,6 +322,7 @@ struct InboxSuggestionPayload: Codable, Equatable {
 }
 
 private struct PromptPayload: Encodable {
+    let instructions: String
     let inboxTitle: String
     let allowedSymbols: [String]
     let allowedColors: [String]

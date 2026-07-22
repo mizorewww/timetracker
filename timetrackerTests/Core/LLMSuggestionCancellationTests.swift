@@ -222,6 +222,278 @@ struct LLMSuggestionCancellationTests {
     }
 
     @Test @MainActor
+    func inboxPromptChangeOnlyReplacesInboxRequestAndRejectsOldCompletion() async throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Planning", parentID: nil, deviceID: "test")
+        let inboxItem = InboxItem(title: "Prepare launch plan", deviceID: "test")
+        let checklistItem = ChecklistItem(
+            taskID: task.id,
+            title: "Review launch copy",
+            deviceID: "test"
+        )
+        context.insert(task)
+        context.insert(inboxItem)
+        context.insert(checklistItem)
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmEndpoint.rawValue,
+            valueJSON: PreferenceJSON.encode("https://example.test/v1"),
+            deviceID: "test"
+        ))
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmSelectedModel.rawValue,
+            valueJSON: PreferenceJSON.encode("test-model"),
+            deviceID: "test"
+        ))
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmAvailableModelIDs.rawValue,
+            valueJSON: PreferenceJSON.encode(["test-model"]),
+            deviceID: "test"
+        ))
+        try context.save()
+
+        let inboxGate = ControlledLLMTransport(payload: .inbox(taskID: task.id))
+        let checklistGate = ControlledLLMTransport(payload: .checklist)
+        let store = Self.configuredStore(
+            context: context,
+            task: task,
+            inboxItems: [inboxItem],
+            checklistItems: [checklistItem],
+            inboxGate: inboxGate,
+            checklistGate: checklistGate
+        )
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+        let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+            forKey: automaticSuggestionsKey
+        )
+        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        defer {
+            if let previousAutomaticSuggestionsValue {
+                UserDefaults.standard.set(
+                    previousAutomaticSuggestionsValue,
+                    forKey: automaticSuggestionsKey
+                )
+            } else {
+                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+            }
+        }
+
+        store.autoSuggestInboxItemsIfNeeded()
+        store.autoSuggestChecklistVisualsIfNeeded()
+        #expect(await Self.eventually {
+            let inboxRequestCount = await inboxGate.requestCount
+            let checklistRequestCount = await checklistGate.requestCount
+            return inboxRequestCount == 1 && checklistRequestCount == 1
+        })
+
+        let updatedInstructions = "Prefer checklist destinations for concrete steps."
+        #expect(
+            store.setLLMPromptInstructions(
+                updatedInstructions,
+                for: .inboxRouting
+            )
+        )
+        #expect(await Self.eventually { await inboxGate.requestCount == 2 })
+        #expect(await checklistGate.requestCount == 1)
+        #expect(store.preferences.llmInboxSuggestionInstructions == updatedInstructions)
+        #expect(store.checklistVisualSuggestionInFlightIDs == [checklistItem.id])
+
+        await inboxGate.resumeRequest(at: 0)
+        #expect(await Self.eventually { await inboxGate.cancelledRequestCount == 1 })
+        #expect(store.inboxSuggestionInFlightIDs == [inboxItem.id])
+        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).isEmpty)
+
+        await inboxGate.resumeRequest(at: 1)
+        await checklistGate.resumeRequest(at: 0)
+        #expect(await Self.eventually {
+            store.inboxSuggestionInFlightIDs.isEmpty &&
+                store.checklistVisualSuggestionInFlightIDs.isEmpty
+        })
+        #expect(store.inboxSuggestion(for: inboxItem) != nil)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).count == 1)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
+    func checklistPromptChangeOnlyReplacesChecklistRequestAndRejectsOldCompletion() async throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Design", parentID: nil, deviceID: "test")
+        let inboxItem = InboxItem(title: "Prepare the visual review", deviceID: "test")
+        let checklistItem = ChecklistItem(
+            taskID: task.id,
+            title: "Choose the review icon",
+            deviceID: "test"
+        )
+        context.insert(task)
+        context.insert(inboxItem)
+        context.insert(checklistItem)
+        Self.insertLLMConfiguration(into: context)
+        try context.save()
+
+        let inboxGate = ControlledLLMTransport(payload: .inbox(taskID: task.id))
+        let checklistGate = ControlledLLMTransport(payload: .checklist)
+        let store = Self.configuredStore(
+            context: context,
+            task: task,
+            inboxItems: [inboxItem],
+            checklistItems: [checklistItem],
+            inboxGate: inboxGate,
+            checklistGate: checklistGate
+        )
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+        let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+            forKey: automaticSuggestionsKey
+        )
+        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        defer {
+            if let previousAutomaticSuggestionsValue {
+                UserDefaults.standard.set(
+                    previousAutomaticSuggestionsValue,
+                    forKey: automaticSuggestionsKey
+                )
+            } else {
+                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+            }
+        }
+
+        store.autoSuggestInboxItemsIfNeeded()
+        store.autoSuggestChecklistVisualsIfNeeded()
+        #expect(await Self.eventually {
+            let inboxRequestCount = await inboxGate.requestCount
+            let checklistRequestCount = await checklistGate.requestCount
+            return inboxRequestCount == 1 && checklistRequestCount == 1
+        })
+
+        let updatedInstructions = "Prefer literal symbols and calm colors."
+        #expect(
+            store.setLLMPromptInstructions(
+                updatedInstructions,
+                for: .checklistVisual
+            )
+        )
+        #expect(await Self.eventually { await checklistGate.requestCount == 2 })
+        #expect(await inboxGate.requestCount == 1)
+        #expect(store.preferences.llmChecklistVisualInstructions == updatedInstructions)
+        #expect(store.inboxSuggestionInFlightIDs == [inboxItem.id])
+
+        await checklistGate.resumeRequest(at: 0)
+        #expect(await Self.eventually { await checklistGate.cancelledRequestCount == 1 })
+        #expect(store.checklistVisualSuggestionInFlightIDs == [checklistItem.id])
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
+
+        await checklistGate.resumeRequest(at: 1)
+        await inboxGate.resumeRequest(at: 0)
+        #expect(await Self.eventually {
+            store.inboxSuggestionInFlightIDs.isEmpty &&
+                store.checklistVisualSuggestionInFlightIDs.isEmpty
+        })
+        #expect(store.inboxSuggestion(for: inboxItem) != nil)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).count == 1)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
+    func syncedPromptRefreshReplacesOnlyRequestsUsingChangedPrompts() async throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Launch", parentID: nil, deviceID: "test")
+        let inboxItem = InboxItem(title: "Route launch notes", deviceID: "test")
+        let checklistItem = ChecklistItem(
+            taskID: task.id,
+            title: "Review launch icon",
+            deviceID: "test"
+        )
+        context.insert(task)
+        context.insert(inboxItem)
+        context.insert(checklistItem)
+        Self.insertLLMConfiguration(into: context)
+        try context.save()
+
+        let inboxGate = ControlledLLMTransport(payload: .inbox(taskID: task.id))
+        let checklistGate = ControlledLLMTransport(payload: .checklist)
+        let store = Self.configuredStore(
+            context: context,
+            task: task,
+            inboxItems: [inboxItem],
+            checklistItems: [checklistItem],
+            inboxGate: inboxGate,
+            checklistGate: checklistGate
+        )
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+        let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+            forKey: automaticSuggestionsKey
+        )
+        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        defer {
+            if let previousAutomaticSuggestionsValue {
+                UserDefaults.standard.set(
+                    previousAutomaticSuggestionsValue,
+                    forKey: automaticSuggestionsKey
+                )
+            } else {
+                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+            }
+        }
+
+        store.autoSuggestInboxItemsIfNeeded()
+        store.autoSuggestChecklistVisualsIfNeeded()
+        #expect(await Self.eventually {
+            let inboxRequestCount = await inboxGate.requestCount
+            let checklistRequestCount = await checklistGate.requestCount
+            return inboxRequestCount == 1 && checklistRequestCount == 1
+        })
+
+        let remoteInboxInstructions = "Prefer the closest existing task."
+        let remoteChecklistInstructions = "Prefer simple symbols and blue tones."
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmInboxSuggestionInstructions.rawValue,
+            valueJSON: PreferenceJSON.encode(remoteInboxInstructions),
+            deviceID: "remote"
+        ))
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmChecklistVisualInstructions.rawValue,
+            valueJSON: PreferenceJSON.encode(remoteChecklistInstructions),
+            deviceID: "remote"
+        ))
+        try context.save()
+        try store.refresh(plan: StoreRefreshPlan(scopes: [.preferences]))
+
+        #expect(store.preferences.llmInboxSuggestionInstructions == remoteInboxInstructions)
+        #expect(
+            store.preferences.llmChecklistVisualInstructions ==
+                remoteChecklistInstructions
+        )
+        #expect(await Self.eventually {
+            let inboxRequestCount = await inboxGate.requestCount
+            let checklistRequestCount = await checklistGate.requestCount
+            return inboxRequestCount == 2 && checklistRequestCount == 2
+        })
+
+        await inboxGate.resumeRequest(at: 0)
+        await checklistGate.resumeRequest(at: 0)
+        #expect(await Self.eventually {
+            let inboxCancellationCount = await inboxGate.cancelledRequestCount
+            let checklistCancellationCount = await checklistGate.cancelledRequestCount
+            return inboxCancellationCount == 1 && checklistCancellationCount == 1
+        })
+        #expect(store.inboxSuggestionInFlightIDs == [inboxItem.id])
+        #expect(store.checklistVisualSuggestionInFlightIDs == [checklistItem.id])
+        #expect(try context.fetch(FetchDescriptor<InboxSuggestion>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
+
+        await inboxGate.resumeRequest(at: 1)
+        await checklistGate.resumeRequest(at: 1)
+        #expect(await Self.eventually {
+            store.inboxSuggestionInFlightIDs.isEmpty &&
+                store.checklistVisualSuggestionInFlightIDs.isEmpty
+        })
+        #expect(store.inboxSuggestion(for: inboxItem) != nil)
+        #expect(try context.fetch(FetchDescriptor<ChecklistItemVisual>()).count == 1)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
     func titleRoundTripRejectsResultFromPreviousSuggestionRevision() async throws {
         let context = try makeTestContext()
         let task = TaskNode(title: "Planning", parentID: nil, deviceID: "test")
@@ -359,6 +631,25 @@ struct LLMSuggestionCancellationTests {
         store.preferences.llmAPIKey = "test-key"
         store.preferences.llmSelectedModel = "test-model"
         return store
+    }
+
+    @MainActor
+    private static func insertLLMConfiguration(into context: ModelContext) {
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmEndpoint.rawValue,
+            valueJSON: PreferenceJSON.encode("https://example.test/v1"),
+            deviceID: "test"
+        ))
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmSelectedModel.rawValue,
+            valueJSON: PreferenceJSON.encode("test-model"),
+            deviceID: "test"
+        ))
+        context.insert(SyncedPreference(
+            key: AppPreferenceKey.llmAvailableModelIDs.rawValue,
+            valueJSON: PreferenceJSON.encode(["test-model"]),
+            deviceID: "test"
+        ))
     }
 
     @MainActor

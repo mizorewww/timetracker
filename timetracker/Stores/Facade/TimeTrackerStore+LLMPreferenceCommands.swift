@@ -71,17 +71,54 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func setLLMTaskPlanInstructions(_ value: String) -> Bool {
+    func setLLMPromptInstructions(
+        _ value: String,
+        for kind: LLMPromptKind
+    ) -> Bool {
         do {
-            let normalized = try AppPreferenceValueSanitizer.llmTaskPlanInstructions(value)
-            return setPreference(
-                .llmTaskPlanInstructions,
+            let normalized = try AppPreferenceValueSanitizer.llmPromptInstructions(
+                value,
+                for: kind
+            )
+            let changed = normalized != preferences.llmInstructions(for: kind)
+            let inboxRequestSnapshot = inboxSuggestionTasksByItemID.mapValues(\.requestID)
+            let checklistRequestSnapshot = checklistVisualSuggestionTasksByItemID
+                .mapValues(\.requestID)
+            let preferenceKey: AppPreferenceKey
+            switch kind {
+            case .inboxRouting:
+                preferenceKey = .llmInboxSuggestionInstructions
+            case .checklistVisual:
+                preferenceKey = .llmChecklistVisualInstructions
+            case .taskPlan:
+                preferenceKey = .llmTaskPlanInstructions
+            }
+            let didSet = setPreference(
+                preferenceKey,
                 valueJSON: PreferenceJSON.encode(normalized)
             )
+            if didSet, changed {
+                switch kind {
+                case .inboxRouting:
+                    cancelInboxSuggestionRequests(matching: inboxRequestSnapshot)
+                case .checklistVisual:
+                    cancelChecklistVisualSuggestionRequests(
+                        matching: checklistRequestSnapshot
+                    )
+                case .taskPlan:
+                    break
+                }
+            }
+            return didSet
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
+    }
+
+    @discardableResult
+    func setLLMTaskPlanInstructions(_ value: String) -> Bool {
+        setLLMPromptInstructions(value, for: .taskPlan)
     }
 
     @discardableResult

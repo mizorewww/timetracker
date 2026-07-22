@@ -6,8 +6,8 @@
 ## 当前阶段
 
 - [x] 读取唯一反馈并领取任务。
-- [ ] 审计现有 AI 配置、提示词种类、默认值、持久化和调用路径。
-- [ ] 参考 Apple HIG、SwiftUI 专项规范与成熟库，确定编辑体验和依赖边界。
+- [x] 审计现有 AI 配置、提示词种类、默认值、持久化和调用路径。
+- [x] 参考 Apple HIG、SwiftUI 专项规范与成熟库，确定编辑体验和依赖边界。
 - [ ] 实现每一种现有 AI 提示词都可分别编辑、保存、恢复默认并被对应调用读取。
 - [ ] 完成定向测试、owned 模拟器普通交互与截图验收并清理资源。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
@@ -31,10 +31,42 @@
 
 ## 待审计问题
 
-- 当前有哪些 AI prompt consumer，各自的默认提示词位于何处，是否存在硬编码或重复来源。
-- 当前设置页只允许编辑哪一种 prompt，保存值是否真正进入 request builder。
-- 用户覆盖值应使用现有 synced preference、设备本地 preference，还是已有的 prompt store；恢复默认的语义如何表达。
-- iPhone、iPad 与 macOS 设置布局是否共享同一数据流，长文本编辑是否需要独立 sheet/editor。
+- [x] 全仓只有三个真实 prompt consumer：Inbox 路由、Checklist 视觉建议、Task Plan；模型列表 GET 不是 prompt consumer。
+- [x] Task Plan 的行为说明已可编辑并进入 request；Inbox 与 Checklist 仍把行为说明和固定 JSON contract 混在 service 中。
+- [x] 三种行为说明都是非敏感 synced preference；API Key 继续只保存在设备 Keychain。空白输入恢复该种 prompt 的 catalog default。
+- [x] iPhone、iPad 与 macOS 复用一个泛型长文本编辑器；Intelligence 设置直接列出三种 prompt，避免额外的嵌套列表 sheet。
+
+## 已确定实现设计
+
+- `LLMPromptKind` 只建模 `inboxRouting`、`checklistVisual`、`taskPlan` 三种真实功能，并集中各自默认行为说明。
+- 保留已有 `LLMTaskPlanInstructions` key 兼容用户数据；为 Inbox 与 Checklist 分别新增独立 synced key，降低跨设备写冲突粒度。
+- Inbox/Checklist 的 editable instructions 放入动态 user JSON；JSON keys、候选 ID、符号/颜色白名单继续留在不可编辑 system contract，响应端验证不放宽。
+- prompt 保存与远端偏好刷新都必须使对应旧请求失效；Checklist request fingerprint 也包含 prompt，旧 completion 不得回写。
+- 设置页三行进入同一个 `TextEditor` 实现，保留 Save/Cancel、4 KiB UTF-8 校验、恢复默认与未保存退出确认。
+
+## 依赖与资料结论
+
+- 采用系统 SwiftUI `Form`、`TextEditor`、`NavigationStack`、`confirmationDialog` 和仓库现有 `EditorSafety`；本任务不新增库。
+- Apple 一手参考：HIG Settings、Text views、Undo and redo、Generative AI，以及 SwiftUI `TextEditor` / `Form` 文档。
+- 未采用 `STTextView`（约 1.6k stars，GPLv3/商业许可且偏代码编辑器）或 `Runestone`（约 3.2k stars，代码编辑器能力过重）。
+- 仓库已有 `MarkdownView` 是渲染器、约 138 stars，且属于下一条用户明确提出的子任务；本任务不使用。
+
+## Checkpoint 编排
+
+- [x] Checkpoint A：prompt catalog、同步偏好、service request、旧请求失效和定向单元测试。
+- [~] Checkpoint B：三行设置入口、泛型编辑器、本地化、UI/contract 测试与 owned 模拟器截图。
+- [ ] Checkpoint C：全量回归、精确 Release 全设备安装、状态标记和资源清理。
+
+## Checkpoint A 结果
+
+- 新建统一 `LLMPromptKind` catalog；保留 Task Plan 既有同步 key，并为 Inbox / Checklist 新增独立、非敏感的同步偏好。
+- Inbox / Checklist request 将用户行为说明放入 user JSON；固定响应 schema、目标语义、候选 ID 和图标/颜色白名单仍在不可编辑 system contract。
+- 本地保存或远端同步改变 prompt 时，只替换相应请求；旧 request ID、旧配置或旧 prompt 的 completion 均不可落库。
+- prompt 仍限 24 KiB，outer request 明确限 64 KiB，覆盖 JSON 二次转义最坏开销且不裁掉已预算候选。
+- 定向回归：94 passed、0 failed、0 skipped；结果为
+  `build/Task19PromptDataTests/DerivedData/Logs/Test/Test-timetracker-2026.07.22_13-10-00-+0800.xcresult`。
+- 两轮只读子代理审查完成；修复组合预算和对称失效覆盖后最终均为 no findings。
+- 本检查点未启动 simulator；验证后无 Booted device、`xcodebuild`、`xctest` 或 runner 残留。
 
 ## 资源所有权
 

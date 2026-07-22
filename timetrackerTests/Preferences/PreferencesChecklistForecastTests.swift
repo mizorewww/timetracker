@@ -307,7 +307,7 @@ struct PreferencesChecklistForecastTests {
         var preferences = AppPreferences(syncedPreferences: stored)
         preferences.llmAPIKey = try credentialStore.readAPIKey() ?? ""
 
-        #expect(stored.count == AppPreferenceKey.allCases.count - 2)
+        #expect(stored.count == AppPreferenceKey.allCases.count - 4)
         #expect(stored.allSatisfy { SyncedPreferenceService.shouldSyncKey($0.key) })
         #expect(preferences.preferredColorScheme == "dark")
         #expect(preferences.pomodoroDefaultMode == PomodoroPreset.deep.rawValue)
@@ -323,6 +323,14 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.llmAPIKey == "test-key")
         #expect(preferences.llmSelectedModel == "gpt-test")
         #expect(preferences.llmAvailableModelIDs == ["gpt-other", "gpt-test"])
+        #expect(
+            preferences.llmInboxSuggestionInstructions ==
+                LLMPromptKind.inboxRouting.defaultInstructions
+        )
+        #expect(
+            preferences.llmChecklistVisualInstructions ==
+                LLMPromptKind.checklistVisual.defaultInstructions
+        )
         #expect(preferences.llmTaskPlanInstructions == "Prefer concise generated tasks.")
         let defaultPlans = PomodoroPlan.defaultPlans
         #expect(preferences.pomodoroPlans.map(\.name) == defaultPlans.map(\.name))

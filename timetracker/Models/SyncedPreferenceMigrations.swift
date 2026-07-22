@@ -141,6 +141,11 @@ extension SyncedPreferenceService {
                 .split(separator: ",")
                 .map(String.init) ?? []
             encodedValue = try? PreferenceJSON.encodeChecked(models)
+        case .llmInboxSuggestionInstructions,
+             .llmChecklistVisualInstructions:
+            // These prompts were introduced directly in synced storage and
+            // have no legacy UserDefaults representation to migrate.
+            return nil
         case .llmTaskPlanInstructions:
             guard let value = defaults.string(forKey: key.rawValue) else { return nil }
             encodedValue = try? PreferenceJSON.encodeChecked(value)

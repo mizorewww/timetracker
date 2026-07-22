@@ -18,6 +18,7 @@ struct LLMChecklistVisualSuggestionService {
         checklistTitle: String,
         taskTitle: String,
         taskPath: String,
+        instructions: String = LLMPromptKind.checklistVisual.defaultInstructions,
         endpoint: String,
         apiKey: String,
         modelID: String
@@ -34,6 +35,7 @@ struct LLMChecklistVisualSuggestionService {
 
         let request = try suggestionRequest(
             input: input,
+            instructions: instructions,
             endpoint: endpoint,
             apiKey: apiKey
         )
@@ -59,6 +61,7 @@ struct LLMChecklistVisualSuggestionService {
         checklistTitle: String,
         taskTitle: String,
         taskPath: String,
+        instructions: String = LLMPromptKind.checklistVisual.defaultInstructions,
         endpoint: String,
         apiKey: String,
         modelID: String
@@ -72,11 +75,17 @@ struct LLMChecklistVisualSuggestionService {
         guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
         }
-        return try suggestionRequest(input: input, endpoint: endpoint, apiKey: apiKey)
+        return try suggestionRequest(
+            input: input,
+            instructions: instructions,
+            endpoint: endpoint,
+            apiKey: apiKey
+        )
     }
 
     private func suggestionRequest(
         input: LLMChecklistVisualSuggestionPreparedInput,
+        instructions: String,
         endpoint: String,
         apiKey: String
     ) throws -> URLRequest {
@@ -91,6 +100,8 @@ struct LLMChecklistVisualSuggestionService {
         guard let url = LLMInboxSuggestionService.chatCompletionsURL(endpoint: trimmedEndpoint) else {
             throw LLMModelServiceError.invalidEndpoint
         }
+        let preparedInstructions = try AppPreferenceValueSanitizer
+            .llmChecklistVisualInstructions(instructions)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -104,13 +115,14 @@ struct LLMChecklistVisualSuggestionService {
                 messages: [
                     .init(
                         role: "system",
-                        content: """
-                        You choose a concise visual identity for one checklist item. Return only JSON with keys iconName, colorHex, reason. Use a valid SF Symbol from allowedSymbols exactly and a color from allowedColors exactly.
-                        """
+                        content: Self.responseContract
                     ),
                     .init(
                         role: "user",
-                        content: try prompt(input: input)
+                        content: try prompt(
+                            input: input,
+                            instructions: preparedInstructions
+                        )
                     )
                 ],
                 temperature: 0.2,
@@ -142,8 +154,12 @@ struct LLMChecklistVisualSuggestionService {
         )
     }
 
-    private func prompt(input: LLMChecklistVisualSuggestionPreparedInput) throws -> String {
+    private func prompt(
+        input: LLMChecklistVisualSuggestionPreparedInput,
+        instructions: String
+    ) throws -> String {
         let payload = ChecklistVisualPromptPayload(
+            instructions: instructions,
             checklistTitle: input.checklistTitle,
             taskTitle: input.taskTitle,
             taskPath: input.taskPath,
@@ -159,6 +175,13 @@ struct LLMChecklistVisualSuggestionService {
     }
 }
 
+private extension LLMChecklistVisualSuggestionService {
+    static let responseContract = """
+    Return only JSON with keys iconName, colorHex, reason. Use an SF Symbol from \
+    allowedSymbols exactly and a color from allowedColors exactly.
+    """
+}
+
 struct ChecklistVisualSuggestionPayload: Codable, Equatable {
     let iconName: String
     let colorHex: String
@@ -166,6 +189,7 @@ struct ChecklistVisualSuggestionPayload: Codable, Equatable {
 }
 
 private struct ChecklistVisualPromptPayload: Encodable {
+    let instructions: String
     let checklistTitle: String
     let taskTitle: String
     let taskPath: String

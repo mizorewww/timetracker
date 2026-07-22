@@ -130,7 +130,9 @@ extension SyncDataSnapshot {
                      .llmEndpoint,
                      .llmSelectedModel:
                     isValid = decodes(String.self, from: data)
-                case .llmTaskPlanInstructions:
+                case .llmInboxSuggestionInstructions,
+                     .llmChecklistVisualInstructions,
+                     .llmTaskPlanInstructions:
                     isValid = (
                         try? PreferenceJSON.canonicalValueJSON(
                             for: key,

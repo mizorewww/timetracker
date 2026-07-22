@@ -93,16 +93,24 @@ struct CoreLLMInboxRequestBudgetTests {
                 !SymbolCatalog.aiSuggestionSymbolNameSet.contains($0)
             }
         )
+        let customInstructions = "Prefer the narrowest destination with a concise reason."
         let request = try LLMInboxSuggestionService().suggestionRequest(
             inboxTitle: "Read the architecture notes",
             taskCandidates: [Self.candidate(index: 1)],
             categoryCandidates: [Self.categoryCandidate(index: 1)],
+            instructions: customInstructions,
             endpoint: "https://example.com/v1",
             apiKey: "secret",
             modelID: "test-model"
         )
         let prompt = try Self.decodePrompt(from: request)
+        let envelope = try Self.decodeEnvelope(from: request)
+        let systemMessage = try #require(envelope.messages.first { $0.role == "system" })
 
+        #expect(prompt.instructions == customInstructions)
+        #expect(systemMessage.content.contains("destinationKind"))
+        #expect(systemMessage.content.contains("must exactly match an ID"))
+        #expect(systemMessage.content.contains("childTask to create a new child task"))
         #expect(prompt.allowedSymbols == SymbolCatalog.aiSuggestionSymbolNames)
         #expect(!prompt.allowedSymbols.contains(symbolExcludedFromAI))
         #expect(prompt.tasks.count == 1)
@@ -116,6 +124,46 @@ struct CoreLLMInboxRequestBudgetTests {
             ChecklistVisualSanitizer.sanitizedIcon("not.a.real.symbol") ==
                 ChecklistVisualSanitizer.defaultIcon
         )
+    }
+
+    @Test
+    func maximumEditableInboxInstructionsStayWithinRequestBudgets() throws {
+        let instructions = String(
+            repeating: "\\\"",
+            count: AppPreferenceValueSanitizer.maximumLLMPromptInstructionsByteCount / 2
+        )
+        let tasks = (0..<160).map { index in
+            Self.candidate(
+                index: index,
+                title: String(repeating: "\\\"", count: 180),
+                path: String(repeating: "Root/\\\"", count: 100)
+            )
+        }
+        let categories = (0..<80).map { index in
+            Self.categoryCandidate(
+                index: index,
+                title: String(repeating: "\\\"", count: 180)
+            )
+        }
+        let request = try LLMInboxSuggestionService().suggestionRequest(
+            inboxTitle: String(repeating: "\\\"", count: 400),
+            taskCandidates: tasks,
+            categoryCandidates: categories,
+            instructions: instructions,
+            endpoint: "https://example.com/v1",
+            apiKey: "secret",
+            modelID: "test-model"
+        )
+        let body = try #require(request.httpBody)
+        let prompt = try Self.decodePrompt(from: request)
+        let envelope = try Self.decodeEnvelope(from: request)
+        let userMessage = try #require(envelope.messages.last { $0.role == "user" })
+
+        #expect(prompt.instructions == instructions)
+        #expect(!prompt.tasks.isEmpty)
+        #expect(!prompt.categories.isEmpty)
+        #expect(body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount)
+        #expect(userMessage.content.utf8.count <= LLMSuggestionInputPolicy.maximumPromptByteCount)
     }
 
     @Test
@@ -462,10 +510,14 @@ struct CoreLLMInboxRequestBudgetTests {
     }
 
     private static func decodePrompt(from request: URLRequest) throws -> PromptEnvelope {
-        let body = try #require(request.httpBody)
-        let envelope = try JSONDecoder().decode(RequestEnvelope.self, from: body)
+        let envelope = try decodeEnvelope(from: request)
         let userMessage = try #require(envelope.messages.last { $0.role == "user" })
         return try JSONDecoder().decode(PromptEnvelope.self, from: Data(userMessage.content.utf8))
+    }
+
+    private static func decodeEnvelope(from request: URLRequest) throws -> RequestEnvelope {
+        let body = try #require(request.httpBody)
+        return try JSONDecoder().decode(RequestEnvelope.self, from: body)
     }
 }
 
@@ -479,9 +531,11 @@ private struct RequestEnvelope: Decodable {
     }
 }
 
-private struct PromptEnvelope: Decodable {
+private struct PromptEnvelope: Codable {
+    let instructions: String
     let inboxTitle: String
     let allowedSymbols: [String]
+    let allowedColors: [String]
     let tasks: [LLMTaskCandidate]
     let categories: [LLMCategoryCandidate]
 }

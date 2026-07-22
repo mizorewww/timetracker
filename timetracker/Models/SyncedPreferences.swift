@@ -14,6 +14,8 @@ enum AppPreferenceKey: String, CaseIterable {
     case llmEndpoint = "LLMEndpoint"
     case llmSelectedModel = "LLMSelectedModel"
     case llmAvailableModelIDs = "LLMAvailableModelIDs"
+    case llmInboxSuggestionInstructions = "LLMInboxSuggestionInstructions"
+    case llmChecklistVisualInstructions = "LLMChecklistVisualInstructions"
     case llmTaskPlanInstructions = "LLMTaskPlanInstructions"
 }
 
@@ -40,6 +42,8 @@ struct AppPreferences: Equatable {
     var llmAPIKey = ""
     var llmSelectedModel = ""
     var llmAvailableModelIDs: [String] = []
+    var llmInboxSuggestionInstructions = LLMPromptKind.inboxRouting.defaultInstructions
+    var llmChecklistVisualInstructions = LLMPromptKind.checklistVisual.defaultInstructions
     var llmTaskPlanInstructions = LLMTaskPlanPrompt.defaultInstructions
     var llmAutomaticSuggestionsEnabled = false
 
@@ -102,6 +106,24 @@ struct AppPreferences: Equatable {
             llmAvailableModelIDs = AppPreferenceValueSanitizer.llmModelIDs(
                 PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
             )
+        case .llmInboxSuggestionInstructions:
+            let storedValue = PreferenceJSON.decode(
+                String.self,
+                from: preference.valueJSON,
+                default: LLMPromptKind.inboxRouting.defaultInstructions
+            )
+            llmInboxSuggestionInstructions = (
+                try? AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(storedValue)
+            ) ?? LLMPromptKind.inboxRouting.defaultInstructions
+        case .llmChecklistVisualInstructions:
+            let storedValue = PreferenceJSON.decode(
+                String.self,
+                from: preference.valueJSON,
+                default: LLMPromptKind.checklistVisual.defaultInstructions
+            )
+            llmChecklistVisualInstructions = (
+                try? AppPreferenceValueSanitizer.llmChecklistVisualInstructions(storedValue)
+            ) ?? LLMPromptKind.checklistVisual.defaultInstructions
         case .llmTaskPlanInstructions:
             let storedValue = PreferenceJSON.decode(
                 String.self,
@@ -152,11 +174,36 @@ struct AppPreferences: Equatable {
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
         case .llmAvailableModelIDs:
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
+        case .llmInboxSuggestionInstructions:
+            let instructions = (
+                try? AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(
+                    llmInboxSuggestionInstructions
+                )
+            ) ?? LLMPromptKind.inboxRouting.defaultInstructions
+            return PreferenceJSON.encode(instructions)
+        case .llmChecklistVisualInstructions:
+            let instructions = (
+                try? AppPreferenceValueSanitizer.llmChecklistVisualInstructions(
+                    llmChecklistVisualInstructions
+                )
+            ) ?? LLMPromptKind.checklistVisual.defaultInstructions
+            return PreferenceJSON.encode(instructions)
         case .llmTaskPlanInstructions:
             let instructions = (try? AppPreferenceValueSanitizer.llmTaskPlanInstructions(
                 llmTaskPlanInstructions
             )) ?? LLMTaskPlanPrompt.defaultInstructions
             return PreferenceJSON.encode(instructions)
+        }
+    }
+
+    func llmInstructions(for kind: LLMPromptKind) -> String {
+        switch kind {
+        case .inboxRouting:
+            llmInboxSuggestionInstructions
+        case .checklistVisual:
+            llmChecklistVisualInstructions
+        case .taskPlan:
+            llmTaskPlanInstructions
         }
     }
 }

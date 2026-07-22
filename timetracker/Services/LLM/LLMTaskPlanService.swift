@@ -91,15 +91,6 @@ nonisolated struct AITaskPlanChecklistDraft: Identifiable, Equatable, Sendable {
     }
 }
 
-nonisolated enum LLMTaskPlanPrompt {
-    static let defaultInstructions = """
-    Create a practical plan for time tracking. Use categories only as broad \
-    reporting groups, tasks as work that can be timed, and checklist items as \
-    concrete completion steps. Keep titles concise, avoid duplicate work, and \
-    add notes only when they provide useful context.
-    """
-}
-
 enum LLMTaskPlanServiceError: LocalizedError, Equatable {
     case missingRequest
     case missingModel

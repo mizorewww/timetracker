@@ -23,6 +23,15 @@ struct AITaskPlanUIContractTests {
         #expect(generator.contains("TextField("))
         #expect(generator.contains("removeTaskSubtree"))
         #expect(generator.contains("pruningUnusedCategories"))
+        #expect(generator.contains("AITaskPlanTaskProgressDraftEditor"))
+        #expect(generator.contains("TaskProgressDraftPersistencePolicy.prepare"))
+        #expect(generator.contains(".quantity.toggle"))
+        #expect(generator.contains(".quantity.target"))
+        #expect(generator.contains(".quantity.unit"))
+        #expect(generator.contains(".recurrence.daily"))
+        #expect(generator.contains("quantityGoal: TaskQuantityGoalDraft("))
+        #expect(generator.contains("dailyRecurrence: TaskDailyRecurrenceDraft("))
+        #expect(generator.contains("checklistItems: (1...10).map"))
         #expect(generator.contains(".editorDiscardConfirmation("))
         #expect(generator.contains("hasUnsavedChanges: hasUnsavedChanges || isCreating"))
         #expect(generator.contains("pendingDiscardAction = .returnToRequest"))
@@ -44,6 +53,12 @@ struct AITaskPlanUIContractTests {
         #expect(settings.contains("ForEach(LLMPromptKind.allCases)"))
         #expect(settings.contains("onEditPrompt(kind)"))
         #expect(editor.contains("TextEditor(text: $draft)"))
+        #expect(editor.contains("import MarkdownView"))
+        #expect(editor.contains("kind == .taskPlan"))
+        #expect(editor.contains("MarkdownView(draft)"))
+        #expect(editor.contains(".pickerStyle(.segmented)"))
+        #expect(editor.contains(#"\(accessibilityID).mode"#))
+        #expect(editor.contains(#"\(accessibilityID).preview"#))
         #expect(editor.contains("maximumLLMPromptInstructionsByteCount"))
         #expect(editor.contains("llmPromptInstructions(draft, for: kind)"))
         #expect(editor.contains("restoreDefault"))
@@ -81,6 +96,11 @@ struct AITaskPlanUIContractTests {
             "settings.llm.prompt.footer",
             "settings.llm.prompt.error.controlCharacter",
             "settings.llm.prompt.error.tooLongFormat",
+            "task.notes.preview",
+            "task.quantity.editor.toggle",
+            "task.quantity.editor.target",
+            "task.quantity.editor.unit",
+            "task.recurrence.editor.daily",
         ]
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {

@@ -542,6 +542,9 @@ private struct AITaskPlanTaskDraftRow: View {
                 .accessibilityLabel(AppStrings.localized("aiTaskPlan.taskActions"))
             }
 
+            AITaskPlanTaskProgressDraftEditor(task: $task)
+                .padding(.leading, 44)
+
             if !task.checklistItems.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(task.checklistItems) { item in
@@ -564,6 +567,131 @@ private struct AITaskPlanTaskDraftRow: View {
         }
         .padding(.leading, CGFloat(min(depth, LLMTaskPlanService.maximumTaskDepth)) * 12)
         .frame(minHeight: AppLayout.minimumInteractiveTarget)
+    }
+}
+
+private struct AITaskPlanTaskProgressDraftEditor: View {
+    @Binding var task: AITaskPlanTaskDraft
+
+    private var accessibilityIdentifierPrefix: String {
+        "aiTaskPlan.task.\(task.id.uuidString)"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            Toggle(
+                AppStrings.localized("task.quantity.editor.toggle"),
+                isOn: quantityEnabledBinding
+            )
+            .accessibilityIdentifier(
+                "\(accessibilityIdentifierPrefix).quantity.toggle"
+            )
+
+            if task.quantityGoal != nil {
+                quantityTargetEditor
+                quantityUnitEditor
+            }
+
+            Toggle(
+                AppStrings.localized("task.recurrence.editor.daily"),
+                isOn: dailyRecurrenceEnabledBinding
+            )
+            .accessibilityIdentifier(
+                "\(accessibilityIdentifierPrefix).recurrence.daily"
+            )
+        }
+        .font(.subheadline)
+    }
+
+    private var quantityTargetEditor: some View {
+        LabeledContent {
+            TextField(
+                AppStrings.localized("task.quantity.editor.target"),
+                value: quantityTargetBinding,
+                format: .number.grouping(.never)
+            )
+            .multilineTextAlignment(.trailing)
+            #if os(iOS)
+            .keyboardType(.numberPad)
+            #endif
+            .accessibilityIdentifier(
+                "\(accessibilityIdentifierPrefix).quantity.target"
+            )
+        } label: {
+            Text(.app("task.quantity.editor.target"))
+        }
+    }
+
+    private var quantityUnitEditor: some View {
+        LabeledContent {
+            TextField(
+                AppStrings.localized("task.quantity.editor.unit"),
+                text: quantityUnitBinding
+            )
+            .multilineTextAlignment(.trailing)
+            .submitLabel(.done)
+            .accessibilityIdentifier(
+                "\(accessibilityIdentifierPrefix).quantity.unit"
+            )
+        } label: {
+            Text(.app("task.quantity.editor.unit"))
+        }
+    }
+
+    private var quantityEnabledBinding: Binding<Bool> {
+        Binding {
+            task.quantityGoal != nil
+        } set: { isEnabled in
+            var updated = task
+            if isEnabled {
+                guard updated.quantityGoal == nil else { return }
+                updated.quantityGoal = TaskQuantityGoalDraft()
+            } else {
+                updated.quantityGoal = nil
+            }
+            task = updated
+        }
+    }
+
+    private var quantityTargetBinding: Binding<Int> {
+        Binding {
+            task.quantityGoal?.targetAmount ?? 1
+        } set: { targetAmount in
+            guard var quantityGoal = task.quantityGoal else { return }
+            quantityGoal.targetAmount = targetAmount
+            var updated = task
+            updated.quantityGoal = quantityGoal
+            task = updated
+        }
+    }
+
+    private var quantityUnitBinding: Binding<String> {
+        Binding {
+            task.quantityGoal?.unitLabel ?? ""
+        } set: { unitLabel in
+            guard var quantityGoal = task.quantityGoal else { return }
+            quantityGoal.unitLabel = unitLabel
+            var updated = task
+            updated.quantityGoal = quantityGoal
+            task = updated
+        }
+    }
+
+    private var dailyRecurrenceEnabledBinding: Binding<Bool> {
+        Binding {
+            task.dailyRecurrence?.isEnabled == true
+        } set: { isEnabled in
+            var updated = task
+            if var recurrence = updated.dailyRecurrence {
+                recurrence.isEnabled = true
+                updated.dailyRecurrence = isEnabled ? recurrence : nil
+            } else if isEnabled {
+                updated.dailyRecurrence = TaskDailyRecurrenceDraft()
+            }
+            task = updated
+        }
     }
 }
 
@@ -672,6 +800,10 @@ private extension AITaskPlanDraft {
                         )
                     }
                 )
+                _ = try TaskProgressDraftPersistencePolicy.prepare(
+                    quantityGoal: task.quantityGoal,
+                    dailyRecurrence: task.dailyRecurrence
+                )
             } catch {
                 return error.localizedDescription
             }
@@ -760,11 +892,21 @@ private extension AITaskPlanDraft {
     }
 
     static var uiTestFixture: AITaskPlanDraft {
-        let wellnessID = UUID()
-        let learningID = UUID()
-        let pushupsID = UUID()
-        let techniqueID = UUID()
-        let readingID = UUID()
+        let wellnessID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000001"
+        )!
+        let readingCategoryID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000002"
+        )!
+        let pushupsID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000101"
+        )!
+        let techniqueID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000102"
+        )!
+        let readingID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000103"
+        )!
         return AITaskPlanDraft(
             categories: [
                 AITaskPlanCategoryDraft(
@@ -774,8 +916,8 @@ private extension AITaskPlanDraft {
                     colorHex: "34C759"
                 ),
                 AITaskPlanCategoryDraft(
-                    id: learningID,
-                    title: "Learning",
+                    id: readingCategoryID,
+                    title: "Reading",
                     iconName: "book",
                     colorHex: "5E5CE6"
                 ),
@@ -789,6 +931,15 @@ private extension AITaskPlanDraft {
                     estimatedMinutes: 10,
                     iconName: "dumbbell",
                     colorHex: "34C759",
+                    quantityGoal: TaskQuantityGoalDraft(
+                        targetAmount: 50,
+                        unitLabel: "push-ups"
+                    ),
+                    dailyRecurrence: TaskDailyRecurrenceDraft(
+                        isEnabled: true,
+                        startDayKey: "2026-07-22",
+                        timeZoneIdentifier: "Asia/Singapore"
+                    ),
                     checklistItems: [
                         AITaskPlanChecklistDraft(
                             title: "Warm up shoulders",
@@ -819,18 +970,18 @@ private extension AITaskPlanDraft {
                 ),
                 AITaskPlanTaskDraft(
                     id: readingID,
-                    categoryID: learningID,
-                    title: "Read Apple Interaction Guidance",
-                    estimatedMinutes: 30,
+                    categoryID: readingCategoryID,
+                    title: "Read 10 Chapters",
+                    estimatedMinutes: 300,
                     iconName: "book",
                     colorHex: "5E5CE6",
-                    checklistItems: [
+                    checklistItems: (1...10).map { chapter in
                         AITaskPlanChecklistDraft(
-                            title: "Capture three actionable notes",
+                            title: "Chapter \(chapter)",
                             iconName: "pencil.and.list.clipboard",
                             colorHex: "5E5CE6"
-                        ),
-                    ]
+                        )
+                    }
                 ),
             ],
             modelID: "ui-test"

@@ -1,3 +1,4 @@
+import MarkdownView
 import SwiftUI
 
 struct LLMPromptInstructionsEditor: View {
@@ -8,6 +9,7 @@ struct LLMPromptInstructionsEditor: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var draft: String
+    @State private var mode = LLMPromptInstructionsEditorMode.edit
     @State private var validationError: LLMPromptInstructionsValidationError?
     @State private var isDiscardConfirmationPresented = false
 
@@ -89,13 +91,22 @@ struct LLMPromptInstructionsEditor: View {
     private var editorContent: some View {
         Form {
             Section {
-                TextEditor(text: $draft)
-                    .font(.body)
-                    .frame(minHeight: 220)
-                    .accessibilityLabel(
-                        AppStrings.localized(kind.settingsTitleKey)
-                    )
-                    .accessibilityIdentifier("\(accessibilityID).editor")
+                if kind == .taskPlan {
+                    Picker(
+                        AppStrings.localized(kind.settingsTitleKey),
+                        selection: $mode
+                    ) {
+                        Text(AppStrings.edit)
+                            .tag(LLMPromptInstructionsEditorMode.edit)
+                        Text(.app("task.notes.preview"))
+                            .tag(LLMPromptInstructionsEditorMode.preview)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("\(accessibilityID).mode")
+                }
+
+                instructionsContent
 
                 VStack(alignment: .leading, spacing: 6) {
                     if let validationError {
@@ -170,6 +181,23 @@ struct LLMPromptInstructionsEditor: View {
         }
     }
 
+    @ViewBuilder
+    private var instructionsContent: some View {
+        if kind == .taskPlan, mode == .preview {
+            MarkdownView(draft)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .accessibilityIdentifier("\(accessibilityID).preview")
+        } else {
+            TextEditor(text: $draft)
+                .font(.body)
+                .frame(minHeight: 220)
+                .accessibilityLabel(
+                    AppStrings.localized(kind.settingsTitleKey)
+                )
+                .accessibilityIdentifier("\(accessibilityID).editor")
+        }
+    }
+
     private func requestDismiss() {
         if hasUnsavedChanges {
             isDiscardConfirmationPresented = true
@@ -218,4 +246,9 @@ struct LLMPromptInstructionsEditor: View {
             return nil
         }
     }
+}
+
+private enum LLMPromptInstructionsEditorMode: Hashable {
+    case edit
+    case preview
 }

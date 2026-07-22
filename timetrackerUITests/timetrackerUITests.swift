@@ -2603,6 +2603,23 @@ final class timetrackerUITests: XCTestCase {
             }
             activate(editor)
             editor.typeText("\n\(uniqueInstructions)")
+            if kind == "taskPlan" {
+                let mode = app.descendants(matching: .any)[
+                    "settings.llm.prompt.taskPlan.mode"
+                ].firstMatch
+                XCTAssertTrue(mode.waitForExistence(timeout: 3))
+                let previewSegment = mode.buttons.element(boundBy: 1)
+                XCTAssertTrue(previewSegment.exists && previewSegment.isHittable)
+                activate(previewSegment)
+                let markdownPreview = app.descendants(matching: .any)[
+                    "settings.llm.prompt.taskPlan.preview"
+                ].firstMatch
+                XCTAssertTrue(markdownPreview.waitForExistence(timeout: 5))
+                try capture(
+                    "\(screenshotPrefix)-ai-prompt-task-plan-markdown-preview",
+                    app: app
+                )
+            }
             let save = app.buttons[
                 "settings.llm.prompt.\(kind).save"
             ].firstMatch
@@ -2662,6 +2679,7 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: ["--uitesting-ai-task-plan"]
         )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
         openSection(
             "Tasks",
             tabIdentifier: "phone.tab.tasks",
@@ -2699,7 +2717,7 @@ final class timetrackerUITests: XCTestCase {
         activate(request)
         request.typeText("Build a practical daily fitness and learning plan")
         XCTAssertTrue(generate.isEnabled)
-        try capture("ai-task-plan-request", app: app)
+        try capture("\(screenshotPrefix)-ai-task-plan-request", app: app)
 
         let cancelPlan = app.buttons["aiTaskPlan.cancel"].firstMatch
         XCTAssertTrue(cancelPlan.waitForExistence(timeout: 3) && cancelPlan.isHittable)
@@ -2722,13 +2740,51 @@ final class timetrackerUITests: XCTestCase {
         let create = app.buttons["aiTaskPlan.create"].firstMatch
         let editRequest = app.buttons["aiTaskPlan.editRequest"].firstMatch
         let summary = app.staticTexts[
-            "2 categories · 3 tasks · 4 checklist items"
+            "2 categories · 3 tasks · 13 checklist items"
         ].firstMatch
         XCTAssertTrue(create.waitForExistence(timeout: 8) && create.isHittable)
         XCTAssertTrue(editRequest.waitForExistence(timeout: 3))
         XCTAssertTrue(summary.waitForExistence(timeout: 3))
         XCTAssertGreaterThanOrEqual(create.frame.height, 28)
-        try capture("ai-task-plan-preview", app: app)
+
+        let pushupsIdentifier =
+            "aiTaskPlan.task.20000000-0000-4000-8000-000000000101"
+        let quantityToggle = app.descendants(matching: .any)[
+            "\(pushupsIdentifier).quantity.toggle"
+        ].firstMatch
+        let quantityTarget = app.descendants(matching: .any)[
+            "\(pushupsIdentifier).quantity.target"
+        ].firstMatch
+        let quantityUnit = app.descendants(matching: .any)[
+            "\(pushupsIdentifier).quantity.unit"
+        ].firstMatch
+        let dailyRecurrence = app.descendants(matching: .any)[
+            "\(pushupsIdentifier).recurrence.daily"
+        ].firstMatch
+        for control in [
+            quantityToggle,
+            quantityTarget,
+            quantityUnit,
+            dailyRecurrence,
+        ] {
+            scrollUntilHittable(control, direction: .up, in: app)
+            XCTAssertTrue(control.waitForExistence(timeout: 3) && control.isHittable)
+        }
+        XCTAssertEqual(quantityTarget.value as? String, "50")
+        XCTAssertEqual(quantityUnit.value as? String, "push-ups")
+        try capture("\(screenshotPrefix)-ai-task-plan-typed-preview", app: app)
+
+        let chapterTen = app.textFields.matching(
+            NSPredicate(format: "value == %@", "Chapter 10")
+        ).firstMatch
+        scrollUntilHittable(
+            chapterTen,
+            direction: .up,
+            maximumScrolls: 16,
+            in: app
+        )
+        XCTAssertTrue(chapterTen.waitForExistence(timeout: 3) && chapterTen.isHittable)
+        try capture("\(screenshotPrefix)-ai-task-plan-chapters-1-to-10", app: app)
 
         activate(editRequest)
         let discardDraft = hittableButton(
@@ -2756,7 +2812,7 @@ final class timetrackerUITests: XCTestCase {
                 .waitForNonExistence(timeout: 8)
         )
         XCTAssertTrue(taskDetailIsReady(in: app))
-        try capture("ai-task-plan-created-detail", app: app)
+        try capture("\(screenshotPrefix)-ai-task-plan-created-detail", app: app)
         #else
         throw XCTSkip("Task-plan review geometry runs only on an explicitly owned simulator.")
         #endif

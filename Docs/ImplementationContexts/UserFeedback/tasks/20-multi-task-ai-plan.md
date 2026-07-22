@@ -9,8 +9,8 @@
 - [x] 审计现有 Task Plan request、响应 schema、draft/editor、category 与批量落库能力。
 - [x] 研究成熟库与 Apple HIG / SwiftUI 约束，完成独立产品与技术设计文档。
 - [x] 实现一次生成多个、类型完整且可验证的任务计划，并安全落库到 category。
-- [~] 使用现有 MarkdownView 呈现本任务的提示词预览，补齐计划草稿类型编辑并完成定向测试。
-- [ ] 完成 owned iPhone/iPad simulator 普通路径与截图验收，清理全部资源。
+- [x] 使用现有 MarkdownView 呈现本任务的提示词预览，补齐计划草稿类型编辑并完成定向测试。
+- [~] 完成 owned iPhone/iPad simulator 普通路径与截图验收，清理全部资源。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -53,8 +53,14 @@
   - quantity、daily rule、当天 occurrence 与生成 task 在同一 fresh-context transaction 落库；五个 progress checkpoint 注入失败均整批回滚，重放仍幂等。
   - 主代理 macOS 集成定向测试 `50/50` 通过（service、coordinator、settings、UI contract）；独立 DerivedData/xcresult 已删除，无 `xcodebuild`/`xctest`、Booted simulator 或设备流程残留。
   - 未新增依赖；复用现有 `TaskProgressDraftPersistencePolicy`、`TaskDraftProgressMutationService` 与事务基础设施。
-- [~] Checkpoint C：生成/预览/编辑/落库 UI、MarkdownView 提示词体验与本地化。
-- [ ] Checkpoint D：全量相关回归、owned simulator UI/截图、精确 Release 安装、状态与资源收口。
+- [x] Checkpoint C：生成/预览/编辑/落库 UI、MarkdownView 提示词体验与本地化。
+  - Task Plan 提示词专属 Edit / Preview 分段；系统 `TextEditor` 继续编辑，仓库已锁定的 `MarkdownView 4.1.7` 直接渲染同一 draft，其他 prompt 不变。
+  - AI plan 每个 task 可核对/编辑 quantity target、unit 与 daily recurrence；组合类型同时可见，关闭 daily 的新草稿语义为 `nil`。
+  - UI fixture 固定为 2 category / 3 task / 13 checklist，包含 quantity + daily、父子 task，以及 Reading / Chapter 1...10。
+  - 三主语言复用现有 quantity、recurrence、Edit/Preview 文案；契约测试锁定 MarkdownView、控件标识、领域校验与十章 fixture。
+  - 主代理 macOS 集成定向测试最终 `50/50` 通过；首次运行只暴露契约测试源码字符串转义错误，改用 Swift raw string 后复跑通过。DerivedData/两份 xcresult 已清理，无测试进程或 Booted simulator。
+  - 未新增依赖；继续复用用户指定的现有 `MarkdownView` 与系统 SwiftUI controls。
+- [~] Checkpoint D：全量相关回归、owned simulator UI/截图、精确 Release 安装、状态与资源收口。
 
 ## 资源所有权
 

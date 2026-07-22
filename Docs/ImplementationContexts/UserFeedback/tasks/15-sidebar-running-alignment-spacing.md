@@ -6,8 +6,8 @@
 ## 当前阶段
 
 - [x] 领取反馈、读取 Apple HIG / SwiftUI 强制技能并建立活动链接。
-- [~] 审计侧边栏任务行的视图层级、对齐轴、默认行 inset 与自定义 spacing。
-- [ ] 实现最小修复并补齐稳定的布局契约测试。
+- [x] 审计侧边栏任务行的视图层级、对齐轴、默认行 inset 与自定义 spacing。
+- [x] 确认并定向验证仓库既有最小修复与稳定布局契约，无需重复修改产品代码。
 - [ ] 使用 owned iPhone / iPad 模拟器完成普通路径与截图验收。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
@@ -37,12 +37,31 @@
 
 ## Checkpoint 记录
 
-- [~] 初始 checkpoint：领取反馈、完成强制参考读取、建立实现记忆与 active link。
+- [x] 初始 checkpoint `2861b21`：领取反馈、完成强制参考读取、建立实现记忆与 active link。
+- [x] 现状与定向回归审计：
+  - 反馈的产品修复已由既有 checkpoint `d9a2117`（`fix: align sidebar task status`）实现，当前 HEAD
+    仍完整保留，因而不制造第二套实现或无意义产品 diff。
+  - `SidebarTaskTreeRow` 复用 `TaskSummaryRow(layout: .inline)`；任务图标、文字和尾部状态都在同一个
+    `HStack(alignment: .center, spacing: 12)` 中，计时状态不再进入第二条 metadata line。
+  - running 与 idle 行共享外层行高策略：iPadOS 由 disclosure slot 和外层 row 保持 44 pt 最小触控高度，
+    macOS 继续采用系统紧凑行高；条件出现的 running indicator 不改变行高或相邻任务的垂直节奏。
+  - 状态复用 `TaskRunningIndicator` 与 SF Symbol `timer.circle.fill`，没有侧边栏专用重复状态组件；绿色只
+    表达正在运行这一有意义状态，任务图标继续使用任务自身配色。
+  - 既有源码契约锁定 `.inline`、中心对齐、单行文本、无状态驱动行高和不创建侧边栏专用 timer image；
+    既有 UI E2E 直接比较 running/idle sibling 的 `minX` 与 `height`（容差 1 pt）并保存截图。
+  - 首次把不存在的另外两条测试名连同正确 suite 过滤器执行时，Xcode 明确报告 0 tests；该次不计验证。
+    随后使用包含 `()` 的完整 Swift Testing 标识精确执行
+    `sidebarUsesTheSharedInlineTaskSummaryWithoutStatusDrivenRowHeight()`：1 test passed、0 failure。
+  - 定向测试保持 Apple Development `ZEXUAN GAO (PX46M259V3)` 与付费团队 provisioning，未关闭签名。
 
 ## 依赖与互联网库审计
 
-- 待核对 Apple 官方 SwiftUI `List` / `HStack` / alignment 文档以及仓库现有依赖。
-- 本项优先使用 Apple SwiftUI；不为标准侧边栏行布局引入整套第三方 UI 框架。
+- Apple 官方 SwiftUI 文档确认 `HStack` 的 alignment 控制子视图的垂直对齐且默认值为 center；
+  `listRowSpacing(_:)` 专门控制相邻 List rows 的垂直间距。当前共享单根 row 已直接满足，无需自定义布局引擎。
+- 审阅成熟候选 `SwiftUIX`（约 8.1k stars）、`SwiftUI Introspect`（约 6.5k stars）和仅测试使用的
+  `ViewInspector`（约 2.6k stars）。前两者会把标准 SwiftUI 行布局变成额外框架/底层 UIKit-AppKit
+  耦合，后者不能替代真实 List 几何验收；都没有带来值得新增依赖的任务边界。
+- 本 checkpoint 使用的库：仅 Apple SwiftUI 与既有测试基础设施；项目依赖图不变。
 
 ## 模拟器验收与资源所有权
 

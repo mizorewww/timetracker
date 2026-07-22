@@ -3620,14 +3620,38 @@ final class timetrackerUITests: XCTestCase {
         scrollTodayUntilHittable(timeline, in: app)
         XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
 
-        let fixtureTask = app.staticTexts["Timeline Short Blue"].firstMatch
-        XCTAssertTrue(
-            fixtureTask.waitForExistence(timeout: 5),
-            "The dedicated short-task Timeline fixture must be visible below the chart."
-        )
+        scroll(direction: .up, toward: timeline, in: app)
+        let chartMarks = app.images.matching(identifier: "home.timeline.graph")
+        let blue = chartMarks.matching(
+            NSPredicate(format: "label == %@", "Flash")
+        ).firstMatch
+        let orange = chartMarks.matching(
+            NSPredicate(format: "label == %@", "Flame")
+        ).firstMatch
+        let terminal = chartMarks.matching(
+            NSPredicate(format: "label == %@", "Down")
+        ).firstMatch
+        XCTAssertTrue(blue.waitForExistence(timeout: 5))
+        XCTAssertTrue(orange.waitForExistence(timeout: 5))
+        XCTAssertTrue(terminal.waitForExistence(timeout: 5))
 
-        scrollUntilHittable(timeline, direction: .down, in: app)
-        XCTAssertTrue(timeline.isHittable)
+        let projectedOverlap = min(blue.frame.maxY, orange.frame.maxY) -
+            max(blue.frame.minY, orange.frame.minY)
+        XCTAssertGreaterThan(
+            projectedOverlap,
+            0,
+            "The fixture's short marks must overlap on the projected time axis."
+        )
+        XCTAssertGreaterThanOrEqual(
+            abs(blue.frame.midX - orange.frame.midX),
+            6,
+            "Projected marks that collide must render on separate visual lanes."
+        )
+        XCTAssertGreaterThan(
+            terminal.frame.minY,
+            max(blue.frame.maxY, orange.frame.maxY),
+            "The terminal short mark must remain anchored later on the downward axis."
+        )
         try capture("iphone-home-short-timeline-lanes", app: app)
         #endif
     }

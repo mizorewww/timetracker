@@ -46,8 +46,11 @@
 - [~] Checkpoint C：专用短任务 fixture、owned simulator 截图验收与精确 Release 安装收口。
   - [x] C1：新增仅在 `--uitesting-short-timeline` 下生效的隔离 fixture；它以 replace-on-launch 模式创建两条相隔 90 秒的 30 秒短任务、一条靠近显示区末端的 30 秒短任务，以及一条制造长空档压缩的上下文记录，正常 Demo 与用户数据路径不受影响。
   - [x] C1：新增 iPhone-only UI 验收入口与源码契约，明确要求加载专用 fixture、定位 Today Timeline 并导出 `iphone-home-short-timeline-lanes` 截图。macOS arm64、付费开发签名下精确运行共享图表契约、fixture 契约和非 Debug Demo 隔离契约，3/3 通过、0 failure、0 skip。首次不带 Swift Testing 枚举中的 `()` 过滤只加载 suite 而执行 0 项，未计为验证；随后按枚举出的完整测试标识重新执行并得到上述 3/3 结果。
-  - [~] C2：创建并登记单台 owned iPhone simulator，运行专用 UI 测试、检查截图后彻底清理。
+  - [x] C2：在 owned iPhone 17 Pro / iOS 27.0 上运行专用 UI 测试。第一次运行因测试直接查询图表下方尚未惰性加载的记录行而失败；失败 hierarchy 同时证明 fixture 与 chart marks 已加载。修正为直接检查图表 mark 后，同一设备重跑 1/1 通过、0 failure、0 skip：蓝/橙短 mark 的投影矩形确实相交，横向 lane 间距至少 6pt；末端绿色短 mark 位于两者之后并保持向下锚定。
+  - [x] C2 截图验收：`iphone-home-short-timeline-lanes`（iPhone 17 Pro，1206×2622）显示蓝/橙 30 秒 mark 在相邻轨道而非向上侵占，绿色末端 mark 向下生长；`2 hr skipped` capsule 与虚线清晰可读、未被彩色 mark 或图标遮挡，普通字号下记录列表也没有重叠。截图检查后已删除。
 
 ## 资源所有权
 
-- 尚未创建 simulator、截图或 trace 资源。C1 的 macOS app/test runner 已退出；临时 `build/Task23FixtureContracts` 将在 checkpoint 提交前删除。
+- C1 的 macOS app/test runner 已退出，临时 `build/Task23FixtureContracts` 已删除。
+- C2 owned simulator：`TT-Task23-Timeline-iPhone17Pro-20260722-1817`，iPhone 17 Pro / iOS 27.0，UDID `4CFD5544-D462-4654-B41F-77C160B38E91`。创建前没有 Booted device，Simulator.app 也未运行；验收后已终止 app/runner、关机并删除该设备，当前没有本批次 Booted device，Simulator.app 已退出。
+- C2 owned artifacts：`build/Task23SimulatorValidation` 中的 DerivedData、两次 xcresult、失败诊断、截图和导出附件均已删除；没有遗留 owned `xcodebuild`、`xctest`、UI runner、app extension 或 trace 进程。

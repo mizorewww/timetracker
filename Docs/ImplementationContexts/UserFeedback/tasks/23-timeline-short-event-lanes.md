@@ -8,8 +8,8 @@
 - [x] 领取反馈，审计手机 Timeline 的事件几何、最小高度、图标和 elapsed 标签布局。
 - [x] 对照 Apple HIG、SwiftUI 布局语义与成熟日历/时间轴实现，确定轨道分配和间距规则。
 - [x] 实现短任务避让及回归测试，保持正常长度任务和跨平台行为稳定。
-- [~] 使用 owned iPhone simulator 验证普通交互路径并截图；按需要补充 iPad 回归，随后清理资源。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 使用 owned iPhone simulator 验证普通交互路径并截图；按需要补充 iPad 回归，随后清理资源。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -43,14 +43,16 @@
   - [x] B2 验证：macOS arm64、付费开发签名下精确运行 `AnalyticsTimelineTests`、Task 23 的 `HomeUIContractTests/todayAndAnalyticsShareOneGraphicalTimelineComponent` 与 `CorePerformanceBudgetTests`，38/38 通过、0 failure、0 skip；覆盖投影碰撞换轨、逆序稳定、末端向下生长、恰好阈值、0 高度、gutter 边界、50,000 段与大规模 Timeline 性能预算。一次扩大到整个 `HomeUIContractTests` 的诊断运行额外暴露 Quick Start/Tracking entrypoint 的反馈范围外既有契约失败；Task 23 自身契约通过，本任务未越界修改那些代码。
   - [x] B2.1 HIG 复审：将 vertical annotation gutter 扩为 96pt，英文省略时长保持系统 `caption2` 11pt、允许两行，不再用 `minimumScaleFactor(0.7)` 压成约 7.7pt；与 capsule frame 相撞的内部 hour ticks 会被纯布局过滤，start/end 边界仍保留。gap 虚线在数据 marks 后绘制，仅 gutter label 位于前景，避免辅助线穿过彩色条和图标。
   - [x] B2.1 验证：新增真实 omitted-gap 压缩回归，证明 pixel lane 依据压缩后距离换轨，并验证 gap 边界 tick 让位；Timeline/Task 23 contract 30/30 通过、0 failure、0 skip。该批次未创建 simulator。
-- [~] Checkpoint C：专用短任务 fixture、owned simulator 截图验收与精确 Release 安装收口。
+- [x] Checkpoint C：专用短任务 fixture、owned simulator 截图验收与精确 Release 安装收口。
   - [x] C1：新增仅在 `--uitesting-short-timeline` 下生效的隔离 fixture；它以 replace-on-launch 模式创建两条相隔 90 秒的 30 秒短任务、一条靠近显示区末端的 30 秒短任务，以及一条制造长空档压缩的上下文记录，正常 Demo 与用户数据路径不受影响。
   - [x] C1：新增 iPhone-only UI 验收入口与源码契约，明确要求加载专用 fixture、定位 Today Timeline 并导出 `iphone-home-short-timeline-lanes` 截图。macOS arm64、付费开发签名下精确运行共享图表契约、fixture 契约和非 Debug Demo 隔离契约，3/3 通过、0 failure、0 skip。首次不带 Swift Testing 枚举中的 `()` 过滤只加载 suite 而执行 0 项，未计为验证；随后按枚举出的完整测试标识重新执行并得到上述 3/3 结果。
   - [x] C2：在 owned iPhone 17 Pro / iOS 27.0 上运行专用 UI 测试。第一次运行因测试直接查询图表下方尚未惰性加载的记录行而失败；失败 hierarchy 同时证明 fixture 与 chart marks 已加载。修正为直接检查图表 mark 后，同一设备重跑 1/1 通过、0 failure、0 skip：蓝/橙短 mark 的投影矩形确实相交，横向 lane 间距至少 6pt；末端绿色短 mark 位于两者之后并保持向下锚定。
   - [x] C2 截图验收：`iphone-home-short-timeline-lanes`（iPhone 17 Pro，1206×2622）显示蓝/橙 30 秒 mark 在相邻轨道而非向上侵占，绿色末端 mark 向下生长；`2 hr skipped` capsule 与虚线清晰可读、未被彩色 mark 或图标遮挡，普通字号下记录列表也没有重叠。截图检查后已删除。
+  - [x] C3：精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 成功；Release `1.1.52 (107)` 使用 Apple Development `ZEXUAN GAO (PX46M259V3)` / Team `LT98S43NKA` 签名，iOS 主应用和 embedded Watch companion 均通过严格 codesign 验证，并安装到 iPad Pro M4 与 iPhone Air；macOS 通用应用构建成功、复制到 `/Applications/timetracker.app` 并通过严格 codesign 验证。脚本保持默认 `LAUNCH_AFTER_INSTALL=0`，未启动、操作或截图任何物理设备；没有可见物理 Apple Watch，因此仅验证了 embedded companion，配对手表后续由系统 Automatic App Install 负责。
 
 ## 资源所有权
 
 - C1 的 macOS app/test runner 已退出，临时 `build/Task23FixtureContracts` 已删除。
 - C2 owned simulator：`TT-Task23-Timeline-iPhone17Pro-20260722-1817`，iPhone 17 Pro / iOS 27.0，UDID `4CFD5544-D462-4654-B41F-77C160B38E91`。创建前没有 Booted device，Simulator.app 也未运行；验收后已终止 app/runner、关机并删除该设备，当前没有本批次 Booted device，Simulator.app 已退出。
 - C2 owned artifacts：`build/Task23SimulatorValidation` 中的 DerivedData、两次 xcresult、失败诊断、截图和导出附件均已删除；没有遗留 owned `xcodebuild`、`xctest`、UI runner、app extension 或 trace 进程。
+- C3 Release 构建产物在读取版本与签名结果后删除；没有 Booted simulator，也没有遗留本任务 owned `xcodebuild`、`xctest`、UI runner、app extension、trace 或 timetracker 进程。

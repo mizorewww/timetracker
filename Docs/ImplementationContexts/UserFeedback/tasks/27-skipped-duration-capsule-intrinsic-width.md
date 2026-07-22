@@ -5,8 +5,8 @@
 
 ## 当前阶段
 
-- [~] 领取反馈，定位 `xxx min elapsed/skipped` 胶囊的固定宽度来源及所有平台复用点。
-- [ ] 对照 Apple HIG、SwiftUI intrinsic sizing 与现有成熟组件确定自适应宽度契约。
+- [x] 领取反馈，定位 `xxx min elapsed/skipped` 胶囊的固定宽度来源及所有平台复用点。
+- [x] 对照 Apple HIG、SwiftUI intrinsic sizing 与现有成熟组件确定自适应宽度契约。
 - [ ] 实现胶囊抱住完整文字并补充布局/契约回归。
 - [ ] 使用 owned simulator 与 XCTest 自动化 macOS window 做跨平台截图验收并清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
@@ -26,7 +26,37 @@
 
 ## Checkpoint 编排
 
-- [~] Checkpoint A：静态根因、复用点、局部化宽度与成熟方案审计。
-- [ ] Checkpoint B：intrinsic capsule 实现与纯布局/契约回归。
+- [x] Checkpoint A：静态根因、复用点、局部化宽度与成熟方案审计。
+- [~] Checkpoint B：intrinsic capsule 实现与纯布局/契约回归。
 - [ ] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
 - [ ] Checkpoint D：精确 Release 安装、状态标记与收口。
+
+## Checkpoint A 审计结论
+
+### 根因与复用范围
+
+- `TimelineChartLayout.horizontalGapLabelWidth = 96` 让横向 placement 永远使用同一宽度，`TimelineChartGrid.horizontalGapLabel` 又把带 padding 的胶囊压回该固定 frame。
+- 紧凑 iPhone 纵向布局同样把胶囊压进 `verticalAxisLabelWidth - 12 = 84pt`；所以 Home 与 Analytics 共用的 `TimelineChart` 在所有布局方向都受影响。
+- `DurationFormatter.compact` 与 `analytics.timeline.gap.omitted` 能生成完整本地化文案；数据和翻译没有丢失，问题只在固定显示框。
+- 旧 fixture 只有两个 `2 hr skipped`，旧 XCUITest 还允许 `40...110pt`，因此固定 96pt 会被误判通过。
+
+### HIG 与原生实现决定
+
+- Apple HIG 要求布局适配窗口、方向、Dynamic Type 和不同长度的本地化文本；不能以固定文案宽度、缩字或截断代替自适应布局。
+- 使用统一的单行 `TimelineGapLabel`，让 SwiftUI 以 `.fixedSize(horizontal: true, vertical: true)` 保留包含文字与 padding 的理想尺寸。
+- 使用 SwiftUI `Layout` 和 `LayoutSubview.sizeThatFits(.unspecified)` 在布局周期内取得真实尺寸；横向用实测宽度分行，纵向用最长实测宽度扩展 gutter，并让 grid、connector、lane 与可滚动最小宽度共享同一 gutter。
+- 不使用 GeometryReader/状态回传尺寸；Apple 的自定义 Layout 指南明确警告该做法可能形成布局反馈循环。
+- 不新增第三方库。该问题由 SwiftUI 原生 layout engine 最准确地处理；额外文字测量/图表库既重复造轮子，也无法比系统更可靠地覆盖本地化字体和 Dynamic Type。现有 `swift-collections` 与本修复无关。
+
+### Checkpoint B 验收契约
+
+- fixture 必须经真实 `DurationFormatter` 产生一短一长两种文案，击穿旧 96pt 假设。
+- 纯布局回归覆盖：每个 label 的实测 extent、横向碰撞分行与输入反序确定性、纵向 gutter 随最长胶囊增长、最小滚动宽度保留 bar footprint。
+- 仅在 UI-test 标记开启时暴露成对的 `timeline.gapText.<id>` / `timeline.gapCapsule.<id>` 几何 probe；生产 VoiceOver 仍保持一个 gap 语义元素。
+- XCUITest 按 ID 配对后直接断言胶囊包含完整文字、两侧 padding 对称、长胶囊比短胶囊宽、宽度差跟随文字宽度差、无省略且标签互不相交。
+- iPhone portrait、iPad portrait/landscape、macOS 自动坐标放窗全部由 XCTest/XCUITest 完成；物理机不启动、不交互、不截图。
+
+### 只读子代理结论
+
+- 静态审计与 UI 策略代理均未编辑文件、构建、启动设备或占用 simulator。
+- 两者一致建议使用 SwiftUI `Layout` 的真实 subview 测量；UI 策略额外指出必须分别暴露文字和胶囊 frame，否则旧测试无法证明“抱住文字”。

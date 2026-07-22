@@ -77,6 +77,16 @@ extension SeedData {
                 try context.saveAfterMutationStep()
                 return
             }
+            if CommandLine.arguments.contains("--uitesting-gap-label-collision") {
+                try addGapLabelCollisionTimelineUITestFixture(
+                    context: context,
+                    taskRepository: taskRepository,
+                    categoryID: workCategory.id,
+                    startOfToday: startOfToday
+                )
+                try context.saveAfterMutationStep()
+                return
+            }
             if CommandLine.arguments.contains("--uitesting-today-heatmap") {
                 let quantityTask = try taskRepository.createTask(
                     title: "Daily Push-ups",
@@ -518,6 +528,62 @@ extension SeedData {
                 note: "Task 24 overlapping short mark \(index + 1)"
             )
         }
+    }
+
+    private static func addGapLabelCollisionTimelineUITestFixture(
+        context: ModelContext,
+        taskRepository: SwiftDataTaskRepository,
+        categoryID: UUID,
+        startOfToday: Date
+    ) throws {
+        let morning = try taskRepository.createTask(
+            title: "Timeline Gap Morning",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "1677FF",
+            iconName: "sunrise.fill"
+        )
+        let bridge = try taskRepository.createTask(
+            title: "Timeline Gap Bridge",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "7C3AED",
+            iconName: "point.topleft.down.to.point.bottomright.curvepath"
+        )
+        let evening = try taskRepository.createTask(
+            title: "Timeline Gap Evening",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "F97316",
+            iconName: "sunset.fill"
+        )
+
+        try addSegment(
+            context: context,
+            taskID: morning.id,
+            source: .timer,
+            start: startOfToday.addingTimeInterval(9 * 60 * 60),
+            duration: 3 * 60 * 60,
+            note: "Task 25 morning anchor"
+        )
+        try addSegment(
+            context: context,
+            taskID: bridge.id,
+            source: .manual,
+            start: startOfToday.addingTimeInterval(14 * 60 * 60),
+            duration: 10 * 60,
+            note: "Task 25 bridge anchor"
+        )
+        try addSegment(
+            context: context,
+            taskID: evening.id,
+            source: .manual,
+            start: startOfToday.addingTimeInterval(
+                16 * 60 * 60 + 10 * 60
+            ),
+            duration: 110 * 60,
+            note: "Task 25 evening anchor"
+        )
     }
 
     private static func addActiveSegment(

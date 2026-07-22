@@ -3734,6 +3734,59 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testMultipleTimelineGapLabelsAvoidCollisionAcrossPlatforms() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-gap-label-collision"]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
+        scrollTodayUntilHittable(timeline, in: app)
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
+        try assertMultipleTimelineGapLabels(in: app)
+
+        #if os(macOS)
+        scroll(direction: .up, toward: timeline, in: app)
+        waitForScreenshotTransition()
+        try capture("mac-home-multiple-gap-labels", app: app)
+        #else
+        let usesIPadShell = platformScreenshotPrefix(in: app) == "ipad"
+        if usesIPadShell {
+            waitForScreenshotTransition()
+            try capture("ipad-home-multiple-gap-labels-portrait", app: app)
+
+            XCUIDevice.shared.orientation = .landscapeLeft
+            XCTAssertTrue(waitUntil(timeout: 5) {
+                let frame = app.windows.firstMatch.frame
+                return frame.width > frame.height
+            })
+            let landscapeTimeline = app.descendants(matching: .any)[
+                "home.timeline"
+            ].firstMatch
+            scrollTodayUntilHittable(landscapeTimeline, in: app)
+            XCTAssertTrue(
+                landscapeTimeline.waitForExistence(timeout: 5) &&
+                    landscapeTimeline.isHittable
+            )
+            try assertMultipleTimelineGapLabels(in: app)
+            scroll(direction: .up, toward: landscapeTimeline, in: app)
+            waitForScreenshotTransition()
+            try capture("ipad-home-multiple-gap-labels-landscape", app: app)
+        } else {
+            scroll(direction: .up, toward: timeline, in: app)
+            waitForScreenshotTransition()
+            try capture("iphone-home-multiple-gap-labels", app: app)
+        }
+        #endif
+    }
+
+    @MainActor
     func testAppleHealthTimelineControlsStayVisibleAndContextual() throws {
         #if os(macOS)
         throw XCTSkip("Apple Health timeline controls require an iOS simulator.")
@@ -5847,6 +5900,59 @@ final class timetrackerUITests: XCTestCase {
             usesHorizontalTimeAxis
                 ? "Horizontal timelines must overlap in X and separate lanes in Y."
                 : "The iPhone timeline must overlap in Y and separate lanes in X."
+        )
+    }
+
+    @MainActor
+    private func assertMultipleTimelineGapLabels(
+        in app: XCUIApplication
+    ) throws {
+        let query = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", "2 hr skipped")
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { query.count >= 2 },
+            "The isolated fixture must expose both two-hour omitted-gap labels."
+        )
+
+        var uniqueFrames: [CGRect] = []
+        for element in query.allElementsBoundByIndex {
+            let frame = element.frame
+            guard frame.width > 0, frame.height > 0 else { continue }
+            if uniqueFrames.contains(where: { existing in
+                abs(existing.minX - frame.minX) < 0.5 &&
+                    abs(existing.minY - frame.minY) < 0.5 &&
+                    abs(existing.width - frame.width) < 0.5 &&
+                    abs(existing.height - frame.height) < 0.5
+            }) == false {
+                uniqueFrames.append(frame)
+            }
+        }
+
+        XCTAssertEqual(
+            uniqueFrames.count,
+            2,
+            "The fixture must render exactly two visible omitted-gap labels."
+        )
+        let frames = uniqueFrames.sorted { $0.minY < $1.minY }
+        let first = try XCTUnwrap(frames.first)
+        let second = try XCTUnwrap(frames.dropFirst().first)
+        let horizontalOverlap = min(first.maxX, second.maxX) -
+            max(first.minX, second.minX)
+
+        XCTAssertGreaterThan(
+            horizontalOverlap,
+            0,
+            "The fixture must challenge labels whose horizontal footprints overlap."
+        )
+        XCTAssertFalse(
+            first.intersects(second),
+            "Omitted-gap labels must never cover one another."
+        )
+        XCTAssertGreaterThanOrEqual(
+            second.minY - first.maxY,
+            3,
+            "Omitted-gap labels must retain the four-point design spacing after pixel rounding."
         )
     }
 

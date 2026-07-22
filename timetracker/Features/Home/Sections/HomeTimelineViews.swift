@@ -137,7 +137,8 @@ struct TodayTimelineChart: View {
     private var exposesUITestingMarks: Bool {
         #if DEBUG
         CommandLine.arguments.contains("--uitesting-short-timeline") ||
-            CommandLine.arguments.contains("--uitesting-overlap-timeline")
+            CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
+            CommandLine.arguments.contains("--uitesting-gap-label-collision")
         #else
         false
         #endif
@@ -145,7 +146,10 @@ struct TodayTimelineChart: View {
 
     private func timelineReferenceDate(liveDate: Date) -> Date {
         #if DEBUG
-        guard CommandLine.arguments.contains("--uitesting-overlap-timeline") else {
+        let usesFixedReferenceDate =
+            CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
+            CommandLine.arguments.contains("--uitesting-gap-label-collision")
+        guard usesFixedReferenceDate else {
             return liveDate
         }
         return Calendar.current.startOfDay(for: liveDate)

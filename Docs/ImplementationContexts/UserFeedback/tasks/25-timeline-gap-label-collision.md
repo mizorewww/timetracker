@@ -7,8 +7,8 @@
 
 - [x] 领取反馈，复现并审计 iPhone 多个 `xxx min elapsed` 标注互相遮挡的根因。
 - [x] 对照 Apple HIG、SwiftUI 布局语义和成熟实现，确定跨平台标注避让策略。
-- [~] 实现纯布局修复与覆盖密集 gap 的单元/契约测试。
-- [ ] 使用明确登记的 owned simulator 与本机 macOS 窗口做全平台 UI/截图验收并清理资源。
+- [x] 实现纯布局修复与覆盖密集 gap 的单元/契约测试。
+- [~] 使用明确登记的 owned simulator 与本机 macOS 窗口做全平台 UI/截图验收并清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -38,7 +38,10 @@
   - [x] B1：`verticalTimeline`、capsule、短引导线和 `verticalAxisTicks` 共用最终 placement frame；标签不再各自 clamp，也不扩大 96pt gutter 挤压任务轨道。horizontal 路径继续使用 Task 24 的多行 allocator；专用测试语义提供稳定 `timeline.gap.*` identifier，生产图仍由父层保持装饰性隐藏。
   - [x] B1：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主两次运行完整 `AnalyticsTimelineTests`，每次均为 36 项通过、0 失败；新增用例先证明旧的两个 32pt frame 在 300pt 轴上相交，再证明最终 frame 确定、反序输入一致、完整留在首尾安全区且间距至少 4pt，并覆盖 100pt 硬约束的确定性降密度与 12 个 gap 的 compact Timeline 容量扩展。
   - [x] B1：本批次未创建 simulator。测试宿主已退出，`build/Task25Geometry*` 与全部 xcresult 已删除，确认没有引用这些路径的 `xcodebuild`、`xctest`、UI runner 或 app 进程，且没有 Booted simulator。
-  - [~] B2：新增隔离的双 gap fixture、跨平台 UI 断言与截图入口。
+  - [x] B2：新增隔离的双 gap fixture：09:00–12:00、14:00–14:10、16:10–18:00 三段稳定产生两个 `2 hr skipped` 标注；专用 `--uitesting-gap-label-collision` 参数与 18:00 固定 reference date 不影响其他 demo/test 路径。
+  - [x] B2：新增一条共享 iPhone/iPad/macOS UI 回归入口；它对可见 AX frame 去重，要求两个标注的横向 footprint 确实重叠、最终矩形不相交且保留至少 3pt 的像素取整后间距。iPad 同一测试覆盖 portrait 与 landscape，并分别产出截图；所有截图入口都仅面向 simulator/macOS。
+  - [x] B2：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主运行完整 `HomeUIContractTests`。新增 `multipleGapTimelineFixtureCoversCompactAndHorizontalCollisionLayouts` 通过；测试组仍因任务开始前已存在的 `quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions`（报告两次）与 `trackingEntrypointsShareAvailabilityAndRunningStateSemantics` 失败而以 65 退出，未把它误记为全绿。编译及本任务契约验证成功。
+  - [x] B2：本批次没有创建 simulator；`build/Task25Fixture`、对应 xcresult、测试宿主及派生进程均已清理，确认没有 Booted simulator。
 - [ ] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
 
 ## 资源所有权

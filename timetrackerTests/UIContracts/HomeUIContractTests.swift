@@ -977,6 +977,40 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func multipleGapTimelineFixtureCoversCompactAndHorizontalCollisionLayouts() throws {
+        let seedSource = try sourceText(
+            "timetracker/App/SeedData+DemoBuild.swift"
+        )
+        let uiTestSource = try sourceText(
+            "timetrackerUITests/timetrackerUITests.swift"
+        )
+        let homeTimelineSource = try sourceText(
+            "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
+        )
+
+        #expect(seedSource.contains("--uitesting-gap-label-collision"))
+        #expect(seedSource.contains("addGapLabelCollisionTimelineUITestFixture("))
+        #expect(seedSource.contains("Timeline Gap Morning"))
+        #expect(seedSource.contains("Timeline Gap Bridge"))
+        #expect(seedSource.contains("Timeline Gap Evening"))
+        #expect(seedSource.contains("duration: 3 * 60 * 60"))
+        #expect(seedSource.contains("duration: 10 * 60"))
+        #expect(seedSource.contains("duration: 110 * 60"))
+        #expect(homeTimelineSource.contains("--uitesting-gap-label-collision"))
+        #expect(
+            uiTestSource.contains(
+                "testMultipleTimelineGapLabelsAvoidCollisionAcrossPlatforms"
+            )
+        )
+        #expect(uiTestSource.contains("assertMultipleTimelineGapLabels("))
+        #expect(uiTestSource.contains("label == %@\", \"2 hr skipped"))
+        #expect(uiTestSource.contains("iphone-home-multiple-gap-labels"))
+        #expect(uiTestSource.contains("ipad-home-multiple-gap-labels-portrait"))
+        #expect(uiTestSource.contains("ipad-home-multiple-gap-labels-landscape"))
+        #expect(uiTestSource.contains("mac-home-multiple-gap-labels"))
+    }
+
+    @Test
     func trackedTimeRowsUseSharedBoundedDisplayPolicy() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/DurationLabels.swift")
         let homeTimelineSource = try sourceText("timetracker/Features/Home/Rows/HomeTimelineRows.swift")

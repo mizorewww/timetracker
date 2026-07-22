@@ -9,7 +9,7 @@
 - [x] 对照 Apple HIG、SwiftUI 布局语义和成熟实现，确定跨平台标注避让策略。
 - [x] 实现纯布局修复与覆盖密集 gap 的单元/契约测试。
 - [x] 使用明确登记的 owned simulator 与 XCTest 自动前台/主屏定位后的 App window 截图做全平台 UI/截图验收并清理资源；macOS 不再手动调试窗口。
-- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -42,9 +42,11 @@
   - [x] B2：新增一条共享 iPhone/iPad/macOS UI 回归入口；它对精确文案命中的可见 AX frame 做真实标签 footprint 过滤并去重，要求两个最终矩形不相交；X footprint 重叠时至少保留 3pt 纵向间距，宽屏自然横向分开时至少保留 3pt 横向间距。iPad 同一测试覆盖 portrait 与 landscape，并分别产出截图；所有截图入口都仅面向 simulator/macOS。
   - [x] B2：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主运行完整 `HomeUIContractTests`。新增 `multipleGapTimelineFixtureCoversCompactAndHorizontalCollisionLayouts` 通过；测试组仍因任务开始前已存在的 `quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions`（报告两次）与 `trackingEntrypointsShareAvailabilityAndRunningStateSemantics` 失败而以 65 退出，未把它误记为全绿。编译及本任务契约验证成功。
   - [x] B2：本批次没有创建 simulator；`build/Task25Fixture`、对应 xcresult、测试宿主及派生进程均已清理，确认没有 Booted simulator。
-- [~] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
+- [x] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
   - [x] C1：macOS 截图已收口为仓库内 XCTest：使用官方 `XCUICoordinate` 标题栏拖拽把越界窗口自动移入主显示器，等待 App 为 `.runningForeground`，确认 window 完整落在主屏、Timeline frame 完整落在 window，再对 window 截图并验证有限 frame 与有效 PNG；不再接受任何手动窗口重定位验收。
-  - [~] C2：精确 Release 全设备安装、签名/版本只读核验与反馈收口。
+  - [x] C2：2026-07-22 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并以 0 退出；Release iOS/iPadOS 主 App、嵌入 Watch companion 与 universal macOS App 均构建成功，macOS 已复制到 `/Applications/timetracker.app`。
+  - [x] C2：构建产物均为 `1.1.52 (107)`；iOS、Watch 与 macOS 的 `codesign --verify --deep --strict` 均通过，签名 Team 均为 `LT98S43NKA`。`devicectl device info apps` 只读确认 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 与 iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B` 均已安装 `me.mezorewww.timetracker` `1.1.52 (107)`；没有启动、操作或截图物理设备，Watch 由配对设备的 Automatic App Install 管理。
+  - [x] C2：Release 核验后删除 `build/Install`，确认没有本任务 `xcodebuild`、测试 Runner、App 或 Booted simulator 残留；根目录 `README.md` 仍不存在。
 
 ## 资源所有权
 

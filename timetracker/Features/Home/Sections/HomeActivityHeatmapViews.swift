@@ -55,12 +55,11 @@ struct HomeActivityHeatmapSection: View {
             )
             Group {
                 if request.selectedTaskIDs.isEmpty == false {
-                    if let loadedHeatmaps,
-                       loadedHeatmaps.request == request {
-                        section(loadedHeatmaps.snapshots)
-                    } else {
-                        loadingSection
-                    }
+                    section(
+                        loadedHeatmaps?.request == request
+                            ? loadedHeatmaps?.snapshots
+                            : nil
+                    )
                 }
             }
             .task(id: request) {
@@ -107,76 +106,62 @@ struct HomeActivityHeatmapSection: View {
     }
 
     @ViewBuilder
-    private var loadingSection: some View {
-        switch container {
-        case .card:
-            VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(title: AppStrings.localized("home.heatmap.title"))
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 120)
-                    .padding(16)
-                    .appCard(padding: 0)
-            }
-        case .listSection:
-            Section {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 104)
-                    .padding(.vertical, 6)
-            } header: {
-                Text(.app("home.heatmap.title"))
+    private func section(
+        _ snapshots: [TaskActivityHeatmapSnapshot]?
+    ) -> some View {
+        if snapshots?.isEmpty != true {
+            switch container {
+            case .card:
+                VStack(alignment: .leading, spacing: 10) {
+                    HomeActivityHeatmapHeader(
+                        container: .card,
+                        taskCount: snapshots.map { taskCount($0.count) },
+                        snapshots: snapshots ?? []
+                    )
+                    if let snapshots {
+                        LazyVStack(spacing: 10) {
+                            ForEach(snapshots) { snapshot in
+                                TaskActivityHeatmapCard(snapshot: snapshot)
+                                    .padding(16)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .appCard(padding: 0)
+                            }
+                        }
+                    } else {
+                        loadingCard
+                    }
+                }
+            case .listSection:
+                Section {
+                    if let snapshots {
+                        ForEach(snapshots) { snapshot in
+                            TaskActivityHeatmapCard(snapshot: snapshot)
+                                .padding(.vertical, 6)
+                        }
+                    } else {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 104)
+                            .padding(.vertical, 6)
+                    }
+                } header: {
+                    HomeActivityHeatmapHeader(
+                        container: .listSection,
+                        taskCount: snapshots.map { taskCount($0.count) },
+                        snapshots: snapshots ?? []
+                    )
                     .textCase(nil)
+                }
             }
         }
     }
 
-    @ViewBuilder
-    private func section(
-        _ snapshots: [TaskActivityHeatmapSnapshot]
-    ) -> some View {
-        if snapshots.isEmpty == false {
-            switch container {
-            case .card:
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionTitle(
-                        title: AppStrings.localized("home.heatmap.title"),
-                        trailing: taskCount(snapshots.count),
-                        trailingTint: .secondary
-                    )
-                    LazyVStack(spacing: 10) {
-                        ForEach(snapshots) { snapshot in
-                            TaskActivityHeatmapCard(snapshot: snapshot)
-                                .padding(16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .appCard(padding: 0)
-                        }
-                    }
-                }
-                .accessibilityIdentifier("home.heatmaps")
-            case .listSection:
-                Section {
-                    ForEach(snapshots) { snapshot in
-                        TaskActivityHeatmapCard(snapshot: snapshot)
-                            .padding(.vertical, 6)
-                    }
-                } header: {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(.app("home.heatmap.title"))
-                        Spacer(minLength: 8)
-                        Text(taskCount(snapshots.count))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    .textCase(nil)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(.isHeader)
-                } footer: {
-                    Text(.app("home.heatmap.section.footer"))
-                }
-                .accessibilityIdentifier("home.heatmaps")
-            }
-        }
+    private var loadingCard: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
+            .padding(16)
+            .appCard(padding: 0)
     }
 
     private func taskCount(_ count: Int) -> String {
@@ -188,5 +173,47 @@ struct HomeActivityHeatmapSection: View {
 
     private func refreshClock() {
         clockRevision &+= 1
+    }
+}
+
+private struct HomeActivityHeatmapHeader: View {
+    let container: HomeSectionContainer
+    var taskCount: String?
+    var snapshots: [TaskActivityHeatmapSnapshot] = []
+
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                title
+                Spacer(minLength: 8)
+                if let taskCount {
+                    Text(taskCount)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("home.heatmaps.header")
+
+            HomeSectionInformationButton.heatmaps(
+                snapshots: snapshots,
+                locale: locale
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var title: some View {
+        switch container {
+        case .card:
+            Text(.app("home.heatmap.title"))
+                .font(.headline)
+        case .listSection:
+            Text(.app("home.heatmap.title"))
+        }
     }
 }

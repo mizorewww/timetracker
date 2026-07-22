@@ -25,7 +25,6 @@ struct HomeWeeklyGrossTimeChart: View {
             .frame(height: chartHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("home.weeklyGross.chart")
         } else {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "chart.bar.xaxis")

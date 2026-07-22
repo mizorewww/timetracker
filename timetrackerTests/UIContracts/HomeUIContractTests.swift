@@ -557,12 +557,22 @@ struct HomeUIContractTests {
         #expect(chartSource.contains("endPadding: trailingAxisClearance"))
         #expect(chartSource.contains(".automatic(includesZero: true)"))
         #expect(chartSource.contains("DurationFormatter.spoken"))
+        #expect(chartSource.contains(".foregroundStyle(AppColors.grossTime)"))
+        #expect(chartSource.contains("AppColors.grossTime.gradient") == false)
+        for gradientType in [
+            "Gradient(",
+            "LinearGradient(",
+            "RadialGradient(",
+            "AngularGradient("
+        ] {
+            #expect(chartSource.contains(gradientType) == false)
+        }
         #expect(homeSource.contains("analyticsDomainStore.dailyBreakdown("))
         #expect(homeSource.contains(".visibleDeduplicatedByID()"))
         #expect(homeSource.contains("allSegments") == false)
         #expect(homeSource.components(separatedBy: "HomeWeeklyGrossTimeSection(").count - 1 == 2)
         #expect(homeSource.contains("mode: .grossBars"))
-        #expect(homeSource.contains("home.weeklyGross.chart"))
+        #expect(homeSource.contains("home.weeklyGross.card"))
         #expect(homeSource.contains(".accessibilityElement(children: .contain)"))
         #expect(homeSource.contains("HomeWeeklyGrossTimeRefreshRequest"))
         #expect(homeSource.contains("AnalyticsEvaluationCacheKey("))
@@ -574,6 +584,100 @@ struct HomeUIContractTests {
         #expect(analyticsSource.contains("BarMark(") == false)
         #expect(metricSources.components(separatedBy: "AppColors.grossTime").count - 1 == 4)
         #expect(metricSources.components(separatedBy: "AppColors.wallTime").count - 1 == 4)
+    }
+
+    @Test
+    func homeKeepsPersistentExplanationsInSecondaryInformationViews() throws {
+        let home = try sourceText("timetracker/Features/Home/HomeViews.swift")
+        let quickStart = try sourceText(
+            "timetracker/Features/Home/Sections/HomeQuickStartViews.swift"
+        )
+        let phoneQuickStart = try sourceText(
+            "timetracker/Features/Home/PhoneHomeSections.swift"
+        )
+        let overview = try sourceText(
+            "timetracker/Features/Home/Sections/HomeMetricsViews.swift"
+        )
+        let forecast = try sourceText(
+            "timetracker/Features/Home/Sections/HomeForecastViews.swift"
+        )
+        let forecastInformation = try sourceText(
+            "timetracker/SharedUI/Components/ForecastInfoViews.swift"
+        )
+        let weeklyGross = try sourceText(
+            "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeViews.swift"
+        )
+        let weeklyGrossChart = try sourceText(
+            "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeChart.swift"
+        )
+        let heatmapSection = try sourceText(
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift"
+        )
+        let heatmapCard = try sourceText(
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapCard.swift"
+        )
+        let information = try sourceText(
+            "timetracker/Features/Home/Controls/HomeInformationViews.swift"
+        )
+
+        #expect(home.contains("home.subtitle") == false)
+        #expect(quickStart.contains("quickStart.defaultHint") == false)
+        #expect(weeklyGross.contains("home.weeklyGross.footer") == false)
+        #expect(heatmapCard.contains("metricExplanation") == false)
+        #expect(heatmapCard.contains("home.heatmap.footer.durationFormat") == false)
+        #expect(heatmapCard.contains("home.heatmap.footer.checklistFormat") == false)
+        #expect(heatmapCard.contains("home.heatmap.footer.quantityFormat") == false)
+
+        #expect(information.contains("struct HomeSectionInformationButton: View"))
+        #expect(information.contains("InformationPresentationButton("))
+        #expect(information.contains("home.subtitle"))
+        #expect(information.contains("quickStart.defaultHint"))
+        #expect(information.contains("home.weeklyGross.footer"))
+        #expect(information.contains("home.heatmap.info.duration"))
+        #expect(information.contains("home.heatmap.info.checklist"))
+        #expect(information.contains("home.heatmap.info.quantity"))
+        #expect(information.contains("home.info.heatmaps.task."))
+        #expect(information.contains("home.heatmap.footer.durationFormat"))
+        #expect(information.contains("home.heatmap.footer.checklistFormat"))
+        #expect(information.contains("home.heatmap.footer.quantityFormat"))
+
+        #expect(overview.contains("HomeSectionInformationButton.overview("))
+        #expect(overview.contains("home.overview.header"))
+        #expect(information.contains("home.overview.info"))
+        #expect(quickStart.contains("HomeSectionInformationButton.quickStart"))
+        #expect(phoneQuickStart.contains("HomeSectionInformationButton.quickStart"))
+        #expect(information.contains("home.quickStart.info"))
+        #expect(forecast.contains("ForecastInfoButton()"))
+        #expect(phoneQuickStart.contains("ForecastInfoButton()"))
+        #expect(forecast.contains("home.forecasts.header"))
+        #expect(phoneQuickStart.contains("home.forecasts.header"))
+        #expect(forecastInformation.contains("home.info.forecast"))
+        #expect(forecastInformation.contains("home.info.forecast.requirements"))
+        #expect(forecast.contains(".accessibilityIdentifier(\"home.forecasts\")") == false)
+        #expect(phoneQuickStart.contains(".accessibilityIdentifier(\"home.forecasts\")") == false)
+
+        #expect(weeklyGross.contains("HomeSectionInformationButton.weeklyGross"))
+        #expect(
+            weeklyGross.contains(
+                ".accessibilityIdentifier(\"home.weeklyGross\")"
+            ) == false
+        )
+        #expect(weeklyGross.contains("home.weeklyGross.header"))
+        #expect(weeklyGross.contains("home.weeklyGross.card"))
+        #expect(information.contains("home.weeklyGross.info"))
+        #expect(heatmapSection.contains("HomeSectionInformationButton.heatmaps"))
+        #expect(information.contains("home.heatmaps.info"))
+        #expect(heatmapSection.contains("home.heatmaps.header"))
+        #expect(
+            heatmapSection.contains(
+                ".accessibilityIdentifier(\"home.heatmaps\")"
+            ) == false
+        )
+
+        #expect(quickStart.contains("quickStart.empty.description"))
+        #expect(weeklyGrossChart.contains("home.weeklyGross.emptyDescription"))
+        #expect(heatmapCard.contains("noActivityExplanation"))
+        #expect(heatmapCard.contains("home.heatmap.footer.noActivityFormat"))
     }
 
     @Test @MainActor
@@ -1186,7 +1290,9 @@ struct HomeUIContractTests {
         let forecastSource = try sourceText("timetracker/Features/Home/Sections/HomeForecastViews.swift")
 
         let nowIndex = try #require(homeSource.range(of: "PhoneNowSection(")?.lowerBound)
-        let overviewIndex = try #require(homeSource.range(of: "home.overview.title")?.lowerBound)
+        let overviewIndex = try #require(
+            homeSource.range(of: "HomeOverviewHeader(")?.lowerBound
+        )
         let weeklyIndex = try #require(homeSource.range(of: "HomeWeeklyGrossTimeSection(")?.lowerBound)
         let heatmapIndex = try #require(
             homeSource.range(of: "HomeActivityHeatmapSection(")?.lowerBound

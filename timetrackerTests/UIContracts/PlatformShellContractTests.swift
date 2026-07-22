@@ -38,7 +38,7 @@ struct PlatformShellContractTests {
         #expect(source.contains(".navigationBarTitleDisplayMode(.large)"))
         #expect(source.contains("struct HeaderBar") == false)
         #expect(source.contains("HeaderBar()") == false)
-        #expect(source.contains("Text(.app(\"home.subtitle\"))"))
+        #expect(source.contains("home.subtitle") == false)
         #expect(source.contains(".onGeometryChange(for: CGFloat.self)"))
         #expect(source.contains("GeometryReader") == false)
     }

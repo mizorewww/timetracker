@@ -20,9 +20,15 @@ struct PhoneHomeView: View {
                 startTimer: { presentationRouter.presentStartTaskPicker() }
             )
 
-            Section(AppStrings.localized("home.overview.title")) {
+            Section {
                 PhoneTodaySummaryRow(store: store)
                     .accessibilityIdentifier("home.overview")
+            } header: {
+                HomeOverviewHeader(
+                    container: .listSection,
+                    showsWallTime: store.preferences.showGrossAndWallTogether
+                )
+                    .textCase(nil)
             }
 
             HomeWeeklyGrossTimeSection(

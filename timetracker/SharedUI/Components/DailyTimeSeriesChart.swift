@@ -105,7 +105,7 @@ struct DailyTimeSeriesChart: View {
                     y: .value(AppStrings.grossTime, point.grossMinutes),
                     width: .ratio(0.62)
                 )
-                .foregroundStyle(AppColors.grossTime.gradient)
+                .foregroundStyle(AppColors.grossTime)
                 .cornerRadius(3)
                 .accessibilityLabel(accessibleDate(point.date))
                 .accessibilityValue(

@@ -14,7 +14,7 @@
 "home.now.title" = "现在";
 "home.overview.title" = "概览";
 "home.weeklyGross.title" = "本周累计时间";
-"home.weeklyGross.footer" = "按天累计所有任务的计时；重叠计时会分别计算。";
+"home.weeklyGross.footer" = "每根柱形按天相加每个任务计时器的完整时长。例如，两个计时器重叠 30 分钟，累计时间会增加 60 分钟。";
 "home.weeklyGross.empty" = "本周还没有计时";
 "home.weeklyGross.emptyDescription" = "开始一个任务后，这里会按天显示累计时间。";
 "action.startTimer" = "开始计时";
@@ -40,6 +40,7 @@
 "common.all" = "全部";
 "error.title" = "错误";
 "home.subtitle" = "先确认正在发生的事，再回看今天，并快速继续下一项任务。";
+"home.info.format" = "关于%@";
 "timer.chooseTaskHeader" = "开始计时";
 "timer.chooseTaskFooter" = "选择一个任务后会立即开始计时。之后可以在今日时间线里修改。";
 "timer.search.empty.description" = "请尝试其他名称，或新建任务。";
@@ -1158,7 +1159,11 @@
 "heatmap.picker.removeHidden" = "移除未显示项";
 "home.heatmap.title" = "活跃度热力图";
 "home.heatmap.taskCount" = "%lld 个任务";
-"home.heatmap.section.footer" = "每个任务都有独立热力图和 Blossom 主题色。每个方格代表一天；颜色越深，活动越多。";
+"home.heatmap.section.footer" = "每个方格代表一天。颜色越深，表示相对于该热力图最活跃一天的活动越多；每个任务保留自己的主题色。";
+"home.heatmap.info.duration" = "按天相加此任务及其所有子任务的计时时长；重叠计时会分别计入。";
+"home.heatmap.info.checklist" = "按天统计此任务及其所有子任务完成的清单项数量。";
+"home.heatmap.info.quantity.title" = "任务量";
+"home.heatmap.info.quantity" = "按天相加此任务及相同单位子任务记录的任务量；颜色深浅表示相对于各任务目标的进度。";
 "home.heatmap.chart.accessibilityLabel" = "%@活跃度热力图";
 "home.heatmap.chart.week" = "周";
 "home.heatmap.chart.weekday" = "星期";

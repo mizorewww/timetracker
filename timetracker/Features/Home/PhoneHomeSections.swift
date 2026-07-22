@@ -136,8 +136,13 @@ struct PhoneQuickStartSection: View {
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
         } header: {
-            Text(AppStrings.quickStart)
-                .accessibilityIdentifier("home.quickStart")
+            HStack(alignment: .center, spacing: 4) {
+                Text(AppStrings.quickStart)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("home.quickStart")
+                HomeSectionInformationButton.quickStart
+            }
+            .textCase(nil)
         } footer: {
             if tasks.isEmpty {
                 Text(.app("quickStart.empty.description"))
@@ -221,10 +226,10 @@ struct PhoneForecastSection: View {
         } header: {
             HStack {
                 Text(AppStrings.localized("forecast.today.title"))
+                    .accessibilityIdentifier("home.forecasts.header")
                 Spacer()
                 ForecastInfoButton()
             }
-            .accessibilityIdentifier("home.forecasts")
         }
     }
 }

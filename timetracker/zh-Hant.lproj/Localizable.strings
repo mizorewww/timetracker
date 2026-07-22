@@ -14,7 +14,7 @@
 "home.now.title" = "現在";
 "home.overview.title" = "概覽";
 "home.weeklyGross.title" = "本週累計時間";
-"home.weeklyGross.footer" = "按天累計所有任務的計時；重疊計時會分別計算。";
+"home.weeklyGross.footer" = "每根柱形按天相加每個任務計時器的完整時長。例如，兩個計時器重疊 30 分鐘，累計時間會增加 60 分鐘。";
 "home.weeklyGross.empty" = "本週還沒有計時";
 "home.weeklyGross.emptyDescription" = "開始一個任務後，這裡會按天顯示累計時間。";
 "action.startTimer" = "開始計時";
@@ -40,6 +40,7 @@
 "common.all" = "全部";
 "error.title" = "錯誤";
 "home.subtitle" = "先確認正在發生的事，再回看今天，並快速繼續下一項任務。";
+"home.info.format" = "關於%@";
 "timer.chooseTaskHeader" = "開始計時";
 "timer.chooseTaskFooter" = "選擇一個任務後會立即開始計時。之後可以在今日時間線裡修改。";
 "timer.search.empty.description" = "請嘗試其他名稱，或新增任務。";
@@ -1158,7 +1159,11 @@
 "heatmap.picker.removeHidden" = "移除未顯示項";
 "home.heatmap.title" = "活躍度熱力圖";
 "home.heatmap.taskCount" = "%lld 個任務";
-"home.heatmap.section.footer" = "每個任務都有獨立熱力圖和 Blossom 主題色。每個方格代表一天；顏色越深，活動越多。";
+"home.heatmap.section.footer" = "每個方格代表一天。顏色越深，表示相對於該熱力圖最活躍一天的活動越多；每個任務保留自己的主題色。";
+"home.heatmap.info.duration" = "按天相加此任務及其所有子任務的計時時長；重疊計時會分別計入。";
+"home.heatmap.info.checklist" = "按天統計此任務及其所有子任務完成的清單項數量。";
+"home.heatmap.info.quantity.title" = "任務量";
+"home.heatmap.info.quantity" = "按天相加此任務及相同單位子任務記錄的任務量；顏色深淺表示相對於各任務目標的進度。";
 "home.heatmap.chart.accessibilityLabel" = "%@活躍度熱力圖";
 "home.heatmap.chart.week" = "週";
 "home.heatmap.chart.weekday" = "星期";

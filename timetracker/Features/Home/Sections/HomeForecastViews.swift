@@ -16,6 +16,7 @@ struct TaskForecastSummarySection: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     SectionTitle(title: AppStrings.localized("forecast.today.title"))
+                        .accessibilityIdentifier("home.forecasts.header")
                     ForecastInfoButton()
                 }
 
@@ -34,7 +35,6 @@ struct TaskForecastSummarySection: View {
                 }
                 .appCard(padding: 0)
             }
-            .accessibilityIdentifier("home.forecasts")
         }
     }
 }

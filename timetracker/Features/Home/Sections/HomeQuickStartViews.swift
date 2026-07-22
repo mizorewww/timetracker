@@ -9,15 +9,11 @@ struct QuickStartSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(AppStrings.quickStart)
-                        .font(.headline)
-                        .accessibilityIdentifier("home.quickStart")
-                    Text(AppStrings.localized("quickStart.defaultHint"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(AppStrings.quickStart)
+                    .font(.headline)
+                    .accessibilityIdentifier("home.quickStart")
                 Spacer()
+                HomeSectionInformationButton.quickStart
                 Button {
                     presentationRouter.presentQuickStartEditor(using: store)
                 } label: {

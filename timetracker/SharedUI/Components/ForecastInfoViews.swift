@@ -31,23 +31,11 @@ struct ForecastExplanationCallout: View {
 }
 
 struct ForecastInfoButton: View {
-    @State private var isPresented = false
-
     var body: some View {
-        Button {
-            isPresented = true
-        } label: {
-            Image(systemName: "info.circle")
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-        .frame(
-            minWidth: AppLayout.minimumInteractiveTarget,
-            minHeight: AppLayout.minimumInteractiveTarget
-        )
-        .contentShape(Rectangle())
-        .accessibilityLabel(AppStrings.localized("forecast.info.title"))
-        .popover(isPresented: $isPresented) {
+        InformationPresentationButton(
+            title: AppStrings.localized("forecast.info.title"),
+            accessibilityIdentifier: "forecast.info.open"
+        ) {
             ForecastInfoView()
                 .frame(minWidth: 320, idealWidth: 420, maxWidth: 520, minHeight: 420)
         }
@@ -61,26 +49,30 @@ struct ForecastInfoView: View {
         NavigationStack {
             List {
                 Section {
-                    InfoGuideRow(
+                    InformationGuideRow(
                         icon: "checklist",
                         title: AppStrings.localized("forecast.info.requirements.title"),
                         bodyText: AppStrings.localized("forecast.info.requirements.body")
                     )
-                    InfoGuideRow(
+                    .accessibilityIdentifier("home.info.forecast.requirements")
+                    InformationGuideRow(
                         icon: "function",
                         title: AppStrings.localized("forecast.info.formula.title"),
                         bodyText: AppStrings.localized("forecast.info.formula.body")
                     )
-                    InfoGuideRow(
+                    .accessibilityIdentifier("home.info.forecast.formula")
+                    InformationGuideRow(
                         icon: "folder.badge.gearshape",
                         title: AppStrings.localized("forecast.info.children.title"),
                         bodyText: AppStrings.localized("forecast.info.children.body")
                     )
-                    InfoGuideRow(
+                    .accessibilityIdentifier("home.info.forecast.children")
+                    InformationGuideRow(
                         icon: "archivebox",
                         title: AppStrings.localized("forecast.info.history.title"),
                         bodyText: AppStrings.localized("forecast.info.history.body")
                     )
+                    .accessibilityIdentifier("home.info.forecast.history")
                 }
 
                 Section(AppStrings.localized("forecast.info.example.title")) {
@@ -99,6 +91,7 @@ struct ForecastInfoView: View {
                     .padding(.vertical, 4)
                 }
             }
+            .accessibilityIdentifier("home.info.forecast")
             .navigationTitle(AppStrings.localized("forecast.info.title"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -108,34 +101,13 @@ struct ForecastInfoView: View {
                     Button(AppStrings.done) {
                         dismiss()
                     }
+                    .accessibilityIdentifier("home.info.done")
                 }
             }
         }
-    }
-}
-
-private struct InfoGuideRow: View {
-    let icon: String
-    let title: String
-    let bodyText: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(.blue)
-                .frame(width: 28)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Text(bodyText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.vertical, 3)
-        .accessibilityElement(children: .combine)
+        #if os(iOS)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        #endif
     }
 }

@@ -19,12 +19,11 @@ struct HomeWeeklyGrossTimeSection: View {
                 calendar: calendar
             )
             Group {
-                if let snapshot,
-                   snapshot.interval == request.evaluationKey.interval {
-                    section(snapshot: snapshot)
-                } else {
-                    loadingSection
-                }
+                section(
+                    snapshot: snapshot?.interval == request.evaluationKey.interval
+                        ? snapshot
+                        : nil
+                )
             }
             .task(id: request) {
                 snapshot = store.weeklyGrossTimeSnapshot(
@@ -33,7 +32,6 @@ struct HomeWeeklyGrossTimeSection: View {
                 )
             }
         }
-        .accessibilityIdentifier("home.weeklyGross")
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             clockRevision &+= 1
@@ -62,102 +60,105 @@ struct HomeWeeklyGrossTimeSection: View {
     }
 
     @ViewBuilder
-    private var loadingSection: some View {
+    private func section(snapshot: WeeklyGrossTimeSnapshot?) -> some View {
         switch container {
         case .card:
             VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(
-                    title: AppStrings.localized("home.weeklyGross.title")
+                HomeWeeklyGrossTimeHeader(
+                    container: .card,
+                    total: snapshot.flatMap { snapshot in
+                        snapshot.hasTrackedTime
+                            ? DurationFormatter.chart(snapshot.totalGrossSeconds)
+                            : nil
+                    }
                 )
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 238)
-                    .padding(16)
-                    .appCard(padding: 0)
-            }
-        case .listSection:
-            Section {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 170)
-                    .padding(.vertical, 6)
-            } header: {
-                Text(.app("home.weeklyGross.title"))
-                    .textCase(nil)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func section(snapshot: WeeklyGrossTimeSnapshot) -> some View {
-        switch container {
-        case .card:
-            VStack(alignment: .leading, spacing: 10) {
-                cardHeader(snapshot: snapshot)
-                VStack(alignment: .leading, spacing: 8) {
-                    HomeWeeklyGrossTimeChart(
-                        snapshot: snapshot,
-                        chartHeight: 210,
-                        emptyHeight: 96,
-                        calendar: calendar
-                    )
-                    if snapshot.hasTrackedTime {
-                        Text(.app("home.weeklyGross.footer"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                Group {
+                    if let snapshot {
+                        HomeWeeklyGrossTimeChart(
+                            snapshot: snapshot,
+                            chartHeight: 210,
+                            emptyHeight: 96,
+                            calendar: calendar
+                        )
+                    } else {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 238)
                     }
                 }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .appCard(padding: 0)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("home.weeklyGross.card")
             }
         case .listSection:
             Section {
-                HomeWeeklyGrossTimeChart(
-                    snapshot: snapshot,
-                    chartHeight: 170,
-                    emptyHeight: 64,
-                    calendar: calendar
-                )
+                Group {
+                    if let snapshot {
+                        HomeWeeklyGrossTimeChart(
+                            snapshot: snapshot,
+                            chartHeight: 170,
+                            emptyHeight: 64,
+                            calendar: calendar
+                        )
+                    } else {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 170)
+                    }
+                }
                     .padding(.vertical, 6)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("home.weeklyGross.card")
             } header: {
-                listHeader(snapshot: snapshot)
+                HomeWeeklyGrossTimeHeader(
+                    container: .listSection,
+                    total: snapshot.flatMap { snapshot in
+                        snapshot.hasTrackedTime
+                            ? DurationFormatter.chart(snapshot.totalGrossSeconds)
+                            : nil
+                    }
+                )
                     .textCase(nil)
-            } footer: {
-                if snapshot.hasTrackedTime {
-                    Text(.app("home.weeklyGross.footer"))
+            }
+        }
+    }
+}
+
+private struct HomeWeeklyGrossTimeHeader: View {
+    let container: HomeSectionContainer
+    var total: String?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                title
+                Spacer(minLength: 8)
+                if let total {
+                    Text(total)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+
+            HomeSectionInformationButton.weeklyGross
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.weeklyGross.header")
     }
 
-    private func cardHeader(
-        snapshot: WeeklyGrossTimeSnapshot
-    ) -> some View {
-        SectionTitle(
-            title: AppStrings.localized("home.weeklyGross.title"),
-            trailing: snapshot.hasTrackedTime
-                ? DurationFormatter.chart(snapshot.totalGrossSeconds)
-                : nil,
-            trailingTint: .secondary
-        )
-    }
-
-    private func listHeader(
-        snapshot: WeeklyGrossTimeSnapshot
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+    @ViewBuilder
+    private var title: some View {
+        switch container {
+        case .card:
             Text(.app("home.weeklyGross.title"))
-            Spacer(minLength: 8)
-            if snapshot.hasTrackedTime {
-                Text(DurationFormatter.chart(snapshot.totalGrossSeconds))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
+                .font(.headline)
+        case .listSection:
+            Text(.app("home.weeklyGross.title"))
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
     }
-
 }

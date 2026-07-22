@@ -51,9 +51,6 @@ private struct DesktopTodayContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            Text(.app("home.subtitle"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
             DesktopTodayCurrentStateSections(
                 store: store,
                 segments: content.activeSegments,

@@ -133,6 +133,11 @@ struct TodayHeatmapUIContractTests {
             "home.heatmap.metric.duration",
             "home.heatmap.metric.checklist",
             "home.heatmap.metric.quantityFormat",
+            "home.info.format",
+            "home.heatmap.info.duration",
+            "home.heatmap.info.checklist",
+            "home.heatmap.info.quantity.title",
+            "home.heatmap.info.quantity",
             "home.heatmap.footer.durationFormat",
             "home.heatmap.footer.checklistFormat",
             "home.heatmap.footer.quantityFormat",
@@ -171,6 +176,9 @@ struct TodayHeatmapUIContractTests {
             "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift",
             "timetracker/Features/Home/Sections/HomeActivityHeatmapCard.swift"
         ].map { try sourceText($0) }.joined(separator: "\n")
+        let information = try sourceText(
+            "timetracker/Features/Home/Controls/HomeInformationViews.swift"
+        )
         let grid = try [
             "timetracker/SharedUI/Components/ActivityHeatmapGrid.swift",
             "timetracker/SharedUI/Components/ActivityHeatmapChart.swift",
@@ -202,6 +210,17 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains("TaskActivityHeatmapCard(snapshot: snapshot)"))
         #expect(section.contains("home.heatmap.\\(snapshot.taskID.uuidString)"))
         #expect(section.contains("home.heatmap.grid.\\(snapshot.taskID.uuidString)"))
+        #expect(section.contains("HomeSectionInformationButton.heatmaps"))
+        #expect(information.contains("home.heatmaps.info"))
+        #expect(information.contains("home.info.heatmaps.task."))
+        #expect(section.contains("home.heatmaps.header"))
+        #expect(
+            section.contains(
+                ".accessibilityIdentifier(\"home.heatmaps\")"
+            ) == false
+        )
+        #expect(section.contains("metricExplanation") == false)
+        #expect(section.contains("noActivityExplanation"))
         #expect(section.contains("snapshot.colorHex"))
         #expect(section.contains("case .trackedDuration:"))
         #expect(section.contains("case .checklistCompletions:"))

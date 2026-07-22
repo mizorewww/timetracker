@@ -15,10 +15,12 @@ struct TaskActivityHeatmapCard: View {
             .accessibilityIdentifier(
                 "home.heatmap.grid.\(snapshot.taskID.uuidString)"
             )
-            Text(snapshot.hasActivity ? metricExplanation : noActivityExplanation)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if snapshot.hasActivity == false {
+                Text(noActivityExplanation)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(
@@ -94,26 +96,6 @@ struct TaskActivityHeatmapCard: View {
             metric: snapshot.metric,
             locale: locale
         )
-    }
-
-    private var metricExplanation: String {
-        switch snapshot.metric {
-        case .trackedDuration:
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.footer.durationFormat"),
-                maximumDailyValue
-            )
-        case .checklistCompletions:
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.footer.checklistFormat"),
-                maximumDailyValue
-            )
-        case .quantity:
-            String.localizedStringWithFormat(
-                AppStrings.localized("home.heatmap.footer.quantityFormat"),
-                maximumDailyValue
-            )
-        }
     }
 
     private var noActivityExplanation: String {

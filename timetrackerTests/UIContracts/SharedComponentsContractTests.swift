@@ -447,6 +447,9 @@ struct SharedComponentsContractTests {
         let sectionHeader = try sourceText("timetracker/SharedUI/Components/SectionHeaders.swift")
         let emptyState = try sourceText("timetracker/SharedUI/Components/EmptyStates.swift")
         let infoRow = try sourceText("timetracker/SharedUI/Components/InfoRows.swift")
+        let informationPresentation = try sourceText(
+            "timetracker/SharedUI/Components/InformationPresentationViews.swift"
+        )
         let forecast = try sourceText("timetracker/SharedUI/Components/ForecastInfoViews.swift")
         let metrics = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
 
@@ -456,8 +459,22 @@ struct SharedComponentsContractTests {
         #expect(emptyState.contains(".accessibilityLabel(title)"))
         #expect(infoRow.contains("ViewThatFits(in: .horizontal)"))
         #expect(infoRow.contains(".fixedSize(horizontal: false, vertical: true)"))
-        #expect(forecast.contains("minWidth: AppLayout.minimumInteractiveTarget"))
-        #expect(forecast.components(separatedBy: ".accessibilityHidden(true)").count - 1 >= 2)
+        #expect(informationPresentation.contains(
+            "struct InformationPresentationButton<Destination: View>: View"
+        ))
+        #expect(informationPresentation.contains("struct InformationGuideRow: View"))
+        #expect(informationPresentation.contains("@State private var isPresented"))
+        #expect(informationPresentation.contains("Button {"))
+        #expect(informationPresentation.contains(".popover(isPresented: $isPresented)"))
+        #expect(informationPresentation.contains(".presentationCompactAdaptation(.sheet)"))
+        #expect(informationPresentation.contains(".presentationCompactAdaptation(.popover)") == false)
+        #expect(informationPresentation.contains("minWidth: AppLayout.minimumInteractiveTarget"))
+        #expect(informationPresentation.contains("minHeight: AppLayout.minimumInteractiveTarget"))
+        #expect(informationPresentation.contains(".accessibilityLabel(title)"))
+        #expect(informationPresentation.contains(".accessibilityHidden(true)"))
+        #expect(informationPresentation.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(forecast.contains("InformationPresentationButton("))
+        #expect(forecast.contains("InformationGuideRow("))
         #expect(metrics.contains("dynamicTypeSize.isAccessibilitySize ? nil : 1"))
         #expect(metrics.contains(".accessibilityValue(\"\\(metric.value), \\(metric.trendText)\")"))
     }

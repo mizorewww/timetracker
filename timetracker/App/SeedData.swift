@@ -51,8 +51,14 @@ enum SeedData {
             throw SeedDataError.demoDataCreationUnavailable
         }
 
+        let resetsPreferences = CommandLine.arguments.contains(
+            "--uitesting-reset-demo-preferences"
+        )
         try context.performAtomicMutation {
-            try clearAllChanges(context: context, includesPreferences: false)
+            try clearAllChanges(
+                context: context,
+                includesPreferences: resetsPreferences
+            )
             try buildDemoData(context: context)
         }
         setAutomaticDemoSeedingDisabled(false)

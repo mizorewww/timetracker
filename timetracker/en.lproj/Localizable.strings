@@ -14,7 +14,7 @@
 "home.now.title" = "Now";
 "home.overview.title" = "Overview";
 "home.weeklyGross.title" = "This Week’s Gross Time";
-"home.weeklyGross.footer" = "Daily Gross Time across all tasks; overlapping timers count separately.";
+"home.weeklyGross.footer" = "Each bar adds the full duration of every task timer for that day. If two timers overlap for 30 minutes, Gross Time increases by 60 minutes.";
 "home.weeklyGross.empty" = "No tracked time this week";
 "home.weeklyGross.emptyDescription" = "Start a task and its time will appear here by day.";
 "action.startTimer" = "Start Timer";
@@ -40,6 +40,7 @@
 "common.all" = "All";
 "error.title" = "Error";
 "home.subtitle" = "Check what is running, review today, then continue with the next task.";
+"home.info.format" = "About %@";
 "timer.chooseTaskHeader" = "Start Timing";
 "timer.chooseTaskFooter" = "Choose a task to start timing. You can edit the record later from Today.";
 "timer.search.empty.description" = "Try another name or create a new task.";
@@ -1158,7 +1159,11 @@
 "heatmap.picker.removeHidden" = "Remove Hidden";
 "home.heatmap.title" = "Activity Heatmaps";
 "home.heatmap.taskCount" = "%lld Tasks";
-"home.heatmap.section.footer" = "Each task has its own Heatmap and Blossom theme color. Each square represents one day; darker shades mean more activity.";
+"home.heatmap.section.footer" = "Each square represents one day. Darker shades mean more activity relative to that Heatmap’s busiest day; every task keeps its own theme color.";
+"home.heatmap.info.duration" = "Adds tracked time for this task and all of its subtasks on each day. Overlapping timers count separately.";
+"home.heatmap.info.checklist" = "Counts checklist items completed for this task and all of its subtasks on each day.";
+"home.heatmap.info.quantity.title" = "Task Quantity";
+"home.heatmap.info.quantity" = "Adds quantities recorded for this task and matching-unit subtasks on each day. Shade reflects progress toward each task’s goal.";
 "home.heatmap.chart.accessibilityLabel" = "%@ activity Heatmap";
 "home.heatmap.chart.week" = "Week";
 "home.heatmap.chart.weekday" = "Weekday";

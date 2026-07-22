@@ -15,8 +15,32 @@ final class timetrackerUITests: XCTestCase {
         let titleField: XCUIElement
     }
 
+    private var screenshotRunDirectoryURL: URL?
+
     override func setUpWithError() throws {
         continueAfterFailure = false
+        #if os(iOS)
+        let root = FileManager.default.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+        )[0]
+        .appendingPathComponent("UITestScreenshots", isDirectory: true)
+        let testDirectoryName = name.map { character in
+            character.isLetter || character.isNumber ? character : "-"
+        }
+        let testDirectory = root.appendingPathComponent(
+            String(testDirectoryName),
+            isDirectory: true
+        )
+        if FileManager.default.fileExists(atPath: testDirectory.path) {
+            try FileManager.default.removeItem(at: testDirectory)
+        }
+        try FileManager.default.createDirectory(
+            at: testDirectory,
+            withIntermediateDirectories: true
+        )
+        screenshotRunDirectoryURL = testDirectory
+        #endif
     }
 
     override func tearDownWithError() throws {
@@ -829,12 +853,15 @@ final class timetrackerUITests: XCTestCase {
         let taskTitle = "Read Apple HIG"
         let app = launchApp(
             replacesDemoDataOnLaunch: true,
-            additionalLaunchArguments: ["--uitesting-today-heatmap"]
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-reset-demo-preferences"
+            ]
         )
         XCTAssertTrue(initialConfigurationIsReady(in: app))
         XCTAssertTrue(homeIsReady(in: app))
         let configuredHeatmaps = app.descendants(matching: .any)[
-            "home.heatmaps"
+            "home.heatmaps.header"
         ].firstMatch
         XCTAssertTrue(configuredHeatmaps.waitForExistence(timeout: 8))
         openSection(
@@ -4666,128 +4693,407 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTodayWeeklyGrossTimeChartIsVisible() throws {
-        #if os(macOS)
-        throw XCTSkip("The Today weekly chart screenshot requires an iOS simulator.")
-        #else
+    func testTodayPersistentExplanationsOpenFromInformationButtons() throws {
         let app = launchApp(replacesDemoDataOnLaunch: true)
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
         XCTAssertTrue(homeIsReady(in: app))
-        let chart = app.otherElements.matching(NSPredicate(
-            format: "label == %@",
-            "This Week’s Gross Time"
-        )).firstMatch
-        let footer = app.staticTexts[
+        let prefix = platformScreenshotPrefix(in: app)
+
+        XCTAssertTrue(
+            app.staticTexts[
+                "Check what is running, review today, then continue with the next task."
+            ].waitForNonExistence(timeout: 2),
+            "The overview explanation must not consume persistent Home space."
+        )
+        let overviewInfo = app.buttons["home.overview.info"].firstMatch
+        scrollUntilHittable(
+            overviewInfo,
+            direction: .up,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            overviewInfo.waitForExistence(timeout: 5) && overviewInfo.isHittable
+        )
+        activate(overviewInfo)
+        let overviewView = app.descendants(matching: .any)[
+            "home.info.overview"
+        ].firstMatch
+        XCTAssertTrue(overviewView.waitForExistence(timeout: 5))
+        for identifier in [
+            "home.info.overview.summary",
+            "home.info.overview.gross",
+            "home.info.overview.wall",
+        ] {
+            XCTAssertTrue(
+                app.descendants(matching: .any)[identifier]
+                    .firstMatch.waitForExistence(timeout: 3),
+                "Overview Info must expose \(identifier)."
+            )
+        }
+        try capture("\(prefix)-home-overview-info", app: app)
+        let overviewDone = app.descendants(matching: .any)[
+            "home.info.done"
+        ].firstMatch
+        XCTAssertTrue(overviewDone.waitForExistence(timeout: 3))
+        activate(overviewDone)
+        XCTAssertTrue(overviewView.waitForNonExistence(timeout: 3))
+
+        XCTAssertTrue(
+            app.staticTexts[
+                "Pinned tasks first, then frequently used recent tasks."
+            ].waitForNonExistence(timeout: 2),
+            "The Quick Start explanation must not remain as a persistent footer."
+        )
+        let quickStartInfo = app.buttons["home.quickStart.info"].firstMatch
+        scrollUntilHittable(
+            quickStartInfo,
+            direction: .up,
+            maximumScrolls: 12,
+            in: app
+        )
+        XCTAssertTrue(
+            quickStartInfo.waitForExistence(timeout: 5) && quickStartInfo.isHittable
+        )
+        activate(quickStartInfo)
+        let quickStartView = app.descendants(matching: .any)[
+            "home.info.quickStart"
+        ].firstMatch
+        let quickStartSummary = app.descendants(matching: .any)[
+            "home.info.quickStart.summary"
+        ].firstMatch
+        XCTAssertTrue(quickStartView.waitForExistence(timeout: 5))
+        XCTAssertTrue(quickStartSummary.waitForExistence(timeout: 3))
+        let quickStartCopy = [
+            quickStartSummary.label,
+            quickStartSummary.value as? String ?? ""
+        ].joined(separator: " ")
+        XCTAssertTrue(
+            quickStartCopy.localizedCaseInsensitiveContains("pinned tasks"),
+            "Quick Start Info must explain pinned-task ordering. Copy: \(quickStartCopy)"
+        )
+        try capture("\(prefix)-home-quick-start-info", app: app)
+        let quickStartDone = app.descendants(matching: .any)[
+            "home.info.done"
+        ].firstMatch
+        XCTAssertTrue(quickStartDone.waitForExistence(timeout: 3))
+        activate(quickStartDone)
+        XCTAssertTrue(quickStartView.waitForNonExistence(timeout: 3))
+
+        let forecastInfo = app.buttons["forecast.info.open"].firstMatch
+        scrollUntilHittable(
+            forecastInfo,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            forecastInfo.waitForExistence(timeout: 5) && forecastInfo.isHittable,
+            "Forecast explanations must remain reachable through Info."
+        )
+        activate(forecastInfo)
+        let forecastView = app.descendants(matching: .any)[
+            "home.info.forecast"
+        ].firstMatch
+        let forecastRequirements = app.descendants(matching: .any)[
+            "home.info.forecast.requirements"
+        ].firstMatch
+        XCTAssertTrue(forecastView.waitForExistence(timeout: 5))
+        XCTAssertTrue(forecastRequirements.waitForExistence(timeout: 3))
+        try capture("\(prefix)-home-forecast-info", app: app)
+        let forecastDone = app.descendants(matching: .any)[
+            "home.info.done"
+        ].firstMatch
+        XCTAssertTrue(forecastDone.waitForExistence(timeout: 3))
+        activate(forecastDone)
+        XCTAssertTrue(forecastView.waitForNonExistence(timeout: 3))
+    }
+
+    @MainActor
+    func testTodayWeeklyGrossTimeChartIsVisible() throws {
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        XCTAssertTrue(homeIsReady(in: app))
+        let header = app.descendants(matching: .any)[
+            "home.weeklyGross.header"
+        ].firstMatch
+        let card = app.descendants(matching: .any)[
+            "home.weeklyGross.card"
+        ].firstMatch
+        let info = app.descendants(matching: .any)[
+            "home.weeklyGross.info"
+        ].firstMatch
+        let oldInlineFooter = app.staticTexts[
             "Daily Gross Time across all tasks; overlapping timers count separately."
         ].firstMatch
-        let home = app.descendants(matching: .any)["home.view"].firstMatch
 
-        for _ in 0..<3 {
-            home.swipeDown()
+        scrollTodayUntilHittable(info, in: app)
+        XCTAssertTrue(
+            header.waitForExistence(timeout: 5),
+            "The weekly chart title must remain visible outside its card."
+        )
+        XCTAssertTrue(
+            card.waitForExistence(timeout: 5),
+            "The weekly chart must expose its card boundary for layout verification."
+        )
+        #if os(iOS)
+        dragContentUp(by: 64, in: app)
+        #endif
+        XCTAssertTrue(
+            info.waitForExistence(timeout: 5) && info.isHittable,
+            "The weekly chart explanation must be available from its Info button."
+        )
+        XCTAssertTrue(header.isHittable, "The weekly title must be on-screen.")
+        XCTAssertTrue(card.isHittable, "The weekly chart card must be on-screen.")
+        XCTAssertEqual(card.label, "This Week’s Gross Time")
+        #if os(macOS)
+        let headerText = header.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "label BEGINSWITH %@",
+                    "This Week’s Gross Time"
+                )
+            )
+            .firstMatch
+        XCTAssertTrue(headerText.waitForExistence(timeout: 3))
+        let aggregateCopy = [
+            headerText.label,
+            headerText.value as? String ?? ""
+        ].joined(separator: " ")
+        XCTAssertNotEqual(
+            aggregateCopy,
+            "This Week’s Gross Time ",
+            "The weekly chart header must expose its aggregate duration."
+        )
+        #else
+        let chartSummary = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "label == %@ AND value != nil AND value != ''",
+                    "This Week’s Gross Time"
+                )
+            )
+            .firstMatch
+        let headerAggregate = app.staticTexts
+            .matching(
+                NSPredicate(
+                    format: "label BEGINSWITH %@",
+                    "This Week’s Gross Time,"
+                )
+            )
+            .firstMatch
+        let chartValue = chartSummary.exists
+            ? chartSummary.value as? String ?? ""
+            : ""
+        XCTAssertTrue(
+            !chartValue.isEmpty || headerAggregate.exists,
+            "The weekly chart section must expose its aggregate duration."
+        )
+        #endif
+        XCTAssertLessThanOrEqual(
+            header.frame.maxY,
+            card.frame.minY + 2,
+            "The weekly title must be positioned above, rather than inside, the chart card."
+        )
+        XCTAssertFalse(
+            header.frame.intersects(card.frame),
+            "The weekly title and chart card must have separate visual regions."
+        )
+        XCTAssertTrue(
+            oldInlineFooter.waitForNonExistence(timeout: 2),
+            "The overlap explanation must no longer consume space inside the chart card."
+        )
+        XCTAssertGreaterThanOrEqual(card.frame.height, 150)
+        XCTAssertGreaterThan(card.frame.width, 240)
+        XCTAssertTrue(
+            isFrameFullyVisibleAboveSystemChrome(card, in: app),
+            "The entire weekly chart card must be visible before acceptance capture."
+        )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        try capture(
+            "\(screenshotPrefix)-home-weekly-gross-card-hierarchy",
+            app: app
+        )
+
+        activate(info)
+        let informationView = app.descendants(matching: .any)[
+            "home.info.weeklyGross"
+        ].firstMatch
+        let summary = app.descendants(matching: .any)[
+            "home.info.weeklyGross.summary"
+        ].firstMatch
+        XCTAssertTrue(
+            informationView.waitForExistence(timeout: 5),
+            "Activating Info must open the weekly Gross Time explanation."
+        )
+        XCTAssertTrue(
+            summary.waitForExistence(timeout: 5),
+            "The weekly explanation must expose a concise semantic summary."
+        )
+        let explanation = [
+            summary.label,
+            summary.value as? String ?? ""
+        ].joined(separator: " ").lowercased()
+        XCTAssertTrue(
+            explanation.contains("overlap") &&
+                explanation.contains("two timers") &&
+                explanation.contains("30 minutes") &&
+                explanation.contains("60 minutes"),
+            "The weekly explanation must clearly demonstrate how two overlapping timers accumulate. Copy: \(explanation)"
+        )
+        try capture(
+            "\(screenshotPrefix)-home-weekly-gross-info",
+            app: app
+        )
+
+        let done = app.descendants(matching: .any)["home.info.done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
+        activate(done)
+        XCTAssertTrue(
+            informationView.waitForNonExistence(timeout: 3),
+            "Done must dismiss the weekly information surface."
+        )
+
+        #if os(iOS)
+        if screenshotPrefix == "ipad" {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            defer { XCUIDevice.shared.orientation = .portrait }
+            scrollUntilHittable(
+                info,
+                direction: .down,
+                maximumScrolls: 8,
+                in: app
+            )
+            XCTAssertTrue(info.waitForExistence(timeout: 5) && info.isHittable)
+            XCTAssertTrue(header.exists && card.exists)
+            XCTAssertLessThanOrEqual(header.frame.maxY, card.frame.minY + 2)
+            XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(card, in: app))
+            try capture(
+                "ipad-home-weekly-gross-card-landscape",
+                app: app
+            )
         }
-
-        for _ in 0..<8 {
-            if chart.exists {
-                break
-            }
-            home.swipeUp()
-        }
-
-        XCTAssertTrue(
-            chart.waitForExistence(timeout: 5),
-            "Demo data must render the shared weekly Gross Time chart."
-        )
-        XCTAssertTrue(
-            footer.waitForExistence(timeout: 5),
-            "The weekly chart must explain its Gross Time overlap semantics."
-        )
-        scrollUntilFullyVisibleAboveSystemChrome(footer, in: app)
-        XCTAssertGreaterThanOrEqual(chart.frame.height, 150)
-        XCTAssertGreaterThan(chart.frame.width, 240)
-        XCTAssertTrue(
-            isFrameFullyVisibleAboveSystemChrome(chart, in: app),
-            "The complete weekly chart must be visible above system chrome."
-        )
-        XCTAssertTrue(
-            isFrameFullyVisibleAboveSystemChrome(footer, in: app),
-            "The chart explanation must remain readable above system chrome."
-        )
-        try capture("today-weekly-gross-time-chart", app: app)
         #endif
     }
 
     @MainActor
     func testTodayConfiguredHeatmapsStayIndependentByTaskAndMetric() throws {
-        #if os(macOS)
-        throw XCTSkip("The Today heatmap screenshot is verified on iPhone and iPad.")
-        #else
+        #if os(iOS)
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
         let app = launchApp(
             replacesDemoDataOnLaunch: true,
-            additionalLaunchArguments: ["--uitesting-today-heatmap"]
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-reset-demo-preferences"
+            ]
         )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #else
         XCTAssertTrue(initialConfigurationIsReady(in: app))
+        #endif
         XCTAssertTrue(homeIsReady(in: app))
         let heatmaps = app.descendants(matching: .any)[
-            "home.heatmaps"
+            "home.heatmaps.header"
         ].firstMatch
-        let checklistGrid = app.otherElements.matching(
+        let checklistGrid = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "label == %@",
                 "Time Tracker App activity Heatmap"
             )
         ).firstMatch
-        let durationGrid = app.otherElements.matching(
+        let durationGrid = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "label == %@",
                 "Client Work activity Heatmap"
             )
         ).firstMatch
-        let quantityGrid = app.otherElements.matching(
+        let quantityGrid = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "label == %@",
                 "Daily Push-ups activity Heatmap"
             )
         ).firstMatch
-        let checklistFooter = app.staticTexts[
+        let checklistHeader = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "(label CONTAINS[c] %@ OR value CONTAINS[c] %@) AND (label CONTAINS[c] %@ OR value CONTAINS[c] %@)",
+                "Time Tracker App",
+                "Time Tracker App",
+                "Checklist Completions",
+                "Checklist Completions"
+            )
+        ).firstMatch
+        let durationHeader = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "(label CONTAINS[c] %@ OR value CONTAINS[c] %@) AND (label CONTAINS[c] %@ OR value CONTAINS[c] %@)",
+                "Client Work",
+                "Client Work",
+                "Tracked Time",
+                "Tracked Time"
+            )
+        ).firstMatch
+        let quantityHeader = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "(label CONTAINS[c] %@ OR value CONTAINS[c] %@) AND (label CONTAINS[c] %@ OR value CONTAINS[c] %@)",
+                "Daily Push-ups",
+                "Daily Push-ups",
+                "Quantity",
+                "Quantity"
+            )
+        ).firstMatch
+        let oldChecklistFooter = app.staticTexts[
             "Daily completed checklist items for this task and its subtasks. Shades are relative to the busiest day (4 completed)."
         ].firstMatch
-        let durationFooter = app.staticTexts.matching(
+        let oldDurationFooter = app.staticTexts.matching(
             NSPredicate(
                 format: "label BEGINSWITH %@",
                 "Daily gross tracked time for this task and its subtasks."
             )
         ).firstMatch
-        let quantityFooter = app.staticTexts[
+        let oldQuantityFooter = app.staticTexts[
             "Daily quantity for this task and matching-unit subtasks. Shades show progress toward each task’s declared goal; peak 45 reps."
         ].firstMatch
 
-        scrollUntilHittable(checklistGrid, direction: .up, in: app)
+        scrollUntilHittable(
+            heatmaps,
+            direction: .up,
+            maximumScrolls: 10,
+            in: app
+        )
         XCTAssertTrue(
             heatmaps.waitForExistence(timeout: 8),
             "Selecting tasks must expose the task-specific Today Heatmaps."
         )
+        scrollUntilFullyVisibleAboveSystemChrome(checklistGrid, in: app)
         XCTAssertTrue(
             checklistGrid.waitForExistence(timeout: 8),
             "The checklist task must have its own Heatmap."
         )
+        XCTAssertTrue(checklistHeader.waitForExistence(timeout: 3))
+        let checklistHeaderCopy = [
+            checklistHeader.label,
+            checklistHeader.value as? String ?? ""
+        ].joined(separator: " ")
+        XCTAssertTrue(checklistHeaderCopy.contains("9 completed"))
+        #if os(iOS)
         XCTAssertEqual(
             checklistGrid.value as? String,
             "Checklist Completions. Total 9 completed across 4 active days; busiest day 4 completed."
         )
-        XCTAssertTrue(checklistFooter.waitForExistence(timeout: 5))
-        scrollUntilFullyVisibleAboveSystemChrome(checklistFooter, in: app)
+        #endif
+        XCTAssertTrue(oldChecklistFooter.waitForNonExistence(timeout: 2))
         XCTAssertGreaterThan(checklistGrid.frame.width, 240)
         XCTAssertGreaterThan(checklistGrid.frame.height, 90)
         XCTAssertTrue(
             isFrameFullyVisibleAboveSystemChrome(checklistGrid, in: app)
         )
-        XCTAssertTrue(
-            isFrameFullyVisibleAboveSystemChrome(checklistFooter, in: app)
-        )
-        let prefix = app.windows.firstMatch.frame.width >= 700
-            ? "ipad"
-            : "iphone"
+        let prefix = platformScreenshotPrefix(in: app)
         try capture("\(prefix)-home-today-heatmap-checklist", app: app)
 
         scrollUntilHittable(durationGrid, direction: .up, in: app)
@@ -4795,37 +5101,170 @@ final class timetrackerUITests: XCTestCase {
             durationGrid.waitForExistence(timeout: 8),
             "The duration task must have a separate Heatmap."
         )
+        XCTAssertTrue(durationHeader.waitForExistence(timeout: 3))
+        let durationHeaderCopy = [
+            durationHeader.label,
+            durationHeader.value as? String ?? ""
+        ].joined(separator: " ")
+        XCTAssertTrue(durationHeaderCopy.contains("24 hr, 10 min"))
+        #if os(iOS)
         let durationSummary = durationGrid.value as? String ?? ""
         XCTAssertTrue(durationSummary.contains("Tracked Time"))
         XCTAssertTrue(durationSummary.contains("active days"))
-        XCTAssertTrue(durationFooter.waitForExistence(timeout: 5))
-        scrollUntilFullyVisibleAboveSystemChrome(durationFooter, in: app)
+        #endif
+        XCTAssertTrue(oldDurationFooter.waitForNonExistence(timeout: 2))
         XCTAssertGreaterThan(durationGrid.frame.width, 240)
         XCTAssertGreaterThan(durationGrid.frame.height, 90)
         XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(durationGrid, in: app))
-        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(durationFooter, in: app))
+        #if os(iOS)
         XCTAssertNotEqual(checklistGrid.value as? String, durationGrid.value as? String)
+        #endif
         try capture("\(prefix)-home-today-heatmap-duration", app: app)
 
         scrollUntilHittable(quantityGrid, direction: .up, in: app)
+        scrollUntilFullyVisibleAboveSystemChrome(quantityGrid, in: app)
         XCTAssertTrue(
             quantityGrid.waitForExistence(timeout: 8),
             "The quantity task must have a third independent Heatmap."
         )
+        XCTAssertTrue(quantityHeader.waitForExistence(timeout: 3))
+        let quantityHeaderCopy = [
+            quantityHeader.label,
+            quantityHeader.value as? String ?? ""
+        ].joined(separator: " ")
+        XCTAssertTrue(quantityHeaderCopy.contains("75"))
+        #if os(iOS)
         XCTAssertEqual(
             quantityGrid.value as? String,
             "Quantity · reps. Total 75 reps across 2 active days; busiest day 45 reps."
         )
-        XCTAssertTrue(quantityFooter.waitForExistence(timeout: 5))
-        scrollUntilFullyVisibleAboveSystemChrome(quantityFooter, in: app)
+        #endif
+        XCTAssertTrue(oldQuantityFooter.waitForNonExistence(timeout: 2))
         XCTAssertGreaterThan(quantityGrid.frame.width, 240)
         XCTAssertGreaterThan(quantityGrid.frame.height, 90)
         XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(quantityGrid, in: app))
-        XCTAssertTrue(isFrameFullyVisibleAboveSystemChrome(quantityFooter, in: app))
+        #if os(iOS)
         XCTAssertNotEqual(checklistGrid.value as? String, quantityGrid.value as? String)
         XCTAssertNotEqual(durationGrid.value as? String, quantityGrid.value as? String)
-        try capture("\(prefix)-home-today-heatmap-quantity", app: app)
         #endif
+        try capture("\(prefix)-home-today-heatmap-quantity", app: app)
+
+        let info = app.descendants(matching: .any)["home.heatmaps.info"].firstMatch
+        scrollUntilHittable(
+            info,
+            direction: .down,
+            maximumScrolls: 14,
+            in: app
+        )
+        XCTAssertTrue(
+            info.waitForExistence(timeout: 5) && info.isHittable,
+            "Heatmap explanations must be reachable from the section Info button."
+        )
+        activate(info)
+
+        let informationView = app.descendants(matching: .any)[
+            "home.info.heatmaps"
+        ].firstMatch
+        XCTAssertTrue(
+            informationView.waitForExistence(timeout: 5),
+            "Activating Info must open the Heatmap explanation."
+        )
+        let informationRows: [(identifier: String, requiredTerms: [String])] = [
+            ("home.info.heatmaps.summary", ["square", "day"]),
+            ("home.info.heatmaps.duration", ["tracked time", "subtasks", "overlapping timers"]),
+            ("home.info.heatmaps.checklist", ["checklist", "subtasks", "each day"]),
+            ("home.info.heatmaps.quantity", ["quantities", "matching-unit", "goal"]),
+        ]
+        for informationRow in informationRows {
+            let row = app.descendants(matching: .any)[
+                informationRow.identifier
+            ].firstMatch
+            XCTAssertTrue(
+                row.waitForExistence(timeout: 3),
+                "The Heatmap guide must expose \(informationRow.identifier)."
+            )
+            let copy = [
+                row.label,
+                row.value as? String ?? ""
+            ].joined(separator: " ").lowercased()
+            for term in informationRow.requiredTerms {
+                XCTAssertTrue(
+                    copy.contains(term),
+                    "\(informationRow.identifier) must clearly explain \(term). Label: \(row.label)"
+                )
+            }
+        }
+        let quantityTaskExplanation = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "home.info.heatmaps.task."
+                )
+            )
+            .matching(
+                NSPredicate(
+                    format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@",
+                    "Daily Push-ups",
+                    "Daily Push-ups"
+                )
+            )
+            .firstMatch
+        #if os(iOS)
+        for _ in 0..<8 {
+            if quantityTaskExplanation.exists && quantityTaskExplanation.isHittable {
+                break
+            }
+            let appFrame = app.frame
+            let informationFrame = informationView.frame
+            let horizontalPosition = (
+                informationFrame.midX - appFrame.minX
+            ) / appFrame.width
+            let startPosition = (
+                informationFrame.maxY - 36 - appFrame.minY
+            ) / appFrame.height
+            let endPosition = (
+                informationFrame.minY + 80 - appFrame.minY
+            ) / appFrame.height
+            let start = app.coordinate(
+                withNormalizedOffset: CGVector(
+                    dx: horizontalPosition,
+                    dy: startPosition
+                )
+            )
+            let end = app.coordinate(
+                withNormalizedOffset: CGVector(
+                    dx: horizontalPosition,
+                    dy: endPosition
+                )
+            )
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
+        #else
+        for _ in 0..<8 where !quantityTaskExplanation.exists {
+            informationView.scroll(byDeltaX: 0, deltaY: -240)
+        }
+        #endif
+        XCTAssertTrue(
+            quantityTaskExplanation.waitForExistence(timeout: 3),
+            "Heatmap Info must retain each configured task's dynamic scale explanation."
+        )
+        let quantityExplanationCopy = [
+            quantityTaskExplanation.label,
+            quantityTaskExplanation.value as? String ?? ""
+        ].joined(separator: " ")
+        XCTAssertTrue(
+            quantityExplanationCopy.localizedCaseInsensitiveContains("peak 45 reps"),
+            "The moved quantity explanation must preserve the actual peak scale."
+        )
+        try capture("\(prefix)-home-today-heatmap-info", app: app)
+
+        let done = app.descendants(matching: .any)["home.info.done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
+        activate(done)
+        XCTAssertTrue(
+            informationView.waitForNonExistence(timeout: 3),
+            "Done must dismiss the Heatmap information surface."
+        )
     }
 
     @MainActor
@@ -6821,12 +7260,27 @@ final class timetrackerUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
 
-        guard let directory = ProcessInfo.processInfo.environment["UI_SCREENSHOT_DIR"], !directory.isEmpty else {
+        let directoryURL: URL
+        if let directory = ProcessInfo.processInfo.environment["UI_SCREENSHOT_DIR"],
+           !directory.isEmpty {
+            directoryURL = URL(fileURLWithPath: directory, isDirectory: true)
+        } else {
+            #if os(iOS)
+            directoryURL = try XCTUnwrap(
+                screenshotRunDirectoryURL,
+                "setUp must prepare an isolated screenshot directory."
+            )
+            #else
             return
+            #endif
         }
-        let url = URL(fileURLWithPath: directory, isDirectory: true)
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        try screenshot.pngRepresentation.write(to: url.appendingPathComponent("\(name).png"))
+        try FileManager.default.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true
+        )
+        try screenshot.pngRepresentation.write(
+            to: directoryURL.appendingPathComponent("\(name).png")
+        )
     }
 
     @MainActor
@@ -7086,6 +7540,16 @@ final class timetrackerUITests: XCTestCase {
         _ element: XCUIElement,
         in app: XCUIApplication
     ) {
+        #if os(macOS)
+        for _ in 0..<12 where !isFrameFullyVisibleAboveSystemChrome(element, in: app) {
+            let windowFrame = app.windows.firstMatch.frame
+            let direction: ScrollDirection = element.exists &&
+                element.frame.minY < windowFrame.minY
+                ? .down
+                : .up
+            scroll(direction: direction, toward: element, in: app)
+        }
+        #else
         for _ in 0..<12 where !isFullyVisibleAboveSystemChrome(element, in: app) {
             let unobscuredBottom = systemChromeTop(in: app)
             let frame = element.frame
@@ -7101,6 +7565,7 @@ final class timetrackerUITests: XCTestCase {
                 app.swipeUp()
             }
         }
+        #endif
     }
 
     @MainActor
@@ -7158,9 +7623,15 @@ final class timetrackerUITests: XCTestCase {
     ) -> Bool {
         guard element.exists else { return false }
 
+        #if os(macOS)
+        let windowFrame = app.windows.firstMatch.frame
+        return element.frame.minY >= windowFrame.minY
+            && element.frame.maxY <= windowFrame.maxY - 8
+        #else
         let unobscuredBottom = systemChromeTop(in: app)
         return element.frame.minY >= app.frame.minY
             && element.frame.maxY <= unobscuredBottom - 8
+        #endif
     }
 
     @MainActor

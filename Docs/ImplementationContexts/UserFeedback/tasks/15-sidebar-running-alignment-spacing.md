@@ -8,7 +8,7 @@
 - [x] 领取反馈、读取 Apple HIG / SwiftUI 强制技能并建立活动链接。
 - [x] 审计侧边栏任务行的视图层级、对齐轴、默认行 inset 与自定义 spacing。
 - [x] 确认并定向验证仓库既有最小修复与稳定布局契约，无需重复修改产品代码。
-- [ ] 使用 owned iPhone / iPad 模拟器完成普通路径与截图验收。
+- [x] 使用 owned iPad 模拟器完成普通路径、真实行几何断言与截图验收。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
 ## 唯一反馈边界
@@ -65,6 +65,18 @@
 
 ## 模拟器验收与资源所有权
 
-- 待创建 fresh owned iPhone / iPad 模拟器并在此记录 UDID；不得复用或操作他人拥有的设备。
-- 截图应同时包含至少两个相邻任务与一个正在计时任务，核对图标中心线、行高和任务间垂直节奏。
-- 批次结束后终止 App/runner，shutdown + delete owned 模拟器，并确认无 owned 测试/trace 进程残留。
+- Task 15 独占 fresh iPad Pro 13-inch (M5, 16GB) / iOS 27.0：
+  `D17733BD-1FD3-4F5A-9C0D-55DA062B5855`。iPhone 紧凑布局不显示持久侧边栏，不做无关截图。
+- 源码契约补强：锁定 inline metadata 至少与 24 pt 图标同高，防止计时状态重新引入第二行或改变行高。
+- UI E2E 补强：使用平台模型识别 iPad（不依赖 iOS 27 未公开到 AX 树的 split-view identifier），并断言
+  相邻 running / idle 叶子行之间没有额外 gap（`0 ± 2 pt`）；原有同 `minX`、同 row height 断言继续保留。
+- 诊断历史：首轮因 `ipad.splitNavigation` 未暴露而 skip；第二轮证明实际侧边栏可达，但用 disclosure
+  parent 的内容 AX frame 比较整行 gap 得到无效失败；移除该不成立的比较后，一轮因启动时侧边栏折叠而
+  skip。最终改用真实平台模型判定，测试会通过系统 sidebar toggle 展开普通路径，不掩盖布局失败。
+- 最终结果包 `build/Task15SimulatorValidation/iPad4.xcresult`：1 test passed、0 failed、0 skipped；
+  截图附件 `ipad-sidebar-running-task-spacing` 同时包含 running 与 idle 相邻叶子任务。人工核验绿色计时
+  状态与任务图标处于同一中心线，叶子行垂直节奏一致。
+- 批次结束后终止了遗留的 owned `iPad2` xcodebuild/diagnostics，owned App 已由测试 teardown 终止；
+  随后 shutdown + delete `D17733BD-1FD3-4F5A-9C0D-55DA062B5855`。复核无 Booted device，且无 owned
+  `xcodebuild`、`xctest`、UI runner、App extension、Instruments/trace、Simulator 或 Problem Reporter
+  进程残留；未触碰既有且保持 Shutdown 的 `AnalyticsReview-iPhone17Pro`。

@@ -4765,8 +4765,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
 
         #if os(iOS)
-        guard app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 5) else {
+        guard platformScreenshotPrefix(in: app) == "ipad" else {
             throw XCTSkip("The sidebar geometry audit requires an iPad.")
         }
         #endif
@@ -4833,6 +4832,12 @@ final class timetrackerUITests: XCTestCase {
             idleTask.frame.height,
             accuracy: 1,
             "A running indicator must not add a metadata line or alter sidebar row spacing."
+        )
+        XCTAssertEqual(
+            idleTask.frame.minY - runningTask.frame.maxY,
+            0,
+            accuracy: 2,
+            "Adjacent leaf rows must not gain extra vertical spacing when the first task is running."
         )
 
         #if os(macOS)

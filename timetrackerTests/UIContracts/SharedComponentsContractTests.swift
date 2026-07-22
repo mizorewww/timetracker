@@ -321,6 +321,7 @@ struct SharedComponentsContractTests {
         #expect(sidebar.contains("TaskSummaryRow("))
         #expect(sidebar.contains("layout: .inline"))
         #expect(sidebar.contains(".frame(minHeight: minimumRowHeight)"))
+        #expect(summary.contains(".frame(minHeight: iconSize)"))
         #expect(sidebar.contains("Image(systemName: \"timer\")") == false)
     }
 

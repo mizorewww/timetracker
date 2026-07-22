@@ -909,6 +909,28 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func shortTimelineSimulatorFixtureExercisesProjectedLaneVisuals() throws {
+        let seedSource = try sourceText(
+            "timetracker/App/SeedData+DemoBuild.swift"
+        )
+        let uiTestSource = try sourceText(
+            "timetrackerUITests/timetrackerUITests.swift"
+        )
+
+        #expect(seedSource.contains("--uitesting-short-timeline"))
+        #expect(seedSource.contains("addShortTimelineUITestFixture("))
+        #expect(seedSource.contains("Timeline Short Blue"))
+        #expect(seedSource.contains("Timeline Short Orange"))
+        #expect(seedSource.contains("Timeline Terminal Green"))
+        #expect(seedSource.contains("firstShortStart.addingTimeInterval(2 * 60)"))
+        #expect(seedSource.contains("duration: 30"))
+        #expect(uiTestSource.contains("testPhoneShortTimelineBarsUseProjectedLanes"))
+        #expect(uiTestSource.contains("replacesDemoDataOnLaunch: true"))
+        #expect(uiTestSource.contains("--uitesting-short-timeline"))
+        #expect(uiTestSource.contains("iphone-home-short-timeline-lanes"))
+    }
+
+    @Test
     func trackedTimeRowsUseSharedBoundedDisplayPolicy() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/DurationLabels.swift")
         let homeTimelineSource = try sourceText("timetracker/Features/Home/Rows/HomeTimelineRows.swift")

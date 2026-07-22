@@ -3605,6 +3605,34 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testPhoneShortTimelineBarsUseProjectedLanes() throws {
+        #if os(macOS)
+        throw XCTSkip("Projected short-task lanes are verified on an iPhone simulator.")
+        #else
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-short-timeline"]
+        )
+
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
+        scrollTodayUntilHittable(timeline, in: app)
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
+
+        let fixtureTask = app.staticTexts["Timeline Short Blue"].firstMatch
+        XCTAssertTrue(
+            fixtureTask.waitForExistence(timeout: 5),
+            "The dedicated short-task Timeline fixture must be visible below the chart."
+        )
+
+        scrollUntilHittable(timeline, direction: .down, in: app)
+        XCTAssertTrue(timeline.isHittable)
+        try capture("iphone-home-short-timeline-lanes", app: app)
+        #endif
+    }
+
+    @MainActor
     func testAppleHealthTimelineControlsStayVisibleAndContextual() throws {
         #if os(macOS)
         throw XCTSkip("Apple Health timeline controls require an iOS simulator.")

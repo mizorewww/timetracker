@@ -44,7 +44,10 @@
   - [x] B2.1 HIG 复审：将 vertical annotation gutter 扩为 96pt，英文省略时长保持系统 `caption2` 11pt、允许两行，不再用 `minimumScaleFactor(0.7)` 压成约 7.7pt；与 capsule frame 相撞的内部 hour ticks 会被纯布局过滤，start/end 边界仍保留。gap 虚线在数据 marks 后绘制，仅 gutter label 位于前景，避免辅助线穿过彩色条和图标。
   - [x] B2.1 验证：新增真实 omitted-gap 压缩回归，证明 pixel lane 依据压缩后距离换轨，并验证 gap 边界 tick 让位；Timeline/Task 23 contract 30/30 通过、0 failure、0 skip。该批次未创建 simulator。
 - [~] Checkpoint C：专用短任务 fixture、owned simulator 截图验收与精确 Release 安装收口。
+  - [x] C1：新增仅在 `--uitesting-short-timeline` 下生效的隔离 fixture；它以 replace-on-launch 模式创建两条相隔 90 秒的 30 秒短任务、一条靠近显示区末端的 30 秒短任务，以及一条制造长空档压缩的上下文记录，正常 Demo 与用户数据路径不受影响。
+  - [x] C1：新增 iPhone-only UI 验收入口与源码契约，明确要求加载专用 fixture、定位 Today Timeline 并导出 `iphone-home-short-timeline-lanes` 截图。macOS arm64、付费开发签名下精确运行共享图表契约、fixture 契约和非 Debug Demo 隔离契约，3/3 通过、0 failure、0 skip。首次不带 Swift Testing 枚举中的 `()` 过滤只加载 suite 而执行 0 项，未计为验证；随后按枚举出的完整测试标识重新执行并得到上述 3/3 结果。
+  - [~] C2：创建并登记单台 owned iPhone simulator，运行专用 UI 测试、检查截图后彻底清理。
 
 ## 资源所有权
 
-- 尚未创建 simulator、测试 runner、截图或 trace 资源。
+- 尚未创建 simulator、截图或 trace 资源。C1 的 macOS app/test runner 已退出；临时 `build/Task23FixtureContracts` 将在 checkpoint 提交前删除。

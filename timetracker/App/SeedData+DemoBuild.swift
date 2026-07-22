@@ -56,6 +56,17 @@ extension SeedData {
                     deviceID: "demo"
                 )
             )
+            if CommandLine.arguments.contains("--uitesting-short-timeline") {
+                try addShortTimelineUITestFixture(
+                    context: context,
+                    taskRepository: taskRepository,
+                    categoryID: workCategory.id,
+                    startOfToday: startOfToday,
+                    now: now
+                )
+                try context.saveAfterMutationStep()
+                return
+            }
             if CommandLine.arguments.contains("--uitesting-today-heatmap") {
                 let quantityTask = try taskRepository.createTask(
                     title: "Daily Push-ups",
@@ -360,6 +371,85 @@ extension SeedData {
             run.state = .completed
             context.insert(run)
         }
+    }
+
+    private static func addShortTimelineUITestFixture(
+        context: ModelContext,
+        taskRepository: SwiftDataTaskRepository,
+        categoryID: UUID,
+        startOfToday: Date,
+        now: Date
+    ) throws {
+        let contextTask = try taskRepository.createTask(
+            title: "Timeline Fixture Context",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "64748B",
+            iconName: "rectangle.3.group"
+        )
+        let firstShortTask = try taskRepository.createTask(
+            title: "Timeline Short Blue",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "1677FF",
+            iconName: "bolt.fill"
+        )
+        let secondShortTask = try taskRepository.createTask(
+            title: "Timeline Short Orange",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "F97316",
+            iconName: "flame.fill"
+        )
+        let terminalTask = try taskRepository.createTask(
+            title: "Timeline Terminal Green",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "16A34A",
+            iconName: "arrow.down"
+        )
+
+        let terminalEnd = now.addingTimeInterval(-5 * 60)
+        let terminalStart = terminalEnd.addingTimeInterval(-30)
+        let firstShortStart = terminalStart.addingTimeInterval(-45 * 60)
+        let secondShortStart = firstShortStart.addingTimeInterval(2 * 60)
+        let contextStart = max(
+            startOfToday.addingTimeInterval(60),
+            firstShortStart.addingTimeInterval(-2.5 * 60 * 60)
+        )
+
+        try addSegment(
+            context: context,
+            taskID: contextTask.id,
+            source: .timer,
+            start: contextStart,
+            duration: 30 * 60,
+            note: "Task 23 compressed-gap context"
+        )
+        try addSegment(
+            context: context,
+            taskID: firstShortTask.id,
+            source: .manual,
+            start: firstShortStart,
+            duration: 30,
+            note: "Task 23 first short mark"
+        )
+        try addSegment(
+            context: context,
+            taskID: secondShortTask.id,
+            source: .manual,
+            start: secondShortStart,
+            duration: 30,
+            note: "Task 23 second short mark"
+        )
+        try addSegment(
+            context: context,
+            taskID: terminalTask.id,
+            source: .manual,
+            start: terminalStart,
+            duration: 30,
+            note: "Task 23 terminal short mark"
+        )
     }
 
     private static func addActiveSegment(

@@ -9,7 +9,7 @@
 - [x] 审计侧边栏任务行的视图层级、对齐轴、默认行 inset 与自定义 spacing。
 - [x] 确认并定向验证仓库既有最小修复与稳定布局契约，无需重复修改产品代码。
 - [x] 使用 owned iPad 模拟器完成普通路径、真实行几何断言与截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，清理资源并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -80,3 +80,17 @@
   随后 shutdown + delete `D17733BD-1FD3-4F5A-9C0D-55DA062B5855`。复核无 Booted device，且无 owned
   `xcodebuild`、`xctest`、UI runner、App extension、Instruments/trace、Simulator 或 Problem Reporter
   进程残留；未触碰既有且保持 Shutdown 的 `AnalyticsReview-iPhone17Pro`。
+
+## Release 全设备安装
+
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，exit 0；没有设置
+  `LAUNCH_AFTER_INSTALL=1`，因此未启动或操作物理设备 App。
+- iOS/iPadOS Release 与 embedded Watch companion、macOS Release 均 build succeeded；iOS、Watch、
+  `/Applications/timetracker.app` 均通过 `codesign --verify --deep --strict`。签名为 Apple Development
+  `ZEXUAN GAO (PX46M259V3)`，Team ID `LT98S43NKA`，未禁用签名或付费 provisioning。
+- Watch bundle `me.mezorewww.timetracker.watchkitapp` 已嵌入 iOS App，
+  `WKCompanionAppBundleIdentifier = me.mezorewww.timetracker`，签名与依赖关系验证通过。
+- 只读 `devicectl device info apps` 验证 iPad Pro M4 与 iPhone Air 都已安装
+  `me.mezorewww.timetracker` 版本 `1.1.52 (107)`；没有对任一物理设备进行启动、UI 操作或截图。
+- 安装后复核无 owned `xcodebuild`、`xctest`、UI runner、App/extension 或 Instruments 进程，且没有
+  Booted 模拟器；根目录 `README.md` 仍不存在，用户未暂存的 8 条新增反馈保持不进入本任务提交。

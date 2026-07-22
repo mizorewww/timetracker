@@ -10,7 +10,7 @@
 - [x] 参考 Apple 官方语义与成熟库，确定最小、可测试的合并策略。
 - [x] 确认既有产品修复完整，并补齐读取层、跨午夜 Store 贯通和 UI 唯一性回归测试。
 - [x] 使用 owned 模拟器完成普通路径与截图验收并清理资源。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -81,6 +81,17 @@
   主代理目视确认 Timeline 只有一条 `Sleep`，区间 `00:00–06:30`，实际睡眠 `6 hr, 18 min`；fixture 中间
   12 分钟 Awake 未计入时长，`Running` 仍独立显示。
 - 所有构建和测试均保持 Apple Development 签名，没有关闭 code signing。
+
+## Release 全设备安装
+
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，退出码为 0；iOS/iPadOS（含嵌入式 Watch）与
+  macOS Release 构建成功，脚本完成物理 iOS/iPadOS 安装并复制 macOS App 到 `/Applications/timetracker.app`。
+- 只读 `devicectl device info apps` 核验：iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与
+  iPhone Air（`FBA36694-D841-56D4-8ED6-21942873B21B`）均安装 `me.mezorewww.timetracker` `1.1.52 (107)`。
+- 本地 Release iOS、嵌入式 Watch `me.mezorewww.timetracker.watchkitapp` 与 macOS App 均为 `1.1.52 (107)`；
+  三个 bundle 均通过 `codesign --verify --deep --strict --verbose=2`。
+- 物理 iPhone/iPad 全程仅安装与只读查询，未启动、操作或截图 App；配对 Watch 由系统的 Automatic App Install
+  处理嵌入式 companion。
 
 ## 资源所有权
 

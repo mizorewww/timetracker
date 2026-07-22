@@ -9,7 +9,7 @@
 - [x] 对照 Apple HIG、SwiftUI intrinsic sizing 与现有成熟组件确定自适应宽度契约。
 - [x] 实现胶囊抱住完整文字并补充布局/契约回归。
 - [x] 使用 owned simulator 与 XCTest 自动化 macOS window 做跨平台截图验收并清理资源。
-- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -29,7 +29,7 @@
 - [x] Checkpoint A：静态根因、复用点、局部化宽度与成熟方案审计。
 - [x] Checkpoint B：intrinsic capsule 实现与纯布局/契约回归。
 - [x] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
-- [~] Checkpoint D：精确 Release 安装、状态标记与收口。
+- [x] Checkpoint D：精确 Release 安装、状态标记与收口。
 
 ## Checkpoint A 审计结论
 
@@ -97,3 +97,12 @@
 - 三张自动导出的截图均确认 `1 hr, 5 min skipped` 与 `2 hr, 35 min skipped` 全文可见；长文案胶囊明显更宽，两枚胶囊没有截断、碰撞或覆盖 Timeline 内容。
 - 验收后已终止 App，关机并删除上述两个 owned simulator；Simulator 与 Problem Reporter 已退出。复核无 owned device、Booted simulator、`xcodebuild`、`xctest`、UI runner、App 或 Instruments/xctrace 残留进程。
 - 未新增第三方库；本检查点继续使用系统 XCTest、XCUITest、SwiftUI 与 `xcresulttool`。下一步只执行精确 Release 全设备安装、签名/安装只读核验与反馈收口。
+
+### Checkpoint D Release 全设备安装与收口
+
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 成功；保留自动签名、设备注册与付费团队 `LT98S43NKA`，没有关闭 code signing。
+- iOS/iPadOS Release（含 Widget、Live Activity 与 Watch companion）构建成功并由脚本安装到连接的 `iPhone Air`；`devicectl` 只读查询确认设备内 `me.mezorewww.timetracker` 为 `1.1.52 (107)`，全过程未启动或操作物理机 App。
+- 嵌入 Watch companion `me.mezorewww.timetracker.watchkitapp` 的严格深层签名、Designated Requirement、Team ID 与版本均通过；当前没有可见物理 Apple Watch，因此实机 profile coverage/安装未核验，未把它误报为成功。
+- macOS universal Release 构建成功并复制到 `/Applications/timetracker.app`；`arm64`/`x86_64` 架构、严格深层签名、Designated Requirement、Team ID `LT98S43NKA` 与版本 `1.1.52 (107)` 均通过。
+- 已删除 `build/Install` 与 `/tmp/timetracker-task27`；复核无 Booted simulator、`xcodebuild`、`xctest`、UI runner 或 trace 残留。根目录 `README.md`/`readme.md` 仍不存在。
+- 反馈唯一来源中的本条已标记 `[x]`，活动链接已移除；未新增依赖，最终实现只使用系统 SwiftUI/XCTest/XCUITest。

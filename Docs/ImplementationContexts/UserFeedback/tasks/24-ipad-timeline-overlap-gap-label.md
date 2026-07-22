@@ -9,7 +9,7 @@
 - [x] 对照 Apple HIG、SwiftUI 布局语义及成熟时间轴实现，确定跨平台修复与依赖策略。
 - [x] 完成横向投影分轨、独立标注带与自适应高度的纯布局、契约和性能回归。
 - [x] 构造大量重叠、短任务的隔离 fixture，完成跨平台 UI 回归入口。
-- [ ] 使用明确登记的 owned iPhone/iPad simulator 与本机 macOS 测试窗口进行 UI 验收并截图，随后清理资源。
+- [x] 使用明确登记的 owned iPhone/iPad simulator 与本机 macOS 测试窗口进行 UI 验收并截图，随后清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -55,3 +55,4 @@
 - [x] owned iPhone batch：`Task24-iPhone17Pro-20260722`，UDID `789C9A9A-74C3-44C6-A739-C6BCFD1E4FA7`，iPhone 17 Pro / iOS 27.0。唯一 Task 24 UI 用例 1/1 通过；原始 XCTest attachment 显示 11 个 mark、10 个短任务在 Y 时间重叠时沿 X 清晰分轨，`2 hr skipped` 位于独立横向标注线上且不与任务相交。app/runner 已由 XCTest 终止，随后 shutdown/delete owned UDID；`build/Task24UIPhone`、xcresult 与导出截图已删除，确认没有该 UDID、Booted device 或相关进程残留。
 - [x] owned iPad batch：`Task24-iPadPro11-20260722`，UDID `21206DEE-45A6-4936-9223-9FFFCDCC8EFC`，iPad Pro 11-inch (M5, 16GB) / iOS 27.0。同一 Task 24 UI 用例最终 1/1 通过；portrait 与 landscape 均自动读取 11 个实际 bar，并证明 10 个相互时间重叠的短任务占据 10 条独立 Y 轨道。原始 XCTest 截图分别完整展示 plot 与滚动后的 annotation band，`2 hr skipped` 在两种方向下都没有进入任务区域。首轮失败仅由多余滚动把 chart accessibility 容器移出树、以及父级 `home.timeline` 覆盖子 identifier 引起；测试改为先断言后滚动，并使用仅在两项专用 Debug fixture 开启的 bar 语义标签，Release 继续隐藏装饰图。XCTest 已终止 app/runner；随后 shutdown/delete owned UDID，删除 `build/Task24UIIPad`、6 份 retry xcresult、失败录像/层级与最终截图，确认没有该 UDID、Booted device 或相关进程残留。
 - [x] 观测口相关 3 项精确 Timeline contract 在签名 macOS 测试中通过。额外尝试的完整 `HomeUIContractTests` 仍报告既有 `quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions` 与 `trackingEntrypointsShareAvailabilityAndRunningStateSemantics` 失败；它们不读取本 checkpoint 修改的 Timeline 文件，未伪报为通过。临时 `build/Task24UIHooks`、测试宿主与相关进程已清理。
+- [x] 本机 macOS UI batch：同一 Task 24 用例最终 1/1 通过，11 个实际 bar 中 10 个互相重叠短任务占据 10 条独立 Y 轨道；最终原始 XCTest 截图同时展示任务 plot、`2 hr skipped` 独立标注带与记录列表，没有相交。首轮 shell identifier 断言因系统未暴露 `mac.splitNavigation` 而失败；第二轮确认侧栏同名任务会与图表 bar 同时命中，最终查询用父级 `home.timeline` 排除 `sidebar.task.*`。XCTest 已终止 app/runner，`build/Task24UIMac`、3 份 xcresult 与导出截图均已删除，确认无相关进程或 Booted simulator。

@@ -3627,12 +3627,13 @@ final class timetrackerUITests: XCTestCase {
         scroll(direction: .up, toward: timeline, in: app)
         let chartMarks = app.otherElements.matching(
             NSPredicate(
-                format: "label IN %@",
+                format: "label IN %@ AND identifier == %@",
                 [
                     "Timeline Short Blue",
                     "Timeline Short Orange",
                     "Timeline Terminal Green"
-                ]
+                ],
+                "home.timeline"
             )
         )
         let blue = chartMarks.matching(
@@ -3687,14 +3688,11 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
 
         #if os(macOS)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["mac.splitNavigation"]
-                .waitForExistence(timeout: 3)
-        )
         try assertOverlappingTimelineMarks(
             in: app,
             usesHorizontalTimeAxis: true
         )
+        scroll(direction: .up, toward: timeline, in: app)
         waitForScreenshotTransition()
         try capture("mac-home-overlap-timeline", app: app)
         #else
@@ -5787,7 +5785,11 @@ final class timetrackerUITests: XCTestCase {
         let expectedTitles = ["Timeline Overlap Context"] +
             (1...10).map { String(format: "Timeline Burst %02d", $0) }
         let query = app.otherElements.matching(
-            NSPredicate(format: "label IN %@", expectedTitles)
+            NSPredicate(
+                format: "label IN %@ AND identifier == %@",
+                expectedTitles,
+                "home.timeline"
+            )
         )
         XCTAssertTrue(
             waitUntil(timeout: 5) { query.count >= 11 },

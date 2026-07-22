@@ -10,7 +10,7 @@
 - [x] 参考 HealthKit、Apple Fitness 与 Apple HIG，确定仅同步产品语义及成熟库边界。
 - [x] 实现并验证 workout/睡眠任务不能由 Time Tracker 启动计时，只能由 Apple Health 同步。
 - [x] 使用 owned 模拟器完成普通交互与截图验收并清理资源。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -111,5 +111,16 @@
 
 ## 下一步
 
-- 仅剩精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，核对签名、版本与所有目标安装；物理 iPhone/iPad
-  只做安装和只读核验，不启动、不交互、不截图。成功后把唯一反馈 `[~]` 改为 `[x]` 并移除 active link。
+- 无。本任务可以由 Codex 把唯一反馈 `[~]` 改为 `[x]` 并移除 active link，然后继续读取下一条未完成反馈。
+
+## Release 全设备安装
+
+- 已精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，exit 0；iOS/iPadOS 主 App、嵌入 Watch companion
+  与 macOS Release 均使用付费 Apple Development 身份和 Team `LT98S43NKA` 构建，未关闭签名。
+- iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 与 iPhone Air
+  `FBA36694-D841-56D4-8ED6-21942873B21B` 的只读 `devicectl device info apps` 均确认安装
+  `me.mezorewww.timetracker`，版本 `1.1.52 (107)`，且为 developer app。
+- Release iOS 主包、嵌入 `me.mezorewww.timetracker.watchkitapp` 与 `/Applications/timetracker.app` 均为
+  `1.1.52 (107)`；三者 `codesign --verify --deep --strict` 全部通过，Authority 为
+  `Apple Development: ZEXUAN GAO (PX46M259V3)`，Team Identifier 为 `LT98S43NKA`。
+- 物理设备只执行脚本安装和上述只读查询；没有 launch、交互或截图。

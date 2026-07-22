@@ -34,6 +34,13 @@ extension TimeTrackerStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) async {
+        // The deterministic task catalog is app navigation metadata, not
+        // protected HealthKit sample data. Keep it visible without requesting
+        // authorization or requiring the optional Timeline presentation.
+        materializeAppleHealthTaskCatalog(
+            clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
+                .taskCatalogClearRecoveryTaskIDs
+        )
         guard isAppleHealthTimelineEnabled else { return }
         await refreshAppleHealthTimeline(
             now: now,

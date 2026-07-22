@@ -664,6 +664,52 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
+    func disabledTimelineRefreshMaterializesVisibleSyncOnlyCatalogWithoutHealthAccess()
+        async throws {
+        let context = try makeTestContext()
+        let reader = StubAppleHealthReader(
+            isHealthDataAvailable: false,
+            batch: .empty
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: false
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences,
+            writeAuthorization: .isolatedTestHarness
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.hasCompletedStartupConfiguration = true
+
+        await store.refreshAppleHealthTimelineIfEnabled()
+
+        let plan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        #expect(Set(store.tasks.map(\.id)) == Set(plan.tasks.map(\.id)))
+        #expect(
+            Set(store.taskCategories.map(\.id)) == Set(plan.categories.map(\.id))
+        )
+        #expect(
+            Set(store.taskCategoryAssignments.map(\.id)) ==
+                Set(plan.tasks.map(\.categoryAssignmentID))
+        )
+        for definition in plan.tasks {
+            let task = try #require(store.task(for: definition.id))
+            #expect(store.isTaskVisible(task))
+            #expect(store.isTaskAvailableForTracking(task) == false)
+        }
+        #expect(preferences.isTimelineEnabled == false)
+        #expect(store.appleHealthTimelineState == .unavailable)
+        #expect(reader.authorizationRequestStatusCount == 0)
+        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.sampleRequestIntervals.isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSession>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TimeSegment>()).isEmpty)
+    }
+
+    @Test @MainActor
     func enabledRefreshMergesCrossMidnightSleepBeforeVisibleRangeClipping()
         async throws {
         var calendar = Calendar(identifier: .gregorian)

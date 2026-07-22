@@ -10,7 +10,7 @@
 - [x] 参考 Apple HIG、SwiftUI 专项规范与成熟库，确定编辑体验和依赖边界。
 - [x] 实现每一种现有 AI 提示词都可分别编辑、保存、恢复默认并被对应调用读取。
 - [x] 完成定向测试、owned 模拟器普通交互与截图验收并清理资源。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
 
 ## 唯一反馈边界
 
@@ -55,7 +55,7 @@
 
 - [x] Checkpoint A：prompt catalog、同步偏好、service request、旧请求失效和定向单元测试。
 - [x] Checkpoint B：三行设置入口、泛型编辑器、本地化、UI/contract 测试与 owned 模拟器截图。
-- [~] Checkpoint C：全量回归、精确 Release 全设备安装、状态标记和资源清理。
+- [x] Checkpoint C：全量回归、精确 Release 全设备安装、状态标记和资源清理。
 
 ## Checkpoint A 结果
 
@@ -94,10 +94,20 @@
 - macOS 全量 `timetrackerTests` 已执行；结果为 1534 passed、12 failed、0 skipped（1546 total）：
   `build/Task19PromptUI/FullRegressionDerivedData/Logs/Test/Test-timetracker-2026.07.22_13-54-00-+0800.xcresult`。
 - 12 个失败均不位于 AI prompt catalog、同步偏好、service request、设置编辑器或本任务 UI tests：包括既有源码行数预算、
-  Live Activity / Home UI 静态契约、Cloud sync 静态契约和归档时间戳纳秒级相等测试。
+  Live Activity / Home UI 静态契约、Cloud sync 静态契约和归档时间戳严格 `Date` 相等测试。
 - 本任务最终专项回归仍为 56 passed、0 failed、0 skipped，三种 prompt 的 simulator UI 闭环也全部通过；不得把
   repository-wide 全量回归表述为通过。
+- 独立只读复审确认：本任务直接新增/修改的 15 个单元测试全部通过，涉及改动的 7 个 unit-test suites 合计
+  85 passed、0 failed；全量回归的失败测试文件及其断言读取的源文件均未被本任务改动。
 - 全量回归未创建 simulator；运行结束后没有 owned `xcodebuild`、`xctest`、runner 或 Booted device 残留。
+- 精确命令 `CONFIGURATION=Release scripts/build_install_all.sh` 退出码为 0；iOS/iPadOS、嵌入式 watchOS companion
+  与 macOS Release 均构建、签名并安装成功。
+- iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与 iPhone Air
+  （`FBA36694-D841-56D4-8ED6-21942873B21B`）只读核验均显示 `me.mezorewww.timetracker` 版本
+  `1.1.52 (107)`；未启动、操作或截图物理设备。
+- iOS app、embedded Watch app 与 `/Applications/timetracker.app` 均通过 `codesign --verify --deep --strict`；
+  Team Identifier 为 `LT98S43NKA`。iOS binary 为 `arm64`，Watch binary 为 `arm64 arm64_32`，macOS binary 为
+  `arm64 x86_64`。
 
 ## 资源所有权
 
@@ -105,4 +115,5 @@
   `2B2144DE-03A7-429B-8DFD-8EA843A21139`）已清理并删除。
 - Checkpoint B 的 owned iPad `Task19Prompt-iPad-20260722-1330`（UDID
   `9EF8B4CE-BFD5-446E-990E-1525424A7B4D`）已清理并删除。
-- Checkpoint C 尚未创建 simulator；全量回归必须继续显式记录和清理任何新资源。
+- Checkpoint C 未创建 simulator；Release 完成后无 Booted device、owned `xcodebuild`、`xctest`、UI runner、
+  extension 或 trace 进程残留。

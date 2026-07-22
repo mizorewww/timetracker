@@ -8,7 +8,7 @@
 - [x] 领取反馈，定位 Live Activity 各 family 的尾部时间布局、现有 fixture 与自动化验收入口。
 - [x] 依据 Apple HIG 与 SwiftUI 布局规范确定信息层级、间距和最窄宽度契约。
 - [x] 实现最小修复，补齐单元/UI contract 与完全脚本化 XCUITest 几何/截图验收。
-- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -27,7 +27,7 @@
 
 - [x] Checkpoint A：布局根因、HIG 约束与自动化验收设计审计。
 - [x] Checkpoint B：实现、定向单元/UI contract 与脚本化视觉验收。
-- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## 资源所有权
 
@@ -79,3 +79,11 @@
 - 失败分流：Xcode 27 beta 的 `maxFieldCount: 2` 长单位输出、一次 AX IPC timeout、两次 Air 首启迁移状态与两次诊断收集卡顿均保留在上方记忆；只有截图确认的 timer 裁切/纵排/标题消失被当作产品红灯并完成修复。
 - 资源清理：所有 Task29 模拟器均已关机删除；App、extension、Runner、xcodebuild、xctest 与 owned diagnose 均已退出；iPhone 17 Pro/Air 的 DerivedData、xcresult 和附件已删除。Checkpoint B 没有使用物理设备或手动窗口。
 - 库：仅复用 Apple ActivityKit、WidgetKit、SwiftUI、Vision、SF 系统字体与 XCTest/XCUITest；没有新增第三方依赖。ActivityKit family proposal 与无边界 Stopwatch 比通用 UI 库更准确，Vision 则复用系统级 OCR 做截图可见性门禁。
+
+## Checkpoint C 完成结论
+
+- Release：精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并以 0 退出；iOS、内嵌 watchOS 与 macOS 产物统一为 `1.1.58 (113)`。
+- 安装：脚本把 iOS Release 安装到 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 与 iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B`，并把 macOS Release 复制到 `/Applications/timetracker.app`。两台物理设备只做安装与 `devicectl` 版本只读核验，均确认 `1.1.58 (113)`；未启动、点击或截图。
+- 签名：iOS、内嵌 Watch companion、macOS 均通过 `codesign --verify --deep --strict`，TeamIdentifier 为 `LT98S43NKA`；macOS 主程序为 `x86_64 arm64` universal。脚本未发现可见物理 Apple Watch，因此无法额外核验描述文件对某台手表的覆盖；内嵌 Watch 产物本身已构建并通过签名验证。
+- 资源清理：删除 `build/Install`；无 Task29/Booted simulator，也无 owned `xcodebuild`、`xctest`、UI runner、diagnose 或 Instruments 进程残留。物理设备上的 Release 安装和 `/Applications/timetracker.app` 按任务要求保留。
+- 库：Release 收尾未引入依赖；任务整体只使用 Apple ActivityKit、WidgetKit、SwiftUI、Vision、SF 系统字体与 XCTest/XCUITest。

@@ -89,6 +89,16 @@
 - 本检查点不新增第三方库；两台 owned simulator 均已终止 App、shutdown 并 delete，且无 Booted device、
   `xcodebuild`、`xctest`、UI runner、extension 或 trace 残留。
 
+## Checkpoint C 全量回归记录
+
+- macOS 全量 `timetrackerTests` 已执行；结果为 1534 passed、12 failed、0 skipped（1546 total）：
+  `build/Task19PromptUI/FullRegressionDerivedData/Logs/Test/Test-timetracker-2026.07.22_13-54-00-+0800.xcresult`。
+- 12 个失败均不位于 AI prompt catalog、同步偏好、service request、设置编辑器或本任务 UI tests：包括既有源码行数预算、
+  Live Activity / Home UI 静态契约、Cloud sync 静态契约和归档时间戳纳秒级相等测试。
+- 本任务最终专项回归仍为 56 passed、0 failed、0 skipped，三种 prompt 的 simulator UI 闭环也全部通过；不得把
+  repository-wide 全量回归表述为通过。
+- 全量回归未创建 simulator；运行结束后没有 owned `xcodebuild`、`xctest`、runner 或 Booted device 残留。
+
 ## 资源所有权
 
 - Checkpoint B 的 owned iPhone `Task19Prompt-iPhone-20260722-1330`（UDID

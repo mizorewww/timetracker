@@ -3744,6 +3744,9 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: ["--uitesting-gap-label-collision"]
         )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
         XCTAssertTrue(homeIsReady(in: app))
 
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
@@ -3754,7 +3757,16 @@ final class timetrackerUITests: XCTestCase {
         #if os(macOS)
         scroll(direction: .up, toward: timeline, in: app)
         waitForScreenshotTransition()
-        try capture("mac-home-multiple-gap-labels", app: app)
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+        XCTAssertTrue(
+            app.windows.firstMatch.frame.contains(timeline.frame),
+            "The macOS Timeline must be fully visible inside the app window"
+        )
+        try capture(
+            "mac-home-multiple-gap-labels",
+            element: app.windows.firstMatch
+        )
         #else
         let usesIPadShell = platformScreenshotPrefix(in: app) == "ipad"
         if usesIPadShell {
@@ -6426,6 +6438,100 @@ final class timetrackerUITests: XCTestCase {
         #endif
         try recordScreenshot(screenshot, name: name)
     }
+
+    @MainActor
+    private func capture(_ name: String, element: XCUIElement) throws {
+        XCTAssertTrue(element.exists, "Screenshot target must exist: \(name)")
+        XCTAssertTrue(element.isHittable, "Screenshot target must be visible: \(name)")
+
+        let frame = element.frame
+        XCTAssertTrue(
+            frame.origin.x.isFinite &&
+                frame.origin.y.isFinite &&
+                frame.width.isFinite &&
+                frame.height.isFinite,
+            "Screenshot target must have a finite frame: \(name)"
+        )
+        XCTAssertGreaterThan(frame.width, 0, "Screenshot target must have width: \(name)")
+        XCTAssertGreaterThan(frame.height, 0, "Screenshot target must have height: \(name)")
+
+        let screenshot = element.screenshot()
+        XCTAssertGreaterThan(
+            screenshot.pngRepresentation.count,
+            1_024,
+            "Screenshot target must produce a valid PNG: \(name)"
+        )
+        try recordScreenshot(screenshot, name: name)
+    }
+
+    #if os(macOS)
+    @MainActor
+    private func placeMainWindowOnPrimaryScreen(
+        in app: XCUIApplication
+    ) throws {
+        let uiWindow = app.windows.firstMatch
+        XCTAssertTrue(uiWindow.waitForExistence(timeout: 5))
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+        let primaryScreen = try XCTUnwrap(
+            NSScreen.screens.first { $0.frame.origin == .zero },
+            "The primary macOS screen must be available"
+        )
+        let primaryScreenFrame = CGRect(
+            origin: .zero,
+            size: primaryScreen.frame.size
+        )
+        let originalFrame = uiWindow.frame
+        XCTAssertLessThanOrEqual(
+            originalFrame.width,
+            primaryScreenFrame.width,
+            "The macOS UI-test window must fit the primary screen width"
+        )
+        XCTAssertLessThanOrEqual(
+            originalFrame.height,
+            primaryScreenFrame.height,
+            "The macOS UI-test window must fit the primary screen height"
+        )
+
+        let menuBarInset = primaryScreen.frame.maxY - primaryScreen.visibleFrame.maxY
+        let targetOrigin = CGPoint(
+            x: min(
+                primaryScreen.visibleFrame.minX + 64,
+                primaryScreenFrame.maxX - originalFrame.width
+            ),
+            y: min(
+                menuBarInset + 64,
+                primaryScreenFrame.maxY - originalFrame.height
+            )
+        )
+        if !primaryScreenFrame.contains(originalFrame) {
+            let titleBarCoordinate = uiWindow.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.85, dy: 0.02)
+            )
+            let destination = titleBarCoordinate.withOffset(CGVector(
+                dx: targetOrigin.x - originalFrame.minX,
+                dy: targetOrigin.y - originalFrame.minY
+            ))
+            titleBarCoordinate.click(
+                forDuration: 0.2,
+                thenDragTo: destination
+            )
+        }
+
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+        XCTAssertTrue(waitUntil(timeout: 3) {
+            let frame = uiWindow.frame
+            return frame.width > 0 &&
+                frame.height > 0 &&
+                primaryScreenFrame.contains(frame)
+        }, "The macOS UI-test window must be visible on the primary screen")
+        uiWindow.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.85, dy: 0.02)
+        ).click()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+    }
+    #endif
 
     @MainActor
     private func recordScreenshot(

@@ -35,18 +35,21 @@ extension TimelineChart {
             }
         }
     }
-    func verticalHourGrid(width: CGFloat, height: CGFloat) -> some View {
+    func verticalHourGrid(width: CGFloat, axisLength: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(
-                visibleHourTicks(axisLength: height, minimumSpacing: 28),
+                visibleHourTicks(axisLength: axisLength, minimumSpacing: 28),
                 id: \.date
             ) { tick in
                 let ratio = axisCompression.ratio(for: tick.date)
-                let y = height * CGFloat(ratio)
+                let y = axisLength * CGFloat(ratio)
                 TimelineGridLine(position: y, isVertical: false)
                     .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
-                    .frame(width: max(0, width - 68), height: height)
-                    .offset(x: 68)
+                    .frame(
+                        width: max(0, width - TimelineChartLayout.verticalAxisLabelWidth),
+                        height: axisLength
+                    )
+                    .offset(x: TimelineChartLayout.verticalAxisLabelWidth)
                 Text(hourLabel(tick.date))
                     .font(
                         .footnote
@@ -62,7 +65,7 @@ extension TimelineChart {
                     .offset(
                         y: TimelineChartLayout.axisLabelOrigin(
                             position: y,
-                            axisLength: height,
+                            axisLength: axisLength,
                             labelExtent: 16,
                             role: tick.role
                         )
@@ -93,37 +96,74 @@ extension TimelineChart {
     func verticalGapMarker(
         _ gap: TimelineOmittedGap,
         width: CGFloat,
-        height: CGFloat
+        axisLength: CGFloat
     ) -> some View {
-        let y = height * CGFloat(
+        let y = axisLength * CGFloat(
             axisCompression.ratio(forCompressedOffset: gap.compressedMidpointOffset)
         )
-        return DashedTimelineLine(isVertical: false)
-            .stroke(
-                Color.secondary.opacity(0.42),
-                style: StrokeStyle(lineWidth: 1, dash: [4, 4])
-            )
-            .frame(width: max(40, width - 68), height: 1)
-            .overlay(alignment: .center) {
-                omittedGapLabel(gap)
-            }
-            .offset(x: 68, y: min(max(0, y), height - 1))
+        let labelFrame = TimelineChartLayout.verticalGapLabelFrame(
+            position: y,
+            axisLength: axisLength
+        )
+
+        return ZStack(alignment: .topLeading) {
+            DashedTimelineLine(isVertical: false)
+                .stroke(
+                    Color.secondary.opacity(0.42),
+                    style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                )
+                .frame(
+                    width: max(
+                        0,
+                        width - TimelineChartLayout.verticalAxisLabelWidth
+                    ),
+                    height: 1
+                )
+                .offset(
+                    x: TimelineChartLayout.verticalAxisLabelWidth,
+                    y: min(max(0, y), max(0, axisLength - 1))
+                )
+            verticalOmittedGapLabel(gap)
+                .frame(width: labelFrame.width, height: labelFrame.height)
+                .offset(x: labelFrame.minX, y: labelFrame.minY)
+        }
+        .frame(
+            width: max(0, width),
+            height: max(0, axisLength),
+            alignment: .topLeading
+        )
     }
 
     private func omittedGapLabel(_ gap: TimelineOmittedGap) -> some View {
-        Text(
-            String(
-                format: AppStrings.localized("analytics.timeline.gap.omitted"),
-                DurationFormatter.compact(Int(gap.duration))
-            )
+        Text(omittedGapText(gap))
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(.regularMaterial, in: Capsule())
+            .fixedSize()
+    }
+
+    private func verticalOmittedGapLabel(
+        _ gap: TimelineOmittedGap
+    ) -> some View {
+        Text(omittedGapText(gap))
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .allowsTightening(true)
+            .padding(.horizontal, 3)
+            .padding(.vertical, 2)
+            .background(.regularMaterial, in: Capsule())
+    }
+
+    private func omittedGapText(_ gap: TimelineOmittedGap) -> String {
+        String(
+            format: AppStrings.localized("analytics.timeline.gap.omitted"),
+            DurationFormatter.compact(Int(gap.duration))
         )
-        .font(.caption2.weight(.medium))
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(.regularMaterial, in: Capsule())
-        .fixedSize()
     }
 
     private func visibleHourTicks(

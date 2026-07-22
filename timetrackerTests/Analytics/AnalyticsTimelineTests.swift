@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import SwiftData
 import Testing
@@ -494,6 +495,166 @@ struct AnalyticsTimelineTests {
     }
 
     @Test
+    func compactVerticalTimelineAssignsLanesFromRenderedFootprints() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let display = DateInterval(start: start, duration: 60 * 60)
+        let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
+        let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000102")!
+        let thirdID = UUID(uuidString: "00000000-0000-0000-0000-000000000103")!
+        let entries = [
+            makeTimelineEntry(
+                id: firstID,
+                start: start,
+                end: start.addingTimeInterval(60)
+            ),
+            makeTimelineEntry(
+                id: secondID,
+                start: start.addingTimeInterval(4 * 60),
+                end: start.addingTimeInterval(5 * 60)
+            ),
+            makeTimelineEntry(
+                id: thirdID,
+                start: start.addingTimeInterval(20 * 60),
+                end: start.addingTimeInterval(21 * 60)
+            )
+        ]
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: entries.map(\.interval)
+        )
+
+        let layout = TimelineChartLayout.verticalBars(
+            entries: entries,
+            compression: compression,
+            height: 120
+        )
+        let first = try #require(
+            layout.placements.first { $0.id == .trackedSegment(firstID) }
+        )
+        let second = try #require(
+            layout.placements.first { $0.id == .trackedSegment(secondID) }
+        )
+        let third = try #require(
+            layout.placements.first { $0.id == .trackedSegment(thirdID) }
+        )
+
+        #expect(layout.axisLength == 100)
+        #expect(layout.laneCount == 2)
+        #expect(first.lane == 0)
+        #expect(second.lane == 1)
+        #expect(third.lane == 0)
+        #expect(first.axisExtent == 20)
+        #expect(second.axisOrigin - first.axisEnd < 6)
+        #expect(third.axisOrigin - first.axisEnd > 6)
+        #expect(
+            TimelineChartLayout.verticalBars(
+                entries: Array(entries.reversed()),
+                compression: compression,
+                height: 120
+            ) == layout
+        )
+    }
+
+    @Test
+    func visualLaneAllocatorReusesLaneAtExactPointThreshold() {
+        let firstID = TimelineEntryID.trackedSegment(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000105")!
+        )
+        let secondID = TimelineEntryID.trackedSegment(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000106")!
+        )
+        let intervals = [
+            TimelineLaneInterval(id: firstID, start: 0, end: 20),
+            TimelineLaneInterval(id: secondID, start: 26, end: 30)
+        ]
+
+        #expect(
+            TimelineLaneAllocator.assignments(
+                for: intervals,
+                minimumGap: 6
+            ).map(\.lane) == [0, 1]
+        )
+        #expect(
+            TimelineLaneAllocator.assignments(
+                for: intervals,
+                minimumGap: 6,
+                allowsReuseAtMinimumGap: true
+            ).map(\.lane) == [0, 0]
+        )
+    }
+
+    @Test
+    func compactVerticalTimelineReturnsNoInvisibleLanesAtZeroHeight() {
+        let start = Date(timeIntervalSince1970: 0)
+        let entry = makeTimelineEntry(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000107")!,
+            start: start,
+            end: start.addingTimeInterval(60)
+        )
+        let compression = TimelineAxisCompression(
+            displayInterval: entry.interval,
+            busyIntervals: [entry.interval]
+        )
+
+        let layout = TimelineChartLayout.verticalBars(
+            entries: [entry],
+            compression: compression,
+            height: 0
+        )
+
+        #expect(layout.axisLength == 0)
+        #expect(layout.placements.isEmpty)
+        #expect(layout.laneCount == 0)
+    }
+
+    @Test
+    func compactVerticalTimelineAnchorsTerminalShortBarDownward() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let display = DateInterval(start: start, duration: 60 * 60)
+        let entry = makeTimelineEntry(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000104")!,
+            start: start.addingTimeInterval(59 * 60),
+            end: display.end
+        )
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: [entry.interval]
+        )
+
+        let layout = TimelineChartLayout.verticalBars(
+            entries: [entry],
+            compression: compression,
+            height: 120
+        )
+        let placement = try #require(layout.placements.first)
+        let projectedStart = layout.axisLength * CGFloat(59.0 / 60.0)
+
+        #expect(abs(placement.axisOrigin - projectedStart) < 0.001)
+        #expect(placement.axisExtent == 20)
+        #expect(placement.axisEnd <= 120)
+        #expect(placement.axisEnd > layout.axisLength)
+        #expect(placement.axisOrigin != 120 - placement.axisExtent)
+    }
+
+    @Test
+    func compactVerticalGapLabelStaysInsideAxisGutter() {
+        let frame = TimelineChartLayout.verticalGapLabelFrame(
+            position: 298,
+            axisLength: 300
+        )
+        let lanes = TimelineChartLayout.verticalLanes(
+            width: 340,
+            laneCount: 3
+        )
+
+        #expect(frame.minX >= 0)
+        #expect(frame.maxX <= TimelineChartLayout.verticalAxisLabelWidth)
+        #expect(frame.maxX <= lanes.origin)
+        #expect(frame.minY >= 0)
+        #expect(frame.maxY <= 300)
+    }
+
+    @Test
     func timelineChartTicksPreserveExactBoundsWithoutCrowdingNearbyHours() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
@@ -861,4 +1022,25 @@ private func fixedAnalyticsMidday() -> Date {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(secondsFromGMT: 0)!
     return calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 12, minute: 0))!
+}
+
+private func makeTimelineEntry(
+    id: UUID,
+    start: Date,
+    end: Date
+) -> AnalyticsTimelineEntry {
+    AnalyticsTimelineEntry(
+        id: .trackedSegment(id),
+        subject: .task(id),
+        title: "Timeline test",
+        path: "Timeline test",
+        iconName: "clock",
+        colorHex: "1677FF",
+        startedAt: start,
+        endedAt: end,
+        lane: 0,
+        labelIndex: 0,
+        interval: DateInterval(start: start, end: end),
+        durationSeconds: max(0, Int(end.timeIntervalSince(start)))
+    )
 }

@@ -80,21 +80,40 @@ extension TimelineChart {
 
     var verticalTimeline: some View {
         GeometryReader { proxy in
+            let barLayout = TimelineChartLayout.verticalBars(
+                entries: laneEntries,
+                compression: axisCompression,
+                height: proxy.size.height
+            )
+            let entryByID = Dictionary(
+                uniqueKeysWithValues: laneEntries.map { ($0.id, $0) }
+            )
+            let lanes = TimelineChartLayout.verticalLanes(
+                width: proxy.size.width,
+                laneCount: barLayout.laneCount
+            )
+
             ZStack(alignment: .topLeading) {
-                verticalHourGrid(width: proxy.size.width, height: proxy.size.height)
-                ForEach(axisCompression.omittedGaps) { gap in
-                    verticalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
-                }
-                let lanes = TimelineChartLayout.verticalLanes(
+                verticalHourGrid(
                     width: proxy.size.width,
-                    laneCount: laneCount
+                    axisLength: barLayout.axisLength
                 )
-                ForEach(laneEntries) { entry in
-                    verticalBar(
-                        entry: entry,
-                        height: proxy.size.height,
-                        lanes: lanes
+                ForEach(barLayout.placements) { placement in
+                    if let entry = entryByID[placement.id] {
+                        verticalBar(
+                            entry: entry,
+                            placement: placement,
+                            lanes: lanes
+                        )
+                    }
+                }
+                ForEach(axisCompression.omittedGaps) { gap in
+                    verticalGapMarker(
+                        gap,
+                        width: proxy.size.width,
+                        axisLength: barLayout.axisLength
                     )
+                    .zIndex(1)
                 }
             }
         }

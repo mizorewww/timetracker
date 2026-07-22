@@ -20,7 +20,8 @@ nonisolated struct TimelineLaneAssignment: Identifiable, Equatable, Sendable {
 nonisolated enum TimelineLaneAllocator {
     static func assignments(
         for intervals: [TimelineLaneInterval],
-        minimumGap: Double
+        minimumGap: Double,
+        allowsReuseAtMinimumGap: Bool = false
     ) -> [TimelineLaneAssignment] {
         let gap = minimumGap.isFinite ? max(0, minimumGap) : 0
         let sorted = intervals
@@ -50,6 +51,7 @@ nonisolated enum TimelineLaneAllocator {
                 startingAt: interval.start,
                 laneEnds: laneEnds,
                 minimumGap: gap,
+                allowsReuseAtMinimumGap: allowsReuseAtMinimumGap,
                 endingLanes: &endingLanes,
                 availableLanes: &availableLanes
             )
@@ -73,6 +75,7 @@ nonisolated enum TimelineLaneAllocator {
         startingAt start: Double,
         laneEnds: [Double],
         minimumGap: Double,
+        allowsReuseAtMinimumGap: Bool,
         endingLanes: inout Heap<TimelineLaneAvailability>,
         availableLanes: inout Heap<Int>
     ) {
@@ -82,7 +85,11 @@ nonisolated enum TimelineLaneAllocator {
                 _ = endingLanes.popMin()
                 continue
             }
-            guard start - candidate.end > minimumGap else {
+            let separation = start - candidate.end
+            let canReuse = allowsReuseAtMinimumGap
+                ? separation >= minimumGap
+                : separation > minimumGap
+            guard canReuse else {
                 return
             }
             _ = endingLanes.popMin()

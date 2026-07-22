@@ -7,8 +7,8 @@
 
 - [x] 领取反馈，审计手机 Timeline 的事件几何、最小高度、图标和 elapsed 标签布局。
 - [x] 对照 Apple HIG、SwiftUI 布局语义与成熟日历/时间轴实现，确定轨道分配和间距规则。
-- [~] 实现短任务避让及回归测试，保持正常长度任务和跨平台行为稳定。
-- [ ] 使用 owned iPhone simulator 验证普通交互路径并截图；按需要补充 iPad 回归，随后清理资源。
+- [x] 实现短任务避让及回归测试，保持正常长度任务和跨平台行为稳定。
+- [~] 使用 owned iPhone simulator 验证普通交互路径并截图；按需要补充 iPad 回归，随后清理资源。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -35,11 +35,13 @@
   - Apple HIG 要求图表 mark、轴和说明保持清晰层级，并给重要内容足够空间；SwiftUI 专项规范要求由实际容器尺寸驱动布局、把可测试逻辑移出 View body、保持稳定 identity。参考：<https://developer.apple.com/design/human-interface-guidelines/charts>、<https://developer.apple.com/design/human-interface-guidelines/layout>、<https://developer.apple.com/documentation/swiftui/custom-layout>。
   - 依赖审计：CalendarKit（约 2.7k stars）验证了日历事件在绘制层按 frame 分组的成熟方向，但它是 UIKit/Mac Catalyst 整套 day calendar，接入会替换现有 SwiftUI、自定义压缩轴、Health 混合数据与相邻精确记录列表；HorizonCalendar（约 3.1k）和 FSCalendar（约 10.6k）是日期网格而非本时间轨道；KVKCalendar 约 801 stars，低于约束。均不采用。参考：<https://github.com/richardtop/CalendarKit>、<https://github.com/airbnb/HorizonCalendar>、<https://github.com/WenchaoD/FSCalendar>、<https://github.com/kvyatkovskys/KVKCalendar>。
   - 最终依赖决策采用 Apple 官方 `swift-collections` 1.6.0 的 `HeapModule`（审计时约 4,459 stars，持续维护）：把领域时间轨道和后续屏幕投影轨道共用的稳定 interval partition 提取为 `TimelineLaneAllocator`，同时删除项目内手写 `MinHeap`，不保留重复实现。整套 CalendarKit/HorizonCalendar/FSCalendar 仍不引入，因为它们不能替代本项目的压缩轴与混合数据语义。
-- [~] Checkpoint B：实现轨道几何与单元/契约回归。
+- [x] Checkpoint B：实现轨道几何与单元/契约回归。
   - [x] B1：主 target 显式链接 `HeapModule`；共享分配器接受时间或投影 point interval，按 start/end/stable ID 稳定排序，使用两个最小堆以 `O(n log k)` 复用编号最小的可用轨道；`TimelineLayoutEngine` 已迁移且保留严格 `> 60s` 的原领域行为。
   - [x] B1 验证：`plutil` 通过；macOS arm64、付费开发签名下运行 `AnalyticsTimelineTests` 与 `CorePerformanceBudgetTests`，33/33 通过、0 failure、0 skip；50,000 段性能预算与大规模 Timeline 布局预算均通过。该批次没有 simulator，测试 app/runner 已退出，临时 DerivedData 在提交前删除。
-  - [~] B2：实现 compact vertical 的 projected-mark 几何、向下锚定、视觉碰撞分轨与 elapsed/omitted-gap 注释 gutter。
-- [ ] Checkpoint C：owned simulator 截图验收与精确 Release 安装收口。
+  - [x] B2：compact vertical 先以实际容器高度和同一 compression 投影 mark footprint，再按 20pt 最小高度与 6pt 视觉间距分轨；时间轴统一预留一个最小 mark 尾部空间，短条锚定 projected start 向下扩展，不再使用 `min(y, height - barHeight)` 向上挪动。iPad/macOS horizontal 路径继续使用领域 lane/full-width axis，未改变。
+  - [x] B2：vertical grid、omitted-gap marker 与 bars 共用 `barLayout.axisLength`；gap capsule 被约束在 68pt axis annotation gutter 内并置于前景，不再与 plot 中 bar 几何相交。视觉阈值按反馈的“小于”语义处理：恰好 6pt 可复用轨道，领域时间分配器原有严格边界保持不变；0 高度不创建不可见轨道。
+  - [x] B2 验证：macOS arm64、付费开发签名下精确运行 `AnalyticsTimelineTests`、Task 23 的 `HomeUIContractTests/todayAndAnalyticsShareOneGraphicalTimelineComponent` 与 `CorePerformanceBudgetTests`，38/38 通过、0 failure、0 skip；覆盖投影碰撞换轨、逆序稳定、末端向下生长、恰好阈值、0 高度、gutter 边界、50,000 段与大规模 Timeline 性能预算。一次扩大到整个 `HomeUIContractTests` 的诊断运行额外暴露 Quick Start/Tracking entrypoint 的反馈范围外既有契约失败；Task 23 自身契约通过，本任务未越界修改那些代码。
+- [~] Checkpoint C：专用短任务 fixture、owned simulator 截图验收与精确 Release 安装收口。
 
 ## 资源所有权
 

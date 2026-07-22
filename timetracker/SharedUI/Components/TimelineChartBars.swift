@@ -28,19 +28,14 @@ extension TimelineChart {
 
     func verticalBar(
         entry: AnalyticsTimelineEntry,
-        height: CGFloat,
+        placement: TimelineChartBarPlacement,
         lanes: TimelineChartLaneLayout
     ) -> some View {
-        let startRatio = axisCompression.ratio(for: entry.interval.start)
-        let endRatio = axisCompression.ratio(for: entry.interval.end)
-        let durationRatio = max(0, endRatio - startRatio)
-        let barHeight = max(20, height * CGFloat(durationRatio))
-        let x = lanes.offset(for: entry.lane)
-        let y = height * CGFloat(startRatio)
+        let x = lanes.offset(for: placement.lane)
 
         return RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(Color(hex: entry.colorHex) ?? .blue)
-            .frame(width: lanes.laneExtent, height: barHeight)
+            .frame(width: lanes.laneExtent, height: placement.axisExtent)
             .overlay(alignment: .top) {
                 Image(systemName: entry.iconName)
                     .font(.caption2.weight(.semibold))
@@ -49,7 +44,7 @@ extension TimelineChart {
                     )
                     .padding(.top, 4)
             }
-            .offset(x: x, y: min(y, height - barHeight))
+            .offset(x: x, y: placement.axisOrigin)
             .help("\(entry.title) \(shortRange(entry))")
     }
 

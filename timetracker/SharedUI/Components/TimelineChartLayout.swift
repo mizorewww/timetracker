@@ -24,7 +24,30 @@ nonisolated struct TimelineChartLaneLayout: Equatable, Sendable {
         origin + CGFloat(max(0, lane)) * (laneExtent + laneSpacing)
     }
 }
+
+nonisolated struct TimelineChartBarPlacement: Identifiable, Equatable, Sendable {
+    let id: TimelineEntryID
+    let lane: Int
+    let axisOrigin: CGFloat
+    let axisExtent: CGFloat
+
+    var axisEnd: CGFloat {
+        axisOrigin + axisExtent
+    }
+}
+
+nonisolated struct TimelineChartBarLayout: Equatable, Sendable {
+    let axisLength: CGFloat
+    let placements: [TimelineChartBarPlacement]
+    let laneCount: Int
+}
+
 nonisolated enum TimelineChartLayout {
+    static let verticalAxisLabelWidth: CGFloat = 68
+    static let verticalTrailingInset: CGFloat = 12
+    static let verticalMinimumBarExtent: CGFloat = 20
+    static let verticalMinimumBarSpacing: CGFloat = 6
+
     static func horizontalLanes(
         height: CGFloat,
         laneCount: Int,
@@ -41,8 +64,8 @@ nonisolated enum TimelineChartLayout {
     static func verticalLanes(
         width: CGFloat,
         laneCount: Int,
-        axisLabelWidth: CGFloat = 68,
-        trailingInset: CGFloat = 12
+        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
+        trailingInset: CGFloat = verticalTrailingInset
     ) -> TimelineChartLaneLayout {
         let safeWidth = max(1, width)
         let plotOrigin = min(axisLabelWidth, max(0, safeWidth - trailingInset))
@@ -54,6 +77,116 @@ nonisolated enum TimelineChartLayout {
             preferredSpacing: 8
         )
     }
+
+    /// Projects compact vertical marks before assigning visual lanes.
+    ///
+    /// Reserving one minimum mark extent below the time axis means a terminal
+    /// short event can stay anchored to its projected start and grow downward,
+    /// instead of being shifted upward to fit inside the chart.
+    static func verticalBars(
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        height: CGFloat,
+        minimumBarExtent: CGFloat = verticalMinimumBarExtent,
+        minimumSpacing: CGFloat = verticalMinimumBarSpacing
+    ) -> TimelineChartBarLayout {
+        let totalHeight = finiteNonnegative(height)
+        let markExtent = min(
+            totalHeight,
+            finiteNonnegative(minimumBarExtent)
+        )
+        let axisLength = max(0, totalHeight - markExtent)
+        let spacing = finiteNonnegative(minimumSpacing)
+        guard totalHeight > 0, entries.isEmpty == false else {
+            return TimelineChartBarLayout(
+                axisLength: axisLength,
+                placements: [],
+                laneCount: 0
+            )
+        }
+        var projectedByID: [TimelineEntryID: ProjectedBar] = [:]
+        var intervals: [TimelineLaneInterval] = []
+        projectedByID.reserveCapacity(entries.count)
+        intervals.reserveCapacity(entries.count)
+
+        for entry in entries where projectedByID[entry.id] == nil {
+            let origin = projectedPosition(
+                for: entry.interval.start,
+                compression: compression,
+                axisLength: axisLength
+            )
+            let naturalEnd = max(
+                origin,
+                projectedPosition(
+                    for: entry.interval.end,
+                    compression: compression,
+                    axisLength: axisLength
+                )
+            )
+            let availableExtent = max(0, totalHeight - origin)
+            let extent = min(
+                availableExtent,
+                max(markExtent, naturalEnd - origin)
+            )
+            let projected = ProjectedBar(origin: origin, extent: extent)
+            projectedByID[entry.id] = projected
+            intervals.append(
+                TimelineLaneInterval(
+                    id: entry.id,
+                    start: Double(origin),
+                    end: Double(projected.end)
+                )
+            )
+        }
+
+        let assignments = TimelineLaneAllocator.assignments(
+            for: intervals,
+            minimumGap: Double(spacing),
+            allowsReuseAtMinimumGap: true
+        )
+        let placements = assignments.compactMap { assignment in
+            projectedByID[assignment.id].map { projected in
+                TimelineChartBarPlacement(
+                    id: assignment.id,
+                    lane: assignment.lane,
+                    axisOrigin: projected.origin,
+                    axisExtent: projected.extent
+                )
+            }
+        }
+
+        return TimelineChartBarLayout(
+            axisLength: axisLength,
+            placements: placements,
+            laneCount: (placements.map(\.lane).max() ?? -1) + 1
+        )
+    }
+
+    static func verticalGapLabelFrame(
+        position: CGFloat,
+        axisLength: CGFloat,
+        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
+        labelHeight: CGFloat = 20,
+        horizontalInset: CGFloat = 6
+    ) -> CGRect {
+        let length = finiteNonnegative(axisLength)
+        let gutterWidth = finiteNonnegative(axisLabelWidth)
+        let inset = min(finiteNonnegative(horizontalInset), gutterWidth / 2)
+        let height = min(finiteNonnegative(labelHeight), length)
+        let coordinate = position.isFinite ? position : 0
+        let originY = min(
+            max(0, coordinate - height / 2),
+            max(0, length - height)
+        )
+
+        return CGRect(
+            x: inset,
+            y: originY,
+            width: max(0, gutterWidth - 2 * inset),
+            height: height
+        )
+    }
+
     static func axisTicks(
         displayInterval: DateInterval,
         compression: TimelineAxisCompression,
@@ -149,6 +282,20 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
+    private static func projectedPosition(
+        for date: Date,
+        compression: TimelineAxisCompression,
+        axisLength: CGFloat
+    ) -> CGFloat {
+        let rawRatio = compression.ratio(for: date)
+        let ratio = rawRatio.isFinite ? min(max(0, rawRatio), 1) : 0
+        return axisLength * CGFloat(ratio)
+    }
+
+    private static func finiteNonnegative(_ value: CGFloat) -> CGFloat {
+        value.isFinite ? max(0, value) : 0
+    }
+
     private static func interiorHourTicks(
         in interval: DateInterval,
         calendar: Calendar
@@ -173,5 +320,14 @@ nonisolated enum TimelineChartLayout {
             }
         }
         return result
+    }
+}
+
+private nonisolated struct ProjectedBar {
+    let origin: CGFloat
+    let extent: CGFloat
+
+    var end: CGFloat {
+        origin + extent
     }
 }

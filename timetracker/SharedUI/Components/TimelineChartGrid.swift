@@ -2,8 +2,7 @@ import SwiftUI
 extension TimelineChart {
     func horizontalHourGrid(
         axisLength: CGFloat,
-        plotHeight: CGFloat,
-        gapLabelRowCount: Int
+        plotHeight: CGFloat
     ) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(
@@ -15,6 +14,18 @@ extension TimelineChart {
                 TimelineGridLine(position: x, isVertical: true)
                     .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
                     .frame(width: axisLength, height: plotHeight)
+            }
+        }
+    }
+
+    func horizontalHourLabels(axisLength: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(
+                visibleHourTicks(axisLength: axisLength, minimumSpacing: 84),
+                id: \.date
+            ) { tick in
+                let ratio = axisCompression.ratio(for: tick.date)
+                let x = axisLength * CGFloat(ratio)
                 Text(hourLabel(tick.date))
                     .font(
                         .footnote
@@ -33,15 +44,12 @@ extension TimelineChart {
                             axisLength: axisLength,
                             labelExtent: 52,
                             role: tick.role
-                        ),
-                        y: TimelineChartLayout.horizontalAxisLabelOrigin(
-                            plotHeight: plotHeight,
-                            gapLabelRowCount: gapLabelRowCount
                         )
                     )
             }
         }
     }
+
     func verticalHourGrid(width: CGFloat, axisLength: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(
@@ -57,11 +65,30 @@ extension TimelineChart {
                 let y = axisLength * CGFloat(ratio)
                 TimelineGridLine(position: y, isVertical: false)
                     .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
-                    .frame(
-                        width: max(0, width - TimelineChartLayout.verticalAxisLabelWidth),
-                        height: axisLength
-                    )
-                    .offset(x: TimelineChartLayout.verticalAxisLabelWidth)
+                    .frame(width: width, height: axisLength)
+            }
+        }
+    }
+
+    func verticalHourLabels(
+        width: CGFloat,
+        axisLength: CGFloat,
+        gapLabelHeight: CGFloat
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(
+                TimelineChartLayout.verticalAxisTicks(
+                    displayInterval: displayInterval,
+                    compression: axisCompression,
+                    axisLength: axisLength,
+                    minimumSpacing: 28,
+                    axisLabelWidth: width,
+                    gapLabelHeight: gapLabelHeight
+                ),
+                id: \.date
+            ) { tick in
+                let ratio = axisCompression.ratio(for: tick.date)
+                let y = axisLength * CGFloat(ratio)
                 Text(hourLabel(tick.date))
                     .font(
                         .footnote
@@ -74,7 +101,7 @@ extension TimelineChart {
                     .lineLimit(1)
                     .minimumScaleFactor(0.92)
                     .frame(
-                        width: TimelineChartLayout.verticalAxisLabelWidth - 12,
+                        width: max(0, width - 12),
                         height: 16,
                         alignment: .trailing
                     )
@@ -106,23 +133,6 @@ extension TimelineChart {
             .offset(x: min(max(0, x), max(0, axisLength - 1)))
     }
 
-    func horizontalGapLabel(
-        _ gap: TimelineOmittedGap,
-        placement: TimelineChartHorizontalGapLabelPlacement,
-        plotHeight: CGFloat
-    ) -> some View {
-        let frame = TimelineChartLayout.horizontalGapLabelFrame(
-            placement: placement,
-            plotHeight: plotHeight
-        )
-
-        return omittedGapLabel(gap)
-            .frame(width: frame.width, height: frame.height)
-            .offset(x: frame.minX, y: frame.minY)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(omittedGapText(gap))
-            .accessibilityIdentifier("timeline.gap.\(gap.id)")
-    }
     func verticalGapLine(
         _ gap: TimelineOmittedGap,
         width: CGFloat,
@@ -136,83 +146,80 @@ extension TimelineChart {
                 Color.secondary.opacity(0.42),
                 style: StrokeStyle(lineWidth: 1, dash: [4, 4])
             )
-            .frame(
-                width: max(
-                    0,
-                    width - TimelineChartLayout.verticalAxisLabelWidth
-                ),
-                height: 1
-            )
+            .frame(width: width, height: 1)
             .offset(
-                x: TimelineChartLayout.verticalAxisLabelWidth,
                 y: min(max(0, y), max(0, axisLength - 1))
             )
     }
 
-    func verticalGapLabel(
-        _ gap: TimelineOmittedGap,
-        placement: TimelineChartVerticalGapLabelPlacement
-    ) -> some View {
-        let frame = TimelineChartLayout.verticalGapLabelFrame(
-            placement: placement
-        )
-
-        return verticalOmittedGapLabel(gap)
-            .frame(width: frame.width, height: frame.height)
-            .offset(x: frame.minX, y: frame.minY)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(omittedGapText(gap))
-            .accessibilityIdentifier("timeline.gap.\(gap.id)")
+    func verticalGapConnector(descends: Bool) -> some View {
+        VerticalGapConnector(descends: descends)
+            .stroke(Color.secondary.opacity(0.32), lineWidth: 1)
     }
 
-    func verticalGapConnector(
-        placement: TimelineChartVerticalGapLabelPlacement,
-        axisLength: CGFloat
-    ) -> some View {
-        let frame = TimelineChartLayout.verticalGapLabelFrame(
-            placement: placement
-        )
-        return VerticalGapConnector(
-            start: CGPoint(x: frame.maxX, y: frame.midY),
-            end: CGPoint(
-                x: TimelineChartLayout.verticalAxisLabelWidth,
-                y: min(max(0, placement.anchorPosition), axisLength)
-            )
-        )
-        .stroke(Color.secondary.opacity(0.32), lineWidth: 1)
-        .frame(
-            width: TimelineChartLayout.verticalAxisLabelWidth,
-            height: axisLength
-        )
-    }
-
-    private func omittedGapLabel(_ gap: TimelineOmittedGap) -> some View {
-        Text(omittedGapText(gap))
-            .font(.caption2.weight(.medium))
-            .foregroundStyle(.secondary)
-            .lineLimit(2)
-            .multilineTextAlignment(.center)
-            .allowsTightening(true)
+    @ViewBuilder
+    func omittedGapLabel(_ gap: TimelineOmittedGap) -> some View {
+        let text = omittedGapText(gap)
+        let label = omittedGapLabelText(gap, text: text)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(.regularMaterial, in: Capsule())
+            .fixedSize(horizontal: true, vertical: true)
+
+        if exposesUITestingMarks {
+            label
+                .overlay {
+                    gapGeometryProbe(
+                        identifier: "timeline.gapCapsule.\(gap.id)",
+                        label: text
+                    )
+                }
+                .accessibilityElement(children: .contain)
+        } else {
+            label
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(text)
+                .accessibilityIdentifier("timeline.gap.\(gap.id)")
+        }
     }
 
-    private func verticalOmittedGapLabel(
-        _ gap: TimelineOmittedGap
+    @ViewBuilder
+    private func omittedGapLabelText(
+        _ gap: TimelineOmittedGap,
+        text: String
     ) -> some View {
-        Text(omittedGapText(gap))
+        let label = Text(text)
             .font(.caption2.weight(.medium))
             .foregroundStyle(.secondary)
-            .lineLimit(2)
+            .lineLimit(1)
             .multilineTextAlignment(.center)
-            .allowsTightening(true)
-            .padding(.horizontal, 3)
-            .padding(.vertical, 2)
-            .background(.regularMaterial, in: Capsule())
+            .fixedSize(horizontal: true, vertical: true)
+
+        if exposesUITestingMarks {
+            label.overlay {
+                gapGeometryProbe(
+                    identifier: "timeline.gapText.\(gap.id)",
+                    label: text
+                )
+            }
+        } else {
+            label
+        }
     }
 
-    private func omittedGapText(_ gap: TimelineOmittedGap) -> String {
+    private func gapGeometryProbe(
+        identifier: String,
+        label: String
+    ) -> some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .accessibilityElement()
+            .accessibilityLabel(label)
+            .accessibilityIdentifier(identifier)
+            .allowsHitTesting(false)
+    }
+
+    func omittedGapText(_ gap: TimelineOmittedGap) -> String {
         String(
             format: AppStrings.localized("analytics.timeline.gap.omitted"),
             DurationFormatter.compact(Int(gap.duration))
@@ -237,13 +244,22 @@ extension TimelineChart {
 }
 
 private struct VerticalGapConnector: Shape {
-    let start: CGPoint
-    let end: CGPoint
+    let descends: Bool
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.move(to: start)
-        path.addLine(to: end)
+        path.move(
+            to: CGPoint(
+                x: rect.minX,
+                y: descends ? rect.minY : rect.maxY
+            )
+        )
+        path.addLine(
+            to: CGPoint(
+                x: rect.maxX,
+                y: descends ? rect.maxY : rect.minY
+            )
+        )
         return path
     }
 }

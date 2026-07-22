@@ -3768,7 +3768,7 @@ final class timetrackerUITests: XCTestCase {
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
         scrollTodayUntilHittable(timeline, in: app)
         XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
-        try assertMultipleTimelineGapLabels(in: app)
+        try assertTimelineGapCapsulesHugText(in: app)
 
         #if os(macOS)
         scroll(direction: .up, toward: timeline, in: app)
@@ -3780,14 +3780,17 @@ final class timetrackerUITests: XCTestCase {
             "The macOS Timeline must be fully visible inside the app window"
         )
         try capture(
-            "mac-home-multiple-gap-labels",
+            "mac-home-task27-intrinsic-gap-capsules",
             element: app.windows.firstMatch
         )
         #else
         let usesIPadShell = platformScreenshotPrefix(in: app) == "ipad"
         if usesIPadShell {
             waitForScreenshotTransition()
-            try capture("ipad-home-multiple-gap-labels-portrait", app: app)
+            try capture(
+                "ipad-home-task27-intrinsic-gap-capsules-portrait",
+                app: app
+            )
 
             XCUIDevice.shared.orientation = .landscapeLeft
             XCTAssertTrue(waitUntil(timeout: 5) {
@@ -3802,14 +3805,20 @@ final class timetrackerUITests: XCTestCase {
                 landscapeTimeline.waitForExistence(timeout: 5) &&
                     landscapeTimeline.isHittable
             )
-            try assertMultipleTimelineGapLabels(in: app)
+            try assertTimelineGapCapsulesHugText(in: app)
             scroll(direction: .up, toward: landscapeTimeline, in: app)
             waitForScreenshotTransition()
-            try capture("ipad-home-multiple-gap-labels-landscape", app: app)
+            try capture(
+                "ipad-home-task27-intrinsic-gap-capsules-landscape",
+                app: app
+            )
         } else {
             scroll(direction: .up, toward: timeline, in: app)
             waitForScreenshotTransition()
-            try capture("iphone-home-multiple-gap-labels", app: app)
+            try capture(
+                "iphone-home-task27-intrinsic-gap-capsules",
+                app: app
+            )
         }
         #endif
     }
@@ -6028,42 +6037,145 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    private func assertMultipleTimelineGapLabels(
+    private func assertTimelineGapCapsulesHugText(
         in app: XCUIApplication
     ) throws {
-        let query = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label == %@", "2 hr skipped")
+        let textIdentifierPrefix = "timeline.gapText."
+        let capsuleIdentifierPrefix = "timeline.gapCapsule."
+        let descendants = app.descendants(matching: .any)
+        let textQuery = descendants.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                textIdentifierPrefix
+            )
         )
-        XCTAssertTrue(
-            waitUntil(timeout: 5) { query.count >= 2 },
-            "The isolated fixture must expose both two-hour omitted-gap labels."
+        let capsuleQuery = descendants.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                capsuleIdentifierPrefix
+            )
         )
 
-        var uniqueFrames: [CGRect] = []
-        for element in query.allElementsBoundByIndex {
-            let frame = element.frame
-            guard frame.width >= 40,
-                  frame.width <= 110,
-                  frame.height >= 16,
-                  frame.height <= 40 else {
-                continue
-            }
-            if uniqueFrames.contains(where: { existing in
-                abs(existing.minX - frame.minX) < 0.5 &&
-                    abs(existing.minY - frame.minY) < 0.5 &&
-                    abs(existing.width - frame.width) < 0.5 &&
-                    abs(existing.height - frame.height) < 0.5
-            }) == false {
-                uniqueFrames.append(frame)
-            }
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                textQuery.count == 2 && capsuleQuery.count == 2
+            },
+            "The fixture must expose one text and capsule frame probe per omitted gap."
+        )
+        XCTAssertEqual(textQuery.count, 2)
+        XCTAssertEqual(capsuleQuery.count, 2)
+
+        let textSnapshots = textQuery.allElementsBoundByIndex.reduce(
+            into: [String: (label: String, frame: CGRect)]()
+        ) { result, element in
+            let identifier = element.identifier
+            guard identifier.hasPrefix(textIdentifierPrefix) else { return }
+            let gapID = String(identifier.dropFirst(textIdentifierPrefix.count))
+            XCTAssertFalse(gapID.isEmpty, "A gap text probe must include its stable ID.")
+            XCTAssertNil(result[gapID], "Every gap must expose one text frame probe.")
+            result[gapID] = (label: element.label, frame: element.frame)
+        }
+        let capsuleSnapshots = capsuleQuery.allElementsBoundByIndex.reduce(
+            into: [String: (label: String, frame: CGRect)]()
+        ) { result, element in
+            let identifier = element.identifier
+            guard identifier.hasPrefix(capsuleIdentifierPrefix) else { return }
+            let gapID = String(identifier.dropFirst(capsuleIdentifierPrefix.count))
+            XCTAssertFalse(gapID.isEmpty, "A gap capsule probe must include its stable ID.")
+            XCTAssertNil(result[gapID], "Every gap must expose one capsule frame probe.")
+            result[gapID] = (label: element.label, frame: element.frame)
         }
 
-        XCTAssertEqual(
-            uniqueFrames.count,
-            2,
-            "The fixture must render exactly two visible omitted-gap labels."
+        let gapIDs = textSnapshots.keys.sorted()
+        XCTAssertEqual(gapIDs, capsuleSnapshots.keys.sorted())
+        XCTAssertEqual(gapIDs.count, 2)
+
+        let pixelTolerance: CGFloat = 1
+        let pairs = try gapIDs.map { gapID in
+            let text = try XCTUnwrap(textSnapshots[gapID])
+            let capsule = try XCTUnwrap(capsuleSnapshots[gapID])
+            let textFrame = text.frame
+            let capsuleFrame = capsule.frame
+
+            XCTAssertEqual(text.label, capsule.label)
+            XCTAssertFalse(text.label.isEmpty)
+            XCTAssertFalse(text.label.contains("…"))
+            XCTAssertFalse(text.label.contains("..."))
+            for frame in [textFrame, capsuleFrame] {
+                XCTAssertFalse(frame.isNull)
+                XCTAssertFalse(frame.isInfinite)
+                XCTAssertTrue(frame.origin.x.isFinite)
+                XCTAssertTrue(frame.origin.y.isFinite)
+                XCTAssertTrue(frame.width.isFinite)
+                XCTAssertTrue(frame.height.isFinite)
+                XCTAssertGreaterThan(frame.width, 0)
+                XCTAssertGreaterThan(frame.height, 0)
+            }
+
+            XCTAssertTrue(
+                capsuleFrame
+                    .insetBy(dx: -pixelTolerance, dy: -pixelTolerance)
+                    .contains(textFrame),
+                "The \(text.label) capsule must contain its complete text frame."
+            )
+
+            let leadingPadding = textFrame.minX - capsuleFrame.minX
+            let trailingPadding = capsuleFrame.maxX - textFrame.maxX
+            let topPadding = textFrame.minY - capsuleFrame.minY
+            let bottomPadding = capsuleFrame.maxY - textFrame.maxY
+            XCTAssertGreaterThan(
+                min(leadingPadding, trailingPadding),
+                0,
+                "The \(text.label) capsule must retain horizontal padding."
+            )
+            XCTAssertGreaterThan(
+                min(topPadding, bottomPadding),
+                0,
+                "The \(text.label) capsule must retain vertical padding."
+            )
+            XCTAssertEqual(
+                leadingPadding,
+                trailingPadding,
+                accuracy: pixelTolerance,
+                "The \(text.label) capsule must hug text symmetrically in X."
+            )
+            XCTAssertEqual(
+                topPadding,
+                bottomPadding,
+                accuracy: pixelTolerance,
+                "The \(text.label) capsule must hug text symmetrically in Y."
+            )
+            XCTAssertEqual(
+                capsuleFrame.width - textFrame.width,
+                leadingPadding + trailingPadding,
+                accuracy: pixelTolerance
+            )
+
+            return (label: text.label, text: textFrame, capsule: capsuleFrame)
+        }
+
+        XCTAssertEqual(Set(pairs.map { $0.label }).count, 2)
+        let widthOrdered = pairs.sorted { $0.text.width < $1.text.width }
+        let short = try XCTUnwrap(widthOrdered.first)
+        let long = try XCTUnwrap(widthOrdered.last)
+        XCTAssertGreaterThan(
+            long.text.width,
+            short.text.width,
+            "The fixture must include distinct short and long localized labels."
         )
-        let frames = uniqueFrames.sorted { $0.minY < $1.minY }
+        XCTAssertGreaterThan(
+            long.capsule.width,
+            short.capsule.width,
+            "The capsule width must grow with its localized text."
+        )
+        XCTAssertEqual(
+            long.capsule.width - short.capsule.width,
+            long.text.width - short.text.width,
+            accuracy: 2 * pixelTolerance,
+            "Both capsules must add the same intrinsic horizontal padding."
+        )
+
+        let frames = pairs.map { $0.capsule }.sorted { $0.minY < $1.minY }
         let first = try XCTUnwrap(frames.first)
         let second = try XCTUnwrap(frames.dropFirst().first)
         let horizontalOverlap = min(first.maxX, second.maxX) -
@@ -6071,7 +6183,7 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertFalse(
             first.intersects(second),
-            "Omitted-gap labels must never cover one another."
+            "Intrinsic omitted-gap capsules must never cover one another."
         )
         if horizontalOverlap > 0 {
             XCTAssertGreaterThanOrEqual(

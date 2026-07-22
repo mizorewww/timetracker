@@ -570,7 +570,9 @@ extension SeedData {
             context: context,
             taskID: bridge.id,
             source: .manual,
-            start: startOfToday.addingTimeInterval(14 * 60 * 60),
+            start: startOfToday.addingTimeInterval(
+                13 * 60 * 60 + 5 * 60
+            ),
             duration: 10 * 60,
             note: "Task 25 bridge anchor"
         )
@@ -579,9 +581,9 @@ extension SeedData {
             taskID: evening.id,
             source: .manual,
             start: startOfToday.addingTimeInterval(
-                16 * 60 * 60 + 10 * 60
+                15 * 60 * 60 + 50 * 60
             ),
-            duration: 110 * 60,
+            duration: 130 * 60,
             note: "Task 25 evening anchor"
         )
     }

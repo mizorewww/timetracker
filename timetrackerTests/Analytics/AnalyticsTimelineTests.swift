@@ -725,10 +725,17 @@ struct AnalyticsTimelineTests {
             displayInterval: display,
             busyIntervals: [first, middle, last]
         )
+        let labelWidths: [String: CGFloat] = Dictionary(
+            uniqueKeysWithValues: zip(
+                compression.omittedGaps.map(\.id),
+                [72, 148]
+            )
+        )
         let layout = TimelineChartLayout.horizontalGapLabels(
             gaps: compression.omittedGaps,
             compression: compression,
-            axisLength: 702
+            axisLength: 702,
+            labelWidths: labelWidths
         )
 
         #expect(compression.omittedGaps.count == 2)
@@ -736,10 +743,18 @@ struct AnalyticsTimelineTests {
         #expect(layout.rowCount == 2)
         #expect(Set(layout.placements.map(\.row)) == Set([0, 1]))
         #expect(
+            Dictionary(
+                uniqueKeysWithValues: layout.placements.map {
+                    ($0.id, $0.axisExtent)
+                }
+            ) == labelWidths
+        )
+        #expect(
             TimelineChartLayout.horizontalGapLabels(
                 gaps: Array(compression.omittedGaps.reversed()),
                 compression: compression,
-                axisLength: 702
+                axisLength: 702,
+                labelWidths: labelWidths
             ) == layout
         )
 
@@ -780,6 +795,74 @@ struct AnalyticsTimelineTests {
                 TimelineChartLayout.horizontalGapLabelRowSpacing
         )
         #expect(max(firstFrame.maxY, secondFrame.maxY) <= axisLabelTop)
+
+        let measuredLabelHeight: CGFloat = 38
+        let oneRowAnnotationHeight = TimelineChartLayout.horizontalGapAnnotationHeight(
+            rowCount: 1,
+            labelHeight: measuredLabelHeight
+        )
+        let twoRowAnnotationHeight = TimelineChartLayout.horizontalGapAnnotationHeight(
+            rowCount: 2,
+            labelHeight: measuredLabelHeight
+        )
+        let measuredTimelineHeight = TimelineChartLayout.horizontalTimelineHeight(
+            laneCount: 3,
+            gapLabelRowCount: 2,
+            gapLabelHeight: measuredLabelHeight
+        )
+        let measuredOneRowTimelineHeight = TimelineChartLayout.horizontalTimelineHeight(
+            laneCount: 3,
+            gapLabelRowCount: 1,
+            gapLabelHeight: measuredLabelHeight
+        )
+
+        #expect(
+            twoRowAnnotationHeight - oneRowAnnotationHeight ==
+                measuredLabelHeight + TimelineChartLayout.horizontalGapLabelRowSpacing
+        )
+        #expect(
+            measuredTimelineHeight - measuredOneRowTimelineHeight ==
+                measuredLabelHeight + TimelineChartLayout.horizontalGapLabelRowSpacing
+        )
+    }
+
+    @Test
+    func compactTimelineGutterHugsTheLongestGapCapsule() {
+        let gapLabelWidths: [CGFloat] = [72, 148]
+        let axisLabelWidth = TimelineChartLayout.verticalAxisLabelWidth(
+            for: gapLabelWidths
+        )
+        let baselineMinimumWidth = TimelineChartLayout.verticalMinimumContentWidth(
+            laneCount: 3
+        )
+        let contentSizedMinimumWidth = TimelineChartLayout.verticalMinimumContentWidth(
+            laneCount: 3,
+            axisLabelWidth: axisLabelWidth
+        )
+        let lanes = TimelineChartLayout.verticalLanes(
+            width: contentSizedMinimumWidth,
+            laneCount: 3,
+            axisLabelWidth: axisLabelWidth
+        )
+
+        #expect(
+            TimelineChartLayout.verticalAxisLabelWidth(for: []) ==
+                TimelineChartLayout.verticalAxisLabelWidth
+        )
+        #expect(
+            axisLabelWidth == gapLabelWidths.max()! +
+                2 * TimelineChartLayout.verticalGapLabelHorizontalInset
+        )
+        #expect(axisLabelWidth > TimelineChartLayout.verticalAxisLabelWidth)
+        #expect(
+            contentSizedMinimumWidth - baselineMinimumWidth ==
+                axisLabelWidth - TimelineChartLayout.verticalAxisLabelWidth
+        )
+        #expect(lanes.origin >= axisLabelWidth)
+        #expect(
+            lanes.origin + lanes.groupExtent <=
+                contentSizedMinimumWidth - TimelineChartLayout.verticalTrailingInset
+        )
     }
 
     @Test

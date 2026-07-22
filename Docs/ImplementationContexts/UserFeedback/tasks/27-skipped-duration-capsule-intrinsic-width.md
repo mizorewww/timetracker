@@ -7,8 +7,8 @@
 
 - [x] 领取反馈，定位 `xxx min elapsed/skipped` 胶囊的固定宽度来源及所有平台复用点。
 - [x] 对照 Apple HIG、SwiftUI intrinsic sizing 与现有成熟组件确定自适应宽度契约。
-- [ ] 实现胶囊抱住完整文字并补充布局/契约回归。
-- [ ] 使用 owned simulator 与 XCTest 自动化 macOS window 做跨平台截图验收并清理资源。
+- [x] 实现胶囊抱住完整文字并补充布局/契约回归。
+- [~] 使用 owned simulator 与 XCTest 自动化 macOS window 做跨平台截图验收并清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -27,8 +27,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：静态根因、复用点、局部化宽度与成熟方案审计。
-- [~] Checkpoint B：intrinsic capsule 实现与纯布局/契约回归。
-- [ ] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
+- [x] Checkpoint B：intrinsic capsule 实现与纯布局/契约回归。
+- [~] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
 - [ ] Checkpoint D：精确 Release 安装、状态标记与收口。
 
 ## Checkpoint A 审计结论
@@ -60,3 +60,13 @@
 
 - 静态审计与 UI 策略代理均未编辑文件、构建、启动设备或占用 simulator。
 - 两者一致建议使用 SwiftUI `Layout` 的真实 subview 测量；UI 策略额外指出必须分别暴露文字和胶囊 frame，否则旧测试无法证明“抱住文字”。
+
+## Checkpoint B 实现与验证
+
+- 统一的 omitted-gap label 改为单行 intrinsic size：文字本身与包含 6pt 水平、3pt 垂直 padding 的材质 `Capsule` 都使用 SwiftUI 理想尺寸，不再把文案压入固定 96pt/84pt frame。
+- 横向布局由自定义 `Layout` 实测每个本地化胶囊宽高，再以每个 gap 的真实宽度确定碰撞分行和 annotation band 高度；纵向布局用最长胶囊宽度扩展 gutter，并同步 grid、connector、lane 与最小滚动宽度。
+- demo fixture 通过真实 `DurationFormatter` 产生 65 分钟与 155 分钟两个不同长度的英文文案，避免旧的两个同宽 `2 hr skipped` fixture 掩盖固定宽度问题。
+- 纯回归覆盖每个 ID 的不同实测宽度、输入反序确定性、实测 label 高度驱动 timeline 高度，以及纵向 gutter/最小滚动宽度随最长胶囊增长。
+- 定向验证通过：macOS arm64 Debug 签名构建；`AnalyticsTimelineTests` 的两项新增布局测试；`HomeUIContractTests` 的两项本任务共享组件/fixture 契约，共 4/4 通过。
+- 更宽的既有 `HomeUIContractTests` 另有 3 项与本反馈无关的 Quick Start/入口旧契约失败；未将其误报为本任务回归，也未越界修改。
+- 未新增第三方库；继续使用系统 SwiftUI `Layout`、XCTest 与 XCUITest。

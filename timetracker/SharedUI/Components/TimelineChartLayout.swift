@@ -77,10 +77,10 @@ nonisolated enum TimelineChartLayout {
     static let horizontalAxisLabelHeight: CGFloat = 24
     static let horizontalGapLabelHeight: CGFloat = 32
     static let horizontalAnnotationSpacing: CGFloat = 4
-    static let horizontalGapLabelWidth: CGFloat = 96
     static let horizontalGapLabelMinimumSpacing: CGFloat = 4
     static let horizontalGapLabelRowSpacing: CGFloat = 4
     static let verticalAxisLabelWidth: CGFloat = 96
+    static let verticalGapLabelHorizontalInset: CGFloat = 6
     static let verticalTrailingInset: CGFloat = 12
     static let verticalMinimumBarExtent = minimumBarFootprint
     static let verticalMinimumBarSpacing: CGFloat = 6
@@ -93,16 +93,31 @@ nonisolated enum TimelineChartLayout {
     static func horizontalLanes(
         height: CGFloat,
         laneCount: Int,
-        gapLabelRowCount: Int
+        gapLabelRowCount: Int,
+        gapLabelHeight: CGFloat = horizontalGapLabelHeight
     ) -> TimelineChartLaneLayout {
         centeredLanes(
             plotOrigin: 0,
             plotExtent: max(
                 1,
                 height - horizontalAnnotationHeight(
-                    gapLabelRowCount: gapLabelRowCount
+                    gapLabelRowCount: gapLabelRowCount,
+                    gapLabelHeight: gapLabelHeight
                 )
             ),
+            laneCount: laneCount,
+            preferredLaneExtent: horizontalPreferredLaneExtent,
+            preferredSpacing: horizontalPreferredLaneSpacing
+        )
+    }
+
+    static func horizontalPlotLanes(
+        height: CGFloat,
+        laneCount: Int
+    ) -> TimelineChartLaneLayout {
+        centeredLanes(
+            plotOrigin: 0,
+            plotExtent: max(1, height),
             laneCount: laneCount,
             preferredLaneExtent: horizontalPreferredLaneExtent,
             preferredSpacing: horizontalPreferredLaneSpacing
@@ -138,54 +153,87 @@ nonisolated enum TimelineChartLayout {
             CGFloat(gapCount) * verticalPreferredLaneSpacing
     }
 
-    static func horizontalGapAnnotationHeight(rowCount: Int) -> CGFloat {
+    static func verticalAxisLabelWidth(
+        for gapLabelWidths: [CGFloat],
+        horizontalInset: CGFloat = verticalGapLabelHorizontalInset
+    ) -> CGFloat {
+        let labelWidth = gapLabelWidths
+            .map(finiteNonnegative)
+            .max() ?? 0
+        return max(
+            verticalAxisLabelWidth,
+            labelWidth + 2 * finiteNonnegative(horizontalInset)
+        )
+    }
+
+    static func horizontalGapAnnotationHeight(
+        rowCount: Int,
+        labelHeight: CGFloat = horizontalGapLabelHeight
+    ) -> CGFloat {
         let count = max(0, rowCount)
         guard count > 0 else { return 0 }
         return horizontalAnnotationSpacing +
-            CGFloat(count) * horizontalGapLabelHeight +
+            CGFloat(count) * finiteNonnegative(labelHeight) +
             CGFloat(count - 1) * horizontalGapLabelRowSpacing
     }
 
-    static func horizontalAnnotationHeight(gapLabelRowCount: Int) -> CGFloat {
-        horizontalGapAnnotationHeight(rowCount: gapLabelRowCount) +
+    static func horizontalAnnotationHeight(
+        gapLabelRowCount: Int,
+        gapLabelHeight: CGFloat = horizontalGapLabelHeight
+    ) -> CGFloat {
+        horizontalGapAnnotationHeight(
+            rowCount: gapLabelRowCount,
+            labelHeight: gapLabelHeight
+        ) +
             horizontalAxisLabelHeight
     }
 
     static func horizontalPlotHeight(
         height: CGFloat,
-        gapLabelRowCount: Int
+        gapLabelRowCount: Int,
+        gapLabelHeight: CGFloat = horizontalGapLabelHeight
     ) -> CGFloat {
         max(
             0,
             finiteNonnegative(height) - horizontalAnnotationHeight(
-                gapLabelRowCount: gapLabelRowCount
+                gapLabelRowCount: gapLabelRowCount,
+                gapLabelHeight: gapLabelHeight
             )
         )
     }
 
-    static func horizontalAxisLabelOrigin(
-        plotHeight: CGFloat,
-        gapLabelRowCount: Int
-    ) -> CGFloat {
-        finiteNonnegative(plotHeight) + horizontalGapAnnotationHeight(
-            rowCount: gapLabelRowCount
-        )
-    }
-
-    static func horizontalTimelineHeight(
-        laneCount: Int,
-        gapLabelRowCount: Int
-    ) -> CGFloat {
+    static func horizontalPlotHeight(laneCount: Int) -> CGFloat {
         let count = max(1, laneCount)
         let groupExtent =
             CGFloat(count) * horizontalPreferredLaneExtent +
             CGFloat(max(0, count - 1)) * horizontalPreferredLaneSpacing
         return max(
-            120,
-            groupExtent + 20 + horizontalAnnotationHeight(
-                gapLabelRowCount: gapLabelRowCount
-            )
+            120 - horizontalAxisLabelHeight,
+            groupExtent + 20
         )
+    }
+
+    static func horizontalAxisLabelOrigin(
+        plotHeight: CGFloat,
+        gapLabelRowCount: Int,
+        gapLabelHeight: CGFloat = horizontalGapLabelHeight
+    ) -> CGFloat {
+        finiteNonnegative(plotHeight) + horizontalGapAnnotationHeight(
+            rowCount: gapLabelRowCount,
+            labelHeight: gapLabelHeight
+        )
+    }
+
+    static func horizontalTimelineHeight(
+        laneCount: Int,
+        gapLabelRowCount: Int,
+        gapLabelHeight: CGFloat = horizontalGapLabelHeight
+    ) -> CGFloat {
+        horizontalPlotHeight(laneCount: laneCount) +
+            horizontalAnnotationHeight(
+                gapLabelRowCount: gapLabelRowCount,
+                gapLabelHeight: gapLabelHeight
+            )
     }
 
     static func verticalTimelineHeight(
@@ -246,19 +294,23 @@ nonisolated enum TimelineChartLayout {
         gaps: [TimelineOmittedGap],
         compression: TimelineAxisCompression,
         axisLength: CGFloat,
-        labelWidth: CGFloat = horizontalGapLabelWidth,
+        labelWidths: [String: CGFloat],
         minimumSpacing: CGFloat = horizontalGapLabelMinimumSpacing
     ) -> TimelineChartHorizontalGapLabelLayout {
         let length = finiteNonnegative(axisLength)
-        let width = min(finiteNonnegative(labelWidth), length)
-        guard width > 0, gaps.isEmpty == false else {
+        guard length > 0, gaps.isEmpty == false else {
             return TimelineChartHorizontalGapLabelLayout(
                 placements: [],
                 rowCount: 0
             )
         }
         let spacing = finiteNonnegative(minimumSpacing)
-        let candidates = gaps.map { gap in
+        let candidates = gaps.compactMap { gap -> HorizontalGapLabelCandidate? in
+            let width = min(
+                finiteNonnegative(labelWidths[gap.id] ?? 0),
+                length
+            )
+            guard width > 0 else { return nil }
             let rawPosition = length * CGFloat(
                 compression.ratio(
                     forCompressedOffset: gap.compressedMidpointOffset
@@ -429,7 +481,7 @@ nonisolated enum TimelineChartLayout {
     static func verticalGapLabelFrame(
         placement: TimelineChartVerticalGapLabelPlacement,
         axisLabelWidth: CGFloat = verticalAxisLabelWidth,
-        horizontalInset: CGFloat = 6
+        horizontalInset: CGFloat = verticalGapLabelHorizontalInset
     ) -> CGRect {
         let gutterWidth = finiteNonnegative(axisLabelWidth)
         let inset = min(finiteNonnegative(horizontalInset), gutterWidth / 2)
@@ -446,7 +498,7 @@ nonisolated enum TimelineChartLayout {
         axisLength: CGFloat,
         axisLabelWidth: CGFloat = verticalAxisLabelWidth,
         labelHeight: CGFloat = verticalGapLabelHeight,
-        horizontalInset: CGFloat = 6
+        horizontalInset: CGFloat = verticalGapLabelHorizontalInset
     ) -> CGRect {
         let length = finiteNonnegative(axisLength)
         let gutterWidth = finiteNonnegative(axisLabelWidth)
@@ -473,7 +525,9 @@ nonisolated enum TimelineChartLayout {
         minimumSpacing: CGFloat,
         calendar: Calendar = .current,
         tickLabelHeight: CGFloat = 16,
-        collisionClearance: CGFloat = 2
+        collisionClearance: CGFloat = 2,
+        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
+        gapLabelHeight: CGFloat = verticalGapLabelHeight
     ) -> [TimelineChartAxisTick] {
         let length = finiteNonnegative(axisLength)
         let labelHeight = min(finiteNonnegative(tickLabelHeight), length)
@@ -481,9 +535,13 @@ nonisolated enum TimelineChartLayout {
         let gapFrames = verticalGapLabels(
             gaps: compression.omittedGaps,
             compression: compression,
-            axisLength: length
+            axisLength: length,
+            labelHeight: gapLabelHeight
         ).placements.map { placement in
-            verticalGapLabelFrame(placement: placement)
+            verticalGapLabelFrame(
+                placement: placement,
+                axisLabelWidth: axisLabelWidth
+            )
         }
 
         return axisTicks(
@@ -504,7 +562,7 @@ nonisolated enum TimelineChartLayout {
                     labelExtent: labelHeight,
                     role: tick.role
                 ) - clearance,
-                width: verticalAxisLabelWidth,
+                width: axisLabelWidth,
                 height: labelHeight + 2 * clearance
             )
             return gapFrames.contains { $0.intersects(tickFrame) } == false

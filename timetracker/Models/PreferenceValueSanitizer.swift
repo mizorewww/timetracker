@@ -7,10 +7,10 @@ enum LLMPromptInstructionsValidationError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .controlCharacter:
-            AppStrings.localized("settings.llm.taskPlanInstructions.error.controlCharacter")
+            AppStrings.localized("settings.llm.prompt.error.controlCharacter")
         case let .byteLimitExceeded(actual, maximum):
             String.localizedStringWithFormat(
-                AppStrings.localized("settings.llm.taskPlanInstructions.error.tooLongFormat"),
+                AppStrings.localized("settings.llm.prompt.error.tooLongFormat"),
                 Int64(actual),
                 Int64(maximum)
             )

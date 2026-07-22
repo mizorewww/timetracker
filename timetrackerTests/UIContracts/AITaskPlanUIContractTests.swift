@@ -30,21 +30,26 @@ struct AITaskPlanUIContractTests {
     }
 
     @Test
-    func editablePlanningInstructionsStayInSettingsAndPreserveFixedRules() throws {
+    func everyEditablePromptUsesOneSafeSettingsEditorAndPreservesFixedRules() throws {
         let settings = try sourceText(
             "timetracker/Features/Settings/LLMSettingsSection.swift"
         )
         let editor = try sourceText(
-            "timetracker/Features/Settings/LLMTaskPlanInstructionsEditor.swift"
+            "timetracker/Features/Settings/LLMPromptInstructionsEditor.swift"
         )
         let service = try sourceText(
             "timetracker/Services/LLM/LLMTaskPlanService.swift"
         )
 
-        #expect(settings.contains("onEditTaskPlanInstructions"))
+        #expect(settings.contains("ForEach(LLMPromptKind.allCases)"))
+        #expect(settings.contains("onEditPrompt(kind)"))
         #expect(editor.contains("TextEditor(text: $draft)"))
-        #expect(editor.contains("maximumLLMTaskPlanInstructionsByteCount"))
+        #expect(editor.contains("maximumLLMPromptInstructionsByteCount"))
+        #expect(editor.contains("llmPromptInstructions(draft, for: kind)"))
         #expect(editor.contains("restoreDefault"))
+        #expect(editor.contains("kind.defaultInstructions"))
+        #expect(editor.contains(".editorDiscardConfirmation("))
+        #expect(editor.contains(".navigationBarBackButtonHidden(isEmbeddedInNavigationStack)"))
         #expect(service.contains("systemContract"))
         #expect(service.contains("instructions: preparedInstructions"))
         #expect(service.contains("maximumTaskDepth = 6"))
@@ -52,13 +57,30 @@ struct AITaskPlanUIContractTests {
     }
 
     @Test
-    func everyMainLocaleContainsTaskPlanSurfaceAndRecoveryCopy() throws {
+    func everyMainLocaleContainsAllPromptSurfacesAndTaskPlanRecoveryCopy() throws {
         let requiredKeys = [
             "aiTaskPlan.title",
             "aiTaskPlan.request.footer",
             "aiTaskPlan.preview.footer",
             "settings.llm.taskPlan.error.invalidResponse",
             "settings.llm.taskPlan.error.identityConflict",
+            "settings.llm.prompt.inboxRouting.title",
+            "settings.llm.prompt.inboxRouting.edit",
+            "settings.llm.prompt.inboxRouting.editorTitle",
+            "settings.llm.prompt.inboxRouting.footer",
+            "settings.llm.prompt.checklistVisual.title",
+            "settings.llm.prompt.checklistVisual.edit",
+            "settings.llm.prompt.checklistVisual.editorTitle",
+            "settings.llm.prompt.checklistVisual.footer",
+            "settings.llm.prompt.taskPlan.title",
+            "settings.llm.prompt.taskPlan.edit",
+            "settings.llm.prompt.taskPlan.editorTitle",
+            "settings.llm.prompt.taskPlan.footer",
+            "settings.llm.prompt.restoreDefault",
+            "settings.llm.prompt.byteCountFormat",
+            "settings.llm.prompt.footer",
+            "settings.llm.prompt.error.controlCharacter",
+            "settings.llm.prompt.error.tooLongFormat",
         ]
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {

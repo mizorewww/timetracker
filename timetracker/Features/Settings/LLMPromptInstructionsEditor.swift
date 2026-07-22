@@ -1,0 +1,221 @@
+import SwiftUI
+
+struct LLMPromptInstructionsEditor: View {
+    let kind: LLMPromptKind
+    let onSave: (String) -> Bool
+    private let isEmbeddedInNavigationStack: Bool
+    private let onDismiss: (() -> Void)?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: String
+    @State private var validationError: LLMPromptInstructionsValidationError?
+    @State private var isDiscardConfirmationPresented = false
+
+    private let initialInstructions: String
+
+    init(
+        kind: LLMPromptKind,
+        instructions: String,
+        isEmbeddedInNavigationStack: Bool = false,
+        onDismiss: (() -> Void)? = nil,
+        onSave: @escaping (String) -> Bool
+    ) {
+        let initialInstructions = (
+            try? AppPreferenceValueSanitizer.llmPromptInstructions(
+                instructions,
+                for: kind
+            )
+        ) ?? kind.defaultInstructions
+        self.kind = kind
+        self.initialInstructions = initialInstructions
+        self.isEmbeddedInNavigationStack = isEmbeddedInNavigationStack
+        self.onDismiss = onDismiss
+        self.onSave = onSave
+        _draft = State(initialValue: initialInstructions)
+        _validationError = State(
+            initialValue: Self.validationError(for: initialInstructions, kind: kind)
+        )
+    }
+
+    private var hasUnsavedChanges: Bool {
+        guard let normalizedDraft else { return true }
+        return normalizedDraft != initialInstructions
+    }
+
+    private var byteCount: Int {
+        if let normalizedDraft {
+            return normalizedDraft.utf8.count
+        }
+        if case let .some(.byteLimitExceeded(actual, _)) = validationError {
+            return actual
+        }
+        return draft.utf8.count
+    }
+
+    private var normalizedDraft: String? {
+        try? AppPreferenceValueSanitizer.llmPromptInstructions(
+            draft,
+            for: kind
+        )
+    }
+
+    private var accessibilityID: String {
+        kind.settingsAccessibilityID
+    }
+
+    var body: some View {
+        Group {
+            if isEmbeddedInNavigationStack {
+                editorContent
+            } else {
+                NavigationStack {
+                    editorContent
+                }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 560, minHeight: 520)
+        #endif
+        .onChange(of: draft) { _, newValue in
+            validationError = Self.validationError(for: newValue, kind: kind)
+        }
+        .editorDiscardConfirmation(
+            isPresented: $isDiscardConfirmationPresented,
+            hasUnsavedChanges: hasUnsavedChanges,
+            discard: dismissEditor
+        )
+    }
+
+    private var editorContent: some View {
+        Form {
+            Section {
+                TextEditor(text: $draft)
+                    .font(.body)
+                    .frame(minHeight: 220)
+                    .accessibilityLabel(
+                        AppStrings.localized(kind.settingsTitleKey)
+                    )
+                    .accessibilityIdentifier("\(accessibilityID).editor")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if let validationError {
+                        Label(
+                            validationError.localizedDescription,
+                            systemImage: "exclamationmark.circle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("\(accessibilityID).error")
+                    }
+
+                    Text(
+                        String.localizedStringWithFormat(
+                            AppStrings.localized(
+                                "settings.llm.prompt.byteCountFormat"
+                            ),
+                            Int64(byteCount),
+                            Int64(
+                                AppPreferenceValueSanitizer
+                                    .maximumLLMPromptInstructionsByteCount
+                            )
+                        )
+                    )
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(
+                        validationError == nil ? Color.secondary : Color.red
+                    )
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .accessibilityIdentifier("\(accessibilityID).byteCount")
+                }
+
+                Button(action: restoreDefault) {
+                    Label(
+                        AppStrings.localized(
+                            "settings.llm.prompt.restoreDefault"
+                        ),
+                        systemImage: "arrow.counterclockwise"
+                    )
+                }
+                .disabled(draft == kind.defaultInstructions)
+                .accessibilityIdentifier("\(accessibilityID).restoreDefault")
+            } header: {
+                Text(AppStrings.localized(kind.settingsTitleKey))
+            } footer: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(AppStrings.localized(kind.settingsFooterKey))
+                    Text(AppStrings.localized("settings.llm.prompt.footer"))
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(
+            AppStrings.localized(kind.settingsEditorTitleKey)
+        )
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(isEmbeddedInNavigationStack)
+        #endif
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(AppStrings.cancel, action: requestDismiss)
+                    .accessibilityIdentifier("\(accessibilityID).cancel")
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(AppStrings.localized("common.save"), action: save)
+                    .disabled(validationError != nil || !hasUnsavedChanges)
+                    .accessibilityIdentifier("\(accessibilityID).save")
+            }
+        }
+    }
+
+    private func requestDismiss() {
+        if hasUnsavedChanges {
+            isDiscardConfirmationPresented = true
+        } else {
+            dismissEditor()
+        }
+    }
+
+    private func save() {
+        guard let normalized = try? AppPreferenceValueSanitizer
+            .llmPromptInstructions(draft, for: kind) else {
+            validationError = Self.validationError(for: draft, kind: kind)
+            return
+        }
+        if onSave(normalized) {
+            dismissEditor()
+        }
+    }
+
+    private func dismissEditor() {
+        if let onDismiss {
+            onDismiss()
+        } else {
+            dismiss()
+        }
+    }
+
+    private func restoreDefault() {
+        draft = kind.defaultInstructions
+    }
+
+    private static func validationError(
+        for value: String,
+        kind: LLMPromptKind
+    ) -> LLMPromptInstructionsValidationError? {
+        do {
+            _ = try AppPreferenceValueSanitizer.llmPromptInstructions(
+                value,
+                for: kind
+            )
+            return nil
+        } catch let error as LLMPromptInstructionsValidationError {
+            return error
+        } catch {
+            assertionFailure("Unexpected prompt instructions validation error: \(error)")
+            return nil
+        }
+    }
+}

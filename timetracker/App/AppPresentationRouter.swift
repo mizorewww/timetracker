@@ -17,7 +17,7 @@ struct AppPresentation: Identifiable {
         case quickStartEditor(selectedIDs: [UUID])
         case settings
         case llmConfiguration(LLMConfigurationDraft)
-        case llmTaskPlanInstructions(String)
+        case llmPrompt(kind: LLMPromptKind, instructions: String)
         case aiTaskPlanGenerator
     }
 
@@ -221,9 +221,13 @@ extension AppPresentationRouter {
     }
 
     @discardableResult
-    func presentLLMTaskPlanInstructions(using store: TimeTrackerStore) -> Bool {
-        present(.llmTaskPlanInstructions(
-            store.preferences.llmTaskPlanInstructions
+    func presentLLMPrompt(
+        _ kind: LLMPromptKind,
+        using store: TimeTrackerStore
+    ) -> Bool {
+        present(.llmPrompt(
+            kind: kind,
+            instructions: store.preferences.llmInstructions(for: kind)
         ))
     }
 

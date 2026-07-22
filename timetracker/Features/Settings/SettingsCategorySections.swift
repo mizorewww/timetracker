@@ -107,7 +107,7 @@ extension SettingsView {
                 selectedModel: store.preferences.llmSelectedModel,
                 availableModels: store.preferences.llmAvailableModelIDs,
                 onConfigure: presentLLMConfiguration,
-                onEditTaskPlanInstructions: presentLLMTaskPlanInstructions
+                onEditPrompt: presentLLMPrompt
             )
 
         case .advanced:

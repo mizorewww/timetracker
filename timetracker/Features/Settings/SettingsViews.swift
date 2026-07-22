@@ -13,6 +13,9 @@ struct SettingsView: View {
     @State var syncOperationMessage: String?
     @State var dataOperationMessage: String?
     @State private var selectedCategory: SettingsCategory? = .general
+    #if os(iOS)
+    @State private var selectedLLMPromptKind: LLMPromptKind?
+    #endif
 
     var body: some View {
         settingsNavigation
@@ -95,6 +98,16 @@ struct SettingsView: View {
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $selectedLLMPromptKind) { kind in
+            LLMPromptInstructionsEditor(
+                kind: kind,
+                instructions: store.preferences.llmInstructions(for: kind),
+                isEmbeddedInNavigationStack: true,
+                onDismiss: { selectedLLMPromptKind = nil }
+            ) {
+                store.setLLMPromptInstructions($0, for: kind)
+            }
+        }
         #endif
     }
 
@@ -145,7 +158,11 @@ struct SettingsView: View {
         presentationRouter.presentLLMConfiguration(using: store)
     }
 
-    func presentLLMTaskPlanInstructions() {
-        presentationRouter.presentLLMTaskPlanInstructions(using: store)
+    func presentLLMPrompt(_ kind: LLMPromptKind) {
+        #if os(iOS)
+        selectedLLMPromptKind = kind
+        #else
+        presentationRouter.presentLLMPrompt(kind, using: store)
+        #endif
     }
 }

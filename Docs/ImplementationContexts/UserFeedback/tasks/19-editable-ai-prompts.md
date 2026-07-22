@@ -8,8 +8,8 @@
 - [x] 读取唯一反馈并领取任务。
 - [x] 审计现有 AI 配置、提示词种类、默认值、持久化和调用路径。
 - [x] 参考 Apple HIG、SwiftUI 专项规范与成熟库，确定编辑体验和依赖边界。
-- [ ] 实现每一种现有 AI 提示词都可分别编辑、保存、恢复默认并被对应调用读取。
-- [ ] 完成定向测试、owned 模拟器普通交互与截图验收并清理资源。
+- [x] 实现每一种现有 AI 提示词都可分别编辑、保存、恢复默认并被对应调用读取。
+- [x] 完成定向测试、owned 模拟器普通交互与截图验收并清理资源。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并由 Codex 标记完成。
 
 ## 唯一反馈边界
@@ -54,8 +54,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：prompt catalog、同步偏好、service request、旧请求失效和定向单元测试。
-- [~] Checkpoint B：三行设置入口、泛型编辑器、本地化、UI/contract 测试与 owned 模拟器截图。
-- [ ] Checkpoint C：全量回归、精确 Release 全设备安装、状态标记和资源清理。
+- [x] Checkpoint B：三行设置入口、泛型编辑器、本地化、UI/contract 测试与 owned 模拟器截图。
+- [~] Checkpoint C：全量回归、精确 Release 全设备安装、状态标记和资源清理。
 
 ## Checkpoint A 结果
 
@@ -68,7 +68,31 @@
 - 两轮只读子代理审查完成；修复组合预算和对称失效覆盖后最终均为 no findings。
 - 本检查点未启动 simulator；验证后无 Booted device、`xcodebuild`、`xctest` 或 runner 残留。
 
+## Checkpoint B 结果
+
+- Intelligence 设置直接列出 Inbox Routing、Checklist Visual 和 Task Planning 三个独立入口，复用同一个
+  `LLMPromptInstructionsEditor`。
+- 编辑器使用系统 `Form` / `TextEditor`，提供 Save、Cancel、4 KiB UTF-8 计数与验证、草稿恢复默认和
+  未保存离开确认；尾随空白归一化后不会产生假 dirty。
+- iOS/iPadOS 在 AI Assistant 的 `NavigationStack` 内 push 编辑器，不再在 Settings sheet 上叠加第二层 sheet；
+  显式 close 只 pop prompt，返回原 AI 设置页。macOS 保留独立 sheet。
+- 三套主要本地化键齐全，`plutil -lint` 全部通过。
+- 最终定向回归：56 passed、0 failed、0 skipped；结果为
+  `build/Task19PromptUI/DerivedData/Logs/Test/Test-timetracker-2026.07.22_13-49-33-+0800.xcresult`。
+- iPhone 最终 UI 测试 1 passed：
+  `build/Task19PromptUI/iPhoneDerivedData/Logs/Test/Test-timetracker-2026.07.22_13-41-33-+0800.xcresult`。
+- iPad 最终 UI 测试 1 passed：
+  `build/Task19PromptUI/iPadDerivedData/Logs/Test/Test-timetracker-2026.07.22_13-45-16-+0800.xcresult`。
+- UI 测试逐种验证编辑、保存、重开、恢复默认、再次重开；Inbox 额外验证脏草稿保留/放弃。
+- 主代理已检查 iPhone 与 iPad 各三张截图：三入口列表、Checklist 编辑器和放弃确认均无重叠、截断或
+  平台不一致。最终只读子代理复审为 no findings。
+- 本检查点不新增第三方库；两台 owned simulator 均已终止 App、shutdown 并 delete，且无 Booted device、
+  `xcodebuild`、`xctest`、UI runner、extension 或 trace 残留。
+
 ## 资源所有权
 
-- 尚未创建 simulator。开始 UI 批次时由主代理记录唯一 owned UDID，并在批次结束后终止 App、shutdown、delete，
-  同时验证无 owned `xcodebuild`、`xctest`、UI runner、extension、trace 或 Booted device 残留。
+- Checkpoint B 的 owned iPhone `Task19Prompt-iPhone-20260722-1330`（UDID
+  `2B2144DE-03A7-429B-8DFD-8EA843A21139`）已清理并删除。
+- Checkpoint B 的 owned iPad `Task19Prompt-iPad-20260722-1330`（UDID
+  `9EF8B4CE-BFD5-446E-990E-1525424A7B4D`）已清理并删除。
+- Checkpoint C 尚未创建 simulator；全量回归必须继续显式记录和清理任何新资源。

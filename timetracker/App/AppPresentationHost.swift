@@ -117,9 +117,12 @@ private struct AppPresentationSheet: View {
                     availableModelIDs: configuration.availableModels
                 )
             }
-        case let .llmTaskPlanInstructions(instructions):
-            LLMTaskPlanInstructionsEditor(instructions: instructions) {
-                store.setLLMTaskPlanInstructions($0)
+        case let .llmPrompt(kind, instructions):
+            LLMPromptInstructionsEditor(
+                kind: kind,
+                instructions: instructions
+            ) {
+                store.setLLMPromptInstructions($0, for: kind)
             }
         case .aiTaskPlanGenerator:
             AITaskPlanGeneratorSheet(

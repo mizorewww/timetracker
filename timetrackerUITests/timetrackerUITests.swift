@@ -2470,10 +2470,193 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAITaskPlanDraftReviewAtomicCreateAndInstructionsEditor() throws {
-        #if os(macOS)
-        throw XCTSkip("Task-plan review geometry is verified on iPhone and iPad.")
+    func testEveryAIPromptCanBeEditedSavedRestoredAndSafelyDiscarded() throws {
+        #if targetEnvironment(simulator)
+        let app = launchApp(route: "settings")
+        let settingsView = app.descendants(matching: .any)[
+            "settings.view"
+        ].firstMatch
+        if !settingsView.waitForExistence(timeout: 3) {
+            openSettings(in: app)
+        }
+        XCTAssertTrue(settingsView.waitForExistence(timeout: 8))
+
+        let intelligence = app.descendants(matching: .any)[
+            "settings.category.intelligence"
+        ].firstMatch
+        XCTAssertTrue(
+            intelligence.waitForExistence(timeout: 3) && intelligence.isHittable
+        )
+        activate(intelligence)
+
+        let kinds = ["inboxRouting", "checklistVisual", "taskPlan"]
+        for kind in kinds {
+            let edit = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).edit"
+            ].firstMatch
+            scrollUntilHittable(edit, direction: .up, in: app)
+            XCTAssertTrue(edit.waitForExistence(timeout: 5) && edit.isHittable)
+        }
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        try capture("\(screenshotPrefix)-settings-ai-prompt-list", app: app)
+
+        let inboxEdit = app.descendants(matching: .any)[
+            "settings.llm.prompt.inboxRouting.edit"
+        ].firstMatch
+        scrollUntilHittable(inboxEdit, direction: .down, in: app)
+        activate(inboxEdit)
+        let inboxEditor = app.descendants(matching: .any)[
+            "settings.llm.prompt.inboxRouting.editor"
+        ].firstMatch
+        let inboxByteCount = app.descendants(matching: .any)[
+            "settings.llm.prompt.inboxRouting.byteCount"
+        ].firstMatch
+        XCTAssertTrue(inboxEditor.waitForExistence(timeout: 5) && inboxEditor.isHittable)
+        XCTAssertTrue(inboxByteCount.waitForExistence(timeout: 3))
+        activate(inboxEditor)
+        let inboxDirtySuffix = "Prefer the narrowest matching destination."
+        inboxEditor.typeText("\n\(inboxDirtySuffix)")
+
+        let inboxCancel = app.buttons[
+            "settings.llm.prompt.inboxRouting.cancel"
+        ].firstMatch
+        XCTAssertTrue(inboxCancel.waitForExistence(timeout: 3) && inboxCancel.isHittable)
+        activate(inboxCancel)
+        let discardDialog = app.sheets["Discard Changes?"].firstMatch
+        XCTAssertTrue(discardDialog.waitForExistence(timeout: 3))
+        try capture("\(screenshotPrefix)-ai-prompt-discard-confirmation", app: app)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.5)).tap()
+        XCTAssertTrue(discardDialog.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(inboxEditor.waitForExistence(timeout: 3))
+
+        activate(inboxCancel)
+        let discard = app.buttons["editor.discard.confirm"].firstMatch
+        XCTAssertTrue(discard.waitForExistence(timeout: 3) && discard.isHittable)
+        activate(discard)
+        XCTAssertTrue(inboxEditor.waitForNonExistence(timeout: 5))
+
+        scrollUntilHittable(inboxEdit, direction: .down, in: app)
+        activate(inboxEdit)
+        XCTAssertTrue(inboxEditor.waitForExistence(timeout: 5) && inboxEditor.isHittable)
+        XCTAssertFalse((inboxEditor.value as? String ?? "").contains(inboxDirtySuffix))
+        activate(inboxEditor)
+        inboxEditor.typeText("\n\(inboxDirtySuffix)")
+        let inboxSave = app.buttons[
+            "settings.llm.prompt.inboxRouting.save"
+        ].firstMatch
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                inboxSave.exists && inboxSave.isEnabled && inboxSave.isHittable
+            }
+        )
+        activate(inboxSave)
+        XCTAssertTrue(inboxEditor.waitForNonExistence(timeout: 5))
+
+        scrollUntilHittable(inboxEdit, direction: .down, in: app)
+        activate(inboxEdit)
+        XCTAssertTrue(inboxEditor.waitForExistence(timeout: 5))
+        XCTAssertTrue((inboxEditor.value as? String ?? "").contains(inboxDirtySuffix))
+        let restoreDefault = app.buttons[
+            "settings.llm.prompt.inboxRouting.restoreDefault"
+        ].firstMatch
+        XCTAssertTrue(
+            restoreDefault.waitForExistence(timeout: 3) &&
+                restoreDefault.isEnabled &&
+                restoreDefault.isHittable
+        )
+        activate(restoreDefault)
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                inboxSave.exists && inboxSave.isEnabled && inboxSave.isHittable
+            }
+        )
+        activate(inboxSave)
+        XCTAssertTrue(inboxEditor.waitForNonExistence(timeout: 5))
+
+        scrollUntilHittable(inboxEdit, direction: .down, in: app)
+        activate(inboxEdit)
+        XCTAssertTrue(inboxEditor.waitForExistence(timeout: 5))
+        XCTAssertFalse((inboxEditor.value as? String ?? "").contains(inboxDirtySuffix))
+        XCTAssertFalse(restoreDefault.isEnabled)
+        activate(inboxCancel)
+        XCTAssertTrue(inboxEditor.waitForNonExistence(timeout: 5))
+
+        for (kind, uniqueInstructions) in [
+            ("checklistVisual", "Prefer literal symbols with calm colors."),
+            ("taskPlan", "Prefer small tasks with concrete checklist steps."),
+        ] {
+            let edit = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).edit"
+            ].firstMatch
+            scrollUntilHittable(edit, direction: .up, in: app)
+            activate(edit)
+            let editor = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).editor"
+            ].firstMatch
+            let byteCount = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).byteCount"
+            ].firstMatch
+            XCTAssertTrue(editor.waitForExistence(timeout: 5) && editor.isHittable)
+            XCTAssertTrue(byteCount.waitForExistence(timeout: 3))
+            if kind == "checklistVisual" {
+                try capture("\(screenshotPrefix)-ai-prompt-checklist-editor", app: app)
+            }
+            activate(editor)
+            editor.typeText("\n\(uniqueInstructions)")
+            let save = app.buttons[
+                "settings.llm.prompt.\(kind).save"
+            ].firstMatch
+            XCTAssertTrue(
+                waitUntil(timeout: 3) {
+                    save.exists && save.isEnabled && save.isHittable
+                }
+            )
+            activate(save)
+            XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+
+            scrollUntilHittable(edit, direction: .up, in: app)
+            XCTAssertTrue(edit.isHittable)
+            activate(edit)
+            XCTAssertTrue(editor.waitForExistence(timeout: 5))
+            XCTAssertTrue((editor.value as? String ?? "").contains(uniqueInstructions))
+            let restore = app.buttons[
+                "settings.llm.prompt.\(kind).restoreDefault"
+            ].firstMatch
+            XCTAssertTrue(
+                restore.waitForExistence(timeout: 3) &&
+                    restore.isEnabled &&
+                    restore.isHittable
+            )
+            activate(restore)
+            XCTAssertTrue(
+                waitUntil(timeout: 3) {
+                    save.exists && save.isEnabled && save.isHittable
+                }
+            )
+            activate(save)
+            XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+
+            scrollUntilHittable(edit, direction: .up, in: app)
+            XCTAssertTrue(edit.isHittable)
+            activate(edit)
+            XCTAssertTrue(editor.waitForExistence(timeout: 5))
+            XCTAssertFalse((editor.value as? String ?? "").contains(uniqueInstructions))
+            XCTAssertFalse(restore.isEnabled)
+            let cancel = app.buttons[
+                "settings.llm.prompt.\(kind).cancel"
+            ].firstMatch
+            XCTAssertTrue(cancel.waitForExistence(timeout: 3) && cancel.isHittable)
+            activate(cancel)
+            XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+        }
         #else
+        throw XCTSkip("AI prompt editing and screenshots run only on an explicitly owned simulator.")
+        #endif
+    }
+
+    @MainActor
+    func testAITaskPlanDraftReviewAtomicCreate() throws {
+        #if targetEnvironment(simulator)
         let app = launchApp(
             route: "tasks",
             replacesDemoDataOnLaunch: true,
@@ -2574,43 +2757,8 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(taskDetailIsReady(in: app))
         try capture("ai-task-plan-created-detail", app: app)
-
-        app.terminate()
-        let settingsApp = launchApp(route: "settings")
-        let settingsView = settingsApp.descendants(matching: .any)[
-            "settings.view"
-        ].firstMatch
-        if !settingsView.waitForExistence(timeout: 3) {
-            openSettings(in: settingsApp)
-        }
-        XCTAssertTrue(settingsView.waitForExistence(timeout: 8))
-
-        let intelligence = settingsApp.descendants(matching: .any)[
-            "settings.category.intelligence"
-        ].firstMatch
-        XCTAssertTrue(
-            intelligence.waitForExistence(timeout: 3) && intelligence.isHittable
-        )
-        activate(intelligence)
-
-        let editInstructions = settingsApp.descendants(matching: .any)[
-            "settings.llm.taskPlanInstructions.edit"
-        ].firstMatch
-        XCTAssertTrue(
-            editInstructions.waitForExistence(timeout: 5) &&
-                editInstructions.isHittable
-        )
-        activate(editInstructions)
-
-        let editor = settingsApp.descendants(matching: .any)[
-            "settings.llm.taskPlanInstructions.editor"
-        ].firstMatch
-        let byteCount = settingsApp.descendants(matching: .any)[
-            "settings.llm.taskPlanInstructions.byteCount"
-        ].firstMatch
-        XCTAssertTrue(editor.waitForExistence(timeout: 5) && editor.isHittable)
-        XCTAssertTrue(byteCount.waitForExistence(timeout: 3))
-        try capture("ai-task-plan-instructions-editor", app: settingsApp)
+        #else
+        throw XCTSkip("Task-plan review geometry runs only on an explicitly owned simulator.")
         #endif
     }
 

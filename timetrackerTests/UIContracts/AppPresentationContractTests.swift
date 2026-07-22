@@ -25,6 +25,7 @@ struct AppPresentationContractTests {
     @Test
     func presentationHostUsesOneItemDrivenSheetAndMapsEverySupportedCase() throws {
         let host = try sourceText("timetracker/App/AppPresentationHost.swift")
+        let router = try sourceText("timetracker/App/AppPresentationRouter.swift")
 
         #expect(host.components(separatedBy: ".sheet(item:").count - 1 == 1)
         #expect(host.contains(".sheet(isPresented:") == false)
@@ -40,12 +41,14 @@ struct AppPresentationContractTests {
             ".quickStartEditor(",
             ".settings",
             ".llmConfiguration(",
-            ".llmTaskPlanInstructions(",
+            ".llmPrompt(",
             ".aiTaskPlanGenerator"
         ] {
             #expect(host.contains(route))
         }
         #expect(host.contains("inboxSuggestionEditor") == false)
+        #expect(router.contains("store.preferences.llmInstructions(for: kind)"))
+        #expect(host.contains("store.setLLMPromptInstructions($0, for: kind)"))
     }
 
     @Test
@@ -183,9 +186,9 @@ struct AppPresentationContractTests {
         #expect(phoneHome.contains("presentationRouter.presentQuickStartEditor(using: store)"))
         #expect(quickStart.contains("presentationRouter.presentQuickStartEditor(using: store)"))
         #expect(settings.contains("presentationRouter.presentLLMConfiguration(using: store)"))
-        #expect(settings.contains(
-            "presentationRouter.presentLLMTaskPlanInstructions(using: store)"
-        ))
+        #expect(settings.contains("presentationRouter.presentLLMPrompt(kind, using: store)"))
+        #expect(settings.contains("selectedLLMPromptKind = kind"))
+        #expect(settings.contains(".navigationDestination(item: $selectedLLMPromptKind)"))
         #expect(host.contains("router.replaceWithNewTask("))
         #expect(host.contains("if taskPicker.selectTask(taskID)"))
         #expect(host.contains(
@@ -210,13 +213,11 @@ struct AppPresentationContractTests {
         #expect(dataSections.contains("onAddTime") == false)
         #expect(dataSections.contains("AppStrings.addTime") == false)
         #expect(categorySections.contains("onConfigure: presentLLMConfiguration"))
-        #expect(categorySections.contains(
-            "onEditTaskPlanInstructions: presentLLMTaskPlanInstructions"
-        ))
+        #expect(categorySections.contains("onEditPrompt: presentLLMPrompt"))
         #expect(settingsView.contains("presentationRouter.presentLLMConfiguration(using: store)"))
-        #expect(settingsView.contains(
-            "presentationRouter.presentLLMTaskPlanInstructions(using: store)"
-        ))
+        #expect(settingsView.contains("presentationRouter.presentLLMPrompt(kind, using: store)"))
+        #expect(settingsView.contains("isEmbeddedInNavigationStack: true"))
+        #expect(settingsView.contains("onDismiss: { selectedLLMPromptKind = nil }"))
         #expect(presentationHost.contains("private struct AppSettingsSheet: View"))
         #expect(presentationHost.contains("@State private var childRouter = AppPresentationRouter()"))
         #expect(presentationHost.contains(".environment(childRouter)"))

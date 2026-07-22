@@ -2,32 +2,47 @@
 import Foundation
 
 /// Deterministic, in-memory Health samples for UI verification. The factory
-/// requires both UI-test arguments so ordinary Debug launches keep using
-/// HealthKit, and Release builds contain no fixture path.
+/// requires a UI-test launch plus an explicit argument or environment signal,
+/// so ordinary Debug launches keep using HealthKit and Release builds contain
+/// no fixture path.
 @MainActor
 final class UITestAppleHealthDataReader: AppleHealthDataReading {
     private static let enableArgument = "--uitesting-apple-health"
+    private static let enableEnvironmentKey =
+        "TIMETRACKER_UI_TEST_APPLE_HEALTH"
 
     static func isRequested(
-        arguments: [String] = CommandLine.arguments
+        arguments: [String] = CommandLine.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
         arguments.contains("--uitesting") &&
-            arguments.contains(enableArgument)
+            (
+                arguments.contains(enableArgument) ||
+                    environment[enableEnvironmentKey] == "1"
+            )
     }
 
     static func makeIfRequested(
-        arguments: [String] = CommandLine.arguments
+        arguments: [String] = CommandLine.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> UITestAppleHealthDataReader? {
-        guard isRequested(arguments: arguments) else {
+        guard isRequested(
+            arguments: arguments,
+            environment: environment
+        ) else {
             return nil
         }
         return UITestAppleHealthDataReader()
     }
 
     static func preferenceStoreIfRequested(
-        arguments: [String] = CommandLine.arguments
+        arguments: [String] = CommandLine.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> (any AppleHealthTimelinePreferenceStoring)? {
-        guard isRequested(arguments: arguments) else {
+        guard isRequested(
+            arguments: arguments,
+            environment: environment
+        ) else {
             return nil
         }
         return UITestAppleHealthTimelinePreferenceStore()

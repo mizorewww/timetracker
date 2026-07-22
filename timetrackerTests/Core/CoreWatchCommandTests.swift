@@ -765,6 +765,58 @@ struct CoreWatchCommandTests {
     }
 
     @Test @MainActor
+    func watchSnapshotExcludesAppleHealthSyncOnlyBranchesEvenWhenPinned() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let runningID = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        ).id
+        let sleepID = AppleHealthTaskCatalog.taskDefinition(for: .sleep).id
+        let ordinaryTask = try taskRepository.createTask(
+            title: "Ordinary",
+            parentID: nil
+        )
+        let runningTask = TaskNode(
+            title: "Running",
+            parentID: nil,
+            deviceID: "health"
+        )
+        runningTask.id = runningID
+        let runningChild = TaskNode(
+            title: "Intervals",
+            parentID: runningTask.id,
+            deviceID: "health"
+        )
+        let sleepTask = TaskNode(
+            title: "Sleep",
+            parentID: nil,
+            deviceID: "health"
+        )
+        sleepTask.id = sleepID
+        context.insert(runningTask)
+        context.insert(runningChild)
+        context.insert(sleepTask)
+        try context.save()
+
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        #expect(store.setQuickStartTaskIDs([
+            runningTask.id,
+            runningChild.id,
+            sleepTask.id,
+            ordinaryTask.id,
+        ]))
+
+        let snapshot = store.watchStateSnapshot(
+            now: Date(timeIntervalSinceReferenceDate: 20)
+        )
+
+        #expect(snapshot.recentTasks.map(\.taskID) == [ordinaryTask.id])
+        #expect(snapshot.allTasksByUsage.map(\.taskID) == [ordinaryTask.id])
+        #expect(snapshot.recentTasks.first?.quickStartRank == 0)
+    }
+
+    @Test @MainActor
     func watchSnapshotBreaksUsageTiesByRecencyThenStableIdentity() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")

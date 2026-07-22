@@ -3390,6 +3390,193 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAppleHealthTasksStayOutOfQuickStartAndExplainSyncOnlyDetail()
+        throws {
+        #if os(macOS)
+        throw XCTSkip("Apple Health sync-only UI requires an iOS simulator.")
+        #else
+        let app = launchApp(
+            seedsDemoData: true,
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-apple-health",
+                "-AppleHealthTimelineEnabled",
+                "NO"
+            ]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        let syncOnlyTaskIDs = [
+            "A1200000-0000-4000-8000-000000000002",
+            "A1200000-0000-4000-8000-000000000012",
+        ]
+
+        let timelineAccess = app.buttons[
+            "Show Apple Health in Timeline"
+        ].firstMatch
+        for _ in 0..<8 {
+            if timelineAccess.exists, timelineAccess.isHittable {
+                break
+            }
+            dragContentUp(by: app.frame.height * 0.25, in: app)
+        }
+        XCTAssertTrue(
+            timelineAccess.waitForExistence(timeout: 5) &&
+                timelineAccess.isHittable
+        )
+        activate(timelineAccess)
+
+        let importedSleep = app.buttons
+            .matching(
+                NSPredicate(
+                    format: "label CONTAINS[c] %@ AND label CONTAINS[c] %@",
+                    "Sleep",
+                    "Apple Health"
+                )
+            )
+            .firstMatch
+        XCTAssertTrue(importedSleep.waitForExistence(timeout: 8))
+
+        let tasksTab = app.descendants(matching: .any)[
+            "phone.tab.tasks"
+        ].firstMatch
+        for _ in 0..<5 where !tasksTab.isHittable {
+            app.swipeDown()
+        }
+
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let running = app.buttons[
+            "tasks.row.A1200000-0000-4000-8000-000000000002"
+        ].firstMatch
+        scrollUntilHittable(
+            running,
+            direction: .up,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            running.waitForExistence(timeout: 8) && running.isHittable
+        )
+        activate(running)
+
+        XCTAssertTrue(taskDetailIsReady(in: app))
+        let syncOnlyNotice = app.descendants(matching: .any)[
+            "task.detail.trackingUnavailable"
+        ].firstMatch
+        scrollUntilHittable(syncOnlyNotice, direction: .up, in: app)
+        XCTAssertTrue(
+            syncOnlyNotice.waitForExistence(timeout: 5) &&
+                syncOnlyNotice.isHittable
+        )
+        XCTAssertEqual(syncOnlyNotice.label, "Apple Health Sync")
+        let syncOnlyExplanation = app.staticTexts.matching(
+            NSPredicate(
+                format: "label == %@",
+                "This task belongs to an Apple Health sync branch. It stays editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable."
+            )
+        ).firstMatch
+        XCTAssertTrue(syncOnlyExplanation.waitForExistence(timeout: 5))
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.detail.timer"].exists
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.detail.addTime"].exists
+        )
+        try capture(
+            "\(screenshotPrefix)-apple-health-sync-only-detail",
+            app: app
+        )
+
+        let tasksBack = taskDetailBackButton(to: "Tasks", in: app)
+        XCTAssertTrue(
+            tasksBack.waitForExistence(timeout: 5) && tasksBack.isHittable
+        )
+        activate(tasksBack)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 5)
+        )
+
+        let todayTab = app.descendants(matching: .any)[
+            "phone.tab.today"
+        ].firstMatch
+        for _ in 0..<5 where !todayTab.isHittable {
+            app.swipeDown()
+        }
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        let editQuickStart = app.buttons["home.quickStart.edit"].firstMatch
+        scrollTodayUntilHittable(editQuickStart, in: app)
+        XCTAssertTrue(
+            editQuickStart.waitForExistence(timeout: 5) &&
+                editQuickStart.isHittable
+        )
+        XCTAssertGreaterThan(
+            app.buttons.matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "home.quickStart.task."
+                )
+            ).count,
+            0,
+            "Ordinary demo tasks keep the Quick Start filter observable."
+        )
+        for taskID in syncOnlyTaskIDs {
+            XCTAssertFalse(
+                app.buttons["home.quickStart.task.\(taskID)"].exists,
+                "Apple Health workout and sleep tasks must not become Quick Start rows."
+            )
+            XCTAssertFalse(
+                app.buttons["home.quickStart.timer.\(taskID)"].exists,
+                "Apple Health tasks must not expose Quick Start timer actions."
+            )
+        }
+        activate(editQuickStart)
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["quickStart.editor"]
+                .waitForExistence(timeout: 5)
+        )
+        let editorTaskRows = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ OR identifier BEGINSWITH %@",
+                "quickStart.editor.pinned.",
+                "quickStart.editor.available."
+            )
+        )
+        XCTAssertGreaterThan(
+            editorTaskRows.count,
+            0,
+            "Ordinary tasks must remain available while sync-only tasks are filtered."
+        )
+        for taskID in syncOnlyTaskIDs {
+            XCTAssertFalse(
+                app.buttons["quickStart.editor.pinned.\(taskID)"].exists
+            )
+            XCTAssertFalse(
+                app.buttons["quickStart.editor.available.\(taskID)"].exists,
+                "Sync-only Apple Health tasks must not be pinnable."
+            )
+        }
+        try capture(
+            "\(screenshotPrefix)-apple-health-sync-only-quick-start",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsTodayDistributionUsesSharedScale() throws {
         #if os(macOS)
         throw XCTSkip("Analytics hourly distribution screenshots require an iOS simulator.")
@@ -5069,6 +5256,11 @@ final class timetrackerUITests: XCTestCase {
             seedsDemoData ? "NO" : "YES"
         ]
         app.launchArguments.append(contentsOf: additionalLaunchArguments)
+        if additionalLaunchArguments.contains("--uitesting-apple-health") {
+            app.launchEnvironment[
+                "TIMETRACKER_UI_TEST_APPLE_HEALTH"
+            ] = "1"
+        }
         if let contentSizeCategory {
             app.launchArguments += [
                 "-UIPreferredContentSizeCategoryName",

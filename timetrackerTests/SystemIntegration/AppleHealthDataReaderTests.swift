@@ -79,35 +79,56 @@ struct AppleHealthDataReaderTests {
 
     #if DEBUG && os(iOS)
     @Test @MainActor
-    func uiFixtureRequiresBothArgumentsAndUsesIsolatedPreferences() throws {
+    func uiFixtureRequiresUITestLaunchAndExplicitOptIn() throws {
         #expect(
             UITestAppleHealthDataReader.makeIfRequested(
-                arguments: ["--uitesting-apple-health"]
+                arguments: ["--uitesting-apple-health"],
+                environment: [:]
             ) == nil
         )
         #expect(
             UITestAppleHealthDataReader.makeIfRequested(
-                arguments: ["--uitesting"]
+                arguments: ["--uitesting"],
+                environment: [:]
             ) == nil
         )
         let arguments = ["--uitesting", "--uitesting-apple-health"]
         _ = try #require(
-            UITestAppleHealthDataReader.makeIfRequested(arguments: arguments)
+            UITestAppleHealthDataReader.makeIfRequested(
+                arguments: arguments,
+                environment: [:]
+            )
         )
         let preferences = try #require(
             UITestAppleHealthDataReader.preferenceStoreIfRequested(
-                arguments: arguments
+                arguments: arguments,
+                environment: [:]
             )
         )
         preferences.isTimelineEnabled = true
         let freshPreferences = try #require(
             UITestAppleHealthDataReader.preferenceStoreIfRequested(
-                arguments: arguments
+                arguments: arguments,
+                environment: [:]
             )
         )
 
         #expect(freshPreferences.isTimelineEnabled == false)
         #expect(freshPreferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+
+        let environment = ["TIMETRACKER_UI_TEST_APPLE_HEALTH": "1"]
+        _ = try #require(
+            UITestAppleHealthDataReader.makeIfRequested(
+                arguments: ["--uitesting"],
+                environment: environment
+            )
+        )
+        #expect(
+            UITestAppleHealthDataReader.makeIfRequested(
+                arguments: [],
+                environment: environment
+            ) == nil
+        )
     }
 
     @Test @MainActor

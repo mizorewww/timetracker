@@ -8,8 +8,8 @@
 - [x] 领取反馈，复现并审计 iPhone 多个 `xxx min elapsed` 标注互相遮挡的根因。
 - [x] 对照 Apple HIG、SwiftUI 布局语义和成熟实现，确定跨平台标注避让策略。
 - [x] 实现纯布局修复与覆盖密集 gap 的单元/契约测试。
-- [~] 使用明确登记的 owned simulator 与本机 macOS 窗口做全平台 UI/截图验收并清理资源。
-- [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 使用明确登记的 owned simulator 与本机 macOS 窗口做全平台 UI/截图验收并清理资源。
+- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -39,7 +39,7 @@
   - [x] B1：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主两次运行完整 `AnalyticsTimelineTests`，每次均为 36 项通过、0 失败；新增用例先证明旧的两个 32pt frame 在 300pt 轴上相交，再证明最终 frame 确定、反序输入一致、完整留在首尾安全区且间距至少 4pt，并覆盖 100pt 硬约束的确定性降密度与 12 个 gap 的 compact Timeline 容量扩展。
   - [x] B1：本批次未创建 simulator。测试宿主已退出，`build/Task25Geometry*` 与全部 xcresult 已删除，确认没有引用这些路径的 `xcodebuild`、`xctest`、UI runner 或 app 进程，且没有 Booted simulator。
   - [x] B2：新增隔离的双 gap fixture：09:00–12:00、14:00–14:10、16:10–18:00 三段稳定产生两个 `2 hr skipped` 标注；专用 `--uitesting-gap-label-collision` 参数与 18:00 固定 reference date 不影响其他 demo/test 路径。
-  - [x] B2：新增一条共享 iPhone/iPad/macOS UI 回归入口；它对可见 AX frame 去重，要求两个标注的横向 footprint 确实重叠、最终矩形不相交且保留至少 3pt 的像素取整后间距。iPad 同一测试覆盖 portrait 与 landscape，并分别产出截图；所有截图入口都仅面向 simulator/macOS。
+  - [x] B2：新增一条共享 iPhone/iPad/macOS UI 回归入口；它对精确文案命中的可见 AX frame 做真实标签 footprint 过滤并去重，要求两个最终矩形不相交；X footprint 重叠时至少保留 3pt 纵向间距，宽屏自然横向分开时至少保留 3pt 横向间距。iPad 同一测试覆盖 portrait 与 landscape，并分别产出截图；所有截图入口都仅面向 simulator/macOS。
   - [x] B2：2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试宿主运行完整 `HomeUIContractTests`。新增 `multipleGapTimelineFixtureCoversCompactAndHorizontalCollisionLayouts` 通过；测试组仍因任务开始前已存在的 `quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions`（报告两次）与 `trackingEntrypointsShareAvailabilityAndRunningStateSemantics` 失败而以 65 退出，未把它误记为全绿。编译及本任务契约验证成功。
   - [x] B2：本批次没有创建 simulator；`build/Task25Fixture`、对应 xcresult、测试宿主及派生进程均已清理，确认没有 Booted simulator。
 - [~] Checkpoint C：owned UI 设备矩阵截图、精确 Release 安装与收口。
@@ -48,6 +48,6 @@
 
 - [x] owned iPhone batch：`Task25-iPhone-17-Pro`，UDID `D6759E45-FE6C-4BB1-8FAD-BDF341594468`，iPhone 17 Pro / iOS 27.0。顺序复跑后唯一 Task 25 用例 1/1 通过；自动断言确认两个 `2 hr skipped` 的真实 label frame 横向 footprint 重叠但最终不相交并保持间距。原始 XCTest 截图显示两个胶囊在左侧纵轴清晰分开，第二项以短 connector 保留真实时间锚点，三段任务条、图标、虚线和刻度均正常。首次双 simulator 并发只产生 CoreSimulator app launch timeout；首次顺序产品断言又暴露纯 `label` 查询会同时命中两个祖先语义 frame，最终查询收窄到生产已有的 `timeline.gap.*` identifier，避免把容器误计为标签。XCTest 已终止 app/runner，owned UDID 已 shutdown/delete，`build/Task25UIPhone*`、xcresult、失败录像与导出截图均已删除，确认没有该 UDID 或相关进程残留。
 - [x] owned iPad batch：`Task25-iPad-Pro-11`，UDID `02B4E95F-C009-43B5-AA48-C96DEA0F92CD`，iPad Pro 11-inch (M5) / iOS 27.0。最终唯一 Task 25 用例 1/1 通过，portrait 与 landscape 均读取两个真实 32pt 高 gap label frame；较窄 portrait 中两个 96pt footprint 相交时被分配到独立 annotation row，landscape 宽度足够时保持同一行至少 3pt 水平间距，两个方向的矩形都不相交。两张原始 XCTest 截图均显示胶囊、三段任务条、图标、虚线、刻度和记录列表清楚正常。首轮与 iPhone 并发只产生 app launch timeout；首个顺序运行确认 iPad regular-width 的父 `home.timeline` 会覆盖子 identifier，因此最终查询使用精确文案并限制到真实 40...110pt × 16...40pt label footprint，排除大尺寸祖先语义 frame；第二轮仅因 landscape 宽度使理想标签本就不相交而调整成按 X/Y 实际分离方向断言。XCTest 已终止 app/runner，owned UDID 已 shutdown/delete，`build/Task25UIIPad*`、xcresult、失败诊断与导出截图均已删除，确认没有该 UDID 或相关进程残留。
-- Task 25 最终 iPhone 17 Pro 复核 simulator：`9849F363-B3DC-4733-8070-19677EEFE11A`（iOS 27.0；owned，仅用于最终跨平台查询复核）。
+- [x] owned 最终 iPhone 复核 batch：`Task25-iPhone-Final`，UDID `9849F363-B3DC-4733-8070-19677EEFE11A`，iPhone 17 Pro / iOS 27.0。最终 footprint 过滤与按实际 X/Y 分离方向断言的唯一 Task 25 用例 1/1 通过；原始 XCTest 截图确认两个 `2 hr skipped` 胶囊在左侧纵轴分离清晰、短 connector 保留锚点，三段任务条、图标、虚线、刻度与列表正常。XCTest 已终止 app/runner，owned UDID 已 shutdown/delete，`build/Task25UIPhoneFinalQuery*`、xcresult 与导出截图均已删除，确认无该 UDID、Booted device 或相关进程残留。
 - [x] macOS UI batch：唯一 Task 25 用例 1/1 通过。AX 几何自动证明两个 `2 hr skipped` 横向 footprint 重叠但最终 frame 不相交并保持间距；原始 XCTest attachment 是有效前台 App 截图，两个胶囊位于独立标注行且清晰可读，三段任务条、图标、刻度和记录列表正常。XCTest 已终止 app/runner；`build/Task25UIMac`、xcresult 与导出截图均已删除，确认没有相关进程。
-- 最终复核结束后必须删除新建的 owned iPhone，并确认无 Booted device、DerivedData、xcresult 或导出截图残留；前两台 owned 设备已经删除。
+- [x] UI 设备矩阵资源总清理：三台 owned simulator 均已删除；Simulator 与 Problem Reporter 已退出；无 Booted device、Task 25 DerivedData、xcresult、导出截图、app/runner 或相关测试进程残留。

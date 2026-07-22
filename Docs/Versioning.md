@@ -16,19 +16,27 @@ Example:
 
 ## Local Git Hook
 
-The repository includes `.githooks/pre-commit`. Enable it once per clone:
+The repository includes `.githooks/pre-commit`. Install it once per clone:
 
 ```sh
-git config core.hooksPath .githooks
+scripts/install_git_hooks.sh
 ```
 
-The hook runs `scripts/bump_marketing_version.sh`, stages `timetracker.xcodeproj/project.pbxproj`, and then lets the commit continue.
-
-Use this only for emergency commits where a version bump is not wanted:
+Git intentionally does not activate hooks from tracked files after a clone. The installer sets this clone's local `core.hooksPath` to `.githooks` and verifies that the executable pre-commit hook resolves correctly. Check an existing clone without changing it with:
 
 ```sh
-SKIP_VERSION_BUMP=1 git commit -m "Commit message"
+scripts/install_git_hooks.sh --check
 ```
+
+The hook runs `scripts/stage_commit_version.sh`. It derives the next version from `HEAD`, so repeating a failed commit attempt is idempotent. It updates only the version fields in the index and working copy: already staged project changes stay staged, while unrelated unstaged project changes remain unstaged.
+
+Run the isolated Git integration test with:
+
+```sh
+scripts/test_versioning_hooks.sh
+```
+
+Every `git commit`, including `--allow-empty` and `--amend`, advances the version. The standard Git `--no-verify` escape can bypass client-side hooks, so release verification must still confirm the installed bundle version.
 
 ## Build Metadata
 

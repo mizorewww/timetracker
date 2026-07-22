@@ -13,6 +13,8 @@ Also read any task-relevant files referenced by those skills before making chang
 
 The primary agent must commit its completed work after every small, coherent task has been implemented and verified. Do not wait until the entire repository-wide goal is finished before creating commits.
 
+Before the first commit in a clone, run `scripts/install_git_hooks.sh`; use `scripts/install_git_hooks.sh --check` to verify later checkpoints. The tracked hook must remain active so every normal commit advances the app marketing version and build number.
+
 - Keep each commit focused, reviewable, and safe to revert.
 - Run the tests or checks appropriate to that task before committing.
 - Stage only completed work; do not capture another active agent's half-finished edit.

@@ -16,10 +16,32 @@
 PROJECT_FILE=/tmp/timetracker.pbxproj ./scripts/bump_marketing_version.sh
 ```
 
-正常提交时 `.githooks/pre-commit` 会自动调用它并暂存项目文件。若某次紧急提交不应递增版本，请使用：
+该脚本保留给显式手动递增或临时副本验证。正常提交由 `.githooks/pre-commit` 调用下文的 `stage_commit_version.sh`，以免暂存无关工程修改。
+
+## `install_git_hooks.sh`
+
+为当前 clone 幂等配置 `core.hooksPath=.githooks`，并验证仓库内的 pre-commit hook 存在且可执行。Git 不会在 clone 后自动信任 tracked hook，因此每个新 clone 需要执行一次：
 
 ```sh
-SKIP_VERSION_BUMP=1 git commit -m "message"
+scripts/install_git_hooks.sh
+```
+
+只读检查当前 clone：
+
+```sh
+scripts/install_git_hooks.sh --check
+```
+
+## `stage_commit_version.sh`
+
+由 pre-commit hook 调用。下一版本始终按 `HEAD + 1 patch/build` 计算，因此同一次失败提交反复重试不会继续累加。脚本直接更新 Git index 中的 project blob，只同步工作树的版本字段，不会把其他未暂存的 Xcode 工程改动带入提交。
+
+## `test_versioning_hooks.sh`
+
+在隔离 HOME 的临时 Git 仓库中安装真实 hook，验证连续提交与 `--allow-empty`/`--amend` 递增、commit-msg 失败重试幂等、12 组版本一致、未暂存 project 修改不会泄漏进 commit，以及异常版本状态会在修改前被拒绝。测试结束自动删除临时仓库：
+
+```sh
+scripts/test_versioning_hooks.sh
 ```
 
 ## `write_build_info_plist.sh`

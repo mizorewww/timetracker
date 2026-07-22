@@ -21,7 +21,6 @@ struct TimerText: View {
                 )
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
 
             if isStale {
                 Image(systemName: "exclamationmark.clock.fill")
@@ -29,18 +28,18 @@ struct TimerText: View {
                     .foregroundStyle(.white.opacity(0.72))
             }
         }
-        .frame(
-            minWidth: style == .lockScreen ? 78 : 64,
-            idealWidth: style == .lockScreen ? 88 : 72,
-            maxWidth: style == .lockScreen ? 104 : 84,
-            minHeight: 44,
-            alignment: .trailing
-        )
+        .frame(minHeight: 44, alignment: .trailing)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: isStale ? "live.timer.stale" : "live.timer.elapsed"))
         .accessibilityValue(stopwatchText)
         .accessibilityHint(
             isStale ? String(localized: "live.timer.staleHint") : ""
+        )
+        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityIdentifier(
+            style == .lockScreen
+                ? "liveActivity.lockScreen.timer"
+                : "liveActivity.expanded.timer"
         )
     }
 
@@ -59,17 +58,12 @@ struct TimerText: View {
 
 struct CompactTimerText: View {
     let startedAt: Date
-    let isStale: Bool
 
     var body: some View {
-        stopwatchText
-            .accessibilityValue(stopwatchText)
-            .accessibilityHint(
-                isStale ? String(localized: "live.timer.staleHint") : ""
-            )
+        fullStopwatchText
     }
 
-    private var stopwatchText: Text {
+    var fullStopwatchText: Text {
         Text(
             .currentDate,
             format: .stopwatch(

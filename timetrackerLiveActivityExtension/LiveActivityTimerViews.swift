@@ -41,6 +41,24 @@ enum LiveActivityTimerRowStyle {
             .expanded
         }
     }
+
+    var summaryLayoutPriority: Double {
+        switch self {
+        case .lockScreen:
+            1
+        case .dynamicIsland:
+            2
+        }
+    }
+
+    var timerLayoutPriority: Double {
+        switch self {
+        case .lockScreen:
+            2
+        case .dynamicIsland:
+            1
+        }
+    }
 }
 
 struct LiveActivityTimerRow: View {
@@ -54,12 +72,18 @@ struct LiveActivityTimerRow: View {
             if dynamicTypeSize.isAccessibilitySize {
                 stackedContent
             } else {
-                ViewThatFits(in: .horizontal) {
+                switch style {
+                case .lockScreen:
+                    ViewThatFits(in: .horizontal) {
+                        horizontalContent
+                        stackedContent
+                    }
+                case .dynamicIsland:
                     horizontalContent
-                    stackedContent
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var horizontalContent: some View {
@@ -71,11 +95,10 @@ struct LiveActivityTimerRow: View {
                 showsPath: style.showsPath,
                 allowsWrapping: false
             )
-
-            Spacer(minLength: 6)
+            .layoutPriority(style.summaryLayoutPriority)
 
             timer
-                .layoutPriority(2)
+                .layoutPriority(style.timerLayoutPriority)
         }
     }
 
@@ -118,6 +141,11 @@ struct ActivityTaskSummary: View {
                 .foregroundStyle(.white)
                 .lineLimit(allowsWrapping ? 2 : 1)
                 .privacySensitive()
+                .accessibilityIdentifier(
+                    showsPath
+                        ? "liveActivity.lockScreen.title"
+                        : "liveActivity.expanded.title"
+                )
 
             if showsPath {
                 ViewThatFits(in: .horizontal) {
@@ -132,8 +160,6 @@ struct ActivityTaskSummary: View {
                 .privacySensitive()
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .layoutPriority(1)
     }
 }
 

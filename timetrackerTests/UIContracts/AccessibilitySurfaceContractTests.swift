@@ -34,8 +34,15 @@ struct AccessibilitySurfaceContractTests {
         #expect(widget.contains("Text(WidgetElapsedFormatter.clock(seconds))"))
         #expect(widget.contains(".accessibilityValue(Text(generatedAt, style: .relative))"))
         #expect(liveActivity.contains("struct CompactTimerText"))
-        #expect(liveActivity.contains(".accessibilityValue(elapsedAccessibilityValue)"))
-        #expect(liveActivity.contains("Text(LiveActivityElapsedFormatter.clock(seconds))"))
+        #expect(liveActivity.contains("format: .stopwatch("))
+        #expect(liveActivity.contains(".accessibilityValue(stopwatchText)"))
+        #expect(liveActivity.contains(".accessibilityValue(timer.fullStopwatchText)"))
+        #expect(liveActivity.components(separatedBy: "maxFieldCount: 3").count - 1 == 2)
+        #expect(liveActivity.contains("visibleFieldCount") == false)
+        #expect(liveActivity.contains(".fontWidth(.condensed)"))
+        #expect(liveActivity.contains(".fontWidth(.compressed)"))
+        #expect(liveActivity.contains(".accessibilityHidden(true)"))
+        #expect(liveActivity.contains(".accessibilityAddTraits(.updatesFrequently)"))
         #expect(liveActivity.contains("live.timer.staleHint"))
     }
 

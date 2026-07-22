@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 
 @Suite(.serialized)
@@ -49,8 +50,24 @@ struct SystemSurfaceInteractionContractTests {
         #expect(!timer.contains("timerInterval:"))
         #expect(!timer.contains("LiveActivityElapsedFormatter.clock(seconds)"))
         #expect(bundle.contains("CompactTimerText("))
-        #expect(bundle.contains("isStale: context.isStale"))
+        #expect(bundle.contains("context.isStale ? \"live.timer.stale\" : \"live.timer.elapsed\""))
+        #expect(bundle.contains("context.isStale ? String(localized: \"live.timer.staleHint\") : \"\""))
         #expect(timer.contains(".accessibilityValue(stopwatchText)"))
+    }
+
+    @Test
+    func liveActivityStopwatchKeepsAThreeFieldSixteenHourClock() {
+        let startedAt = Date(timeIntervalSince1970: 0)
+        let currentDate = startedAt.addingTimeInterval(16 * 3_600 + 2 * 60 + 3)
+        let style = SystemFormatStyle.Stopwatch(
+            startingAt: startedAt,
+            showsHours: true,
+            maxFieldCount: 3,
+            maxPrecision: .seconds(1)
+        )
+        .locale(Locale(identifier: "en_US_POSIX"))
+
+        #expect(String(style.format(currentDate).characters) == "16:02:03")
     }
 
     @Test
@@ -101,18 +118,55 @@ struct SystemSurfaceInteractionContractTests {
         let bundle = try sourceText(
             "timetrackerLiveActivityExtension/TimeTrackerLiveActivityBundle.swift"
         )
+        let timer = try sourceText(
+            "timetrackerLiveActivityExtension/LiveActivityTimerPresentationViews.swift"
+        )
         let support = try sourceText(
             "timetrackerLiveActivityExtension/LiveActivitySupport.swift"
+        )
+        let systemTest = try sourceText(
+            "timetrackerUITests/LiveActivitySystemSurfaceUITests.swift"
         )
 
         #expect(lockScreen.contains("struct LiveActivityTimerRow: View"))
         #expect(lockScreen.contains("dynamicTypeSize.isAccessibilitySize"))
         #expect(lockScreen.contains("ViewThatFits(in: .horizontal)"))
+        #expect(lockScreen.contains("case .dynamicIsland:\n                    horizontalContent"))
         #expect(lockScreen.contains("horizontalContent"))
         #expect(lockScreen.contains("stackedContent"))
         #expect(lockScreen.contains("case dynamicIsland"))
         #expect(lockScreen.contains("self == .lockScreen"))
         #expect(lockScreen.contains(".lineLimit(allowsWrapping ? 2 : 1)"))
+        #expect(lockScreen.contains("Spacer(minLength: 6)") == false)
+        #expect(lockScreen.contains(".layoutPriority(style.summaryLayoutPriority)"))
+        #expect(lockScreen.contains(".layoutPriority(style.timerLayoutPriority)"))
+        #expect(lockScreen.contains("var summaryLayoutPriority: Double"))
+        #expect(lockScreen.contains("var timerLayoutPriority: Double"))
+        let summaryPrioritySource = lockScreen
+            .components(separatedBy: "var summaryLayoutPriority: Double")
+            .last?
+            .components(separatedBy: "var timerLayoutPriority: Double")
+            .first ?? ""
+        #expect(summaryPrioritySource.contains(
+            "case .lockScreen:\n            1\n        case .dynamicIsland:\n            2\n"
+        ))
+        let timerPrioritySource = lockScreen
+            .components(separatedBy: "var timerLayoutPriority: Double")
+            .last?
+            .components(separatedBy: "struct LiveActivityTimerRow: View")
+            .first ?? ""
+        #expect(timerPrioritySource.contains(
+            "case .lockScreen:\n            2\n        case .dynamicIsland:\n            1\n"
+        ))
+        let summarySource = lockScreen
+            .components(separatedBy: "struct ActivityTaskSummary: View")
+            .last?
+            .components(separatedBy: "struct ActivityIconView: View")
+            .first ?? ""
+        #expect(summarySource.contains(".frame(maxWidth: .infinity") == false)
+        #expect(summarySource.contains(".layoutPriority(") == false)
+        #expect(lockScreen.contains("liveActivity.lockScreen.title"))
+        #expect(lockScreen.contains("liveActivity.expanded.title"))
         #expect(expanded.contains("LiveActivityTimerRow("))
         #expect(expanded.contains("style: .dynamicIsland"))
         #expect(expanded.contains("ActivityTaskSummary(") == false)
@@ -122,6 +176,30 @@ struct SystemSurfaceInteractionContractTests {
         #expect(bundle.contains("DynamicIslandExpandedRegion(.trailing)") == false)
         #expect(bundle.contains("Text(context.state.taskTitle)"))
         #expect(bundle.components(separatedBy: "CompactTimerText(").count - 1 == 2)
+        #expect(bundle.contains(".minimumScaleFactor(") == false)
+        #expect(bundle.contains(".frame(maxWidth: 62") == false)
+        #expect(bundle.contains(".frame(maxWidth: 50") == false)
+        #expect(bundle.contains(".frame(maxWidth: 45") == false)
+        #expect(bundle.contains(".fontWidth(.condensed)"))
+        #expect(bundle.contains(".fontWidth(.compressed)"))
+        #expect(bundle.contains(".accessibilityValue(timer.fullStopwatchText)"))
+        #expect(bundle.contains(".accessibilityHidden(true)"))
+        #expect(timer.components(separatedBy: "maxFieldCount: 3").count - 1 == 2)
+        #expect(timer.contains("visibleFieldCount") == false)
+        #expect(timer.contains("idealWidth:") == false)
+        #expect(timer.contains("maxWidth: style == .lockScreen") == false)
+        #expect(timer.contains(".minimumScaleFactor(") == false)
+        #expect(timer.contains(".fixedSize(horizontal: true") == false)
+        #expect(systemTest.contains("#if os(iOS) && targetEnvironment(simulator)"))
+        #expect(systemTest.contains("physicalDeviceModelIdentifier") == false)
+        #expect(systemTest.contains("liveActivity.compact.leading"))
+        #expect(systemTest.contains("liveActivity.compact.timer"))
+        #expect(systemTest.contains("liveActivity.lockScreen.timer"))
+        #expect(systemTest.contains("liveActivity.expanded.timer"))
+        #expect(systemTest.contains("import Vision"))
+        #expect(systemTest.contains("assertScreenshotContainsLongElapsedClock"))
+        #expect(systemTest.contains("request.regionOfInterest = normalizedRegionOfInterest"))
+        #expect(systemTest.contains("allow.isHittable") == false)
         #expect(lockScreen.contains("Button(intent:") == false)
         #expect(expanded.contains("Button(intent:") == false)
         #expect(support.contains("timetracker://timer/stop") == false)

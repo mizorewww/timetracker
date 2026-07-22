@@ -29,38 +29,53 @@ struct TimeTrackerLiveActivityWidget: Widget {
                         Text(context.state.taskTitle)
                             .font(.caption2.weight(.semibold))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
                             .privacySensitive()
                     }
-                    .frame(maxWidth: 62, alignment: .leading)
                 }
                 .accessibilityLabel(context.state.taskTitle)
+                .accessibilityIdentifier("liveActivity.compact.leading")
             } compactTrailing: {
+                let timer = CompactTimerText(
+                    startedAt: context.state.startedAt
+                )
                 Link(destination: LiveActivityDeepLinks.today) {
-                    CompactTimerText(
-                        startedAt: context.state.startedAt,
-                        isStale: context.isStale
-                    )
+                    timer
                         .font(.caption2.monospacedDigit().weight(.semibold))
+                        .fontWidth(.condensed)
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .frame(maxWidth: 50)
+                        .accessibilityHidden(true)
                 }
-                .accessibilityLabel(String(localized: "live.timer.elapsed"))
+                .accessibilityLabel(
+                    String(localized: context.isStale ? "live.timer.stale" : "live.timer.elapsed")
+                )
+                .accessibilityValue(timer.fullStopwatchText)
+                .accessibilityHint(
+                    context.isStale ? String(localized: "live.timer.staleHint") : ""
+                )
+                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityIdentifier("liveActivity.compact.timer")
             } minimal: {
+                let timer = CompactTimerText(
+                    startedAt: context.state.startedAt
+                )
                 Link(destination: LiveActivityDeepLinks.today) {
-                    CompactTimerText(
-                        startedAt: context.state.startedAt,
-                        isStale: context.isStale
-                    )
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-                    .frame(maxWidth: 45)
+                    timer
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .fontWidth(.compressed)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .accessibilityHidden(true)
                 }
-                .accessibilityLabel(String(localized: "live.timer.elapsed"))
+                .accessibilityLabel(
+                    String(localized: context.isStale ? "live.timer.stale" : "live.timer.elapsed")
+                )
+                .accessibilityValue(timer.fullStopwatchText)
+                .accessibilityHint(
+                    context.isStale ? String(localized: "live.timer.staleHint") : ""
+                )
+                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityIdentifier("liveActivity.minimal.timer")
             }
             .keylineTint(activityColor(context.state.colorHex))
             .widgetURL(LiveActivityDeepLinks.today)

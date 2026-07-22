@@ -8,7 +8,7 @@
 - [x] 领取反馈，复现并审计彩色任务条无法包住图标、记录列表仍使用圆点的问题。
 - [x] 对照 Apple HIG、SwiftUI 布局语义与成熟图表实现，确定图标最小 footprint 和密集时间段降级策略。
 - [x] 实现共享跨平台布局与记录图标，并补充纯布局/契约测试。
-- [~] 使用 owned iPhone/iPad simulator 与 XCTest 自动化 macOS window 做截图验收并清理资源。
+- [x] 使用 owned iPhone/iPad simulator 与 XCTest 自动化 macOS window 做截图验收并清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -29,7 +29,7 @@
 
 - [x] Checkpoint A：静态根因、现有组件/依赖与成熟方案审计。
 - [x] Checkpoint B：任务条最小 icon footprint、记录图标与纯布局/契约回归。
-- [~] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
+- [x] Checkpoint C：owned UI 设备矩阵与脚本截图验收。
 - [ ] Checkpoint D：精确 Release 安装、状态标记与收口。
 
 ## Checkpoint A 静态证据
@@ -57,14 +57,16 @@
 
 ### 全脚本验收契约
 
-- 扩展现有 `--uitesting-overlap-timeline` fixture 和 `assertOverlappingTimelineMarks`，由 XCTest 对水平/垂直两种时间轴的条尺寸直接断言 `>= 20pt`，并比较实际 icon frame 与 bar frame，容许 `0.5pt` 像素舍入后四边仍至少保留 `3.5pt`。
+- 扩展现有 `--uitesting-overlap-timeline` fixture 和 `assertOverlappingTimelineMarks`，由 XCTest 对水平/垂直两种时间轴的条尺寸直接断言 `>= 20pt`，并确认每条都包含带独立标识的 SF Symbol 语义元素。macOS 会把 overlay icon 的 AX frame 扩成 bar frame，因此精确 `12 + 2×4 = 20pt` 由纯布局测试证明，实际 padding 由自动截图验收，不能伪造 AX frame。
 - 记录按钮增加稳定的图标测试 identifier，XCTest 自动滚动到带指定 SF Symbol 的记录行后截图。
 - macOS 流程在测试内调用 `placeMainWindowOnPrimaryScreen`，随后断言前台状态与 window/frame 包含关系；不再手工调窗口。
 - 所有截图只由 owned iPhone/iPad simulator 或 macOS XCTest 生成；物理机仍只做 Release 安装和只读签名/版本核验。
 
 ## 资源所有权
 
-- 当前未创建 simulator；任何 UI batch 开始前必须记录专属名称与 UDID，完成后 shutdown/delete。
+- owned iPhone：`Task26-iPhone17Pro-20260722`，UDID `A76C44CB-C7D6-424F-A1AB-E8FB27AE842E`。
+- owned iPad：`Task26-iPadPro11M5-20260722`，UDID `3D78D87A-A727-4E51-867E-AD6296441B9D`。
+- 两台设备仅供 Checkpoint C；batch 完成后必须 terminate app、shutdown、delete，并验证没有 owned runner/process/Booted device。
 
 ## Checkpoint B 实现与验证
 
@@ -75,3 +77,15 @@
 - 精确回归通过：`AnalyticsTimelineTests` 全部 35 项以及本任务拥有的两项 `HomeUIContractTests`，合计 37 项；命令退出码 `0`、`** TEST SUCCEEDED **`。
 - 首次运行完整 `HomeUIContractTests` 时另有三项与本任务无关的既有契约失败（timer button 源码形状断言两处、tracking entrypoint 计数一处）；本任务拥有的旧 `.ignore` 断言已同步为 `.contain` 并在精确回归中通过，未擅自修改无关失败。
 - 本 checkpoint 未创建 simulator、未打开或手工移动窗口；无 owned UI 资源需要清理。
+
+## Checkpoint C 当前证据
+
+- macOS XCTest 已全自动启动并定位 app window；未手工拖动窗口。系统遗留的 `screencaptureui` 工具栏一度阻塞 hit point，编排脚本清理该临时系统 UI 后重跑通过。
+- 修正了原 UI 验收的语义定位漏洞：desktop `TimelineSection` 使用 `.accessibilityElement(children: .contain)`，避免 `home.timeline` 覆盖 bar、icon 与 record identifiers；脚本只查询 `timeline.bar.*` / `timeline.barIcon.*`。
+- macOS overlap UI test 通过，自动截图 `mac-home-overlap-timeline` 与 `mac-home-overlap-timeline-record-icons` 已从 xcresult 导出并检查：11 条彩色条保留图标 footprint，记录行中 rectangle/star/bolt 使用真实任务 SF Symbol。
+- iPhone 17 Pro（iOS 27）最终 UI test 通过，`1 passed / 0 failed / 0 skipped`；自动截图 `iphone-home-overlap-timeline` 与 `iphone-home-overlap-timeline-record-icons` 已从 xcresult 导出并检查。
+- iPad Pro 11-inch M5（iPadOS 27）最终 UI test 通过，`1 passed / 0 failed / 0 skipped`；测试脚本自动覆盖 portrait/landscape，并生成两种 Timeline 与 landscape 记录图标截图。首次诊断运行因重复 AX frame 查询导致耗时异常，由编排器只中断本批 owned 进程；随后将几何读取改为一次 snapshot 缓存，优化后的完整运行通过。
+- macOS 最终冷 DerivedData 重跑通过，`1 passed / 0 failed / 0 skipped`；用例耗时 `45.761s`，窗口定位、滚动与截图均由 XCTest 自动完成，无手工窗口操作。
+- Checkpoint C 两项源码契约精确执行并通过，`2 passed / 0 failed / 0 skipped`；一次漏写 Swift Testing 方法名 `()` 的选择器空跑未计入验证，已用正确标识重跑。
+- 三平台截图均显示彩色条至少保留 `20pt` 图标 footprint；记录行中 `rectangle.3.group`、`star.fill`、`bolt.fill` 为真实任务 SF Symbol。
+- 已 terminate app（两台设备均确认当时无残留实例）、shutdown 并删除 owned iPhone `A76C44CB-C7D6-424F-A1AB-E8FB27AE842E` 与 owned iPad `3D78D87A-A727-4E51-867E-AD6296441B9D`；复核无 `Task26`/Booted device、owned `xcodebuild`/`xctest`/UI runner/App/扩展进程，也没有本批 Simulator 或 Problem Reporter UI 残留。

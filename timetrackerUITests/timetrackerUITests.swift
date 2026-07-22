@@ -3680,6 +3680,9 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: ["--uitesting-overlap-timeline"]
         )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
         XCTAssertTrue(homeIsReady(in: app))
 
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
@@ -3731,6 +3734,19 @@ final class timetrackerUITests: XCTestCase {
             try capture("iphone-home-overlap-timeline", app: app)
         }
         #endif
+
+        assertOverlappingTimelineRecordIcons(in: app)
+        waitForScreenshotTransition()
+        let recordScreenshotPrefix = platformScreenshotPrefix(in: app)
+        let recordScreenshotName = switch recordScreenshotPrefix {
+        case "ipad":
+            "ipad-home-overlap-timeline-record-icons-landscape"
+        case "iphone":
+            "iphone-home-overlap-timeline-record-icons"
+        default:
+            "mac-home-overlap-timeline-record-icons"
+        }
+        try capture(recordScreenshotName, app: app)
     }
 
     @MainActor
@@ -5849,23 +5865,82 @@ final class timetrackerUITests: XCTestCase {
     ) throws {
         let expectedTitles = ["Timeline Overlap Context"] +
             (1...10).map { String(format: "Timeline Burst %02d", $0) }
-        let query = app.otherElements.matching(
-            NSPredicate(format: "label IN %@", expectedTitles)
+        let query = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label IN %@",
+                "timeline.bar.",
+                expectedTitles
+            )
         )
+        let contextMark = query.matching(
+            NSPredicate(format: "label == %@", "Timeline Overlap Context")
+        ).firstMatch
+        scrollTodayUntilHittable(contextMark, in: app)
         XCTAssertTrue(
-            waitUntil(timeout: 5) { query.count >= 11 },
+            waitUntil(timeout: 5) { query.count == expectedTitles.count },
             "The isolated fixture must render one context mark and ten burst marks."
         )
-        let marks = query.allElementsBoundByIndex.filter { mark in
-            mark.frame.width > 0 &&
-                mark.frame.height > 0 &&
-                !mark.identifier.hasPrefix("sidebar.task.")
-        }
+        let marks: [(label: String, frame: CGRect)] =
+            query.allElementsBoundByIndex.compactMap { mark in
+                let frame = mark.frame
+                guard frame.width > 0, frame.height > 0 else { return nil }
+                return (label: mark.label, frame: frame)
+            }
         XCTAssertEqual(
             marks.count,
             11,
             "The overlap fixture must stay isolated from the regular demo timeline."
         )
+
+        let footprintTolerance: CGFloat = 0.5
+        let expectedIconLabels = expectedTitles.map { "\($0) icon" }
+        let icons = app.images.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label IN %@",
+                "timeline.barIcon.",
+                expectedIconLabels
+            )
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { icons.count >= expectedIconLabels.count },
+            "Every overlap bar must expose its actual SF Symbol frame."
+        )
+        let iconSnapshots = icons.allElementsBoundByIndex.reduce(
+            into: [String: (identifier: String, frame: CGRect)]()
+        ) { result, icon in
+            result[icon.label] = (
+                identifier: icon.identifier,
+                frame: icon.frame
+            )
+        }
+        for mark in marks {
+            XCTAssertGreaterThanOrEqual(
+                mark.frame.width,
+                20 - footprintTolerance,
+                "\(mark.label) must preserve the icon footprint horizontally."
+            )
+            XCTAssertGreaterThanOrEqual(
+                mark.frame.height,
+                20 - footprintTolerance,
+                "\(mark.label) must preserve the icon footprint vertically."
+            )
+
+            let iconLabel = "\(mark.label) icon"
+            let icon = try XCTUnwrap(
+                iconSnapshots[iconLabel],
+                "Missing actual icon element for \(mark.label)."
+            )
+            let iconFrame = icon.frame
+            XCTAssertTrue(icon.identifier.hasPrefix("timeline.barIcon."))
+            XCTAssertGreaterThan(iconFrame.width, 0)
+            XCTAssertGreaterThan(iconFrame.height, 0)
+            XCTAssertTrue(
+                mark.frame
+                    .insetBy(dx: -footprintTolerance, dy: -footprintTolerance)
+                    .contains(iconFrame),
+                "\(mark.label) must contain its SF Symbol accessibility element."
+            )
+        }
 
         let laneCoordinates = Set(marks.map { mark in
             let midpoint = usesHorizontalTimeAxis
@@ -5912,6 +5987,43 @@ final class timetrackerUITests: XCTestCase {
             usesHorizontalTimeAxis
                 ? "Horizontal timelines must overlap in X and separate lanes in Y."
                 : "The iPhone timeline must overlap in Y and separate lanes in X."
+        )
+    }
+
+    @MainActor
+    private func assertOverlappingTimelineRecordIcons(
+        in app: XCUIApplication
+    ) {
+        let expectedRecords = [
+            (title: "Timeline Burst 02", symbol: "star.fill"),
+            (title: "Timeline Burst 01", symbol: "bolt.fill"),
+            (title: "Timeline Overlap Context", symbol: "rectangle.3.group"),
+        ]
+        var records: [XCUIElement] = []
+
+        for expected in expectedRecords {
+            let identifierPrefix = "timeline.record.\(expected.symbol)."
+            let record = app.buttons.matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                identifierPrefix,
+                expected.title
+            )).firstMatch
+            scrollTodayUntilHittable(record, in: app)
+            XCTAssertTrue(
+                record.waitForExistence(timeout: 5) && record.isHittable,
+                "Missing visible \(expected.title) record with \(expected.symbol)."
+            )
+            XCTAssertTrue(record.identifier.hasPrefix(identifierPrefix))
+            XCTAssertTrue(
+                app.windows.firstMatch.frame.intersects(record.frame),
+                "\(expected.title) must be visible inside the app window."
+            )
+            records.append(record)
+        }
+
+        XCTAssertTrue(
+            records.allSatisfy { $0.exists && $0.isHittable },
+            "The three fixture icon rows must be visible together for screenshot evidence."
         )
     }
 

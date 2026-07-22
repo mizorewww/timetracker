@@ -950,6 +950,9 @@ struct HomeUIContractTests {
         let homeTimelineSource = try sourceText(
             "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
         )
+        let chartBarsSource = try sourceText(
+            "timetracker/SharedUI/Components/TimelineChartBars.swift"
+        )
 
         #expect(seedSource.contains("--uitesting-overlap-timeline"))
         #expect(seedSource.contains("addOverlappingTimelineUITestFixture("))
@@ -963,6 +966,7 @@ struct HomeUIContractTests {
         #expect(homeTimelineSource.contains("timelineReferenceDate(liveDate:"))
         #expect(homeTimelineSource.contains("--uitesting-overlap-timeline"))
         #expect(homeTimelineSource.contains("18 * 60 * 60"))
+        #expect(homeTimelineSource.contains(".accessibilityElement(children: .contain)"))
         #expect(
             uiTestSource.contains(
                 "testOverlappingShortTimelineProtectsGapAnnotationAcrossPlatforms"
@@ -970,10 +974,23 @@ struct HomeUIContractTests {
         )
         #expect(uiTestSource.contains("--uitesting-overlap-timeline"))
         #expect(uiTestSource.contains("assertOverlappingTimelineMarks("))
+        #expect(chartBarsSource.contains("timeline.bar.\\(entry.id.stableSortKey)"))
+        #expect(chartBarsSource.contains("timeline.barIcon.\\(entry.id.stableSortKey)"))
+        #expect(uiTestSource.contains("\"timeline.bar.\""))
+        #expect(uiTestSource.contains("\"timeline.barIcon.\""))
+        #expect(uiTestSource.contains("20 - footprintTolerance"))
+        #expect(uiTestSource.contains(".insetBy(dx: -footprintTolerance"))
+        #expect(uiTestSource.contains("expectedIconLabels"))
+        #expect(uiTestSource.contains("assertOverlappingTimelineRecordIcons("))
+        #expect(uiTestSource.contains("timeline.record.\\(expected.symbol)."))
+        #expect(uiTestSource.contains("try placeMainWindowOnPrimaryScreen(in: app)"))
         #expect(uiTestSource.contains("iphone-home-overlap-timeline"))
         #expect(uiTestSource.contains("ipad-home-overlap-timeline-portrait"))
         #expect(uiTestSource.contains("ipad-home-overlap-timeline-landscape"))
         #expect(uiTestSource.contains("mac-home-overlap-timeline"))
+        #expect(uiTestSource.contains("iphone-home-overlap-timeline-record-icons"))
+        #expect(uiTestSource.contains("ipad-home-overlap-timeline-record-icons-landscape"))
+        #expect(uiTestSource.contains("mac-home-overlap-timeline-record-icons"))
         #expect(uiTestSource.contains("The Task 23 fixture is phone-only."))
     }
 

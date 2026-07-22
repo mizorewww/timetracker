@@ -110,6 +110,7 @@ struct TimelineSection: View {
             }
             .appCard(padding: 0)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.timeline")
     }
 }

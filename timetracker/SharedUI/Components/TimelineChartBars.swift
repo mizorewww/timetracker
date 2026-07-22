@@ -18,6 +18,7 @@ extension TimelineChart {
             )
             .help("\(entry.title) \(shortRange(entry))")
             .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("timeline.bar.\(entry.id.stableSortKey)")
             .accessibilityLabel(entry.title)
             .accessibilityHidden(!exposesUITestingMarks)
     }
@@ -38,6 +39,7 @@ extension TimelineChart {
             .offset(x: x, y: placement.axisOrigin)
             .help("\(entry.title) \(shortRange(entry))")
             .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("timeline.bar.\(entry.id.stableSortKey)")
             .accessibilityLabel(entry.title)
             .accessibilityHidden(!exposesUITestingMarks)
     }
@@ -53,6 +55,7 @@ extension TimelineChart {
                 height: TimelineChartLayout.barIconExtent
             )
             .accessibilityLabel("\(entry.title) icon")
+            .accessibilityIdentifier("timeline.barIcon.\(entry.id.stableSortKey)")
             .accessibilityHidden(!exposesUITestingMarks)
             .frame(
                 width: TimelineChartLayout.minimumBarFootprint,

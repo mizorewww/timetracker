@@ -10,7 +10,7 @@
 - [x] 完成横向投影分轨、独立标注带与自适应高度的纯布局、契约和性能回归。
 - [x] 构造大量重叠、短任务的隔离 fixture，完成跨平台 UI 回归入口。
 - [x] 使用明确登记的 owned iPhone/iPad simulator 与本机 macOS 测试窗口进行 UI 验收并截图，随后清理资源。
-- [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -47,7 +47,7 @@
   - [x] post-commit review 发现多个 omitted-gap label 可能彼此覆盖；新增固定 96pt footprint 的确定性投影分行，按首个满足 4pt 间距的最低 annotation row 分配，实际 rowCount 同步扩展 label band 与总高度。没有伪造 UUID，也不把标签重新压回任务 plot。
   - [x] 2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 批次编译完整 UI test target；完整 `AnalyticsTimelineTests`、5,000 条性能样本及 3 项共享/fixture contract 共 38 项通过、0 失败，性能样本约 0.027 秒。
   - [x] 本 checkpoint 未创建 simulator。macOS 测试宿主已退出，`build/Task24Fixture` 与 xcresult 已删除，确认不存在引用该路径的 `xcodebuild`、`xctest`、UI runner 或 app 进程，且没有 Booted simulator。
-- [ ] Checkpoint C：owned UI 设备矩阵截图验收、精确 Release 安装与收口。
+- [x] Checkpoint C：owned UI 设备矩阵截图验收、精确 Release 安装与收口。
 
 ## 资源所有权
 
@@ -58,3 +58,5 @@
 - [x] 本机 macOS UI batch：同一 Task 24 用例最终 1/1 通过，11 个实际 bar 中 10 个互相重叠短任务占据 10 条独立 Y 轨道；最终原始 XCTest 截图同时展示任务 plot、`2 hr skipped` 独立标注带与记录列表，没有相交。首轮 shell identifier 断言因系统未暴露 `mac.splitNavigation` 而失败；第二轮确认侧栏同名任务会与图表 bar 同时命中，最终查询用父级 `home.timeline` 排除 `sidebar.task.*`。XCTest 已终止 app/runner，`build/Task24UIMac`、3 份 xcresult 与导出截图均已删除，确认无相关进程或 Booted simulator。
 - [x] 最终代码 owned iPhone 复核：`Task24-iPhone17Pro-Final-20260722`，UDID `9649BE9C-07B2-4FAB-930B-5483CE92CD8B`，iPhone 17 Pro / iOS 27.0。最终查询版本 1/1 通过；11 个 bar 自动断言证明 10 个相互重叠短任务占据 10 条 X 轨道，滚动后的原始 XCTest 截图完整显示 `2 hr skipped` 独立虚线标注与 10 个短任务图标，没有遮挡。一次重拍在进入测试逻辑前因 CoreSimulator App launch timeout 失败；仅重置 owned simulator 后复跑成功。XCTest 已终止 app/runner，随后 shutdown/delete UDID；`build/Task24UIPhoneFinal`、4 份 xcresult、失败录像与导出截图均已删除，确认无该 UDID、Booted device 或相关进程。
 - [x] 最终跨平台查询同时在 iPhone 与本机 macOS 复跑 1/1 通过：按精确 bar 标签查询，并排除 `sidebar.task.*`，不再依赖 compact/regular size class 不一致的 identifier 继承。macOS 最终几何用例通过；`app.screenshot()` 在后两次运行中受桌面前台焦点影响捕获到背景，尝试的窗口元素截图又被 macOS 27 XCTest 明确拒绝，因此视觉结论沿用同一产品实现、同一 fixture 先前已检查的有效 App 截图，不把背景图伪报为验收图。`build/Task24UIMacFinal`、4 份 xcresult、无效截图和测试进程均已清理。
+- [x] 2026-07-22 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 成功，iOS/iPadOS 与 macOS 均报告 `BUILD SUCCEEDED`；未设置 `LAUNCH_AFTER_INSTALL`，因此物理设备上只安装、不启动、不操作、不截图。Release `1.1.52 (107)` 已通过 `devicectl device info apps` 只读核验安装到 iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与 iPhone Air（`FBA36694-D841-56D4-8ED6-21942873B21B`），macOS app 已复制到 `/Applications/timetracker.app`。
+- [x] iOS 与 macOS Release 均通过 `codesign --verify --deep --strict`，bundle identifier `me.mezorewww.timetracker`、Team `LT98S43NKA`、Apple Development identity 保持完整；安装脚本结束后确认没有 Booted simulator 或 owned `xcodebuild`、`xctest`、UI runner、app/trace 进程残留，随后删除 `build/Install` 临时构建目录。

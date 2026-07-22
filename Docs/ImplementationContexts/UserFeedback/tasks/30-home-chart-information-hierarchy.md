@@ -8,7 +8,7 @@
 - [x] 领取反馈，审计主页统计图、渐变、标题位置与全部说明文字入口。
 - [x] 依据 Apple HIG、SwiftUI 规范与成熟系统组件制定信息层级和自动化验收契约。
 - [x] 实现统计卡片与 info 二级菜单，补齐定向测试和完全脚本化截图验收。
-- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -28,7 +28,7 @@
 
 - [x] Checkpoint A：范围领取、现状/依赖/HIG 审计与自动化验收设计。
 - [x] Checkpoint B：最小实现、定向单元/UI contract 与脚本化视觉验收。
-- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## 资源所有权
 
@@ -44,6 +44,7 @@
 - macOS 全程使用 XCUITest 的 `XCUICoordinate` 自动放置窗口和目标滚动，无手动窗口操作。Weekly 1/1 与 Heatmap 1/1 最终通过，后者结果为 `/tmp/timetracker-task30-mac-heatmap-rerun.xcresult`；主代理导出并检查了系统 popover 截图。跨平台语义读取兼容 `label`/`value`，Info 列表直接由脚本滚动。
 - 最终源码合同累计 6/6 通过：首轮 5 项通过，唯一失败是测试对 Swift 源码换行的过度精确匹配；改为匹配组件调用后聚焦复跑 1/1 通过。三套本地化 `plutil -lint` 与 `git diff --check` 均通过。
 - 清理完成：终止本批 app/runner，关闭并删除上述两个 owned 模拟器，核验无 `codex-task30`、Booted device、owned `xcodebuild`、`xctest`、runner 或 `/tmp/timetracker-task30` 进程残留；临时 xcresult/DerivedData/截图在记录结果后删除。
+- Checkpoint C 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 成功：iOS 与 macOS Release 均构建成功，iOS 主应用、内嵌 watchOS companion 与 `/Applications/timetracker.app` 均通过签名验证，TeamIdentifier 为 `LT98S43NKA`；macOS 可执行文件为 arm64 + x86_64 Universal。版本 `1.1.61 (116)` 已只读核验，并安装到物理 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 与 iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B`，两台设备查询到的已安装版本均为 `1.1.61 (116)`；未在物理设备启动、交互或截图。当前无可见物理 Apple Watch，因此脚本无法核验 embedded profile 对实体手表的覆盖范围，但内嵌 Watch app 本身签名有效；该限制如实保留且不影响本反馈交付。
 
 ## Checkpoint A 审计结论
 

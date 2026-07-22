@@ -2602,7 +2602,24 @@ final class timetrackerUITests: XCTestCase {
                 try capture("\(screenshotPrefix)-ai-prompt-checklist-editor", app: app)
             }
             activate(editor)
-            editor.typeText("\n\(uniqueInstructions)")
+            if kind == "taskPlan" {
+                editor.typeKey("a", modifierFlags: .command)
+                editor.typeText(
+                    "# Task plan instructions\n\n\(uniqueInstructions)\n\n" +
+                        "## Structure\n\n- Keep every step concrete."
+                )
+                let editedInstructions = editor.value as? String ?? ""
+                XCTAssertTrue(
+                    editedInstructions.hasPrefix("# Task plan instructions")
+                )
+                XCTAssertTrue(
+                    editedInstructions.contains(
+                        "## Structure\n\n- Keep every step concrete."
+                    )
+                )
+            } else {
+                editor.typeText("\n\(uniqueInstructions)")
+            }
             if kind == "taskPlan" {
                 let mode = app.descendants(matching: .any)[
                     "settings.llm.prompt.taskPlan.mode"
@@ -2702,12 +2719,16 @@ final class timetrackerUITests: XCTestCase {
         activate(generatePlan)
 
         let request = app.descendants(matching: .any)["aiTaskPlan.request"].firstMatch
-        if !request.waitForExistence(timeout: 5),
-           addMenu.waitForExistence(timeout: 2),
-           addMenu.isHittable {
-            activate(addMenu)
-            if generatePlan.waitForExistence(timeout: 2), generatePlan.isHittable {
+        if !request.waitForExistence(timeout: 5) {
+            if generatePlan.waitForExistence(timeout: 2),
+               generatePlan.isHittable {
                 activate(generatePlan)
+            } else if addMenu.waitForExistence(timeout: 2), addMenu.isHittable {
+                activate(addMenu)
+                if generatePlan.waitForExistence(timeout: 2),
+                   generatePlan.isHittable {
+                    activate(generatePlan)
+                }
             }
         }
         let generate = app.buttons["aiTaskPlan.generate"].firstMatch
@@ -2730,10 +2751,26 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             discardRequest.waitForExistence(timeout: 3) && discardRequest.isHittable
         )
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
-        XCTAssertTrue(discardRequest.waitForNonExistence(timeout: 3))
-        XCTAssertTrue(request.waitForExistence(timeout: 3))
-        XCTAssertTrue(generate.waitForExistence(timeout: 3) && generate.isHittable)
+        activate(discardRequest)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["aiTaskPlan.sheet"]
+                .waitForNonExistence(timeout: 5)
+        )
+
+        XCTAssertTrue(addMenu.waitForExistence(timeout: 3) && addMenu.isHittable)
+        activate(addMenu)
+        XCTAssertTrue(
+            generatePlan.waitForExistence(timeout: 3) && generatePlan.isHittable
+        )
+        activate(generatePlan)
+        XCTAssertTrue(request.waitForExistence(timeout: 5) && request.isHittable)
+        activate(request)
+        request.typeText("Build a practical daily fitness and learning plan")
+        XCTAssertTrue(
+            generate.waitForExistence(timeout: 3) &&
+                generate.isEnabled &&
+                generate.isHittable
+        )
 
         activate(generate)
 
@@ -2785,8 +2822,26 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(chapterTen.waitForExistence(timeout: 3) && chapterTen.isHittable)
         try capture("\(screenshotPrefix)-ai-task-plan-chapters-1-to-10", app: app)
+        chapterTen.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: -0.25)
+        ).tap()
+        XCTAssertTrue(
+            app.keyboards.firstMatch.waitForExistence(timeout: 3),
+            "The 44-point checklist hit shape must focus the field above its text glyphs."
+        )
 
-        activate(editRequest)
+        let returnedEditRequest = app.buttons["aiTaskPlan.editRequest"].firstMatch
+        scrollUntilHittable(
+            returnedEditRequest,
+            direction: .down,
+            maximumScrolls: 16,
+            in: app
+        )
+        XCTAssertTrue(
+            returnedEditRequest.waitForExistence(timeout: 3) &&
+                returnedEditRequest.isHittable
+        )
+        activate(returnedEditRequest)
         let discardDraft = hittableButton(
             identifier: "editor.discard.confirm",
             localizedLabels: ["Discard Changes", "放弃更改", "放棄變更"],

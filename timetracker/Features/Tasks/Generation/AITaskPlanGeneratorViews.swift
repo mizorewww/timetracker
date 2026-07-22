@@ -377,6 +377,7 @@ struct AITaskPlanGeneratorSheet: View {
     private func performPendingDiscard() {
         let action = pendingDiscardAction
         pendingDiscardAction = nil
+        isDiscardConfirmationPresented = false
 
         switch action {
         case .dismissSheet:
@@ -397,11 +398,9 @@ private struct AITaskPlanDraftPreview: View {
         ForEach(draft.previewSections) { section in
             Section {
                 ForEach(section.rows) { row in
-                    if let taskIndex = draft.tasks.firstIndex(where: {
-                        $0.id == row.taskID
-                    }) {
+                    if let task = draft.tasks.first(where: { $0.id == row.taskID }) {
                         AITaskPlanTaskDraftRow(
-                            task: $draft.tasks[taskIndex],
+                            task: taskBinding(for: task),
                             depth: row.depth,
                             removeTask: {
                                 draft.removeTaskSubtree(rootID: row.taskID)
@@ -417,6 +416,21 @@ private struct AITaskPlanDraftPreview: View {
             }
         }
     }
+
+    private func taskBinding(
+        for fallback: AITaskPlanTaskDraft
+    ) -> Binding<AITaskPlanTaskDraft> {
+        Binding {
+            draft.tasks.first(where: { $0.id == fallback.id }) ?? fallback
+        } set: { updatedTask in
+            guard let index = draft.tasks.firstIndex(where: {
+                $0.id == fallback.id
+            }) else {
+                return
+            }
+            draft.tasks[index] = updatedTask
+        }
+    }
 }
 
 private struct AITaskPlanCategoryDraftHeader: View {
@@ -425,21 +439,24 @@ private struct AITaskPlanCategoryDraftHeader: View {
 
     var body: some View {
         if let categoryID,
-           let categoryIndex = draft.categories.firstIndex(where: {
+           let category = draft.categories.first(where: {
                $0.id == categoryID
            }) {
             HStack(spacing: 8) {
                 TaskIcon(
                     visual: TaskVisualPresentation(
-                        iconName: draft.categories[categoryIndex].iconName,
-                        colorHex: draft.categories[categoryIndex].colorHex
+                        iconName: category.iconName,
+                        colorHex: category.colorHex
                     ),
                     size: 30
                 )
 
                 TextField(
                     AppStrings.localized("aiTaskPlan.categoryName"),
-                    text: $draft.categories[categoryIndex].title,
+                    text: categoryTitleBinding(
+                        categoryID: categoryID,
+                        fallback: category.title
+                    ),
                     axis: .vertical
                 )
                 .font(.subheadline.weight(.semibold))
@@ -474,6 +491,22 @@ private struct AITaskPlanCategoryDraftHeader: View {
             )
             .font(.subheadline.weight(.semibold))
             .textCase(nil)
+        }
+    }
+
+    private func categoryTitleBinding(
+        categoryID: UUID,
+        fallback: String
+    ) -> Binding<String> {
+        Binding {
+            draft.categories.first(where: { $0.id == categoryID })?.title ?? fallback
+        } set: { title in
+            guard let index = draft.categories.firstIndex(where: {
+                $0.id == categoryID
+            }) else {
+                return
+            }
+            draft.categories[index].title = title
         }
     }
 }
@@ -548,18 +581,14 @@ private struct AITaskPlanTaskDraftRow: View {
             if !task.checklistItems.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(task.checklistItems) { item in
-                        if let itemIndex = task.checklistItems.firstIndex(
-                            where: { $0.id == item.id }
-                        ) {
-                            AITaskPlanChecklistDraftRow(
-                                item: $task.checklistItems[itemIndex],
-                                remove: {
-                                    task.checklistItems.removeAll {
-                                        $0.id == item.id
-                                    }
+                        AITaskPlanChecklistDraftRow(
+                            item: checklistItemBinding(for: item),
+                            remove: {
+                                task.checklistItems.removeAll {
+                                    $0.id == item.id
                                 }
-                            )
-                        }
+                            }
+                        )
                     }
                 }
                 .padding(.leading, 44)
@@ -567,6 +596,21 @@ private struct AITaskPlanTaskDraftRow: View {
         }
         .padding(.leading, CGFloat(min(depth, LLMTaskPlanService.maximumTaskDepth)) * 12)
         .frame(minHeight: AppLayout.minimumInteractiveTarget)
+    }
+
+    private func checklistItemBinding(
+        for fallback: AITaskPlanChecklistDraft
+    ) -> Binding<AITaskPlanChecklistDraft> {
+        Binding {
+            task.checklistItems.first(where: { $0.id == fallback.id }) ?? fallback
+        } set: { updatedItem in
+            guard let index = task.checklistItems.firstIndex(where: {
+                $0.id == fallback.id
+            }) else {
+                return
+            }
+            task.checklistItems[index] = updatedItem
+        }
     }
 }
 
@@ -698,6 +742,7 @@ private struct AITaskPlanTaskProgressDraftEditor: View {
 private struct AITaskPlanChecklistDraftRow: View {
     @Binding var item: AITaskPlanChecklistDraft
     let remove: () -> Void
+    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -714,6 +759,15 @@ private struct AITaskPlanChecklistDraftRow: View {
             .font(.subheadline)
             .lineLimit(1...3)
             .textFieldStyle(.plain)
+            .focused($isTitleFocused)
+            .frame(
+                minHeight: AppLayout.minimumInteractiveTarget,
+                alignment: .leading
+            )
+            .contentShape([.interaction, .accessibility], Rectangle())
+            .onTapGesture {
+                isTitleFocused = true
+            }
             .accessibilityLabel(AppStrings.localized("aiTaskPlan.checklistName"))
 
             Button(role: .destructive, action: remove) {

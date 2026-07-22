@@ -10,8 +10,8 @@
 - [x] 研究成熟库与 Apple HIG / SwiftUI 约束，完成独立产品与技术设计文档。
 - [x] 实现一次生成多个、类型完整且可验证的任务计划，并安全落库到 category。
 - [x] 使用现有 MarkdownView 呈现本任务的提示词预览，补齐计划草稿类型编辑并完成定向测试。
-- [~] 完成 owned iPhone/iPad simulator 普通路径与截图验收，清理全部资源。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 完成 owned iPhone/iPad simulator 普通路径与截图验收，清理全部资源。
+- [~] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -61,7 +61,16 @@
   - 主代理 macOS 集成定向测试最终 `50/50` 通过；首次运行只暴露契约测试源码字符串转义错误，改用 Swift raw string 后复跑通过。DerivedData/两份 xcresult 已清理，无测试进程或 Booted simulator。
   - 未新增依赖；继续复用用户指定的现有 `MarkdownView` 与系统 SwiftUI controls。
 - [~] Checkpoint D：全量相关回归、owned simulator UI/截图、精确 Release 安装、状态与资源收口。
+  - 返回修改请求时发现并复现旧数组下标 Binding 在动画退出期间越界；task/category/checklist 全部改为按稳定 UUID 查找，元素消失时 getter 使用只读快照、setter 安全 no-op，原崩溃回归 `1/1` 通过。
+  - checklist 编辑行使用 44pt 普通交互高度与显式 focus hit shape；UI 回归从文字上方点击后键盘出现，确认命中区不是只扩张视觉 frame。
+  - owned iPhone 17 Pro（iOS 27.0）最终两条 UI 验收 `2/2` 通过；owned iPad Pro 11-inch（M5，iOS 27.0）同矩阵 `2/2` 通过，均保留签名且未使用隐式 runner clone。
+  - iPhone/iPad attachment 经主代理与独立子代理检查放行：Chapter 1...10 无截断，quantity 50 + unit + daily、父子 task、原子创建后的数量进度正确；MarkdownView 的标题、粗体、段落和列表语义正确。
+  - 共享 SwiftUI 文件保留签名的 macOS scheme build 通过；Swift parse 与 `git diff --check` 通过。
+  - 两台 owned simulator 均已终止 app、shutdown 并 delete；无 owned Booted device、`xcodebuild`、`xctest`、UI runner、Simulator 或 Problem Reporter 残留。截图、xcresult 与 DerivedData 在独立截图复核后删除。
 
 ## 资源所有权
 
 - Checkpoint A 尚未创建 simulator 或启动设备流程。
+- Checkpoint D owned iPhone：`TT-Task20-iPhone-20260722-1456`，UDID `6559CA22-FD88-49EF-BDB4-027E4A08A3F8`。
+- Checkpoint D owned iPad：`TT-Task20-iPad-20260722-1456`，UDID `5A509A6A-C967-4DA9-B4A7-49AC5B1D9DB1`。
+- 两台设备只用于 Task20 的普通字号 UI test / screenshot；均已终止 app、shutdown、delete，并核验不再出现在 `simctl list devices`。

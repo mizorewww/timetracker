@@ -824,6 +824,20 @@ struct AnalyticsTimelineTests {
             measuredTimelineHeight - measuredOneRowTimelineHeight ==
                 measuredLabelHeight + TimelineChartLayout.horizontalGapLabelRowSpacing
         )
+
+        let narrowAxisLayout = TimelineChartLayout.horizontalGapLabels(
+            gaps: [compression.omittedGaps[1]],
+            compression: compression,
+            axisLength: 100,
+            labelWidths: [compression.omittedGaps[1].id: 148]
+        )
+        #expect(narrowAxisLayout.placements.first?.axisExtent == 148)
+        #expect(
+            TimelineChartLayout.horizontalMinimumContentWidth(
+                availableWidth: 100,
+                gapLabelWidths: [72, 148]
+            ) == 148 + TimelineChartLayout.horizontalMinimumBarExtent
+        )
     }
 
     @Test

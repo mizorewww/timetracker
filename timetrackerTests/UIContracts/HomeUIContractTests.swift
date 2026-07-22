@@ -900,6 +900,7 @@ struct HomeUIContractTests {
         #expect(sharedSource.contains("verticalGapLabelFrame("))
         #expect(sharedSource.contains("min(y, height - barHeight)") == false)
         #expect(chartSource.contains("TimelineChartHorizontalLayout("))
+        #expect(chartSource.contains("TimelineChartHorizontalViewportLayout("))
         #expect(chartSource.contains("TimelineChartVerticalLayout("))
         #expect(chartSource.contains("subview.sizeThatFits(.unspecified)"))
         #expect(chartSource.contains("labelWidths: labelSizes.mapValues(\\.width)"))
@@ -910,7 +911,9 @@ struct HomeUIContractTests {
         #expect(chartSource.contains(".gapLabel(gap.id)"))
         #expect(gridSource.contains(".fixedSize(horizontal: true, vertical: true)"))
         #expect(gridSource.contains("timeline.gapText."))
+        #expect(gridSource.contains("timeline.gapIntrinsicText."))
         #expect(gridSource.contains("timeline.gapCapsule."))
+        #expect(sharedSource.contains("horizontalMinimumContentWidth("))
         #expect(gridSource.contains("TimelineChartLayout.verticalAxisTicks("))
         #expect(gridSource.contains("minimumScaleFactor(0.7)") == false)
         #expect(barsSource.contains("lanes.offset(for: placement.lane)"))
@@ -1044,7 +1047,9 @@ struct HomeUIContractTests {
         )
         #expect(uiTestSource.contains("assertTimelineGapCapsulesHugText("))
         #expect(uiTestSource.contains("timeline.gapText."))
+        #expect(uiTestSource.contains("timeline.gapIntrinsicText."))
         #expect(uiTestSource.contains("timeline.gapCapsule."))
+        #expect(uiTestSource.contains("let descendants = timeline.descendants"))
         #expect(uiTestSource.contains("capsuleFrame") && uiTestSource.contains("textFrame"))
         #expect(
             uiTestSource.contains(

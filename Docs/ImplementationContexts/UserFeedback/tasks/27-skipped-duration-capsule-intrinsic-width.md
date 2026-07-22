@@ -70,3 +70,12 @@
 - 定向验证通过：macOS arm64 Debug 签名构建；`AnalyticsTimelineTests` 的两项新增布局测试；`HomeUIContractTests` 的两项本任务共享组件/fixture 契约，共 4/4 通过。
 - 更宽的既有 `HomeUIContractTests` 另有 3 项与本反馈无关的 Quick Start/入口旧契约失败；未将其误报为本任务回归，也未越界修改。
 - 未新增第三方库；继续使用系统 SwiftUI `Layout`、XCTest 与 XCUITest。
+
+### 自动化前静态复核加固
+
+- 只读复核发现窄窗口/超长本地化边界：旧算法会把用于碰撞计算的 label width 截成 axis length，却仍按真实 intrinsic width 放置。现已让碰撞 placement 始终保留实测宽度，并让横向内容最小宽度至少容纳最长胶囊与终点 mark；超出 viewport 时由原生水平 `ScrollView` 承载。
+- 新增 `labelWidth > axisLength` 的纯回归，证明 placement 不会伪装成较窄宽度；同时验证最小内容宽度会增长。
+- UI-test 增加独立的 intrinsic Text reference probe；实际 Text frame 必须与系统 intrinsic reference 相等，查询范围限定在 `home.timeline`，截图前先保证整个 Timeline 位于可见区域。
+- 第一轮移动端冷构建在用例执行前主动中止；owned iPhone `B335D372-1EB5-4C68-85AE-04A6A290657D` 与 iPad `1696AE29-B41F-4326-A6BA-9C1545583268` 已终止 App、关机、删除，未留下 Booted device/TestManager/xcodebuild。
+- 加固后 macOS arm64 Debug 签名构建通过，本任务 4/4 定向纯测试再次通过；下一步从头执行脚本化 UI 矩阵。
+- 复核另指出极端 Dynamic Type 下纵向 32pt 高度模型可进一步扩展；按仓库明确的普通字号验收优先级，本项只处理用户反馈中的胶囊宽度，不扩张为极端字号专项。

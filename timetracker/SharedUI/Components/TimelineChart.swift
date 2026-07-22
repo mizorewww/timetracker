@@ -60,6 +60,28 @@ struct TimelineChart: View {
 
 extension TimelineChart {
     var horizontalTimeline: some View {
+        TimelineChartHorizontalViewportLayout(
+            entries: laneEntries,
+            gaps: axisCompression.omittedGaps,
+            compression: axisCompression
+        ) {
+            GeometryReader { viewport in
+                ScrollView(.horizontal) {
+                    horizontalTimelineContent
+                        .frame(minWidth: viewport.size.width)
+                }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            }
+            .timelineChartLayoutRole(.viewport)
+
+            ForEach(axisCompression.omittedGaps) { gap in
+                omittedGapMeasurementLabel(gap)
+                    .timelineChartLayoutRole(.gapLabel(gap.id))
+            }
+        }
+    }
+
+    private var horizontalTimelineContent: some View {
         TimelineChartHorizontalLayout(
             entries: laneEntries,
             gaps: axisCompression.omittedGaps,
@@ -273,6 +295,7 @@ private struct TimelineChartVerticalSizingLayout: Layout {
 
 nonisolated private enum TimelineChartLayoutSubviewRole: Hashable {
     case content
+    case viewport
     case plot
     case axisLabels
     case gapLabel(String)
@@ -291,6 +314,50 @@ private extension View {
     }
 }
 
+private struct TimelineChartHorizontalViewportLayout: Layout {
+    let entries: [AnalyticsTimelineEntry]
+    let gaps: [TimelineOmittedGap]
+    let compression: TimelineAxisCompression
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        guard subviews.isEmpty == false else { return .zero }
+        let availableWidth = finiteDimension(proposal.width, fallback: 640)
+        let metrics = timelineChartHorizontalMetrics(
+            entries: entries,
+            gaps: gaps,
+            compression: compression,
+            availableWidth: availableWidth,
+            labelSizes: measuredGapLabelSizes(in: subviews)
+        )
+        return CGSize(width: availableWidth, height: metrics.totalHeight)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard let viewport = subviews.first(where: {
+            $0[TimelineChartLayoutSubviewRoleKey.self] == .viewport
+        }) else {
+            return
+        }
+        viewport.place(
+            at: bounds.origin,
+            anchor: .topLeading,
+            proposal: ProposedViewSize(
+                width: bounds.width,
+                height: bounds.height
+            )
+        )
+    }
+}
+
 private struct TimelineChartHorizontalLayout: Layout {
     let entries: [AnalyticsTimelineEntry]
     let gaps: [TimelineOmittedGap]
@@ -302,7 +369,7 @@ private struct TimelineChartHorizontalLayout: Layout {
         cache: inout ()
     ) -> CGSize {
         guard subviews.isEmpty == false else { return .zero }
-        let width = finiteDimension(proposal.width, fallback: 640)
+        let width = finiteDimension(proposal.width, fallback: 0)
         let metrics = metrics(width: width, subviews: subviews)
         return CGSize(width: metrics.width, height: metrics.totalHeight)
     }
@@ -363,7 +430,7 @@ private struct TimelineChartHorizontalLayout: Layout {
                         height: size.height
                     )
                 )
-            case .content, .gapConnector:
+            case .content, .viewport, .gapConnector:
                 continue
             }
         }
@@ -372,48 +439,14 @@ private struct TimelineChartHorizontalLayout: Layout {
     private func metrics(
         width: CGFloat,
         subviews: Subviews
-    ) -> HorizontalMetrics {
-        let safeWidth = max(0, width.isFinite ? width : 0)
-        let bars = TimelineChartLayout.horizontalBars(
+    ) -> TimelineChartHorizontalMetrics {
+        timelineChartHorizontalMetrics(
             entries: entries,
-            compression: compression,
-            width: safeWidth
-        )
-        let labelSizes = measuredGapLabelSizes(in: subviews)
-        let gapLayout = TimelineChartLayout.horizontalGapLabels(
             gaps: gaps,
             compression: compression,
-            axisLength: bars.axisLength,
-            labelWidths: labelSizes.mapValues(\.width)
+            availableWidth: width,
+            labelSizes: measuredGapLabelSizes(in: subviews)
         )
-        let labelHeight = labelSizes.values.map(\.height).max() ?? 0
-        let plotHeight = TimelineChartLayout.horizontalPlotHeight(
-            laneCount: bars.laneCount
-        )
-        let gapAnnotationHeight = TimelineChartLayout.horizontalGapAnnotationHeight(
-            rowCount: gapLayout.rowCount,
-            labelHeight: labelHeight
-        )
-        return HorizontalMetrics(
-            width: safeWidth,
-            plotHeight: plotHeight,
-            labelHeight: labelHeight,
-            gapAnnotationHeight: gapAnnotationHeight,
-            totalHeight: plotHeight + gapAnnotationHeight +
-                TimelineChartLayout.horizontalAxisLabelHeight,
-            labelSizes: labelSizes,
-            gapLayout: gapLayout
-        )
-    }
-
-    private struct HorizontalMetrics {
-        let width: CGFloat
-        let plotHeight: CGFloat
-        let labelHeight: CGFloat
-        let gapAnnotationHeight: CGFloat
-        let totalHeight: CGFloat
-        let labelSizes: [String: CGSize]
-        let gapLayout: TimelineChartHorizontalGapLabelLayout
     }
 }
 
@@ -514,7 +547,7 @@ private struct TimelineChartVerticalLayout: Layout {
                         height: max(1, abs(anchorY - labelMidY))
                     )
                 )
-            case .content:
+            case .content, .viewport:
                 continue
             }
         }
@@ -569,6 +602,58 @@ private struct TimelineChartVerticalLayout: Layout {
         let labelSizes: [String: CGSize]
         let gapLayout: TimelineChartVerticalGapLabelLayout
     }
+}
+
+private struct TimelineChartHorizontalMetrics {
+    let width: CGFloat
+    let plotHeight: CGFloat
+    let labelHeight: CGFloat
+    let gapAnnotationHeight: CGFloat
+    let totalHeight: CGFloat
+    let labelSizes: [String: CGSize]
+    let gapLayout: TimelineChartHorizontalGapLabelLayout
+}
+
+private func timelineChartHorizontalMetrics(
+    entries: [AnalyticsTimelineEntry],
+    gaps: [TimelineOmittedGap],
+    compression: TimelineAxisCompression,
+    availableWidth: CGFloat,
+    labelSizes: [String: CGSize]
+) -> TimelineChartHorizontalMetrics {
+    let width = TimelineChartLayout.horizontalMinimumContentWidth(
+        availableWidth: availableWidth,
+        gapLabelWidths: labelSizes.values.map(\.width)
+    )
+    let bars = TimelineChartLayout.horizontalBars(
+        entries: entries,
+        compression: compression,
+        width: width
+    )
+    let gapLayout = TimelineChartLayout.horizontalGapLabels(
+        gaps: gaps,
+        compression: compression,
+        axisLength: bars.axisLength,
+        labelWidths: labelSizes.mapValues(\.width)
+    )
+    let labelHeight = labelSizes.values.map(\.height).max() ?? 0
+    let plotHeight = TimelineChartLayout.horizontalPlotHeight(
+        laneCount: bars.laneCount
+    )
+    let gapAnnotationHeight = TimelineChartLayout.horizontalGapAnnotationHeight(
+        rowCount: gapLayout.rowCount,
+        labelHeight: labelHeight
+    )
+    return TimelineChartHorizontalMetrics(
+        width: width,
+        plotHeight: plotHeight,
+        labelHeight: labelHeight,
+        gapAnnotationHeight: gapAnnotationHeight,
+        totalHeight: plotHeight + gapAnnotationHeight +
+            TimelineChartLayout.horizontalAxisLabelHeight,
+        labelSizes: labelSizes,
+        gapLayout: gapLayout
+    )
 }
 
 private func measuredGapLabelSizes(

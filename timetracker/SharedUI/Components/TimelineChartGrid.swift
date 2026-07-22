@@ -183,28 +183,55 @@ extension TimelineChart {
         }
     }
 
+    func omittedGapMeasurementLabel(_ gap: TimelineOmittedGap) -> some View {
+        omittedGapTextContent(omittedGapText(gap))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .fixedSize(horizontal: true, vertical: true)
+            .hidden()
+            .accessibilityHidden(true)
+    }
+
     @ViewBuilder
     private func omittedGapLabelText(
         _ gap: TimelineOmittedGap,
         text: String
     ) -> some View {
-        let label = Text(text)
+        let label = omittedGapTextContent(text)
+
+        if exposesUITestingMarks {
+            label
+                .overlay {
+                    gapGeometryProbe(
+                        identifier: "timeline.gapText.\(gap.id)",
+                        label: text
+                    )
+                }
+                .overlay {
+                    Text(text)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.clear)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .accessibilityElement()
+                        .accessibilityLabel(text)
+                        .accessibilityIdentifier(
+                            "timeline.gapIntrinsicText.\(gap.id)"
+                        )
+                        .allowsHitTesting(false)
+                }
+        } else {
+            label
+        }
+    }
+
+    private func omittedGapTextContent(_ text: String) -> some View {
+        Text(text)
             .font(.caption2.weight(.medium))
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: true, vertical: true)
-
-        if exposesUITestingMarks {
-            label.overlay {
-                gapGeometryProbe(
-                    identifier: "timeline.gapText.\(gap.id)",
-                    label: text
-                )
-            }
-        } else {
-            label
-        }
     }
 
     private func gapGeometryProbe(

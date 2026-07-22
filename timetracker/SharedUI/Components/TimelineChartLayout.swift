@@ -153,6 +153,20 @@ nonisolated enum TimelineChartLayout {
             CGFloat(gapCount) * verticalPreferredLaneSpacing
     }
 
+    static func horizontalMinimumContentWidth(
+        availableWidth: CGFloat,
+        gapLabelWidths: [CGFloat],
+        terminalMarkAllowance: CGFloat = horizontalMinimumBarExtent
+    ) -> CGFloat {
+        let longestLabelWidth = gapLabelWidths
+            .map(finiteNonnegative)
+            .max() ?? 0
+        return max(
+            finiteNonnegative(availableWidth),
+            longestLabelWidth + finiteNonnegative(terminalMarkAllowance)
+        )
+    }
+
     static func verticalAxisLabelWidth(
         for gapLabelWidths: [CGFloat],
         horizontalInset: CGFloat = verticalGapLabelHorizontalInset
@@ -306,10 +320,7 @@ nonisolated enum TimelineChartLayout {
         }
         let spacing = finiteNonnegative(minimumSpacing)
         let candidates = gaps.compactMap { gap -> HorizontalGapLabelCandidate? in
-            let width = min(
-                finiteNonnegative(labelWidths[gap.id] ?? 0),
-                length
-            )
+            let width = finiteNonnegative(labelWidths[gap.id] ?? 0)
             guard width > 0 else { return nil }
             let rawPosition = length * CGFloat(
                 compression.ratio(

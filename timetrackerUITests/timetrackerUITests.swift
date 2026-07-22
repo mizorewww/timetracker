@@ -3768,7 +3768,6 @@ final class timetrackerUITests: XCTestCase {
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
         scrollTodayUntilHittable(timeline, in: app)
         XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
-        try assertTimelineGapCapsulesHugText(in: app)
 
         #if os(macOS)
         scroll(direction: .up, toward: timeline, in: app)
@@ -3779,6 +3778,7 @@ final class timetrackerUITests: XCTestCase {
             app.windows.firstMatch.frame.contains(timeline.frame),
             "The macOS Timeline must be fully visible inside the app window"
         )
+        try assertTimelineGapCapsulesHugText(in: app)
         try capture(
             "mac-home-task27-intrinsic-gap-capsules",
             element: app.windows.firstMatch
@@ -3786,6 +3786,9 @@ final class timetrackerUITests: XCTestCase {
         #else
         let usesIPadShell = platformScreenshotPrefix(in: app) == "ipad"
         if usesIPadShell {
+            scrollUntilFullyVisibleAboveSystemChrome(timeline, in: app)
+            XCTAssertTrue(isFullyVisibleAboveSystemChrome(timeline, in: app))
+            try assertTimelineGapCapsulesHugText(in: app)
             waitForScreenshotTransition()
             try capture(
                 "ipad-home-task27-intrinsic-gap-capsules-portrait",
@@ -3805,15 +3808,20 @@ final class timetrackerUITests: XCTestCase {
                 landscapeTimeline.waitForExistence(timeout: 5) &&
                     landscapeTimeline.isHittable
             )
+            scrollUntilFullyVisibleAboveSystemChrome(landscapeTimeline, in: app)
+            XCTAssertTrue(
+                isFullyVisibleAboveSystemChrome(landscapeTimeline, in: app)
+            )
             try assertTimelineGapCapsulesHugText(in: app)
-            scroll(direction: .up, toward: landscapeTimeline, in: app)
             waitForScreenshotTransition()
             try capture(
                 "ipad-home-task27-intrinsic-gap-capsules-landscape",
                 app: app
             )
         } else {
-            scroll(direction: .up, toward: timeline, in: app)
+            scrollUntilFullyVisibleAboveSystemChrome(timeline, in: app)
+            XCTAssertTrue(isFullyVisibleAboveSystemChrome(timeline, in: app))
+            try assertTimelineGapCapsulesHugText(in: app)
             waitForScreenshotTransition()
             try capture(
                 "iphone-home-task27-intrinsic-gap-capsules",
@@ -6041,12 +6049,21 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication
     ) throws {
         let textIdentifierPrefix = "timeline.gapText."
+        let intrinsicTextIdentifierPrefix = "timeline.gapIntrinsicText."
         let capsuleIdentifierPrefix = "timeline.gapCapsule."
-        let descendants = app.descendants(matching: .any)
+        let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5))
+        let descendants = timeline.descendants(matching: .any)
         let textQuery = descendants.matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@",
                 textIdentifierPrefix
+            )
+        )
+        let intrinsicTextQuery = descendants.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                intrinsicTextIdentifierPrefix
             )
         )
         let capsuleQuery = descendants.matching(
@@ -6058,11 +6075,14 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(
             waitUntil(timeout: 5) {
-                textQuery.count == 2 && capsuleQuery.count == 2
+                textQuery.count == 2 &&
+                    intrinsicTextQuery.count == 2 &&
+                    capsuleQuery.count == 2
             },
-            "The fixture must expose one text and capsule frame probe per omitted gap."
+            "The Timeline must expose actual text, intrinsic text, and capsule probes per gap."
         )
         XCTAssertEqual(textQuery.count, 2)
+        XCTAssertEqual(intrinsicTextQuery.count, 2)
         XCTAssertEqual(capsuleQuery.count, 2)
 
         let textSnapshots = textQuery.allElementsBoundByIndex.reduce(
@@ -6073,6 +6093,18 @@ final class timetrackerUITests: XCTestCase {
             let gapID = String(identifier.dropFirst(textIdentifierPrefix.count))
             XCTAssertFalse(gapID.isEmpty, "A gap text probe must include its stable ID.")
             XCTAssertNil(result[gapID], "Every gap must expose one text frame probe.")
+            result[gapID] = (label: element.label, frame: element.frame)
+        }
+        let intrinsicTextSnapshots = intrinsicTextQuery.allElementsBoundByIndex.reduce(
+            into: [String: (label: String, frame: CGRect)]()
+        ) { result, element in
+            let identifier = element.identifier
+            guard identifier.hasPrefix(intrinsicTextIdentifierPrefix) else { return }
+            let gapID = String(
+                identifier.dropFirst(intrinsicTextIdentifierPrefix.count)
+            )
+            XCTAssertFalse(gapID.isEmpty, "An intrinsic text probe must include its ID.")
+            XCTAssertNil(result[gapID], "Every gap must expose one intrinsic text probe.")
             result[gapID] = (label: element.label, frame: element.frame)
         }
         let capsuleSnapshots = capsuleQuery.allElementsBoundByIndex.reduce(
@@ -6087,21 +6119,25 @@ final class timetrackerUITests: XCTestCase {
         }
 
         let gapIDs = textSnapshots.keys.sorted()
+        XCTAssertEqual(gapIDs, intrinsicTextSnapshots.keys.sorted())
         XCTAssertEqual(gapIDs, capsuleSnapshots.keys.sorted())
         XCTAssertEqual(gapIDs.count, 2)
 
         let pixelTolerance: CGFloat = 1
         let pairs = try gapIDs.map { gapID in
             let text = try XCTUnwrap(textSnapshots[gapID])
+            let intrinsicText = try XCTUnwrap(intrinsicTextSnapshots[gapID])
             let capsule = try XCTUnwrap(capsuleSnapshots[gapID])
             let textFrame = text.frame
+            let intrinsicTextFrame = intrinsicText.frame
             let capsuleFrame = capsule.frame
 
+            XCTAssertEqual(text.label, intrinsicText.label)
             XCTAssertEqual(text.label, capsule.label)
             XCTAssertFalse(text.label.isEmpty)
             XCTAssertFalse(text.label.contains("…"))
             XCTAssertFalse(text.label.contains("..."))
-            for frame in [textFrame, capsuleFrame] {
+            for frame in [textFrame, intrinsicTextFrame, capsuleFrame] {
                 XCTAssertFalse(frame.isNull)
                 XCTAssertFalse(frame.isInfinite)
                 XCTAssertTrue(frame.origin.x.isFinite)
@@ -6111,6 +6147,24 @@ final class timetrackerUITests: XCTestCase {
                 XCTAssertGreaterThan(frame.width, 0)
                 XCTAssertGreaterThan(frame.height, 0)
             }
+            XCTAssertEqual(
+                textFrame.width,
+                intrinsicTextFrame.width,
+                accuracy: pixelTolerance,
+                "The rendered \(text.label) text must keep its intrinsic width."
+            )
+            XCTAssertEqual(
+                textFrame.height,
+                intrinsicTextFrame.height,
+                accuracy: pixelTolerance,
+                "The rendered \(text.label) text must keep its intrinsic height."
+            )
+            XCTAssertTrue(
+                timeline.frame
+                    .insetBy(dx: -pixelTolerance, dy: -pixelTolerance)
+                    .contains(capsuleFrame),
+                "The \(text.label) capsule must remain inside the Timeline content."
+            )
 
             XCTAssertTrue(
                 capsuleFrame

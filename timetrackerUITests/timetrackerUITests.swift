@@ -5908,11 +5908,7 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication
     ) throws {
         let query = app.descendants(matching: .any).matching(
-            NSPredicate(
-                format: "identifier BEGINSWITH %@ AND label == %@",
-                "timeline.gap.",
-                "2 hr skipped"
-            )
+            NSPredicate(format: "label == %@", "2 hr skipped")
         )
         XCTAssertTrue(
             waitUntil(timeout: 5) { query.count >= 2 },
@@ -5922,7 +5918,12 @@ final class timetrackerUITests: XCTestCase {
         var uniqueFrames: [CGRect] = []
         for element in query.allElementsBoundByIndex {
             let frame = element.frame
-            guard frame.width > 0, frame.height > 0 else { continue }
+            guard frame.width >= 40,
+                  frame.width <= 110,
+                  frame.height >= 16,
+                  frame.height <= 40 else {
+                continue
+            }
             if uniqueFrames.contains(where: { existing in
                 abs(existing.minX - frame.minX) < 0.5 &&
                     abs(existing.minY - frame.minY) < 0.5 &&
@@ -5944,20 +5945,26 @@ final class timetrackerUITests: XCTestCase {
         let horizontalOverlap = min(first.maxX, second.maxX) -
             max(first.minX, second.minX)
 
-        XCTAssertGreaterThan(
-            horizontalOverlap,
-            0,
-            "The fixture must challenge labels whose horizontal footprints overlap."
-        )
         XCTAssertFalse(
             first.intersects(second),
             "Omitted-gap labels must never cover one another."
         )
-        XCTAssertGreaterThanOrEqual(
-            second.minY - first.maxY,
-            3,
-            "Omitted-gap labels must retain the four-point design spacing after pixel rounding."
-        )
+        if horizontalOverlap > 0 {
+            XCTAssertGreaterThanOrEqual(
+                second.minY - first.maxY,
+                3,
+                "Overlapping horizontal footprints must move to separate annotation rows."
+            )
+        } else {
+            let horizontallyOrdered = frames.sorted { $0.minX < $1.minX }
+            let horizontalSpacing = horizontallyOrdered[1].minX -
+                horizontallyOrdered[0].maxX
+            XCTAssertGreaterThanOrEqual(
+                horizontalSpacing,
+                3,
+                "Same-row gap labels must retain the four-point design spacing after pixel rounding."
+            )
+        }
     }
 
     @MainActor

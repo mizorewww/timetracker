@@ -67,6 +67,16 @@ extension SeedData {
                 try context.saveAfterMutationStep()
                 return
             }
+            if CommandLine.arguments.contains("--uitesting-overlap-timeline") {
+                try addOverlappingTimelineUITestFixture(
+                    context: context,
+                    taskRepository: taskRepository,
+                    categoryID: workCategory.id,
+                    startOfToday: startOfToday
+                )
+                try context.saveAfterMutationStep()
+                return
+            }
             if CommandLine.arguments.contains("--uitesting-today-heatmap") {
                 let quantityTask = try taskRepository.createTask(
                     title: "Daily Push-ups",
@@ -450,6 +460,64 @@ extension SeedData {
             duration: 30,
             note: "Task 23 terminal short mark"
         )
+    }
+
+    private static func addOverlappingTimelineUITestFixture(
+        context: ModelContext,
+        taskRepository: SwiftDataTaskRepository,
+        categoryID: UUID,
+        startOfToday: Date
+    ) throws {
+        let contextTask = try taskRepository.createTask(
+            title: "Timeline Overlap Context",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "64748B",
+            iconName: "rectangle.3.group"
+        )
+        let contextStart = startOfToday.addingTimeInterval(13 * 60 * 60)
+        let burstStart = startOfToday.addingTimeInterval(15.5 * 60 * 60)
+        let burstTaskCount = 10
+        let colors = [
+            "1677FF", "7C3AED", "F97316", "16A34A", "EF4444",
+            "0EA5E9", "A855F7", "14B8A6", "E11D48", "64748B",
+        ]
+
+        try addSegment(
+            context: context,
+            taskID: contextTask.id,
+            source: .timer,
+            start: contextStart,
+            duration: 30 * 60,
+            note: "Task 24 compressed-gap context"
+        )
+
+        for index in 0..<burstTaskCount {
+            let iconName: String
+            switch index {
+            case 0:
+                iconName = "bolt.fill"
+            case 1:
+                iconName = "star.fill"
+            default:
+                iconName = "circle.fill"
+            }
+            let task = try taskRepository.createTask(
+                title: String(format: "Timeline Burst %02d", index + 1),
+                parentID: nil,
+                categoryID: categoryID,
+                colorHex: colors[index],
+                iconName: iconName
+            )
+            try addSegment(
+                context: context,
+                taskID: task.id,
+                source: .manual,
+                start: burstStart.addingTimeInterval(TimeInterval(index * 2)),
+                duration: 30,
+                note: "Task 24 overlapping short mark \(index + 1)"
+            )
+        }
     }
 
     private static func addActiveSegment(

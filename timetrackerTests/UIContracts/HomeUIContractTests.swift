@@ -924,7 +924,6 @@ struct HomeUIContractTests {
         let uiTestSource = try sourceText(
             "timetrackerUITests/timetrackerUITests.swift"
         )
-
         #expect(seedSource.contains("--uitesting-short-timeline"))
         #expect(seedSource.contains("addShortTimelineUITestFixture("))
         #expect(seedSource.contains("Timeline Short Blue"))
@@ -936,6 +935,44 @@ struct HomeUIContractTests {
         #expect(uiTestSource.contains("replacesDemoDataOnLaunch: true"))
         #expect(uiTestSource.contains("--uitesting-short-timeline"))
         #expect(uiTestSource.contains("iphone-home-short-timeline-lanes"))
+    }
+
+    @Test
+    func overlappingTimelineFixtureCoversEveryPlatformLayout() throws {
+        let seedSource = try sourceText(
+            "timetracker/App/SeedData+DemoBuild.swift"
+        )
+        let uiTestSource = try sourceText(
+            "timetrackerUITests/timetrackerUITests.swift"
+        )
+        let homeTimelineSource = try sourceText(
+            "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
+        )
+
+        #expect(seedSource.contains("--uitesting-overlap-timeline"))
+        #expect(seedSource.contains("addOverlappingTimelineUITestFixture("))
+        #expect(seedSource.contains("let burstTaskCount = 10"))
+        #expect(seedSource.contains("startOfToday.addingTimeInterval(13 * 60 * 60)"))
+        #expect(seedSource.contains("startOfToday.addingTimeInterval(15.5 * 60 * 60)"))
+        #expect(seedSource.contains("iconName = \"bolt.fill\""))
+        #expect(seedSource.contains("iconName = \"star.fill\""))
+        #expect(seedSource.contains("TimeInterval(index * 2)"))
+        #expect(seedSource.contains("note: \"Task 24 overlapping short mark \\(index + 1)\""))
+        #expect(homeTimelineSource.contains("timelineReferenceDate(liveDate:"))
+        #expect(homeTimelineSource.contains("--uitesting-overlap-timeline"))
+        #expect(homeTimelineSource.contains("18 * 60 * 60"))
+        #expect(
+            uiTestSource.contains(
+                "testOverlappingShortTimelineProtectsGapAnnotationAcrossPlatforms"
+            )
+        )
+        #expect(uiTestSource.contains("--uitesting-overlap-timeline"))
+        #expect(uiTestSource.contains("assertOverlappingTimelineMarks("))
+        #expect(uiTestSource.contains("iphone-home-overlap-timeline"))
+        #expect(uiTestSource.contains("ipad-home-overlap-timeline-portrait"))
+        #expect(uiTestSource.contains("ipad-home-overlap-timeline-landscape"))
+        #expect(uiTestSource.contains("mac-home-overlap-timeline"))
+        #expect(uiTestSource.contains("The Task 23 fixture is phone-only."))
     }
 
     @Test

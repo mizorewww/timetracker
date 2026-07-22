@@ -2,7 +2,8 @@ import SwiftUI
 extension TimelineChart {
     func horizontalHourGrid(
         axisLength: CGFloat,
-        plotHeight: CGFloat
+        plotHeight: CGFloat,
+        gapLabelRowCount: Int
     ) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(
@@ -33,9 +34,10 @@ extension TimelineChart {
                             labelExtent: 52,
                             role: tick.role
                         ),
-                        y: plotHeight +
-                            TimelineChartLayout.horizontalAnnotationSpacing +
-                            TimelineChartLayout.horizontalGapLabelHeight
+                        y: TimelineChartLayout.horizontalAxisLabelOrigin(
+                            plotHeight: plotHeight,
+                            gapLabelRowCount: gapLabelRowCount
+                        )
                     )
             }
         }
@@ -106,17 +108,11 @@ extension TimelineChart {
 
     func horizontalGapLabel(
         _ gap: TimelineOmittedGap,
-        axisLength: CGFloat,
+        placement: TimelineChartHorizontalGapLabelPlacement,
         plotHeight: CGFloat
     ) -> some View {
-        let x = axisLength * CGFloat(
-            axisCompression.ratio(
-                forCompressedOffset: gap.compressedMidpointOffset
-            )
-        )
         let frame = TimelineChartLayout.horizontalGapLabelFrame(
-            position: x,
-            axisLength: axisLength,
+            placement: placement,
             plotHeight: plotHeight
         )
 

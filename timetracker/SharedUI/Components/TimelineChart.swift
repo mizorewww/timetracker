@@ -62,18 +62,29 @@ extension TimelineChart {
             let entryByID = Dictionary(
                 uniqueKeysWithValues: laneEntries.map { ($0.id, $0) }
             )
+            let gapByID = Dictionary(
+                uniqueKeysWithValues: axisCompression.omittedGaps.map { ($0.id, $0) }
+            )
+            let gapLabelLayout = TimelineChartLayout.horizontalGapLabels(
+                gaps: axisCompression.omittedGaps,
+                compression: axisCompression,
+                axisLength: barLayout.axisLength
+            )
             let plotHeight = TimelineChartLayout.horizontalPlotHeight(
-                height: proxy.size.height
+                height: proxy.size.height,
+                gapLabelRowCount: gapLabelLayout.rowCount
             )
             let lanes = TimelineChartLayout.horizontalLanes(
                 height: proxy.size.height,
-                laneCount: barLayout.laneCount
+                laneCount: barLayout.laneCount,
+                gapLabelRowCount: gapLabelLayout.rowCount
             )
 
             ZStack(alignment: .topLeading) {
                 horizontalHourGrid(
                     axisLength: barLayout.axisLength,
-                    plotHeight: plotHeight
+                    plotHeight: plotHeight,
+                    gapLabelRowCount: gapLabelLayout.rowCount
                 )
                 ForEach(axisCompression.omittedGaps) { gap in
                     horizontalGapLine(
@@ -91,13 +102,15 @@ extension TimelineChart {
                         )
                     }
                 }
-                ForEach(axisCompression.omittedGaps) { gap in
-                    horizontalGapLabel(
-                        gap,
-                        axisLength: barLayout.axisLength,
-                        plotHeight: plotHeight
-                    )
-                    .zIndex(1)
+                ForEach(gapLabelLayout.placements) { placement in
+                    if let gap = gapByID[placement.id] {
+                        horizontalGapLabel(
+                            gap,
+                            placement: placement,
+                            plotHeight: plotHeight
+                        )
+                        .zIndex(1)
+                    }
                 }
             }
         }
@@ -172,10 +185,16 @@ private struct TimelineChartHorizontalSizingLayout: Layout {
             compression: compression,
             width: width
         )
+        let gapLabels = TimelineChartLayout.horizontalGapLabels(
+            gaps: compression.omittedGaps,
+            compression: compression,
+            axisLength: bars.axisLength
+        )
         return CGSize(
             width: width,
             height: TimelineChartLayout.horizontalTimelineHeight(
-                laneCount: bars.laneCount
+                laneCount: bars.laneCount,
+                gapLabelRowCount: gapLabels.rowCount
             )
         )
     }

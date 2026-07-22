@@ -8,7 +8,7 @@
 - [x] 领取反馈，审计 iPad/macOS horizontal Timeline 的重叠轨道、短任务几何与 omitted-gap 标注层级。
 - [x] 对照 Apple HIG、SwiftUI 布局语义及成熟时间轴实现，确定跨平台修复与依赖策略。
 - [x] 完成横向投影分轨、独立标注带与自适应高度的纯布局、契约和性能回归。
-- [ ] 构造大量重叠、短任务的隔离 fixture，完成跨平台 UI 回归入口。
+- [x] 构造大量重叠、短任务的隔离 fixture，完成跨平台 UI 回归入口。
 - [ ] 使用明确登记的 owned iPhone/iPad simulator 与本机 macOS 测试窗口进行 UI 验收并截图，随后清理资源。
 - [ ] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
@@ -40,9 +40,15 @@
   - [x] 横向高度改由 width proposal 下的 projected laneCount 决定；每轨保持 24pt、轨间保持 10pt，避免大量重叠短任务把图标压缩到 1pt。
   - [x] 2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 测试验证：6 项针对性测试通过；随后完整 `AnalyticsTimelineTests` 加性能和共享组件契约共 35 项通过、0 失败。5,000 条投影性能样本约 0.020 秒。
   - [x] 本 checkpoint 未创建或启动 simulator。测试宿主已退出，`build/Task24Geometry` 与 xcresult 已删除，确认不存在引用该路径的 `xcodebuild`、`xctest`、UI runner 或 app 进程。
-- [ ] Checkpoint B2：隔离的高密度重叠 fixture 与跨平台 UI 契约。
+- [x] Checkpoint B2：隔离的高密度重叠 fixture 与跨平台 UI 契约。
+  - [x] 新增独立 `--uitesting-overlap-timeline`：当天 13:00 的 30 分钟 context，随后 15:30 起 10 个持续 30 秒、起点相隔 2 秒的短任务；前两项使用 `bolt.fill`/`star.fill`，共 11 个可查询 mark，不混入常规 demo segment。
+  - [x] 为该 fixture 增加仅 Debug + 专用 flag 生效的当天 18:00 局部 Timeline 参考时间，避免早于 15:30 运行时被未来时间保护过滤；Release 与其他路径继续使用实时 `TimelineView` 日期。
+  - [x] 新增跨平台 UI 用例：iPhone 验证 Y 时间重叠与 X 分轨；iPad/macOS 验证 X 时间重叠与 Y 分轨；预置 iPhone、iPad 竖/横屏和 macOS 截图名称，并让旧 Task 23 用例在 iPad 明确 skip。
+  - [x] post-commit review 发现多个 omitted-gap label 可能彼此覆盖；新增固定 96pt footprint 的确定性投影分行，按首个满足 4pt 间距的最低 annotation row 分配，实际 rowCount 同步扩展 label band 与总高度。没有伪造 UUID，也不把标签重新压回任务 plot。
+  - [x] 2026-07-22 使用 Team `LT98S43NKA` 的签名 macOS 批次编译完整 UI test target；完整 `AnalyticsTimelineTests`、5,000 条性能样本及 3 项共享/fixture contract 共 38 项通过、0 失败，性能样本约 0.027 秒。
+  - [x] 本 checkpoint 未创建 simulator。macOS 测试宿主已退出，`build/Task24Fixture` 与 xcresult 已删除，确认不存在引用该路径的 `xcodebuild`、`xctest`、UI runner 或 app 进程，且没有 Booted simulator。
 - [ ] Checkpoint C：owned UI 设备矩阵截图验收、精确 Release 安装与收口。
 
 ## 资源所有权
 
-- 尚未创建 Task 24 simulator。Checkpoint B1 只运行 macOS unit/contract test，相关测试宿主和临时构建产物均已释放。
+- 尚未创建 Task 24 simulator。Checkpoint B1/B2 只运行 macOS unit/contract test，相关测试宿主和临时构建产物均已释放。

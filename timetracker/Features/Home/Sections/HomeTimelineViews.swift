@@ -121,15 +121,28 @@ struct TodayTimelineChart: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
+            let referenceDate = timelineReferenceDate(liveDate: context.date)
             TimelineChart(
                 timeline: store.timelineSnapshot(
                     segments: segments,
-                    date: context.date,
-                    now: context.date
+                    date: referenceDate,
+                    now: referenceDate
                 ),
                 compactHeight: compactHeight
             )
         }
         .accessibilityIdentifier("home.timeline.graph")
+    }
+
+    private func timelineReferenceDate(liveDate: Date) -> Date {
+        #if DEBUG
+        guard CommandLine.arguments.contains("--uitesting-overlap-timeline") else {
+            return liveDate
+        }
+        return Calendar.current.startOfDay(for: liveDate)
+            .addingTimeInterval(18 * 60 * 60)
+        #else
+        return liveDate
+        #endif
     }
 }

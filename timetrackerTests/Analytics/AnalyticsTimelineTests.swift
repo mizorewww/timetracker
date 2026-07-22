@@ -461,23 +461,34 @@ struct AnalyticsTimelineTests {
         )
 
         let horizontal = TimelineChartLayout.horizontalLanes(
-            height: TimelineChartLayout.horizontalTimelineHeight(laneCount: 1),
-            laneCount: 1
+            height: TimelineChartLayout.horizontalTimelineHeight(
+                laneCount: 1,
+                gapLabelRowCount: 0
+            ),
+            laneCount: 1,
+            gapLabelRowCount: 0
         )
         let horizontalPlotHeight = TimelineChartLayout.horizontalPlotHeight(
-            height: TimelineChartLayout.horizontalTimelineHeight(laneCount: 1)
+            height: TimelineChartLayout.horizontalTimelineHeight(
+                laneCount: 1,
+                gapLabelRowCount: 0
+            ),
+            gapLabelRowCount: 0
         )
         #expect(abs(horizontal.midpoint - horizontalPlotHeight / 2) < 0.001)
 
         let horizontalOverlapHeight = TimelineChartLayout.horizontalTimelineHeight(
-            laneCount: 3
+            laneCount: 3,
+            gapLabelRowCount: 0
         )
         let horizontalOverlap = TimelineChartLayout.horizontalLanes(
             height: horizontalOverlapHeight,
-            laneCount: 3
+            laneCount: 3,
+            gapLabelRowCount: 0
         )
         let horizontalOverlapPlotHeight = TimelineChartLayout.horizontalPlotHeight(
-            height: horizontalOverlapHeight
+            height: horizontalOverlapHeight,
+            gapLabelRowCount: 0
         )
         #expect(
             abs(horizontalOverlap.midpoint - horizontalOverlapPlotHeight / 2) < 0.001
@@ -613,27 +624,42 @@ struct AnalyticsTimelineTests {
     @Test
     func horizontalTimelineReservesGapAnnotationBandAcrossDenseLanes() {
         let laneCount = 11
+        let gapLabelRowCount = 1
         let height = TimelineChartLayout.horizontalTimelineHeight(
-            laneCount: laneCount
+            laneCount: laneCount,
+            gapLabelRowCount: gapLabelRowCount
         )
-        let plotHeight = TimelineChartLayout.horizontalPlotHeight(height: height)
+        let plotHeight = TimelineChartLayout.horizontalPlotHeight(
+            height: height,
+            gapLabelRowCount: gapLabelRowCount
+        )
         let lanes = TimelineChartLayout.horizontalLanes(
             height: height,
-            laneCount: laneCount
+            laneCount: laneCount,
+            gapLabelRowCount: gapLabelRowCount
         )
         let startFrame = TimelineChartLayout.horizontalGapLabelFrame(
-            position: 0,
-            axisLength: 702,
+            placement: TimelineChartHorizontalGapLabelPlacement(
+                id: "start",
+                row: 0,
+                axisOrigin: 0,
+                axisExtent: 96
+            ),
             plotHeight: plotHeight
         )
         let endFrame = TimelineChartLayout.horizontalGapLabelFrame(
-            position: 702,
-            axisLength: 702,
+            placement: TimelineChartHorizontalGapLabelPlacement(
+                id: "end",
+                row: 0,
+                axisOrigin: 606,
+                axisExtent: 96
+            ),
             plotHeight: plotHeight
         )
-        let axisLabelTop = plotHeight +
-            TimelineChartLayout.horizontalAnnotationSpacing +
-            TimelineChartLayout.horizontalGapLabelHeight
+        let axisLabelTop = TimelineChartLayout.horizontalAxisLabelOrigin(
+            plotHeight: plotHeight,
+            gapLabelRowCount: gapLabelRowCount
+        )
 
         #expect(lanes.laneExtent == 24)
         #expect(lanes.laneSpacing == 10)
@@ -644,6 +670,80 @@ struct AnalyticsTimelineTests {
         #expect(startFrame.maxY <= axisLabelTop)
         #expect(endFrame.minY >= plotHeight)
         #expect(endFrame.maxY <= axisLabelTop)
+    }
+
+    @Test
+    func horizontalGapAnnotationsUseSeparateRowsAndExpandHeight() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let first = DateInterval(start: start, duration: 3 * 60 * 60)
+        let middle = DateInterval(
+            start: start.addingTimeInterval(5 * 60 * 60),
+            duration: 10 * 60
+        )
+        let last = DateInterval(
+            start: start.addingTimeInterval(7 * 60 * 60 + 10 * 60),
+            duration: 3 * 60 * 60
+        )
+        let display = DateInterval(start: first.start, end: last.end)
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: [first, middle, last]
+        )
+        let layout = TimelineChartLayout.horizontalGapLabels(
+            gaps: compression.omittedGaps,
+            compression: compression,
+            axisLength: 702
+        )
+
+        #expect(compression.omittedGaps.count == 2)
+        #expect(layout.placements.count == 2)
+        #expect(layout.rowCount == 2)
+        #expect(Set(layout.placements.map(\.row)) == Set([0, 1]))
+        #expect(
+            TimelineChartLayout.horizontalGapLabels(
+                gaps: Array(compression.omittedGaps.reversed()),
+                compression: compression,
+                axisLength: 702
+            ) == layout
+        )
+
+        let height = TimelineChartLayout.horizontalTimelineHeight(
+            laneCount: 3,
+            gapLabelRowCount: layout.rowCount
+        )
+        let oneRowHeight = TimelineChartLayout.horizontalTimelineHeight(
+            laneCount: 3,
+            gapLabelRowCount: 1
+        )
+        let plotHeight = TimelineChartLayout.horizontalPlotHeight(
+            height: height,
+            gapLabelRowCount: layout.rowCount
+        )
+        let firstPlacement = try #require(layout.placements.first)
+        let secondPlacement = try #require(layout.placements.dropFirst().first)
+        let firstFrame = TimelineChartLayout.horizontalGapLabelFrame(
+            placement: firstPlacement,
+            plotHeight: plotHeight
+        )
+        let secondFrame = TimelineChartLayout.horizontalGapLabelFrame(
+            placement: secondPlacement,
+            plotHeight: plotHeight
+        )
+        let horizontalOverlap = min(firstFrame.maxX, secondFrame.maxX) -
+            max(firstFrame.minX, secondFrame.minX)
+        let axisLabelTop = TimelineChartLayout.horizontalAxisLabelOrigin(
+            plotHeight: plotHeight,
+            gapLabelRowCount: layout.rowCount
+        )
+
+        #expect(horizontalOverlap > 0)
+        #expect(firstFrame.intersects(secondFrame) == false)
+        #expect(
+            height - oneRowHeight ==
+                TimelineChartLayout.horizontalGapLabelHeight +
+                TimelineChartLayout.horizontalGapLabelRowSpacing
+        )
+        #expect(max(firstFrame.maxY, secondFrame.maxY) <= axisLabelTop)
     }
 
     @Test

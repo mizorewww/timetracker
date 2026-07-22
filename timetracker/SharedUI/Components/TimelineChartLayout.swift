@@ -42,6 +42,18 @@ nonisolated struct TimelineChartBarLayout: Equatable, Sendable {
     let laneCount: Int
 }
 
+nonisolated struct TimelineChartHorizontalGapLabelPlacement: Identifiable, Equatable, Sendable {
+    let id: String
+    let row: Int
+    let axisOrigin: CGFloat
+    let axisExtent: CGFloat
+}
+
+nonisolated struct TimelineChartHorizontalGapLabelLayout: Equatable, Sendable {
+    let placements: [TimelineChartHorizontalGapLabelPlacement]
+    let rowCount: Int
+}
+
 nonisolated enum TimelineChartLayout {
     static let horizontalMinimumBarExtent: CGFloat = 18
     static let horizontalMinimumBarSpacing: CGFloat = 6
@@ -51,6 +63,8 @@ nonisolated enum TimelineChartLayout {
     static let horizontalGapLabelHeight: CGFloat = 32
     static let horizontalAnnotationSpacing: CGFloat = 4
     static let horizontalGapLabelWidth: CGFloat = 96
+    static let horizontalGapLabelMinimumSpacing: CGFloat = 4
+    static let horizontalGapLabelRowSpacing: CGFloat = 4
     static let verticalAxisLabelWidth: CGFloat = 96
     static let verticalTrailingInset: CGFloat = 12
     static let verticalMinimumBarExtent: CGFloat = 20
@@ -60,11 +74,16 @@ nonisolated enum TimelineChartLayout {
     static func horizontalLanes(
         height: CGFloat,
         laneCount: Int,
-        annotationHeight: CGFloat = horizontalAnnotationHeight
+        gapLabelRowCount: Int
     ) -> TimelineChartLaneLayout {
         centeredLanes(
             plotOrigin: 0,
-            plotExtent: max(1, height - annotationHeight),
+            plotExtent: max(
+                1,
+                height - horizontalAnnotationHeight(
+                    gapLabelRowCount: gapLabelRowCount
+                )
+            ),
             laneCount: laneCount,
             preferredLaneExtent: horizontalPreferredLaneExtent,
             preferredSpacing: horizontalPreferredLaneSpacing
@@ -87,22 +106,54 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
-    static var horizontalAnnotationHeight: CGFloat {
-        horizontalAnnotationSpacing +
-            horizontalGapLabelHeight +
+    static func horizontalGapAnnotationHeight(rowCount: Int) -> CGFloat {
+        let count = max(0, rowCount)
+        guard count > 0 else { return 0 }
+        return horizontalAnnotationSpacing +
+            CGFloat(count) * horizontalGapLabelHeight +
+            CGFloat(count - 1) * horizontalGapLabelRowSpacing
+    }
+
+    static func horizontalAnnotationHeight(gapLabelRowCount: Int) -> CGFloat {
+        horizontalGapAnnotationHeight(rowCount: gapLabelRowCount) +
             horizontalAxisLabelHeight
     }
 
-    static func horizontalPlotHeight(height: CGFloat) -> CGFloat {
-        max(0, finiteNonnegative(height) - horizontalAnnotationHeight)
+    static func horizontalPlotHeight(
+        height: CGFloat,
+        gapLabelRowCount: Int
+    ) -> CGFloat {
+        max(
+            0,
+            finiteNonnegative(height) - horizontalAnnotationHeight(
+                gapLabelRowCount: gapLabelRowCount
+            )
+        )
     }
 
-    static func horizontalTimelineHeight(laneCount: Int) -> CGFloat {
+    static func horizontalAxisLabelOrigin(
+        plotHeight: CGFloat,
+        gapLabelRowCount: Int
+    ) -> CGFloat {
+        finiteNonnegative(plotHeight) + horizontalGapAnnotationHeight(
+            rowCount: gapLabelRowCount
+        )
+    }
+
+    static func horizontalTimelineHeight(
+        laneCount: Int,
+        gapLabelRowCount: Int
+    ) -> CGFloat {
         let count = max(1, laneCount)
         let groupExtent =
             CGFloat(count) * horizontalPreferredLaneExtent +
             CGFloat(max(0, count - 1)) * horizontalPreferredLaneSpacing
-        return max(120, groupExtent + 20 + horizontalAnnotationHeight)
+        return max(
+            120,
+            groupExtent + 20 + horizontalAnnotationHeight(
+                gapLabelRowCount: gapLabelRowCount
+            )
+        )
     }
 
     /// Projects horizontal marks before assigning visual lanes. Reserving one
@@ -143,26 +194,94 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
-    static func horizontalGapLabelFrame(
-        position: CGFloat,
+    static func horizontalGapLabels(
+        gaps: [TimelineOmittedGap],
+        compression: TimelineAxisCompression,
         axisLength: CGFloat,
-        plotHeight: CGFloat,
         labelWidth: CGFloat = horizontalGapLabelWidth,
-        labelHeight: CGFloat = horizontalGapLabelHeight
-    ) -> CGRect {
+        minimumSpacing: CGFloat = horizontalGapLabelMinimumSpacing
+    ) -> TimelineChartHorizontalGapLabelLayout {
         let length = finiteNonnegative(axisLength)
         let width = min(finiteNonnegative(labelWidth), length)
-        let height = finiteNonnegative(labelHeight)
-        let coordinate = position.isFinite ? position : 0
-        let originX = min(
-            max(0, coordinate - width / 2),
-            max(0, length - width)
+        guard width > 0, gaps.isEmpty == false else {
+            return TimelineChartHorizontalGapLabelLayout(
+                placements: [],
+                rowCount: 0
+            )
+        }
+        let spacing = finiteNonnegative(minimumSpacing)
+        let candidates = gaps.map { gap in
+            let rawPosition = length * CGFloat(
+                compression.ratio(
+                    forCompressedOffset: gap.compressedMidpointOffset
+                )
+            )
+            let position = rawPosition.isFinite ? rawPosition : 0
+            let origin = min(
+                max(0, position - width / 2),
+                max(0, length - width)
+            )
+            return HorizontalGapLabelCandidate(
+                id: gap.id,
+                origin: origin,
+                extent: width
+            )
+        }
+        .sorted {
+            if $0.origin != $1.origin {
+                return $0.origin < $1.origin
+            }
+            if $0.end != $1.end {
+                return $0.end < $1.end
+            }
+            return $0.id < $1.id
+        }
+
+        var rowEnds: [CGFloat] = []
+        var placements: [TimelineChartHorizontalGapLabelPlacement] = []
+        placements.reserveCapacity(candidates.count)
+
+        for candidate in candidates {
+            let row = rowEnds.firstIndex { rowEnd in
+                candidate.origin - rowEnd >= spacing
+            } ?? rowEnds.count
+            if row == rowEnds.count {
+                rowEnds.append(candidate.end)
+            } else {
+                rowEnds[row] = candidate.end
+            }
+            placements.append(
+                TimelineChartHorizontalGapLabelPlacement(
+                    id: candidate.id,
+                    row: row,
+                    axisOrigin: candidate.origin,
+                    axisExtent: candidate.extent
+                )
+            )
+        }
+
+        return TimelineChartHorizontalGapLabelLayout(
+            placements: placements,
+            rowCount: rowEnds.count
         )
+    }
+
+    static func horizontalGapLabelFrame(
+        placement: TimelineChartHorizontalGapLabelPlacement,
+        plotHeight: CGFloat,
+        labelHeight: CGFloat = horizontalGapLabelHeight,
+        rowSpacing: CGFloat = horizontalGapLabelRowSpacing
+    ) -> CGRect {
+        let row = max(0, placement.row)
+        let height = finiteNonnegative(labelHeight)
+        let spacing = finiteNonnegative(rowSpacing)
 
         return CGRect(
-            x: originX,
-            y: finiteNonnegative(plotHeight) + horizontalAnnotationSpacing,
-            width: width,
+            x: finiteNonnegative(placement.axisOrigin),
+            y: finiteNonnegative(plotHeight) +
+                horizontalAnnotationSpacing +
+                CGFloat(row) * (height + spacing),
+            width: finiteNonnegative(placement.axisExtent),
             height: height
         )
     }
@@ -453,6 +572,16 @@ nonisolated enum TimelineChartLayout {
             }
         }
         return result
+    }
+}
+
+private nonisolated struct HorizontalGapLabelCandidate {
+    let id: String
+    let origin: CGFloat
+    let extent: CGFloat
+
+    var end: CGFloat {
+        origin + extent
     }
 }
 

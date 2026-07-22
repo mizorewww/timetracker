@@ -3615,6 +3615,10 @@ final class timetrackerUITests: XCTestCase {
         )
 
         XCTAssertTrue(homeIsReady(in: app))
+        if app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1) {
+            throw XCTSkip("The Task 23 fixture is phone-only.")
+        }
 
         let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
         scrollTodayUntilHittable(timeline, in: app)
@@ -3653,6 +3657,75 @@ final class timetrackerUITests: XCTestCase {
             "The terminal short mark must remain anchored later on the downward axis."
         )
         try capture("iphone-home-short-timeline-lanes", app: app)
+        #endif
+    }
+
+    @MainActor
+    func testOverlappingShortTimelineProtectsGapAnnotationAcrossPlatforms() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-overlap-timeline"]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let timeline = app.descendants(matching: .any)["home.timeline"].firstMatch
+        scrollTodayUntilHittable(timeline, in: app)
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
+        scroll(direction: .up, toward: timeline, in: app)
+
+        #if os(macOS)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["mac.splitNavigation"]
+                .waitForExistence(timeout: 3)
+        )
+        try assertOverlappingTimelineMarks(
+            in: app,
+            usesHorizontalTimeAxis: true
+        )
+        waitForScreenshotTransition()
+        try capture("mac-home-overlap-timeline", app: app)
+        #else
+        let usesIPadShell = app.descendants(matching: .any)[
+            "ipad.splitNavigation"
+        ].waitForExistence(timeout: 2)
+        try assertOverlappingTimelineMarks(
+            in: app,
+            usesHorizontalTimeAxis: usesIPadShell
+        )
+
+        if usesIPadShell {
+            waitForScreenshotTransition()
+            try capture("ipad-home-overlap-timeline-portrait", app: app)
+
+            XCUIDevice.shared.orientation = .landscapeLeft
+            XCTAssertTrue(waitUntil(timeout: 5) {
+                let frame = app.windows.firstMatch.frame
+                return frame.width > frame.height
+            })
+            let landscapeTimeline = app.descendants(matching: .any)[
+                "home.timeline"
+            ].firstMatch
+            scrollTodayUntilHittable(landscapeTimeline, in: app)
+            XCTAssertTrue(
+                landscapeTimeline.waitForExistence(timeout: 5) &&
+                    landscapeTimeline.isHittable
+            )
+            scroll(direction: .up, toward: landscapeTimeline, in: app)
+            try assertOverlappingTimelineMarks(
+                in: app,
+                usesHorizontalTimeAxis: true
+            )
+            waitForScreenshotTransition()
+            try capture("ipad-home-overlap-timeline-landscape", app: app)
+        } else {
+            waitForScreenshotTransition()
+            try capture("iphone-home-overlap-timeline", app: app)
+        }
         #endif
     }
 
@@ -5698,6 +5771,73 @@ final class timetrackerUITests: XCTestCase {
             return true
         }
         return app.buttons["home.startTimer"].waitForExistence(timeout: 2)
+    }
+
+    @MainActor
+    private func assertOverlappingTimelineMarks(
+        in app: XCUIApplication,
+        usesHorizontalTimeAxis: Bool
+    ) throws {
+        let query = app.images.matching(identifier: "home.timeline.graph")
+        XCTAssertTrue(
+            waitUntil(timeout: 5) { query.count >= 11 },
+            "The isolated fixture must render one context mark and ten burst marks."
+        )
+        let marks = query.allElementsBoundByIndex.filter { mark in
+            mark.frame.width > 0 && mark.frame.height > 0
+        }
+        XCTAssertEqual(
+            marks.count,
+            11,
+            "The overlap fixture must stay isolated from the regular demo timeline."
+        )
+
+        let laneCoordinates = Set(marks.map { mark in
+            let midpoint = usesHorizontalTimeAxis
+                ? mark.frame.midY
+                : mark.frame.midX
+            return Int(midpoint.rounded())
+        })
+        XCTAssertGreaterThanOrEqual(
+            laneCoordinates.count,
+            10,
+            "Ten mutually overlapping short tasks must occupy ten visual lanes."
+        )
+
+        var representativePair: (CGRect, CGRect)?
+        for firstIndex in marks.indices {
+            for secondIndex in marks.indices where secondIndex > firstIndex {
+                let first = marks[firstIndex].frame
+                let second = marks[secondIndex].frame
+                let horizontalOverlap = min(first.maxX, second.maxX) -
+                    max(first.minX, second.minX)
+                let verticalOverlap = min(first.maxY, second.maxY) -
+                    max(first.minY, second.minY)
+                let timeOverlap = usesHorizontalTimeAxis
+                    ? horizontalOverlap
+                    : verticalOverlap
+                let laneOverlap = usesHorizontalTimeAxis
+                    ? verticalOverlap
+                    : horizontalOverlap
+                let laneDistance = usesHorizontalTimeAxis
+                    ? abs(first.midY - second.midY)
+                    : abs(first.midX - second.midX)
+                if timeOverlap > 0, laneOverlap <= 0, laneDistance >= 6 {
+                    representativePair = (first, second)
+                    break
+                }
+            }
+            if representativePair != nil {
+                break
+            }
+        }
+
+        _ = try XCTUnwrap(
+            representativePair,
+            usesHorizontalTimeAxis
+                ? "Horizontal timelines must overlap in X and separate lanes in Y."
+                : "The iPhone timeline must overlap in Y and separate lanes in X."
+        )
     }
 
     @MainActor

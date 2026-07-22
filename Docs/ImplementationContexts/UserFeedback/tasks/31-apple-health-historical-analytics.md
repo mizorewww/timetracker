@@ -8,8 +8,8 @@
 - [x] 领取 Apple Health 类型任务的详情 Summary 与历史时间线缺失反馈。
 - [x] 审计 HealthKit 数据投影、任务详情与统计数据流，并制定自动化验收契约。
 - [x] 实现历史时长与历史时间线，补齐定向测试和脚本化截图验收。
-- [~] 提交已验证实现，随后精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`。
-- [ ] 标记反馈完成并移除活动链接。
+- [x] 提交已验证实现，并精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`。
+- [x] 标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -28,7 +28,7 @@
 
 - [x] Checkpoint A：范围领取、现状/依赖/HIG 审计与自动化验收设计。
 - [x] Checkpoint B：最小实现、定向单元/UI contract 与脚本化视觉验收。
-- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## 资源所有权
 
@@ -47,5 +47,7 @@
 - 日期轴改为真实 `Date` 值，并由 `DailyTimeSeriesXAxisPolicy` 在紧凑 Month 最多选择 5 个、常规宽度最多选择 8 个均匀刻度；脚本截图确认 iPhone 与 iPad 横竖屏均无省略号、裁切或密集网格。视觉审计将左下角悬浮圆形识别为系统 `.tabBarMinimizeBehavior(.onScrollDown)`，不是产品自绘遮挡。
 - 最终自动化结果：Apple Health 聚焦单测 10/10；Apple Health、Analytics、Home、Task 与本地化关联回归 163/163；iPhone 历史范围 1/1、iPad 历史范围与旋转 1/1、iPhone retry/empty/background refresh 2/2；最终 iOS build-for-testing 成功。关联回归同时修正 3 个落后于既有实现的静态源码契约断言，没有改产品行为。
 - macOS XCUITest 两次都在 test runner 初始化前被系统拒绝，原因是控制台会话处于 `CGSSessionScreenIsLocked=Yes`，报 `LocalAuthentication Code=-4`；没有手动解锁、调整窗口或触碰用户会话。macOS 逻辑与 UI contract 已由上述 10/10、163/163 自动化覆盖，此项如实记为环境性未执行。
+- `CONFIGURATION=Release scripts/build_install_all.sh` 成功：iOS Release（含 Watch companion）与 macOS Universal Release 均使用 Team `LT98S43NKA` 构建、签名并通过 `codesign --verify --deep --strict`；1.1.65 (120) 已安装到 iPad Pro M4、iPhone Air 与 `/Applications/timetracker.app`。当前无可见物理 Apple Watch，故只验证 companion 嵌入与签名，未声称手表安装成功。物理设备没有被启动、点击或截图。
+- Release DerivedData、Task31 xcresult、截图与其他 `/tmp/timetracker-task31-*` 产物已删除；owned simulator、测试进程与 UI runner 仍保持零残留。
 - Apple HIG 要求仅在相关上下文请求健康数据，并使用系统授权界面；HealthKit 读取授权结果不可被应用判定，空态只能表述为“没有可读取的数据”，不能声称用户拒绝。查询继续使用 overlap 语义，避免漏掉跨午夜睡眠。官方依据：<https://developer.apple.com/design/human-interface-guidelines/healthkit>、<https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data>、<https://developer.apple.com/documentation/healthkit/hkqueryoptions>、<https://developer.apple.com/documentation/healthkit/running-queries-with-swift-concurrency>。
 - 依赖审计：现有第三方包不提供本缺口能力；Apple HealthKit、Swift Concurrency、SwiftUI、Swift Charts 与 XCTest/XCUITest 已覆盖需求。新增第三方依赖：无。

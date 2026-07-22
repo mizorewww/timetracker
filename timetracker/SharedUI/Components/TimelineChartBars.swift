@@ -3,18 +3,12 @@ import SwiftUI
 extension TimelineChart {
     func horizontalBar(
         entry: AnalyticsTimelineEntry,
-        width: CGFloat,
+        placement: TimelineChartBarPlacement,
         lanes: TimelineChartLaneLayout
     ) -> some View {
-        let startRatio = axisCompression.ratio(for: entry.interval.start)
-        let endRatio = axisCompression.ratio(for: entry.interval.end)
-        let durationRatio = max(0, endRatio - startRatio)
-        let barWidth = max(18, width * CGFloat(durationRatio))
-        let x = width * CGFloat(startRatio)
-
         return RoundedRectangle(cornerRadius: 5, style: .continuous)
             .fill(Color(hex: entry.colorHex) ?? .blue)
-            .frame(width: barWidth, height: lanes.laneExtent)
+            .frame(width: placement.axisExtent, height: lanes.laneExtent)
             .overlay {
                 Image(systemName: entry.iconName)
                     .font(.caption.weight(.semibold))
@@ -22,7 +16,10 @@ extension TimelineChart {
                         TaskColorPalette.contrastingForegroundColor(for: entry.colorHex)
                     )
             }
-            .offset(x: x, y: lanes.offset(for: entry.lane))
+            .offset(
+                x: placement.axisOrigin,
+                y: lanes.offset(for: placement.lane)
+            )
             .help("\(entry.title) \(shortRange(entry))")
     }
 

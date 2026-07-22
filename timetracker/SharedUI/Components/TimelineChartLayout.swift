@@ -43,6 +43,14 @@ nonisolated struct TimelineChartBarLayout: Equatable, Sendable {
 }
 
 nonisolated enum TimelineChartLayout {
+    static let horizontalMinimumBarExtent: CGFloat = 18
+    static let horizontalMinimumBarSpacing: CGFloat = 6
+    static let horizontalPreferredLaneExtent: CGFloat = 24
+    static let horizontalPreferredLaneSpacing: CGFloat = 10
+    static let horizontalAxisLabelHeight: CGFloat = 24
+    static let horizontalGapLabelHeight: CGFloat = 32
+    static let horizontalAnnotationSpacing: CGFloat = 4
+    static let horizontalGapLabelWidth: CGFloat = 96
     static let verticalAxisLabelWidth: CGFloat = 96
     static let verticalTrailingInset: CGFloat = 12
     static let verticalMinimumBarExtent: CGFloat = 20
@@ -52,14 +60,14 @@ nonisolated enum TimelineChartLayout {
     static func horizontalLanes(
         height: CGFloat,
         laneCount: Int,
-        axisLabelHeight: CGFloat = 24
+        annotationHeight: CGFloat = horizontalAnnotationHeight
     ) -> TimelineChartLaneLayout {
         centeredLanes(
             plotOrigin: 0,
-            plotExtent: max(1, height - axisLabelHeight),
+            plotExtent: max(1, height - annotationHeight),
             laneCount: laneCount,
-            preferredLaneExtent: 24,
-            preferredSpacing: 10
+            preferredLaneExtent: horizontalPreferredLaneExtent,
+            preferredSpacing: horizontalPreferredLaneSpacing
         )
     }
     static func verticalLanes(
@@ -79,11 +87,46 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
+    static var horizontalAnnotationHeight: CGFloat {
+        horizontalAnnotationSpacing +
+            horizontalGapLabelHeight +
+            horizontalAxisLabelHeight
+    }
+
+    static func horizontalPlotHeight(height: CGFloat) -> CGFloat {
+        max(0, finiteNonnegative(height) - horizontalAnnotationHeight)
+    }
+
+    static func horizontalTimelineHeight(laneCount: Int) -> CGFloat {
+        let count = max(1, laneCount)
+        let groupExtent =
+            CGFloat(count) * horizontalPreferredLaneExtent +
+            CGFloat(max(0, count - 1)) * horizontalPreferredLaneSpacing
+        return max(120, groupExtent + 20 + horizontalAnnotationHeight)
+    }
+
+    /// Projects horizontal marks before assigning visual lanes. Reserving one
+    /// minimum mark extent after the time axis lets a terminal short event stay
+    /// anchored to its projected start and grow rightward without clipping.
+    static func horizontalBars(
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        width: CGFloat,
+        minimumBarExtent: CGFloat = horizontalMinimumBarExtent,
+        minimumSpacing: CGFloat = horizontalMinimumBarSpacing
+    ) -> TimelineChartBarLayout {
+        projectedBars(
+            entries: entries,
+            compression: compression,
+            totalAxisExtent: width,
+            minimumBarExtent: minimumBarExtent,
+            minimumSpacing: minimumSpacing
+        )
+    }
+
     /// Projects compact vertical marks before assigning visual lanes.
-    ///
-    /// Reserving one minimum mark extent below the time axis means a terminal
-    /// short event can stay anchored to its projected start and grow downward,
-    /// instead of being shifted upward to fit inside the chart.
+    /// Reserving one minimum mark extent below the time axis lets a terminal
+    /// short event stay anchored to its projected start and grow downward.
     static func verticalBars(
         entries: [AnalyticsTimelineEntry],
         compression: TimelineAxisCompression,
@@ -91,75 +134,36 @@ nonisolated enum TimelineChartLayout {
         minimumBarExtent: CGFloat = verticalMinimumBarExtent,
         minimumSpacing: CGFloat = verticalMinimumBarSpacing
     ) -> TimelineChartBarLayout {
-        let totalHeight = finiteNonnegative(height)
-        let markExtent = min(
-            totalHeight,
-            finiteNonnegative(minimumBarExtent)
+        projectedBars(
+            entries: entries,
+            compression: compression,
+            totalAxisExtent: height,
+            minimumBarExtent: minimumBarExtent,
+            minimumSpacing: minimumSpacing
         )
-        let axisLength = max(0, totalHeight - markExtent)
-        let spacing = finiteNonnegative(minimumSpacing)
-        guard totalHeight > 0, entries.isEmpty == false else {
-            return TimelineChartBarLayout(
-                axisLength: axisLength,
-                placements: [],
-                laneCount: 0
-            )
-        }
-        var projectedByID: [TimelineEntryID: ProjectedBar] = [:]
-        var intervals: [TimelineLaneInterval] = []
-        projectedByID.reserveCapacity(entries.count)
-        intervals.reserveCapacity(entries.count)
+    }
 
-        for entry in entries where projectedByID[entry.id] == nil {
-            let origin = projectedPosition(
-                for: entry.interval.start,
-                compression: compression,
-                axisLength: axisLength
-            )
-            let naturalEnd = max(
-                origin,
-                projectedPosition(
-                    for: entry.interval.end,
-                    compression: compression,
-                    axisLength: axisLength
-                )
-            )
-            let availableExtent = max(0, totalHeight - origin)
-            let extent = min(
-                availableExtent,
-                max(markExtent, naturalEnd - origin)
-            )
-            let projected = ProjectedBar(origin: origin, extent: extent)
-            projectedByID[entry.id] = projected
-            intervals.append(
-                TimelineLaneInterval(
-                    id: entry.id,
-                    start: Double(origin),
-                    end: Double(projected.end)
-                )
-            )
-        }
-
-        let assignments = TimelineLaneAllocator.assignments(
-            for: intervals,
-            minimumGap: Double(spacing),
-            allowsReuseAtMinimumGap: true
+    static func horizontalGapLabelFrame(
+        position: CGFloat,
+        axisLength: CGFloat,
+        plotHeight: CGFloat,
+        labelWidth: CGFloat = horizontalGapLabelWidth,
+        labelHeight: CGFloat = horizontalGapLabelHeight
+    ) -> CGRect {
+        let length = finiteNonnegative(axisLength)
+        let width = min(finiteNonnegative(labelWidth), length)
+        let height = finiteNonnegative(labelHeight)
+        let coordinate = position.isFinite ? position : 0
+        let originX = min(
+            max(0, coordinate - width / 2),
+            max(0, length - width)
         )
-        let placements = assignments.compactMap { assignment in
-            projectedByID[assignment.id].map { projected in
-                TimelineChartBarPlacement(
-                    id: assignment.id,
-                    lane: assignment.lane,
-                    axisOrigin: projected.origin,
-                    axisExtent: projected.extent
-                )
-            }
-        }
 
-        return TimelineChartBarLayout(
-            axisLength: axisLength,
-            placements: placements,
-            laneCount: (placements.map(\.lane).max() ?? -1) + 1
+        return CGRect(
+            x: originX,
+            y: finiteNonnegative(plotHeight) + horizontalAnnotationSpacing,
+            width: width,
+            height: height
         )
     }
 
@@ -328,6 +332,86 @@ nonisolated enum TimelineChartLayout {
             laneExtent: laneExtent,
             laneSpacing: spacing,
             groupExtent: groupExtent
+        )
+    }
+
+    private static func projectedBars(
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        totalAxisExtent: CGFloat,
+        minimumBarExtent: CGFloat,
+        minimumSpacing: CGFloat
+    ) -> TimelineChartBarLayout {
+        let totalExtent = finiteNonnegative(totalAxisExtent)
+        let markExtent = min(
+            totalExtent,
+            finiteNonnegative(minimumBarExtent)
+        )
+        let axisLength = max(0, totalExtent - markExtent)
+        let spacing = finiteNonnegative(minimumSpacing)
+        guard totalExtent > 0, entries.isEmpty == false else {
+            return TimelineChartBarLayout(
+                axisLength: axisLength,
+                placements: [],
+                laneCount: 0
+            )
+        }
+
+        var projectedByID: [TimelineEntryID: ProjectedBar] = [:]
+        var intervals: [TimelineLaneInterval] = []
+        projectedByID.reserveCapacity(entries.count)
+        intervals.reserveCapacity(entries.count)
+
+        for entry in entries where projectedByID[entry.id] == nil {
+            let origin = projectedPosition(
+                for: entry.interval.start,
+                compression: compression,
+                axisLength: axisLength
+            )
+            let naturalEnd = max(
+                origin,
+                projectedPosition(
+                    for: entry.interval.end,
+                    compression: compression,
+                    axisLength: axisLength
+                )
+            )
+            let availableExtent = max(0, totalExtent - origin)
+            let extent = min(
+                availableExtent,
+                max(markExtent, naturalEnd - origin)
+            )
+            let projected = ProjectedBar(origin: origin, extent: extent)
+            projectedByID[entry.id] = projected
+            intervals.append(
+                TimelineLaneInterval(
+                    id: entry.id,
+                    start: Double(origin),
+                    end: Double(projected.end)
+                )
+            )
+        }
+
+        let assignments = TimelineLaneAllocator.assignments(
+            for: intervals,
+            minimumGap: Double(spacing),
+            allowsReuseAtMinimumGap: true
+        )
+        let placements = assignments.compactMap { assignment in
+            projectedByID[assignment.id].map { projected in
+                TimelineChartBarPlacement(
+                    id: assignment.id,
+                    lane: assignment.lane,
+                    axisOrigin: projected.origin,
+                    axisExtent: projected.extent
+                )
+            }
+        }
+
+        return TimelineChartBarLayout(
+            axisLength: axisLength,
+            placements: placements,
+            laneCount: (placements.map(\.lane).max() ?? -1) + 1
         )
     }
 

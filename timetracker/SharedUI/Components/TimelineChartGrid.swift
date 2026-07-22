@@ -1,16 +1,19 @@
 import SwiftUI
 extension TimelineChart {
-    func horizontalHourGrid(width: CGFloat, height: CGFloat) -> some View {
+    func horizontalHourGrid(
+        axisLength: CGFloat,
+        plotHeight: CGFloat
+    ) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(
-                visibleHourTicks(axisLength: width, minimumSpacing: 84),
+                visibleHourTicks(axisLength: axisLength, minimumSpacing: 84),
                 id: \.date
             ) { tick in
                 let ratio = axisCompression.ratio(for: tick.date)
-                let x = width * CGFloat(ratio)
+                let x = axisLength * CGFloat(ratio)
                 TimelineGridLine(position: x, isVertical: true)
                     .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
-                    .frame(width: width, height: max(0, height - 24))
+                    .frame(width: axisLength, height: plotHeight)
                 Text(hourLabel(tick.date))
                     .font(
                         .footnote
@@ -26,11 +29,13 @@ extension TimelineChart {
                     .offset(
                         x: TimelineChartLayout.axisLabelOrigin(
                             position: x,
-                            axisLength: width,
+                            axisLength: axisLength,
                             labelExtent: 52,
                             role: tick.role
                         ),
-                        y: max(0, height - 20)
+                        y: plotHeight +
+                            TimelineChartLayout.horizontalAnnotationSpacing +
+                            TimelineChartLayout.horizontalGapLabelHeight
                     )
             }
         }
@@ -82,12 +87,12 @@ extension TimelineChart {
             }
         }
     }
-    func horizontalGapMarker(
+    func horizontalGapLine(
         _ gap: TimelineOmittedGap,
-        width: CGFloat,
-        height: CGFloat
+        axisLength: CGFloat,
+        plotHeight: CGFloat
     ) -> some View {
-        let x = width * CGFloat(
+        let x = axisLength * CGFloat(
             axisCompression.ratio(forCompressedOffset: gap.compressedMidpointOffset)
         )
         return DashedTimelineLine(isVertical: true)
@@ -95,12 +100,29 @@ extension TimelineChart {
                 Color.secondary.opacity(0.42),
                 style: StrokeStyle(lineWidth: 1, dash: [4, 4])
             )
-            .frame(width: 1, height: max(28, height - 28))
-            .overlay(alignment: .bottom) {
-                omittedGapLabel(gap)
-                    .padding(.bottom, 2)
-            }
-            .offset(x: min(max(0, x), width - 1), y: 4)
+            .frame(width: 1, height: plotHeight)
+            .offset(x: min(max(0, x), max(0, axisLength - 1)))
+    }
+
+    func horizontalGapLabel(
+        _ gap: TimelineOmittedGap,
+        axisLength: CGFloat,
+        plotHeight: CGFloat
+    ) -> some View {
+        let x = axisLength * CGFloat(
+            axisCompression.ratio(
+                forCompressedOffset: gap.compressedMidpointOffset
+            )
+        )
+        let frame = TimelineChartLayout.horizontalGapLabelFrame(
+            position: x,
+            axisLength: axisLength,
+            plotHeight: plotHeight
+        )
+
+        return omittedGapLabel(gap)
+            .frame(width: frame.width, height: frame.height)
+            .offset(x: frame.minX, y: frame.minY)
     }
     func verticalGapLine(
         _ gap: TimelineOmittedGap,
@@ -151,11 +173,12 @@ extension TimelineChart {
         Text(omittedGapText(gap))
             .font(.caption2.weight(.medium))
             .foregroundStyle(.secondary)
-            .lineLimit(1)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+            .allowsTightening(true)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(.regularMaterial, in: Capsule())
-            .fixedSize()
     }
 
     private func verticalOmittedGapLabel(

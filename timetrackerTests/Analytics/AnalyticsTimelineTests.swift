@@ -461,18 +461,32 @@ struct AnalyticsTimelineTests {
         )
 
         let horizontal = TimelineChartLayout.horizontalLanes(
-            height: 120,
+            height: TimelineChartLayout.horizontalTimelineHeight(laneCount: 1),
             laneCount: 1
         )
-        #expect(abs(horizontal.midpoint - 48) < 0.001)
+        let horizontalPlotHeight = TimelineChartLayout.horizontalPlotHeight(
+            height: TimelineChartLayout.horizontalTimelineHeight(laneCount: 1)
+        )
+        #expect(abs(horizontal.midpoint - horizontalPlotHeight / 2) < 0.001)
 
-        let horizontalOverlap = TimelineChartLayout.horizontalLanes(
-            height: 120,
+        let horizontalOverlapHeight = TimelineChartLayout.horizontalTimelineHeight(
             laneCount: 3
         )
-        #expect(abs(horizontalOverlap.midpoint - 48) < 0.001)
+        let horizontalOverlap = TimelineChartLayout.horizontalLanes(
+            height: horizontalOverlapHeight,
+            laneCount: 3
+        )
+        let horizontalOverlapPlotHeight = TimelineChartLayout.horizontalPlotHeight(
+            height: horizontalOverlapHeight
+        )
+        #expect(
+            abs(horizontalOverlap.midpoint - horizontalOverlapPlotHeight / 2) < 0.001
+        )
         #expect(horizontalOverlap.origin >= 0)
-        #expect(horizontalOverlap.origin + horizontalOverlap.groupExtent <= 96)
+        #expect(
+            horizontalOverlap.origin + horizontalOverlap.groupExtent
+                <= horizontalOverlapPlotHeight
+        )
 
         #expect(
             TimelineChartLayout.axisLabelOrigin(
@@ -498,6 +512,138 @@ struct AnalyticsTimelineTests {
                 role: .end
             ) == 288
         )
+    }
+
+    @Test
+    func horizontalTimelineAssignsLanesFromRenderedFootprints() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let display = DateInterval(start: start, duration: 5_430)
+        let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000111")!
+        let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000112")!
+        let thirdID = UUID(uuidString: "00000000-0000-0000-0000-000000000113")!
+        let entries = [
+            makeTimelineEntry(
+                id: firstID,
+                start: start,
+                end: start.addingTimeInterval(30)
+            ),
+            makeTimelineEntry(
+                id: secondID,
+                start: start.addingTimeInterval(120),
+                end: start.addingTimeInterval(150)
+            ),
+            makeTimelineEntry(
+                id: thirdID,
+                start: start.addingTimeInterval(600),
+                end: start.addingTimeInterval(630)
+            )
+        ]
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: entries.map(\.interval)
+        )
+
+        let layout = TimelineChartLayout.horizontalBars(
+            entries: entries,
+            compression: compression,
+            width: 720
+        )
+        let first = try #require(
+            layout.placements.first { $0.id == .trackedSegment(firstID) }
+        )
+        let second = try #require(
+            layout.placements.first { $0.id == .trackedSegment(secondID) }
+        )
+        let third = try #require(
+            layout.placements.first { $0.id == .trackedSegment(thirdID) }
+        )
+
+        #expect(layout.axisLength == 702)
+        #expect(layout.laneCount == 2)
+        #expect(first.lane == 0)
+        #expect(second.lane == 1)
+        #expect(third.lane == 0)
+        #expect(first.axisExtent == 18)
+        #expect(second.axisOrigin - first.axisEnd < 6)
+        #expect(third.axisOrigin - first.axisEnd > 6)
+        #expect(
+            TimelineChartLayout.horizontalBars(
+                entries: Array(entries.reversed()),
+                compression: compression,
+                width: 720
+            ) == layout
+        )
+    }
+
+    @Test
+    func horizontalTimelineReservesTerminalMarkAndHandlesZeroWidth() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let display = DateInterval(start: start, duration: 60 * 60)
+        let entry = makeTimelineEntry(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000114")!,
+            start: start.addingTimeInterval(59 * 60),
+            end: display.end
+        )
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: [entry.interval]
+        )
+
+        let layout = TimelineChartLayout.horizontalBars(
+            entries: [entry],
+            compression: compression,
+            width: 120
+        )
+        let placement = try #require(layout.placements.first)
+        let zero = TimelineChartLayout.horizontalBars(
+            entries: [entry],
+            compression: compression,
+            width: 0
+        )
+
+        #expect(layout.axisLength == 102)
+        #expect(placement.axisExtent == 18)
+        #expect(placement.axisEnd <= 120)
+        #expect(placement.axisEnd > layout.axisLength)
+        #expect(zero.axisLength == 0)
+        #expect(zero.placements.isEmpty)
+        #expect(zero.laneCount == 0)
+    }
+
+    @Test
+    func horizontalTimelineReservesGapAnnotationBandAcrossDenseLanes() {
+        let laneCount = 11
+        let height = TimelineChartLayout.horizontalTimelineHeight(
+            laneCount: laneCount
+        )
+        let plotHeight = TimelineChartLayout.horizontalPlotHeight(height: height)
+        let lanes = TimelineChartLayout.horizontalLanes(
+            height: height,
+            laneCount: laneCount
+        )
+        let startFrame = TimelineChartLayout.horizontalGapLabelFrame(
+            position: 0,
+            axisLength: 702,
+            plotHeight: plotHeight
+        )
+        let endFrame = TimelineChartLayout.horizontalGapLabelFrame(
+            position: 702,
+            axisLength: 702,
+            plotHeight: plotHeight
+        )
+        let axisLabelTop = plotHeight +
+            TimelineChartLayout.horizontalAnnotationSpacing +
+            TimelineChartLayout.horizontalGapLabelHeight
+
+        #expect(lanes.laneExtent == 24)
+        #expect(lanes.laneSpacing == 10)
+        #expect(lanes.origin + lanes.groupExtent <= plotHeight)
+        #expect(startFrame.minX == 0)
+        #expect(endFrame.maxX == 702)
+        #expect(startFrame.minY >= plotHeight)
+        #expect(startFrame.maxY <= axisLabelTop)
+        #expect(endFrame.minY >= plotHeight)
+        #expect(endFrame.maxY <= axisLabelTop)
     }
 
     @Test

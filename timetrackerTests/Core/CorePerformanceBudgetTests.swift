@@ -316,6 +316,50 @@ struct CorePerformanceBudgetTests {
         #expect(elapsed < 1.0)
     }
 
+    @Test
+    func horizontalTimelineProjectionWithManyRowsStaysWithinPerformanceBudget() {
+        let startDate = Date(timeIntervalSince1970: 1_800_000_000)
+        let entries = (0..<5_000).map { index in
+            let startedAt = startDate.addingTimeInterval(Double(index * 13))
+            let endedAt = startedAt.addingTimeInterval(30)
+            let id = UUID()
+            return AnalyticsTimelineEntry(
+                id: .trackedSegment(id),
+                subject: .task(id),
+                title: "Projected \(index)",
+                path: "Projected \(index)",
+                iconName: "clock",
+                colorHex: "1677FF",
+                startedAt: startedAt,
+                endedAt: endedAt,
+                lane: 0,
+                labelIndex: index,
+                interval: DateInterval(start: startedAt, end: endedAt),
+                durationSeconds: 30
+            )
+        }
+        let display = DateInterval(
+            start: startDate,
+            end: entries.last?.endedAt ?? startDate.addingTimeInterval(1)
+        )
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: entries.map(\.interval)
+        )
+
+        let start = CFAbsoluteTimeGetCurrent()
+        let layout = TimelineChartLayout.horizontalBars(
+            entries: entries,
+            compression: compression,
+            width: 720
+        )
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        #expect(layout.placements.count == entries.count)
+        #expect(layout.laneCount > 1)
+        #expect(elapsed < 1.0)
+    }
+
     @Test @MainActor
     func affectedRollupRefreshStaysWithinPerformanceBudget() throws {
         let parent = TaskNode(title: "Budget Parent", parentID: nil, deviceID: "test")

@@ -16,8 +16,12 @@ struct TimelineChart: View {
                 verticalTimeline
                     .frame(height: compactHeight)
             } else {
-                horizontalTimeline
-                    .frame(height: horizontalTimelineHeight)
+                TimelineChartHorizontalSizingLayout(
+                    entries: laneEntries,
+                    compression: axisCompression
+                ) {
+                    horizontalTimeline
+                }
             }
         }
         .accessibilityHidden(true)
@@ -37,10 +41,6 @@ struct TimelineChart: View {
             ?? TimelineAxisCompression(displayInterval: displayInterval, busyIntervals: [])
     }
 
-    var laneCount: Int {
-        timeline.laneCount
-    }
-
     private var usesVerticalLayout: Bool {
         #if os(iOS)
         horizontalSizeClass == .compact
@@ -49,30 +49,55 @@ struct TimelineChart: View {
         #endif
     }
 
-    private var horizontalTimelineHeight: CGFloat {
-        max(120, CGFloat(laneCount) * 34 + 34)
-    }
 }
 
 extension TimelineChart {
     var horizontalTimeline: some View {
         GeometryReader { proxy in
+            let barLayout = TimelineChartLayout.horizontalBars(
+                entries: laneEntries,
+                compression: axisCompression,
+                width: proxy.size.width
+            )
+            let entryByID = Dictionary(
+                uniqueKeysWithValues: laneEntries.map { ($0.id, $0) }
+            )
+            let plotHeight = TimelineChartLayout.horizontalPlotHeight(
+                height: proxy.size.height
+            )
+            let lanes = TimelineChartLayout.horizontalLanes(
+                height: proxy.size.height,
+                laneCount: barLayout.laneCount
+            )
+
             ZStack(alignment: .topLeading) {
-                horizontalHourGrid(width: proxy.size.width, height: proxy.size.height)
-                ForEach(axisCompression.omittedGaps) { gap in
-                    horizontalGapMarker(gap, width: proxy.size.width, height: proxy.size.height)
-                        .zIndex(1)
-                }
-                let lanes = TimelineChartLayout.horizontalLanes(
-                    height: proxy.size.height,
-                    laneCount: laneCount
+                horizontalHourGrid(
+                    axisLength: barLayout.axisLength,
+                    plotHeight: plotHeight
                 )
-                ForEach(laneEntries) { entry in
-                    horizontalBar(
-                        entry: entry,
-                        width: proxy.size.width,
-                        lanes: lanes
+                ForEach(axisCompression.omittedGaps) { gap in
+                    horizontalGapLine(
+                        gap,
+                        axisLength: barLayout.axisLength,
+                        plotHeight: plotHeight
                     )
+                }
+                ForEach(barLayout.placements) { placement in
+                    if let entry = entryByID[placement.id] {
+                        horizontalBar(
+                            entry: entry,
+                            placement: placement,
+                            lanes: lanes
+                        )
+                    }
+                }
+                ForEach(axisCompression.omittedGaps) { gap in
+                    horizontalGapLabel(
+                        gap,
+                        axisLength: barLayout.axisLength,
+                        plotHeight: plotHeight
+                    )
+                    .zIndex(1)
                 }
             }
         }
@@ -123,5 +148,52 @@ extension TimelineChart {
                 }
             }
         }
+    }
+}
+
+private struct TimelineChartHorizontalSizingLayout: Layout {
+    let entries: [AnalyticsTimelineEntry]
+    let compression: TimelineAxisCompression
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        guard subviews.isEmpty == false else { return .zero }
+        let width: CGFloat
+        if let proposedWidth = proposal.width, proposedWidth.isFinite {
+            width = max(0, proposedWidth)
+        } else {
+            width = 640
+        }
+        let bars = TimelineChartLayout.horizontalBars(
+            entries: entries,
+            compression: compression,
+            width: width
+        )
+        return CGSize(
+            width: width,
+            height: TimelineChartLayout.horizontalTimelineHeight(
+                laneCount: bars.laneCount
+            )
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard let subview = subviews.first else { return }
+        subview.place(
+            at: bounds.origin,
+            anchor: .topLeading,
+            proposal: ProposedViewSize(
+                width: bounds.width,
+                height: bounds.height
+            )
+        )
     }
 }

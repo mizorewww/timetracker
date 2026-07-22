@@ -38,7 +38,12 @@ extension TimelineChart {
     func verticalHourGrid(width: CGFloat, axisLength: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(
-                visibleHourTicks(axisLength: axisLength, minimumSpacing: 28),
+                TimelineChartLayout.verticalAxisTicks(
+                    displayInterval: displayInterval,
+                    compression: axisCompression,
+                    axisLength: axisLength,
+                    minimumSpacing: 28
+                ),
                 id: \.date
             ) { tick in
                 let ratio = axisCompression.ratio(for: tick.date)
@@ -61,7 +66,11 @@ extension TimelineChart {
                     )
                     .lineLimit(1)
                     .minimumScaleFactor(0.92)
-                    .frame(width: 56, height: 16, alignment: .trailing)
+                    .frame(
+                        width: TimelineChartLayout.verticalAxisLabelWidth - 12,
+                        height: 16,
+                        alignment: .trailing
+                    )
                     .offset(
                         y: TimelineChartLayout.axisLabelOrigin(
                             position: y,
@@ -93,7 +102,7 @@ extension TimelineChart {
             }
             .offset(x: min(max(0, x), width - 1), y: 4)
     }
-    func verticalGapMarker(
+    func verticalGapLine(
         _ gap: TimelineOmittedGap,
         width: CGFloat,
         axisLength: CGFloat
@@ -101,37 +110,41 @@ extension TimelineChart {
         let y = axisLength * CGFloat(
             axisCompression.ratio(forCompressedOffset: gap.compressedMidpointOffset)
         )
-        let labelFrame = TimelineChartLayout.verticalGapLabelFrame(
+        return DashedTimelineLine(isVertical: false)
+            .stroke(
+                Color.secondary.opacity(0.42),
+                style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+            )
+            .frame(
+                width: max(
+                    0,
+                    width - TimelineChartLayout.verticalAxisLabelWidth
+                ),
+                height: 1
+            )
+            .offset(
+                x: TimelineChartLayout.verticalAxisLabelWidth,
+                y: min(max(0, y), max(0, axisLength - 1))
+            )
+    }
+
+    func verticalGapLabel(
+        _ gap: TimelineOmittedGap,
+        axisLength: CGFloat
+    ) -> some View {
+        let y = axisLength * CGFloat(
+            axisCompression.ratio(
+                forCompressedOffset: gap.compressedMidpointOffset
+            )
+        )
+        let frame = TimelineChartLayout.verticalGapLabelFrame(
             position: y,
             axisLength: axisLength
         )
 
-        return ZStack(alignment: .topLeading) {
-            DashedTimelineLine(isVertical: false)
-                .stroke(
-                    Color.secondary.opacity(0.42),
-                    style: StrokeStyle(lineWidth: 1, dash: [4, 4])
-                )
-                .frame(
-                    width: max(
-                        0,
-                        width - TimelineChartLayout.verticalAxisLabelWidth
-                    ),
-                    height: 1
-                )
-                .offset(
-                    x: TimelineChartLayout.verticalAxisLabelWidth,
-                    y: min(max(0, y), max(0, axisLength - 1))
-                )
-            verticalOmittedGapLabel(gap)
-                .frame(width: labelFrame.width, height: labelFrame.height)
-                .offset(x: labelFrame.minX, y: labelFrame.minY)
-        }
-        .frame(
-            width: max(0, width),
-            height: max(0, axisLength),
-            alignment: .topLeading
-        )
+        return verticalOmittedGapLabel(gap)
+            .frame(width: frame.width, height: frame.height)
+            .offset(x: frame.minX, y: frame.minY)
     }
 
     private func omittedGapLabel(_ gap: TimelineOmittedGap) -> some View {
@@ -151,8 +164,8 @@ extension TimelineChart {
         Text(omittedGapText(gap))
             .font(.caption2.weight(.medium))
             .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
             .allowsTightening(true)
             .padding(.horizontal, 3)
             .padding(.vertical, 2)

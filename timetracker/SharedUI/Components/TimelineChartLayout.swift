@@ -43,10 +43,11 @@ nonisolated struct TimelineChartBarLayout: Equatable, Sendable {
 }
 
 nonisolated enum TimelineChartLayout {
-    static let verticalAxisLabelWidth: CGFloat = 68
+    static let verticalAxisLabelWidth: CGFloat = 96
     static let verticalTrailingInset: CGFloat = 12
     static let verticalMinimumBarExtent: CGFloat = 20
     static let verticalMinimumBarSpacing: CGFloat = 6
+    static let verticalGapLabelHeight: CGFloat = 32
 
     static func horizontalLanes(
         height: CGFloat,
@@ -166,7 +167,7 @@ nonisolated enum TimelineChartLayout {
         position: CGFloat,
         axisLength: CGFloat,
         axisLabelWidth: CGFloat = verticalAxisLabelWidth,
-        labelHeight: CGFloat = 20,
+        labelHeight: CGFloat = verticalGapLabelHeight,
         horizontalInset: CGFloat = 6
     ) -> CGRect {
         let length = finiteNonnegative(axisLength)
@@ -185,6 +186,54 @@ nonisolated enum TimelineChartLayout {
             width: max(0, gutterWidth - 2 * inset),
             height: height
         )
+    }
+
+    static func verticalAxisTicks(
+        displayInterval: DateInterval,
+        compression: TimelineAxisCompression,
+        axisLength: CGFloat,
+        minimumSpacing: CGFloat,
+        calendar: Calendar = .current,
+        tickLabelHeight: CGFloat = 16,
+        collisionClearance: CGFloat = 2
+    ) -> [TimelineChartAxisTick] {
+        let length = finiteNonnegative(axisLength)
+        let labelHeight = min(finiteNonnegative(tickLabelHeight), length)
+        let clearance = finiteNonnegative(collisionClearance)
+        let gapFrames = compression.omittedGaps.map { gap in
+            verticalGapLabelFrame(
+                position: length * CGFloat(
+                    compression.ratio(
+                        forCompressedOffset: gap.compressedMidpointOffset
+                    )
+                ),
+                axisLength: length
+            )
+        }
+
+        return axisTicks(
+            displayInterval: displayInterval,
+            compression: compression,
+            axisLength: length,
+            minimumSpacing: minimumSpacing,
+            calendar: calendar
+        )
+        .filter { tick in
+            guard tick.role == .interior else { return true }
+            let position = length * CGFloat(compression.ratio(for: tick.date))
+            let tickFrame = CGRect(
+                x: 0,
+                y: axisLabelOrigin(
+                    position: position,
+                    axisLength: length,
+                    labelExtent: labelHeight,
+                    role: tick.role
+                ) - clearance,
+                width: verticalAxisLabelWidth,
+                height: labelHeight + 2 * clearance
+            )
+            return gapFrames.contains { $0.intersects(tickFrame) } == false
+        }
     }
 
     static func axisTicks(

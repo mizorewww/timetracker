@@ -98,6 +98,13 @@ extension TimelineChart {
                     width: proxy.size.width,
                     axisLength: barLayout.axisLength
                 )
+                ForEach(axisCompression.omittedGaps) { gap in
+                    verticalGapLine(
+                        gap,
+                        width: proxy.size.width,
+                        axisLength: barLayout.axisLength
+                    )
+                }
                 ForEach(barLayout.placements) { placement in
                     if let entry = entryByID[placement.id] {
                         verticalBar(
@@ -108,9 +115,8 @@ extension TimelineChart {
                     }
                 }
                 ForEach(axisCompression.omittedGaps) { gap in
-                    verticalGapMarker(
+                    verticalGapLabel(
                         gap,
-                        width: proxy.size.width,
                         axisLength: barLayout.axisLength
                     )
                     .zIndex(1)

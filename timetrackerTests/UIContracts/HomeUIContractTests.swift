@@ -852,6 +852,15 @@ struct HomeUIContractTests {
 
     @Test
     func todayAndAnalyticsShareOneGraphicalTimelineComponent() throws {
+        let chartSource = try sourceText(
+            "timetracker/SharedUI/Components/TimelineChart.swift"
+        )
+        let gridSource = try sourceText(
+            "timetracker/SharedUI/Components/TimelineChartGrid.swift"
+        )
+        let barsSource = try sourceText(
+            "timetracker/SharedUI/Components/TimelineChartBars.swift"
+        )
         let sharedSource = try [
             "timetracker/SharedUI/Components/TimelineChart.swift",
             "timetracker/SharedUI/Components/TimelineChartLayout.swift",
@@ -886,6 +895,12 @@ struct HomeUIContractTests {
         #expect(sharedSource.contains("y: placement.axisOrigin"))
         #expect(sharedSource.contains("verticalGapLabelFrame("))
         #expect(sharedSource.contains("min(y, height - barHeight)") == false)
+        #expect(chartSource.contains("verticalGapLine("))
+        #expect(chartSource.contains("verticalGapLabel("))
+        #expect(gridSource.contains("TimelineChartLayout.verticalAxisTicks("))
+        #expect(gridSource.contains("TimelineChartLayout.verticalGapLabelFrame("))
+        #expect(gridSource.contains("minimumScaleFactor(0.7)") == false)
+        #expect(barsSource.contains("lanes.offset(for: placement.lane)"))
         #expect(homeSource.contains("TodayTimelineChart("))
         #expect(homeSource.contains(".accessibilityIdentifier(\"home.timeline.graph\")"))
         #expect(analyticsSource.contains("TimelineChart("))

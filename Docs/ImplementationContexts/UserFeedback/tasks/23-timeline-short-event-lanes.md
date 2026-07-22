@@ -39,8 +39,10 @@
   - [x] B1：主 target 显式链接 `HeapModule`；共享分配器接受时间或投影 point interval，按 start/end/stable ID 稳定排序，使用两个最小堆以 `O(n log k)` 复用编号最小的可用轨道；`TimelineLayoutEngine` 已迁移且保留严格 `> 60s` 的原领域行为。
   - [x] B1 验证：`plutil` 通过；macOS arm64、付费开发签名下运行 `AnalyticsTimelineTests` 与 `CorePerformanceBudgetTests`，33/33 通过、0 failure、0 skip；50,000 段性能预算与大规模 Timeline 布局预算均通过。该批次没有 simulator，测试 app/runner 已退出，临时 DerivedData 在提交前删除。
   - [x] B2：compact vertical 先以实际容器高度和同一 compression 投影 mark footprint，再按 20pt 最小高度与 6pt 视觉间距分轨；时间轴统一预留一个最小 mark 尾部空间，短条锚定 projected start 向下扩展，不再使用 `min(y, height - barHeight)` 向上挪动。iPad/macOS horizontal 路径继续使用领域 lane/full-width axis，未改变。
-  - [x] B2：vertical grid、omitted-gap marker 与 bars 共用 `barLayout.axisLength`；gap capsule 被约束在 68pt axis annotation gutter 内并置于前景，不再与 plot 中 bar 几何相交。视觉阈值按反馈的“小于”语义处理：恰好 6pt 可复用轨道，领域时间分配器原有严格边界保持不变；0 高度不创建不可见轨道。
+  - [x] B2：vertical grid、omitted-gap marker 与 bars 共用 `barLayout.axisLength`；gap capsule 被约束在专用 axis annotation gutter 内，不再与 plot 中 bar 几何相交。视觉阈值按反馈的“小于”语义处理：恰好 6pt 可复用轨道，领域时间分配器原有严格边界保持不变；0 高度不创建不可见轨道。
   - [x] B2 验证：macOS arm64、付费开发签名下精确运行 `AnalyticsTimelineTests`、Task 23 的 `HomeUIContractTests/todayAndAnalyticsShareOneGraphicalTimelineComponent` 与 `CorePerformanceBudgetTests`，38/38 通过、0 failure、0 skip；覆盖投影碰撞换轨、逆序稳定、末端向下生长、恰好阈值、0 高度、gutter 边界、50,000 段与大规模 Timeline 性能预算。一次扩大到整个 `HomeUIContractTests` 的诊断运行额外暴露 Quick Start/Tracking entrypoint 的反馈范围外既有契约失败；Task 23 自身契约通过，本任务未越界修改那些代码。
+  - [x] B2.1 HIG 复审：将 vertical annotation gutter 扩为 96pt，英文省略时长保持系统 `caption2` 11pt、允许两行，不再用 `minimumScaleFactor(0.7)` 压成约 7.7pt；与 capsule frame 相撞的内部 hour ticks 会被纯布局过滤，start/end 边界仍保留。gap 虚线在数据 marks 后绘制，仅 gutter label 位于前景，避免辅助线穿过彩色条和图标。
+  - [x] B2.1 验证：新增真实 omitted-gap 压缩回归，证明 pixel lane 依据压缩后距离换轨，并验证 gap 边界 tick 让位；Timeline/Task 23 contract 30/30 通过、0 failure、0 skip。该批次未创建 simulator。
 - [~] Checkpoint C：专用短任务 fixture、owned simulator 截图验收与精确 Release 安装收口。
 
 ## 资源所有权

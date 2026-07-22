@@ -443,7 +443,10 @@ struct AnalyticsTimelineTests {
             width: 340,
             laneCount: 1
         )
-        let verticalPlotMidpoint: CGFloat = 68 + (340 - 68 - 12) / 2
+        let axisWidth = TimelineChartLayout.verticalAxisLabelWidth
+        let trailingInset = TimelineChartLayout.verticalTrailingInset
+        let verticalPlotMidpoint: CGFloat =
+            axisWidth + (340 - axisWidth - trailingInset) / 2
         #expect(abs(vertical.midpoint - verticalPlotMidpoint) < 0.001)
 
         let verticalOverlap = TimelineChartLayout.verticalLanes(
@@ -451,8 +454,11 @@ struct AnalyticsTimelineTests {
             laneCount: 3
         )
         #expect(abs(verticalOverlap.midpoint - verticalPlotMidpoint) < 0.001)
-        #expect(verticalOverlap.origin >= 68)
-        #expect(verticalOverlap.origin + verticalOverlap.groupExtent <= 328)
+        #expect(verticalOverlap.origin >= axisWidth)
+        #expect(
+            verticalOverlap.origin + verticalOverlap.groupExtent
+                <= 340 - trailingInset
+        )
 
         let horizontal = TimelineChartLayout.horizontalLanes(
             height: 120,
@@ -652,6 +658,69 @@ struct AnalyticsTimelineTests {
         #expect(frame.maxX <= lanes.origin)
         #expect(frame.minY >= 0)
         #expect(frame.maxY <= 300)
+    }
+
+    @Test
+    func compactVerticalTicksYieldToCompressedGapAnnotations() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 22,
+            hour: 9
+        )))
+        let first = DateInterval(start: start, duration: 60 * 60)
+        let second = DateInterval(
+            start: start.addingTimeInterval(5 * 60 * 60),
+            duration: 60 * 60
+        )
+        let display = DateInterval(start: first.start, end: second.end)
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: [first, second]
+        )
+
+        let ticks = TimelineChartLayout.verticalAxisTicks(
+            displayInterval: display,
+            compression: compression,
+            axisLength: 300,
+            minimumSpacing: 28,
+            calendar: calendar
+        )
+
+        #expect(compression.omittedGaps.count == 1)
+        #expect(ticks.map(\.date) == [display.start, display.end])
+        #expect(ticks.map(\.role) == [.start, .end])
+    }
+
+    @Test
+    func compactVerticalLanesUseCompressedGapPixelDistance() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let first = makeTimelineEntry(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000108")!,
+            start: start,
+            end: start.addingTimeInterval(60 * 60)
+        )
+        let second = makeTimelineEntry(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000109")!,
+            start: start.addingTimeInterval(5 * 60 * 60),
+            end: start.addingTimeInterval(6 * 60 * 60)
+        )
+        let display = DateInterval(start: first.startedAt, end: second.endedAt)
+        let compression = TimelineAxisCompression(
+            displayInterval: display,
+            busyIntervals: [first.interval, second.interval]
+        )
+
+        let layout = TimelineChartLayout.verticalBars(
+            entries: [first, second],
+            compression: compression,
+            height: 60
+        )
+
+        #expect(compression.omittedGaps.count == 1)
+        #expect(layout.placements.map(\.lane) == [0, 1])
     }
 
     @Test

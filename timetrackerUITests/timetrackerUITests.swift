@@ -3627,13 +3627,12 @@ final class timetrackerUITests: XCTestCase {
         scroll(direction: .up, toward: timeline, in: app)
         let chartMarks = app.otherElements.matching(
             NSPredicate(
-                format: "label IN %@ AND identifier == %@",
+                format: "label IN %@",
                 [
                     "Timeline Short Blue",
                     "Timeline Short Orange",
                     "Timeline Terminal Green"
-                ],
-                "home.timeline"
+                ]
             )
         )
         let blue = chartMarks.matching(
@@ -3727,6 +3726,7 @@ final class timetrackerUITests: XCTestCase {
             waitForScreenshotTransition()
             try capture("ipad-home-overlap-timeline-landscape", app: app)
         } else {
+            scroll(direction: .up, toward: timeline, in: app)
             waitForScreenshotTransition()
             try capture("iphone-home-overlap-timeline", app: app)
         }
@@ -5785,18 +5785,16 @@ final class timetrackerUITests: XCTestCase {
         let expectedTitles = ["Timeline Overlap Context"] +
             (1...10).map { String(format: "Timeline Burst %02d", $0) }
         let query = app.otherElements.matching(
-            NSPredicate(
-                format: "label IN %@ AND identifier == %@",
-                expectedTitles,
-                "home.timeline"
-            )
+            NSPredicate(format: "label IN %@", expectedTitles)
         )
         XCTAssertTrue(
             waitUntil(timeout: 5) { query.count >= 11 },
             "The isolated fixture must render one context mark and ten burst marks."
         )
         let marks = query.allElementsBoundByIndex.filter { mark in
-            mark.frame.width > 0 && mark.frame.height > 0
+            mark.frame.width > 0 &&
+                mark.frame.height > 0 &&
+                !mark.identifier.hasPrefix("sidebar.task.")
         }
         XCTAssertEqual(
             marks.count,

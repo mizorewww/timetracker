@@ -8,7 +8,7 @@
 - [x] 领取反馈，审计现有 hook、版本字段、安装包版本展示与失效根因。
 - [x] 确定不会递归提交、不会丢失用户变更且能在每个成功 commit 中生效的版本递增契约。
 - [x] 实现 hook 与自动化回归，在隔离仓库中证明连续 commit 连续递增。
-- [~] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -26,7 +26,7 @@
 
 - [x] Checkpoint A：现有 hook、安装入口、版本字段与失败模式审计。
 - [x] Checkpoint B：修复实现与隔离连续提交回归。
-- [~] Checkpoint C：Release 全设备安装、版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、版本只读核验与收口。
 
 ## Checkpoint A 审计结论
 
@@ -47,3 +47,12 @@
 - index 与工作树版本只允许处于 `HEAD` 或已准备的 `HEAD+1` 状态；手工分叉或字段不一致会在修改用户文件前失败，隔离回归确认拒绝后 `9.9.99 (999)` 原样保留。
 - 第一轮测试唯一失败是 diff 上下文行被误判为脏版本字段；改为直接比较 HEAD/index/working tree 后全量重跑通过。临时仓库已自动删除，无测试目录、设备、simulator 或进程残留。
 - 新增脚本均通过 `bash -n`，仓库 diff 通过 whitespace check；本机未安装 ShellCheck，未把该项误报为已执行。下一次真实 checkpoint commit 本身将作为当前 clone 的端到端 hook 验证，并应从 `1.1.52 (107)` 递增到 `1.1.53 (108)`。
+
+## Checkpoint C Release 与收口
+
+- 实现 checkpoint `f71164d` 的真实 commit 已由安装后的 hook 自动从 `1.1.52 (107)` 递增到 `1.1.53 (108)`，证明当前 clone 的普通提交链路会执行 tracked hook。
+- 为保证最终收口 commit 与已安装测试包版本完全一致，先通过 `git hook run pre-commit` 幂等预备 `1.1.54 (109)`，再精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`；脚本成功完成 iOS Release（包含 Watch companion）、物理 iPhone 安装、macOS universal Release 构建与 `/Applications/timetracker.app` 安装。
+- iOS App、嵌入式 Watch App 与 macOS App 的 Info.plist 均只读确认为 `1.1.54 (109)`；三者 `codesign --verify --deep --strict` 均通过，标识符分别为 `me.mezorewww.timetracker`、`me.mezorewww.timetracker.watchkitapp`、`me.mezorewww.timetracker`，TeamIdentifier 均为 `LT98S43NKA`。
+- macOS 主二进制经 `lipo -archs` 确认为 `x86_64 arm64`；物理 iPhone 通过 `devicectl device info apps` 只读确认为已安装 `1.1.54 (109)`。未启动、点击或截图物理机 App；当前没有可直接安装的物理 Watch，故仅验证签名有效的嵌入式 Watch companion，并保留系统配对自动安装路径。
+- Release 产物核验后删除 `build/Install`，并确认无本批次 `xcodebuild`、`xctest`、UI runner、Instruments/trace 进程及 Booted simulator 残留。最终 commit 的 pre-commit 对已预备版本保持幂等，不会额外跳到下一版。
+- 本任务没有新增第三方库：继续使用 Git 官方 hooks / `core.hooksPath`、Xcode build settings 与仓库 shell 自动化；外部工具仅作为方案审计，没有引入依赖。

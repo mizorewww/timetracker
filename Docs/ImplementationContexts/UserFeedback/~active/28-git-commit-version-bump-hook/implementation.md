@@ -1,1 +1,0 @@
-../../tasks/28-git-commit-version-bump-hook.md

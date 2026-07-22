@@ -20,14 +20,16 @@ struct StoreScopedAITaskPlanCommandCoordinator {
         self.didReachCheckpoint = didReachCheckpoint
     }
 
-    func apply(_ draft: AITaskPlanDraft) throws -> AITaskPlanMutationOutcome {
+    func apply(
+        _ draft: AITaskPlanDraft,
+        now: Date = Date()
+    ) throws -> AITaskPlanMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let prepared = try Self.prepare(draft)
         let transaction = StoreScopedTimerMutationTransaction(
             scope: try TimerStoreScope(container: container),
             container: container
         )
-
         return try transaction.withFreshContext { context in
             let persistedCategoryIDs = Set(
                 try context.fetch(FetchDescriptor<TaskCategory>()).map(\.id)
@@ -81,8 +83,15 @@ struct StoreScopedAITaskPlanCommandCoordinator {
                 editorDraft.notes = task.notes ?? ""
                 editorDraft.estimatedMinutes = task.estimatedMinutes
                 editorDraft.checklistItems = task.checklistItems
+                editorDraft.quantityGoal = task.progress.quantityGoal.map {
+                    TaskQuantityGoalDraft(
+                        targetAmount: $0.targetAmount,
+                        unitLabel: $0.unitLabel
+                    )
+                }
+                editorDraft.dailyRecurrence = task.progress.dailyRecurrence
 
-                _ = try TaskDraftCommandHandler().saveNew(
+                let savedTaskID = try TaskDraftCommandHandler().saveNew(
                     draft: editorDraft,
                     proposedTaskID: task.id,
                     sanitizedTitle: task.title,
@@ -97,6 +106,24 @@ struct StoreScopedAITaskPlanCommandCoordinator {
                         )
                         try didReachCheckpoint(.checklistSaved(taskID: taskID))
                     }
+                )
+                _ = try TaskDraftProgressMutationService(
+                    context: context,
+                    container: container,
+                    writeAuthorization: writeAuthorization,
+                    deviceID: resolvedDeviceID,
+                    didReachCheckpoint: { checkpoint in
+                        try didReachCheckpoint(
+                            .progress(
+                                taskID: savedTaskID,
+                                checkpoint: checkpoint
+                            )
+                        )
+                    }
+                ).apply(
+                    task.progress,
+                    to: savedTaskID,
+                    now: now
                 )
                 createdTaskIDs.insert(task.id)
             }
@@ -131,6 +158,7 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
         let iconName: String?
         let colorHex: String?
         let checklistItems: [ChecklistEditorDraft]
+        let progress: PreparedTaskProgressDraft
     }
 
     struct PreparedPlan {
@@ -164,6 +192,17 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
 
         let categoryIDs = Set(draft.categories.map(\.id))
         let taskIDs = Set(draft.tasks.map(\.id))
+        let appleHealthPlan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        let reservedAppleHealthIDs = Set(
+            appleHealthPlan.categories.map(\.id)
+        ).union(AppleHealthTaskCatalog.syncOnlyTaskIDs)
+        guard categoryIDs.union(taskIDs).isDisjoint(
+            with: reservedAppleHealthIDs
+        ) else {
+            throw StoreScopedAITaskPlanMutationError.identityConflict
+        }
         for task in draft.tasks {
             if task.parentID != nil, task.categoryID != nil {
                 throw LLMTaskPlanServiceError.childCategory
@@ -209,6 +248,11 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
                 )
             }
             let preparedChecklist = try ChecklistDraftPersistencePolicy.prepare(checklistDrafts)
+            let preparedProgress = try TaskProgressDraftPersistencePolicy
+                .prepare(
+                    quantityGoal: task.quantityGoal,
+                    dailyRecurrence: task.dailyRecurrence
+                )
             return PreparedTask(
                 id: task.id,
                 categoryID: task.categoryID,
@@ -225,7 +269,8 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
                         iconName: $0.iconName,
                         colorHex: $0.colorHex
                     )
-                }
+                },
+                progress: preparedProgress
             )
         }
 

@@ -35,4 +35,8 @@ enum AITaskPlanMutationCheckpoint: Equatable {
     case categoryCreated(UUID)
     case taskCreated(UUID)
     case checklistSaved(taskID: UUID)
+    case progress(
+        taskID: UUID,
+        checkpoint: TaskDraftMutationCheckpoint
+    )
 }

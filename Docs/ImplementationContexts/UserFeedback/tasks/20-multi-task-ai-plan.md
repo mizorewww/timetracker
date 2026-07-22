@@ -8,8 +8,8 @@
 - [x] 读取唯一反馈并领取任务。
 - [x] 审计现有 Task Plan request、响应 schema、draft/editor、category 与批量落库能力。
 - [x] 研究成熟库与 Apple HIG / SwiftUI 约束，完成独立产品与技术设计文档。
-- [~] 实现一次生成多个、类型完整且可验证的任务计划，并安全预览/编辑/落库到 category。
-- [ ] 使用现有 MarkdownView 呈现或编辑本任务的提示词体验，并完成定向测试。
+- [x] 实现一次生成多个、类型完整且可验证的任务计划，并安全落库到 category。
+- [~] 使用现有 MarkdownView 呈现本任务的提示词预览，补齐计划草稿类型编辑并完成定向测试。
 - [ ] 完成 owned iPhone/iPad simulator 普通路径与截图验收，清理全部资源。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
@@ -47,8 +47,13 @@
   - 三个只读子审计与主代理结论一致：保留现有多根/扁平图；quantity 与 daily recurrence 是正交能力；Health-managed 不可生成；MarkdownView 只做渲染。
   - 上游核验：仓库已锁定用户指定的 `MarkdownView 4.1.7`（MIT、138 stars、2026-07-16 release）；因用户明确指定而作为低于默认 1k-star 门槛的例外，不新增其他依赖。
   - macOS 基线：`CoreLLMTaskPlanServiceTests` 7/7、`StoreScopedAITaskPlanCommandCoordinatorTests` 6/6、`AITaskPlanUIContractTests` 3/3，共 16/16 通过；xcresult/DerivedData 已删除。
-- [~] Checkpoint B：多任务 response schema、解析/预算、draft 模型与原子 mutation。
-- [ ] Checkpoint C：生成/预览/编辑/落库 UI、MarkdownView 提示词体验与本地化。
+- [x] Checkpoint B：多任务 response schema、解析/预算、draft 模型与原子 mutation。
+  - task payload 新增可选 quantity goal 与 daily recurrence，旧 payload 缺字段仍兼容；固定 contract 要求完整多任务/章节清单并禁止 Health-managed 内容。
+  - 默认 Task Plan instructions 升级为 Markdown；只把精确旧默认值迁移为新默认，自定义内容保持不变。
+  - quantity、daily rule、当天 occurrence 与生成 task 在同一 fresh-context transaction 落库；五个 progress checkpoint 注入失败均整批回滚，重放仍幂等。
+  - 主代理 macOS 集成定向测试 `50/50` 通过（service、coordinator、settings、UI contract）；独立 DerivedData/xcresult 已删除，无 `xcodebuild`/`xctest`、Booted simulator 或设备流程残留。
+  - 未新增依赖；复用现有 `TaskProgressDraftPersistencePolicy`、`TaskDraftProgressMutationService` 与事务基础设施。
+- [~] Checkpoint C：生成/预览/编辑/落库 UI、MarkdownView 提示词体验与本地化。
 - [ ] Checkpoint D：全量相关回归、owned simulator UI/截图、精确 Release 安装、状态与资源收口。
 
 ## 资源所有权

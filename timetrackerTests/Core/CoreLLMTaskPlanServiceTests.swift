@@ -78,10 +78,150 @@ struct CoreLLMTaskPlanServiceTests {
         #expect(root.parentID == nil)
         #expect(root.notes == " Useful context ")
         #expect(root.estimatedMinutes == 25)
+        #expect(root.quantityGoal == nil)
+        #expect(root.dailyRecurrence == nil)
         #expect(root.checklistItems.map(\.title) == ["Verify tests"])
         #expect(child.categoryID == nil)
         #expect(child.parentID == root.id)
         #expect(Set(draft.tasks.map(\.id)).count == 2)
+    }
+
+    @Test
+    func quantityAndDailyRecurrenceUseValidatedDomainDraftsAndTrustedLocalTime() throws {
+        let timeZone = try #require(TimeZone(identifier: "Asia/Singapore"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let now = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 22,
+                    hour: 9
+                )
+            )
+        )
+
+        let draft = try LLMTaskPlanService.makeDraft(
+            from: Self.payload(tasks: [
+                Self.task(
+                    "quantity",
+                    quantityGoal: .init(
+                        targetAmount: 50,
+                        unitLabel: " push-ups "
+                    )
+                ),
+                Self.task("daily", recurrenceCadence: "daily"),
+                Self.task(
+                    "combined",
+                    quantityGoal: .init(
+                        targetAmount: 10,
+                        unitLabel: "pages"
+                    ),
+                    recurrenceCadence: "daily"
+                ),
+            ]),
+            modelID: "model",
+            now: now,
+            timeZone: timeZone
+        )
+
+        let quantity = try #require(draft.tasks.first { $0.title == "quantity" })
+        let daily = try #require(draft.tasks.first { $0.title == "daily" })
+        let combined = try #require(draft.tasks.first { $0.title == "combined" })
+        #expect(
+            quantity.quantityGoal == TaskQuantityGoalDraft(
+                targetAmount: 50,
+                unitLabel: "push-ups"
+            )
+        )
+        #expect(quantity.dailyRecurrence == nil)
+        #expect(daily.quantityGoal == nil)
+        #expect(
+            daily.dailyRecurrence == TaskDailyRecurrenceDraft(
+                isEnabled: true,
+                startDayKey: "2026-07-22",
+                timeZoneIdentifier: "Asia/Singapore"
+            )
+        )
+        #expect(combined.quantityGoal?.targetAmount == 10)
+        #expect(combined.dailyRecurrence?.startDayKey == "2026-07-22")
+    }
+
+    @Test
+    func invalidQuantityAndUnknownRecurrenceRejectTheWholePayload() {
+        let invalidQuantityGoals = [
+            AITaskPlanQuantityGoalPayload(targetAmount: 0, unitLabel: "pages"),
+            AITaskPlanQuantityGoalPayload(targetAmount: 1_000_001, unitLabel: "pages"),
+            AITaskPlanQuantityGoalPayload(targetAmount: 10, unitLabel: "   "),
+            AITaskPlanQuantityGoalPayload(targetAmount: 10, unitLabel: "bad\u{0000}unit"),
+            AITaskPlanQuantityGoalPayload(
+                targetAmount: 10,
+                unitLabel: String(repeating: "a", count: 129)
+            ),
+        ]
+
+        for quantityGoal in invalidQuantityGoals {
+            Self.expectError(.invalidField) {
+                _ = try LLMTaskPlanService.makeDraft(
+                    from: Self.payload(tasks: [
+                        Self.task("quantity", quantityGoal: quantityGoal),
+                    ]),
+                    modelID: "model"
+                )
+            }
+        }
+
+        Self.expectError(.invalidField) {
+            _ = try LLMTaskPlanService.makeDraft(
+                from: Self.payload(tasks: [
+                    Self.task("weekly", recurrenceCadence: "weekly"),
+                ]),
+                modelID: "model"
+            )
+        }
+    }
+
+    @Test
+    func incompleteQuantityObjectIsNotSilentlyRepaired() async throws {
+        let contentData = try JSONSerialization.data(withJSONObject: [
+            "categories": [],
+            "tasks": [[
+                "reference": "reading",
+                "categoryReference": NSNull(),
+                "parentReference": NSNull(),
+                "title": "Read",
+                "notes": NSNull(),
+                "estimatedMinutes": NSNull(),
+                "iconName": "book",
+                "colorHex": "1677FF",
+                "quantityGoal": ["targetAmount": 10],
+                "recurrenceCadence": NSNull(),
+            ]],
+            "checklistItems": [],
+        ])
+        let content = try #require(String(data: contentData, encoding: .utf8))
+        let service = LLMTaskPlanService { request in
+            let response = try #require(
+                HTTPURLResponse(
+                    url: request.url ?? URL(string: "https://example.test")!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )
+            )
+            return (try Self.chatResponseData(content: content), response)
+        }
+
+        await Self.expectError(.invalidResponse) {
+            _ = try await service.generate(
+                request: "Plan",
+                instructions: "",
+                endpoint: "https://example.test/v1",
+                apiKey: "key",
+                modelID: "model"
+            )
+        }
     }
 
     @Test
@@ -110,6 +250,11 @@ struct CoreLLMTaskPlanServiceTests {
         #expect(envelope.messages.map(\.role) == ["system", "user"])
         #expect(envelope.messages[0].content.contains("three flat arrays"))
         #expect(envelope.messages[0].content.contains("maximum task depth is 6"))
+        #expect(envelope.messages[0].content.contains("quantityGoal"))
+        #expect(envelope.messages[0].content.contains("recurrenceCadence"))
+        #expect(envelope.messages[0].content.contains("Apple Health"))
+        #expect(envelope.messages[0].content.contains("not only one representative task"))
+        #expect(envelope.messages[0].content.contains("Chapter 1 through Chapter 10"))
         #expect(prompt.request == "Build a release plan")
         #expect(prompt.instructions == "Line one\nLine two\nLine three")
         #expect(prompt.allowedSymbols == SymbolCatalog.aiSuggestionSymbolNames)
@@ -388,7 +533,9 @@ struct CoreLLMTaskPlanServiceTests {
     private static func task(
         _ reference: String,
         category: String? = nil,
-        parent: String? = nil
+        parent: String? = nil,
+        quantityGoal: AITaskPlanQuantityGoalPayload? = nil,
+        recurrenceCadence: String? = nil
     ) -> AITaskPlanTaskPayload {
         AITaskPlanTaskPayload(
             reference: reference,
@@ -398,7 +545,9 @@ struct CoreLLMTaskPlanServiceTests {
             notes: nil,
             estimatedMinutes: nil,
             iconName: "checkmark.circle",
-            colorHex: "1677FF"
+            colorHex: "1677FF",
+            quantityGoal: quantityGoal,
+            recurrenceCadence: recurrenceCadence
         )
     }
 

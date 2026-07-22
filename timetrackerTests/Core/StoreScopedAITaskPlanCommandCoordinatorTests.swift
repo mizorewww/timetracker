@@ -62,6 +62,134 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
     }
 
     @Test
+    func quantityAndDailyRecurrenceMaterializeACompleteGraphAndReplayOnce()
+        throws {
+        let context = try makeTestContext()
+        let now = try singaporeDate(day: 22)
+        let fixture = makePlanFixture(
+            quantityGoal: TaskQuantityGoalDraft(
+                targetAmount: 50,
+                unitLabel: " push-ups "
+            ),
+            dailyRecurrence: TaskDailyRecurrenceDraft(
+                startDayKey: "2026-07-22",
+                timeZoneIdentifier: "Asia/Singapore"
+            )
+        )
+        var checkpoints: [AITaskPlanMutationCheckpoint] = []
+        let command = coordinator(
+            container: context.container,
+            checkpoint: { checkpoints.append($0) }
+        )
+
+        let first = try command.apply(fixture.draft, now: now)
+        let checkpointCountAfterFirstApply = checkpoints.count
+        let replay = try command.apply(fixture.draft, now: now)
+
+        #expect(first.didCreate)
+        #expect(replay.didCreate == false)
+        #expect(checkpoints.count == checkpointCountAfterFirstApply)
+
+        let freshContext = ModelContext(context.container)
+        let tasks = try freshContext.fetch(FetchDescriptor<TaskNode>())
+            .visibleDeduplicatedByID()
+        let rules = try freshContext.fetch(
+            FetchDescriptor<TaskRecurrenceRule>()
+        ).visibleDeduplicatedByID()
+        let occurrences = try freshContext.fetch(
+            FetchDescriptor<TaskRecurrenceOccurrence>()
+        ).visibleDeduplicatedByID()
+        let goals = try freshContext.fetch(
+            FetchDescriptor<TaskQuantityGoal>()
+        ).visibleDeduplicatedByID()
+        let ruleID = TaskProgressIdentity.recurrenceRuleID(
+            templateTaskID: fixture.rootTaskID
+        )
+        let generatedTaskID = TaskProgressIdentity.generatedTaskID(
+            ruleID: ruleID,
+            dayKey: "2026-07-22"
+        )
+        let occurrenceID = TaskProgressIdentity.recurrenceOccurrenceID(
+            ruleID: ruleID,
+            dayKey: "2026-07-22"
+        )
+        let templateGoalID = TaskProgressIdentity.quantityGoalID(
+            taskID: fixture.rootTaskID
+        )
+        let generatedGoalID = TaskProgressIdentity.quantityGoalID(
+            taskID: generatedTaskID
+        )
+        let generatedTask = try #require(
+            tasks.first { $0.id == generatedTaskID }
+        )
+        let templateGoal = try #require(
+            goals.first { $0.id == templateGoalID }
+        )
+        let generatedGoal = try #require(
+            goals.first { $0.id == generatedGoalID }
+        )
+
+        #expect(tasks.count == 3)
+        #expect(rules.count == 1)
+        #expect(rules.first?.id == ruleID)
+        #expect(occurrences.count == 1)
+        #expect(occurrences.first?.id == occurrenceID)
+        #expect(occurrences.first?.generatedTaskID == generatedTaskID)
+        #expect(generatedTask.parentID == fixture.rootTaskID)
+        #expect(goals.count == 2)
+        #expect(templateGoal.targetAmount == 50)
+        #expect(templateGoal.unitLabel == "push-ups")
+        #expect(generatedGoal.targetAmount == 50)
+        #expect(generatedGoal.unitLabel == "push-ups")
+        #expect(
+            checkpoints.contains(
+                .progress(
+                    taskID: fixture.rootTaskID,
+                    checkpoint: .quantityGoalChanged(templateGoalID)
+                )
+            )
+        )
+        #expect(
+            checkpoints.contains(
+                .progress(
+                    taskID: fixture.rootTaskID,
+                    checkpoint: .recurrence(.ruleCreated(ruleID))
+                )
+            )
+        )
+        #expect(
+            checkpoints.contains(
+                .progress(
+                    taskID: fixture.rootTaskID,
+                    checkpoint: .recurrence(
+                        .generatedTaskCreated(generatedTaskID)
+                    )
+                )
+            )
+        )
+        #expect(
+            checkpoints.contains(
+                .progress(
+                    taskID: fixture.rootTaskID,
+                    checkpoint: .recurrence(
+                        .quantityGoalCreated(generatedGoalID)
+                    )
+                )
+            )
+        )
+        #expect(
+            checkpoints.contains(
+                .progress(
+                    taskID: fixture.rootTaskID,
+                    checkpoint: .recurrence(
+                        .occurrenceCreated(occurrenceID)
+                    )
+                )
+            )
+        )
+    }
+
+    @Test
     func thrownStepRollsBackEveryCreatedFact() throws {
         enum InjectedFailure: Error {
             case stop
@@ -93,6 +221,145 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
         #expect(
             try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty
         )
+    }
+
+    @Test
+    func everyProgressCheckpointRollsBackTheWholePlan() throws {
+        let now = try singaporeDate(day: 22)
+
+        for stage in AIPlanProgressFailureStage.allCases {
+            let context = try makeTestContext()
+            let fixture = makePlanFixture(
+                quantityGoal: TaskQuantityGoalDraft(
+                    targetAmount: 50,
+                    unitLabel: "push-ups"
+                ),
+                dailyRecurrence: TaskDailyRecurrenceDraft(
+                    startDayKey: "2026-07-22",
+                    timeZoneIdentifier: "Asia/Singapore"
+                )
+            )
+            let command = coordinator(
+                container: context.container,
+                checkpoint: { checkpoint in
+                    if stage.matches(
+                        checkpoint,
+                        taskID: fixture.rootTaskID
+                    ) {
+                        throw InjectedAIPlanFailure.stop
+                    }
+                }
+            )
+
+            #expect(throws: InjectedAIPlanFailure.self) {
+                try command.apply(fixture.draft, now: now)
+            }
+
+            let freshContext = ModelContext(context.container)
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskCategory>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(FetchDescriptor<TaskNode>()).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskCategoryAssignment>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<ChecklistItem>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<ChecklistItemVisual>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskQuantityGoal>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskRecurrenceRule>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskRecurrenceOccurrence>()
+                ).isEmpty
+            )
+        }
+    }
+
+    @Test
+    func appleHealthManagedCategoryAndTaskIdentitiesRejectTheWholePlan()
+        throws {
+        let healthPlan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        let managedCategoryID = try #require(
+            healthPlan.categories.first?.id
+        )
+        let managedTaskID = try #require(
+            AppleHealthTaskCatalog.syncOnlyTaskIDs.first
+        )
+        let fixtures = [
+            makePlanFixture(categoryID: managedCategoryID),
+            makePlanFixture(rootTaskID: managedTaskID),
+        ]
+
+        for fixture in fixtures {
+            let context = try makeTestContext()
+
+            #expect(
+                throws:
+                    StoreScopedAITaskPlanMutationError.identityConflict
+            ) {
+                try coordinator(container: context.container)
+                    .apply(fixture.draft)
+            }
+
+            let freshContext = ModelContext(context.container)
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskCategory>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(FetchDescriptor<TaskNode>()).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskCategoryAssignment>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<ChecklistItem>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskQuantityGoal>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskRecurrenceRule>()
+                ).isEmpty
+            )
+            #expect(
+                try freshContext.fetch(
+                    FetchDescriptor<TaskRecurrenceOccurrence>()
+                ).isEmpty
+            )
+        }
     }
 
     @Test
@@ -210,10 +477,13 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
         let childTaskID: UUID
     }
 
-    private func makePlanFixture() -> PlanFixture {
-        let categoryID = UUID()
-        let rootTaskID = UUID()
-        let childTaskID = UUID()
+    private func makePlanFixture(
+        categoryID: UUID = UUID(),
+        rootTaskID: UUID = UUID(),
+        childTaskID: UUID = UUID(),
+        quantityGoal: TaskQuantityGoalDraft? = nil,
+        dailyRecurrence: TaskDailyRecurrenceDraft? = nil
+    ) -> PlanFixture {
         return PlanFixture(
             draft: AITaskPlanDraft(
                 categories: [
@@ -251,7 +521,9 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
                         notes: "Deliver this week",
                         estimatedMinutes: 45,
                         iconName: "shippingbox.fill",
-                        colorHex: "FF8A00"
+                        colorHex: "FF8A00",
+                        quantityGoal: quantityGoal,
+                        dailyRecurrence: dailyRecurrence
                     ),
                 ],
                 modelID: "test-model"
@@ -263,12 +535,68 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
     }
 
     private func coordinator(
-        container: ModelContainer
+        container: ModelContainer,
+        checkpoint: @escaping
+            (AITaskPlanMutationCheckpoint) throws -> Void = { _ in }
     ) -> StoreScopedAITaskPlanCommandCoordinator {
         StoreScopedAITaskPlanCommandCoordinator(
             container: container,
             writeAuthorization: .isolatedTestHarness,
-            deviceID: "ai-test"
+            deviceID: "ai-test",
+            didReachCheckpoint: checkpoint
         )
+    }
+
+    private func singaporeDate(
+        day: Int,
+        hour: Int = 12
+    ) throws -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(
+            TimeZone(identifier: "Asia/Singapore")
+        )
+        return try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: day,
+                    hour: hour
+                )
+            )
+        )
+    }
+}
+
+private enum InjectedAIPlanFailure: Error {
+    case stop
+}
+
+private enum AIPlanProgressFailureStage: CaseIterable {
+    case templateGoal
+    case rule
+    case generatedTask
+    case generatedGoal
+    case occurrence
+
+    func matches(
+        _ checkpoint: AITaskPlanMutationCheckpoint,
+        taskID: UUID
+    ) -> Bool {
+        guard case let .progress(checkpointTaskID, progressCheckpoint) =
+                checkpoint,
+              checkpointTaskID == taskID else {
+            return false
+        }
+        return switch (self, progressCheckpoint) {
+        case (.templateGoal, .quantityGoalChanged),
+             (.rule, .recurrence(.ruleCreated)),
+             (.generatedTask, .recurrence(.generatedTaskCreated)),
+             (.generatedGoal, .recurrence(.quantityGoalCreated)),
+             (.occurrence, .recurrence(.occurrenceCreated)):
+            true
+        default:
+            false
+        }
     }
 }

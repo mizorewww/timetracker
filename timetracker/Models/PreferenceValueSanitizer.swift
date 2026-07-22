@@ -139,10 +139,15 @@ enum AppPreferenceValueSanitizer {
         _ value: String,
         for kind: LLMPromptKind
     ) throws -> String {
-        try llmPromptInstructions(
+        let instructions = try llmPromptInstructions(
             value,
             defaultInstructions: kind.defaultInstructions
         )
+        if kind == .taskPlan,
+           instructions == LLMTaskPlanPrompt.legacyDefaultInstructions {
+            return LLMTaskPlanPrompt.defaultInstructions
+        }
+        return instructions
     }
 
     static func llmTaskPlanInstructions(_ value: String) throws -> String {

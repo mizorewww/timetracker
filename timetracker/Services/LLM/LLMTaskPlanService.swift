@@ -47,6 +47,8 @@ nonisolated struct AITaskPlanTaskDraft: Identifiable, Equatable, Sendable {
     var estimatedMinutes: Int?
     var iconName: String
     var colorHex: String
+    var quantityGoal: TaskQuantityGoalDraft?
+    var dailyRecurrence: TaskDailyRecurrenceDraft?
     var checklistItems: [AITaskPlanChecklistDraft]
 
     init(
@@ -58,6 +60,8 @@ nonisolated struct AITaskPlanTaskDraft: Identifiable, Equatable, Sendable {
         estimatedMinutes: Int? = nil,
         iconName: String,
         colorHex: String,
+        quantityGoal: TaskQuantityGoalDraft? = nil,
+        dailyRecurrence: TaskDailyRecurrenceDraft? = nil,
         checklistItems: [AITaskPlanChecklistDraft] = []
     ) {
         self.id = id
@@ -68,6 +72,8 @@ nonisolated struct AITaskPlanTaskDraft: Identifiable, Equatable, Sendable {
         self.estimatedMinutes = estimatedMinutes
         self.iconName = iconName
         self.colorHex = colorHex
+        self.quantityGoal = quantityGoal
+        self.dailyRecurrence = dailyRecurrence
         self.checklistItems = checklistItems
     }
 }
@@ -163,7 +169,9 @@ struct LLMTaskPlanService {
         instructions: String,
         endpoint: String,
         apiKey: String,
-        modelID: String
+        modelID: String,
+        now: Date = Date(),
+        timeZone: TimeZone = .autoupdatingCurrent
     ) async throws -> AITaskPlanDraft {
         let generationRequest = try generationRequest(
             request: request,
@@ -202,7 +210,9 @@ struct LLMTaskPlanService {
         }
         return try Self.makeDraft(
             from: payload,
-            modelID: Self.preparedModelID(modelID)
+            modelID: Self.preparedModelID(modelID),
+            now: now,
+            timeZone: timeZone
         )
     }
 
@@ -277,7 +287,9 @@ struct LLMTaskPlanService {
 
     static func makeDraft(
         from payload: AITaskPlanPayload,
-        modelID: String
+        modelID: String,
+        now: Date = Date(),
+        timeZone: TimeZone = .autoupdatingCurrent
     ) throws -> AITaskPlanDraft {
         guard !payload.tasks.isEmpty else {
             throw LLMTaskPlanServiceError.noTasks
@@ -379,6 +391,12 @@ struct LLMTaskPlanService {
                 let checklistItems = try (checklistPayloadByTaskReference[reference] ?? []).map {
                     try preparedChecklistDraft(from: $0)
                 }
+                let progress = try preparedProgressDraft(
+                    quantityGoal: task.quantityGoal,
+                    recurrenceCadence: task.recurrenceCadence,
+                    now: now,
+                    timeZone: timeZone
+                )
                 return AITaskPlanTaskDraft(
                     id: taskIDByReference[reference]!,
                     categoryID: relationship.categoryReference.flatMap {
@@ -392,6 +410,8 @@ struct LLMTaskPlanService {
                     estimatedMinutes: try preparedEstimatedMinutes(task.estimatedMinutes),
                     iconName: prepared.iconName ?? ChecklistVisualSanitizer.defaultIcon,
                     colorHex: prepared.colorHex ?? ChecklistVisualSanitizer.defaultColor,
+                    quantityGoal: progress.quantityGoal,
+                    dailyRecurrence: progress.dailyRecurrence,
                     checklistItems: checklistItems
                 )
             }
@@ -431,6 +451,13 @@ nonisolated struct AITaskPlanTaskPayload: Decodable, Equatable, Sendable {
     let estimatedMinutes: Int?
     let iconName: String
     let colorHex: String
+    let quantityGoal: AITaskPlanQuantityGoalPayload?
+    let recurrenceCadence: String?
+}
+
+nonisolated struct AITaskPlanQuantityGoalPayload: Decodable, Equatable, Sendable {
+    let targetAmount: Int
+    let unitLabel: String
 }
 
 nonisolated struct AITaskPlanChecklistPayload: Decodable, Equatable, Sendable {
@@ -459,8 +486,16 @@ private extension LLMTaskPlanService {
 
     Category object: reference, title, iconName, colorHex.
     Task object: reference, categoryReference, parentReference, title, notes, \
-    estimatedMinutes, iconName, colorHex.
+    estimatedMinutes, iconName, colorHex, quantityGoal, recurrenceCadence.
     Checklist object: reference, taskReference, title, iconName, colorHex.
+
+    Return every useful task requested, not only one representative task. Use \
+    categories only as broad reporting groups, tasks for independently timed \
+    work, child tasks for independently timed work within another task, and \
+    checklist items for concrete completion units that are not separately \
+    timed. Example: a request to read Chapter 1 through Chapter 10 should \
+    include every chapter as a checklist item instead of returning only one \
+    sample chapter.
 
     References are opaque strings. Each reference must be nonempty and unique \
     within its array. A task parentReference must name another task. A \
@@ -471,10 +506,16 @@ private extension LLMTaskPlanService {
 
     Limits: at most 8 categories, 64 tasks, 32 checklist items per task, and \
     256 checklist items total. estimatedMinutes is null or an integer from 0 \
-    through 600. notes is null or plain text. Use iconName from \
-    allowedSymbols exactly and colorHex from allowedColors exactly. Do not \
-    include Markdown fences, commentary, generated UUIDs, or nested task \
-    objects.
+    through 600. notes is null or plain text. quantityGoal is null or an \
+    object with exactly targetAmount and unitLabel; targetAmount is an integer \
+    from 1 through 1000000 and unitLabel is nonempty plain text of at most 128 \
+    UTF-8 bytes. recurrenceCadence is null or exactly "daily". Quantity goals \
+    and daily recurrence may be combined on one task. Use iconName from \
+    allowedSymbols exactly and colorHex from allowedColors exactly.
+
+    Never create Apple Health-managed workout or sleep tasks or imitate its \
+    reserved managed task catalog. Do not include Markdown fences, commentary, \
+    generated UUIDs, extra fields, or nested task objects.
     """
 
     static func preparedRequest(_ value: String) throws -> String {
@@ -619,5 +660,49 @@ private extension LLMTaskPlanService {
             throw LLMTaskPlanServiceError.invalidField
         }
         return TaskEstimatePolicy.seconds(fromMinutes: minutes).map { $0 / 60 }
+    }
+
+    static func preparedProgressDraft(
+        quantityGoal payload: AITaskPlanQuantityGoalPayload?,
+        recurrenceCadence: String?,
+        now: Date,
+        timeZone: TimeZone
+    ) throws -> (
+        quantityGoal: TaskQuantityGoalDraft?,
+        dailyRecurrence: TaskDailyRecurrenceDraft?
+    ) {
+        let quantityGoal = payload.map {
+            TaskQuantityGoalDraft(
+                targetAmount: $0.targetAmount,
+                unitLabel: $0.unitLabel
+            )
+        }
+
+        let dailyRecurrence: TaskDailyRecurrenceDraft?
+        switch recurrenceCadence {
+        case nil:
+            dailyRecurrence = nil
+        case TaskRecurrenceCadence.daily.rawValue:
+            dailyRecurrence = TaskDailyRecurrenceDraft(
+                startingAt: now,
+                timeZone: timeZone
+            )
+        default:
+            throw LLMTaskPlanServiceError.invalidField
+        }
+
+        let prepared = try TaskProgressDraftPersistencePolicy.prepare(
+            quantityGoal: quantityGoal,
+            dailyRecurrence: dailyRecurrence
+        )
+        return (
+            quantityGoal: prepared.quantityGoal.map {
+                TaskQuantityGoalDraft(
+                    targetAmount: $0.targetAmount,
+                    unitLabel: $0.unitLabel
+                )
+            },
+            dailyRecurrence: prepared.dailyRecurrence
+        )
     }
 }

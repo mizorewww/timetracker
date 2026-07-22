@@ -105,6 +105,68 @@ struct LLMSettingsTests {
     }
 
     @Test
+    func taskPlanDefaultIsMarkdownAndDescribesCompleteDetailedPlans() {
+        let instructions = LLMTaskPlanPrompt.defaultInstructions
+
+        #expect(instructions.contains("##"))
+        #expect(instructions.contains("**Checklist item**"))
+        #expect(instructions.localizedCaseInsensitiveContains("quantity"))
+        #expect(instructions.localizedCaseInsensitiveContains("daily"))
+        #expect(
+            instructions.utf8.count <=
+                AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
+        )
+    }
+
+    @Test
+    func exactLegacyTaskPlanDefaultUpgradesWithoutOverwritingCustomization() throws {
+        let legacy = LLMTaskPlanPrompt.legacyDefaultInstructions
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(legacy) ==
+                LLMTaskPlanPrompt.defaultInstructions
+        )
+        #expect(
+            try AppPreferenceValueSanitizer.llmPromptInstructions(
+                legacy,
+                for: .taskPlan
+            ) == LLMTaskPlanPrompt.defaultInstructions
+        )
+
+        let customized = legacy + "\n\nKeep this custom rule."
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(customized) ==
+                customized
+        )
+    }
+
+    @Test @MainActor
+    func syncedLegacyTaskPlanDefaultIsReadAndRewrittenAsTheNewDefault() throws {
+        let preference = SyncedPreference(
+            key: AppPreferenceKey.llmTaskPlanInstructions.rawValue,
+            valueJSON: PreferenceJSON.encode(
+                LLMTaskPlanPrompt.legacyDefaultInstructions
+            ),
+            deviceID: "test"
+        )
+        let preferences = AppPreferences(syncedPreferences: [preference])
+
+        #expect(
+            preferences.llmTaskPlanInstructions ==
+                LLMTaskPlanPrompt.defaultInstructions
+        )
+        #expect(
+            preferences.valueJSON(for: .llmTaskPlanInstructions) ==
+                PreferenceJSON.encode(LLMTaskPlanPrompt.defaultInstructions)
+        )
+        #expect(
+            try PreferenceJSON.canonicalValueJSON(
+                for: .llmTaskPlanInstructions,
+                from: preference.valueJSON
+            ) == PreferenceJSON.encode(LLMTaskPlanPrompt.defaultInstructions)
+        )
+    }
+
+    @Test
     func everyPromptKindFallsBackToItsOwnDistinctDefault() throws {
         let defaults = try LLMPromptKind.allCases.map { kind in
             let resolved = try AppPreferenceValueSanitizer.llmPromptInstructions(

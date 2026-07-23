@@ -595,14 +595,21 @@ final class timetrackerUITests: XCTestCase {
             ].firstMatch
             if !studySidebar.waitForExistence(timeout: 2) ||
                 !studySidebar.isHittable {
-                let showSidebar = app.descendants(matching: .any)[
+                let identifiedToggle = app.descendants(matching: .any)[
                     "sidebar.show"
                 ].firstMatch
-                XCTAssertTrue(
-                    showSidebar.waitForExistence(timeout: 3) &&
-                        showSidebar.isHittable
-                )
-                activate(showSidebar)
+                let systemToggle = app.buttons["Show Sidebar"].firstMatch
+                if identifiedToggle.waitForExistence(timeout: 2),
+                   identifiedToggle.isHittable {
+                    activate(identifiedToggle)
+                } else {
+                    XCTAssertTrue(
+                        systemToggle.waitForExistence(timeout: 3) &&
+                            systemToggle.isHittable,
+                        "A collapsed persistent Sidebar must expose a scriptable toggle."
+                    )
+                    activate(systemToggle)
+                }
                 studySidebar = app.descendants(matching: .any)[
                     studySidebarID
                 ].firstMatch

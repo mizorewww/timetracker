@@ -32,6 +32,7 @@ extension SwiftDataTaskRepository {
         colorHex: String? = nil,
         iconName: String? = nil
     ) throws -> TaskNode {
+        try validateAppleHealthPlacement(taskID: proposedID, parentID: parentID, categoryID: categoryID)
         let values = try TaskPersistencePolicy.prepareTask(
             title: title,
             colorHex: colorHex,
@@ -75,6 +76,7 @@ extension SwiftDataTaskRepository {
         )
         let nodes = try allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
+        try validateAppleHealthPlacement(taskID: taskID, parentID: parentID, categoryID: categoryID)
         let isChangingParent = node.parentID != parentID
         guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else {
             throw TaskRepositoryError.invalidMove
@@ -102,6 +104,7 @@ extension SwiftDataTaskRepository {
     func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {
         let nodes = try allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
+        try validateAppleHealthParentPlacement(taskID: taskID, parentID: newParentID)
         guard canMove(nodeID: taskID, to: newParentID, nodes: nodes) else {
             throw TaskRepositoryError.invalidMove
         }

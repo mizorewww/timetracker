@@ -79,6 +79,25 @@ struct AppleHealthDataReaderTests {
 
     #if DEBUG && os(iOS)
     @Test @MainActor
+    func platformFactorySelectsUIFixtureAtCallTime() {
+        let arguments = [
+            "--uitesting",
+            "--uitesting-apple-health-history",
+        ]
+        let reader = AppleHealthDataReaderFactory.platformDefault(
+            arguments: arguments,
+            environment: [:]
+        )
+        let reusedReader = AppleHealthDataReaderFactory.platformDefault(
+            arguments: arguments,
+            environment: [:]
+        )
+
+        #expect(reader is UITestAppleHealthDataReader)
+        #expect(reader === reusedReader)
+    }
+
+    @Test @MainActor
     func uiFixtureRequiresUITestLaunchAndExplicitOptIn() throws {
         #expect(
             UITestAppleHealthDataReader.makeIfRequested(

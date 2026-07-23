@@ -503,7 +503,9 @@
 "task.action.unarchive.parentFirst" = "请先取消归档父任务。";
 "task.archived.trackingUnavailable" = "此任务或其上级任务已归档，不能接收新工作。";
 "task.healthSyncOnly.title" = "Apple 健康同步";
-"task.healthSyncOnly.trackingUnavailable" = "此任务属于 Apple 健康同步分支。它仍可编辑和查看，但不能用于计时、番茄钟、快速开始或手动补录。";
+"task.healthSyncOnly.trackingUnavailable" = "此任务属于 Apple 健康同步分支。其他任务详情仍可编辑和查看，但不能用于计时、番茄钟、快速开始或手动补录。";
+"task.healthSyncOnly.categoryLocked" = "分类由 Apple 健康同步管理。";
+"task.error.appleHealthPlacementLocked" = "Apple 健康任务必须保留在根层级及其指定分类中。";
 "task.parentUnavailable" = "所选父任务不能接收新工作。";
 "task.editor.staleDraft" = "此任务已在其他位置发生变化。请查看最新版本后重试。";
 "task.autosave.failed" = "更改尚未保存";

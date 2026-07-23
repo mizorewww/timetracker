@@ -503,7 +503,9 @@
 "task.action.unarchive.parentFirst" = "Unarchive the parent task first.";
 "task.archived.trackingUnavailable" = "This task cannot receive new work because it or a parent is archived.";
 "task.healthSyncOnly.title" = "Apple Health Sync";
-"task.healthSyncOnly.trackingUnavailable" = "This task belongs to an Apple Health sync branch. It stays editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable.";
+"task.healthSyncOnly.trackingUnavailable" = "This task belongs to an Apple Health sync branch. Other task details stay editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable.";
+"task.healthSyncOnly.categoryLocked" = "Category is managed by Apple Health sync.";
+"task.error.appleHealthPlacementLocked" = "Apple Health tasks must remain at the root level in their assigned category.";
 "task.parentUnavailable" = "The selected parent cannot receive new work.";
 "task.editor.staleDraft" = "This task changed elsewhere. Review the latest version, then try again.";
 "task.autosave.failed" = "Changes Not Saved";

@@ -134,6 +134,7 @@ extension PomodoroRepository {
 enum TaskRepositoryError: LocalizedError, Equatable {
     case invalidMove
     case categoryUnavailable
+    case appleHealthPlacementLocked
 
     var errorDescription: String? {
         switch self {
@@ -141,6 +142,8 @@ enum TaskRepositoryError: LocalizedError, Equatable {
             AppStrings.localized("task.error.invalidMove")
         case .categoryUnavailable:
             AppStrings.localized("taskCategory.error.unavailable")
+        case .appleHealthPlacementLocked:
+            AppStrings.localized("task.error.appleHealthPlacementLocked")
         }
     }
 }

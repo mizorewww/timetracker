@@ -121,8 +121,7 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         var tasksByID: [UUID: TaskNode]
         var taskRowsByID: [UUID: [TaskNode]]
         var assignmentsByID: [UUID: TaskCategoryAssignment]
-        let assignmentRowsByID: [UUID: [TaskCategoryAssignment]]
-        let assignmentRowsByTaskID: [UUID: [TaskCategoryAssignment]]
+        let assignmentRows: [TaskCategoryAssignment]
         let claimedTaskIDs: Set<UUID>
 
         init(context: ModelContext) throws {
@@ -136,11 +135,7 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
             tasksByID = tasks.latestByID()
             taskRowsByID = Dictionary(grouping: tasks, by: \.id)
             assignmentsByID = assignments.latestByID()
-            assignmentRowsByID = Dictionary(grouping: assignments, by: \.id)
-            assignmentRowsByTaskID = Dictionary(
-                grouping: assignments,
-                by: \.taskID
-            )
+            assignmentRows = assignments
             claimedTaskIDs = Set(tasks.map(\.id))
                 .union(assignments.map(\.taskID))
         }
@@ -197,13 +192,18 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
             }
 
             if let task = state.tasksByID[definition.id] {
-                guard recoverableIDs.contains(definition.id) else {
+                guard task.deletedAt != nil else {
+                    try repairActiveTaskPlacementAndAssignment(
+                        task,
+                        to: definition,
+                        state: state,
+                        repository: repository,
+                        now: now,
+                        outcome: &outcome
+                    )
                     continue
                 }
-                guard task.deletedAt != nil else {
-                    outcome = outcome.consumingClearRecoveryTask(
-                        definition.id
-                    )
+                guard recoverableIDs.contains(definition.id) else {
                     continue
                 }
                 try repository.resetAppleHealthTaskAfterClear(
@@ -215,7 +215,7 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
                 )
                 outcome = outcome.appendingRestoredTask(definition.id)
                 try didReachCheckpoint(.taskRestored(definition.id))
-                try resetAssignmentAfterClear(
+                try repairAssignment(
                     definition,
                     state: state,
                     repository: repository,
@@ -244,7 +244,64 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         }
     }
 
-    func resetAssignmentAfterClear(
+    func repairActiveTaskPlacementAndAssignment(
+        _ task: TaskNode,
+        to definition: AppleHealthTaskDefinition,
+        state: PersistenceState,
+        repository: SwiftDataTaskRepository,
+        now: Date,
+        outcome: inout AppleHealthTaskCatalogMutationOutcome
+    ) throws {
+        let didRepairPlacement = try repository.repairAppleHealthTaskPlacement(
+            task,
+            to: definition,
+            visibleTasks: state.tasksByID.values.filter { $0.deletedAt == nil },
+            observedDates: state.taskRowsByID[definition.id, default: []]
+                .map(\.updatedAt),
+            now: now
+        )
+        if didRepairPlacement {
+            outcome = outcome.appendingRestoredTask(definition.id)
+            try didReachCheckpoint(.taskRestored(definition.id))
+        }
+
+        guard assignmentNeedsRepair(definition, state: state) else { return }
+        try repairAssignment(
+            definition,
+            state: state,
+            repository: repository,
+            now: now,
+            outcome: &outcome
+        )
+    }
+
+    func assignmentNeedsRepair(
+        _ definition: AppleHealthTaskDefinition,
+        state: PersistenceState
+    ) -> Bool {
+        guard let canonical =
+                state.assignmentsByID[definition.categoryAssignmentID],
+              canonical.deletedAt == nil,
+              canonical.taskID == definition.id,
+              canonical.categoryID == definition.categoryID else {
+            return true
+        }
+
+        let relevantRows = assignmentRows(for: definition, state: state)
+        let activeRows = relevantRows.filter { $0.deletedAt == nil }
+        let logicalWinner = state.assignmentRows
+            .filter { $0.taskID == definition.id }
+            .logicalWinnersByTaskID()[definition.id]
+        guard activeRows.count == 1,
+              activeRows[0].persistentModelID == canonical.persistentModelID,
+              logicalWinner?.persistentModelID ==
+                canonical.persistentModelID else {
+            return true
+        }
+        return false
+    }
+
+    func repairAssignment(
         _ definition: AppleHealthTaskDefinition,
         state: PersistenceState,
         repository: SwiftDataTaskRepository,
@@ -253,16 +310,12 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
     ) throws {
         let assignment =
             state.assignmentsByID[definition.categoryAssignmentID]
-        try repository.resetAppleHealthAssignmentAfterClear(
+        try repository.repairAppleHealthAssignment(
             assignment,
-            competingAssignments:
-                state.assignmentRowsByTaskID[
-                    definition.id,
-                    default: []
-                ] + state.assignmentRowsByID[
-                    definition.categoryAssignmentID,
-                    default: []
-                ],
+            competingAssignments: assignmentRows(
+                for: definition,
+                state: state
+            ),
             to: definition,
             now: now
         )
@@ -272,6 +325,16 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         try didReachCheckpoint(
             .assignmentRestored(definition.categoryAssignmentID)
         )
+    }
+
+    func assignmentRows(
+        for definition: AppleHealthTaskDefinition,
+        state: PersistenceState
+    ) -> [TaskCategoryAssignment] {
+        state.assignmentRows.filter { assignment in
+            assignment.taskID == definition.id ||
+                assignment.id == definition.categoryAssignmentID
+        }
     }
 
     func categoryIsAvailable(

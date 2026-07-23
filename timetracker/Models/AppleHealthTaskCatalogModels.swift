@@ -60,6 +60,13 @@ nonisolated enum AppleHealthTaskCatalog {
         taskRoleByID[taskID]
     }
 
+    static func taskDefinition(
+        for taskID: UUID
+    ) -> AppleHealthTaskDefinition? {
+        guard let role = taskRole(for: taskID) else { return nil }
+        return taskDefinition(for: role)
+    }
+
     static func plan(
         for roles: Set<AppleHealthTaskRole>
     ) -> AppleHealthTaskCatalogPlan {

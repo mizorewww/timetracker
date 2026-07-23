@@ -2,6 +2,56 @@ import Foundation
 import SwiftData
 
 extension SwiftDataTaskRepository {
+    func validateAppleHealthPlacement(
+        taskID: UUID,
+        parentID: UUID?,
+        categoryID: UUID?
+    ) throws {
+        guard AppleHealthTaskCatalog.taskDefinition(for: taskID) != nil else {
+            return
+        }
+        guard parentID == nil else {
+            throw TaskRepositoryError.appleHealthPlacementLocked
+        }
+        try validateAppleHealthCategoryAssignment(
+            categoryID: categoryID,
+            taskID: taskID
+        )
+    }
+
+    func validateAppleHealthParentPlacement(
+        taskID: UUID,
+        parentID: UUID?
+    ) throws {
+        guard AppleHealthTaskCatalog.taskDefinition(for: taskID) != nil,
+              parentID != nil else { return }
+        throw TaskRepositoryError.appleHealthPlacementLocked
+    }
+
+    func validateAppleHealthCategoryAssignment(
+        categoryID: UUID?,
+        taskID: UUID
+    ) throws {
+        guard let definition = AppleHealthTaskCatalog.taskDefinition(for: taskID)
+        else { return }
+        guard categoryID == definition.categoryID else {
+            throw TaskRepositoryError.appleHealthPlacementLocked
+        }
+        guard try category(id: definition.categoryID) != nil else {
+            throw TaskRepositoryError.categoryUnavailable
+        }
+    }
+
+    func validateAppleHealthCategoryDeletion(categoryID: UUID) throws {
+        let hasActiveAppleHealthTask = try allNodes().contains { task in
+            AppleHealthTaskCatalog.taskDefinition(for: task.id)?
+                .categoryID == categoryID
+        }
+        guard hasActiveAppleHealthTask == false else {
+            throw TaskRepositoryError.appleHealthPlacementLocked
+        }
+    }
+
     /// This seed path must run inside a store-scoped atomic transaction. It
     /// delegates validation and relationship creation to the ordinary
     /// repository, then makes only the generated identities and initial
@@ -115,8 +165,54 @@ extension SwiftDataTaskRepository {
         )
     }
 
+    /// Repairs only the fixed catalog placement after an out-of-process writer
+    /// bypasses repository validation. User-editable presentation, lifecycle,
+    /// estimate, notes, and ordering fields remain untouched.
     @discardableResult
-    func resetAppleHealthAssignmentAfterClear(
+    func repairAppleHealthTaskPlacement(
+        _ task: TaskNode,
+        to definition: AppleHealthTaskDefinition,
+        visibleTasks: [TaskNode],
+        observedDates: [Date],
+        now: Date
+    ) throws -> Bool {
+        let canonicalPath = TaskHierarchyMetadata.canonicalPath(
+            for: definition.id
+        )
+        guard task.parentID != nil ||
+                task.depth != 0 ||
+                task.path != canonicalPath else {
+            return false
+        }
+
+        let descendantTaskIDs = descendantIDs(
+            of: task.id,
+            nodes: visibleTasks
+        )
+        let hierarchyDates = visibleTasks.compactMap { candidate in
+            descendantTaskIDs.contains(candidate.id) ? candidate.updatedAt : nil
+        }
+        let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+            preferred: now,
+            observed: observedDates + hierarchyDates
+        )
+        task.parentID = nil
+        task.depth = 0
+        task.path = canonicalPath
+        task.updatedAt = mutationDate
+        task.deviceID = deviceID
+        task.clientMutationID = UUID()
+        updateDescendantHierarchy(
+            of: task,
+            nodes: visibleTasks,
+            now: mutationDate
+        )
+        try context.saveAfterMutationStep()
+        return true
+    }
+
+    @discardableResult
+    func repairAppleHealthAssignment(
         _ assignment: TaskCategoryAssignment?,
         competingAssignments: [TaskCategoryAssignment],
         to definition: AppleHealthTaskDefinition,

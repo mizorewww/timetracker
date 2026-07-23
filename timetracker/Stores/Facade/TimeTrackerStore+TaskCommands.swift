@@ -3,7 +3,7 @@ import SwiftData
 
 extension TimeTrackerStore {
     func editorDraft(for task: TaskNode) -> TaskEditorDraft {
-        TaskEditorDraft(
+        var draft = TaskEditorDraft(
             task: task,
             categoryID: taskCategoryIDByRootTaskID[task.id],
             categoryAssignment: taskCategoryAssignmentByRootTaskID[task.id],
@@ -19,6 +19,13 @@ extension TimeTrackerStore {
                 $0.taskID == task.id
             }
         )
+        if let taskDefinition = AppleHealthTaskCatalog.taskDefinition(
+            for: task.id
+        ) {
+            draft.parentID = nil
+            draft.categoryID = taskDefinition.categoryID
+        }
+        return draft
     }
 
     @discardableResult

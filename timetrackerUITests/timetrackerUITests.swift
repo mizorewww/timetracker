@@ -4047,7 +4047,7 @@ final class timetrackerUITests: XCTestCase {
         let syncOnlyExplanation = app.staticTexts.matching(
             NSPredicate(
                 format: "label == %@",
-                "This task belongs to an Apple Health sync branch. It stays editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable."
+                "This task belongs to an Apple Health sync branch. Other task details stay editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable."
             )
         ).firstMatch
         XCTAssertTrue(syncOnlyExplanation.waitForExistence(timeout: 5))
@@ -4151,6 +4151,60 @@ final class timetrackerUITests: XCTestCase {
         }
         try capture(
             "\(screenshotPrefix)-apple-health-sync-only-quick-start",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
+    func testAppleHealthTaskShowsReadOnlyCanonicalCategory() throws {
+        #if os(macOS)
+        throw XCTSkip("Apple Health sync-only UI requires an iOS simulator.")
+        #else
+        let app = launchApp(
+            route: "task-detail",
+            seedsDemoData: true,
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Running",
+            additionalLaunchArguments: [
+                "--uitesting-apple-health-history",
+                "-AppleHealthTimelineEnabled",
+                "NO"
+            ]
+        )
+        ensureTaskDetailIsReady(named: "Running", in: app)
+
+        let readOnlyCategory = app.descendants(matching: .any)[
+            "task.editor.category.readOnly"
+        ].firstMatch
+        XCTAssertTrue(readOnlyCategory.waitForExistence(timeout: 5))
+        scrollUntilFullyVisibleAboveSystemChrome(readOnlyCategory, in: app)
+        XCTAssertTrue(
+            isFrameFullyVisibleAboveSystemChrome(readOnlyCategory, in: app)
+        )
+        XCTAssertEqual(readOnlyCategory.label, "Category")
+        XCTAssertEqual(readOnlyCategory.value as? String, "Exercise")
+
+        let reason = app.descendants(matching: .any)[
+            "task.editor.category.readOnly.reason"
+        ].firstMatch
+        XCTAssertTrue(reason.waitForExistence(timeout: 5))
+        XCTAssertEqual(reason.label, "Category is managed by Apple Health sync.")
+        XCTAssertLessThan(
+            reason.frame.minY - readOnlyCategory.frame.maxY,
+            32,
+            "The managed-category explanation must stay attached to its compact value row."
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.editor.category"].exists
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["task.editor.parent"].exists
+        )
+        assertNoAppleHealthAuthorizationSheet(in: app)
+
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-task-detail-apple-health-read-only-category",
             app: app
         )
         #endif
@@ -6738,12 +6792,49 @@ final class timetrackerUITests: XCTestCase {
     private func assertNoAppleHealthAuthorizationSheet(
         in app: XCUIApplication
     ) {
-        let allow = app.buttons["UIA.Health.Allow.Button"].firstMatch
-        let deny = app.buttons["UIA.Health.DoNotAllow.Button"].firstMatch
-        XCTAssertFalse(
-            allow.waitForExistence(timeout: 1) || deny.exists,
-            "The deterministic Apple Health fixture must never present HealthKit authorization UI."
+        let healthPrivacyService = XCUIApplication(
+            bundleIdentifier: "com.apple.HealthPrivacyService"
         )
+        let appAllow = app.buttons["UIA.Health.Allow.Button"].firstMatch
+        let appDeny = app.buttons["UIA.Health.DoNotAllow.Button"].firstMatch
+        let systemAllow = healthPrivacyService.buttons[
+            "UIA.Health.Allow.Button"
+        ].firstMatch
+        let systemDeny = healthPrivacyService.buttons[
+            "UIA.Health.DoNotAllow.Button"
+        ].firstMatch
+        let systemPrompt = healthPrivacyService.staticTexts[
+            "Health Access"
+        ].firstMatch
+        let appPromptCandidates = [
+            appAllow,
+            appDeny,
+        ]
+        let systemPromptCandidates = [
+            systemAllow,
+            systemDeny,
+            systemPrompt,
+        ]
+        func authorizationPromptExists() -> Bool {
+            if appPromptCandidates.contains(where: \.exists) {
+                return true
+            }
+            guard healthPrivacyService.state == .runningForeground else {
+                return false
+            }
+            return systemPromptCandidates.contains(where: \.exists)
+        }
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline {
+            if authorizationPromptExists() {
+                XCTFail(
+                    "The deterministic Apple Health fixture must never present HealthKit authorization UI."
+                )
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        XCTAssertFalse(authorizationPromptExists())
     }
 
     @MainActor

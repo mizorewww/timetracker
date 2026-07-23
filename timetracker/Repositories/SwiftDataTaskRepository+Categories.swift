@@ -107,6 +107,7 @@ extension SwiftDataTaskRepository {
         guard let category = try category(id: categoryID) else {
             throw TaskRepositoryError.categoryUnavailable
         }
+        try validateAppleHealthCategoryDeletion(categoryID: categoryID)
         let now = Date()
         category.deletedAt = now
         category.updatedAt = now
@@ -123,6 +124,7 @@ extension SwiftDataTaskRepository {
     }
 
     func setCategoryAssignment(categoryID: UUID?, forRootTaskID taskID: UUID) throws {
+        try validateAppleHealthCategoryAssignment(categoryID: categoryID, taskID: taskID)
         let now = Date()
         let existing = try activeCategoryAssignments(forRootTaskID: taskID)
 

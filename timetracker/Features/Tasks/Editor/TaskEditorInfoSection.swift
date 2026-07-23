@@ -36,16 +36,22 @@ struct TaskInfoEditorSection: View {
                     }
                 }
             }
-            TaskParentPickerRow(
-                selection: $draft.parentID,
-                options: parentOptions,
-                changeBlocker: parentChangeBlocker
-            )
-            if draft.parentID == nil {
-                TaskCategoryPickerRow(
-                    selection: $draft.categoryID,
-                    options: categoryOptions
+            if let appleHealthCategory {
+                TaskReadOnlyCategoryRow(
+                    category: appleHealthCategory
                 )
+            } else {
+                TaskParentPickerRow(
+                    selection: $draft.parentID,
+                    options: parentOptions,
+                    changeBlocker: parentChangeBlocker
+                )
+                if draft.parentID == nil {
+                    TaskCategoryPickerRow(
+                        selection: $draft.categoryID,
+                        options: categoryOptions
+                    )
+                }
             }
             VStack(alignment: .leading, spacing: 6) {
                 SymbolColorPickerRow(
@@ -111,6 +117,34 @@ struct TaskInfoEditorSection: View {
             title: category.title,
             iconName: category.iconName ?? "square.grid.2x2",
             colorHex: category.colorHex
+        )
+    }
+
+    private var appleHealthCategory: TaskInheritedCategoryHint? {
+        guard let taskID = draft.taskID,
+              let taskDefinition = AppleHealthTaskCatalog.taskDefinition(
+                for: taskID
+              ) else {
+            return nil
+        }
+        if let category = store.taskCategories.first(where: {
+            $0.id == taskDefinition.categoryID
+        }) {
+            return TaskInheritedCategoryHint(
+                title: category.title,
+                iconName: category.iconName ?? "square.grid.2x2",
+                colorHex: category.colorHex
+            )
+        }
+        let categoryDefinition = AppleHealthTaskCatalog.categoryDefinition(
+            for: taskDefinition.role.categoryRole
+        )
+        return TaskInheritedCategoryHint(
+            title: AppStrings.localized(
+                categoryDefinition.titleLocalizationKey
+            ),
+            iconName: categoryDefinition.iconName,
+            colorHex: categoryDefinition.colorHex
         )
     }
 

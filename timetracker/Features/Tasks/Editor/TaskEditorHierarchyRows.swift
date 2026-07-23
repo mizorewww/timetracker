@@ -91,6 +91,53 @@ struct TaskCategoryPickerRow: View {
     }
 }
 
+struct TaskReadOnlyCategoryRow: View {
+    let category: TaskInheritedCategoryHint
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent(AppStrings.localized("taskCategory.title")) {
+                Label {
+                    Text(category.title)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: category.iconName)
+                        .foregroundStyle(
+                            Color(hex: category.colorHex) ?? .secondary
+                        )
+                }
+            }
+            .labeledContentStyle(TaskReadOnlyCategoryLabeledContentStyle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(AppStrings.localized("taskCategory.title"))
+            .accessibilityValue(category.title)
+            .accessibilityIdentifier("task.editor.category.readOnly")
+
+            Label(
+                AppStrings.localized("task.healthSyncOnly.categoryLocked"),
+                systemImage: "lock.fill"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(
+                AppStrings.localized("task.healthSyncOnly.categoryLocked")
+            )
+            .accessibilityIdentifier("task.editor.category.readOnly.reason")
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct TaskReadOnlyCategoryLabeledContentStyle: LabeledContentStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            configuration.label
+            Spacer(minLength: 12)
+            configuration.content
+        }
+    }
+}
+
 struct TaskHierarchyEditorHints: View {
     let inheritedCategory: TaskInheritedCategoryHint?
     let parentChangeBlocker: TaskParentChangeBlocker?

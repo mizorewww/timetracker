@@ -106,7 +106,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
     }
 
     @Test
-    func replayPreservesUserRenameMoveAndArchive() throws {
+    func replayPreservesUserMetadataAndRepairsManagedPlacement() throws {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         let role = AppleHealthTaskRole.workout(.running)
@@ -118,6 +118,10 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
             context: editContext,
             deviceID: "user-device"
         )
+        let customParent = try repository.createTask(
+            title: "Custom parent",
+            parentID: nil
+        )
         let customCategory = try repository.createCategory(
             title: "My movement",
             includesInForecast: true
@@ -126,7 +130,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
             taskID: definition.id,
             title: "Morning run",
             parentID: nil,
-            categoryID: customCategory.id,
+            categoryID: definition.categoryID,
             colorHex: "00A870",
             iconName: "sunrise.fill",
             notes: "Keep this",
@@ -135,24 +139,251 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         )
         try repository.archiveTask(taskID: definition.id)
 
-        let replay = try coordinator.apply(roles: [role])
-
-        #expect(replay == .noChanges)
-        let fresh = ModelContext(context.container)
+        let importedAt = Date().addingTimeInterval(3_600)
         let task = try #require(
+            try editContext.fetch(FetchDescriptor<TaskNode>())
+                .latestByID()[definition.id]
+        )
+        task.parentID = customParent.id
+        task.depth = 1
+        task.path = "imported-invalid-path"
+        task.updatedAt = importedAt
+        task.clientMutationID = UUID()
+        let fixedAssignment = try #require(
+            try editContext.fetch(FetchDescriptor<TaskCategoryAssignment>())
+                .latestByID()[definition.categoryAssignmentID]
+        )
+        fixedAssignment.categoryID = customCategory.id
+        fixedAssignment.updatedAt = importedAt
+        fixedAssignment.clientMutationID = UUID()
+        let competitor = TaskCategoryAssignment(
+            taskID: definition.id,
+            categoryID: customCategory.id,
+            deviceID: "remote-device"
+        )
+        competitor.updatedAt = importedAt.addingTimeInterval(10)
+        editContext.insert(competitor)
+        try editContext.save()
+
+        let replay = try coordinator.apply(roles: [role])
+        let secondReplay = try coordinator.apply(roles: [role])
+
+        #expect(replay.restoredTaskIDs == [definition.id])
+        #expect(
+            replay.restoredAssignmentIDs == [definition.categoryAssignmentID]
+        )
+        #expect(secondReplay == .noChanges)
+        let fresh = ModelContext(context.container)
+        let repairedTask = try #require(
             try fresh.fetch(FetchDescriptor<TaskNode>())
                 .latestByID()[definition.id]
         )
-        let assignment = try #require(
-            try fresh.fetch(FetchDescriptor<TaskCategoryAssignment>())
-                .logicalWinnersByTaskID()[definition.id]
+        let assignments = try fresh.fetch(
+            FetchDescriptor<TaskCategoryAssignment>()
         )
-        #expect(task.title == "Morning run")
-        #expect(task.notes == "Keep this")
-        #expect(task.iconName == "sunrise.fill")
-        #expect(task.colorHex == "00A870")
-        #expect(task.isArchivedForLifecycle)
-        #expect(assignment.categoryID == customCategory.id)
+        let assignment = try #require(
+            assignments.logicalWinnersByTaskID()[definition.id]
+        )
+        #expect(repairedTask.title == "Morning run")
+        #expect(repairedTask.notes == "Keep this")
+        #expect(repairedTask.iconName == "sunrise.fill")
+        #expect(repairedTask.colorHex == "00A870")
+        #expect(repairedTask.isArchivedForLifecycle)
+        #expect(repairedTask.parentID == nil)
+        #expect(repairedTask.depth == 0)
+        #expect(
+            repairedTask.path == TaskHierarchyMetadata.canonicalPath(
+                for: definition.id
+            )
+        )
+        #expect(repairedTask.updatedAt > importedAt)
+        #expect(assignment.id == definition.categoryAssignmentID)
+        #expect(assignment.categoryID == definition.categoryID)
+        #expect(assignment.updatedAt > competitor.updatedAt)
+        #expect(
+            assignments.filter {
+                $0.taskID == definition.id && $0.deletedAt == nil
+            }.map(\.id) == [definition.categoryAssignmentID]
+        )
+    }
+
+    @Test
+    func replayRepairsCrossedCanonicalAssignmentsInOnePass() throws {
+        let context = try makeTestContext()
+        let coordinator = makeCoordinator(container: context.container)
+        let definitions = [
+            AppleHealthTaskCatalog.taskDefinition(for: .workout(.walking)),
+            AppleHealthTaskCatalog.taskDefinition(for: .workout(.running)),
+        ]
+        let roles = Set(definitions.map(\.role))
+        _ = try coordinator.apply(roles: roles)
+
+        let editContext = ModelContext(context.container)
+        let rowsByID = try editContext.fetch(
+            FetchDescriptor<TaskCategoryAssignment>()
+        ).latestByID()
+        let first = try #require(
+            rowsByID[definitions[0].categoryAssignmentID]
+        )
+        let second = try #require(
+            rowsByID[definitions[1].categoryAssignmentID]
+        )
+        first.taskID = definitions[1].id
+        second.taskID = definitions[0].id
+        first.updatedAt = Date().addingTimeInterval(3_600)
+        second.updatedAt = first.updatedAt.addingTimeInterval(1)
+        first.clientMutationID = UUID()
+        second.clientMutationID = UUID()
+        try editContext.save()
+
+        let repaired = try coordinator.apply(roles: roles)
+        let replay = try coordinator.apply(roles: roles)
+
+        #expect(
+            Set(repaired.restoredAssignmentIDs) ==
+                Set(definitions.map(\.categoryAssignmentID))
+        )
+        #expect(replay == .noChanges)
+        let fresh = ModelContext(context.container)
+        let assignments = try fresh.fetch(
+            FetchDescriptor<TaskCategoryAssignment>()
+        )
+        let logicalWinners = assignments.logicalWinnersByTaskID()
+        for definition in definitions {
+            let canonical = try #require(
+                assignments.latestByID()[definition.categoryAssignmentID]
+            )
+            #expect(canonical.deletedAt == nil)
+            #expect(canonical.taskID == definition.id)
+            #expect(canonical.categoryID == definition.categoryID)
+            #expect(logicalWinners[definition.id]?.id == canonical.id)
+            #expect(
+                assignments.filter {
+                    $0.taskID == definition.id && $0.deletedAt == nil
+                }.count == 1
+            )
+        }
+    }
+
+    @Test
+    func repositoryRejectsManagedPlacementBypassesBeforeMutation() throws {
+        let context = try makeTestContext()
+        let coordinator = makeCoordinator(container: context.container)
+        let definition = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        )
+
+        let missingCategoryContext = try makeTestContext()
+        let missingCategoryRepository = SwiftDataTaskRepository(
+            context: missingCategoryContext,
+            deviceID: "user-device"
+        )
+        #expect(throws: TaskRepositoryError.categoryUnavailable) {
+            try missingCategoryRepository.createTask(
+                proposedID: definition.id,
+                title: "Must not be inserted",
+                parentID: nil,
+                categoryID: definition.categoryID
+            )
+        }
+        #expect(
+            try missingCategoryContext.fetch(FetchDescriptor<TaskNode>())
+                .contains { $0.id == definition.id } == false
+        )
+
+        _ = try coordinator.apply(roles: [.workout(.running)])
+
+        let editContext = ModelContext(context.container)
+        let repository = SwiftDataTaskRepository(
+            context: editContext,
+            deviceID: "user-device"
+        )
+        let customParent = try repository.createTask(
+            title: "Custom parent",
+            parentID: nil
+        )
+        let customCategory = try repository.createCategory(
+            title: "Custom category"
+        )
+        let task = try #require(try repository.task(id: definition.id))
+        let originalTitle = task.title
+        let originalSortOrder = task.sortOrder
+        let originalMutationID = task.clientMutationID
+
+        #expect(throws: TaskRepositoryError.appleHealthPlacementLocked) {
+            try repository.updateTask(
+                taskID: definition.id,
+                title: "Must not persist",
+                parentID: nil,
+                categoryID: customCategory.id,
+                colorHex: task.colorHex,
+                iconName: task.iconName,
+                notes: task.notes,
+                estimatedSeconds: task.estimatedSeconds,
+                dueAt: task.dueAt
+            )
+        }
+        #expect(task.title == originalTitle)
+        #expect(task.clientMutationID == originalMutationID)
+
+        #expect(throws: TaskRepositoryError.appleHealthPlacementLocked) {
+            try repository.moveTask(
+                taskID: definition.id,
+                newParentID: customParent.id,
+                sortOrder: 123
+            )
+        }
+        #expect(task.parentID == nil)
+        #expect(task.sortOrder == originalSortOrder)
+        #expect(task.clientMutationID == originalMutationID)
+
+        #expect(throws: TaskRepositoryError.appleHealthPlacementLocked) {
+            try repository.setCategoryAssignment(
+                categoryID: customCategory.id,
+                forRootTaskID: definition.id
+            )
+        }
+        #expect(
+            try repository.categoryID(forRootTaskID: definition.id) ==
+                definition.categoryID
+        )
+
+        #expect(throws: TaskRepositoryError.appleHealthPlacementLocked) {
+            try repository.softDeleteCategory(
+                categoryID: definition.categoryID
+            )
+        }
+        #expect(try repository.category(id: definition.categoryID) != nil)
+
+        try repository.moveTask(
+            taskID: definition.id,
+            newParentID: nil,
+            sortOrder: originalSortOrder + 1
+        )
+        #expect(task.sortOrder == originalSortOrder + 1)
+
+        let canonicalCategory = try #require(
+            try repository.category(id: definition.categoryID)
+        )
+        tombstone(canonicalCategory, at: Date())
+        try editContext.save()
+        let titleBeforeUnavailableCategory = task.title
+        let mutationBeforeUnavailableCategory = task.clientMutationID
+        #expect(throws: TaskRepositoryError.categoryUnavailable) {
+            try repository.updateTask(
+                taskID: definition.id,
+                title: "Must not survive a missing category",
+                parentID: nil,
+                categoryID: definition.categoryID,
+                colorHex: task.colorHex,
+                iconName: task.iconName,
+                notes: task.notes,
+                estimatedSeconds: task.estimatedSeconds,
+                dueAt: task.dueAt
+            )
+        }
+        #expect(task.title == titleBeforeUnavailableCategory)
+        #expect(task.clientMutationID == mutationBeforeUnavailableCategory)
     }
 
     @Test

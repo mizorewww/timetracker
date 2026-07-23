@@ -272,6 +272,46 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func appleHealthTasksExposeReadOnlyCanonicalPlacement() throws {
+        let catalogSource = try sourceText(
+            "timetracker/Models/AppleHealthTaskCatalogModels.swift"
+        )
+        let infoSource = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorInfoSection.swift"
+        )
+        let hierarchySource = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskEditorHierarchyRows.swift"
+        )
+        let commandsSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+TaskCommands.swift"
+        )
+
+        #expect(catalogSource.contains("static func taskDefinition("))
+        #expect(catalogSource.contains("for taskID: UUID"))
+        #expect(infoSource.contains("if let appleHealthCategory"))
+        #expect(infoSource.contains("TaskReadOnlyCategoryRow("))
+        #expect(infoSource.contains("$0.id == taskDefinition.categoryID"))
+        #expect(hierarchySource.contains("LabeledContent("))
+        #expect(hierarchySource.contains("Image(systemName: category.iconName)"))
+        #expect(
+            hierarchySource.contains(
+                ".accessibilityIdentifier(\"task.editor.category.readOnly\")"
+            )
+        )
+        #expect(
+            hierarchySource.contains(
+                ".accessibilityIdentifier(\"task.editor.category.readOnly.reason\")"
+            )
+        )
+        #expect(commandsSource.contains("draft.parentID = nil"))
+        #expect(
+            commandsSource.contains(
+                "draft.categoryID = taskDefinition.categoryID"
+            )
+        )
+    }
+
+    @Test
     func trackedTimeAssignmentPickersHideArchivedBranchesWithoutBreakingHistoryEdits() throws {
         let manualSource = try sourceText("timetracker/Features/Ledger/ManualTimeViews.swift")
         let segmentSource = try segmentEditorFeatureSource()

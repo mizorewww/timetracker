@@ -8,8 +8,8 @@
 - [x] 领取“首页不要把 heatmap 和柱状图混在一起，每个元素单独做卡片”的反馈。
 - [x] 审计首页 Heatmap、柱状图、说明文字和共享卡片容器的当前层级。
 - [x] 复用现有首页组件完成最小拆分，补齐 UI contract/XCUITest 与截图验收。
-- [~] 提交已验证并完成资源清理的实现 checkpoint。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 提交已验证并完成资源清理的实现 checkpoint：`bd7198f`。
+- [x] 收口 `CONFIGURATION=Release scripts/build_install_all.sh` 结果，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -28,7 +28,7 @@
 
 - [x] Checkpoint A：范围领取、当前视图层级审计与自动化验收设计。
 - [x] Checkpoint B：最小实现、聚焦测试与脚本截图验收。
-- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## 资源所有权
 
@@ -63,3 +63,13 @@
 - 最终 iPhone、iPad 竖屏和 iPad 横屏截图均已视觉检查：灰色页面背景可见，每个可视化有独立白色圆角卡片和清晰间隔，没有共享外框。
 - 复核代理提出的两项 P2（首项身份不稳定、测试未定位真实卡片边界）均已修复；复核代理只读且未占用 simulator。
 - 新增库：无。实现仅复用 SwiftUI、Swift Charts、现有 `appCard` 与 XCTest/XCUITest。
+
+## Checkpoint C Release 验证
+
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，退出码 0；未设置 `LAUNCH_AFTER_INSTALL`，未启动或操作物理设备 App。
+- Release 版本：`1.1.77 (132)`；iOS/iPadOS 主 App、嵌入 Watch companion 与 macOS App 的 `TeamIdentifier` 均为付费开发团队 `LT98S43NKA`，`codesign` 磁盘与 designated requirement 验证均通过。
+- iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93` 为 available，脚本安装成功；`devicectl device info apps` 只读核验为 `1.1.77 (132)`。
+- iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B` 在安装批次及之后三次脚本轮询都由 CoreDevice 报告为 `unavailable`，因此本 checkpoint 不虚报该设备安装结果；脚本已完成全部当时 available 设备。
+- 没有可见物理 Apple Watch；仅完成 embedded companion 的签名、包标识与依赖验证，配对手表由系统 Automatic App Install 接收。
+- macOS Release 已复制到 `/Applications/timetracker.app`，二进制架构为 `arm64 x86_64`。
+- Release `build/Install` 已删除；owned `xcodebuild`/`xctest`/UI runner、Booted simulator 与临时验收产物复核为零；Task 34 active link 已移除。

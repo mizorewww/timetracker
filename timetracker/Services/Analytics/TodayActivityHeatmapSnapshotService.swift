@@ -1,7 +1,6 @@
 import Foundation
 
 struct TodayActivityHeatmapSnapshotService {
-    static let weekCount = 53
     static let daysPerWeek = 7
 
     func taskSnapshots(
@@ -11,6 +10,7 @@ struct TodayActivityHeatmapSnapshotService {
         checklistItems: [ChecklistItem],
         quantityGoals: [TaskQuantityGoal],
         quantityEntries: [TaskQuantityEntry],
+        period: ActivityHeatmapPeriod,
         now: Date,
         calendar: Calendar = .current
     ) -> [TaskActivityHeatmapSnapshot] {
@@ -23,6 +23,7 @@ struct TodayActivityHeatmapSnapshotService {
             checklistItems: checklistItems,
             quantityGoals: quantityGoals,
             quantityEntries: quantityEntries,
+            period: period,
             now: now,
             calendar: calendar
         )
@@ -36,10 +37,15 @@ struct TodayActivityHeatmapSnapshotService {
         checklistItems: [ChecklistItem],
         quantityGoals: [TaskQuantityGoal],
         quantityEntries: [TaskQuantityEntry],
+        period: ActivityHeatmapPeriod,
         now: Date,
         calendar: Calendar = .current
     ) -> [TaskActivityHeatmapSnapshot] {
-        let dateRange = dateRange(now: now, calendar: calendar)
+        let dateRange = dateRange(
+            period: period,
+            now: now,
+            calendar: calendar
+        )
         let indexes = activityIndexes(
             taskByID: taskByID,
             segments: segments,
@@ -74,6 +80,7 @@ struct TodayActivityHeatmapSnapshotService {
                 valuesByDay: values.valuesByDay,
                 referencesByDay: values.referencesByDay,
                 defaultReferenceValue: maximumDailyValue,
+                weekCount: period.weekCount,
                 dateRange: dateRange,
                 calendar: calendar
             )

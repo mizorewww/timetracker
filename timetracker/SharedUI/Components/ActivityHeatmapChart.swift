@@ -1,6 +1,59 @@
 import Charts
 import SwiftUI
 
+nonisolated enum ActivityHeatmapLayoutContext: Equatable, Sendable {
+    case phone
+    case regular
+}
+
+nonisolated struct ActivityHeatmapLayoutPolicy: Equatable, Sendable {
+    private static let dayCount: CGFloat = 7
+
+    let context: ActivityHeatmapLayoutContext
+    let weekCount: Int
+
+    var cellSize: CGFloat {
+        switch (context, weekCount) {
+        case (.phone, ...5):
+            15
+        case (.phone, ...14):
+            12
+        case (.phone, ...27):
+            11
+        case (.phone, _):
+            10
+        case (.regular, ...5):
+            14
+        case (.regular, ...14):
+            11
+        case (.regular, ...27):
+            10
+        case (.regular, _):
+            9
+        }
+    }
+
+    var cellSpacing: CGFloat { 3 }
+
+    var chartWidth: CGFloat {
+        let columns = CGFloat(max(1, weekCount))
+        return columns * cellSize
+            + max(0, columns - 1) * cellSpacing
+            + 34
+    }
+
+    var chartHeight: CGFloat {
+        let rows = Self.dayCount
+        return rows * cellSize
+            + (rows - 1) * cellSpacing
+            + 27
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var activityHeatmapLayoutContext: ActivityHeatmapLayoutContext = .regular
+}
+
 struct ActivityHeatmapChart: View {
     let snapshot: TaskActivityHeatmapSnapshot
 
@@ -8,10 +61,10 @@ struct ActivityHeatmapChart: View {
     @Environment(\.calendar) private var calendar
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
+    @Environment(\.activityHeatmapLayoutContext)
+    private var layoutContext
 
     private let cells: [ActivityHeatmapChartCell]
-    private let cellSize: CGFloat = 9
-    private let cellSpacing: CGFloat = 3
 
     init(snapshot: TaskActivityHeatmapSnapshot) {
         self.snapshot = snapshot
@@ -37,8 +90,8 @@ struct ActivityHeatmapChart: View {
                     AppStrings.localized("home.heatmap.chart.weekday"),
                     cell.weekdayPosition
                 ),
-                width: .fixed(cellSize),
-                height: .fixed(cellSize)
+                width: .fixed(layoutPolicy.cellSize),
+                height: .fixed(layoutPolicy.cellSize)
             )
             .foregroundStyle(fillColor(for: cell.day))
             .cornerRadius(2)
@@ -46,7 +99,10 @@ struct ActivityHeatmapChart: View {
                 if cell.day.isToday {
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .stroke(.primary.opacity(0.72), lineWidth: 1)
-                        .frame(width: cellSize, height: cellSize)
+                        .frame(
+                            width: layoutPolicy.cellSize,
+                            height: layoutPolicy.cellSize
+                        )
                 }
             }
             .accessibilityLabel(accessibleDate(cell.day.date))
@@ -101,7 +157,13 @@ struct ActivityHeatmapChart: View {
                 }
             }
         }
-        .frame(width: chartWidth, height: 108)
+        .frame(
+            width: layoutPolicy.chartWidth,
+            height: layoutPolicy.chartHeight
+        )
+        .accessibilityIdentifier(
+            "home.heatmap.chart.\(snapshot.taskID.uuidString)"
+        )
     }
 
     private var palette: ActivityHeatmapPalette {
@@ -112,9 +174,11 @@ struct ActivityHeatmapChart: View {
         )
     }
 
-    private var chartWidth: CGFloat {
-        let count = CGFloat(snapshot.weeks.count)
-        return max(320, count * cellSize + max(0, count - 1) * cellSpacing + 34)
+    private var layoutPolicy: ActivityHeatmapLayoutPolicy {
+        ActivityHeatmapLayoutPolicy(
+            context: layoutContext,
+            weekCount: snapshot.weeks.count
+        )
     }
 
     private var monthMarkers: [ActivityHeatmapMonthMarker] {

@@ -12,6 +12,7 @@ struct TodayActivityHeatmapRefreshTests {
         let taskID = UUID()
         let store = TimeTrackerStore()
         store.preferences.todayHeatmapTaskIDs = [taskID]
+        store.preferences.todayHeatmapPeriod = .oneYear
 
         let idleNow = HomeActivityHeatmapRefreshRequest(
             store: store,
@@ -59,6 +60,33 @@ struct TodayActivityHeatmapRefreshTests {
     }
 
     @Test @MainActor
+    func refreshIdentityTracksTheSelectedPeriod() throws {
+        let calendar = testCalendar()
+        let now = try testDate(calendar: calendar)
+        let store = TimeTrackerStore()
+        store.preferences.todayHeatmapTaskIDs = [UUID()]
+        store.preferences.todayHeatmapPeriod = .oneMonth
+
+        let month = HomeActivityHeatmapRefreshRequest(
+            store: store,
+            now: now,
+            calendar: calendar,
+            clockRevision: 0
+        )
+        store.preferences.todayHeatmapPeriod = .oneYear
+        let year = HomeActivityHeatmapRefreshRequest(
+            store: store,
+            now: now,
+            calendar: calendar,
+            clockRevision: 0
+        )
+
+        #expect(month.period == .oneMonth)
+        #expect(year.period == .oneYear)
+        #expect(month != year)
+    }
+
+    @Test @MainActor
     func runningTimerSnapshotGrowsWhenTheTimelineRefreshes() throws {
         let calendar = testCalendar()
         let now = try testDate(calendar: calendar)
@@ -80,15 +108,18 @@ struct TodayActivityHeatmapRefreshTests {
         store.activeSegments = [segment]
         store.allSegments = [segment]
         store.preferences.todayHeatmapTaskIDs = [task.id]
+        store.preferences.todayHeatmapPeriod = .oneYear
 
         let initial = try #require(
             store.todayTaskActivityHeatmapSnapshots(
+                period: .oneYear,
                 now: now,
                 calendar: calendar
             ).first
         )
         let refreshed = try #require(
             store.todayTaskActivityHeatmapSnapshots(
+                period: .oneYear,
                 now: now.addingTimeInterval(60),
                 calendar: calendar
             ).first

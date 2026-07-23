@@ -14,7 +14,7 @@ struct ActivityHeatmapGrid: View {
             }
             .scrollIndicators(.hidden)
             .defaultScrollAnchor(.trailing, for: .initialOffset)
-            .defaultScrollAnchor(.leading, for: .alignment)
+            .defaultScrollAnchor(.trailing, for: .alignment)
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -42,6 +42,9 @@ struct ActivityHeatmapGrid: View {
         Text(rangeText)
             .font(.caption)
             .foregroundStyle(.secondary)
+            .accessibilityIdentifier(
+                "home.heatmap.range.\(snapshot.taskID.uuidString)"
+            )
     }
 
     private var intensityLegend: some View {

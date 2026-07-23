@@ -5,12 +5,13 @@ extension TodayActivityHeatmapSnapshotService {
         valuesByDay: [Date: Int],
         referencesByDay: [Date: Int],
         defaultReferenceValue: Int,
+        weekCount: Int,
         dateRange: ActivityHeatmapDateRange,
         calendar: Calendar
     ) -> [ActivityHeatmapWeek] {
         var result: [ActivityHeatmapWeek] = []
-        result.reserveCapacity(Self.weekCount)
-        for weekIndex in 0..<Self.weekCount {
+        result.reserveCapacity(weekCount)
+        for weekIndex in 0..<weekCount {
             guard let weekStart = calendar.date(
                 byAdding: .weekOfYear,
                 value: weekIndex,
@@ -45,6 +46,7 @@ extension TodayActivityHeatmapSnapshotService {
     }
 
     func dateRange(
+        period: ActivityHeatmapPeriod,
         now: Date,
         calendar: Calendar
     ) -> ActivityHeatmapDateRange {
@@ -55,7 +57,7 @@ extension TodayActivityHeatmapSnapshotService {
         )?.start ?? today
         let intervalStart = calendar.date(
             byAdding: .weekOfYear,
-            value: -(Self.weekCount - 1),
+            value: -(period.weekCount - 1),
             to: currentWeekStart
         ) ?? currentWeekStart
         let intervalEnd = calendar.date(

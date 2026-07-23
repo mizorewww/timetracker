@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeActivityHeatmapRefreshRequest: Hashable {
     let selectedTaskIDs: [UUID]
+    let period: ActivityHeatmapPeriod
     let analyticsRevision: UInt
     let taskReadModelRevision: UInt64
     let localDay: Date
@@ -17,6 +18,7 @@ struct HomeActivityHeatmapRefreshRequest: Hashable {
         clockRevision: UInt
     ) {
         selectedTaskIDs = store.preferences.todayHeatmapTaskIDs
+        period = store.preferences.todayHeatmapPeriod
         analyticsRevision = store.analyticsRevision
         taskReadModelRevision = store.taskReadModelRevision
         localDay = calendar.startOfDay(for: now)
@@ -62,12 +64,17 @@ struct HomeActivityHeatmapSection: View {
                     )
                 }
             }
+            .environment(
+                \.activityHeatmapLayoutContext,
+                activityHeatmapLayoutContext
+            )
             .task(id: request) {
                 guard request.selectedTaskIDs.isEmpty == false else {
                     loadedHeatmaps = nil
                     return
                 }
                 let snapshots = store.todayTaskActivityHeatmapSnapshots(
+                    period: request.period,
                     now: context.date,
                     calendar: calendar
                 )
@@ -189,6 +196,15 @@ struct HomeActivityHeatmapSection: View {
             AppStrings.localized("home.heatmap.taskCount"),
             Int64(count)
         )
+    }
+
+    private var activityHeatmapLayoutContext: ActivityHeatmapLayoutContext {
+        switch container {
+        case .card:
+            .regular
+        case .listSection:
+            .phone
+        }
     }
 
     private func refreshClock() {

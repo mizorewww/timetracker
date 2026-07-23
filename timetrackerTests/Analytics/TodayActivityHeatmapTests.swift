@@ -97,6 +97,7 @@ struct TodayActivityHeatmapTests {
             checklistItems: items,
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
         )
@@ -145,6 +146,7 @@ struct TodayActivityHeatmapTests {
             checklistItems: [item],
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
         ).first)
@@ -159,6 +161,7 @@ struct TodayActivityHeatmapTests {
             checklistItems: [item],
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
         ).first)
@@ -173,6 +176,7 @@ struct TodayActivityHeatmapTests {
             checklistItems: [item],
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
         ).first)
@@ -203,6 +207,7 @@ struct TodayActivityHeatmapTests {
             checklistItems: [],
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
             ).first
@@ -247,6 +252,117 @@ struct TodayActivityHeatmapTests {
         )
         #expect(cells.contains { $0.date == dayAfter })
         #expect(snapshot.totalValue == 0)
+    }
+
+    @Test @MainActor
+    func configuredPeriodsProjectTheirExpectedLocaleWeekCounts() throws {
+        var calendar = try testCalendar(
+            timeZone: TimeZone(identifier: "America/Los_Angeles")
+        )
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        let now = try testDate(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12,
+            calendar: calendar
+        )
+        let currentWeekStart = try #require(
+            calendar.dateInterval(of: .weekOfYear, for: now)?.start
+        )
+        let root = task("Root")
+        let periods: [ActivityHeatmapPeriod] = [
+            .oneMonth,
+            .threeMonths,
+            .sixMonths,
+            .oneYear,
+        ]
+
+        for period in periods {
+            let snapshot = try #require(
+                TodayActivityHeatmapSnapshotService().taskSnapshots(
+                    selectedTaskIDs: [root.id],
+                    tasks: [root],
+                    segments: [],
+                    checklistItems: [],
+                    quantityGoals: [],
+                    quantityEntries: [],
+                    period: period,
+                    now: now,
+                    calendar: calendar
+                ).first
+            )
+            let expectedStart = try #require(
+                calendar.date(
+                    byAdding: .weekOfYear,
+                    value: -(period.weekCount - 1),
+                    to: currentWeekStart
+                )
+            )
+
+            #expect(snapshot.weeks.count == period.weekCount)
+            #expect(snapshot.weeks.allSatisfy { $0.days.count == 7 })
+            #expect(snapshot.weeks.first?.startDate == expectedStart)
+            #expect(snapshot.interval.start == expectedStart)
+        }
+    }
+
+    @Test
+    func layoutPolicyScalesCellsForPeriodAndContainer() {
+        let periods: [ActivityHeatmapPeriod] = [
+            .oneMonth,
+            .threeMonths,
+            .sixMonths,
+            .oneYear,
+        ]
+        let phoneMonth = ActivityHeatmapLayoutPolicy(
+            context: .phone,
+            weekCount: ActivityHeatmapPeriod.oneMonth.weekCount
+        )
+        let phoneYear = ActivityHeatmapLayoutPolicy(
+            context: .phone,
+            weekCount: ActivityHeatmapPeriod.oneYear.weekCount
+        )
+        let regularMonth = ActivityHeatmapLayoutPolicy(
+            context: .regular,
+            weekCount: ActivityHeatmapPeriod.oneMonth.weekCount
+        )
+        let regularYear = ActivityHeatmapLayoutPolicy(
+            context: .regular,
+            weekCount: ActivityHeatmapPeriod.oneYear.weekCount
+        )
+
+        #expect(
+            periods.map {
+                ActivityHeatmapLayoutPolicy(
+                    context: .phone,
+                    weekCount: $0.weekCount
+                ).cellSize
+            } == [15, 12, 11, 10]
+        )
+        #expect(
+            periods.map {
+                ActivityHeatmapLayoutPolicy(
+                    context: .regular,
+                    weekCount: $0.weekCount
+                ).cellSize
+            } == [14, 11, 10, 9]
+        )
+        #expect(phoneMonth.cellSize > 9)
+        #expect(phoneYear.cellSize >= 10)
+        #expect(regularMonth.cellSize > 9)
+        #expect(regularYear.cellSize == 9)
+        #expect(phoneMonth.cellSize > phoneYear.cellSize)
+        #expect(regularMonth.cellSize > regularYear.cellSize)
+        #expect(phoneMonth.chartWidth < phoneYear.chartWidth)
+        #expect(regularMonth.chartWidth < regularYear.chartWidth)
+        #expect(phoneMonth.chartHeight > phoneYear.chartHeight)
+        #expect(regularMonth.chartHeight > regularYear.chartHeight)
+        #expect(phoneMonth.chartWidth == 121)
+        #expect(phoneYear.chartWidth == 720)
+        #expect(regularMonth.chartHeight == 143)
+        #expect(regularYear.chartHeight == 108)
     }
 
     @Test @MainActor
@@ -298,6 +414,7 @@ struct TodayActivityHeatmapTests {
             ],
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
         )
@@ -366,6 +483,7 @@ struct TodayActivityHeatmapTests {
             checklistItems: [],
             quantityGoals: [],
             quantityEntries: [],
+            period: .oneYear,
             now: now,
             calendar: calendar
         )
@@ -496,6 +614,7 @@ struct TodayActivityHeatmapTests {
                     recordedAt: now.addingTimeInterval(3_600)
                 ),
             ],
+            period: .oneYear,
             now: now,
             calendar: calendar
         )

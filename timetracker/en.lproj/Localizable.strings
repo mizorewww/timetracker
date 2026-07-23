@@ -1162,10 +1162,13 @@
 "heatmap.settings.tasks" = "Tracked Tasks";
 "heatmap.settings.off" = "Off";
 "heatmap.settings.taskCount" = "%lld Selections";
-"heatmap.settings.footer" = "Choose the default range and tasks shown in Today. Every selection gets its own Heatmap and includes its subtasks; selecting both a parent and child shows two separate Heatmaps.";
+"heatmap.settings.footer" = "Choose the default range and tasks shown in Today. Every selection includes its subtasks. Repeating occurrences roll up to their parent; ordinary parent and child selections remain separate Heatmaps.";
 "task.detail.heatmap.title" = "Activity Heatmap";
 "task.detail.heatmap.toggle" = "Show This Task in Today";
+"task.detail.heatmap.recurringToggle" = "Show Repeating Parent in Today";
 "task.detail.heatmap.footer" = "Off by default. The task color selected with the Blossom color picker becomes this Heatmap’s theme, and subtasks contribute to its daily activity.";
+"task.detail.heatmap.recurringFooter" = "Work stays recorded on this occurrence. Its repeating parent owns the Heatmap and combines every occurrence.";
+"task.detail.heatmap.unavailable" = "This Heatmap is temporarily unavailable while the repeating task relationship is incomplete.";
 "task.detail.heatmap.limitReached" = "The Heatmap task limit has been reached. Deselect a task in Settings before enabling this one.";
 "task.detail.heatmap.palette" = "Color Scale";
 "heatmap.picker.title" = "Heatmap Tasks";

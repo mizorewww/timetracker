@@ -92,11 +92,19 @@ nonisolated struct TodayHeatmapRecurrenceProjection: Equatable, Sendable {
                 pickerExcludedTaskIDs.insert(expectedGeneratedTaskID)
             }
 
-            let participants = [
+            var participantCandidates = [
                 occurrence.templateTaskID,
                 occurrence.generatedTaskID,
                 expectedGeneratedTaskID,
-            ].filter(validTaskIDs.contains)
+            ]
+            if let ruleTemplateTaskID = validRuleByID[
+                occurrence.ruleID
+            ]?.templateTaskID {
+                participantCandidates.append(ruleTemplateTaskID)
+            }
+            let participants = participantCandidates.filter(
+                validTaskIDs.contains
+            )
             let relationshipIsIncomplete = participants.contains {
                 blockedTaskIDs.contains($0)
             }

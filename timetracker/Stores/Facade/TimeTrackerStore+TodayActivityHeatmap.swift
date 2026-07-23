@@ -24,9 +24,12 @@ extension TimeTrackerStore {
 
     func todayHeatmapOwnerTaskID(for taskID: UUID) -> UUID? {
         _ = taskReadModelRevision
-        return todayHeatmapRecurrenceProjection.ownerTaskID(
+        let ownerTaskID = todayHeatmapRecurrenceProjection.ownerTaskID(
             for: taskID
         )
+        return todayHeatmapRecurrenceProjection.renderableTaskIDs([
+            ownerTaskID
+        ]).first
     }
 
     func todayTaskActivityHeatmapSnapshots(

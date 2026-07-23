@@ -8,7 +8,7 @@
 - [x] 领取“可重复任务由子任务记录数量/时间、父任务显示 Heatmap”反馈并建立活动链接。
 - [x] 审计任务量/可重复任务的父子模型、完成记录、Heatmap 聚合与三平台入口。
 - [x] 实现 recurrence owner 投影、权威父级聚合并补齐聚焦测试。
-- [~] 将 UI fixture 改为真实 recurrence，并补齐三平台脚本化验收。
+- [x] 将 UI fixture 改为真实 recurrence，并补齐三平台脚本化验收。
 - [ ] 分 checkpoint 提交，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -28,7 +28,7 @@
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
 - [x] Checkpoint B：审计父子数据流、完成记录、Heatmap 投影、库与自动化基线。
 - [x] Checkpoint C：实现数据/聚合修复并完成聚焦验证。
-- [~] Checkpoint D：补齐三平台脚本化 UI 验收。
+- [x] Checkpoint D：补齐三平台脚本化 UI 验收。
 - [ ] Checkpoint E：Release 全设备安装、签名/版本核验与收口。
 
 ## 审计证据
@@ -55,10 +55,15 @@
 - [x] 偏好写命令、详情 Toggle、设置 picker、Home refresh identity 与 snapshot 全部消费同一投影；普通任务与普通父子 Heatmap 语义不变。
 - [x] Snapshot 将权威 generated IDs 作为额外遍历根，与现有层级子树 Set 合并；因此 generated 的普通后代也被计入且不会重复。
 - [x] 聚焦验证通过：36 个 projection/Heatmap/刷新/UI contract/picker 测试 + 1 个真实 Store 集成测试；覆盖旧 generated 偏好、详情开关持久化为模板、父子去重、数量与时长、移父、损坏与 staged 图。两个 xcresult、DerivedData 与测试进程均已清理。
+- [x] Review 补强：损坏 occurrence 同时封锁其 rule 指向的 canonical template；不可渲染 owner 返回 `nil`；Settings picker 在过滤前缓存 selectable ID 集合，避免逐项重建；新增对应回归测试。
+- [x] Demo/UI fixture 使用真实 rule + 昨日/今日 occurrences；两次 generated 数量记录为 30 + 45，旧 generated 偏好在界面归一到父任务 `Daily Push-ups`，Today 父卡汇总显示 75，generated 详情不再拥有独立卡片。
+- [x] 14 个最终聚焦单元/UI contract 测试通过：`TodayHeatmapRecurrenceProjectionTests`、`TodayHeatmapRecurrenceStoreTests`、`TodayHeatmapUIContractTests`。
+- [x] XCUITest 三平台脚本验收通过：macOS recurring + 全指标、iPhone recurring + 全指标、iPad 两项组合；窗口定位、导航、开关、断言与截图全部由 XCUITest 完成，没有手动调试窗口。
+- [x] 截图视觉验收通过：三平台均显示 generated 的“重复父任务”开关/父级调色板；Home 仅显示 `Daily Push-ups` 父卡且总量为 75，没有 generated 独立卡片。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/TestManager/simulator/XCUITest/screenshot/Release 批次与清理。
+- [~] 主代理：任务状态、编排、集成、最终 Release 批次与清理。
 - [x] `task38_model_audit`：只读确认真实 recurrence 写入语义、owner 断点与可编辑 `parentID` 风险。
 - [x] `task38_heatmap_audit`：只读确认 snapshot/偏好/刷新身份断点与权威 contributor 建议。
 - [x] `task38_test_audit`：只读确认现有 fixture 是普通父子而非 recurrence，并给出真实 rule/occurrence 的三平台脚本矩阵。
@@ -67,4 +72,12 @@
 
 - [x] `6def19c9`：领取任务、建立实现记忆与 active link。
 - [x] `1bc53743`：静态/库审计与聚焦自动化基线。
-- [~] 待提交：recurrence owner、权威父级聚合、Store 接线与聚焦测试。
+- [x] `2dadcd2c`：recurrence owner、权威父级聚合、Store 接线与聚焦测试。
+- [~] 待提交：真实 recurrence UI fixture、三平台界面接线、自动化验收与 reviewer 补强。
+
+## UI 自动化与资源清理
+
+- [x] macOS：`mac-recurring-final.xcresult` recurring 测试通过；`mac-full.xcresult` 全指标测试通过。
+- [x] iPhone：owned UDID `97F5A457-B982-45E8-9A88-0BDDB9EBF25B`；recurring 与最终全指标测试通过，批次结束后已关机并删除。
+- [x] iPad：owned UDID `060C048A-613C-4974-90B0-69FCF9C8F9EC`；两项组合测试通过，批次结束后已关机并删除。
+- [x] `simctl` 已确认没有 `Task38` 或 Booted 模拟器；测试 App、XCTest/XCUITest 与 xcodebuild 批次均已退出。截图证据保存在 `build/Task38UI/evidence-*`，等待本任务最终收口后一并清理。

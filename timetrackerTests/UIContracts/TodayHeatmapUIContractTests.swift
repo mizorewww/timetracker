@@ -21,6 +21,7 @@ struct TodayHeatmapUIContractTests {
         #expect(settings.contains("context: .todayHeatmap"))
         #expect(settings.contains("showsDismissButton") == false)
         #expect(settings.contains("OrderedTaskIDSelectionMutation.toggling("))
+        #expect(settings.contains("store.todayHeatmapSelectedTaskIDs"))
         #expect(settings.contains("hiddenSelectionRecovery"))
         #expect(settings.contains("OrderedTaskIDSelectionMutation.removing("))
         #expect(settings.contains(
@@ -38,6 +39,8 @@ struct TodayHeatmapUIContractTests {
         #expect(picker.contains("selectedTaskIDs.contains(item.id)"))
         #expect(picker.contains("isSelectionDisabled(for: item)"))
         #expect(picker.contains("current.subtracting(previous)"))
+        #expect(picker.contains("case .todayHeatmap:"))
+        #expect(picker.contains("store.todayHeatmapSelectableTaskIDs"))
     }
 
     @Test
@@ -60,6 +63,9 @@ struct TodayHeatmapUIContractTests {
         #expect(sanitizer.contains("maximumTodayHeatmapTaskCount"))
         #expect(sanitizer.contains("static func todayHeatmapTaskIDs("))
         #expect(commands.contains("func setTodayHeatmapTaskIDs("))
+        #expect(commands.contains(
+            "todayHeatmapRecurrenceProjection.canonicalTaskIDs(ids)"
+        ))
         #expect(commands.contains(".todayHeatmapTaskIDs"))
         #expect(settings.contains("TodayHeatmapSettingsSection("))
         #expect(settings.contains("store.setTodayHeatmapTaskIDs(taskIDs)"))
@@ -147,7 +153,10 @@ struct TodayHeatmapUIContractTests {
 
         #expect(detail.contains("TaskDetailHeatmapTrackingSection("))
         #expect(section.contains("Toggle(isOn: trackingBinding)"))
-        #expect(section.contains("preferences.todayHeatmapTaskIDs.contains(task.id)"))
+        #expect(section.contains("store.todayHeatmapOwnerTaskID(for: task.id)"))
+        #expect(section.contains("store.todayHeatmapSelectedTaskIDs.contains("))
+        #expect(section.contains("task.detail.heatmap.recurringToggle"))
+        #expect(section.contains("task.detail.heatmap.recurringFooter"))
         #expect(section.contains("store.setTodayHeatmapTrackingEnabled("))
         #expect(section.contains("task.detail.heatmapTracking"))
         #expect(section.contains("ActivityHeatmapPalettePreview("))
@@ -178,7 +187,10 @@ struct TodayHeatmapUIContractTests {
             "heatmap.settings.footer",
             "task.detail.heatmap.title",
             "task.detail.heatmap.toggle",
+            "task.detail.heatmap.recurringToggle",
             "task.detail.heatmap.footer",
+            "task.detail.heatmap.recurringFooter",
+            "task.detail.heatmap.unavailable",
             "task.detail.heatmap.limitReached",
             "task.detail.heatmap.palette",
             "heatmap.picker.title",
@@ -351,8 +363,16 @@ struct TodayHeatmapUIContractTests {
         #expect(seed.contains("app.id.uuidString,"))
         #expect(seed.contains("client.id.uuidString"))
         #expect(seed.contains("title: \"Daily Push-ups\""))
+        #expect(seed.contains("--uitesting-today-heatmap-template-id"))
+        #expect(seed.contains("flatMap(UUID.init(uuidString:)) ?? UUID()"))
+        #expect(seed.contains("TaskRecurrenceRule("))
+        #expect(seed.contains("TaskRecurrenceOccurrence("))
+        #expect(seed.contains("createGeneratedRecurrenceTask("))
         #expect(seed.contains("TaskQuantityGoal("))
-        #expect(seed.contains("quantityTask.id.uuidString"))
+        #expect(seed.contains("taskID: yesterdayTask.id"))
+        #expect(seed.contains("taskID: todayTask.id"))
+        #expect(seed.contains("todayTask.id.uuidString"))
+        #expect(seed.contains("Morning Set") == false)
         #expect(grid.contains("struct ActivityHeatmapGrid: View"))
         #expect(grid.contains("import Charts"))
         #expect(grid.contains("Chart(cells)"))
@@ -406,10 +426,15 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains(".NSCalendarDayChanged"))
         #expect(section.contains("TimelineView(.periodic(from: .now, by: 60))"))
         #expect(section.contains("store.activeSegments.isEmpty"))
+        #expect(section.contains("store.todayHeatmapRenderableTaskIDs"))
         #expect(section.contains("Int(now.timeIntervalSinceReferenceDate / 60)"))
         #expect(section.contains("now: context.date"))
         #expect(store.contains("taskByID: taskByID"))
         #expect(store.contains("childrenByParentID: childrenByParentID"))
+        #expect(store.contains(
+            "additionalContributingTaskIDsBySelectedTaskID:"
+        ))
+        #expect(store.contains("generatedTaskIDsByTemplateTaskID"))
         #expect(store.contains("segments: allSegments"))
         #expect(store.contains("quantityGoals: taskQuantityGoals"))
         #expect(store.contains("quantityEntries: taskQuantityEntries"))

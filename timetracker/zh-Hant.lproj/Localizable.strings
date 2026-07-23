@@ -1162,10 +1162,13 @@
 "heatmap.settings.tasks" = "統計任務";
 "heatmap.settings.off" = "關閉";
 "heatmap.settings.taskCount" = "%lld 項選擇";
-"heatmap.settings.footer" = "選擇 Today 中熱力圖的預設範圍和任務。每項選擇都有獨立熱力圖並包含其子任務；同時選擇父子任務會顯示兩張獨立熱力圖。";
+"heatmap.settings.footer" = "選擇 Today 中熱力圖的預設範圍和任務。每項選擇都會包含其子任務；重複產生的子任務會彙總到父任務，普通父子任務仍可分別顯示熱力圖。";
 "task.detail.heatmap.title" = "活躍度熱力圖";
 "task.detail.heatmap.toggle" = "在 Today 中顯示此任務";
+"task.detail.heatmap.recurringToggle" = "在 Today 中顯示重複父任務";
 "task.detail.heatmap.footer" = "預設關閉。透過 Blossom 顏色選擇器設定的任務顏色會成為此熱力圖的主題色，子任務活動也會計入。";
+"task.detail.heatmap.recurringFooter" = "工作仍記錄在目前的重複子任務中；熱力圖歸屬於重複父任務，並彙總每次產生的子任務。";
+"task.detail.heatmap.unavailable" = "重複任務關係尚未完整同步，目前暫時無法設定此熱力圖。";
 "task.detail.heatmap.limitReached" = "熱力圖任務已達上限。請先在設定中取消一個任務，再啟用此任務。";
 "task.detail.heatmap.palette" = "顏色刻度";
 "heatmap.picker.title" = "熱力圖任務";

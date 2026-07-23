@@ -207,19 +207,22 @@ extension TaskHierarchyPickerMode {
         case .timer:
             store.trackableTaskIDs
         case let .singleSelection(_, context):
-            context.usesDirectWorkEligibility
-                ? store.trackableTaskIDs
-                : store.parentEligibleTaskIDs
+            context.selectionEligibleTaskIDs(in: store)
         case let .multipleSelection(_, context, _):
-            context.usesDirectWorkEligibility
-                ? store.trackableTaskIDs
-                : store.parentEligibleTaskIDs
+            context.selectionEligibleTaskIDs(in: store)
         }
     }
 }
 
 private extension TaskHierarchyPickerSelectionContext {
-    var usesDirectWorkEligibility: Bool {
-        self == .pomodoro
+    func selectionEligibleTaskIDs(in store: TimeTrackerStore) -> Set<UUID> {
+        switch self {
+        case .pomodoro:
+            store.trackableTaskIDs
+        case .todayHeatmap:
+            store.todayHeatmapSelectableTaskIDs
+        case .inboxChildTaskParent, .inboxChecklistTarget:
+            store.parentEligibleTaskIDs
+        }
     }
 }

@@ -248,6 +248,46 @@ struct TodayHeatmapRecurrenceProjectionTests {
             ]).isEmpty
         )
     }
+
+    @Test @MainActor
+    func mismatchedOccurrenceBlocksItsCanonicalRuleTemplate() {
+        let template = task(title: "Canonical template")
+        let wrongTemplate = task(title: "Conflicting template")
+        let rule = recurrenceRule(templateTaskID: template.id)
+        let conflictingOccurrence = occurrence(
+            rule: rule,
+            dayKey: "2026-07-23"
+        )
+        conflictingOccurrence.templateTaskID = wrongTemplate.id
+        let generated = task(
+            id: conflictingOccurrence.generatedTaskID,
+            title: "Generated occurrence",
+            parentID: template.id
+        )
+        let projection = projection(
+            tasks: [template, wrongTemplate, generated],
+            rules: [rule],
+            occurrences: [conflictingOccurrence]
+        )
+
+        #expect(
+            projection.generatedTaskIDsByTemplateTaskID[template.id] == nil
+        )
+        #expect(
+            projection.renderableTaskIDs([
+                template.id,
+                wrongTemplate.id,
+                generated.id,
+            ]).isEmpty
+        )
+        #expect(
+            projection.selectableTaskIDs(from: [
+                template.id,
+                wrongTemplate.id,
+                generated.id,
+            ]).isEmpty
+        )
+    }
 }
 
 private extension TodayHeatmapRecurrenceProjectionTests {

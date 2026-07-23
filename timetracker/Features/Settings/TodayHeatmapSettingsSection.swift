@@ -50,9 +50,8 @@ struct TodayHeatmapSettingsSection: View {
     }
 
     private var selectedTaskIDs: [UUID] {
-        store.preferences.todayHeatmapTaskIDs
+        store.todayHeatmapSelectedTaskIDs
     }
-
     private var periodBinding: Binding<ActivityHeatmapPeriod> {
         Binding(
             get: { store.preferences.todayHeatmapPeriod },
@@ -122,13 +121,14 @@ private struct TodayHeatmapTaskSelectionView: View {
     }
 
     private var selectedTaskIDs: [UUID] {
-        store.preferences.todayHeatmapTaskIDs
+        store.todayHeatmapSelectedTaskIDs
     }
-
     private var hiddenSelectedTaskIDs: Set<UUID> {
-        Set(selectedTaskIDs.filter { taskID in
+        let selectableTaskIDs = store.todayHeatmapSelectableTaskIDs
+        return Set(selectedTaskIDs.filter { taskID in
             guard let task = store.task(for: taskID) else { return true }
-            return store.isTaskVisible(task) == false
+            return store.isTaskVisible(task) == false ||
+                selectableTaskIDs.contains(taskID) == false
         })
     }
 
@@ -138,9 +138,7 @@ private struct TodayHeatmapTaskSelectionView: View {
             HStack(spacing: 12) {
                 Label(
                     String.localizedStringWithFormat(
-                        AppStrings.localized(
-                            "heatmap.picker.hiddenSelectionCount"
-                        ),
+                        AppStrings.localized("heatmap.picker.hiddenSelectionCount"),
                         hiddenSelectedTaskIDs.count
                     ),
                     systemImage: "eye.slash"
@@ -159,9 +157,7 @@ private struct TodayHeatmapTaskSelectionView: View {
                     )
                 }
                 .buttonStyle(.bordered)
-                .accessibilityIdentifier(
-                    "settings.todayHeatmap.taskPicker.removeHidden"
-                )
+                .accessibilityIdentifier("settings.todayHeatmap.taskPicker.removeHidden")
             }
             .padding(.horizontal)
             .padding(.vertical, 10)

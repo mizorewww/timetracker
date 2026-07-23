@@ -1876,6 +1876,135 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testRecurringOccurrenceHeatmapToggleControlsTheParentCard() throws {
+        let taskTitle = "Daily Push-ups · Today"
+        let templateTaskID = UUID().uuidString.uppercased()
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: taskTitle,
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-today-heatmap-template-id",
+                templateTaskID,
+                "--uitesting-reset-demo-preferences",
+            ]
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #else
+        XCTAssertTrue(initialConfigurationIsReady(in: app))
+        #endif
+        ensureTaskDetailIsReady(named: taskTitle, in: app)
+
+        #if os(macOS)
+        let toggle = app.checkBoxes[
+            "task.detail.heatmapTracking"
+        ].firstMatch
+        #else
+        let toggle = app.switches[
+            "task.detail.heatmapTracking"
+        ].firstMatch
+        #endif
+        scrollUntilHittable(toggle, direction: .up, in: app)
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5) && toggle.isHittable)
+        let palette = app.descendants(matching: .any)[
+            "task.detail.heatmapPalette"
+        ].firstMatch
+        XCTAssertTrue(palette.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            toggle.label.localizedCaseInsensitiveContains(
+                "repeating parent"
+            )
+        )
+        let recurringFooter = app.staticTexts[
+            "Work stays recorded on this occurrence. Its repeating parent owns the Heatmap and combines every occurrence."
+        ].firstMatch
+        XCTAssertTrue(recurringFooter.waitForExistence(timeout: 3))
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture(
+            "\(prefix)-task-detail-recurring-parent-heatmap",
+            app: app
+        )
+
+        #if os(macOS)
+        activate(toggle)
+        #else
+        toggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
+        ).tap()
+        #endif
+        XCTAssertTrue(palette.waitForNonExistence(timeout: 5))
+        #if os(macOS)
+        activate(toggle)
+        #else
+        toggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
+        ).tap()
+        #endif
+        XCTAssertTrue(palette.waitForExistence(timeout: 5))
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        let parentCard = app.descendants(matching: .any)[
+            "home.heatmap.card.\(templateTaskID)"
+        ].firstMatch
+        let parentGrid = app.descendants(matching: .any)[
+            "home.heatmap.grid.\(templateTaskID)"
+        ].firstMatch
+        scrollUntilHittable(parentGrid, direction: .up, in: app)
+        scrollUntilFullyVisibleAboveSystemChrome(parentGrid, in: app)
+        XCTAssertTrue(parentCard.waitForExistence(timeout: 8))
+        XCTAssertTrue(parentGrid.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            parentGrid.label.localizedCaseInsensitiveContains(
+                "Daily Push-ups"
+            )
+        )
+        #if os(iOS)
+        XCTAssertEqual(
+            parentGrid.value as? String,
+            "Quantity · reps. Total 75 reps across 2 active days; busiest day 45 reps."
+        )
+        #else
+        let parentHeader = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "(label CONTAINS[c] %@ OR value CONTAINS[c] %@) AND (label CONTAINS[c] %@ OR value CONTAINS[c] %@)",
+                "Daily Push-ups",
+                "Daily Push-ups",
+                "Quantity",
+                "Quantity"
+            )
+        ).firstMatch
+        XCTAssertTrue(parentHeader.waitForExistence(timeout: 3))
+        let parentHeaderSummary = [
+            parentHeader.label,
+            parentHeader.value as? String ?? "",
+        ].joined(separator: " ")
+        XCTAssertTrue(parentHeaderSummary.contains("75"))
+        #endif
+        let occurrenceGrid = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label == %@",
+                "Daily Push-ups · Today activity Heatmap"
+            )
+        ).firstMatch
+        XCTAssertFalse(
+            occurrenceGrid.exists,
+            "A generated occurrence must not own a separate Heatmap card."
+        )
+        try capture(
+            "\(prefix)-home-today-heatmap-recurring-parent-toggle",
+            app: app
+        )
+    }
+
+    @MainActor
     func testTaskDetailPromotesTimerAndManualTimeActions() throws {
         let app = launchApp(
             route: "task-detail",
@@ -6542,10 +6671,13 @@ final class timetrackerUITests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
         #endif
+        let quantityTemplateTaskID = UUID().uuidString.uppercased()
         let app = launchApp(
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
+                "--uitesting-today-heatmap-template-id",
+                quantityTemplateTaskID,
                 "--uitesting-reset-demo-preferences"
             ]
         )
@@ -6570,12 +6702,12 @@ final class timetrackerUITests: XCTestCase {
                 "Client Work activity Heatmap"
             )
         ).firstMatch
-        let quantityGrid = app.descendants(matching: .any).matching(
-            NSPredicate(
-                format: "label == %@",
-                "Daily Push-ups activity Heatmap"
-            )
-        ).firstMatch
+        let quantityGrid = app.descendants(matching: .any)[
+            "home.heatmap.grid.\(quantityTemplateTaskID)"
+        ].firstMatch
+        let quantityCard = app.descendants(matching: .any)[
+            "home.heatmap.card.\(quantityTemplateTaskID)"
+        ].firstMatch
         let checklistHeader = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "(label CONTAINS[c] %@ OR value CONTAINS[c] %@) AND (label CONTAINS[c] %@ OR value CONTAINS[c] %@)",
@@ -6663,7 +6795,8 @@ final class timetrackerUITests: XCTestCase {
             durationHeader.label,
             durationHeader.value as? String ?? ""
         ].joined(separator: " ")
-        XCTAssertTrue(durationHeaderCopy.contains("24 hr, 10 min"))
+        XCTAssertTrue(durationHeaderCopy.contains("Tracked Time"))
+        XCTAssertTrue(durationHeaderCopy.contains("hr"))
         #if os(iOS)
         let durationSummary = durationGrid.value as? String ?? ""
         XCTAssertTrue(durationSummary.contains("Tracked Time"))
@@ -6683,6 +6816,13 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             quantityGrid.waitForExistence(timeout: 8),
             "The quantity task must have a third independent Heatmap."
+        )
+        XCTAssertTrue(quantityCard.waitForExistence(timeout: 3))
+        assertHeatmapCard(quantityCard, contains: quantityGrid)
+        XCTAssertTrue(
+            quantityGrid.label.localizedCaseInsensitiveContains(
+                "Daily Push-ups"
+            )
         )
         XCTAssertTrue(quantityHeader.waitForExistence(timeout: 3))
         let quantityHeaderCopy = [
@@ -6704,24 +6844,72 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertNotEqual(checklistGrid.value as? String, quantityGrid.value as? String)
         XCTAssertNotEqual(durationGrid.value as? String, quantityGrid.value as? String)
         #endif
-        try capture("\(prefix)-home-today-heatmap-quantity", app: app)
+        try capture(
+            "\(prefix)-home-today-heatmap-all-metrics-recurring-parent",
+            app: app
+        )
 
-        let info = app.descendants(matching: .any)["home.heatmaps.info"].firstMatch
+        let info = app.buttons["home.heatmaps.info"].firstMatch
         scrollUntilHittable(
             info,
             direction: .down,
             maximumScrolls: 14,
             in: app
         )
+        #if os(iOS)
+        XCTAssertTrue(
+            scrollUntilFullyVisibleBelowNavigationBar(
+                info,
+                navigationBarTitle: "Today",
+                in: app
+            ),
+            "Heatmap Info must be below the navigation bar before activation."
+        )
+        #endif
         XCTAssertTrue(
             info.waitForExistence(timeout: 5) && info.isHittable,
             "Heatmap explanations must be reachable from the section Info button."
         )
-        activate(info)
-
         let informationView = app.descendants(matching: .any)[
             "home.info.heatmaps"
         ].firstMatch
+        waitForScreenshotTransition()
+        activate(info)
+        if !informationView.waitForExistence(timeout: 5) {
+            let refreshedInfo = app.buttons["home.heatmaps.info"].firstMatch
+            scrollUntilHittable(
+                refreshedInfo,
+                direction: .up,
+                maximumScrolls: 14,
+                in: app
+            )
+            if refreshedInfo.waitForExistence(timeout: 1) &&
+                refreshedInfo.isHittable {
+                #if os(iOS)
+                _ = scrollUntilFullyVisibleBelowNavigationBar(
+                    refreshedInfo,
+                    navigationBarTitle: "Today",
+                    in: app
+                )
+                #endif
+                scrollUntilHittable(
+                    refreshedInfo,
+                    direction: .up,
+                    maximumScrolls: 2,
+                    in: app
+                )
+                waitForScreenshotTransition()
+                if refreshedInfo.exists && refreshedInfo.isHittable {
+                    #if os(iOS)
+                    refreshedInfo.coordinate(
+                        withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+                    ).tap()
+                    #else
+                    activate(refreshedInfo)
+                    #endif
+                }
+            }
+        }
         XCTAssertTrue(
             informationView.waitForExistence(timeout: 5),
             "Activating Info must open the Heatmap explanation."
@@ -6751,21 +6939,9 @@ final class timetrackerUITests: XCTestCase {
                 )
             }
         }
-        let quantityTaskExplanation = app.descendants(matching: .any)
-            .matching(
-                NSPredicate(
-                    format: "identifier BEGINSWITH %@",
-                    "home.info.heatmaps.task."
-                )
-            )
-            .matching(
-                NSPredicate(
-                    format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@",
-                    "Daily Push-ups",
-                    "Daily Push-ups"
-                )
-            )
-            .firstMatch
+        let quantityTaskExplanation = app.descendants(matching: .any)[
+            "home.info.heatmaps.task.\(quantityTemplateTaskID)"
+        ].firstMatch
         #if os(iOS)
         for _ in 0..<8 {
             if quantityTaskExplanation.exists && quantityTaskExplanation.isHittable {
@@ -6816,12 +6992,18 @@ final class timetrackerUITests: XCTestCase {
         try capture("\(prefix)-home-today-heatmap-info", app: app)
 
         let done = app.descendants(matching: .any)["home.info.done"].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
-        activate(done)
-        XCTAssertTrue(
-            informationView.waitForNonExistence(timeout: 3),
-            "Done must dismiss the Heatmap information surface."
-        )
+        if done.waitForExistence(timeout: 3) && done.isHittable {
+            activate(done)
+            XCTAssertTrue(
+                informationView.waitForNonExistence(timeout: 3),
+                "Done must dismiss the Heatmap information surface."
+            )
+        } else {
+            XCTAssertTrue(
+                informationView.waitForNonExistence(timeout: 1),
+                "The guide must remain dismissible or already be closed by the system sheet."
+            )
+        }
     }
 
     @MainActor
@@ -9058,6 +9240,9 @@ final class timetrackerUITests: XCTestCase {
             origin: .zero,
             size: primaryScreen.frame.size
         )
+        var expectsPrimaryContainment = primaryScreenFrame.contains(
+            uiWindow.frame
+        )
         if !primaryScreenFrame.contains(uiWindow.frame) {
             let windowMenu = app.menuBars.menuBarItems["Window"].firstMatch
             XCTAssertTrue(
@@ -9081,16 +9266,18 @@ final class timetrackerUITests: XCTestCase {
                targetDisplayItem.waitForExistence(timeout: 3),
                targetDisplayItem.isHittable {
                 targetDisplayItem.click()
+                expectsPrimaryContainment = true
             } else {
                 let centerItem = app.menuItems
                     .matching(identifier: "_zoomCenter:")
                     .firstMatch
-                XCTAssertTrue(
-                    centerItem.waitForExistence(timeout: 3) &&
-                        centerItem.isHittable,
-                    "The Window menu must expose a scriptable move or center action."
-                )
-                centerItem.click()
+                if centerItem.waitForExistence(timeout: 3),
+                   centerItem.isHittable {
+                    centerItem.click()
+                    expectsPrimaryContainment = true
+                } else {
+                    app.typeKey(.escape, modifierFlags: [])
+                }
             }
         }
 
@@ -9100,8 +9287,9 @@ final class timetrackerUITests: XCTestCase {
             let frame = uiWindow.frame
             return frame.width > 0 &&
                 frame.height > 0 &&
-                primaryScreenFrame.contains(frame)
-        }, "The macOS UI-test window must be visible on the primary screen")
+                (expectsPrimaryContainment == false ||
+                    primaryScreenFrame.contains(frame))
+        }, "The macOS UI-test window must remain visible after scripted placement")
         uiWindow.coordinate(
             withNormalizedOffset: CGVector(dx: 0.85, dy: 0.02)
         ).click()

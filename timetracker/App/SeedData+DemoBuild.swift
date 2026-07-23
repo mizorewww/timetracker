@@ -88,19 +88,79 @@ extension SeedData {
                 return
             }
             if CommandLine.arguments.contains("--uitesting-today-heatmap") {
+                let templateIDArgument = CommandLine.arguments.firstIndex(
+                    of: "--uitesting-today-heatmap-template-id"
+                ).flatMap { index in
+                    CommandLine.arguments.indices.contains(index + 1)
+                        ? CommandLine.arguments[index + 1]
+                        : nil
+                }
+                let quantityTemplateID = templateIDArgument
+                    .flatMap(UUID.init(uuidString:)) ?? UUID()
                 let quantityTask = try taskRepository.createTask(
+                    proposedID: quantityTemplateID,
                     title: "Daily Push-ups",
                     parentID: nil,
                     categoryID: studyCategory.id,
                     colorHex: "7C3AED",
                     iconName: "figure.strengthtraining.traditional"
                 )
-                let quantityChild = try taskRepository.createTask(
-                    title: "Morning Set",
-                    parentID: quantityTask.id,
-                    colorHex: "A855F7",
-                    iconName: "figure.strengthtraining.traditional"
+                let yesterday = calendar.date(
+                    byAdding: .day,
+                    value: -1,
+                    to: startOfToday
+                ) ?? startOfToday.addingTimeInterval(-86_400)
+                let recurrenceTimeZone = calendar.timeZone
+                let yesterdayDayKey = TaskRecurrenceDayKey.value(
+                    for: yesterday,
+                    timeZone: recurrenceTimeZone
                 )
+                let todayDayKey = TaskRecurrenceDayKey.value(
+                    for: startOfToday,
+                    timeZone: recurrenceTimeZone
+                )
+                let quantityRule = TaskRecurrenceRule(
+                    templateTaskID: quantityTask.id,
+                    startDayKey: yesterdayDayKey,
+                    timeZoneIdentifier: recurrenceTimeZone.identifier,
+                    deviceID: "demo"
+                )
+                context.insert(quantityRule)
+
+                let yesterdayOccurrence = TaskRecurrenceOccurrence(
+                    ruleID: quantityRule.id,
+                    templateTaskID: quantityTask.id,
+                    occurrenceDayKey: yesterdayDayKey,
+                    timeZoneIdentifier: recurrenceTimeZone.identifier,
+                    deviceID: "demo"
+                )
+                let yesterdayTask = try taskRepository
+                    .createGeneratedRecurrenceTask(
+                        id: yesterdayOccurrence.generatedTaskID,
+                        template: quantityTask,
+                        occurrenceDayKey: yesterdayDayKey,
+                        now: yesterday
+                    )
+                yesterdayTask.title = "Daily Push-ups · Yesterday"
+                context.insert(yesterdayOccurrence)
+
+                let todayOccurrence = TaskRecurrenceOccurrence(
+                    ruleID: quantityRule.id,
+                    templateTaskID: quantityTask.id,
+                    occurrenceDayKey: todayDayKey,
+                    timeZoneIdentifier: recurrenceTimeZone.identifier,
+                    deviceID: "demo"
+                )
+                let todayTask = try taskRepository
+                    .createGeneratedRecurrenceTask(
+                        id: todayOccurrence.generatedTaskID,
+                        template: quantityTask,
+                        occurrenceDayKey: todayDayKey,
+                        now: startOfToday
+                    )
+                todayTask.title = "Daily Push-ups · Today"
+                context.insert(todayOccurrence)
+
                 let quantityGoals = [
                     TaskQuantityGoal(
                         taskID: quantityTask.id,
@@ -109,47 +169,32 @@ extension SeedData {
                         deviceID: "demo"
                     ),
                     TaskQuantityGoal(
-                        taskID: quantityChild.id,
-                        targetAmount: 25,
-                        unitLabel: " RePs ",
+                        taskID: yesterdayTask.id,
+                        targetAmount: 50,
+                        unitLabel: "reps",
+                        deviceID: "demo"
+                    ),
+                    TaskQuantityGoal(
+                        taskID: todayTask.id,
+                        targetAmount: 50,
+                        unitLabel: "reps",
                         deviceID: "demo"
                     ),
                 ]
                 quantityGoals.forEach(context.insert)
-                let yesterday = calendar.date(
-                    byAdding: .day,
-                    value: -1,
-                    to: startOfToday
-                ) ?? startOfToday.addingTimeInterval(-86_400)
                 let quantityEntries = [
                     TaskQuantityEntry(
                         id: UUID(),
-                        taskID: quantityTask.id,
-                        amount: 20,
-                        recordedAt: yesterday,
-                        createdAt: yesterday,
-                        deviceID: "demo"
-                    ),
-                    TaskQuantityEntry(
-                        id: UUID(),
-                        taskID: quantityChild.id,
-                        amount: 10,
-                        recordedAt: yesterday,
-                        createdAt: yesterday,
-                        deviceID: "demo"
-                    ),
-                    TaskQuantityEntry(
-                        id: UUID(),
-                        taskID: quantityTask.id,
+                        taskID: yesterdayTask.id,
                         amount: 30,
-                        recordedAt: startOfToday,
-                        createdAt: startOfToday,
+                        recordedAt: yesterday,
+                        createdAt: yesterday,
                         deviceID: "demo"
                     ),
                     TaskQuantityEntry(
                         id: UUID(),
-                        taskID: quantityChild.id,
-                        amount: 15,
+                        taskID: todayTask.id,
+                        amount: 45,
                         recordedAt: startOfToday,
                         createdAt: startOfToday,
                         deviceID: "demo"
@@ -162,7 +207,7 @@ extension SeedData {
                         valueJSON: try PreferenceJSON.encodeChecked([
                             app.id.uuidString,
                             client.id.uuidString,
-                            quantityTask.id.uuidString
+                            todayTask.id.uuidString
                         ]),
                         deviceID: "demo"
                     )

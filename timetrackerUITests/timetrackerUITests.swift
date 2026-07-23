@@ -433,6 +433,213 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskCategorySortingUpdatesTasksAndPersistentSidebarOrder() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        #if os(iOS)
+        if screenshotPrefix == "ipad" {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            waitForScreenshotTransition()
+        }
+        #endif
+
+        let tasksView = app.descendants(matching: .any)[
+            "tasks.view"
+        ].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 8))
+
+        let addMenu = app.descendants(matching: .any)[
+            "tasks.add"
+        ].firstMatch
+        XCTAssertTrue(
+            addMenu.waitForExistence(timeout: 5) && addMenu.isHittable
+        )
+        activate(addMenu)
+
+        let sortCategories = app.descendants(matching: .any)[
+            "tasks.sortCategories"
+        ].firstMatch
+        XCTAssertTrue(
+            sortCategories.waitForExistence(timeout: 5) &&
+                sortCategories.isHittable
+        )
+        activate(sortCategories)
+
+        let sorter = app.descendants(matching: .any)[
+            "taskCategory.sorter"
+        ].firstMatch
+        XCTAssertTrue(sorter.waitForExistence(timeout: 8))
+
+        let workRow = taskCategorySortRow(
+            named: "Work",
+            in: sorter
+        )
+        let studyRow = taskCategorySortRow(
+            named: "Study",
+            in: sorter
+        )
+        XCTAssertTrue(
+            workRow.waitForExistence(timeout: 5) && workRow.isHittable
+        )
+        XCTAssertTrue(
+            studyRow.waitForExistence(timeout: 5) && studyRow.isHittable
+        )
+        XCTAssertLessThan(
+            workRow.frame.minY,
+            studyRow.frame.minY,
+            "The deterministic demo must begin with Work before Study."
+        )
+
+        let workCategoryID = try taskCategoryID(fromSortRow: workRow)
+        let studyCategoryID = try taskCategoryID(fromSortRow: studyRow)
+        let studyMoveUp = sorter.descendants(matching: .any)[
+            "taskCategory.sort.moveUp.\(studyCategoryID)"
+        ].firstMatch
+        let workMoveDown = sorter.descendants(matching: .any)[
+            "taskCategory.sort.moveDown.\(workCategoryID)"
+        ].firstMatch
+
+        if studyMoveUp.waitForExistence(timeout: 3),
+           studyMoveUp.isHittable {
+            activate(studyMoveUp)
+        } else {
+            XCTAssertTrue(
+                workMoveDown.waitForExistence(timeout: 3) &&
+                    workMoveDown.isHittable,
+                "The sorter must expose a semantic button for either equivalent move."
+            )
+            activate(workMoveDown)
+        }
+
+        let reorderedStudyRow = taskCategorySortRow(
+            named: "Study",
+            in: sorter
+        )
+        let reorderedWorkRow = taskCategorySortRow(
+            named: "Work",
+            in: sorter
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                reorderedStudyRow.exists &&
+                    reorderedWorkRow.exists &&
+                    reorderedStudyRow.isHittable &&
+                    reorderedWorkRow.isHittable &&
+                    reorderedStudyRow.frame.minY <
+                        reorderedWorkRow.frame.minY
+            },
+            "Moving Study up must immediately update the sorter order."
+        )
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-task-category-sorter-study-first",
+            app: app
+        )
+
+        let done = app.descendants(matching: .any)[
+            "taskCategory.sort.done"
+        ].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
+        activate(done)
+        XCTAssertTrue(sorter.waitForNonExistence(timeout: 5))
+
+        let studySectionID =
+            "tasks.category.disclosure.category-\(studyCategoryID)"
+        let workSectionID =
+            "tasks.category.disclosure.category-\(workCategoryID)"
+        let studySection = app.descendants(matching: .any)[
+            studySectionID
+        ].firstMatch
+        XCTAssertTrue(
+            studySection.waitForExistence(timeout: 8) &&
+                studySection.isHittable
+        )
+        activate(studySection)
+
+        let refreshedStudySection = app.descendants(matching: .any)[
+            studySectionID
+        ].firstMatch
+        let refreshedWorkSection = app.descendants(matching: .any)[
+            workSectionID
+        ].firstMatch
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                refreshedStudySection.exists &&
+                    refreshedWorkSection.exists &&
+                    refreshedStudySection.isHittable &&
+                    refreshedWorkSection.isHittable &&
+                    refreshedStudySection.frame.minY <
+                        refreshedWorkSection.frame.minY
+            },
+            "Tasks must render the persisted Study-before-Work Category order."
+        )
+
+        if screenshotPrefix == "ipad" || screenshotPrefix == "mac" {
+            let studySidebarID =
+                "sidebar.category.disclosure.category-\(studyCategoryID)"
+            let workSidebarID =
+                "sidebar.category.disclosure.category-\(workCategoryID)"
+            var studySidebar = app.descendants(matching: .any)[
+                studySidebarID
+            ].firstMatch
+            if !studySidebar.waitForExistence(timeout: 2) ||
+                !studySidebar.isHittable {
+                let showSidebar = app.descendants(matching: .any)[
+                    "sidebar.show"
+                ].firstMatch
+                XCTAssertTrue(
+                    showSidebar.waitForExistence(timeout: 3) &&
+                        showSidebar.isHittable
+                )
+                activate(showSidebar)
+                studySidebar = app.descendants(matching: .any)[
+                    studySidebarID
+                ].firstMatch
+            }
+            XCTAssertTrue(
+                studySidebar.waitForExistence(timeout: 5) &&
+                    studySidebar.isHittable
+            )
+            activate(studySidebar)
+
+            let refreshedStudySidebar = app.descendants(matching: .any)[
+                studySidebarID
+            ].firstMatch
+            let refreshedWorkSidebar = app.descendants(matching: .any)[
+                workSidebarID
+            ].firstMatch
+            XCTAssertTrue(
+                waitUntil(timeout: 5) {
+                    refreshedStudySidebar.exists &&
+                        refreshedWorkSidebar.exists &&
+                        refreshedStudySidebar.isHittable &&
+                        refreshedWorkSidebar.isHittable &&
+                        refreshedStudySidebar.frame.minY <
+                            refreshedWorkSidebar.frame.minY
+                },
+                "The persistent Sidebar must mirror the Tasks Category order."
+            )
+        }
+
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-task-category-study-before-work",
+            app: app
+        )
+    }
+
+    @MainActor
     func testPhoneSettingsSheetDismissesToAnUnmodifiedTodayStack() throws {
         #if os(macOS)
         throw XCTSkip("The phone Settings sheet requires an iOS simulator.")
@@ -7983,6 +8190,35 @@ final class timetrackerUITests: XCTestCase {
                 title
             ))
             .firstMatch
+    }
+
+    private func taskCategorySortRow(
+        named title: String,
+        in sorter: XCUIElement
+    ) -> XCUIElement {
+        sorter.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "taskCategory.sort.row.",
+                title
+            ))
+            .firstMatch
+    }
+
+    private func taskCategoryID(
+        fromSortRow row: XCUIElement
+    ) throws -> String {
+        let prefix = "taskCategory.sort.row."
+        XCTAssertTrue(
+            row.identifier.hasPrefix(prefix),
+            "A Category sorter row must carry its stable Category identifier."
+        )
+        let identifier = String(row.identifier.dropFirst(prefix.count))
+        _ = try XCTUnwrap(
+            UUID(uuidString: identifier),
+            "A Category sorter row identifier must end in a UUID."
+        )
+        return identifier
     }
 
     private func recurringTaskRow(

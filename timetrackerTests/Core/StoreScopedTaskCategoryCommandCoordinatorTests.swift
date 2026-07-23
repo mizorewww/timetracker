@@ -155,6 +155,304 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
     }
 
     @Test
+    func reorderPersistsCanonicalOrderWithOneDominatingRevision() throws {
+        let context = try makeTestContext()
+        let categories = try makeCategories(
+            ["First", "Second", "Third"],
+            in: context
+        )
+        let baseline = TaskCategoryOrderMutationBaseline(categories: categories)
+        let mutationIDsBefore = baseline.categoryMutationIDs
+        let latestObservedDate = try #require(categories.map(\.updatedAt).max())
+        let requestedOrder = [categories[2].id, categories[0].id, categories[1].id]
+
+        let outcome = try coordinator(
+            container: context.container,
+            deviceID: "reorder",
+            nowProvider: { .distantPast }
+        ).reorder(
+            orderedCategoryIDs: requestedOrder,
+            baseline: baseline
+        )
+
+        #expect(outcome.didMutate)
+        #expect(outcome.affectedCategoryIDs == Set(requestedOrder))
+        #expect(
+            outcome.events ==
+                [.taskChanged(taskID: nil, affectedAncestorIDs: [])]
+        )
+        let persisted = try freshRepository(context.container).categories()
+        #expect(persisted.map(\.id) == requestedOrder)
+        #expect(persisted.map(\.sortOrder) == [10, 20, 30])
+        #expect(persisted.allSatisfy { $0.updatedAt > latestObservedDate })
+        #expect(Set(persisted.map(\.updatedAt)).count == 1)
+        #expect(persisted.allSatisfy { $0.deviceID == "reorder" })
+        let persistedBatchMutationIDs = Set(
+            persisted.map(\.clientMutationID)
+        )
+        #expect(persistedBatchMutationIDs.count == 1)
+        #expect(
+            persisted.allSatisfy {
+                $0.clientMutationID != mutationIDsBefore[$0.id]
+            }
+        )
+    }
+
+    @Test
+    func sameOrderIsANoOpThatPreservesEveryRevision() throws {
+        let context = try makeTestContext()
+        let categories = try makeCategories(
+            ["First", "Second", "Third"],
+            in: context
+        )
+        let baseline = TaskCategoryOrderMutationBaseline(categories: categories)
+        let sortOrderBefore = Dictionary(
+            uniqueKeysWithValues: categories.map { ($0.id, $0.sortOrder) }
+        )
+        let updatedAtBefore = Dictionary(
+            uniqueKeysWithValues: categories.map { ($0.id, $0.updatedAt) }
+        )
+        let deviceIDBefore = Dictionary(
+            uniqueKeysWithValues: categories.map { ($0.id, $0.deviceID) }
+        )
+
+        let outcome = try coordinator(
+            container: context.container,
+            deviceID: "must-not-write",
+            nowProvider: { .distantFuture }
+        ).reorder(
+            orderedCategoryIDs: baseline.orderedCategoryIDs,
+            baseline: baseline
+        )
+
+        #expect(outcome.didMutate == false)
+        #expect(outcome.events.isEmpty)
+        let persisted = try freshRepository(context.container).categories()
+        #expect(persisted.map(\.id) == baseline.orderedCategoryIDs)
+        #expect(
+            persisted.allSatisfy {
+                $0.sortOrder == sortOrderBefore[$0.id] &&
+                    $0.updatedAt == updatedAtBefore[$0.id] &&
+                    $0.deviceID == deviceIDBefore[$0.id] &&
+                    $0.clientMutationID == baseline.categoryMutationIDs[$0.id]
+            }
+        )
+    }
+
+    @Test
+    func staleBaselineCannotOverwriteASiblingReorder() throws {
+        let context = try makeTestContext()
+        let categories = try makeCategories(
+            ["First", "Second", "Third"],
+            in: context
+        )
+        let staleBaseline = TaskCategoryOrderMutationBaseline(
+            categories: categories
+        )
+        let siblingOrder = [
+            categories[1].id,
+            categories[2].id,
+            categories[0].id
+        ]
+        _ = try coordinator(
+            container: context.container,
+            deviceID: "sibling"
+        ).reorder(
+            orderedCategoryIDs: siblingOrder,
+            baseline: staleBaseline
+        )
+
+        #expect(throws: StoreScopedTaskCategoryMutationError.categoryChanged) {
+            try coordinator(
+                container: context.container,
+                deviceID: "stale"
+            ).reorder(
+                orderedCategoryIDs: [
+                    categories[2].id,
+                    categories[0].id,
+                    categories[1].id
+                ],
+                baseline: staleBaseline
+            )
+        }
+        #expect(
+            try freshRepository(context.container).categories().map(\.id) ==
+                siblingOrder
+        )
+    }
+
+    @Test
+    func facadeRejectsAStaleEditAndRefreshesTheWinningCategory() throws {
+        let context = try makeTestContext()
+        _ = try makeCategories(["First", "Second", "Third"], in: context)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let visibleCategories = store.taskCategories
+        let sheetBaseline = TaskCategoryOrderMutationBaseline(
+            categories: visibleCategories
+        )
+        var siblingDraft = TaskCategoryEditorDraft(
+            category: visibleCategories[0]
+        )
+        siblingDraft.title = "Sibling winner"
+        _ = try coordinator(
+            container: context.container,
+            deviceID: "sibling"
+        ).save(draft: siblingDraft)
+        try store.refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+        #expect(
+            store.taskCategory(for: visibleCategories[0].id)?.title ==
+                "Sibling winner"
+        )
+        let requestedOrder = [
+            visibleCategories[2].id,
+            visibleCategories[0].id,
+            visibleCategories[1].id
+        ]
+
+        #expect(
+            store.reorderTaskCategories(
+                orderedCategoryIDs: requestedOrder,
+                baseline: sheetBaseline
+            ) == false
+        )
+
+        #expect(
+            store.errorMessage ==
+                AppStrings.localized("taskCategory.error.changed")
+        )
+        #expect(
+            store.taskCategory(for: visibleCategories[0].id)?.title ==
+                "Sibling winner"
+        )
+        #expect(
+            store.taskCategories.map(\.id) ==
+                visibleCategories.map(\.id)
+        )
+    }
+
+    @Test
+    func facadeRefreshesItsCategoryOrderAfterASuccessfulReorder() throws {
+        let context = try makeTestContext()
+        _ = try makeCategories(["First", "Second", "Third"], in: context)
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let requestedOrder = [
+            store.taskCategories[2].id,
+            store.taskCategories[0].id,
+            store.taskCategories[1].id
+        ]
+
+        #expect(
+            store.reorderTaskCategories(
+                orderedCategoryIDs: requestedOrder
+            )
+        )
+        #expect(store.taskCategories.map(\.id) == requestedOrder)
+        #expect(
+            try freshRepository(context.container).categories().map(\.id) ==
+                requestedOrder
+        )
+    }
+
+    @Test
+    func staleMembershipCannotOverwriteACreateOrDelete() throws {
+        let context = try makeTestContext()
+        let original = try makeCategories(["First", "Second"], in: context)
+        let baselineBeforeCreate = TaskCategoryOrderMutationBaseline(
+            categories: original
+        )
+        var createDraft = TaskCategoryEditorDraft()
+        createDraft.title = "Third"
+        let created = try coordinator(
+            container: context.container,
+            deviceID: "sibling-create"
+        ).save(draft: createDraft)
+
+        #expect(throws: StoreScopedTaskCategoryMutationError.categoryChanged) {
+            try coordinator(
+                container: context.container,
+                deviceID: "stale"
+            ).reorder(
+                orderedCategoryIDs: original.reversed().map(\.id),
+                baseline: baselineBeforeCreate
+            )
+        }
+
+        let beforeDelete = try freshRepository(context.container).categories()
+        let baselineBeforeDelete = TaskCategoryOrderMutationBaseline(
+            categories: beforeDelete
+        )
+        let deletedCategory = try #require(
+            beforeDelete.first { $0.id == created.categoryID }
+        )
+        _ = try coordinator(
+            container: context.container,
+            deviceID: "sibling-delete"
+        ).delete(
+            baseline: TaskCategoryMutationBaseline(
+                category: deletedCategory
+            )
+        )
+
+        #expect(throws: StoreScopedTaskCategoryMutationError.categoryChanged) {
+            try coordinator(
+                container: context.container,
+                deviceID: "stale"
+            ).reorder(
+                orderedCategoryIDs: beforeDelete.reversed().map(\.id),
+                baseline: baselineBeforeDelete
+            )
+        }
+        #expect(
+            try freshRepository(context.container).categories().map(\.id) ==
+                original.map(\.id)
+        )
+    }
+
+    @Test
+    func directSortOrderMutationInvalidatesTheFullOrderBaseline() throws {
+        let context = try makeTestContext()
+        let categories = try makeCategories(
+            ["First", "Second", "Third"],
+            in: context
+        )
+        let baseline = TaskCategoryOrderMutationBaseline(categories: categories)
+        let directContext = ModelContext(context.container)
+        let directRepository = SwiftDataTaskRepository(
+            context: directContext,
+            deviceID: "direct"
+        )
+        let directlyMoved = try #require(
+            try directRepository.category(id: categories[0].id)
+        )
+        directlyMoved.sortOrder = 40
+        try directContext.save()
+
+        #expect(
+            directlyMoved.clientMutationID ==
+                baseline.categoryMutationIDs[directlyMoved.id]
+        )
+        #expect(throws: StoreScopedTaskCategoryMutationError.categoryChanged) {
+            try coordinator(
+                container: context.container,
+                deviceID: "stale"
+            ).reorder(
+                orderedCategoryIDs: [
+                    categories[2].id,
+                    categories[0].id,
+                    categories[1].id
+                ],
+                baseline: baseline
+            )
+        }
+        #expect(
+            try freshRepository(context.container).categories().map(\.id) ==
+                [categories[1].id, categories[2].id, categories[0].id]
+        )
+    }
+
+    @Test
     func repositoryDoesNotReportMissingCategoryMutationsAsSuccess() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -174,6 +472,22 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         }
     }
 
+    private func makeCategories(
+        _ titles: [String],
+        in context: ModelContext
+    ) throws -> [TaskCategory] {
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "seed"
+        )
+        return try titles.map {
+            try repository.createCategory(
+                title: $0,
+                includesInForecast: true
+            )
+        }
+    }
+
     private func makeCategory(
         in context: ModelContext,
         title: String
@@ -184,12 +498,14 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
 
     private func coordinator(
         container: ModelContainer,
-        deviceID: String
+        deviceID: String,
+        nowProvider: @escaping () -> Date = Date.init
     ) -> StoreScopedTaskCategoryCommandCoordinator {
         StoreScopedTaskCategoryCommandCoordinator(
             container: container,
             writeAuthorization: .isolatedTestHarness,
-            deviceID: deviceID
+            deviceID: deviceID,
+            nowProvider: nowProvider
         )
     }
 

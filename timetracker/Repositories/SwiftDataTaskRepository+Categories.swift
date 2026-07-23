@@ -32,6 +32,45 @@ extension SwiftDataTaskRepository {
     }
 
     @discardableResult
+    func reorderCategories(
+        orderedCategoryIDs: [UUID],
+        now: Date
+    ) throws -> Bool {
+        let categories = try categories()
+        let categoryByID = Dictionary(
+            uniqueKeysWithValues: categories.map { ($0.id, $0) }
+        )
+        guard orderedCategoryIDs.count == categories.count,
+              Set(orderedCategoryIDs) == Set(categoryByID.keys) else {
+            throw TaskRepositoryError.categoryUnavailable
+        }
+        guard categories.map(\.id) != orderedCategoryIDs else {
+            return false
+        }
+
+        let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+            preferred: now,
+            observed: categories.map(\.updatedAt)
+        )
+        // Keep the whole order mutation on one LWW revision. If two devices
+        // happen to use the same persisted timestamp, a shared operation UUID
+        // prevents the winning order from being selected independently by row.
+        let batchMutationID = UUID()
+        try context.performAtomicMutation {
+            for (index, categoryID) in orderedCategoryIDs.enumerated() {
+                guard let category = categoryByID[categoryID] else {
+                    throw TaskRepositoryError.categoryUnavailable
+                }
+                category.sortOrder = Double(index + 1) * 10
+                category.updatedAt = mutationDate
+                category.deviceID = deviceID
+                category.clientMutationID = batchMutationID
+            }
+        }
+        return true
+    }
+
+    @discardableResult
     func createCategory(
         title: String,
         colorHex: String? = nil,

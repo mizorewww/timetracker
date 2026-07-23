@@ -3,6 +3,41 @@ import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
+    func reorderTaskCategories(orderedCategoryIDs: [UUID]) -> Bool {
+        reorderTaskCategories(
+            orderedCategoryIDs: orderedCategoryIDs,
+            baseline: TaskCategoryOrderMutationBaseline(
+                categories: taskCategories
+            )
+        )
+    }
+
+    @discardableResult
+    func reorderTaskCategories(
+        orderedCategoryIDs: [UUID],
+        baseline: TaskCategoryOrderMutationBaseline
+    ) -> Bool {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return false
+        }
+        do {
+            let outcome = try StoreScopedTaskCategoryCommandCoordinator(
+                container: modelContext.container,
+                writeAuthorization: writeAuthorization
+            ).reorder(
+                orderedCategoryIDs: orderedCategoryIDs,
+                baseline: baseline
+            )
+            finishStoreScopedMutation(events: outcome.events)
+            return true
+        } catch {
+            handleStoreScopedTaskCategoryError(error)
+            return false
+        }
+    }
+
+    @discardableResult
     func saveTaskCategoryDraft(_ draft: TaskCategoryEditorDraft) -> Bool {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {

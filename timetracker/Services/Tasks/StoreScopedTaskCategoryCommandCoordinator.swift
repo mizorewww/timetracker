@@ -33,15 +33,50 @@ struct StoreScopedTaskCategoryCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
+    let nowProvider: () -> Date
 
     init(
         container: ModelContainer,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
-        deviceID: String = DeviceIdentity.current
+        deviceID: String = DeviceIdentity.current,
+        nowProvider: @escaping () -> Date = Date.init
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
         self.deviceID = deviceID
+        self.nowProvider = nowProvider
+    }
+
+    func reorder(
+        orderedCategoryIDs: [UUID],
+        baseline: TaskCategoryOrderMutationBaseline
+    ) throws -> TaskCategoryOrderMutationOutcome {
+        try withFreshRepository { repository in
+            let categories = try repository.categories()
+            let currentBaseline = TaskCategoryOrderMutationBaseline(
+                categories: categories
+            )
+            guard currentBaseline == baseline,
+                  orderedCategoryIDs.count == categories.count,
+                  Set(orderedCategoryIDs) == Set(categories.map(\.id)) else {
+                throw StoreScopedTaskCategoryMutationError.categoryChanged
+            }
+            guard currentBaseline.orderedCategoryIDs != orderedCategoryIDs else {
+                return TaskCategoryOrderMutationOutcome(
+                    affectedCategoryIDs: Set(orderedCategoryIDs),
+                    didMutate: false
+                )
+            }
+
+            let didMutate = try repository.reorderCategories(
+                orderedCategoryIDs: orderedCategoryIDs,
+                now: nowProvider()
+            )
+            return TaskCategoryOrderMutationOutcome(
+                affectedCategoryIDs: Set(orderedCategoryIDs),
+                didMutate: didMutate
+            )
+        }
     }
 
     func save(draft: TaskCategoryEditorDraft) throws -> TaskCategoryMutationOutcome {

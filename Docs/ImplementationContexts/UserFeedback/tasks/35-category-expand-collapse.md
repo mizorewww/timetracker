@@ -8,7 +8,7 @@
 - [x] 领取“feature: category 的展开和收起”反馈。
 - [x] 审计 Category 的现有层级、导航、状态持久化与跨平台交互。
 - [x] 设计并实现最小的展开/收起行为，补齐自动化与脚本截图验收。
-- [ ] 提交实现 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 提交实现 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -26,8 +26,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取范围、当前 Category 信息架构与自动化基线审计。
-- [~] Checkpoint B：最小实现、聚焦测试与脚本截图验收。
-- [ ] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint B：最小实现、聚焦测试与脚本截图验收。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## 资源所有权
 
@@ -73,3 +73,14 @@
 
 - owned iPhone UDID `7828FCB3-295E-4C37-B68D-AA97486C9D43` 与 iPad UDID `DE99CFA4-A2D0-4D65-A118-DD9E3E83785F` 已终止 App、shutdown 并 delete。
 - 已确认无 `codex-task35`、implicit Clone、Booted simulator、owned `xcodebuild`、`xctest`、UI runner 或 timetracker App 进程残留；本批次未打开 Simulator 或 Problem Reporter GUI。
+
+## Checkpoint C：Release 与收口
+
+- 实现提交：`7cdba145 feat: collapse task categories`；提交 hook 将版本提升到 `1.1.81 (136)`。
+- 已精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，命令成功完成 iOS/iPadOS + embedded Watch companion 与 macOS Release 构建，并保留自动签名、provisioning update 和设备注册能力。
+- iOS/iPadOS、embedded Watch 与 macOS 的 bundle ID 分别为 `me.mezorewww.timetracker`、`me.mezorewww.timetracker.watchkitapp`、`me.mezorewww.timetracker`；均为 `1.1.81 (136)`，签名 Team 均为 `LT98S43NKA`，`codesign --verify --deep --strict` 通过。
+- embedded Watch 的 `WKCompanionAppBundleIdentifier` 为 `me.mezorewww.timetracker`；当前没有可见物理 Watch，脚本按既有规则验证嵌入 companion，实际安装由配对 iPhone 的 Automatic App Install 完成。
+- macOS Release 为 `x86_64 arm64` 通用二进制，已安装到 `/Applications/timetracker.app`，磁盘签名与 designated requirement 验证通过。
+- 可用物理 iPad Pro M4 已安装；只读 `devicectl device info apps` 确认 `Time Tracker / me.mezorewww.timetracker / 1.1.81 / 136`。物理 iPhone Air 当前为 `unavailable`，因此脚本按“仅 available/connected 设备”规则跳过；未启动、交互或截图任何物理设备 App。
+- `build/Install` 已移入废纸篓；确认无 Booted/owned simulator、Clone、`xcodebuild`、`xctest`、UI runner、Simulator GUI、Problem Reporter 或 timetracker 测试进程残留。根目录不存在 `README.md`/`readme.md`。
+- 唯一任务源对应条目已由 Codex 标记 `[x]`；活动链接随本 checkpoint 删除。`Docs/userfeedback.md` 中用户的其余未暂存新增内容未被纳入提交。

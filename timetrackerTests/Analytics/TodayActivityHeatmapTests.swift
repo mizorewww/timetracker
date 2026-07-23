@@ -648,6 +648,184 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
+    func recurrenceContributorsAggregateReparentedQuantityAndRetainTemplateHistory() throws {
+        let calendar = try testCalendar()
+        let now = try testDate(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12,
+            calendar: calendar
+        )
+        let today = calendar.startOfDay(for: now)
+        let yesterday = try #require(
+            calendar.date(byAdding: .day, value: -1, to: today)
+        )
+        let template = task("Daily push-ups", colorHex: "16A34A")
+        let movedParent = task("Moved occurrences")
+        let generated = task(
+            "Daily push-ups occurrence",
+            parentID: movedParent.id
+        )
+        let generatedChild = task(
+            "Daily push-ups notes",
+            parentID: generated.id
+        )
+        let templateGoal = quantityGoal(
+            taskID: template.id,
+            targetAmount: 100,
+            unitLabel: "reps"
+        )
+        let generatedGoal = quantityGoal(
+            taskID: generated.id,
+            targetAmount: 40,
+            unitLabel: "reps"
+        )
+        let generatedChildGoal = quantityGoal(
+            taskID: generatedChild.id,
+            targetAmount: 10,
+            unitLabel: "reps"
+        )
+        let templateEntry = quantityEntry(
+            taskID: template.id,
+            amount: 20,
+            recordedAt: yesterday.addingTimeInterval(60)
+        )
+        let generatedEntry = quantityEntry(
+            taskID: generated.id,
+            amount: 30,
+            recordedAt: today.addingTimeInterval(120)
+        )
+        let generatedChildEntry = quantityEntry(
+            taskID: generatedChild.id,
+            amount: 5,
+            recordedAt: today.addingTimeInterval(180)
+        )
+        let service = TodayActivityHeatmapSnapshotService()
+        let tasks = [template, movedParent, generated, generatedChild]
+        let goals = [templateGoal, generatedGoal, generatedChildGoal]
+        let entries = [
+            templateEntry,
+            generatedEntry,
+            generatedChildEntry,
+        ]
+
+        let withoutRecurrenceMapping = try #require(
+            service.taskSnapshots(
+                selectedTaskIDs: [template.id],
+                tasks: tasks,
+                segments: [],
+                checklistItems: [],
+                quantityGoals: goals,
+                quantityEntries: entries,
+                period: .oneYear,
+                now: now,
+                calendar: calendar
+            ).first
+        )
+        let snapshot = try #require(
+            service.taskSnapshots(
+                selectedTaskIDs: [template.id],
+                tasks: tasks,
+                additionalContributingTaskIDsBySelectedTaskID: [
+                    template.id: Set([generated.id])
+                ],
+                segments: [],
+                checklistItems: [],
+                quantityGoals: goals,
+                quantityEntries: entries,
+                period: .oneYear,
+                now: now,
+                calendar: calendar
+            ).first
+        )
+
+        #expect(withoutRecurrenceMapping.totalValue == 20)
+        #expect(snapshot.taskID == template.id)
+        #expect(snapshot.title == template.title)
+        #expect(snapshot.metric == .quantity(unitLabel: "reps"))
+        #expect(snapshot.totalValue == 55)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 20)
+        #expect(
+            day(yesterday, in: snapshot, calendar: calendar)?.referenceValue
+                == 100
+        )
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 35)
+        #expect(
+            day(today, in: snapshot, calendar: calendar)?.referenceValue
+                == 50
+        )
+    }
+
+    @Test @MainActor
+    func recurrenceContributorsAggregateReparentedDurationAndRetainTemplateHistory() throws {
+        let calendar = try testCalendar()
+        let now = try testDate(
+            year: 2026,
+            month: 4,
+            day: 9,
+            hour: 12,
+            calendar: calendar
+        )
+        let today = calendar.startOfDay(for: now)
+        let yesterday = try #require(
+            calendar.date(byAdding: .day, value: -1, to: today)
+        )
+        let template = task("Daily practice", colorHex: "2563EB")
+        let movedParent = task("Moved occurrences")
+        let generated = task(
+            "Daily practice occurrence",
+            parentID: movedParent.id
+        )
+        let generatedChild = task(
+            "Daily practice notes",
+            parentID: generated.id
+        )
+
+        let snapshot = try #require(
+            TodayActivityHeatmapSnapshotService().taskSnapshots(
+                selectedTaskIDs: [template.id],
+                tasks: [template, movedParent, generated, generatedChild],
+                additionalContributingTaskIDsBySelectedTaskID: [
+                    template.id: Set([generated.id])
+                ],
+                segments: [
+                    segment(
+                        taskID: template.id,
+                        start: yesterday.addingTimeInterval(3_600),
+                        end: yesterday.addingTimeInterval(5_400)
+                    ),
+                    segment(
+                        taskID: generated.id,
+                        start: today.addingTimeInterval(7_200),
+                        end: today.addingTimeInterval(10_800)
+                    ),
+                    segment(
+                        taskID: generatedChild.id,
+                        start: today.addingTimeInterval(14_400),
+                        end: today.addingTimeInterval(15_300)
+                    ),
+                ],
+                checklistItems: [],
+                quantityGoals: [],
+                quantityEntries: [],
+                period: .oneYear,
+                now: now,
+                calendar: calendar
+            ).first
+        )
+
+        #expect(snapshot.taskID == template.id)
+        #expect(snapshot.title == template.title)
+        #expect(snapshot.metric == .trackedDuration)
+        #expect(snapshot.totalValue == 6_300)
+        #expect(
+            day(yesterday, in: snapshot, calendar: calendar)?.value == 1_800
+        )
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 4_500)
+    }
+
+    @Test @MainActor
     func heatmapSelectionPersistsAcrossContainerReopen() throws {
         let directory = FileManager.default.temporaryDirectory.appending(
             path: "TodayHeatmapPersistenceTests-\(UUID().uuidString)",

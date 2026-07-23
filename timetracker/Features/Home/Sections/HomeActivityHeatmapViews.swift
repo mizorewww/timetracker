@@ -17,7 +17,7 @@ struct HomeActivityHeatmapRefreshRequest: Hashable {
         calendar: Calendar,
         clockRevision: UInt
     ) {
-        selectedTaskIDs = store.preferences.todayHeatmapTaskIDs
+        selectedTaskIDs = store.todayHeatmapRenderableTaskIDs
         period = store.preferences.todayHeatmapPeriod
         analyticsRevision = store.analyticsRevision
         taskReadModelRevision = store.taskReadModelRevision

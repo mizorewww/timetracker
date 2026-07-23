@@ -41,7 +41,9 @@ extension TimeTrackerStore {
 
     @discardableResult
     func setTodayHeatmapTaskIDs(_ ids: [UUID]) -> Bool {
-        let normalized = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(ids)
+        let normalized = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(
+            todayHeatmapRecurrenceProjection.canonicalTaskIDs(ids)
+        )
         return setPreference(
             .todayHeatmapTaskIDs,
             valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString))
@@ -61,10 +63,19 @@ extension TimeTrackerStore {
         _ isEnabled: Bool,
         for taskID: UUID
     ) -> Bool {
-        let current = preferences.todayHeatmapTaskIDs
+        guard let ownerTaskID = todayHeatmapOwnerTaskID(for: taskID) else {
+            return false
+        }
+        let current = todayHeatmapSelectedTaskIDs
         let updated = isEnabled
-            ? OrderedTaskIDSelectionMutation.adding(taskID, to: current)
-            : OrderedTaskIDSelectionMutation.removing(taskID, from: current)
+            ? OrderedTaskIDSelectionMutation.adding(
+                ownerTaskID,
+                to: current
+            )
+            : OrderedTaskIDSelectionMutation.removing(
+                ownerTaskID,
+                from: current
+            )
         guard !isEnabled || updated.count <=
                 AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount else {
             return false

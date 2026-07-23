@@ -6,6 +6,7 @@ struct TodayActivityHeatmapSnapshotService {
     func taskSnapshots(
         selectedTaskIDs: [UUID],
         tasks: [TaskNode],
+        additionalContributingTaskIDsBySelectedTaskID: [UUID: Set<UUID>] = [:],
         segments: [TimeSegment],
         checklistItems: [ChecklistItem],
         quantityGoals: [TaskQuantityGoal],
@@ -19,6 +20,8 @@ struct TodayActivityHeatmapSnapshotService {
             selectedTaskIDs: selectedTaskIDs,
             taskByID: indexes.taskByID,
             childrenByParentID: indexes.childrenByParentID,
+            additionalContributingTaskIDsBySelectedTaskID:
+                additionalContributingTaskIDsBySelectedTaskID,
             segments: segments,
             checklistItems: checklistItems,
             quantityGoals: quantityGoals,
@@ -33,6 +36,7 @@ struct TodayActivityHeatmapSnapshotService {
         selectedTaskIDs: [UUID],
         taskByID: [UUID: TaskNode],
         childrenByParentID: [UUID?: [TaskNode]],
+        additionalContributingTaskIDsBySelectedTaskID: [UUID: Set<UUID>] = [:],
         segments: [TimeSegment],
         checklistItems: [ChecklistItem],
         quantityGoals: [TaskQuantityGoal],
@@ -64,8 +68,13 @@ struct TodayActivityHeatmapSnapshotService {
                   task.deletedAt == nil else {
                 return nil
             }
+            var contributingRootTaskIDs =
+                additionalContributingTaskIDsBySelectedTaskID[
+                    selectedTaskID
+                ] ?? []
+            contributingRootTaskIDs.insert(selectedTaskID)
             let contributingIDs = contributingTaskIDs(
-                selectedTaskIDs: [selectedTaskID],
+                selectedTaskIDs: Array(contributingRootTaskIDs),
                 taskByID: taskByID,
                 childrenByParentID: childrenByParentID
             )

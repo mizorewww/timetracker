@@ -195,6 +195,15 @@ extension TimeTrackerStore {
             recurrenceRules: taskRecurrenceRules,
             recurrenceOccurrences: taskRecurrenceOccurrences
         ).subtracting(taskIDsWithIncompleteRecurrence)
+        todayHeatmapRecurrenceProjection = TodayHeatmapRecurrenceProjection(
+            taskByID: taskByID,
+            recurrenceRules: taskRecurrenceRules,
+            recurrenceOccurrences: taskRecurrenceOccurrences,
+            incompleteTemplateTaskIDs:
+                incompleteRecurrenceTemplateTaskIDs,
+            incompleteGeneratedTaskIDs:
+                incompleteRecurrenceGeneratedTaskIDs
+        )
         rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
         taskReadModelRevision &+= 1

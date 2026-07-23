@@ -6,8 +6,9 @@
 ## 当前阶段
 
 - [x] 领取“可重复任务由子任务记录数量/时间、父任务显示 Heatmap”反馈并建立活动链接。
-- [~] 审计任务量/可重复任务的父子模型、完成记录、Heatmap 聚合与三平台入口。
-- [ ] 设计并实现最小修复，补齐单元测试与脚本化 UI 验收。
+- [x] 审计任务量/可重复任务的父子模型、完成记录、Heatmap 聚合与三平台入口。
+- [~] 实现 recurrence owner 投影、权威父级聚合并补齐聚焦测试。
+- [ ] 补齐三平台脚本化 UI 验收。
 - [ ] 分 checkpoint 提交，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -25,22 +26,36 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
-- [~] Checkpoint B：审计父子数据流、完成记录、Heatmap 投影、库与自动化基线。
-- [ ] Checkpoint C：实现数据/聚合修复并完成聚焦验证。
+- [x] Checkpoint B：审计父子数据流、完成记录、Heatmap 投影、库与自动化基线。
+- [~] Checkpoint C：实现数据/聚合修复并完成聚焦验证。
 - [ ] Checkpoint D：补齐三平台脚本化 UI 验收。
 - [ ] Checkpoint E：Release 全设备安装、签名/版本核验与收口。
 
 ## 审计证据
 
-- [~] 待填：任务模型、父子关系和重复任务生成路径。
-- [ ] 待填：数量/时间记录与父级 Heatmap 当前断点。
-- [ ] 待填：现有测试、可复用库与 HIG/SwiftUI 约束。
+- [x] `TaskRecurrenceOccurrence` 的 `templateTaskID ↔ generatedTaskID` 是稳定重复关系；`parentID` 只是可编辑层级。生成时子任务初始挂在模板下并复制数量目标，但之后允许改父。
+- [x] 模板是蓝图/容器，数量与时间命令已拒绝模板直接记录；生成子任务才承载 `TaskQuantityEntry` 与 `TimeSegment`。这部分数据写入语义正确。
+- [x] 现有 snapshot 在“选中模板且 generated 的 `parentID` 未改动”时，能沿子树汇总同单位数量目标与时长；真正断点是详情开关、设置 picker、偏好命令和 Home 刷新身份都保存/读取原始 generated ID，于是 Heatmap 被固定在单日实例。
+- [x] 次级断点是聚合只沿 `parentID`，没有使用 occurrence 权威映射；generated 改父后，模板 Heatmap 会漏掉它的历史。
+- [x] 修复边界：建立可缓存的 recurrence Heatmap 投影，提供 generated→template owner、template→generated contributors、顺序稳定归一化、选择资格与 staged/corrupt graph fail-closed；普通父子 Heatmap 继续保留原语义。
+- [x] 旧偏好兼容：读取时把有效 generated ID 投影到模板，父子同时存在时去重；写入时持久化模板 ID。未知/暂存不完整 ID 保留为隐藏选择供用户恢复，不静默删 Cloud 偏好。
+- [x] HIG/SwiftUI：使用原生 Toggle、层级 picker、Swift Charts；视图只消费 Store 投影，不在 `body` 重建 recurrence 图；稳定 ID、可观察 revision 与明确父/子文案。
+
+## 库与基线
+
+- [x] 官方能力满足缺口：SwiftUI、Swift Charts、SwiftData、Foundation `Calendar`、Swift Testing 与 XCTest/XCUIAutomation；不新增运行时依赖。
+- [x] 已审计 `apple/swift-collections`（现有工程依赖，GitHub 约 4.4k stars），但最多 64 项的有序 UUID 归一化用现有 `Array + Set` 更清晰，无需额外链接 `OrderedCollections` 产品。
+- [x] 官方参考：[Swift Charts](https://developer.apple.com/documentation/charts)、[Calendar](https://developer.apple.com/documentation/foundation/calendar)、[XCUITest](https://developer.apple.com/documentation/xcuiautomation)、[swift-collections](https://github.com/apple/swift-collections)。
+- [x] macOS arm64 聚焦基线通过：Heatmap、刷新身份、重复任务、数量详情与 UI contract 共 29 个测试；结果为 `** TEST SUCCEEDED **`。临时 DerivedData 与 xcresult 已移入废纸篓，无本批次遗留进程。
 
 ## 资源所有权
 
 - [~] 主代理：任务状态、编排、集成、所有 build/TestManager/simulator/XCUITest/screenshot/Release 批次与清理。
-- [~] 子代理只做只读静态审计；未经主代理另行记录不得编辑、构建、创建设备或操作窗口。
+- [x] `task38_model_audit`：只读确认真实 recurrence 写入语义、owner 断点与可编辑 `parentID` 风险。
+- [x] `task38_heatmap_audit`：只读确认 snapshot/偏好/刷新身份断点与权威 contributor 建议。
+- [x] `task38_test_audit`：只读确认现有 fixture 是普通父子而非 recurrence，并给出真实 rule/occurrence 的三平台脚本矩阵。
 
 ## 已提交 checkpoint
 
-- [ ] 待提交：领取任务、建立实现记忆与 active link。
+- [x] `6def19c9`：领取任务、建立实现记忆与 active link。
+- [~] 待提交：静态/库审计与聚焦自动化基线。

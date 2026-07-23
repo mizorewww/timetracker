@@ -23,9 +23,6 @@ struct TaskActivityHeatmapCard: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(
-            "home.heatmap.\(snapshot.taskID.uuidString)"
-        )
     }
 
     private var header: some View {

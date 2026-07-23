@@ -173,6 +173,7 @@ struct TodayHeatmapUIContractTests {
             "timetracker/Features/Home/HomeViews.swift"
         )
         let section = try [
+            "timetracker/Features/Home/HomeSectionContainer.swift",
             "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift",
             "timetracker/Features/Home/Sections/HomeActivityHeatmapCard.swift"
         ].map { try sourceText($0) }.joined(separator: "\n")
@@ -195,6 +196,7 @@ struct TodayHeatmapUIContractTests {
             ).count - 1 == 1
         )
         #expect(phone.contains("container: .listSection"))
+        #expect(phone.contains(".homeVisualizationListSection()"))
         #expect(
             desktop.components(
                 separatedBy: "HomeActivityHeatmapSection("
@@ -207,8 +209,17 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains("[TaskActivityHeatmapSnapshot]"))
         #expect(section.contains("ForEach(snapshots)"))
         #expect(section.contains("LazyVStack(spacing: 10)"))
+        #expect(section.contains("ForEach(snapshots.dropFirst())") == false)
+        #expect(section.contains(
+            "ForEach(snapshots) { snapshot in\n                        Section {"
+        ))
+        #expect(section.contains("snapshot.id == snapshots.first?.id"))
         #expect(section.contains("TaskActivityHeatmapCard(snapshot: snapshot)"))
-        #expect(section.contains("home.heatmap.\\(snapshot.taskID.uuidString)"))
+        #expect(section.contains("homeVisualizationListCard("))
+        #expect(section.contains("homeVisualizationListSection()"))
+        #expect(section.contains(".listRowBackground(Color.clear)"))
+        #expect(section.contains(".listRowSeparator(.hidden)"))
+        #expect(section.contains("home.heatmap.card.\\(snapshot.taskID.uuidString)"))
         #expect(section.contains("home.heatmap.grid.\\(snapshot.taskID.uuidString)"))
         #expect(section.contains("HomeSectionInformationButton.heatmaps"))
         #expect(information.contains("home.heatmaps.info"))

@@ -530,6 +530,7 @@ struct HomeUIContractTests {
             "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeChart.swift",
             "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeRefresh.swift",
             "timetracker/Features/Home/Sections/HomeWeeklyGrossTimeViews.swift",
+            "timetracker/Features/Home/HomeSectionContainer.swift",
             "timetracker/Features/Home/HomeViews.swift",
             "timetracker/Features/Home/PhoneHomeView.swift"
         ]
@@ -573,6 +574,10 @@ struct HomeUIContractTests {
         #expect(homeSource.components(separatedBy: "HomeWeeklyGrossTimeSection(").count - 1 == 2)
         #expect(homeSource.contains("mode: .grossBars"))
         #expect(homeSource.contains("home.weeklyGross.card"))
+        #expect(homeSource.contains("homeVisualizationListCard("))
+        #expect(homeSource.contains("homeVisualizationListSection()"))
+        #expect(homeSource.contains(".listRowBackground(Color.clear)"))
+        #expect(homeSource.contains(".listRowSeparator(.hidden)"))
         #expect(homeSource.contains(".accessibilityElement(children: .contain)"))
         #expect(homeSource.contains("HomeWeeklyGrossTimeRefreshRequest"))
         #expect(homeSource.contains("AnalyticsEvaluationCacheKey("))

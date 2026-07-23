@@ -125,6 +125,10 @@ struct HomeActivityHeatmapSection: View {
                                     .padding(16)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .appCard(padding: 0)
+                                    .accessibilityElement(children: .contain)
+                                    .accessibilityIdentifier(
+                                        "home.heatmap.card.\(snapshot.taskID.uuidString)"
+                                    )
                             }
                         }
                     } else {
@@ -132,25 +136,41 @@ struct HomeActivityHeatmapSection: View {
                     }
                 }
             case .listSection:
-                Section {
-                    if let snapshots {
-                        ForEach(snapshots) { snapshot in
+                if let snapshots {
+                    ForEach(snapshots) { snapshot in
+                        Section {
                             TaskActivityHeatmapCard(snapshot: snapshot)
-                                .padding(.vertical, 6)
+                                .homeVisualizationListCard(
+                                    accessibilityIdentifier:
+                                        "home.heatmap.card.\(snapshot.taskID.uuidString)"
+                                )
+                        } header: {
+                            if snapshot.id == snapshots.first?.id {
+                                HomeActivityHeatmapHeader(
+                                    container: .listSection,
+                                    taskCount: taskCount(snapshots.count),
+                                    snapshots: snapshots
+                                )
+                                .textCase(nil)
+                            }
                         }
-                    } else {
+                    }
+                } else {
+                    Section {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                             .frame(height: 104)
-                            .padding(.vertical, 6)
+                            .homeVisualizationListCard(
+                                accessibilityIdentifier: "home.heatmap.loadingCard"
+                            )
+                    } header: {
+                        HomeActivityHeatmapHeader(
+                            container: .listSection,
+                            taskCount: nil,
+                            snapshots: []
+                        )
+                        .textCase(nil)
                     }
-                } header: {
-                    HomeActivityHeatmapHeader(
-                        container: .listSection,
-                        taskCount: snapshots.map { taskCount($0.count) },
-                        snapshots: snapshots ?? []
-                    )
-                    .textCase(nil)
                 }
             }
         }

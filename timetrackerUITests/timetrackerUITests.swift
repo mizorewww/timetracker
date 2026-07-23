@@ -5494,6 +5494,96 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayVisualizationCardsAreVisuallyIndependent() throws {
+        #if os(macOS)
+        throw XCTSkip("Native List card separation is verified on iPhone and iPad.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-reset-demo-preferences"
+            ]
+        )
+        XCTAssertTrue(initialConfigurationIsReady(in: app))
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let weeklyCard = app.descendants(matching: .any)[
+            "home.weeklyGross.card"
+        ].firstMatch
+        let heatmapsHeader = app.descendants(matching: .any)[
+            "home.heatmaps.header"
+        ].firstMatch
+        let checklistGrid = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label == %@",
+                "Time Tracker App activity Heatmap"
+            )
+        ).firstMatch
+        let durationGrid = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label == %@",
+                "Client Work activity Heatmap"
+            )
+        ).firstMatch
+
+        scrollUntilHittable(
+            heatmapsHeader,
+            direction: .up,
+            maximumScrolls: 10,
+            in: app
+        )
+        XCTAssertTrue(heatmapsHeader.waitForExistence(timeout: 8))
+        scrollUntilFullyVisibleAboveSystemChrome(checklistGrid, in: app)
+        XCTAssertTrue(checklistGrid.waitForExistence(timeout: 8))
+        let checklistCard = heatmapCard(for: checklistGrid, in: app)
+        assertHeatmapCard(checklistCard, contains: checklistGrid)
+
+        scrollUntilHittable(durationGrid, direction: .up, in: app)
+        XCTAssertTrue(durationGrid.waitForExistence(timeout: 8))
+        let durationCard = heatmapCard(for: durationGrid, in: app)
+        assertHeatmapCard(durationCard, contains: durationGrid)
+        XCTAssertNotEqual(checklistCard.identifier, durationCard.identifier)
+        XCTAssertTrue(
+            scrollUntilCardBoundaryIsVisible(checklistCard, durationCard, in: app),
+            "Two adjacent Heatmap card boundaries must share one acceptance view."
+        )
+        assertSeparateCards(checklistCard, durationCard)
+
+        XCTAssertTrue(weeklyCard.waitForExistence(timeout: 3))
+        XCTAssertFalse(weeklyCard.frame.intersects(checklistCard.frame))
+        XCTAssertLessThan(weeklyCard.frame.maxY, checklistCard.frame.minY)
+        XCTAssertFalse(heatmapsHeader.frame.intersects(checklistCard.frame))
+        XCTAssertLessThanOrEqual(
+            heatmapsHeader.frame.maxY,
+            checklistCard.frame.minY + 2
+        )
+
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-home-visualization-card-separation", app: app)
+
+        if prefix == "ipad" {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            waitForScreenshotTransition()
+            XCTAssertTrue(
+                scrollUntilCardBoundaryIsVisible(
+                    checklistCard,
+                    durationCard,
+                    in: app
+                )
+            )
+            assertSeparateCards(checklistCard, durationCard)
+            try capture(
+                "ipad-home-visualization-card-separation-landscape",
+                app: app
+            )
+        }
+        #endif
+    }
+
+    @MainActor
     func testTodayConfiguredHeatmapsStayIndependentByTaskAndMetric() throws {
         #if os(iOS)
         XCUIDevice.shared.orientation = .portrait
@@ -5610,6 +5700,7 @@ final class timetrackerUITests: XCTestCase {
         try capture("\(prefix)-home-today-heatmap-checklist", app: app)
 
         scrollUntilHittable(durationGrid, direction: .up, in: app)
+        scrollUntilFullyVisibleAboveSystemChrome(durationGrid, in: app)
         XCTAssertTrue(
             durationGrid.waitForExistence(timeout: 8),
             "The duration task must have a separate Heatmap."
@@ -8399,6 +8490,123 @@ final class timetrackerUITests: XCTestCase {
         return element.frame.minY >= app.frame.minY
             && element.frame.maxY <= unobscuredBottom - 8
         #endif
+    }
+
+    @MainActor
+    private func heatmapCard(
+        for grid: XCUIElement,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        let gridPrefix = "home.heatmap.grid."
+        XCTAssertTrue(
+            grid.identifier.hasPrefix(gridPrefix),
+            "Heatmap grids must expose their task identity."
+        )
+        let taskID = grid.identifier.dropFirst(gridPrefix.count)
+        return app.descendants(matching: .any)[
+            "home.heatmap.card.\(taskID)"
+        ].firstMatch
+    }
+
+    @MainActor
+    private func assertHeatmapCard(
+        _ card: XCUIElement,
+        contains grid: XCUIElement
+    ) {
+        XCTAssertTrue(
+            card.waitForExistence(timeout: 3),
+            "Every Heatmap must expose its own card boundary."
+        )
+        XCTAssertTrue(
+            card.frame.insetBy(dx: -2, dy: -2).contains(grid.frame),
+            "A Heatmap grid must belong only to its task card."
+        )
+    }
+
+    @MainActor
+    private func assertSeparateCards(
+        _ first: XCUIElement,
+        _ second: XCUIElement
+    ) {
+        XCTAssertTrue(first.exists)
+        XCTAssertTrue(second.exists)
+        let upperFrame: CGRect
+        let lowerFrame: CGRect
+        if first.frame.minY <= second.frame.minY {
+            upperFrame = first.frame
+            lowerFrame = second.frame
+        } else {
+            upperFrame = second.frame
+            lowerFrame = first.frame
+        }
+        XCTAssertFalse(
+            upperFrame.intersects(lowerFrame),
+            "Independent visualization cards must not overlap."
+        )
+        XCTAssertGreaterThanOrEqual(
+            lowerFrame.minY - upperFrame.maxY,
+            8,
+            "Independent visualization cards need visible separation."
+        )
+    }
+
+    @MainActor
+    private func scrollUntilCardBoundaryIsVisible(
+        _ first: XCUIElement,
+        _ second: XCUIElement,
+        in app: XCUIApplication
+    ) -> Bool {
+        for _ in 0..<12 {
+            if first.exists, second.exists {
+                let navigationBar = app.navigationBars.firstMatch
+                let visibleTop = navigationBar.exists
+                    ? navigationBar.frame.maxY + 8
+                    : app.frame.minY + 8
+                let visibleBottom = systemChromeTop(in: app) - 8
+                let upperFrame = first.frame.minY <= second.frame.minY
+                    ? first.frame
+                    : second.frame
+                let lowerFrame = first.frame.minY <= second.frame.minY
+                    ? second.frame
+                    : first.frame
+                if upperFrame.maxY >= visibleTop + 8,
+                   upperFrame.maxY <= visibleBottom - 8,
+                   lowerFrame.minY >= visibleTop + 8,
+                   lowerFrame.minY <= visibleBottom - 8 {
+                    return true
+                }
+
+                let pairMidpoint = (upperFrame.maxY + lowerFrame.minY) / 2
+                let viewportMidpoint = (visibleTop + visibleBottom) / 2
+                let distance = max(abs(pairMidpoint - viewportMidpoint), 48)
+                if pairMidpoint > viewportMidpoint {
+                    #if os(macOS)
+                    scroll(direction: .up, toward: second, in: app)
+                    #else
+                    dragContentUp(by: distance, in: app)
+                    #endif
+                } else {
+                    #if os(macOS)
+                    scroll(direction: .down, toward: first, in: app)
+                    #else
+                    dragContentDown(by: distance, in: app)
+                    #endif
+                }
+            } else if first.exists {
+                #if os(macOS)
+                scroll(direction: .up, toward: second, in: app)
+                #else
+                dragContentUp(by: 80, in: app)
+                #endif
+            } else {
+                #if os(macOS)
+                scroll(direction: .down, toward: first, in: app)
+                #else
+                dragContentDown(by: 80, in: app)
+                #endif
+            }
+        }
+        return false
     }
 
     @MainActor

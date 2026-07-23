@@ -317,7 +317,7 @@ struct TodayHeatmapUIContractTests {
             ).count - 1 == 1
         )
         #expect(phone.contains("container: .listSection"))
-        #expect(phone.contains(".homeVisualizationListSection()") == false)
+        #expect(phone.contains(".homeVisualizationListSection()"))
         #expect(
             desktop.components(
                 separatedBy: "HomeActivityHeatmapSection("
@@ -336,10 +336,12 @@ struct TodayHeatmapUIContractTests {
         ))
         #expect(section.contains("snapshot.id == snapshots.first?.id"))
         #expect(section.contains("TaskActivityHeatmapCard(snapshot: snapshot)"))
-        #expect(section.contains("homeVisualizationListCard(") == false)
-        #expect(section.contains("homeVisualizationListSection()") == false)
-        #expect(section.contains(".listRowBackground(Color.clear)") == false)
-        #expect(section.contains(".listRowSeparator(.hidden)") == false)
+        #expect(section.contains("homeVisualizationListCard("))
+        #expect(section.contains("homeVisualizationListSection()"))
+        #expect(section.contains(".listRowBackground(Color.clear)"))
+        #expect(section.contains(".listRowSeparator(.hidden)"))
+        #expect(section.contains("RoundedRectangle(cornerRadius: 26, style: .continuous)"))
+        #expect(section.contains("cornerRadius: AppLayout.cardRadius") == false)
         #expect(section.contains("home.heatmap.card.\\(snapshot.taskID.uuidString)"))
         #expect(section.contains("home.heatmap.grid.\\(snapshot.taskID.uuidString)"))
         #expect(section.contains("HomeSectionInformationButton.heatmaps"))

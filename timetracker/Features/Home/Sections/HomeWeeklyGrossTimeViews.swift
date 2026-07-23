@@ -108,9 +108,9 @@ struct HomeWeeklyGrossTimeSection: View {
                             .frame(height: 170)
                     }
                 }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("home.weeklyGross.card")
+                    .homeVisualizationListCard(
+                        accessibilityIdentifier: "home.weeklyGross.card"
+                    )
             } header: {
                 HomeWeeklyGrossTimeHeader(
                     container: .listSection,

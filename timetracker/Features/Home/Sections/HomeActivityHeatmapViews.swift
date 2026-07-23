@@ -147,10 +147,9 @@ struct HomeActivityHeatmapSection: View {
                     ForEach(snapshots) { snapshot in
                         Section {
                             TaskActivityHeatmapCard(snapshot: snapshot)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .accessibilityElement(children: .contain)
-                                .accessibilityIdentifier(
-                                    "home.heatmap.card.\(snapshot.taskID.uuidString)"
+                                .homeVisualizationListCard(
+                                    accessibilityIdentifier:
+                                        "home.heatmap.card.\(snapshot.taskID.uuidString)"
                                 )
                         } header: {
                             if snapshot.id == snapshots.first?.id {
@@ -168,7 +167,9 @@ struct HomeActivityHeatmapSection: View {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                             .frame(height: 104)
-                            .accessibilityIdentifier("home.heatmap.loadingCard")
+                            .homeVisualizationListCard(
+                                accessibilityIdentifier: "home.heatmap.loadingCard"
+                            )
                     } header: {
                         HomeActivityHeatmapHeader(
                             container: .listSection,

@@ -19,6 +19,14 @@
 - **契约测试**:`HomeUIContractTests`/`TodayHeatmapUIContractTests` 改为反向锁定已删除修饰符,锁定原生行语义。
 - **验收矩阵**(复用 fixture `--uitesting-today-heatmap` + `--uitesting-reset-demo-preferences`):macOS `testTodayWeeklyGrossTimeChartIsVisible` + `testTodayConfiguredHeatmapsStayIndependentByTaskAndMetric`;iPhone/iPad 加 `testTodayVisualizationCardsAreVisuallyIndependent`(iPad 含脚本横屏);owned 模拟器 `codex-task39-*`,产物 `/tmp/timetracker-task39-*`。
 
+## 实现过程关键发现
+
+- iPhone 原生 grouped Section 方案被验收否决:iOS 26+ insetGrouped 会把连续 Section(尤其 ForEach 生成、无 header)合并成一张连续卡片;`listSectionSpacing`/`listSectionMargins`/空 header 均无法拆卡(实测间距恒为 7.53pt),任务 34 当年也否决不過同一假设。
+- 最终方案:保留任务 34 的自绘独立卡片结构(`homeVisualizationListCard`/`homeVisualizationListSection`),把样式从 `appCard`(radius 8 + 描边)改为与 iOS 26 原生 grouped 卡片一致 —— `RoundedRectangle(cornerRadius: 26, style: .continuous)` + `AppColors.cardBackground`(secondarySystemGroupedBackground)+ 无描边。
+- 桌面端保持 `appCard`,padding 16 统一为兄弟卡片的 14;weekly loading 高度与 chartHeight 对齐(210)。
+- 契约测试恢复正向锁定共享修饰符,并新增 radius 26 / 禁用 `AppLayout.cardRadius` 的样式锁。
+- iPhone 截图验收:weekly 卡、三张 heatmap 卡各自独立、圆角/背景/间距与原生 grouped 卡片一致,标题在卡片外。
+
 ## 唯一反馈边界
 
 - 只统一 Heatmap 与柱状图相对同屏原生卡片的视觉和容器行为。

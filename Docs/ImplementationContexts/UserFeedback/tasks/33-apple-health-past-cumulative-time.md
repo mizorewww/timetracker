@@ -9,7 +9,7 @@
 - [x] 对照上一项历史分析实现，以脚本化测试设计复现真实剩余缺口。
 - [x] 审计数据查询范围、累计口径、详情/统计入口与刷新生命周期。
 - [x] 复用现有周期导航实现最小修复并补齐 Core/UI contract/XCUITest。
-- [~] 提交实现 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 提交实现 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -27,7 +27,7 @@
 
 - [x] Checkpoint A：范围领取、上一实现差距审计与自动化复现设计。
 - [x] Checkpoint B：最小实现、聚焦测试与脚本截图验收。
-- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## Checkpoint A 审计结论
 
@@ -60,3 +60,10 @@
 - Task33 iPhone 17 Pro（iOS 27.0）：`024C0073-7B1C-47AE-86EB-77F17663CAD4`，已 terminate、shutdown 并删除。
 - Task33 iPad Pro 11-inch M4（iOS 27.0）：`BFABF2B1-9CD0-444F-BC72-18A1FD2645A2`，已 terminate、shutdown 并删除。
 - 已删除本任务 xcresult、截图导出目录和 DerivedData；确认没有 owned runner、xcodebuild、xctest、App 进程、设备条目或 Booted device 残留。
+
+## Checkpoint C 结果
+
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 并以 0 退出；iOS/iPadOS 主 App、嵌入 Watch companion、Widget、Live Activity 与 universal macOS App 均完成 Release 构建，macOS App 已复制到 `/Applications/timetracker.app`。
+- `devicectl device info apps` 只读确认 iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）与 iPhone Air（`FBA36694-D841-56D4-8ED6-21942873B21B`）均安装 `me.mezorewww.timetracker` `1.1.73 (128)`；没有启动、点击或截图物理设备。
+- iOS、嵌入 Watch 与 macOS 产物的 `codesign --verify --deep --strict` 均通过，Team Identifier 均为 `LT98S43NKA`；macOS 主二进制为 `x86_64 arm64`。当前无可见物理 Apple Watch，配对设备继续通过 Automatic App Install 管理已签名的嵌入 companion。
+- Release 核验后已删除 `build/Install`，确认没有 owned `xcodebuild`、`xctest`、UI runner、Task33 App/临时路径、Booted simulator 或活动链接残留；根目录 `README.md`/`readme.md` 不存在。

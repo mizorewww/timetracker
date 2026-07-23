@@ -967,6 +967,7 @@
 "taskCategory.title" = "Category";
 "taskCategory.new" = "New Category";
 "taskCategory.edit" = "Edit Category";
+"taskCategory.sort" = "Sort Categories";
 "taskCategory.delete" = "Delete Category";
 "taskCategory.name" = "Category Name";
 "taskCategory.nameRequired" = "Category name is required.";

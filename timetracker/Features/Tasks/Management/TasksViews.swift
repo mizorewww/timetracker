@@ -113,6 +113,17 @@ struct TasksView: View {
                     Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
                 }
 
+                Button {
+                    presentationRouter.presentTaskCategoryOrdering()
+                } label: {
+                    Label(
+                        AppStrings.localized("taskCategory.sort"),
+                        systemImage: "arrow.up.arrow.down"
+                    )
+                }
+                .disabled(store.taskCategories.count < 2)
+                .accessibilityIdentifier("tasks.sortCategories")
+
                 Divider()
 
                 Button {

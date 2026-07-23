@@ -42,6 +42,8 @@ private struct AppPresentationSheet: View {
             )
         case let .taskCategoryEditor(draft):
             TaskCategoryEditorSheet(store: store, initialDraft: draft)
+        case .taskCategoryOrdering:
+            TaskCategoryOrderingSheet(store: store)
         case let .manualTime(draft):
             ManualTimeSheet(store: store, initialDraft: draft)
         case let .segmentEditor(draft):

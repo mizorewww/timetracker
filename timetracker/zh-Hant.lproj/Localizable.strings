@@ -967,6 +967,7 @@
 "taskCategory.title" = "分類";
 "taskCategory.new" = "新增分類";
 "taskCategory.edit" = "編輯分類";
+"taskCategory.sort" = "排序分類";
 "taskCategory.delete" = "刪除分類";
 "taskCategory.name" = "分類名稱";
 "taskCategory.nameRequired" = "請填寫分類名稱。";

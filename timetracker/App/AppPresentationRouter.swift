@@ -9,6 +9,7 @@ struct AppPresentation: Identifiable {
         )
         case recoveredTaskEditor(RecoveredTaskDraftPresentation)
         case taskCategoryEditor(TaskCategoryEditorDraft)
+        case taskCategoryOrdering
         case manualTime(ManualTimeDraft)
         case segmentEditor(SegmentEditorDraft)
         case startTaskPicker
@@ -126,6 +127,11 @@ extension AppPresentationRouter {
     @discardableResult
     func presentEditTaskCategory(_ category: TaskCategory) -> Bool {
         present(.taskCategoryEditor(TaskCategoryEditorDraft(category: category)))
+    }
+
+    @discardableResult
+    func presentTaskCategoryOrdering() -> Bool {
+        present(.taskCategoryOrdering)
     }
 
     @discardableResult

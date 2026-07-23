@@ -37,6 +37,17 @@ struct TimeTrackerCommands: Commands {
 
             Divider()
 
+            Button(AppStrings.localized("taskCategory.sort")) {
+                guard let presentationRouter else { return }
+                presentationRouter.presentTaskCategoryOrdering()
+            }
+            .disabled(
+                (store?.taskCategories.count ?? 0) < 2 ||
+                    presentationRouter?.canPresent != true
+            )
+
+            Divider()
+
             Button(AppStrings.localized("menu.archiveSelectedTask")) {
                 guard let store, let selectedTask = store.selectedTask else {
                     return

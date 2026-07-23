@@ -967,6 +967,7 @@
 "taskCategory.title" = "分类";
 "taskCategory.new" = "新建分类";
 "taskCategory.edit" = "编辑分类";
+"taskCategory.sort" = "排序分类";
 "taskCategory.delete" = "删除分类";
 "taskCategory.name" = "分类名称";
 "taskCategory.nameRequired" = "请填写分类名称。";

@@ -1271,6 +1271,68 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskCategoryOrderingUsesOneRoutedDraftWithNativeAndButtonMoves() throws {
+        let tasksSource = try sourceText(
+            "timetracker/Features/Tasks/Management/TasksViews.swift"
+        )
+        let orderingSource = try sourceText(
+            "timetracker/Features/Tasks/Editor/TaskCategoryOrderingSheet.swift"
+        )
+        let routerSource = try sourceText(
+            "timetracker/App/AppPresentationRouter.swift"
+        )
+        let hostSource = try sourceText(
+            "timetracker/App/AppPresentationHost.swift"
+        )
+        let commandSource = try sourceText(
+            "timetracker/App/TimeTrackerCommands.swift"
+        )
+        let englishStrings = try sourceText(
+            "timetracker/en.lproj/Localizable.strings"
+        )
+        let simplifiedChineseStrings = try sourceText(
+            "timetracker/zh-Hans.lproj/Localizable.strings"
+        )
+        let traditionalChineseStrings = try sourceText(
+            "timetracker/zh-Hant.lproj/Localizable.strings"
+        )
+
+        #expect(routerSource.contains("case taskCategoryOrdering"))
+        #expect(routerSource.contains("func presentTaskCategoryOrdering() -> Bool"))
+        #expect(routerSource.contains("present(.taskCategoryOrdering)"))
+        #expect(hostSource.contains("case .taskCategoryOrdering:"))
+        #expect(hostSource.contains("TaskCategoryOrderingSheet(store: store)"))
+        #expect(tasksSource.contains("presentationRouter.presentTaskCategoryOrdering()"))
+        #expect(tasksSource.contains(".disabled(store.taskCategories.count < 2)"))
+        #expect(tasksSource.contains(".accessibilityIdentifier(\"tasks.sortCategories\")"))
+        #expect(commandSource.contains("Button(AppStrings.localized(\"taskCategory.sort\"))"))
+        #expect(commandSource.contains("presentationRouter.presentTaskCategoryOrdering()"))
+        #expect(orderingSource.contains("NavigationStack {"))
+        #expect(orderingSource.contains("List {"))
+        #expect(orderingSource.contains("ForEach(orderedCategories)"))
+        #expect(orderingSource.contains(".onMove(perform: moveCategories)"))
+        #expect(orderingSource.contains(".environment(\\.editMode, .constant(.active))"))
+        #expect(orderingSource.contains("@State private var baseline: TaskCategoryOrderMutationBaseline"))
+        #expect(orderingSource.contains("TaskCategoryOrderMutationBaseline("))
+        #expect(orderingSource.contains("orderedCategoryIDs: orderedCategories.map(\\.id),"))
+        #expect(orderingSource.contains("baseline: baseline"))
+        #expect(orderingSource.contains("Button(AppStrings.cancel)"))
+        #expect(orderingSource.contains("Button(AppStrings.done)"))
+        #expect(orderingSource.contains("\"taskCategory.sorter\""))
+        #expect(orderingSource.contains("\"taskCategory.sort.row.\\(category.id.uuidString)\""))
+        #expect(orderingSource.contains("\"taskCategory.sort.moveUp.\\(category.id.uuidString)\""))
+        #expect(orderingSource.contains("\"taskCategory.sort.moveDown.\\(category.id.uuidString)\""))
+        #expect(orderingSource.contains("\"taskCategory.sort.cancel\""))
+        #expect(orderingSource.contains("\"taskCategory.sort.done\""))
+        #expect(orderingSource.contains(".accessibilityLabel(category.title)"))
+        #expect(orderingSource.contains("AppStrings.localized(\"common.moveUp\")"))
+        #expect(orderingSource.contains("AppStrings.localized(\"common.moveDown\")"))
+        #expect(englishStrings.contains("\"taskCategory.sort\" = \"Sort Categories\";"))
+        #expect(simplifiedChineseStrings.contains("\"taskCategory.sort\" = \"排序分类\";"))
+        #expect(traditionalChineseStrings.contains("\"taskCategory.sort\" = \"排序分類\";"))
+    }
+
+    @Test
     func taskDetailExposesDiscoverableActionsAndUsesSystemBackNavigation() throws {
         let detailSource = try taskDetailFeatureSource()
         let actionSource = try sourceText("timetracker/Features/Tasks/Management/TaskRowComponents.swift")

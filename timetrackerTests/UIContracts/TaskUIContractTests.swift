@@ -706,6 +706,9 @@ struct TaskUIContractTests {
         let recordsSource = try sourceText(
             "timetracker/Features/Tasks/Detail/TaskDetailRecordViews.swift"
         )
+        let analyticsStoreSource = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+Analytics.swift"
+        )
         let englishStrings = try sourceText(
             "timetracker/en.lproj/Localizable.strings"
         )
@@ -732,6 +735,19 @@ struct TaskUIContractTests {
         #expect(workspaceSource.contains("retryID = newRetryID"))
         #expect(workspaceSource.contains("refreshAfterSceneActivation()"))
         #expect(workspaceSource.contains("authorizationRetryID = nil"))
+        #expect(workspaceSource.contains("@State private var referenceDate"))
+        #expect(workspaceSource.contains("@State private var followsCurrentPeriod"))
+        #expect(workspaceSource.contains("@State private var monthNavigationAnchor"))
+        #expect(workspaceSource.contains("referenceDate: effectiveReferenceDate"))
+        #expect(workspaceSource.contains("liveNow: evaluationDate"))
+        #expect(workspaceSource.contains("set: selectReferenceDate"))
+        #expect(analyticsStoreSource.contains("referenceDate: Date"))
+        #expect(analyticsStoreSource.contains("liveNow: Date"))
+        #expect(
+            analyticsStoreSource.contains(
+                "range.evaluation(\n            referenceDate: referenceDate,\n            liveNow: liveNow"
+            )
+        )
         #expect(workspaceSource.contains("error.localizedDescription") == false)
 
         for identifier in [
@@ -744,16 +760,27 @@ struct TaskUIContractTests {
             "task.detail.appleHealth.retry",
             "task.detail.summary.gross",
             "task.detail.summary.wall",
+            "task.detail.summary.period",
+            "task.detail.appleHealth.periodFilter",
+            "task.detail.appleHealth.periodTitle",
             "task.detail.history.chart",
             "task.detail.history.header"
         ] {
             #expect(detailSource.contains(identifier))
         }
         #expect(detailSource.contains("TaskDetailAppleHealthRetryButton"))
+        #expect(
+            detailSource.contains(
+                "if isAppleHealthTask, analyticsState != .unavailable"
+            )
+        )
         #expect(detailSource.contains("Button(action: action)"))
         #expect(detailSource.contains(".frame(minHeight: 44)"))
         #expect(overviewSource.contains("if snapshot.source == .tracked"))
         #expect(analysisSource.contains("snapshot.source == .appleHealth"))
+        #expect(analysisSource.contains("AnalyticsPeriodNavigator("))
+        #expect(analysisSource.contains("AnalyticsPeriodText.title("))
+        #expect(analysisSource.contains("if snapshot.source == .tracked"))
         #expect(analysisSource.contains("DailyTimeSeriesChart("))
         #expect(analysisSource.contains("mode: .wallBarsAndGrossLine"))
         #expect(

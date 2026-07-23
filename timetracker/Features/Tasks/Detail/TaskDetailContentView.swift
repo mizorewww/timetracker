@@ -11,6 +11,9 @@ struct TaskDetailList: View {
     let analyticsState: TaskDetailAnalyticsLoadState
     let isAppleHealthTask: Bool
     @Binding var range: AnalyticsRange
+    @Binding var referenceDate: Date
+    let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
     let isRefreshing: Bool
     let retryAnalytics: () -> Void
     @State private var quantityEditorRoute:
@@ -31,6 +34,9 @@ struct TaskDetailList: View {
             }
 
             TaskDetailTrackingAvailabilitySection(store: store, task: task)
+            if isAppleHealthTask {
+                analyticsContent
+            }
             TaskDetailQuantitySections(
                 readModel: store.taskQuantityDetail(for: task.id),
                 addEntry: { _ in presentQuantityEntryEditor() },
@@ -73,7 +79,9 @@ struct TaskDetailList: View {
                 notesInteractionStyle: .expandablePreview
             )
             TaskDetailForecastSection(store: store, task: task)
-            analyticsContent
+            if isAppleHealthTask == false {
+                analyticsContent
+            }
         }
         #if os(iOS)
         .listStyle(.insetGrouped)
@@ -146,6 +154,15 @@ struct TaskDetailList: View {
 
     @ViewBuilder
     private var analyticsContent: some View {
+        if isAppleHealthTask, analyticsState != .unavailable {
+            TaskDetailAppleHealthPeriodSection(
+                range: $range,
+                referenceDate: $referenceDate,
+                liveNow: liveNow,
+                monthNavigationAnchor: $monthNavigationAnchor
+            )
+        }
+
         if let snapshot {
             if isAppleHealthTask, analyticsState == .failed {
                 TaskDetailAppleHealthFailureSection(retry: retryAnalytics)
@@ -153,7 +170,10 @@ struct TaskDetailList: View {
                 TaskDetailAppleHealthUnavailableSection()
             }
 
-            TaskDetailOverviewSection(snapshot: snapshot)
+            TaskDetailOverviewSection(
+                snapshot: snapshot,
+                periodTitle: isAppleHealthTask ? selectedPeriodTitle : nil
+            )
             TaskDetailAnalysisSection(
                 range: $range,
                 snapshot: snapshot,
@@ -178,6 +198,14 @@ struct TaskDetailList: View {
                 TaskDetailAppleHealthFailureSection(retry: retryAnalytics)
             }
         }
+    }
+
+    private var selectedPeriodTitle: String {
+        AnalyticsPeriodText.title(
+            for: range,
+            date: referenceDate,
+            liveNow: liveNow
+        )
     }
 }
 

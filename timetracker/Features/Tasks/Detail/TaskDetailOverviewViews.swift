@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TaskDetailOverviewSection: View {
     let snapshot: TaskAnalyticsSnapshot
+    let periodTitle: String?
 
     var body: some View {
         Section {
@@ -36,8 +37,20 @@ struct TaskDetailOverviewSection: View {
                 )
             }
         } header: {
-            Text(AppStrings.localized("analytics.summary.title"))
-                .accessibilityIdentifier("task.detail.summary")
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(AppStrings.localized("analytics.summary.title"))
+                    .accessibilityIdentifier("task.detail.summary")
+                if let periodTitle {
+                    Spacer(minLength: 8)
+                    Text(periodTitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityIdentifier(
+                            "task.detail.summary.period"
+                        )
+                }
+            }
         }
     }
 }

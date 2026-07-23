@@ -33,7 +33,10 @@ private struct TaskDetailAnalyticsWorkspace: View {
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
 
     @State private var range: AnalyticsRange = .week
+    @State private var referenceDate = Date()
     @State private var liveNow = Date()
+    @State private var followsCurrentPeriod = true
+    @State private var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
     @State private var snapshot: TaskAnalyticsSnapshot?
     @State private var loadedRequest: TaskAnalyticsSnapshotRequest?
     @State private var loadState: TaskDetailAnalyticsLoadState = .loading
@@ -43,10 +46,14 @@ private struct TaskDetailAnalyticsWorkspace: View {
 
     var body: some View {
         let evaluationDate = liveNow
+        let effectiveReferenceDate = followsCurrentPeriod
+            ? evaluationDate
+            : referenceDate
         let request = store.taskAnalyticsSnapshotRequest(
             for: task,
             range: range,
-            now: evaluationDate
+            referenceDate: effectiveReferenceDate,
+            liveNow: evaluationDate
         )
         let loadRequest = TaskDetailAnalyticsLoadRequest(
             request: request,
@@ -55,7 +62,7 @@ private struct TaskDetailAnalyticsWorkspace: View {
         let refreshPlan = scenePhase == .active
             ? AnalyticsRefreshPlan.next(
                 liveNow: evaluationDate,
-                followsCurrentPeriod: true,
+                followsCurrentPeriod: followsCurrentPeriod,
                 liveRefreshBucket: request.liveRefreshBucket
             )
             : nil
@@ -77,6 +84,9 @@ private struct TaskDetailAnalyticsWorkspace: View {
             analyticsState: loadState,
             isAppleHealthTask: isAppleHealthTask,
             range: rangeSelection,
+            referenceDate: referenceDateSelection,
+            liveNow: evaluationDate,
+            monthNavigationAnchor: $monthNavigationAnchor,
             isRefreshing: loadState == .loading && visibleSnapshot != nil,
             retryAnalytics: retry
         )
@@ -120,13 +130,31 @@ private struct TaskDetailAnalyticsWorkspace: View {
         )
     }
 
+    private var referenceDateSelection: Binding<Date> {
+        Binding(
+            get: { followsCurrentPeriod ? liveNow : referenceDate },
+            set: selectReferenceDate
+        )
+    }
+
     private func selectRange(_ selectedRange: AnalyticsRange) {
         guard selectedRange != range else { return }
         let evaluationDate = Date()
+        let selectedReferenceDate = followsCurrentPeriod
+            ? evaluationDate
+            : referenceDate
+        let followsSelectedPeriod = selectedRange.isCurrentPeriod(
+            selectedReferenceDate,
+            liveNow: evaluationDate
+        )
+        let effectiveReferenceDate = followsSelectedPeriod
+            ? evaluationDate
+            : selectedReferenceDate
         let request = store.taskAnalyticsSnapshotRequest(
             for: task,
             range: selectedRange,
-            now: evaluationDate
+            referenceDate: effectiveReferenceDate,
+            liveNow: evaluationDate
         )
 
         if isAppleHealthTask == false,
@@ -141,7 +169,21 @@ private struct TaskDetailAnalyticsWorkspace: View {
             loadState = .content
         }
         range = selectedRange
+        referenceDate = selectedReferenceDate
+        followsCurrentPeriod = followsSelectedPeriod
+        monthNavigationAnchor = nil
         liveNow = evaluationDate
+    }
+
+    private func selectReferenceDate(_ selectedDate: Date) {
+        let actionNow = Date()
+        let boundedDate = min(selectedDate, actionNow)
+        referenceDate = boundedDate
+        liveNow = actionNow
+        followsCurrentPeriod = range.isCurrentPeriod(
+            boundedDate,
+            liveNow: actionNow
+        )
     }
 
     private func retry() {
@@ -245,11 +287,15 @@ private struct TaskDetailAnalyticsWorkspace: View {
     }
 
     private var currentLoadRequest: TaskDetailAnalyticsLoadRequest {
-        TaskDetailAnalyticsLoadRequest(
+        let effectiveReferenceDate = followsCurrentPeriod
+            ? liveNow
+            : referenceDate
+        return TaskDetailAnalyticsLoadRequest(
             request: store.taskAnalyticsSnapshotRequest(
                 for: task,
                 range: range,
-                now: liveNow
+                referenceDate: effectiveReferenceDate,
+                liveNow: liveNow
             ),
             retryID: retryID
         )

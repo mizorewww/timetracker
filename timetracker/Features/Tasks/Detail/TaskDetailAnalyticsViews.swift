@@ -1,15 +1,81 @@
 import SwiftUI
 
+struct TaskDetailAppleHealthPeriodSection: View {
+    @Binding var range: AnalyticsRange
+    @Binding var referenceDate: Date
+    let liveNow: Date
+    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
+
+    private var periodTitle: String {
+        AnalyticsPeriodText.title(
+            for: range,
+            date: referenceDate,
+            liveNow: liveNow
+        )
+    }
+
+    var body: some View {
+        Section {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                    TaskDetailAnalyticsRangePicker(range: $range)
+                        .fixedSize(horizontal: true, vertical: false)
+                    AnalyticsPeriodNavigator(
+                        range: range,
+                        referenceDate: $referenceDate,
+                        liveNow: liveNow,
+                        monthNavigationAnchor: $monthNavigationAnchor
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    TaskDetailAnalyticsRangePicker(range: $range)
+                    HStack(spacing: 8) {
+                        AnalyticsPeriodNavigator(
+                            range: range,
+                            referenceDate: $referenceDate,
+                            liveNow: liveNow,
+                            monthNavigationAnchor: $monthNavigationAnchor
+                        )
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(AppStrings.localized("analytics.range"))
+            .accessibilityValue(periodTitle)
+            .accessibilityIdentifier(
+                "task.detail.appleHealth.periodFilter"
+            )
+        } header: {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(AppStrings.localized("analytics.range"))
+                Spacer(minLength: 8)
+                Text(periodTitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .accessibilityIdentifier(
+                        "task.detail.appleHealth.periodTitle"
+                    )
+            }
+        }
+    }
+
+}
+
 struct TaskDetailAnalysisSection: View {
     @Binding var range: AnalyticsRange
     let snapshot: TaskAnalyticsSnapshot
     let isRefreshing: Bool
     let retryAppleHealth: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Section {
-            rangePicker
+            if snapshot.source == .tracked {
+                TaskDetailAnalyticsRangePicker(range: $range)
+            }
 
             if snapshot.overview.grossSeconds == 0,
                snapshot.source == .appleHealth {
@@ -132,8 +198,13 @@ struct TaskDetailAnalysisSection: View {
         }
     }
 
-    @ViewBuilder
-    private var rangePicker: some View {
+}
+
+private struct TaskDetailAnalyticsRangePicker: View {
+    @Binding var range: AnalyticsRange
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
         if dynamicTypeSize.isAccessibilitySize {
             Picker(AppStrings.localized("analytics.range"), selection: $range) {
                 ForEach(AnalyticsRange.allCases) { range in
@@ -142,6 +213,7 @@ struct TaskDetailAnalysisSection: View {
             }
             .pickerStyle(.menu)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 44)
             .accessibilityIdentifier("task.detail.analysis.range")
         } else {
             Picker(AppStrings.localized("analytics.range"), selection: $range) {
@@ -150,6 +222,7 @@ struct TaskDetailAnalysisSection: View {
                 }
             }
             .pickerStyle(.segmented)
+            .frame(minHeight: 44)
             .accessibilityIdentifier("task.detail.analysis.range")
         }
     }

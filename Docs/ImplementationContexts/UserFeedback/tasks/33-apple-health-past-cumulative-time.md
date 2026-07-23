@@ -8,8 +8,8 @@
 - [x] 领取“Apple Health 任务似乎无法查看过去累积时间和过去时间段”的反馈。
 - [x] 对照上一项历史分析实现，以脚本化测试设计复现真实剩余缺口。
 - [x] 审计数据查询范围、累计口径、详情/统计入口与刷新生命周期。
-- [~] 复用现有周期导航实现最小修复并补齐 Core/UI contract/XCUITest。
-- [ ] 提交实现 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 复用现有周期导航实现最小修复并补齐 Core/UI contract/XCUITest。
+- [~] 提交实现 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -26,8 +26,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：范围领取、上一实现差距审计与自动化复现设计。
-- [~] Checkpoint B：最小实现、聚焦测试与脚本截图验收。
-- [ ] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint B：最小实现、聚焦测试与脚本截图验收。
+- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## Checkpoint A 审计结论
 
@@ -44,6 +44,19 @@
 - lifetime/all-time Health 总计需要独立 read model 与受控/增量 HealthKit 查询，不能把 sample query 起点粗暴改成 `distantPast`；当前反馈不授权扩项。
 - 当前周期内永久前台时监听外部 Health 新样本、历史列表分页/“查看全部”都不是本次“无法选择过去周期”的根因，留给明确反馈处理。
 
+## Checkpoint B 结果
+
+- 详情请求明确拆分所选 `referenceDate` 与真实 `liveNow`，历史周期使用完整闭合区间，当前周期仍只统计到当前时刻；历史视图停止不必要的实时刷新计划。
+- Apple Health 详情复用现有 `AnalyticsPeriodNavigator`、`AnalyticsPeriodText`、原生 segmented picker 与 `DatePicker`，支持上一/下一周期、日期选择和 Today 返回；Summary 同步显示所选周期，HealthKit 不可用时不展示无效控件。
+- 没有新增第三方依赖或网络实现；继续复用 SwiftUI、HealthKit 与项目既有 Analytics 服务。
+- 最终 Core + UI contract 聚焦批次 54/54 通过（`AppleHealthTaskAnalyticsTests` 11、`TaskUIContractTests` 43）；新增投影测试验证历史周 Gross 4h、Wall 3h、上一比较周期 1h、完整周期 query plan 及当前记录隔离。
+- 最终脚本化 XCUITest：iPhone 17 Pro 1/1 通过（196.370 秒），iPad Pro 11-inch M4 1/1 通过（213.632 秒）；真实点击上一周、断言周期标题变化/下一周期可用/Today 返回、历史累计非零、当前记录排除、历史记录存在，并覆盖 iPad 月视图横竖屏。
+- 已从最终 xcresult 导出并用 `view_image` 检查 iPhone/iPad `historical-period`、历史图表及 iPad 横竖屏截图；周期控件、`Week of Jul 13, 2026`、Gross/Wall 1h10m 和图表层级均正常。
+- macOS 签名 Debug 构建通过；补充的 macOS XCUITest 连续两次在执行任何用例断言前因 XCTest `Timed out while enabling automation mode` 失败，诚实记为基础设施 inconclusive。`.unavailable` 隐藏控件由已通过的精确 UI contract 覆盖。
+- 最终只读审查覆盖 SwiftUI 状态流、周期导航、HealthKit 历史区间、加载状态及 XCUITest，修正了 unavailable 状态控件与重复进度提示后未发现剩余可操作问题。
+
 ## 资源所有权
 
-- 尚未创建本任务 simulator；任何创建的 UDID 必须记录于此并在批次结束后 shutdown/delete。
+- Task33 iPhone 17 Pro（iOS 27.0）：`024C0073-7B1C-47AE-86EB-77F17663CAD4`，已 terminate、shutdown 并删除。
+- Task33 iPad Pro 11-inch M4（iOS 27.0）：`BFABF2B1-9CD0-444F-BC72-18A1FD2645A2`，已 terminate、shutdown 并删除。
+- 已删除本任务 xcresult、截图导出目录和 DerivedData；确认没有 owned runner、xcodebuild、xctest、App 进程、设备条目或 Booted device 残留。

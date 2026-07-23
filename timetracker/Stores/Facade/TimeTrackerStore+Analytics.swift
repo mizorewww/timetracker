@@ -153,10 +153,26 @@ extension TimeTrackerStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> TaskAnalyticsSnapshotRequest {
-        let taskIDs = taskAndDescendantIDs(for: task.id)
-        let evaluation = range.evaluation(
+        taskAnalyticsSnapshotRequest(
+            for: task,
+            range: range,
             referenceDate: now,
             liveNow: now,
+            calendar: calendar
+        )
+    }
+
+    func taskAnalyticsSnapshotRequest(
+        for task: TaskNode,
+        range: AnalyticsRange,
+        referenceDate: Date,
+        liveNow: Date,
+        calendar: Calendar = .current
+    ) -> TaskAnalyticsSnapshotRequest {
+        let taskIDs = taskAndDescendantIDs(for: task.id)
+        let evaluation = range.evaluation(
+            referenceDate: referenceDate,
+            liveNow: liveNow,
             calendar: calendar
         )
         return TaskAnalyticsSnapshotRequest(

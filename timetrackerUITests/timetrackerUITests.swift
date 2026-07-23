@@ -4246,6 +4246,12 @@ final class timetrackerUITests: XCTestCase {
             unavailable.waitForExistence(timeout: 8) &&
                 unavailable.isHittable
         )
+        XCTAssertFalse(
+            app.descendants(matching: .any)[
+                "task.detail.appleHealth.periodFilter"
+            ].exists,
+            "Historical controls must stay hidden when Apple Health is unavailable."
+        )
         #else
         ensureTaskDetailIsReady(named: "Running", in: app)
         assertNoAppleHealthAuthorizationSheet(in: app)
@@ -4307,6 +4313,116 @@ final class timetrackerUITests: XCTestCase {
         try capture(
             "\(screenshotPrefix)-task-detail-apple-health-history-week",
             app: app
+        )
+
+        let periodTitle = app.staticTexts[
+            "task.detail.appleHealth.periodTitle"
+        ].firstMatch
+        scrollUntilHittable(
+            periodTitle,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            periodTitle.waitForExistence(timeout: 5) && periodTitle.isHittable
+        )
+        let currentWeekTitle = periodTitle.label
+        XCTAssertFalse(currentWeekTitle.isEmpty)
+
+        let periodFilter = app.descendants(matching: .any)[
+            "task.detail.appleHealth.periodFilter"
+        ].firstMatch
+        XCTAssertTrue(periodFilter.waitForExistence(timeout: 5))
+        let previousWeek = app.buttons[
+            "analytics.period.previous"
+        ].firstMatch
+        scrollUntilHittable(
+            previousWeek,
+            direction: .down,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            previousWeek.waitForExistence(timeout: 5) &&
+                previousWeek.isHittable && previousWeek.isEnabled
+        )
+        activate(previousWeek)
+
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                periodTitle.exists && periodTitle.label.isEmpty == false &&
+                    periodTitle.label != currentWeekTitle
+            },
+            "Moving to the previous week must update the visible period title."
+        )
+
+        let nextWeek = app.buttons[
+            "analytics.period.next"
+        ].firstMatch
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                nextWeek.exists && nextWeek.isEnabled
+            },
+            "The next-period action must be enabled from a historical week."
+        )
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-task-detail-apple-health-historical-period",
+            app: app
+        )
+
+        let currentHealthRecordIdentifier =
+            "task.detail.history.appleHealthWorkout." +
+            "D0410000-0000-4000-8000-000000000001"
+        let historicalWeekChart = assertAppleHealthHistoricalWeekContent(
+            in: app,
+            excludingIdentifier: currentHealthRecordIdentifier
+        )
+        scrollUntilHittable(
+            historicalWeekChart,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        scrollUntilFullyVisibleAboveSystemChrome(historicalWeekChart, in: app)
+        XCTAssertTrue(
+            isFullyVisibleAboveSystemChrome(historicalWeekChart, in: app)
+        )
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-task-detail-apple-health-historical-week",
+            app: app
+        )
+
+        scrollUntilHittable(
+            periodTitle,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            periodTitle.waitForExistence(timeout: 5) && periodTitle.isHittable
+        )
+        let returnToToday = app.buttons[
+            "analytics.period.today"
+        ].firstMatch
+        scrollUntilHittable(
+            returnToToday,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            returnToToday.waitForExistence(timeout: 5) &&
+                returnToToday.isHittable && returnToToday.isEnabled
+        )
+        activate(returnToToday)
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                periodTitle.exists && periodTitle.label == currentWeekTitle
+            },
+            "Returning to today must restore the current-week period title."
         )
 
         let pickerForMonth = taskDetailRangePicker(in: app)
@@ -6702,6 +6818,94 @@ final class timetrackerUITests: XCTestCase {
 
         scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)
         XCTAssertTrue(isFullyVisibleAboveSystemChrome(chart, in: app))
+        return chart
+    }
+
+    @MainActor
+    @discardableResult
+    private func assertAppleHealthHistoricalWeekContent(
+        in app: XCUIApplication,
+        excludingIdentifier currentHealthRecordIdentifier: String
+    ) -> XCUIElement {
+        let gross = app.descendants(matching: .any)[
+            "task.detail.summary.gross"
+        ].firstMatch
+        scrollUntilHittable(
+            gross,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(gross.waitForExistence(timeout: 8) && gross.isHittable)
+        assertDurationIsNonZero(gross, name: "historical gross")
+
+        let wall = app.descendants(matching: .any)[
+            "task.detail.summary.wall"
+        ].firstMatch
+        scrollUntilHittable(
+            wall,
+            direction: .up,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(wall.waitForExistence(timeout: 5) && wall.isHittable)
+        assertDurationIsNonZero(wall, name: "historical wall")
+
+        let chart = app.descendants(matching: .any)[
+            "task.detail.history.chart"
+        ].firstMatch
+        scrollUntilHittable(
+            chart,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(chart.waitForExistence(timeout: 8) && chart.isHittable)
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                let loadedChart = app.descendants(matching: .any)[
+                    "task.detail.history.chart"
+                ].firstMatch
+                return loadedChart.exists &&
+                    (loadedChart.value as? String) == "Week"
+            },
+            "The chart must reload as a Week snapshot after period navigation."
+        )
+
+        let currentHealthRecord = app.descendants(matching: .any)[
+            currentHealthRecordIdentifier
+        ].firstMatch
+        XCTAssertTrue(
+            currentHealthRecord.waitForNonExistence(timeout: 8),
+            "Today's fixed Apple Health record must not remain in the previous week."
+        )
+
+        let recordIdentifierPrefix =
+            "task.detail.history.appleHealthWorkout."
+        let historicalHealthRecord = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    recordIdentifierPrefix
+                )
+            )
+            .firstMatch
+        scrollUntilHittable(
+            historicalHealthRecord,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(
+            historicalHealthRecord.waitForExistence(timeout: 8) &&
+                historicalHealthRecord.isHittable,
+            "A historical week must expose at least one Apple Health workout."
+        )
+        XCTAssertNotEqual(
+            historicalHealthRecord.identifier,
+            currentHealthRecordIdentifier
+        )
+
         return chart
     }
 

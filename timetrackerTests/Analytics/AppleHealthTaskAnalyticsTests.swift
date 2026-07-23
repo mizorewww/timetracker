@@ -137,6 +137,149 @@ struct AppleHealthTaskAnalyticsTests {
     }
 
     @Test
+    func historicalWeekUsesCompleteSelectedIntervalAndExcludesLiveEvidence()
+        throws {
+        let calendar = utcCalendar()
+        let liveNow = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 23,
+                    hour: 12
+                )
+            )
+        )
+        let historicalReference = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 6,
+                    hour: 12
+                )
+            )
+        )
+        let definition = AppleHealthTaskCatalog.taskDefinition(
+            for: .workout(.running)
+        )
+        let task = TaskNode(
+            title: "Running",
+            parentID: nil,
+            deviceID: "health"
+        )
+        task.id = definition.id
+        task.path = "Exercise / Running"
+        let store = healthStore(
+            task: task,
+            reader: TaskAnalyticsAppleHealthReader(batch: .empty)
+        )
+        let evaluation = AnalyticsRange.week.evaluation(
+            referenceDate: historicalReference,
+            liveNow: liveNow,
+            calendar: calendar
+        )
+        let request = store.taskAnalyticsSnapshotRequest(
+            for: task,
+            range: .week,
+            referenceDate: historicalReference,
+            liveNow: liveNow,
+            calendar: calendar
+        )
+        let service = AppleHealthTaskAnalyticsProjectionService()
+        let plan = service.queryPlan(
+            for: request,
+            now: liveNow,
+            calendar: calendar
+        )
+
+        #expect(request.evaluationKey.interval == evaluation.interval)
+        #expect(evaluation.cutoff == evaluation.interval.end)
+        #expect(plan.comparisonWindow.current == evaluation.interval)
+        #expect(plan.comparisonWindow.basis == .completePeriods)
+        #expect(
+            plan.projectionInterval
+                == DateInterval(
+                    start: plan.comparisonWindow.previous.start,
+                    end: evaluation.interval.end
+                )
+        )
+        #expect(
+            plan.queryInterval
+                == DateInterval(
+                    start: plan.comparisonWindow.previous.start
+                        .addingTimeInterval(
+                            -AppleHealthSleepEpisodePolicy.queryContextDuration
+                        ),
+                    end: evaluation.interval.end
+                )
+        )
+
+        let previousID = try fixedID(60)
+        let historicalEarlyID = try fixedID(61)
+        let historicalLateID = try fixedID(62)
+        let liveID = try fixedID(63)
+        let historicalStart = evaluation.interval.start
+        let previousStart = plan.comparisonWindow.previous.start
+        let snapshot = service.snapshot(
+            role: .workout(.running),
+            taskID: definition.id,
+            title: "Running",
+            path: "Exercise / Running",
+            batch: AppleHealthSampleBatch(
+                workouts: [
+                    workout(
+                        id: previousID,
+                        kind: .running,
+                        start: previousStart.addingTimeInterval(9 * 3_600)
+                            .timeIntervalSince1970,
+                        end: previousStart.addingTimeInterval(10 * 3_600)
+                            .timeIntervalSince1970
+                    ),
+                    workout(
+                        id: historicalEarlyID,
+                        kind: .running,
+                        start: historicalStart.addingTimeInterval(9 * 3_600)
+                            .timeIntervalSince1970,
+                        end: historicalStart.addingTimeInterval(11 * 3_600)
+                            .timeIntervalSince1970
+                    ),
+                    workout(
+                        id: historicalLateID,
+                        kind: .running,
+                        start: historicalStart.addingTimeInterval(10 * 3_600)
+                            .timeIntervalSince1970,
+                        end: historicalStart.addingTimeInterval(12 * 3_600)
+                            .timeIntervalSince1970
+                    ),
+                    workout(
+                        id: liveID,
+                        kind: .running,
+                        start: liveNow.addingTimeInterval(-2 * 3_600)
+                            .timeIntervalSince1970,
+                        end: liveNow.addingTimeInterval(-3_600)
+                            .timeIntervalSince1970
+                    ),
+                ],
+                sleep: []
+            ),
+            request: request,
+            now: liveNow,
+            calendar: calendar
+        )
+
+        #expect(snapshot.overview.grossSeconds == 4 * 3_600)
+        #expect(snapshot.overview.wallSeconds == 3 * 3_600)
+        #expect(snapshot.comparison.previousGrossSeconds == 3_600)
+        #expect(snapshot.comparison.previousWallSeconds == 3_600)
+        #expect(snapshot.recentRecords.map(\.id) == [
+            .appleHealthWorkout(historicalLateID),
+            .appleHealthWorkout(historicalEarlyID),
+        ])
+        #expect(snapshot.recentRecords.contains { $0.id == .appleHealthWorkout(liveID) } == false)
+    }
+
+    @Test
     func queryIncludesPreviousPeriodAndSleepContextWhileEmptyHealthStaysTyped()
         throws {
         let calendar = utcCalendar()

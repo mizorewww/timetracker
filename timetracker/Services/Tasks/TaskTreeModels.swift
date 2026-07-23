@@ -93,3 +93,27 @@ struct TaskExpansionState: Equatable {
         expandedTaskIDs.remove(taskID)
     }
 }
+
+struct TaskCategoryExpansionState: Equatable {
+    private(set) var collapsedSectionIDs: Set<String> = []
+
+    func isExpanded(_ sectionID: String) -> Bool {
+        collapsedSectionIDs.contains(sectionID) == false
+    }
+
+    mutating func setExpanded(_ isExpanded: Bool, for sectionID: String) {
+        if isExpanded {
+            collapsedSectionIDs.remove(sectionID)
+        } else {
+            collapsedSectionIDs.insert(sectionID)
+        }
+    }
+
+    mutating func toggle(_ sectionID: String) {
+        setExpanded(isExpanded(sectionID) == false, for: sectionID)
+    }
+
+    mutating func expand(_ sectionID: String) {
+        collapsedSectionIDs.remove(sectionID)
+    }
+}

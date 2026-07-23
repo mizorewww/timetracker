@@ -7,6 +7,10 @@ struct TaskCategorySectionHeader: View {
     var addTask: (() -> Void)?
     var editCategory: (() -> Void)?
     var deleteCategory: (() -> Void)?
+    var isExpanded: Bool? = nil
+    var toggleExpansion: (() -> Void)? = nil
+    var disclosureAccessibilityIdentifier: String? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 #endif
@@ -20,7 +24,7 @@ struct TaskCategorySectionHeader: View {
             }
         }
         .accessibilityElement(
-            children: addTask == nil && editCategory == nil && deleteCategory == nil ? .combine : .contain
+            children: hasInteractiveControls ? .contain : .combine
         )
     }
 
@@ -39,18 +43,7 @@ struct TaskCategorySectionHeader: View {
 
     private var standardHeader: some View {
         HStack(spacing: 8) {
-            categorySymbol
-            categoryTitle
-
-            if !section.includesInForecast {
-                Image(systemName: "chart.line.downtrend.xyaxis")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .help(AppStrings.localized("taskCategory.forecastDisabled"))
-                    .accessibilityLabel(AppStrings.localized("taskCategory.forecastDisabled"))
-            }
-
-            Spacer(minLength: 8)
+            categoryIdentity(showsForecastIndicator: true)
             categoryActionsMenu
         }
     }
@@ -58,9 +51,7 @@ struct TaskCategorySectionHeader: View {
     private var accessibilityHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                categorySymbol
-                categoryTitle
-                Spacer(minLength: 8)
+                categoryIdentity(showsForecastIndicator: false)
 
                 if section.includesInForecast {
                     categoryActionsMenu
@@ -86,6 +77,84 @@ struct TaskCategorySectionHeader: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    @ViewBuilder
+    private func categoryIdentity(
+        showsForecastIndicator: Bool
+    ) -> some View {
+        if let isExpanded,
+           let toggleExpansion,
+           let disclosureAccessibilityIdentifier {
+            Button {
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+                    toggleExpansion()
+                }
+            } label: {
+                categoryIdentityLabel(
+                    isExpanded: isExpanded,
+                    showsForecastIndicator: showsForecastIndicator
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(section.title)
+            .accessibilityValue(
+                section.includesInForecast
+                    ? ""
+                    : AppStrings.localized("taskCategory.forecastDisabled")
+            )
+            .accessibilityHint(
+                AppStrings.localized(
+                    isExpanded ? "tasks.collapse" : "tasks.expand"
+                )
+            )
+            .accessibilityIdentifier(disclosureAccessibilityIdentifier)
+        } else {
+            categoryIdentityLabel(
+                isExpanded: nil,
+                showsForecastIndicator: showsForecastIndicator
+            )
+        }
+    }
+
+    private func categoryIdentityLabel(
+        isExpanded: Bool?,
+        showsForecastIndicator: Bool
+    ) -> some View {
+        HStack(spacing: 8) {
+            if let isExpanded {
+                Image(
+                    systemName: isExpanded
+                        ? "chevron.down"
+                        : "chevron.forward"
+                )
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 14, alignment: .center)
+                .accessibilityHidden(true)
+            }
+
+            categorySymbol
+            categoryTitle
+
+            if showsForecastIndicator && !section.includesInForecast {
+                Image(systemName: "chart.line.downtrend.xyaxis")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help(AppStrings.localized("taskCategory.forecastDisabled"))
+                    .accessibilityLabel(AppStrings.localized("taskCategory.forecastDisabled"))
+            }
+
+            Spacer(minLength: 8)
+        }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: isExpanded == nil
+                ? nil
+                : AppLayout.minimumInteractiveTarget,
+            alignment: .leading
+        )
+        .contentShape(Rectangle())
+    }
+
     private var categorySymbol: some View {
         Image(systemName: section.iconName)
             .font((compact ? Font.caption : Font.subheadline).weight(.semibold))
@@ -100,6 +169,13 @@ struct TaskCategorySectionHeader: View {
             .textCase(nil)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var hasInteractiveControls: Bool {
+        toggleExpansion != nil ||
+            addTask != nil ||
+            editCategory != nil ||
+            deleteCategory != nil
     }
 
     @ViewBuilder

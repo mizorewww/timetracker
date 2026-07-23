@@ -5,6 +5,7 @@ struct TasksView: View {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var searchText = ""
     @State private var expansionState = TaskExpansionState()
+    @State private var categoryExpansionState = TaskCategoryExpansionState()
     @State private var categoryPendingDeletionID: UUID?
     #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -49,31 +50,13 @@ struct TasksView: View {
                     .listRowBackground(Color.clear)
                 }
 
-                ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
-                    Section {
-                        ForEach(section.rows) { row in
-                            TaskManagementTreeRow(
-                                store: store,
-                                row: row,
-                                supplement: rowSupplements.supplement(
-                                    for: row.taskID
-                                ),
-                                toggleExpansion: {
-                                    expansionState.toggle(row.taskID)
-                                },
-                                openTaskDetail: { task in
-                                    store.openTaskDetail(task.id)
-                                }
-                            )
-                        }
-                    } header: {
-                        TaskCategorySectionHeader(
-                            section: section,
-                            addTask: newRootTaskAction(for: section),
-                            editCategory: editAction(for: section),
-                            deleteCategory: deleteAction(for: section)
-                        )
-                    }
+                ForEach(
+                    store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)
+                ) { section in
+                    taskCategorySection(
+                        section,
+                        rowSupplements: rowSupplements
+                    )
                 }
             } else if matchingTasks.isEmpty {
                 ContentUnavailableView.search(text: query)
@@ -163,6 +146,83 @@ struct TasksView: View {
             }
         } message: {
             Text(.app("taskCategory.delete.confirm.message"))
+        }
+    }
+
+    @ViewBuilder
+    private func taskCategorySection(
+        _ section: TaskTreeVisibleSectionModel,
+        rowSupplements: TaskManagementRowSupplementProjection
+    ) -> some View {
+        if section.rows.isEmpty {
+            Section {
+                taskCategoryRows(
+                    section,
+                    rowSupplements: rowSupplements
+                )
+            } header: {
+                TaskCategorySectionHeader(
+                    section: section,
+                    addTask: newRootTaskAction(for: section),
+                    editCategory: editAction(for: section),
+                    deleteCategory: deleteAction(for: section)
+                )
+            }
+        } else {
+            let isExpanded = categoryExpansionState.isExpanded(section.id)
+            Section(
+                isExpanded: categoryExpansionBinding(for: section.id)
+            ) {
+                taskCategoryRows(
+                    section,
+                    rowSupplements: rowSupplements
+                )
+            } header: {
+                TaskCategorySectionHeader(
+                    section: section,
+                    addTask: newRootTaskAction(for: section),
+                    editCategory: editAction(for: section),
+                    deleteCategory: deleteAction(for: section),
+                    isExpanded: isExpanded,
+                    toggleExpansion: {
+                        categoryExpansionState.toggle(section.id)
+                    },
+                    disclosureAccessibilityIdentifier:
+                        "tasks.category.disclosure.\(section.id)"
+                )
+            }
+        }
+    }
+
+    private func taskCategoryRows(
+        _ section: TaskTreeVisibleSectionModel,
+        rowSupplements: TaskManagementRowSupplementProjection
+    ) -> some View {
+        ForEach(section.rows) { row in
+            TaskManagementTreeRow(
+                store: store,
+                row: row,
+                supplement: rowSupplements.supplement(for: row.taskID),
+                toggleExpansion: {
+                    expansionState.toggle(row.taskID)
+                },
+                openTaskDetail: { task in
+                    store.openTaskDetail(task.id)
+                }
+            )
+        }
+    }
+
+    private func categoryExpansionBinding(
+        for sectionID: String
+    ) -> Binding<Bool> {
+        Binding {
+            categoryExpansionState.isExpanded(sectionID)
+        } set: { isExpanded in
+            categoryExpansionState.setExpanded(
+                isExpanded,
+                for: sectionID
+            )
         }
     }
 

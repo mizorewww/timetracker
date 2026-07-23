@@ -1238,6 +1238,9 @@ struct TaskUIContractTests {
         let categorySource = try sourceText("timetracker/SharedUI/Components/TaskCategoryViews.swift")
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
         let editorSource = try sourceText("timetracker/Features/Tasks/Editor/TaskCategoryEditorViews.swift")
+        let treeModelsSource = try sourceText(
+            "timetracker/Services/Tasks/TaskTreeModels.swift"
+        )
 
         #expect(categorySource.contains(".accessibilityIdentifier(\"tasks.category.actions.\\(section.id)\")"))
         #expect(categorySource.contains("AppStrings.localized(\"common.more\")"))
@@ -1249,6 +1252,20 @@ struct TaskUIContractTests {
         #expect(tasksSource.contains("editCategory: editAction(for: section)"))
         #expect(tasksSource.contains("deleteCategory: deleteAction(for: section)"))
         #expect(sidebarSource.contains("showsBottomDivider: true"))
+        #expect(treeModelsSource.contains("struct TaskCategoryExpansionState"))
+        #expect(treeModelsSource.contains("collapsedSectionIDs: Set<String> = []"))
+        #expect(tasksSource.contains("Section(\n                isExpanded: categoryExpansionBinding"))
+        #expect(tasksSource.contains("tasks.category.disclosure.\\(section.id)"))
+        #expect(sidebarSource.contains("isExpanded: categoryExpansionBinding"))
+        #expect(sidebarSource.contains(".listStyle(.sidebar)"))
+        #expect(sidebarSource.contains("sidebar.category.disclosure.\\(section.id)"))
+        #expect(sidebarSource.contains("categoryExpansionState.expand(section.id)"))
+        #expect(categorySource.contains("withAnimation(reduceMotion ? nil : .snappy(duration: 0.22))"))
+        #expect(categorySource.contains("AppStrings.localized(\"taskCategory.forecastDisabled\")"))
+        #expect(categorySource.contains("? \"chevron.down\""))
+        #expect(categorySource.contains(": \"chevron.forward\""))
+        #expect(categorySource.contains("AppLayout.minimumInteractiveTarget"))
+        #expect(categorySource.contains("children: hasInteractiveControls ? .contain : .combine"))
         #expect(editorSource.contains(".confirmationDialog("))
         #expect(editorSource.contains("Button(AppStrings.localized(\"taskCategory.delete\"), role: .destructive"))
     }

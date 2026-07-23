@@ -9,6 +9,7 @@ struct SidebarView: View {
     let store: TimeTrackerStore
     let onNavigate: () -> Void
     @State private var expansionState = TaskExpansionState()
+    @State private var categoryExpansionState = TaskCategoryExpansionState()
 
     init(store: TimeTrackerStore, onNavigate: @escaping () -> Void = {}) {
         self.store = store
@@ -33,30 +34,80 @@ struct SidebarView: View {
                 }
             }
 
-            ForEach(store.taskTreeSections(expandedTaskIDs: expansionState.expandedTaskIDs)) { section in
-                Section {
-                    ForEach(section.rows) { row in
-                        SidebarTaskTreeRowContainer(
-                            store: store,
-                            row: row,
-                            expansionState: $expansionState
-                        )
-                        .tag(SidebarSelection.task(row.taskID))
-                    }
-                } header: {
-                    TaskCategorySectionHeader(
-                        section: section,
-                        compact: true,
-                        showsBottomDivider: true
-                    )
-                }
+            ForEach(
+                store.taskTreeSections(
+                    expandedTaskIDs: expansionState.expandedTaskIDs
+                )
+            ) { section in
+                sidebarCategorySection(section)
             }
         }
+        .listStyle(.sidebar)
         .navigationTitle(AppStrings.localized("app.name"))
         .onAppear(perform: expandAncestorsForCurrentTask)
         .onChange(of: store.tasksRoute) { _, _ in expandAncestorsForCurrentTask() }
         .onChange(of: store.taskTreeReadIndexRevision) { _, _ in
             expandAncestorsForCurrentTask()
+        }
+    }
+
+    @ViewBuilder
+    private func sidebarCategorySection(
+        _ section: TaskTreeVisibleSectionModel
+    ) -> some View {
+        if section.rows.isEmpty {
+            Section {
+                sidebarTaskRows(in: section)
+            } header: {
+                sidebarCategoryHeader(section)
+            }
+        } else {
+            Section(
+                isExpanded: categoryExpansionBinding(for: section.id)
+            ) {
+                sidebarTaskRows(in: section)
+            } header: {
+                sidebarCategoryHeader(section)
+            }
+        }
+    }
+
+    private func sidebarTaskRows(
+        in section: TaskTreeVisibleSectionModel
+    ) -> some View {
+        ForEach(section.rows) { row in
+            SidebarTaskTreeRowContainer(
+                store: store,
+                row: row,
+                expansionState: $expansionState
+            )
+            .tag(SidebarSelection.task(row.taskID))
+        }
+    }
+
+    private func sidebarCategoryHeader(
+        _ section: TaskTreeVisibleSectionModel
+    ) -> some View {
+        TaskCategorySectionHeader(
+            section: section,
+            compact: true,
+            showsBottomDivider: true
+        )
+        .accessibilityIdentifier(
+            "sidebar.category.disclosure.\(section.id)"
+        )
+    }
+
+    private func categoryExpansionBinding(
+        for sectionID: String
+    ) -> Binding<Bool> {
+        Binding {
+            categoryExpansionState.isExpanded(sectionID)
+        } set: { isExpanded in
+            categoryExpansionState.setExpanded(
+                isExpanded,
+                for: sectionID
+            )
         }
     }
 
@@ -93,6 +144,14 @@ struct SidebarView: View {
               store.isTaskDetailRouteValid(taskID) else { return }
         for ancestorID in store.ancestorTaskIDs(for: taskID) {
             expansionState.expand(ancestorID)
+        }
+        let sections = store.taskTreeSections(
+            expandedTaskIDs: expansionState.expandedTaskIDs
+        )
+        if let section = sections.first(where: { section in
+            section.rows.contains { $0.taskID == taskID }
+        }) {
+            categoryExpansionState.expand(section.id)
         }
     }
 

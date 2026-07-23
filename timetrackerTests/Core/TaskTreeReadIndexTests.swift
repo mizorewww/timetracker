@@ -208,6 +208,24 @@ struct TaskTreeReadIndexTests {
     }
 
     @Test
+    func categoryExpansionDefaultsOpenAndKeepsSectionsIndependent() {
+        var state = TaskCategoryExpansionState()
+
+        #expect(state.isExpanded("category-work"))
+        #expect(state.isExpanded("uncategorized"))
+
+        state.toggle("category-work")
+        #expect(state.isExpanded("category-work") == false)
+        #expect(state.isExpanded("uncategorized"))
+
+        state.setExpanded(false, for: "uncategorized")
+        state.expand("category-work")
+        #expect(state.isExpanded("category-work"))
+        #expect(state.isExpanded("uncategorized") == false)
+        #expect(state.isExpanded("category-created-later"))
+    }
+
+    @Test
     func swiftUITreeSurfacesDoNotReintroduceWholeTreeOrPerRowFiltering() throws {
         let tasksViewSource = try sourceText(
             "timetracker/Features/Tasks/Management/TasksViews.swift"

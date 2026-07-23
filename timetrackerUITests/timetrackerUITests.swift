@@ -142,6 +142,297 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskCategoryDisclosureCollapsesAndRestoresHierarchy() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        let workDisclosure = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.category.disclosure.",
+                "Work"
+            )
+        ).firstMatch
+        let studyDisclosure = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.category.disclosure.",
+                "Study"
+            )
+        ).firstMatch
+        let workRoot = taskRow(named: "Time Tracker App", in: app)
+        let workChild = taskRow(named: "Design System", in: app)
+
+        scrollUntilHittable(
+            workDisclosure,
+            direction: .down,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            workDisclosure.waitForExistence(timeout: 5) &&
+                workDisclosure.isHittable,
+            "A non-empty Category must expose an actionable disclosure."
+        )
+        XCTAssertTrue(workRoot.waitForExistence(timeout: 5))
+        let rootIdentifierPrefix = "tasks.row."
+        XCTAssertTrue(workRoot.identifier.hasPrefix(rootIdentifierPrefix))
+        let rootTaskID = workRoot.identifier.dropFirst(rootIdentifierPrefix.count)
+        let rootDisclosure = app.buttons[
+            "tasks.disclosure.\(rootTaskID)"
+        ].firstMatch
+        XCTAssertTrue(
+            rootDisclosure.waitForExistence(timeout: 5) &&
+                rootDisclosure.isHittable
+        )
+        activate(rootDisclosure)
+        XCTAssertTrue(
+            workChild.waitForExistence(timeout: 5),
+            "The fixture must expose Category → root task → child task."
+        )
+
+        scrollUntilHittable(
+            workDisclosure,
+            direction: .down,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(workDisclosure.isHittable)
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-tasks-category-expanded", app: app)
+
+        let sectionID = workDisclosure.identifier.dropFirst(
+            "tasks.category.disclosure.".count
+        )
+        let workActions = app.descendants(matching: .any)[
+            "tasks.category.actions.\(sectionID)"
+        ].firstMatch
+        activate(workDisclosure)
+        XCTAssertTrue(
+            workRoot.waitForNonExistence(timeout: 5),
+            "Collapsing Work must hide its root tasks."
+        )
+        XCTAssertTrue(
+            workChild.waitForNonExistence(timeout: 5),
+            "Collapsing Work must hide its expanded descendants."
+        )
+        XCTAssertTrue(workDisclosure.exists)
+        XCTAssertTrue(workActions.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            studyDisclosure.waitForExistence(timeout: 5),
+            "Collapsing one Category must leave the other Category available."
+        )
+        waitForScreenshotTransition()
+        try capture("\(prefix)-tasks-category-collapsed", app: app)
+
+        XCTAssertTrue(workDisclosure.isHittable)
+        activate(workDisclosure)
+        XCTAssertTrue(workRoot.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            workChild.waitForExistence(timeout: 5),
+            "Re-expanding Work must preserve the nested task expansion state."
+        )
+        waitForScreenshotTransition()
+        try capture("\(prefix)-tasks-category-restored", app: app)
+
+        #if os(iOS)
+        if prefix == "ipad" {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            waitForScreenshotTransition()
+            scrollUntilHittable(
+                workDisclosure,
+                direction: .down,
+                maximumScrolls: 8,
+                in: app
+            )
+            XCTAssertTrue(workDisclosure.isHittable && workChild.exists)
+            try capture(
+                "ipad-tasks-category-restored-landscape",
+                app: app
+            )
+        }
+        #endif
+
+        scrollUntilHittable(workChild, direction: .up, in: app)
+        XCTAssertTrue(workChild.isHittable)
+        activate(workChild)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail"]
+                .waitForExistence(timeout: 8),
+            "Category disclosure must not break task navigation."
+        )
+    }
+
+    @MainActor
+    func testSidebarCategoryDisclosurePreservesHierarchyAndAutoExpandsCurrentTask() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        let prefix = platformScreenshotPrefix(in: app)
+        #if os(iOS)
+        guard prefix == "ipad" else {
+            throw XCTSkip("The persistent Sidebar is verified on iPad and macOS.")
+        }
+        #endif
+
+        let mainWorkDisclosure = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "tasks.category.disclosure.",
+                "Work"
+            )
+        ).firstMatch
+        scrollUntilHittable(
+            mainWorkDisclosure,
+            direction: .down,
+            maximumScrolls: 8,
+            in: app
+        )
+        XCTAssertTrue(
+            mainWorkDisclosure.waitForExistence(timeout: 5) &&
+                mainWorkDisclosure.isHittable
+        )
+        let sectionID = mainWorkDisclosure.identifier.dropFirst(
+            "tasks.category.disclosure.".count
+        )
+        let sidebarCategory = app.descendants(matching: .any)[
+            "sidebar.category.disclosure.\(sectionID)"
+        ].firstMatch
+
+        if !sidebarCategory.waitForExistence(timeout: 2) ||
+            !sidebarCategory.isHittable {
+            let identifiedToggle = app.descendants(matching: .any)[
+                "sidebar.show"
+            ].firstMatch
+            let systemToggle = app.buttons["Show Sidebar"].firstMatch
+            if identifiedToggle.waitForExistence(timeout: 2),
+               identifiedToggle.isHittable {
+                activate(identifiedToggle)
+            } else if systemToggle.waitForExistence(timeout: 2),
+                      systemToggle.isHittable {
+                activate(systemToggle)
+            }
+        }
+        XCTAssertTrue(
+            sidebarCategory.waitForExistence(timeout: 5) &&
+                sidebarCategory.isHittable,
+            "The Work Category must expose its native Sidebar disclosure header."
+        )
+
+        let sidebarRoot = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                "Time Tracker App"
+            )
+        ).firstMatch
+        let sidebarRootDisclosure = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@",
+                "sidebar.disclosure.",
+                "Time Tracker App"
+            )
+        ).firstMatch
+        let sidebarChild = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                "Design System"
+            )
+        ).firstMatch
+
+        XCTAssertTrue(sidebarRoot.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            sidebarRootDisclosure.waitForExistence(timeout: 5) &&
+                sidebarRootDisclosure.isHittable
+        )
+        activate(sidebarRootDisclosure)
+        XCTAssertTrue(
+            sidebarChild.waitForExistence(timeout: 5),
+            "The Sidebar fixture must expose Category → root task → child task."
+        )
+        try capture("\(prefix)-sidebar-category-expanded", app: app)
+
+        activate(sidebarCategory)
+        XCTAssertTrue(
+            sidebarRoot.waitForNonExistence(timeout: 5) &&
+                sidebarChild.waitForNonExistence(timeout: 5),
+            "Collapsing a Sidebar Category must hide its full task hierarchy."
+        )
+        let studyCategory = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "sidebar.category.disclosure.",
+                "Study"
+            )
+        ).firstMatch
+        XCTAssertTrue(
+            studyCategory.waitForExistence(timeout: 5),
+            "Collapsing Work must leave the Study Sidebar Category available."
+        )
+        let mainWorkRoot = taskRow(named: "Time Tracker App", in: app)
+        XCTAssertTrue(
+            mainWorkRoot.waitForExistence(timeout: 5),
+            "Sidebar and Tasks-list Category expansion must stay independent."
+        )
+        waitForScreenshotTransition()
+        try capture("\(prefix)-sidebar-category-collapsed", app: app)
+
+        XCTAssertTrue(sidebarCategory.isHittable)
+        activate(sidebarCategory)
+        XCTAssertTrue(sidebarRoot.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            sidebarChild.waitForExistence(timeout: 5),
+            "Re-expanding the Sidebar Category must preserve nested task expansion."
+        )
+        waitForScreenshotTransition()
+        try capture("\(prefix)-sidebar-category-restored", app: app)
+
+        activate(sidebarCategory)
+        XCTAssertTrue(sidebarRoot.waitForNonExistence(timeout: 5))
+        scrollUntilHittable(mainWorkRoot, direction: .up, in: app)
+        XCTAssertTrue(mainWorkRoot.isHittable)
+        activate(mainWorkRoot)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["task.detail"]
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertTrue(
+            sidebarRoot.waitForExistence(timeout: 5),
+            "Navigating to a task must automatically reveal its collapsed Sidebar Category."
+        )
+        waitForScreenshotTransition()
+        try capture("\(prefix)-sidebar-category-auto-expanded", app: app)
+    }
+
+    @MainActor
     func testPhoneSettingsSheetDismissesToAnUnmodifiedTodayStack() throws {
         #if os(macOS)
         throw XCTSkip("The phone Settings sheet requires an iOS simulator.")
@@ -8005,7 +8296,19 @@ final class timetrackerUITests: XCTestCase {
         #if os(iOS)
         let screenshot = XCUIScreen.main.screenshot()
         #else
-        let screenshot = app.screenshot()
+        let mainWindow = try XCTUnwrap(
+            app.windows.allElementsBoundByIndex.max { lhs, rhs in
+                lhs.frame.width * lhs.frame.height <
+                    rhs.frame.width * rhs.frame.height
+            },
+            "The macOS app window must exist before capturing \(name)."
+        )
+        let screenshot = mainWindow.screenshot()
+        XCTAssertGreaterThan(
+            screenshot.pngRepresentation.count,
+            1_024,
+            "The macOS app window must produce a valid PNG for \(name)."
+        )
         #endif
         try recordScreenshot(screenshot, name: name)
     }
@@ -8052,41 +8355,40 @@ final class timetrackerUITests: XCTestCase {
             origin: .zero,
             size: primaryScreen.frame.size
         )
-        let originalFrame = uiWindow.frame
-        XCTAssertLessThanOrEqual(
-            originalFrame.width,
-            primaryScreenFrame.width,
-            "The macOS UI-test window must fit the primary screen width"
-        )
-        XCTAssertLessThanOrEqual(
-            originalFrame.height,
-            primaryScreenFrame.height,
-            "The macOS UI-test window must fit the primary screen height"
-        )
+        if !primaryScreenFrame.contains(uiWindow.frame) {
+            let windowMenu = app.menuBars.menuBarItems["Window"].firstMatch
+            XCTAssertTrue(
+                windowMenu.waitForExistence(timeout: 3) &&
+                    windowMenu.isHittable,
+                "The macOS Window menu must be scriptable by XCUITest."
+            )
+            windowMenu.click()
 
-        let menuBarInset = primaryScreen.frame.maxY - primaryScreen.visibleFrame.maxY
-        let targetOrigin = CGPoint(
-            x: min(
-                primaryScreen.visibleFrame.minX + 64,
-                primaryScreenFrame.maxX - originalFrame.width
-            ),
-            y: min(
-                menuBarInset + 64,
-                primaryScreenFrame.maxY - originalFrame.height
-            )
-        )
-        if !primaryScreenFrame.contains(originalFrame) {
-            let titleBarCoordinate = uiWindow.coordinate(
-                withNormalizedOffset: CGVector(dx: 0.85, dy: 0.02)
-            )
-            let destination = titleBarCoordinate.withOffset(CGVector(
-                dx: targetOrigin.x - originalFrame.minX,
-                dy: targetOrigin.y - originalFrame.minY
-            ))
-            titleBarCoordinate.click(
-                forDuration: 0.2,
-                thenDragTo: destination
-            )
+            let targetDisplayItem = app.menuItems
+                .matching(identifier: "_moveToDisplay:")
+                .allElementsBoundByIndex
+                .first { item in
+                    item.title.localizedCaseInsensitiveContains(
+                        primaryScreen.localizedName
+                    ) || item.label.localizedCaseInsensitiveContains(
+                        primaryScreen.localizedName
+                    )
+                }
+            if let targetDisplayItem,
+               targetDisplayItem.waitForExistence(timeout: 3),
+               targetDisplayItem.isHittable {
+                targetDisplayItem.click()
+            } else {
+                let centerItem = app.menuItems
+                    .matching(identifier: "_zoomCenter:")
+                    .firstMatch
+                XCTAssertTrue(
+                    centerItem.waitForExistence(timeout: 3) &&
+                        centerItem.isHittable,
+                    "The Window menu must expose a scriptable move or center action."
+                )
+                centerItem.click()
+            }
         }
 
         app.activate()

@@ -1023,6 +1023,454 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayHeatmapPeriodAdaptsAndPersistsAcrossRelaunch() throws {
+        defer { cleanupPersistentUITestStore() }
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            route: "settings",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-reset-demo-preferences",
+                "--uitesting-persistent-store",
+                "--uitesting-reset-persistent-store"
+            ]
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        #if os(iOS)
+        let general = app.buttons["settings.category.general"].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                general,
+                timeout: 5,
+                diagnosticName: "heatmap-period-settings-general",
+                in: app
+            ) && general.isHittable
+        )
+        activate(general)
+        #endif
+
+        let periodPicker = app.descendants(matching: .any)[
+            "settings.todayHeatmap.period"
+        ].firstMatch
+        scrollUntilHittable(
+            periodPicker,
+            direction: .up,
+            maximumScrolls: 10,
+            in: app
+        )
+        XCTAssertTrue(
+            waitForElement(
+                periodPicker,
+                timeout: 5,
+                diagnosticName: "heatmap-period-picker",
+                in: app
+            ) && periodPicker.isHittable
+        )
+        let periodPresentation = {
+            [
+                periodPicker.label,
+                periodPicker.value.map { String(describing: $0) } ?? "",
+            ].joined(separator: " ")
+        }
+        XCTAssertTrue(
+            periodPresentation().contains("1 Year"),
+            "The reset preference must expose the one-year default."
+        )
+
+        activate(periodPicker)
+        let oneMonthOptionIdentifier =
+            "settings.todayHeatmap.period.oneMonth"
+        #if os(macOS)
+        let oneMonth = app.menuItems.matching(
+            NSPredicate(
+                format: "identifier == %@ OR label == %@",
+                oneMonthOptionIdentifier,
+                "1 Month"
+            )
+        ).firstMatch
+        #else
+        let oneMonth = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ OR label == %@",
+                oneMonthOptionIdentifier,
+                "1 Month"
+            )
+        ).firstMatch
+        #endif
+        XCTAssertTrue(
+            waitForElement(
+                oneMonth,
+                timeout: 5,
+                diagnosticName: "heatmap-period-one-month-option",
+                in: app
+            ) && oneMonth.isHittable
+        )
+        activate(oneMonth)
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                periodPresentation().contains("1 Month")
+            },
+            "Choosing one month must update the native Picker immediately."
+        )
+
+        let prefix = platformScreenshotPrefix(in: app)
+        waitForScreenshotTransition()
+        #if os(macOS)
+        let settingsWindow = try XCTUnwrap(
+            app.windows.allElementsBoundByIndex.first { window in
+                window.descendants(matching: .any)["settings.view"].exists
+            },
+            "The macOS Settings window must exist for screenshot acceptance."
+        )
+        try placeWindowOnPrimaryScreen(settingsWindow, in: app)
+        try capture(
+            "\(prefix)-settings-today-heatmap-one-month",
+            element: settingsWindow
+        )
+        #else
+        try capture(
+            "\(prefix)-settings-today-heatmap-one-month",
+            app: app
+        )
+        #endif
+
+        try dismissSettingsPresentationIfNeeded(in: app)
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let checklistGrid = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label == %@",
+                "Time Tracker App activity Heatmap"
+            )
+        ).firstMatch
+        let heatmapsHeader = app.descendants(matching: .any)[
+            "home.heatmaps.header"
+        ].firstMatch
+        scrollUntilHittable(
+            heatmapsHeader,
+            direction: .up,
+            maximumScrolls: 10,
+            in: app
+        )
+        XCTAssertTrue(heatmapsHeader.waitForExistence(timeout: 8))
+        scrollUntilFullyVisibleAboveSystemChrome(checklistGrid, in: app)
+        XCTAssertTrue(
+            waitForElement(
+                checklistGrid,
+                timeout: 8,
+                diagnosticName: "heatmap-period-checklist-grid",
+                in: app
+            )
+        )
+        let gridIdentifierPrefix = "home.heatmap.grid."
+        XCTAssertTrue(checklistGrid.identifier.hasPrefix(gridIdentifierPrefix))
+        let taskID = String(
+            checklistGrid.identifier.dropFirst(gridIdentifierPrefix.count)
+        )
+        XCTAssertNotNil(UUID(uuidString: taskID))
+        let checklistGridIdentifier = checklistGrid.identifier
+
+        let rangeIdentifier = "home.heatmap.range.\(taskID)"
+        let chartIdentifier = "home.heatmap.chart.\(taskID)"
+        let range = app.descendants(matching: .any)[rangeIdentifier].firstMatch
+        let chart = app.descendants(matching: .any)[chartIdentifier].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                range,
+                timeout: 5,
+                diagnosticName: "heatmap-period-range",
+                in: app
+            )
+        )
+        XCTAssertTrue(
+            waitForElement(
+                chart,
+                timeout: 5,
+                diagnosticName: "heatmap-period-chart",
+                in: app
+            )
+        )
+        let oneMonthRange = [
+            range.label,
+            range.value.map { String(describing: $0) } ?? "",
+        ].joined(separator: " ")
+        XCTAssertFalse(oneMonthRange.trimmingCharacters(in: .whitespaces).isEmpty)
+        XCTAssertGreaterThanOrEqual(
+            chart.frame.height,
+            138,
+            "The short range must enlarge the Heatmap cells on every platform."
+        )
+        XCTAssertLessThanOrEqual(
+            chart.frame.width,
+            checklistGrid.frame.width + 2,
+            "A one-month Heatmap must fit its card without horizontal overflow."
+        )
+        XCTAssertLessThanOrEqual(
+            chart.frame.maxY,
+            range.frame.minY + 2,
+            "The chart and range footer must keep separate visual regions."
+        )
+        let oneMonthChartSize = chart.frame.size
+        waitForScreenshotTransition()
+        #if os(macOS)
+        try capture(
+            "\(prefix)-home-today-heatmap-one-month",
+            element: checklistGrid
+        )
+        #else
+        try capture(
+            "\(prefix)-home-today-heatmap-one-month",
+            app: app
+        )
+        #endif
+
+        app.terminate()
+
+        let relaunchedApp = launchApp(
+            route: "settings",
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-persistent-store"
+            ]
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: relaunchedApp)
+        #endif
+        XCTAssertTrue(
+            relaunchedApp.descendants(matching: .any)["settings.view"]
+                .waitForExistence(timeout: 8)
+        )
+
+        #if os(iOS)
+        let persistedGeneral = relaunchedApp.buttons[
+            "settings.category.general"
+        ].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                persistedGeneral,
+                timeout: 5,
+                diagnosticName: "heatmap-period-persisted-general",
+                in: relaunchedApp
+            ) && persistedGeneral.isHittable
+        )
+        activate(persistedGeneral)
+        #endif
+
+        let persistedPeriodPicker = relaunchedApp.descendants(matching: .any)[
+            "settings.todayHeatmap.period"
+        ].firstMatch
+        scrollUntilHittable(
+            persistedPeriodPicker,
+            direction: .up,
+            maximumScrolls: 10,
+            in: relaunchedApp
+        )
+        XCTAssertTrue(
+            waitForElement(
+                persistedPeriodPicker,
+                timeout: 5,
+                diagnosticName: "heatmap-period-persisted-picker",
+                in: relaunchedApp
+            ) && persistedPeriodPicker.isHittable
+        )
+        let persistedPeriodPresentation = [
+            persistedPeriodPicker.label,
+            persistedPeriodPicker.value.map {
+                String(describing: $0)
+            } ?? "",
+        ].joined(separator: " ")
+        XCTAssertTrue(
+            persistedPeriodPresentation.contains("1 Month"),
+            "The one-month period must survive a process relaunch."
+        )
+
+        relaunchedApp.terminate()
+        let persistedHomeApp = launchApp(
+            route: "today",
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-persistent-store"
+            ]
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: persistedHomeApp)
+        #endif
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: persistedHomeApp
+        )
+        XCTAssertTrue(homeIsReady(in: persistedHomeApp))
+
+        let persistedGrid = persistedHomeApp.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label == %@",
+                "Time Tracker App activity Heatmap"
+            )
+        ).firstMatch
+        let persistedHeatmapsHeader = persistedHomeApp.descendants(matching: .any)[
+            "home.heatmaps.header"
+        ].firstMatch
+        scrollUntilHittable(
+            persistedHeatmapsHeader,
+            direction: .up,
+            maximumScrolls: 10,
+            in: persistedHomeApp
+        )
+        XCTAssertTrue(persistedHeatmapsHeader.waitForExistence(timeout: 8))
+        scrollUntilFullyVisibleAboveSystemChrome(
+            persistedGrid,
+            in: persistedHomeApp
+        )
+        XCTAssertTrue(
+            waitForElement(
+                persistedGrid,
+                timeout: 8,
+                diagnosticName: "heatmap-period-persisted-grid",
+                in: persistedHomeApp
+            )
+        )
+        XCTAssertEqual(persistedGrid.identifier, checklistGridIdentifier)
+
+        let persistedRange = persistedHomeApp.descendants(matching: .any)[
+            rangeIdentifier
+        ].firstMatch
+        let persistedChart = persistedHomeApp.descendants(matching: .any)[
+            chartIdentifier
+        ].firstMatch
+        XCTAssertTrue(
+            waitForElement(
+                persistedRange,
+                timeout: 5,
+                diagnosticName: "heatmap-period-persisted-range",
+                in: persistedHomeApp
+            )
+        )
+        XCTAssertTrue(
+            waitForElement(
+                persistedChart,
+                timeout: 5,
+                diagnosticName: "heatmap-period-persisted-chart",
+                in: persistedHomeApp
+            )
+        )
+        let persistedRangePresentation = [
+            persistedRange.label,
+            persistedRange.value.map { String(describing: $0) } ?? "",
+        ].joined(separator: " ")
+        XCTAssertFalse(
+            persistedRangePresentation
+                .trimmingCharacters(in: .whitespaces)
+                .isEmpty
+        )
+        XCTAssertEqual(
+            persistedChart.frame.width,
+            oneMonthChartSize.width,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            persistedChart.frame.height,
+            oneMonthChartSize.height,
+            accuracy: 1
+        )
+        waitForScreenshotTransition()
+        #if os(macOS)
+        try capture(
+            "\(platformScreenshotPrefix(in: persistedHomeApp))-home-today-heatmap-one-month-persisted",
+            element: persistedGrid
+        )
+        #else
+        try capture(
+            "\(platformScreenshotPrefix(in: persistedHomeApp))-home-today-heatmap-one-month-persisted",
+            app: persistedHomeApp
+        )
+        #endif
+    }
+
+    @MainActor
+    private func cleanupPersistentUITestStore() {
+        let app = launchApp(
+            seedsDemoData: false,
+            additionalLaunchArguments: [
+                "--uitesting-clean-persistent-store"
+            ]
+        )
+        app.terminate()
+    }
+
+    @MainActor
+    private func dismissSettingsPresentationIfNeeded(
+        in app: XCUIApplication
+    ) throws {
+        #if os(macOS)
+        guard let discoveredSettingsWindow = app.windows.allElementsBoundByIndex
+            .first(where: { window in
+                window.descendants(matching: .any)["settings.view"].exists
+            }) else {
+            XCTFail("The macOS Settings window must exist before dismissal.")
+            return
+        }
+        let settingsWindowIdentifier = discoveredSettingsWindow.identifier
+        let settingsWindow = settingsWindowIdentifier.isEmpty
+            ? discoveredSettingsWindow
+            : app.windows.matching(
+                identifier: settingsWindowIdentifier
+            ).firstMatch
+        try placeWindowOnPrimaryScreen(settingsWindow, in: app)
+        settingsWindow.typeKey("w", modifierFlags: .command)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"]
+                .firstMatch.waitForNonExistence(timeout: 5),
+            "Closing macOS Settings must uncover the main window."
+        )
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+        #elseif os(iOS)
+        guard platformScreenshotPrefix(in: app) == "iphone" else {
+            return
+        }
+
+        let settingsBack = app.navigationBars["General"]
+            .buttons["Settings"]
+            .firstMatch
+        if settingsBack.waitForExistence(timeout: 2), settingsBack.isHittable {
+            activate(settingsBack)
+        }
+
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(
+            done.waitForExistence(timeout: 3) && done.isHittable,
+            "The phone Settings sheet must expose its system Done action."
+        )
+        activate(done)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"]
+                .firstMatch.waitForNonExistence(timeout: 5),
+            "Dismissing phone Settings must restore the tab shell."
+        )
+        #endif
+    }
+
+    @MainActor
     func testTaskPickerShowsRunningAndSelectedPassiveIndicatorsTogether() throws {
         #if os(iOS)
         XCUIDevice.shared.orientation = .portrait
@@ -8587,8 +9035,20 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication
     ) throws {
         let uiWindow = app.windows.firstMatch
+        try placeWindowOnPrimaryScreen(uiWindow, in: app)
+    }
+
+    @MainActor
+    private func placeWindowOnPrimaryScreen(
+        _ uiWindow: XCUIElement,
+        in app: XCUIApplication
+    ) throws {
         XCTAssertTrue(uiWindow.waitForExistence(timeout: 5))
         app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+        uiWindow.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.85, dy: 0.02)
+        ).click()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
         let primaryScreen = try XCTUnwrap(
             NSScreen.screens.first { $0.frame.origin == .zero },

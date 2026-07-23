@@ -16,6 +16,12 @@ extension SettingsView {
 
             TodayHeatmapSettingsSection(
                 store: store,
+                onChangePeriod: { period in
+                    handleSettingsStoreMutation(
+                        store.setTodayHeatmapPeriod(period),
+                        title: AppStrings.localized("heatmap.settings.title")
+                    )
+                },
                 onChangeSelection: { taskIDs in
                     handleSettingsStoreMutation(
                         store.setTodayHeatmapTaskIDs(taskIDs),

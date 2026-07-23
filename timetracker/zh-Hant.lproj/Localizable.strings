@@ -1154,10 +1154,15 @@
 "Title" = "標題";
 "Task" = "任務";
 "heatmap.settings.title" = "活躍度熱力圖";
+"heatmap.settings.period" = "預設範圍";
+"heatmap.settings.period.oneMonth" = "1 個月";
+"heatmap.settings.period.threeMonths" = "3 個月";
+"heatmap.settings.period.sixMonths" = "6 個月";
+"heatmap.settings.period.oneYear" = "1 年";
 "heatmap.settings.tasks" = "統計任務";
 "heatmap.settings.off" = "關閉";
 "heatmap.settings.taskCount" = "%lld 項選擇";
-"heatmap.settings.footer" = "選擇要顯示在 Today 的任務。每項選擇都有獨立熱力圖並包含其子任務；同時選擇父子任務會顯示兩張獨立熱力圖。";
+"heatmap.settings.footer" = "選擇 Today 中熱力圖的預設範圍和任務。每項選擇都有獨立熱力圖並包含其子任務；同時選擇父子任務會顯示兩張獨立熱力圖。";
 "task.detail.heatmap.title" = "活躍度熱力圖";
 "task.detail.heatmap.toggle" = "在 Today 中顯示此任務";
 "task.detail.heatmap.footer" = "預設關閉。透過 Blossom 顏色選擇器設定的任務顏色會成為此熱力圖的主題色，子任務活動也會計入。";

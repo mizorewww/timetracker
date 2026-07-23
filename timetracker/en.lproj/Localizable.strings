@@ -1154,10 +1154,15 @@
 "Title" = "Title";
 "Task" = "Task";
 "heatmap.settings.title" = "Activity Heatmap";
+"heatmap.settings.period" = "Default Range";
+"heatmap.settings.period.oneMonth" = "1 Month";
+"heatmap.settings.period.threeMonths" = "3 Months";
+"heatmap.settings.period.sixMonths" = "6 Months";
+"heatmap.settings.period.oneYear" = "1 Year";
 "heatmap.settings.tasks" = "Tracked Tasks";
 "heatmap.settings.off" = "Off";
 "heatmap.settings.taskCount" = "%lld Selections";
-"heatmap.settings.footer" = "Choose the tasks shown in Today. Every selection gets its own Heatmap and includes its subtasks; selecting both a parent and child shows two separate Heatmaps.";
+"heatmap.settings.footer" = "Choose the default range and tasks shown in Today. Every selection gets its own Heatmap and includes its subtasks; selecting both a parent and child shows two separate Heatmaps.";
 "task.detail.heatmap.title" = "Activity Heatmap";
 "task.detail.heatmap.toggle" = "Show This Task in Today";
 "task.detail.heatmap.footer" = "Off by default. The task color selected with the Blossom color picker becomes this Heatmap’s theme, and subtasks contribute to its daily activity.";

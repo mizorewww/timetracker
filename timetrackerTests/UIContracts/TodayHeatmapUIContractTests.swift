@@ -66,6 +66,71 @@ struct TodayHeatmapUIContractTests {
     }
 
     @Test
+    func heatmapPeriodUsesANativeMenuAndSyncedPreferenceCommand() throws {
+        let model = try sourceText(
+            "timetracker/Models/ActivityHeatmapModels.swift"
+        )
+        let preferences = try sourceText(
+            "timetracker/Models/SyncedPreferences.swift"
+        )
+        let sanitizer = try sourceText(
+            "timetracker/Models/PreferenceValueSanitizer.swift"
+        )
+        let commands = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+CloudPreferenceCommands.swift"
+        )
+        let section = try sourceText(
+            "timetracker/Features/Settings/TodayHeatmapSettingsSection.swift"
+        )
+        let settings = try sourceText(
+            "timetracker/Features/Settings/SettingsCategorySections.swift"
+        )
+
+        for token in [
+            "case oneMonth",
+            "case threeMonths",
+            "case sixMonths",
+            "case oneYear",
+            "static let standard = ActivityHeatmapPeriod.oneYear",
+            "case .oneMonth:",
+            "case .threeMonths:",
+            "case .sixMonths:",
+            "case .oneYear:",
+        ] {
+            #expect(model.contains(token))
+        }
+        #expect(model.contains("Identifiable"))
+        #expect(model.contains("Hashable"))
+        #expect(preferences.contains("case todayHeatmapPeriod"))
+        #expect(preferences.contains(
+            "var todayHeatmapPeriod = ActivityHeatmapPeriod.standard"
+        ))
+        #expect(sanitizer.contains("static func todayHeatmapPeriod("))
+        #expect(commands.contains(
+            "func setTodayHeatmapPeriod(_ period: ActivityHeatmapPeriod)"
+        ))
+        #expect(commands.contains(".todayHeatmapPeriod"))
+
+        #expect(section.contains("Picker("))
+        #expect(section.contains("selection: periodBinding"))
+        #expect(section.contains("ForEach(ActivityHeatmapPeriod.allCases)"))
+        #expect(section.contains(".tag(period)"))
+        #expect(section.contains("SettingsRowLabel("))
+        #expect(section.contains("systemImage: \"calendar\""))
+        #expect(section.contains(".pickerStyle(.menu)"))
+        #expect(section.contains(
+            ".accessibilityIdentifier(\"settings.todayHeatmap.period\")"
+        ))
+        #expect(section.contains(
+            "\"settings.todayHeatmap.period.\\(period.rawValue)\""
+        ))
+        #expect(section.contains("onChangePeriod(period)"))
+        #expect(settings.contains("onChangePeriod: { period in"))
+        #expect(settings.contains("handleSettingsStoreMutation("))
+        #expect(settings.contains("store.setTodayHeatmapPeriod(period)"))
+    }
+
+    @Test
     func taskDetailUsesTheSameDefaultOffHeatmapPreference() throws {
         let detail = try sourceText(
             "timetracker/Features/Tasks/Detail/TaskDetailContentView.swift"
@@ -102,6 +167,11 @@ struct TodayHeatmapUIContractTests {
         ]
         let keys = [
             "heatmap.settings.title",
+            "heatmap.settings.period",
+            "heatmap.settings.period.oneMonth",
+            "heatmap.settings.period.threeMonths",
+            "heatmap.settings.period.sixMonths",
+            "heatmap.settings.period.oneYear",
             "heatmap.settings.tasks",
             "heatmap.settings.off",
             "heatmap.settings.taskCount",
@@ -160,6 +230,45 @@ struct TodayHeatmapUIContractTests {
                 #expect(source.contains(
                     "\"home.heatmap.footer.durationFormat\" = \"此任務及其子任務每天的 Gross"
                 ) == false)
+            }
+        }
+
+        let expectedPeriodTranslations = [
+            (
+                "timetracker/en.lproj/Localizable.strings",
+                [
+                    "\"heatmap.settings.period\" = \"Default Range\";",
+                    "\"heatmap.settings.period.oneMonth\" = \"1 Month\";",
+                    "\"heatmap.settings.period.threeMonths\" = \"3 Months\";",
+                    "\"heatmap.settings.period.sixMonths\" = \"6 Months\";",
+                    "\"heatmap.settings.period.oneYear\" = \"1 Year\";",
+                ]
+            ),
+            (
+                "timetracker/zh-Hans.lproj/Localizable.strings",
+                [
+                    "\"heatmap.settings.period\" = \"默认范围\";",
+                    "\"heatmap.settings.period.oneMonth\" = \"1 个月\";",
+                    "\"heatmap.settings.period.threeMonths\" = \"3 个月\";",
+                    "\"heatmap.settings.period.sixMonths\" = \"6 个月\";",
+                    "\"heatmap.settings.period.oneYear\" = \"1 年\";",
+                ]
+            ),
+            (
+                "timetracker/zh-Hant.lproj/Localizable.strings",
+                [
+                    "\"heatmap.settings.period\" = \"預設範圍\";",
+                    "\"heatmap.settings.period.oneMonth\" = \"1 個月\";",
+                    "\"heatmap.settings.period.threeMonths\" = \"3 個月\";",
+                    "\"heatmap.settings.period.sixMonths\" = \"6 個月\";",
+                    "\"heatmap.settings.period.oneYear\" = \"1 年\";",
+                ]
+            ),
+        ]
+        for (path, translations) in expectedPeriodTranslations {
+            let source = try sourceText(path)
+            for translation in translations {
+                #expect(source.contains(translation))
             }
         }
     }
@@ -253,7 +362,7 @@ struct TodayHeatmapUIContractTests {
             ".defaultScrollAnchor(.trailing, for: .initialOffset)"
         ))
         #expect(grid.contains(
-            ".defaultScrollAnchor(.leading, for: .alignment)"
+            ".defaultScrollAnchor(.trailing, for: .alignment)"
         ))
         #expect(grid.contains(".font(.caption2)"))
         #expect(grid.contains(".font(.system(size:") == false)
@@ -310,11 +419,82 @@ struct TodayHeatmapUIContractTests {
         #expect(service.contains("segments.visibleDeduplicatedByID()"))
         #expect(service.contains("quantityGoals.visibleDeduplicatedByID()"))
         #expect(service.contains("quantityEntries.visibleDeduplicatedByID()"))
-        #expect(service.contains("for weekIndex in 0..<Self.weekCount"))
+        #expect(service.contains("for weekIndex in 0..<weekCount"))
         #expect(
             service.components(
                 separatedBy: "checklistItems.visibleDeduplicatedByID()"
             ).count - 1 == 1
         )
+    }
+
+    @Test
+    func heatmapPeriodDrivesRefreshRangeAndAdaptiveChartLayout() throws {
+        let section = try sourceText(
+            "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift"
+        )
+        let service = try [
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService.swift",
+            "timetracker/Services/Analytics/TodayActivityHeatmapSnapshotService+CalendarProjection.swift"
+        ].map { try sourceText($0) }.joined(separator: "\n")
+        let store = try sourceText(
+            "timetracker/Stores/Facade/TimeTrackerStore+TodayActivityHeatmap.swift"
+        )
+        let chart = try sourceText(
+            "timetracker/SharedUI/Components/ActivityHeatmapChart.swift"
+        )
+        let grid = try sourceText(
+            "timetracker/SharedUI/Components/ActivityHeatmapGrid.swift"
+        )
+
+        #expect(section.contains("let period: ActivityHeatmapPeriod"))
+        #expect(section.contains(
+            "period = store.preferences.todayHeatmapPeriod"
+        ))
+        #expect(section.contains(".task(id: request)"))
+        #expect(section.contains("period: request.period"))
+        #expect(section.contains("ActivityHeatmapLayoutContext"))
+        #expect(section.contains("case .card:"))
+        #expect(section.contains(".regular"))
+        #expect(section.contains("case .listSection:"))
+        #expect(section.contains(".phone"))
+
+        #expect(store.contains(
+            "period: ActivityHeatmapPeriod,\n        now: Date"
+        ))
+        #expect(store.contains("period: period"))
+        #expect(service.contains("period: ActivityHeatmapPeriod"))
+        #expect(service.contains("weekCount: period.weekCount"))
+        #expect(service.contains("result.reserveCapacity(weekCount)"))
+        #expect(service.contains("for weekIndex in 0..<weekCount"))
+        #expect(service.contains("value: -(period.weekCount - 1)"))
+        #expect(service.contains("Self.weekCount") == false)
+
+        #expect(chart.contains("struct ActivityHeatmapLayoutPolicy"))
+        for token in [
+            "case (.phone, ...5):\n            15",
+            "case (.phone, ...14):\n            12",
+            "case (.phone, ...27):\n            11",
+            "case (.phone, _):\n            10",
+            "case (.regular, ...5):\n            14",
+            "case (.regular, ...14):\n            11",
+            "case (.regular, ...27):\n            10",
+            "case (.regular, _):\n            9",
+        ] {
+            #expect(chart.contains(token))
+        }
+        #expect(chart.contains("width: .fixed(layoutPolicy.cellSize)"))
+        #expect(chart.contains("height: .fixed(layoutPolicy.cellSize)"))
+        #expect(chart.contains("weekCount: snapshot.weeks.count"))
+        #expect(chart.contains("width: layoutPolicy.chartWidth"))
+        #expect(chart.contains("height: layoutPolicy.chartHeight"))
+        #expect(chart.contains(
+            "\"home.heatmap.chart.\\(snapshot.taskID.uuidString)\""
+        ))
+        #expect(grid.contains(
+            ".defaultScrollAnchor(.trailing, for: .alignment)"
+        ))
+        #expect(grid.contains(
+            "\"home.heatmap.range.\\(snapshot.taskID.uuidString)\""
+        ))
     }
 }

@@ -2,10 +2,29 @@ import SwiftUI
 
 struct TodayHeatmapSettingsSection: View {
     let store: TimeTrackerStore
+    let onChangePeriod: (ActivityHeatmapPeriod) -> Void
     let onChangeSelection: ([UUID]) -> Void
 
     var body: some View {
         Section {
+            Picker(selection: periodBinding) {
+                ForEach(ActivityHeatmapPeriod.allCases) { period in
+                    Text(.app(period.settingsLocalizationKey))
+                        .tag(period)
+                        .accessibilityIdentifier(
+                            "settings.todayHeatmap.period.\(period.rawValue)"
+                        )
+                }
+            } label: {
+                SettingsRowLabel(
+                    title: AppStrings.localized("heatmap.settings.period"),
+                    systemImage: "calendar",
+                    tint: .green
+                )
+            }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("settings.todayHeatmap.period")
+
             NavigationLink {
                 TodayHeatmapTaskSelectionView(
                     store: store,
@@ -34,6 +53,18 @@ struct TodayHeatmapSettingsSection: View {
         store.preferences.todayHeatmapTaskIDs
     }
 
+    private var periodBinding: Binding<ActivityHeatmapPeriod> {
+        Binding(
+            get: { store.preferences.todayHeatmapPeriod },
+            set: { period in
+                guard period != store.preferences.todayHeatmapPeriod else {
+                    return
+                }
+                onChangePeriod(period)
+            }
+        )
+    }
+
     private var selectionSummary: String {
         guard selectedTaskIDs.isEmpty == false else {
             return AppStrings.localized("heatmap.settings.off")
@@ -42,6 +73,21 @@ struct TodayHeatmapSettingsSection: View {
             AppStrings.localized("heatmap.settings.taskCount"),
             selectedTaskIDs.count
         )
+    }
+}
+
+private extension ActivityHeatmapPeriod {
+    var settingsLocalizationKey: String {
+        switch self {
+        case .oneMonth:
+            "heatmap.settings.period.oneMonth"
+        case .threeMonths:
+            "heatmap.settings.period.threeMonths"
+        case .sixMonths:
+            "heatmap.settings.period.sixMonths"
+        case .oneYear:
+            "heatmap.settings.period.oneYear"
+        }
     }
 }
 

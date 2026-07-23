@@ -11,6 +11,7 @@ enum AppPreferenceKey: String, CaseIterable {
     case showGrossAndWallTogether = "ShowGrossAndWallTogether"
     case quickStartTaskIDs = "QuickStartTaskIDs"
     case todayHeatmapTaskIDs = "TodayHeatmapTaskIDs"
+    case todayHeatmapPeriod = "TodayHeatmapPeriod"
     case llmEndpoint = "LLMEndpoint"
     case llmSelectedModel = "LLMSelectedModel"
     case llmAvailableModelIDs = "LLMAvailableModelIDs"
@@ -38,6 +39,7 @@ struct AppPreferences: Equatable {
     var cloudSyncEnabled = AppCloudSync.isEnabled
     var quickStartTaskIDs: [UUID] = []
     var todayHeatmapTaskIDs: [UUID] = []
+    var todayHeatmapPeriod = ActivityHeatmapPeriod.standard
     var llmEndpoint = "https://api.openai.com/v1"
     var llmAPIKey = ""
     var llmSelectedModel = ""
@@ -93,6 +95,14 @@ struct AppPreferences: Equatable {
             let strings = PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
             todayHeatmapTaskIDs = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(
                 strings.compactMap(UUID.init(uuidString:))
+            )
+        case .todayHeatmapPeriod:
+            todayHeatmapPeriod = AppPreferenceValueSanitizer.todayHeatmapPeriod(
+                PreferenceJSON.decode(
+                    String.self,
+                    from: preference.valueJSON,
+                    default: ActivityHeatmapPeriod.standard.rawValue
+                )
             )
         case .llmEndpoint:
             llmEndpoint = AppPreferenceValueSanitizer.llmEndpoint(
@@ -167,6 +177,10 @@ struct AppPreferences: Equatable {
         case .todayHeatmapTaskIDs:
             return PreferenceJSON.encode(
                 AppPreferenceValueSanitizer.todayHeatmapTaskIDs(todayHeatmapTaskIDs).map(\.uuidString)
+            )
+        case .todayHeatmapPeriod:
+            return PreferenceJSON.encode(
+                AppPreferenceValueSanitizer.todayHeatmapPeriod(todayHeatmapPeriod.rawValue).rawValue
             )
         case .llmEndpoint:
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(llmEndpoint))

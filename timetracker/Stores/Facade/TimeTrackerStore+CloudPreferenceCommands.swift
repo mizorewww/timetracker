@@ -49,6 +49,14 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
+    func setTodayHeatmapPeriod(_ period: ActivityHeatmapPeriod) -> Bool {
+        setPreference(
+            .todayHeatmapPeriod,
+            valueJSON: PreferenceJSON.encode(period.rawValue)
+        )
+    }
+
+    @discardableResult
     func setTodayHeatmapTrackingEnabled(
         _ isEnabled: Bool,
         for taskID: UUID

@@ -127,6 +127,7 @@ extension SyncDataSnapshot {
                 switch key {
                 case .preferredColorScheme,
                      .pomodoroDefaultMode,
+                     .todayHeatmapPeriod,
                      .llmEndpoint,
                      .llmSelectedModel:
                     isValid = decodes(String.self, from: data)

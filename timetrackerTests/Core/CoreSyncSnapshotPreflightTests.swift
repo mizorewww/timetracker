@@ -277,6 +277,26 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
+    func invalidTodayHeatmapPeriodPreferenceTypeIsRejectedBeforeExistingRowsChange() throws {
+        let (context, sentinelID) = try makeSentinelContext()
+        let preference = SyncedPreference(
+            key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
+            valueJSON: PreferenceJSON.encode(true),
+            deviceID: "source"
+        )
+        let preferenceRecord = SyncedPreferenceRecord(preference)
+
+        #expect(throws: SyncDataSnapshotPreflightError.invalidPreferenceValue(
+            id: preferenceRecord.id,
+            key: AppPreferenceKey.todayHeatmapPeriod.rawValue
+        )) {
+            try SyncDataSnapshot(syncedPreferences: [preferenceRecord])
+                .restoreAsLocalWinner(context: context)
+        }
+        try expectSentinelUnchanged(context: context, id: sentinelID)
+    }
+
+    @Test @MainActor
     func extremeSortOrderAndUnsafePreferenceKeysAreRejected() throws {
         let sortOrderContext = try makeSentinelContext()
         let task = TaskNode(title: "Unadvanceable order", parentID: nil, deviceID: "source")

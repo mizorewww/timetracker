@@ -1,5 +1,29 @@
 import Foundation
 
+nonisolated enum ActivityHeatmapPeriod: String, CaseIterable, Identifiable, Equatable, Hashable, Sendable {
+    case oneMonth
+    case threeMonths
+    case sixMonths
+    case oneYear
+
+    static let standard = ActivityHeatmapPeriod.oneYear
+
+    var id: String { rawValue }
+
+    var weekCount: Int {
+        switch self {
+        case .oneMonth:
+            5
+        case .threeMonths:
+            14
+        case .sixMonths:
+            27
+        case .oneYear:
+            53
+        }
+    }
+}
+
 nonisolated enum ActivityHeatmapIntensity: Int, CaseIterable, Equatable, Sendable {
     case none
     case low

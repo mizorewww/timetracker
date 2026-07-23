@@ -70,6 +70,10 @@ enum AppPreferenceValueSanitizer {
         orderedTaskIDs(values, maximumCount: maximumTodayHeatmapTaskCount)
     }
 
+    static func todayHeatmapPeriod(_ value: String) -> ActivityHeatmapPeriod {
+        ActivityHeatmapPeriod(rawValue: value) ?? .standard
+    }
+
     private static func orderedTaskIDs(
         _ values: [UUID],
         maximumCount: Int

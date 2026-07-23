@@ -5,6 +5,22 @@ import Testing
 
 @Suite(.serialized)
 struct PreferencesChecklistForecastTests {
+    @Test
+    func heatmapPeriodsExposeStableIdentityAndWeekCounts() {
+        #expect(ActivityHeatmapPeriod.allCases == [
+            .oneMonth,
+            .threeMonths,
+            .sixMonths,
+            .oneYear,
+        ])
+        #expect(ActivityHeatmapPeriod.oneMonth.id == "oneMonth")
+        #expect(ActivityHeatmapPeriod.oneMonth.weekCount == 5)
+        #expect(ActivityHeatmapPeriod.threeMonths.weekCount == 14)
+        #expect(ActivityHeatmapPeriod.sixMonths.weekCount == 27)
+        #expect(ActivityHeatmapPeriod.oneYear.weekCount == 53)
+        #expect(ActivityHeatmapPeriod.standard == .oneYear)
+    }
+
     @Test @MainActor
     func newerPreferenceTombstoneSuppressesOlderActiveDuplicate() {
         let key = AppPreferenceKey.defaultFocusMinutes.rawValue
@@ -103,6 +119,11 @@ struct PreferencesChecklistForecastTests {
                 deviceID: "remote"
             ),
             SyncedPreference(
+                key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
+                valueJSON: PreferenceJSON.encode("futurePeriod"),
+                deviceID: "remote"
+            ),
+            SyncedPreference(
                 key: AppPreferenceKey.llmEndpoint.rawValue,
                 valueJSON: PreferenceJSON.encode("  https://example.test/" + String(repeating: "a", count: 3_000)),
                 deviceID: "remote"
@@ -132,6 +153,7 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.todayHeatmapTaskIDs == Array(
             heatmapValues.prefix(AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount)
         ))
+        #expect(preferences.todayHeatmapPeriod == .standard)
         #expect(preferences.llmEndpoint.count <= AppPreferenceValueSanitizer.maximumLLMEndpointLength)
         #expect(preferences.llmEndpoint.hasPrefix("https://example.test/"))
         #expect(preferences.llmAvailableModelIDs.count == AppPreferenceValueSanitizer.maximumLLMModelCount)
@@ -173,6 +195,33 @@ struct PreferencesChecklistForecastTests {
                 )
                 .map(\.uuidString)
         )
+    }
+
+    @Test @MainActor
+    func heatmapPeriodPreferencePersistsValidValuesAndCanonicalizesInvalidRawValues() throws {
+        let valid = AppPreferences(syncedPreferences: [
+            SyncedPreference(
+                key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
+                valueJSON: PreferenceJSON.encode(ActivityHeatmapPeriod.threeMonths.rawValue),
+                deviceID: "remote"
+            )
+        ])
+        let invalid = AppPreferences(syncedPreferences: [
+            SyncedPreference(
+                key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
+                valueJSON: PreferenceJSON.encode("futurePeriod"),
+                deviceID: "remote"
+            )
+        ])
+        let canonicalJSON = try PreferenceJSON.canonicalValueJSON(
+            for: .todayHeatmapPeriod,
+            from: PreferenceJSON.encode("futurePeriod")
+        )
+
+        #expect(AppPreferences.defaults.todayHeatmapPeriod == .standard)
+        #expect(valid.todayHeatmapPeriod == .threeMonths)
+        #expect(invalid.todayHeatmapPeriod == .standard)
+        #expect(canonicalJSON == PreferenceJSON.encode(ActivityHeatmapPeriod.standard.rawValue))
     }
 
     @Test @MainActor
@@ -286,6 +335,10 @@ struct PreferencesChecklistForecastTests {
         defaults.set(false, forKey: AppPreferenceKey.showGrossAndWallTogether.rawValue)
         defaults.set(false, forKey: AppCloudSync.enabledKey)
         defaults.set(pinnedID.uuidString, forKey: AppPreferenceKey.quickStartTaskIDs.rawValue)
+        defaults.set(
+            ActivityHeatmapPeriod.oneMonth.rawValue,
+            forKey: AppPreferenceKey.todayHeatmapPeriod.rawValue
+        )
         defaults.set("https://example.test/v1", forKey: AppPreferenceKey.llmEndpoint.rawValue)
         defaults.set("test-key", forKey: SyncedPreferenceService.legacyLLMAPIKey)
         defaults.set("gpt-test", forKey: AppPreferenceKey.llmSelectedModel.rawValue)
@@ -307,7 +360,7 @@ struct PreferencesChecklistForecastTests {
         var preferences = AppPreferences(syncedPreferences: stored)
         preferences.llmAPIKey = try credentialStore.readAPIKey() ?? ""
 
-        #expect(stored.count == AppPreferenceKey.allCases.count - 4)
+        #expect(stored.count == AppPreferenceKey.allCases.count - 5)
         #expect(stored.allSatisfy { SyncedPreferenceService.shouldSyncKey($0.key) })
         #expect(preferences.preferredColorScheme == "dark")
         #expect(preferences.pomodoroDefaultMode == PomodoroPreset.deep.rawValue)
@@ -319,6 +372,7 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
         #expect(preferences.todayHeatmapTaskIDs.isEmpty)
+        #expect(preferences.todayHeatmapPeriod == .standard)
         #expect(preferences.llmEndpoint == "https://example.test/v1")
         #expect(preferences.llmAPIKey == "test-key")
         #expect(preferences.llmSelectedModel == "gpt-test")
@@ -488,6 +542,7 @@ struct PreferencesChecklistForecastTests {
         store.setCloudSyncEnabled(false)
         store.setQuickStartTaskIDs([pinnedID])
         store.setTodayHeatmapTaskIDs(heatmapTaskIDs)
+        store.setTodayHeatmapPeriod(.threeMonths)
         store.setPomodoroPlans([
             PomodoroPlan(
                 name: "Writing",
@@ -516,6 +571,7 @@ struct PreferencesChecklistForecastTests {
         #expect(preferences.cloudSyncEnabled == false)
         #expect(preferences.quickStartTaskIDs == [pinnedID])
         #expect(preferences.todayHeatmapTaskIDs == heatmapTaskIDs)
+        #expect(preferences.todayHeatmapPeriod == .threeMonths)
         #expect(preferences.pomodoroPlans.count == 1)
         #expect(preferences.pomodoroPlans.first?.name == "Writing")
         #expect(preferences.pomodoroPlans.first?.focusMinutes == 30)
@@ -527,6 +583,10 @@ struct PreferencesChecklistForecastTests {
         #expect(try credentialStore.readAPIKey() == "test-key")
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).allSatisfy {
             SyncedPreferenceService.shouldSyncKey($0.key)
+        })
+        #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).contains {
+            $0.key == AppPreferenceKey.todayHeatmapPeriod.rawValue &&
+                $0.valueJSON == PreferenceJSON.encode(ActivityHeatmapPeriod.threeMonths.rawValue)
         })
         #expect(preferences.llmAvailableModelIDs == ["gpt-a", "gpt-z"])
         #expect(preferences.llmSelectedModel == "gpt-a")

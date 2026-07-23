@@ -13,6 +13,7 @@ struct PreferenceCommandValidationTests {
             (.defaultFocusMinutes, "{", .invalidValue),
             (.defaultFocusMinutes, "null", .invalidValue),
             (.defaultFocusMinutes, PreferenceJSON.encode("25"), .invalidValue),
+            (.todayHeatmapPeriod, PreferenceJSON.encode(42), .invalidValue),
             (
                 .llmEndpoint,
                 String(repeating: "x", count: PreferenceJSON.maximumPayloadByteCount + 1),
@@ -104,6 +105,7 @@ struct PreferenceCommandValidationTests {
             values: [
                 (.preferredColorScheme, PreferenceJSON.encode("neon")),
                 (.defaultFocusMinutes, PreferenceJSON.encode(999)),
+                (.todayHeatmapPeriod, PreferenceJSON.encode("futurePeriod")),
                 (
                     .quickStartTaskIDs,
                     PreferenceJSON.encode([
@@ -120,6 +122,10 @@ struct PreferenceCommandValidationTests {
         let valuesByKey = Dictionary(uniqueKeysWithValues: stored.map { ($0.key, $0.valueJSON) })
         #expect(valuesByKey[AppPreferenceKey.preferredColorScheme.rawValue] == PreferenceJSON.encode("system"))
         #expect(valuesByKey[AppPreferenceKey.defaultFocusMinutes.rawValue] == PreferenceJSON.encode(480))
+        #expect(
+            valuesByKey[AppPreferenceKey.todayHeatmapPeriod.rawValue] ==
+                PreferenceJSON.encode(ActivityHeatmapPeriod.standard.rawValue)
+        )
         #expect(
             valuesByKey[AppPreferenceKey.quickStartTaskIDs.rawValue] ==
                 PreferenceJSON.encode([validTaskID.uuidString])

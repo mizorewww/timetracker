@@ -126,9 +126,10 @@ extension SyncedPreferenceService {
                 .split(separator: ",")
                 .map(String.init) ?? []
             encodedValue = try? PreferenceJSON.encodeChecked(ids)
-        case .todayHeatmapTaskIDs:
-            // This preference was introduced in synced storage and has no
-            // legacy UserDefaults representation to migrate.
+        case .todayHeatmapTaskIDs,
+             .todayHeatmapPeriod:
+            // These preferences were introduced in synced storage and have
+            // no legacy UserDefaults representation to migrate.
             return nil
         case .llmEndpoint:
             guard let value = defaults.string(forKey: key.rawValue) else { return nil }

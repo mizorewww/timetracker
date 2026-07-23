@@ -9,7 +9,7 @@
 - [x] 审计任务分类编辑入口、持久化命令与固定 Health catalog 不变量。
 - [x] 实现最小修复并补齐 Core/UI contract 自动化测试。
 - [x] 在脚本创建的 owned iPhone/iPad simulator 上执行 XCUITest 与截图验收，并释放全部 owned 资源。
-- [~] 提交实现 checkpoint，精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
+- [x] 提交实现 checkpoint，精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，标记反馈完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -27,7 +27,7 @@
 
 - [x] Checkpoint A：范围领取、现状/依赖/HIG 审计与自动化验收设计。
 - [x] Checkpoint B：最小实现、单元/UI contract 与脚本化验收。
-- [~] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
+- [x] Checkpoint C：Release 全设备安装、签名/版本只读核验与收口。
 
 ## 资源所有权
 
@@ -69,3 +69,5 @@
 - 全量 macOS 回归：1594 项中 1583 通过；本任务曾触发的 repository 文件行数预算已修复并单独复测通过。其余 10 个既有 source-contract/layout 失败不属于本反馈；另 1 个 archive 时间精度偶发失败单独重跑通过。
 - `plutil -lint` 三套本地化通过，`git diff --check` 通过；repository 拆分文件分别为 167/179 行，符合 180 行预算。
 - 未新增第三方依赖；实现只使用现有 SwiftUI/SwiftData、系统 HealthKit 与 XCTest/Swift Testing。
+- 实现 checkpoint：`a1db343`（`fix: lock Apple Health task categories`），版本提升至 1.1.69 (124)。
+- 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh` 成功：iPhone Air 与 iPad Pro M4 均只安装未启动 1.1.69 (124)，macOS `/Applications/timetracker.app` 同版本；iOS、内嵌 Watch 与 macOS 包的严格签名验证均通过，Team Identifier 为 `LT98S43NKA`。

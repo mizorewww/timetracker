@@ -1,1 +1,0 @@
-../../tasks/32-apple-health-category-lock.md

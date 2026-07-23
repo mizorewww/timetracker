@@ -9,7 +9,7 @@
 - [x] 审计任务量/可重复任务的父子模型、完成记录、Heatmap 聚合与三平台入口。
 - [x] 实现 recurrence owner 投影、权威父级聚合并补齐聚焦测试。
 - [x] 将 UI fixture 改为真实 recurrence，并补齐三平台脚本化验收。
-- [ ] 分 checkpoint 提交，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
+- [x] 分 checkpoint 提交，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -29,7 +29,7 @@
 - [x] Checkpoint B：审计父子数据流、完成记录、Heatmap 投影、库与自动化基线。
 - [x] Checkpoint C：实现数据/聚合修复并完成聚焦验证。
 - [x] Checkpoint D：补齐三平台脚本化 UI 验收。
-- [ ] Checkpoint E：Release 全设备安装、签名/版本核验与收口。
+- [x] Checkpoint E：Release 全设备安装、签名/版本核验与收口。
 
 ## 审计证据
 
@@ -63,7 +63,7 @@
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、最终 Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、最终 Release 批次与清理。
 - [x] `task38_model_audit`：只读确认真实 recurrence 写入语义、owner 断点与可编辑 `parentID` 风险。
 - [x] `task38_heatmap_audit`：只读确认 snapshot/偏好/刷新身份断点与权威 contributor 建议。
 - [x] `task38_test_audit`：只读确认现有 fixture 是普通父子而非 recurrence，并给出真实 rule/occurrence 的三平台脚本矩阵。
@@ -73,11 +73,19 @@
 - [x] `6def19c9`：领取任务、建立实现记忆与 active link。
 - [x] `1bc53743`：静态/库审计与聚焦自动化基线。
 - [x] `2dadcd2c`：recurrence owner、权威父级聚合、Store 接线与聚焦测试。
-- [~] 待提交：真实 recurrence UI fixture、三平台界面接线、自动化验收与 reviewer 补强。
+- [x] `1e86b082`：真实 recurrence UI fixture、三平台界面接线、自动化验收与 reviewer 补强；版本 `1.1.100 (155)`。
 
 ## UI 自动化与资源清理
 
 - [x] macOS：`mac-recurring-final.xcresult` recurring 测试通过；`mac-full.xcresult` 全指标测试通过。
 - [x] iPhone：owned UDID `97F5A457-B982-45E8-9A88-0BDDB9EBF25B`；recurring 与最终全指标测试通过，批次结束后已关机并删除。
 - [x] iPad：owned UDID `060C048A-613C-4974-90B0-69FCF9C8F9EC`；两项组合测试通过，批次结束后已关机并删除。
-- [x] `simctl` 已确认没有 `Task38` 或 Booted 模拟器；测试 App、XCTest/XCUITest 与 xcodebuild 批次均已退出。截图证据保存在 `build/Task38UI/evidence-*`，等待本任务最终收口后一并清理。
+- [x] `simctl` 已确认没有 `Task38` 或 Booted 模拟器；测试 App、XCTest/XCUITest 与 xcodebuild 批次均已退出；`build/Task38UI` 临时 xcresult、DerivedData 与截图证据已移入废纸篓。
+
+## Release 收口
+
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，iOS/iPadOS 与 macOS 均 `BUILD SUCCEEDED`，Team 为 `LT98S43NKA`。
+- [x] `1.1.100 (155)` 已安装到物理 iPad Pro M4 与 iPhone Air；没有启动、交互或截取物理设备画面。
+- [x] iOS App、内嵌 Watch companion、Widget、Live Activity 与 macOS App 的签名/嵌入校验通过；当前无可见物理 Apple Watch，因此手表自动安装覆盖无法核验。
+- [x] `/Applications/timetracker.app` 为 `arm64 + x86_64` universal binary，签名验证通过；没有 Owned simulator、构建/测试进程或根目录 README 残留。
+- [x] 反馈已由 Codex 标记完成，active link 已移除。

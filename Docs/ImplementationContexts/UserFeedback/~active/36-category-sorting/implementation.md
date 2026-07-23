@@ -1,1 +1,0 @@
-../../tasks/36-category-sorting.md

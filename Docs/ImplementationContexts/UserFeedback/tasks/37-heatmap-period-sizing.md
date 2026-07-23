@@ -8,7 +8,7 @@
 - [x] 领取“设置中 Heatmap 默认时间段长度选择，并改善 iPhone 方块偏小”反馈并建立活动链接。
 - [x] 审计现有 Heatmap 设置、持久化、布局、跨平台入口与测试基线。
 - [x] 设计并实现最小能力，补齐自动化与脚本截图验收。
-- [~] 提交自动化 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
+- [x] 提交自动化 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -27,7 +27,7 @@
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
 - [x] Checkpoint B：审计设置/布局/持久化语义、库与自动化基线。
 - [x] Checkpoint C：实现、聚焦验证、脚本截图与实现提交。
-- [~] Checkpoint D：Release 全设备安装、签名/版本核验与收口。
+- [x] Checkpoint D：Release 全设备安装、签名/版本核验与收口。
 
 ## 审计证据
 
@@ -49,11 +49,11 @@
 
 ## 资源所有权
 
-- [~] 主代理：维护唯一任务状态、编排、集成、所有 build/TestManager/simulator/XCUITest/screenshot/Release 批次与清理。
-- [~] Task 37 iPhone 17 Pro 模拟器由主代理独占：`1387CFF7-4B3E-4523-8718-656D3ABCCE11`；批次结束必须终止 App/runner、关机并删除。
-- [~] Task 37 iPad Pro 11-inch (M5) 模拟器由主代理独占：`7E6465AD-8A47-4778-95C6-D08E69A67A58`；批次结束必须终止 App/runner、关机并删除。
+- [x] 主代理：完成唯一任务状态、编排、集成、所有 build/TestManager/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] Task 37 iPhone 17 Pro 模拟器 `1387CFF7-4B3E-4523-8718-656D3ABCCE11` 已终止 App/runner、关机并删除。
+- [x] Task 37 iPad Pro 11-inch (M5) 模拟器 `7E6465AD-8A47-4778-95C6-D08E69A67A58` 已终止 App/runner、关机并删除。
 - [x] 三个子代理完成持久化、布局与自动化基线的只读审计；均未编辑、构建、创建设备或操作窗口。
-- [~] 后续子代理只编辑明确、互不重叠的范围；不得自行构建、创建 simulator 或操作窗口。
+- [x] 后续没有子代理编辑、构建、创建 simulator 或操作窗口。
 
 ## 已提交 checkpoint
 
@@ -62,7 +62,7 @@
 - [x] `e681cdf9`：增加可同步、可规范化且默认兼容 1 年的 Heatmap 周期 preference。
 - [x] `0c4ac14f`：让 snapshot、refresh request 与 Swift Charts 布局随周期变化并提高短周期方块尺寸。
 - [x] `f2ef2cc0`：在 General 设置中增加原生周期 Picker 与三平台 UI contract。
-- [~] 自动化持久化与三平台截图验收 checkpoint 待提交。
+- [x] `91dab4ef`：增加独立持久化 UI-test store，以及 iPhone、iPad、macOS 三段进程持久化与脚本截图验收；版本 1.1.95 (150)。
 
 ## 聚焦验证证据
 
@@ -73,3 +73,12 @@
 - [x] 当前代码 macOS arm64：1/1 通过、0 失败，111.494 秒；所有窗口定位、设置操作、进程重启、断言与截图均由 XCUITest 完成，没有手动调试窗口。
 - [x] 九张截图逐张检查：三平台均显示 `Default Range = 1 Month`；5 周 Heatmap 方块、日期范围与图例无裁切、横向溢出或相互遮挡，首次与持久化尺寸一致；iPhone 方块明显大于原 9pt 基线。
 - [x] 子代理最终只读审查未发现阻塞问题；持久化 store 仅供该串行验收用例使用，不与普通内存 UI test 共用。
+
+## Release 与清理证据
+
+- [x] 精确执行 `CONFIGURATION=Release scripts/build_install_all.sh`，命令退出 0；iOS/iPadOS、嵌入 Watch companion、两个扩展和 macOS Release 均构建成功，未关闭签名。
+- [x] 物理 `iPad Pro M4`（`748D0137-ADC3-58AF-855C-1E98B3125F93`）安装成功；`devicectl` 只读核验已安装 `me.mezorewww.timetracker` 为 1.1.95 (150)，没有启动、交互或截图。
+- [x] iOS App 与 `me.mezorewww.timetracker.watchkitapp` 均为 1.1.95 (150)，TeamIdentifier `LT98S43NKA`，`codesign --verify --deep --strict` 通过；Watch companion 的 `WKCompanionAppBundleIdentifier` 为 `me.mezorewww.timetracker`。
+- [x] 当前没有可见物理 Apple Watch，因此脚本如实提示未验证 embedded profile 的手表设备覆盖；嵌入 companion 本身通过 on-disk、Designated Requirement 与 Xcode embedded binary validation。
+- [x] `/Applications/timetracker.app` 为 1.1.95 (150)，TeamIdentifier `LT98S43NKA`，严格签名验证通过，主二进制同时包含 `x86_64 arm64`。
+- [x] Release 后删除 `build/Install`；当前无 Booted simulator、无本任务 xcodebuild/xctest/UI runner/App 进程，两个独占 simulator 已删除，根目录无 README/readme，工作树只保留用户自己的 `Docs/userfeedback.md` 状态变更等待收口提交。

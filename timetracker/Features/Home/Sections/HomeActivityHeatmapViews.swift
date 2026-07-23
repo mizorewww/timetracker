@@ -129,7 +129,7 @@ struct HomeActivityHeatmapSection: View {
                         LazyVStack(spacing: 10) {
                             ForEach(snapshots) { snapshot in
                                 TaskActivityHeatmapCard(snapshot: snapshot)
-                                    .padding(16)
+                                    .padding(14)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .appCard(padding: 0)
                                     .accessibilityElement(children: .contain)
@@ -147,9 +147,10 @@ struct HomeActivityHeatmapSection: View {
                     ForEach(snapshots) { snapshot in
                         Section {
                             TaskActivityHeatmapCard(snapshot: snapshot)
-                                .homeVisualizationListCard(
-                                    accessibilityIdentifier:
-                                        "home.heatmap.card.\(snapshot.taskID.uuidString)"
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityElement(children: .contain)
+                                .accessibilityIdentifier(
+                                    "home.heatmap.card.\(snapshot.taskID.uuidString)"
                                 )
                         } header: {
                             if snapshot.id == snapshots.first?.id {
@@ -167,9 +168,7 @@ struct HomeActivityHeatmapSection: View {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                             .frame(height: 104)
-                            .homeVisualizationListCard(
-                                accessibilityIdentifier: "home.heatmap.loadingCard"
-                            )
+                            .accessibilityIdentifier("home.heatmap.loadingCard")
                     } header: {
                         HomeActivityHeatmapHeader(
                             container: .listSection,
@@ -187,7 +186,7 @@ struct HomeActivityHeatmapSection: View {
         ProgressView()
             .frame(maxWidth: .infinity)
             .frame(height: 120)
-            .padding(16)
+            .padding(14)
             .appCard(padding: 0)
     }
 

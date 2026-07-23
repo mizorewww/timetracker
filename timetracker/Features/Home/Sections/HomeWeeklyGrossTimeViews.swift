@@ -83,10 +83,10 @@ struct HomeWeeklyGrossTimeSection: View {
                     } else {
                         ProgressView()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 238)
+                            .frame(height: 210)
                     }
                 }
-                    .padding(16)
+                    .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .appCard(padding: 0)
                     .accessibilityElement(children: .contain)
@@ -108,9 +108,9 @@ struct HomeWeeklyGrossTimeSection: View {
                             .frame(height: 170)
                     }
                 }
-                    .homeVisualizationListCard(
-                        accessibilityIdentifier: "home.weeklyGross.card"
-                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("home.weeklyGross.card")
             } header: {
                 HomeWeeklyGrossTimeHeader(
                     container: .listSection,

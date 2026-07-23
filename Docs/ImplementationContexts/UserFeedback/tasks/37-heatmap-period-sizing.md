@@ -6,8 +6,8 @@
 ## 当前阶段
 
 - [x] 领取“设置中 Heatmap 默认时间段长度选择，并改善 iPhone 方块偏小”反馈并建立活动链接。
-- [~] 审计现有 Heatmap 设置、持久化、布局、跨平台入口与测试基线。
-- [ ] 设计并实现最小能力，补齐自动化与脚本截图验收。
+- [x] 审计现有 Heatmap 设置、持久化、布局、跨平台入口与测试基线。
+- [~] 设计并实现最小能力，补齐自动化与脚本截图验收。
 - [ ] 提交小 checkpoint，执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -25,19 +25,35 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
-- [~] Checkpoint B：审计设置/布局/持久化语义、库与自动化基线。
-- [ ] Checkpoint C：实现、聚焦验证、脚本截图与实现提交。
+- [x] Checkpoint B：审计设置/布局/持久化语义、库与自动化基线。
+- [~] Checkpoint C：实现、聚焦验证、脚本截图与实现提交。
 - [ ] Checkpoint D：Release 全设备安装、签名/版本核验与收口。
 
-## 审计与实现决定
+## 审计证据
 
-- [~] 待主代理与子代理从现有代码、测试和权威参考补齐。
+- [x] `TodayActivityHeatmapSnapshotService` 与日历投影把范围写死为 53 周；设置页只有任务选择，没有范围选择。
+- [x] `ActivityHeatmapChart` 把方块/间距/图高写死为 `9 / 3 / 108pt`，且宽度至少 320pt；仅减少周数不会改善小方块。
+- [x] `HomeActivityHeatmapRefreshRequest` 没有周期字段，因此只修改 preference 会命中旧 request 与旧 snapshot，是必须同步修复的陈旧缓存缺口。
+- [x] 通用 `SyncedPreference`、canonical JSON、同步预检、store 广播链可直接复用，不需要 SwiftData schema migration。
+- [x] 现有单元测试已覆盖首周日、DST、future cells、活动聚合、容器重开；现有 XCUITest 已有 Heatmap demo seed 与三平台首页路径，可扩展为全脚本设置、重启持久化和截图验收。
+
+## 实现决定
+
+- [x] 增加稳定、可同步的 `ActivityHeatmapPeriod` raw-value 枚举：1 个月 / 3 个月 / 6 个月 / 1 年，对应 5 / 14 / 27 / 53 周；缺失 preference 保持原有 1 年行为，非法值回退到该默认值。
+- [x] 设置使用原生 SwiftUI `Picker`；周期进入 snapshot service、store facade 与 `HomeActivityHeatmapRefreshRequest`，保证即时重算且不会复用旧缓存。
+- [x] 方块使用独立、可单测的布局策略：短周期显著大于现有 9pt，长周期也提高基础尺寸；图宽和图高由周数、方块及间距推导，保留横向滚动。
+- [x] 继续使用项目已有 Apple Swift Charts、SwiftUI、SwiftData。官方能力已覆盖标准 Picker、矩形 mark 与滚动容器；不新增依赖。
+- [x] 库质量审计：`ChartsOrg/Charts` 约 28k stars，但引入 UIKit bridge 与现有 Swift Charts 重复；`willdale/SwiftUICharts` 约 963 stars、`DPCharts` 约 17 stars、`HeatmapKit` 约 3 stars，均低于用户要求或不值得替换原生实现，全部拒绝。
+- [x] 权威参考：[Apple Swift Charts](https://developer.apple.com/documentation/charts)、[Creating a chart using Swift Charts](https://developer.apple.com/documentation/charts/creating-a-chart-using-swift-charts)、[SwiftUI Picker](https://developer.apple.com/documentation/swiftui/picker)、[XCUIAutomation](https://developer.apple.com/documentation/xcuiautomation)。
+- [x] UI 验收只由 XCUITest 自动导航、断言与截图；物理机只做最终 Release 安装、签名与版本读取，不启动 App。
 
 ## 资源所有权
 
 - [~] 主代理：维护唯一任务状态、编排、集成、所有 build/TestManager/simulator/XCUITest/screenshot/Release 批次与清理。
-- [ ] 子代理只在明确分配的只读审计或互不重叠实现范围内工作；不得自行构建、创建 simulator 或操作窗口。
+- [x] 三个子代理完成持久化、布局与自动化基线的只读审计；均未编辑、构建、创建设备或操作窗口。
+- [~] 后续子代理只编辑明确、互不重叠的范围；不得自行构建、创建 simulator 或操作窗口。
 
 ## 已提交 checkpoint
 
-- [~] 领取任务 checkpoint 待提交。
+- [x] `482e9dff`：领取任务、建立实现记忆与 active link。
+- [~] 审计 checkpoint 待提交。

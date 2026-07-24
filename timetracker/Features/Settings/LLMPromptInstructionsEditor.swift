@@ -92,20 +92,18 @@ struct LLMPromptInstructionsEditor: View {
     private var editorContent: some View {
         Form {
             Section {
-                if kind == .taskPlan {
-                    Picker(
-                        AppStrings.localized(kind.settingsTitleKey),
-                        selection: $mode
-                    ) {
-                        Text(AppStrings.edit)
-                            .tag(LLMPromptInstructionsEditorMode.edit)
-                        Text(.app("task.notes.preview"))
-                            .tag(LLMPromptInstructionsEditorMode.preview)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("\(accessibilityID).mode")
+                Picker(
+                    AppStrings.localized(kind.settingsTitleKey),
+                    selection: $mode
+                ) {
+                    Text(AppStrings.edit)
+                        .tag(LLMPromptInstructionsEditorMode.edit)
+                    Text(.app("task.notes.preview"))
+                        .tag(LLMPromptInstructionsEditorMode.preview)
                 }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("\(accessibilityID).mode")
 
                 instructionsContent
 
@@ -160,6 +158,61 @@ struct LLMPromptInstructionsEditor: View {
                     Text(AppStrings.localized("settings.llm.prompt.footer"))
                 }
             }
+
+            Section {
+                DisclosureGroup {
+                    Text(kind.fixedResponseContract)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                } label: {
+                    Text(AppStrings.localized("settings.llm.prompt.fixedRules"))
+                }
+                .accessibilityIdentifier("\(accessibilityID).fixedRules")
+
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: 10) {
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.adaptive(minimum: 28), spacing: 8)
+                            ],
+                            spacing: 8
+                        ) {
+                            ForEach(
+                                SymbolCatalog.aiSuggestionSymbolNames,
+                                id: \.self
+                            ) { symbol in
+                                Image(systemName: symbol)
+                                    .font(.body)
+                                    .frame(width: 28, height: 28)
+                                    .accessibilityLabel(symbol)
+                            }
+                        }
+                        HStack(spacing: 8) {
+                            ForEach(
+                                TaskColorPalette.hexValues,
+                                id: \.self
+                            ) { hex in
+                                Circle()
+                                    .fill(TaskColorPalette.pickerColor(for: hex))
+                                    .frame(width: 20, height: 20)
+                                    .accessibilityLabel(
+                                        TaskColorPalette.accessibilityName(
+                                            for: hex
+                                        )
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } label: {
+                    Text(AppStrings.localized("settings.llm.prompt.allowedVisuals"))
+                }
+                .accessibilityIdentifier("\(accessibilityID).allowedVisuals")
+            } header: {
+                Text(AppStrings.localized("settings.llm.prompt.contractSection"))
+            }
         }
         .formStyle(.grouped)
         .navigationTitle(
@@ -192,7 +245,7 @@ struct LLMPromptInstructionsEditor: View {
 
     @ViewBuilder
     private var instructionsContent: some View {
-        if kind == .taskPlan, mode == .preview {
+        if mode == .preview {
             MarkdownView(draft)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .accessibilityIdentifier("\(accessibilityID).preview")

@@ -226,6 +226,9 @@
 "settings.llm.prompt.restoreDefault" = "恢復預設指令";
 "settings.llm.prompt.byteCountFormat" = "%lld / %lld 位元組";
 "settings.llm.prompt.footer" = "這些指令會隨 App 資料同步，並在對應 AI 功能執行時傳送到你設定的 endpoint。請勿填寫密碼或 API Key。清空編輯器並儲存後會恢復該功能的預設指令；固定回應格式與驗證規則始終有效。";
+"settings.llm.prompt.contractSection" = "AI 始終收到的內容";
+"settings.llm.prompt.fixedRules" = "固定回應契約";
+"settings.llm.prompt.allowedVisuals" = "AI 可使用的圖示與顏色";
 "settings.llm.prompt.error.controlCharacter" = "請移除不支援的控制字元。允許使用定位字元和換行。";
 "settings.llm.prompt.error.tooLongFormat" = "指令佔用 %lld 位元組，最多允許 %lld 位元組。";
 "settings.llm.taskPlan.error.requestRequired" = "請描述你想建立的任務計畫。";

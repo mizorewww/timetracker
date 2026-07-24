@@ -54,7 +54,7 @@ struct AITaskPlanUIContractTests {
         #expect(settings.contains("onEditPrompt(kind)"))
         #expect(editor.contains("TextEditor(text: $draft)"))
         #expect(editor.contains("import MarkdownView"))
-        #expect(editor.contains("kind == .taskPlan"))
+        #expect(editor.contains("kind == .taskPlan") == false)
         #expect(editor.contains("MarkdownView(draft)"))
         #expect(editor.contains(".pickerStyle(.segmented)"))
         #expect(editor.contains(#"\(accessibilityID).mode"#))
@@ -63,6 +63,11 @@ struct AITaskPlanUIContractTests {
         #expect(editor.contains("llmPromptInstructions(draft, for: kind)"))
         #expect(editor.contains("restoreDefault"))
         #expect(editor.contains("kind.defaultInstructions"))
+        #expect(editor.contains("kind.fixedResponseContract"))
+        #expect(editor.contains("SymbolCatalog.aiSuggestionSymbolNames"))
+        #expect(editor.contains("TaskColorPalette.hexValues"))
+        #expect(editor.contains(#"\(accessibilityID).fixedRules"#))
+        #expect(editor.contains(#"\(accessibilityID).allowedVisuals"#))
         #expect(editor.contains(".editorDiscardConfirmation("))
         #expect(editor.contains(".navigationBarBackButtonHidden(isEmbeddedInNavigationStack)"))
         #expect(service.contains("systemContract"))
@@ -94,6 +99,9 @@ struct AITaskPlanUIContractTests {
             "settings.llm.prompt.restoreDefault",
             "settings.llm.prompt.byteCountFormat",
             "settings.llm.prompt.footer",
+            "settings.llm.prompt.contractSection",
+            "settings.llm.prompt.fixedRules",
+            "settings.llm.prompt.allowedVisuals",
             "settings.llm.prompt.error.controlCharacter",
             "settings.llm.prompt.error.tooLongFormat",
             "task.notes.preview",

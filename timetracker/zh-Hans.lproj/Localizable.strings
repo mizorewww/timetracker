@@ -226,6 +226,9 @@
 "settings.llm.prompt.restoreDefault" = "恢复默认指令";
 "settings.llm.prompt.byteCountFormat" = "%lld / %lld 字节";
 "settings.llm.prompt.footer" = "这些指令会随应用数据同步，并在对应 AI 功能运行时发送到你配置的 endpoint。请勿填写密码或 API Key。清空编辑器并保存后会恢复该功能的默认指令；固定响应格式与验证规则始终有效。";
+"settings.llm.prompt.contractSection" = "AI 始终收到的内容";
+"settings.llm.prompt.fixedRules" = "固定响应契约";
+"settings.llm.prompt.allowedVisuals" = "AI 可使用的图标与颜色";
 "settings.llm.prompt.error.controlCharacter" = "请移除不支持的控制字符。允许使用制表符和换行。";
 "settings.llm.prompt.error.tooLongFormat" = "指令占用 %lld 字节，最多允许 %lld 字节。";
 "settings.llm.taskPlan.error.requestRequired" = "请描述你想创建的任务计划。";

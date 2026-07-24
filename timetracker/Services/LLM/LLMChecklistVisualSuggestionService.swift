@@ -175,7 +175,7 @@ struct LLMChecklistVisualSuggestionService {
     }
 }
 
-private extension LLMChecklistVisualSuggestionService {
+extension LLMChecklistVisualSuggestionService {
     static let responseContract = """
     Return only JSON with keys iconName, colorHex, reason. Use an SF Symbol from \
     allowedSymbols exactly and a color from allowedColors exactly.

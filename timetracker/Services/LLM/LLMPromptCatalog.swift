@@ -57,6 +57,22 @@ nonisolated enum LLMPromptKind: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+extension LLMPromptKind {
+    /// The fixed response contract always sent alongside the editable
+    /// instructions. Settings shows it read-only so users can tell which
+    /// behavior their instructions cannot change.
+    var fixedResponseContract: String {
+        switch self {
+        case .inboxRouting:
+            LLMInboxSuggestionService.responseContract
+        case .checklistVisual:
+            LLMChecklistVisualSuggestionService.responseContract
+        case .taskPlan:
+            LLMTaskPlanService.systemContract
+        }
+    }
+}
+
 /// Compatibility name retained for the task-plan service and existing synced
 /// preference. New prompt surfaces should use `LLMPromptKind` directly.
 nonisolated enum LLMTaskPlanPrompt {

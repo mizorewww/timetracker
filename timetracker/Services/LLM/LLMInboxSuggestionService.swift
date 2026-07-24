@@ -301,7 +301,7 @@ struct LLMInboxSuggestionService {
     }
 }
 
-private extension LLMInboxSuggestionService {
+extension LLMInboxSuggestionService {
     static let responseContract = """
     Return only JSON with keys destinationKind, destinationID, reason, iconName, \
     colorHex. destinationKind must be childTask, category, or checklist. For \

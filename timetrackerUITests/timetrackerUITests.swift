@@ -3699,6 +3699,116 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testEveryAIPromptExposesMarkdownPreviewAndFixedContract() throws {
+        // Prompt editor presentation on macOS lives in a separate Settings
+        // scene whose window placement makes scripted navigation unreliable;
+        // macOS coverage comes from the shared editor source contract tests.
+        #if targetEnvironment(simulator)
+        let app = launchApp(route: "settings")
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        let settingsView = app.descendants(matching: .any)[
+            "settings.view"
+        ].firstMatch
+        if !settingsView.waitForExistence(timeout: 3) {
+            openSettings(in: app)
+        }
+        XCTAssertTrue(
+            settingsView.waitForExistence(timeout: 8),
+            "The settings surface must be visible."
+        )
+        let intelligence = app.descendants(matching: .any)[
+            "settings.category.intelligence"
+        ].firstMatch
+        scrollUntilHittable(intelligence, direction: .up, in: app)
+        // The macOS Settings window can open on another display or stay
+        // behind the main window, making isHittable/activate unreliable;
+        // a coordinate click still reaches the row.
+        #if os(macOS)
+        XCTAssertTrue(
+            intelligence.waitForExistence(timeout: 5),
+            "The intelligence settings category must be available."
+        )
+        intelligence.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+        ).click()
+        #else
+        XCTAssertTrue(
+            intelligence.waitForExistence(timeout: 5) && intelligence.isHittable,
+            "The intelligence settings category must be available."
+        )
+        activate(intelligence)
+        #endif
+
+        for kind in ["inboxRouting", "checklistVisual", "taskPlan"] {
+            let edit = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).edit"
+            ].firstMatch
+            scrollUntilHittable(edit, direction: .up, in: app)
+            #if os(macOS)
+            XCTAssertTrue(edit.waitForExistence(timeout: 5))
+            #else
+            XCTAssertTrue(edit.waitForExistence(timeout: 5) && edit.isHittable)
+            #endif
+            activate(edit)
+
+            let mode = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).mode"
+            ].firstMatch
+            XCTAssertTrue(
+                mode.waitForExistence(timeout: 5),
+                "Every prompt editor must offer an edit/preview mode switch."
+            )
+            let previewSegment = mode.buttons.element(boundBy: 1)
+            XCTAssertTrue(previewSegment.exists && previewSegment.isHittable)
+            activate(previewSegment)
+            let preview = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).preview"
+            ].firstMatch
+            XCTAssertTrue(
+                preview.waitForExistence(timeout: 5),
+                "Every prompt editor must render a Markdown preview."
+            )
+
+            let fixedRules = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).fixedRules"
+            ].firstMatch
+            scrollUntilHittable(fixedRules, direction: .up, in: app)
+            XCTAssertTrue(
+                fixedRules.waitForExistence(timeout: 5),
+                "Every prompt editor must expose the fixed response contract."
+            )
+            let allowedVisuals = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).allowedVisuals"
+            ].firstMatch
+            scrollUntilHittable(allowedVisuals, direction: .up, in: app)
+            XCTAssertTrue(
+                allowedVisuals.waitForExistence(timeout: 5),
+                "Every prompt editor must expose the allowed symbols and colors."
+            )
+            #if !os(macOS)
+            if kind == "inboxRouting" {
+                activate(fixedRules)
+                try capture(
+                    "\(screenshotPrefix)-ai-prompt-\(kind)-fixed-contract",
+                    app: app
+                )
+            }
+            #endif
+
+            let cancel = app.buttons[
+                "settings.llm.prompt.\(kind).cancel"
+            ].firstMatch
+            XCTAssertTrue(cancel.waitForExistence(timeout: 3))
+            activate(cancel)
+            let editor = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).editor"
+            ].firstMatch
+            XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+        }
+        #endif
+    }
+
+    @MainActor
     func testEveryAIPromptCanBeEditedSavedRestoredAndSafelyDiscarded() throws {
         #if targetEnvironment(simulator)
         let app = launchApp(route: "settings")

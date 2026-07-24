@@ -226,6 +226,9 @@
 "settings.llm.prompt.restoreDefault" = "Restore Default Instructions";
 "settings.llm.prompt.byteCountFormat" = "%lld of %lld bytes";
 "settings.llm.prompt.footer" = "These instructions sync with your app data and are sent to your configured endpoint when the corresponding AI feature runs. Do not include passwords or API keys. Saving an empty editor restores that feature’s default instructions. The fixed response format and validation rules always remain in effect.";
+"settings.llm.prompt.contractSection" = "What the AI always receives";
+"settings.llm.prompt.fixedRules" = "Fixed response contract";
+"settings.llm.prompt.allowedVisuals" = "Symbols and colors the AI may use";
 "settings.llm.prompt.error.controlCharacter" = "Remove unsupported control characters. Tabs and line breaks are allowed.";
 "settings.llm.prompt.error.tooLongFormat" = "The instructions use %lld bytes; the maximum is %lld bytes.";
 "settings.llm.taskPlan.error.requestRequired" = "Describe the task plan you want to create.";

@@ -475,10 +475,7 @@ private nonisolated struct AITaskPlanPromptEnvelope: Encodable {
     let allowedColors: [String]
 }
 
-private extension LLMTaskPlanService {
-    static let maximumReferenceByteCount =
-        SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
-
+extension LLMTaskPlanService {
     static let systemContract = """
     You generate an editable Time Tracker plan draft. Return only one JSON \
     object with exactly three flat arrays: categories, tasks, and \
@@ -517,6 +514,11 @@ private extension LLMTaskPlanService {
     reserved managed task catalog. Do not include Markdown fences, commentary, \
     generated UUIDs, extra fields, or nested task objects.
     """
+}
+
+private extension LLMTaskPlanService {
+    static let maximumReferenceByteCount =
+        SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
 
     static func preparedRequest(_ value: String) throws -> String {
         let prepared = value.trimmingCharacters(in: .whitespacesAndNewlines)

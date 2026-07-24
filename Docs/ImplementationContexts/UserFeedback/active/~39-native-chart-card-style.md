@@ -1,1 +1,0 @@
-../tasks/39-native-chart-card-style.md

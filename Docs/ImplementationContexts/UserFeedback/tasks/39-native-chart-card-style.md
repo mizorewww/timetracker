@@ -8,8 +8,8 @@
 - [x] 领取“Heatmap 和柱状图风格与原生卡片不一致”反馈。
 - [x] 审计 Heatmap、柱状图与同屏原生卡片的组件、平台差异和现有自动化证据。
 - [x] 确定复用 SwiftUI 原生容器/项目 DesignSystem 的最小统一方案。
-- [~] 分 checkpoint 实现并运行聚焦测试与 macOS/iPhone/iPad XCUITest 截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
+- [x] 分 checkpoint 实现并运行聚焦测试与 macOS/iPhone/iPad XCUITest 截图验收。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`，由 Codex 标记完成并移除活动链接。
 
 ## 审计结论(task39_visual_audit / task39_test_audit)
 
@@ -44,9 +44,9 @@
 
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
 - [x] Checkpoint B：并行审计现有卡片实现、HIG/库方案与自动化矩阵。
-- [~] Checkpoint C：实现共享原生卡片样式并补齐聚焦测试。
-- [ ] Checkpoint D：三平台脚本化视觉验收。
-- [ ] Checkpoint E：Release 全设备安装、签名/版本核验与收口。
+- [x] Checkpoint C：实现共享原生卡片样式并补齐聚焦测试。
+- [x] Checkpoint D：三平台脚本化视觉验收。
+- [x] Checkpoint E：Release 全设备安装、签名/版本核验与收口。
 
 ## 资源所有权
 
@@ -57,4 +57,18 @@
 
 ## 已提交 checkpoint
 
+- [x] `3f5168b1`:iPhone 原生 grouped 行方案(后被验收否决,见关键发现)。
+- [x] `e6d402d6`:原生卡片样式(radius 26 无描边)+ 桌面 padding 14 + 契约/三平台 XCUITest 通过(1.1.104 (159))。
 - [x] `f141f00d`：领取任务、实现记忆与 active link。
+
+
+## 验收与 Release 记录
+
+- [x] 契约测试 `HomeUIContractTests` + `TodayHeatmapUIContractTests`:41/41 通过。
+- [x] iPhone(owned `codex-task39-iPhone17Pro` `12A715F6`):weekly 层级/拆卡/三 metric 3/3 通过;截图确认卡片独立、radius 26、无描边、标题在卡外。
+- [x] iPad(owned `codex-task39-iPadPro11` `A6665DFB`):3/3 通过(含脚本横屏);截图确认桌面 appCard 一致。
+- [x] macOS:2/2 通过;截图确认桌面卡片语言一致。
+- [x] 资源清理:两台 owned 模拟器已 shutdown+delete;无 Booted/owned 测试进程残留。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED;iPhone Air 已装 `1.1.104 (159)`;/Applications/timetracker.app 签名校验通过。
+- [x] iPad Pro M4 安装失败(设备锁定,DDI 无法挂载);按用户 2026-07-24 指示,实体机安装状态不阻塞任务完成,iPhone Air 与 macOS 已装 `1.1.104 (159)`。
+- [x] 反馈已由主代理标记完成,active link 已移除;剩余任务见 `Docs/userfeedback.md`。

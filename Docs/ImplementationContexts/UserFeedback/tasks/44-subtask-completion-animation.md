@@ -9,7 +9,7 @@
 - [x] 审计任务详情子任务列表的完成排序、动画与身份机制(对照任务11的 checklist 动画)。
 - [x] 确定最小修复:完成时子任务动画移动到底部;取消完成动画回到按原顺序的位置。
 - [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,11 +30,11 @@
 - [x] Checkpoint B：审计子任务列表排序/动画/身份。
 - [x] Checkpoint C：实现动画与位置恢复并补齐聚焦测试。
 - [x] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] `task44_subtask_audit`(只读)：子任务列表实现审计。
 
 ## 审计记录(task44_subtask_audit)
@@ -47,10 +47,12 @@
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `c5481fb7`:动画 + 位置恢复实现与全部验收(1.1.122 (177));领取任务与 active link 创建时已提交。
 
 
 ## 验收记录
 
 - [x] `TaskEditorSessionTests`/`CoreCommandHandlerTests`/`TaskUIContractTests` 全绿(含 2 个新位置恢复用例与持久化恢复断言更新)。
 - [x] iPhone(owned `codex-task44-iPhone17Pro`)、iPad(`codex-task44-iPadPro11`)`testCompletingChecklistItemMovesItBelowIncompleteWork`(含取消恢复步骤)通过;截图确认 Polish timeline 回到未完成组顶部。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.122 (177)`,无设备安装失败。
+- [x] 两条反馈均已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

@@ -6,9 +6,9 @@
 ## 当前阶段
 
 - [x] 领取“AI 提示词预览/计划开关重叠/保存提示词卡死”反馈组。
-- [~] 审计三条问题的现状:三个 AI 提示词的编辑/预览路径、生成计划页开关实现、提示词保存链路。
-- [ ] 确定各项最小方案。
-- [ ] 分 checkpoint 实现并运行聚焦测试与模拟器截图验收。
+- [x] 审计三条问题的现状:三个 AI 提示词的编辑/预览路径、生成计划页开关实现、提示词保存链路。
+- [x] 确定各项最小方案。
+- [x] 分 checkpoint 实现并运行聚焦测试与模拟器截图验收。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界(三个子项)
@@ -31,11 +31,11 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
-- [ ] Checkpoint B：并行审计三条问题(提示词编辑/预览、计划开关、保存链路)。
-- [ ] Checkpoint C：修复保存卡死(Bug 优先)。
-- [ ] Checkpoint D：计划开关复用任务详情 UI。
-- [ ] Checkpoint E：三个提示词统一 MarkdownView 预览与逻辑暴露。
-- [ ] Checkpoint F：三平台模拟器验收、Release 与收口。
+- [x] Checkpoint B：并行审计三条问题(提示词编辑/预览、计划开关、保存链路)。
+- [x] Checkpoint C：修复保存卡死(Bug 优先)。
+- [x] Checkpoint D：计划开关复用任务详情 UI。
+- [x] Checkpoint E：三个提示词统一 MarkdownView 预览与逻辑暴露。
+- [~] Checkpoint F：三平台模拟器验收、Release 与收口。
 
 ## 资源所有权
 
@@ -65,4 +65,14 @@
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] 领取任务、实现记忆与 active link(创建即提交)。
+- [x] `1b20c197`:保存卡死修复 —— 两把跨进程文件锁(flock/lockf)加 5s 退避超时(ETIMEDOUT 替代永久卡死)、锁 registry 改强引用、编辑器保存中态;锁超时单元测试(1.1.116 (171))。
+- [x] `8c354c25`:计划开关拆独立 List 行(与任务详情一致),标识符不变,三平台既有验收测试通过(1.1.117 (172))。
+- [x] `cc9694d3`:三个提示词统一 Edit/Preview + MarkdownView;新增"AI 始终收到的内容"只读区(固定响应契约单一来源 + 可选图标/色板);iOS 模拟器 UI 测试 + 契约测试(1.1.118 (173))。
+
+
+## 验收记录
+
+- [x] 锁/偏好/LLM 契约测试全绿;锁超时单元测试验证 ETIMEDOUT < 3s。
+- [x] 计划开关:iPhone/iPad/macOS `testAITaskPlanDraftReviewAtomicCreate` 通过;截图确认 Quantity Goal/Repeat Daily 独立行。
+- [x] 提示词暴露:iPhone/iPad `testEveryAIPromptExposesMarkdownPreviewAndFixedContract` + 既有编辑保存测试通过;截图确认 inboxRouting 也有 Preview 与固定契约披露。macOS 该场景脚本导航不可靠(独立 Settings 窗口),按既有惯例跳过,由共享源码契约测试覆盖。

@@ -578,7 +578,7 @@ struct HomeUIContractTests {
         #expect(homeSource.contains("homeVisualizationListSection()"))
         #expect(homeSource.contains(".listRowBackground(Color.clear)"))
         #expect(homeSource.contains(".listRowSeparator(.hidden)"))
-        #expect(homeSource.contains("RoundedRectangle(cornerRadius: 26, style: .continuous)"))
+        #expect(homeSource.contains("cornerRadius: AppLayout.nativeGroupedCardRadius"))
         #expect(homeSource.contains(".accessibilityElement(children: .contain)"))
         #expect(homeSource.contains("HomeWeeklyGrossTimeRefreshRequest"))
         #expect(homeSource.contains("AnalyticsEvaluationCacheKey("))

@@ -39,7 +39,7 @@ struct ActivePomodoroCard: View {
                 Divider()
                 stopButton
             }
-            .appCard(padding: 24)
+            .appNativeCard(padding: 24)
             .accessibilityIdentifier("pomodoro.active")
         } secondary: {
             PomodoroLedgerCard(store: store)

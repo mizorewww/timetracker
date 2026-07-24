@@ -1,7 +1,13 @@
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#endif
+
 enum AppLayout {
     static let cardRadius: CGFloat = 8
+    /// Corner radius matching the native inset-grouped list card on iOS.
+    static let nativeGroupedCardRadius: CGFloat = 26
     static let iconRadius: CGFloat = 7
     static let pageSpacing: CGFloat = 20
     static let sectionSpacing: CGFloat = 12
@@ -39,6 +45,30 @@ struct AppCardBackground: ViewModifier {
 extension View {
     func appCard(padding: CGFloat = AppLayout.cardPadding, stroke: Bool = true) -> some View {
         modifier(AppCardBackground(padding: padding, stroke: stroke))
+    }
+
+    /// Card matching the platform's native card language: iPhone uses the
+    /// inset-grouped look (large continuous corners, grouped background, no
+    /// stroke); iPad and macOS use the regular app card.
+    @ViewBuilder
+    func appNativeCard(padding: CGFloat = AppLayout.cardPadding) -> some View {
+        #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            self
+                .padding(padding)
+                .background(
+                    AppColors.cardBackground,
+                    in: RoundedRectangle(
+                        cornerRadius: AppLayout.nativeGroupedCardRadius,
+                        style: .continuous
+                    )
+                )
+        } else {
+            self.appCard(padding: padding)
+        }
+        #else
+        self.appCard(padding: padding)
+        #endif
     }
 
     @ViewBuilder

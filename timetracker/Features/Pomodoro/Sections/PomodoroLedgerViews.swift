@@ -11,8 +11,7 @@ struct PomodoroLedgerCard: View {
 
             PomodoroLedgerContent(store: store)
         }
-        .padding(18)
-        .appCard(padding: 0)
+        .appNativeCard(padding: 18)
     }
 }
 

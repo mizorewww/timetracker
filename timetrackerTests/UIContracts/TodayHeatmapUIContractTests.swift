@@ -340,7 +340,7 @@ struct TodayHeatmapUIContractTests {
         #expect(section.contains("homeVisualizationListSection()"))
         #expect(section.contains(".listRowBackground(Color.clear)"))
         #expect(section.contains(".listRowSeparator(.hidden)"))
-        #expect(section.contains("RoundedRectangle(cornerRadius: 26, style: .continuous)"))
+        #expect(section.contains("cornerRadius: AppLayout.nativeGroupedCardRadius"))
         #expect(section.contains("cornerRadius: AppLayout.cardRadius") == false)
         #expect(section.contains("home.heatmap.card.\\(snapshot.taskID.uuidString)"))
         #expect(section.contains("home.heatmap.grid.\\(snapshot.taskID.uuidString)"))

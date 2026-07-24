@@ -4272,6 +4272,22 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testFocusCardsMatchTheNativePlatformCardStyle() throws {
+        let app = launchApp(route: "focus")
+        XCTAssertTrue(
+            app.descendants(matching: .any)["pomodoro.view"]
+                .waitForExistence(timeout: 8)
+        )
+        let setup = app.descendants(matching: .any)["pomodoro.setup"].firstMatch
+        XCTAssertTrue(setup.waitForExistence(timeout: 5))
+        let ledger = app.descendants(matching: .any)["pomodoro.recent"].firstMatch
+        scrollUntilHittable(ledger, direction: .up, in: app)
+
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-focus-native-card-style", app: app)
+    }
+
+    @MainActor
     func testFocusTaskPickerSearchesAndSelectsWithoutStartingFocus() throws {
         #if os(macOS)
         throw XCTSkip("The Focus task picker interaction requires an iOS simulator.")

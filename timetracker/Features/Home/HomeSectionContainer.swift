@@ -25,7 +25,10 @@ extension View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 AppColors.cardBackground,
-                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+                in: RoundedRectangle(
+                    cornerRadius: AppLayout.nativeGroupedCardRadius,
+                    style: .continuous
+                )
             )
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(accessibilityIdentifier)

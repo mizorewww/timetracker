@@ -4,6 +4,32 @@ import Testing
 @Suite(.serialized)
 struct FocusUIContractTests {
     @Test
+    func pomodoroCardsFollowTheNativePlatformCardLanguage() throws {
+        let designSystem = try sourceText(
+            "timetracker/SharedUI/Foundation/DesignSystem.swift"
+        )
+        let setup = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift"
+        )
+        let active = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroActiveViews.swift"
+        )
+        let ledger = try sourceText(
+            "timetracker/Features/Pomodoro/Sections/PomodoroLedgerViews.swift"
+        )
+
+        #expect(designSystem.contains("static let nativeGroupedCardRadius: CGFloat = 26"))
+        #expect(designSystem.contains("func appNativeCard(padding: CGFloat = AppLayout.cardPadding)"))
+        #expect(designSystem.contains("cornerRadius: AppLayout.nativeGroupedCardRadius"))
+        #expect(setup.contains(".appNativeCard(padding: layout.setupCardPadding)"))
+        #expect(active.contains(".appNativeCard(padding: 24)"))
+        #expect(ledger.contains(".appNativeCard(padding: 18)"))
+        #expect(setup.contains(".appCard(") == false)
+        #expect(active.contains(".appCard(") == false)
+        #expect(ledger.contains(".appCard(") == false)
+    }
+
+    @Test
     func setupUsesOnePrimaryActionAndAnAdaptiveHistoryColumn() throws {
         let setup = try sourceText(
             "timetracker/Features/Pomodoro/Sections/PomodoroSetupViews.swift"

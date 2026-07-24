@@ -43,7 +43,7 @@ struct PomodoroSetupCard: View {
                     )
                 }
             }
-            .appCard(padding: layout.setupCardPadding)
+            .appNativeCard(padding: layout.setupCardPadding)
         } secondary: {
             PomodoroLedgerCard(store: store)
         }

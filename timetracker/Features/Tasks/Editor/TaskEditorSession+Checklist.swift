@@ -18,11 +18,18 @@ extension TaskEditorSession {
         var item = draft.checklistItems.remove(at: sourceIndex)
         item.isCompleted.toggle()
         if item.isCompleted {
+            preCompletionChecklistIndices[id] = sourceIndex
             draft.checklistItems.append(item)
         } else {
-            let insertionIndex = draft.checklistItems.firstIndex(where: {
+            // Restore the original position when it is still inside the
+            // incomplete group; fall back to the group end otherwise.
+            let incompleteEnd = draft.checklistItems.firstIndex(where: {
                 $0.isCompleted
             }) ?? draft.checklistItems.endIndex
+            let restoredIndex = preCompletionChecklistIndices.removeValue(
+                forKey: id
+            )
+            let insertionIndex = min(restoredIndex ?? incompleteEnd, incompleteEnd)
             draft.checklistItems.insert(item, at: insertionIndex)
         }
     }

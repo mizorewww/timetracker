@@ -178,11 +178,16 @@ final class TaskEditorSession {
         pendingReloadDraft = store.editorDraft(for: latestTask)
     }
 
+    /// Original draft indices of checklist items before they were completed,
+    /// so uncompleting restores their place. Cleared when the draft reloads.
+    var preCompletionChecklistIndices: [UUID: Int] = [:]
+
     func replace(with latestDraft: TaskEditorDraft) {
         draft = latestDraft
         sessionBaseline = latestDraft
         parentCandidates = Self.parentCandidates(for: latestDraft, store: store)
         pendingReloadDraft = nil
+        preCompletionChecklistIndices.removeAll()
     }
 
     func finishAutosaveRebase(

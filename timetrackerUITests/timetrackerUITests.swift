@@ -2532,6 +2532,21 @@ final class timetrackerUITests: XCTestCase {
             "\(screenshotPrefix)-checklist-completed-moved-to-bottom",
             app: app
         )
+
+        activate(incomplete)
+        scrollUntilHittable(incomplete, direction: .up, in: app)
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                incomplete.value as? String == "Not completed" &&
+                    completedFirst.exists &&
+                    incomplete.frame.minY < completedFirst.frame.minY
+            },
+            "Uncompleting must restore the checklist item above completed work."
+        )
+        try capture(
+            "\(screenshotPrefix)-checklist-uncompleted-restored-position",
+            app: app
+        )
         #endif
     }
 

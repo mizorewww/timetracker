@@ -51,7 +51,9 @@ struct TaskChecklistEditorSection: View {
                 moveDown: { moveChecklistItem(visualIndex: placement.visualIndex, direction: 1) },
                 delete: { deleteChecklistItem(at: placement.sourceIndex) },
                 toggleCompletion: {
-                    toggleChecklistItem(placement.id)
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+                        toggleChecklistItem(placement.id)
+                    }
                 },
                 focus: focusedChecklistDraftID,
                 submit: { addChecklistItem(placement.visualIndex) }

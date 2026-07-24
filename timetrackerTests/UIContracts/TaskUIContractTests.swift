@@ -1135,6 +1135,8 @@ struct TaskUIContractTests {
         #expect(editorSource.contains("ChecklistOrderingService().completionGrouped("))
         #expect(editorSource.contains("func toggleChecklistItem(id: UUID)"))
         #expect(editorSource.contains("draft.checklistItems.append(item)"))
+        #expect(editorSource.contains("preCompletionChecklistIndices"))
+        #expect(editorSource.contains("withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {"))
         #expect(editorSource.contains("id: checklistItems[sourceIndex].id"))
         #expect(editorSource.contains("action: toggleCompletion"))
         #expect(editorSource.contains("reduceMotion ? nil : .snappy(duration: 0.28)"))

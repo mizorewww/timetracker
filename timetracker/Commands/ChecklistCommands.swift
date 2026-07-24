@@ -65,7 +65,13 @@ struct ChecklistCommandHandler {
         deviceID: String = DeviceIdentity.current
     ) throws {
         guard item.isCompleted != isCompleted else { return }
-        if let lastSiblingSortOrder = existingItems.lazy
+        if isCompleted {
+            item.sortOrderBeforeCompletion = item.sortOrder
+        }
+        if let restoredOrder = isCompleted ? nil : item.sortOrderBeforeCompletion {
+            item.sortOrder = restoredOrder
+            item.sortOrderBeforeCompletion = nil
+        } else if let lastSiblingSortOrder = existingItems.lazy
             .filter({ $0.id != item.id && $0.taskID == item.taskID })
             .map(\.sortOrder)
             .max() {

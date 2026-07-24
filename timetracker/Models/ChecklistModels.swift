@@ -8,6 +8,9 @@ final class ChecklistItem {
     var title: String = ""
     var isCompleted: Bool = false
     var sortOrder: Double = 0
+    /// Position before the item was last marked complete, so uncompleting
+    /// can restore its original place instead of appending to the group.
+    var sortOrderBeforeCompletion: Double?
     var completedAt: Date?
     var createdAt: Date = Date()
     var updatedAt: Date = Date()

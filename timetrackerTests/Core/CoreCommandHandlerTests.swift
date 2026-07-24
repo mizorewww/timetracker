@@ -32,6 +32,7 @@ struct CoreCommandHandlerTests {
         #expect(first.isCompleted)
         #expect(first.completedAt == Date(timeIntervalSince1970: 1_000))
         #expect(first.sortOrder > second.sortOrder)
+        #expect(first.sortOrderBeforeCompletion == 10)
 
         try handler.toggle(
             first,
@@ -41,7 +42,10 @@ struct CoreCommandHandlerTests {
         )
         #expect(first.isCompleted == false)
         #expect(first.completedAt == nil)
-        #expect(first.sortOrder > second.sortOrder)
+        // Uncompleting restores the original position instead of the group end.
+        #expect(first.sortOrder == 10)
+        #expect(first.sortOrder < second.sortOrder)
+        #expect(first.sortOrderBeforeCompletion == nil)
     }
 
     @Test @MainActor

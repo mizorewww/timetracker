@@ -186,13 +186,67 @@ struct TaskEditorSessionTests {
         session.toggleChecklistItem(id: item.id)
         session.toggleChecklistItem(id: item.id)
 
+        // Completing then uncompleting restores the original position.
         #expect(session.draft.checklistItems.map(\.id) == [
             openFirst.id,
-            openLast.id,
             item.id,
+            openLast.id,
             completed.id,
         ])
-        #expect(session.draft.checklistItems[2].isCompleted == false)
+        #expect(session.draft.checklistItems[1].isCompleted == false)
+    }
+
+    @Test
+    func uncompletingChecklistItemRestoresItsOriginalPosition() {
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        let first = ChecklistEditorDraft(title: "First")
+        let item = ChecklistEditorDraft(title: "Round trip")
+        let last = ChecklistEditorDraft(title: "Last")
+        initialDraft.checklistItems = [first, item, last]
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: initialDraft
+        )
+
+        session.toggleChecklistItem(id: item.id)
+        #expect(session.draft.checklistItems.map(\.id) == [
+            first.id,
+            last.id,
+            item.id,
+        ])
+
+        session.toggleChecklistItem(id: item.id)
+        #expect(session.draft.checklistItems.map(\.id) == [
+            first.id,
+            item.id,
+            last.id,
+        ])
+        #expect(session.draft.checklistItems[1].isCompleted == false)
+    }
+
+    @Test
+    func uncompletingChecklistItemClampsRestoredPositionInsideIncompleteGroup() {
+        var initialDraft = TaskEditorDraft(parentID: nil)
+        let first = ChecklistEditorDraft(title: "First")
+        let item = ChecklistEditorDraft(title: "Round trip")
+        let last = ChecklistEditorDraft(title: "Last")
+        initialDraft.checklistItems = [first, item, last]
+        let session = TaskEditorSession(
+            store: makeTestStore(),
+            initialDraft: initialDraft
+        )
+
+        session.toggleChecklistItem(id: item.id)
+        session.toggleChecklistItem(id: first.id)
+        // `first` was completed after `item`; uncompleting `item` must not
+        // jump ahead of the remaining incomplete rows.
+        session.toggleChecklistItem(id: item.id)
+        #expect(session.draft.checklistItems.map(\.id) == [
+            last.id,
+            item.id,
+            first.id,
+        ])
+        #expect(session.draft.checklistItems[1].isCompleted == false)
     }
 
     @Test

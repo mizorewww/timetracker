@@ -169,6 +169,9 @@ struct ChecklistDraftService {
                     }
                     item.isCompleted = draft.isCompleted
                     item.sortOrder = sortOrder
+                    if draft.isCompleted == false {
+                        item.sortOrderBeforeCompletion = nil
+                    }
                     item.deletedAt = nil
                     item.updatedAt = now
                     item.deviceID = deviceID

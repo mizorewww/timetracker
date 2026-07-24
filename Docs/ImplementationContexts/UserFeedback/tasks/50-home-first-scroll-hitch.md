@@ -9,7 +9,7 @@
 - [x] 审计主页(PhoneHomeView)首屏各 section 的加载/刷新链与懒加载策略,定位首次滚动卡顿根因。
 - [x] 必要时用 Instruments(Time Profiler,模拟器)取证。
 - [x] 实现最小修复并运行聚焦测试与模拟器验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,16 +30,16 @@
 - [x] Checkpoint B：审计首屏加载链与热路径,必要时录 trace。
 - [x] Checkpoint C：实现修复并补齐聚焦测试。
 - [x] Checkpoint D：模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] `task50_home_perf_audit`(只读)：主页热路径审计。
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `8cb1a4d4`:性能修复与验收(1.1.143→1.1.144 (199));领取任务与 active link 创建时已提交。
 
 
 ## 审计与实现记录(task50_home_perf_audit)
@@ -49,3 +49,5 @@
 - 未做(记录在案):timelineSnapshot 每次 body 评估对全历史 session 分组(section 与 chart 各算一次)与 TodayHomeContent 每次评估重建 —— 量级次之,留作后续。
 - [x] heatmap 四个套件(Tests/Recurrence/Refresh/UIContract)全绿;iPhone/iPad/macOS heatmap 两项 UI 验收通过。
 - [x] 未录 Instruments trace:静态证据已闭环(主线程同步调用点 + 行高抖动路径),修复不依赖计时断言。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.144 (199)`,无设备安装失败。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

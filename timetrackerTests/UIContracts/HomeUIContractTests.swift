@@ -859,6 +859,22 @@ struct HomeUIContractTests {
     }
 
     @Test
+    func quickStartEditorReordersPinnedRowsWithAnimatedControls() throws {
+        let source = try sourceText(
+            "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift"
+        )
+
+        #expect(source.contains("QuickStartPinnedReorderControls("))
+        #expect(source.contains("private func movePinned(_ taskID: UUID, offset: Int)"))
+        #expect(source.contains("selectedIDs.swapAt(sourceIndex, destinationIndex)"))
+        #expect(source.contains("withSelectionAnimation"))
+        #expect(source.contains("quickStart.editor.moveUp."))
+        #expect(source.contains("quickStart.editor.moveDown."))
+        #expect(source.contains("common.moveUp"))
+        #expect(source.contains("common.moveDown"))
+    }
+
+    @Test
     func quickStartUsesIndexedTaskIdentityAndSeparatesNavigationFromTimerActions() throws {
         let identitySource = try sourceText(
             "timetracker/Services/Tasks/TaskIdentityPresentation.swift"

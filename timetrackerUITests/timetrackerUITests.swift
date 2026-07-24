@@ -6292,6 +6292,100 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testQuickStartEditorReordersPinnedTasks() throws {
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+
+        let edit = app.buttons["home.quickStart.edit"].firstMatch
+        scrollTodayUntilHittable(edit, in: app)
+        XCTAssertTrue(edit.waitForExistence(timeout: 3) && edit.isHittable)
+        activate(edit)
+        let editor = app.descendants(matching: .any)["quickStart.editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+
+        let available = app.buttons
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "quickStart.editor.available."
+            ))
+            .matching(
+                NSPredicate(format: "label == %@", "Requirements Review")
+            )
+            .firstMatch
+        scrollUntilHittable(available, direction: .up, in: app)
+        XCTAssertTrue(available.waitForExistence(timeout: 5) && available.isHittable)
+        let taskID = available.identifier.replacingOccurrences(
+            of: "quickStart.editor.available.",
+            with: ""
+        )
+        activate(available)
+
+        let pinnedRows = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "quickStart.editor.pinned."
+            )
+        )
+        let thirdPinned = pinnedRows
+            .matching(
+                NSPredicate(format: "label == %@", "Requirements Review")
+            )
+            .firstMatch
+        let secondPinned = pinnedRows
+            .matching(NSPredicate(format: "label == %@", "Design System"))
+            .firstMatch
+        scrollUntilHittable(thirdPinned, direction: .down, in: app)
+        XCTAssertTrue(thirdPinned.waitForExistence(timeout: 5))
+        XCTAssertTrue(secondPinned.waitForExistence(timeout: 5))
+        XCTAssertEqual(thirdPinned.value as? String, "Pinned, order 3")
+        XCTAssertEqual(secondPinned.value as? String, "Pinned, order 2")
+        let passedTaskID = secondPinned.identifier.replacingOccurrences(
+            of: "quickStart.editor.pinned.",
+            with: ""
+        )
+
+        let moveUp = app.buttons[
+            "quickStart.editor.moveUp.\(taskID)"
+        ].firstMatch
+        XCTAssertTrue(moveUp.waitForExistence(timeout: 3))
+        activate(moveUp)
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                thirdPinned.value as? String == "Pinned, order 2"
+            },
+            "Moving a pinned task up must update its order badge."
+        )
+        #if !os(macOS)
+        try capture("\(screenshotPrefix)-quick-start-editor-reordered", app: app)
+        #endif
+
+        let save = app.buttons["Save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
+        activate(save)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let reorderedRow = app.descendants(matching: .any)[
+            "home.quickStart.task.\(taskID)"
+        ].firstMatch
+        let previousRow = app.descendants(matching: .any)[
+            "home.quickStart.task.\(passedTaskID)"
+        ].firstMatch
+        scrollTodayUntilHittable(reorderedRow, in: app)
+        XCTAssertTrue(reorderedRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(previousRow.waitForExistence(timeout: 5))
+        XCTAssertLessThan(
+            reorderedRow.frame.minY,
+            previousRow.frame.minY,
+            "The reordered pinned task must appear above the task it passed."
+        )
+        #if !os(macOS)
+        try capture("\(screenshotPrefix)-quick-start-home-reordered", app: app)
+        #endif
+    }
+
+    @MainActor
     func testRunningQuickStartOpensTaskDetailInsteadOfStopping() throws {
         #if os(macOS)
         throw XCTSkip("The phone Quick Start interaction requires an iOS simulator.")

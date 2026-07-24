@@ -62,6 +62,17 @@ struct QuickStartEditorSheet: View {
         }
     }
 
+    private func movePinned(_ taskID: UUID, offset: Int) {
+        guard let sourceIndex = selectedIDs.firstIndex(of: taskID) else {
+            return
+        }
+        let destinationIndex = sourceIndex + offset
+        guard selectedIDs.indices.contains(destinationIndex) else { return }
+        withSelectionAnimation {
+            selectedIDs.swapAt(sourceIndex, destinationIndex)
+        }
+    }
+
     private func withSelectionAnimation(_ updates: () -> Void) {
         withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
             updates()
@@ -84,26 +95,37 @@ struct QuickStartEditorSheet: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(Array(pinnedTasks.enumerated()), id: \.element.id) { index, task in
-                            Button {
-                                unpin(task)
-                            } label: {
-                                QuickStartEditorTaskRow(
-                                    presentation: store.taskIdentityPresentation(for: task),
-                                    order: index + 1,
-                                    actionSystemImage: "minus.circle",
-                                    actionTint: Color.primary.opacity(0.45)
+                            HStack(spacing: 4) {
+                                Button {
+                                    unpin(task)
+                                } label: {
+                                    QuickStartEditorTaskRow(
+                                        presentation: store.taskIdentityPresentation(for: task),
+                                        order: index + 1,
+                                        actionSystemImage: "minus.circle",
+                                        actionTint: Color.primary.opacity(0.45)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(task.title)
+                                .accessibilityValue(selectionValue(isPinned: true, order: index + 1))
+                                .accessibilityHint(
+                                    AppStrings.localized("quickStart.selection.unpinHint")
+                                )
+                                .accessibilityAddTraits(.isSelected)
+                                .accessibilityIdentifier(
+                                    "quickStart.editor.pinned.\(task.id.uuidString)"
+                                )
+
+                                QuickStartPinnedReorderControls(
+                                    taskID: task.id,
+                                    canMoveUp: index > 0,
+                                    canMoveDown: index < pinnedTasks.count - 1,
+                                    move: { offset in
+                                        movePinned(task.id, offset: offset)
+                                    }
                                 )
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(task.title)
-                            .accessibilityValue(selectionValue(isPinned: true, order: index + 1))
-                            .accessibilityHint(
-                                AppStrings.localized("quickStart.selection.unpinHint")
-                            )
-                            .accessibilityAddTraits(.isSelected)
-                            .accessibilityIdentifier(
-                                "quickStart.editor.pinned.\(task.id.uuidString)"
-                            )
                         }
                         .onDelete(perform: removePinned)
                     }
@@ -199,6 +221,48 @@ struct QuickStartEditorSheet: View {
     }
 }
 
+private struct QuickStartPinnedReorderControls: View {
+    let taskID: UUID
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let move: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button {
+                move(-1)
+            } label: {
+                Image(systemName: "chevron.up")
+                    .frame(
+                        width: AppLayout.minimumInteractiveTarget,
+                        height: AppLayout.minimumInteractiveTarget
+                    )
+            }
+            .disabled(canMoveUp == false)
+            .accessibilityLabel(AppStrings.localized("common.moveUp"))
+            .accessibilityIdentifier(
+                "quickStart.editor.moveUp.\(taskID.uuidString)"
+            )
+
+            Button {
+                move(1)
+            } label: {
+                Image(systemName: "chevron.down")
+                    .frame(
+                        width: AppLayout.minimumInteractiveTarget,
+                        height: AppLayout.minimumInteractiveTarget
+                    )
+            }
+            .disabled(canMoveDown == false)
+            .accessibilityLabel(AppStrings.localized("common.moveDown"))
+            .accessibilityIdentifier(
+                "quickStart.editor.moveDown.\(taskID.uuidString)"
+            )
+        }
+        .buttonStyle(.borderless)
+    }
+}
+
 private struct QuickStartEditorTaskRow: View {
     let presentation: TaskIdentityPresentation
     let order: Int?
@@ -214,6 +278,7 @@ private struct QuickStartEditorTaskRow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                    .fixedSize()
             }
             Image(systemName: actionSystemImage)
                 .foregroundStyle(actionTint)

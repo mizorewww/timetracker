@@ -9,7 +9,7 @@
 - [x] 审计任务详情页图标展示与现有图标/颜色编辑器(color&icon 选择器)的呈现方式与入口。
 - [x] 确定最小跳转方案(复用现有编辑器,平台一致)。
 - [x] 实现并运行聚焦契约/UI 测试与 iPhone/iPad/macOS 模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,17 +30,17 @@
 - [x] Checkpoint B：审计详情页图标与编辑器入口。
 - [x] Checkpoint C：实现跳转并补齐聚焦测试。
 - [x] Checkpoint D：三平台模拟器脚本化视觉验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] 主代理(直接审计,无需子代理)：任务详情页与图标编辑器代码审计。
 
 ## 已提交 checkpoint
 
-- [~] 待提交:实现 + 契约/UI 测试 + 三平台截图验收。
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `36d697b6`:实现 + 契约/UI 测试 + 三平台截图验收(1.1.107 (162))。
+- [x] `dfd1d229`：领取任务、实现记忆与 active link。
 
 
 ## 实现与验收记录
@@ -49,3 +49,5 @@
 - 契约测试 `taskDetailIconOpensTheSharedSymbolColorPicker` 锁定链接、绑定与焦点清理。
 - XCUITest `testTaskDetailIconOpensSymbolColorPicker`:经 `route: "task-detail"` 直接启动(手写 Tasks 导航在 macOS 上不稳定,改用既有 route 机制),断言推出/弹出 `symbol.picker.view` 与搜索框;iPhone 需 15s 等待(route 在健康刷新后应用)。
 - [x] iPhone(owned `codex-task40-iPhone17Pro`)、iPad(`codex-task40-iPadPro11`)、macOS 均通过;截图确认 iOS 推送整页编辑器、macOS popover 锚定图标。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh` 成功;iPhone Air 已装 `1.1.107 (162)`;实体机安装状态不阻塞收口。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

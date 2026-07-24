@@ -1,1 +1,0 @@
-../tasks/40-task-detail-icon-editor-link.md

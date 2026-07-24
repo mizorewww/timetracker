@@ -4475,6 +4475,33 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testDesktopTodayShowsUnifiedNowOverviewRow() throws {
+        #if targetEnvironment(simulator) || os(macOS)
+        let app = launchApp()
+        XCTAssertTrue(homeIsReady(in: app))
+        let now = app.descendants(matching: .any)["home.activeTimers"].firstMatch
+        let overview = app.descendants(matching: .any)["home.overview"].firstMatch
+        let overviewHeader = app.descendants(matching: .any)[
+            "home.overview.header"
+        ].firstMatch
+        XCTAssertTrue(now.waitForExistence(timeout: 8))
+        XCTAssertTrue(overview.waitForExistence(timeout: 8))
+        #if !os(macOS)
+        if app.windows.firstMatch.frame.width >= 700 {
+            XCTAssertTrue(overviewHeader.waitForExistence(timeout: 3))
+            XCTAssertLessThan(
+                abs(now.frame.minY - overviewHeader.frame.minY),
+                12,
+                "On wide screens Now and Overview must share one row."
+            )
+        }
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-today-unified-now-overview", app: app)
+        #endif
+        #endif
+    }
+
+    @MainActor
     func testAnalyticsRangeSwitchKeepsPeriodControlsMounted() throws {
         let app = launchApp(route: "analytics")
         XCTAssertTrue(analyticsIsReady(in: app))

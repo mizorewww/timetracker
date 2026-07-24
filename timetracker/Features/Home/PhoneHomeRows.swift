@@ -56,6 +56,8 @@ struct PhoneSummaryMetric: View {
                     Spacer(minLength: 12)
                     Text(value)
                         .font(.headline.monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
             }
         }

@@ -14,9 +14,9 @@ struct TodayActivityHeatmapSnapshotService {
         period: ActivityHeatmapPeriod,
         now: Date,
         calendar: Calendar = .current
-    ) -> [TaskActivityHeatmapSnapshot] {
+    ) async -> [TaskActivityHeatmapSnapshot] {
         let indexes = TaskTreeService().indexes(tasks: tasks)
-        return taskSnapshots(
+        return await taskSnapshots(
             selectedTaskIDs: selectedTaskIDs,
             taskByID: indexes.taskByID,
             childrenByParentID: indexes.childrenByParentID,
@@ -44,13 +44,13 @@ struct TodayActivityHeatmapSnapshotService {
         period: ActivityHeatmapPeriod,
         now: Date,
         calendar: Calendar = .current
-    ) -> [TaskActivityHeatmapSnapshot] {
+    ) async -> [TaskActivityHeatmapSnapshot] {
         let dateRange = dateRange(
             period: period,
             now: now,
             calendar: calendar
         )
-        let indexes = activityIndexes(
+        let indexes = await activityIndexes(
             taskByID: taskByID,
             segments: segments,
             checklistItems: checklistItems,
@@ -62,11 +62,16 @@ struct TodayActivityHeatmapSnapshotService {
         )
         var seen = Set<UUID>()
 
-        return selectedTaskIDs.compactMap { selectedTaskID in
+        var snapshots: [TaskActivityHeatmapSnapshot] = []
+        for selectedTaskID in selectedTaskIDs {
+            // Heavy per-task projection (values + 53-week calendar work).
+            // Yield between tasks so a first fast scroll stays responsive.
+            await Task.yield()
+            guard Task.isCancelled == false else { return snapshots }
             guard seen.insert(selectedTaskID).inserted,
                   let task = taskByID[selectedTaskID],
                   task.deletedAt == nil else {
-                return nil
+                continue
             }
             var contributingRootTaskIDs =
                 additionalContributingTaskIDsBySelectedTaskID[
@@ -94,20 +99,23 @@ struct TodayActivityHeatmapSnapshotService {
                 calendar: calendar
             )
 
-            return TaskActivityHeatmapSnapshot(
-                taskID: selectedTaskID,
-                title: task.title,
-                iconName: ChecklistVisualSanitizer.sanitizedIcon(task.iconName),
-                colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex),
-                metric: values.metric,
-                interval: dateRange.interval,
-                today: dateRange.today,
-                weeks: weeks,
-                totalValue: values.valuesByDay.values.reduce(0, +),
-                activeDayCount: values.valuesByDay.values.lazy.filter { $0 > 0 }.count,
-                maximumDailyValue: maximumDailyValue
+            snapshots.append(
+                TaskActivityHeatmapSnapshot(
+                    taskID: selectedTaskID,
+                    title: task.title,
+                    iconName: ChecklistVisualSanitizer.sanitizedIcon(task.iconName),
+                    colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex),
+                    metric: values.metric,
+                    interval: dateRange.interval,
+                    today: dateRange.today,
+                    weeks: weeks,
+                    totalValue: values.valuesByDay.values.reduce(0, +),
+                    activeDayCount: values.valuesByDay.values.lazy.filter { $0 > 0 }.count,
+                    maximumDailyValue: maximumDailyValue
+                )
             )
         }
+        return snapshots
     }
 
     func contributingTaskIDs(

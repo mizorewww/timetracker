@@ -6,7 +6,7 @@ import Testing
 @Suite(.serialized)
 struct TodayHeatmapRecurrenceStoreTests {
     @Test @MainActor
-    func generatedPreferenceAndDetailCommandsUseTheTemplateHeatmap() throws {
+    func generatedPreferenceAndDetailCommandsUseTheTemplateHeatmap() async throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(
             context: context,
@@ -93,7 +93,7 @@ struct TodayHeatmapRecurrenceStoreTests {
         )
         #expect(request.selectedTaskIDs == [template.id])
         let snapshot = try #require(
-            store.todayTaskActivityHeatmapSnapshots(
+            await store.todayTaskActivityHeatmapSnapshots(
                 period: .oneMonth,
                 now: now,
                 calendar: calendar

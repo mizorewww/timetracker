@@ -105,15 +105,10 @@ struct ActivityHeatmapChart: View {
                         )
                 }
             }
-            .accessibilityLabel(accessibleDate(cell.day.date))
-            .accessibilityValue(
-                ActivityHeatmapValueFormatter.spoken(
-                    cell.day.value,
-                    metric: snapshot.metric,
-                    locale: locale
-                )
-            )
-            .accessibilityHidden(cell.day.isFuture)
+            // Per-cell accessibility elements cost a formatted date string
+            // and an AX node for every one of the 371 marks; the card-level
+            // summary already describes the whole heatmap.
+            .accessibilityHidden(true)
         }
         .chartLegend(.hidden)
         .chartXScale(
@@ -213,16 +208,6 @@ struct ActivityHeatmapChart: View {
         day.isFuture ? .clear : palette.color(for: day.intensity)
     }
 
-    private func accessibleDate(_ date: Date) -> String {
-        date.formatted(
-            .dateTime
-                .weekday(.wide)
-                .month(.wide)
-                .day()
-                .year()
-                .locale(locale)
-        )
-    }
 }
 
 private struct ActivityHeatmapChartCell: Identifiable {

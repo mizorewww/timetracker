@@ -22,7 +22,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func selectedBranchesCountChecklistCompletionsOnceAndRetainArchivedHistory() throws {
+    func selectedBranchesCountChecklistCompletionsOnceAndRetainArchivedHistory() async throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -84,7 +84,7 @@ struct TodayActivityHeatmapTests {
         ]
         let service = TodayActivityHeatmapSnapshotService()
         let tasks = [root, child, grandchild, unrelated, deleted]
-        let snapshots = service.taskSnapshots(
+        let snapshots = await service.taskSnapshots(
             selectedTaskIDs: [
                 root.id,
                 child.id,
@@ -119,7 +119,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func completionHistoryIsDerivedFromCurrentChecklistState() throws {
+    func completionHistoryIsDerivedFromCurrentChecklistState() async throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -139,7 +139,7 @@ struct TodayActivityHeatmapTests {
         )
         let service = TodayActivityHeatmapSnapshotService()
 
-        var snapshot = try #require(service.taskSnapshots(
+        var snapshot = try #require(await service.taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
             segments: [],
@@ -154,7 +154,7 @@ struct TodayActivityHeatmapTests {
 
         item.isCompleted = false
         item.completedAt = nil
-        snapshot = try #require(service.taskSnapshots(
+        snapshot = try #require(await service.taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
             segments: [],
@@ -169,7 +169,7 @@ struct TodayActivityHeatmapTests {
 
         item.isCompleted = true
         item.completedAt = yesterday.addingTimeInterval(60)
-        snapshot = try #require(service.taskSnapshots(
+        snapshot = try #require(await service.taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
             segments: [],
@@ -185,7 +185,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func calendarProducesFiftyThreeLocaleWeeksAndMarksFutureCells() throws {
+    func calendarProducesFiftyThreeLocaleWeeksAndMarksFutureCells() async throws {
         var calendar = try testCalendar(
             timeZone: TimeZone(identifier: "America/Los_Angeles")
         )
@@ -200,7 +200,7 @@ struct TodayActivityHeatmapTests {
         )
         let root = task("Root")
         let snapshot = try #require(
-            TodayActivityHeatmapSnapshotService().taskSnapshots(
+            await TodayActivityHeatmapSnapshotService().taskSnapshots(
             selectedTaskIDs: [root.id, UUID()],
             tasks: [root],
             segments: [],
@@ -255,7 +255,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func configuredPeriodsProjectTheirExpectedLocaleWeekCounts() throws {
+    func configuredPeriodsProjectTheirExpectedLocaleWeekCounts() async throws {
         var calendar = try testCalendar(
             timeZone: TimeZone(identifier: "America/Los_Angeles")
         )
@@ -281,7 +281,7 @@ struct TodayActivityHeatmapTests {
 
         for period in periods {
             let snapshot = try #require(
-                TodayActivityHeatmapSnapshotService().taskSnapshots(
+                await TodayActivityHeatmapSnapshotService().taskSnapshots(
                     selectedTaskIDs: [root.id],
                     tasks: [root],
                     segments: [],
@@ -366,7 +366,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func selectedTasksProduceIndependentChecklistAndDurationSnapshots() throws {
+    func selectedTasksProduceIndependentChecklistAndDurationSnapshots() async throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -383,7 +383,7 @@ struct TodayActivityHeatmapTests {
         let checklistChild = task("Checklist Child", parentID: checklistRoot.id)
         let durationRoot = task("Duration Root", colorHex: "F97316")
         let service = TodayActivityHeatmapSnapshotService()
-        let snapshots = service.taskSnapshots(
+        let snapshots = await service.taskSnapshots(
             selectedTaskIDs: [durationRoot.id, checklistRoot.id, durationRoot.id],
             tasks: [checklistRoot, checklistChild, durationRoot],
             segments: [
@@ -443,7 +443,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func durationSplitsAtCalendarMidnightAndClipsActiveAndFutureSegments() throws {
+    func durationSplitsAtCalendarMidnightAndClipsActiveAndFutureSegments() async throws {
         var calendar = try testCalendar(
             timeZone: TimeZone(identifier: "America/Los_Angeles")
         )
@@ -460,7 +460,7 @@ struct TodayActivityHeatmapTests {
             calendar.date(byAdding: .day, value: -1, to: today)
         )
         let root = task("Duration")
-        let snapshots = TodayActivityHeatmapSnapshotService().taskSnapshots(
+        let snapshots = await TodayActivityHeatmapSnapshotService().taskSnapshots(
             selectedTaskIDs: [root.id],
             tasks: [root],
             segments: [
@@ -498,7 +498,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func quantityAggregatesMatchingUnitSubtasksAgainstDeclaredGoals() throws {
+    func quantityAggregatesMatchingUnitSubtasksAgainstDeclaredGoals() async throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -555,7 +555,7 @@ struct TodayActivityHeatmapTests {
             differentUnitChild,
             deletedChild,
         ]
-        let snapshots = service.taskSnapshots(
+        let snapshots = await service.taskSnapshots(
             selectedTaskIDs: [quantityTask.id],
             tasks: tasks,
             segments: [
@@ -648,7 +648,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func recurrenceContributorsAggregateReparentedQuantityAndRetainTemplateHistory() throws {
+    func recurrenceContributorsAggregateReparentedQuantityAndRetainTemplateHistory() async throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -711,7 +711,7 @@ struct TodayActivityHeatmapTests {
         ]
 
         let withoutRecurrenceMapping = try #require(
-            service.taskSnapshots(
+            await service.taskSnapshots(
                 selectedTaskIDs: [template.id],
                 tasks: tasks,
                 segments: [],
@@ -724,7 +724,7 @@ struct TodayActivityHeatmapTests {
             ).first
         )
         let snapshot = try #require(
-            service.taskSnapshots(
+            await service.taskSnapshots(
                 selectedTaskIDs: [template.id],
                 tasks: tasks,
                 additionalContributingTaskIDsBySelectedTaskID: [
@@ -758,7 +758,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func recurrenceContributorsAggregateReparentedDurationAndRetainTemplateHistory() throws {
+    func recurrenceContributorsAggregateReparentedDurationAndRetainTemplateHistory() async throws {
         let calendar = try testCalendar()
         let now = try testDate(
             year: 2026,
@@ -783,7 +783,7 @@ struct TodayActivityHeatmapTests {
         )
 
         let snapshot = try #require(
-            TodayActivityHeatmapSnapshotService().taskSnapshots(
+            await TodayActivityHeatmapSnapshotService().taskSnapshots(
                 selectedTaskIDs: [template.id],
                 tasks: [template, movedParent, generated, generatedChild],
                 additionalContributingTaskIDsBySelectedTaskID: [
@@ -826,7 +826,7 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test @MainActor
-    func heatmapSelectionPersistsAcrossContainerReopen() throws {
+    func heatmapSelectionPersistsAcrossContainerReopen() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(
             path: "TodayHeatmapPersistenceTests-\(UUID().uuidString)",
             directoryHint: .isDirectory

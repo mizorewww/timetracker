@@ -10,13 +10,19 @@ extension TodayActivityHeatmapSnapshotService {
         interval: DateInterval,
         now: Date,
         calendar: Calendar
-    ) -> ActivityHeatmapIndexes {
+    ) async -> ActivityHeatmapIndexes {
         let validTaskIDs = Set(taskByID.values.lazy.filter {
             $0.deletedAt == nil
         }.map(\.id))
 
         var segmentIntervalsByTaskID: [UUID: [DateInterval]] = [:]
-        for segment in segments.visibleDeduplicatedByID() {
+        for (index, segment) in segments.visibleDeduplicatedByID().enumerated() {
+            if index.isMultiple(of: 512) {
+                await Task.yield()
+                guard Task.isCancelled == false else {
+                    return ActivityHeatmapIndexes.empty
+                }
+            }
             guard validTaskIDs.contains(segment.taskID),
                   let clipped = TrackedTimePolicy.interval(
                     startedAt: segment.startedAt,
@@ -31,7 +37,10 @@ extension TodayActivityHeatmapSnapshotService {
 
         var checklistTaskIDs = Set<UUID>()
         var checklistValuesByTaskAndDay: [UUID: [Date: Int]] = [:]
-        for item in checklistItems.visibleDeduplicatedByID() {
+        for (index, item) in checklistItems.visibleDeduplicatedByID().enumerated() {
+            if index.isMultiple(of: 512) {
+                await Task.yield()
+            }
             guard validTaskIDs.contains(item.taskID) else { continue }
             checklistTaskIDs.insert(item.taskID)
             guard item.isCompleted,

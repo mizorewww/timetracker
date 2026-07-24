@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 struct TodayActivityHeatmapRefreshTests {
     @Test @MainActor
-    func refreshIdentityAdvancesByMinuteOnlyWhileATimerIsRunning() throws {
+    func refreshIdentityAdvancesByMinuteOnlyWhileATimerIsRunning() async throws {
         let calendar = testCalendar()
         let now = try testDate(calendar: calendar)
         let later = now.addingTimeInterval(60)
@@ -60,7 +60,7 @@ struct TodayActivityHeatmapRefreshTests {
     }
 
     @Test @MainActor
-    func refreshIdentityTracksTheSelectedPeriod() throws {
+    func refreshIdentityTracksTheSelectedPeriod() async throws {
         let calendar = testCalendar()
         let now = try testDate(calendar: calendar)
         let store = TimeTrackerStore()
@@ -87,7 +87,7 @@ struct TodayActivityHeatmapRefreshTests {
     }
 
     @Test @MainActor
-    func runningTimerSnapshotGrowsWhenTheTimelineRefreshes() throws {
+    func runningTimerSnapshotGrowsWhenTheTimelineRefreshes() async throws {
         let calendar = testCalendar()
         let now = try testDate(calendar: calendar)
         let task = TaskNode(
@@ -111,14 +111,14 @@ struct TodayActivityHeatmapRefreshTests {
         store.preferences.todayHeatmapPeriod = .oneYear
 
         let initial = try #require(
-            store.todayTaskActivityHeatmapSnapshots(
+            await store.todayTaskActivityHeatmapSnapshots(
                 period: .oneYear,
                 now: now,
                 calendar: calendar
             ).first
         )
         let refreshed = try #require(
-            store.todayTaskActivityHeatmapSnapshots(
+            await store.todayTaskActivityHeatmapSnapshots(
                 period: .oneYear,
                 now: now.addingTimeInterval(60),
                 calendar: calendar

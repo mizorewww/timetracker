@@ -36,8 +36,8 @@ extension TimeTrackerStore {
         period: ActivityHeatmapPeriod,
         now: Date,
         calendar: Calendar = .current
-    ) -> [TaskActivityHeatmapSnapshot] {
-        TodayActivityHeatmapSnapshotService().taskSnapshots(
+    ) async -> [TaskActivityHeatmapSnapshot] {
+        await TodayActivityHeatmapSnapshotService().taskSnapshots(
             selectedTaskIDs: todayHeatmapRenderableTaskIDs,
             taskByID: taskByID,
             childrenByParentID: childrenByParentID,

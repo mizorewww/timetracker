@@ -57,11 +57,10 @@ struct HomeActivityHeatmapSection: View {
             )
             Group {
                 if request.selectedTaskIDs.isEmpty == false {
-                    section(
-                        loadedHeatmaps?.request == request
-                            ? loadedHeatmaps?.snapshots
-                            : nil
-                    )
+                    // Keep showing the last resolved snapshots while a newer
+                    // request computes, so recomputation never collapses the
+                    // section into a spinner mid-scroll.
+                    section(loadedHeatmaps?.snapshots)
                 }
             }
             .environment(
@@ -73,7 +72,7 @@ struct HomeActivityHeatmapSection: View {
                     loadedHeatmaps = nil
                     return
                 }
-                let snapshots = store.todayTaskActivityHeatmapSnapshots(
+                let snapshots = await store.todayTaskActivityHeatmapSnapshots(
                     period: request.period,
                     now: context.date,
                     calendar: calendar

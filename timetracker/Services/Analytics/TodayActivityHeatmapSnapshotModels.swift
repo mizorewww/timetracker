@@ -11,6 +11,14 @@ struct ActivityHeatmapIndexes {
     let checklistValuesByTaskAndDay: [UUID: [Date: Int]]
     let quantityGoalByTaskID: [UUID: TaskQuantityGoal]
     let quantityValuesByTaskAndDay: [UUID: [Date: Int]]
+
+    static let empty = ActivityHeatmapIndexes(
+        segmentIntervalsByTaskID: [:],
+        checklistTaskIDs: [],
+        checklistValuesByTaskAndDay: [:],
+        quantityGoalByTaskID: [:],
+        quantityValuesByTaskAndDay: [:]
+    )
 }
 
 struct ActivityHeatmapValues {

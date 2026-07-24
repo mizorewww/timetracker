@@ -441,7 +441,7 @@ struct TodayHeatmapUIContractTests {
         #expect(store.contains("quantityGoals: taskQuantityGoals"))
         #expect(store.contains("quantityEntries: taskQuantityEntries"))
         #expect(store.contains("tasks: tasks") == false)
-        #expect(service.contains("let indexes = activityIndexes("))
+        #expect(service.contains("let indexes = await activityIndexes("))
         #expect(service.contains("func taskSnapshots("))
         #expect(service.contains("segments.visibleDeduplicatedByID()"))
         #expect(service.contains("quantityGoals.visibleDeduplicatedByID()"))

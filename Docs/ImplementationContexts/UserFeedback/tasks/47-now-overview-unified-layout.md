@@ -9,7 +9,7 @@
 - [x] 审计 iPhone 与桌面(iPad/macOS)的 Now、Overview 组件差异(任务03/33 的历史差异设计)。
 - [x] 确定统一方案:同一套 Now/Overview 组件,宽屏 Now|overview 同行,iPhone 保持上下排。
 - [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,16 +30,16 @@
 - [x] Checkpoint B：审计两版 Now/Overview 差异。
 - [x] Checkpoint C：实现统一组件与宽屏并排。
 - [x] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] 主代理(直接审计,无需子代理)：Now/Overview 组件差异审计。
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] 统一实现提交 + `feb338fa`(1.1.134 (189));领取任务与 active link 创建时已提交。
 
 
 ## 实现与验收记录
@@ -48,3 +48,5 @@
 - 宽屏 Now|overview 并排沿用既有 `DesktopTodayCurrentStateSections`。
 - 契约:`nowAndOverviewShareOneComponentAcrossPlatforms` 锁共享结构与死代码移除;多个旧锁重定向。
 - UI:`testDesktopTodayShowsUnifiedNowOverviewRow` 三平台通过;iPad 截图确认 Now|Overview 同行且组件与 iPhone 一致,iPhone 截图确认无变化;Gross Time 值加 lineLimit(1)+minimumScaleFactor 防窄列换行。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.134 (189)`,无设备安装失败。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

@@ -301,7 +301,7 @@ struct DataModelContractTests {
         #expect(schema.entity(for: TaskQuantityEntry.self) != nil)
         #expect(
             TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
-                == TimeTrackerSchemaV13.versionIdentifier
+                == TimeTrackerSchemaV14.versionIdentifier
         )
         let configuration = ModelConfiguration(
             "TimeTrackerCloudSyncContract",
@@ -401,7 +401,7 @@ struct DataModelContractTests {
             let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
             #expect(taskIDs == [fixture.taskID])
             #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV13.versionIdentifier)
+            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV14.versionIdentifier)
         }
     }
 

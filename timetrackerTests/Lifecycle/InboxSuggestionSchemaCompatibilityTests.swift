@@ -70,7 +70,7 @@ struct InboxSuggestionSchemaCompatibilityTests {
             #expect(suggestion.destinationKind == .checklist)
             #expect(
                 TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
-                    == TimeTrackerSchemaV13.versionIdentifier
+                    == TimeTrackerSchemaV14.versionIdentifier
             )
         }
     }

@@ -23,7 +23,7 @@ struct TaskPlanningSchemaCompatibilityTests {
             #expect(try context.fetch(FetchDescriptor<TaskQuantityEntry>()).isEmpty)
             #expect(
                 TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
-                    == TimeTrackerSchemaV13.versionIdentifier
+                    == TimeTrackerSchemaV14.versionIdentifier
             )
 
             let rule = TaskRecurrenceRule(

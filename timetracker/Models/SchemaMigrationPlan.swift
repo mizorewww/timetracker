@@ -17,7 +17,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV10.self,
             TimeTrackerSchemaV11.self,
             TimeTrackerSchemaV12.self,
-            TimeTrackerSchemaV13.self
+            TimeTrackerSchemaV13.self,
+            TimeTrackerSchemaV14.self
         ]
     }
 
@@ -70,7 +71,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             ),
             .lightweight(fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self),
             .lightweight(fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV12.self, toVersion: TimeTrackerSchemaV13.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV12.self, toVersion: TimeTrackerSchemaV13.self),
+            .lightweight(fromVersion: TimeTrackerSchemaV13.self, toVersion: TimeTrackerSchemaV14.self)
         ]
     }
 

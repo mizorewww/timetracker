@@ -1,12 +1,14 @@
 import SwiftUI
 
-struct SymbolColorPickerButton: View {
+/// Opens the shared symbol & color picker with a custom label, mirroring the
+/// platform conventions of `SymbolColorPickerButton` (push on iOS, popover on
+/// macOS).
+struct SymbolColorPickerPresentation<Label: View>: View {
     @Binding var symbolName: String
     @Binding var colorHex: String
-    var titleKey: String = "common.choose"
-    var showsTitle: Bool = true
     var pickerAccessibilityIdentifier: String = "symbol.picker.open"
     var onOpen: () -> Void = {}
+    @ViewBuilder var label: Label
     #if os(macOS)
     @State private var isPickerPresented = false
     #endif
@@ -18,8 +20,9 @@ struct SymbolColorPickerButton: View {
             onOpen()
             isPickerPresented = true
         } label: {
-            pickerLabel
+            label
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(AppStrings.localized("editor.symbol.title"))
         .accessibilityValue(TaskColorPalette.accessibilityName(for: colorHex))
         .accessibilityIdentifier(pickerAccessibilityIdentifier)
@@ -33,12 +36,41 @@ struct SymbolColorPickerButton: View {
                 .navigationTitle(AppStrings.localized("editor.symbol.title"))
                 .navigationBarTitleDisplayMode(.inline)
         } label: {
-            pickerLabel
+            label
         }
         .accessibilityLabel(AppStrings.localized("editor.symbol.title"))
         .accessibilityValue(TaskColorPalette.accessibilityName(for: colorHex))
         .accessibilityIdentifier(pickerAccessibilityIdentifier)
         #endif
+    }
+
+    private var picker: some View {
+        SymbolAndColorPicker(
+            symbols: SymbolCatalog.symbolNames,
+            searchKeywords: SymbolCatalog.searchKeywords,
+            symbolName: $symbolName,
+            colorHex: $colorHex
+        )
+    }
+}
+
+struct SymbolColorPickerButton: View {
+    @Binding var symbolName: String
+    @Binding var colorHex: String
+    var titleKey: String = "common.choose"
+    var showsTitle: Bool = true
+    var pickerAccessibilityIdentifier: String = "symbol.picker.open"
+    var onOpen: () -> Void = {}
+
+    var body: some View {
+        SymbolColorPickerPresentation(
+            symbolName: $symbolName,
+            colorHex: $colorHex,
+            pickerAccessibilityIdentifier: pickerAccessibilityIdentifier,
+            onOpen: onOpen
+        ) {
+            pickerLabel
+        }
     }
 
     private var pickerLabel: some View {
@@ -49,15 +81,6 @@ struct SymbolColorPickerButton: View {
                 Text(.app(titleKey))
             }
         }
-    }
-
-    private var picker: some View {
-        SymbolAndColorPicker(
-            symbols: SymbolCatalog.symbolNames,
-            searchKeywords: SymbolCatalog.searchKeywords,
-            symbolName: $symbolName,
-            colorHex: $colorHex
-        )
     }
 }
 

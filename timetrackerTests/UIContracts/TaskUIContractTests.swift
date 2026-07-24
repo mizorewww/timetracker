@@ -205,6 +205,27 @@ struct TaskUIContractTests {
     }
 
     @Test
+    func taskDetailIconOpensTheSharedSymbolColorPicker() throws {
+        let identitySource = try sourceText(
+            "timetracker/Features/Tasks/Detail/TaskDetailIdentityViews.swift"
+        )
+        let pickerSource = try sourceText(
+            "timetracker/Features/Tasks/Editor/SymbolPickerViews.swift"
+        )
+
+        #expect(identitySource.contains("SymbolColorPickerPresentation("))
+        #expect(identitySource.contains("task.detail.icon.edit"))
+        #expect(identitySource.contains("symbolName: $draft.iconName"))
+        #expect(identitySource.contains("colorHex: $draft.colorHex"))
+        #expect(identitySource.contains("focusedTextField.wrappedValue = nil"))
+        #expect(pickerSource.contains(
+            "struct SymbolColorPickerPresentation<Label: View>: View"
+        ))
+        #expect(pickerSource.contains("SymbolAndColorPicker("))
+        #expect(pickerSource.contains("SymbolColorPickerPresentation("))
+    }
+
+    @Test
     func healthSyncOnlyTasksUseTheSharedAvailabilityGate() throws {
         let availability = try sourceText(
             "timetracker/Services/Tasks/TaskTrackingAvailabilityService.swift"

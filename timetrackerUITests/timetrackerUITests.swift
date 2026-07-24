@@ -1876,6 +1876,50 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTaskDetailIconOpensSymbolColorPicker() throws {
+        let taskTitle = "Read Apple HIG"
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: taskTitle,
+            additionalLaunchArguments: ["--uitesting-reset-demo-preferences"]
+        )
+        let detail = app.descendants(matching: .any)["task.detail"].firstMatch
+        XCTAssertTrue(
+            detail.waitForExistence(timeout: 15),
+            "Task detail must open before the icon can be activated."
+        )
+
+        let iconButton = app.descendants(matching: .any)[
+            "task.detail.icon.edit"
+        ].firstMatch
+        scrollUntilHittable(iconButton, direction: .up, in: app)
+        XCTAssertTrue(
+            iconButton.waitForExistence(timeout: 5),
+            "The task detail identity icon must be an interactive editor link."
+        )
+        activate(iconButton)
+
+        let pickerView = app.descendants(matching: .any)[
+            "symbol.picker.view"
+        ].firstMatch
+        XCTAssertTrue(
+            pickerView.waitForExistence(timeout: 8),
+            "Activating the task icon must present the symbol picker."
+        )
+        let pickerSearch = app.descendants(matching: .any)[
+            "symbol.picker.search"
+        ].firstMatch
+        XCTAssertTrue(
+            pickerSearch.waitForExistence(timeout: 5),
+            "The presented symbol picker must include its search field."
+        )
+
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-task-detail-icon-editor", app: app)
+    }
+
+    @MainActor
     func testRecurringOccurrenceHeatmapToggleControlsTheParentCard() throws {
         let taskTitle = "Daily Push-ups · Today"
         let templateTaskID = UUID().uuidString.uppercased()

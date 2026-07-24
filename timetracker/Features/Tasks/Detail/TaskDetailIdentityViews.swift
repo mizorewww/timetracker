@@ -45,13 +45,22 @@ struct TaskDetailIdentityRow: View {
 
     private var identitySummary: some View {
         HStack(alignment: .top, spacing: 14) {
-            TaskIcon(
-                visual: TaskVisualPresentation(
-                    iconName: draft.iconName,
-                    colorHex: draft.colorHex
-                ),
-                size: 44
-            )
+            SymbolColorPickerPresentation(
+                symbolName: $draft.iconName,
+                colorHex: $draft.colorHex,
+                pickerAccessibilityIdentifier: "task.detail.icon.edit",
+                onOpen: {
+                    focusedTextField.wrappedValue = nil
+                }
+            ) {
+                TaskIcon(
+                    visual: TaskVisualPresentation(
+                        iconName: draft.iconName,
+                        colorHex: draft.colorHex
+                    ),
+                    size: 44
+                )
+            }
             identityText
         }
         .frame(maxWidth: .infinity, alignment: .leading)

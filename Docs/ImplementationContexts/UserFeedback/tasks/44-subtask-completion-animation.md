@@ -56,3 +56,10 @@
 - [x] iPhone(owned `codex-task44-iPhone17Pro`)、iPad(`codex-task44-iPadPro11`)`testCompletingChecklistItemMovesItBelowIncompleteWork`(含取消恢复步骤)通过;截图确认 Polish timeline 回到未完成组顶部。
 - [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.122 (177)`,无设备安装失败。
 - [x] 两条反馈均已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。
+
+## 事故与修复(2026-07-24)
+
+- 事故:本任务给 `ChecklistItem` 加 `sortOrderBeforeCompletion` 时未新增 VersionedSchema,导致 1.1.122–1.1.125 在所有已安装设备无法打开 store(SwiftDataError error 1,落入 in-memory 恢复屏)。期间 app 未写入持久库,数据无损。
+- 修复(`87b640c3` 前后):V3–V13 的 `ChecklistItem` 解析到新增的 V13 冻结快照(`SchemaChecklistLegacyModels.swift`),新增 `TimeTrackerSchemaV14` (1.13.0) + 轻量迁移阶段,registry/迁移计划/契约测试同步;V8/V9 旧库 fixture 迁移至 V14 全部通过。
+- 教训(已写入长期记忆):任何 `@Model` 变更必须同步新增 schema 版本与迁移阶段。
+- 备注:`CoreSourceLayoutTests` 的行数预算失败为历史欠债(本任务前已超预算),与本修复无关,未掩盖。

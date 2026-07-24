@@ -1,1 +1,0 @@
-../tasks/48-analytics-heatmap.md

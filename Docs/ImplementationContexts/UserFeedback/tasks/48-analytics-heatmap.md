@@ -9,7 +9,7 @@
 - [x] 审计主页 heatmap 组件(HomeActivityHeatmapSection)与分析页面结构,确定复用路径。
 - [x] 确定放置位置与语义(与分析页 Day/Week/Month 的关系、用同一批追踪任务)。
 - [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -29,8 +29,8 @@
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
 - [x] Checkpoint B：审计组件复用与分析页结构。
 - [x] Checkpoint C：实现并补齐聚焦测试。
-- [~] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint D：三平台模拟器验收与资源清理。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
@@ -39,7 +39,7 @@
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `51bfc3f8`:实现 + 契约/UI(1.1.137 (192));领取任务与 active link 创建时已提交。
 
 
 ## 实现与验收记录
@@ -47,4 +47,6 @@
 - 复用 `HomeActivityHeatmapSection`(自带数据链),置于分析页 Summary 之后、Review/Explore 之前;独立于分析页 Day/Week/Month,常驻不随切换卸载(继承任务41的抗闪烁语义),语义由既有 info 二级菜单解释。
 - 契约测试 `analyticsHomeEmbedsTheTrackedTaskHeatmapsWithTheirOwnDataChain` 锁定嵌入位置与常驻性。
 - [x] iPhone(owned `codex-task48-iPhone17Pro`)、iPad(`codex-task48-iPadPro11`)`testAnalyticsHomeShowsTrackedTaskHeatmaps` 通过;iPad 截图确认 Activity Heatmaps 三张任务卡片。
-- [~] macOS:UI 测试 runner 连续被 "System authentication is running" 阻塞(环境弹窗),等待用户关闭后补验;macOS 与 iPad 共享同一 AnalyticsContent 代码路径。
+- [x] macOS:弹窗清除后 `testAnalyticsHomeShowsTrackedTaskHeatmaps` 通过(三平台全绿)。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.137 (192)`,无设备安装失败。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

@@ -47,21 +47,14 @@ struct AnalyticsView: View {
             $0.canRemainVisible(whileLoading: request)
         } ?? false
 
-        Group {
-            if let snapshot, canKeepDisplayingSnapshot {
-                AnalyticsContent(
-                    snapshot: snapshot,
-                    range: $range,
-                    referenceDate: effectiveReferenceDateBinding,
-                    liveNow: liveNow,
-                    monthNavigationAnchor: $monthNavigationAnchor,
-                    isRefreshing: loadedRequest != request
-                )
-            } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityLabel(AppStrings.localized("analytics.loading"))
-            }
-        }
+        AnalyticsContent(
+            snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
+            range: $range,
+            referenceDate: effectiveReferenceDateBinding,
+            liveNow: liveNow,
+            monthNavigationAnchor: $monthNavigationAnchor,
+            isRefreshing: loadedRequest != request
+        )
         .task(id: request) {
             await Task.yield()
             guard Task.isCancelled == false else { return }

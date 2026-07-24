@@ -6,9 +6,9 @@
 ## 当前阶段
 
 - [x] 领取“Analytics 界面，切换 Day/Week/Month 的时候会闪烁”反馈。
-- [~] 审计 Analytics 周期切换的数据加载、视图身份与动画链，定位闪烁根因。
-- [ ] 确定最小修复(稳定视图身份/避免重复加载/合理动画)。
-- [ ] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图(或录屏)验收。
+- [x] 审计 Analytics 周期切换的数据加载、视图身份与动画链，定位闪烁根因。
+- [x] 确定最小修复(稳定视图身份/避免重复加载/合理动画)。
+- [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图(或录屏)验收。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -27,16 +27,26 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
-- [ ] Checkpoint B：审计闪烁根因(数据链 + 视图身份 + 动画)。
-- [ ] Checkpoint C：实现修复并补齐聚焦测试。
-- [ ] Checkpoint D：三平台模拟器验收与资源清理。
-- [ ] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint B：审计闪烁根因(数据链 + 视图身份 + 动画)。
+- [x] Checkpoint C：实现修复并补齐聚焦测试。
+- [x] Checkpoint D：三平台模拟器验收与资源清理。
+- [~] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
 - [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
-- [ ] 待分配：Analytics 周期切换链路审计。
+- [x] 主代理(直接审计,无需子代理)：Analytics 周期切换链路审计。
 
 ## 已提交 checkpoint
 
+- [~] 待提交:修复 + 契约/UI 回归 + 三平台验收。
 - [~] 待提交：领取任务、实现记忆与 active link。
+
+
+## 实现与验收记录
+
+- 根因:切换 Day/Week/Month 时 `canRemainVisible` 为 false,`AnalyticsView` 用全屏 `ProgressView` 整体替换 `AnalyticsContent` —— 周期选择器(picker)和数据一起卸载,滚动位置丢失,造成闪烁。
+- 修复:`AnalyticsContent` 改为接收可选 snapshot,`AnalyticsPeriodSection` 常驻,仅数据区原地显示 `ProgressView`(minHeight 240)—— 与 `AnalyticsCategoryDetailView` 既有模式一致;仍然不会在新选周期下展示旧数据。
+- 契约测试 `analyticsHomeKeepsPeriodControlsMountedWhileSwitchingRanges` 锁定结构。
+- XCUITest `testAnalyticsRangeSwitchKeepsPeriodControlsMounted`:Day→Week→Month→Day 循环,每次切换后立即断言 `analytics.periodFilter` 存在、数据 section 10s 内恢复;macOS 段控件为 RadioButton(平台分支)。
+- [x] iPhone(owned `codex-task41-iPhone17Pro`)、iPad(`codex-task41-iPadPro11`)、macOS 均通过;截图确认控件稳定、数据恢复。

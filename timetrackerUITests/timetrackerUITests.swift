@@ -4334,6 +4334,47 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsRangeSwitchKeepsPeriodControlsMounted() throws {
+        let app = launchApp(route: "analytics")
+        XCTAssertTrue(analyticsIsReady(in: app))
+
+        let periodFilter = app.descendants(matching: .any)[
+            "analytics.periodFilter"
+        ].firstMatch
+        XCTAssertTrue(
+            periodFilter.waitForExistence(timeout: 5),
+            "The Analytics period controls must be visible before switching."
+        )
+        let reviewSection = app.descendants(matching: .any)[
+            "analytics.section.review"
+        ].firstMatch
+
+        for segment in ["Week", "Month", "Day"] {
+            #if os(macOS)
+            let button = app.radioButtons[segment].firstMatch
+            #else
+            let button = app.segmentedControls.buttons[segment].firstMatch
+            #endif
+            XCTAssertTrue(
+                button.waitForExistence(timeout: 5) && button.isHittable,
+                "The \(segment) range segment must be available."
+            )
+            activate(button)
+            XCTAssertTrue(
+                periodFilter.exists,
+                "The period controls must stay mounted while \(segment) loads."
+            )
+            XCTAssertTrue(
+                reviewSection.waitForExistence(timeout: 10),
+                "The \(segment) data sections must return after loading."
+            )
+        }
+
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-analytics-range-switch-stable", app: app)
+    }
+
+    @MainActor
     func testAnalyticsReviewAndExploreExposeAnswers() throws {
         #if os(macOS)
         throw XCTSkip("The question-led Analytics path requires an iOS simulator.")

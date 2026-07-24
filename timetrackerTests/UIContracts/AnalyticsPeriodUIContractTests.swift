@@ -4,6 +4,23 @@ import Testing
 @Suite(.serialized)
 struct AnalyticsPeriodUIContractTests {
     @Test
+    func analyticsHomeKeepsPeriodControlsMountedWhileSwitchingRanges() throws {
+        let views = try sourceText(
+            "timetracker/Features/Analytics/AnalyticsViews.swift"
+        )
+        let content = try sourceText(
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift"
+        )
+
+        #expect(views.contains("snapshot: canKeepDisplayingSnapshot ? snapshot : nil"))
+        #expect(views.contains("ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)") == false)
+        #expect(content.contains("let snapshot: AnalyticsSnapshot?"))
+        #expect(content.contains("AnalyticsPeriodSection("))
+        #expect(content.contains("if let snapshot {"))
+        #expect(content.contains("minHeight: 240"))
+    }
+
+    @Test
     func focusRoundEvidenceAndForecastsRespectTheSelectedPeriod() throws {
         let detail = try sourceText(
             "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift"

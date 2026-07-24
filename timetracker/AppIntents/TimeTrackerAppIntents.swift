@@ -86,6 +86,39 @@ struct StopTimerIntent: AppIntent {
     }
 }
 
+struct GetActiveTimersIntent: AppIntent {
+    static var title: LocalizedStringResource = "Get Running Timers"
+    static var description = IntentDescription("List the currently running Time Tracker timers.")
+    static var openAppWhenRun = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<[ActiveTimerAppEntity]> {
+        let entities = try await ActiveTimerEntityQuery().suggestedEntities()
+        return .result(value: entities)
+    }
+}
+
+struct StopAllTimersIntent: AppIntent {
+    static var title: LocalizedStringResource = "Stop All Timers"
+    static var description = IntentDescription("Stop every running Time Tracker timer.")
+    static var openAppWhenRun = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        let outcome = try SystemActionCommandHandler().stopAllTimersMutation(
+            container: SystemActionContextProvider.container
+        )
+        if outcome.didMutate {
+            let postCommitContext = SystemActionContextProvider.makeContext()
+            await SystemActionPostCommitEffects().apply(
+                context: postCommitContext,
+                events: outcome.events
+            )
+        }
+        return .result()
+    }
+}
+
 struct ActiveTimerAppEntity: AppEntity, Identifiable {
     static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Running Timer")
     static var defaultQuery = ActiveTimerEntityQuery()
@@ -172,6 +205,26 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Stop Timer",
             systemImageName: "stop.fill"
+        )
+
+        AppShortcut(
+            intent: GetActiveTimersIntent(),
+            phrases: [
+                "Get running timers in \(.applicationName)",
+                "What am I tracking in \(.applicationName)"
+            ],
+            shortTitle: "Get Running Timers",
+            systemImageName: "list.bullet"
+        )
+
+        AppShortcut(
+            intent: StopAllTimersIntent(),
+            phrases: [
+                "Stop all timers in \(.applicationName)",
+                "Stop everything in \(.applicationName)"
+            ],
+            shortTitle: "Stop All Timers",
+            systemImageName: "stop.circle.fill"
         )
     }
 }

@@ -30,10 +30,15 @@ struct CoreSystemActionCommandTests {
         #expect(source.contains("container: SystemActionContextProvider.container"))
         #expect(source.contains("let postCommitContext = SystemActionContextProvider.makeContext()"))
         #expect(source.contains("timetrackerApp.applicationModelContainer"))
+        #expect(source.contains("struct GetActiveTimersIntent: AppIntent"))
+        #expect(source.contains("ReturnsValue<[ActiveTimerAppEntity]>"))
+        #expect(source.contains("struct StopAllTimersIntent: AppIntent"))
+        #expect(source.contains("stopAllTimersMutation("))
+        #expect(handler.contains("struct StopAllTimersOutcome"))
         #expect(
             source.components(
                 separatedBy: "await SystemActionPostCommitEffects().apply("
-            ).count - 1 == 3
+            ).count - 1 == 4
         )
         #expect(handler.contains("struct SystemActionPostCommitEffects"))
         #expect(handler.contains("CommittedMutationSnapshotRecorder().recordLocalMutation"))
@@ -42,6 +47,47 @@ struct CoreSystemActionCommandTests {
         #expect(handler.contains("StoreMutationBroadcaster.publish(events: events)"))
         #expect(handler.contains("allowParallelTimers: Bool") == false)
         #expect(coordinator.contains("TimerAdmissionPreferenceResolver\n                .allowParallelTimers(in: context)"))
+    }
+
+    @Test @MainActor
+    func stopAllTimersMutationStopsEveryRunningSegment() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Parallel work",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let first = TimeSegment(
+            sessionID: UUID(),
+            taskID: task.id,
+            source: .timer,
+            deviceID: "test",
+            startedAt: Date(timeIntervalSinceReferenceDate: 100)
+        )
+        let second = TimeSegment(
+            sessionID: UUID(),
+            taskID: task.id,
+            source: .pomodoro,
+            deviceID: "test",
+            startedAt: Date(timeIntervalSinceReferenceDate: 200)
+        )
+        context.insert(first)
+        context.insert(second)
+        try context.save()
+
+        let outcome = try makeTestSystemActionCommandHandler()
+            .stopAllTimersMutation(container: context.container)
+
+        #expect(outcome.didMutate)
+        #expect(Set(outcome.stoppedSegmentIDs) == Set([first.id, second.id]))
+        #expect(outcome.events.isEmpty == false)
+        let remaining = try SwiftDataTimeTrackingRepository(context: context)
+            .activeSegments()
+        #expect(remaining.isEmpty)
     }
 
     @Test @MainActor

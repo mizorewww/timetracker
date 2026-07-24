@@ -6,9 +6,9 @@
 ## 当前阶段
 
 - [x] 领取“iOS shortcut支持&文档(请开一个文件夹讲shortcut设计)”反馈。
-- [~] 审计现有 App Intents/Shortcuts 能力(锁域注释提到 Shortcuts 进程)与缺口。
-- [ ] 在 `Docs/Shortcuts/` 开文件夹写设计文档(能力矩阵、意图清单、参数、示例、限制)。
-- [ ] 实现缺口的 App Intents 并运行聚焦测试与模拟器验收。
+- [x] 审计现有 App Intents/Shortcuts 能力(锁域注释提到 Shortcuts 进程)与缺口。
+- [x] 在 `Docs/Shortcuts/` 开文件夹写设计文档(能力矩阵、意图清单、参数、示例、限制)。
+- [x] 实现缺口的 App Intents 并运行聚焦测试与模拟器验收。
 - [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
@@ -27,16 +27,24 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取任务、创建实现记忆与 active link。
-- [ ] Checkpoint B：审计现有 Shortcuts 能力与命令路径。
-- [ ] Checkpoint C：写 `Docs/Shortcuts/` 设计文档。
-- [ ] Checkpoint D：实现缺口 intents + 聚焦测试。
-- [ ] Checkpoint E：模拟器验收、Release 与收口。
+- [x] Checkpoint B：审计现有 Shortcuts 能力与命令路径。
+- [x] Checkpoint C：写 `Docs/Shortcuts/` 设计文档。
+- [x] Checkpoint D：实现缺口 intents + 聚焦测试。
+- [~] Checkpoint E：模拟器验收、Release 与收口。
 
 ## 资源所有权
 
 - [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
-- [ ] 待分配：App Intents 现状审计。
+- [x] 主代理(直接审计,无需子代理)：App Intents 现状审计。
 
 ## 已提交 checkpoint
 
 - [~] 待提交：领取任务、实现记忆与 active link。
+
+
+## 审计与实现记录
+
+- 现状:`AddInboxItemIntent`/`StartTimerIntent`/`StopTimerIntent` + Task/RunningTimer 实体 + AppShortcutsProvider 已存在且走统一命令层。
+- 缺口补齐:`GetActiveTimersIntent`(查询运行中计时,返回值)、`StopAllTimersIntent`(全停);命令层新增 `stopAllTimersMutation`(逐段独立提交,事件聚合一次提交后效果)。
+- 设计文档:`Docs/Shortcuts/README.md`(能力矩阵、实体语义、典型用法、架构决策、限制、测试)。
+- [x] `CoreSystemActionCommandTests` 全绿(含新 stop-all 单测与薄封装契约更新)。

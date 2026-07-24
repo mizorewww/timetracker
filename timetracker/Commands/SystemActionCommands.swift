@@ -179,6 +179,40 @@ struct SystemActionCommandHandler {
         ).stop(segmentID: segmentID, taskID: taskID)
     }
 
+    /// Stops every currently running segment one committed mutation at a
+    /// time, so partial success still leaves the store consistent.
+    func stopAllTimersMutation(
+        container: ModelContainer
+    ) throws -> StopAllTimersOutcome {
+        let readContext = ModelContext(container)
+        let activeSegments = try SwiftDataTimeTrackingRepository(
+            context: readContext
+        ).activeSegments()
+        var stoppedSegmentIDs: [UUID] = []
+        var events: Set<StoreDomainEvent> = []
+        for segment in activeSegments {
+            let outcome = try stopTimerMutation(
+                segmentID: segment.id,
+                container: container
+            )
+            if outcome.subjectSegmentID == segment.id {
+                stoppedSegmentIDs.append(segment.id)
+                events.formUnion(outcome.events)
+            }
+        }
+        return StopAllTimersOutcome(
+            stoppedSegmentIDs: stoppedSegmentIDs,
+            events: events
+        )
+    }
+
+}
+
+struct StopAllTimersOutcome: Equatable {
+    let stoppedSegmentIDs: [UUID]
+    let events: Set<StoreDomainEvent>
+
+    var didMutate: Bool { stoppedSegmentIDs.isEmpty == false }
 }
 
 enum SystemActionCommandError: LocalizedError, Equatable {

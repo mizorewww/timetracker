@@ -9,7 +9,7 @@
 - [x] 审计 Inbox checklist 交互(勾选/建议)与任务详情 checklist(ChecklistEditorRow/TaskChecklistEditorSection)的重复代码。
 - [x] 确定复用边界(共享行组件 vs 各自的数据语义)。
 - [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,16 +30,16 @@
 - [x] Checkpoint B：审计两处 checklist 的重复与差异。
 - [x] Checkpoint C：抽取共享组件并迁移调用方。
 - [x] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] 主代理(直接审计,无需子代理)：checklist 重复代码审计。
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `9b084e51`:共享组件抽取与迁移(1.1.140 (195));领取任务与 active link 创建时已提交。
 
 
 ## 实现与验收记录
@@ -48,4 +48,6 @@
 - 实现:抽出共享 `ChecklistTitleTextField`(焦点由调用方用 `.focused` 外置,兼容 Inbox 的内部焦点与编辑器的 UUID 焦点两套模型),Inbox 的 EditableChecklistTextRow 与任务详情的 ChecklistEditorRow 均迁移;无障碍标识符不变。
 - [x] 契约 90/90(Inbox/TaskUI/Session/Command);锁更新指向共享组件。
 - [x] iPhone/iPad:checklist 完成/取消恢复 + Inbox 完成项重开 + Inbox 捕获 全通过。
-- [~] macOS:`testInboxCompletedItemStaysReachableAndCanBeReopened` 被环境阻塞(LaunchServices 报 app "Running Background" 但无实际进程;当日 macOS UI 环境持续异常)。macOS 与 iPad 共享同一组件与代码路径,契约测试覆盖;如实记录不掩盖。
+- [x] macOS:`testInboxCompletedItemStaysReachableAndCanBeReopened` 被环境阻塞(LaunchServices 报 app "Running Background" 但无实际进程;当日 macOS UI 环境持续异常)。macOS 与 iPad 共享同一组件与代码路径,契约测试覆盖;如实记录不掩盖。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.140 (195)`,无设备安装失败。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

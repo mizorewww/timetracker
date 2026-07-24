@@ -1,4 +1,3 @@
-#if os(iOS)
 import SwiftUI
 
 struct PhoneTodaySummaryRow: View {
@@ -64,4 +63,3 @@ struct PhoneSummaryMetric: View {
     }
 }
 
-#endif

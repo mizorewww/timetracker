@@ -4,47 +4,34 @@ struct ActiveTimersSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
+    let startTimer: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(title: AppStrings.localized("home.now.title"))
                 .accessibilityIdentifier("home.activeTimers")
 
-            VStack(spacing: 0) {
-                if segments.isEmpty {
-                    ContentUnavailableView {
-                        Label(AppStrings.noActiveTimers, systemImage: "timer")
-                    } description: {
-                        Text(.app("timer.chooseTaskFooter"))
-                    } actions: {
-                        TodayTimerAction(store: store)
-                            .frame(minWidth: 220, maxWidth: 320)
-                    }
-                    .padding(18)
-                } else {
-                    let lastActiveSegmentID = segments.last?.id
-                    ForEach(segments, id: \.id) { segment in
-                        ActiveTimerRow(
-                            store: store,
-                            segment: segment,
-                            actionLabelStyle: .titleAndIcon,
-                            openTaskDetail: openTask
-                        )
-                            .padding(14)
-                        if segment.id != lastActiveSegmentID {
-                            Divider()
-                                .padding(.horizontal, 14)
-                        }
-                    }
-                    Divider()
-                        .padding(.horizontal, 14)
-                    TodayTimerAction(store: store)
-                        .frame(maxWidth: 320)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+            if segments.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HomeNowEmptyStartButton(startTimer: startTimer)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(14)
                 }
+                .appCard(padding: 0)
+                Text(.app("timer.chooseTaskFooter"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                HomeNowActiveContent(
+                    store: store,
+                    segments: segments,
+                    allowsParallelTimers: store.preferences.allowParallelTimers,
+                    actionLabelStyle: .titleAndIcon,
+                    openTask: openTask,
+                    startTimer: startTimer
+                )
+                .appCard(padding: 0)
             }
-            .appCard(padding: 0)
         }
     }
 }

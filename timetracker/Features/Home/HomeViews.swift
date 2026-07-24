@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DesktopMainView: View {
     let store: TimeTrackerStore
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var viewportWidth: CGFloat = 720
     @State private var todayTaskRoute: TasksRoute?
 
@@ -14,7 +15,8 @@ struct DesktopMainView: View {
                 store: store,
                 content: content,
                 layout: layout,
-                openTask: openTask
+                openTask: openTask,
+                startTimer: { presentationRouter.presentStartTaskPicker() }
             )
                 .frame(width: layout.contentWidth, alignment: .leading)
                 .padding(.vertical, layout.pagePadding)
@@ -48,6 +50,7 @@ private struct DesktopTodayContent: View {
     let content: TodayHomeContent
     let layout: HomeLayoutPolicy
     let openTask: (UUID) -> Void
+    let startTimer: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
@@ -55,7 +58,8 @@ private struct DesktopTodayContent: View {
                 store: store,
                 segments: content.activeSegments,
                 layout: layout,
-                openTask: openTask
+                openTask: openTask,
+                startTimer: startTimer
             )
 
             if layout.usesTwoColumnContent && content.hasSupportingContent {
@@ -112,6 +116,7 @@ private struct DesktopTodayCurrentStateSections: View {
     let segments: [TimeSegment]
     let layout: HomeLayoutPolicy
     let openTask: (UUID) -> Void
+    let startTimer: () -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -143,7 +148,8 @@ private struct DesktopTodayCurrentStateSections: View {
         ActiveTimersSection(
             store: store,
             segments: segments,
-            openTask: openTask
+            openTask: openTask,
+            startTimer: startTimer
         )
     }
 

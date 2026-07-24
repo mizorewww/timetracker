@@ -95,31 +95,6 @@ struct WeeklyGrossTimeSnapshot {
     }
 }
 
-nonisolated enum TodayMetricTrend: Equatable, Sendable {
-    case noComparison
-    case increased(percent: Int)
-    case decreased(percent: Int)
-    case unchanged
-
-    init(current: Int, previous: Int) {
-        guard previous > 0 else {
-            self = .noComparison
-            return
-        }
-
-        let percentage = ((Double(max(0, current)) / Double(previous)) - 1) * 100
-        let boundedPercentage = min(Double(Int.max), max(Double(Int.min + 1), percentage.rounded()))
-        let rounded = Int(boundedPercentage)
-        if rounded > 0 {
-            self = .increased(percent: rounded)
-        } else if rounded < 0 {
-            self = .decreased(percent: abs(rounded))
-        } else {
-            self = .unchanged
-        }
-    }
-}
-
 extension TimeTrackerStore {
     func todayMetricsSnapshot(
         now: Date,

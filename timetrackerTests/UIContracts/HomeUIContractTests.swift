@@ -5,15 +5,6 @@ import Testing
 
 @Suite(.serialized)
 struct HomeUIContractTests {
-    @Test
-    func todayMetricTrendHandlesEveryComparisonState() {
-        #expect(TodayMetricTrend(current: 100, previous: 0) == .noComparison)
-        #expect(TodayMetricTrend(current: 150, previous: 100) == .increased(percent: 50))
-        #expect(TodayMetricTrend(current: 50, previous: 100) == .decreased(percent: 50))
-        #expect(TodayMetricTrend(current: 100, previous: 100) == .unchanged)
-        #expect(TodayMetricTrend(current: 1004, previous: 1000) == .unchanged)
-    }
-
     @Test @MainActor
     func todayMetricsClipBothDaysAndSeparateGrossFromWallTime() throws {
         var calendar = Calendar(identifier: .gregorian)
@@ -588,8 +579,8 @@ struct HomeUIContractTests {
         #expect(analyticsSource.contains("mode: .wallBarsAndGrossLine"))
         #expect(analyticsSource.contains("import Charts") == false)
         #expect(analyticsSource.contains("BarMark(") == false)
-        #expect(metricSources.components(separatedBy: "AppColors.grossTime").count - 1 == 4)
-        #expect(metricSources.components(separatedBy: "AppColors.wallTime").count - 1 == 4)
+        #expect(metricSources.components(separatedBy: "AppColors.grossTime").count - 1 == 3)
+        #expect(metricSources.components(separatedBy: "AppColors.wallTime").count - 1 == 3)
     }
 
     @Test
@@ -1277,8 +1268,7 @@ struct HomeUIContractTests {
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/PhoneHomeRows.swift",
             "timetracker/Features/Home/PhoneHomeSections.swift",
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
-            "timetracker/Features/Home/Rows/HomeTimerRows.swift",
+                        "timetracker/Features/Home/Rows/HomeTimerRows.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartButtons.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartEditorViews.swift",
@@ -1333,7 +1323,10 @@ struct HomeUIContractTests {
         #expect(timelineIndex < forecastIndex)
         #expect(homeSource.contains("TodayHomeContent(store: store)"))
         #expect(homeSource.contains("home.toolbar.newTask") == false)
-        let sectionSource = try sourceText("timetracker/Features/Home/PhoneHomeSections.swift")
+        let sectionSource = try [
+            "timetracker/Features/Home/PhoneHomeSections.swift",
+            "timetracker/Features/Home/Sections/HomeNowSectionContent.swift"
+        ].map(sourceText).joined(separator: "\n")
         #expect(sectionSource.contains("@Environment(\\.dynamicTypeSize)") == false)
         #expect(sectionSource.contains("if !dynamicTypeSize.isAccessibilitySize") == false)
         #expect(sectionSource.contains("!segments.isEmpty && dynamicTypeSize.isAccessibilitySize") == false)
@@ -1350,43 +1343,38 @@ struct HomeUIContractTests {
     }
 
     @Test
-    func todayMetricsUseNeutralComparisonColorsAndSingleTodayAction() throws {
-        let source = try [
-            "timetracker/Features/Home/Sections/HomeMetricsViews.swift",
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
-            "timetracker/SharedUI/Components/MetricCards.swift"
-        ]
-        .map { try sourceText($0) }
-        .joined(separator: "\n")
-        let homeMetricsSource = try sourceText("timetracker/Features/Home/Sections/HomeMetricsViews.swift")
-        let sharedMetricsSource = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
-        let timerActionSource = try sourceText(
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift"
+    func nowAndOverviewShareOneComponentAcrossPlatforms() throws {
+        let phoneRows = try sourceText("timetracker/Features/Home/PhoneHomeRows.swift")
+        let phoneSections = try sourceText(
+            "timetracker/Features/Home/PhoneHomeSections.swift"
         )
-        let timerPickerRowSource = try [
-            "timetracker/SharedUI/Components/TaskHierarchyPickerRows.swift",
-            "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
-            "timetracker/SharedUI/Components/TimerPickerPresentation.swift"
-        ]
-        .map(sourceText)
-        .joined(separator: "\n")
+        let nowContent = try sourceText(
+            "timetracker/Features/Home/Sections/HomeNowSectionContent.swift"
+        )
+        let desktopNow = try sourceText(
+            "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
+        )
+        let desktopOverview = try sourceText(
+            "timetracker/Features/Home/Sections/HomeMetricsViews.swift"
+        )
 
-        #expect(source.contains("trendColor: grossTrend.color"))
-        #expect(source.contains(".foregroundStyle(metric.trendColor)"))
-        #expect(homeMetricsSource.contains("home.metric.upFromYesterday\"), percent), .secondary"))
-        #expect(homeMetricsSource.contains("home.metric.downFromYesterday\"), percent), .secondary"))
-        #expect(homeMetricsSource.contains("), .red)") == false)
-        #expect(sharedMetricsSource.contains("struct MetricCell"))
-        #expect(sharedMetricsSource.contains("struct MetricSummaryItem"))
-        #expect(homeMetricsSource.contains("struct MetricCell") == false)
-        #expect(homeMetricsSource.contains("if dynamicTypeSize.isAccessibilitySize"))
-        #expect(homeMetricsSource.contains("verticalMetrics(metrics)"))
-        #expect(source.contains("AppActionLabel(title: actionTitle"))
-        #expect(timerActionSource.contains("store.timerPickerMode.title"))
-        #expect(timerPickerRowSource.contains("case .switchTimer:"))
-        #expect(timerPickerRowSource.contains("home.switchTimer"))
-        #expect(source.contains("home.newTask") == false)
-        #expect(source.contains(".layoutPriority(1.1)") == false)
+        #expect(phoneRows.contains("#if os(iOS)") == false)
+        #expect(phoneRows.contains("struct PhoneTodaySummaryRow: View"))
+        #expect(desktopOverview.contains("PhoneTodaySummaryRow(store: store)"))
+        #expect(desktopOverview.contains("MetricsPanel(") == false)
+        #expect(desktopOverview.contains("MetricCell(") == false)
+        #expect(phoneSections.contains("HomeNowActiveContent("))
+        #expect(phoneSections.contains("HomeNowEmptyStartButton("))
+        #expect(phoneSections.contains("actionLabelStyle: .iconOnly"))
+        #expect(desktopNow.contains("HomeNowActiveContent("))
+        #expect(desktopNow.contains("HomeNowEmptyStartButton("))
+        #expect(desktopNow.contains("actionLabelStyle: .titleAndIcon"))
+        #expect(desktopNow.contains("TodayTimerAction(") == false)
+        #expect(nowContent.contains("ActiveTimerRow("))
+        #expect(nowContent.contains("home.startAnotherTimer"))
+        #expect(nowContent.contains("home.switchTimer"))
+        #expect(nowContent.contains("AppActionLabel("))
+        #expect(nowContent.contains("home.startTimer"))
     }
 
     @Test

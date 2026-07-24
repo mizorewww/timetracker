@@ -75,7 +75,7 @@ struct SharedComponentsContractTests {
     func primaryActionLabelsWrapLegiblyAndExposeStableActions() throws {
         let sharedSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
         let homeSource = try [
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
+            "timetracker/Features/Home/Sections/HomeNowSectionContent.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPicker.swift",
             "timetracker/SharedUI/Components/TaskHierarchyPickerPresentation.swift",
             "timetracker/SharedUI/Components/TimerPickerPresentation.swift"
@@ -95,7 +95,7 @@ struct SharedComponentsContractTests {
         #expect(sharedSource.contains(".frame(height: dynamicTypeSize.isAccessibilitySize ? nil : fixedHeight)"))
         #expect(sharedSource.contains("dynamicTypeSize.isAccessibilitySize || fixedHeight == nil"))
         #expect(sharedSource.contains(".padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 4 : 0)"))
-        #expect(homeSource.contains("AppActionLabel(title: actionTitle"))
+        #expect(homeSource.contains("AppActionLabel("))
         #expect(homeSource.contains(".accessibilityIdentifier(\"home.startTimer\")"))
         #expect(homeTimelineSource.contains("SectionTitle(title: AppStrings.localized(\"home.now.title\"))\n                .accessibilityIdentifier(\"home.activeTimers\")"))
         #expect(homeTimelineSource.contains("        .accessibilityIdentifier(\"home.activeTimers\")\n    }\n}\n\nstruct TimelineSection") == false)
@@ -362,7 +362,9 @@ struct SharedComponentsContractTests {
     @Test
     func compactActionsAdaptLayoutAndKeepAccessibleHitTargets() throws {
         let actionSource = try sourceText("timetracker/SharedUI/Components/ActionControls.swift")
-        let homeActionSource = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let nowContentSource = try sourceText(
+            "timetracker/Features/Home/Sections/HomeNowSectionContent.swift"
+        )
         let inboxSuggestionSource = try sourceText("timetracker/Features/Inbox/InboxSuggestionRow.swift")
         let readySuggestionRemainder = try #require(
             inboxSuggestionSource.components(
@@ -379,10 +381,9 @@ struct SharedComponentsContractTests {
         #expect(actionSource.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(actionSource.contains(".frame(height: dynamicTypeSize.isAccessibilitySize ? nil : fixedHeight)"))
         #expect(actionSource.contains("dynamicTypeSize.isAccessibilitySize || fixedHeight == nil"))
-        #expect(homeActionSource.contains("if store.activeSegments.isEmpty"))
-        #expect(homeActionSource.contains(".buttonStyle(.borderedProminent)"))
-        #expect(homeActionSource.contains(".buttonStyle(.bordered)"))
-        #expect(homeActionSource.contains("home.newTask") == false)
+        #expect(nowContentSource.contains("segments.isEmpty") == false)
+        #expect(nowContentSource.contains(".buttonStyle(.borderedProminent)"))
+        #expect(nowContentSource.contains("home.newTask") == false)
         #expect(inboxSuggestionSource.contains("if isCompact {"))
         #expect(inboxSuggestionSource.contains("ViewThatFits(in: .horizontal)"))
         #expect(readySuggestionSource.contains("ViewThatFits(in: .horizontal)") == false)
@@ -451,8 +452,6 @@ struct SharedComponentsContractTests {
             "timetracker/SharedUI/Components/InformationPresentationViews.swift"
         )
         let forecast = try sourceText("timetracker/SharedUI/Components/ForecastInfoViews.swift")
-        let metrics = try sourceText("timetracker/SharedUI/Components/MetricCards.swift")
-
         #expect(sectionHeader.contains(".accessibilityAddTraits(.isHeader)"))
         #expect(sectionHeader.contains(".accessibilityHidden(true)"))
         #expect(emptyState.contains(".accessibilityElement(children: .ignore)"))
@@ -475,7 +474,5 @@ struct SharedComponentsContractTests {
         #expect(informationPresentation.contains(".fixedSize(horizontal: false, vertical: true)"))
         #expect(forecast.contains("InformationPresentationButton("))
         #expect(forecast.contains("InformationGuideRow("))
-        #expect(metrics.contains("dynamicTypeSize.isAccessibilitySize ? nil : 1"))
-        #expect(metrics.contains(".accessibilityValue(\"\\(metric.value), \\(metric.trendText)\")"))
     }
 }

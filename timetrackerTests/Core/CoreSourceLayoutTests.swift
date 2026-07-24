@@ -253,7 +253,6 @@ struct CoreSourceLayoutTests {
             "timetracker/SharedUI/Components/SelectionPulse.swift",
             "timetracker/SharedUI/Components/InfoRows.swift",
             "timetracker/SharedUI/Components/SplitViewToolbarButtons.swift",
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/Features/Home/HomeSectionContainer.swift",
             "timetracker/Features/Home/HomeViews.swift",
             "timetracker/Features/Home/Sections/HomeActivityHeatmapViews.swift",

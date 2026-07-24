@@ -11,48 +11,17 @@ struct PhoneNowSection: View {
     var body: some View {
         Section {
             if segments.isEmpty {
-                Button(action: startTimer) {
-                    AppActionLabel(
-                        title: AppStrings.startTimer,
-                        systemImage: "play.fill",
-                        minHeight: 48
-                    )
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .listRowBackground(Color.clear)
-                .accessibilityIdentifier("home.startTimer")
+                HomeNowEmptyStartButton(startTimer: startTimer)
+                    .listRowBackground(Color.clear)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(segments, id: \.id) { segment in
-                        ActiveTimerRow(
-                            store: store,
-                            segment: segment,
-                            actionLabelStyle: .iconOnly,
-                            openTaskDetail: openTask
-                        )
-                        .padding(12)
-                        .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
-
-                        Divider()
-                            .padding(.horizontal, 12)
-                    }
-
-                    Button(action: startTimer) {
-                        Label {
-                            Text(activeTimerActionTitle)
-                                .lineLimit(nil)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } icon: {
-                            Image(systemName: activeTimerActionSystemImage)
-                        }
-                        .font(.body.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .accessibilityIdentifier("home.startTimer")
-                }
+                HomeNowActiveContent(
+                    store: store,
+                    segments: segments,
+                    allowsParallelTimers: allowsParallelTimers,
+                    actionLabelStyle: .iconOnly,
+                    openTask: openTask,
+                    startTimer: startTimer
+                )
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
             }
@@ -64,16 +33,6 @@ struct PhoneNowSection: View {
                 Text(.app("timer.chooseTaskFooter"))
             }
         }
-    }
-
-    private var activeTimerActionTitle: String {
-        allowsParallelTimers
-            ? AppStrings.localized("home.startAnotherTimer")
-            : AppStrings.localized("home.switchTimer")
-    }
-
-    private var activeTimerActionSystemImage: String {
-        allowsParallelTimers ? "plus.circle" : "arrow.left.arrow.right.circle"
     }
 }
 

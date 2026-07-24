@@ -55,7 +55,6 @@ struct AppPresentationContractTests {
     func featureRootsDoNotOwnCompetingSheets() throws {
         let featureSources = try [
             "timetracker/App/ContentView.swift",
-            "timetracker/Features/Home/Controls/HomeActionsViews.swift",
             "timetracker/Features/Home/PhoneHomeView.swift",
             "timetracker/Features/Home/Sections/HomeQuickStartViews.swift",
             "timetracker/Features/Settings/SettingsViews.swift",
@@ -169,7 +168,7 @@ struct AppPresentationContractTests {
         let deepLinks = try sourceText(
             "timetracker/App/AppSceneDeepLinkCoordinator.swift"
         )
-        let homeActions = try sourceText("timetracker/Features/Home/Controls/HomeActionsViews.swift")
+        let homeViews = try sourceText("timetracker/Features/Home/HomeViews.swift")
         let phoneHome = try sourceText("timetracker/Features/Home/PhoneHomeView.swift")
         let quickStart = try sourceText("timetracker/Features/Home/Sections/HomeQuickStartViews.swift")
         let settings = try [
@@ -181,7 +180,7 @@ struct AppPresentationContractTests {
         #expect(content.contains("AppSceneDeepLinkCoordinator("))
         #expect(deepLinks.contains("store.handleDeepLink("))
         #expect(deepLinks.contains("presentationRouter: presentationRouter"))
-        #expect(homeActions.contains("presentationRouter.presentStartTaskPicker()"))
+        #expect(homeViews.contains("presentationRouter.presentStartTaskPicker()"))
         #expect(phoneHome.contains("presentationRouter.presentStartTaskPicker()"))
         #expect(phoneHome.contains("presentationRouter.presentQuickStartEditor(using: store)"))
         #expect(quickStart.contains("presentationRouter.presentQuickStartEditor(using: store)"))
@@ -194,7 +193,7 @@ struct AppPresentationContractTests {
         #expect(host.contains(
             "if categoryPicker.selectCategory(categoryID)"
         ))
-        #expect(homeActions.contains("Task.yield()") == false)
+        #expect(homeViews.contains("Task.yield()") == false)
     }
 
     @Test

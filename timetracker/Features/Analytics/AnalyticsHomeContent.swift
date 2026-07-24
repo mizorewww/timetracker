@@ -3,6 +3,7 @@ import SwiftUI
 struct AnalyticsContent: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    let store: TimeTrackerStore
     /// `nil` while a newly selected period is still loading. The period
     /// controls stay mounted so switching Day/Week/Month never unmounts the
     /// picker; only the data sections swap to an in-place loading state.
@@ -30,6 +31,14 @@ struct AnalyticsContent: View {
                     .frame(maxWidth: .infinity, minHeight: 240)
                     .accessibilityLabel(AppStrings.localized("analytics.loading"))
             }
+
+            // The tracked-task heatmaps have their own data chain and period,
+            // independent of the analytics range, so they stay mounted while
+            // a newly selected period loads.
+            HomeActivityHeatmapSection(
+                store: store,
+                container: .listSection
+            )
         }
         #if os(iOS)
         .listStyle(.insetGrouped)

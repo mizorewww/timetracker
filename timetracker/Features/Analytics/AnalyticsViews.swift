@@ -48,6 +48,7 @@ struct AnalyticsView: View {
         } ?? false
 
         AnalyticsContent(
+            store: store,
             snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
             range: $range,
             referenceDate: effectiveReferenceDateBinding,

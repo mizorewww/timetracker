@@ -4475,6 +4475,41 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsHomeShowsTrackedTaskHeatmaps() throws {
+        let app = launchApp(
+            route: "analytics",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-reset-demo-preferences"
+            ]
+        )
+        XCTAssertTrue(analyticsIsReady(in: app))
+
+        let heatmapsHeader = app.descendants(matching: .any)[
+            "home.heatmaps.header"
+        ].firstMatch
+        scrollUntilHittable(heatmapsHeader, direction: .up, in: app)
+        XCTAssertTrue(
+            heatmapsHeader.waitForExistence(timeout: 8),
+            "The analytics home must show the tracked-task heatmap section."
+        )
+        let grid = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label == %@",
+                "Time Tracker App activity Heatmap"
+            )
+        ).firstMatch
+        scrollUntilHittable(grid, direction: .up, in: app)
+        XCTAssertTrue(grid.waitForExistence(timeout: 8))
+
+        let prefix = platformScreenshotPrefix(in: app)
+        #if !os(macOS)
+        try capture("\(prefix)-analytics-task-heatmaps", app: app)
+        #endif
+    }
+
+    @MainActor
     func testDesktopTodayShowsUnifiedNowOverviewRow() throws {
         #if targetEnvironment(simulator) || os(macOS)
         let app = launchApp()

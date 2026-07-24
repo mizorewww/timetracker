@@ -4,6 +4,32 @@ import Testing
 @Suite(.serialized)
 struct AnalyticsPeriodUIContractTests {
     @Test
+    func analyticsHomeEmbedsTheTrackedTaskHeatmapsWithTheirOwnDataChain() throws {
+        let content = try sourceText(
+            "timetracker/Features/Analytics/AnalyticsHomeContent.swift"
+        )
+        let views = try sourceText(
+            "timetracker/Features/Analytics/AnalyticsViews.swift"
+        )
+
+        #expect(content.contains("let store: TimeTrackerStore"))
+        #expect(content.contains("HomeActivityHeatmapSection("))
+        #expect(content.contains("container: .listSection"))
+        #expect(views.contains("AnalyticsContent("))
+        #expect(views.contains("store: store,"))
+        // The heatmap stays mounted outside the swappable data sections so a
+        // range switch cannot flicker it.
+        let dataSectionsRemainder = content.components(
+            separatedBy: "private func dataSections"
+        )
+        #expect(dataSectionsRemainder.count > 1)
+        #expect(
+            dataSectionsRemainder[1].contains("HomeActivityHeatmapSection(")
+                == false
+        )
+    }
+
+    @Test
     func analyticsHomeKeepsPeriodControlsMountedWhileSwitchingRanges() throws {
         let views = try sourceText(
             "timetracker/Features/Analytics/AnalyticsViews.swift"

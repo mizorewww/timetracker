@@ -1,0 +1,42 @@
+# 45：iOS Shortcut 支持与设计文档实现记忆
+
+> 本文件只用于主代理与子代理的实现、验证和编排记忆，不是任务来源。唯一范围与状态必须重新读取
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+
+## 当前阶段
+
+- [x] 领取“iOS shortcut支持&文档(请开一个文件夹讲shortcut设计)”反馈。
+- [~] 审计现有 App Intents/Shortcuts 能力(锁域注释提到 Shortcuts 进程)与缺口。
+- [ ] 在 `Docs/Shortcuts/` 开文件夹写设计文档(能力矩阵、意图清单、参数、示例、限制)。
+- [ ] 实现缺口的 App Intents 并运行聚焦测试与模拟器验收。
+- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+
+## 唯一反馈边界
+
+- iOS Shortcut(App Intents)支持 + 设计文档文件夹。
+- 不领取 quickstart 排序、iPad/mac Now 同步或其他反馈。
+- 以普通文字大小、正常交互路径、三平台系统约定为优先。
+
+## 强制约束
+
+- 完整遵循仓库本地 `apple-hig` 与 `swiftui-expert-skill`;所有 UI 导航、断言与截图只用 XCTest/XCUITest 脚本。
+- 实体机器不做测试;模拟器验收后 shutdown+delete 并清理 /tmp 产物。
+- 优先复用 App Intents 框架与现有命令路径;除用户建议外不引入 GitHub 少于 1k stars 的库。
+- 每个 checkpoint 只暂存本任务的已完成变更;保留用户在反馈文件中的其他内容。
+
+## Checkpoint 编排
+
+- [x] Checkpoint A：领取任务、创建实现记忆与 active link。
+- [ ] Checkpoint B：审计现有 Shortcuts 能力与命令路径。
+- [ ] Checkpoint C：写 `Docs/Shortcuts/` 设计文档。
+- [ ] Checkpoint D：实现缺口 intents + 聚焦测试。
+- [ ] Checkpoint E：模拟器验收、Release 与收口。
+
+## 资源所有权
+
+- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [ ] 待分配：App Intents 现状审计。
+
+## 已提交 checkpoint
+
+- [~] 待提交：领取任务、实现记忆与 active link。

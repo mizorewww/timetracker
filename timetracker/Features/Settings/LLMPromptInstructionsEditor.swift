@@ -12,6 +12,7 @@ struct LLMPromptInstructionsEditor: View {
     @State private var mode = LLMPromptInstructionsEditorMode.edit
     @State private var validationError: LLMPromptInstructionsValidationError?
     @State private var isDiscardConfirmationPresented = false
+    @State private var isSaving = false
 
     private let initialInstructions: String
 
@@ -171,12 +172,20 @@ struct LLMPromptInstructionsEditor: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppStrings.cancel, action: requestDismiss)
+                    .disabled(isSaving)
                     .accessibilityIdentifier("\(accessibilityID).cancel")
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(AppStrings.localized("common.save"), action: save)
-                    .disabled(validationError != nil || !hasUnsavedChanges)
-                    .accessibilityIdentifier("\(accessibilityID).save")
+                Button(action: save) {
+                    if isSaving {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text(AppStrings.localized("common.save"))
+                    }
+                }
+                .disabled(validationError != nil || !hasUnsavedChanges || isSaving)
+                .accessibilityIdentifier("\(accessibilityID).save")
             }
         }
     }
@@ -212,8 +221,16 @@ struct LLMPromptInstructionsEditor: View {
             validationError = Self.validationError(for: draft, kind: kind)
             return
         }
-        if onSave(normalized) {
-            dismissEditor()
+        isSaving = true
+        Task { @MainActor in
+            // Let the saving state render before the synchronous store commit
+            // (locked cross-process file IO) runs.
+            await Task.yield()
+            let didSave = onSave(normalized)
+            isSaving = false
+            if didSave {
+                dismissEditor()
+            }
         }
     }
 

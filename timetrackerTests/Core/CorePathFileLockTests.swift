@@ -162,6 +162,36 @@ struct CorePathFileLockTests {
         #expect(secondFinished.wait(timeout: .now() + 2) == .success)
     }
 
+    @Test
+    func processLockTimesOutInsteadOfBlockingForever() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let lockURL = fixture.root.appendingPathComponent("contended.lock")
+
+        // Simulate another process holding the exclusive flock.
+        let descriptor = lockURL.path.withCString { path in
+            Darwin.open(path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        }
+        try #require(descriptor >= 0)
+        defer { Darwin.close(descriptor) }
+        try #require(flock(descriptor, LOCK_EX) == 0)
+        defer { flock(descriptor, LOCK_UN) }
+
+        let previousTimeout = PathProcessFileLock.acquireTimeout
+        PathProcessFileLock.acquireTimeout = 0.3
+        defer { PathProcessFileLock.acquireTimeout = previousTimeout }
+
+        let lock = PathFileLockRegistry.shared.lock(for: lockURL)
+        let started = Date()
+        do {
+            try lock.withExclusiveAccess {}
+            Issue.record("A contended lock must fail instead of blocking forever.")
+        } catch let error as POSIXError {
+            #expect(error.code == .ETIMEDOUT)
+        }
+        #expect(Date().timeIntervalSince(started) < 3)
+    }
+
     private struct InjectedFailure: Error {}
 
     private struct Fixture {

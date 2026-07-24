@@ -43,14 +43,31 @@ nonisolated final class PathProcessFileLock: @unchecked Sendable {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
 
-        while flock(descriptor, LOCK_EX) != 0 {
+        // Widget and Shortcuts processes share this lock domain. A permanently
+        // blocked wait freezes the caller (often the main thread), so retry
+        // with backoff for a bounded budget and fail instead of hanging.
+        let deadline = Date().addingTimeInterval(Self.acquireTimeout)
+        var backoff = Self.initialBackoff
+        while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
             let errorCode = errno
             if errorCode == EINTR { continue }
-            Darwin.close(descriptor)
-            throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
+            guard errorCode == EWOULDBLOCK else {
+                Darwin.close(descriptor)
+                throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
+            }
+            guard Date() < deadline else {
+                Darwin.close(descriptor)
+                throw POSIXError(.ETIMEDOUT)
+            }
+            usleep(backoff)
+            backoff = min(backoff * 2, Self.maximumBackoff)
         }
         return descriptor
     }
+
+    static var acquireTimeout: TimeInterval = 5
+    private static let initialBackoff: useconds_t = 25_000
+    private static let maximumBackoff: useconds_t = 250_000
 
     private static func releaseDescriptor(_ descriptor: Int32) {
         guard descriptor >= 0 else { return }
@@ -63,22 +80,20 @@ nonisolated final class PathFileLockRegistry: @unchecked Sendable {
     static let shared = PathFileLockRegistry()
 
     private let registryLock = NSLock()
-    private let locksByPath = NSMapTable<NSString, PathProcessFileLock>(
-        keyOptions: .copyIn,
-        valueOptions: .weakMemory
-    )
+    // Strong references: a weak table can drop a lock instance mid-flight and
+    // hand the same path a second guard, defeating in-process recursion safety.
+    private var locksByPath: [String: PathProcessFileLock] = [:]
 
     func lock(for url: URL) -> PathProcessFileLock {
         let canonicalURL = canonicalLockURL(for: url)
         let path = canonicalURL.path
         registryLock.lock()
         defer { registryLock.unlock() }
-        let key = path as NSString
-        if let existing = locksByPath.object(forKey: key) {
+        if let existing = locksByPath[path] {
             return existing
         }
         let created = PathProcessFileLock(lockURL: canonicalURL)
-        locksByPath.setObject(created, forKey: key)
+        locksByPath[path] = created
         return created
     }
 

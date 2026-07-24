@@ -42,6 +42,27 @@
 - [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [ ] 待分配：三条问题的代码审计。
 
+## 审计记录
+
+### 提示词编辑/预览(task43_prompt_audit)
+
+- 三个提示词 `LLMPromptKind`(inboxRouting/checklistVisual/taskPlan)共用 `LLMPromptInstructionsEditor`;仅 taskPlan 有 MarkdownView 预览(`kind == .taskPlan` 硬编码,LLMPromptInstructionsEditor.swift L94/L186)。
+- 用户可编辑 instructions 均 zero-shot;真正的输出契约是各服务硬编码 system prompt(JSON schema/字段约束/图规则/上限),UI 完全不可见;allowedSymbols(~77)/allowedColors 随请求发送但不展示;temperature 0.2/response_format/45s 超时/无 reasoning 参数均不可见。
+- 方案方向:三个编辑器统一预览(去掉 kind 判断);footer 展示对应只读 system contract 摘要与符号/色板范围;不引入新库(复用已集成 MarkdownView)。
+
+### 计划开关重叠(task43_toggle_audit)
+
+- 根因:`AITaskPlanGeneratorViews.swift` 的 `AITaskPlanTaskProgressDraftEditor`(L617-650)把数量目标/每日重复两个 Toggle 嵌在任务行内 VStack(spacing 8、subheadline、44pt 前导缩进、手绘 Divider),不是独立 List 行,拿不到系统行高/内边距/分隔符,多控件挤压重叠。
+- 对照:任务详情同款开关是独立 Section 行(`TaskQuantityEditorSection` L10-44 `task.editor.quantity.toggle`;`TaskRecurrenceEditorSection` L9-57 `task.editor.recurrence.daily`)。
+- 方案:计划预览拆行 —— 任务头一行、数量 Toggle 独立行、目标值/单位 LabeledContent 行、每日重复 Toggle 独立行;保留全部现有 accessibility identifier(`aiTaskPlan.task.<id>.quantity.toggle`/`...recurrence.daily`),复用既有 XCUITest `testAITaskPlanDraftReviewAtomicCreate` 与 `--uitesting-ai-task-plan` fixture 验收。
+
+### 保存卡死(task43_save_audit)
+
+- 保存是按钮触发的全同步 @MainActor 链:`setLLMPromptInstructions`→`setPreference`→coordinator(`flock(LOCK_EX)` 无限阻塞 + fresh ModelContext 主线程 save)→finish(refresh + 主线程 Keychain 读 + `recordLocalMutation` 第二把 `lockf(F_LOCK)` 阻塞锁 + 快照/SHA/写盘)→广播。
+- 根因 A(最可能):两把跨进程文件锁(app/widget/Shortcuts 共享)无限阻塞主线程;`PathFileLockRegistry` 用 weakMemory,进程内防自锁可能失效。根因 B:主线程 save 撞 iCloud 导入。根因 C:SyncedPreference 重复行 O(n)。
+- 无 debounce(按钮式单次保存,问题不在击键)。
+- 方案:① 锁获取加超时退避重试,失败报错而非永久卡死;② registry 改强引用;③ 编辑器保存中态 + 异步执行,失败给错误提示。
+
 ## 已提交 checkpoint
 
 - [~] 待提交：领取任务、实现记忆与 active link。

@@ -42,14 +42,30 @@ nonisolated private final class SyncConflictProcessFileLock: @unchecked Sendable
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
 
-        while Darwin.lockf(descriptor, F_LOCK, 0) != 0 {
+        // Bounded non-blocking acquire: never hang the caller (often the main
+        // thread) on a lock held by a widget or Shortcuts process.
+        let deadline = Date().addingTimeInterval(Self.acquireTimeout)
+        var backoff = Self.initialBackoff
+        while Darwin.lockf(descriptor, F_TLOCK, 0) != 0 {
             let errorCode = errno
             if errorCode == EINTR { continue }
-            Darwin.close(descriptor)
-            throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
+            guard errorCode == EAGAIN || errorCode == EACCES else {
+                Darwin.close(descriptor)
+                throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
+            }
+            guard Date() < deadline else {
+                Darwin.close(descriptor)
+                throw POSIXError(.ETIMEDOUT)
+            }
+            usleep(backoff)
+            backoff = min(backoff * 2, Self.maximumBackoff)
         }
         return descriptor
     }
+
+    private static let acquireTimeout: TimeInterval = 5
+    private static let initialBackoff: useconds_t = 25_000
+    private static let maximumBackoff: useconds_t = 250_000
 
     private static func releaseDescriptor(_ descriptor: Int32) {
         guard descriptor >= 0 else { return }

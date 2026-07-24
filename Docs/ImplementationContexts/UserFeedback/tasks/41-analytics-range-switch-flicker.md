@@ -9,7 +9,7 @@
 - [x] 审计 Analytics 周期切换的数据加载、视图身份与动画链，定位闪烁根因。
 - [x] 确定最小修复(稳定视图身份/避免重复加载/合理动画)。
 - [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图(或录屏)验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,17 +30,17 @@
 - [x] Checkpoint B：审计闪烁根因(数据链 + 视图身份 + 动画)。
 - [x] Checkpoint C：实现修复并补齐聚焦测试。
 - [x] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] 主代理(直接审计,无需子代理)：Analytics 周期切换链路审计。
 
 ## 已提交 checkpoint
 
-- [~] 待提交:修复 + 契约/UI 回归 + 三平台验收。
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `e36807df`:修复 + 契约/UI 回归 + 三平台验收(1.1.110 (165))。
+- [x] 领取任务、实现记忆与 active link(创建即提交)。
 
 
 ## 实现与验收记录
@@ -50,3 +50,5 @@
 - 契约测试 `analyticsHomeKeepsPeriodControlsMountedWhileSwitchingRanges` 锁定结构。
 - XCUITest `testAnalyticsRangeSwitchKeepsPeriodControlsMounted`:Day→Week→Month→Day 循环,每次切换后立即断言 `analytics.periodFilter` 存在、数据 section 10s 内恢复;macOS 段控件为 RadioButton(平台分支)。
 - [x] iPhone(owned `codex-task41-iPhone17Pro`)、iPad(`codex-task41-iPadPro11`)、macOS 均通过;截图确认控件稳定、数据恢复。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.110 (165)`,无设备安装失败。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

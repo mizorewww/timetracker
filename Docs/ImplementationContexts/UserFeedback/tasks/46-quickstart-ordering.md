@@ -9,7 +9,7 @@
 - [x] 审计 Quick Start 的存储(固定列表顺序)、编辑页(任务14的动画/置顶)与排序现状。
 - [x] 确定排序交互(参照 category 排序任务36 / checklist Sort 模式)。
 - [x] 实现并运行聚焦测试与 iPhone/iPad/macOS 模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,16 +30,16 @@
 - [x] Checkpoint B：审计 Quick Start 存储与编辑交互。
 - [x] Checkpoint C：实现排序并补齐聚焦测试。
 - [x] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [x] 主代理(直接审计,无需子代理)：Quick Start 存储与编辑审计。
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] `b8d027bf`:实现 + 契约/UI + 三平台验收(1.1.130 (185));领取任务与 active link 创建时已提交。
 
 
 ## 实现与验收记录
@@ -48,3 +48,5 @@
 - 实现:编辑器固定区每行新增 `QuickStartPinnedReorderControls`(上移/下移 chevron,44pt 目标,边界禁用,与 category 排序一致),`movePinned` 走既有 `withSelectionAnimation` swapAt;`#N` 序号徽标加 `fixedSize` 防止被挤压。
 - 契约测试 `quickStartEditorReordersPinnedRowsWithAnimatedControls`;UI 测试 `testQuickStartEditorReordersPinnedTasks`(先 pin 第三项→上移到 #2→保存→主页顺序断言),iPhone/iPad/macOS 全通过;macOS 截图因既有截图设施限制跳过(与任务43同)。
 - 插曲:iPad 模拟器连续 3 次 launch 超时,重建模拟器后通过,资源已清理。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.130 (185)`,无设备安装失败。
+- [x] 反馈已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

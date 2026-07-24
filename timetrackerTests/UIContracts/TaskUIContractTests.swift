@@ -1142,7 +1142,8 @@ struct TaskUIContractTests {
         #expect(editorSource.contains("reduceMotion ? nil : .snappy(duration: 0.28)"))
         #expect(editorSource.contains("value: rowPlacements"))
         #expect(sharedSource.contains(".lineLimit(nil)"))
-        #expect(editorSource.contains("TextField(AppStrings.localized(\"editor.checklist.itemPlaceholder\"), text: $item.title, axis: .vertical)"))
+        #expect(editorSource.contains("ChecklistTitleTextField("))
+        #expect(sharedSource.contains(".strikethrough(isCompleted)"))
         #expect(editorSource.contains("EditButton()") == false)
         #expect(editorSource.contains(".onMove(perform: moveChecklistItems)"))
         #expect(editorSource.contains("Image(systemName: \"trash\")"))
@@ -1151,7 +1152,7 @@ struct TaskUIContractTests {
         #expect(editorSource.contains("#if os(macOS)"))
         #expect(editorSource.contains(".labelsHidden()"))
         #expect(editorSource.contains("arrow.up.arrow.down.circle") == false)
-        #expect(editorSource.contains(".strikethrough(item.isCompleted)"))
+        #expect(sharedSource.contains(".strikethrough(isCompleted)"))
         #expect(englishStrings.contains("\"checklist.showLess\""))
         #expect(englishStrings.contains("\"checklist.keepCompletedHint\""))
     }

@@ -45,24 +45,15 @@ struct ChecklistEditorRow: View {
                 height: AppLayout.minimumInteractiveTarget
             )
 
-            TextField(AppStrings.localized("editor.checklist.itemPlaceholder"), text: $item.title, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...4)
-                .strikethrough(item.isCompleted)
-                .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                .focused(focus, equals: item.id)
-                .submitLabel(.done)
-                .onSubmit(submit)
-                .labelsHidden()
-                .accessibilityLabel(AppStrings.localized("editor.checklist.itemPlaceholder"))
-                .accessibilityIdentifier(
-                    "task.editor.checklist.title.\(item.id.uuidString)"
-                )
-                .onChange(of: item.title) { _, newValue in
-                    guard newValue.contains(where: \.isNewline) else { return }
-                    item.title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
-                    submit()
-                }
+            ChecklistTitleTextField(
+                title: $item.title,
+                isCompleted: item.isCompleted,
+                lineLimit: 1...4,
+                accessibilityIdentifier:
+                    "task.editor.checklist.title.\(item.id.uuidString)",
+                submit: submit
+            )
+            .focused(focus, equals: item.id)
 
             sortingControls
             Button(role: .destructive) {

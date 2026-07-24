@@ -200,6 +200,50 @@ struct InlineChecklistAddRow: View {
     }
 }
 
+/// Shared checklist title field used by the inbox row, the task detail
+/// editor, and the editable checklist row: plain style, completion
+/// strikethrough, and newline-to-submit normalization. Focus is applied by
+/// the caller with `.focused` so each surface keeps its own focus model.
+struct ChecklistTitleTextField: View {
+    @Binding var title: String
+    let isCompleted: Bool
+    var placeholder: String = AppStrings.localized("editor.checklist.itemPlaceholder")
+    var lineLimit: ClosedRange<Int> = 1...5
+    var accessibilityIdentifier: String?
+    let submit: () -> Void
+
+    var body: some View {
+        TextField(placeholder, text: $title, axis: .vertical)
+            .textFieldStyle(.plain)
+            .lineLimit(lineLimit)
+            .strikethrough(isCompleted)
+            .foregroundStyle(isCompleted ? .secondary : .primary)
+            .submitLabel(.done)
+            .onSubmit(submit)
+            .labelsHidden()
+            .accessibilityLabel(placeholder)
+            .accessibilityIdentifier(optional: accessibilityIdentifier)
+            .onChange(of: title) { _, newValue in
+                guard newValue.contains(where: \.isNewline) else { return }
+                title = ChecklistInputTextNormalizer.collapsingNewlines(
+                    in: newValue
+                )
+                submit()
+            }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func accessibilityIdentifier(optional identifier: String?) -> some View {
+        if let identifier {
+            self.accessibilityIdentifier(identifier)
+        } else {
+            self
+        }
+    }
+}
+
 struct EditableChecklistTextRow: View {
     @Binding var title: String
     let isCompleted: Bool
@@ -270,20 +314,12 @@ struct EditableChecklistTextRow: View {
     }
 
     private var baseTitleField: some View {
-        TextField(placeholder, text: $title, axis: .vertical)
-            .textFieldStyle(.plain)
-            .lineLimit(1...5)
-            .strikethrough(isCompleted)
-            .foregroundStyle(isCompleted ? .secondary : .primary)
-            .focused($isFocused)
-            .submitLabel(.done)
-            .onSubmit(commit)
-            .labelsHidden()
-            .accessibilityLabel(placeholder)
-            .onChange(of: title) { _, newValue in
-                guard newValue.contains(where: \.isNewline) else { return }
-                title = ChecklistInputTextNormalizer.collapsingNewlines(in: newValue)
-                commit()
-            }
+        ChecklistTitleTextField(
+            title: $title,
+            isCompleted: isCompleted,
+            placeholder: placeholder,
+            submit: commit
+        )
+        .focused($isFocused)
     }
 }

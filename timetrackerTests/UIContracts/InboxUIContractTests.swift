@@ -21,6 +21,9 @@ struct InboxUIContractTests {
         let contentSource = try appRootSource()
         let tasksSource = try sourceText("timetracker/Features/Tasks/Management/TasksViews.swift")
         let inboxSource = try inboxFeatureSource()
+        let sharedSource = try sourceText(
+            "timetracker/SharedUI/Components/ChecklistControls.swift"
+        )
         let inboxItemSource = try sourceText("timetracker/Features/Inbox/InboxItemRow.swift")
         let inboxStoreSource = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+InboxCommands.swift")
         let sidebarSource = try sourceText("timetracker/Features/Sidebar/SidebarViews.swift")
@@ -40,6 +43,7 @@ struct InboxUIContractTests {
         #expect(inboxSource.contains("InboxCaptureRow("))
         #expect(inboxSource.contains("InboxListRow("))
         #expect(inboxSource.contains("EditableChecklistTextRow("))
+        #expect(sharedSource.contains("ChecklistTitleTextField("))
         #expect(inboxSource.contains("showsIcon: false"))
         #expect(inboxSource.contains("contentAlignment: .center"))
         #expect(

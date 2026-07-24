@@ -9,7 +9,7 @@
 - [x] 审计三条问题的现状:三个 AI 提示词的编辑/预览路径、生成计划页开关实现、提示词保存链路。
 - [x] 确定各项最小方案。
 - [x] 分 checkpoint 实现并运行聚焦测试与模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界(三个子项)
 
@@ -35,11 +35,11 @@
 - [x] Checkpoint C：修复保存卡死(Bug 优先)。
 - [x] Checkpoint D：计划开关复用任务详情 UI。
 - [x] Checkpoint E：三个提示词统一 MarkdownView 预览与逻辑暴露。
-- [~] Checkpoint F：三平台模拟器验收、Release 与收口。
+- [x] Checkpoint F：三平台模拟器验收、Release 与收口。
 
 ## 资源所有权
 
-- [~] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
+- [x] 主代理：任务状态、编排、集成、所有 build/simulator/XCUITest/screenshot/Release 批次与清理。
 - [ ] 待分配：三条问题的代码审计。
 
 ## 审计记录
@@ -76,3 +76,5 @@
 - [x] 锁/偏好/LLM 契约测试全绿;锁超时单元测试验证 ETIMEDOUT < 3s。
 - [x] 计划开关:iPhone/iPad/macOS `testAITaskPlanDraftReviewAtomicCreate` 通过;截图确认 Quantity Goal/Repeat Daily 独立行。
 - [x] 提示词暴露:iPhone/iPad `testEveryAIPromptExposesMarkdownPreviewAndFixedContract` + 既有编辑保存测试通过;截图确认 inboxRouting 也有 Preview 与固定契约披露。macOS 该场景脚本导航不可靠(独立 Settings 窗口),按既有惯例跳过,由共享源码契约测试覆盖。
+- [x] `CONFIGURATION=Release scripts/build_install_all.sh`:iOS/macOS BUILD SUCCEEDED,iPhone Air 已装 `1.1.119 (174)`,无设备安装失败。
+- [x] 三条反馈均已由主代理标记完成,active link 已移除;owned 模拟器与 /tmp 产物已清理。

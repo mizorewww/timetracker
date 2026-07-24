@@ -517,66 +517,14 @@ private struct AITaskPlanTaskDraftRow: View {
     let removeTask: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
-                TaskIcon(
-                    visual: TaskVisualPresentation(
-                        iconName: task.iconName,
-                        colorHex: task.colorHex
-                    ),
-                    size: 34
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField(
-                        AppStrings.localized("aiTaskPlan.taskName"),
-                        text: $task.title,
-                        axis: .vertical
-                    )
-                    .font(.body.weight(.semibold))
-                    .lineLimit(1...3)
-                    .textFieldStyle(.plain)
-                    .accessibilityLabel(AppStrings.localized("aiTaskPlan.taskName"))
-                    .accessibilityIdentifier(
-                        "aiTaskPlan.task.\(task.id.uuidString)"
-                    )
-
-                    if !task.notes.isEmpty {
-                        Text(task.notes)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if let estimatedMinutes = task.estimatedMinutes {
-                        Label(
-                            DurationFormatter.compact(estimatedMinutes * 60),
-                            systemImage: "clock"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer(minLength: 4)
-
-                Menu {
-                    Button(role: .destructive, action: removeTask) {
-                        Label(
-                            AppStrings.localized("aiTaskPlan.removeTask"),
-                            systemImage: "trash"
-                        )
-                    }
-                } label: {
-                    TrailingMenuLabel(systemImage: "ellipsis.circle")
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(AppStrings.localized("aiTaskPlan.taskActions"))
-            }
+        // Each child of this Group is its own List row, matching the task
+        // detail editor: the task header row, then quantity/recurrence
+        // toggles as independent rows, then checklist rows.
+        Group {
+            headerRow
 
             AITaskPlanTaskProgressDraftEditor(task: $task)
-                .padding(.leading, 44)
+                .padding(.leading, nestedContentLeadingInset)
 
             if !task.checklistItems.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
@@ -591,10 +539,77 @@ private struct AITaskPlanTaskDraftRow: View {
                         )
                     }
                 }
-                .padding(.leading, 44)
+                .padding(.leading, nestedContentLeadingInset)
             }
         }
-        .padding(.leading, CGFloat(min(depth, LLMTaskPlanService.maximumTaskDepth)) * 12)
+    }
+
+    private var depthLeadingInset: CGFloat {
+        CGFloat(min(depth, LLMTaskPlanService.maximumTaskDepth)) * 12
+    }
+
+    private var nestedContentLeadingInset: CGFloat {
+        depthLeadingInset + 44
+    }
+
+    private var headerRow: some View {
+        HStack(alignment: .top, spacing: 10) {
+            TaskIcon(
+                visual: TaskVisualPresentation(
+                    iconName: task.iconName,
+                    colorHex: task.colorHex
+                ),
+                size: 34
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                TextField(
+                    AppStrings.localized("aiTaskPlan.taskName"),
+                    text: $task.title,
+                    axis: .vertical
+                )
+                .font(.body.weight(.semibold))
+                .lineLimit(1...3)
+                .textFieldStyle(.plain)
+                .accessibilityLabel(AppStrings.localized("aiTaskPlan.taskName"))
+                .accessibilityIdentifier(
+                    "aiTaskPlan.task.\(task.id.uuidString)"
+                )
+
+                if !task.notes.isEmpty {
+                    Text(task.notes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let estimatedMinutes = task.estimatedMinutes {
+                    Label(
+                        DurationFormatter.compact(estimatedMinutes * 60),
+                        systemImage: "clock"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Menu {
+                Button(role: .destructive, action: removeTask) {
+                    Label(
+                        AppStrings.localized("aiTaskPlan.removeTask"),
+                        systemImage: "trash"
+                    )
+                }
+            } label: {
+                TrailingMenuLabel(systemImage: "ellipsis.circle")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(AppStrings.localized("aiTaskPlan.taskActions"))
+        }
+        .padding(.leading, depthLeadingInset)
         .frame(minHeight: AppLayout.minimumInteractiveTarget)
     }
 
@@ -622,9 +637,10 @@ private struct AITaskPlanTaskProgressDraftEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Divider()
-
+        // Independent List rows, like the task detail quantity and
+        // recurrence sections, so the system provides row height, insets,
+        // and separators instead of cramped in-row stacking.
+        Group {
             Toggle(
                 AppStrings.localized("task.quantity.editor.toggle"),
                 isOn: quantityEnabledBinding
@@ -646,7 +662,6 @@ private struct AITaskPlanTaskProgressDraftEditor: View {
                 "\(accessibilityIdentifierPrefix).recurrence.daily"
             )
         }
-        .font(.subheadline)
     }
 
     private var quantityTargetEditor: some View {

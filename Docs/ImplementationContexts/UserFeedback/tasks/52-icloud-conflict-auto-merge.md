@@ -8,8 +8,8 @@
 - [x] 领取"目前总是提示icloud冲突,可merge的应该优先merge,实在冲突再提示选择副本"反馈。
 - [x] 审计冲突检测与解决路径(SyncConflictService 家族),确定"可 merge"判定边界。
 - [x] 实现可合并场景的自动合并 + 行为测试。
-- [~] 模拟器/单试验收,`make test` 全绿。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 模拟器/单试验收,`make test` 全绿。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -29,8 +29,8 @@
 - [x] Checkpoint A:领取任务、创建实现记忆与 active link。
 - [x] Checkpoint B:审计冲突路径与可合并判定。
 - [x] Checkpoint C:实现自动合并 + 补齐行为测试。
-- [~] Checkpoint D:验收与资源清理。
-- [ ] Checkpoint E:Release 构建安装、核验与收口。
+- [x] Checkpoint D:验收与资源清理。
+- [x] Checkpoint E:Release 构建安装、核验与收口。(2026-07-25:Release 全量构建成功,iOS+Watch+macOS 安装流程完成,macOS 装入 /Applications)
 
 ## 资源所有权
 
@@ -39,7 +39,15 @@
 
 ## 已提交 checkpoint
 
-- [ ] 待提交:领取任务、实现记忆与 active link。
+- [x] 实现与测试:`695fbca9` feat: auto-merge diverged iCloud branches before prompting for a copy choice。
+- [x] 已收口:userfeedback 勾选 [x],active link 已移除,任务关闭。
+
+### 验收记录补充(Checkpoint D/E)
+
+- 焦点套件:CoreSyncSnapshotMergeTests(8)+ CoreSyncConflictTests + ResolutionIdentity + StoreSerialization + StateWrite + ActivityOutcome 全绿。
+- `make test` 全量:2 个与本改动无关的既有隔离缺陷(PreferenceSyncBehaviorTests.checklistCompletion… / TaskPersistencePolicyTests.archiveCommandPreserves…),干净 HEAD 同现,单独跑通过;已向用户报告。
+- 本任务为同步/数据层改动,无 UI,无需模拟器截图;未占用模拟器资源。
+- Release:build_install_all 完成(exit 0),macOS 装入 /Applications,iOS+Watch 流程走完;实体机状态不阻塞。
 
 ## 实现与验收记录
 

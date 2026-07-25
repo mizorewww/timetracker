@@ -1,10 +1,15 @@
 # Time Tracker Architecture
 
-Status: current implementation
+Status: current implementation and architecture guardrails
 
-Reviewed: 2026-07-20
+Reviewed: 2026-07-25
 
-Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag.
+Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag. This document answers two practical questions:
+
+1. Where does a new feature belong?
+2. Which boundary prevents UI, sync, forecast, and ledger bugs from spreading?
+
+For the practical "which file do I open first?" map, start with [Project Map](ProjectMap.md). UI guardrails live in [UI Design Notes](UI-Design.md), localization rules in [Localization](Localization.md), and verification policy in [Testing](Testing.md).
 
 ## Layers
 
@@ -19,7 +24,86 @@ SwiftUI View
   -> SwiftData model
 ```
 
-Views may format and present state, but durable business actions should go through the store and use cases. `TimeTrackerStore` is a `@MainActor @Observable` facade: roots own it with `@State`, views read the injected reference, and only binding sites create `@Bindable`. This keeps iOS, macOS, widgets, Live Activities, and Watch commands from duplicating timer logic.
+Views may format and present state, but durable business actions should go through the store and use cases. `TimeTrackerStore` is a `@MainActor @Observable` facade split into lifecycle, read-model, analytics, maintenance, and domain command extensions: roots own it with `@State`, views read the injected reference, and only binding sites create `@Bindable`. Do not reintroduce `ObservableObject/@Published` on the facade or store action closures in focused values. This keeps iOS, macOS, widgets, Live Activities, and Watch commands from duplicating timer logic.
+
+The product rule is unchanged: `TimeSegment` is the fact layer. Tasks, checklist items, pomodoro runs, settings, summaries, and forecasts are all supporting structures around that ledger.
+
+### Write Flow
+
+```text
+SwiftUI action
+  -> TimeTrackerStore facade method
+  -> Domain command handler
+  -> Repository write
+  -> StoreDomainEvent
+  -> StoreRefreshPlanner
+  -> StoreRefreshCoordinator
+  -> Affected domain snapshots refresh in domain order
+  -> SwiftUI renders observed state
+```
+
+Example: a checklist row tap goes through `TimeTrackerStore.toggleChecklistItem(...)` → `ChecklistCommandHandler.toggle(...)` → one SwiftData update → `checklistChanged(taskID, affectedAncestorIDs)` → Checklist, Rollup, and Analytics refresh. Checklist forecast invalidation is not optional: toggling, adding, renaming, deleting, or reordering a checklist item must update the affected task branch immediately because visible remaining time is a direct function of checklist progress.
+
+### Read Flow
+
+```text
+Repository query
+  -> domain-sized snapshot
+  -> pure services derive secondary state
+  -> domain store exposes immutable view state
+  -> SwiftUI view renders
+```
+
+Views should render existing snapshots. They should not calculate analytics, tree rollups, or forecast decisions inside `body`. `TimelineView` is acceptable for clock labels; it is not a place to rebuild analytics.
+
+## Domain Stores and Refresh
+
+Domain stores own state snapshots:
+
+- `TaskStore` owns task tree snapshots.
+- `LedgerStore` owns active, today, history, segment/day/session indexes and mutation deltas.
+- `ChecklistStore` owns global bootstrap plus task-scoped item/visual replacement indexes.
+- `RollupStore` owns exact worked totals, checklist progress, forecast state and the bounded 90-local-day pace index.
+- `AnalyticsStore` owns pure read-model overview/task snapshot caches keyed by full period, current local day, and optional live-minute identity, plus disposable ledger day buckets; cache operations are split into `AnalyticsStore+Caching`, and cached snapshots do not retain SwiftData segment objects.
+- `PreferenceStore` owns synced preference snapshots.
+
+`StoreRefreshCoordinator` owns refresh sequencing after command events. The facade does not decide the order of task, ledger, checklist, rollup, analytics, selection validation, and Live Activity side effects inline.
+
+`StoreDomainEvent` is the write-side invalidation language. Commands emit what happened, not which views should refresh:
+
+```text
+taskChanged(taskID, affectedAncestorIDs)
+checklistChanged(taskID, affectedAncestorIDs)
+ledgerChanged(taskID, dateInterval, isVisible)
+pomodoroChanged(runID, sessionID, taskID)
+preferenceChanged(key)
+countdownChanged
+remoteImportCompleted
+fullSync
+```
+
+`StoreRefreshPlanner` converts those events into a `StoreRefreshPlan`, keeping refresh behavior testable. When the task topology is stable, `LedgerStore` fetches only invalidated ranges, `ChecklistStore` replaces only affected task buckets, and `RollupStore` consumes segment before/after deltas plus direct/ancestor IDs. Active and future-ended segments form the time-sensitive set for forward clock movement; a backward clock correction stays in the same pipeline but reevaluates every segment because candidates cannot be narrowed safely. `AnalyticsStore` invalidates snapshot caches and only the day buckets intersecting ledger ranges. Full structural rebuild remains the explicit path for startup, topology/full-sync changes, remote import without a safe scope, and calendar/time-zone changes.
+
+External CloudKit changes enter the same pipeline through remote-store and completed import/export notifications. The observer coalesces bursts before emitting `remoteImportCompleted`; launch and foreground activation remain consistency boundaries. There is no permanent foreground polling timer.
+
+## Feature Ownership Map
+
+| Feature | Durable model | Write owner | Snapshot owner | Pure services | UI owner |
+| --- | --- | --- | --- | --- | --- |
+| Start, stop, and rapid-restart timer | `TimeSession`, `TimeSegment` | `StoreScopedTimerCommandCoordinator`, `TimerCommandHandler`, time-tracking repository | `LedgerStore`, `RollupStore` | `TimerAdmissionPolicy`, `TimerRapidRestartPolicy`, `LedgerSummaryService` | `Features/Home`, `Features/Tasks/Detail` |
+| Manual time and segment editing | `TimeSession`, `TimeSegment` | `LedgerCommandHandler` | `LedgerStore`, `AnalyticsStore` | `TimelineLayoutEngine` | `Features/Ledger`, `Features/Home` |
+| Task edit, move, archive, restore | `TaskNode` | `TaskDraftCommandHandler` | `TaskStore`, `RollupStore` | `TaskTreeService`, `TaskTreeFlattener`, `TaskHierarchyMetadataService`, `TaskTrackingAvailabilityService` | `Features/Tasks`, `Features/Sidebar` |
+| Daily recurrence and quantity configuration | `TaskRecurrenceRule`, `TaskRecurrenceOccurrence`, `TaskQuantityGoal`, `TaskQuantityEntry`, generated `TaskNode` | `StoreScopedTaskRecurrenceCommandCoordinator`, task recurrence repository | `TaskStore`, facade recurrence snapshots | `TaskRecurrenceDayKey`, `TaskTrackingAvailabilityService` | Runtime lifecycle is implemented; creation and quantity-entry UI remain future `Features/Tasks` work |
+| Task categories | `TaskCategory`, `TaskCategoryAssignment` | task category commands, task draft command | `TaskStore`, `RollupStore` | `TaskTreeService` | `Features/Tasks`, `Features/Sidebar` |
+| Checklist | `ChecklistItem` | `ChecklistCommandHandler` | `ChecklistStore`, `RollupStore` | `ChecklistDraftService`, `TaskRollupService` | `Features/Tasks/Editor`, `Features/Tasks/Detail` |
+| Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Tasks/Detail` |
+| Pomodoro | `PomodoroRun`, ledger models | `PomodoroCommandHandler`, ledger/task commands | `LedgerStore`, Pomodoro read models | persisted-phase deadline/reconciliation helpers | `Features/Pomodoro` |
+| Analytics | none, derived | none | `AnalyticsStore` | `AnalyticsEngine`, `TimeAggregationService` | `Features/Analytics` |
+| Synced settings | `SyncedPreference` | `PreferenceCommandHandler` | `PreferenceStore` | `AppPreferenceCodec`, `SyncedPreferenceService` | `Features/Settings` |
+| Countdown events | `CountdownEvent` | `CountdownCommandHandler` | `TimeTrackerStore` countdown snapshot | date formatting helpers | `Features/Home`, `Features/Settings` |
+| JSON export | none | facade maintenance command | none | export DTO encoding | `Features/Settings/Support/SettingsExportDocument` |
+| Tombstone maintenance | destructive maintenance, Demo/UI Test only | maintenance facade | affected stores | `DatabaseMaintenanceService` | hidden for production stores |
+| Live Activity | ledger snapshot | shared ledger commands/intents | `LedgerStore` | shared activity attributes | extension UI |
 
 ## Domain Model
 
@@ -47,7 +131,7 @@ Ordinary stopwatch restarts use one narrow canonicalization rule. When the same 
 
 Task visibility and work eligibility derive only from reversible archive markers and historical tombstones. A task is archived when `archivedAt != nil` or its compatibility raw value is `archived`; archive commands write both markers so older clients still understand the result. Archived or tombstoned branches are hidden and cannot accept new work. Archiving a branch requires its active timers and Pomodoro work to stop first. Legacy `planned`, `active`, and `completed` raw values do not change visibility, editing, hierarchy, or work eligibility. Tombstone sync semantics and historical ledger ownership remain unchanged even though ordinary task Delete is no longer a product action.
 
-The current SwiftData schema is V13 (`1.12.0`). V9 removed the persisted `DailySummary` derived cache through a lightweight V8→V9 migration. V10 adds optional opaque Inbox suggestion identity fields; the V9→V10 migration deterministically initializes legacy rows and preserves the old “generated with no active suggestion” dismissal state. V11 adds durable Inbox capture receipts, and V12 persists the Inbox suggestion destination kind. V13 adds recurrence rules, materialization receipts, quantity goals, and additive quantity entries through a lightweight V12→V13 migration. Rule, receipt, generated-task, and goal identities use frozen deterministic UUIDv8 domains so retries and independent devices converge without CloudKit uniqueness constraints. The four V13 snapshot tables are optional only for backward compatibility: a missing key means unknown legacy state, while an explicit empty array authoritatively clears that table. Legacy Inbox model shapes remain frozen for migration, and current analytics still creates disposable `DailySummarySnapshot` values from ledger facts.
+The current SwiftData schema is V14 (`1.13.0`). V9 removed the persisted `DailySummary` derived cache through a lightweight V8→V9 migration. V10 adds optional opaque Inbox suggestion identity fields; the V9→V10 migration deterministically initializes legacy rows and preserves the old "generated with no active suggestion" dismissal state. V11 adds durable Inbox capture receipts, and V12 persists the Inbox suggestion destination kind. V13 adds recurrence rules, materialization receipts, quantity goals, and additive quantity entries through a lightweight V12→V13 migration. V14 adds `ChecklistItem.sortOrderBeforeCompletion` through a lightweight V13→V14 migration; V13-and-older schemas resolve `ChecklistItem` to a frozen V13 snapshot so installed stores keep opening. Rule, receipt, generated-task, and goal identities use frozen deterministic UUIDv8 domains so retries and independent devices converge without CloudKit uniqueness constraints. The V13/V14 snapshot tables are optional only for backward compatibility: a missing key means unknown legacy state, while an explicit empty array authoritatively clears that table. Legacy Inbox model shapes remain frozen for migration, and current analytics still creates disposable `DailySummarySnapshot` values from ledger facts.
 
 ## Forecasting and Analytics
 
@@ -93,6 +177,8 @@ No forecastable source exists:
   do not show a forecast card; show guidance in task detail
 ```
 
+Checklist completion is the only task-level completion/progress semantic and never makes a task unavailable for later work. The task editor, rows, and detail surface therefore do not expose a workflow-status picker, status badge, Complete action, or Reopen action.
+
 Mutation refresh is incremental after initial/full load. `LedgerStore` replaces only segments overlapping invalidated ranges and related sessions; `ChecklistStore` replaces affected task buckets; `RollupIncrementalIndex` applies segment before/after deltas and recalculates direct tasks plus ancestors. Active and future-ended segments are time-sensitive: forward clock movement reevaluates that bounded set, while a backward wall-clock correction reevaluates all ledger rows because a previously completed row can cross the reference boundary again. Full-history worked seconds remain exact, while only the 90-day pace buckets are bounded. `CorePerformanceBudgetTests` includes a 50,000-segment single-record mutation and cached frequent-task ranking budget.
 
 Checklist quick add, completion, and reorder commands share the store-scoped mutation lock with task-editor replacement and task lifecycle writes. The coordinator creates a fresh context after acquiring the lock, rejects stale item/order mutation baselines, validates the canonical task before inserting related rows, and derives refresh ancestors from the fresh hierarchy. This prevents stale scenes from resurrecting checklist tombstones, creating checklist/visual orphans, overwriting newer completion state, or invalidating only an obsolete parent chain.
@@ -102,6 +188,40 @@ Task-category create, update, delete, and task-draft assignment also share that 
 `AnalyticsStore` caches overview and task snapshots by range, true calendar period start, and optional minute live bucket. A live bucket exists only when an active segment overlaps the selected range, so historical views do not recompute for clock ticks. Ledger events invalidate snapshots and only intersecting day buckets; every cache remains disposable and reconstructable from ledger facts.
 
 Analytics ranking and single-value selections are deterministic. Task ties resolve by gross time, wall time, localized title, then UUID; peak-hour ties choose the earliest local hour. Deleted-task titles use the latest valid session snapshot by start time, update time, and UUID, shared by task breakdown and overlap participants. Collection input order and dictionary iteration order are never product semantics.
+
+## Ledger Query Strategy
+
+Initial/full range queries use SwiftData predicates plus deterministic clipping. Normal mutations use `LedgerStore` day/ID indexes to fetch and replace only segments overlapping `StoreInvalidationRange`, update related session IDs, and emit coalesced `LedgerSegmentChange` values. `AnalyticsStore` caches daily summaries plus full overview/task snapshots by range and `AnalyticsEvaluationCacheKey`: complete calendar interval, current local-day identity, and an optional minute key only when an active segment overlaps that range. The day identity makes idle current weeks/months miss at midnight without making completed history follow the wall clock.
+
+Rules:
+
+1. Keep raw `TimeSegment` as the source of truth and rebuild buckets when summary rules change.
+2. Route every persisted-time read through `TrackedTimePolicy` with an explicit reference `now`; never derive duration from raw `endedAt` in a view, formatter, cache, or store.
+3. Reject local future writes, but retain and safely clip clock-skewed CloudKit/import/legacy facts.
+4. Keep active timer queries direct and fresh; active timers must never wait for a cache.
+5. Coalesce only a new ordinary stopwatch Start with the immediately preceding same-task singleton session when the non-overlapping gap is strictly below 60 seconds and contains no other visible work. Keep a new active segment identity, tombstone the predecessor, and never apply this repair to Manual, Calendar, Pomodoro, `replaceAll`, import, or read paths.
+6. Invalidate full overview/task snapshots after relevant facts change, and invalidate only intersecting day buckets from `ledgerChanged` ranges.
+7. Keep rollup full-history totals exact; only forecast pace is bounded to 90 local days.
+8. Preserve the 50,000-segment single-mutation budget and equality with a full rebuild, including time advance and clock rewind. Ordinary rapid restart must also remain store-query bounded: reuse the coordinator's canonical active snapshot, fetch the open Pomodoro working set once before filtering relevant sessions, never scan full history or issue N+1 session queries, and cover the real SwiftData path with a 50,000-row budget.
+
+## Schema Evolution Rules
+
+SwiftData models must stay compatible with existing local and iCloud stores. New features should not casually add columns to `TaskNode`, `TimeSession`, `TimeSegment`, or other fact-layer models.
+
+Rules:
+
+1. Prefer extension models with explicit UUID references for new feature data. Example: task categories use `TaskCategory` plus `TaskCategoryAssignment(taskID, categoryID)` instead of adding `categoryID` to `TaskNode`.
+2. If an existing core model truly needs a new persisted field, add a new schema version, make the field optional or give it a stable default, and add a migration/compatibility test before wiring UI.
+3. Old `VersionedSchema` definitions must keep their historical model shape. A new feature must not mutate older schema versions by reusing a changed model shape without a migration strategy. If the live model gains a field, older versions resolve that model to a frozen legacy snapshot type (see the V13 `ChecklistItem` snapshot behind V14).
+4. Never reuse a schema version identifier for a different model shape. If a bad schema reached a build or branch that may have been installed, the next compatible schema must use a new version number.
+5. CloudKit-backed models should keep `id`, timestamps, `deletedAt`, `deviceID`, and `clientMutationID` semantics stable. Synced entities that still expose Delete, authoritative reset, and deduplication use tombstones; ordinary tasks expose Archive/Restore, while `TaskNode.deletedAt` remains compatibility protocol only.
+6. Every schema change must update `TimeTrackerModelRegistry.cloudSyncedUserModelNames` expectations and add a test proving old stores can still open or that the change is isolated in a new extension model.
+
+Current examples: V9 (`1.8.0`) removes the derived `DailySummary` cache from the active schema with a lightweight V8→V9 migration. V10 (`1.9.0`) freezes the V9 Inbox model shape and uses a custom V9→V10 migration to initialize optional opaque suggestion context/revision UUIDs while preserving legacy dismissal state. V11 adds durable Inbox capture receipts, V12 persists suggestion destination kind, V13 (`1.12.0`) lightweight-adds recurrence rules, occurrence claims, quantity goals, and additive quantity entries without changing `TaskNode`, and V14 (`1.13.0`) adds `ChecklistItem.sortOrderBeforeCompletion` behind a frozen V13 checklist snapshot. Real V8, V9, V11, and V12 disk fixtures must continue to open. Removing a reconstructable cache must never remove its source facts, adding sync identity must not derive it from user text, and a background materializer must treat tombstones and staged partial rows as authoritative claims rather than silently repairing them.
+
+`TaskNode.statusRaw` is a frozen compatibility field for old schemas, snapshots, and CloudKit records. Preflight continues to accept all four V4 raw values without bulk rewriting existing data. `planned`, `active`, and `completed` have no product behavior. Archive reads accept either `archivedAt` or raw `archived`, while archive writes set both markers for older clients.
+
+The guiding principle is forward migration, not feature rollback: existing user data opens first, then new feature data is added in a compatible layer.
 
 ## Task Archive and Tombstone Rules
 
@@ -198,7 +318,7 @@ timetracker/Features/Pomodoro
                    timer face, active-run, and recent-ledger sections
 timetracker/Features/Analytics
   root files      Landing page, typed category model/detail destination, summary rows,
-                   metric/detail lists, and period controls
+                  metric/detail lists, and period controls
   Sections/       Overview, forecast, distribution, and activity sections
   Timeline/       Timeline chart composition and support views
 timetracker/Features/Settings
@@ -225,7 +345,7 @@ Within `Stores/Facade`, `TimeTrackerStore+Configuration.swift` owns full first-r
 
 Avoid root-level "miscellaneous" folders that collect unrelated files. If a file name needs a `+` extension suffix, it should usually live under the owning facade or feature directory instead of being left beside unrelated domain stores. If a directory grows beyond one ownership concept, split it by domain before adding more files.
 
-For the practical "where do I put this change?" map, start with `Docs/ProjectMap.md`. For the current architecture and feature ownership map, see `Docs/ArchitecturePlan.md`.
+Visual and interaction guardrails — native-first control choices, responsive checks, timeline and task-list rules — are maintained in [UI Design Notes](UI-Design.md). User-facing copy rules are maintained in [Localization](Localization.md). Task Detail is currently the canonical selected-task surface; adding an inspector requires an explicit product decision rather than being a default layout assumption.
 
 Xcode shared schemes are source-controlled under `timetracker.xcodeproj/xcshareddata/xcschemes`. Do not rely on per-user scheme state for app builds; command-line builds and install scripts must be able to use `-scheme timetracker` from a clean checkout.
 
@@ -234,6 +354,23 @@ Xcode shared schemes are source-controlled under `timetracker.xcodeproj/xcshared
 `TimelineLayoutEngine` owns Today timeline clipping, display interval, and lane allocation. Keep this logic out of SwiftUI view bodies so chart behavior can be tested without launching the app.
 
 Task tree display is derived UI state. The durable hierarchy remains `TaskNode.parentID` plus repairable `depth`/canonical locator `path`; the Tasks screen derives a flat list of visible rows and title paths so native list interactions remain reliable without recursive SwiftUI identity.
+
+## Testing Strategy
+
+Prefer behavior tests over source-string scans. The full verification policy — baseline commands, required coverage, UI testing, performance budgets, and resource ownership — is maintained in [Testing](Testing.md). Performance budgets currently cover large task-tree flattening, analytics snapshot generation (including dense overlap), ledger bucket summaries, timeline layout inputs, checklist rollup calculations, and affected-branch rollup refresh.
+
+Before merging a feature:
+
+1. Can the feature be found from the ownership table?
+2. Does every durable write go through a command or repository boundary?
+3. Does the view avoid expensive work in `body`?
+4. Are active timers still derived from open `TimeSegment` rows?
+5. Are historical/imported task tombstones and their ledger rows handled intentionally without reintroducing a product Delete action?
+6. Does iCloud remote import coalesce refresh work?
+7. Are compact iPhone, iPad split view, and macOS sidebar/detail layouts considered separately?
+8. Are all strings localized in English, Simplified Chinese, and Traditional Chinese?
+9. Are tests behavior-based rather than fragile source scans?
+10. Did verification match the change's risk: relevant signed tests/builds for code changes, normal-size screenshots for affected visual flows, and Instruments only for performance-sensitive work? Is dated evidence recorded in the Audit rather than inferred from an earlier batch, and are all owned simulator/test/trace resources released?
 
 ## Feature Status
 

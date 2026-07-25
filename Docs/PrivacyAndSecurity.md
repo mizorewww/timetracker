@@ -26,7 +26,7 @@
 
 业务实体存放在 SwiftData store。启用 iCloud 后，同一业务模型可由 CloudKit 同步。应用可能在持久容器无法建立时进入诊断或临时内存模式；内存模式的数据在进程结束后消失。
 
-当前 schema 是 V13。V8→V9 lightweight migration 删除可重建的 `DailySummary` cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。V9→V10 为 Inbox AI dismissal 增加可同步的不透明 context/revision UUID，V11 加入 durable Inbox capture receipts，V12 持久化 suggestion destination kind，V13 lightweight-adds 重复规则、每日生成回执、任务量目标与增量记录。Inbox identity 是随机值或 legacy record UUID，不包含标题、规范化标题或标题哈希；每条记录只保存固定数量字段。V13 的 deterministic recurrence/goal identities 只由 UUID、规则日键和冻结时区等领域标识计算，不含用户文本。Legacy 类型只用于读取旧 store，不应重新进入当前导出或 CloudKit registry。
+当前 schema 是 V14。V8→V9 lightweight migration 删除可重建的 `DailySummary` cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。V9→V10 为 Inbox AI dismissal 增加可同步的不透明 context/revision UUID，V11 加入 durable Inbox capture receipts，V12 持久化 suggestion destination kind，V13 lightweight-adds 重复规则、每日生成回执、任务量目标与增量记录，V14 为 `ChecklistItem` 增加完成分组排序字段（V13 及更早版本解析为冻结快照类型）。Inbox identity 是随机值或 legacy record UUID，不包含标题、规范化标题或标题哈希；每条记录只保存固定数量字段。V13 的 deterministic recurrence/goal identities 只由 UUID、规则日键和冻结时区等领域标识计算，不含用户文本。Legacy 类型只用于读取旧 store，不应重新进入当前导出或 CloudKit registry。
 
 LLM API 密钥使用 Keychain generic password：
 

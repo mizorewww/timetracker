@@ -15,6 +15,8 @@
 
 修改 Accepted 决策时，应新增决策或明确标记替代关系，并同步更新受影响的用户、代码、隐私和版本文档。
 
+2026-07-25 说明：各决策“验证”中提到的源码扫描契约（`CoreSourceLayoutTests`、UIContracts 源码扫描层、各 “source contract/源码契约” 断言）已整体删除，相关表述是历史验证记录，不再对应现存测试；当前验证以领域行为、store/command 集成、accessibility identifier UI 与截图检查为准，且不得新增源码字符串扫描。AD-014 的“源码扫描只保留少量架构护栏”由本说明替代。
+
 ## AD-001：TimeSegment 是时间事实来源
 
 状态：Accepted
@@ -128,7 +130,7 @@
 决策：
 
 - README、UserGuide、CodeGuide、Architecture 和 ProjectMap 描述当前事实与所有权。
-- NextDevelopmentPlan、NativeUIPlan 等明确标为 future 的文档描述未来，并写清前置条件和验收门禁。
+- NextDevelopmentPlan 等明确标为 future 的文档描述未来，并写清前置条件和验收门禁。
 - 带日期的 Audit 记录该次审核的 baseline、实现结果与证据；它可以承载最终冻结工作树证据，但不替代当前用户/代码规范。
 - 已归档或被替代的计划必须在顶部标明 superseded/historical，旧命令、绝对路径、未勾选项和临时 hard rule 均不得继续充当 Agent 指令或当前 backlog。CodeRefactorPlan 等标为 current status/guardrails 的文档则按当前工作树维护，不能因为名称含 Plan 就自动视为历史。
 

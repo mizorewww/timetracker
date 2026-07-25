@@ -71,7 +71,7 @@ Before shipping the next minor version:
 6. New features have documented behavior and tests before UI wiring.
 7. Any schema change has an old-store compatibility test.
 8. No performance budget test regresses without a documented reason.
-9. No new large production Swift file violates `CoreSourceLayoutTests`.
+9. New large production Swift files get a responsibility review instead of an automated line-count gate (see `Docs/CodeRefactorPlan.md` file/folder rules).
 10. Normal-text-size screenshots and ordinary interaction smoke tests pass for the affected iPhone, iPad split-view, and macOS surfaces. Maximum Dynamic Type is added only when a change affects text reflow/truncation or a reported regression creates that risk.
 11. Performance-sensitive changes include a nonempty SwiftUI/Time Profiler trace from the frozen source state with no unexplained application-owned hitch or invalidation hotspot; unrelated feature work does not create a trace merely to satisfy a fixed matrix.
 12. A Countdown created in Settings remains visible from Today on iPhone, iPad, and macOS, with compact and wide screenshots guarding against platform regressions.

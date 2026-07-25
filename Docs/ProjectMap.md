@@ -120,7 +120,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 6. Keep `TimeTrackerStore` as a facade. If a method grows domain logic, move that logic into a command handler, domain store, or service.
 7. If a directory starts collecting unrelated files, split it before adding more.
 8. After moving files, run the scheme visibility check, macOS tests, and generic iOS build from `Docs/Testing.md`.
-9. For schema changes, prefer additive extension models over changing core ledger/task models. Update `Docs/ArchitecturePlan.md` schema rules and add migration/compatibility tests before UI work.
+9. For schema changes, prefer additive extension models over changing core ledger/task models. Update `Docs/Architecture.md` schema rules and add migration/compatibility tests before UI work.
 
 ## Naming Rules
 
@@ -134,7 +134,7 @@ The most important rule is still: `TimeSegment` is the ledger fact. UI state, fo
 
 ## Before Adding A Feature
 
-1. Add expected behavior to `Docs/Architecture.md`, `Docs/ArchitecturePlan.md`, this map, or a focused feature document.
+1. Add expected behavior to `Docs/Architecture.md`, this map, or a focused feature document.
 2. Add or update tests for the service, command, store, or UI contract boundary.
 3. Implement the smallest domain owner first.
 4. Wire SwiftUI last.
@@ -147,5 +147,5 @@ Use these before starting larger work:
 | Document | Purpose |
 | --- | --- |
 | `Docs/NextDevelopmentPlan.md` | Product backlog and feature acceptance criteria for the next development cycles. |
-| `Docs/CodeRefactorPlan.md` | Completed structural split, current concentration inventory, and architecture guardrails. |
-| `Docs/NativeUIPlan.md` | Native-first UI guardrails and future screenshot/device acceptance checklist. |
+| `Docs/CodeRefactorPlan.md` | Current concentration inventory and architecture guardrails. |
+| `Docs/UI-Design.md` | Native-first UI guardrails and review/screenshot checklists. |

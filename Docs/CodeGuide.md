@@ -40,23 +40,7 @@
 
 ## 2. 代码地图
 
-| 路径 | 主要责任 |
-| --- | --- |
-| timetracker/App | 启动、依赖组装、平台根视图、导航与 scene 级 presentation |
-| timetracker/Features | Today、Inbox、Tasks、Pomodoro、Analytics、Settings 等界面 |
-| timetracker/Models | SwiftData 持久模型与 schema 版本 |
-| timetracker/Commands | 可持久业务动作与 use case handler |
-| timetracker/Repositories | SwiftData 查询与写入实现 |
-| timetracker/Services | 分析、预测、同步、安全、维护与系统集成服务 |
-| timetracker/Stores | `@Observable` UI 门面、领域快照、刷新规划和业务/页面导航状态 |
-| timetracker/Shared | App/扩展可共享的 DTO、字符串与辅助类型 |
-| timetracker/SharedUI | 原生风格组件、布局策略和设计 token |
-| SharedLiveActivity | 主应用与扩展共用的 Activity attributes |
-| timetrackerLiveActivityExtension | ActivityKit 展示与属性 |
-| timetrackerWidgetExtension | WidgetKit 时间线和共享快照读取 |
-| timetrackerWatchApp | Watch UI、快照与连接命令 |
-| timetrackerTests | 单元和契约测试 |
-| timetrackerUITests | UI 流程与截图测试 |
+目录级代码地图（每个路径的责任、何时打开、不应放入什么）维护在 [ProjectMap](ProjectMap.md)，此处不再重复。
 
 `Features/Inspector`、`PhoneChromeViews`、Home 通用年月日进度卡、Pomodoro 自绘高刷新转场、`SettingsSectionsViews.swift` 和 `TimeTrackerServices.swift` 已不存在；不要继续把它们当作当前模块或扩展点。
 
@@ -230,7 +214,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 
 ## 5. 持久化、CloudKit 与迁移
 
-当前 schema 为 V13（版本标识 `1.12.0`），迁移计划覆盖 V1 至 V13。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；V10 通过 V9→V10 custom migration 为 Inbox item/suggestion 初始化不透明 context/revision UUID，并把旧版“已有 generatedAt 且没有 active suggestion”转换为该修订的显式 dismissal；V11 加入 durable Inbox capture receipt，V12 持久化 suggestion destination kind。V13 通过 V12→V13 lightweight migration 加入 `TaskRecurrenceRule`、`TaskRecurrenceOccurrence`、`TaskQuantityGoal` 与 `TaskQuantityEntry`。rule、occurrence、generated child task 和 quantity goal 使用冻结 domain 的 deterministic UUIDv8；entry 的 UUID 是调用方必须在重试时复用的 command identity。四张 V13 snapshot table 为兼容旧快照而声明为 optional：缺 key 表示未知，显式 `[]` 才是权威清空；capture、restore、clear/demo cleanup、maintenance 和 conflict fingerprint 必须一起接入。持久层保留分阶段 Cloud import 的可见 orphan，Task Store 只在 task/rule/goal 关系完整后向 UI 发布；scoped refresh 按 task ID 查询并沿 occurrence 扩展到 generated child，禁止每次编辑全量 fetch/materialize 全部 quantity history。任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，旧 Inbox 类型保留冻结形状；当前 registry 不包含 `DailySummary`。`TaskNode.statusRaw` 继续按 V4 兼容合同 round-trip，不为移除 UI 状态机新增 schema migration。版本升级时：
+当前 schema 为 V14（版本标识 `1.13.0`），迁移计划覆盖 V1 至 V14。V9 通过 V8→V9 lightweight migration 移除持久化 `DailySummary` 派生缓存；V10 通过 V9→V10 custom migration 为 Inbox item/suggestion 初始化不透明 context/revision UUID，并把旧版“已有 generatedAt 且没有 active suggestion”转换为该修订的显式 dismissal；V11 加入 durable Inbox capture receipt，V12 持久化 suggestion destination kind。V13 通过 V12→V13 lightweight migration 加入 `TaskRecurrenceRule`、`TaskRecurrenceOccurrence`、`TaskQuantityGoal` 与 `TaskQuantityEntry`。V14 通过 V13→V14 lightweight migration 为 `ChecklistItem` 加入 `sortOrderBeforeCompletion`，V13 及更早版本把 `ChecklistItem` 解析为冻结的 V13 快照类型，使已安装设备继续打开 store。rule、occurrence、generated child task 和 quantity goal 使用冻结 domain 的 deterministic UUIDv8；entry 的 UUID 是调用方必须在重试时复用的 command identity。四张 V13 snapshot table 为兼容旧快照而声明为 optional：缺 key 表示未知，显式 `[]` 才是权威清空；capture、restore、clear/demo cleanup、maintenance 和 conflict fingerprint 必须一起接入。持久层保留分阶段 Cloud import 的可见 orphan，Task Store 只在 task/rule/goal 关系完整后向 UI 发布；scoped refresh 按 task ID 查询并沿 occurrence 扩展到 generated child，禁止每次编辑全量 fetch/materialize 全部 quantity history。任务、segment、session、Pomodoro、checklist、Inbox、倒计时、分类和偏好等用户事实仍保留。`DailySummary` 类型只留给 V1...V8 schema 读取与迁移，旧 Inbox 类型保留冻结形状；当前 registry 不包含 `DailySummary`。`TaskNode.statusRaw` 继续按 V4 兼容合同 round-trip，不为移除 UI 状态机新增 schema migration。版本升级时：
 
 1. 先声明哪些用户数据必须保留。
 2. 为旧 schema 准备真实 store fixture。
@@ -423,7 +407,7 @@ Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一
 1. 保持 View 的 body 可读，把可测试规则移入 command/service。
 2. 使用稳定身份和精确 observation，避免整个根视图因计时 tick 重算。
 3. 默认先验证正常字号下的系统导航、控件、键盘、窗口尺寸与平台 HIG；保留 Dynamic Type/VoiceOver 基础语义，只在文本重排、语义或既有回归风险触发时增加对应专项。
-4. 添加行为测试；源码字符串扫描只能作为轻量架构护栏。
+4. 添加行为测试；不要新增源码字符串扫描契约（见第 10 节）。
 5. 在 iPhone、iPad、Mac 对应尺寸上验证，并检查深色模式与 Reduce Motion。
 
 ### 新增导出或恢复格式
@@ -447,9 +431,8 @@ Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一
 2. Store/command 集成测试
 3. 正常字号下以稳定界面标识驱动的核心流程测试
 4. 少量稳定截图测试
-5. 源码结构契约
 
-仍有部分测试通过读取 Swift 源文件并匹配字符串来约束 UI，这类测试会在等价重构后误报。逐步把它们替换为行为、accessibility identifier 和结构化 API 测试。
+2026-07-25 已删除全部通过读取 Swift 源文件并匹配字符串来约束 UI 的源码扫描契约测试（含 `CoreSourceLayoutTests` 与 UIContracts 源码扫描层）：这类测试在等价重构后误报，维护成本高于护栏价值。新增测试必须落在上述四个层级；布局类验收使用截图/人工检查清单，不再新增源码字符串扫描。
 
 测试必须隔离 UserDefaults、Keychain、临时目录、时区与 locale。本轮已移除类别空分区测试对演示种子全局状态的依赖；新增测试仍应显式清理共享状态。
 
